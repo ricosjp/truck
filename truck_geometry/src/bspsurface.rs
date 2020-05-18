@@ -152,7 +152,7 @@ impl BSplineSurface {
 
     /// substitution to B-spline surface. private method
     #[inline(always)]
-    fn substitution(&self, u: f64, v: f64) -> Vector {
+    pub fn subs(&self, u: f64, v: f64) -> Vector {
         let (degree0, degree1) = self.degrees();
         let basis0 = self
             .knot_vecs
@@ -171,6 +171,11 @@ impl BSplineSurface {
             }
         }
         res
+    }
+
+    #[inline(always)]
+    pub fn get_closure(&self) -> impl Fn(f64, f64) -> Vector + '_ {
+        move |u, v| self.subs(u, v)
     }
 
     #[inline(always)]
@@ -269,9 +274,9 @@ impl BSplineSurface {
 
     /// get the normal unit vector at the parameter `(u, v)`.
     pub fn normal_vector(&mut self, u: f64, v: f64) -> Vector {
-        let pt = self(u, v);
-        let der0 = self.first_derivation()(u, v);
-        let der1 = self.second_derivation()(u, v);
+        let pt = self.subs(u, v);
+        let der0 = self.first_derivation().subs(u, v);
+        let der1 = self.second_derivation().subs(u, v);
         let vec0 = pt.derivation_projection(&der0);
         let vec1 = pt.derivation_projection(&der1);
         vec0 ^ vec1
@@ -673,15 +678,15 @@ impl BSplineSurface {
                 continue;
             }
             for j0 in 0..division0 {
-                let s = self.knot_vecs.0[i0 - 1] + delta0 * (j0 as f64) / (division0 as f64);
+                let u = self.knot_vecs.0[i0 - 1] + delta0 * (j0 as f64) / (division0 as f64);
                 for i1 in 1..self.knot_vecs.1.len() {
                     let delta1 = self.knot_vecs.1[i1] - self.knot_vecs.1[i1 - 1];
                     if delta1.so_small() {
                         continue;
                     }
                     for j1 in 0..division1 {
-                        let t = self.knot_vecs.1[i1 - 1] + delta1 * (j1 as f64) / (division1 as f64);
-                        if !ord(&self(s, t), &other(s, t)) {
+                        let v = self.knot_vecs.1[i1 - 1] + delta1 * (j1 as f64) / (division1 as f64);
+                        if !ord(&self.subs(u, v), &other.subs(u, v)) {
                             return false;
                         }
                     }
@@ -709,31 +714,5 @@ impl BSplineSurface {
     #[inline(always)]
     pub fn near2_as_projected_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 2, |x, y| x.projection().near2(&y.projection()))
-    }
-}
-
-impl FnOnce<(f64, f64)> for BSplineSurface {
-    type Output = Vector;
-
-    /// substitution to B-spline surface.
-    #[inline(always)]
-    extern "rust-call" fn call_once(self, (s, t): (f64, f64)) -> Vector {
-        self.substitution(s, t)
-    }
-}
-
-impl FnMut<(f64, f64)> for BSplineSurface {
-    /// substitution to B-spline surface.
-    #[inline(always)]
-    extern "rust-call" fn call_mut(&mut self, (s, t): (f64, f64)) -> Vector {
-        self.substitution(s, t)
-    }
-}
-
-impl Fn<(f64, f64)> for BSplineSurface {
-    /// substitution to B-spline surface.
-    #[inline(always)]
-    extern "rust-call" fn call(&self, (s, t): (f64, f64)) -> Vector {
-        self.substitution(s, t)
     }
 }

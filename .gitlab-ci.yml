@@ -5,16 +5,12 @@ stages:
 test:
     image: rust:latest
     stage: test
-    before_script:
-        - rustup default nightly
     script:
         - cargo test
 
 pages:
     image: rust:latest
     stage: pages
-    before_script:
-        - rustup default nightly
     script:
         - cargo doc --no-deps
         - mv target/doc public

@@ -8,33 +8,34 @@ impl PolygonMesh {
     /// * `tol` - standard tolerance for meshing
     pub fn from_surface(bspsurface: &mut BSplineSurface, tol: f64) -> PolygonMesh {
         let (knot_vec0, knot_vec1) = bspsurface.knot_vecs();
-        let s0 = knot_vec0[0];
-        let s1 = knot_vec0[knot_vec0.len() - 1];
-        let mut div0 = vec![s0, s1];
-        let t0 = knot_vec1[0];
-        let t1 = knot_vec1[knot_vec1.len() - 1];
-        let mut div1 = vec![t0, t1];
+        let u0 = knot_vec0[0];
+        let u1 = knot_vec0[knot_vec0.len() - 1];
+        let mut div0 = vec![u0, u1];
+        let v0 = knot_vec1[0];
+        let v1 = knot_vec1[knot_vec1.len() - 1];
+        let mut div1 = vec![v0, v1];
 
         create_space_division(bspsurface, tol, &mut div0, &mut div1);
         create_mesh(bspsurface, &div0, &div1)
     }
 }
 
-fn is_far(bspsurface: &BSplineSurface, s0: f64, s1: f64, t0: f64, t1: f64, tol: f64) -> bool {
+fn is_far(bspsurface: &BSplineSurface, u0: f64, u1: f64, v0: f64, v1: f64, tol: f64) -> bool {
     let (mut degree0, mut degree1) = bspsurface.degrees();
+    let bspsurface = bspsurface.get_closure();
     degree0 *= 2;
     degree1 *= 2;
     for i in 0..=degree0 {
         for j in 0..=degree1 {
             let p = (i as f64) / (degree0 as f64);
             let q = (j as f64) / (degree1 as f64);
-            let s = s0 * p + s1 * (1.0 - p);
-            let t = t0 * q + t1 * (1.0 - q);
-            let val_mid = bspsurface(s, t);
-            let par_mid = bspsurface(s0, t0) * p * q 
-                + bspsurface(s0, t1) * p * (1.0 - q) 
-                + bspsurface(s1, t0) * (1.0 - p) * q
-                + bspsurface(s1, t1) * (1.0 - p) * (1.0 - q);
+            let u = u0 * p + u1 * (1.0 - p);
+            let v = v0 * q + v1 * (1.0 - q);
+            let val_mid = bspsurface(u, v);
+            let par_mid = bspsurface(u0, v0) * p * q 
+                + bspsurface(u0, v1) * p * (1.0 - q) 
+                + bspsurface(u1, v0) * (1.0 - p) * q
+                + bspsurface(u1, v1) * (1.0 - p) * (1.0 - q);
             let res = val_mid.projection() - par_mid.projection();
             if res.norm2() > tol * tol {
                 return true;
@@ -96,12 +97,12 @@ fn create_space_division(
 
 fn create_mesh(bspsurface: &mut BSplineSurface, div0: &Vec<f64>, div1: &Vec<f64>) -> PolygonMesh {
     let mut meshdata = PolygonMesh::default();
-    for s in div0 {
-        for t in div1 {
-            let vertex = bspsurface(*s, *t).projection();
+    for u in div0 {
+        for v in div1 {
+            let vertex = bspsurface.subs(*u, *v).projection();
             meshdata.vertices.push([vertex[0], vertex[1], vertex[2]]);
-            meshdata.uv_coords.push([*s, *t]);
-            let normal = bspsurface.normal_vector(*s, *t).projection();
+            meshdata.uv_coords.push([*u, *v]);
+            let normal = bspsurface.normal_vector(*u, *v).projection();
             meshdata.normals.push([normal[0], normal[1], normal[2]]);
         }
     }

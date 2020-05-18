@@ -17,7 +17,7 @@ Truck is a collection of multiple crates. Users can use only the packages they n
 * Even if an OpenGL viewer is incorporated in the future, web app developers will be able to create apps that are independent from that viewer.
 * If you don't like the CSG-like utility API provided here, you can create your own utility that depends only on more primitive crates.
 
-### packages
+### crates
 * [truck_geometry](https://ricos.pages.ritc.jp/truck/truck/truck_geometry/index.html)  
 geometrical structs: vector, matrix, knot vector, and bsplines
 * [truck_topology](https://ricos.pages.ritc.jp/truck/truck/truck_topology/index.html)  

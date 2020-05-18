@@ -1,5 +1,3 @@
-#![feature(unboxed_closures, fn_traits, is_sorted)]
-
 /// 4 dimentional vector
 #[derive(Clone, PartialEq, Debug)]
 pub struct Vector {

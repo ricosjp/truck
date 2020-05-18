@@ -397,8 +397,10 @@ impl KnotVec {
     /// assert_eq!(knot_vec, KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0]));
     /// ```
     pub fn from_single_multi(knots: Vec<f64>, mults: Vec<usize>) -> Result<KnotVec> {
-        if !knots.is_sorted() {
-            return Err(Error::NotSortedVector);
+        for i in 1..knots.len() {
+            if knots[i - 1] > knots[i] {
+                return Err(Error::NotSortedVector);
+            }
         }
 
         let mut vec = Vec::new();
@@ -413,11 +415,12 @@ impl KnotVec {
     
     /// construct from `Vec<f64>`. do not sort, only check sorted.
     pub fn try_from(entity: Vec<f64>) -> Result<KnotVec> {
-        if entity.is_sorted() {
-            Ok(KnotVec { entity: entity })
-        } else {
-            Err(Error::NotSortedVector)
+        for i in 1..entity.len() {
+            if entity[i - 1] > entity[i] {
+                return Err(Error::NotSortedVector);
+            }
         }
+        Ok(KnotVec { entity: entity })
     }
 }
 

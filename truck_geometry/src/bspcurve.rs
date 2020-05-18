@@ -127,7 +127,7 @@ impl BSplineCurve {
 
     /// substitution to B-spline curve. private method
     #[inline(always)]
-    fn substitution(&self, t: f64) -> Vector {
+    pub fn subs(&self, t: f64) -> Vector {
         let basis = self
             .knot_vec
             .bspline_basis_functions(self.degree(), t)
@@ -137,6 +137,12 @@ impl BSplineCurve {
         iter.for_each(|(vec, basis)| sum += vec * *basis);
         sum
     }
+
+    #[inline(always)]
+    pub fn get_closure(&self) -> impl Fn(f64) -> Vector + '_ {
+        move |t| self.subs(t)
+    }
+
     /// inverse as curve
     /// # Examples
     /// ```
@@ -154,7 +160,7 @@ impl BSplineCurve {
     /// bspline1.inverse();
     /// for i in 0..=N {
     ///     let t = 3.0 * (i as f64) / (N as f64);
-    ///     Vector::assert_near(&bspline0(t), &bspline1(3.0 - t));
+    ///     Vector::assert_near(&bspline0.subs(t), &bspline1.subs(3.0 - t));
     /// }
     /// ```
     #[inline(always)]
@@ -238,7 +244,7 @@ impl BSplineCurve {
     /// let derived = bspline.derivation();
     /// for i in 0..N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     Vector::assert_near2(&derived(t), &Vector::new(-2.0 * t, 2.0, 2.0 * t, 0.0));
+    ///     Vector::assert_near2(&derived.subs(t), &Vector::new(-2.0 * t, 2.0, 2.0 * t, 0.0));
     /// }
     /// ```
     pub fn derivation(&mut self) -> &BSplineCurve {
@@ -520,11 +526,11 @@ impl BSplineCurve {
     /// let part1 = part0.cut(1.8);
     /// for i in 0..=N {
     ///     let t = 1.8 * (i as f64) / (N as f64);
-    ///     Vector::assert_near2(&bspline(t), &part0(t));
+    ///     Vector::assert_near2(&bspline.subs(t), &part0.subs(t));
     /// }
     /// for i in 0..=N {
     ///     let t = 1.8 + 1.2 * (i as f64) / (N as f64);
-    ///     Vector::assert_near2(&bspline(t), &part1(t));
+    ///     Vector::assert_near2(&bspline.subs(t), &part1.subs(t));
     /// }
     /// ```
     pub fn cut(&mut self, mut t: f64) -> BSplineCurve {
@@ -626,7 +632,7 @@ impl BSplineCurve {
     /// let mut flag = false;
     /// for i in 0..N {
     ///     let t = 4.0 * (i as f64) / (N as f64);
-    ///     flag = flag || bspline(t).near(&bspline(t + 1.0 / (N as f64)));
+    ///     flag = flag || bspline.subs(t).near(&bspline.subs(t + 1.0 / (N as f64)));
     /// }
     /// assert!(flag);
     ///
@@ -635,7 +641,7 @@ impl BSplineCurve {
     /// let mut flag = false;
     /// for i in 0..N {
     ///     let t = 1.0 * (i as f64) / (N as f64);
-    ///     flag = flag || bspline(t).near(&bspline(t + 1.0 / (N as f64)));
+    ///     flag = flag || bspline.subs(t).near(&bspline.subs(t + 1.0 / (N as f64)));
     /// }
     /// assert!(!flag);
     /// ```
@@ -665,7 +671,7 @@ impl BSplineCurve {
     /// let (knots, _) = bspline.knot_vec().to_single_multi();
     /// assert_eq!(&knots, &[0.0, 1.0, 2.0, 3.0]);
     ///
-    /// let pt = bspline(1.2);
+    /// let pt = bspline.subs(1.2);
     /// let t = bspline.search_nearest_parameter(&pt, 1.0).unwrap();
     /// f64::assert_near(&t, &1.2);
     /// ```
@@ -679,9 +685,9 @@ impl BSplineCurve {
         hint: f64,
         counter: usize,
     ) -> Result<f64> {
-        let pt = self(hint) - point;
-        let der = self.derivation()(hint);
-        let der2 = self.derivation_with_degree(2)(hint);
+        let pt = self.subs(hint) - point;
+        let der = self.derivation().subs(hint);
+        let der2 = self.derivation_with_degree(2).subs(hint);
         let f = &der * &pt;
         let fprime = &der2 * &pt + der.norm2();
         let t = hint - f / fprime;
@@ -714,7 +720,7 @@ impl BSplineCurve {
     pub fn is_arc_of(&self, curve: &mut BSplineCurve, hint: f64) -> Option<f64> {
         let degree = std::cmp::max(self.degree(), curve.degree()) * 3 + 1;
         let (knots, _) = self.knot_vec.to_single_multi();
-        if !self(knots[0]).near(&curve(hint)) {
+        if !self.subs(knots[0]).near(&curve.subs(hint)) {
             return None;
         }
 
@@ -723,7 +729,7 @@ impl BSplineCurve {
             let range = knots[i] - knots[i - 1];
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
-                let pt = self(t);
+                let pt = self.subs(t);
                 let res = curve.search_nearest_parameter(&pt, hint);
                 if let Ok(res) = res {
                     if hint > res {
@@ -734,7 +740,7 @@ impl BSplineCurve {
                 } else {
                     return None;
                 }
-                if !curve(hint).near(&pt) {
+                if !curve.subs(hint).near(&pt) {
                     return None;
                 }
             }
@@ -755,7 +761,7 @@ impl BSplineCurve {
     /// let (knots, _) = bspline.knot_vec().to_single_multi();
     /// assert_eq!(&knots, &[0.0, 1.0, 2.0, 3.0]);
     ///
-    /// let pt = bspline(1.2);
+    /// let pt = bspline.subs(1.2);
     /// let t = bspline.search_projected_nearest_parameter(&pt, 1.0).unwrap();
     /// f64::assert_near(&t, &1.2);
     /// ```
@@ -769,9 +775,9 @@ impl BSplineCurve {
         hint: f64,
         counter: usize,
     ) -> Result<f64> {
-        let pt = self(hint);
-        let der = self.derivation()(hint);
-        let der2 = self.derivation_with_degree(2)(hint);
+        let pt = self.subs(hint);
+        let der = self.derivation().subs(hint);
+        let der2 = self.derivation_with_degree(2).subs(hint);
         let der2 = pt.derivation2_projection(&der, &der2);
         let der = pt.derivation_projection(&der);
         let pt = pt.projection() - point.projection();
@@ -807,7 +813,7 @@ impl BSplineCurve {
     pub fn is_projected_arc_of(&self, curve: &mut BSplineCurve, hint: f64) -> Option<f64> {
         let degree = std::cmp::max(self.degree(), curve.degree()) * 3 + 1;
         let (knots, _) = self.knot_vec.to_single_multi();
-        if !self(knots[0]).projection().near(&curve(hint).projection()) {
+        if !self.subs(knots[0]).projection().near(&curve.subs(hint).projection()) {
             return None;
         }
 
@@ -816,7 +822,7 @@ impl BSplineCurve {
             let range = knots[i] - knots[i - 1];
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
-                let pt = self(t);
+                let pt = self.subs(t);
                 let res = curve.search_projected_nearest_parameter(&pt, hint);
                 if let Ok(res) = res {
                     if hint <= res {
@@ -827,7 +833,7 @@ impl BSplineCurve {
                 } else {
                     return None;
                 }
-                if !curve(hint).projection().near(&pt.projection()) {
+                if !curve.subs(hint).projection().near(&pt.projection()) {
                     return None;
                 }
             }
@@ -859,7 +865,7 @@ impl BSplineCurve {
 
             for j in 0..division {
                 let t = self.knot_vec[i] + delta * (j as f64) / (division as f64);
-                if !ord(&self(t), &other(t)) {
+                if !ord(&self.subs(t), &other.subs(t)) {
                     return false;
                 }
             }
@@ -908,32 +914,6 @@ impl BSplineCurve {
     #[inline(always)]
     pub fn near2_as_projected_curve(&self, other: &BSplineCurve) -> bool {
         self.sub_near_as_curve(other, 2, |x, y| x.projection().near2(&y.projection()))
-    }
-}
-
-impl FnOnce<(f64,)> for BSplineCurve {
-    type Output = Vector;
-
-    /// substitution to B-spline curve.
-    #[inline(always)]
-    extern "rust-call" fn call_once(self, (t,): (f64,)) -> Vector {
-        self.substitution(t)
-    }
-}
-
-impl FnMut<(f64,)> for BSplineCurve {
-    /// substitution to B-spline curve.
-    #[inline(always)]
-    extern "rust-call" fn call_mut(&mut self, (t,): (f64,)) -> Vector {
-        self.substitution(t)
-    }
-}
-
-impl Fn<(f64,)> for BSplineCurve {
-    /// substitution to B-spline curve.
-    #[inline(always)]
-    extern "rust-call" fn call(&self, (t,): (f64,)) -> Vector {
-        self.substitution(t)
     }
 }
 
