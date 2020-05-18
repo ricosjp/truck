@@ -69,8 +69,7 @@ pub trait Origin: Tolerance {
 /// 4-dimensional B-spline curve
 /// # Examples
 /// ```
-/// use truck::base::*;
-/// use truck::geometry::BSplineCurve;
+/// use truck_geometry::*;
 /// const N : usize = 100; // sample size in test
 ///
 /// // the knot vector
@@ -110,8 +109,7 @@ pub struct BSplineCurve {
 /// 4-dimensional B-spline surface
 /// # Examples
 /// ```
-/// use truck::base::*;
-/// use truck::geometry::BSplineSurface;
+/// use truck_geometry::*;
 /// const N : usize = 100; // sample size in test
 ///
 /// // the knot vectors

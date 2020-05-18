@@ -7,7 +7,7 @@ use truck_polymesh::PolygonMesh;
 /// write obj data to output stream
 /// # Examples
 /// ```
-/// use truck_geometry::MeshData;
+/// use truck_polymesh::PolygonMesh;
 /// let vertices = vec![
 ///     [0.0, 0.0, 0.0],
 ///     [1.0, 0.0, 0.0],
@@ -40,7 +40,7 @@ use truck_polymesh::PolygonMesh;
 ///     [[3, 0, 2], [6, 0, 2], [7, 0, 2]],
 ///     [[3, 0, 2], [7, 0, 2], [5, 0, 2]],
 /// ];
-/// let mesh = MeshData {
+/// let mesh = PolygonMesh {
 ///     vertices: vertices,
 ///     uv_coords: Vec::new(),
 ///     normals: normals,
