@@ -4,5 +4,7 @@ stages:
 test:
     image: rust:latest
     stage: test
+    before_script:
+        - rustup default nightly
     script:
         - cargo test
