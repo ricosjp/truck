@@ -13,6 +13,8 @@ test:
 pages:
     image: rust:latest
     stage: pages
+    before_script:
+        - rustup default nightly
     script:
         - cargo doc
         - mv target/doc public
