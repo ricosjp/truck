@@ -1,5 +1,6 @@
 stages:
     - test
+    - pages
 
 test:
     image: rust:latest
@@ -8,3 +9,15 @@ test:
         - rustup default nightly
     script:
         - cargo test
+
+pages:
+    image: rust:latest
+    stage: pages
+    script:
+        - cargo doc
+        - mv target/doc public
+    artifacts:
+        paths:
+            - public
+    only:
+        - master
