@@ -1,0 +1,11 @@
+{"NumberOfVertex":5}
+{"Edge":[0,1]}
+{"Edge":[1,2]}
+{"Edge":[2,0]}
+{"Edge":[1,3]}
+{"Edge":[3,0]}
+{"Edge":[1,4]}
+{"Edge":[4,0]}
+{"Face":[true,[0,1,2]]}
+{"Face":[true,[0,3,4]]}
+{"Face":[true,[0,5,6]]}
