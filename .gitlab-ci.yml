@@ -16,7 +16,7 @@ pages:
     before_script:
         - rustup default nightly
     script:
-        - cargo doc
+        - cargo doc --no-deps
         - mv target/doc public
     artifacts:
         paths:
