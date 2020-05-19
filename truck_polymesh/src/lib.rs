@@ -34,10 +34,10 @@ impl std::convert::From<PolygonMesh> for MeshHandler {
     fn from(mesh: PolygonMesh) -> MeshHandler { MeshHandler::new(mesh) }
 }
 
-pub mod meshing_shape;
-pub mod structuring;
+pub mod errors;
+pub mod extract_topology;
 pub mod healing;
+pub mod meshing_shape;
 pub mod smoothing;
 pub mod splitting;
-pub mod extract_topology;
-pub mod errors;
+pub mod structuring;
