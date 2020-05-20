@@ -1,5 +1,6 @@
 extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
+extern crate truck_shape as shape;
 
 /// mesh data
 #[derive(Clone, Debug, Default)]

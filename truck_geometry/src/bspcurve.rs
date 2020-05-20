@@ -57,6 +57,7 @@ impl BSplineCurve {
             })
         }
     }
+
     /// constructor.
     /// # Arguments
     /// * `knot_vec` - the knot vector
@@ -119,6 +120,16 @@ impl BSplineCurve {
     pub fn is_const(&self) -> bool {
         for vec in &self.control_points {
             if !vec.near(&self.control_points[0]) {
+                return false;
+            }
+        }
+        true
+    }
+
+    pub fn is_projected_const(&self) -> bool {
+        let pt = self.control_points[0].projection();
+        for vec in &self.control_points {
+            if !vec.projection().near(&pt) {
                 return false;
             }
         }
@@ -659,6 +670,24 @@ impl BSplineCurve {
         self
     }
 
+    pub fn make_locally_projected_injective(&mut self) -> &mut Self {
+        let beziers = self.bezier_decomposition();
+        *self = beziers[0].clone();
+        let mut x = 0.0;
+        for mut bezier in beziers.into_iter().skip(1) {
+            if bezier.is_projected_const() {
+                x += bezier.knot_vec.range_length();
+            } else {
+                let s0 = self.control_points.last().unwrap()[3];
+                let s1 = bezier.control_points[0][3];
+                bezier *= s0 / s1;
+                self.concat(bezier.knot_translate(-x)).unwrap();
+            }
+        }
+        
+        self
+    }
+
     /// serch the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// # Examples
     /// ```
@@ -1040,6 +1069,53 @@ impl std::ops::Mul<&BSplineCurve> for &BSplineCurve {
             }
         }
         BSplineSurface::new_unchecked(knot_vecs, control_points)
+    }
+}
+
+impl std::ops::MulAssign<f64> for BSplineCurve {
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul_assign(&mut self, scalar: f64) {
+        for vec in &mut self.control_points {
+            *vec *= scalar;
+        }
+    }
+}
+
+impl std::ops::Mul<f64> for &BSplineCurve {
+    type Output = BSplineCurve;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, scalar: f64) -> BSplineCurve {
+        let mut new_spline = self.clone();
+        new_spline *= scalar;
+        new_spline
+    }
+}
+
+impl std::ops::Mul<f64> for BSplineCurve {
+    type Output = BSplineCurve;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(mut self, scalar: f64) -> BSplineCurve {
+        self *= scalar;
+        self
+    }
+}
+
+impl std::ops::Mul<&BSplineCurve> for f64 {
+    type Output = BSplineCurve;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: &BSplineCurve) -> BSplineCurve {
+        let mut new_spline = bspline.clone();
+        for vec in &mut new_spline.control_points {
+            *vec = self * &*vec;
+        }
+        new_spline
     }
 }
 

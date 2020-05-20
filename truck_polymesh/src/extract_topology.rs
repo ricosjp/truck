@@ -19,6 +19,18 @@ impl MeshHandler {
             wire.push_back(create_edge(v[k], v[i], &mut edges));
             shell.push(Face::new(wire));
         }
+        for face in &mesh.quad_faces {
+            let i = face[0][0];
+            let j = face[1][0];
+            let k = face[2][0];
+            let l = face[3][0];
+            let mut wire = Wire::new();
+            wire.push_back(create_edge(v[i], v[j], &mut edges));
+            wire.push_back(create_edge(v[j], v[k], &mut edges));
+            wire.push_back(create_edge(v[k], v[l], &mut edges));
+            wire.push_back(create_edge(v[l], v[i], &mut edges));
+            shell.push(Face::new(wire));
+        }
 
         shell
     }

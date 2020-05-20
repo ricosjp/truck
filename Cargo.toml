@@ -4,4 +4,5 @@ members = [
 	"truck_topology",
 	"truck_polymesh",
 	"truck_io",
+	"truck_shape",
 ]

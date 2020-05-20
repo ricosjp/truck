@@ -1,5 +1,6 @@
 use crate::PolygonMesh;
 use geometry::BSplineSurface;
+use shape::Geometry;
 
 impl PolygonMesh {
     /// meshing the bspline surface
@@ -17,6 +18,25 @@ impl PolygonMesh {
 
         create_space_division(bspsurface, tol, &mut div0, &mut div1);
         create_mesh(bspsurface, &div0, &div1)
+    }
+
+    pub fn from_shape(geometry: &mut Geometry, tol: f64) -> PolygonMesh {
+        let mut mesh = PolygonMesh::default();
+        for surface in geometry.surfaces_mut() {
+            let counter = mesh.vertices.len();
+            let mut tmp = PolygonMesh::from_surface(surface, tol);
+            mesh.vertices.append(&mut tmp.vertices);
+            mesh.uv_coords.append(&mut tmp.uv_coords);
+            mesh.normals.append(&mut tmp.normals);
+            for face in tmp.quad_faces.iter_mut() {
+                for vert in face.iter_mut() {
+                    vert[0] += counter;
+                    vert[2] += counter;
+                }
+                mesh.quad_faces.push(face.clone());
+            }
+        }
+        mesh
     }
 }
 

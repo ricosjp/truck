@@ -32,7 +32,7 @@ impl MeshHandler {
         self
     }
 
-    pub fn remove_degenerate_face(&mut self) -> &mut Self {
+    pub fn remove_degenerate_faces(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
         let mut new_quad_faces = Vec::new();
         for face in &mesh.quad_faces {
