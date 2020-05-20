@@ -90,16 +90,11 @@ fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<
             }
             for face in &mesh.quad_faces {
                 writer.write_fmt(format_args!(
-                    "f {} {} {}\n",
+                    "f {} {} {} {}\n",
                     face[0][0] + 1,
                     face[1][0] + 1,
-                    face[3][0] + 1,
-                ))?;
-                writer.write_fmt(format_args!(
-                    "f {} {} {}\n",
                     face[2][0] + 1,
                     face[3][0] + 1,
-                    face[1][0] + 1,
                 ))?;
             }
         } else {
@@ -116,22 +111,15 @@ fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<
             }
             for face in &mesh.quad_faces {
                 writer.write_fmt(format_args!(
-                    "f {}//{} {}//{} {}//{}\n",
+                    "f {}//{} {}//{} {}//{} {}//{}\n",
                     face[0][0] + 1,
                     face[0][2] + 1,
                     face[1][0] + 1,
                     face[1][2] + 1,
-                    face[3][0] + 1,
-                    face[3][2] + 1
-                ))?;
-                writer.write_fmt(format_args!(
-                    "f {}//{} {}//{} {}//{}\n",
                     face[2][0] + 1,
                     face[2][2] + 1,
                     face[3][0] + 1,
-                    face[3][2] + 1,
-                    face[1][0] + 1,
-                    face[1][2] + 1
+                    face[3][2] + 1
                 ))?;
             }
         }
@@ -150,22 +138,15 @@ fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<
             }
             for face in &mesh.quad_faces {
                 writer.write_fmt(format_args!(
-                    "f {}/{} {}/{} {}/{}\n",
+                    "f {}/{} {}/{} {}/{} {}/{}\n",
                     face[0][0] + 1,
                     face[0][1] + 1,
                     face[1][0] + 1,
                     face[1][1] + 1,
-                    face[3][0] + 1,
-                    face[3][1] + 1
-                ))?;
-                writer.write_fmt(format_args!(
-                    "f {}/{} {}/{} {}/{}\n",
                     face[2][0] + 1,
                     face[2][1] + 1,
                     face[3][0] + 1,
-                    face[3][1] + 1,
-                    face[1][0] + 1,
-                    face[1][1] + 1
+                    face[3][1] + 1
                 ))?;
             }
         } else {
@@ -185,28 +166,19 @@ fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<
             }
             for face in &mesh.quad_faces {
                 writer.write_fmt(format_args!(
-                    "f {}/{}/{} {}/{}/{} {}/{}/{}\n",
+                    "f {}/{}/{} {}/{}/{} {}/{}/{} {}/{}/{}\n",
                     face[0][0] + 1,
                     face[0][1] + 1,
                     face[0][2] + 1,
                     face[1][0] + 1,
                     face[1][1] + 1,
                     face[1][2] + 1,
-                    face[3][0] + 1,
-                    face[3][1] + 1,
-                    face[3][2] + 1
-                ))?;
-                writer.write_fmt(format_args!(
-                    "f {}/{}/{} {}/{}/{} {}/{}/{}\n",
                     face[2][0] + 1,
                     face[2][1] + 1,
                     face[2][2] + 1,
                     face[3][0] + 1,
                     face[3][1] + 1,
-                    face[3][2] + 1,
-                    face[1][0] + 1,
-                    face[1][1] + 1,
-                    face[1][2] + 1
+                    face[3][2] + 1
                 ))?;
             }
         }
