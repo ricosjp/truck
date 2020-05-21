@@ -59,6 +59,18 @@ impl std::convert::From<serde_json::Error> for Error {
     fn from(error: serde_json::Error) -> Error { Error::SerdeError(error) }
 }
 
+impl std::convert::From<std::num::ParseFloatError> for Error {
+    fn from(error: std::num::ParseFloatError) -> Error {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, error).into()
+    }
+}
+
+impl std::convert::From<std::num::ParseIntError> for Error {
+    fn from(error: std::num::ParseIntError) -> Error {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, error).into()
+    }
+}
+
 pub mod obj;
 pub mod tgb;
 pub mod tts;

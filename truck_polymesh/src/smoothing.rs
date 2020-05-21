@@ -3,7 +3,7 @@ use geometry::Vector;
 use std::collections::HashMap;
 
 impl MeshHandler {
-    /// add the smooth normal to the mesh.
+    /// add the smooth normal vectors to the mesh.
     pub fn add_smooth_normal(&mut self, tol_ang: f64) -> &mut Self {
         let inf = tol_ang.cos();
         let mesh = &mut self.mesh;
@@ -40,6 +40,20 @@ impl MeshHandler {
                 inf,
             );
         }
+        for (i, face) in mesh.other_faces.iter().enumerate() {
+            let i = i + mesh.tri_faces.len() + mesh.quad_faces.len();
+            for j in 2..face.len() {
+                add_normal_one_face(
+                    &mesh.vertices,
+                    i,
+                    face[0][0],
+                    face[j - 1][0],
+                    face[j][0],
+                    &mut vnmap,
+                    inf,
+                );
+            }
+        }
 
         let mut normals = Vec::new();
         for (vert, vecs) in vnmap.iter() {
@@ -52,10 +66,16 @@ impl MeshHandler {
                     if i < &mesh.tri_faces.len() {
                         let j = (0..3).find(|j| mesh.tri_faces[*i][*j][0] == *vert).unwrap();
                         mesh.tri_faces[*i][j][2] = idx;
-                    } else {
+                    } else if i < &(mesh.tri_faces.len() + mesh.quad_faces.len()) {
                         let i = i - mesh.tri_faces.len();
                         let j = (0..4).find(|j| mesh.quad_faces[i][*j][0] == *vert).unwrap();
                         mesh.quad_faces[i][j][2] = idx;
+                    } else {
+                        let i = i - mesh.tri_faces.len() - mesh.quad_faces.len();
+                        let j = (0..mesh.other_faces[i].len())
+                            .find(|j| mesh.other_faces[i][*j][0] == *vert)
+                            .unwrap();
+                        mesh.other_faces[i][j][2] = idx;
                     }
                 }
             }
@@ -74,7 +94,8 @@ fn add_normal_one_face(
     fv2: usize,
     vnmap: &mut HashMap<usize, Vec<Vec<(usize, Vector)>>>,
     inf: f64,
-) {
+)
+{
     let tmp = vertices[fv0];
     let org = Vector::new3(tmp[0], tmp[1], tmp[2]);
     let tmp = vertices[fv1];
@@ -93,7 +114,8 @@ fn add_to_vnmap(
     mut normal: Vector,
     vnmap: &mut HashMap<usize, Vec<Vec<(usize, Vector)>>>,
     inf: f64,
-) {
+)
+{
     let normal_normal = normal.projection();
     normal[3] = 0.0;
     match vnmap.get_mut(&vert) {

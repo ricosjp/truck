@@ -278,6 +278,25 @@ impl Matrix {
             + self[3][0] * self[0][1] * self[2][2] * self[1][3]
     }
 
+    /// calculate `x: Vector` such that `x * self = b`
+    pub fn solve(&self, b: &Vector) -> Result<Vector> {
+        let det = self.determinant();
+        if det.so_small() {
+            return Err(Error::IrregularMatrix(self.clone()));
+        }
+
+        let vec0 = self.row(0);
+        let vec1 = self.row(1);
+        let vec2 = self.row(2);
+        let vec3 = self.row(3);
+        let det0 = Matrix::by_rows_ref(&b, &vec1, &vec2, &vec3).determinant() / det;
+        let det1 = Matrix::by_rows_ref(&vec0, &b, &vec2, &vec3).determinant() / det;
+        let det2 = Matrix::by_rows_ref(&vec0, &vec1, &b, &vec3).determinant() / det;
+        let det3 = Matrix::by_rows_ref(&vec0, &vec1, &vec2, &b).determinant() / det;
+
+        Ok(Vector::new(det0, det1, det2, det3))
+    }
+
     /// calculate inverse  
     /// If `self` is not invartible, return `Err()`.
     /// #Examples

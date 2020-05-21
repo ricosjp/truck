@@ -92,6 +92,35 @@ impl Vector {
         Vector::new(self[0] / self[3], self[1] / self[3], self[2] / self[3], 1.0)
     }
 
+    /// culculate cosine similarity
+    /// ```
+    /// use truck_geometry::Vector;
+    /// let vec0 = Vector::new(1.0, 0.0, 0.0, 0.0);
+    /// let vec1 = Vector::new(0.0, 2.0, 0.0, 0.0);
+    /// assert_eq!(vec0.cos_similarity(vec1), 0.0);
+    /// ```
+    #[inline(always)]
+    pub fn cos_angle(&self, other: &Vector) -> f64 {
+        let norm = self.norm();
+        let vec0 = if norm.so_small() {
+            return 0.0;
+        } else {
+            self / norm
+        };
+        let norm = self.norm();
+        let vec1 = if norm.so_small() {
+            return 0.0;
+        } else {
+            other / norm
+        };
+        vec0 * vec1
+    }
+
+    /// culculate angle of two vectors
+    pub fn angle(&self, other: &Vector) -> f64 {
+        self.cos_angle(other).acos()
+    }
+
     /// curve-derivation projection.  
     /// For a curve x(t) = (x_0(t), x_1(t), x_2(t), x_3(t)), calculate the derivation
     /// of the projected curve (x_0 / x_3, x_1 / x_3, x_2 / x_3, 1.0).

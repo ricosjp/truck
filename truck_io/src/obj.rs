@@ -1,7 +1,6 @@
 use crate::Error;
-use extern_obj::{Obj, SimplePolygon};
-use std::path::Path;
-use std::io::{BufWriter, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::convert::TryInto;
 use truck_polymesh::PolygonMesh;
 
 /// write obj data to output stream
@@ -186,41 +185,46 @@ fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<
     Ok(())
 }
 
-/// read obj data to output stream
-pub fn read<P: AsRef<Path>>(path: &P) -> Result<PolygonMesh, Error> {
-    let obj = Obj::<SimplePolygon>::load(path.as_ref())?;
-    let vertices: Vec<[f64; 3]> = obj.position
-        .iter()
-        .map(|x| [x[0] as f64, x[1] as f64, x[2] as f64])
-        .collect();
-    let uv_coords: Vec<[f64; 2]> = obj.texture
-        .iter()
-        .map(|x| [x[0] as f64, x[1] as f64])
-        .collect();
-    let normals: Vec<[f64; 3]> = obj.normal
-        .iter()
-        .map(|x| [x[0] as f64, x[1] as f64, x[2] as f64])
-        .collect();
-
-    let mut faces = Vec::new();
-    for object in obj.objects.iter() {
-        for grp in object.groups.iter() {
-            for tri in grp.polys.iter() {
-                let face = [
-                    [tri[0].0, tri[0].1.unwrap_or(0), tri[0].2.unwrap_or(0)],
-                    [tri[1].0, tri[1].1.unwrap_or(0), tri[1].2.unwrap_or(0)],
-                    [tri[2].0, tri[2].1.unwrap_or(0), tri[2].2.unwrap_or(0)],
-                ];
-                faces.push(face);
+pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
+    let mut mesh = PolygonMesh::default();
+    let reader = BufReader::new(reader);
+    for line in reader.lines().map(|s| s.unwrap()) {
+        let args: Vec<_> = line.split_whitespace().collect();
+        if args.is_empty() {
+            continue;
+        } else if args[0] == "v" {
+            mesh.vertices
+                .push([args[1].parse()?, args[2].parse()?, args[3].parse()?]);
+        } else if args[0] == "vt" {
+            mesh.uv_coords.push([args[1].parse()?, args[2].parse()?]);
+        } else if args[0] == "vn" {
+            mesh.normals
+                .push([args[1].parse()?, args[2].parse()?, args[3].parse()?]);
+        } else if args[0] == "f" {
+            let mut face = Vec::new();
+            for i in 1..args.len() {
+                if &args[i][0..1] == "#" {
+                    break;
+                }
+                let mut vert = Vec::new();
+                for val in args[i].split("/") {
+                    if val.len() == 0 {
+                        vert.push(0);
+                    } else {
+                        vert.push(val.parse::<usize>()? - 1);
+                    }
+                }
+                vert.resize(3, 0);
+                face.push(vert.as_slice().try_into().unwrap());
+            }
+            if face.len() == 3 {
+                mesh.tri_faces.push([face[0], face[1], face[2]]);
+            } else if face.len() == 4 {
+                mesh.quad_faces.push([face[0], face[1], face[2], face[3]]);
+            } else {
+                mesh.other_faces.push(face);
             }
         }
     }
-
-    Ok(PolygonMesh {
-        vertices: vertices,
-        uv_coords: uv_coords,
-        normals: normals,
-        tri_faces: faces,
-        quad_faces: Vec::new(),
-    })
+    Ok(mesh)
 }

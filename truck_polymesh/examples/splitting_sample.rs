@@ -2,18 +2,17 @@ extern crate truck_io as io;
 use truck_polymesh::*;
 
 fn main() {
-    let mesh = io::obj::read(&"tests/data/sample.obj").unwrap();
+    let file = std::fs::File::open("tests/data/sample.obj").unwrap();
+    let mut mesh = io::obj::read(file).unwrap();
+    mesh.uv_coords = Vec::new();
+    mesh.normals = Vec::new();
     let mut handler = MeshHandler::new(mesh);
     handler.add_smooth_normal(std::f64::consts::PI / 6.0);
     let parts = handler.clustering_face();
-    let mesh: PolygonMesh = handler.into();
 
     for (i, faces) in parts.into_iter().enumerate() {
-        let mut new_mesh = mesh.clone();
-        new_mesh.tri_faces = faces.iter().map(|i| mesh.tri_faces[*i].clone()).collect();
-        let mut handler = MeshHandler::new(new_mesh);
-        handler.remove_unused_attrs();
-        let file = std::fs::File::create(&format!("parts_{}.obj", i)).unwrap();
-        io::obj::write(&handler.into(), file).unwrap()
+        let mesh = handler.create_mesh_by_face_indices(&faces);
+        let file = std::fs::File::create(&format!("output0/parts_{}.obj", i)).unwrap();
+        io::obj::write(&mesh, file).unwrap()
     }
 }
