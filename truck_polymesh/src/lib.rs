@@ -1,15 +1,16 @@
 extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
+use geometry::{Vector2, Vector3};
 
 /// mesh data
 #[derive(Clone, Debug, Default)]
 pub struct PolygonMesh {
     /// List of positions
-    pub vertices: Vec<[f64; 3]>,
+    pub vertices: Vec<Vector3>,
     /// List of texture matrix
-    pub uv_coords: Vec<[f64; 2]>,
+    pub uv_coords: Vec<Vector2>,
     /// List of normal vectors
-    pub normals: Vec<[f64; 3]>,
+    pub normals: Vec<Vector3>,
     /// triangle faces
     pub tri_faces: Vec<[[usize; 3]; 3]>,
     /// quadrangle faces
@@ -21,9 +22,9 @@ pub struct PolygonMesh {
 /// structured quadrangle mesh
 #[derive(Clone, Debug)]
 pub struct StructuredMesh {
-    points: Vec<Vec<[f64; 3]>>,
+    points: Vec<Vec<Vector3>>,
     uv_division: (Vec<f64>, Vec<f64>),
-    normals: Vec<Vec<[f64; 3]>>,
+    normals: Vec<Vec<Vector3>>,
 }
 
 #[derive(Clone, Debug)]

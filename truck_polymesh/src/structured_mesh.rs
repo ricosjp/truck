@@ -1,11 +1,12 @@
+use geometry::{Vector2, Vector3};
 use crate::errors::Error;
 use crate::{PolygonMesh, StructuredMesh};
 
 impl StructuredMesh {
     pub fn new(
-        points: Vec<Vec<[f64; 3]>>,
+        points: Vec<Vec<Vector3>>,
         (u_div, v_div): (Vec<f64>, Vec<f64>),
-        normals: Vec<Vec<[f64; 3]>>,
+        normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh
     {
         if points.len() != u_div.len() || normals.len() != u_div.len() {
@@ -39,9 +40,9 @@ impl StructuredMesh {
     }
 
     pub fn new_unchecked(
-        points: Vec<Vec<[f64; 3]>>,
+        points: Vec<Vec<Vector3>>,
         (u_div, v_div): (Vec<f64>, Vec<f64>),
-        normals: Vec<Vec<[f64; 3]>>,
+        normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh
     {
         StructuredMesh {
@@ -50,7 +51,7 @@ impl StructuredMesh {
             normals: normals,
         }
     }
-    pub fn by_points(points: Vec<Vec<[f64; 3]>>) -> StructuredMesh {
+    pub fn by_points(points: Vec<Vec<Vector3>>) -> StructuredMesh {
         for arr in &points {
             if arr.len() != points[0].len() {
                 panic!("{}", Error::IrregularArray);
@@ -77,7 +78,7 @@ impl StructuredMesh {
         mesh.uv_coords = self.uv_division.0.iter()
             .flat_map(|u| {
                 self.uv_division.1.iter().map(move |v| {
-                    [*u, *v]
+                    Vector2::new(*u, *v)
                 })
             })
             .collect();

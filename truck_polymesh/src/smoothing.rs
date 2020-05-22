@@ -1,5 +1,5 @@
 use crate::MeshHandler;
-use geometry::Vector;
+use geometry::Vector3;
 use std::collections::HashMap;
 
 impl MeshHandler {
@@ -58,9 +58,9 @@ impl MeshHandler {
         let mut normals = Vec::new();
         for (vert, vecs) in vnmap.iter() {
             for vec in vecs {
-                let mut tmp = vec.iter().fold(Vector::zero(), |sum, (_, n)| sum + n);
+                let mut tmp = vec.iter().fold(Vector3::zero(), |sum, (_, n)| sum + n);
                 tmp /= tmp.norm();
-                normals.push([tmp[0], tmp[1], tmp[2]]);
+                normals.push(tmp);
                 let idx = normals.len() - 1;
                 for (i, _) in vec {
                     if i < &mesh.tri_faces.len() {
@@ -87,21 +87,18 @@ impl MeshHandler {
 }
 
 fn add_normal_one_face(
-    vertices: &Vec<[f64; 3]>,
+    vertices: &Vec<Vector3>,
     i: usize,
     fv0: usize,
     fv1: usize,
     fv2: usize,
-    vnmap: &mut HashMap<usize, Vec<Vec<(usize, Vector)>>>,
+    vnmap: &mut HashMap<usize, Vec<Vec<(usize, Vector3)>>>,
     inf: f64,
 )
 {
-    let tmp = vertices[fv0];
-    let org = Vector::new3(tmp[0], tmp[1], tmp[2]);
-    let tmp = vertices[fv1];
-    let vec0 = Vector::new3(tmp[0], tmp[1], tmp[2]) - &org;
-    let tmp = vertices[fv2];
-    let vec1 = Vector::new3(tmp[0], tmp[1], tmp[2]) - &org;
+    let org = &vertices[fv0];
+    let vec0 = &vertices[fv1] - org;
+    let vec1 = &vertices[fv2] - org;
     let n = vec0 ^ vec1;
     add_to_vnmap(fv0, i, n.clone(), vnmap, inf);
     add_to_vnmap(fv1, i, n.clone(), vnmap, inf);
@@ -111,17 +108,16 @@ fn add_normal_one_face(
 fn add_to_vnmap(
     vert: usize,
     face: usize,
-    mut normal: Vector,
-    vnmap: &mut HashMap<usize, Vec<Vec<(usize, Vector)>>>,
+    normal: Vector3,
+    vnmap: &mut HashMap<usize, Vec<Vec<(usize, Vector3)>>>,
     inf: f64,
 )
 {
-    let normal_normal = normal.projection();
-    normal[3] = 0.0;
+    let normal_normal = &normal / normal.norm();
     match vnmap.get_mut(&vert) {
         Some(vecs) => {
             for vec in vecs.iter_mut() {
-                let mut tmp = vec.iter().fold(Vector::zero(), |sum, (_, n)| sum + n);
+                let mut tmp = vec.iter().fold(Vector3::zero(), |sum, (_, n)| sum + n);
                 tmp /= tmp.norm();
                 if &normal_normal * tmp > inf {
                     vec.push((face, normal));

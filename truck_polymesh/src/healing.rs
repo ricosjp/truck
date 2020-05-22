@@ -1,5 +1,5 @@
 use crate::MeshHandler;
-use geometry::Tolerance;
+use geometry::{Tolerance, Vector3};
 use std::collections::HashMap;
 use std::iter::Iterator;
 
@@ -89,14 +89,10 @@ impl MeshHandler {
     }
 }
 
-fn is_degenerate_tri(vertices: &Vec<[f64; 3]>, i0: usize, i1: usize, i2: usize) -> bool {
-    let v0 = vertices[i0];
-    let v1 = vertices[i1];
-    let v2 = vertices[i2];
-    let v0v1 = (&v0[..]).near(&&v1[..]);
-    let v0v2 = (&v0[..]).near(&&v2[..]);
-    let v1v2 = (&v1[..]).near(&&v2[..]);
-    v0v1 || v0v2 || v1v2
+fn is_degenerate_tri(vertices: &Vec<Vector3>, i0: usize, i1: usize, i2: usize) -> bool {
+    vertices[i0].near(&vertices[i1])
+        || vertices[i0].near(&vertices[i2])
+        || vertices[i1].near(&vertices[i2])
 }
 
 fn sub_remove_unused_attrs<'a, I: Iterator<Item = &'a mut [usize; 3]>>(

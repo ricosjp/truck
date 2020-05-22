@@ -1,6 +1,6 @@
 use crate::Error;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
-use truck_topology::WrappedUpShell;
+use topology::WrappedUpShell;
 
 #[derive(Serialize, Deserialize)]
 enum TopoElement {

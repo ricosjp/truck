@@ -1,7 +1,7 @@
 use crate::Error;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::convert::TryInto;
-use truck_polymesh::PolygonMesh;
+use polymesh::PolygonMesh;
 
 /// write obj data to output stream
 /// # Examples
@@ -45,6 +45,7 @@ use truck_polymesh::PolygonMesh;
 ///     normals: normals,
 ///     tri_faces: faces,
 ///     quad_faces: Vec::new(),
+///     other_faces: Vec::new(),
 /// };
 /// truck_io::obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
 /// ```
@@ -194,12 +195,12 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
             continue;
         } else if args[0] == "v" {
             mesh.vertices
-                .push([args[1].parse()?, args[2].parse()?, args[3].parse()?]);
+                .push([args[1].parse()?, args[2].parse()?, args[3].parse()?].into());
         } else if args[0] == "vt" {
-            mesh.uv_coords.push([args[1].parse()?, args[2].parse()?]);
+            mesh.uv_coords.push([args[1].parse()?, args[2].parse()?].into());
         } else if args[0] == "vn" {
             mesh.normals
-                .push([args[1].parse()?, args[2].parse()?, args[3].parse()?]);
+                .push([args[1].parse()?, args[2].parse()?, args[3].parse()?].into());
         } else if args[0] == "f" {
             let mut face = Vec::new();
             for i in 1..args.len() {

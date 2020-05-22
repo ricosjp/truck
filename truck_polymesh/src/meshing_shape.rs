@@ -1,5 +1,5 @@
 use crate::StructuredMesh;
-use geometry::BSplineSurface;
+use geometry::*;
 
 impl StructuredMesh {
     /// meshing the bspline surface
@@ -103,9 +103,9 @@ fn create_mesh(bspsurface: &mut BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) 
         let mut nrow = Vec::new();
         for v in &div1 {
             let vertex = bspsurface.subs(*u, *v).projection();
-            prow.push([vertex[0], vertex[1], vertex[2]]);
+            prow.push(Vector3::new(vertex[0], vertex[1], vertex[2]));
             let normal = bspsurface.normal_vector(*u, *v).projection();
-            nrow.push([normal[0], normal[1], normal[2]]);
+            nrow.push(Vector3::new(normal[0], normal[1], normal[2]));
         }
         points.push(prow);
         normals.push(nrow);

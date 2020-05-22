@@ -1,5 +1,5 @@
 use crate::MeshHandler;
-use geometry::{Matrix, Vector};
+use geometry::Vector3;
 
 impl MeshHandler {
     pub fn triangulate(&mut self) -> &mut Self {
@@ -47,9 +47,8 @@ impl MeshHandler {
                 for k in 0..3 {
                     if face.iter().find(|arr| arr[0] == other[k][0]).is_none() {
                         let v3 = &mesh.vertices[other[k][0]];
-                        let (det0, det1, det2, dot) = divide(v0, v1, v2, v3);
-                        if det2 < tol {
-                            passed.push((*j, other[k].clone(), det0, det1, dot));
+                        if let Some((idx, dot)) = divide(v0, v1, v2, v3, tol) {
+                            passed.push((*j, k, idx, dot));
                         }
                         break;
                     }
@@ -60,24 +59,16 @@ impl MeshHandler {
             } else {
                 let pass = passed
                     .iter()
-                    .min_by(|a, b| a.4.abs().partial_cmp(&b.4.abs()).unwrap())
+                    .min_by(|a, b| a.3.abs().partial_cmp(&b.3.abs()).unwrap())
                     .unwrap();
-                let a = pass.2;
-                let b = pass.3;
-                let v0 = face[0].clone();
-                let v1 = face[1].clone();
-                let v2 = face[2].clone();
-                let v3 = pass.1.clone();
-                if a < 0.0 && b < 0.0 {
-                    new_tri.push(face.clone());
-                    new_tri.push(mesh.tri_faces[pass.0].clone());
-                } else if a > 0.0 && b < 0.0 && a + b < 1.0 {
-                    mesh.quad_faces.push([v0, v3, v1, v2]);
-                } else if a < 0.0 && b > 0.0 && a + b < 1.0 {
-                    mesh.quad_faces.push([v0, v1, v2, v3]);
-                } else {
-                    mesh.quad_faces.push([v0, v1, v3, v2]);
-                }
+                let v = [
+                    face[0].clone(),
+                    face[1].clone(),
+                    face[2].clone(),
+                    mesh.tri_faces[pass.0][pass.1].clone(),
+                ];
+                let idx = pass.2;
+                mesh.quad_faces.push([v[idx[0]], v[idx[1]], v[idx[2]], v[idx[3]]]);
                 used[pass.0] = true;
             }
         }
@@ -87,22 +78,26 @@ impl MeshHandler {
     }
 }
 
-fn divide(v0: &[f64; 3], v1: &[f64; 3], v2: &[f64; 3], v3: &[f64; 3]) -> (f64, f64, f64, f64) {
-    let v0 = Vector::new3(v0[0], v0[1], v0[2]);
-    let v1 = Vector::new3(v1[0], v1[1], v1[2]);
-    let v2 = Vector::new3(v2[0], v2[1], v2[2]);
-    let v3 = Vector::new3(v3[0], v3[1], v3[2]);
-
-    let org = Vector::new3(0.0, 0.0, 0.0);
-    let vec0 = v1 - &v0;
-    let vec1 = v2 - &v0;
-    let mut vec2 = &vec0 ^ &vec1;
-    vec2[3] = 0.0;
+fn divide(v0: &Vector3, v1: &Vector3, v2: &Vector3, v3: &Vector3, tol: f64) -> Option<([usize; 4], f64)> {
+    let vec0 = v1 - v0;
+    let vec1 = v2 - v0;
+    let vec2 = &vec0 ^ &vec1;
     
-    let mat = Matrix::by_rows_ref(&vec0, &vec1, &vec2, &org);
-    let vec3 = v3 - &v0;
-    match mat.solve(&vec3) {
-        Ok(det) => (det[0], det[1], det[2], vec0.cos_angle(&vec1)),
-        Err(_) => (0.0, 0.0, 1.0, 0.0),
+    let vec3 = v3 - v0;
+    match vec3.divide(&vec0, &vec1, &vec2) {
+        Some(det) => {
+            if det[2] > tol {
+                None
+            }else if det[0] > 0.0 && det[1] < 0.0 && det[0] + det[1] < 1.0 {
+                Some(([0, 3, 1, 2], vec1.cos_angle(&vec3)))
+            } else if det[0] < 0.0 && det[1] > 0.0 && det[0] + det[1] < 1.0 {
+                Some(([0, 1, 2, 3], vec0.cos_angle(&vec3)))
+            } else if det[0] > 0.0 && det[1] > 0.0 {
+                Some(([0, 1, 3, 2], vec0.cos_angle(&vec1)))
+            } else {
+                None
+            }
+        },
+        None => None,
     }
 }
