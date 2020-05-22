@@ -64,7 +64,7 @@ pub fn write_vec<W: Write>(mesh: &Vec<PolygonMesh>, writer: W) -> Result<(), Err
 }
 
 fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<(), Error> {
-    for vertex in &mesh.vertices {
+    for vertex in &mesh.positions {
         writer.write_fmt(format_args!(
             "v {:.7e} {:.7e} {:.7e}\n",
             vertex[0], vertex[1], vertex[2]
@@ -195,7 +195,7 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
         if args.is_empty() {
             continue;
         } else if args[0] == "v" {
-            mesh.vertices
+            mesh.positions
                 .push([args[1].parse()?, args[2].parse()?, args[3].parse()?].into());
         } else if args[0] == "vt" {
             mesh.uv_coords.push([args[1].parse()?, args[2].parse()?].into());

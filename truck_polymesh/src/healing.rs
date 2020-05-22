@@ -1,4 +1,4 @@
-use crate::MeshHandler;
+use crate::{get_tri, MeshHandler};
 use geometry::{Tolerance, Vector3};
 use std::collections::HashMap;
 use std::iter::Iterator;
@@ -6,58 +6,39 @@ use std::iter::Iterator;
 impl MeshHandler {
     pub fn remove_unused_attrs(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
-        if !mesh.vertices.is_empty() {
-            let vec0 = mesh.tri_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec1 = mesh.quad_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec2 = mesh.other_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec = vec0.chain(vec1).chain(vec2);
-            let idcs = sub_remove_unused_attrs(vec, 0, mesh.vertices.len());
-            mesh.vertices = idcs.iter().map(|idx| mesh.vertices[*idx].clone()).collect();
+        if !mesh.positions.is_empty() {
+            let idcs = mesh.sub_remove_unused_attrs(0, mesh.positions.len());
+            mesh.positions = reindex(&mesh.positions, &idcs);
         }
         if !mesh.uv_coords.is_empty() {
-            let vec0 = mesh.tri_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec1 = mesh.quad_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec2 = mesh.other_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec = vec0.chain(vec1).chain(vec2);
-            let idcs = sub_remove_unused_attrs(vec, 1, mesh.uv_coords.len());
-            mesh.uv_coords = idcs
-                .iter()
-                .map(|idx| mesh.uv_coords[*idx].clone())
-                .collect();
+            let idcs = mesh.sub_remove_unused_attrs(1, mesh.uv_coords.len());
+            mesh.uv_coords = reindex(&mesh.uv_coords, &idcs);
         }
         if !mesh.normals.is_empty() {
-            let vec0 = mesh.tri_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec1 = mesh.quad_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec2 = mesh.other_faces.iter_mut().flat_map(|arr| arr.iter_mut());
-            let vec = vec0.chain(vec1).chain(vec2);
-            let idcs = sub_remove_unused_attrs(vec, 2, mesh.normals.len());
-            mesh.normals = idcs.iter().map(|idx| mesh.normals[*idx].clone()).collect();
+            let idcs = mesh.sub_remove_unused_attrs(2, mesh.normals.len());
+            mesh.normals = reindex(&mesh.normals, &idcs);
         }
         self
     }
 
     pub fn remove_degenerate_faces(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
+        let positions = &mesh.positions;
+
+        let mut new_tri_faces = Vec::new();
         let mut new_quad_faces = Vec::new();
         for face in &mesh.quad_faces {
-            let is_deg0 = is_degenerate_tri(&mesh.vertices, face[0][0], face[1][0], face[3][0]);
-            if is_deg0 {
-                mesh.tri_faces
-                    .push([face[2].clone(), face[3].clone(), face[1].clone()]);
-            }
-            let is_deg1 = is_degenerate_tri(&mesh.vertices, face[2][0], face[3][0], face[1][0]);
-            if is_deg1 {
-                mesh.tri_faces
-                    .push([face[0].clone(), face[1].clone(), face[3].clone()]);
-            }
-            if !is_deg0 && !is_deg1 {
-                new_quad_faces.push(face.clone());
+            let is_deg0 = is_degenerate_tri(positions, face[0][0], face[1][0], face[3][0]);
+            let is_deg1 = is_degenerate_tri(positions, face[2][0], face[3][0], face[1][0]);
+            match (is_deg0, is_deg1) {
+                (true, true) => {}
+                (true, false) => new_tri_faces.push(get_tri(face, 2, 3, 1)),
+                (false, true) => new_tri_faces.push(get_tri(face, 0, 1, 3)),
+                (false, false) => new_quad_faces.push(face.clone()),
             }
         }
-        let mut new_tri_faces = Vec::new();
         for face in &mesh.tri_faces {
-            let is_deg = is_degenerate_tri(&mesh.vertices, face[0][0], face[1][0], face[2][0]);
-            if !is_deg {
+            if !is_degenerate_tri(positions, face[0][0], face[1][0], face[2][0]) {
                 new_tri_faces.push(face.clone());
             }
         }
@@ -69,7 +50,7 @@ impl MeshHandler {
 
     pub fn put_together_same_attrs(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
-        let vert_map = sub_put_together_same_attrs(&mesh.vertices);
+        let vert_map = sub_put_together_same_attrs(&mesh.positions);
         reflect_matching(&mut mesh.tri_faces, 0, &vert_map);
         reflect_matching(&mut mesh.quad_faces, 0, &vert_map);
         reflect_matching(&mut mesh.other_faces, 0, &vert_map);
@@ -89,10 +70,19 @@ impl MeshHandler {
     }
 }
 
-fn is_degenerate_tri(vertices: &Vec<Vector3>, i0: usize, i1: usize, i2: usize) -> bool {
-    vertices[i0].near(&vertices[i1])
-        || vertices[i0].near(&vertices[i2])
-        || vertices[i1].near(&vertices[i2])
+impl crate::PolygonMesh {
+    fn sub_remove_unused_attrs(&mut self, idx: usize, old_len: usize) -> Vec<usize> {
+        let vec0 = self.tri_faces.iter_mut().flat_map(|arr| arr.iter_mut());
+        let vec1 = self.quad_faces.iter_mut().flat_map(|arr| arr.iter_mut());
+        let vec2 = self.other_faces.iter_mut().flat_map(|arr| arr.iter_mut());
+        sub_remove_unused_attrs(vec0.chain(vec1).chain(vec2), idx, old_len)
+    }
+}
+
+fn is_degenerate_tri(positions: &Vec<Vector3>, i0: usize, i1: usize, i2: usize) -> bool {
+    positions[i0].near(&positions[i1])
+        || positions[i0].near(&positions[i2])
+        || positions[i1].near(&positions[i2])
 }
 
 fn sub_remove_unused_attrs<'a, I: Iterator<Item = &'a mut [usize; 3]>>(
@@ -143,4 +133,8 @@ fn reflect_matching<T: AsMut<[[usize; 3]]>>(faces: &mut [T], i: usize, map: &Vec
             vert[i] = map[vert[i]];
         }
     }
+}
+
+fn reindex<T: Clone>(vec: &Vec<T>, idcs: &Vec<usize>) -> Vec<T> {
+    idcs.iter().map(|i| vec[*i].clone()).collect()
 }

@@ -96,7 +96,7 @@ fn create_space_division(
 }
 
 fn create_mesh(bspsurface: &mut BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) -> StructuredMesh {
-    let mut points = Vec::new();
+    let mut positions = Vec::new();
     let mut normals = Vec::new();
     for u in &div0 {
         let mut prow = Vec::new();
@@ -107,11 +107,11 @@ fn create_mesh(bspsurface: &mut BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) 
             let normal = bspsurface.normal_vector(*u, *v).projection();
             nrow.push(Vector3::new(normal[0], normal[1], normal[2]));
         }
-        points.push(prow);
+        positions.push(prow);
         normals.push(nrow);
     }
     StructuredMesh {
-        points: points,
+        positions: positions,
         uv_division: (div0, div1),
         normals: normals,
     }

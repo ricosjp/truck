@@ -2,7 +2,7 @@ extern crate truck_io as io;
 use truck_polymesh::*;
 
 fn main() {
-    let file = std::fs::File::open("tests/data/bunny.obj").unwrap();
+    let file = std::fs::File::open("tests/data/teapot.obj").unwrap();
     let mesh = io::obj::read(file).unwrap();
     let mut handler = MeshHandler::new(mesh);
 

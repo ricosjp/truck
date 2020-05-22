@@ -4,15 +4,15 @@ use crate::{PolygonMesh, StructuredMesh};
 
 impl StructuredMesh {
     pub fn new(
-        points: Vec<Vec<Vector3>>,
+        positions: Vec<Vec<Vector3>>,
         (u_div, v_div): (Vec<f64>, Vec<f64>),
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh
     {
-        if points.len() != u_div.len() || normals.len() != u_div.len() {
+        if positions.len() != u_div.len() || normals.len() != u_div.len() {
             panic!("{}", Error::DifferentLengthArrays);
         }
-        for arr in &points {
+        for arr in &positions {
             if arr.len() != v_div.len() {
                 panic!("{}", Error::IrregularArray);
             }
@@ -33,33 +33,33 @@ impl StructuredMesh {
             }
         }
         StructuredMesh {
-            points: points,
+            positions: positions,
             uv_division: (u_div, v_div),
             normals: normals,
         }
     }
 
     pub fn new_unchecked(
-        points: Vec<Vec<Vector3>>,
+        positions: Vec<Vec<Vector3>>,
         (u_div, v_div): (Vec<f64>, Vec<f64>),
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh
     {
         StructuredMesh {
-            points: points,
+            positions: positions,
             uv_division: (u_div, v_div),
             normals: normals,
         }
     }
-    pub fn by_points(points: Vec<Vec<Vector3>>) -> StructuredMesh {
-        for arr in &points {
-            if arr.len() != points[0].len() {
+    pub fn by_positions(positions: Vec<Vec<Vector3>>) -> StructuredMesh {
+        for arr in &positions {
+            if arr.len() != positions[0].len() {
                 panic!("{}", Error::IrregularArray);
             }
         }
 
         StructuredMesh {
-            points: points,
+            positions: positions,
             uv_division: (Vec::new(), Vec::new()),
             normals: Vec::new(),
         }
@@ -67,10 +67,10 @@ impl StructuredMesh {
 
     pub fn destruct(self) -> PolygonMesh {
         let mut mesh = PolygonMesh::default();
-        let m = self.points.len();
-        let n = self.points[0].len();
-        mesh.vertices = self
-            .points
+        let m = self.positions.len();
+        let n = self.positions[0].len();
+        mesh.positions = self
+            .positions
             .iter()
             .flat_map(|vec| vec.iter())
             .map(|x| x.clone())

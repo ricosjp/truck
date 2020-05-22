@@ -23,7 +23,7 @@ macro_rules! impl_vector_new {
 
 impl_vector_new!(Vector, 4, x, y, z, w);
 impl_vector_new!(Vector3, 3, x, y, z);
-impl_vector_new!(Vector2, 2, x, y);
+impl_vector_new!(Vector2, 2, u, v);
 
 macro_rules! impl_vector {
     ($classname: ty, $dim: expr, $($num: expr), *) => {
