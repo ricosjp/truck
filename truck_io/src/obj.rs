@@ -8,7 +8,7 @@ use polymesh::PolygonMesh;
 /// ```
 /// use truck_polymesh::PolygonMesh;
 /// use truck_geometry::{Vector2, Vector3};
-/// let vertices = vec![
+/// let positions = vec![
 ///     Vector3::new(0.0, 0.0, 0.0),
 ///     Vector3::new(1.0, 0.0, 0.0),
 ///     Vector3::new(0.0, 1.0, 0.0),
@@ -41,7 +41,7 @@ use polymesh::PolygonMesh;
 ///     [[3, 0, 2], [7, 0, 2], [5, 0, 2]],
 /// ];
 /// let mesh = PolygonMesh {
-///     vertices: vertices,
+///     positions: positions,
 ///     uv_coords: Vec::new(),
 ///     normals: normals,
 ///     tri_faces: faces,
