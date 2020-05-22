@@ -17,6 +17,7 @@ pages:
     image: rust:latest
     stage: pages
     script:
+        - cargo clean
         - cargo test
         - cargo doc --no-deps
     artifacts:
