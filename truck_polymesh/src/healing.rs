@@ -3,6 +3,7 @@ use geometry::{Tolerance, Vector3};
 use std::collections::HashMap;
 use std::iter::Iterator;
 
+/// mesh healing algorithms
 impl MeshHandler {
     pub fn remove_unused_attrs(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;

@@ -14,15 +14,15 @@ impl MeshHandler {
             signup_adjacency(i, face, 1, 2, &mut face_adjacency, &mut edge_face_map);
             signup_adjacency(i, face, 2, 0, &mut face_adjacency, &mut edge_face_map);
         }
-        for (i, face) in mesh.quad_faces.iter().enumerate() {
-            let i = i + mesh.tri_faces.len();
+        for (mut i, face) in mesh.quad_faces.iter().enumerate() {
+            i += mesh.tri_faces.len();
             signup_adjacency(i, face, 0, 1, &mut face_adjacency, &mut edge_face_map);
             signup_adjacency(i, face, 1, 2, &mut face_adjacency, &mut edge_face_map);
             signup_adjacency(i, face, 2, 3, &mut face_adjacency, &mut edge_face_map);
             signup_adjacency(i, face, 3, 0, &mut face_adjacency, &mut edge_face_map);
         }
-        for (i, face) in mesh.other_faces.iter().enumerate() {
-            let i = i + mesh.tri_faces.len() + mesh.quad_faces.len();
+        for (mut i, face) in mesh.other_faces.iter().enumerate() {
+            i += mesh.tri_faces.len() + mesh.quad_faces.len();
             let n = face.len();
             for j in 1..n {
                 signup_adjacency(i, face, j - 1, j, &mut face_adjacency, &mut edge_face_map);
@@ -38,6 +38,27 @@ impl MeshHandler {
         }
         let face_adjacency = self.face_adjacency();
         get_components(&face_adjacency)
+    }
+
+    pub fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        let mesh = &self.mesh;
+        let tol2 = tol * tol;
+        let mut planes = Vec::new();
+        let mut others = Vec::new();
+        'tri: for (i, tri) in mesh.tri_faces.iter().enumerate() {
+            let vec0 = &mesh.positions[tri[1][0]] - &mesh.positions[tri[0][0]];
+            let vec1 = &mesh.positions[tri[2][0]] - &mesh.positions[tri[0][0]];
+            let mut n = vec0 ^ vec1;
+            n /= n.norm();
+            for [_, _, idx] in tri {
+                if (&n - &mesh.normals[*idx]).norm2() < tol2 {
+                    planes.push(i);
+                    continue 'tri;
+                }
+            }
+            others.push(i);
+        }
+        (planes, others)
     }
 
     pub fn create_mesh_by_face_indices(&self, indices: &Vec<usize>) -> PolygonMesh {
@@ -63,7 +84,6 @@ impl MeshHandler {
         handler.remove_unused_attrs();
         handler.mesh
     }
-
 }
 
 fn signup_adjacency(

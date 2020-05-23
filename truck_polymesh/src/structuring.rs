@@ -83,7 +83,8 @@ impl PolygonMesh {
             .unwrap();
         let vec0 = &self.positions[face0[1][0]] - &self.positions[face0[0][0]];
         let vec1 = &self.positions[face0[2][0]] - &self.positions[face0[0][0]];
-        let n = &vec0 ^ &vec1;
+        let mut n = &vec0 ^ &vec1;
+        n /= n.norm();
         let vec2 = &self.positions[face1[k][0]] - &self.positions[face0[0][0]];
         let coef = match vec2.divide(&vec0, &vec1, &n) {
             Some(coef) => coef,

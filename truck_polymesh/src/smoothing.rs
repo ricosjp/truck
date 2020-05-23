@@ -116,6 +116,6 @@ fn signup_vertex_normal<T: AsMut<[[usize; 3]]>>(
     normal_id: usize,
     face_list: &mut [T],
 ) {
-    let j = (0..3).find(|j| face_list[face_id].as_mut()[*j][0] == pos_id).unwrap();
+    let j = (0..face_list.len()).find(|j| face_list[face_id].as_mut()[*j][0] == pos_id).unwrap();
     face_list[face_id].as_mut()[j][2] = normal_id;
 }

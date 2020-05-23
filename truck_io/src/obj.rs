@@ -1,7 +1,7 @@
 use crate::Error;
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
-use std::convert::TryInto;
+use geometry::{Vector2, Vector3};
 use polymesh::PolygonMesh;
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 
 /// write obj data to output stream
 /// # Examples
@@ -191,40 +191,42 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
     let mut mesh = PolygonMesh::default();
     let reader = BufReader::new(reader);
     for line in reader.lines().map(|s| s.unwrap()) {
-        let args: Vec<_> = line.split_whitespace().collect();
-        if args.is_empty() {
-            continue;
-        } else if args[0] == "v" {
-            mesh.positions
-                .push([args[1].parse()?, args[2].parse()?, args[3].parse()?].into());
-        } else if args[0] == "vt" {
-            mesh.uv_coords.push([args[1].parse()?, args[2].parse()?].into());
-        } else if args[0] == "vn" {
-            mesh.normals
-                .push([args[1].parse()?, args[2].parse()?, args[3].parse()?].into());
-        } else if args[0] == "f" {
-            let mut face = Vec::new();
-            for i in 1..args.len() {
-                if &args[i][0..1] == "#" {
-                    break;
-                }
-                let mut vert = Vec::new();
-                for val in args[i].split("/") {
-                    if val.len() == 0 {
-                        vert.push(0);
-                    } else {
-                        vert.push(val.parse::<usize>()? - 1);
+        let mut args = line.split_whitespace();
+        if let Some(first_str) = args.next() {
+            if first_str == "v" {
+                let x = args.next().unwrap().parse()?;
+                let y = args.next().unwrap().parse()?;
+                let z = args.next().unwrap().parse()?;
+                mesh.positions.push(Vector3::new(x, y, z));
+            } else if first_str == "vt" {
+                let u = args.next().unwrap().parse()?;
+                let v = args.next().unwrap().parse()?;
+                mesh.uv_coords.push(Vector2::new(u, v));
+            } else if first_str == "vn" {
+                let x = args.next().unwrap().parse()?;
+                let y = args.next().unwrap().parse()?;
+                let z = args.next().unwrap().parse()?;
+                mesh.normals.push(Vector3::new(x, y, z));
+            } else if first_str == "f" {
+                let mut face = Vec::new();
+                for vert_str in args {
+                    if &vert_str[0..1] == "#" {
+                        break;
                     }
+                    let mut vert = Vec::new();
+                    for val in vert_str.split("/") {
+                        vert.push(val.parse::<usize>().unwrap_or(1) - 1);
+                    }
+                    vert.resize(3, 0);
+                    face.push([vert[0], vert[1], vert[2]]);
                 }
-                vert.resize(3, 0);
-                face.push(vert.as_slice().try_into().unwrap());
-            }
-            if face.len() == 3 {
-                mesh.tri_faces.push([face[0], face[1], face[2]]);
-            } else if face.len() == 4 {
-                mesh.quad_faces.push([face[0], face[1], face[2], face[3]]);
-            } else {
-                mesh.other_faces.push(face);
+                if face.len() == 3 {
+                    mesh.tri_faces.push([face[0], face[1], face[2]]);
+                } else if face.len() == 4 {
+                    mesh.quad_faces.push([face[0], face[1], face[2], face[3]]);
+                } else {
+                    mesh.other_faces.push(face);
+                }
             }
         }
     }
