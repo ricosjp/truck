@@ -1,7 +1,10 @@
 use crate::errors::Error;
 use crate::{MeshHandler, PolygonMesh};
+use geometry::Vector3;
 use std::collections::HashMap;
+use std::f64::consts::PI;
 
+/// splitting the global faces
 impl MeshHandler {
     pub fn face_adjacency(&self) -> Vec<Vec<usize>> {
         let mesh = &self.mesh;
@@ -58,7 +61,91 @@ impl MeshHandler {
             }
             others.push(i);
         }
+        'quad: for (mut i, quad) in mesh.quad_faces.iter().enumerate() {
+            i += mesh.tri_faces.len();
+            let vec0 = &mesh.positions[quad[1][0]] - &mesh.positions[quad[0][0]];
+            let vec1 = &mesh.positions[quad[2][0]] - &mesh.positions[quad[0][0]];
+            let mut n = vec0 ^ vec1;
+            n /= n.norm();
+            for [_, _, idx] in quad {
+                if (&n - &mesh.normals[*idx]).norm2() < tol2 {
+                    planes.push(i);
+                    continue 'quad;
+                }
+            }
+            others.push(i);
+        }
+        'poly: for (mut i, poly) in mesh.other_faces.iter().enumerate() {
+            i += mesh.tri_faces.len() + mesh.quad_faces.len();
+            let vec0 = &mesh.positions[poly[1][0]] - &mesh.positions[poly[0][0]];
+            let vec1 = &mesh.positions[poly[2][0]] - &mesh.positions[poly[0][0]];
+            let mut n = vec0 ^ vec1;
+            n /= n.norm();
+            for [_, _, idx] in poly {
+                if (&n - &mesh.normals[*idx]).norm2() < tol2 {
+                    planes.push(i);
+                    continue 'poly;
+                }
+            }
+            others.push(i);
+        }
         (planes, others)
+    }
+
+    pub fn clustering_faces_by_gcurvature(
+        &self,
+        threshold: f64,
+        preferred_upper: bool,
+    ) -> (Vec<usize>, Vec<usize>)
+    {
+        let gcurve = self.get_gcurve();
+        let mesh = &self.mesh;
+
+        let mut lower = Vec::new();
+        let mut upper = Vec::new();
+        for (i, face) in mesh.tri_faces.iter().enumerate() {
+            if preferred_upper {
+                match face.iter().find(|v| gcurve[v[0]] > threshold) {
+                    Some(_) => upper.push(i),
+                    None => lower.push(i),
+                }
+            } else {
+                match face.iter().find(|v| gcurve[v[0]] < threshold) {
+                    Some(_) => lower.push(i),
+                    None => upper.push(i),
+                }
+            }
+        }
+        for (mut i, face) in mesh.quad_faces.iter().enumerate() {
+            i += mesh.tri_faces.len();
+            if preferred_upper {
+                match face.iter().find(|v| gcurve[v[0]] > threshold) {
+                    Some(_) => upper.push(i),
+                    None => lower.push(i),
+                }
+            } else {
+                match face.iter().find(|v| gcurve[v[0]] < threshold) {
+                    Some(_) => lower.push(i),
+                    None => upper.push(i),
+                }
+            }
+        }
+        for (mut i, face) in mesh.other_faces.iter().enumerate() {
+            i += mesh.tri_faces.len() + mesh.quad_faces.len();
+            if preferred_upper {
+                match face.iter().find(|v| gcurve[v[0]] > threshold) {
+                    Some(_) => upper.push(i),
+                    None => lower.push(i),
+                }
+            } else {
+                match face.iter().find(|v| gcurve[v[0]] < threshold) {
+                    Some(_) => lower.push(i),
+                    None => upper.push(i),
+                }
+            }
+        }
+
+        (lower, upper)
     }
 
     pub fn create_mesh_by_face_indices(&self, indices: &Vec<usize>) -> PolygonMesh {
@@ -83,6 +170,36 @@ impl MeshHandler {
         let mut handler = MeshHandler::new(mesh);
         handler.remove_unused_attrs();
         handler.mesh
+    }
+
+    pub fn get_gcurve(&self) -> Vec<f64> {
+        let positions = &self.mesh.positions;
+        let mut angles = vec![0.0; positions.len()];
+        let mut weights = vec![0.0; positions.len()];
+        for face in &self.mesh.tri_faces {
+            angles[face[0][0]] += get_angle(positions, face, 0, 1, 2);
+            angles[face[1][0]] += get_angle(positions, face, 1, 2, 0);
+            angles[face[2][0]] += get_angle(positions, face, 2, 0, 1);
+            add_weights(&mut weights, positions, face);
+        }
+        for face in &self.mesh.quad_faces {
+            angles[face[0][0]] += get_angle(positions, face, 0, 1, 2);
+            angles[face[1][0]] += get_angle(positions, face, 1, 2, 0);
+            angles[face[2][0]] += get_angle(positions, face, 2, 3, 1);
+            angles[face[3][0]] += get_angle(positions, face, 3, 0, 1);
+            add_weights(&mut weights, positions, face);
+        }
+        for face in &self.mesh.other_faces {
+            let n = face.len() - 1;
+            angles[face[0][0]] += get_angle(positions, face, 0, 1, n);
+            for i in 1..n {
+                angles[face[i][0]] += get_angle(positions, face, i, i + 1, i - 1);
+            }
+            angles[face[n][0]] += get_angle(positions, face, n, 0, n - 1);
+            add_weights(&mut weights, positions, face);
+        }
+
+        angles.into_iter().zip(weights).map(|(ang, weight)| (PI * 2.0 - ang) / weight).collect()
     }
 }
 
@@ -144,5 +261,33 @@ fn get_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
             }
         }
         components.push(component);
+    }
+}
+
+fn get_angle(
+    positions: &Vec<Vector3>,
+    face: &[[usize; 3]],
+    idx0: usize,
+    idx1: usize,
+    idx2: usize,
+) -> f64
+{
+    let vec0 = &positions[face[idx1][0]] - &positions[face[idx0][0]];
+    let vec1 = &positions[face[idx2][0]] - &positions[face[idx0][0]];
+    vec0.angle(&vec1)
+}
+
+fn add_weights(
+    weights: &mut Vec<f64>,
+    positions: &Vec<Vector3>,
+    face: &[[usize; 3]],
+) {
+    let area = (2..face.len()).fold(0.0, |sum, i| {
+        let vec0 = &positions[face[i - 1][0]] - &positions[face[0][0]];
+        let vec1 = &positions[face[i][0]] - &positions[face[0][0]];
+        sum + (vec0 ^ vec1).norm() / 2.0
+    }) / (face.len() as f64);
+    for v in face {
+        weights[v[0]] += area;
     }
 }

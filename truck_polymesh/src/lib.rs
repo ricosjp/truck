@@ -28,12 +28,14 @@ pub struct StructuredMesh {
 }
 
 #[derive(Clone, Debug)]
-pub struct MeshHandler {
-    mesh: PolygonMesh,
-}
+pub struct MeshHandler { mesh: PolygonMesh }
 
 impl MeshHandler {
-    pub fn new(mesh: PolygonMesh) -> MeshHandler { MeshHandler { mesh: mesh } }
+    pub fn new(mesh: PolygonMesh) -> MeshHandler {
+        MeshHandler {
+            mesh: mesh,
+        }
+    }
 }
 
 impl std::convert::From<MeshHandler> for PolygonMesh {

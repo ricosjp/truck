@@ -51,7 +51,9 @@ fn create_space_division(
     mut div0: &mut Vec<f64>,
     mut div1: &mut Vec<f64>,
 ) {
-    let (degree0, degree1) = bspsurface.degrees();
+    let (mut degree0, mut degree1) = bspsurface.degrees();
+    degree0 *= 2;
+    degree1 *= 2;
 
     let mut divide_flag0 = vec![false; div0.len() - 1];
     let mut divide_flag1 = vec![false; div1.len() - 1];

@@ -2,6 +2,7 @@ use crate::MeshHandler;
 use geometry::Vector3;
 use std::collections::HashMap;
 
+/// mesh smoothing filters
 impl MeshHandler {
     /// add the smooth normal vectors to the mesh.
     pub fn add_smooth_normal(&mut self, tol_ang: f64) -> &mut Self {
@@ -86,13 +87,13 @@ fn add_face_normal(
 }
 
 fn add_to_vnmap(
-    vert: usize,
+    pos_id: usize,
     face_normal: FaceNormal,
     vnmap: &mut HashMap<usize, Vec<Vec<FaceNormal>>>,
     inf: f64,
 )
 {
-    match vnmap.get_mut(&vert) {
+    match vnmap.get_mut(&pos_id) {
         Some(vecs) => {
             for vec in vecs.iter_mut() {
                 let tmp = get_normal_sum(&*vec);
@@ -105,7 +106,7 @@ fn add_to_vnmap(
         }
         None => {
             let vecs = vec![vec![face_normal]];
-            vnmap.insert(vert, vecs);
+            vnmap.insert(pos_id, vecs);
         }
     }
 }

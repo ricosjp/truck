@@ -97,7 +97,7 @@ macro_rules! impl_vector {
                 } else {
                     self / norm
                 };
-                let norm = self.norm();
+                let norm = other.norm();
                 let vec1 = if norm.so_small() {
                     return 0.0;
                 } else {

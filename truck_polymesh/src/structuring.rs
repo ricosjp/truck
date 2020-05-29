@@ -1,6 +1,7 @@
 use crate::{get_tri, MeshHandler, PolygonMesh};
 use geometry::Vector3;
 
+/// triangulation, quadrangulation, give a structure
 impl MeshHandler {
     pub fn triangulate(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
