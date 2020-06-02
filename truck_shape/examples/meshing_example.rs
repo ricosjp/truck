@@ -254,11 +254,11 @@ fn tsudsumi() -> Geometry {
 }
 
 fn main() {
-    let mesh = PolygonMesh::from_shape(&mut cube(), 0.01);
+    let mesh = StructuredMesh::from_shape(&mut cube(), 0.01);
     let file = std::fs::File::create("cube.obj").unwrap();
     truck_io::obj::write(&mesh, file).unwrap();
 
-    let mesh = PolygonMesh::from_shape(&mut tsudsumi(), 0.01);
+    let mesh = StructuredMesh::from_shape(&mut tsudsumi(), 0.01);
     let file = std::fs::File::create("tsudsumi.obj").unwrap();
     truck_io::obj::write(&mesh, file).unwrap();
 }
