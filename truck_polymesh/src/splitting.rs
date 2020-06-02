@@ -6,6 +6,11 @@ use std::f64::consts::PI;
 
 /// splitting the global faces
 impl MeshHandler {
+    /// create the adjacency list of the faces  
+    /// # Remarks
+    /// the indices of faces are serial number of all kinds of faces, i.e.
+    /// * the `i`th quad face is identified as the `i + tri_faces.len()`th face, and
+    /// * the `i`th other face is identified as the `i + tri_faces.len() + quad_faces.len()`th face.
     pub fn face_adjacency(&self) -> Vec<Vec<usize>> {
         let mesh = &self.mesh;
         let len = mesh.tri_faces.len() + mesh.quad_faces.len() + mesh.other_faces.len();
@@ -35,6 +40,13 @@ impl MeshHandler {
         face_adjacency
     }
 
+    /// extract the each components of faces.  
+    /// Two vertices are reagarded as the same if and only if they have the same
+    /// position and the normal vector respectively.
+    /// # Remarks
+    /// the indices of faces are serial number of all kinds of faces, i.e.
+    /// * the `i`th quad face is identified as the `i + tri_faces.len()`th face, and
+    /// * the `i`th other face is identified as the `i + tri_faces.len() + quad_faces.len()`th face.
     pub fn clustering_face(&self) -> Vec<Vec<usize>> {
         if self.mesh.normals.is_empty() {
             panic!("{}", Error::NoNormal);
@@ -43,53 +55,46 @@ impl MeshHandler {
         get_components(&face_adjacency)
     }
 
-    pub fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
+    /// separate all faces into two clusters, one with `func` returning true and the other with false.
+    /// # Returns
+    /// (the vector of all faces `f` which `func(f) == true`, the one of the other faces)
+    /// # Remarks
+    /// the indices of faces are serial number of all kinds of faces, i.e.
+    /// * the `i`th quad face is identified as the `i + tri_faces.len()`th face, and
+    /// * the `i`th other face is identified as the `i + tri_faces.len() + quad_faces.len()`th face.
+    pub fn faces_into_two_clusters<F: Fn(&[[usize; 3]]) -> bool>(
+        &self,
+        func: F,
+    ) -> (Vec<usize>, Vec<usize>)
+    {
         let mesh = &self.mesh;
-        let tol2 = tol * tol;
-        let mut planes = Vec::new();
-        let mut others = Vec::new();
-        'tri: for (i, tri) in mesh.tri_faces.iter().enumerate() {
-            let vec0 = &mesh.positions[tri[1][0]] - &mesh.positions[tri[0][0]];
-            let vec1 = &mesh.positions[tri[2][0]] - &mesh.positions[tri[0][0]];
-            let mut n = vec0 ^ vec1;
-            n /= n.norm();
-            for [_, _, idx] in tri {
-                if (&n - &mesh.normals[*idx]).norm2() < tol2 {
-                    planes.push(i);
-                    continue 'tri;
-                }
+        let mut true_faces = Vec::new();
+        let mut false_faces = Vec::new();
+        for (i, tri) in mesh.tri_faces.iter().enumerate() {
+            match func(tri) {
+                true => true_faces.push(i),
+                false => false_faces.push(i),
             }
-            others.push(i);
         }
-        'quad: for (mut i, quad) in mesh.quad_faces.iter().enumerate() {
-            i += mesh.tri_faces.len();
-            let vec0 = &mesh.positions[quad[1][0]] - &mesh.positions[quad[0][0]];
-            let vec1 = &mesh.positions[quad[2][0]] - &mesh.positions[quad[0][0]];
-            let mut n = vec0 ^ vec1;
-            n /= n.norm();
-            for [_, _, idx] in quad {
-                if (&n - &mesh.normals[*idx]).norm2() < tol2 {
-                    planes.push(i);
-                    continue 'quad;
-                }
+        for (i, quad) in mesh.quad_faces.iter().enumerate() {
+            match func(quad) {
+                true => true_faces.push(i + mesh.tri_faces.len()),
+                false => false_faces.push(i + mesh.tri_faces.len()),
             }
-            others.push(i);
         }
-        'poly: for (mut i, poly) in mesh.other_faces.iter().enumerate() {
-            i += mesh.tri_faces.len() + mesh.quad_faces.len();
-            let vec0 = &mesh.positions[poly[1][0]] - &mesh.positions[poly[0][0]];
-            let vec1 = &mesh.positions[poly[2][0]] - &mesh.positions[poly[0][0]];
-            let mut n = vec0 ^ vec1;
-            n /= n.norm();
-            for [_, _, idx] in poly {
-                if (&n - &mesh.normals[*idx]).norm2() < tol2 {
-                    planes.push(i);
-                    continue 'poly;
-                }
+        for (i, poly) in mesh.other_faces.iter().enumerate() {
+            match func(poly) {
+                true => true_faces.push(i + mesh.tri_faces.len() + mesh.quad_faces.len()),
+                false => false_faces.push(i + mesh.tri_faces.len() + mesh.quad_faces.len()),
             }
-            others.push(i);
         }
-        (planes, others)
+        (true_faces, false_faces)
+    }
+
+    pub fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        self.faces_into_two_clusters(|face: &[[usize; 3]]| {
+            is_in_the_plane(&self.mesh.positions, &self.mesh.normals, face, tol * tol)
+        })
     }
 
     pub fn clustering_faces_by_gcurvature(
@@ -99,53 +104,9 @@ impl MeshHandler {
     ) -> (Vec<usize>, Vec<usize>)
     {
         let gcurve = self.get_gcurve();
-        let mesh = &self.mesh;
-
-        let mut lower = Vec::new();
-        let mut upper = Vec::new();
-        for (i, face) in mesh.tri_faces.iter().enumerate() {
-            if preferred_upper {
-                match face.iter().find(|v| gcurve[v[0]] > threshold) {
-                    Some(_) => upper.push(i),
-                    None => lower.push(i),
-                }
-            } else {
-                match face.iter().find(|v| gcurve[v[0]] < threshold) {
-                    Some(_) => lower.push(i),
-                    None => upper.push(i),
-                }
-            }
-        }
-        for (mut i, face) in mesh.quad_faces.iter().enumerate() {
-            i += mesh.tri_faces.len();
-            if preferred_upper {
-                match face.iter().find(|v| gcurve[v[0]] > threshold) {
-                    Some(_) => upper.push(i),
-                    None => lower.push(i),
-                }
-            } else {
-                match face.iter().find(|v| gcurve[v[0]] < threshold) {
-                    Some(_) => lower.push(i),
-                    None => upper.push(i),
-                }
-            }
-        }
-        for (mut i, face) in mesh.other_faces.iter().enumerate() {
-            i += mesh.tri_faces.len() + mesh.quad_faces.len();
-            if preferred_upper {
-                match face.iter().find(|v| gcurve[v[0]] > threshold) {
-                    Some(_) => upper.push(i),
-                    None => lower.push(i),
-                }
-            } else {
-                match face.iter().find(|v| gcurve[v[0]] < threshold) {
-                    Some(_) => lower.push(i),
-                    None => upper.push(i),
-                }
-            }
-        }
-
-        (lower, upper)
+        self.faces_into_two_clusters(|face: &[[usize; 3]]| {
+            is_signed_up_upper(face, &gcurve, preferred_upper, threshold)
+        })
     }
 
     pub fn create_mesh_by_face_indices(&self, indices: &Vec<usize>) -> PolygonMesh {
@@ -183,7 +144,7 @@ impl MeshHandler {
             add_weights(&mut weights, positions, face);
         }
         for face in &self.mesh.quad_faces {
-            angles[face[0][0]] += get_angle(positions, face, 0, 1, 2);
+            angles[face[0][0]] += get_angle(positions, face, 0, 1, 3);
             angles[face[1][0]] += get_angle(positions, face, 1, 2, 0);
             angles[face[2][0]] += get_angle(positions, face, 2, 3, 1);
             angles[face[3][0]] += get_angle(positions, face, 3, 0, 1);
@@ -199,7 +160,11 @@ impl MeshHandler {
             add_weights(&mut weights, positions, face);
         }
 
-        angles.into_iter().zip(weights).map(|(ang, weight)| (PI * 2.0 - ang) / weight).collect()
+        angles
+            .into_iter()
+            .zip(weights)
+            .map(|(ang, weight)| (PI * 2.0 - ang) / weight)
+            .collect()
     }
 }
 
@@ -264,6 +229,45 @@ fn get_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
     }
 }
 
+fn is_in_the_plane(
+    positions: &Vec<Vector3>,
+    normals: &Vec<Vector3>,
+    face: &[[usize; 3]],
+    tol2: f64,
+) -> bool
+{
+    let vec0 = &positions[face[1][0]] - &positions[face[0][0]];
+    let vec1 = &positions[face[2][0]] - &positions[face[0][0]];
+    let mut n = vec0 ^ vec1;
+    n /= n.norm();
+    for [_, _, idx] in face {
+        if (&n - &normals[*idx]).norm2() < tol2 {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_signed_up_upper(
+    face: &[[usize; 3]],
+    gcurve: &Vec<f64>,
+    preferred_upper: bool,
+    threshold: f64,
+) -> bool
+{
+    if preferred_upper {
+        match face.as_ref().iter().find(|v| gcurve[v[0]] > threshold) {
+            Some(_) => true,
+            None => false,
+        }
+    } else {
+        match face.as_ref().iter().find(|v| gcurve[v[0]] < threshold) {
+            Some(_) => false,
+            None => true,
+        }
+    }
+}
+
 fn get_angle(
     positions: &Vec<Vector3>,
     face: &[[usize; 3]],
@@ -277,11 +281,7 @@ fn get_angle(
     vec0.angle(&vec1)
 }
 
-fn add_weights(
-    weights: &mut Vec<f64>,
-    positions: &Vec<Vector3>,
-    face: &[[usize; 3]],
-) {
+fn add_weights(weights: &mut Vec<f64>, positions: &Vec<Vector3>, face: &[[usize; 3]]) {
     let area = (2..face.len()).fold(0.0, |sum, i| {
         let vec0 = &positions[face[i - 1][0]] - &positions[face[0][0]];
         let vec1 = &positions[face[i][0]] - &positions[face[0][0]];

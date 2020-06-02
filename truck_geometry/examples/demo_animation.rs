@@ -1,5 +1,5 @@
-use truck_geometry::*;
 use std::f64::consts::PI;
+use truck_geometry::*;
 
 const N: usize = 100; // the number of frames
 
@@ -26,10 +26,13 @@ fn main() {
     control_points.push(control_points[0].iter().map(|x| shift(x, 0.6)).collect());
     control_points.push(control_points[0].iter().map(|x| shift(x, 0.8)).collect());
     control_points.push(control_points[0].iter().map(|x| shift(x, 1.0)).collect());
-   
+
     let mut bspline = BSplineSurface::new((knot_vec0, knot_vec1), control_points);
 
-    std::fs::DirBuilder::new().recursive(true).create("frames").unwrap();
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .create("frames")
+        .unwrap();
     for i in 0..N {
         let t = PI * (i as f64) / (N as f64);
         bspline.control_point_mut(0, 2)[1] = t.cos();

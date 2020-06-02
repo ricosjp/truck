@@ -2,7 +2,9 @@ use crate::MeshHandler;
 use std::collections::HashMap;
 use topology::*;
 
+/// create a shell from the mesh
 impl MeshHandler {
+    /// create a shell from the mesh
     pub fn extract_topology(&self) -> Shell {
         let mesh = &self.mesh;
         let v = Vertex::news(mesh.positions.len());

@@ -3,6 +3,7 @@ use geometry::Vector3;
 
 /// triangulation, quadrangulation, give a structure
 impl MeshHandler {
+    /// triangulate all n-gons
     pub fn triangulate(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
         let tri_faces = &mut mesh.tri_faces;
@@ -16,10 +17,24 @@ impl MeshHandler {
             }
         }
         mesh.quad_faces = Vec::new();
+        mesh.other_faces = Vec::new();
 
         self
     }
 
+    /// join two triangles into one quadrangle.
+    /// # Arguments
+    /// * `tol` - the tolerance for determining that four points are in the same plane
+    /// # Details
+    /// The overview of the algorithm is the following:
+    /// 1. make the list of pairs of triangles satisfying the following conditions:
+    ///   * two faces are adjacent by one edge,
+    ///   * the pair of faces consists four vertices in the same plane
+    /// 1. for each joined quadrangle, calculate the score by the sum of the absolute value of
+    /// the cosine for each angles,
+    /// 1. sort the list of the pairs of triangles by the score
+    /// 1. take a pair of triangles in order from the top of the list and register a new one
+    /// if it doesn't conflict with the one has been already registered.
     pub fn quadrangulate(&mut self, tol: f64) -> &mut Self {
         let list = self.create_face_edge_list(tol);
         self.reflect_face_edge_list(list);

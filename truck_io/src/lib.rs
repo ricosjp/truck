@@ -1,8 +1,8 @@
 extern crate obj as extern_obj;
 extern crate serde;
 extern crate truck_geometry as geometry;
-extern crate truck_topology as topology;
 extern crate truck_polymesh as polymesh;
+extern crate truck_topology as topology;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;

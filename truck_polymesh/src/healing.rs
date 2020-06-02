@@ -5,6 +5,7 @@ use std::iter::Iterator;
 
 /// mesh healing algorithms
 impl MeshHandler {
+    /// remove all unused position, texture coordinates, and normal vectors.
     pub fn remove_unused_attrs(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
         if !mesh.positions.is_empty() {
@@ -22,33 +23,40 @@ impl MeshHandler {
         self
     }
 
+    /// remove degenerate triangles and quadrangles.
     pub fn remove_degenerate_faces(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
         let positions = &mesh.positions;
 
-        let mut new_tri_faces = Vec::new();
-        let mut new_quad_faces = Vec::new();
-        for face in &mesh.quad_faces {
-            let is_deg0 = is_degenerate_tri(positions, face[0][0], face[1][0], face[3][0]);
-            let is_deg1 = is_degenerate_tri(positions, face[2][0], face[3][0], face[1][0]);
-            match (is_deg0, is_deg1) {
-                (true, true) => {}
-                (true, false) => new_tri_faces.push(get_tri(face, 2, 3, 1)),
-                (false, true) => new_tri_faces.push(get_tri(face, 0, 1, 3)),
-                (false, false) => new_quad_faces.push(face.clone()),
+        {
+            let mut new_tri_faces = Vec::new();
+            for face in &mesh.tri_faces {
+                if !is_degenerate_tri(positions, face[0][0], face[1][0], face[2][0]) {
+                    new_tri_faces.push(face.clone());
+                }
             }
+            mesh.tri_faces = new_tri_faces;
         }
-        for face in &mesh.tri_faces {
-            if !is_degenerate_tri(positions, face[0][0], face[1][0], face[2][0]) {
-                new_tri_faces.push(face.clone());
+
+        {
+            let mut new_quad_faces = Vec::new();
+            for face in &mesh.quad_faces {
+                let is_deg0 = is_degenerate_tri(positions, face[0][0], face[1][0], face[3][0]);
+                let is_deg1 = is_degenerate_tri(positions, face[2][0], face[3][0], face[1][0]);
+                match (is_deg0, is_deg1) {
+                    (true, true) => {}
+                    (true, false) => mesh.tri_faces.push(get_tri(face, 2, 3, 1)),
+                    (false, true) => mesh.tri_faces.push(get_tri(face, 0, 1, 3)),
+                    (false, false) => new_quad_faces.push(face.clone()),
+                }
             }
+            mesh.quad_faces = new_quad_faces;
         }
-        mesh.tri_faces = new_tri_faces;
-        mesh.quad_faces = new_quad_faces;
 
         self
     }
 
+    /// give the same indices to the same positions, texture coordinate, and normal vectors, respectively.
     pub fn put_together_same_attrs(&mut self) -> &mut Self {
         let mesh = &mut self.mesh;
         let vert_map = sub_put_together_same_attrs(&mesh.positions);

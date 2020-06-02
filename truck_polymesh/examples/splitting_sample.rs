@@ -17,7 +17,10 @@ fn main() {
     let planes_parts = planes_handler.clustering_face();
     let others_parts = others_handler.clustering_face();
 
-    std::fs::DirBuilder::new().recursive(true).create("output").unwrap();
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .create("output")
+        .unwrap();
     for (i, faces) in planes_parts.into_iter().enumerate() {
         let mesh = planes_handler.create_mesh_by_face_indices(&faces);
         let file = std::fs::File::create(&format!("output/planes_parts_{}.obj", i)).unwrap();

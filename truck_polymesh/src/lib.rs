@@ -27,28 +27,16 @@ pub struct StructuredMesh {
     normals: Vec<Vec<Vector3>>,
 }
 
+/// the decorator for mesh handling
 #[derive(Clone, Debug)]
-pub struct MeshHandler { mesh: PolygonMesh }
-
-impl MeshHandler {
-    pub fn new(mesh: PolygonMesh) -> MeshHandler {
-        MeshHandler {
-            mesh: mesh,
-        }
-    }
-}
-
-impl std::convert::From<MeshHandler> for PolygonMesh {
-    fn from(handler: MeshHandler) -> PolygonMesh { handler.mesh }
-}
-
-impl std::convert::From<PolygonMesh> for MeshHandler {
-    fn from(mesh: PolygonMesh) -> MeshHandler { MeshHandler::new(mesh) }
+pub struct MeshHandler {
+    mesh: PolygonMesh,
 }
 
 pub mod errors;
 pub mod extract_topology;
 pub mod healing;
+pub mod mesh_handler;
 pub mod meshing_shape;
 pub mod smoothing;
 pub mod splitting;

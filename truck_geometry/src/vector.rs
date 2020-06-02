@@ -82,7 +82,7 @@ macro_rules! impl_vector {
             #[inline(always)]
             pub fn norm(&self) -> f64 { self.norm2().sqrt() }
 
-            /// culculate cosine similarity
+            /// culculate cosine of the angle of the two vectors
             /// ```
             /// use truck_geometry::Vector;
             /// let vec0 = Vector::new(1.0, 0.0, 0.0, 0.0);
@@ -106,7 +106,7 @@ macro_rules! impl_vector {
                 vec0 * vec1
             }
 
-            /// culculate angle of two vectors
+            /// culculate the angle of two vectors
             #[inline(always)]
             pub fn angle(&self, other: &Self) -> f64 { self.cos_angle(other).acos() }
 
