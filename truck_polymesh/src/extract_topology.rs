@@ -2,10 +2,12 @@ use crate::MeshHandler;
 use std::collections::HashMap;
 use topology::*;
 
+/// create a shell from the mesh
 impl MeshHandler {
+    /// create a shell from the mesh
     pub fn extract_topology(&self) -> Shell {
         let mesh = &self.mesh;
-        let v = Vertex::news(mesh.vertices.len());
+        let v = Vertex::news(mesh.positions.len());
 
         let mut shell = Shell::new();
         let mut edges: HashMap<(Vertex, Vertex), Edge> = HashMap::new();
@@ -29,6 +31,16 @@ impl MeshHandler {
             wire.push_back(create_edge(v[j], v[k], &mut edges));
             wire.push_back(create_edge(v[k], v[l], &mut edges));
             wire.push_back(create_edge(v[l], v[i], &mut edges));
+            shell.push(Face::new(wire));
+        }
+        for face in &mesh.other_faces {
+            let idx: Vec<_> = face.iter().map(|x| x[0]).collect();
+            let mut wire = Wire::new();
+            for i in 0..=idx.len() {
+                let idx0 = idx[i];
+                let idx1 = idx[(i + 1) % idx.len()];
+                wire.push_back(create_edge(v[idx0], v[idx1], &mut edges));
+            }
             shell.push(Face::new(wire));
         }
 

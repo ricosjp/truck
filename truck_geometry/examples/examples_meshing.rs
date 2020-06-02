@@ -7,7 +7,7 @@ fn main() {
 
     for (i, surface) in geomdata.surfaces.iter_mut().enumerate() {
         let file = std::fs::File::create(format!("sample_{}.obj", i)).unwrap();
-        let mesh = truck_polymesh::PolygonMesh::from_surface(surface, 0.01);
-        truck_io::obj::write(&mesh, file).unwrap();
+        let mesh = truck_polymesh::StructuredMesh::from_surface(surface, 0.01);
+        truck_io::obj::write(&mesh.destruct(), file).unwrap();
     }
 }

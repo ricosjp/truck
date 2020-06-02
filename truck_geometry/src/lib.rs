@@ -1,8 +1,14 @@
-/// 4 dimentional vector
-#[derive(Clone, PartialEq, Debug)]
-pub struct Vector {
-    x: [f64; 4],
+macro_rules! vector_define {
+    ($classname: ident, $dim: expr) => {
+        /// vector
+        #[derive(Clone, PartialEq, Debug)]
+        pub struct $classname([f64; $dim]);
+    };
 }
+
+vector_define!(Vector, 4);
+vector_define!(Vector3, 3);
+vector_define!(Vector2, 2);
 
 /// 4x4 matrix
 #[derive(Clone, PartialEq, Debug)]
