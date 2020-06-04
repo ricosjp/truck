@@ -3,7 +3,7 @@ use truck_polymesh::*;
 use truck_shape::*;
 use truck_topology::*;
 
-fn cube() -> Geometry {
+fn cube() -> Volume {
     let v = Vertex::news(8);
     let edge = [
         Edge::new(v[0], v[1]), // 0
@@ -126,17 +126,21 @@ fn cube() -> Geometry {
     ];
 
     let mut geometry = Geometry::new();
+    for (it0, it1) in v.iter().zip(pt.into_iter()) {
+        geometry.attach_point(it0, it1);
+    }
     for (it0, it1) in edge.iter().zip(curve.into_iter()) {
-        geometry.attach_curve(it0, it1).unwrap();
+        geometry.attach_curve(it0, it1);
     }
     for (it0, it1) in face.iter().zip(surface.into_iter()) {
-        geometry.attach_surface(it0, it1).unwrap();
+        geometry.attach_surface(it0, it1);
     }
 
-    geometry
+    let solid = Solid::new(vec![Shell::from(face)]);
+    Volume::new(solid, geometry)
 }
 
-fn tsudsumi() -> Geometry {
+fn tsudsumi() -> Volume {
     let v = Vertex::news(4);
     let edge = [
         Edge::new(v[0], v[1]),
@@ -241,24 +245,27 @@ fn tsudsumi() -> Geometry {
 
     let mut geometry = Geometry::new();
     for (v, p) in v.iter().zip(pt.into_iter()) {
-        geometry.attach_point(v, p).unwrap();
+        geometry.attach_point(v, p);
     }
     for (e, c) in edge.iter().zip(curve.into_iter()) {
-        geometry.attach_curve(e, c).unwrap();
+        geometry.attach_curve(e, c);
     }
     for (f, s) in face.iter().zip(surface.into_iter()) {
-        geometry.attach_surface(f, s).unwrap();
+        geometry.attach_surface(f, s);
     }
 
-    geometry
+    let solid = Solid::new(vec![Shell::from(face)]);
+    Volume::new(solid, geometry)
 }
 
 fn main() {
-    let mesh = StructuredMesh::from_shape(&mut cube(), 0.01);
+    let (_, mut geom): (Solid, Geometry) = cube().into();
+    let mesh = StructuredMesh::from_shape(&mut geom, 0.01);
     let file = std::fs::File::create("cube.obj").unwrap();
     truck_io::obj::write(&mesh, file).unwrap();
 
-    let mesh = StructuredMesh::from_shape(&mut tsudsumi(), 0.01);
+    let (_, mut geom): (Solid, Geometry) = tsudsumi().into();
+    let mesh = StructuredMesh::from_shape(&mut geom, 0.01);
     let file = std::fs::File::create("tsudsumi.obj").unwrap();
     truck_io::obj::write(&mesh, file).unwrap();
 }

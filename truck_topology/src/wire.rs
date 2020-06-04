@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::{Result, Edge, Vertex, Wire};
+use crate::{Edge, Result, Vertex, Wire};
 use std::collections::vec_deque;
 use std::collections::{HashSet, VecDeque};
 
@@ -24,7 +24,6 @@ impl Wire {
         }
         wire
     }
-    
     #[inline(always)]
     pub fn try_by_slice(arr: &[Edge]) -> Result<Wire> {
         let mut wire = Wire::new();
@@ -177,10 +176,14 @@ impl Wire {
     }
 
     #[inline(always)]
-    pub fn inverse(&mut self) {
-        self.edge_list
-            .iter_mut()
-            .for_each(|edge| *edge = edge.inverse());
+    pub fn inverse(&mut self) -> &mut Self {
+        let new_edges: VecDeque<Edge> = self
+            .edge_iter()
+            .rev()
+            .map(|edge| edge.inverse())
+            .collect();
+        self.edge_list = new_edges;
+        self
     }
 
     /// whether simple or not. i.e. wheter there exists duplicate verticies in wire except for the front
@@ -218,6 +221,12 @@ impl Wire {
         }
         true
     }
+}
+
+impl std::ops::Index<usize> for Wire {
+    type Output = Edge;
+
+    fn index(&self, idx: usize) -> &Edge { &self.edge_list[idx] }
 }
 
 impl std::convert::TryFrom<Vec<Edge>> for Wire {

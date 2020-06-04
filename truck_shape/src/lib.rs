@@ -1,24 +1,45 @@
-use truck_geometry::*;
-use truck_topology::*;
+extern crate truck_geometry as geometry;
+extern crate truck_topology as topology;
+use topology::*;
+use geometry::*;
 use std::collections::HashMap;
 
+#[derive(Clone, PartialEq, Debug, Default)]
 pub struct Geometry {
-    surfaces: HashMap<usize, BSplineSurface>,
-    curves: HashMap<usize, BSplineCurve>,
-    points: HashMap<usize, Vector>,
+    pub surfaces: HashMap<usize, BSplineSurface>,
+    pub curves: HashMap<usize, BSplineCurve>,
+    pub points: HashMap<usize, Vector>,
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct Volume {
-    topology: Solid,
-    geometry: Geometry,
+    solid: Solid,
+    geom: Geometry,
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct Surface {
-    topology: Shell,
-    geometry: Geometry,
+    shell: Shell,
+    geom: Geometry,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Curve {
+    wire: Wire,
+    geom: Geometry,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Point(pub Vertex, pub Vector);
+
+impl Point {
+    pub fn by_coord(coord: Vector) -> Point { Point (Vertex::new(), coord) }
 }
 
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
-mod geometry;
-mod errors;
+pub mod curve;
+pub mod shape_geometry;
+pub mod errors;
+pub mod surface;
+pub mod volume;

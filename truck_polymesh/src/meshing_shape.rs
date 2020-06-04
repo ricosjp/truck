@@ -22,7 +22,7 @@ impl StructuredMesh {
 
     pub fn from_shape(geometry: &mut Geometry, tol: f64) -> PolygonMesh {
         let mut mesh = PolygonMesh::default();
-        for surface in geometry.surfaces_mut() {
+        for surface in geometry.surfaces.values_mut() {
             let counter = mesh.positions.len();
             let mut tmp = StructuredMesh::from_surface(surface, tol).destruct();
             mesh.positions.append(&mut tmp.positions);

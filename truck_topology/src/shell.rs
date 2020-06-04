@@ -21,6 +21,9 @@ impl Shell {
 
     #[inline(always)]
     pub fn is_empty(&self) -> bool { self.face_list.is_empty() }
+
+    #[inline(always)]
+    pub fn len(&self) -> usize { self.face_list.len() }
     
     /// add an face
     #[inline(always)]
