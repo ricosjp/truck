@@ -8,7 +8,26 @@ fn cube(director: &mut Director) -> Solid {
     let v = director.create_vertex(Vector::new3(0.0, 0.0, 0.0));
     let edge = director.tsweep(&v, &Vector3::new(1.0, 0.0, 0.0)).unwrap();
     let face = director.tsweep(&edge, &Vector3::new(0.0, 1.0, 0.0)).unwrap();
-    director.tsweep(&face, &Vector3::new(0.0, 0.0, 1.0)).unwrap()
+    let solid = director.tsweep(&face, &Vector3::new(0.0, 0.0, 1.0)).unwrap();
+    director.remove_surface(face);
+    solid
+}
+
+fn bottle(director: &mut Director, width: f64, thick: f64, height: f64) -> Solid {
+    let v0 = director.create_vertex(Vector::new3(-width / 2.0, -thick / 4.0, 0.0));
+    let v1 = director.create_vertex(Vector::new3(width / 2.0, -thick / 4.0, 0.0));
+    let transit = Vector3::new(0.0, -thick / 2.0, 0.0);
+    let edge0 = director.circle_arc(v0, v1, &transit).unwrap();
+    let edge1 = director.create_rotated(
+        &edge0,
+        &Vector3::new(0.0, 0.0, 0.0),
+        &Vector3::new(0.0, 0.0, 1.0),
+        std::f64::consts::PI,
+    ).unwrap();
+    let wire0 = Wire::by_slice(&[edge0]);
+    let wire1 = Wire::by_slice(&[edge1.inverse()]);
+    let face = director.homotopy(&wire0, &wire1).unwrap();
+    director.tsweep(&face, &Vector3::new(0.0, 0.0, height)).unwrap()
 }
 
 fn tsudsumi() -> Director {
@@ -135,6 +154,14 @@ fn main() {
     assert_eq!(integrity, TopoGeomIntegrity::Integrate);
     let mesh = StructuredMesh::from_shape(&mut director, 0.01);
     let file = std::fs::File::create("cube.obj").unwrap();
+    truck_io::obj::write(&mesh, file).unwrap();
+    
+    let mut director = Director::new();
+    let solid = bottle(&mut director, 6.0, 4.0, 10.0);
+    let integrity = director.check_solid_integrity(&solid);
+    assert_eq!(integrity, TopoGeomIntegrity::Integrate);
+    let mesh = StructuredMesh::from_shape(&mut director, 0.01);
+    let file = std::fs::File::create("bottle.obj").unwrap();
     truck_io::obj::write(&mesh, file).unwrap();
 
     let mut geom = tsudsumi();

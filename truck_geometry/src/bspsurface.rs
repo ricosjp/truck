@@ -41,8 +41,6 @@ impl BSplineSurface {
                 BSplineSurface {
                     knot_vecs: knot_vecs,
                     control_points: control_points,
-                    first_derivation: None,
-                    second_derivation: None,
                 }
             }
         }
@@ -89,8 +87,6 @@ impl BSplineSurface {
                 Ok(BSplineSurface {
                     knot_vecs: knot_vecs,
                     control_points: control_points,
-                    first_derivation: None,
-                    second_derivation: None,
                 })
             }
         }
@@ -112,8 +108,6 @@ impl BSplineSurface {
         BSplineSurface {
             knot_vecs: knot_vecs,
             control_points: control_points,
-            first_derivation: None,
-            second_derivation: None,
         }
     }
 
@@ -134,8 +128,6 @@ impl BSplineSurface {
     /// the mutable reference of the control point corresponding to index `(idx0, idx1)`.
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx0: usize, idx1: usize) -> &mut Vector {
-        self.first_derivation = None;
-        self.second_derivation = None;
         &mut self.control_points[idx0][idx1]
     }
 
@@ -197,11 +189,7 @@ impl BSplineSurface {
     }
 
     /// Calculate derived B-spline surface by the first parameter.
-    pub fn first_derivation(&mut self) -> &BSplineSurface {
-        if let Some(ref derivation) = self.first_derivation {
-            return derivation;
-        }
-
+    pub fn first_derivation(&self) -> BSplineSurface {
         let n0 = self.control_points.len();
         let n1 = self.control_points[0].len();
         let (k, _) = self.degrees();
@@ -221,23 +209,14 @@ impl BSplineSurface {
             vec![vec![Vector::zero(); n1]; n0]
         };
 
-        let bspsurface = BSplineSurface {
+        BSplineSurface {
             knot_vecs: (knot_vec0, knot_vec1),
             control_points: new_points,
-            first_derivation: None,
-            second_derivation: None,
-        };
-
-        self.first_derivation = Some(Box::new(bspsurface));
-        self.first_derivation.as_ref().unwrap()
+        }
     }
 
     /// Calculate derived B-spline surface by the second parameter.
-    pub fn second_derivation(&mut self) -> &BSplineSurface {
-        if let Some(ref derivation) = self.second_derivation {
-            return derivation;
-        }
-
+    pub fn second_derivation(&self) -> BSplineSurface {
         let n0 = self.control_points.len();
         let n1 = self.control_points[0].len();
         let (_, k) = self.degrees();
@@ -258,24 +237,33 @@ impl BSplineSurface {
             vec![vec![Vector::zero(); n1]; n0]
         };
 
-        let bspsurface = BSplineSurface {
+        BSplineSurface {
             knot_vecs: (knot_vec0, knot_vec1),
             control_points: new_points,
-            first_derivation: None,
-            second_derivation: None,
-        };
-        self.second_derivation = Some(Box::new(bspsurface));
-        self.second_derivation.as_ref().unwrap()
+        }
     }
 
     /// get the normal unit vector at the parameter `(u, v)`.
-    pub fn normal_vector(&mut self, u: f64, v: f64) -> Vector {
+    pub fn normal_vector(&self, u: f64, v: f64) -> Vector {
         let pt = self.subs(u, v);
         let der0 = self.first_derivation().subs(u, v);
         let der1 = self.second_derivation().subs(u, v);
         let vec0 = pt.derivation_projection(&der0);
         let vec1 = pt.derivation_projection(&der1);
         vec0 ^ vec1
+    }
+
+    pub fn normal_vectors<I: Iterator<Item=(f64, f64)>>(&self, params: I) -> Vec<Vector> {
+        let derivation0 = self.first_derivation();
+        let derivation1 = self.second_derivation();
+        params.map(|(u, v)| {
+            let pt = self.subs(u, v);
+            let der0 = derivation0.subs(u, v);
+            let der1 = derivation1.subs(u, v);
+            let vec0 = pt.derivation_projection(&der0);
+            let vec1 = pt.derivation_projection(&der1);
+            vec0 ^ vec1
+        }).collect()
     }
 
     /// swap two parameters.
@@ -584,12 +572,6 @@ impl BSplineSurface {
 
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
-        if let Some(ref mut derivation) = self.first_derivation {
-            derivation.knot_normalize();
-        }
-        if let Some(ref mut derivation) = self.second_derivation {
-            derivation.knot_normalize();
-        }
         self.knot_vecs.0.normalize().unwrap();
         self.knot_vecs.1.normalize().unwrap();
         self

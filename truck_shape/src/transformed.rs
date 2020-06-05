@@ -8,6 +8,7 @@ pub trait TopologicalElement: Sized {
     type Sweeped: Sized;
     fn copy(&self, director: &mut Director) -> Result<Self>;
     fn transformed(&self, director: &mut Director, trsf: &Transform) -> Result<Self>;
+    fn tsweep(&self, director: &mut Director, vector: &Vector3) -> Result<Self::Sweeped>;
     fn translated(&self, director: &mut Director, vector: &Vector3) -> Result<Self> {
         self.transformed(director, &Transform::translate(vector))
     }
@@ -30,7 +31,6 @@ pub trait TopologicalElement: Sized {
         let trsf2 = Transform::translate(origin);
         self.transformed(director, &(trsf0 * trsf1 * trsf2))
     }
-    fn tsweep(&self, director: &mut Director, vector: &Vector3) -> Result<Self::Sweeped>;
 }
 
 impl Director {
@@ -262,10 +262,10 @@ impl TopologicalElement for Face {
             let wire = Wire::by_slice(&[edge0, edge1, edge2, edge3]);
             shell.push(director.plane(wire)?);
         }
-        shell.push(face);
-        let mut wire = self.boundary().clone();
+        shell.push(face1.clone());
+        let mut wire = face0.boundary().clone();
         wire.inverse();
-        let mut surface = director.get_surface(self)?.clone();
+        let mut surface = director.get_surface(face0)?.clone();
         surface.swap_axes();
         shell.push(director.create_face(wire, surface)?);
         Ok(Solid::new(vec![shell]))

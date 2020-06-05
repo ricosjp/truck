@@ -107,7 +107,6 @@ pub trait Origin: Tolerance {
 pub struct BSplineCurve {
     knot_vec: KnotVec,           // the knot vector
     control_points: Vec<Vector>, // the indices of control points
-    derivation: Option<Box<BSplineCurve>>,
 }
 
 /// 4-dimensional B-spline surface
@@ -170,8 +169,6 @@ pub struct BSplineCurve {
 pub struct BSplineSurface {
     knot_vecs: (KnotVec, KnotVec),
     control_points: Vec<Vec<Vector>>,
-    first_derivation: Option<Box<BSplineSurface>>,
-    second_derivation: Option<Box<BSplineSurface>>,
 }
 
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;

@@ -48,6 +48,16 @@ impl Transform {
         let arr3 = [0.0, 0.0, 0.0, 1.0];
         Transform(Matrix::new(arr0, arr1, arr2, arr3))
     }
+
+    #[inline(always)]
+    pub fn by_axes(axis_x: &Vector3, axis_y: &Vector3, axis_z: &Vector3) -> Transform {
+        let arr0 = [axis_x[0], axis_x[1], axis_x[2], 0.0];
+        let arr1 = [axis_y[0], axis_y[1], axis_y[2], 0.0];
+        let arr2 = [axis_z[0], axis_z[1], axis_z[2], 0.0];
+        let arr3 = [0.0, 0.0, 0.0, 1.0];
+        let mat = Matrix::new(arr0, arr1, arr2, arr3);
+        Transform(mat)
+    }
 }
 
 impl std::ops::MulAssign<&Transform> for Transform {

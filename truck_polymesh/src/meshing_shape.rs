@@ -52,8 +52,8 @@ fn is_far(bspsurface: &BSplineSurface, u0: f64, u1: f64, v0: f64, v1: f64, tol: 
             let u = u0 * p + u1 * (1.0 - p);
             let v = v0 * q + v1 * (1.0 - q);
             let val_mid = bspsurface(u, v);
-            let par_mid = bspsurface(u0, v0) * p * q 
-                + bspsurface(u0, v1) * p * (1.0 - q) 
+            let par_mid = bspsurface(u0, v0) * p * q
+                + bspsurface(u0, v1) * p * (1.0 - q)
                 + bspsurface(u1, v0) * (1.0 - p) * q
                 + bspsurface(u1, v1) * (1.0 - p) * (1.0 - q);
             let res = val_mid.projection() - par_mid.projection();
@@ -70,7 +70,8 @@ fn create_space_division(
     tol: f64,
     mut div0: &mut Vec<f64>,
     mut div1: &mut Vec<f64>,
-) {
+)
+{
     let (mut degree0, mut degree1) = bspsurface.degrees();
     degree0 *= 2;
     degree1 *= 2;
@@ -117,18 +118,22 @@ fn create_space_division(
     }
 }
 
-fn create_mesh(bspsurface: &mut BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) -> StructuredMesh {
+fn create_mesh(bspsurface: &BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) -> StructuredMesh {
     let mut positions = Vec::new();
     let mut normals = Vec::new();
     for u in &div0 {
-        let mut prow = Vec::new();
-        let mut nrow = Vec::new();
-        for v in &div1 {
-            let vertex = bspsurface.subs(*u, *v).projection();
-            prow.push(Vector3::new(vertex[0], vertex[1], vertex[2]));
-            let normal = bspsurface.normal_vector(*u, *v).projection();
-            nrow.push(Vector3::new(normal[0], normal[1], normal[2]));
-        }
+        let prow = div1
+            .iter()
+            .map(|v| {
+                let pt = bspsurface.subs(*u, *v).projection();
+                Vector3::new(pt[0], pt[1], pt[2])
+            })
+            .collect();
+        let nrow = bspsurface
+            .normal_vectors(div1.iter().map(|v| (*u, *v)))
+            .iter()
+            .map(|normal| Vector3::new(normal[0], normal[1], normal[2]))
+            .collect();
         positions.push(prow);
         normals.push(nrow);
     }

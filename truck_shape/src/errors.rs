@@ -13,6 +13,7 @@ pub enum Error {
     DifferentNumOfVertexAndPoints,
     WireIsNotSimple,
     EmptyPointIter,
+    NotStartingOrigin,
     FromGeometry(geometry::errors::Error),
     FromTopology(topology::errors::Error),
 }
@@ -31,6 +32,7 @@ impl std::fmt::Display for Error {
             Error::DifferentNumOfVertexAndPoints => f.pad("The number of edges in topology is not equal to the one of points in geometry."),
             Error::WireIsNotSimple => f.pad("This wire is not simple."),
             Error::EmptyPointIter => f.pad("This iterator has no points."),
+            Error::NotStartingOrigin => f.pad("This curve does not start from (0, 0, 0, 1)."),
             Error::FromGeometry(err) => err.fmt(f),
             Error::FromTopology(err) => err.fmt(f),
         }

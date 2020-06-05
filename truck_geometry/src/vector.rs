@@ -14,8 +14,8 @@ macro_rules! impl_vector_new {
             /// assert_eq!(v[2], 3.0);
             /// assert_eq!(v[3], 4.0);
             /// ```
-            pub fn new($($field: f64), *) -> Self {
-                Self([$($field), *])
+            pub fn new<T: Into<f64>>($($field: T), *) -> Self {
+                Self([$($field.into()), *])
             }
         }
     };
