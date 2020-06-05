@@ -60,7 +60,8 @@ impl BSplineSurface {
     pub fn try_new(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<Vector>>,
-    ) -> Result<BSplineSurface> {
+    ) -> Result<BSplineSurface>
+    {
         if control_points.is_empty() {
             Err(Error::EmptyControlPoints)
         } else if control_points[0].is_empty() {
@@ -106,7 +107,8 @@ impl BSplineSurface {
     pub fn new_unchecked(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<Vector>>,
-    ) -> BSplineSurface {
+    ) -> BSplineSurface
+    {
         BSplineSurface {
             knot_vecs: knot_vecs,
             control_points: control_points,
@@ -117,15 +119,11 @@ impl BSplineSurface {
 
     /// the reference of the knot vectors
     #[inline(always)]
-    pub fn knot_vecs(&self) -> &(KnotVec, KnotVec) {
-        &self.knot_vecs
-    }
+    pub fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.knot_vecs }
 
     /// the control points
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<Vec<Vector>> {
-        &self.control_points
-    }
+    pub fn control_points(&self) -> &Vec<Vec<Vector>> { &self.control_points }
 
     /// the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]
@@ -174,9 +172,7 @@ impl BSplineSurface {
     }
 
     #[inline(always)]
-    pub fn get_closure(&self) -> impl Fn(f64, f64) -> Vector + '_ {
-        move |u, v| self.subs(u, v)
-    }
+    pub fn get_closure(&self) -> impl Fn(f64, f64) -> Vector + '_ { move |u, v| self.subs(u, v) }
 
     #[inline(always)]
     fn delta0_control_points(&self, i: usize, j: usize) -> Vector {
@@ -647,7 +643,8 @@ impl BSplineSurface {
         other: &BSplineSurface,
         div_coef: usize,
         ord: F,
-    ) -> bool {
+    ) -> bool
+    {
         if !self.knot_vecs.0[0].near(&other.knot_vecs.0[0])
             || !self
                 .knot_vecs
@@ -685,7 +682,8 @@ impl BSplineSurface {
                         continue;
                     }
                     for j1 in 0..division1 {
-                        let v = self.knot_vecs.1[i1 - 1] + delta1 * (j1 as f64) / (division1 as f64);
+                        let v =
+                            self.knot_vecs.1[i1 - 1] + delta1 * (j1 as f64) / (division1 as f64);
                         if !ord(&self.subs(u, v), &other.subs(u, v)) {
                             return false;
                         }
@@ -695,24 +693,185 @@ impl BSplineSurface {
         }
         true
     }
-    
     #[inline(always)]
     pub fn near_as_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 1, |x, y| x.near(y))
     }
-    
     #[inline(always)]
     pub fn near2_as_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 1, |x, y| x.near2(y))
     }
-    
     #[inline(always)]
     pub fn near_as_projected_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 2, |x, y| x.projection().near(&y.projection()))
     }
-    
     #[inline(always)]
     pub fn near2_as_projected_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 2, |x, y| x.projection().near2(&y.projection()))
+    }
+}
+
+impl std::ops::MulAssign<&Matrix> for BSplineSurface {
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul_assign(&mut self, mat: &Matrix) {
+        for vecs in &mut self.control_points {
+            for vec in vecs {
+                *vec *= mat;
+            }
+        }
+    }
+}
+
+impl std::ops::MulAssign<Matrix> for BSplineSurface {
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul_assign(&mut self, mat: Matrix) {
+        self.mul_assign(&mat);
+    }
+}
+
+impl std::ops::Mul<&Matrix> for &BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, mat: &Matrix) -> BSplineSurface {
+        let mut new_spline = self.clone();
+        new_spline *= mat;
+        new_spline
+    }
+}
+
+impl std::ops::Mul<Matrix> for &BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, mat: Matrix) -> BSplineSurface {
+        self * &mat
+    }
+}
+
+impl std::ops::Mul<&Matrix> for BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(mut self, mat: &Matrix) -> BSplineSurface {
+        self *= mat;
+        self
+    }
+}
+
+impl std::ops::Mul<Matrix> for BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, mat: Matrix) -> BSplineSurface {
+        self * &mat
+    }
+}
+
+impl std::ops::Mul<&BSplineSurface> for &Matrix {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: &BSplineSurface) -> BSplineSurface {
+        let mut new_spline = bspline.clone();
+        for vecs in &mut new_spline.control_points {
+            for vec in vecs {
+                *vec = self * &*vec;
+            }
+        }
+        new_spline
+    }
+}
+
+impl std::ops::Mul<&BSplineSurface> for Matrix {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: &BSplineSurface) -> BSplineSurface {
+        &self * bspline
+    }
+}
+
+impl std::ops::Mul<BSplineSurface> for &Matrix {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, mut bspline: BSplineSurface) -> BSplineSurface {
+        for vecs in &mut bspline.control_points {
+            for vec in vecs {
+                *vec = self * &*vec;
+            }
+        }
+        bspline
+    }
+}
+
+impl std::ops::Mul<BSplineSurface> for Matrix {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: BSplineSurface) -> BSplineSurface {
+        &self * bspline
+    }
+}
+
+impl std::ops::MulAssign<f64> for BSplineSurface {
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul_assign(&mut self, scalar: f64) {
+        for vecs in &mut self.control_points {
+            for vec in vecs {
+                *vec *= scalar;
+            }
+        }
+    }
+}
+
+impl std::ops::Mul<f64> for &BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, scalar: f64) -> BSplineSurface {
+        let mut new_spline = self.clone();
+        new_spline *= scalar;
+        new_spline
+    }
+}
+
+impl std::ops::Mul<f64> for BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(mut self, scalar: f64) -> BSplineSurface {
+        self *= scalar;
+        self
+    }
+}
+
+impl std::ops::Mul<&BSplineSurface> for f64 {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: &BSplineSurface) -> BSplineSurface {
+        let mut new_spline = bspline.clone();
+        for vecs in &mut new_spline.control_points {
+            for vec in vecs {
+                *vec = self * &*vec;
+            }
+        }
+        new_spline
     }
 }

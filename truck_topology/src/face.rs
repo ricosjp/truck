@@ -63,6 +63,13 @@ impl Face {
     #[inline(always)]
     pub fn id(&self) -> usize { self.id }
 
+    /// inversed face
+    #[inline(always)]
+    pub fn inverse(&mut self) -> &mut Self {
+        self.boundary.inverse();
+        self
+    }
+
     /// return true, if the two faces have the shared edge.
     pub fn border_on(&self, other: &Face) -> bool {
         let mut hashmap = HashMap::new();

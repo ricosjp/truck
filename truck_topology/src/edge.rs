@@ -58,7 +58,7 @@ impl Edge {
     pub fn inverse(&self) -> Edge {
         Edge {
             vertices: self.vertices,
-            orientation: false,
+            orientation: !self.orientation,
             id: self.id,
         }
     }

@@ -1,146 +1,17 @@
 use truck_geometry::*;
 use truck_polymesh::*;
+use truck_shape::director::TopoGeomIntegrity;
 use truck_shape::*;
 use truck_topology::*;
 
-fn cube() -> Volume {
-    let v = Vertex::news(8);
-    let edge = [
-        Edge::new(v[0], v[1]), // 0
-        Edge::new(v[1], v[2]), // 1
-        Edge::new(v[2], v[3]), // 2
-        Edge::new(v[3], v[0]), // 3
-        Edge::new(v[0], v[4]), // 4
-        Edge::new(v[1], v[5]), // 5
-        Edge::new(v[2], v[6]), // 6
-        Edge::new(v[3], v[7]), // 7
-        Edge::new(v[4], v[5]), // 8
-        Edge::new(v[5], v[6]), // 9
-        Edge::new(v[6], v[7]), // 10
-        Edge::new(v[7], v[4]), // 11
-    ];
-
-    let mut wire = vec![Wire::new(); 6];
-
-    wire[0].push_back(edge[0]);
-    wire[0].push_back(edge[1]);
-    wire[0].push_back(edge[2]);
-    wire[0].push_back(edge[3]);
-
-    wire[1].push_back(edge[4]);
-    wire[1].push_back(edge[8]);
-    wire[1].push_back(edge[5].inverse());
-    wire[1].push_back(edge[0].inverse());
-
-    wire[2].push_back(edge[5]);
-    wire[2].push_back(edge[9]);
-    wire[2].push_back(edge[6].inverse());
-    wire[2].push_back(edge[1].inverse());
-
-    wire[3].push_back(edge[6]);
-    wire[3].push_back(edge[10]);
-    wire[3].push_back(edge[7].inverse());
-    wire[3].push_back(edge[2].inverse());
-    wire[4].push_back(edge[7]);
-    wire[4].push_back(edge[11]);
-    wire[4].push_back(edge[4].inverse());
-    wire[4].push_back(edge[3].inverse());
-
-    wire[5].push_back(edge[11].inverse());
-    wire[5].push_back(edge[10].inverse());
-    wire[5].push_back(edge[9].inverse());
-    wire[5].push_back(edge[8].inverse());
-
-    let face: Vec<Face> = wire.into_iter().map(|x| Face::new(x)).collect();
-
-    let knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    let pt = vec![
-        Vector::new3(0.0, 0.0, 0.0),
-        Vector::new3(0.0, 1.0, 0.0),
-        Vector::new3(1.0, 1.0, 0.0),
-        Vector::new3(1.0, 0.0, 0.0),
-        Vector::new3(0.0, 0.0, 1.0),
-        Vector::new3(0.0, 1.0, 1.0),
-        Vector::new3(1.0, 1.0, 1.0),
-        Vector::new3(1.0, 0.0, 1.0),
-    ];
-
-    let curve = vec![
-        BSplineCurve::new(knot_vec.clone(), vec![pt[0].clone(), pt[1].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[1].clone(), pt[2].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[2].clone(), pt[3].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[3].clone(), pt[0].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[0].clone(), pt[4].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[1].clone(), pt[5].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[2].clone(), pt[6].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[3].clone(), pt[7].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[4].clone(), pt[5].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[5].clone(), pt[6].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[6].clone(), pt[7].clone()]),
-        BSplineCurve::new(knot_vec.clone(), vec![pt[7].clone(), pt[4].clone()]),
-    ];
-
-    let surface = vec![
-        BSplineSurface::new(
-            (knot_vec.clone(), knot_vec.clone()),
-            vec![
-                vec![pt[0].clone(), pt[3].clone()],
-                vec![pt[1].clone(), pt[2].clone()],
-            ],
-        ),
-        BSplineSurface::new(
-            (knot_vec.clone(), knot_vec.clone()),
-            vec![
-                vec![pt[0].clone(), pt[1].clone()],
-                vec![pt[4].clone(), pt[5].clone()],
-            ],
-        ),
-        BSplineSurface::new(
-            (knot_vec.clone(), knot_vec.clone()),
-            vec![
-                vec![pt[1].clone(), pt[2].clone()],
-                vec![pt[5].clone(), pt[6].clone()],
-            ],
-        ),
-        BSplineSurface::new(
-            (knot_vec.clone(), knot_vec.clone()),
-            vec![
-                vec![pt[2].clone(), pt[3].clone()],
-                vec![pt[6].clone(), pt[7].clone()],
-            ],
-        ),
-        BSplineSurface::new(
-            (knot_vec.clone(), knot_vec.clone()),
-            vec![
-                vec![pt[3].clone(), pt[0].clone()],
-                vec![pt[7].clone(), pt[4].clone()],
-            ],
-        ),
-        BSplineSurface::new(
-            (knot_vec.clone(), knot_vec.clone()),
-            vec![
-                vec![pt[4].clone(), pt[5].clone()],
-                vec![pt[7].clone(), pt[6].clone()],
-            ],
-        ),
-    ];
-
-    let mut geometry = Geometry::new();
-    for (it0, it1) in v.iter().zip(pt.into_iter()) {
-        geometry.attach_point(it0, it1);
-    }
-    for (it0, it1) in edge.iter().zip(curve.into_iter()) {
-        geometry.attach_curve(it0, it1);
-    }
-    for (it0, it1) in face.iter().zip(surface.into_iter()) {
-        geometry.attach_surface(it0, it1);
-    }
-
-    let solid = Solid::new(vec![Shell::from(face)]);
-    Volume::new(solid, geometry)
+fn cube(director: &mut Director) -> Solid {
+    let v = director.create_vertex(Vector::new3(0.0, 0.0, 0.0));
+    let edge = director.tsweep(&v, &Vector3::new(1.0, 0.0, 0.0)).unwrap();
+    let face = director.tsweep(&edge, &Vector3::new(0.0, 1.0, 0.0)).unwrap();
+    director.tsweep(&face, &Vector3::new(0.0, 0.0, 1.0)).unwrap()
 }
 
-fn tsudsumi() -> Volume {
+fn tsudsumi() -> Director {
     let v = Vertex::news(4);
     let edge = [
         Edge::new(v[0], v[1]),
@@ -243,28 +114,30 @@ fn tsudsumi() -> Volume {
     ];
     surface[1].swap_axes();
 
-    let mut geometry = Geometry::new();
+    let mut geometry = Director::new();
     for (v, p) in v.iter().zip(pt.into_iter()) {
-        geometry.attach_point(v, p);
+        geometry.insert_point(v, p);
     }
     for (e, c) in edge.iter().zip(curve.into_iter()) {
-        geometry.attach_curve(e, c);
+        geometry.insert_curve(e, c);
     }
     for (f, s) in face.iter().zip(surface.into_iter()) {
-        geometry.attach_surface(f, s);
+        geometry.insert_surface(f, s);
     }
 
-    let solid = Solid::new(vec![Shell::from(face)]);
-    Volume::new(solid, geometry)
+    geometry
 }
 
 fn main() {
-    let (_, mut geom): (Solid, Geometry) = cube().into();
-    let mesh = StructuredMesh::from_shape(&mut geom, 0.01);
+    let mut director = Director::new();
+    let solid = cube(&mut director);
+    let integrity = director.check_solid_integrity(&solid);
+    assert_eq!(integrity, TopoGeomIntegrity::Integrate);
+    let mesh = StructuredMesh::from_shape(&mut director, 0.01);
     let file = std::fs::File::create("cube.obj").unwrap();
     truck_io::obj::write(&mesh, file).unwrap();
 
-    let (_, mut geom): (Solid, Geometry) = tsudsumi().into();
+    let mut geom = tsudsumi();
     let mesh = StructuredMesh::from_shape(&mut geom, 0.01);
     let file = std::fs::File::create("tsudsumi.obj").unwrap();
     truck_io::obj::write(&mesh, file).unwrap();

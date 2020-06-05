@@ -493,7 +493,7 @@ impl BSplineCurve {
         }
     }
     /// make two splines have the same normalized knot vectors.
-    pub fn syncro_knot(self: &mut BSplineCurve, other: &mut BSplineCurve) {
+    pub fn syncro_knot(&mut self, other: &mut BSplineCurve) {
         self.knot_normalize();
         other.knot_normalize();
 

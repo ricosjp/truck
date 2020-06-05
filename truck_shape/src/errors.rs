@@ -1,4 +1,4 @@
-use crate::shape_geometry::GeometryShellIntegrity;
+use crate::director::TopoGeomIntegrity;
 
 #[derive(PartialEq, Debug)]
 pub enum Error {
@@ -47,15 +47,15 @@ impl std::convert::From<truck_topology::errors::Error> for Error {
     fn from(err: truck_topology::errors::Error) -> Error { Error::FromTopology(err) }
 }
 
-impl std::convert::From<GeometryShellIntegrity> for Error {
-    fn from(integrity: GeometryShellIntegrity) -> Error {
+impl std::convert::From<TopoGeomIntegrity> for Error {
+    fn from(integrity: TopoGeomIntegrity) -> Error {
         match integrity {
-            GeometryShellIntegrity::Integrate => Error::None,
-            GeometryShellIntegrity::NoSurfaceFace { face_id } => Error::NoSurfaceFace(face_id),
-            GeometryShellIntegrity::NoCurveEdge { edge_id } => Error::NoCurveEdge(edge_id),
-            GeometryShellIntegrity::NoPointVertex { vertex_id } => Error::NoPointVertex(vertex_id),
-            GeometryShellIntegrity::NotBoundary { face_id, edge_id } => Error::NotBoundary(face_id, edge_id),
-            GeometryShellIntegrity::NotEndPoint { edge_id, vertex_id } => Error::NotEndPoint(edge_id, vertex_id),
+            TopoGeomIntegrity::Integrate => Error::None,
+            TopoGeomIntegrity::NoSurfaceFace { face_id } => Error::NoSurfaceFace(face_id),
+            TopoGeomIntegrity::NoCurveEdge { edge_id } => Error::NoCurveEdge(edge_id),
+            TopoGeomIntegrity::NoPointVertex { vertex_id } => Error::NoPointVertex(vertex_id),
+            TopoGeomIntegrity::NotBoundary { face_id, edge_id } => Error::NotBoundary(face_id, edge_id),
+            TopoGeomIntegrity::NotEndPoint { edge_id, vertex_id } => Error::NotEndPoint(edge_id, vertex_id),
         }
     }
 }

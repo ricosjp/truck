@@ -422,6 +422,13 @@ impl KnotVec {
         }
         Ok(KnotVec { entity: entity })
     }
+
+    /// get the knot vector for the bezier spline i.e. [0,...,0,1,...,1].
+    pub fn bezier_knot(degree: usize) -> KnotVec {
+        let mut entity = vec![0.0; degree + 1];
+        (0..=degree).for_each(|_| entity.push(1.0));
+        KnotVec { entity }
+    }
 }
 
 impl std::convert::From<Vec<f64>> for KnotVec {

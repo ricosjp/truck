@@ -20,7 +20,7 @@ impl StructuredMesh {
         create_mesh(bspsurface, div0, div1)
     }
 
-    pub fn from_shape(geometry: &mut Geometry, tol: f64) -> PolygonMesh {
+    pub fn from_shape(geometry: &mut Director, tol: f64) -> PolygonMesh {
         let mut mesh = PolygonMesh::default();
         for surface in geometry.surfaces.values_mut() {
             let counter = mesh.positions.len();
