@@ -1,7 +1,7 @@
 use crate::{Builder, Director, Mesher};
 use polymesh::{PolygonMesh, StructuredMesh};
-use topology::*;
 use std::collections::HashMap;
+use topology::*;
 
 impl<'a> Mesher<'a> {
     pub fn meshing<T: Meshed>(&self, meshed: &T, tol: f64) -> T::MeshType {
@@ -54,7 +54,13 @@ impl<'a> Mesher<'a> {
     }
 }
 
-fn create_edge(v0: Vertex, v1: Vertex, edges: &mut HashMap<(Vertex, Vertex), Edge>, builder: &mut Builder) -> Edge {
+fn create_edge(
+    v0: Vertex,
+    v1: Vertex,
+    edges: &mut HashMap<(Vertex, Vertex), Edge>,
+    builder: &mut Builder,
+) -> Edge
+{
     let min = std::cmp::min(v0, v1);
     let max = std::cmp::max(v0, v1);
     let edge = match edges.get(&(min, max)) {
@@ -72,7 +78,6 @@ fn create_edge(v0: Vertex, v1: Vertex, edges: &mut HashMap<(Vertex, Vertex), Edg
         edge.inverse()
     }
 }
-
 
 pub trait Meshed {
     type MeshType;

@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::{Edge, Result, Vertex, Wire};
 use std::collections::vec_deque;
-use std::collections::{HashSet, VecDeque, HashMap};
+use std::collections::{HashSet, VecDeque};
 
 impl Wire {
     /// Create the empty wire.

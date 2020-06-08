@@ -1,4 +1,4 @@
-use crate::director::TopoGeomIntegrity;
+use crate::elements::TopoGeomIntegrity;
 
 #[derive(PartialEq, Debug)]
 pub enum Error {
@@ -15,6 +15,7 @@ pub enum Error {
     EmptyPointIter,
     NotStartingOrigin,
     IrregularShell,
+    ZeroVectorTSweep,
     FromGeometry(geometry::errors::Error),
     FromTopology(topology::errors::Error),
 }
@@ -35,6 +36,7 @@ impl std::fmt::Display for Error {
             Error::EmptyPointIter => f.pad("This iterator has no points."),
             Error::NotStartingOrigin => f.pad("This curve does not start from (0, 0, 0, 1)."),
             Error::IrregularShell => f.pad("This shell is irregular."),
+            Error::ZeroVectorTSweep => f.pad("It is not allowed to sweep by the zero vector."),
             Error::FromGeometry(err) => err.fmt(f),
             Error::FromTopology(err) => err.fmt(f),
         }

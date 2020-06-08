@@ -57,9 +57,9 @@ impl Transformed for Vertex {
         builder: &mut Builder,
     ) -> Result<Self>
     {
-        let mut pt = builder.director.get_geometry(self)?.clone();
+        let mut pt = builder.director.try_get_geometry(self)?.clone();
         vector_closure(&mut pt);
-        builder.create_by_geometry(pt)
+        builder.create_topology(pt)
     }
 }
 
@@ -81,7 +81,7 @@ impl Transformed for Edge {
         let v1 =
             self.absolute_back()
                 .mapped(vector_closure, curve_closure, surface_closure, builder)?;
-        let mut curve = builder.director.get_geometry(self)?.clone();
+        let mut curve = builder.director.try_get_geometry(self)?.clone();
         curve_closure(&mut curve);
         let new_edge = Edge::try_new(v0, v1)?;
         builder.director.insert(&new_edge, curve);
@@ -121,7 +121,7 @@ impl Transformed for Wire {
             } else {
                 let vertex0 = *vertex_map.get(&edge.absolute_front()).unwrap();
                 let vertex1 = *vertex_map.get(&edge.absolute_back()).unwrap();
-                let mut curve = builder.director.get_geometry(edge)?.clone();
+                let mut curve = builder.director.try_get_geometry(edge)?.clone();
                 curve_closure(&mut curve);
                 let new_edge = Edge::new_unchecked(vertex0, vertex1);
                 builder.director.insert(&new_edge, curve);
@@ -150,7 +150,7 @@ impl Transformed for Face {
             self.boundary()
                 .mapped(vector_closure, curve_closure, surface_closure, builder)?;
         let face = Face::new_unchecked(wire);
-        let mut surface = builder.director.get_geometry(self)?.clone();
+        let mut surface = builder.director.try_get_geometry(self)?.clone();
         surface_closure(&mut surface);
         builder.director.insert(&face, surface);
         Ok(face)
@@ -173,15 +173,12 @@ impl Transformed for Shell {
             .flat_map(|face| face.boundary().edge_iter().map(|edge| edge.front()));
         for vertex in vertex_iter {
             if vmap.get(&vertex).is_none() {
-                let new_vertex = vertex.mapped(
-                    vector_closure,
-                    curve_closure,
-                    surface_closure,
-                    builder,
-                )?;
+                let new_vertex =
+                    vertex.mapped(vector_closure, curve_closure, surface_closure, builder)?;
                 vmap.insert(vertex, new_vertex);
             }
         }
+        let director = &mut builder.director;
         let mut edge_map: HashMap<usize, Edge> = HashMap::new();
         for face in self.face_iter() {
             let mut wire = Wire::new();
@@ -195,10 +192,10 @@ impl Transformed for Shell {
                 } else {
                     let v0 = vmap.get(&edge.absolute_front()).unwrap();
                     let v1 = vmap.get(&edge.absolute_back()).unwrap();
-                    let mut curve = builder.director.get_geometry(edge)?.clone();
+                    let mut curve = director.try_get_geometry(edge)?.clone();
                     curve_closure(&mut curve);
                     let new_edge = Edge::new_unchecked(*v0, *v1);
-                    builder.director.insert(&new_edge, curve);
+                    director.insert(&new_edge, curve);
                     if edge.absolute_front() == edge.front() {
                         wire.push_back(new_edge);
                     } else {
@@ -208,9 +205,9 @@ impl Transformed for Shell {
                 }
             }
             let new_face = Face::new_unchecked(wire);
-            let mut surface = builder.director.get_geometry(face)?.clone();
+            let mut surface = director.try_get_geometry(face)?.clone();
             surface_closure(&mut surface);
-            builder.director.insert(&new_face, surface);
+            director.insert(&new_face, surface);
             shell.push(new_face);
         }
         Ok(shell)

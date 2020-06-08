@@ -1,6 +1,6 @@
 extern crate truck_geometry as geometry;
-extern crate truck_topology as topology;
 extern crate truck_polymesh as polymesh;
+extern crate truck_topology as topology;
 use geometry::{BSplineCurve, BSplineSurface, Matrix, Vector};
 use std::collections::HashMap;
 
@@ -16,7 +16,7 @@ pub struct Builder<'a> {
 }
 
 pub struct Mesher<'a> {
-    director: &'a mut Director
+    director: &'a mut Director,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -24,12 +24,15 @@ pub struct Transform(Matrix);
 
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
-pub mod curve_element;
+fn get_typename<T>(_: T) -> &'static str { std::any::type_name::<T>() }
+
 pub mod builder;
+pub mod topological_curve;
 pub mod director;
 pub mod elements;
 pub mod errors;
+pub mod math_impls;
 pub mod mesher;
-pub mod tsweep;
 pub mod transform;
 pub mod transformed;
+pub mod tsweep;

@@ -60,6 +60,12 @@ impl Transform {
     }
 
     #[inline(always)]
+    pub const fn identity() -> Transform { Transform(Matrix::identity()) }
+   
+    #[inline(always)]
+    pub fn inverse(&self) -> Result<Transform> { Ok(Transform(self.0.inverse()?)) }
+    
+    #[inline(always)]
     pub fn mul_assign_closure<'a, T: std::ops::MulAssign<&'a Transform>>(
         &'a self,
     ) -> impl Fn(&mut T) + 'a {

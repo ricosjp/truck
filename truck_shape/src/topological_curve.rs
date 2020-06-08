@@ -1,18 +1,18 @@
 use crate::errors::Error;
 use crate::{Director, Result};
-use geometry::{BSplineCurve, BSplineSurface};
+use geometry::{BSplineCurve, BSplineSurface, Tolerance};
 use topology::*;
 
-pub trait CurveElement: Sized {
+pub trait TopologicalCurve: Sized {
     fn front_vertex(&self) -> Vertex;
     fn back_vertex(&self) -> Vertex;
-    fn get_geometry(&self, director: &mut Director) -> Result<BSplineCurve>;
+    fn get_geometry(&self, director: &Director) -> Result<BSplineCurve>;
     fn clone_wire(&self) -> Wire;
     fn for_each<F: FnMut(&Edge)>(&self, closure: F);
     fn is_closed(&self) -> bool;
     fn split_wire(&self) -> Option<[Wire; 2]>;
     fn homotopy<T>(&self, other: &T, director: &mut Director) -> Result<Shell>
-    where T: CurveElement {
+    where T: TopologicalCurve {
         let closed0 = self.is_closed();
         let closed1 = other.is_closed();
         if closed0 && closed1 {
@@ -27,8 +27,8 @@ pub trait CurveElement: Sized {
 
 fn open_homotopy<C0, C1>(elem0: &C0, elem1: &C1, director: &mut Director) -> Result<Shell>
 where
-    C0: CurveElement,
-    C1: CurveElement, {
+    C0: TopologicalCurve,
+    C1: TopologicalCurve, {
     let curve0 = elem0.get_geometry(director)?;
     let curve1 = elem1.get_geometry(director)?;
     let surface = BSplineSurface::homotopy(curve0, curve1);
@@ -49,8 +49,8 @@ where
 
 fn closed_homotopy<C0, C1>(elem0: &C0, elem1: &C1, director: &mut Director) -> Result<Shell>
 where
-    C0: CurveElement,
-    C1: CurveElement, {
+    C0: TopologicalCurve,
+    C1: TopologicalCurve, {
     let [mut wire0, mut wire1] = elem0.split_wire().unwrap();
     let [mut wire2, mut wire3] = elem1.split_wire().unwrap();
     let curve0 = wire0.get_geometry(director)?.clone();
@@ -78,11 +78,15 @@ where
     Ok(vec![face0, face1].into())
 }
 
-impl CurveElement for Edge {
+impl TopologicalCurve for Edge {
     fn front_vertex(&self) -> Vertex { self.front() }
     fn back_vertex(&self) -> Vertex { self.back() }
-    fn get_geometry(&self, director: &mut Director) -> Result<BSplineCurve> {
-        director.get_oriented_curve(self)
+    fn get_geometry(&self, director: &Director) -> Result<BSplineCurve> {
+        let mut curve = director.try_get_geometry(self)?.clone();
+        if self.front() != self.absolute_front() {
+            curve.inverse();
+        }
+        Ok(curve)
     }
     fn clone_wire(&self) -> Wire { Wire::by_slice(&[*self]) }
     fn for_each<F: FnMut(&Edge)>(&self, mut closure: F) { closure(self) }
@@ -90,11 +94,25 @@ impl CurveElement for Edge {
     fn split_wire(&self) -> Option<[Wire; 2]> { None }
 }
 
-impl CurveElement for Wire {
+impl TopologicalCurve for Wire {
     fn front_vertex(&self) -> Vertex { self.front_vertex().unwrap() }
     fn back_vertex(&self) -> Vertex { self.back_vertex().unwrap() }
-    fn get_geometry(&self, director: &mut Director) -> Result<BSplineCurve> {
-        director.bspline_by_wire(self)
+    fn get_geometry(&self, director: &Director) -> Result<BSplineCurve> {
+        let mut iter = self.edge_iter();
+        let mut curve = iter.next().unwrap().get_geometry(director)?.clone();
+        curve.knot_normalize();
+        for (i, edge) in iter.enumerate() {
+            let mut tmp_curve = edge.get_geometry(director)?.clone();
+            let pt0 = curve.control_points().last().unwrap();
+            let pt1 = tmp_curve.control_point(0);
+            if !pt0[3].near(&pt1[3]) {
+                let scalar = pt0[3] / pt1[3];
+                tmp_curve *= scalar;
+            }
+            tmp_curve.knot_normalize().knot_translate((i + 1) as f64);
+            curve.concat(&mut tmp_curve).unwrap();
+        }
+        Ok(curve)
     }
     fn clone_wire(&self) -> Wire { self.clone() }
     fn for_each<F: FnMut(&Edge)>(&self, closure: F) { self.edge_iter().for_each(closure) }

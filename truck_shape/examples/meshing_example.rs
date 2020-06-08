@@ -1,5 +1,5 @@
 use truck_geometry::*;
-use truck_shape::director::TopoGeomIntegrity;
+use truck_shape::elements::TopoGeomIntegrity;
 use truck_shape::*;
 use truck_topology::*;
 
@@ -35,7 +35,7 @@ fn bottle(builder: &mut Builder) -> Solid {
     let transit = Vector3::new(-thick / 2.0, 0.0, 0.0);
     let edge0 = builder.circle_arc(v0, v1, &transit).unwrap();
     let edge1 = builder
-        .create_rotated(
+        .rotated(
             &edge0,
             &Vector3::new(0.0, 0.0, 0.0),
             &Vector3::new(0.0, 0.0, 1.0),
@@ -106,7 +106,7 @@ fn truck3d(builder: &mut Builder) -> Solid {
     ];
     let mut shell = builder.homotopy(&edge[0], &edge[1]).unwrap();
     let face1 = builder
-        .create_rotated(
+        .rotated(
             &shell[0],
             &Vector3::new(2.0, 0.0, 3.5),
             &Vector3::new(0.0, 1.0, 0.0),

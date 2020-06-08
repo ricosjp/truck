@@ -1,4 +1,3 @@
-use crate::director::TopoGeomIntegrity;
 use crate::Director;
 use geometry::*;
 use std::collections::HashMap;
@@ -9,7 +8,6 @@ pub trait TopologicalElement {
     fn id(&self) -> usize;
     fn geom_container(director: &Director) -> &HashMap<usize, Self::Geometry>;
     fn geom_mut_container(director: &mut Director) -> &mut HashMap<usize, Self::Geometry>;
-    fn create_by_geometry(geom: Self::Geometry, director: &mut Director) -> Self;
 }
 
 impl TopologicalElement for Vertex {
@@ -18,11 +16,6 @@ impl TopologicalElement for Vertex {
     fn geom_container(director: &Director) -> &HashMap<usize, Self::Geometry> { &director.points }
     fn geom_mut_container(director: &mut Director) -> &mut HashMap<usize, Self::Geometry> {
         &mut director.points
-    }
-    fn create_by_geometry(point: Vector, director: &mut Director) -> Vertex {
-        let vert = Vertex::new();
-        director.insert(&vert, point);
-        vert
     }
 }
 
@@ -33,15 +26,6 @@ impl TopologicalElement for Edge {
     fn geom_mut_container(director: &mut Director) -> &mut HashMap<usize, Self::Geometry> {
         &mut director.curves
     }
-    fn create_by_geometry(curve: BSplineCurve, director: &mut Director) -> Edge {
-        let (pt0, pt1) = curve.end_points();
-        let edge = Edge::new_unchecked(
-            Vertex::create_by_geometry(pt0, director),
-            Vertex::create_by_geometry(pt1, director),
-        );
-        director.insert(&edge, curve);
-        edge
-    }
 }
 
 impl TopologicalElement for Face {
@@ -51,35 +35,68 @@ impl TopologicalElement for Face {
     fn geom_mut_container(director: &mut Director) -> &mut HashMap<usize, Self::Geometry> {
         &mut director.surfaces
     }
-    fn create_by_geometry(surface: BSplineSurface, director: &mut Director) -> Face {
-        let [curve0, curve1, curve2, curve3] = surface.splitted_boundary();
-        let edge0 = Edge::create_by_geometry(curve0, director);
-        let edge2 = Edge::create_by_geometry(curve2, director);
+}
+
+pub trait GeometricalElement: Sized {
+    type Topology: TopologicalElement<Geometry = Self>;
+    fn create_topology(self, director: &mut Director) -> Self::Topology;
+}
+
+impl GeometricalElement for Vector {
+    type Topology = Vertex;
+    fn create_topology(self, director: &mut Director) -> Vertex {
+        let vert = Vertex::new();
+        director.insert(&vert, self);
+        vert
+    }
+}
+
+impl GeometricalElement for BSplineCurve {
+    type Topology = Edge;
+    fn create_topology(self, director: &mut Director) -> Edge {
+        let (pt0, pt1) = self.end_points();
+        let edge = Edge::new_unchecked(
+            pt0.create_topology(director),
+            pt1.create_topology(director),
+        );
+        director.insert(&edge, self);
+        edge
+    }
+}
+
+impl GeometricalElement for BSplineSurface {
+    type Topology = Face;
+    fn create_topology(self, director: &mut Director) -> Face {
+        let [curve0, curve1, curve2, curve3] = self.splitted_boundary();
+        let edge0 = curve0.create_topology(director);
+        let edge2 = curve2.create_topology(director);
         let edge1 = Edge::new_unchecked(edge0.back(), edge2.front());
         director.insert(&edge1, curve1);
         let edge3 = Edge::new_unchecked(edge2.back(), edge0.front());
         director.insert(&edge3, curve3);
         let wire = Wire::by_slice(&[edge0, edge1, edge2, edge3]);
         let face = Face::new_unchecked(wire);
-        director.insert(&face, surface);
+        director.insert(&face, self);
         face
     }
 }
 
-pub trait GeometricalElement: Sized {
-    type Topology: TopologicalElement<Geometry = Self>;
-}
-
-impl GeometricalElement for Vector {
-    type Topology = Vertex;
-}
-
-impl GeometricalElement for BSplineCurve {
-    type Topology = Edge;
-}
-
-impl GeometricalElement for BSplineSurface {
-    type Topology = Face;
+/// integrity of geometric information and shell
+#[derive(PartialEq, Debug)]
+pub enum TopoGeomIntegrity {
+    /// Every face, edge, and vertice correspond to a surface, a curve, and a point, respectively.
+    /// Moreover, the geometric information is compatible with the topological information.
+    Integrate,
+    /// The face with id = `face_id` does not correspond to a surface.
+    NoGeometryElement { typename: &'static str, id: usize },
+    /// The 4th component of Vector is not positive.
+    NonPositiveWeightedPoint,
+    /// The curve which corresponds to the edge with id = `edge_id` is not in the boundary of
+    /// the surface which corresponds to the face with id = `face_id`.
+    NotBoundary { face_id: usize, edge_id: usize },
+    /// The point which corresponds to the vertex with id = `vertex_id` is not the end point of
+    /// the curve which corresponds to the edge with id = `edge_id`.
+    NotEndPoint { edge_id: usize, vertex_id: usize },
 }
 
 pub trait Integrity {
@@ -98,10 +115,10 @@ macro_rules! return_not_integrate {
 macro_rules! got_or_return_integrity {
     ($director: expr, $elem: expr) => {
         match $director.get_geometry($elem) {
-            Ok(got) => got,
-            Err(_) => {
+            Some(got) => got,
+            None => {
                 return TopoGeomIntegrity::NoGeometryElement {
-                    typename: get_typename($elem),
+                    typename: crate::get_typename($elem),
                     id: $elem.id(),
                 }
             }
@@ -207,6 +224,4 @@ impl Integrity for Solid {
         TopoGeomIntegrity::Integrate
     }
 }
-
-fn get_typename<T>(_: T) -> &'static str { std::any::type_name::<T>() }
 
