@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 truck_geometry = {path = "../truck_geometry"}
 truck_topology = {path = "../truck_topology"}
-truck_shape = {path = "../truck_shape"}
 
 [dev-dependencies]
 truck_io = {path = "../truck_io"}

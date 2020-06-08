@@ -1,13 +1,12 @@
 use crate::*;
 use geometry::*;
-use shape::*;
 
 impl StructuredMesh {
     /// meshing the bspline surface
     /// # Arguments
     /// * `bspsurface` - bspline surface to meshed
     /// * `tol` - standard tolerance for meshing
-    pub fn from_surface(bspsurface: &mut BSplineSurface, tol: f64) -> StructuredMesh {
+    pub fn from_surface(bspsurface: &BSplineSurface, tol: f64) -> StructuredMesh {
         let (knot_vec0, knot_vec1) = bspsurface.knot_vecs();
         let u0 = knot_vec0[0];
         let u1 = knot_vec0[knot_vec0.len() - 1];
@@ -18,25 +17,6 @@ impl StructuredMesh {
 
         create_space_division(bspsurface, tol, &mut div0, &mut div1);
         create_mesh(bspsurface, div0, div1)
-    }
-
-    pub fn from_shape(geometry: &mut Director, tol: f64) -> PolygonMesh {
-        let mut mesh = PolygonMesh::default();
-        for surface in geometry.surfaces.values_mut() {
-            let counter = mesh.positions.len();
-            let mut tmp = StructuredMesh::from_surface(surface, tol).destruct();
-            mesh.positions.append(&mut tmp.positions);
-            mesh.uv_coords.append(&mut tmp.uv_coords);
-            mesh.normals.append(&mut tmp.normals);
-            for face in tmp.quad_faces.iter_mut() {
-                for vert in face.iter_mut() {
-                    vert[0] += counter;
-                    vert[2] += counter;
-                }
-                mesh.quad_faces.push(face.clone());
-            }
-        }
-        mesh
     }
 }
 
@@ -132,7 +112,10 @@ fn create_mesh(bspsurface: &BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) -> S
         let nrow = bspsurface
             .normal_vectors(div1.iter().map(|v| (*u, *v)))
             .iter()
-            .map(|normal| Vector3::new(normal[0], normal[1], normal[2]))
+            .map(|normal| {
+                let normal = normal.projection();
+                Vector3::new(normal[0], normal[1], normal[2])
+            })
             .collect();
         positions.push(prow);
         normals.push(nrow);

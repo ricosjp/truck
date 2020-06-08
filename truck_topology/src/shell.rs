@@ -1,5 +1,5 @@
-use crate::{Vertex, Edge, Wire, Face, Shell, WrappedUpShell};
-use std::collections::{HashMap, HashSet};
+use crate::{Edge, Face, Shell, Vertex, Wire, WrappedUpShell};
+use std::collections::HashMap;
 use std::vec::Vec;
 
 #[derive(PartialEq, Eq, Debug)]
@@ -14,39 +14,74 @@ pub enum ShellCondition {
     Closed,
 }
 
+#[derive(PartialEq, Eq, Debug)]
+pub enum Connectivity {
+    /// non-connected
+    NonConnected,
+    /// connected
+    Connected,
+    /// The shell is connected manifold if the shell is regular.
+    StronglyConnected,
+}
+
 impl Shell {
     /// Create the empty shell.
     #[inline(always)]
-    pub fn new() -> Shell { Shell { face_list: Vec::new() } }
+    pub fn new() -> Shell {
+        Shell {
+            face_list: Vec::new(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn with_capacity(capacity: usize) -> Shell {
+        Shell {
+            face_list: Vec::with_capacity(capacity),
+        }
+    }
+
+    #[inline(always)]
+    pub fn capacity(&self) -> usize { self.face_list.capacity() }
+
+    #[inline(always)]
+    pub fn reserve(&mut self, additional: usize) { self.face_list.reserve(additional) }
+
+    #[inline(always)]
+    pub fn reserve_exact(&mut self, additional: usize) { self.face_list.reserve_exact(additional) }
 
     #[inline(always)]
     pub fn is_empty(&self) -> bool { self.face_list.is_empty() }
 
     #[inline(always)]
     pub fn len(&self) -> usize { self.face_list.len() }
-    
     /// add an face
     #[inline(always)]
     pub fn push(&mut self, face: Face) { self.face_list.push(face); }
-    
     /// get a face iterator
     #[inline(always)]
     pub fn face_iter(&self) -> FaceIter { self.face_list.iter() }
 
+    pub fn append(&mut self, other: &mut Shell) { self.face_list.append(&mut other.face_list); }
+
+    pub fn remove(&mut self, idx: usize) { self.face_list.remove(idx); }
+
     /// return (oriented, boundary used), If irregular, return None.
-    fn boundary_edge_extraction(&self) -> Option<(bool, HashMap<usize, &Edge>, HashMap<usize, &Edge>)> {
+    fn boundary_edge_extraction(
+        &self,
+    ) -> Option<(bool, HashMap<usize, &Edge>, HashMap<usize, &Edge>)> {
         let mut boundary = HashMap::with_capacity(self.face_list.len());
         let mut used = HashMap::with_capacity(self.face_list.len());
 
         let mut oriented = true;
-        for face in self.face_list.iter() {
-            for edge in face.boundary().edge_iter() {
-                if let Some(edge0) = boundary.insert(edge.id(), edge) {
-                    if used.insert(edge.id(), edge).is_some() {
-                        return None;
-                    } else if edge == edge0 {
-                        oriented = false;
-                    }
+        let edge_iter = self
+            .face_iter()
+            .flat_map(|face| face.boundary().edge_iter());
+        for edge in edge_iter {
+            if let Some(edge0) = boundary.insert(edge.id(), edge) {
+                if used.insert(edge.id(), edge).is_some() {
+                    return None;
+                } else if edge == edge0 {
+                    oriented = false;
                 }
             }
         }
@@ -72,58 +107,99 @@ impl Shell {
         }
     }
 
-    /// return (the set of all vertices, vertices adjacency lists)
-    fn create_vertex_adjacency(&self) -> (HashSet<Vertex>, HashMap<Vertex, HashSet<Vertex>>){
-        let mut adjacency: HashMap<Vertex, HashSet<Vertex>> = HashMap::with_capacity(self.face_list.len());
-        let mut vertices = HashSet::with_capacity(self.face_list.len());
-        for face in self.face_list.iter() {
-            for edge in face.boundary.edge_iter() {
-                if let Some(ref mut set) = adjacency.get_mut(&edge.front()) {
-                    set.insert(edge.back());
-                } else {
-                    let mut set = HashSet::new();
-                    set.insert(edge.back());
-                    adjacency.insert(edge.front(), set);
-                    vertices.insert(edge.front());
+    pub fn create_vertex_adjacency(&self) -> (HashMap<Vertex, usize>, Vec<Vec<usize>>) {
+        let mut vmap: HashMap<Vertex, usize> = HashMap::new();
+        let mut adjacency = Vec::new();
+        let edge_iter = self
+            .face_iter()
+            .flat_map(|face| face.boundary().edge_iter());
+        for edge in edge_iter {
+            let v0 = edge.front();
+            let v1 = edge.back();
+            let i = match vmap.get(&v0) {
+                Some(i) => *i,
+                None => {
+                    vmap.insert(v0, vmap.len());
+                    adjacency.push(Vec::new());
+                    vmap.len() - 1
                 }
-            }
+            };
+            let j = match vmap.get(&v1) {
+                Some(j) => *j,
+                None => {
+                    vmap.insert(v1, vmap.len());
+                    adjacency.push(Vec::new());
+                    vmap.len() - 1
+                }
+            };
+            adjacency[i].push(j);
+            adjacency[j].push(i);
         }
-
-        (vertices, adjacency)
+        (vmap, adjacency)
     }
 
-    fn get_one_component(unchecked: &mut HashSet<Vertex>, adjacency: &HashMap<Vertex, HashSet<Vertex>>) {
-        let mut stack = Vec::new();
-        let first_vertex = *unchecked.iter().next().unwrap();
-        stack.push(first_vertex);
-        unchecked.remove(&first_vertex);
-        while !stack.is_empty() && !unchecked.is_empty() {
-            let cursor = stack.pop().unwrap();
-            for vertex in adjacency.get(&cursor).unwrap() {
-                if unchecked.remove(&vertex) {
-                    stack.push(*vertex);
+    pub fn create_face_adjacency(&self) -> Vec<Vec<usize>> {
+        let mut adjacency = vec![Vec::new(); self.len()];
+        let mut edge_face_map: HashMap<usize, usize> = HashMap::new();
+        for (i, face) in self.face_iter().enumerate() {
+            for edge in face.boundary().edge_iter() {
+                if let Some(j) = edge_face_map.get(&edge.id()) {
+                    adjacency[i].push(*j);
+                    adjacency[*j].push(i);
+                } else {
+                    edge_face_map.insert(edge.id(), i);
                 }
             }
         }
+        adjacency
+    }
+
+    pub fn is_vertex_connected(&self) -> bool {
+        if self.is_empty() {
+            return true;
+        }
+        let (_, adjacency) = self.create_vertex_adjacency();
+        check_connectivity(&adjacency)
+    }
+
+    pub fn is_face_connected(&self) -> bool {
+        if self.is_empty() {
+            return true;
+        }
+        let adjacency = self.create_face_adjacency();
+        check_connectivity(&adjacency)
     }
 
     /// determine whether this shell is connected or not.
     /// The complexity increases in proportion to the number of vertices and edges.
-    pub fn is_connected(&self) -> bool {
-        if self.is_empty() {
-            return true;
+    pub fn connectivity(&self) -> Connectivity {
+        if !self.is_vertex_connected() {
+            Connectivity::NonConnected
+        } else if !self.is_face_connected() {
+            Connectivity::Connected
+        } else {
+            Connectivity::StronglyConnected
         }
+    }
 
-        let (mut unchecked, adjacency) = self.create_vertex_adjacency();
-        Shell::get_one_component(&mut unchecked, &adjacency);
-
-        unchecked.is_empty()
+    pub fn connected_components(&self) -> Vec<Shell> {
+        let adjacency = self.create_face_adjacency();
+        let components = create_components(&adjacency);
+        components
+            .iter()
+            .map(|vec| vec.iter().map(|i| self[*i].clone()).collect())
+            .collect()
     }
 
     /// return the following hash maps:
     /// * from vertex to the local id.
     /// * from edge to (the local id, front vertex's local id, back vertex's local id)
-    fn create_vertex_edge_map(&self) -> (HashMap<Vertex, usize>, HashMap<usize, (usize, usize, usize)>) {
+    fn create_vertex_edge_map(
+        &self,
+    ) -> (
+        HashMap<Vertex, usize>,
+        HashMap<usize, (usize, usize, usize)>,
+    ) {
         let mut vertices_map = HashMap::with_capacity(self.face_list.len());
         let mut edges_map = HashMap::with_capacity(self.face_list.len());
 
@@ -160,7 +236,8 @@ impl Shell {
     pub fn wrap_up(&self) -> WrappedUpShell {
         let (vertices_map, edges_map) = self.create_vertex_edge_map();
 
-        let faces: Vec<(bool, Vec<usize>)> = self.face_iter()
+        let faces: Vec<(bool, Vec<usize>)> = self
+            .face_iter()
             .map(|face| {
                 let mut wire_info = Vec::new();
 
@@ -178,11 +255,14 @@ impl Shell {
                 }
 
                 (ori, wire_info)
-            }).collect();
+            })
+            .collect();
 
-        let mut edges_with_id: Vec<(usize, usize, usize)> = edges_map.into_iter().map(|(_, x)| x).collect();
+        let mut edges_with_id: Vec<(usize, usize, usize)> =
+            edges_map.into_iter().map(|(_, x)| x).collect();
         edges_with_id.sort_by(|(a, _, _), (b, _, _)| a.cmp(b));
-        let edges: Vec<(usize, usize)> = edges_with_id.into_iter().map(|(_, f, b)| (f, b)).collect();
+        let edges: Vec<(usize, usize)> =
+            edges_with_id.into_iter().map(|(_, f, b)| (f, b)).collect();
 
         WrappedUpShell {
             number_of_vertices: vertices_map.len(),
@@ -235,11 +315,75 @@ impl std::convert::From<Vec<Face>> for Shell {
 
 impl std::iter::FromIterator<Face> for Shell {
     fn from_iter<I: IntoIterator<Item = Face>>(iter: I) -> Shell {
-        Shell { face_list: iter.into_iter().collect() }
+        Shell {
+            face_list: iter.into_iter().collect(),
+        }
     }
 }
 
+impl std::ops::Index<usize> for Shell {
+    type Output = Face;
+    fn index(&self, idx: usize) -> &Face { &self.face_list[idx] }
+}
+
 pub type FaceIter<'a> = std::slice::Iter<'a, Face>;
+
+impl ShellCondition {
+    fn get_id(&self) -> usize {
+        match *self {
+            ShellCondition::Irregular => 0,
+            ShellCondition::Regular => 1,
+            ShellCondition::Oriented => 2,
+            ShellCondition::Closed => 3,
+        }
+    }
+}
+
+impl std::cmp::PartialOrd for ShellCondition {
+    fn partial_cmp(&self, other: &ShellCondition) -> Option<std::cmp::Ordering> {
+        self.get_id().partial_cmp(&other.get_id())
+    }
+}
+
+fn check_connectivity(adjacency: &Vec<Vec<usize>>) -> bool {
+    let mut unchecked = vec![true; adjacency.len()];
+    let component = create_one_component(adjacency, &mut unchecked);
+    component.len() == adjacency.len()
+}
+
+fn create_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
+    let mut unchecked = vec![true; adjacency.len()];
+    let mut res = Vec::new();
+    loop {
+        let component = create_one_component(adjacency, &mut unchecked);
+        match component.is_empty() {
+            true => break,
+            false => res.push(component),
+        }
+    }
+    res
+}
+
+fn create_one_component(adjacency: &Vec<Vec<usize>>, unchecked: &mut Vec<bool>) -> Vec<usize> {
+    let first = match unchecked.iter().position(|x| *x) {
+        Some(i) => i,
+        None => return Vec::new(),
+    };
+    let mut stack = vec![first];
+    let mut res = vec![first];
+    unchecked[first] = false;
+    while !stack.is_empty() {
+        let i = stack.pop().unwrap();
+        for j in &adjacency[i] {
+            if unchecked[*j] {
+                stack.push(*j);
+                res.push(*j);
+                unchecked[*j] = false;
+            }
+        }
+    }
+    res
+}
 
 #[test]
 fn shell_test() {

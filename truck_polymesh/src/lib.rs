@@ -1,6 +1,5 @@
 extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
-extern crate truck_shape as shape;
 use geometry::{Vector2, Vector3};
 
 /// mesh data

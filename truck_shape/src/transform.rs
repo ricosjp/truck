@@ -1,5 +1,5 @@
 use crate::Transform;
-use geometry::{Matrix, Vector3};
+use geometry::*;
 
 impl Transform {
     #[inline(always)]
@@ -42,7 +42,7 @@ impl Transform {
         let arr2 = [
             axis[2] * axis[0] * (1.0 - cos) + axis[1] * sin,
             axis[1] * axis[2] * (1.0 - cos) - axis[0] * sin,
-            cos + axis[1] * axis[1] * (1.0 - cos),
+            cos + axis[2] * axis[2] * (1.0 - cos),
             0.0,
         ];
         let arr3 = [0.0, 0.0, 0.0, 1.0];
@@ -57,6 +57,15 @@ impl Transform {
         let arr3 = [0.0, 0.0, 0.0, 1.0];
         let mat = Matrix::new(arr0, arr1, arr2, arr3);
         Transform(mat)
+    }
+
+    #[inline(always)]
+    pub fn mul_assign_closure<'a, T: std::ops::MulAssign<&'a Transform>>(
+        &'a self,
+    ) -> impl Fn(&mut T) + 'a {
+        move |x| {
+            *x *= self;
+        }
     }
 }
 
@@ -117,6 +126,22 @@ impl std::ops::SubAssign<Vector3> for Transform {
     fn sub_assign(&mut self, vector: Vector3) { *self *= Transform::translate(&-vector); }
 }
 
+impl std::ops::MulAssign<&Transform> for Vector3 {
+    #[inline(always)]
+    fn mul_assign(&mut self, trsf: &Transform) {
+        let mut vector = Vector::new3(self[0], self[1], self[2]);
+        vector *= trsf;
+        self[0] = vector[0] / vector[3];
+        self[1] = vector[1] / vector[3];
+        self[2] = vector[2] / vector[3];
+    }
+}
+
+impl std::ops::MulAssign<Transform> for Vector3 {
+    #[inline(always)]
+    fn mul_assign(&mut self, trsf: Transform) { *self *= &trsf; }
+}
+
 impl std::convert::From<Transform> for Matrix {
     #[inline(always)]
     fn from(transform: Transform) -> Matrix { transform.0 }
@@ -126,3 +151,25 @@ impl std::convert::From<Matrix> for Transform {
     #[inline(always)]
     fn from(mat: Matrix) -> Transform { Transform(mat) }
 }
+
+macro_rules! mul_as_mat {
+    ($classname: ty) => {
+        impl std::ops::MulAssign<&Transform> for $classname {
+            #[inline(always)]
+            fn mul_assign(&mut self, trsf: &Transform) {
+                *self *= &trsf.0;
+            }
+        }
+        
+        impl std::ops::MulAssign<Transform> for $classname {
+            #[inline(always)]
+            fn mul_assign(&mut self, trsf: Transform) {
+                *self *= &trsf.0;
+            }
+        }
+    };
+}
+
+mul_as_mat!(Vector);
+mul_as_mat!(BSplineCurve);
+mul_as_mat!(BSplineSurface);

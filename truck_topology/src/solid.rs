@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use crate::errors::Error;
 use crate::{Result, Shell, Solid};
-use crate::shell::ShellCondition;
+use crate::shell::{ShellCondition, Connectivity};
 
 impl Solid {
     /// create the shell whose boundaries is boundary.
@@ -9,16 +9,10 @@ impl Solid {
     /// All boundary must be non-empty, connected, and closed.
     #[inline(always)]
     pub fn new(boundaries: Vec<Shell>) -> Solid {
-        for shell in &boundaries {
-            if shell.is_empty() {
-                panic!("{}", Error::EmptyShell);
-            } else if !shell.is_connected() {
-                panic!("{}", Error::NotConnectedShell);
-            } else if shell.shell_condition() != ShellCondition::Closed {
-                panic!("{}", Error::NotClosedShell);
-            }
+        match Solid::try_new(boundaries) {
+            Ok(solid) => solid,
+            Err(error) => panic!("{}", error),
         }
-        Solid { boundaries: boundaries }
     }
     
     /// create the shell whose boundaries is boundary.
@@ -29,10 +23,10 @@ impl Solid {
         for shell in &boundaries {
             if shell.is_empty() {
                 return Err(Error::EmptyShell);
-            } else if !shell.is_connected() {
-                return Err(Error::NotConnectedShell);
             } else if shell.shell_condition() != ShellCondition::Closed {
                 return Err(Error::NotClosedShell);
+            } else if shell.connectivity() != Connectivity::StronglyConnected {
+                return Err(Error::NotConnectedManifold);
             }
         }
         Ok(Solid { boundaries: boundaries })
@@ -117,11 +111,12 @@ fn cube() {
     shell.push(face0);
     shell.push(face5);
     
-    assert!(!shell.is_connected());
+    assert_eq!(shell.connectivity(), Connectivity::NonConnected);
     
     shell.push(face1);
     
     assert_eq!(shell.shell_condition(), ShellCondition::Oriented);
+    assert_eq!(shell.connectivity(), Connectivity::StronglyConnected);
     
     shell.push(face2);
     shell.push(face3);

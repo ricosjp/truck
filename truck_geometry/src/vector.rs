@@ -1,4 +1,4 @@
-use crate::{Origin, Tolerance, Vector, Vector3, Vector2};
+use crate::{Origin, Tolerance, Vector, Vector2, Vector3};
 use std::cmp::Ordering;
 
 macro_rules! impl_vector_new {
@@ -116,7 +116,7 @@ macro_rules! impl_vector {
                 Self::new($(self[$num] / self[$dim - 1]),*)
             }
 
-            /// curve-derivation projection.  
+            /// curve-derivation projection.
             /// For a curve x(t) = (x_0(t), x_1(t), x_2(t), x_3(t)), calculate the derivation
             /// of the projected curve (x_0 / x_3, x_1 / x_3, x_2 / x_3, 1.0).
             /// # Arguments
@@ -918,27 +918,21 @@ impl_bitxor_assign!(Vector3);
 impl std::fmt::Display for Vector {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.write_fmt(format_args!(
-                "[{}    {}  {}  {}]",
-                self[0], self[1], self[2], self[3]
+            "[{}    {}  {}  {}]",
+            self[0], self[1], self[2], self[3]
         ))
     }
 }
 
 impl std::fmt::Display for Vector3 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-                "[{}    {}  {}]",
-                self[0], self[1], self[2]
-        ))
+        f.write_fmt(format_args!("[{}    {}  {}]", self[0], self[1], self[2]))
     }
 }
 
 impl std::fmt::Display for Vector2 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-                "[{}    {}]",
-                self[0], self[1]
-        ))
+        f.write_fmt(format_args!("[{}    {}]", self[0], self[1]))
     }
 }
 
@@ -951,18 +945,18 @@ impl Vector {
     /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 1.0));
     /// ```
     #[inline(always)]
-    pub fn new3(x: f64, y: f64, z: f64) -> Vector { Self([x, y, z, 1.0]) }
+    pub fn new3<T: Into<f64>>(x: T, y: T, z: T) -> Vector {
+        Self([x.into(), y.into(), z.into(), 1.0])
+    }
 }
 
 impl Vector3 {
     #[inline(always)]
     pub fn volume(&self, v0: &Vector3, v1: &Vector3) -> f64 {
-        self[0] * v0[1] * v1[2]
-        + self[1] * v0[2] * v1[0]
-        + self[2] * v0[0] * v1[1]
-        - self[0] * v0[2] * v1[1]
-        - self[2] * v0[1] * v1[0]
-        - self[1] * v0[0] * v1[2]
+        self[0] * v0[1] * v1[2] + self[1] * v0[2] * v1[0] + self[2] * v0[0] * v1[1]
+            - self[0] * v0[2] * v1[1]
+            - self[2] * v0[1] * v1[0]
+            - self[1] * v0[0] * v1[2]
     }
 
     #[inline(always)]
