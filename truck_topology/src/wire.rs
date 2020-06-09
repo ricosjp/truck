@@ -310,6 +310,22 @@ impl Wire {
         }
         true
     }
+
+    pub fn replace(&self, search: Vertex, replace: Vertex) -> Wire {
+        let mut edge_list = VecDeque::<Edge>::new();
+        for edge in self.edge_iter() {
+            if search == edge.front() {
+                if edge.back() != search && edge.back() != replace {
+                    edge_list.push_back(Edge::new(replace, edge.back()));
+                }
+            } else if search == edge.back() {
+                if edge.front() != replace {
+                    edge_list.push_back(Edge::new(edge.front(), replace));
+                }
+            }
+        }
+        Wire { edge_list }
+    }
 }
 
 impl std::ops::Index<usize> for Wire {

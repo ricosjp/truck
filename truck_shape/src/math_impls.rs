@@ -6,34 +6,22 @@ pub(super) fn line(pt0: Vector, pt1: Vector) -> BSplineCurve {
     BSplineCurve::new_unchecked(knot_vec, vec![pt0, pt1])
 }
 
-pub(super) fn circle_arc(pt0: Vector, pt1: Vector, transit: &Vector3) -> BSplineCurve {
-    let pt0 = Vector3::new(pt0[0], pt0[1], pt0[2]);
-    let pt1 = Vector3::new(pt1[0], pt1[1], pt1[2]);
-    // circum_center
-    let org = circum_center(&pt0, &pt1, transit);
-    let trsf0 = Transform::translate(&org);
-
-    // scalar component
-    let scalar = (&pt0 - &org).norm();
-    let trsf1 = Transform::scale(&Vector3::new(scalar, scalar, scalar));
-
-    // the cosine of half of the angle of arc
-    let cos = -(&pt0 - transit).cos_angle(&(&pt1 - transit));
-    let mut curve = unit_circle_arc(cos);
-
-    // orthogonal part
-    let vec0 = &pt1 - &pt0;
-    let mid = (&pt0 + &pt1) / 2.0;
-    let vec1 = transit - mid;
-    let mut radius = &vec1 - (&vec0 * &vec1) / (&vec0 * &vec0) * vec0;
-    radius /= radius.norm();
-    let mut n = (&pt1 - transit) ^ (&pt0 - transit);
-    n /= n.norm();
-    let trsf2 = Transform::by_axes(&radius, &(&n ^ &radius), &n);
-
-    let trsf = trsf1 * trsf2 * trsf0;
-    curve *= trsf.0;
-    curve
+pub(super) fn circle_arc_by_three_points(
+    point0: Vector,
+    point1: Vector,
+    transit: &Vector3,
+) -> BSplineCurve
+{
+    let pt0 = Vector3::new(point0[0], point0[1], point0[2]);
+    let pt1 = Vector3::new(point1[0], point1[1], point1[2]);
+    let origin = circum_center(&pt0, &pt1, transit);
+    let vec0 = &pt0 - transit;
+    let vec1 = &pt1 - transit;
+    let angle = std::f64::consts::PI - vec0.angle(&vec1);
+    let mut axis = &vec1 ^ &vec0;
+    axis /= axis.norm();
+    let control_points = circle_arc_control_pts(&point0, &origin, &axis, angle * 2.0);
+    BSplineCurve::new(KnotVec::bezier_knot(2), control_points)
 }
 
 fn circum_center(pt0: &Vector3, pt1: &Vector3, pt2: &Vector3) -> Vector3 {
@@ -48,15 +36,42 @@ fn circum_center(pt0: &Vector3, pt1: &Vector3, pt2: &Vector3) -> Vector3 {
     pt0 + u * vec0 + v * vec1
 }
 
-fn unit_circle_arc(cos: f64) -> BSplineCurve {
-    let knot_vec = KnotVec::bezier_knot(2);
-    let sin = (1.0 - cos * cos).sqrt();
-    let control_points = vec![
-        Vector::new(cos, -sin, 0.0, 1.0),
-        Vector::new(1.0, 0.0, 0.0, cos),
-        Vector::new(cos, sin, 0.0, 1.0),
-    ];
-    BSplineCurve::new_unchecked(knot_vec, control_points)
+pub(super) fn circle_arc(
+    point: &Vector,
+    origin: &Vector3,
+    axis: &Vector3,
+    angle: f64,
+) -> BSplineCurve
+{
+    BSplineCurve::new(
+        KnotVec::bezier_knot(2),
+        circle_arc_control_pts(point, origin, axis, angle),
+    )
+}
+
+fn circle_arc_control_pts(
+    point: &Vector,
+    origin: &Vector3,
+    axis: &Vector3,
+    angle: f64,
+) -> Vec<Vector>
+{
+    let axis_trsf = if (axis[2] * axis[2]).near(&1.0) {
+        Transform::identity()
+    } else {
+        let axis_angle = axis[2].acos();
+        let mut axis_axis = Vector3::new(-axis[1], axis[0], 0.0);
+        axis_axis /= axis_axis.norm();
+        Transform::rotate(&axis_axis, axis_angle) * Transform::translate(origin)
+    };
+    let point = point * axis_trsf.inverse().unwrap().0;
+    let rotation = Transform::rotate(&Vector3::new(0, 0, 1), angle / 2.0);
+    let mut res = vec![&point * &axis_trsf.0];
+    let mut point1 = &point * &rotation.0;
+    point1[3] *= (angle / 2.0).cos();
+    res.push(point1 * &axis_trsf.0);
+    res.push(point * (&rotation * &rotation).0 * axis_trsf.0);
+    res
 }
 
 pub(super) fn plane_by_two_curves(
@@ -86,22 +101,13 @@ pub(super) fn rsweep_surface(
     origin: &Vector3,
     axis: &Vector3,
     angle: f64,
-) -> BSplineSurface {
-    let trsf = Transform::translate(&-origin)
-        * Transform::rotate(axis, angle / 2.0) 
-        * Transform::translate(&origin);
-    let trsf2 = &trsf * &trsf;
-    let cos = (angle / 2.0).cos();
-    let knot_vec0 = KnotVec::bezier_knot(3);
-    let knot_vec1 = curve.knot_vec().clone();
+) -> BSplineSurface
+{
+    let knot_vec0 = curve.knot_vec().clone();
+    let knot_vec1 = KnotVec::bezier_knot(3);
     let mut control_points = Vec::new();
     for point in curve.control_points() {
-        let mut row = vec![point.clone()];
-        let mut point1 = point * &trsf.0;
-        point1[3] *= cos;
-        row.push(point1);
-        row.push(point * &trsf2.0);
-        control_points.push(row);
+        control_points.push(circle_arc_control_pts(point, origin, axis, angle));
     }
     BSplineSurface::new((knot_vec0, knot_vec1), control_points)
 }

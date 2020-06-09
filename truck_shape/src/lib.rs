@@ -33,6 +33,7 @@ pub mod elements;
 pub mod errors;
 pub mod math_impls;
 pub mod mesher;
+pub mod rsweep;
 pub mod transform;
 pub mod transformed;
 pub mod tsweep;

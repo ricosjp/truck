@@ -125,6 +125,7 @@ fn truck3d(builder: &mut Builder) -> Solid {
         .unwrap()
 }
 
+#[allow(dead_code)]
 fn large_box(builder: &mut Builder) -> Solid {
     const N: usize = 100;
 
@@ -166,6 +167,24 @@ fn large_box(builder: &mut Builder) -> Solid {
     builder.tsweep(&shell, &Vector3::new(0, 0, 1)).unwrap().pop().unwrap()
 }
 
+fn torus(builder: &mut Builder) -> Solid {
+    let v = vec![
+        builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap(),
+        builder.vertex(Vector3::new(0.0, 0.0, 3.0)).unwrap(),
+    ];
+    let wire = Wire::by_slice(&[
+        builder.circle_arc(v[0], v[1], &Vector3::new(0.0, 1.0, 0.0)).unwrap(),
+        builder.circle_arc(v[1], v[0], &Vector3::new(0.0, -1.0, 0.0)).unwrap(),
+    ]);
+    let shell = builder.rsweep(
+        &wire,
+        &Vector3::new(0, 0, 0),
+        &Vector3::new(0, 1, 0),
+        std::f64::consts::PI * 2.0,
+    ).unwrap();
+    Solid::new(vec![shell])
+}
+
 fn output_mesh<F>(director: &mut Director, function: F, filename: &str)
 where F: FnOnce(&mut Builder) -> Solid {
     let instant = std::time::Instant::now();
@@ -199,5 +218,6 @@ fn main() {
         let filename = format!("{}-gon-prism.obj", n);
         output_mesh(&mut director, |d| n_gon_prism(d, n), &filename);
     }
-    output_mesh(&mut director, large_box, "large_plane.obj");
+    //output_mesh(&mut director, large_box, "large_plane.obj");
+    output_mesh(&mut director, torus, "torus.obj");
 }

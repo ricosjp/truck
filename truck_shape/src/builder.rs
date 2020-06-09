@@ -4,6 +4,7 @@ use crate::errors::Error;
 use crate::math_impls::*;
 use crate::transformed::Transformed;
 use crate::tsweep::TSweep;
+use crate::rsweep::RSweep;
 
 use crate::{Builder, Result, Transform};
 use geometry::*;
@@ -41,7 +42,7 @@ impl<'a> Builder<'a> {
         let pt0 = director.try_get_geometry(&vertex0)?.projection();
         let pt1 = director.try_get_geometry(&vertex1)?.projection();
         let edge = Edge::new(vertex0, vertex1);
-        self.director.insert(&edge, circle_arc(pt0, pt1, transit));
+        director.insert(&edge, circle_arc_by_three_points(pt0, pt1, transit));
         Ok(edge)
     }
 
@@ -110,6 +111,16 @@ impl<'a> Builder<'a> {
         } else {
             elem.tsweep(vector, self)
         }
+    }
+    
+    pub fn rsweep<T: RSweep>(
+        &mut self,
+        elem: &T,
+        origin: &Vector3,
+        axis: &Vector3,
+        angle: f64,
+    ) -> Result<T::Output> {
+        elem.rsweep(origin, axis, angle, self)
     }
 }
 
