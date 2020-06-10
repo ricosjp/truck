@@ -915,6 +915,21 @@ macro_rules! impl_bitxor_assign {
 impl_bitxor_assign!(Vector);
 impl_bitxor_assign!(Vector3);
 
+macro_rules! impl_lesser_convert {
+    ($higher_vector: ty, $lesser_vector: ty, $($lesser_index: expr), *) => {
+        impl std::convert::From<$higher_vector> for $lesser_vector {
+            #[inline(always)]
+            fn from(vector: $higher_vector) -> $lesser_vector {
+                <$lesser_vector>::new($(vector[$lesser_index]),*)
+            }
+        }
+    };
+}
+
+impl_lesser_convert!(Vector, Vector3, 0, 1, 2);
+impl_lesser_convert!(Vector, Vector2, 0, 1);
+impl_lesser_convert!(Vector3, Vector2, 0, 1);
+
 impl std::fmt::Display for Vector {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.write_fmt(format_args!(

@@ -59,14 +59,18 @@ impl Face {
     #[inline(always)]
     pub fn boundary(&self) -> &Wire { &self.boundary }
 
+    #[inline(always)]
+    pub fn into_boundary(self) -> Wire { self.boundary }
+
     /// get the face id.
     #[inline(always)]
     pub fn id(&self) -> usize { self.id }
 
-    /// inversed face
+    /// inverse the direction of face and give a new id.
     #[inline(always)]
     pub fn inverse(&mut self) -> &mut Self {
         self.boundary.inverse();
+        self.id = ID_GENERATOR.generate();
         self
     }
 

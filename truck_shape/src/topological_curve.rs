@@ -43,7 +43,7 @@ where
     elem1.for_each(|edge| wire.push_back(edge.inverse()));
     wire.push_back(edge1);
     let face = Face::try_new(wire)?;
-    director.insert(&face, surface);
+    director.attach(&face, surface);
     Ok(vec![face].into())
 }
 
@@ -73,8 +73,8 @@ where
     wire1.push_back(edge1.inverse());
     let face0 = Face::try_new(wire0)?;
     let face1 = Face::try_new(wire1)?;
-    director.insert(&face0, surface0);
-    director.insert(&face1, surface1);
+    director.attach(&face0, surface0);
+    director.attach(&face1, surface1);
     Ok(vec![face0, face1].into())
 }
 

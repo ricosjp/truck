@@ -61,6 +61,9 @@ impl Shell {
     #[inline(always)]
     pub fn face_iter(&self) -> FaceIter { self.face_list.iter() }
 
+    #[inline(always)]
+    pub fn face_iter_mut(&mut self) -> FaceIterMut { self.face_list.iter_mut() }
+
     pub fn append(&mut self, other: &mut Shell) { self.face_list.append(&mut other.face_list); }
 
     pub fn remove(&mut self, idx: usize) { self.face_list.remove(idx); }
@@ -327,6 +330,7 @@ impl std::ops::Index<usize> for Shell {
 }
 
 pub type FaceIter<'a> = std::slice::Iter<'a, Face>;
+pub type FaceIterMut<'a> = std::slice::IterMut<'a, Face>;
 
 impl ShellCondition {
     fn get_id(&self) -> usize {

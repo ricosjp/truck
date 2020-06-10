@@ -46,7 +46,7 @@ impl GeometricalElement for Vector {
     type Topology = Vertex;
     fn create_topology(self, director: &mut Director) -> Vertex {
         let vert = Vertex::new();
-        director.insert(&vert, self);
+        director.attach(&vert, self);
         vert
     }
 }
@@ -59,7 +59,7 @@ impl GeometricalElement for BSplineCurve {
             pt0.create_topology(director),
             pt1.create_topology(director),
         );
-        director.insert(&edge, self);
+        director.attach(&edge, self);
         edge
     }
 }
@@ -71,12 +71,12 @@ impl GeometricalElement for BSplineSurface {
         let edge0 = curve0.create_topology(director);
         let edge2 = curve2.create_topology(director);
         let edge1 = Edge::new_unchecked(edge0.back(), edge2.front());
-        director.insert(&edge1, curve1);
+        director.attach(&edge1, curve1);
         let edge3 = Edge::new_unchecked(edge2.back(), edge0.front());
-        director.insert(&edge3, curve3);
+        director.attach(&edge3, curve3);
         let wire = Wire::by_slice(&[edge0, edge1, edge2, edge3]);
         let face = Face::new_unchecked(wire);
-        director.insert(&face, self);
+        director.attach(&face, self);
         face
     }
 }

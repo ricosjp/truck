@@ -26,7 +26,25 @@ impl<'a> Builder<'a> {
         let pt0 = director.try_get_geometry(&vertex0)?.clone();
         let pt1 = director.try_get_geometry(&vertex1)?.clone();
         let edge = Edge::new(vertex0, vertex1);
-        director.insert(&edge, line(pt0, pt1));
+        director.attach(&edge, line(pt0, pt1));
+        Ok(edge)
+    }
+
+    pub fn bezier(
+        &mut self,
+        vertex0: Vertex,
+        vertex1: Vertex,
+        mut inter_points: Vec<Vector3>
+    ) -> Result<Edge> {
+        let mut control_points: Vec<Vector3> = Vec::new();
+        let pt0 = self.director.try_get_geometry(&vertex0)?.projection();
+        let pt1 = self.director.try_get_geometry(&vertex1)?.projection();
+        control_points.push(pt0.into());
+        control_points.append(&mut inter_points);
+        control_points.push(pt1.into());
+        let curve = bezier_curve(control_points);
+        let edge = Edge::try_new(vertex0, vertex1)?;
+        self.director.attach(&edge, curve);
         Ok(edge)
     }
 
@@ -42,7 +60,7 @@ impl<'a> Builder<'a> {
         let pt0 = director.try_get_geometry(&vertex0)?.projection();
         let pt1 = director.try_get_geometry(&vertex1)?.projection();
         let edge = Edge::new(vertex0, vertex1);
-        director.insert(&edge, circle_arc_by_three_points(pt0, pt1, transit));
+        director.attach(&edge, circle_arc_by_three_points(pt0, pt1, transit));
         Ok(edge)
     }
 
@@ -68,7 +86,7 @@ impl<'a> Builder<'a> {
             BSplineSurface::by_boundary(curve0, curve1, curve2, curve3)
         };
         let face = Face::try_new(wire)?;
-        self.director.insert(&face, surface);
+        self.director.attach(&face, surface);
         Ok(face)
     }
 
@@ -105,7 +123,7 @@ impl<'a> Builder<'a> {
         elem.scaled(origin, scalar, self)
     }
 
-    pub fn tsweep<T: TSweep>(&mut self, elem: &T, vector: &Vector3) -> Result<T::Output> {
+    pub fn tsweep<T: TSweep>(&mut self, elem: T, vector: &Vector3) -> Result<T::Output> {
         if vector.so_small() {
             Err(Error::ZeroVectorTSweep)
         } else {
@@ -115,7 +133,7 @@ impl<'a> Builder<'a> {
     
     pub fn rsweep<T: RSweep>(
         &mut self,
-        elem: &T,
+        elem: T,
         origin: &Vector3,
         axis: &Vector3,
         angle: f64,

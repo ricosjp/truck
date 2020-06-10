@@ -283,6 +283,12 @@ impl Wire {
         self
     }
 
+    #[inline(always)]
+    pub fn inversed_clone(&self) -> Wire {
+        let edge_list = self.edge_iter().rev().map(|edge| edge.inverse()).collect();
+        Wire { edge_list }
+    }
+
     /// whether simple or not. i.e. wheter there exists duplicate verticies in wire except for the front
     /// and the end.
     /// # Examples

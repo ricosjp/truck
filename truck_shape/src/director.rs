@@ -5,12 +5,11 @@ use crate::Result;
 use crate::*;
 use geometry::BSplineCurve;
 
-/// basic methods
 impl Director {
     pub fn new() -> Director { Director::default() }
 
     #[inline(always)]
-    pub fn insert<T>(&mut self, topo: &T, geom: T::Geometry) -> Option<T::Geometry>
+    pub fn attach<T>(&mut self, topo: &T, geom: T::Geometry) -> Option<T::Geometry>
     where T: TopologicalElement {
         T::geom_mut_container(self).insert(topo.id(), geom)
     }
@@ -53,6 +52,21 @@ impl Director {
     #[inline(always)]
     pub fn try_get_curve<T: TopologicalCurve>(&self, curve_element: &T) -> Result<BSplineCurve> {
         curve_element.get_geometry(self)
+    }
+
+    #[inline(always)]
+    pub fn reverse_face(&mut self, face: &mut topology::Face) {
+        match self.get_geometry(face) {
+            Some(got) => {
+                let mut surface = got.clone();
+                surface.swap_axes();
+                face.inverse();
+                self.attach(face, surface);
+            }
+            None => {
+                face.inverse();
+            }
+        }
     }
 
     #[inline(always)]

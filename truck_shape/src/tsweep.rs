@@ -5,32 +5,32 @@ use topology::*;
 
 pub trait TSweep: Sized {
     type Output: Sized;
-    fn tsweep(&self, vector: &Vector3, builder: &mut Builder) -> Result<Self::Output>;
+    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Self::Output>;
 }
 
 impl TSweep for Vertex {
     type Output = Edge;
-    fn tsweep(&self, vector: &Vector3, builder: &mut Builder) -> Result<Edge> {
-        let vertex = builder.translated(self, vector)?;
-        builder.line(*self, vertex)
+    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Edge> {
+        let vertex = builder.translated(&self, vector)?;
+        builder.line(self, vertex)
     }
 }
 
 impl TSweep for Edge {
     type Output = Face;
-    fn tsweep(&self, vector: &Vector3, builder: &mut Builder) -> Result<Face> {
-        let edge2 = builder.translated(self, vector)?;
+    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Face> {
+        let edge2 = builder.translated(&self, vector)?;
         let edge1 = builder.line(self.back(), edge2.back())?;
         let edge3 = builder.line(edge2.front(), self.front())?;
-        let wire = Wire::by_slice(&[*self, edge1, edge2.inverse(), edge3]);
+        let wire = Wire::by_slice(&[self, edge1, edge2.inverse(), edge3]);
         builder.plane(wire)
     }
 }
 
 impl TSweep for Wire {
     type Output = Shell;
-    fn tsweep(&self, vector: &Vector3, builder: &mut Builder) -> Result<Shell> {
-        let wire = builder.translated(self, vector)?;
+    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Shell> {
+        let wire = builder.translated(&self, vector)?;
         let mut columns = Vec::new();
         for (edge0, edge1) in self.edge_iter().zip(wire.edge_iter()) {
             columns.push(builder.line(edge0.front(), edge1.front())?);
@@ -55,19 +55,13 @@ impl TSweep for Wire {
 
 impl TSweep for Face {
     type Output = Solid;
-    fn tsweep(&self, vector: &Vector3, builder: &mut Builder) -> Result<Solid> {
-        let mut surface = builder.director.try_get_geometry(self)?.clone();
-        let same_direction = compare_direction(&mut surface, vector);
-        let face = builder.translated(self, vector)?;
-        let (face0, face1) = match same_direction {
-            true => (self, &face),
-            false => (&face, self),
-        };
-        let wire0 = face0.boundary();
-        let wire1 = face1.boundary();
+    fn tsweep(mut self, vector: &Vector3, builder: &mut Builder) -> Result<Solid> {
+        let face = builder.translated(&self, vector)?;
+        let wire0 = self.boundary();
+        let wire1 = face.boundary();
         let mut columns = Vec::new();
-        for (edge0, edge1) in wire0.edge_iter().zip(wire1.edge_iter()) {
-            columns.push(builder.line(edge0.front(), edge1.front())?);
+        for (v0, v1) in wire0.vertex_iter().zip(wire1.vertex_iter()) {
+            columns.push(builder.line(v0, v1)?);
         }
         let mut shell = Shell::new();
         for i in 0..wire0.len() {
@@ -78,16 +72,8 @@ impl TSweep for Face {
             let wire = Wire::by_slice(&[edge0, edge1, edge2, edge3]);
             shell.push(builder.plane(wire)?);
         }
-        shell.push(face1.clone());
-        let mut wire = face0.boundary().clone();
-        wire.inverse();
-        let mut surface = builder.director.try_get_geometry(face0)?.clone();
-        surface.swap_axes();
-        if !same_direction {
-            builder.director.remove(&face);
-        }
-        let face = Face::new_unchecked(wire);
-        builder.director.insert(&face, surface);
+        builder.director.reverse_face(&mut self);
+        shell.push(self);
         shell.push(face);
         Ok(Solid::new(vec![shell]))
     }
@@ -104,7 +90,7 @@ fn compare_direction(surface: &mut BSplineSurface, vector: &Vector3) -> bool {
 
 impl TSweep for Shell {
     type Output = Vec<Solid>;
-    fn tsweep(&self, vector: &Vector3, builder: &mut Builder) -> Result<Vec<Solid>> {
+    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Vec<Solid>> {
         let mut res = Vec::new();
         for shell in self.connected_components() {
             res.push(connected_shell_sweep(&shell, vector, builder)?)
@@ -128,7 +114,7 @@ fn connected_shell_sweep(shell: &Shell, vector: &Vector3, builder: &mut Builder)
         let mut surface = builder.director.try_get_geometry(face)?.clone();
         surface.swap_axes();
         let new_face = Face::new_unchecked(wire);
-        builder.director.insert(&new_face, surface);
+        builder.director.attach(&new_face, surface);
         new_shell.push(new_face);
     }
     let mut edges_counters: HashMap<usize, usize> = HashMap::new();

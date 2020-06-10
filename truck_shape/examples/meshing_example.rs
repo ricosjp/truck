@@ -1,8 +1,12 @@
 use truck_geometry::*;
-use truck_shape::elements::TopoGeomIntegrity;
+use truck_shape::elements::{Integrity, TopoGeomIntegrity};
 use truck_shape::*;
+use truck_shape::mesher::Meshed;
 use truck_topology::*;
+use truck_polymesh::PolygonMesh;
+use std::f64::consts::PI;
 
+#[allow(dead_code)]
 fn n_gon_prism(builder: &mut Builder, n: usize) -> Solid {
     let v: Vec<_> = (0..n)
         .map(|i| {
@@ -14,16 +18,18 @@ fn n_gon_prism(builder: &mut Builder, n: usize) -> Solid {
         .map(|i| builder.line(v[i], v[(i + 1) % n]).unwrap())
         .collect();
     let face = builder.plane(wire).unwrap();
-    builder.tsweep(&face, &Vector3::new(0, 2, 0)).unwrap()
+    builder.tsweep(face, &Vector3::new(0, 2, 0)).unwrap()
 }
 
+#[allow(dead_code)]
 fn cube(builder: &mut Builder) -> Solid {
     let v: Vertex = builder.vertex(Vector3::new(0.0, 0.0, 0.0)).unwrap();
-    let edge = builder.tsweep(&v, &Vector3::new(1.0, 0.0, 0.0)).unwrap();
-    let face = builder.tsweep(&edge, &Vector3::new(0.0, 1.0, 0.0)).unwrap();
-    builder.tsweep(&face, &Vector3::new(0.0, 0.0, 1.0)).unwrap()
+    let edge = builder.tsweep(v, &Vector3::new(1.0, 0.0, 0.0)).unwrap();
+    let face = builder.tsweep(edge, &Vector3::new(0.0, 1.0, 0.0)).unwrap();
+    builder.tsweep(face, &Vector3::new(0.0, 0.0, 1.0)).unwrap()
 }
 
+#[allow(dead_code)]
 fn bottle(builder: &mut Builder) -> Solid {
     let (width, thick, height) = (6.0, 4.0, 10.0);
     let v0 = builder
@@ -39,19 +45,20 @@ fn bottle(builder: &mut Builder) -> Solid {
             &edge0,
             &Vector3::new(0.0, 0.0, 0.0),
             &Vector3::new(0.0, 0.0, 1.0),
-            std::f64::consts::PI,
+            PI,
         )
         .unwrap();
     let wire0 = Wire::by_slice(&[edge0]);
     let wire1 = Wire::by_slice(&[edge1]);
     let face = builder.homotopy(&wire0, &wire1).unwrap();
     builder
-        .tsweep(&face, &Vector3::new(0.0, height, 0.0))
+        .tsweep(face, &Vector3::new(0.0, height, 0.0))
         .unwrap()
         .pop()
         .unwrap()
 }
 
+#[allow(dead_code)]
 fn tsudsumi(builder: &mut Builder) -> Solid {
     let v = vec![
         builder.vertex(Vector3::new(1.0, 2.0, 0.0)).unwrap(),
@@ -67,30 +74,24 @@ fn tsudsumi(builder: &mut Builder) -> Solid {
         builder
             .circle_arc(v[1], v[0], &Vector3::new(0.0, 2.0, -1.0))
             .unwrap(),
-        builder.line(v[0], v[3]).unwrap(),
-        builder.line(v[1], v[2]).unwrap(),
         builder
-            .circle_arc(v[2], v[3], &Vector3::new(1.0, 0.0, 0.0))
+            .circle_arc(v[2], v[3], &Vector3::new(-1.0, 0.0, 0.0))
             .unwrap(),
         builder
-            .circle_arc(v[3], v[2], &Vector3::new(-1.0, 0.0, 0.0))
+            .circle_arc(v[3], v[2], &Vector3::new(1.0, 0.0, 0.0))
             .unwrap(),
     ];
 
-    let wire = vec![
-        Wire::by_slice(&[edge[0].inverse(), edge[1].inverse()]),
-        Wire::by_slice(&[edge[0], edge[3], edge[4], edge[2].inverse()]),
-        Wire::by_slice(&[edge[1], edge[2], edge[5], edge[3].inverse()]),
-        Wire::by_slice(&[edge[4].inverse(), edge[5].inverse()]),
-    ];
-
-    let shell = wire
-        .into_iter()
-        .map(|w| builder.plane(w).unwrap())
-        .collect();
+    let mut wire0 = Wire::by_slice(&[edge[0], edge[1]]);
+    let wire1 = Wire::by_slice(&[edge[2], edge[3]]);
+    let mut shell = builder.homotopy(&wire0, &wire1).unwrap();
+    wire0.inverse();
+    shell.push(builder.plane(wire0).unwrap());
+    shell.push(builder.plane(wire1).unwrap());
     Solid::new(vec![shell])
 }
 
+#[allow(dead_code)]
 fn truck3d(builder: &mut Builder) -> Solid {
     let v: Vec<Vertex> = vec![
         builder.vertex(Vector3::new(0, 0, 0)).unwrap(),
@@ -119,7 +120,7 @@ fn truck3d(builder: &mut Builder) -> Solid {
     let face3 = builder.homotopy(&wire0[3].inverse(), &wire1[1]).unwrap()[0].clone();
     shell.append(&mut vec![face1, face2, face3].into());
     builder
-        .tsweep(&shell, &Vector3::new(0, 3, 0))
+        .tsweep(shell, &Vector3::new(0, 3, 0))
         .unwrap()
         .pop()
         .unwrap()
@@ -164,39 +165,82 @@ fn large_box(builder: &mut Builder) -> Solid {
             builder.plane(wire).unwrap()
         })
         .collect();
-    builder.tsweep(&shell, &Vector3::new(0, 0, 1)).unwrap().pop().unwrap()
+    builder.tsweep(shell, &Vector3::new(0, 0, 1)).unwrap().pop().unwrap()
 }
 
-fn torus(builder: &mut Builder) -> Solid {
+#[allow(dead_code)]
+fn torus(builder: &mut Builder) -> Shell {
     let v = vec![
         builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap(),
         builder.vertex(Vector3::new(0.0, 0.0, 3.0)).unwrap(),
     ];
     let wire = Wire::by_slice(&[
-        builder.circle_arc(v[0], v[1], &Vector3::new(0.0, 1.0, 0.0)).unwrap(),
-        builder.circle_arc(v[1], v[0], &Vector3::new(0.0, -1.0, 0.0)).unwrap(),
+        builder.circle_arc(v[0], v[1], &Vector3::new(0.0, 1.0, 2.0)).unwrap(),
+        builder.circle_arc(v[1], v[0], &Vector3::new(0.0, -1.0, 2.0)).unwrap(),
     ]);
-    let shell = builder.rsweep(
-        &wire,
+    builder.rsweep(
+        wire,
         &Vector3::new(0, 0, 0),
         &Vector3::new(0, 1, 0),
         std::f64::consts::PI * 2.0,
-    ).unwrap();
-    Solid::new(vec![shell])
+    ).unwrap()
 }
 
-fn output_mesh<F>(director: &mut Director, function: F, filename: &str)
-where F: FnOnce(&mut Builder) -> Solid {
-    let instant = std::time::Instant::now();
-    let solid = director.building(function);
-    let integrity = director.check_integrity(&solid);
+#[allow(dead_code)]
+fn half_torus(builder: &mut Builder) -> Solid {
+    let v = vec![
+        builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap(),
+        builder.vertex(Vector3::new(0.0, 0.0, 3.0)).unwrap(),
+    ];
+    let wire = Wire::by_slice(&[
+        builder.circle_arc(v[0], v[1], &Vector3::new(0.0, 1.0, 2.0)).unwrap(),
+        builder.circle_arc(v[1], v[0], &Vector3::new(0.0, -1.0, 2.0)).unwrap(),
+    ]);
+    let face = builder.plane(wire).unwrap();
+    builder.rsweep(
+        face,
+        &Vector3::new(0, 0, 0),
+        &Vector3::new(0, 1, 0),
+        std::f64::consts::PI,
+    ).unwrap()
+}
+
+#[allow(dead_code)]
+fn vase(builder: &mut Builder) -> Shell {
+    let v0 = builder.vertex(Vector3::new(0, 0, 0)).unwrap();
+    let v1 = builder.vertex(Vector3::new(1, 0, 0)).unwrap();
+    let v2 = builder.vertex(Vector3::new(1.5, 3.0, 0.0)).unwrap();
+    let origin = &Vector3::zero();
+    let axis = &Vector3::new(0, 1, 0);
+    
+    let edge0 = builder.line(v0, v1).unwrap();
+    let inter_points = vec![
+        Vector3::new(2.0, 0.5, 0.0),
+        Vector3::new(1.2, 3.5, 0.0),
+        Vector3::new(1.5, 3.5, 0.0),
+    ];
+    let edge1 = builder.bezier(v1, v2, inter_points).unwrap();
+    let wire = Wire::by_slice(&[edge0, edge1]);
+    builder.rsweep(wire, origin , axis, -PI * 2.0).unwrap()
+}
+
+#[allow(dead_code)]
+fn assert_integrity<T: Integrity>(elem: &T, director: &mut Director, filename: &str) {
+    let integrity = director.check_integrity(elem);
     assert_eq!(
         integrity,
         TopoGeomIntegrity::Integrate,
         "Integrate Error: {}",
         filename
     );
-    let mesh = director.get_mesher().meshing(&solid, 0.01);
+}
+
+fn output_mesh<F, T>(director: &mut Director, function: F, filename: &str)
+where F: FnOnce(&mut Builder) -> T, T: Meshed<MeshType=PolygonMesh> + Integrity {
+    let instant = std::time::Instant::now();
+    let solid = director.building(function);
+    //assert_integrity(&solid, director, filename);
+    let mesh = director.get_mesher().meshing(&solid, 0.02);
     let end_time = instant.elapsed();
     println!(
         "{}: {}.{:03} sec",
@@ -210,14 +254,16 @@ where F: FnOnce(&mut Builder) -> Solid {
 
 fn main() {
     let mut director = Director::new();
-    output_mesh(&mut director, cube, "cube.obj");
-    output_mesh(&mut director, bottle, "bottle.obj");
-    output_mesh(&mut director, tsudsumi, "tsudsumi.obj");
-    output_mesh(&mut director, truck3d, "truck3d.obj");
+    //output_mesh(&mut director, cube, "cube.obj");
+    //output_mesh(&mut director, bottle, "bottle.obj");
+    //output_mesh(&mut director, tsudsumi, "tsudsumi.obj");
+    //output_mesh(&mut director, truck3d, "truck3d.obj");
     for n in 3..=8 {
         let filename = format!("{}-gon-prism.obj", n);
-        output_mesh(&mut director, |d| n_gon_prism(d, n), &filename);
+        //output_mesh(&mut director, |d| n_gon_prism(d, n), &filename);
     }
     //output_mesh(&mut director, large_box, "large_plane.obj");
-    output_mesh(&mut director, torus, "torus.obj");
+    //output_mesh(&mut director, torus, "torus.obj");
+    //output_mesh(&mut director, half_torus, "half_torus.obj");
+    output_mesh(&mut director, vase, "vase.obj");
 }

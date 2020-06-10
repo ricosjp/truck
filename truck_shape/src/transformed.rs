@@ -84,7 +84,7 @@ impl Transformed for Edge {
         let mut curve = builder.director.try_get_geometry(self)?.clone();
         curve_closure(&mut curve);
         let new_edge = Edge::try_new(v0, v1)?;
-        builder.director.insert(&new_edge, curve);
+        builder.director.attach(&new_edge, curve);
         if self.absolute_front() == self.front() {
             Ok(new_edge)
         } else {
@@ -124,7 +124,7 @@ impl Transformed for Wire {
                 let mut curve = builder.director.try_get_geometry(edge)?.clone();
                 curve_closure(&mut curve);
                 let new_edge = Edge::new_unchecked(vertex0, vertex1);
-                builder.director.insert(&new_edge, curve);
+                builder.director.attach(&new_edge, curve);
                 if edge.absolute_front() == edge.front() {
                     wire.push_back(new_edge);
                 } else {
@@ -152,7 +152,7 @@ impl Transformed for Face {
         let face = Face::new_unchecked(wire);
         let mut surface = builder.director.try_get_geometry(self)?.clone();
         surface_closure(&mut surface);
-        builder.director.insert(&face, surface);
+        builder.director.attach(&face, surface);
         Ok(face)
     }
 }
@@ -195,7 +195,7 @@ impl Transformed for Shell {
                     let mut curve = director.try_get_geometry(edge)?.clone();
                     curve_closure(&mut curve);
                     let new_edge = Edge::new_unchecked(*v0, *v1);
-                    director.insert(&new_edge, curve);
+                    director.attach(&new_edge, curve);
                     if edge.absolute_front() == edge.front() {
                         wire.push_back(new_edge);
                     } else {
@@ -207,7 +207,7 @@ impl Transformed for Shell {
             let new_face = Face::new_unchecked(wire);
             let mut surface = director.try_get_geometry(face)?.clone();
             surface_closure(&mut surface);
-            director.insert(&new_face, surface);
+            director.attach(&new_face, surface);
             shell.push(new_face);
         }
         Ok(shell)
