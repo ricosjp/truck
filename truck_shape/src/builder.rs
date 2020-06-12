@@ -93,13 +93,13 @@ impl<'a> Builder<'a> {
     pub fn homotopy<T: TopologicalCurve>(&mut self, elem0: &T, elem1: &T) -> Result<Shell> {
         elem0.homotopy(elem1, &mut self.director)
     }
-    pub fn copy<T: Transformed>(&mut self, elem: &T) -> Result<T> { elem.copy(self) }
+    pub fn copy<T: Transformed>(&mut self, elem: &T) -> Result<T> { elem.copy(self.director) }
 
     pub fn transformed<T: Transformed>(&mut self, elem: &T, trsf: &Transform) -> Result<T> {
-        elem.transformed(trsf, self)
+        elem.transformed(trsf, self.director)
     }
     pub fn translated<T: Transformed>(&mut self, elem: &T, vector: &Vector3) -> Result<T> {
-        elem.translated(vector, self)
+        elem.translated(vector, self.director)
     }
 
     pub fn rotated<T: Transformed>(
@@ -110,7 +110,7 @@ impl<'a> Builder<'a> {
         angle: f64,
     ) -> Result<T>
     {
-        elem.rotated(origin, axis, angle, self)
+        elem.rotated(origin, axis, angle, self.director)
     }
 
     pub fn scaled<T: Transformed>(
@@ -120,14 +120,14 @@ impl<'a> Builder<'a> {
         scalar: &Vector3,
     ) -> Result<T>
     {
-        elem.scaled(origin, scalar, self)
+        elem.scaled(origin, scalar, self.director)
     }
 
     pub fn tsweep<T: TSweep>(&mut self, elem: T, vector: &Vector3) -> Result<T::Output> {
         if vector.so_small() {
             Err(Error::ZeroVectorTSweep)
         } else {
-            elem.tsweep(vector, self)
+            elem.tsweep(vector, self.director)
         }
     }
     

@@ -42,14 +42,6 @@ pub struct Solid {
     boundaries: Vec<Shell>,
 }
 
-/// the wrapped up topological shell data.
-#[derive(Clone, Debug, Default)]
-pub struct WrappedUpShell {
-    pub number_of_vertices: usize,
-    pub edges: Vec<(usize, usize)>,
-    pub faces: Vec<(bool, Vec<usize>)>,
-}
-
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
 pub mod edge;

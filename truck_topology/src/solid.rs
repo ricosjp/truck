@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use crate::errors::Error;
 use crate::{Result, Shell, Solid};
-use crate::shell::{ShellCondition, Connectivity};
+use crate::shell::ShellCondition;
 
 impl Solid {
     /// create the shell whose boundaries is boundary.
@@ -25,8 +25,8 @@ impl Solid {
                 return Err(Error::EmptyShell);
             } else if shell.shell_condition() != ShellCondition::Closed {
                 return Err(Error::NotClosedShell);
-            } else if shell.connectivity() != Connectivity::StronglyConnected {
-                return Err(Error::NotConnectedManifold);
+            } else if !shell.is_connected() {
+                return Err(Error::NotConnected);
             }
         }
         Ok(Solid { boundaries: boundaries })
@@ -111,12 +111,12 @@ fn cube() {
     shell.push(face0);
     shell.push(face5);
     
-    assert_eq!(shell.connectivity(), Connectivity::NonConnected);
+    assert!(!shell.is_connected());
     
     shell.push(face1);
     
     assert_eq!(shell.shell_condition(), ShellCondition::Oriented);
-    assert_eq!(shell.connectivity(), Connectivity::StronglyConnected);
+    assert!(shell.is_connected());
     
     shell.push(face2);
     shell.push(face3);

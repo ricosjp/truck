@@ -1,36 +1,44 @@
-use crate::{Builder, Result};
+use crate::transformed::Transformed;
+use crate::{Director, Result};
 use geometry::*;
 use std::collections::HashMap;
 use topology::*;
 
 pub trait TSweep: Sized {
+    #[doc(hidden)]
     type Output: Sized;
-    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Self::Output>;
+    #[doc(hidden)]
+    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Self::Output>;
 }
 
 impl TSweep for Vertex {
+    #[doc(hidden)]
     type Output = Edge;
-    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Edge> {
-        let vertex = builder.translated(&self, vector)?;
-        builder.line(self, vertex)
+    #[doc(hidden)]
+    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Edge> {
+        let vertex = self.translated(vector, director)?;
+        director.get_builder().line(self, vertex)
     }
 }
 
 impl TSweep for Edge {
+    #[doc(hidden)]
     type Output = Face;
-    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Face> {
-        let edge2 = builder.translated(&self, vector)?;
-        let edge1 = builder.line(self.back(), edge2.back())?;
-        let edge3 = builder.line(edge2.front(), self.front())?;
+    #[doc(hidden)]
+    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Face> {
+        let edge2 = self.translated(vector, director)?;
+        let edge1 = director.get_builder().line(self.back(), edge2.back())?;
+        let edge3 = director.get_builder().line(edge2.front(), self.front())?;
         let wire = Wire::by_slice(&[self, edge1, edge2.inverse(), edge3]);
-        builder.plane(wire)
+        director.get_builder().plane(wire)
     }
 }
 
 impl TSweep for Wire {
     type Output = Shell;
-    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Shell> {
-        let wire = builder.translated(&self, vector)?;
+    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Shell> {
+        let wire = self.translated(vector, director)?;
+        let mut builder = director.get_builder();
         let mut columns = Vec::new();
         for (edge0, edge1) in self.edge_iter().zip(wire.edge_iter()) {
             columns.push(builder.line(edge0.front(), edge1.front())?);
@@ -55,8 +63,9 @@ impl TSweep for Wire {
 
 impl TSweep for Face {
     type Output = Solid;
-    fn tsweep(mut self, vector: &Vector3, builder: &mut Builder) -> Result<Solid> {
-        let face = builder.translated(&self, vector)?;
+    fn tsweep(mut self, vector: &Vector3, director: &mut Director) -> Result<Solid> {
+        let face = self.translated(vector, director)?;
+        let mut builder = director.get_builder();
         let wire0 = self.boundary();
         let wire1 = face.boundary();
         let mut columns = Vec::new();
@@ -72,53 +81,33 @@ impl TSweep for Face {
             let wire = Wire::by_slice(&[edge0, edge1, edge2, edge3]);
             shell.push(builder.plane(wire)?);
         }
-        builder.director.reverse_face(&mut self);
+        director.reverse_face(&mut self);
         shell.push(self);
         shell.push(face);
         Ok(Solid::new(vec![shell]))
     }
 }
 
-fn compare_direction(surface: &mut BSplineSurface, vector: &Vector3) -> bool {
-    let (knot_vec0, knot_vec1) = surface.knot_vecs();
-    let u = knot_vec0[0] + knot_vec0.range_length() / 2.0;
-    let v = knot_vec1[0] + knot_vec1.range_length() / 2.0;
-    let normal = surface.normal_vector(u, v);
-    let normal = Vector3::new(normal[0], normal[1], normal[2]);
-    normal * vector > 0.0
-}
-
 impl TSweep for Shell {
     type Output = Vec<Solid>;
-    fn tsweep(self, vector: &Vector3, builder: &mut Builder) -> Result<Vec<Solid>> {
+    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Vec<Solid>> {
         let mut res = Vec::new();
         for shell in self.connected_components() {
-            res.push(connected_shell_sweep(&shell, vector, builder)?)
+            res.push(connected_shell_sweep(shell, vector, director)?)
         }
         Ok(res)
     }
 }
 
-fn connected_shell_sweep(shell: &Shell, vector: &Vector3, builder: &mut Builder) -> Result<Solid> {
-    let mut surface = builder.director.try_get_geometry(&shell[0])?.clone();
-    let same_direction = compare_direction(&mut surface, vector);
-    let shell0 = builder.translated(shell, vector)?;
-    let (shell0, shell1) = match same_direction {
-        true => (shell, &shell0),
-        false => (&shell0, shell),
-    };
-    let mut new_shell = shell1.clone();
-    for face in shell0.face_iter() {
-        let mut wire = face.boundary().clone();
-        wire.inverse();
-        let mut surface = builder.director.try_get_geometry(face)?.clone();
-        surface.swap_axes();
-        let new_face = Face::new_unchecked(wire);
-        builder.director.attach(&new_face, surface);
-        new_shell.push(new_face);
-    }
+fn connected_shell_sweep(
+    shell: Shell,
+    vector: &Vector3,
+    director: &mut Director,
+) -> Result<Solid>
+{
+    let mut shell0 = shell.translated(vector, director)?;
     let mut edges_counters: HashMap<usize, usize> = HashMap::new();
-    let edge_iter = shell0
+    let edge_iter = shell
         .face_iter()
         .flat_map(|face| face.boundary().edge_iter());
     for edge in edge_iter {
@@ -129,12 +118,14 @@ fn connected_shell_sweep(shell: &Shell, vector: &Vector3, builder: &mut Builder)
             }
         }
     }
-    let edge_iter0 = shell0
+    let edge_iter0 = shell
         .face_iter()
         .flat_map(|face| face.boundary().edge_iter());
-    let edge_iter1 = shell1
+    let edge_iter1 = shell0
         .face_iter()
         .flat_map(|face| face.boundary().edge_iter());
+    let mut builder = director.get_builder();
+    let mut new_shell = Shell::new();
     let mut columns: HashMap<usize, Edge> = HashMap::new();
     for (edge0, edge2) in edge_iter0.zip(edge_iter1) {
         if edges_counters.get(&edge0.id()).unwrap() == &1 {
@@ -159,6 +150,11 @@ fn connected_shell_sweep(shell: &Shell, vector: &Vector3, builder: &mut Builder)
             };
             new_shell.push(builder.plane(wire)?);
         }
+    }
+    new_shell.append(&mut shell0);
+    for mut face in shell.face_into_iter() {
+        director.reverse_face(&mut face);
+        new_shell.push(face);
     }
     Ok(Solid::new(vec![new_shell]))
 }

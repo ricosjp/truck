@@ -13,15 +13,9 @@ impl Face {
     /// `boundary` must be simple and closed.
     #[inline(always)]
     pub fn new(boundary: Wire) -> Face {
-        if !boundary.is_closed() {
-            panic!("{}", Error::NotClosedWire)
-        } else if !boundary.is_simple() {
-            panic!("{}", Error::NotSimpleWire)
-        } else {
-            Face {
-                boundary: boundary,
-                id: ID_GENERATOR.generate(),
-            }
+        match Face::try_new(boundary) {
+            Ok(got) => got,
+            Err(error) => panic!("{}", error),
         }
     }
     
@@ -35,10 +29,7 @@ impl Face {
         } else if !boundary.is_simple() {
             Err(Error::NotSimpleWire)
         } else {
-            Ok(Face {
-                boundary: boundary,
-                id: ID_GENERATOR.generate(),
-            })
+            Ok(Face::new_unchecked(boundary))
         }
     }
 

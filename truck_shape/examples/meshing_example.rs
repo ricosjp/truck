@@ -60,35 +60,21 @@ fn bottle(builder: &mut Builder) -> Solid {
 
 #[allow(dead_code)]
 fn tsudsumi(builder: &mut Builder) -> Solid {
-    let v = vec![
-        builder.vertex(Vector3::new(1.0, 2.0, 0.0)).unwrap(),
-        builder.vertex(Vector3::new(-1.0, 2.0, 0.0)).unwrap(),
-        builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap(),
-        builder.vertex(Vector3::new(0.0, 0.0, -1.0)).unwrap(),
-    ];
-
-    let edge = vec![
-        builder
-            .circle_arc(v[0], v[1], &Vector3::new(0.0, 2.0, 1.0))
-            .unwrap(),
-        builder
-            .circle_arc(v[1], v[0], &Vector3::new(0.0, 2.0, -1.0))
-            .unwrap(),
-        builder
-            .circle_arc(v[2], v[3], &Vector3::new(-1.0, 0.0, 0.0))
-            .unwrap(),
-        builder
-            .circle_arc(v[3], v[2], &Vector3::new(1.0, 0.0, 0.0))
-            .unwrap(),
-    ];
-
-    let mut wire0 = Wire::by_slice(&[edge[0], edge[1]]);
-    let wire1 = Wire::by_slice(&[edge[2], edge[3]]);
-    let mut shell = builder.homotopy(&wire0, &wire1).unwrap();
-    wire0.inverse();
-    shell.push(builder.plane(wire0).unwrap());
-    shell.push(builder.plane(wire1).unwrap());
-    Solid::new(vec![shell])
+    let v0 = builder.vertex(Vector3::new(1.0, 2.0, 0.0)).unwrap();
+    let v1 = builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap();
+    let edge = builder.line(v0, v1).unwrap();
+    let mut shell = builder.rsweep(
+        edge,
+        &Vector3::new(0, 0, 0),
+        &Vector3::new(0, 1, 0),
+        PI * 2.0,
+    ).unwrap();
+    let wire = shell.extract_boundaries().unwrap();
+    for mut wire in wire {
+        wire.inverse();
+        shell.push(builder.plane(wire).unwrap());
+    }
+    Solid::try_new(vec![shell]).unwrap()
 }
 
 #[allow(dead_code)]
@@ -100,9 +86,9 @@ fn truck3d(builder: &mut Builder) -> Solid {
         builder.vertex(Vector3::new(3, 0, 2)).unwrap(),
     ];
     let edge = vec![
-        builder.line(v[0], v[1]).unwrap(),
+        builder.line(v[1], v[0]).unwrap(),
         builder
-            .circle_arc(v[2], v[3], &Vector3::new(2, 0, 1))
+            .circle_arc(v[3], v[2], &Vector3::new(2, 0, 1))
             .unwrap(),
     ];
     let mut shell = builder.homotopy(&edge[0], &edge[1]).unwrap();
@@ -254,16 +240,16 @@ where F: FnOnce(&mut Builder) -> T, T: Meshed<MeshType=PolygonMesh> + Integrity 
 
 fn main() {
     let mut director = Director::new();
-    //output_mesh(&mut director, cube, "cube.obj");
-    //output_mesh(&mut director, bottle, "bottle.obj");
-    //output_mesh(&mut director, tsudsumi, "tsudsumi.obj");
-    //output_mesh(&mut director, truck3d, "truck3d.obj");
+    output_mesh(&mut director, cube, "cube.obj");
+    output_mesh(&mut director, bottle, "bottle.obj");
+    output_mesh(&mut director, tsudsumi, "tsudsumi.obj");
+    output_mesh(&mut director, truck3d, "truck3d.obj");
     for n in 3..=8 {
-        let filename = format!("{}-gon-prism.obj", n);
-        //output_mesh(&mut director, |d| n_gon_prism(d, n), &filename);
+          let filename = format!("{}-gon-prism.obj", n);
+          output_mesh(&mut director, |d| n_gon_prism(d, n), &filename);
     }
     //output_mesh(&mut director, large_box, "large_plane.obj");
-    //output_mesh(&mut director, torus, "torus.obj");
-    //output_mesh(&mut director, half_torus, "half_torus.obj");
+    output_mesh(&mut director, torus, "torus.obj");
+    output_mesh(&mut director, half_torus, "half_torus.obj");
     output_mesh(&mut director, vase, "vase.obj");
 }

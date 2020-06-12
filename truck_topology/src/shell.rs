@@ -1,6 +1,8 @@
-use crate::{Edge, Face, Shell, Vertex, Wire, WrappedUpShell};
-use std::collections::HashMap;
+use crate::{Edge, Face, Result, Shell, Vertex, Wire};
+use crate::errors::Error;
+use std::collections::{HashMap, HashSet};
 use std::vec::Vec;
+use std::convert::TryFrom;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ShellCondition {
@@ -12,16 +14,6 @@ pub enum ShellCondition {
     Oriented,
     /// All edges are shared by two faces.
     Closed,
-}
-
-#[derive(PartialEq, Eq, Debug)]
-pub enum Connectivity {
-    /// non-connected
-    NonConnected,
-    /// connected
-    Connected,
-    /// The shell is connected manifold if the shell is regular.
-    StronglyConnected,
 }
 
 impl Shell {
@@ -64,24 +56,27 @@ impl Shell {
     #[inline(always)]
     pub fn face_iter_mut(&mut self) -> FaceIterMut { self.face_list.iter_mut() }
 
+    #[inline(always)]
+    pub fn face_into_iter(self) -> FaceIntoIter { self.face_list.into_iter() }
+
     pub fn append(&mut self, other: &mut Shell) { self.face_list.append(&mut other.face_list); }
 
     pub fn remove(&mut self, idx: usize) { self.face_list.remove(idx); }
 
-    /// return (oriented, boundary used), If irregular, return None.
-    fn boundary_edge_extraction(
+    /// return (is oriented or not, all edges, inner edge), If irregular, return None.
+    fn inner_edge_extraction(
         &self,
-    ) -> Option<(bool, HashMap<usize, &Edge>, HashMap<usize, &Edge>)> {
-        let mut boundary = HashMap::with_capacity(self.face_list.len());
-        let mut used = HashMap::with_capacity(self.face_list.len());
+    ) -> Option<(bool, HashMap<usize, &Edge>, HashSet<usize>)> {
+        let mut all_edges = HashMap::with_capacity(self.face_list.len());
+        let mut inner_edges = HashSet::with_capacity(self.face_list.len());
 
         let mut oriented = true;
         let edge_iter = self
             .face_iter()
             .flat_map(|face| face.boundary().edge_iter());
         for edge in edge_iter {
-            if let Some(edge0) = boundary.insert(edge.id(), edge) {
-                if used.insert(edge.id(), edge).is_some() {
+            if let Some(edge0) = all_edges.insert(edge.id(), edge) {
+                if !inner_edges.insert(edge.id()) {
                     return None;
                 } else if edge == edge0 {
                     oriented = false;
@@ -89,15 +84,45 @@ impl Shell {
             }
         }
 
-        Some((oriented, boundary, used))
+        Some((oriented, all_edges, inner_edges))
+    }
+
+    pub fn extract_boundaries(&self) -> Result<Vec<Wire>> {
+        let (_, all_edges, inner_edges) = match self.inner_edge_extraction() {
+            Some(tuple) => tuple,
+            None => return Err(Error::NotRegularShell),
+        };
+        let mut vemap: HashMap<Vertex, &Edge> = HashMap::new();
+        for edge in all_edges.values() {
+            if inner_edges.get(&edge.id()).is_none() {
+                vemap.insert(edge.front(), edge);
+            }
+        }
+        let mut res = Vec::new();
+        while !vemap.is_empty() {
+            let vertex = *vemap.keys().next().unwrap();
+            let mut cursor = vemap.remove(&vertex).unwrap();
+            let mut wire = Wire::try_from(vec![*cursor]).unwrap();
+            loop {
+                cursor = match vemap.remove(&cursor.back()) {
+                    None => break,
+                    Some(got) => {
+                        wire.push_back(*got);
+                        got
+                    }
+                };
+            }
+            res.push(wire);
+        }
+        Ok(res)
     }
 
     /// determine the shell conditions: non-regular, regular, oriented, or closed.  
     /// The complexity increases in proportion to the number of edges.
     pub fn shell_condition(&self) -> ShellCondition {
-        if let Some((oriented, boundary, used)) = self.boundary_edge_extraction() {
+        if let Some((oriented, all_edges, inner_edges)) = self.inner_edge_extraction() {
             if oriented {
-                if boundary.len() == used.len() {
+                if all_edges.len() == inner_edges.len() {
                     ShellCondition::Closed
                 } else {
                     ShellCondition::Oriented
@@ -157,32 +182,12 @@ impl Shell {
         adjacency
     }
 
-    pub fn is_vertex_connected(&self) -> bool {
+    pub fn is_connected(&self) -> bool {
         if self.is_empty() {
             return true;
         }
         let (_, adjacency) = self.create_vertex_adjacency();
         check_connectivity(&adjacency)
-    }
-
-    pub fn is_face_connected(&self) -> bool {
-        if self.is_empty() {
-            return true;
-        }
-        let adjacency = self.create_face_adjacency();
-        check_connectivity(&adjacency)
-    }
-
-    /// determine whether this shell is connected or not.
-    /// The complexity increases in proportion to the number of vertices and edges.
-    pub fn connectivity(&self) -> Connectivity {
-        if !self.is_vertex_connected() {
-            Connectivity::NonConnected
-        } else if !self.is_face_connected() {
-            Connectivity::Connected
-        } else {
-            Connectivity::StronglyConnected
-        }
     }
 
     pub fn connected_components(&self) -> Vec<Shell> {
@@ -192,119 +197,6 @@ impl Shell {
             .iter()
             .map(|vec| vec.iter().map(|i| self[*i].clone()).collect())
             .collect()
-    }
-
-    /// return the following hash maps:
-    /// * from vertex to the local id.
-    /// * from edge to (the local id, front vertex's local id, back vertex's local id)
-    fn create_vertex_edge_map(
-        &self,
-    ) -> (
-        HashMap<Vertex, usize>,
-        HashMap<usize, (usize, usize, usize)>,
-    ) {
-        let mut vertices_map = HashMap::with_capacity(self.face_list.len());
-        let mut edges_map = HashMap::with_capacity(self.face_list.len());
-
-        let mut vertex_counter = 0;
-        let mut edge_counter = 0;
-        for face in self.face_iter() {
-            for edge in face.boundary().edge_iter() {
-                let front_info = if let Some(idx) = vertices_map.get(&edge.front()) {
-                    *idx
-                } else {
-                    vertices_map.insert(edge.front(), vertex_counter);
-                    vertex_counter += 1;
-                    vertex_counter - 1
-                };
-                let back_info = if let Some(idx) = vertices_map.get(&edge.back()) {
-                    *idx
-                } else {
-                    vertices_map.insert(edge.back(), vertex_counter);
-                    vertex_counter += 1;
-                    vertex_counter - 1
-                };
-
-                if edges_map.get(&edge.id()).is_none() {
-                    edges_map.insert(edge.id(), (edge_counter, front_info, back_info));
-                    edge_counter += 1;
-                }
-            }
-        }
-
-        (vertices_map, edges_map)
-    }
-
-    /// wrap up the shell data to the topology data.
-    pub fn wrap_up(&self) -> WrappedUpShell {
-        let (vertices_map, edges_map) = self.create_vertex_edge_map();
-
-        let faces: Vec<(bool, Vec<usize>)> = self
-            .face_iter()
-            .map(|face| {
-                let mut wire_info = Vec::new();
-
-                let mut edge_iter = face.boundary().edge_iter();
-                let first_edge = edge_iter.next().unwrap();
-                let (edge_info_id, front_info, _) = edges_map.get(&first_edge.id()).unwrap();
-                wire_info.push(*edge_info_id);
-
-                let vertex_info = vertices_map.get(&first_edge.front()).unwrap();
-                let ori = front_info == vertex_info;
-
-                for edge in edge_iter {
-                    let (edge_info_id, _, _) = edges_map.get(&edge.id()).unwrap();
-                    wire_info.push(*edge_info_id);
-                }
-
-                (ori, wire_info)
-            })
-            .collect();
-
-        let mut edges_with_id: Vec<(usize, usize, usize)> =
-            edges_map.into_iter().map(|(_, x)| x).collect();
-        edges_with_id.sort_by(|(a, _, _), (b, _, _)| a.cmp(b));
-        let edges: Vec<(usize, usize)> =
-            edges_with_id.into_iter().map(|(_, f, b)| (f, b)).collect();
-
-        WrappedUpShell {
-            number_of_vertices: vertices_map.len(),
-            edges: edges,
-            faces: faces,
-        }
-    }
-
-    /// extract topology data
-    pub fn extract(topodata: &WrappedUpShell) -> Shell {
-        let v = Vertex::news(topodata.number_of_vertices);
-        let mut edges = Vec::new();
-        for (i, j) in &topodata.edges {
-            edges.push(Edge::new(v[*i], v[*j]));
-        }
-
-        let mut shell = Shell::new();
-        for (orient, wire_info) in &topodata.faces {
-            let mut wire = Wire::new();
-            let mut iter = wire_info.iter();
-            let idx = *iter.next().unwrap();
-            if *orient {
-                wire.push_back(edges[idx]);
-            } else {
-                wire.push_back(edges[idx].inverse());
-            }
-
-            for idx in iter {
-                if wire.back_vertex().unwrap() == edges[*idx].front() {
-                    wire.push_back(edges[*idx]);
-                } else {
-                    wire.push_back(edges[*idx].inverse());
-                }
-            }
-
-            shell.push(Face::new(wire));
-        }
-
-        shell
     }
 }
 
@@ -331,6 +223,7 @@ impl std::ops::Index<usize> for Shell {
 
 pub type FaceIter<'a> = std::slice::Iter<'a, Face>;
 pub type FaceIterMut<'a> = std::slice::IterMut<'a, Face>;
+pub type FaceIntoIter = std::vec::IntoIter<Face>;
 
 impl ShellCondition {
     fn get_id(&self) -> usize {

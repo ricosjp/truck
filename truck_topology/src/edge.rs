@@ -12,14 +12,9 @@ impl Edge {
     /// The condition `front == back` is not allowed.
     #[inline(always)]
     pub fn new(front: Vertex, back: Vertex) -> Edge {
-        if front == back {
-            panic!("{:?}", Error::SameVertex);
-        }
-
-        Edge {
-            vertices: (front, back),
-            orientation: true,
-            id: ID_GENERATOR.generate(),
+        match Edge::try_new(front, back) {
+            Ok(got) => got,
+            Err(error) => panic!("{}", error),
         }
     }
 
@@ -31,11 +26,7 @@ impl Edge {
         if front == back {
             Err(Error::SameVertex)
         } else {
-            Ok(Edge {
-                vertices: (front, back),
-                orientation: true,
-                id: ID_GENERATOR.generate(),
-            })
+            Ok(Edge::new_unchecked(front, back))
         }
     }
     

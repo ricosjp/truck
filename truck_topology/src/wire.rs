@@ -39,6 +39,8 @@ impl Wire {
     pub fn truncate(&mut self, len: usize) { self.edge_list.truncate(len) }
     #[inline(always)]
     pub fn edge_iter(&self) -> EdgeIter { self.edge_list.iter() }
+    #[inline(always)]
+    pub fn edge_into_iter(self) -> EdgeIntoIter { self.edge_list.into_iter() }
 
     /// get the vertex iterator
     /// # Exapmles
@@ -392,6 +394,7 @@ impl std::iter::IntoIterator for Wire {
 }
 
 pub type EdgeIter<'a> = vec_deque::Iter<'a, Edge>;
+pub type EdgeIntoIter = vec_deque::IntoIter<Edge>;
 
 pub struct VertexIter<'a> {
     edge_iter: EdgeIter<'a>,
