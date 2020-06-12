@@ -5,15 +5,6 @@ macro_rules! impl_vector_new {
     ($classname: ty, $dim: expr, $($field: ident), *) => {
         impl $classname {
             /// constructor.
-            /// # Examples
-            /// ```
-            /// use truck_geometry::Vector;
-            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-            /// assert_eq!(v[0], 1.0);
-            /// assert_eq!(v[1], 2.0);
-            /// assert_eq!(v[2], 3.0);
-            /// assert_eq!(v[3], 4.0);
-            /// ```
             pub fn new<T: Into<f64>>($($field: T), *) -> Self {
                 Self([$($field.into()), *])
             }
@@ -29,30 +20,25 @@ macro_rules! impl_vector {
     ($classname: ty, $dim: expr, $($num: expr), *) => {
         impl $classname {
             /// construct by a reference of array.
-            /// # Examples
-            /// ```
-            /// use truck_geometry::Vector;
-            /// let v = Vector::by_array_ref(&[1.0, 2.0, 3.0, 4.0]);
-            /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 4.0));
-            /// ```
             #[inline(always)]
-            pub fn by_array_ref(arr: &[f64; $dim]) -> Self { Self(arr.clone()) }
+            pub fn by_array_ref<>(arr: &[f64; $dim]) -> Self { Self(arr.clone()) }
 
             /// construct a vector whose components are 0.0.
             /// # Examples
             /// ```
-            /// use truck_geometry::Vector;
-            /// let v = Vector::zero();
-            /// assert_eq!(v, Vector::new(0.0, 0.0, 0.0, 0.0));
+            /// use truck_geometry::{Vector, Vector3, Vector2};
+            /// assert_eq!(Vector::zero(), Vector::new(0.0, 0.0, 0.0, 0.0));
+            /// assert_eq!(Vector3::zero(), Vector3::new(0.0, 0.0, 0.0));
+            /// assert_eq!(Vector2::zero(), Vector2::new(0.0, 0.0));
             /// ```
             #[inline(always)]
             pub const fn zero() -> Self { Self([0.0; $dim]) }
 
-            /// as_slice
+            /// get slice
             #[inline(always)]
             pub fn as_slice(&self) -> &[f64] { &self.0 }
 
-            /// as_mut_slice
+            /// get mutable slice
             #[inline(always)]
             pub fn as_mut_slice(&mut self) -> &mut [f64] { &mut self.0 }
 
@@ -750,7 +736,6 @@ macro_rules! impl_vector {
                     res
             }
         }
-
     };
 }
 
@@ -918,6 +903,7 @@ impl_bitxor_assign!(Vector3);
 macro_rules! impl_lesser_convert {
     ($higher_vector: ty, $lesser_vector: ty, $($lesser_index: expr), *) => {
         impl std::convert::From<$higher_vector> for $lesser_vector {
+            /// canonical projection from higher dimensional vector to lower dimensional
             #[inline(always)]
             fn from(vector: $higher_vector) -> $lesser_vector {
                 <$lesser_vector>::new($(vector[$lesser_index]),*)
@@ -986,3 +972,25 @@ impl Vector3 {
         Some(Vector3::new(x, y, z))
     }
 }
+
+#[test]
+fn vector_test() {
+    // constructor and index
+    let vec = Vector::new(1.0, 2.0, 3.0, 4.0);
+    assert_eq!(vec[0], 1.0);
+    assert_eq!(vec[1], 2.0);
+    assert_eq!(vec[2], 3.0);
+    assert_eq!(vec[3], 4.0);
+
+    // new3
+    let vec = Vector::new3(1, 2, 3);
+    assert_eq!(vec[0], 1.0);
+    assert_eq!(vec[1], 2.0);
+    assert_eq!(vec[2], 3.0);
+    assert_eq!(vec[3], 1.0);
+
+    // by_array_ref
+    let vec = Vector::by_array_ref(&[1.0, 2.0, 3.0, 4.0]);
+    assert_eq!(vec, Vector::new(1.0, 2.0, 3.0, 4.0));
+}
+

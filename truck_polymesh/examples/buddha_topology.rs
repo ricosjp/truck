@@ -14,9 +14,8 @@ fn main() {
     let shell = handler.extract_topology();
     let filter_time = instant.elapsed();
     let instant = std::time::Instant::now();
-    let wrappedup = io::tts::wrap_up(&shell);
     let file = std::fs::File::create(OUTPUT).unwrap();
-    io::tts::write(&wrappedup, file).unwrap();
+    io::tts::write(&shell, file).unwrap();
     let writing_time = instant.elapsed();
 
     println!(

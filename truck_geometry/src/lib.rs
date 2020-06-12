@@ -1,14 +1,14 @@
-macro_rules! vector_define {
-    ($classname: ident, $dim: expr) => {
-        /// vector
-        #[derive(Clone, PartialEq, Debug)]
-        pub struct $classname([f64; $dim]);
-    };
-}
+/// 4 dimentional vector
+#[derive(Clone, PartialEq, Debug)]
+pub struct Vector([f64; 4]);
 
-vector_define!(Vector, 4);
-vector_define!(Vector3, 3);
-vector_define!(Vector2, 2);
+/// 3 dimentional vector
+#[derive(Clone, PartialEq, Debug)]
+pub struct Vector3([f64; 3]);
+
+/// 2 dimentional vector
+#[derive(Clone, PartialEq, Debug)]
+pub struct Vector2([f64; 2]);
 
 /// 4x4 matrix
 #[derive(Clone, PartialEq, Debug)]
