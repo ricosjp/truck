@@ -414,7 +414,7 @@ impl std::convert::From<&Vec<f64>> for KnotVec {
     /// construct by the reference of vector. The clone of vector is sorted by the order.
     /// ```
     /// use truck_geometry::KnotVec;
-    /// let knot_vec = KnotVec::by_vec_ref(&vec![1.0, 0.0, 3.0, 2.0]);
+    /// let knot_vec = KnotVec::from(&vec![1.0, 0.0, 3.0, 2.0]);
     /// let arr : Vec<f64> = knot_vec.into();
     /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
     /// ```
@@ -431,7 +431,7 @@ impl std::convert::From<KnotVec> for Vec<f64> {
     /// ```
     /// use truck_geometry::KnotVec;
     /// let vec = vec![0.0, 1.0, 2.0, 3.0];
-    /// let knot_vec = KnotVec::by_vec_ref(&vec);
+    /// let knot_vec = KnotVec::from(&vec);
     /// let vec0 : Vec<f64> = knot_vec.into();
     /// assert_eq!(vec, vec0);
     /// ```
