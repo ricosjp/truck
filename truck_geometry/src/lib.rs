@@ -1,8 +1,14 @@
-/// 4 dimentional vector
-#[derive(Clone, PartialEq, Debug)]
-pub struct Vector {
-    x: [f64; 4],
+macro_rules! vector_define {
+    ($classname: ident, $dim: expr) => {
+        /// vector
+        #[derive(Clone, PartialEq, Debug)]
+        pub struct $classname([f64; $dim]);
+    };
 }
+
+vector_define!(Vector, 4);
+vector_define!(Vector3, 3);
+vector_define!(Vector2, 2);
 
 /// 4x4 matrix
 #[derive(Clone, PartialEq, Debug)]
@@ -12,9 +18,7 @@ pub struct Matrix {
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug)]
-pub struct KnotVec {
-    entity: std::vec::Vec<f64>,
-}
+pub struct KnotVec(std::vec::Vec<f64>);
 
 /// define a tolerance in the whole package
 pub trait Tolerance: Sized + std::fmt::Debug {
@@ -101,7 +105,6 @@ pub trait Origin: Tolerance {
 pub struct BSplineCurve {
     knot_vec: KnotVec,           // the knot vector
     control_points: Vec<Vector>, // the indices of control points
-    derivation: Option<Box<BSplineCurve>>,
 }
 
 /// 4-dimensional B-spline surface
@@ -164,8 +167,6 @@ pub struct BSplineCurve {
 pub struct BSplineSurface {
     knot_vecs: (KnotVec, KnotVec),
     control_points: Vec<Vec<Vector>>,
-    first_derivation: Option<Box<BSplineSurface>>,
-    second_derivation: Option<Box<BSplineSurface>>,
 }
 
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;

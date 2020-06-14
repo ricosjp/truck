@@ -26,7 +26,6 @@ impl BSplineCurve {
             BSplineCurve {
                 knot_vec: knot_vec,
                 control_points: control_points,
-                derivation: None,
             }
         }
     }
@@ -53,10 +52,10 @@ impl BSplineCurve {
             Ok(BSplineCurve {
                 knot_vec: knot_vec,
                 control_points: control_points,
-                derivation: None,
             })
         }
     }
+
     /// constructor.
     /// # Arguments
     /// * `knot_vec` - the knot vector
@@ -69,56 +68,50 @@ impl BSplineCurve {
         BSplineCurve {
             knot_vec: knot_vec,
             control_points: control_points,
-            derivation: None,
         }
     }
 
     /// the reference of the knot vector
     #[inline(always)]
-    pub fn knot_vec(&self) -> &KnotVec {
-        &self.knot_vec
-    }
+    pub fn knot_vec(&self) -> &KnotVec { &self.knot_vec }
 
     /// the ith knot
     #[inline(always)]
-    pub fn knot(&self, idx: usize) -> f64 {
-        self.knot_vec[idx]
-    }
+    pub fn knot(&self, idx: usize) -> f64 { self.knot_vec[idx] }
 
     /// get the reference of the control points.
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<Vector> {
-        &self.control_points
-    }
+    pub fn control_points(&self) -> &Vec<Vector> { &self.control_points }
 
     /// get the reference of the control point corresponding to the index `idx`.
     #[inline(always)]
-    pub fn control_point(&self, idx: usize) -> &Vector {
-        &self.control_points[idx]
-    }
+    pub fn control_point(&self, idx: usize) -> &Vector { &self.control_points[idx] }
     /// get the mutable reference of the control point corresponding to index `idx`.
     #[inline(always)]
-    pub fn control_point_mut(&mut self, idx: usize) -> &mut Vector {
-        self.derivation = None;
-        &mut self.control_points[idx]
-    }
+    pub fn control_point_mut(&mut self, idx: usize) -> &mut Vector { &mut self.control_points[idx] }
 
     /// the degree of B-spline curve
     #[inline(always)]
-    pub fn degree(&self) -> usize {
-        self.knot_vec.len() - self.control_points.len() - 1
-    }
+    pub fn degree(&self) -> usize { self.knot_vec.len() - self.control_points.len() - 1 }
 
     /// determine the knot vector is clamped
     #[inline(always)]
-    pub fn is_clamped(&self) -> bool {
-        self.knot_vec.is_clamped(self.degree())
-    }
+    pub fn is_clamped(&self) -> bool { self.knot_vec.is_clamped(self.degree()) }
 
     /// determine whether constant curve or not, i.e. all control points are same.
     pub fn is_const(&self) -> bool {
         for vec in &self.control_points {
             if !vec.near(&self.control_points[0]) {
+                return false;
+            }
+        }
+        true
+    }
+
+    pub fn is_projected_const(&self) -> bool {
+        let pt = self.control_points[0].projection();
+        for vec in &self.control_points {
+            if !vec.projection().near(&pt) {
                 return false;
             }
         }
@@ -139,8 +132,12 @@ impl BSplineCurve {
     }
 
     #[inline(always)]
-    pub fn get_closure(&self) -> impl Fn(f64) -> Vector + '_ {
-        move |t| self.subs(t)
+    pub fn get_closure(&self) -> impl Fn(f64) -> Vector + '_ { move |t| self.subs(t) }
+
+    pub fn end_points(&self) -> (Vector, Vector) {
+        let t0 = self.knot_vec[0];
+        let t1 = self.knot_vec[self.knot_vec.len() - 1];
+        (self.subs(t0), self.subs(t1))
     }
 
     /// inverse as curve
@@ -173,9 +170,6 @@ impl BSplineCurve {
     /// Return error if the knot vector is consisted by only one value.
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
-        if let Some(ref mut derivation) = self.derivation {
-            derivation.knot_vec.normalize().unwrap();
-        }
         self.knot_vec.normalize().unwrap();
         self
     }
@@ -183,9 +177,6 @@ impl BSplineCurve {
     /// translate the knot vector
     #[inline(always)]
     pub fn knot_translate(&mut self, x: f64) -> &mut Self {
-        if let Some(ref mut derivation) = self.derivation {
-            derivation.knot_vec.translate(x);
-        }
         self.knot_vec.translate(x);
         self
     }
@@ -199,28 +190,6 @@ impl BSplineCurve {
         } else {
             self.control_point(i) - self.control_point(i - 1)
         }
-    }
-
-    fn calculate_derivation(&mut self) -> &mut Self {
-        if let Some(ref mut derivation) = self.derivation {
-            return derivation;
-        }
-        let n = self.control_points.len();
-        let k = self.degree();
-        let knot_vec = self.knot_vec.clone();
-        let mut new_points = Vec::with_capacity(n + 1);
-        if k > 0 {
-            for i in 0..=n {
-                let delta = knot_vec[i + k] - knot_vec[i];
-                let coef = (k as f64) * inv_or_zero(delta);
-                new_points.push(coef * self.delta_control_points(i));
-            }
-        } else {
-            new_points = vec![Vector::zero(); n];
-        }
-        let bspcurve = BSplineCurve::new_unchecked(knot_vec, new_points);
-        self.derivation = Some(Box::new(bspcurve));
-        self.derivation.as_mut().unwrap()
     }
 
     /// Calculate derived B-spline curve.
@@ -247,22 +216,29 @@ impl BSplineCurve {
     ///     Vector::assert_near2(&derived.subs(t), &Vector::new(-2.0 * t, 2.0, 2.0 * t, 0.0));
     /// }
     /// ```
-    pub fn derivation(&mut self) -> &BSplineCurve {
-        self.calculate_derivation();
-        self.derivation.as_ref().unwrap()
-    }
-
-    fn derivation_with_degree_mut(&mut self, degree: usize) -> &mut Self {
-        if degree == 0 {
-            self
+    pub fn derivation(&self) -> BSplineCurve {
+        let n = self.control_points.len();
+        let k = self.degree();
+        let knot_vec = self.knot_vec.clone();
+        let mut new_points = Vec::with_capacity(n + 1);
+        if k > 0 {
+            for i in 0..=n {
+                let delta = knot_vec[i + k] - knot_vec[i];
+                let coef = (k as f64) * inv_or_zero(delta);
+                new_points.push(coef * self.delta_control_points(i));
+            }
         } else {
-            self.calculate_derivation()
-                .derivation_with_degree_mut(degree - 1)
+            new_points = vec![Vector::zero(); n];
         }
+        BSplineCurve::new_unchecked(knot_vec, new_points)
     }
 
-    pub fn derivation_with_degree(&mut self, degree: usize) -> &BSplineCurve {
-        &*self.derivation_with_degree_mut(degree)
+    pub fn derivation_with_degree(&self, degree: usize) -> BSplineCurve {
+        if degree == 0 {
+            self.clone()
+        } else {
+            self.derivation().derivation_with_degree(degree - 1)
+        }
     }
 
     /// add a knot `x`, and do not change `self` as a curve.  
@@ -457,7 +433,6 @@ impl BSplineCurve {
     /// All other B-spline algorithms (add_knot, remove_knot, etc...) do not call `optimize` at the end.
     /// If you want to keep the curve in optimal condition, you can call "optimize" manually.
     pub fn optimize(&mut self) -> &mut Self {
-        self.derivation = None;
         loop {
             let n = self.knot_vec.len();
             let mut flag = true;
@@ -482,7 +457,7 @@ impl BSplineCurve {
         }
     }
     /// make two splines have the same normalized knot vectors.
-    pub fn syncro_knot(self: &mut BSplineCurve, other: &mut BSplineCurve) {
+    pub fn syncro_knot(&mut self, other: &mut BSplineCurve) {
         self.knot_normalize();
         other.knot_normalize();
 
@@ -659,6 +634,23 @@ impl BSplineCurve {
         self
     }
 
+    pub fn make_locally_projected_injective(&mut self) -> &mut Self {
+        let beziers = self.bezier_decomposition();
+        *self = beziers[0].clone();
+        let mut x = 0.0;
+        for mut bezier in beziers.into_iter().skip(1) {
+            if bezier.is_projected_const() {
+                x += bezier.knot_vec.range_length();
+            } else {
+                let s0 = self.control_points.last().unwrap()[3];
+                let s1 = bezier.control_points[0][3];
+                bezier *= s0 / s1;
+                self.concat(bezier.knot_translate(-x)).unwrap();
+            }
+        }
+        self
+    }
+
     /// serch the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// # Examples
     /// ```
@@ -675,18 +667,30 @@ impl BSplineCurve {
     /// let t = bspline.search_nearest_parameter(&pt, 1.0).unwrap();
     /// f64::assert_near(&t, &1.2);
     /// ```
-    pub fn search_nearest_parameter(&mut self, point: &Vector, hint: f64) -> Result<f64> {
-        self.sub_search_nearest_parameter(point, hint, 0)
+    pub fn search_nearest_parameter(&self, point: &Vector, hint: f64) -> Result<f64> {
+        self.sub_search_nearest_parameter(&self.derivation(), point, hint, 0)
+    }
+
+    fn optimized_search_nearest_parameter(
+        &self,
+        derivation: &BSplineCurve,
+        point: &Vector,
+        hint: f64,
+    ) -> Result<f64>
+    {
+        self.sub_search_nearest_parameter(derivation, point, hint, 0)
     }
 
     fn sub_search_nearest_parameter(
-        &mut self,
+        &self,
+        derivation: &BSplineCurve,
         point: &Vector,
         hint: f64,
         counter: usize,
-    ) -> Result<f64> {
+    ) -> Result<f64>
+    {
         let pt = self.subs(hint) - point;
-        let der = self.derivation().subs(hint);
+        let der = derivation.subs(hint);
         let der2 = self.derivation_with_degree(2).subs(hint);
         let f = &der * &pt;
         let fprime = &der2 * &pt + der.norm2();
@@ -696,7 +700,7 @@ impl BSplineCurve {
         } else if counter == 100 {
             Err(Error::NotConverge)
         } else {
-            self.sub_search_nearest_parameter(point, t, counter + 1)
+            self.sub_search_nearest_parameter(derivation, point, t, counter + 1)
         }
     }
     /// # Examples
@@ -724,13 +728,14 @@ impl BSplineCurve {
             return None;
         }
 
+        let derivation = curve.derivation();
         let mut hint = hint;
         for i in 1..knots.len() {
             let range = knots[i] - knots[i - 1];
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
                 let pt = self.subs(t);
-                let res = curve.search_nearest_parameter(&pt, hint);
+                let res = curve.optimized_search_nearest_parameter(&derivation, &pt, hint);
                 if let Ok(res) = res {
                     if hint > res {
                         return None;
@@ -766,18 +771,34 @@ impl BSplineCurve {
     /// f64::assert_near(&t, &1.2);
     /// ```
     pub fn search_projected_nearest_parameter(&mut self, point: &Vector, hint: f64) -> Result<f64> {
-        self.sub_search_projected_nearest_parameter(point, hint, 0)
+        let derivation0 = self.derivation();
+        let derivation1 = derivation0.derivation();
+        self.sub_search_projected_nearest_parameter(&derivation0, &derivation1, point, hint, 0)
+    }
+
+    fn optimized_search_projected_nearest_parameter(
+        &mut self,
+        derivation0: &BSplineCurve,
+        derivation1: &BSplineCurve,
+        point: &Vector,
+        hint: f64,
+    ) -> Result<f64>
+    {
+        self.sub_search_projected_nearest_parameter(&derivation0, &derivation1, point, hint, 0)
     }
 
     fn sub_search_projected_nearest_parameter(
         &mut self,
+        derivation0: &BSplineCurve,
+        derivation1: &BSplineCurve,
         point: &Vector,
         hint: f64,
         counter: usize,
-    ) -> Result<f64> {
+    ) -> Result<f64>
+    {
         let pt = self.subs(hint);
-        let der = self.derivation().subs(hint);
-        let der2 = self.derivation_with_degree(2).subs(hint);
+        let der = derivation0.subs(hint);
+        let der2 = derivation1.subs(hint);
         let der2 = pt.derivation2_projection(&der, &der2);
         let der = pt.derivation_projection(&der);
         let pt = pt.projection() - point.projection();
@@ -789,7 +810,13 @@ impl BSplineCurve {
         } else if counter == 100 {
             Err(Error::NotConverge)
         } else {
-            self.sub_search_projected_nearest_parameter(point, t, counter + 1)
+            self.sub_search_projected_nearest_parameter(
+                derivation0,
+                derivation1,
+                point,
+                t,
+                counter + 1,
+            )
         }
     }
     /// # Examples
@@ -813,17 +840,28 @@ impl BSplineCurve {
     pub fn is_projected_arc_of(&self, curve: &mut BSplineCurve, hint: f64) -> Option<f64> {
         let degree = std::cmp::max(self.degree(), curve.degree()) * 3 + 1;
         let (knots, _) = self.knot_vec.to_single_multi();
-        if !self.subs(knots[0]).projection().near(&curve.subs(hint).projection()) {
+        if !self
+            .subs(knots[0])
+            .projection()
+            .near(&curve.subs(hint).projection())
+        {
             return None;
         }
 
         let mut hint = hint;
+        let derivation0 = curve.derivation();
+        let derivation1 = derivation0.derivation();
         for i in 1..knots.len() {
             let range = knots[i] - knots[i - 1];
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
                 let pt = self.subs(t);
-                let res = curve.search_projected_nearest_parameter(&pt, hint);
+                let res = curve.optimized_search_projected_nearest_parameter(
+                    &derivation0,
+                    &derivation1,
+                    &pt,
+                    hint,
+                );
                 if let Ok(res) = res {
                     if hint <= res {
                         hint = res;
@@ -846,7 +884,8 @@ impl BSplineCurve {
         other: &BSplineCurve,
         div_coef: usize,
         ord: F,
-    ) -> bool {
+    ) -> bool
+    {
         if !self.knot_vec[0].near(&other.knot_vec[0])
             || !self
                 .knot_vec
@@ -930,9 +969,7 @@ impl std::ops::MulAssign<&Matrix> for BSplineCurve {
 impl std::ops::MulAssign<Matrix> for BSplineCurve {
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul_assign(&mut self, mat: Matrix) {
-        self.mul_assign(&mat);
-    }
+    fn mul_assign(&mut self, mat: Matrix) { self.mul_assign(&mat); }
 }
 
 impl std::ops::Mul<&Matrix> for &BSplineCurve {
@@ -952,9 +989,7 @@ impl std::ops::Mul<Matrix> for &BSplineCurve {
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(self, mat: Matrix) -> BSplineCurve {
-        self * &mat
-    }
+    fn mul(self, mat: Matrix) -> BSplineCurve { self * &mat }
 }
 
 impl std::ops::Mul<&Matrix> for BSplineCurve {
@@ -973,9 +1008,7 @@ impl std::ops::Mul<Matrix> for BSplineCurve {
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(self, mat: Matrix) -> BSplineCurve {
-        self * &mat
-    }
+    fn mul(self, mat: Matrix) -> BSplineCurve { self * &mat }
 }
 
 impl std::ops::Mul<&BSplineCurve> for &Matrix {
@@ -997,9 +1030,7 @@ impl std::ops::Mul<&BSplineCurve> for Matrix {
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, bspline: &BSplineCurve) -> BSplineCurve {
-        &self * bspline
-    }
+    fn mul(self, bspline: &BSplineCurve) -> BSplineCurve { &self * bspline }
 }
 
 impl std::ops::Mul<BSplineCurve> for &Matrix {
@@ -1020,9 +1051,7 @@ impl std::ops::Mul<BSplineCurve> for Matrix {
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, bspline: BSplineCurve) -> BSplineCurve {
-        &self * bspline
-    }
+    fn mul(self, bspline: BSplineCurve) -> BSplineCurve { &self * bspline }
 }
 
 impl std::ops::Mul<&BSplineCurve> for &BSplineCurve {
@@ -1040,6 +1069,53 @@ impl std::ops::Mul<&BSplineCurve> for &BSplineCurve {
             }
         }
         BSplineSurface::new_unchecked(knot_vecs, control_points)
+    }
+}
+
+impl std::ops::MulAssign<f64> for BSplineCurve {
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul_assign(&mut self, scalar: f64) {
+        for vec in &mut self.control_points {
+            *vec *= scalar;
+        }
+    }
+}
+
+impl std::ops::Mul<f64> for &BSplineCurve {
+    type Output = BSplineCurve;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, scalar: f64) -> BSplineCurve {
+        let mut new_spline = self.clone();
+        new_spline *= scalar;
+        new_spline
+    }
+}
+
+impl std::ops::Mul<f64> for BSplineCurve {
+    type Output = BSplineCurve;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(mut self, scalar: f64) -> BSplineCurve {
+        self *= scalar;
+        self
+    }
+}
+
+impl std::ops::Mul<&BSplineCurve> for f64 {
+    type Output = BSplineCurve;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: &BSplineCurve) -> BSplineCurve {
+        let mut new_spline = bspline.clone();
+        for vec in &mut new_spline.control_points {
+            *vec = self * &*vec;
+        }
+        new_spline
     }
 }
 

@@ -1,12 +1,12 @@
-use crate::PolygonMesh;
-use geometry::BSplineSurface;
+use crate::*;
+use geometry::*;
 
-impl PolygonMesh {
+impl StructuredMesh {
     /// meshing the bspline surface
     /// # Arguments
     /// * `bspsurface` - bspline surface to meshed
     /// * `tol` - standard tolerance for meshing
-    pub fn from_surface(bspsurface: &mut BSplineSurface, tol: f64) -> PolygonMesh {
+    pub fn from_surface(bspsurface: &BSplineSurface, tol: f64) -> StructuredMesh {
         let (knot_vec0, knot_vec1) = bspsurface.knot_vecs();
         let u0 = knot_vec0[0];
         let u1 = knot_vec0[knot_vec0.len() - 1];
@@ -16,7 +16,7 @@ impl PolygonMesh {
         let mut div1 = vec![v0, v1];
 
         create_space_division(bspsurface, tol, &mut div0, &mut div1);
-        create_mesh(bspsurface, &div0, &div1)
+        create_mesh(bspsurface, div0, div1)
     }
 }
 
@@ -32,8 +32,8 @@ fn is_far(bspsurface: &BSplineSurface, u0: f64, u1: f64, v0: f64, v1: f64, tol: 
             let u = u0 * p + u1 * (1.0 - p);
             let v = v0 * q + v1 * (1.0 - q);
             let val_mid = bspsurface(u, v);
-            let par_mid = bspsurface(u0, v0) * p * q 
-                + bspsurface(u0, v1) * p * (1.0 - q) 
+            let par_mid = bspsurface(u0, v0) * p * q
+                + bspsurface(u0, v1) * p * (1.0 - q)
                 + bspsurface(u1, v0) * (1.0 - p) * q
                 + bspsurface(u1, v1) * (1.0 - p) * (1.0 - q);
             let res = val_mid.projection() - par_mid.projection();
@@ -50,8 +50,11 @@ fn create_space_division(
     tol: f64,
     mut div0: &mut Vec<f64>,
     mut div1: &mut Vec<f64>,
-) {
-    let (degree0, degree1) = bspsurface.degrees();
+)
+{
+    let (mut degree0, mut degree1) = bspsurface.degrees();
+    degree0 *= 2;
+    degree1 *= 2;
 
     let mut divide_flag0 = vec![false; div0.len() - 1];
     let mut divide_flag1 = vec![false; div1.len() - 1];
@@ -95,25 +98,31 @@ fn create_space_division(
     }
 }
 
-fn create_mesh(bspsurface: &mut BSplineSurface, div0: &Vec<f64>, div1: &Vec<f64>) -> PolygonMesh {
-    let mut meshdata = PolygonMesh::default();
-    for u in div0 {
-        for v in div1 {
-            let vertex = bspsurface.subs(*u, *v).projection();
-            meshdata.vertices.push([vertex[0], vertex[1], vertex[2]]);
-            meshdata.uv_coords.push([*u, *v]);
-            let normal = bspsurface.normal_vector(*u, *v).projection();
-            meshdata.normals.push([normal[0], normal[1], normal[2]]);
-        }
+fn create_mesh(bspsurface: &BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) -> StructuredMesh {
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    for u in &div0 {
+        let prow = div1
+            .iter()
+            .map(|v| {
+                let pt = bspsurface.subs(*u, *v).projection();
+                Vector3::new(pt[0], pt[1], pt[2])
+            })
+            .collect();
+        let nrow = bspsurface
+            .normal_vectors(div1.iter().map(|v| (*u, *v)))
+            .iter()
+            .map(|normal| {
+                let normal = normal.projection();
+                Vector3::new(normal[0], normal[1], normal[2])
+            })
+            .collect();
+        positions.push(prow);
+        normals.push(nrow);
     }
-    for i in 1..div0.len() {
-        for j in 1..div1.len() {
-            let i0 = div1.len() * (i - 1) + (j - 1);
-            let i1 = div1.len() * i + (j - 1);
-            let i2 = div1.len() * i + j;
-            let i3 = div1.len() * (i - 1) + j;
-            meshdata.quad_faces.push([[i0, i0, i0], [i1, i1, i1], [i2, i2, i2], [i3, i3, i3]]);
-        }
+    StructuredMesh {
+        positions: positions,
+        uv_division: (div0, div1),
+        normals: normals,
     }
-    meshdata
 }

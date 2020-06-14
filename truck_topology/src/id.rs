@@ -7,7 +7,6 @@ pub(super) struct IDGenerator {
 
 impl IDGenerator {
     /// constructor  
-    /// The ith generated id is `multi_factor * (i % div_factor) + i / div_factor`.
     pub(super) fn new() -> IDGenerator {
         IDGenerator {
             generator: Mutex::new(0),

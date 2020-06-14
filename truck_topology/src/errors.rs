@@ -4,8 +4,9 @@ pub enum Error {
     CannotAddEdge,
     NotClosedWire,
     NotSimpleWire,
+    NotRegularShell,
     EmptyShell,
-    NotConnectedShell,
+    NotConnected,
     NotClosedShell,
 }
 
@@ -17,7 +18,8 @@ impl std::fmt::Display for Error {
             Error::NotClosedWire => f.pad("The boundary of face must be closed."),
             Error::NotSimpleWire => f.pad("The boundary of face must be simple."),
             Error::EmptyShell => f.pad("This shell is empty."),
-            Error::NotConnectedShell => f.pad("This shell is not connected."),
+            Error::NotConnected => f.pad("This shell is not connected."),
+            Error::NotRegularShell => f.pad("This shell is not regular."),
             Error::NotClosedShell => f.pad("This shell is not oriented and closed."),
         }
     }
@@ -34,7 +36,7 @@ fn print_messages() {
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotClosedWire).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotSimpleWire).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::EmptyShell).unwrap();
-    writeln!(&mut std::io::stderr(), "{}\n", Error::NotConnectedShell).unwrap();
+    writeln!(&mut std::io::stderr(), "{}\n", Error::NotConnected).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotClosedShell).unwrap();
     writeln!(&mut std::io::stderr(), "*******************************************************").unwrap();
 }

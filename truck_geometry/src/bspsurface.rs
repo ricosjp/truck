@@ -41,8 +41,6 @@ impl BSplineSurface {
                 BSplineSurface {
                     knot_vecs: knot_vecs,
                     control_points: control_points,
-                    first_derivation: None,
-                    second_derivation: None,
                 }
             }
         }
@@ -60,7 +58,8 @@ impl BSplineSurface {
     pub fn try_new(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<Vector>>,
-    ) -> Result<BSplineSurface> {
+    ) -> Result<BSplineSurface>
+    {
         if control_points.is_empty() {
             Err(Error::EmptyControlPoints)
         } else if control_points[0].is_empty() {
@@ -88,8 +87,6 @@ impl BSplineSurface {
                 Ok(BSplineSurface {
                     knot_vecs: knot_vecs,
                     control_points: control_points,
-                    first_derivation: None,
-                    second_derivation: None,
                 })
             }
         }
@@ -106,26 +103,21 @@ impl BSplineSurface {
     pub fn new_unchecked(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<Vector>>,
-    ) -> BSplineSurface {
+    ) -> BSplineSurface
+    {
         BSplineSurface {
             knot_vecs: knot_vecs,
             control_points: control_points,
-            first_derivation: None,
-            second_derivation: None,
         }
     }
 
     /// the reference of the knot vectors
     #[inline(always)]
-    pub fn knot_vecs(&self) -> &(KnotVec, KnotVec) {
-        &self.knot_vecs
-    }
+    pub fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.knot_vecs }
 
     /// the control points
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<Vec<Vector>> {
-        &self.control_points
-    }
+    pub fn control_points(&self) -> &Vec<Vec<Vector>> { &self.control_points }
 
     /// the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]
@@ -136,8 +128,6 @@ impl BSplineSurface {
     /// the mutable reference of the control point corresponding to index `(idx0, idx1)`.
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx0: usize, idx1: usize) -> &mut Vector {
-        self.first_derivation = None;
-        self.second_derivation = None;
         &mut self.control_points[idx0][idx1]
     }
 
@@ -174,9 +164,7 @@ impl BSplineSurface {
     }
 
     #[inline(always)]
-    pub fn get_closure(&self) -> impl Fn(f64, f64) -> Vector + '_ {
-        move |u, v| self.subs(u, v)
-    }
+    pub fn get_closure(&self) -> impl Fn(f64, f64) -> Vector + '_ { move |u, v| self.subs(u, v) }
 
     #[inline(always)]
     fn delta0_control_points(&self, i: usize, j: usize) -> Vector {
@@ -201,11 +189,7 @@ impl BSplineSurface {
     }
 
     /// Calculate derived B-spline surface by the first parameter.
-    pub fn first_derivation(&mut self) -> &BSplineSurface {
-        if let Some(ref derivation) = self.first_derivation {
-            return derivation;
-        }
-
+    pub fn first_derivation(&self) -> BSplineSurface {
         let n0 = self.control_points.len();
         let n1 = self.control_points[0].len();
         let (k, _) = self.degrees();
@@ -225,23 +209,14 @@ impl BSplineSurface {
             vec![vec![Vector::zero(); n1]; n0]
         };
 
-        let bspsurface = BSplineSurface {
+        BSplineSurface {
             knot_vecs: (knot_vec0, knot_vec1),
             control_points: new_points,
-            first_derivation: None,
-            second_derivation: None,
-        };
-
-        self.first_derivation = Some(Box::new(bspsurface));
-        self.first_derivation.as_ref().unwrap()
+        }
     }
 
     /// Calculate derived B-spline surface by the second parameter.
-    pub fn second_derivation(&mut self) -> &BSplineSurface {
-        if let Some(ref derivation) = self.second_derivation {
-            return derivation;
-        }
-
+    pub fn second_derivation(&self) -> BSplineSurface {
         let n0 = self.control_points.len();
         let n1 = self.control_points[0].len();
         let (_, k) = self.degrees();
@@ -262,24 +237,35 @@ impl BSplineSurface {
             vec![vec![Vector::zero(); n1]; n0]
         };
 
-        let bspsurface = BSplineSurface {
+        BSplineSurface {
             knot_vecs: (knot_vec0, knot_vec1),
             control_points: new_points,
-            first_derivation: None,
-            second_derivation: None,
-        };
-        self.second_derivation = Some(Box::new(bspsurface));
-        self.second_derivation.as_ref().unwrap()
+        }
     }
 
     /// get the normal unit vector at the parameter `(u, v)`.
-    pub fn normal_vector(&mut self, u: f64, v: f64) -> Vector {
+    pub fn normal_vector(&self, u: f64, v: f64) -> Vector {
         let pt = self.subs(u, v);
         let der0 = self.first_derivation().subs(u, v);
         let der1 = self.second_derivation().subs(u, v);
         let vec0 = pt.derivation_projection(&der0);
         let vec1 = pt.derivation_projection(&der1);
         vec0 ^ vec1
+    }
+
+    pub fn normal_vectors<I: Iterator<Item = (f64, f64)>>(&self, params: I) -> Vec<Vector> {
+        let derivation0 = self.first_derivation();
+        let derivation1 = self.second_derivation();
+        params
+            .map(|(u, v)| {
+                let pt = self.subs(u, v);
+                let der0 = derivation0.subs(u, v);
+                let der1 = derivation1.subs(u, v);
+                let vec0 = pt.derivation_projection(&der0);
+                let vec1 = pt.derivation_projection(&der1);
+                vec0 ^ vec1
+            })
+            .collect()
     }
 
     /// swap two parameters.
@@ -564,10 +550,7 @@ impl BSplineSurface {
         Ok(self)
     }
 
-    pub fn homotopy(bspcurve0: &BSplineCurve, bspcurve1: &BSplineCurve) -> BSplineSurface {
-        let mut bspcurve0 = bspcurve0.clone();
-        let mut bspcurve1 = bspcurve1.clone();
-
+    pub fn homotopy(mut bspcurve0: BSplineCurve, mut bspcurve1: BSplineCurve) -> BSplineSurface {
         bspcurve0.syncro_degree(&mut bspcurve1);
 
         bspcurve0.optimize();
@@ -586,14 +569,48 @@ impl BSplineSurface {
         BSplineSurface::new_unchecked((knot_vec0, knot_vec1), control_points)
     }
 
+    pub fn by_boundary(
+        mut curve0: BSplineCurve,
+        mut curve1: BSplineCurve,
+        mut curve2: BSplineCurve,
+        mut curve3: BSplineCurve,
+    ) -> BSplineSurface
+    {
+        curve2.inverse();
+        curve3.inverse();
+        curve0.syncro_degree(&mut curve2);
+        curve0.optimize();
+        curve2.optimize();
+        curve0.syncro_knot(&mut curve2);
+        curve1.syncro_degree(&mut curve3);
+        curve1.optimize();
+        curve3.optimize();
+        curve1.syncro_knot(&mut curve3);
+
+        let knot_vecs = (curve0.knot_vec().clone(), curve3.knot_vec().clone());
+        let mut control_points = Vec::new();
+        control_points.push(curve3.control_points().clone());
+        let n = curve0.control_points().len();
+        let m = curve3.control_points().len();
+        for i in 1..(n - 1) {
+            let u = (i as f64) / (n as f64);
+            let pt0 = curve0.control_point(i) * u + curve2.control_point(i) * (1.0 - u);
+            let mut new_row = Vec::new();
+            new_row.push(curve0.control_point(i).clone());
+            for j in 1..(m - 1) {
+                let v = (j as f64) / (m as f64);
+                let pt1 = curve3.control_point(j) * v + curve1.control_point(j) * (1.0 - v);
+                new_row.push((&pt0 + pt1) / 2.0);
+            }
+            new_row.push(curve2.control_point(i).clone());
+            control_points.push(new_row);
+        }
+        control_points.push(curve1.control_points().clone());
+        BSplineSurface::new(knot_vecs, control_points)
+    }
+
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
-        if let Some(ref mut derivation) = self.first_derivation {
-            derivation.knot_normalize();
-        }
-        if let Some(ref mut derivation) = self.second_derivation {
-            derivation.knot_normalize();
-        }
         self.knot_vecs.0.normalize().unwrap();
         self.knot_vecs.1.normalize().unwrap();
         self
@@ -617,10 +634,10 @@ impl BSplineSurface {
         self
     }
 
-    /// extract boundary of surface
-    pub fn boundary(&self) -> BSplineCurve {
+    
+
+    pub fn splitted_boundary(&self) -> [BSplineCurve; 4] {
         let (knot_vec0, knot_vec1) = self.knot_vecs.clone();
-        let (range0, range1) = (knot_vec0.range_length(), knot_vec1.range_length());
         let control_points0 = self.control_points.iter().map(|x| x[0].clone()).collect();
         let control_points1 = self.control_points.last().unwrap().clone();
         let control_points2 = self
@@ -629,10 +646,19 @@ impl BSplineSurface {
             .map(|x| x.last().unwrap().clone())
             .collect();
         let control_points3 = self.control_points[0].clone();
-        let mut bspline0 = BSplineCurve::new_unchecked(knot_vec0.clone(), control_points0);
-        let mut bspline1 = BSplineCurve::new_unchecked(knot_vec1.clone(), control_points1);
-        let mut bspline2 = BSplineCurve::new_unchecked(knot_vec0.clone(), control_points2);
-        let mut bspline3 = BSplineCurve::new_unchecked(knot_vec1.clone(), control_points3);
+        [
+            BSplineCurve::new_unchecked(knot_vec0.clone(), control_points0),
+            BSplineCurve::new_unchecked(knot_vec1.clone(), control_points1),
+            BSplineCurve::new_unchecked(knot_vec0.clone(), control_points2),
+            BSplineCurve::new_unchecked(knot_vec1.clone(), control_points3),
+        ]
+    }
+
+    /// extract boundary of surface
+    pub fn boundary(&self) -> BSplineCurve {
+        let (knot_vec0, knot_vec1) = self.knot_vecs.clone();
+        let (range0, range1) = (knot_vec0.range_length(), knot_vec1.range_length());
+        let [mut bspline0, mut bspline1, mut bspline2, mut bspline3] = self.splitted_boundary();
         bspline0
             .concat(&mut bspline1.knot_translate(range0))
             .unwrap()
@@ -642,12 +668,14 @@ impl BSplineSurface {
             .unwrap();
         bspline0
     }
+
     fn sub_near_as_surface<F: Fn(&Vector, &Vector) -> bool>(
         &self,
         other: &BSplineSurface,
         div_coef: usize,
         ord: F,
-    ) -> bool {
+    ) -> bool
+    {
         if !self.knot_vecs.0[0].near(&other.knot_vecs.0[0])
             || !self
                 .knot_vecs
@@ -685,7 +713,8 @@ impl BSplineSurface {
                         continue;
                     }
                     for j1 in 0..division1 {
-                        let v = self.knot_vecs.1[i1 - 1] + delta1 * (j1 as f64) / (division1 as f64);
+                        let v =
+                            self.knot_vecs.1[i1 - 1] + delta1 * (j1 as f64) / (division1 as f64);
                         if !ord(&self.subs(u, v), &other.subs(u, v)) {
                             return false;
                         }
@@ -695,24 +724,175 @@ impl BSplineSurface {
         }
         true
     }
-    
     #[inline(always)]
     pub fn near_as_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 1, |x, y| x.near(y))
     }
-    
     #[inline(always)]
     pub fn near2_as_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 1, |x, y| x.near2(y))
     }
-    
     #[inline(always)]
     pub fn near_as_projected_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 2, |x, y| x.projection().near(&y.projection()))
     }
-    
     #[inline(always)]
     pub fn near2_as_projected_surface(&self, other: &BSplineSurface) -> bool {
         self.sub_near_as_surface(other, 2, |x, y| x.projection().near2(&y.projection()))
+    }
+}
+
+impl std::ops::MulAssign<&Matrix> for BSplineSurface {
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul_assign(&mut self, mat: &Matrix) {
+        for vecs in &mut self.control_points {
+            for vec in vecs {
+                *vec *= mat;
+            }
+        }
+    }
+}
+
+impl std::ops::MulAssign<Matrix> for BSplineSurface {
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul_assign(&mut self, mat: Matrix) { self.mul_assign(&mat); }
+}
+
+impl std::ops::Mul<&Matrix> for &BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, mat: &Matrix) -> BSplineSurface {
+        let mut new_spline = self.clone();
+        new_spline *= mat;
+        new_spline
+    }
+}
+
+impl std::ops::Mul<Matrix> for &BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, mat: Matrix) -> BSplineSurface { self * &mat }
+}
+
+impl std::ops::Mul<&Matrix> for BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(mut self, mat: &Matrix) -> BSplineSurface {
+        self *= mat;
+        self
+    }
+}
+
+impl std::ops::Mul<Matrix> for BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, mat: Matrix) -> BSplineSurface { self * &mat }
+}
+
+impl std::ops::Mul<&BSplineSurface> for &Matrix {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: &BSplineSurface) -> BSplineSurface {
+        let mut new_spline = bspline.clone();
+        for vecs in &mut new_spline.control_points {
+            for vec in vecs {
+                *vec = self * &*vec;
+            }
+        }
+        new_spline
+    }
+}
+
+impl std::ops::Mul<&BSplineSurface> for Matrix {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: &BSplineSurface) -> BSplineSurface { &self * bspline }
+}
+
+impl std::ops::Mul<BSplineSurface> for &Matrix {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, mut bspline: BSplineSurface) -> BSplineSurface {
+        for vecs in &mut bspline.control_points {
+            for vec in vecs {
+                *vec = self * &*vec;
+            }
+        }
+        bspline
+    }
+}
+
+impl std::ops::Mul<BSplineSurface> for Matrix {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: BSplineSurface) -> BSplineSurface { &self * bspline }
+}
+
+impl std::ops::MulAssign<f64> for BSplineSurface {
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul_assign(&mut self, scalar: f64) {
+        for vecs in &mut self.control_points {
+            for vec in vecs {
+                *vec *= scalar;
+            }
+        }
+    }
+}
+
+impl std::ops::Mul<f64> for &BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(self, scalar: f64) -> BSplineSurface {
+        let mut new_spline = self.clone();
+        new_spline *= scalar;
+        new_spline
+    }
+}
+
+impl std::ops::Mul<f64> for BSplineSurface {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts to each control points.
+    #[inline(always)]
+    fn mul(mut self, scalar: f64) -> BSplineSurface {
+        self *= scalar;
+        self
+    }
+}
+
+impl std::ops::Mul<&BSplineSurface> for f64 {
+    type Output = BSplineSurface;
+
+    /// A matrix `mat` acts on each control points.
+    #[inline(always)]
+    fn mul(self, bspline: &BSplineSurface) -> BSplineSurface {
+        let mut new_spline = bspline.clone();
+        for vecs in &mut new_spline.control_points {
+            for vec in vecs {
+                *vec = self * &*vec;
+            }
+        }
+        new_spline
     }
 }

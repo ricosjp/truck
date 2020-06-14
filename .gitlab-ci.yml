@@ -5,17 +5,23 @@ stages:
 test:
     image: rust:latest
     stage: test
+    cache:
+        paths:
+            - target
     script:
         - cargo test
+    except:
+        - master
 
 pages:
     image: rust:latest
     stage: pages
     script:
+        - cargo clean
+        - cargo test
         - cargo doc --no-deps
-        - mv target/doc public
     artifacts:
         paths:
-            - public
+            - target/doc
     only:
         - master

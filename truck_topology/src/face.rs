@@ -13,15 +13,9 @@ impl Face {
     /// `boundary` must be simple and closed.
     #[inline(always)]
     pub fn new(boundary: Wire) -> Face {
-        if !boundary.is_closed() {
-            panic!("{}", Error::NotClosedWire)
-        } else if !boundary.is_simple() {
-            panic!("{}", Error::NotSimpleWire)
-        } else {
-            Face {
-                boundary: boundary,
-                id: ID_GENERATOR.generate(),
-            }
+        match Face::try_new(boundary) {
+            Ok(got) => got,
+            Err(error) => panic!("{}", error),
         }
     }
     
@@ -35,10 +29,7 @@ impl Face {
         } else if !boundary.is_simple() {
             Err(Error::NotSimpleWire)
         } else {
-            Ok(Face {
-                boundary: boundary,
-                id: ID_GENERATOR.generate(),
-            })
+            Ok(Face::new_unchecked(boundary))
         }
     }
 
@@ -59,9 +50,20 @@ impl Face {
     #[inline(always)]
     pub fn boundary(&self) -> &Wire { &self.boundary }
 
+    #[inline(always)]
+    pub fn into_boundary(self) -> Wire { self.boundary }
+
     /// get the face id.
     #[inline(always)]
     pub fn id(&self) -> usize { self.id }
+
+    /// inverse the direction of face and give a new id.
+    #[inline(always)]
+    pub fn inverse(&mut self) -> &mut Self {
+        self.boundary.inverse();
+        self.id = ID_GENERATOR.generate();
+        self
+    }
 
     /// return true, if the two faces have the shared edge.
     pub fn border_on(&self, other: &Face) -> bool {

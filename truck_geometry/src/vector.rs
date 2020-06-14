@@ -1,758 +1,761 @@
-use crate::{Origin, Tolerance, Vector};
+use crate::{Origin, Tolerance, Vector, Vector2, Vector3};
 use std::cmp::Ordering;
 
-impl Vector {
-    /// constructor.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// assert_eq!(v[0], 1.0);
-    /// assert_eq!(v[1], 2.0);
-    /// assert_eq!(v[2], 3.0);
-    /// assert_eq!(v[3], 4.0);
-    /// ```
-    #[inline(always)]
-    pub fn new(x: f64, y: f64, z: f64, w: f64) -> Vector { Vector { x: [x, y, z, w] } }
-
-    /// construct a vector whose 4th component is 1.0.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new3(1.0, 2.0, 3.0);
-    /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 1.0));
-    /// ```
-    #[inline(always)]
-    pub fn new3(x: f64, y: f64, z: f64) -> Vector { Vector { x: [x, y, z, 1.0] } }
-
-    /// construct by a reference of array.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::by_array_ref(&[1.0, 2.0, 3.0, 4.0]);
-    /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 4.0));
-    /// ```
-    #[inline(always)]
-    pub fn by_array_ref(arr: &[f64; 4]) -> Vector { Vector { x: arr.clone() } }
-
-    /// construct a vector whose components are 0.0.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::zero();
-    /// assert_eq!(v, Vector::new(0.0, 0.0, 0.0, 0.0));
-    /// ```
-    #[inline(always)]
-    pub const fn zero() -> Vector {
-        Vector {
-            x: [0.0, 0.0, 0.0, 0.0],
-        }
-    }
-
-    /// as_slice
-    #[inline(always)]
-    pub fn as_slice(&self) -> &[f64] { &self.x }
-
-    /// as_mut_slice
-    #[inline(always)]
-    pub fn as_mut_slice(&mut self) -> &mut [f64] { &mut self.x }
-
-    /// other copy to self
-    #[inline(always)]
-    pub fn assign(&mut self, other: &Vector) {
-        self[0] = other[0];
-        self[1] = other[1];
-        self[2] = other[2];
-        self[3] = other[3];
-    }
-
-    /// square of norm
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// assert_eq!(v.norm2(), 30.0);
-    /// ```
-    #[inline(always)]
-    pub fn norm2(&self) -> f64 { self * self }
-
-    /// norm
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(3.0, 0.0, 4.0, 0.0);
-    /// assert_eq!(v.norm(), 5.0);
-    /// ```
-    #[inline(always)]
-    pub fn norm(&self) -> f64 { self.norm2().sqrt() }
-
-    /// project to 3D affine plane w = 1
-    #[inline(always)]
-    pub fn projection(&self) -> Vector {
-        Vector::new(self[0] / self[3], self[1] / self[3], self[2] / self[3], 1.0)
-    }
-
-    /// curve-derivation projection.  
-    /// For a curve x(t) = (x_0(t), x_1(t), x_2(t), x_3(t)), calculate the derivation
-    /// of the projected curve (x_0 / x_3, x_1 / x_3, x_2 / x_3, 1.0).
-    /// # Arguments
-    /// * `self` - x(t)
-    /// * `der` - x'(t)
-    #[inline(always)]
-    pub fn derivation_projection(&self, der: &Vector) -> Vector {
-        let denom = self[3] * self[3];
-        Vector::new(
-            (der[0] * self[3] - self[0] * der[3]) / denom,
-            (der[1] * self[3] - self[1] * der[3]) / denom,
-            (der[2] * self[3] - self[2] * der[3]) / denom,
-            0.0,
-        )
-    }
-
-    #[inline(always)]
-    pub fn derivation2_projection(&self, der: &Vector, der2: &Vector) -> Vector {
-        let s = self[3] * self[3];
-        let q = s * s;
-        let k = 2.0 * self[3] * der[3];
-        Vector::new(
-            ((der2[0] * self[3] - self[0] * der2[3]) * s
-                - (der[0] * self[3] - self[0] * der[3]) * k)
-                / q,
-            ((der2[1] * self[3] - self[1] * der2[3]) * s
-                - (der[1] * self[3] - self[1] * der[3]) * k)
-                / q,
-            ((der2[2] * self[3] - self[2] * der2[3]) * s
-                - (der[2] * self[3] - self[2] * der[3]) * k)
-                / q,
-            0.0,
-        )
-    }
-
-    #[inline(always)]
-    pub fn nan_to_zero(&mut self) -> &Vector {
-        for val in self.x.iter_mut() {
-            if *val == f64::NAN {
-                *val = 0.0;
+macro_rules! impl_vector_new {
+    ($classname: ty, $dim: expr, $($field: ident), *) => {
+        impl $classname {
+            /// constructor.
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// assert_eq!(v[0], 1.0);
+            /// assert_eq!(v[1], 2.0);
+            /// assert_eq!(v[2], 3.0);
+            /// assert_eq!(v[3], 4.0);
+            /// ```
+            pub fn new<T: Into<f64>>($($field: T), *) -> Self {
+                Self([$($field.into()), *])
             }
         }
-        &*self
-    }
+    };
 }
 
-impl Tolerance for Vector {
-    #[inline(always)]
-    fn near(&self, other: &Vector) -> bool {
-        self[0].near(&other[0])
-            && self[1].near(&other[1])
-            && self[2].near(&other[2])
-            && self[3].near(&other[3])
-    }
+impl_vector_new!(Vector, 4, x, y, z, w);
+impl_vector_new!(Vector3, 3, x, y, z);
+impl_vector_new!(Vector2, 2, u, v);
 
-    #[inline(always)]
-    fn near2(&self, other: &Vector) -> bool {
-        self[0].near2(&other[0])
-            && self[1].near2(&other[1])
-            && self[2].near2(&other[2])
-            && self[3].near2(&other[3])
-    }
-}
+macro_rules! impl_vector {
+    ($classname: ty, $dim: expr, $($num: expr), *) => {
+        impl $classname {
+            /// construct by a reference of array.
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::by_array_ref(&[1.0, 2.0, 3.0, 4.0]);
+            /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 4.0));
+            /// ```
+            #[inline(always)]
+            pub fn by_array_ref(arr: &[f64; $dim]) -> Self { Self(arr.clone()) }
 
-impl Origin for Vector {
-    const ORIGIN: Vector = Vector::zero();
-}
+            /// construct a vector whose components are 0.0.
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::zero();
+            /// assert_eq!(v, Vector::new(0.0, 0.0, 0.0, 0.0));
+            /// ```
+            #[inline(always)]
+            pub const fn zero() -> Self { Self([0.0; $dim]) }
 
-impl std::convert::From<[f64; 4]> for Vector {
-    /// construct by array
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::from([1.0, 2.0, 3.0, 4.0]);
-    /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 4.0));
-    /// ```
-    #[inline(always)]
-    fn from(arr: [f64; 4]) -> Vector { Vector { x: arr } }
-}
+            /// as_slice
+            #[inline(always)]
+            pub fn as_slice(&self) -> &[f64] { &self.0 }
 
-impl std::convert::From<Vector> for [f64; 4] {
-    /// into the array
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let arr: [f64; 4] = v.into();
-    /// assert_eq!(arr, [1.0, 2.0, 3.0, 4.0]);
-    /// ```
-    #[inline(always)]
-    fn from(vec: Vector) -> [f64; 4] { vec.x }
-}
+            /// as_mut_slice
+            #[inline(always)]
+            pub fn as_mut_slice(&mut self) -> &mut [f64] { &mut self.0 }
 
-impl std::convert::From<Vector> for [f32; 4] {
-    /// into the `f32` array
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let arr: [f32; 4] = v.into();
-    /// assert_eq!(arr, [1.0, 2.0, 3.0, 4.0]);
-    /// ```
-    #[inline(always)]
-    fn from(vec: Vector) -> [f32; 4] {
-        [vec.x[0] as f32, vec.x[1] as f32, vec.x[2] as f32, vec.x[3] as f32]
-    }
-}
+            /// other copy to self
+            #[inline(always)]
+            pub fn assign(&mut self, other: &$classname) {
+                $(self[$num] = other[$num];)*
+            }
 
-impl std::ops::Index<usize> for Vector {
-    type Output = f64;
+            /// square of norm
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// assert_eq!(v.norm2(), 30.0);
+            /// ```
+            #[inline(always)]
+            pub fn norm2(&self) -> f64 { self * self }
 
-    /// access each component
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// assert_eq!(v[0], 1.0);
-    /// assert_eq!(v[1], 2.0);
-    /// assert_eq!(v[2], 3.0);
-    /// assert_eq!(v[3], 4.0);
-    /// ```
-    #[inline(always)]
-    fn index(&self, idx: usize) -> &f64 { &self.x[idx] }
-}
+            /// norm
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(3.0, 0.0, 4.0, 0.0);
+            /// assert_eq!(v.norm(), 5.0);
+            /// ```
+            #[inline(always)]
+            pub fn norm(&self) -> f64 { self.norm2().sqrt() }
 
-impl std::ops::IndexMut<usize> for Vector {
-    /// access each component
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// v0[1] = 3.0;
-    /// assert_eq!(v0, Vector::new(1.0, 3.0, 3.0, 4.0));
-    /// ```
-    #[inline(always)]
-    fn index_mut(&mut self, idx: usize) -> &mut f64 { &mut self.x[idx] }
-}
+            /// culculate cosine of the angle of the two vectors
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let vec0 = Vector::new(1.0, 0.0, 0.0, 0.0);
+            /// let vec1 = Vector::new(0.0, 2.0, 0.0, 0.0);
+            /// assert_eq!(vec0.cos_angle(&vec1), 0.0);
+            /// ```
+            #[inline(always)]
+            pub fn cos_angle(&self, other: &Self) -> f64 {
+                let norm = self.norm();
+                let vec0 = if norm.so_small() {
+                    return 0.0;
+                } else {
+                    self / norm
+                };
+                let norm = other.norm();
+                let vec1 = if norm.so_small() {
+                    return 0.0;
+                } else {
+                    other / norm
+                };
+                vec0 * vec1
+            }
 
-impl std::ops::AddAssign<&Vector> for Vector {
-    /// add_assign for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// v += &Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
-    /// ```
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &Vector) {
-        self[0] += rhs[0];
-        self[1] += rhs[1];
-        self[2] += rhs[2];
-        self[3] += rhs[3];
-    }
-}
+            /// culculate the angle of two vectors
+            #[inline(always)]
+            pub fn angle(&self, other: &Self) -> f64 { self.cos_angle(other).acos() }
 
-impl std::ops::AddAssign<Vector> for Vector {
-    /// add_assign for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// v += Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
-    /// ```
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Vector) { self.add_assign(&rhs); }
-}
+            /// project to 3D affine plane w = 1
+            #[inline(always)]
+            pub fn projection(&self) -> Self {
+                Self::new($(self[$num] / self[$dim - 1]),*)
+            }
 
-impl std::ops::Add<&Vector> for &Vector {
-    type Output = Vector;
+            /// curve-derivation projection.
+            /// For a curve x(t) = (x_0(t), x_1(t), x_2(t), x_3(t)), calculate the derivation
+            /// of the projected curve (x_0 / x_3, x_1 / x_3, x_2 / x_3, 1.0).
+            /// # Arguments
+            /// * `self` - x(t)
+            /// * `der` - x'(t)
+            #[inline(always)]
+            pub fn derivation_projection(&self, der: &Self) -> Self {
+                let denom = self[$dim - 1] * self[$dim - 1];
+                Self::new($((der[$num] * self[$dim - 1] - self[$num] * der[$dim - 1]) / denom),*)
+            }
 
-    /// add each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// let v = &v0 + &v1;
-    /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
-    /// ```
-    #[inline(always)]
-    fn add(self, other: &Vector) -> Self::Output {
-        let mut res = self.clone();
-        res += other;
-        res
-    }
-}
+            #[inline(always)]
+            pub fn derivation2_projection(&self, der: &Self, der2: &Self) -> Self {
+                let s = self[$dim - 1] * self[$dim - 1];
+                let q = s * s;
+                let k = 2.0 * self[$dim - 1] * der[$dim - 1];
+                Self::new($(
+                        ((der2[$num] * self[$dim - 1] - self[$num] * der2[$dim - 1]) * s
+                         - (der[$num] * self[$dim - 1] - self[$num] * der[$dim - 1]) * k) / q),*)
+            }
 
-impl std::ops::Add<&Vector> for Vector {
-    type Output = Vector;
-
-    /// add each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// let v = v0 + &v1;
-    /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
-    /// ```
-    #[inline(always)]
-    fn add(mut self, other: &Vector) -> Self::Output {
-        self += other;
-        self
-    }
-}
-
-impl std::ops::Add<Vector> for &Vector {
-    type Output = Vector;
-
-    /// add each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// let v = &v0 + v1;
-    /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
-    /// ```
-    #[inline(always)]
-    fn add(self, other: Vector) -> Self::Output { self + &other }
-}
-
-impl std::ops::Add<Vector> for Vector {
-    type Output = Vector;
-
-    /// add each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// let v = v0 + v1;
-    /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
-    /// ```
-    #[inline(always)]
-    fn add(self, other: Vector) -> Self::Output { self + &other }
-}
-
-impl std::ops::SubAssign<&Vector> for Vector {
-    /// sub_assign for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// v -= &Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &Vector) {
-        self[0] -= rhs[0];
-        self[1] -= rhs[1];
-        self[2] -= rhs[2];
-        self[3] -= rhs[3];
-    }
-}
-
-impl std::ops::SubAssign<Vector> for Vector {
-    /// sub_assign for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// v -= Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: Vector) { self.sub_assign(&rhs); }
-}
-
-impl std::ops::Sub<&Vector> for &Vector {
-    type Output = Vector;
-
-    /// subtract each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// let v = &v0 - &v1;
-    /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn sub(self, other: &Vector) -> Self::Output {
-        let mut res = self.clone();
-        res -= other;
-        res
-    }
-}
-
-impl std::ops::Sub<Vector> for &Vector {
-    type Output = Vector;
-
-    /// subtract each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// let v = &v0 - v1;
-    /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn sub(self, other: Vector) -> Self::Output { self - &other }
-}
-
-impl std::ops::Sub<&Vector> for Vector {
-    type Output = Vector;
-
-    /// subtract each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// let v = v0 - &v1;
-    /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn sub(mut self, other: &Vector) -> Self::Output {
-        self -= other;
-        self
-    }
-}
-
-impl std::ops::Sub<Vector> for Vector {
-    type Output = Vector;
-
-    /// subtract each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// let v = v0 - v1;
-    /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn sub(self, other: Vector) -> Self::Output { self - &other }
-}
-
-impl std::ops::MulAssign<f64> for Vector {
-    /// mul_assign for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// v *= 2.0;
-    /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
-    /// ```
-    #[inline(always)]
-    fn mul_assign(&mut self, scalar: f64) {
-        for a in self.as_mut_slice() {
-            *a *= scalar;
+            #[inline(always)]
+            pub fn nan_to_zero(&mut self) -> &Self {
+                $(if self[$num] == f64::NAN {
+                    self[$num] = 0.0;
+                })*
+                &*self
+            }
         }
-    }
-}
 
-impl std::ops::Mul<f64> for &Vector {
-    type Output = Vector;
+        impl std::ops::Index<usize> for $classname {
+            type Output = f64;
 
-    /// multiply for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v = &v * 2.0;
-    /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
-    /// ```
-    #[inline(always)]
-    fn mul(self, scalar: f64) -> Vector {
-        let mut res = self.clone();
-        res *= scalar;
-        res
-    }
-}
-
-impl std::ops::Mul<f64> for Vector {
-    type Output = Vector;
-
-    /// multiply for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v = v * 2.0;
-    /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
-    /// ```
-    #[inline(always)]
-    fn mul(mut self, scalar: f64) -> Vector {
-        self *= scalar;
-        self
-    }
-}
-
-impl std::ops::Mul<&Vector> for f64 {
-    type Output = Vector;
-
-    /// multiply for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v = 2.0 * &v;
-    /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
-    /// ```
-    #[inline(always)]
-    fn mul(self, vector: &Vector) -> Vector { vector * self }
-}
-
-impl std::ops::Mul<Vector> for f64 {
-    type Output = Vector;
-
-    /// multiply for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v = 2.0 * v;
-    /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
-    /// ```
-    #[inline(always)]
-    fn mul(self, vector: Vector) -> Vector { vector * self }
-}
-
-impl std::ops::Mul<&Vector> for &Vector {
-    type Output = f64;
-
-    /// inner product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// assert_eq!(&v0 * &v1, 1.0);
-    /// ```
-    #[inline(always)]
-    fn mul(self, other: &Vector) -> f64 {
-        self[0] * other[0] + self[1] * other[1] + self[2] * other[2] + self[3] * other[3]
-    }
-}
-
-impl std::ops::Mul<Vector> for &Vector {
-    type Output = f64;
-
-    /// inner product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// assert_eq!(&v0 * v1, 1.0);
-    /// ```
-    #[inline(always)]
-    fn mul(self, other: Vector) -> f64 { self * &other }
-}
-
-impl std::ops::Mul<&Vector> for Vector {
-    type Output = f64;
-
-    /// inner product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// assert_eq!(v0 * &v1, 1.0);
-    /// ```
-    #[inline(always)]
-    fn mul(self, other: &Vector) -> f64 { &self * other }
-}
-
-impl std::ops::Mul<Vector> for Vector {
-    type Output = f64;
-
-    /// inner product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
-    /// assert_eq!(v0 * v1, 1.0);
-    /// ```
-    #[inline(always)]
-    fn mul(self, other: Vector) -> f64 { &self * &other }
-}
-
-impl std::ops::DivAssign<f64> for Vector {
-    /// div_assign for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// v /= 2.0;
-    /// assert_eq!(v, Vector::new(0.5, 1.0, 1.5, 2.0));
-    /// ```
-    #[inline(always)]
-    fn div_assign(&mut self, scalar: f64) {
-        for a in self.as_mut_slice() {
-            *a /= scalar;
+            /// access each component
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// assert_eq!(v[0], 1.0);
+            /// assert_eq!(v[1], 2.0);
+            /// assert_eq!(v[2], 3.0);
+            /// assert_eq!(v[3], 4.0);
+            /// ```
+            #[inline(always)]
+            fn index(&self, idx: usize) -> &f64 { &self.0[idx] }
         }
-    }
+        impl std::ops::IndexMut<usize> for $classname {
+            /// access each component
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// v0[1] = 3.0;
+            /// assert_eq!(v0, Vector::new(1.0, 3.0, 3.0, 4.0));
+            /// ```
+            #[inline(always)]
+            fn index_mut(&mut self, idx: usize) -> &mut f64 { &mut self.0[idx] }
+        }
+        impl Tolerance for $classname {
+            #[inline(always)]
+            fn near(&self, other: &Self) -> bool {
+                true $(&& self[$num].near(&other[$num]))*
+            }
+
+            #[inline(always)]
+            fn near2(&self, other: &$classname) -> bool {
+                true $(&& self[$num].near2(&other[$num]))*
+            }
+        }
+
+        impl Origin for $classname {
+            const ORIGIN: Self = Self::zero();
+        }
+
+        impl std::convert::AsRef<[f64]> for $classname {
+            #[inline(always)]
+            fn as_ref(&self) -> &[f64] { self.0.as_ref() }
+        }
+
+        impl std::convert::From<[f64; $dim]> for $classname {
+            /// construct by array
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::from([1.0, 2.0, 3.0, 4.0]);
+            /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 4.0));
+            /// ```
+            #[inline(always)]
+            fn from(arr: [f64; $dim]) -> Self { Self(arr) }
+        }
+
+        impl std::convert::From<$classname> for [f64; $dim] {
+            /// into the array
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let arr: [f64; 4] = v.into();
+            /// assert_eq!(arr, [1.0, 2.0, 3.0, 4.0]);
+            /// ```
+            #[inline(always)]
+            fn from(vec: $classname) -> [f64; $dim] { vec.0 }
+        }
+
+        impl std::convert::From<$classname> for [f32; $dim] {
+            /// into the `f32` array
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let arr: [f32; 4] = v.into();
+            /// assert_eq!(arr, [1.0, 2.0, 3.0, 4.0]);
+            /// ```
+            #[inline(always)]
+            fn from(vec: $classname) -> [f32; $dim] {
+                [
+                    $(vec.0[$num] as f32),*
+                ]
+            }
+        }
+
+        impl std::ops::AddAssign<&Self> for $classname {
+            /// add_assign for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// v += &Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
+            /// ```
+            #[inline(always)]
+            fn add_assign(&mut self, rhs: &Self) {
+                $(self[$num] += rhs[$num];)*
+            }
+        }
+
+        impl std::ops::AddAssign<Self> for $classname {
+            /// add_assign for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// v += Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
+            /// ```
+            #[inline(always)]
+            fn add_assign(&mut self, rhs: Self) { self.add_assign(&rhs); }
+        }
+
+        impl std::ops::Add<&$classname> for &$classname {
+            type Output = $classname;
+
+            /// add each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// let v = &v0 + &v1;
+            /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
+            /// ```
+            #[inline(always)]
+            fn add(self, other: &$classname) -> Self::Output {
+                [$(self[$num] + other[$num]),*].into()
+            }
+        }
+
+        impl std::ops::Add<&$classname> for $classname {
+            type Output = $classname;
+
+            /// add each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// let v = v0 + &v1;
+            /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
+            /// ```
+            #[inline(always)]
+            fn add(mut self, other: &$classname) -> Self::Output {
+                self += other;
+                self
+            }
+        }
+
+        impl std::ops::Add<$classname> for &$classname {
+            type Output = $classname;
+
+            /// add each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// let v = &v0 + v1;
+            /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
+            /// ```
+            #[inline(always)]
+            fn add(self, other: $classname) -> Self::Output { other + self }
+        }
+
+        impl std::ops::Add<$classname> for $classname {
+            type Output = $classname;
+
+            /// add each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// let v = v0 + v1;
+            /// assert_eq!(v, Vector::new(2.0, -1.0, 1.0, 7.0));
+            /// ```
+            #[inline(always)]
+            fn add(self, other: $classname) -> Self::Output { self + &other }
+        }
+
+        impl std::ops::SubAssign<&$classname> for $classname {
+            /// sub_assign for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// v -= Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn sub_assign(&mut self, rhs: &$classname) {
+                $(self[$num] -= rhs[$num];)*
+            }
+        }
+
+        impl std::ops::SubAssign<$classname> for $classname {
+            /// sub_assign for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// v -= Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn sub_assign(&mut self, rhs: $classname) { self.sub_assign(&rhs); }
+        }
+
+        impl std::ops::Sub<&$classname> for &$classname {
+            type Output = $classname;
+
+            /// subtract each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// let v = &v0 - &v1;
+            /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn sub(self, other: &$classname) -> Self::Output { [$(self[$num] - other[$num]),*].into() }
+        }
+
+        impl std::ops::Sub<$classname> for &$classname {
+            type Output = $classname;
+
+            /// subtract each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// let v = &v0 - v1;
+            /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn sub(self, other: $classname) -> Self::Output { self - &other }
+        }
+
+        impl std::ops::Sub<&$classname> for $classname {
+            type Output = $classname;
+
+            /// subtract each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// let v = v0 - &v1;
+            /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn sub(mut self, other: &$classname) -> Self::Output {
+                self -= other;
+                self
+            }
+        }
+
+        impl std::ops::Sub<$classname> for $classname {
+            type Output = $classname;
+
+            /// subtract each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// let v = v0 - v1;
+            /// assert_eq!(v, Vector::new(0.0, 5.0, 5.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn sub(self, other: $classname) -> Self::Output { self - &other }
+        }
+
+        impl std::ops::MulAssign<f64> for $classname {
+            /// mul_assign for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// v *= 2.0;
+            /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
+            /// ```
+            #[inline(always)]
+            fn mul_assign(&mut self, scalar: f64) { $(self[$num] *= scalar;)* }
+        }
+
+        impl std::ops::Mul<f64> for &$classname {
+            type Output = $classname;
+
+            /// multiply for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v = &v * 2.0;
+            /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
+            /// ```
+            #[inline(always)]
+            fn mul(self, scalar: f64) -> $classname { [$(self[$num] * scalar),*].into() }
+        }
+
+        impl std::ops::Mul<f64> for $classname {
+            type Output = $classname;
+
+            /// multiply for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v = v * 2.0;
+            /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
+            /// ```
+            #[inline(always)]
+            fn mul(mut self, scalar: f64) -> $classname {
+                self *= scalar;
+                self
+            }
+        }
+
+        impl std::ops::Mul<&$classname> for f64 {
+            type Output = $classname;
+
+            /// multiply for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v = 2.0 * &v;
+            /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
+            /// ```
+            #[inline(always)]
+            fn mul(self, vector: &$classname) -> $classname { vector * self }
+        }
+
+        impl std::ops::Mul<$classname> for f64 {
+            type Output = $classname;
+
+            /// multiply for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v = 2.0 * v;
+            /// assert_eq!(v, Vector::new(2.0, 4.0, 6.0, 8.0));
+            /// ```
+            #[inline(always)]
+            fn mul(self, vector: $classname) -> $classname { vector * self }
+        }
+
+        impl std::ops::Mul<&$classname> for &$classname {
+            type Output = f64;
+
+            /// inner product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// assert_eq!(&v0 * &v1, 1.0);
+            /// ```
+            #[inline(always)]
+            fn mul(self, other: &$classname) -> f64 { 0.0 $(+ self[$num] * other[$num])* }
+        }
+
+        impl std::ops::Mul<$classname> for &$classname {
+            type Output = f64;
+
+            /// inner product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// assert_eq!(&v0 * v1, 1.0);
+            /// ```
+            #[inline(always)]
+            fn mul(self, other: $classname) -> f64 { self * &other }
+        }
+
+        impl std::ops::Mul<&$classname> for $classname {
+            type Output = f64;
+
+            /// inner product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// assert_eq!(v0 * &v1, 1.0);
+            /// ```
+            #[inline(always)]
+            fn mul(self, other: &$classname) -> f64 { &self * other }
+        }
+
+        impl std::ops::Mul<$classname> for $classname {
+            type Output = f64;
+
+            /// inner product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(1.0, -3.0, -2.0, 3.0);
+            /// assert_eq!(v0 * v1, 1.0);
+            /// ```
+            #[inline(always)]
+            fn mul(self, other: $classname) -> f64 { &self * &other }
+        }
+
+        impl std::ops::DivAssign<f64> for $classname {
+            /// div_assign for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// v /= 2.0;
+            /// assert_eq!(v, Vector::new(0.5, 1.0, 1.5, 2.0));
+            /// ```
+            #[inline(always)]
+            fn div_assign(&mut self, scalar: f64) { $(self[$num] /= scalar;)* }
+        }
+
+        impl std::ops::Div<f64> for &$classname {
+            type Output = $classname;
+
+            /// divide for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v = &v / 2.0;
+            /// assert_eq!(v, Vector::new(0.5, 1.0, 1.5, 2.0));
+            /// ```
+            #[inline(always)]
+            fn div(self, scalar: f64) -> $classname {
+                [$(self[$num] / scalar),*].into()
+            }
+        }
+
+        impl std::ops::Div<f64> for $classname {
+            type Output = $classname;
+
+            /// divide for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v = v / 2.0;
+            /// assert_eq!(v, Vector::new(0.5, 1.0, 1.5, 2.0));
+            /// ```
+            #[inline(always)]
+            fn div(mut self, scalar: f64) -> $classname {
+                self /= scalar;
+                self
+            }
+        }
+
+        impl std::ops::Neg for &$classname {
+            type Output = $classname;
+
+            /// neg for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v = -&v;
+            /// assert_eq!(v, Vector::new(-1.0, -2.0, -3.0, -4.0));
+            /// ```
+            #[inline(always)]
+            fn neg(self) -> Self::Output { -1.0 * self }
+        }
+
+        impl std::ops::Neg for $classname {
+            type Output = $classname;
+
+            /// neg for each components
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v = -v;
+            /// assert_eq!(v, Vector::new(-1.0, -2.0, -3.0, -4.0));
+            /// ```
+            #[inline(always)]
+            fn neg(self) -> Self::Output { -1.0 * self }
+        }
+
+        impl std::ops::RemAssign<&$classname> for $classname {
+            /// Hadamard product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// v %= &Vector::new(8.0, 7.0, 6.0, 5.0);
+            /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
+            /// ```
+            #[inline(always)]
+            fn rem_assign(&mut self, other: &$classname) { $(self[$num] *= other[$num];)* }
+        }
+
+        impl std::ops::Rem<&$classname> for &$classname {
+            type Output = $classname;
+
+            /// Hadamard product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(8.0, 7.0, 6.0, 5.0);
+            /// let v = &v0 % &v1;
+            /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
+            /// ```
+            #[inline(always)]
+            fn rem(self, other: &$classname) -> $classname {
+                let mut res = self.clone();
+                res %= other;
+                res
+            }
+        }
+
+        impl std::ops::Rem<$classname> for &$classname {
+            type Output = $classname;
+
+            /// Hadamard product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(8.0, 7.0, 6.0, 5.0);
+            /// let v = &v0 % v1;
+            /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
+            /// ```
+            #[inline(always)]
+            fn rem(self, other: $classname) -> $classname { self % &other }
+        }
+
+        impl std::ops::Rem<&$classname> for $classname {
+            type Output = $classname;
+
+            /// Hadamard product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(8.0, 7.0, 6.0, 5.0);
+            /// let v = v0 % &v1;
+            /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
+            /// ```
+            #[inline(always)]
+            fn rem(mut self, other: &$classname) -> $classname {
+                self %= &other;
+                self
+            }
+        }
+
+        impl std::ops::Rem<$classname> for $classname {
+            type Output = $classname;
+
+            /// Hadamard product
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let v1 = Vector::new(8.0, 7.0, 6.0, 5.0);
+            /// let v = v0 % v1;
+            /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
+            /// ```
+            #[inline(always)]
+            fn rem(self, other: $classname) -> $classname { self % &other }
+        }
+
+        impl std::cmp::PartialOrd for $classname {
+            /// expression order
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new(1.0, 0.0, 0.0, 0.0);
+            /// let v1 = Vector::new(0.0, 100.0, 0.0, 0.0);
+            /// let v2 = Vector::new(1.0, 0.0, 1.0, 0.0);
+            /// assert!(v0 == v0);
+            /// assert!(v0 > v1);
+            /// assert!(v0 < v2);
+            /// ```
+            #[inline(always)]
+            fn partial_cmp(&self, rhs: &$classname) -> Option<Ordering> {
+                $(
+                    let res = self[$num].partial_cmp(&rhs[$num]);
+                    if res != Some(Ordering::Equal) {
+                        return res;
+                    }
+                )*
+                    res
+            }
+        }
+    };
 }
 
-impl std::ops::Div<f64> for &Vector {
-    type Output = Vector;
-
-    /// divide for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v = &v / 2.0;
-    /// assert_eq!(v, Vector::new(0.5, 1.0, 1.5, 2.0));
-    /// ```
-    #[inline(always)]
-    fn div(self, scalar: f64) -> Vector {
-        let mut res = self.clone();
-        res /= scalar;
-        res
-    }
-}
-
-impl std::ops::Div<f64> for Vector {
-    type Output = Vector;
-
-    /// divide for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v = v / 2.0;
-    /// assert_eq!(v, Vector::new(0.5, 1.0, 1.5, 2.0));
-    /// ```
-    #[inline(always)]
-    fn div(mut self, scalar: f64) -> Vector {
-        self /= scalar;
-        self
-    }
-}
-
-impl std::ops::Neg for &Vector {
-    type Output = Vector;
-
-    /// neg for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v = -&v;
-    /// assert_eq!(v, Vector::new(-1.0, -2.0, -3.0, -4.0));
-    /// ```
-    #[inline(always)]
-    fn neg(self) -> Self::Output { -1.0 * self }
-}
-
-impl std::ops::Neg for Vector {
-    type Output = Vector;
-
-    /// neg for each components
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v = -v;
-    /// assert_eq!(v, Vector::new(-1.0, -2.0, -3.0, -4.0));
-    /// ```
-    #[inline(always)]
-    fn neg(self) -> Self::Output { -1.0 * self }
-}
-
-impl std::ops::RemAssign<&Vector> for Vector {
-    /// Hadamard product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// v %= &Vector::new(8.0, 7.0, 6.0, 5.0);
-    /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
-    /// ```
-    #[inline(always)]
-    fn rem_assign(&mut self, other: &Vector) {
-        self[0] *= other[0];
-        self[1] *= other[1];
-        self[2] *= other[2];
-        self[3] *= other[3];
-    }
-}
-
-impl std::ops::Rem<&Vector> for &Vector {
-    type Output = Vector;
-
-    /// Hadamard product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(8.0, 7.0, 6.0, 5.0);
-    /// let v = &v0 % &v1;
-    /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
-    /// ```
-    #[inline(always)]
-    fn rem(self, other: &Vector) -> Vector {
-        let mut res = self.clone();
-        res %= other;
-        res
-    }
-}
-
-impl std::ops::Rem<Vector> for &Vector {
-    type Output = Vector;
-
-    /// Hadamard product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(8.0, 7.0, 6.0, 5.0);
-    /// let v = &v0 % v1;
-    /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
-    /// ```
-    #[inline(always)]
-    fn rem(self, other: Vector) -> Vector { self % &other }
-}
-
-impl std::ops::Rem<&Vector> for Vector {
-    type Output = Vector;
-
-    /// Hadamard product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(8.0, 7.0, 6.0, 5.0);
-    /// let v = v0 % &v1;
-    /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
-    /// ```
-    #[inline(always)]
-    fn rem(mut self, other: &Vector) -> Vector {
-        self %= &other;
-        self
-    }
-}
-
-impl std::ops::Rem<Vector> for Vector {
-    type Output = Vector;
-
-    /// Hadamard product
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = Vector::new(8.0, 7.0, 6.0, 5.0);
-    /// let v = v0 % v1;
-    /// assert_eq!(v, Vector::new(8.0, 14.0, 18.0, 20.0));
-    /// ```
-    #[inline(always)]
-    fn rem(self, other: Vector) -> Vector { self % &other }
-}
+impl_vector!(Vector, 4, 0, 1, 2, 3);
+impl_vector!(Vector3, 3, 0, 1, 2);
+impl_vector!(Vector2, 2, 0, 1);
 
 impl std::ops::BitXor<&Vector> for &Vector {
     type Output = Vector;
@@ -776,121 +779,209 @@ impl std::ops::BitXor<&Vector> for &Vector {
     }
 }
 
-impl std::ops::BitXor<&Vector> for Vector {
-    type Output = Vector;
+impl std::ops::BitXor<&Vector3> for &Vector3 {
+    type Output = Vector3;
 
     /// cross product for the first three componets.  
-    /// The 3rd component is always `0.0`.
+    /// The 3rd component is the norm of the above three components.
     /// # Examples
     /// ```
     /// use truck_geometry::Vector;
     /// let v0 = Vector::new3(1.0, 0.0, 0.0);
     /// let v1 = Vector::new3(0.0, 1.0, 0.0);
-    /// let v = v0 ^ &v1;
+    /// let v = &v0 ^ &v1;
     /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
     /// ```
     #[inline(always)]
-    fn bitxor(self, other: &Vector) -> Vector { &self ^ other }
-}
-
-impl std::ops::BitXor<Vector> for &Vector {
-    type Output = Vector;
-
-    /// cross product for the first three componets.  
-    /// The 3rd component is always `0.0`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new3(1.0, 0.0, 0.0);
-    /// let v1 = Vector::new3(0.0, 1.0, 0.0);
-    /// let v = &v0 ^ v1;
-    /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn bitxor(self, other: Vector) -> Vector { self ^ &other }
-}
-
-impl std::ops::BitXor<Vector> for Vector {
-    type Output = Vector;
-
-    /// cross product for the first three componets.  
-    /// The 3rd component is always `0.0`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new3(1.0, 0.0, 0.0);
-    /// let v1 = Vector::new3(0.0, 1.0, 0.0);
-    /// let v = v0 ^ &v1;
-    /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn bitxor(self, other: Vector) -> Vector { &self ^ &other }
-}
-
-impl std::ops::BitXorAssign<&Vector> for Vector {
-    /// cross product for the first three componets.  
-    /// The 3rd component is always `0.0`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new3(1.0, 0.0, 0.0);
-    /// let v0 = Vector::new3(0.0, 1.0, 0.0);
-    /// v ^= &v0;
-    /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn bitxor_assign(&mut self, rhs: &Vector) { *self = &*self ^ rhs; }
-}
-
-impl std::ops::BitXorAssign<Vector> for Vector {
-    /// cross product for the first three componets.  
-    /// The 3rd component is always `0.0`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let mut v = Vector::new3(1.0, 0.0, 0.0);
-    /// let v0 = Vector::new3(0.0, 1.0, 0.0);
-    /// v ^= v0;
-    /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn bitxor_assign(&mut self, rhs: Vector) { self.bitxor_assign(&rhs); }
-}
-
-impl std::cmp::PartialOrd for Vector {
-    /// expression order
-    /// ```
-    /// use truck_geometry::Vector;
-    /// let v0 = Vector::new(1.0, 0.0, 0.0, 0.0);
-    /// let v1 = Vector::new(0.0, 100.0, 0.0, 0.0);
-    /// let v2 = Vector::new(1.0, 0.0, 1.0, 0.0);
-    /// assert!(v0 == v0);
-    /// assert!(v0 > v1);
-    /// assert!(v0 < v2);
-    /// ```
-    #[inline(always)]
-    fn partial_cmp(&self, rhs: &Vector) -> Option<Ordering> {
-        let res = self[0].partial_cmp(&rhs[0]);
-        if res != Some(Ordering::Equal) {
-            return res;
-        }
-        let res = self[1].partial_cmp(&rhs[1]);
-        if res != Some(Ordering::Equal) {
-            return res;
-        }
-        let res = self[2].partial_cmp(&rhs[2]);
-        if res != Some(Ordering::Equal) {
-            return res;
-        }
-        let res = self[3].partial_cmp(&rhs[3]);
-        res
+    fn bitxor(self, other: &Vector3) -> Vector3 {
+        let x = self[1] * other[2] - self[2] * other[1];
+        let y = self[2] * other[0] - self[0] * other[2];
+        let z = self[0] * other[1] - self[1] * other[0];
+        Vector3::new(x, y, z)
     }
 }
+
+impl std::ops::BitXor<&Vector2> for &Vector2 {
+    type Output = f64;
+
+    /// cross product for the first three componets.  
+    /// The 3rd component is the norm of the above three components.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::Vector;
+    /// let v0 = Vector::new3(1.0, 0.0, 0.0);
+    /// let v1 = Vector::new3(0.0, 1.0, 0.0);
+    /// let v = &v0 ^ &v1;
+    /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
+    /// ```
+    #[inline(always)]
+    fn bitxor(self, other: &Vector2) -> f64 { self[0] * other[1] - self[1] * other[0] }
+}
+
+macro_rules! impl_bitxor_others {
+    ($classname: ident) => {
+        impl std::ops::BitXor<&$classname> for $classname {
+            type Output = <&'static $classname as std::ops::BitXor<&'static $classname>>::Output;
+
+            /// cross product for the first three componets.  
+            /// The 3rd component is always `0.0`.
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new3(1.0, 0.0, 0.0);
+            /// let v1 = Vector::new3(0.0, 1.0, 0.0);
+            /// let v = v0 ^ &v1;
+            /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn bitxor(self, other: &$classname) -> Self::Output { &self ^ other }
+        }
+
+        impl std::ops::BitXor<$classname> for &$classname {
+            type Output = <&'static $classname as std::ops::BitXor<&'static $classname>>::Output;
+
+            /// cross product for the first three componets.  
+            /// The 3rd component is always `0.0`.
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new3(1.0, 0.0, 0.0);
+            /// let v1 = Vector::new3(0.0, 1.0, 0.0);
+            /// let v = &v0 ^ v1;
+            /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn bitxor(self, other: $classname) -> Self::Output { self ^ &other }
+        }
+
+        impl std::ops::BitXor<$classname> for $classname {
+            type Output = <&'static $classname as std::ops::BitXor<&'static $classname>>::Output;
+
+            /// cross product for the first three componets.  
+            /// The 3rd component is always `0.0`.
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v0 = Vector::new3(1.0, 0.0, 0.0);
+            /// let v1 = Vector::new3(0.0, 1.0, 0.0);
+            /// let v = v0 ^ &v1;
+            /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn bitxor(self, other: $classname) -> Self::Output { &self ^ &other }
+        }
+    };
+}
+
+impl_bitxor_others!(Vector);
+impl_bitxor_others!(Vector3);
+impl_bitxor_others!(Vector2);
+
+macro_rules! impl_bitxor_assign {
+    ($classname: ty) => {
+        impl std::ops::BitXorAssign<&$classname> for $classname {
+            /// cross product for the first three componets.  
+            /// The 3rd component is always `0.0`.
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new3(1.0, 0.0, 0.0);
+            /// let v0 = Vector::new3(0.0, 1.0, 0.0);
+            /// v ^= &v0;
+            /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn bitxor_assign(&mut self, rhs: &$classname) { *self = &*self ^ rhs; }
+        }
+
+        impl std::ops::BitXorAssign<$classname> for $classname {
+            /// cross product for the first three componets.  
+            /// The 3rd component is always `0.0`.
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let mut v = Vector::new3(1.0, 0.0, 0.0);
+            /// let v0 = Vector::new3(0.0, 1.0, 0.0);
+            /// v ^= v0;
+            /// assert_eq!(v, Vector::new(0.0, 0.0, 1.0, 1.0));
+            /// ```
+            #[inline(always)]
+            fn bitxor_assign(&mut self, rhs: $classname) { self.bitxor_assign(&rhs); }
+        }
+    };
+}
+
+impl_bitxor_assign!(Vector);
+impl_bitxor_assign!(Vector3);
+
+macro_rules! impl_lesser_convert {
+    ($higher_vector: ty, $lesser_vector: ty, $($lesser_index: expr), *) => {
+        impl std::convert::From<$higher_vector> for $lesser_vector {
+            #[inline(always)]
+            fn from(vector: $higher_vector) -> $lesser_vector {
+                <$lesser_vector>::new($(vector[$lesser_index]),*)
+            }
+        }
+    };
+}
+
+impl_lesser_convert!(Vector, Vector3, 0, 1, 2);
+impl_lesser_convert!(Vector, Vector2, 0, 1);
+impl_lesser_convert!(Vector3, Vector2, 0, 1);
 
 impl std::fmt::Display for Vector {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_fmt(format_args!("[{}    {}  {}  {}]", self[0], self[1], self[2], self[3]))
+        f.write_fmt(format_args!(
+            "[{}    {}  {}  {}]",
+            self[0], self[1], self[2], self[3]
+        ))
     }
 }
 
+impl std::fmt::Display for Vector3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_fmt(format_args!("[{}    {}  {}]", self[0], self[1], self[2]))
+    }
+}
 
+impl std::fmt::Display for Vector2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_fmt(format_args!("[{}    {}]", self[0], self[1]))
+    }
+}
+
+impl Vector {
+    /// construct a vector whose 4th component is 1.0.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::Vector;
+    /// let v = Vector::new3(1.0, 2.0, 3.0);
+    /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 1.0));
+    /// ```
+    #[inline(always)]
+    pub fn new3<T: Into<f64>>(x: T, y: T, z: T) -> Vector {
+        Self([x.into(), y.into(), z.into(), 1.0])
+    }
+}
+
+impl Vector3 {
+    #[inline(always)]
+    pub fn volume(&self, v0: &Vector3, v1: &Vector3) -> f64 {
+        self[0] * v0[1] * v1[2] + self[1] * v0[2] * v1[0] + self[2] * v0[0] * v1[1]
+            - self[0] * v0[2] * v1[1]
+            - self[2] * v0[1] * v1[0]
+            - self[1] * v0[0] * v1[2]
+    }
+
+    #[inline(always)]
+    pub fn divide(&self, v0: &Vector3, v1: &Vector3, v2: &Vector3) -> Option<Vector3> {
+        let det = v0.volume(v1, v2);
+        if det.so_small2() {
+            return None;
+        }
+        let x = self.volume(v1, v2) / det;
+        let y = v0.volume(self, v2) / det;
+        let z = v0.volume(v1, self) / det;
+        Some(Vector3::new(x, y, z))
+    }
+}
