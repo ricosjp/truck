@@ -1,8 +1,8 @@
-use crate::{Edge, Face, Result, Shell, Vertex, Wire};
 use crate::errors::Error;
+use crate::{Edge, Face, Result, Shell, Vertex, Wire};
 use std::collections::{HashMap, HashSet};
-use std::vec::Vec;
 use std::convert::TryFrom;
+use std::vec::Vec;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ShellCondition {
@@ -33,40 +33,20 @@ impl Shell {
     }
 
     #[inline(always)]
-    pub fn capacity(&self) -> usize { self.face_list.capacity() }
+    pub fn append(&mut self, other: &mut Shell) { self.face_list.append(&mut other.face_list); }
 
-    #[inline(always)]
-    pub fn reserve(&mut self, additional: usize) { self.face_list.reserve(additional) }
-
-    #[inline(always)]
-    pub fn reserve_exact(&mut self, additional: usize) { self.face_list.reserve_exact(additional) }
-
-    #[inline(always)]
-    pub fn is_empty(&self) -> bool { self.face_list.is_empty() }
-
-    #[inline(always)]
-    pub fn len(&self) -> usize { self.face_list.len() }
-    /// add an face
-    #[inline(always)]
-    pub fn push(&mut self, face: Face) { self.face_list.push(face); }
     /// get a face iterator
     #[inline(always)]
-    pub fn face_iter(&self) -> FaceIter { self.face_list.iter() }
+    pub fn face_iter(&self) -> FaceIter { self.iter() }
 
     #[inline(always)]
-    pub fn face_iter_mut(&mut self) -> FaceIterMut { self.face_list.iter_mut() }
+    pub fn face_iter_mut(&mut self) -> FaceIterMut { self.iter_mut() }
 
     #[inline(always)]
     pub fn face_into_iter(self) -> FaceIntoIter { self.face_list.into_iter() }
 
-    pub fn append(&mut self, other: &mut Shell) { self.face_list.append(&mut other.face_list); }
-
-    pub fn remove(&mut self, idx: usize) { self.face_list.remove(idx); }
-
     /// return (is oriented or not, all edges, inner edge), If irregular, return None.
-    fn inner_edge_extraction(
-        &self,
-    ) -> Option<(bool, HashMap<usize, &Edge>, HashSet<usize>)> {
+    fn inner_edge_extraction(&self) -> Option<(bool, HashMap<usize, &Edge>, HashSet<usize>)> {
         let mut all_edges = HashMap::with_capacity(self.face_list.len());
         let mut inner_edges = HashSet::with_capacity(self.face_list.len());
 
@@ -88,31 +68,39 @@ impl Shell {
     }
 
     pub fn extract_boundaries(&self) -> Result<Vec<Wire>> {
-        let (_, all_edges, inner_edges) = match self.inner_edge_extraction() {
+        let (_, _, inner_edges) = match self.inner_edge_extraction() {
             Some(tuple) => tuple,
             None => return Err(Error::NotRegularShell),
         };
+        let mut boundary_edges = Vec::new();
         let mut vemap: HashMap<Vertex, &Edge> = HashMap::new();
-        for edge in all_edges.values() {
+        let edge_iter = self
+            .face_iter()
+            .flat_map(|face| face.boundary().edge_iter());
+        for edge in edge_iter {
             if inner_edges.get(&edge.id()).is_none() {
-                vemap.insert(edge.front(), edge);
+                boundary_edges.push(*edge);
+                vemap.insert(edge.front(), &edge);
             }
         }
         let mut res = Vec::new();
-        while !vemap.is_empty() {
-            let vertex = *vemap.keys().next().unwrap();
-            let mut cursor = vemap.remove(&vertex).unwrap();
-            let mut wire = Wire::try_from(vec![*cursor]).unwrap();
-            loop {
-                cursor = match vemap.remove(&cursor.back()) {
-                    None => break,
-                    Some(got) => {
-                        wire.push_back(*got);
-                        got
-                    }
-                };
+        for edge in boundary_edges {
+            if inner_edges.get(&edge.id()).is_some() {
+                continue;
             }
-            res.push(wire);
+            if let Some(mut cursor) = vemap.remove(&edge.front()) {
+                let mut wire = Wire::try_from(vec![*cursor]).unwrap();
+                loop {
+                    cursor = match vemap.remove(&cursor.back()) {
+                        None => break,
+                        Some(got) => {
+                            wire.push_back(*got);
+                            got
+                        }
+                    };
+                }
+                res.push(wire);
+            }
         }
         Ok(res)
     }
@@ -216,9 +204,13 @@ impl std::iter::FromIterator<Face> for Shell {
     }
 }
 
-impl std::ops::Index<usize> for Shell {
-    type Output = Face;
-    fn index(&self, idx: usize) -> &Face { &self.face_list[idx] }
+impl std::ops::Deref for Shell {
+    type Target = Vec<Face>;
+    fn deref(&self) -> &Vec<Face> { &self.face_list }
+}
+
+impl std::ops::DerefMut for Shell {
+    fn deref_mut(&mut self) -> &mut Vec<Face> { &mut self.face_list }
 }
 
 pub type FaceIter<'a> = std::slice::Iter<'a, Face>;

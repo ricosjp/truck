@@ -19,14 +19,6 @@ impl Wire {
         }
     }
 
-    /// Provides a reference to the edge at the given index.
-    /// Element at index 0 is the front of the queue.
-    #[inline(always)]
-    pub fn get(&self, index: usize) -> Option<&Edge> { self.edge_list.get(index) }
-
-    #[inline(always)]
-    pub fn capacity(&self) -> usize { self.edge_list.capacity() }
-
     #[inline(always)]
     pub fn reserve_exact(&mut self, additional: usize) { self.edge_list.reserve_exact(additional) }
     #[inline(always)]
@@ -68,20 +60,8 @@ impl Wire {
     }
 
     #[inline(always)]
-    pub fn as_slices(&self) -> (&[Edge], &[Edge]) { self.edge_list.as_slices() }
-
-    /// the number of the edges in wire.
-    #[inline(always)]
-    pub fn len(&self) -> usize { self.edge_list.len() }
-    /// whether empty or not
-    #[inline(always)]
-    pub fn is_empty(&self) -> bool { self.edge_list.is_empty() }
-
-    #[inline(always)]
     pub fn clear(&mut self) { self.edge_list.clear() }
 
-    #[inline(always)]
-    pub fn contains(&self, edge: &Edge) -> bool { self.edge_list.contains(edge) }
     /// get the front edge. If `self` is empty wire, return None.
     #[inline(always)]
     pub fn front_edge(&self) -> Option<Edge> { self.edge_list.front().map(|edge| *edge) }
@@ -413,23 +393,29 @@ impl<'a> std::iter::Iterator for VertexIter<'a> {
             if self.closed || self.next.is_none() {
                 None
             } else {
-                let res = self.next.unwrap();
+                let res = self.next;
                 self.next = None;
-                Some(res)
+                res
             }
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = if self.closed {
-            self.edge_iter.len()
-        } else {
-            self.edge_iter.len() + 1
-        };
+        let size = self.len();
         (size, Some(size))
     }
 
     fn last(self) -> Option<Vertex> { self.edge_iter.last().map(|edge| edge.back()) }
+}
+
+impl<'a> std::iter::ExactSizeIterator for VertexIter<'a> {
+    fn len(&self) -> usize {
+        if self.closed {
+            self.edge_iter.len()
+        } else {
+            self.edge_iter.len() + 1
+        }
+    }
 }
 
 impl Extend<Edge> for Wire {
@@ -437,5 +423,12 @@ impl Extend<Edge> for Wire {
         for edge in iter {
             self.push_back(edge);
         }
+    }
+}
+
+impl std::ops::Deref for Wire {
+    type Target = VecDeque<Edge>;
+    fn deref(&self) -> &VecDeque<Edge> {
+        &self.edge_list
     }
 }

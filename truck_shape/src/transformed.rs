@@ -181,8 +181,8 @@ impl Transformed for Shell {
         let mut shell = Shell::new();
         let mut vmap: HashMap<Vertex, Vertex> = HashMap::new();
         let vertex_iter = self
-            .face_iter()
-            .flat_map(|face| face.boundary().edge_iter().map(|edge| edge.front()));
+            .iter()
+            .flat_map(|face| face.boundary().vertex_iter());
         for vertex in vertex_iter {
             if vmap.get(&vertex).is_none() {
                 let new_vertex =

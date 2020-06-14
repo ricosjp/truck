@@ -750,7 +750,6 @@ macro_rules! impl_vector {
                     res
             }
         }
-
     };
 }
 

@@ -138,7 +138,7 @@ impl<'a> Builder<'a> {
         axis: &Vector3,
         angle: f64,
     ) -> Result<T::Output> {
-        elem.rsweep(origin, axis, angle, self)
+        elem.rsweep(origin, axis, angle, self.director)
     }
 }
 

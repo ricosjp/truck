@@ -3,8 +3,16 @@ extern crate lazy_static;
 
 use std::collections::VecDeque;
 
-/// Vertex, the minimum topological unit.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+/// Vertex, the minimum topological unit.  
+/// The constructor `Vertex::new()` creates a different vertex each time.
+/// These vertices are uniquely identified by their `id`.
+/// ```
+/// # use truck_topology::Vertex;
+/// let v0 = Vertex::new(); // one vertex
+/// let v1 = Vertex::new(); // another vertex
+/// assert_ne!(v0.id(), v1.id()); // two vertices are different
+/// ```
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Vertex {
     id: usize,
 }
