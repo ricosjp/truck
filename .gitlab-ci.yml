@@ -1,5 +1,6 @@
 stages:
     - test
+    - deploy
 
 test:
     image: rust:latest
