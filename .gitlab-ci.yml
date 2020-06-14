@@ -1,6 +1,5 @@
 stages:
     - test
-    - pages
 
 test:
     image: rust:latest
@@ -15,7 +14,7 @@ test:
 
 pages:
     image: rust:latest
-    stage: pages
+    stage: deploy
     script:
         - cargo clean
         - cargo test
