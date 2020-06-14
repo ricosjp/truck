@@ -14,6 +14,7 @@ impl Vertex {
 
     /// create `len` distinct vertices and return them by vector.
     /// ```
+    /// # use truck_topology::Vertex;
     /// let v = Vertex::news(3);
     /// assert_eq!(v.len(), 3);
     /// assert_ne!(v[0], v[2]);
