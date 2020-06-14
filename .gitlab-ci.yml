@@ -1,6 +1,6 @@
 stages:
     - test
-    - deploy
+    - pages
 
 test:
     image: rust:latest
@@ -15,13 +15,14 @@ test:
 
 pages:
     image: rust:latest
-    stage: deploy
+    stage: pages
     script:
         - cargo clean
         - cargo test
         - cargo doc --no-deps
+        - cp -r target/doc public
     artifacts:
         paths:
-            - target/doc
+            - public
     only:
         - master
