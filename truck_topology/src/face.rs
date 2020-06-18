@@ -1,30 +1,55 @@
 use crate::errors::Error;
 use crate::id::IDGenerator;
-use crate::{Result, Wire, Face};
+use crate::wire::EdgeIter;
+use crate::{Edge, Face, RemoveTry, Result, Wire};
 use std::collections::HashMap;
 
 lazy_static! {
-    static ref ID_GENERATOR: IDGenerator  = IDGenerator::new();
+    static ref ID_GENERATOR: IDGenerator = IDGenerator::new();
 }
 
 impl Face {
-    /// construct new face by a wire.
-    /// # Panic
-    /// `boundary` must be simple and closed.
-    #[inline(always)]
-    pub fn new(boundary: Wire) -> Face {
-        match Face::try_new(boundary) {
-            Ok(got) => got,
-            Err(error) => panic!("{}", error),
-        }
-    }
-    
-    /// construct new face by a wire.
+    /// Creates a new face by a wire.
     /// # Failure
-    /// `boundary` must be simple and closed.
+    /// `boundary` must be non-empty, simple and closed. If not, returns the following errors:
+    /// * If `boundary` is empty, then returns `Error::EmptyWire`.
+    /// * If `boundary` is not closed, then returns `Error::NotClosedWire`.
+    /// * If `boundary` is closed but not simple, then returns `Error::NotSimpleWire`.
+    /// # Examples
+    /// ```
+    /// # use truck_topology::*;
+    /// # use truck_topology::errors::Error;
+    /// let v = Vertex::news(4);
+    /// let mut wire = Wire::from(vec![
+    ///     Edge::new(v[0], v[1]),
+    ///     Edge::new(v[1], v[2]),
+    ///     Edge::new(v[2], v[3]),
+    /// ]);
+    ///
+    /// // wire is not closed.
+    /// assert_eq!(Face::try_new(wire.clone()), Err(Error::NotClosedWire));
+    ///
+    /// // wire becomes closed and simple.
+    /// wire.push_back(Edge::new(v[3], v[0]));
+    /// assert!(Face::try_new(wire.clone()).is_ok());
+    ///
+    /// // wire becomes not simple.
+    /// wire.pop_back();
+    /// wire.push_back(Edge::new(v[3], v[1]));
+    /// wire.push_back(Edge::new(v[1], v[0]));
+    /// assert_eq!(Face::try_new(wire), Err(Error::NotSimpleWire));
+    /// ```
+    /// ```
+    /// # use truck_topology::*;
+    /// # use truck_topology::errors::Error;
+    /// // empty wire cannot construct a face
+    /// assert_eq!(Face::try_new(Wire::new()), Err(Error::EmptyWire));
+    /// ```
     #[inline(always)]
     pub fn try_new(boundary: Wire) -> Result<Face> {
-        if !boundary.is_closed() {
+        if boundary.is_empty() {
+            Err(Error::EmptyWire)
+        } else if !boundary.is_closed() {
             Err(Error::NotClosedWire)
         } else if !boundary.is_simple() {
             Err(Error::NotSimpleWire)
@@ -33,39 +58,225 @@ impl Face {
         }
     }
 
-    /// construct new face by a wire.
+    /// Creates a new face by a wire.
+    /// # Panic
+    /// `boundary` must be non-empty, simple and closed.
+    #[inline(always)]
+    pub fn new(boundary: Wire) -> Face { Face::try_new(boundary).remove_try() }
+
+    /// Creates a new face by a wire.
     /// # Remarks
-    /// This method is prepared only for performance-critical development and is not recommended.
-    /// This method does NOT check whether `boundary` is simple and closed.
+    /// This method is prepared only for performance-critical development and is not recommended.  
+    /// This method does NOT check the regularity conditions of `Face::try_new()`.  
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
     pub fn new_unchecked(boundary: Wire) -> Face {
         Face {
             boundary: boundary,
+            orientation: true,
             id: ID_GENERATOR.generate(),
         }
     }
 
-    /// get the reference of the boundary wire.
+    /// Returns the boundary of the wire.
+    /// # Examples
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(3);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(v[0], v[1]),
+    ///     Edge::new(v[1], v[2]),
+    ///     Edge::new(v[2], v[0]),
+    /// ]);
+    /// let mut face = Face::new(wire);
+    /// let boundary = face.boundary();
+    /// for (i, vert) in boundary.vertex_iter().enumerate() {
+    ///     assert_eq!(vert, v[i]);
+    /// }
+    /// 
+    /// // If invert the face, the boundary is also inverted.
+    /// face.invert();
+    /// assert_eq!(boundary.inverse(), face.boundary());
+    /// ```
     #[inline(always)]
-    pub fn boundary(&self) -> &Wire { &self.boundary }
-
+    pub fn boundary(&self) -> Wire {
+        match self.orientation {
+            true => self.boundary.clone(),
+            false => self.boundary.inverse(),
+        }
+    }
+    
+    /// Consumes `self` and returns the entity of its boundary.
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(3);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(v[0], v[1]),
+    ///     Edge::new(v[1], v[2]),
+    ///     Edge::new(v[2], v[0]),
+    /// ]);
+    /// let mut face = Face::new(wire);
+    /// let boundary = face.clone().into_boundary();
+    /// for (i, vert) in boundary.vertex_iter().enumerate() {
+    ///     assert_eq!(vert, v[i]);
+    /// }
+    /// 
+    /// // If invert the face, the boundary is also inverted.
+    /// face.invert();
+    /// assert_eq!(boundary.inverse(), face.into_boundary());
+    /// ```
     #[inline(always)]
-    pub fn into_boundary(self) -> Wire { self.boundary }
+    pub fn into_boundary(self) -> Wire {
+        match self.orientation {
+            true => self.boundary,
+            false => self.boundary.inverse(),
+        }
+    }
 
-    /// get the face id.
+    /// Returns the reference of the boundary wire which is generated by constructor.
+    /// # Examples
+    /// ```
+    /// # use truck_topology::*;
+    /// # let v = Vertex::news(3);
+    /// # let wire = Wire::from(vec![
+    /// #     Edge::new(v[0], v[1]),
+    /// #     Edge::new(v[1], v[2]),
+    /// #     Edge::new(v[2], v[0]),
+    /// # ]);
+    /// # let mut face = Face::new(wire);
+    /// // let mut face: Face = ...;
+    /// let boundary = face.boundary();
+    /// face.invert();
+    /// 
+    /// // The result of face.boudnary() is already inversed.
+    /// assert_eq!(face.boundary(), boundary.inverse());
+    /// 
+    /// // The absolute boundary does never change.
+    /// assert_eq!(face.absolute_boundary(), &boundary);
+    /// ```
+    #[inline(always)]
+    pub fn absolute_boundary(&self) -> &Wire { &self.boundary }
+
+    /// Returns an iterator over all edges in the boundary.
+    /// ```
+    /// # use truck_topology::*;
+    /// # let v = Vertex::news(3);
+    /// # let wire = Wire::from(vec![
+    /// #     Edge::new(v[0], v[1]),
+    /// #     Edge::new(v[1], v[2]),
+    /// #     Edge::new(v[2], v[0]),
+    /// # ]);
+    /// # let mut face = Face::new(wire);
+    /// # face.invert();
+    /// // let mut face: Face = ...;
+    /// let boundary = face.boundary();
+    /// for (edge0, edge1) in boundary.edge_iter().zip(face.boundary_iter()) {
+    ///     assert_eq!(edge0, &edge1);
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn boundary_iter(&self) -> BoundaryIter {
+        BoundaryIter {
+            edge_iter: self.boundary.edge_iter(),
+            orientation: self.orientation,
+        }
+    }
+
+    /// Returns the orientation of face.
+    /// 
+    /// The result of this method is the same with `self.boundary() == self.absolute_boundary().clone()`.
+    /// Moreover, if this method returns false, `self.boundary() == self.absolute_boundary().inverse()`.
+    #[inline(always)]
+    pub fn orientation(&self) -> bool { self.orientation }
+
+    /// Returns the id of face.
     #[inline(always)]
     pub fn id(&self) -> usize { self.id }
 
-    /// inverse the direction of face and give a new id.
+    /// Inverts the direction of the face.
+    /// # Examples
+    /// ```
+    /// # use truck_topology::*;
+    /// # use truck_topology::errors::Error;
+    /// # let v = Vertex::news(3);
+    /// # let wire = Wire::from(vec![
+    /// #    Edge::new(v[0], v[1]),
+    /// #    Edge::new(v[1], v[2]),
+    /// #    Edge::new(v[2], v[0]),
+    /// # ]);
+    /// # let mut face = Face::new(wire);
+    /// // let mut face: Face = ...;
+    /// let id_backup = face.id();
+    /// let boundary_backup = face.boundary();
+    /// face.invert();
+    /// 
+    /// // The id of the face does not change.
+    /// assert_eq!(face.id(), id_backup);
+    /// 
+    /// // The boundary is inverted.
+    /// let inversed_edge_iter = boundary_backup.inverse().edge_into_iter();
+    /// let face_edge_iter = face.boundary_iter();
+    /// for (edge0, edge1) in inversed_edge_iter.zip(face_edge_iter) {
+    ///     assert_eq!(edge0, edge1);
+    /// }
+    /// ```
     #[inline(always)]
-    pub fn inverse(&mut self) -> &mut Self {
-        self.boundary.inverse();
-        self.id = ID_GENERATOR.generate();
+    pub fn invert(&mut self) -> &mut Self {
+        self.orientation = !self.orientation;
         self
     }
 
-    /// return true, if the two faces have the shared edge.
+    /// Returns the inverse face.
+    /// # Examples
+    /// ```
+    /// # use truck_topology::*;
+    /// # use truck_topology::errors::Error;
+    /// # let v = Vertex::news(3);
+    /// # let wire = Wire::from(vec![
+    /// #    Edge::new(v[0], v[1]),
+    /// #    Edge::new(v[1], v[2]),
+    /// #    Edge::new(v[2], v[0]),
+    /// # ]);
+    /// # let mut face = Face::new(wire);
+    /// // let mut face: Face = ...;
+    /// let inverted = face.inverse();
+    /// 
+    /// // The id of the inverted face coincides with the one of the original face.
+    /// assert_eq!(inverted.id(), face.id());
+    /// 
+    /// // The boundary is inverted.
+    /// let inversed_edge_iter = face.boundary().inverse().edge_into_iter();
+    /// let face_edge_iter = inverted.boundary_iter();
+    /// for (edge0, edge1) in inversed_edge_iter.zip(face_edge_iter) {
+    ///     assert_eq!(edge0, edge1);
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn inverse(&self) -> Face {
+        let mut face = self.clone();
+        face.invert();
+        face
+    }
+
+    /// Returns whether two faces `self` and `other` have a shared edge.
+    /// # Examples
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(4);
+    /// let shared_edge = Edge::new(v[0], v[1]);
+    /// let another_edge = Edge::new(v[0], v[1]);
+    /// let inversed_edge = shared_edge.inverse();
+    /// let wire = vec![
+    ///     Wire::from(vec![Edge::new(v[2], v[0]), shared_edge, Edge::new(v[1], v[2])]),
+    ///     Wire::from(vec![Edge::new(v[2], v[0]), another_edge, Edge::new(v[1], v[2])]),
+    ///     Wire::from(vec![Edge::new(v[3], v[0]), shared_edge, Edge::new(v[1], v[3])]),
+    ///     Wire::from(vec![Edge::new(v[3], v[1]), inversed_edge, Edge::new(v[0], v[3])]),
+    /// ];
+    /// let face: Vec<Face> = wire.into_iter().map(|w| Face::new(w)).collect();
+    /// assert!(face[0].border_on(&face[2]));
+    /// assert!(!face[1].border_on(&face[2]));
+    /// assert!(face[0].border_on(&face[3]));
+    /// ```
     pub fn border_on(&self, other: &Face) -> bool {
         let mut hashmap = HashMap::new();
         for edge in self.boundary.edge_iter() {
@@ -79,3 +290,64 @@ impl Face {
         false
     }
 }
+
+/// An iterator over the edges in the boundary of a face.
+/// # Examples
+/// ```
+/// # use truck_topology::*;
+/// let v = Vertex::news(4);
+/// let wire = Wire::from(vec![
+///     Edge::new(v[0], v[1]),
+///     Edge::new(v[1], v[2]),
+///     Edge::new(v[2], v[3]),
+///     Edge::new(v[3], v[0]),
+/// ]);
+/// let face = Face::new(wire.clone());
+/// 
+/// let mut iter = face.boundary_iter();
+/// assert_eq!(iter.next(), Some(wire[0]));
+/// assert_eq!(iter.next_back(), Some(wire[3])); // double ended
+/// assert_eq!(iter.next(), Some(wire[1]));
+/// assert_eq!(iter.next(), Some(wire[2]));
+/// assert_eq!(iter.next_back(), None);
+/// assert_eq!(iter.next(), None); // fused
+/// ```
+#[derive(Clone, Debug)]
+pub struct BoundaryIter<'a> {
+    edge_iter: EdgeIter<'a>,
+    orientation: bool,
+}
+
+impl<'a> std::iter::Iterator for BoundaryIter<'a> {
+    type Item = Edge;
+    #[inline(always)]
+    fn next(&mut self) -> Option<Edge> {
+        match self.orientation {
+            true => self.edge_iter.next().map(|edge| edge.clone()),
+            false => self.edge_iter.next_back().map(|edge| edge.inverse()),
+        }
+    }
+
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) { (self.len(), Some(self.len())) }
+
+    #[inline(always)]
+    fn last(mut self) -> Option<Edge> { self.next_back() }
+}
+
+impl<'a> std::iter::DoubleEndedIterator for BoundaryIter<'a> {
+    #[inline(always)]
+    fn next_back(&mut self) -> Option<Edge> {
+        match self.orientation {
+            true => self.edge_iter.next_back().map(|edge| edge.clone()),
+            false => self.edge_iter.next().map(|edge| edge.inverse()),
+        }
+    }
+}
+
+impl<'a> std::iter::ExactSizeIterator for BoundaryIter<'a> {
+    #[inline(always)]
+    fn len(&self) -> usize { self.edge_iter.len() }
+}
+
+impl<'a> std::iter::FusedIterator for BoundaryIter<'a> {}

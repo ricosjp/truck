@@ -1,4 +1,5 @@
 use std::f64::consts::PI;
+use std::iter::FromIterator;
 use truck_geometry::*;
 use truck_polymesh::PolygonMesh;
 use truck_shape::elements::{Integrity, TopoGeomIntegrity};
@@ -48,8 +49,8 @@ fn bottle(builder: &mut Builder) -> Solid {
             PI,
         )
         .unwrap();
-    let wire0 = Wire::by_slice(&[edge0]);
-    let wire1 = Wire::by_slice(&[edge1]);
+    let wire0 = Wire::from_iter(&[edge0]);
+    let wire1 = Wire::from_iter(&[edge1]);
     let face = builder.homotopy(&wire0, &wire1).unwrap();
     builder
         .tsweep(face, &Vector3::new(0.0, height, 0.0))
@@ -71,9 +72,9 @@ fn tsudsumi(builder: &mut Builder) -> Solid {
             PI * 2.0,
         )
         .unwrap();
-    let wire = shell.extract_boundaries().unwrap();
+    let wire = shell.extract_boundaries();
     for mut wire in wire {
-        wire.inverse();
+        wire.invert();
         shell.push(builder.plane(wire).unwrap());
     }
     Solid::try_new(vec![shell]).unwrap()
@@ -148,7 +149,7 @@ fn large_box(builder: &mut Builder) -> Solid {
     let shell: Shell = (1..N)
         .flat_map(|i| (1..N).map(move |j| (i, j)))
         .map(|(i, j)| {
-            let wire = Wire::by_slice(&[
+            let wire = Wire::from_iter(&[
                 row_edge[i - 1][j - 1],
                 col_edge[i - 1][j],
                 row_edge[i][j - 1].inverse(),
@@ -170,7 +171,7 @@ fn torus(builder: &mut Builder) -> Shell {
         builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap(),
         builder.vertex(Vector3::new(0.0, 0.0, 3.0)).unwrap(),
     ];
-    let wire = Wire::by_slice(&[
+    let wire = Wire::from_iter(&[
         builder
             .circle_arc(v[0], v[1], &Vector3::new(0.0, 1.0, 2.0))
             .unwrap(),
@@ -194,7 +195,7 @@ fn half_torus(builder: &mut Builder) -> Solid {
         builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap(),
         builder.vertex(Vector3::new(0.0, 0.0, 3.0)).unwrap(),
     ];
-    let wire = Wire::by_slice(&[
+    let wire = Wire::from_iter(&[
         builder
             .circle_arc(v[0], v[1], &Vector3::new(0.0, 1.0, 2.0))
             .unwrap(),
@@ -262,7 +263,7 @@ fn vase(builder: &mut Builder) -> Shell {
         Vector3::new(1.5, 3.5, 0.0),
     ];
     let edge1 = builder.bezier(v1, v2, inter_points).unwrap();
-    let wire = Wire::by_slice(&[edge0, edge1]);
+    let wire = Wire::from_iter(&[edge0, edge1]);
     builder.rsweep(wire, origin, axis, -PI * 2.0).unwrap()
 }
 

@@ -1,9 +1,9 @@
-use crate::math_impls::*;
+use crate::geom_impls::*;
 use crate::transformed::Transformed;
 use crate::{Director, Result};
 use geometry::*;
 use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::iter::FromIterator;
 use std::f64::consts::PI;
 use topology::*;
 
@@ -54,7 +54,7 @@ impl RSweep for Vertex {
         let v = self.rotated(origin, axis, angle, director)?;
         let edge = Edge::new_unchecked(self, v);
         director.attach(&edge, curve);
-        Ok(Wire::try_from(vec![edge])?)
+        Ok(Wire::from(vec![edge]))
     }
     fn full_rsweep(
         self,
@@ -73,9 +73,9 @@ impl RSweep for Vertex {
         director.attach(&edge0, curve0);
         director.attach(&edge1, curve1);
         if orientation {
-            Ok(Wire::try_from(vec![edge0, edge1.inverse()])?)
+            Ok(Wire::from(vec![edge0, edge1.inverse()]))
         } else {
-            Ok(Wire::try_from(vec![edge1, edge0.inverse()])?)
+            Ok(Wire::from(vec![edge1, edge0.inverse()]))
         }
     }
 }
@@ -110,10 +110,10 @@ impl RSweep for Edge {
         let (mut wire1, mut surface1) =
             sub_partial_sweep_edge(&self, &edge2, origin, axis, -PI, director)?;
         if orientation {
-            wire1.inverse();
+            wire1.invert();
             surface1.swap_axes();
         } else {
-            wire0.inverse();
+            wire0.invert();
             surface0.swap_axes();
         }
         let face0 = Face::new_unchecked(wire0);
@@ -141,7 +141,7 @@ fn sub_partial_sweep_edge(
     let curve3 = circle_arc(&pt, origin, axis, angle);
     let edge3 = Edge::new_unchecked(edge0.front(), edge2.front());
     director.attach(&edge3, curve3);
-    let wire0 = Wire::by_slice(&[*edge0, edge1, edge2.inverse(), edge3.inverse()]);
+    let wire0 = Wire::from_iter(&[*edge0, edge1, edge2.inverse(), edge3.inverse()]);
     let curve0 = director.try_get_geometry(edge0)?;
     let surface0 = rsweep_surface(&curve0, origin, axis, angle);
     Ok((wire0, surface0))
@@ -200,7 +200,7 @@ fn connect_by_circle_arc(
     for (edge0, edge2) in wire0.edge_iter().zip(wire1.edge_iter()) {
         let edge1 = vemap.get(&edge0.back()).unwrap();
         let edge3 = vemap.get(&edge0.front()).unwrap();
-        let wire1 = Wire::try_from(vec![*edge0, *edge1, edge2.inverse(), edge3.inverse()])?;
+        let wire1 = Wire::from(vec![*edge0, *edge1, edge2.inverse(), edge3.inverse()]);
         let face = Face::new_unchecked(wire1);
         let curve = director.try_get_geometry(edge0)?;
         let surface = rsweep_surface(curve, origin, axis, angle);
@@ -222,8 +222,8 @@ impl RSweep for Face {
     {
         let face = self.rotated(origin, axis, angle, director)?;
         let mut shell = connect_by_circle_arc(
-            self.boundary(),
-            face.boundary(),
+            &self.boundary(),
+            &face.boundary(),
             origin,
             axis,
             angle,
@@ -305,11 +305,9 @@ fn connected_shell_sweep(
 ) -> Result<Shell>
 {
     let wires0 = shell0.extract_boundaries();
-    let wire_iter0 = wires0.iter().flat_map(|vec| vec.iter());
     let wires1 = shell1.extract_boundaries();
-    let wire_iter1 = wires1.iter().flat_map(|vec| vec.iter());
     let mut new_shell = Shell::new();
-    for (wire0, wire1) in wire_iter0.zip(wire_iter1) {
+    for (wire0, wire1) in wires0.iter().zip(&wires1) {
         let mut shell = connect_by_circle_arc(wire0, wire1, origin, axis, angle, director)?;
         new_shell.append(&mut shell);
     }

@@ -1,6 +1,7 @@
 use crate::errors::Error;
 use crate::{Director, Result};
 use geometry::{BSplineCurve, BSplineSurface, Tolerance};
+use std::iter::FromIterator;
 use topology::*;
 
 pub trait TopologicalCurve: Sized {
@@ -66,10 +67,10 @@ where
         .get_builder()
         .line(wire0.back_vertex().unwrap(), wire2.back_vertex().unwrap())?;
     wire0.push_back(edge1);
-    wire0.append(wire2.inverse());
+    wire0.append(wire2.invert());
     wire0.push_back(edge0.inverse());
     wire1.push_back(edge0);
-    wire1.append(wire3.inverse());
+    wire1.append(wire3.invert());
     wire1.push_back(edge1.inverse());
     let face0 = Face::try_new(wire0)?;
     let face1 = Face::try_new(wire1)?;
@@ -88,7 +89,7 @@ impl TopologicalCurve for Edge {
         }
         Ok(curve)
     }
-    fn clone_wire(&self) -> Wire { Wire::by_slice(&[*self]) }
+    fn clone_wire(&self) -> Wire { Wire::from_iter(&[*self]) }
     fn for_each<F: FnMut(&Edge)>(&self, mut closure: F) { closure(self) }
     fn is_closed(&self) -> bool { false }
     fn split_wire(&self) -> Option<[Wire; 2]> { None }

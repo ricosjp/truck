@@ -1,7 +1,7 @@
 use crate::topological_curve::TopologicalCurve;
 use crate::elements::GeometricalElement;
 use crate::errors::Error;
-use crate::math_impls::*;
+use crate::geom_impls::*;
 use crate::transformed::Transformed;
 use crate::tsweep::TSweep;
 use crate::rsweep::RSweep;

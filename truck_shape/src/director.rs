@@ -60,11 +60,11 @@ impl Director {
             Some(got) => {
                 let mut surface = got.clone();
                 surface.swap_axes();
-                face.inverse();
+                face.invert();
                 self.attach(face, surface);
             }
             None => {
-                face.inverse();
+                face.invert();
             }
         }
     }
