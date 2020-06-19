@@ -54,12 +54,8 @@ impl Shell {
             }
         }
 
-        (
-            regular,
-            oriented,
-            all_edges.len() == inner_edges.len(),
-            inner_edges,
-        )
+        let closed = all_edges.len() == inner_edges.len();
+        (regular, oriented, closed, inner_edges)
     }
     /// Determines the shell conditions: non-regular, regular, oriented, or closed.  
     /// The complexity increases in proportion to the number of edges.
@@ -161,24 +157,16 @@ impl Shell {
         for edge in edge_iter {
             let v0 = edge.front();
             let v1 = edge.back();
-            let i = match vmap.get(&v0) {
-                Some(i) => *i,
-                None => {
-                    vvec.push(v0);
-                    vmap.insert(v0, vmap.len());
-                    adjacency.push(Vec::new());
-                    vmap.len() - 1
-                }
-            };
-            let j = match vmap.get(&v1) {
-                Some(j) => *j,
-                None => {
-                    vvec.push(v1);
-                    vmap.insert(v1, vmap.len());
-                    adjacency.push(Vec::new());
-                    vmap.len() - 1
-                }
-            };
+            let i = *vmap.entry(v0).or_insert_with(|| {
+                vvec.push(v0);
+                adjacency.push(Vec::new());
+                vvec.len() - 1
+            });
+            let j = *vmap.entry(v1).or_insert_with(|| {
+                vvec.push(v1);
+                adjacency.push(Vec::new());
+                vvec.len() - 1
+            });
             adjacency[i].push(j);
             adjacency[j].push(i);
         }
@@ -284,10 +272,10 @@ impl Shell {
     }
 
     /// Returns whether the shell has a singular vertex or not.
-    /// 
+    ///
     /// Here, we say that a vertex is singular if, for a sufficiently small neighborhood U of
     /// the vertex, the set U - {the vertex} is not connected.
-    /// 
+    ///
     /// A regular, oriented, or closed shell becomes a manifold if and only if the shell has
     /// no singular vertices.
     pub fn has_singular_vertex(&self) -> bool {
@@ -297,35 +285,18 @@ impl Shell {
             let first_edge = &face.absolute_boundary()[0];
             let mut edge_iter = face.absolute_boundary().edge_iter().peekable();
             while let Some(edge) = edge_iter.next() {
-                let (emap, adjacency) = match vert_wise_adjacency.get_mut(&edge.back()) {
-                    Some(tuple) => tuple,
-                    None => {
-                        vert_wise_adjacency.insert(edge.back(), (HashMap::new(), Vec::new()));
-                        vert_wise_adjacency.get_mut(&edge.back()).unwrap()
-                    }
-                };
-                let next_edge = match edge_iter.peek() {
-                    Some(next_edge) => *next_edge,
-                    None => first_edge,
-                };
-                let idx0 = match emap.get(&edge.id()) {
-                    Some(idx) => *idx,
-                    None => {
-                        let idx = emap.len();
-                        emap.insert(edge.id(), idx);
-                        adjacency.push(Vec::new());
-                        idx
-                    }
-                };
-                let idx1 = match emap.get(&next_edge.id()) {
-                    Some(idx) => *idx,
-                    None => {
-                        let idx = emap.len();
-                        emap.insert(next_edge.id(), idx);
-                        adjacency.push(Vec::new());
-                        idx
-                    }
-                };
+                let (emap, adjacency) = vert_wise_adjacency
+                    .entry(edge.back())
+                    .or_insert((HashMap::new(), Vec::new()));
+                let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
+                let idx0 = *emap.entry(edge.id()).or_insert_with(|| {
+                    adjacency.push(Vec::new());
+                    adjacency.len() - 1
+                });
+                let idx1 = *emap.entry(next_edge.id()).or_insert_with(|| {
+                    adjacency.push(Vec::new());
+                    adjacency.len() - 1
+                });
                 adjacency[idx0].push(idx1);
                 adjacency[idx1].push(idx0);
             }
