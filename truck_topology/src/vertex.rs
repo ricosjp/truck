@@ -12,7 +12,7 @@ impl Vertex {
         Vertex { id: ID_GENERATOR.generate() }
     }
 
-    /// create `len` distinct vertices and return them by vector.
+    /// Creates `len` distinct vertices and return them by vector.
     /// ```
     /// # use truck_topology::Vertex;
     /// let v = Vertex::news(3);
@@ -24,7 +24,7 @@ impl Vertex {
         ID_GENERATOR.multi_generate(len).into_iter().map(|id| Vertex { id: id }).collect()
     }
 
-    /// get the id of vertex
+    /// Returns the id of vertex
     #[inline(always)]
     pub fn id(&self) -> usize { self.id }
 }

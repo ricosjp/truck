@@ -1,3 +1,4 @@
+use std::iter::FromIterator;
 use truck_topology::*;
 
 fn large_torus() -> Solid {
@@ -19,10 +20,10 @@ fn large_torus() -> Solid {
         })
         .collect();
 
-    let shell = (0..N)
+    let shell: Shell = (0..N)
         .flat_map(|i| (0..N).map(move |j| (i, j)))
         .map(|(i, j)| {
-            Face::new(Wire::by_slice(&[
+            Face::new(Wire::from_iter(&[
                 row_edge[i][j],
                 col_edge[i][(j + 1) % N],
                 row_edge[(i + 1) % N][j].inverse(),

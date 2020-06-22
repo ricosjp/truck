@@ -1,4 +1,6 @@
 use crate::Director;
+use crate::errors::Error;
+use std::iter::FromIterator;
 use geometry::*;
 use std::collections::HashMap;
 use topology::*;
@@ -8,6 +10,9 @@ pub trait TopologicalElement {
     fn id(&self) -> usize;
     fn geom_container(director: &Director) -> &HashMap<usize, Self::Geometry>;
     fn geom_mut_container(director: &mut Director) -> &mut HashMap<usize, Self::Geometry>;
+    fn no_geom_error(&self) -> Error {
+        Error::NoGeometry(std::any::type_name::<Self>(), self.id())
+    }
 }
 
 impl TopologicalElement for Vertex {
@@ -74,7 +79,7 @@ impl GeometricalElement for BSplineSurface {
         director.attach(&edge1, curve1);
         let edge3 = Edge::new_unchecked(edge2.back(), edge0.front());
         director.attach(&edge3, curve3);
-        let wire = Wire::by_slice(&[edge0, edge1, edge2, edge3]);
+        let wire = Wire::from_iter(&[edge0, edge1, edge2, edge3]);
         let face = Face::new_unchecked(wire);
         director.attach(&face, self);
         face
@@ -187,9 +192,9 @@ impl Integrity for Face {
             .concat(boundary1.knot_translate(1.0))
             .unwrap();
         let mut hint = 0.0;
-        for edge in self.boundary().edge_iter() {
+        for edge in self.boundary_iter() {
             return_not_integrate!(edge.check_integrity(director));
-            let mut curve = got_or_return_integrity!(director, edge).clone();
+            let mut curve = got_or_return_integrity!(director, &edge).clone();
             if edge.absolute_front() != edge.front() {
                 curve.inverse();
             }

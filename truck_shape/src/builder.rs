@@ -1,7 +1,7 @@
 use crate::topological_curve::TopologicalCurve;
 use crate::elements::GeometricalElement;
 use crate::errors::Error;
-use crate::math_impls::*;
+use crate::geom_impls::*;
 use crate::transformed::Transformed;
 use crate::tsweep::TSweep;
 use crate::rsweep::RSweep;
@@ -69,20 +69,20 @@ impl<'a> Builder<'a> {
             Face::try_new(wire)?;
             return Err(Error::None);
         } else if wire.len() == 2 {
-            let curve0 = self.director.try_get_curve(&wire[0])?;
-            let curve2 = self.director.try_get_curve(&wire[1])?;
+            let curve0 = self.get_curve(&wire[0])?;
+            let curve2 = self.get_curve(&wire[1])?;
             plane_by_two_curves(curve0, curve2)
         } else if wire.len() == 3 {
-            let curve0 = self.director.try_get_curve(&wire[0])?;
-            let curve1 = self.director.try_get_curve(&wire[1])?;
-            let curve3 = self.director.try_get_curve(&wire[2])?;
+            let curve0 = self.get_curve(&wire[0])?;
+            let curve1 = self.get_curve(&wire[1])?;
+            let curve3 = self.get_curve(&wire[2])?;
             plane_by_three_curves(curve0, curve1, curve3)
         } else {
             let wires = split_wire(&wire);
-            let curve0 = self.director.try_get_curve(&wires[0])?;
-            let curve1 = self.director.try_get_curve(&wires[1])?;
-            let curve2 = self.director.try_get_curve(&wires[2])?;
-            let curve3 = self.director.try_get_curve(&wires[3])?;
+            let curve0 = self.get_curve(&wires[0])?;
+            let curve1 = self.get_curve(&wires[1])?;
+            let curve2 = self.get_curve(&wires[2])?;
+            let curve3 = self.get_curve(&wires[3])?;
             BSplineSurface::by_boundary(curve0, curve1, curve2, curve3)
         };
         let face = Face::try_new(wire)?;
@@ -90,6 +90,11 @@ impl<'a> Builder<'a> {
         Ok(face)
     }
 
+    #[inline(always)]
+    fn get_curve<T: TopologicalCurve>(&self, curve_element: &T) -> Result<BSplineCurve> {
+        curve_element.get_geometry(&self.director)
+    }
+    
     pub fn homotopy<T: TopologicalCurve>(&mut self, elem0: &T, elem1: &T) -> Result<Shell> {
         elem0.homotopy(elem1, &mut self.director)
     }

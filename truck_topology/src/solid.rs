@@ -1,35 +1,32 @@
 use std::vec::Vec;
 use crate::errors::Error;
-use crate::{Result, Shell, Solid};
+use crate::{RemoveTry, Result, Shell, Solid};
 use crate::shell::ShellCondition;
 
 impl Solid {
     /// create the shell whose boundaries is boundary.
     /// # Panic
-    /// All boundary must be non-empty, connected, and closed.
+    /// All boundary must be non-empty, connected, and closed manifold.
     #[inline(always)]
-    pub fn new(boundaries: Vec<Shell>) -> Solid {
-        match Solid::try_new(boundaries) {
-            Ok(solid) => solid,
-            Err(error) => panic!("{}", error),
-        }
-    }
+    pub fn new(boundaries: Vec<Shell>) -> Solid { Solid::try_new(boundaries).remove_try() }
     
     /// create the shell whose boundaries is boundary.
     /// # Failure
-    /// All boundary must be non-empty, connected, and closed.
+    /// All boundary must be non-empty, connected, and closed manifold.
     #[inline(always)]
     pub fn try_new(boundaries: Vec<Shell>) -> Result<Solid> {
         for shell in &boundaries {
             if shell.is_empty() {
                 return Err(Error::EmptyShell);
-            } else if shell.shell_condition() != ShellCondition::Closed {
-                return Err(Error::NotClosedShell);
             } else if !shell.is_connected() {
                 return Err(Error::NotConnected);
+            } else if shell.shell_condition() != ShellCondition::Closed {
+                return Err(Error::NotClosedShell);
+            } else if !shell.singular_vertices().is_empty() {
+                return Err(Error::NotManifold);
             }
         }
-        Ok(Solid { boundaries: boundaries })
+        Ok(Solid::new_unchecked(boundaries))
     }
     
     /// create the shell whose boundaries is boundary.

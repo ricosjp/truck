@@ -182,7 +182,7 @@ impl Transformed for Shell {
         let mut vmap: HashMap<Vertex, Vertex> = HashMap::new();
         let vertex_iter = self
             .iter()
-            .flat_map(|face| face.boundary().vertex_iter());
+            .flat_map(|face| face.absolute_boundary().vertex_iter());
         for vertex in vertex_iter {
             if vmap.get(&vertex).is_none() {
                 let new_vertex =
@@ -193,7 +193,7 @@ impl Transformed for Shell {
         let mut edge_map: HashMap<usize, Edge> = HashMap::new();
         for face in self.face_iter() {
             let mut wire = Wire::new();
-            for edge in face.boundary().edge_iter() {
+            for edge in face.boundary_iter() {
                 if let Some(new_edge) = edge_map.get(&edge.id()) {
                     if edge.absolute_front() == edge.front() {
                         wire.push_back(*new_edge);
@@ -203,7 +203,7 @@ impl Transformed for Shell {
                 } else {
                     let v0 = vmap.get(&edge.absolute_front()).unwrap();
                     let v1 = vmap.get(&edge.absolute_back()).unwrap();
-                    let mut curve = director.try_get_geometry(edge)?.clone();
+                    let mut curve = director.try_get_geometry(&edge)?.clone();
                     curve_closure(&mut curve);
                     let new_edge = Edge::new_unchecked(*v0, *v1);
                     director.attach(&new_edge, curve);
