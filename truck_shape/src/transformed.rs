@@ -1,6 +1,6 @@
+use crate::elements::{TopologicalElement, GeometricalElement};
 use crate::Result;
 use crate::*;
-use crate::elements::{GeometricalElement};
 use geometry::*;
 use std::collections::HashMap;
 use topology::*;
@@ -65,7 +65,10 @@ impl Transformed for Vertex {
         director: &mut Director,
     ) -> Result<Self>
     {
-        let mut pt = director.try_get_geometry(self)?.clone();
+        let mut pt = director
+            .get_geometry(self)
+            .ok_or(self.no_geometry())?
+            .clone();
         vector_closure(&mut pt);
         Ok(pt.create_topology(director))
     }
@@ -87,10 +90,16 @@ impl Transformed for Edge {
             surface_closure,
             director,
         )?;
-        let v1 =
-            self.absolute_back()
-                .mapped(vector_closure, curve_closure, surface_closure, director)?;
-        let mut curve = director.try_get_geometry(self)?.clone();
+        let v1 = self.absolute_back().mapped(
+            vector_closure,
+            curve_closure,
+            surface_closure,
+            director,
+        )?;
+        let mut curve = director
+            .get_geometry(self)
+            .ok_or(self.no_geometry())?
+            .clone();
         curve_closure(&mut curve);
         let new_edge = Edge::try_new(v0, v1)?;
         director.attach(&new_edge, curve);
@@ -131,7 +140,10 @@ impl Transformed for Wire {
             } else {
                 let vertex0 = *vertex_map.get(&edge.absolute_front()).unwrap();
                 let vertex1 = *vertex_map.get(&edge.absolute_back()).unwrap();
-                let mut curve = director.try_get_geometry(edge)?.clone();
+                let mut curve = director
+                    .get_geometry(edge)
+                    .ok_or(edge.no_geometry())?
+                    .clone();
                 curve_closure(&mut curve);
                 let new_edge = Edge::new_unchecked(vertex0, vertex1);
                 director.attach(&new_edge, curve);
@@ -161,7 +173,10 @@ impl Transformed for Face {
             self.boundary()
                 .mapped(vector_closure, curve_closure, surface_closure, director)?;
         let face = Face::new_unchecked(wire);
-        let mut surface = director.try_get_geometry(self)?.clone();
+        let mut surface = director
+            .get_geometry(self)
+            .ok_or(self.no_geometry())?
+            .clone();
         surface_closure(&mut surface);
         director.attach(&face, surface);
         Ok(face)
@@ -203,7 +218,10 @@ impl Transformed for Shell {
                 } else {
                     let v0 = vmap.get(&edge.absolute_front()).unwrap();
                     let v1 = vmap.get(&edge.absolute_back()).unwrap();
-                    let mut curve = director.try_get_geometry(&edge)?.clone();
+                    let mut curve = director
+                        .get_geometry(&edge)
+                        .ok_or(edge.no_geometry())?
+                        .clone();
                     curve_closure(&mut curve);
                     let new_edge = Edge::new_unchecked(*v0, *v1);
                     director.attach(&new_edge, curve);
@@ -216,7 +234,10 @@ impl Transformed for Shell {
                 }
             }
             let new_face = Face::new_unchecked(wire);
-            let mut surface = director.try_get_geometry(face)?.clone();
+            let mut surface = director
+                .get_geometry(face)
+                .ok_or(face.no_geometry())?
+                .clone();
             surface_closure(&mut surface);
             director.attach(&new_face, surface);
             shell.push(new_face);

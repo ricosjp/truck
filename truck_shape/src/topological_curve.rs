@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::elements::TopologicalElement;
 use crate::{Director, Result};
 use geometry::{BSplineCurve, BSplineSurface, Tolerance};
 use std::iter::FromIterator;
@@ -83,7 +84,10 @@ impl TopologicalCurve for Edge {
     fn front_vertex(&self) -> Vertex { self.front() }
     fn back_vertex(&self) -> Vertex { self.back() }
     fn get_geometry(&self, director: &Director) -> Result<BSplineCurve> {
-        let mut curve = director.try_get_geometry(self)?.clone();
+        let mut curve = director
+            .get_geometry(self)
+            .ok_or(self.no_geometry())?
+            .clone();
         if self.front() != self.absolute_front() {
             curve.inverse();
         }

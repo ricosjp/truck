@@ -50,7 +50,7 @@ impl RSweep for Vertex {
         director: &mut Director,
     ) -> Result<Wire>
     {
-        let pt = director.get_geometry(&self).ok_or(self.no_geom_error())?;
+        let pt = director.get_geometry(&self).ok_or(self.no_geometry())?;
         let curve = circle_arc(pt, origin, axis, angle);
         let v = self.rotated(origin, axis, angle, director)?;
         let edge = Edge::new_unchecked(self, v);
@@ -65,7 +65,7 @@ impl RSweep for Vertex {
         director: &mut Director,
     ) -> Result<Wire>
     {
-        let pt = director.get_geometry(&self).ok_or(self.no_geom_error())?;
+        let pt = director.get_geometry(&self).ok_or(self.no_geometry())?;
         let curve0 = circle_arc(pt, origin, axis, PI);
         let curve1 = circle_arc(pt, origin, axis, -PI);
         let v = self.rotated(origin, axis, PI, director)?;
@@ -134,16 +134,20 @@ fn sub_partial_sweep_edge(
     director: &mut Director,
 ) -> Result<(Wire, BSplineSurface)>
 {
-    let pt = director.try_get_geometry(&edge0.back())?;
+    let pt = director
+        .get_geometry(&edge0.back())
+        .ok_or(edge0.back().no_geometry())?;
     let curve1 = circle_arc(&pt, origin, axis, angle);
     let edge1 = Edge::new_unchecked(edge0.back(), edge2.back());
     director.attach(&edge1, curve1);
-    let pt = director.try_get_geometry(&edge0.front())?;
+    let pt = director
+        .get_geometry(&edge0.front())
+        .ok_or(edge0.front().no_geometry())?;
     let curve3 = circle_arc(&pt, origin, axis, angle);
     let edge3 = Edge::new_unchecked(edge0.front(), edge2.front());
     director.attach(&edge3, curve3);
     let wire0 = Wire::from_iter(&[*edge0, edge1, edge2.inverse(), edge3.inverse()]);
-    let curve0 = director.try_get_geometry(edge0)?;
+    let curve0 = director.get_geometry(edge0).ok_or(edge0.no_geometry())?;
     let surface0 = rsweep_surface(&curve0, origin, axis, angle);
     Ok((wire0, surface0))
 }
@@ -190,7 +194,7 @@ fn connect_by_circle_arc(
     let mut vemap: HashMap<Vertex, Edge> = HashMap::new();
     for (v0, v1) in wire0.vertex_iter().zip(wire1.vertex_iter()) {
         if vemap.get(&v0).is_none() {
-            let pt0 = director.try_get_geometry(&v0)?;
+            let pt0 = director.get_geometry(&v0).ok_or(v0.no_geometry())?;
             let curve = circle_arc(&pt0, origin, axis, angle);
             let edge = Edge::new_unchecked(v0, v1);
             director.attach(&edge, curve);
@@ -203,7 +207,7 @@ fn connect_by_circle_arc(
         let edge3 = vemap.get(&edge0.front()).unwrap();
         let wire1 = Wire::from(vec![*edge0, *edge1, edge2.inverse(), edge3.inverse()]);
         let face = Face::new_unchecked(wire1);
-        let curve = director.try_get_geometry(edge0)?;
+        let curve = director.get_geometry(edge0).ok_or(edge0.no_geometry())?;
         let surface = rsweep_surface(curve, origin, axis, angle);
         director.attach(&face, surface);
         shell.push(face);

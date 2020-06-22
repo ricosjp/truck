@@ -318,7 +318,7 @@ pub struct BoundaryIter<'a> {
     orientation: bool,
 }
 
-impl<'a> std::iter::Iterator for BoundaryIter<'a> {
+impl<'a> Iterator for BoundaryIter<'a> {
     type Item = Edge;
     #[inline(always)]
     fn next(&mut self) -> Option<Edge> {
@@ -335,7 +335,7 @@ impl<'a> std::iter::Iterator for BoundaryIter<'a> {
     fn last(mut self) -> Option<Edge> { self.next_back() }
 }
 
-impl<'a> std::iter::DoubleEndedIterator for BoundaryIter<'a> {
+impl<'a> DoubleEndedIterator for BoundaryIter<'a> {
     #[inline(always)]
     fn next_back(&mut self) -> Option<Edge> {
         match self.orientation {
@@ -345,7 +345,7 @@ impl<'a> std::iter::DoubleEndedIterator for BoundaryIter<'a> {
     }
 }
 
-impl<'a> std::iter::ExactSizeIterator for BoundaryIter<'a> {
+impl<'a> ExactSizeIterator for BoundaryIter<'a> {
     #[inline(always)]
     fn len(&self) -> usize { self.edge_iter.len() }
 }
