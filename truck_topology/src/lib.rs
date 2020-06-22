@@ -32,7 +32,7 @@
 //! // The boundary of face must be simple and closed.
 //! let mut face: Vec<Face> = wire.into_iter().map(|wire| Face::new(wire)).collect();
 //! face[3].invert();
-//! 
+//!
 //! // Create shell of faces. Shell can be created by the Vec<Face>.
 //! let shell: Shell = face.into();
 //!
@@ -44,24 +44,35 @@
 //! Main structures in `truck_topology` consist 4 topological elements and 2 topological containers.
 //! ### topological elements
 //! The following structures are topological elements.
-//! 
+//!
 //! * [`Vertex`](./struct.Vertex.html)
 //! * [`Edge`](./struct.Edge.html)
 //! * [`Face`](./struct.Face.html)
-//! * [`Solid`](./struct/Solid.html)
-//! 
+//! * [`Solid`](./struct.Solid.html)
+//!
 //! Except `Solid`, each topological element has a unique `id` for each instance.
 //! In higher-level packages, by mapping this `id` to geometric information, you can draw a solid shape.
 //! ### topological containers
 //! The following structures are topological container.
-//! 
+//!
 //! * [`Wire`](./struct.Wire.html)
 //! * [`Shell`](./struct.Shell.html)
-//! 
+//!
 //! The entities of `Wire` and `Shell` are `std::collections::VecDeque<Edge>` and `std::vec::Vec<Face>`,
 //! respectively, and many methods inherited by `Deref` and `DerefMut`.
 //! These containers are used for creating higher-dimentional topological elements and checked the
 //! regularity (e.g. connectivity, closedness, and so on) before creating these elements.
+
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications
+)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -69,7 +80,7 @@ extern crate lazy_static;
 use std::collections::VecDeque;
 
 /// Vertex, the minimum topological unit.
-/// 
+///
 /// The constructor `Vertex::new()` creates a different vertex each time.
 /// These vertices are uniquely identified by their `id`.
 /// ```
@@ -84,7 +95,7 @@ pub struct Vertex {
 }
 
 /// Edge, which consists two vertices.
-/// 
+///
 /// The constructors `Edge::new()`, `Edge::try_new()`, and `Edge::new_unchecked()`
 /// create a different edge each time, even if the end vertices are the same one.
 /// An edge is uniquely identified by their `id`.
@@ -103,7 +114,7 @@ pub struct Edge {
 }
 
 /// Wire, a path or cycle which consists some edges.
-/// 
+///
 /// The entity of this struct is `VecDeque<Edge>` and almost methods are inherited from
 /// `VecDeque<Edge>` by `Deref` and `DerefMut` traits.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -112,7 +123,7 @@ pub struct Wire {
 }
 
 /// Face, attatched to a simple and closed wire.
-/// 
+///
 /// The constructors `Face::new()`, `Face::try_new()`, and `Face::new_unchecked()`
 /// create a different faces each time, even if the boundary wires are the same one.
 /// A face is uniquely identified by their `id`.
@@ -135,7 +146,7 @@ pub struct Face {
 }
 
 /// Shell, a connected compounded faces.
-/// 
+///
 /// The entity of this struct is `Vec<Face>` and almost methods are inherited from
 /// `Vec<Face>` by `Deref` and `DerefMut` traits.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -149,6 +160,7 @@ pub struct Solid {
     boundaries: Vec<Shell>,
 }
 
+/// `Result` with crate's errors.
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
 trait RemoveTry<T> {
@@ -168,10 +180,11 @@ impl<T> RemoveTry<T> for Result<T> {
 pub mod edge;
 /// classifies the errors that can occur in this crate.
 pub mod errors;
+/// Defines the boundary iterator.
 pub mod face;
 #[doc(hidden)]
 pub mod id;
-/// classifies shell conditions and define the face iterators.
+/// classifies shell conditions and defines the face iterators.
 pub mod shell;
 #[doc(hidden)]
 pub mod solid;

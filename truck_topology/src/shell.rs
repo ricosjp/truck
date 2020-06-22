@@ -406,11 +406,11 @@ impl Shell {
     }
 }
 
-impl std::convert::From<Shell> for Vec<Face> {
+impl From<Shell> for Vec<Face> {
     fn from(shell: Shell) -> Vec<Face> { shell.face_list }
 }
 
-impl std::convert::From<Vec<Face>> for Shell {
+impl From<Vec<Face>> for Shell {
     fn from(faces: Vec<Face>) -> Shell { Shell { face_list: faces } }
 }
 
@@ -431,10 +431,14 @@ impl std::ops::DerefMut for Shell {
     fn deref_mut(&mut self) -> &mut Vec<Face> { &mut self.face_list }
 }
 
+/// The reference iterator over all faces in shells
 pub type FaceIter<'a> = std::slice::Iter<'a, Face>;
+/// The mutable reference iterator over all faces in shells
 pub type FaceIterMut<'a> = std::slice::IterMut<'a, Face>;
+/// The into iterator over all faces in shells
 pub type FaceIntoIter = std::vec::IntoIter<Face>;
 
+/// The shell conditions being determined by the half-edge model.
 #[derive(PartialEq, Eq, Debug)]
 pub enum ShellCondition {
     /// This shell is not regular.

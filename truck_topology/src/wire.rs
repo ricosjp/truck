@@ -318,17 +318,20 @@ impl<'a> std::iter::FromIterator<&'a Edge> for Wire {
     }
 }
 
-impl std::iter::IntoIterator for Wire {
+impl IntoIterator for Wire {
     type Item = Edge;
     type IntoIter = std::collections::vec_deque::IntoIter<Edge>;
     fn into_iter(self) -> Self::IntoIter { self.edge_list.into_iter() }
 }
 
+/// The reference iterator over all edges in a wire.
 pub type EdgeIter<'a> = vec_deque::Iter<'a, Edge>;
+/// The mutable reference iterator over all edges in a wire.
 pub type EdgeIterMut<'a> = vec_deque::IterMut<'a, Edge>;
+/// The into iterator over all edges in a wire.
 pub type EdgeIntoIter = vec_deque::IntoIter<Edge>;
 
-/// An iterator over all the vertices included in a wire.
+/// The iterator over all the vertices included in a wire.
 /// # Details
 /// Fundamentally, the iterator runs over all the vertices in a wire.
 /// ```
@@ -393,7 +396,7 @@ pub struct VertexIter<'a> {
     cyclic: bool,
 }
 
-impl<'a> std::iter::Iterator for VertexIter<'a> {
+impl<'a> Iterator for VertexIter<'a> {
     type Item = Vertex;
 
     fn next(&mut self) -> Option<Vertex> {

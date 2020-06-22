@@ -10,7 +10,7 @@ pub trait TopologicalElement {
     fn id(&self) -> usize;
     fn geom_container(director: &Director) -> &HashMap<usize, Self::Geometry>;
     fn geom_mut_container(director: &mut Director) -> &mut HashMap<usize, Self::Geometry>;
-    fn no_geom_error(&self) -> Error {
+    fn no_geometry(&self) -> Error {
         Error::NoGeometry(std::any::type_name::<Self>(), self.id())
     }
 }
