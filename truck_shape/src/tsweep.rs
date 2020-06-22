@@ -67,7 +67,7 @@ impl TSweep for Face {
         let face = self.translated(vector, director)?;
         let mut shell = director
             .building(|builder| sub_wire_sweep(&self.boundary(), &face.boundary(), builder))?;
-        director.reverse_face(&mut self);
+        self.invert();
         shell.push(self);
         shell.push(face);
         Ok(Solid::new(vec![shell]))
@@ -100,7 +100,7 @@ fn connected_shell_sweep(
         new_shell.append(&mut shell);
     }
     for face in shell0.face_iter_mut() {
-        director.reverse_face(face);
+        face.invert();
     }
     new_shell.append(&mut shell0);
     new_shell.append(&mut shell1);

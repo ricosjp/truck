@@ -1,10 +1,11 @@
+use crate::elements::TopologicalElement;
 use crate::geom_impls::*;
 use crate::transformed::Transformed;
 use crate::{Director, Result};
 use geometry::*;
 use std::collections::HashMap;
-use std::iter::FromIterator;
 use std::f64::consts::PI;
+use std::iter::FromIterator;
 use topology::*;
 
 pub trait RSweep: Sized {
@@ -49,7 +50,7 @@ impl RSweep for Vertex {
         director: &mut Director,
     ) -> Result<Wire>
     {
-        let pt = director.try_get_geometry(&self)?;
+        let pt = director.get_geometry(&self).ok_or(self.no_geom_error())?;
         let curve = circle_arc(pt, origin, axis, angle);
         let v = self.rotated(origin, axis, angle, director)?;
         let edge = Edge::new_unchecked(self, v);
@@ -64,7 +65,7 @@ impl RSweep for Vertex {
         director: &mut Director,
     ) -> Result<Wire>
     {
-        let pt = director.try_get_geometry(&self)?;
+        let pt = director.get_geometry(&self).ok_or(self.no_geom_error())?;
         let curve0 = circle_arc(pt, origin, axis, PI);
         let curve1 = circle_arc(pt, origin, axis, -PI);
         let v = self.rotated(origin, axis, PI, director)?;
@@ -229,7 +230,7 @@ impl RSweep for Face {
             angle,
             director,
         )?;
-        director.reverse_face(&mut self);
+        self.invert();
         shell.push(self);
         shell.push(face);
         Ok(Solid::new(vec![shell]))
@@ -264,7 +265,7 @@ impl RSweep for Shell {
             let mut new_shell =
                 connected_shell_sweep(&shell0, &shell1, origin, axis, angle, director)?;
             for face in shell0.face_iter_mut() {
-                director.reverse_face(face);
+                face.invert();
             }
             new_shell.append(&mut shell0);
             new_shell.append(&mut shell1);

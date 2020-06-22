@@ -1,9 +1,7 @@
-use crate::elements::{Integrity, TopologicalElement, TopoGeomIntegrity};
+use crate::elements::{Integrity, TopoGeomIntegrity, TopologicalElement};
 use crate::errors::Error;
-use crate::topological_curve::TopologicalCurve;
 use crate::Result;
 use crate::*;
-use geometry::BSplineCurve;
 
 impl Director {
     pub fn new() -> Director { Director::default() }
@@ -22,10 +20,7 @@ impl Director {
     #[inline(always)]
     pub fn try_get_geometry<T>(&self, topo: &T) -> Result<&T::Geometry>
     where T: TopologicalElement {
-        match self.get_geometry(topo) {
-            Some(got) => Ok(got),
-            None => Err(Error::NoGeometry(std::any::type_name::<T>(), topo.id())),
-        }
+        self.get_geometry(topo).ok_or(topo.no_geom_error())
     }
 
     #[inline(always)]
@@ -39,33 +34,6 @@ impl Director {
         match self.get_mut_geometry(topo) {
             Some(got) => Ok(got),
             None => Err(Error::NoGeometry(std::any::type_name::<T>(), topo.id())),
-        }
-    }
-    #[inline(always)]
-    pub fn get_curve<T: TopologicalCurve>(&self, curve_element: &T) -> Option<BSplineCurve> {
-        match curve_element.get_geometry(self) {
-            Ok(got) => Some(got),
-            Err(_) => None,
-        }
-    }
-
-    #[inline(always)]
-    pub fn try_get_curve<T: TopologicalCurve>(&self, curve_element: &T) -> Result<BSplineCurve> {
-        curve_element.get_geometry(self)
-    }
-
-    #[inline(always)]
-    pub fn reverse_face(&mut self, face: &mut topology::Face) {
-        match self.get_geometry(face) {
-            Some(got) => {
-                let mut surface = got.clone();
-                surface.swap_axes();
-                face.invert();
-                self.attach(face, surface);
-            }
-            None => {
-                face.invert();
-            }
         }
     }
 

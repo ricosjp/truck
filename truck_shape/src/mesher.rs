@@ -87,7 +87,11 @@ pub trait Meshed {
 impl Meshed for Face {
     type MeshType = StructuredMesh;
     fn meshing(&self, tol: f64, director: &Director) -> StructuredMesh {
-        StructuredMesh::from_surface(director.get_geometry(self).unwrap(), tol)
+        let mut surface = director.get_geometry(self).unwrap().clone();
+        if !self.orientation() {
+            surface.swap_axes();
+        }
+        StructuredMesh::from_surface(&surface, tol)
     }
 }
 
