@@ -22,7 +22,7 @@ impl Solid {
                 return Err(Error::NotConnected);
             } else if shell.shell_condition() != ShellCondition::Closed {
                 return Err(Error::NotClosedShell);
-            } else if shell.has_singular_vertex() {
+            } else if !shell.singular_vertices().is_empty() {
                 return Err(Error::NotManifold);
             }
         }

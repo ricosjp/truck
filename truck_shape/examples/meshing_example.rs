@@ -1,4 +1,5 @@
 use std::f64::consts::PI;
+use std::fs::DirBuilder;
 use std::iter::FromIterator;
 use truck_geometry::*;
 use truck_polymesh::PolygonMesh;
@@ -282,6 +283,7 @@ fn output_mesh<F, T>(director: &mut Director, function: F, filename: &str)
 where
     F: FnOnce(&mut Builder) -> T,
     T: Meshed<MeshType = PolygonMesh> + Integrity, {
+    let path = "./output/".to_string() + filename;
     let instant = std::time::Instant::now();
     let solid = director.building(function);
     //assert_integrity(&solid, director, filename);
@@ -293,12 +295,13 @@ where
         end_time.as_secs(),
         end_time.subsec_nanos() / 1_000_000,
     );
-    let file = std::fs::File::create(filename).unwrap();
+    let file = std::fs::File::create(path).unwrap();
     truck_io::obj::write(&mesh, file).unwrap();
 }
 
 fn main() {
     let mut director = Director::new();
+    DirBuilder::new().recursive(true).create("output").unwrap();
     output_mesh(&mut director, cube, "cube.obj");
     output_mesh(&mut director, bottle, "bottle.obj");
     output_mesh(&mut director, tsudsumi, "tsudsumi.obj");
@@ -307,7 +310,7 @@ fn main() {
         let filename = format!("{}-gon-prism.obj", n);
         output_mesh(&mut director, |d| n_gon_prism(d, n), &filename);
     }
-    //output_mesh(&mut director, large_box, "large_plane.obj");
+    output_mesh(&mut director, large_box, "large_plane.obj");
     output_mesh(&mut director, torus, "torus.obj");
     output_mesh(&mut director, half_torus, "half_torus.obj");
     output_mesh(&mut director, truck_torus, "truck_torus.obj");

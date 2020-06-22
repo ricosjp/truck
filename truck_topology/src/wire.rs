@@ -203,6 +203,7 @@ impl Wire {
     }
 
     /// Returns whether all the adjacent pairs of edges have shared vertices or not.
+    /// # Examples
     /// ```
     /// # use truck_topology::*;
     /// let v = Vertex::news(4);
@@ -213,6 +214,11 @@ impl Wire {
     /// assert!(!wire.is_continuous());
     /// wire.insert(1, Edge::new(v[1], v[2]));
     /// assert!(wire.is_continuous());
+    /// ```
+    /// ```
+    /// # use truck_topology::*;
+    /// // The empty wire is continuous
+    /// assert!(Wire::new().is_continuous());
     /// ```
     pub fn is_continuous(&self) -> bool {
         let mut iter = self.edge_iter();
@@ -229,6 +235,7 @@ impl Wire {
     }
 
     /// Returns whether the front vertex of the wire is the same as the back one or not.
+    /// # Examples
     /// ```
     /// # use truck_topology::*;
     /// let v = Vertex::news(4);
@@ -239,6 +246,11 @@ impl Wire {
     /// assert!(!wire.is_cyclic());
     /// wire.push_back(Edge::new(v[3], v[0]));
     /// assert!(wire.is_cyclic());
+    /// ```
+    /// ```
+    /// # use truck_topology::*;
+    /// // The empty wire is cyclic.
+    /// assert!(Wire::new().is_cyclic());
     /// ```
     #[inline(always)]
     pub fn is_cyclic(&self) -> bool { self.front_vertex() == self.back_vertex() }
@@ -265,6 +277,11 @@ impl Wire {
     ///
     /// assert!(!wire0.is_simple());
     /// assert!(wire1.is_simple());
+    /// ```
+    /// ```
+    /// # use truck_topology::*;
+    /// // The empty wire is simple.
+    /// assert!(Wire::new().is_simple());
     /// ```
     pub fn is_simple(&self) -> bool {
         let mut set = HashSet::new();

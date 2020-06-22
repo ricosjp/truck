@@ -138,60 +138,95 @@ impl Shell {
 
     /// Returns the adjacency matrix of vertices in the shell.
     ///
-    /// Now, we denote the returned pair by `(verts, adjacency)`. Then,
-    ///
-    /// * `verts` is the vector containing all vertices in the shell.
-    /// * `adjacency` is the adjacency matrix.
-    ///
-    /// The indices in the adjacency matrix represents the ones in `verts`, not the id of vertices.
-    /// For example, `adjacency[0] == vec![1, 2, 3]` means `verts[0]` is adjacent to `verts[1]`,
-    /// `verts[2]`, and `verts[3]`. Since the graph is non-oriented, `j` is included in `adjacency[i]`
-    /// if and only if `i` is included in `adjacency[j]`.
-    pub fn create_vertex_adjacency(&self) -> (Vec<Vertex>, Vec<Vec<usize>>) {
-        let mut vvec: Vec<Vertex> = Vec::new();
-        let mut vmap: HashMap<Vertex, usize> = HashMap::new();
-        let mut adjacency = Vec::new();
+    /// For the returned hashmap `map` and each vertex `v`,
+    /// the vector `map[&v]` cosists all vertices which is adjacent to `v`.
+    /// # Exmaples
+    /// ```
+    /// use truck_topology::*;
+    /// use std::collections::HashSet;
+    /// use std::iter::FromIterator;
+    /// let v = Vertex::news(4);
+    /// let edge = [
+    ///     Edge::new(v[0], v[2]),
+    ///     Edge::new(v[0], v[3]),
+    ///     Edge::new(v[1], v[2]),
+    ///     Edge::new(v[1], v[3]),
+    ///     Edge::new(v[2], v[3]),
+    /// ];
+    /// let wire = vec![
+    ///     Wire::from(vec![edge[0], edge[4], edge[1].inverse()]),
+    ///     Wire::from(vec![edge[2], edge[4], edge[3].inverse()]),
+    /// ];
+    /// let shell: Shell = wire.into_iter().map(|w| Face::new(w)).collect();
+    /// let adjacency = shell.vertex_adjacency();
+    /// let v0_ads_vec = adjacency.get(&v[0]).unwrap();
+    /// let v0_ads: HashSet<&Vertex> = HashSet::from_iter(v0_ads_vec);
+    /// assert_eq!(v0_ads, HashSet::from_iter(vec![&v[2], &v[3]]));
+    /// ```
+    pub fn vertex_adjacency(&self) -> HashMap<Vertex, Vec<Vertex>> {
+        let mut adjacency: HashMap<Vertex, Vec<Vertex>> = HashMap::new();
+        let mut done_edge: HashSet<usize> = HashSet::new();
         let edge_iter = self
             .face_iter()
             .flat_map(|face| face.absolute_boundary().edge_iter());
         for edge in edge_iter {
+            if !done_edge.insert(edge.id()) {
+                continue;
+            }
             let v0 = edge.front();
             let v1 = edge.back();
-            let i = *vmap.entry(v0).or_insert_with(|| {
-                vvec.push(v0);
-                adjacency.push(Vec::new());
-                vvec.len() - 1
-            });
-            let j = *vmap.entry(v1).or_insert_with(|| {
-                vvec.push(v1);
-                adjacency.push(Vec::new());
-                vvec.len() - 1
-            });
-            adjacency[i].push(j);
-            adjacency[j].push(i);
+            adjacency.entry(v0).or_insert(Vec::new()).push(v1);
+            adjacency.entry(v1).or_insert(Vec::new()).push(v0);
         }
-        (vvec, adjacency)
+        adjacency
     }
 
     /// Returns the adjacency matrix of faces in the shell.
     ///
-    /// The indices in the adjacency matrix represents the ones in the shell, not the id of faces.
-    /// For example, the `0`th vector in the adjacency matrix is `vec![1, 2, 3]`, it means
-    /// `self[0]` is adjacent to `shell[1]`, `shell[2]`, and `shell[3]`.
-    /// Since the graph is non-oriented, `j` is included in `adjacency[i]` if and only if
-    /// `i` is included in `adjacency[j]`.
-    pub fn create_face_adjacency(&self) -> Vec<Vec<usize>> {
-        let mut adjacency = vec![Vec::new(); self.len()];
-        let mut edge_face_map: HashMap<usize, Vec<usize>> = HashMap::new();
-        for (i, face) in self.face_iter().enumerate() {
+    /// For the returned hashmap `map` and each face `face`,
+    /// the vector `map[&face]` consists all faces adjacent to `face`.
+    /// # Examples
+    /// ```
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
+    /// let v = Vertex::news(6);
+    /// let edge = [
+    ///     Edge::new(v[0], v[1]),
+    ///     Edge::new(v[0], v[2]),
+    ///     Edge::new(v[1], v[2]),
+    ///     Edge::new(v[1], v[3]),
+    ///     Edge::new(v[1], v[4]),
+    ///     Edge::new(v[2], v[4]),
+    ///     Edge::new(v[2], v[5]),
+    ///     Edge::new(v[3], v[4]),
+    ///     Edge::new(v[4], v[5]),
+    /// ];
+    /// let wire = vec![
+    ///     Wire::from(vec![edge[0], edge[2], edge[1].inverse()]),
+    ///     Wire::from(vec![edge[3], edge[7], edge[4].inverse()]),
+    ///     Wire::from(vec![edge[5], edge[8], edge[6].inverse()]),
+    ///     Wire::from(vec![edge[2].inverse(), edge[4], edge[5].inverse()]),
+    /// ];
+    /// let shell: Shell = wire.into_iter().map(|w| Face::new(w)).collect();
+    /// let face_adjacency = shell.face_adjacency();
+    /// assert_eq!(face_adjacency[&shell[0]].len(), 1);
+    /// assert_eq!(face_adjacency[&shell[1]].len(), 1);
+    /// assert_eq!(face_adjacency[&shell[2]].len(), 1);
+    /// assert_eq!(face_adjacency[&shell[3]].len(), 3);
+    /// ```
+    pub fn face_adjacency(&self) -> HashMap<&Face, Vec<&Face>> {
+        let mut adjacency: HashMap<&Face, Vec<&Face>> = HashMap::new();
+        let mut edge_face_map: HashMap<usize, Vec<&Face>> = HashMap::new();
+        for face in self.face_iter() {
             for edge in face.absolute_boundary().edge_iter() {
                 if let Some(vec) = edge_face_map.get_mut(&edge.id()) {
-                    for j in vec {
-                        adjacency[i].push(*j);
-                        adjacency[*j].push(i);
+                    for tmp in vec {
+                        adjacency.entry(face).or_insert(Vec::new()).push(tmp);
+                        adjacency.entry(tmp).or_insert(Vec::new()).push(face);
                     }
                 } else {
-                    edge_face_map.insert(edge.id(), vec![i]);
+                    adjacency.entry(face).or_insert(Vec::new());
+                    edge_face_map.insert(edge.id(), vec![face]);
                 }
             }
         }
@@ -200,13 +235,13 @@ impl Shell {
 
     /// Returns whether the shell is connected or not.
     /// # Examples
-    /// ## The empty shell
     /// ```
+    /// // The empty shell is connected.
     /// # use truck_topology::*;
     /// assert!(Shell::new().is_connected());
     /// ```
-    /// ## A connected shell
     /// ```
+    /// // An example of a connected shell
     /// # use truck_topology::*;
     /// let v = Vertex::news(4);
     /// let shared_edge = Edge::new(v[1], v[2]);
@@ -219,8 +254,8 @@ impl Shell {
     /// let shell: Shell = vec![face0, face1].into();
     /// assert!(shell.is_connected());
     /// ```
-    /// ## A non-connected shell
     /// ```
+    /// // An example of a non-connected shell
     /// # use truck_topology::*;
     /// let v = Vertex::news(6);
     /// let face0 = Face::new(
@@ -233,11 +268,17 @@ impl Shell {
     /// assert!(!shell.is_connected());
     /// ```
     pub fn is_connected(&self) -> bool {
-        let (_, adjacency) = self.create_vertex_adjacency();
-        check_connectivity(&adjacency)
+        let mut adjacency = self.vertex_adjacency();
+        check_connectivity(&mut adjacency)
     }
 
     /// Returns a vector consisting of shells of each connected components.
+    /// # Examples
+    /// ```
+    /// # use truck_topology::Shell;
+    /// // The empty shell has no connected component.
+    /// assert!(Shell::new().connected_components().is_empty());
+    /// ```
     /// # Remarks
     /// Since this method uses the face adjacency matrix, multiple components
     /// are perhaps generated even if the shell is connected. In that case,
@@ -263,50 +304,105 @@ impl Shell {
     /// assert_eq!(shell.connected_components().len(), 2);
     /// ```
     pub fn connected_components(&self) -> Vec<Shell> {
-        let adjacency = self.create_face_adjacency();
-        let components = create_components(&adjacency);
+        let mut adjacency = self.face_adjacency();
+        let components = create_components(&mut adjacency);
         components
-            .iter()
-            .map(|vec| vec.iter().map(|i| self[*i].clone()).collect())
+            .into_iter()
+            .map(|vec| vec.into_iter().map(|face| face.clone()).collect())
             .collect()
     }
 
-    /// Returns whether the shell has a singular vertex or not.
+    /// Returns the vector of all singular vertices.
     ///
     /// Here, we say that a vertex is singular if, for a sufficiently small neighborhood U of
     /// the vertex, the set U - {the vertex} is not connected.
     ///
     /// A regular, oriented, or closed shell becomes a manifold if and only if the shell has
     /// no singular vertices.
-    pub fn has_singular_vertex(&self) -> bool {
-        let mut vert_wise_adjacency: HashMap<Vertex, (HashMap<usize, usize>, Vec<Vec<usize>>)> =
-            HashMap::new();
+    /// # Examples
+    /// ```
+    /// // A regular manifold: Mobius bundle
+    /// use truck_topology::*;
+    /// use truck_topology::shell::ShellCondition;
+    ///
+    /// let v = Vertex::news(4);
+    /// let edge = [
+    ///     Edge::new(v[0], v[1]),
+    ///     Edge::new(v[1], v[2]),
+    ///     Edge::new(v[2], v[0]),
+    ///     Edge::new(v[1], v[3]),
+    ///     Edge::new(v[3], v[2]),
+    ///     Edge::new(v[0], v[3]),
+    /// ];
+    /// let wire = vec![
+    ///     Wire::from(vec![edge[0], edge[3], edge[4], edge[2]]),
+    ///     Wire::from(vec![edge[1], edge[2], edge[5], edge[3].inverse()]),
+    /// ];
+    /// let shell: Shell = wire.into_iter().map(|w| Face::new(w)).collect();
+    /// assert_eq!(shell.shell_condition(), ShellCondition::Regular);
+    /// assert!(shell.singular_vertices().is_empty());
+    /// ```
+    /// ```
+    /// // A closed and connected shell which has a singular vertex.
+    /// use truck_topology::*;
+    /// use truck_topology::shell::*;
+    ///
+    /// let v = Vertex::news(7);
+    /// let edge = [
+    ///     Edge::new(v[0], v[1]), // 0
+    ///     Edge::new(v[0], v[2]), // 1
+    ///     Edge::new(v[0], v[3]), // 2
+    ///     Edge::new(v[1], v[2]), // 3
+    ///     Edge::new(v[2], v[3]), // 4
+    ///     Edge::new(v[3], v[1]), // 5
+    ///     Edge::new(v[0], v[4]), // 6
+    ///     Edge::new(v[0], v[5]), // 7
+    ///     Edge::new(v[0], v[6]), // 8
+    ///     Edge::new(v[4], v[5]), // 9
+    ///     Edge::new(v[5], v[6]), // 10
+    ///     Edge::new(v[6], v[4]), // 11
+    /// ];
+    /// let wire = vec![
+    ///     Wire::from(vec![edge[0].inverse(), edge[1], edge[3].inverse()]),
+    ///     Wire::from(vec![edge[1].inverse(), edge[2], edge[4].inverse()]),
+    ///     Wire::from(vec![edge[2].inverse(), edge[0], edge[5].inverse()]),
+    ///     Wire::from(vec![edge[3], edge[4], edge[5]]),
+    ///     Wire::from(vec![edge[6].inverse(), edge[7], edge[9].inverse()]),
+    ///     Wire::from(vec![edge[7].inverse(), edge[8], edge[10].inverse()]),
+    ///     Wire::from(vec![edge[8].inverse(), edge[6], edge[11].inverse()]),
+    ///     Wire::from(vec![edge[9], edge[10], edge[11]]),
+    /// ];
+    /// let shell: Shell = wire.into_iter().map(|w| Face::new(w)).collect();
+    /// assert_eq!(shell.shell_condition(), ShellCondition::Closed);
+    /// assert!(shell.is_connected());
+    /// assert_eq!(shell.singular_vertices(), vec![v[0]]);
+    /// ```
+    pub fn singular_vertices(&self) -> Vec<Vertex> {
+        let mut vert_wise_adjacency: HashMap<Vertex, HashMap<usize, Vec<usize>>> = HashMap::new();
         for face in self.face_iter() {
             let first_edge = &face.absolute_boundary()[0];
             let mut edge_iter = face.absolute_boundary().edge_iter().peekable();
             while let Some(edge) = edge_iter.next() {
-                let (emap, adjacency) = vert_wise_adjacency
+                let adjacency = vert_wise_adjacency
                     .entry(edge.back())
-                    .or_insert((HashMap::new(), Vec::new()));
+                    .or_insert(HashMap::new());
                 let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
-                let idx0 = *emap.entry(edge.id()).or_insert_with(|| {
-                    adjacency.push(Vec::new());
-                    adjacency.len() - 1
-                });
-                let idx1 = *emap.entry(next_edge.id()).or_insert_with(|| {
-                    adjacency.push(Vec::new());
-                    adjacency.len() - 1
-                });
-                adjacency[idx0].push(idx1);
-                adjacency[idx1].push(idx0);
+                adjacency
+                    .entry(edge.id())
+                    .or_insert(Vec::new())
+                    .push(next_edge.id());
+                adjacency
+                    .entry(next_edge.id())
+                    .or_insert(Vec::new())
+                    .push(edge.id());
             }
         }
-        for (_, adjacency) in vert_wise_adjacency.values() {
-            if !check_connectivity(adjacency) {
-                return true;
-            }
-        }
-        false
+        vert_wise_adjacency
+            .into_iter()
+            .filter_map(|(vertex, mut adjacency)| {
+                Some(vertex).filter(|_| !check_connectivity(&mut adjacency))
+            })
+            .collect()
     }
 }
 
@@ -459,17 +555,17 @@ pub enum ShellCondition {
     Closed,
 }
 
-fn check_connectivity(adjacency: &Vec<Vec<usize>>) -> bool {
-    let mut unchecked = vec![true; adjacency.len()];
-    let component = create_one_component(adjacency, &mut unchecked);
-    component.len() == adjacency.len()
+fn check_connectivity<T>(adjacency: &mut HashMap<T, Vec<T>>) -> bool
+where T: Eq + Copy + std::hash::Hash {
+    create_one_component(adjacency);
+    adjacency.is_empty()
 }
 
-fn create_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
-    let mut unchecked = vec![true; adjacency.len()];
+fn create_components<T>(adjacency: &mut HashMap<T, Vec<T>>) -> Vec<Vec<T>>
+where T: Eq + Copy + std::hash::Hash {
     let mut res = Vec::new();
     loop {
-        let component = create_one_component(adjacency, &mut unchecked);
+        let component = create_one_component(adjacency);
         match component.is_empty() {
             true => break,
             false => res.push(component),
@@ -478,21 +574,21 @@ fn create_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
     res
 }
 
-fn create_one_component(adjacency: &Vec<Vec<usize>>, unchecked: &mut Vec<bool>) -> Vec<usize> {
-    let first = match unchecked.iter().position(|x| *x) {
-        Some(i) => i,
+fn create_one_component<T>(adjacency: &mut HashMap<T, Vec<T>>) -> Vec<T>
+where T: Eq + std::hash::Hash + Copy {
+    let mut iter = adjacency.keys();
+    let first = match iter.next() {
+        Some(key) => *key,
         None => return Vec::new(),
     };
     let mut stack = vec![first];
-    let mut res = vec![first];
-    unchecked[first] = false;
+    let mut res = Vec::new();
     while !stack.is_empty() {
         let i = stack.pop().unwrap();
-        for j in &adjacency[i] {
-            if unchecked[*j] {
-                stack.push(*j);
-                res.push(*j);
-                unchecked[*j] = false;
+        if let Some(vec) = adjacency.remove(&i) {
+            res.push(i);
+            for j in vec {
+                stack.push(j);
             }
         }
     }
