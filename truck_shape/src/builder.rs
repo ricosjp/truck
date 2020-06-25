@@ -1,10 +1,10 @@
-use crate::topological_curve::TopologicalCurve;
-use crate::elements::GeometricalElement;
+use crate::elements::{GeometricalElement, TopologicalElement};
 use crate::errors::Error;
-use crate::math_impls::*;
+use crate::geom_impls::*;
+use crate::rsweep::RSweep;
+use crate::topological_curve::TopologicalCurve;
 use crate::transformed::Transformed;
 use crate::tsweep::TSweep;
-use crate::rsweep::RSweep;
 
 use crate::{Builder, Result, Transform};
 use geometry::*;
@@ -23,8 +23,14 @@ impl<'a> Builder<'a> {
 
     pub fn line(&mut self, vertex0: Vertex, vertex1: Vertex) -> Result<Edge> {
         let director = &mut self.director;
-        let pt0 = director.try_get_geometry(&vertex0)?.clone();
-        let pt1 = director.try_get_geometry(&vertex1)?.clone();
+        let pt0 = director
+            .get_geometry(&vertex0)
+            .ok_or(vertex0.no_geometry())?
+            .clone();
+        let pt1 = director
+            .get_geometry(&vertex1)
+            .ok_or(vertex1.no_geometry())?
+            .clone();
         let edge = Edge::new(vertex0, vertex1);
         director.attach(&edge, line(pt0, pt1));
         Ok(edge)
@@ -34,11 +40,20 @@ impl<'a> Builder<'a> {
         &mut self,
         vertex0: Vertex,
         vertex1: Vertex,
-        mut inter_points: Vec<Vector3>
-    ) -> Result<Edge> {
+        mut inter_points: Vec<Vector3>,
+    ) -> Result<Edge>
+    {
         let mut control_points: Vec<Vector3> = Vec::new();
-        let pt0 = self.director.try_get_geometry(&vertex0)?.projection();
-        let pt1 = self.director.try_get_geometry(&vertex1)?.projection();
+        let pt0 = self
+            .director
+            .get_geometry(&vertex0)
+            .ok_or(vertex0.no_geometry())?
+            .projection();
+        let pt1 = self
+            .director
+            .get_geometry(&vertex1)
+            .ok_or(vertex1.no_geometry())?
+            .projection();
         control_points.push(pt0.into());
         control_points.append(&mut inter_points);
         control_points.push(pt1.into());
@@ -57,8 +72,14 @@ impl<'a> Builder<'a> {
     ) -> Result<Edge>
     {
         let director = &mut self.director;
-        let pt0 = director.try_get_geometry(&vertex0)?.projection();
-        let pt1 = director.try_get_geometry(&vertex1)?.projection();
+        let pt0 = director
+            .get_geometry(&vertex0)
+            .ok_or(vertex0.no_geometry())?
+            .projection();
+        let pt1 = director
+            .get_geometry(&vertex1)
+            .ok_or(vertex1.no_geometry())?
+            .projection();
         let edge = Edge::new(vertex0, vertex1);
         director.attach(&edge, circle_arc_by_three_points(pt0, pt1, transit));
         Ok(edge)
@@ -69,20 +90,20 @@ impl<'a> Builder<'a> {
             Face::try_new(wire)?;
             return Err(Error::None);
         } else if wire.len() == 2 {
-            let curve0 = self.director.try_get_curve(&wire[0])?;
-            let curve2 = self.director.try_get_curve(&wire[1])?;
+            let curve0 = self.get_curve(&wire[0])?;
+            let curve2 = self.get_curve(&wire[1])?;
             plane_by_two_curves(curve0, curve2)
         } else if wire.len() == 3 {
-            let curve0 = self.director.try_get_curve(&wire[0])?;
-            let curve1 = self.director.try_get_curve(&wire[1])?;
-            let curve3 = self.director.try_get_curve(&wire[2])?;
+            let curve0 = self.get_curve(&wire[0])?;
+            let curve1 = self.get_curve(&wire[1])?;
+            let curve3 = self.get_curve(&wire[2])?;
             plane_by_three_curves(curve0, curve1, curve3)
         } else {
             let wires = split_wire(&wire);
-            let curve0 = self.director.try_get_curve(&wires[0])?;
-            let curve1 = self.director.try_get_curve(&wires[1])?;
-            let curve2 = self.director.try_get_curve(&wires[2])?;
-            let curve3 = self.director.try_get_curve(&wires[3])?;
+            let curve0 = self.get_curve(&wires[0])?;
+            let curve1 = self.get_curve(&wires[1])?;
+            let curve2 = self.get_curve(&wires[2])?;
+            let curve3 = self.get_curve(&wires[3])?;
             BSplineSurface::by_boundary(curve0, curve1, curve2, curve3)
         };
         let face = Face::try_new(wire)?;
@@ -90,6 +111,10 @@ impl<'a> Builder<'a> {
         Ok(face)
     }
 
+    #[inline(always)]
+    fn get_curve<T: TopologicalCurve>(&self, curve_element: &T) -> Result<BSplineCurve> {
+        curve_element.get_geometry(&self.director)
+    }
     pub fn homotopy<T: TopologicalCurve>(&mut self, elem0: &T, elem1: &T) -> Result<Shell> {
         elem0.homotopy(elem1, &mut self.director)
     }
@@ -130,15 +155,15 @@ impl<'a> Builder<'a> {
             elem.tsweep(vector, self.director)
         }
     }
-    
     pub fn rsweep<T: RSweep>(
         &mut self,
         elem: T,
         origin: &Vector3,
         axis: &Vector3,
         angle: f64,
-    ) -> Result<T::Output> {
-        elem.rsweep(origin, axis, angle, self)
+    ) -> Result<T::Output>
+    {
+        elem.rsweep(origin, axis, angle, self.director)
     }
 }
 

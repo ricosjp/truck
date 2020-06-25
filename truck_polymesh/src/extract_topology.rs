@@ -49,8 +49,8 @@ impl MeshHandler {
 }
 
 fn create_edge(v0: Vertex, v1: Vertex, edges: &mut HashMap<(Vertex, Vertex), Edge>) -> Edge {
-    let min = std::cmp::min(v0, v1);
-    let max = std::cmp::max(v0, v1);
+    let min = if v0.id() < v1.id() { v0 } else { v1 };
+    let max = if v0.id() > v1.id() { v0 } else { v1 };
     let edge = match edges.get(&(min, max)) {
         Some(edge) => edge.clone(),
         None => {

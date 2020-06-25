@@ -1,6 +1,8 @@
 use crate::errors::Error;
+use crate::elements::TopologicalElement;
 use crate::{Director, Result};
 use geometry::{BSplineCurve, BSplineSurface, Tolerance};
+use std::iter::FromIterator;
 use topology::*;
 
 pub trait TopologicalCurve: Sized {
@@ -66,10 +68,10 @@ where
         .get_builder()
         .line(wire0.back_vertex().unwrap(), wire2.back_vertex().unwrap())?;
     wire0.push_back(edge1);
-    wire0.append(wire2.inverse());
+    wire0.append(wire2.invert());
     wire0.push_back(edge0.inverse());
     wire1.push_back(edge0);
-    wire1.append(wire3.inverse());
+    wire1.append(wire3.invert());
     wire1.push_back(edge1.inverse());
     let face0 = Face::try_new(wire0)?;
     let face1 = Face::try_new(wire1)?;
@@ -82,13 +84,16 @@ impl TopologicalCurve for Edge {
     fn front_vertex(&self) -> Vertex { self.front() }
     fn back_vertex(&self) -> Vertex { self.back() }
     fn get_geometry(&self, director: &Director) -> Result<BSplineCurve> {
-        let mut curve = director.try_get_geometry(self)?.clone();
+        let mut curve = director
+            .get_geometry(self)
+            .ok_or(self.no_geometry())?
+            .clone();
         if self.front() != self.absolute_front() {
             curve.inverse();
         }
         Ok(curve)
     }
-    fn clone_wire(&self) -> Wire { Wire::by_slice(&[*self]) }
+    fn clone_wire(&self) -> Wire { Wire::from_iter(&[*self]) }
     fn for_each<F: FnMut(&Edge)>(&self, mut closure: F) { closure(self) }
     fn is_closed(&self) -> bool { false }
     fn split_wire(&self) -> Option<[Wire; 2]> { None }

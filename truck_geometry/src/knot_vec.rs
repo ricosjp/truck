@@ -6,34 +6,7 @@ use std::vec::Vec;
 
 impl KnotVec {
     /// empty constructor
-    pub fn new() -> KnotVec { KnotVec { entity: Vec::new() } }
-
-    /// construct by the reference of vector. The clone of vector is sorted by the order.
-    /// ```
-    /// use truck_geometry::KnotVec;
-    /// let knot_vec = KnotVec::by_vec_ref(&vec![1.0, 0.0, 3.0, 2.0]);
-    /// let arr : Vec<f64> = knot_vec.into();
-    /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
-    /// ```
-    #[inline(always)]
-    pub fn by_vec_ref(entity: &Vec<f64>) -> KnotVec {
-        let mut copy_vec = entity.clone();
-        copy_vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        KnotVec { entity: copy_vec }
-    }
-
-    /// the length of the knot vector
-    /// # Examples
-    /// ```
-    /// use truck_geometry::KnotVec;
-    /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 2.0, 3.0, 3.0]);
-    /// assert_eq!(knot_vec.len(), 6);
-    /// ```
-    #[inline(always)]
-    pub fn len(&self) -> usize { self.entity.len() }
-
-    #[inline(always)]
-    pub fn is_empty(&self) -> bool { self.len() == 0 }
+    pub fn new() -> KnotVec { KnotVec(Vec::new()) }
 
     #[inline(always)]
     pub fn range_length(&self) -> f64 {
@@ -44,17 +17,9 @@ impl KnotVec {
         }
     }
 
-    /// extract a slice containing the entire vector
-    #[inline(always)]
-    pub fn as_slice(&self) -> &[f64] { self.entity.as_slice() }
-
-    /// extract a mut slice containing the entire vector
-    #[inline(always)]
-    fn as_mut_slice(&mut self) -> &mut [f64] { self.entity.as_mut_slice() }
-
     /// remove one item
     #[inline(always)]
-    pub fn remove(&mut self, idx: usize) -> f64 { self.entity.remove(idx) }
+    pub fn remove(&mut self, idx: usize) -> f64 { self.0.remove(idx) }
 
     /// get the maximum index `i` of `self[i] <= x`
     /// Return `None` if `x < self[0] or self.len() == 0`.
@@ -117,9 +82,9 @@ impl KnotVec {
     /// ```
     #[inline(always)]
     pub fn add_knot(&mut self, knot: f64) -> usize {
-        self.entity.push(knot);
+        self.0.push(knot);
         let n = self.len();
-        let knot_vec = &mut self.entity;
+        let knot_vec = &mut self.0;
         for i in 1..n {
             if knot_vec[n - i - 1] <= knot_vec[n - i] {
                 return n - i;
@@ -254,7 +219,7 @@ impl KnotVec {
         }
 
         let start = self[0];
-        for vec in self.as_mut_slice() {
+        for vec in self.0.as_mut_slice() {
             *vec -= start;
             *vec /= range;
         }
@@ -274,7 +239,7 @@ impl KnotVec {
     ///
     /// ```
     pub fn translate(&mut self, x: f64) {
-        for vec in self.as_mut_slice() {
+        for vec in self.0.as_mut_slice() {
             *vec += x;
         }
     }
@@ -296,8 +261,8 @@ impl KnotVec {
             return self;
         }
         let range = self[0] + self[n - 1];
-        let clone = self.entity.clone();
-        for (knot0, knot1) in self.entity.iter_mut().zip(clone.iter().rev()) {
+        let clone = self.0.clone();
+        for (knot0, knot1) in self.0.iter_mut().zip(clone.iter().rev()) {
             *knot0 = range - knot1;
         }
         self
@@ -332,15 +297,15 @@ impl KnotVec {
             return Err(Error::NotClampedKnotVector(self.clone().into(), other.clone().into()));
         }
         
-        let back = self.entity.last().unwrap();
-        let front = other.entity.first().unwrap();
+        let back = self.0.last().unwrap();
+        let front = other.0.first().unwrap();
         if front < back || !front.near(back) {
             return Err(Error::DifferentBackFront(*back, *front));
         }
 
-        self.entity.truncate(self.len() - degree - 1);
-        for knot in &other.entity {
-            self.entity.push(*knot);
+        self.0.truncate(self.len() - degree - 1);
+        for knot in &other.0 {
+            self.0.push(*knot);
         }
 
         Ok(())
@@ -349,7 +314,7 @@ impl KnotVec {
     #[inline(always)]
     pub fn sub_vec<I: SliceIndex<[f64], Output = [f64]>>(&self, range: I) -> KnotVec {
         KnotVec {
-            entity: Vec::from(&self.entity[range]),
+            0: Vec::from(&self.0[range]),
         }
     }
 
@@ -410,24 +375,24 @@ impl KnotVec {
             }
         }
         
-        Ok(KnotVec { entity: vec })
+        Ok(KnotVec { 0: vec })
     }
     
     /// construct from `Vec<f64>`. do not sort, only check sorted.
-    pub fn try_from(entity: Vec<f64>) -> Result<KnotVec> {
-        for i in 1..entity.len() {
-            if entity[i - 1] > entity[i] {
+    pub fn try_from(vec: Vec<f64>) -> Result<KnotVec> {
+        for i in 1..vec.len() {
+            if vec[i - 1] > vec[i] {
                 return Err(Error::NotSortedVector);
             }
         }
-        Ok(KnotVec { entity: entity })
+        Ok(KnotVec(vec))
     }
 
     /// get the knot vector for the bezier spline i.e. [0,...,0,1,...,1].
     pub fn bezier_knot(degree: usize) -> KnotVec {
-        let mut entity = vec![0.0; degree + 1];
-        (0..=degree).for_each(|_| entity.push(1.0));
-        KnotVec { entity }
+        let mut vec = vec![0.0; degree + 1];
+        vec.extend(std::iter::repeat(1.0).take(degree + 1));
+        KnotVec(vec)
     }
 }
 
@@ -439,9 +404,25 @@ impl std::convert::From<Vec<f64>> for KnotVec {
     /// let arr : Vec<f64> = knot_vec.into();
     /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
     /// ```
-    fn from(mut entity: Vec<f64>) -> KnotVec {
-        entity.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        KnotVec { entity: entity }
+    fn from(mut vec: Vec<f64>) -> KnotVec {
+        vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        KnotVec(vec)
+    }
+}
+
+impl std::convert::From<&Vec<f64>> for KnotVec {
+    /// construct by the reference of vector. The clone of vector is sorted by the order.
+    /// ```
+    /// use truck_geometry::KnotVec;
+    /// let knot_vec = KnotVec::from(&vec![1.0, 0.0, 3.0, 2.0]);
+    /// let arr : Vec<f64> = knot_vec.into();
+    /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
+    /// ```
+    #[inline(always)]
+    fn from(vec: &Vec<f64>) -> KnotVec {
+        let mut copy_vec = vec.clone();
+        copy_vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        KnotVec(copy_vec)
     }
 }
 
@@ -450,24 +431,16 @@ impl std::convert::From<KnotVec> for Vec<f64> {
     /// ```
     /// use truck_geometry::KnotVec;
     /// let vec = vec![0.0, 1.0, 2.0, 3.0];
-    /// let knot_vec = KnotVec::by_vec_ref(&vec);
+    /// let knot_vec = KnotVec::from(&vec);
     /// let vec0 : Vec<f64> = knot_vec.into();
     /// assert_eq!(vec, vec0);
     /// ```
     #[inline(always)]
-    fn from(knotvec: KnotVec) -> Vec<f64> { knotvec.entity }
+    fn from(knotvec: KnotVec) -> Vec<f64> { knotvec.0 }
 }
 
-impl std::ops::Index<usize> for KnotVec {
-    type Output = f64;
-
-    /// #Examples
-    /// ```
-    /// use truck_geometry::KnotVec;
-    /// let vec = vec![0.0, 0.0, 1.0, 2.0, 3.0, 3.0];
-    /// let knot_vec = KnotVec::from(vec);
-    /// assert_eq!(knot_vec[3], 2.0);
-    /// ```
+impl std::ops::Deref for KnotVec {
+    type Target = Vec<f64>;
     #[inline(always)]
-    fn index(&self, idx: usize) -> &f64 { &self.entity[idx] }
+    fn deref(&self) -> &Vec<f64> { &self.0 }
 }

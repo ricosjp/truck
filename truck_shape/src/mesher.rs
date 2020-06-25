@@ -61,8 +61,8 @@ fn create_edge(
     builder: &mut Builder,
 ) -> Edge
 {
-    let min = std::cmp::min(v0, v1);
-    let max = std::cmp::max(v0, v1);
+    let min = if v0.id() < v1.id() { v0 } else { v1 };
+    let max = if v0.id() > v1.id() { v0 } else { v1 };
     let edge = match edges.get(&(min, max)) {
         Some(edge) => edge.clone(),
         None => {
@@ -87,7 +87,11 @@ pub trait Meshed {
 impl Meshed for Face {
     type MeshType = StructuredMesh;
     fn meshing(&self, tol: f64, director: &Director) -> StructuredMesh {
-        StructuredMesh::from_surface(director.get_geometry(self).unwrap(), tol)
+        let mut surface = director.get_geometry(self).unwrap().clone();
+        if !self.orientation() {
+            surface.swap_axes();
+        }
+        StructuredMesh::from_surface(&surface, tol)
     }
 }
 
@@ -95,7 +99,7 @@ impl Meshed for Shell {
     type MeshType = PolygonMesh;
     fn meshing(&self, tol: f64, director: &Director) -> PolygonMesh {
         let mut mesh = PolygonMesh::default();
-        for face in self.face_iter() {
+        for face in self.iter() {
             let counter = mesh.positions.len();
             let mut tmp = face.meshing(tol, director).destruct();
             mesh.positions.append(&mut tmp.positions);

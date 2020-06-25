@@ -1,3 +1,4 @@
+use std::iter::FromIterator;
 use truck_topology::*;
 
 fn large_plane() -> Shell {
@@ -22,7 +23,7 @@ fn large_plane() -> Shell {
     (1..N)
         .flat_map(|i| (1..N).map(move |j| (i, j)))
         .map(|(i, j)| {
-            Face::new(Wire::by_slice(&[
+            Face::new(Wire::from_iter(&[
                 row_edge[i - 1][j - 1],
                 col_edge[i - 1][j],
                 row_edge[i][j - 1].inverse(),
@@ -54,7 +55,7 @@ fn large_torus() -> Shell {
     (0..N)
         .flat_map(|i| (0..N).map(move |j| (i, j)))
         .map(|(i, j)| {
-            Face::new(Wire::by_slice(&[
+            Face::new(Wire::from_iter(&[
                 row_edge[i][j],
                 col_edge[i][(j + 1) % N],
                 row_edge[(i + 1) % N][j].inverse(),
@@ -82,20 +83,17 @@ fn cube() -> Shell {
     ];
 
     let wire = vec![
-        Wire::by_slice(&[edge[0], edge[1], edge[2], edge[3]]),
-        Wire::by_slice(&[edge[0].inverse(), edge[4], edge[8], edge[5].inverse()]),
-        Wire::by_slice(&[edge[1].inverse(), edge[5], edge[9], edge[6].inverse()]),
-        Wire::by_slice(&[edge[2].inverse(), edge[6], edge[10], edge[7].inverse()]),
-        Wire::by_slice(&[edge[3].inverse(), edge[7], edge[11], edge[4].inverse()]),
-        Wire::by_slice(&[
-            edge[11].inverse(),
-            edge[10].inverse(),
-            edge[9].inverse(),
-            edge[8].inverse(),
-        ]),
+        Wire::from_iter(&[edge[0], edge[1], edge[2], edge[3]]),
+        Wire::from_iter(&[edge[0].inverse(), edge[4], edge[8], edge[5].inverse()]),
+        Wire::from_iter(&[edge[1].inverse(), edge[5], edge[9], edge[6].inverse()]),
+        Wire::from_iter(&[edge[2].inverse(), edge[6], edge[10], edge[7].inverse()]),
+        Wire::from_iter(&[edge[3].inverse(), edge[7], edge[11], edge[4].inverse()]),
+        Wire::from_iter(&[edge[8], edge[9], edge[10], edge[11]]),
     ];
 
-    wire.into_iter().map(|w| Face::new(w)).collect()
+    let mut shell: Shell = wire.into_iter().map(|w| Face::new(w)).collect();
+    shell[5].invert();
+    shell
 }
 
 fn irregular() -> Shell {
@@ -110,9 +108,9 @@ fn irregular() -> Shell {
         Edge::new(v[1], v[4]),
     ];
     let wire = vec![
-        Wire::by_slice(&[edge[0], edge[4], edge[1].inverse()]),
-        Wire::by_slice(&[edge[0], edge[5], edge[2].inverse()]),
-        Wire::by_slice(&[edge[0], edge[6], edge[3].inverse()]),
+        Wire::from_iter(&[edge[0], edge[4], edge[1].inverse()]),
+        Wire::from_iter(&[edge[0], edge[5], edge[2].inverse()]),
+        Wire::from_iter(&[edge[0], edge[6], edge[3].inverse()]),
     ];
     wire.into_iter().map(|w| Face::new(w)).collect()
 }
@@ -131,10 +129,10 @@ fn regular() -> Shell {
         Edge::new(v[4], v[5]),
     ];
     let wire = vec![
-        Wire::by_slice(&[edge[0], edge[2], edge[1].inverse()]),
-        Wire::by_slice(&[edge[3], edge[7], edge[4].inverse()]),
-        Wire::by_slice(&[edge[5], edge[8], edge[6].inverse()]),
-        Wire::by_slice(&[edge[2], edge[5], edge[4].inverse()]),
+        Wire::from_iter(&[edge[0], edge[2], edge[1].inverse()]),
+        Wire::from_iter(&[edge[3], edge[7], edge[4].inverse()]),
+        Wire::from_iter(&[edge[5], edge[8], edge[6].inverse()]),
+        Wire::from_iter(&[edge[2], edge[5], edge[4].inverse()]),
     ];
     wire.into_iter().map(|w| Face::new(w)).collect()
 }

@@ -1,4 +1,4 @@
-use crate::{Result, Vertex, Edge};
+use crate::{RemoveTry, Result, Vertex, Edge};
 use crate::errors::Error;
 use crate::id::IDGenerator;
 
@@ -7,20 +7,16 @@ lazy_static! {
 }
 
 impl Edge {
-    /// generate the edge from `front` to `back`.
-    /// # Panic
-    /// The condition `front == back` is not allowed.
-    #[inline(always)]
-    pub fn new(front: Vertex, back: Vertex) -> Edge {
-        match Edge::try_new(front, back) {
-            Ok(got) => got,
-            Err(error) => panic!("{}", error),
-        }
-    }
-
-    /// generate the edge from `front` to `back`.
+    /// Generates the edge from `front` to `back`.  
     /// # Failures
-    /// The condition `front == back` is not allowed.
+    /// If `front == back`, then returns `Error::SameVertex`.
+    /// ```
+    /// # use truck_topology::*;
+    /// # use truck_topology::errors::Error;
+    /// let v = Vertex::news(2);
+    /// assert!(Edge::try_new(v[0], v[1]).is_ok());
+    /// assert_eq!(Edge::try_new(v[0], v[0]), Err(Error::SameVertex));
+    /// ```
     #[inline(always)]
     pub fn try_new(front: Vertex, back: Vertex) -> Result<Edge> {
         if front == back {
@@ -30,10 +26,23 @@ impl Edge {
         }
     }
     
-    /// generate the edge from `front` to `back`.
+    /// Generates the edge from `front` to `back`.
+    /// # Panic
+    /// The condition `front == back` is not allowed.
+    /// ```should_panic
+    /// # use truck_topology::*;
+    /// let v = Vertex::new();
+    /// Edge::new(v, v); // panic occurs
+    /// ```
+    #[inline(always)]
+    pub fn new(front: Vertex, back: Vertex) -> Edge {
+        Edge::try_new(front, back).remove_try()
+    }
+    
+    /// Generates the edge from `front` to `back`.
     /// # Remarks
-    /// This method is prepared only for performance-critical development and is not recommended.
-    /// This method does NOT check the condition `front == back`.
+    /// This method is prepared only for performance-critical development and is not recommended.  
+    /// This method does NOT check the condition `front == back`.  
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
     pub fn new_unchecked(front: Vertex, back: Vertex) -> Edge {
@@ -43,8 +52,42 @@ impl Edge {
             id: ID_GENERATOR.generate(),
         }
     }
+    
+    /// Inverts the direction of edge.
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(2);
+    /// let edge = Edge::new(v[0], v[1]);
+    /// let mut inv_edge = edge.clone();
+    /// inv_edge.invert();
+    /// 
+    /// // the id of an edge is preserved.
+    /// assert_eq!(edge.id(), inv_edge.id());
+    /// 
+    /// // the front and back are exchanged.
+    /// assert_eq!(edge.front(), inv_edge.back());
+    /// assert_eq!(edge.back(), inv_edge.front());
+    /// ```
+    #[inline(always)]
+    pub fn invert(&mut self) -> &mut Self {
+        self.orientation = !self.orientation;
+        self
+    }
 
-    /// generate the inverse oriented edge
+    /// Creates the inverse oriented edge.
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(2);
+    /// let edge = Edge::new(v[0], v[1]);
+    /// let inv_edge = edge.inverse();
+    /// 
+    /// // the id of an edge is preserved.
+    /// assert_eq!(edge.id(), inv_edge.id());
+    /// 
+    /// // the front and back are exchanged.
+    /// assert_eq!(edge.front(), inv_edge.back());
+    /// assert_eq!(edge.back(), inv_edge.front());
+    /// ```
     #[inline(always)]
     pub fn inverse(&self) -> Edge {
         Edge {
@@ -53,57 +96,93 @@ impl Edge {
             id: self.id,
         }
     }
-
-    /// get the front vertex
+    
+    /// Returns the front vertex
     /// ```
-    /// use truck_topology::{Vertex, Edge};
-    /// let edge0 = Edge::new(Vertex::new(), Vertex::new());
-    /// let edge1 = edge0.inverse();
-    /// assert_eq!(edge0.front(), edge1.back());
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(2);
+    /// let edge = Edge::new(v[0], v[1]);
+    /// assert_eq!(edge.front(), v[0]);
     /// ```
     #[inline(always)]
     pub fn front(&self) -> Vertex {
-        if self.orientation {
-            self.vertices.0
-        } else {
-            self.vertices.1
+        match self.orientation {
+            true => self.vertices.0,
+            false => self.vertices.1,
         }
     }
 
-    /// get the back vertex
+    /// Returns the back vertex
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(2);
+    /// let edge = Edge::new(v[0], v[1]);
+    /// assert_eq!(edge.back(), v[1]);
+    /// ```
     #[inline(always)]
     pub fn back(&self) -> Vertex {
-        if self.orientation {
-            self.vertices.1
-        } else {
-            self.vertices.0
+        match self.orientation {
+            true => self.vertices.1,
+            false => self.vertices.0,
         }
     }
 
-    /// get the front vertex which is generated by constructor
+    /// Returns the vertices at both ends.
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(2);
+    /// let edge = Edge::new(v[0], v[1]);
+    /// assert_eq!(edge.back(), v[1]);
+    /// ```
+    #[inline(always)]
+    pub fn ends(&self) -> (Vertex, Vertex) {
+        match self.orientation {
+            true => self.vertices,
+            false => (self.vertices.1, self.vertices.0)
+        }
+    }
+
+    /// Returns the front vertex which is generated by constructor
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(2);
+    /// let edge = Edge::new(v[0], v[1]).inverse();
+    /// assert_eq!(edge.front(), v[1]);
+    /// assert_eq!(edge.absolute_front(), v[0]);
+    /// ```
     #[inline(always)]
     pub fn absolute_front(&self) -> Vertex { self.vertices.0 }
     
-    /// get the back vertex which is generated by constructor
+    /// Returns the back vertex which is generated by constructor
+    /// ```
+    /// # use truck_topology::*;
+    /// let v = Vertex::news(2);
+    /// let edge = Edge::new(v[0], v[1]).inverse();
+    /// assert_eq!(edge.back(), v[0]);
+    /// assert_eq!(edge.absolute_back(), v[1]);
+    /// ```
     #[inline(always)]
     pub fn absolute_back(&self) -> Vertex { self.vertices.1 }
 
-    /// whether two edges are the same. Return `true` even if the orientaions are different.
+    #[inline(always)]
+    pub fn absolute_ends(&self) -> (Vertex, Vertex) { self.vertices }
+
+    /// Returns whether two edges are the same. Returns `true` even if the orientaions are different.
     /// ```
-    /// use truck_topology::{Vertex, Edge};
+    /// # use truck_topology::{Vertex, Edge};
     /// let v = Vertex::news(2);
     /// let edge0 = Edge::new(v[0], v[1]);
     /// let edge1 = Edge::new(v[0], v[1]);
     /// let edge2 = edge0.clone();
-    /// let edge3 = edge0.clone().inverse();
-    /// assert!(!edge0.is_same(&edge1));
-    /// assert!(edge0.is_same(&edge2));
-    /// assert!(edge0.is_same(&edge3));
+    /// let edge3 = edge0.inverse();
+    /// assert!(!edge0.is_same(&edge1)); // edges whose ids are different are not the same.
+    /// assert!(edge0.is_same(&edge2)); // The cloned edge is the same edge.
+    /// assert!(edge0.is_same(&edge3)); // The inversed edge is the "same" edge
     /// ```
     #[inline(always)]
     pub fn is_same(&self, other: &Edge) -> bool { self.id == other.id }
 
-    /// get id
+    /// Returns id of the edge
     pub fn id(&self) -> usize { self.id }
 }
 

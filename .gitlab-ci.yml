@@ -20,8 +20,9 @@ pages:
         - cargo clean
         - cargo test
         - cargo doc --no-deps
+        - cp -r target/doc public
     artifacts:
         paths:
-            - target/doc
+            - public
     only:
         - master

@@ -18,9 +18,7 @@ pub struct Matrix {
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug)]
-pub struct KnotVec {
-    entity: std::vec::Vec<f64>,
-}
+pub struct KnotVec(std::vec::Vec<f64>);
 
 /// define a tolerance in the whole package
 pub trait Tolerance: Sized + std::fmt::Debug {
