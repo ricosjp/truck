@@ -5,6 +5,13 @@ macro_rules! impl_vector_new {
     ($classname: ty, $dim: expr, $($field: ident), *) => {
         impl $classname {
             /// constructor.
+            /// # Examples
+            /// ```
+            /// # use truck_geometry::*;
+            /// assert_eq!(Vector::new(0, 1, 2, 3).as_ref(), &[0.0, 1.0, 2.0, 3.0]);
+            /// assert_eq!(Vector3::new(0.0, 1.0, 2.0).as_ref(), &[0.0, 1.0, 2.0]);
+            /// assert_eq!(Vector2::new(0.0_f32, 1.0_f32).as_ref(), &[0.0_f64, 1.0_f64]);
+            /// ```
             pub fn new<T: Into<f64>>($($field: T), *) -> Self {
                 Self([$($field.into()), *])
             }
@@ -19,14 +26,10 @@ impl_vector_new!(Vector2, 2, u, v);
 macro_rules! impl_vector {
     ($classname: ty, $dim: expr, $($num: expr), *) => {
         impl $classname {
-            /// construct by a reference of array.
-            #[inline(always)]
-            pub fn by_array_ref<>(arr: &[f64; $dim]) -> Self { Self(arr.clone()) }
-
-            /// construct a vector whose components are 0.0.
+            /// Creates a vector whose components are 0.0.
             /// # Examples
             /// ```
-            /// use truck_geometry::{Vector, Vector3, Vector2};
+            /// # use truck_geometry::{Vector, Vector3, Vector2};
             /// assert_eq!(Vector::zero(), Vector::new(0.0, 0.0, 0.0, 0.0));
             /// assert_eq!(Vector3::zero(), Vector3::new(0.0, 0.0, 0.0));
             /// assert_eq!(Vector2::zero(), Vector2::new(0.0, 0.0));
@@ -34,26 +37,13 @@ macro_rules! impl_vector {
             #[inline(always)]
             pub const fn zero() -> Self { Self([0.0; $dim]) }
 
-            /// get slice
-            #[inline(always)]
-            pub fn as_slice(&self) -> &[f64] { &self.0 }
-
-            /// get mutable slice
-            #[inline(always)]
-            pub fn as_mut_slice(&mut self) -> &mut [f64] { &mut self.0 }
-
-            /// other copy to self
-            #[inline(always)]
-            pub fn assign(&mut self, other: &$classname) {
-                $(self[$num] = other[$num];)*
-            }
-
             /// square of norm
             /// # Examples
             /// ```
-            /// use truck_geometry::Vector;
-            /// let v = Vector::new(1.0, 2.0, 3.0, 4.0);
-            /// assert_eq!(v.norm2(), 30.0);
+            /// # use truck_geometry::*;
+            /// assert_eq!(Vector::new(1, 2, 3, 4).norm2(), 30.0);
+            /// assert_eq!(Vector3::new(1, 2, 3).norm2(), 14.0);
+            /// assert_eq!(Vector2::new(1.5, 2.1).norm2(), 6.66);
             /// ```
             #[inline(always)]
             pub fn norm2(&self) -> f64 { self * self }
@@ -61,42 +51,64 @@ macro_rules! impl_vector {
             /// norm
             /// # Examples
             /// ```
-            /// use truck_geometry::Vector;
-            /// let v = Vector::new(3.0, 0.0, 4.0, 0.0);
-            /// assert_eq!(v.norm(), 5.0);
-            /// ```
+            /// # use truck_geometry::*;
+            /// assert_eq!(Vector::new(1, 2, 3, 4).norm(), 30.0_f64.sqrt());
+            /// assert_eq!(Vector3::new(1, 2, 3).norm(), 14.0_f64.sqrt());
+            /// assert_eq!(Vector2::new(1.5, 2.1).norm(), 6.66_f64.sqrt());
             #[inline(always)]
             pub fn norm(&self) -> f64 { self.norm2().sqrt() }
 
             /// culculate cosine of the angle of the two vectors
+            /// # Examples
             /// ```
-            /// use truck_geometry::Vector;
-            /// let vec0 = Vector::new(1.0, 0.0, 0.0, 0.0);
-            /// let vec1 = Vector::new(0.0, 2.0, 0.0, 0.0);
+            /// # use truck_geometry::*;
+            /// let vec0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let vec1 = Vector::new(-3.0, 4.0, 2.0, 1.0);
+            /// assert_eq!(vec0.cos_angle(&vec1), 0.5);
+            /// 
+            /// let vec0 = Vector3::new(1.0, 1.0, 0.0);
+            /// let vec1 = Vector3::new(0.0, 0.0, 1.0);
             /// assert_eq!(vec0.cos_angle(&vec1), 0.0);
+            /// 
+            /// let vec0 = Vector2::new(4.26_f64.cos(), 4.26_f64.sin());
+            /// let vec1 = Vector2::new(2.04_f64.cos(), 2.04_f64.sin());
+            /// f64::assert_near2(&vec0.cos_angle(&vec1), &2.22_f64.cos());
+            /// ```
+            /// # Remarks
+            /// If the norm of `self` or `other` is zero, then returns `std::f64::NAN`.
+            /// ```
+            /// # use truck_geometry::*;
+            /// assert!(Vector::zero().cos_angle(&Vector::new(1, 2, 3, 4)).is_nan());
+            /// assert!(Vector3::zero().cos_angle(&Vector3::new(1, 2, 3)).is_nan());
+            /// assert!(Vector2::zero().cos_angle(&Vector2::new(1, 2)).is_nan());
             /// ```
             #[inline(always)]
             pub fn cos_angle(&self, other: &Self) -> f64 {
-                let norm = self.norm();
-                let vec0 = if norm.so_small() {
-                    return 0.0;
-                } else {
-                    self / norm
-                };
-                let norm = other.norm();
-                let vec1 = if norm.so_small() {
-                    return 0.0;
-                } else {
-                    other / norm
-                };
-                vec0 * vec1
+                (self * other) / (self.norm() * other.norm())
             }
 
             /// culculate the angle of two vectors
+            /// # Examples
+            /// ```
+            /// use truck_geometry::*;
+            /// use std::f64::consts::PI;
+            /// 
+            /// let vec0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+            /// let vec1 = Vector::new(-3.0, 4.0, 2.0, 1.0);
+            /// f64::assert_near2(&vec0.angle(&vec1), &(PI / 3.0));
+            /// 
+            /// let vec0 = Vector3::new(1.0, 1.0, 0.0);
+            /// let vec1 = Vector3::new(0.0, 0.0, 1.0);
+            /// f64::assert_near2(&vec0.angle(&vec1), &(PI / 2.0));
+            /// 
+            /// let vec0 = Vector2::new(4.26_f64.cos(), 4.26_f64.sin());
+            /// let vec1 = Vector2::new(2.04_f64.cos(), 2.04_f64.sin());
+            /// f64::assert_near2(&vec0.angle(&vec1), &2.22);
+            /// ```
             #[inline(always)]
             pub fn angle(&self, other: &Self) -> f64 { self.cos_angle(other).acos() }
 
-            /// project to 3D affine plane w = 1
+            /// project to 
             #[inline(always)]
             pub fn projection(&self) -> Self {
                 Self::new($(self[$num] / self[$dim - 1]),*)
@@ -179,7 +191,12 @@ macro_rules! impl_vector {
 
         impl std::convert::AsRef<[f64]> for $classname {
             #[inline(always)]
-            fn as_ref(&self) -> &[f64] { self.0.as_ref() }
+            fn as_ref(&self) -> &[f64] { &self.0 }
+        }
+
+        impl std::convert::AsMut<[f64]> for $classname {
+            #[inline(always)]
+            fn as_mut(&mut self) -> &mut [f64] { &mut self.0 }
         }
 
         impl std::convert::From<[f64; $dim]> for $classname {
@@ -192,6 +209,11 @@ macro_rules! impl_vector {
             /// ```
             #[inline(always)]
             fn from(arr: [f64; $dim]) -> Self { Self(arr) }
+        }
+
+        impl std::convert::From<&[f64; $dim]> for $classname {
+            #[inline(always)]
+            fn from(arr: &[f64; $dim]) -> Self { Self(arr.clone()) }
         }
 
         impl std::convert::From<$classname> for [f64; $dim] {
@@ -988,9 +1010,4 @@ fn vector_test() {
     assert_eq!(vec[1], 2.0);
     assert_eq!(vec[2], 3.0);
     assert_eq!(vec[3], 1.0);
-
-    // by_array_ref
-    let vec = Vector::by_array_ref(&[1.0, 2.0, 3.0, 4.0]);
-    assert_eq!(vec, Vector::new(1.0, 2.0, 3.0, 4.0));
 }
-

@@ -183,7 +183,7 @@ impl Matrix {
     /// assert_eq!(mat.row(1), Vector::new(5.0, 6.0, 7.0, 8.0));
     /// ```
     #[inline(always)]
-    pub fn row(&self, idx: usize) -> Vector { Vector::by_array_ref(&self[idx]) }
+    pub fn row(&self, idx: usize) -> Vector { Vector::from(&self[idx]) }
 
     /// extract a column vector
     /// # Examples
