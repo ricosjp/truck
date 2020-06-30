@@ -1,25 +1,4 @@
-use crate::{Tolerance, Origin, Vector, Vector4, Matrix, Result, NewMatrix};
-use crate::vector::VectorEntity;
-use crate::errors::Error;
-
-pub trait MatrixEntity<T>:
-    Sized + Clone + PartialEq + AsRef<[T]> + AsMut<[T]> + std::fmt::Debug + std::default::Default
-{
-    const ORIGIN: Self;
-}
-
-macro_rules! impl_matrix_entity {
-    ($($dim: expr), *) => {
-        $(
-            impl MatrixEntity<Vector<[f64; $dim]>> for [Vector<[f64; $dim]>; $dim] {
-                const ORIGIN: Self = [Vector::<[f64; $dim]>::ORIGIN; $dim];
-            }
-        )*
-    };
-}
-impl_matrix_entity!(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
-impl_matrix_entity!(14, 15, 16, 17, 18, 19, 20, 21, 22, 23);
-impl_matrix_entity!(24, 25, 26, 27, 28, 29, 30, 31, 32);
+use vector_bench::*;
 
 impl Matrix {
     /// construct a matrix by rows
@@ -1694,3 +1673,4 @@ impl std::fmt::Display for Matrix {
             ))
     }
 }
+

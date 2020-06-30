@@ -13,40 +13,40 @@ fn n_gon_prism(builder: &mut Builder, n: usize) -> Solid {
     let v: Vec<_> = (0..n)
         .map(|i| {
             let t = 2.0 * std::f64::consts::PI * (i as f64) / (n as f64);
-            builder.vertex(Vector3::new(t.sin(), 0.0, t.cos())).unwrap()
+            builder.vertex(vector_new!(t.sin(), 0.0, t.cos())).unwrap()
         })
         .collect();
     let wire: Wire = (0..n)
         .map(|i| builder.line(v[i], v[(i + 1) % n]).unwrap())
         .collect();
     let face = builder.plane(wire).unwrap();
-    builder.tsweep(face, &Vector3::new(0, 2, 0)).unwrap()
+    builder.tsweep(face, &vector_new!(0, 2, 0)).unwrap()
 }
 
 #[allow(dead_code)]
 fn cube(builder: &mut Builder) -> Solid {
-    let v: Vertex = builder.vertex(Vector3::new(0.0, 0.0, 0.0)).unwrap();
-    let edge = builder.tsweep(v, &Vector3::new(1.0, 0.0, 0.0)).unwrap();
-    let face = builder.tsweep(edge, &Vector3::new(0.0, 1.0, 0.0)).unwrap();
-    builder.tsweep(face, &Vector3::new(0.0, 0.0, 1.0)).unwrap()
+    let v: Vertex = builder.vertex(vector_new!(0.0, 0.0, 0.0)).unwrap();
+    let edge = builder.tsweep(v, &vector_new!(1.0, 0.0, 0.0)).unwrap();
+    let face = builder.tsweep(edge, &vector_new!(0.0, 1.0, 0.0)).unwrap();
+    builder.tsweep(face, &vector_new!(0.0, 0.0, 1.0)).unwrap()
 }
 
 #[allow(dead_code)]
 fn bottle(builder: &mut Builder) -> Solid {
     let (width, thick, height) = (6.0, 4.0, 10.0);
     let v0 = builder
-        .vertex(Vector3::new(-thick / 4.0, 0.0, -width / 2.0))
+        .vertex(vector_new!(-thick / 4.0, 0.0, -width / 2.0))
         .unwrap();
     let v1 = builder
-        .vertex(Vector3::new(-thick / 4.0, 0.0, width / 2.0))
+        .vertex(vector_new!(-thick / 4.0, 0.0, width / 2.0))
         .unwrap();
-    let transit = Vector3::new(-thick / 2.0, 0.0, 0.0);
+    let transit = vector_new!(-thick / 2.0, 0.0, 0.0);
     let edge0 = builder.circle_arc(v0, v1, &transit).unwrap();
     let edge1 = builder
         .rotated(
             &edge0,
-            &Vector3::new(0.0, 0.0, 0.0),
-            &Vector3::new(0.0, 0.0, 1.0),
+            &vector_new!(0.0, 0.0, 0.0),
+            &vector_new!(0.0, 0.0, 1.0),
             PI,
         )
         .unwrap();
@@ -54,7 +54,7 @@ fn bottle(builder: &mut Builder) -> Solid {
     let wire1 = Wire::from_iter(&[edge1]);
     let face = builder.homotopy(&wire0, &wire1).unwrap();
     builder
-        .tsweep(face, &Vector3::new(0.0, height, 0.0))
+        .tsweep(face, &vector_new!(0.0, height, 0.0))
         .unwrap()
         .pop()
         .unwrap()
@@ -62,14 +62,14 @@ fn bottle(builder: &mut Builder) -> Solid {
 
 #[allow(dead_code)]
 fn tsudsumi(builder: &mut Builder) -> Solid {
-    let v0 = builder.vertex(Vector3::new(1.0, 2.0, 0.0)).unwrap();
-    let v1 = builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap();
+    let v0 = builder.vertex(vector_new!(1.0, 2.0, 0.0)).unwrap();
+    let v1 = builder.vertex(vector_new!(0.0, 0.0, 1.0)).unwrap();
     let edge = builder.line(v0, v1).unwrap();
     let mut shell = builder
         .rsweep(
             edge,
-            &Vector3::new(0, 0, 0),
-            &Vector3::new(0, 1, 0),
+            &vector_new!(0, 0, 0),
+            &vector_new!(0, 1, 0),
             PI * 2.0,
         )
         .unwrap();
@@ -84,23 +84,23 @@ fn tsudsumi(builder: &mut Builder) -> Solid {
 #[allow(dead_code)]
 fn truck3d(builder: &mut Builder) -> Solid {
     let v: Vec<Vertex> = vec![
-        builder.vertex(Vector3::new(0, 0, 0)).unwrap(),
-        builder.vertex(Vector3::new(4, 0, 0)).unwrap(),
-        builder.vertex(Vector3::new(1, 0, 2)).unwrap(),
-        builder.vertex(Vector3::new(3, 0, 2)).unwrap(),
+        builder.vertex(vector_new!(0, 0, 0)).unwrap(),
+        builder.vertex(vector_new!(4, 0, 0)).unwrap(),
+        builder.vertex(vector_new!(1, 0, 2)).unwrap(),
+        builder.vertex(vector_new!(3, 0, 2)).unwrap(),
     ];
     let edge = vec![
         builder.line(v[1], v[0]).unwrap(),
         builder
-            .circle_arc(v[3], v[2], &Vector3::new(2, 0, 1))
+            .circle_arc(v[3], v[2], &vector_new!(2, 0, 1))
             .unwrap(),
     ];
     let mut shell = builder.homotopy(&edge[0], &edge[1]).unwrap();
     let face1 = builder
         .rotated(
             &shell[0],
-            &Vector3::new(2.0, 0.0, 3.5),
-            &Vector3::new(0.0, 1.0, 0.0),
+            &vector_new!(2.0, 0.0, 3.5),
+            &vector_new!(0.0, 1.0, 0.0),
             std::f64::consts::PI,
         )
         .unwrap();
@@ -110,7 +110,7 @@ fn truck3d(builder: &mut Builder) -> Solid {
     let face3 = builder.homotopy(&wire0[3].inverse(), &wire1[1]).unwrap()[0].clone();
     shell.append(&mut vec![face1, face2, face3].into());
     builder
-        .tsweep(shell, &Vector3::new(0, 3, 0))
+        .tsweep(shell, &vector_new!(0, 3, 0))
         .unwrap()
         .pop()
         .unwrap()
@@ -124,7 +124,7 @@ fn large_box(builder: &mut Builder) -> Solid {
         .flat_map(|i| (0..N).map(move |j| (i, j)))
         .map(|(i, j)| {
             builder
-                .vertex(Vector3::new(i as f64, j as f64, 0.0))
+                .vertex(vector_new!(i as f64, j as f64, 0.0))
                 .unwrap()
         })
         .collect();
@@ -160,7 +160,7 @@ fn large_box(builder: &mut Builder) -> Solid {
         })
         .collect();
     builder
-        .tsweep(shell, &Vector3::new(0, 0, 1))
+        .tsweep(shell, &vector_new!(0, 0, 1))
         .unwrap()
         .pop()
         .unwrap()
@@ -169,22 +169,22 @@ fn large_box(builder: &mut Builder) -> Solid {
 #[allow(dead_code)]
 fn torus(builder: &mut Builder) -> Shell {
     let v = vec![
-        builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap(),
-        builder.vertex(Vector3::new(0.0, 0.0, 3.0)).unwrap(),
+        builder.vertex(vector_new!(0.0, 0.0, 1.0)).unwrap(),
+        builder.vertex(vector_new!(0.0, 0.0, 3.0)).unwrap(),
     ];
     let wire = Wire::from_iter(&[
         builder
-            .circle_arc(v[0], v[1], &Vector3::new(0.0, 1.0, 2.0))
+            .circle_arc(v[0], v[1], &vector_new!(0.0, 1.0, 2.0))
             .unwrap(),
         builder
-            .circle_arc(v[1], v[0], &Vector3::new(0.0, -1.0, 2.0))
+            .circle_arc(v[1], v[0], &vector_new!(0.0, -1.0, 2.0))
             .unwrap(),
     ]);
     builder
         .rsweep(
             wire,
-            &Vector3::new(0, 0, 0),
-            &Vector3::new(0, 1, 0),
+            &vector_new!(0, 0, 0),
+            &vector_new!(0, 1, 0),
             std::f64::consts::PI * 2.0,
         )
         .unwrap()
@@ -193,23 +193,23 @@ fn torus(builder: &mut Builder) -> Shell {
 #[allow(dead_code)]
 fn half_torus(builder: &mut Builder) -> Solid {
     let v = vec![
-        builder.vertex(Vector3::new(0.0, 0.0, 1.0)).unwrap(),
-        builder.vertex(Vector3::new(0.0, 0.0, 3.0)).unwrap(),
+        builder.vertex(vector_new!(0.0, 0.0, 1.0)).unwrap(),
+        builder.vertex(vector_new!(0.0, 0.0, 3.0)).unwrap(),
     ];
     let wire = Wire::from_iter(&[
         builder
-            .circle_arc(v[0], v[1], &Vector3::new(0.0, 1.0, 2.0))
+            .circle_arc(v[0], v[1], &vector_new!(0.0, 1.0, 2.0))
             .unwrap(),
         builder
-            .circle_arc(v[1], v[0], &Vector3::new(0.0, -1.0, 2.0))
+            .circle_arc(v[1], v[0], &vector_new!(0.0, -1.0, 2.0))
             .unwrap(),
     ]);
     let face = builder.plane(wire).unwrap();
     builder
         .rsweep(
             face,
-            &Vector3::new(0, 0, 0),
-            &Vector3::new(0, 1, 0),
+            &vector_new!(0, 0, 0),
+            &vector_new!(0, 1, 0),
             std::f64::consts::PI,
         )
         .unwrap()
@@ -218,23 +218,23 @@ fn half_torus(builder: &mut Builder) -> Solid {
 #[allow(dead_code)]
 fn truck_torus(builder: &mut Builder) -> Solid {
     let v: Vec<Vertex> = vec![
-        builder.vertex(Vector3::new(0, 0, 4)).unwrap(),
-        builder.vertex(Vector3::new(4, 0, 4)).unwrap(),
-        builder.vertex(Vector3::new(1, 0, 6)).unwrap(),
-        builder.vertex(Vector3::new(3, 0, 6)).unwrap(),
+        builder.vertex(vector_new!(0, 0, 4)).unwrap(),
+        builder.vertex(vector_new!(4, 0, 4)).unwrap(),
+        builder.vertex(vector_new!(1, 0, 6)).unwrap(),
+        builder.vertex(vector_new!(3, 0, 6)).unwrap(),
     ];
     let edge = vec![
         builder.line(v[1], v[0]).unwrap(),
         builder
-            .circle_arc(v[3], v[2], &Vector3::new(2, 0, 5))
+            .circle_arc(v[3], v[2], &vector_new!(2, 0, 5))
             .unwrap(),
     ];
     let mut shell = builder.homotopy(&edge[0], &edge[1]).unwrap();
     let face1 = builder
         .rotated(
             &shell[0],
-            &Vector3::new(2.0, 0.0, 7.5),
-            &Vector3::new(0.0, 1.0, 0.0),
+            &vector_new!(2.0, 0.0, 7.5),
+            &vector_new!(0.0, 1.0, 0.0),
             std::f64::consts::PI,
         )
         .unwrap();
@@ -244,7 +244,7 @@ fn truck_torus(builder: &mut Builder) -> Solid {
     let face3 = builder.homotopy(&wire0[3].inverse(), &wire1[1]).unwrap()[0].clone();
     shell.append(&mut vec![face1, face2, face3].into());
     builder
-        .rsweep(shell, &Vector3::zero(), &Vector3::new(1, 0, 0), -PI * 2.0)
+        .rsweep(shell, &Vector3::zero(), &vector_new!(1, 0, 0), -PI * 2.0)
         .unwrap()
         .pop()
         .unwrap()
@@ -252,16 +252,16 @@ fn truck_torus(builder: &mut Builder) -> Solid {
 
 #[allow(dead_code)]
 fn vase(builder: &mut Builder) -> Shell {
-    let v0 = builder.vertex(Vector3::new(0, 0, 0)).unwrap();
-    let v1 = builder.vertex(Vector3::new(1, 0, 0)).unwrap();
-    let v2 = builder.vertex(Vector3::new(1.5, 3.0, 0.0)).unwrap();
+    let v0 = builder.vertex(vector_new!(0, 0, 0)).unwrap();
+    let v1 = builder.vertex(vector_new!(1, 0, 0)).unwrap();
+    let v2 = builder.vertex(vector_new!(1.5, 3.0, 0.0)).unwrap();
     let origin = &Vector3::zero();
-    let axis = &Vector3::new(0, 1, 0);
+    let axis = &vector_new!(0, 1, 0);
     let edge0 = builder.line(v0, v1).unwrap();
     let inter_points = vec![
-        Vector3::new(2.0, 0.5, 0.0),
-        Vector3::new(1.2, 3.5, 0.0),
-        Vector3::new(1.5, 3.5, 0.0),
+        vector_new!(2.0, 0.5, 0.0),
+        vector_new!(1.2, 3.5, 0.0),
+        vector_new!(1.5, 3.5, 0.0),
     ];
     let edge1 = builder.bezier(v1, v2, inter_points).unwrap();
     let wire = Wire::from_iter(&[edge0, edge1]);

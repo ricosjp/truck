@@ -1,5 +1,5 @@
-use crate::Transform;
-use geometry::*;
+use crate::*;
+use geometry::{Vector3, KnotVec, Tolerance};
 use std::f64::consts::PI;
 
 pub(super) fn line(pt0: Vector, pt1: Vector) -> BSplineCurve {
@@ -14,9 +14,9 @@ pub(super) fn circle_arc_by_three_points(
 ) -> BSplineCurve
 {
     let tmp = point0.projection();
-    let pt0 = Vector3::new(tmp[0], tmp[1], tmp[2]);
+    let pt0 = vector_new!(tmp[0], tmp[1], tmp[2]);
     let tmp = point1.projection();
-    let pt1 = Vector3::new(tmp[0], tmp[1], tmp[2]);
+    let pt1 = vector_new!(tmp[0], tmp[1], tmp[2]);
     let origin = circum_center(&pt0, &pt1, transit);
     let vec0 = &pt0 - transit;
     let vec1 = &pt1 - transit;
@@ -51,12 +51,12 @@ pub(super) fn circle_arc(
         Transform::identity()
     } else {
         let axis_angle = axis[2].acos();
-        let mut axis_axis = Vector3::new(-axis[1], axis[0], 0.0);
+        let mut axis_axis = vector_new!(-axis[1], axis[0], 0.0);
         axis_axis /= axis_axis.norm();
         Transform::rotate(&axis_axis, axis_angle) * Transform::translate(&origin)
     };
     let trsf_inverse = &axis_trsf.inverse().unwrap();
-    let rotation = Transform::rotate(&Vector3::new(0, 0, 1), angle / 2.0);
+    let rotation = Transform::rotate(&vector_new!(0, 0, 1), angle / 2.0);
     let rotation2 = &rotation * &rotation * &axis_trsf;
     let cos = (angle / 2.0).cos();
     let pt = point * &trsf_inverse.0;

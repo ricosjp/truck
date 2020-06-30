@@ -1,5 +1,5 @@
-use crate::Transform;
-use geometry::*;
+use crate::*;
+use geometry::{Matrix, Vector3};
 
 impl Transform {
     #[inline(always)]

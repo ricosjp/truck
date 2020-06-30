@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::elements::TopologicalElement;
-use crate::{Director, Result};
-use geometry::{BSplineCurve, BSplineSurface, Tolerance};
+use crate::{Director, Result, BSplineCurve, BSplineSurface};
+use geometry::Tolerance;
 use std::iter::FromIterator;
 use topology::*;
 

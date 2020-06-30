@@ -1,4 +1,4 @@
-use crate::Director;
+use crate::{Director, Vector, BSplineCurve, BSplineSurface};
 use crate::errors::Error;
 use std::iter::FromIterator;
 use geometry::*;

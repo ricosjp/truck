@@ -1,5 +1,4 @@
 use crate::Error;
-use geometry::{Vector2, Vector3};
 use polymesh::PolygonMesh;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 
@@ -194,19 +193,19 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
         let mut args = line.split_whitespace();
         if let Some(first_str) = args.next() {
             if first_str == "v" {
-                let x = args.next().unwrap().parse()?;
-                let y = args.next().unwrap().parse()?;
-                let z = args.next().unwrap().parse()?;
-                mesh.positions.push(Vector3::new::<f64>(x, y, z));
+                let x = args.next().unwrap().parse::<f64>()?;
+                let y = args.next().unwrap().parse::<f64>()?;
+                let z = args.next().unwrap().parse::<f64>()?;
+                mesh.positions.push(vector_new!(x, y, z));
             } else if first_str == "vt" {
-                let u = args.next().unwrap().parse()?;
-                let v = args.next().unwrap().parse()?;
-                mesh.uv_coords.push(Vector2::new::<f64>(u, v));
+                let u = args.next().unwrap().parse::<f64>()?;
+                let v = args.next().unwrap().parse::<f64>()?;
+                mesh.uv_coords.push(vector_new!(u, v));
             } else if first_str == "vn" {
-                let x = args.next().unwrap().parse()?;
-                let y = args.next().unwrap().parse()?;
-                let z = args.next().unwrap().parse()?;
-                mesh.normals.push(Vector3::new::<f64>(x, y, z));
+                let x = args.next().unwrap().parse::<f64>()?;
+                let y = args.next().unwrap().parse::<f64>()?;
+                let z = args.next().unwrap().parse::<f64>()?;
+                mesh.normals.push(vector_new!(x, y, z));
             } else if first_str == "f" {
                 let mut face = Vec::new();
                 for vert_str in args {
