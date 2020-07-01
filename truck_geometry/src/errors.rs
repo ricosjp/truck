@@ -2,7 +2,6 @@ use crate::*;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    IrregularMatrix(Matrix),
     ZeroRange,
     DifferentBackFront(f64, f64),
     NotClampedKnotVector(Vec<f64>, Vec<f64>),
@@ -22,7 +21,6 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Error::IrregularMatrix(mat) => f.write_fmt(format_args!("This matrix is irregular.\n{}", mat)),
             Error::ZeroRange => f.pad("This knot vector consists single value."),
             Error::DifferentBackFront(knot0, knot1) => f.pad(&format!("Cannot concat two knot vectors whose the back of the first and the front of the second are different.\nthe back of the first knot vector: {}\nthe front of the second knot vector: {}", knot0, knot1)),
             Error::NotClampedKnotVector(_, _) => f.pad("This knot vector is not clamped."),

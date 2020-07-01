@@ -9,11 +9,11 @@ const EXPORT_PATH: &str = "tests/data/examples.tgb";
 fn typical_2degree_curve() -> BSplineCurve {
     let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]);
     let control_points = vec![
-        vector_new!(0.0, 0.0, 0.0, 0.0),
-        vector_new!(1.0, 0.0, 0.0, 0.0),
-        vector_new!(0.0, 1.0, 0.0, 0.0),
-        vector_new!(0.0, 0.0, 1.0, 0.0),
-        vector_new!(0.0, 0.0, 0.0, 1.0),
+        vector!(0.0, 0.0, 0.0, 0.0),
+        vector!(1.0, 0.0, 0.0, 0.0),
+        vector!(0.0, 1.0, 0.0, 0.0),
+        vector!(0.0, 0.0, 1.0, 0.0),
+        vector!(0.0, 0.0, 0.0, 1.0),
     ];
 
     BSplineCurve::new(knot_vec, control_points)
@@ -103,26 +103,26 @@ fn one_sheet_hyperboloid() -> BSplineSurface {
 
     // the control points
     let control_points0 = vec![
-        vector_new!(0.0, -2.0, 2.0, 2.0),
-        vector_new!(1.0, -1.0, 1.0, 1.0),
-        vector_new!(1.0, 0.0, 1.0, 1.0),
-        vector_new!(1.0, 1.0, 1.0, 1.0),
-        vector_new!(0.0, 2.0, 2.0, 2.0),
-        vector_new!(-1.0, 1.0, 1.0, 1.0),
-        vector_new!(-1.0, 0.0, 1.0, 1.0),
-        vector_new!(-1.0, -1.0, 1.0, 1.0),
-        vector_new!(0.0, -2.0, 2.0, 2.0),
+        vector!(0.0, -2.0, 2.0, 2.0),
+        vector!(1.0, -1.0, 1.0, 1.0),
+        vector!(1.0, 0.0, 1.0, 1.0),
+        vector!(1.0, 1.0, 1.0, 1.0),
+        vector!(0.0, 2.0, 2.0, 2.0),
+        vector!(-1.0, 1.0, 1.0, 1.0),
+        vector!(-1.0, 0.0, 1.0, 1.0),
+        vector!(-1.0, -1.0, 1.0, 1.0),
+        vector!(0.0, -2.0, 2.0, 2.0),
     ];
     let control_points1 = vec![
-        vector_new!(2.0, 0.0, -2.0, 2.0),
-        vector_new!(1.0, 1.0, -1.0, 1.0),
-        vector_new!(0.0, 1.0, -1.0, 1.0),
-        vector_new!(-1.0, 1.0, -1.0, 1.0),
-        vector_new!(-2.0, 0.0, -2.0, 2.0),
-        vector_new!(-1.0, -1.0, -1.0, 1.0),
-        vector_new!(0.0, -1.0, -1.0, 1.0),
-        vector_new!(1.0, -1.0, -1.0, 1.0),
-        vector_new!(2.0, 0.0, -2.0, 2.0),
+        vector!(2.0, 0.0, -2.0, 2.0),
+        vector!(1.0, 1.0, -1.0, 1.0),
+        vector!(0.0, 1.0, -1.0, 1.0),
+        vector!(-1.0, 1.0, -1.0, 1.0),
+        vector!(-2.0, 0.0, -2.0, 2.0),
+        vector!(-1.0, -1.0, -1.0, 1.0),
+        vector!(0.0, -1.0, -1.0, 1.0),
+        vector!(1.0, -1.0, -1.0, 1.0),
+        vector!(2.0, 0.0, -2.0, 2.0),
     ];
 
     // construct the B-spline surface
@@ -135,21 +135,21 @@ fn disk() -> BSplineSurface {
     let knot_vec1 = knot_vec0.clone();
 
     let control_points0 = vec![
-        vector_new!(1.0, 0.0, 0.0, 1.0),
-        vector_new!(1.0, 0.0, 1.0, 1.0),
-        vector_new!(0.0, 0.0, 2.0, 2.0),
+        vector!(1.0, 0.0, 0.0, 1.0),
+        vector!(1.0, 0.0, 1.0, 1.0),
+        vector!(0.0, 0.0, 2.0, 2.0),
     ];
 
     let control_points1 = vec![
-        vector_new!(1.0, 0.0, -1.0, 1.0),
-        vector_new!(0.0, 0.0, 0.0, 1.0),
-        vector_new!(-2.0, 0.0, 2.0, 2.0),
+        vector!(1.0, 0.0, -1.0, 1.0),
+        vector!(0.0, 0.0, 0.0, 1.0),
+        vector!(-2.0, 0.0, 2.0, 2.0),
     ];
 
     let control_points2 = vec![
-        vector_new!(0.0, 0.0, -2.0, 2.0),
-        vector_new!(-2.0, 0.0, -2.0, 2.0),
-        vector_new!(-4.0, 0.0, 0.0, 4.0),
+        vector!(0.0, 0.0, -2.0, 2.0),
+        vector!(-2.0, 0.0, -2.0, 2.0),
+        vector!(-4.0, 0.0, 0.0, 4.0),
     ];
 
     let control_points = vec![control_points0, control_points1, control_points2];

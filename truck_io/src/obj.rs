@@ -196,16 +196,16 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
                 let x = args.next().unwrap().parse::<f64>()?;
                 let y = args.next().unwrap().parse::<f64>()?;
                 let z = args.next().unwrap().parse::<f64>()?;
-                mesh.positions.push(vector_new!(x, y, z));
+                mesh.positions.push(vector!(x, y, z));
             } else if first_str == "vt" {
                 let u = args.next().unwrap().parse::<f64>()?;
                 let v = args.next().unwrap().parse::<f64>()?;
-                mesh.uv_coords.push(vector_new!(u, v));
+                mesh.uv_coords.push(vector!(u, v));
             } else if first_str == "vn" {
                 let x = args.next().unwrap().parse::<f64>()?;
                 let y = args.next().unwrap().parse::<f64>()?;
                 let z = args.next().unwrap().parse::<f64>()?;
-                mesh.normals.push(vector_new!(x, y, z));
+                mesh.normals.push(vector!(x, y, z));
             } else if first_str == "f" {
                 let mut face = Vec::new();
                 for vert_str in args {

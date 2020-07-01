@@ -1,9 +1,8 @@
 use crate::errors::Error;
 use crate::tolerance::inv_or_zero;
 use crate::*;
-use crate::vector::VectorEntity;
 
-impl<T: VectorEntity> BSplineCurve<T> {
+impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// constructor.
     /// # Arguments
     /// * `knot_vec` - the knot vector
@@ -943,67 +942,93 @@ impl<T: VectorEntity> BSplineCurve<T> {
     }
 }
 
-impl std::ops::MulAssign<&Matrix> for BSplineCurve<[f64; 4]> {
+impl<T, M> std::ops::MulAssign<&Matrix<T, M>> for BSplineCurve<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul_assign(&mut self, mat: &Matrix) {
-        for vec in &mut self.control_points {
-            *vec *= mat;
-        }
+    fn mul_assign(&mut self, mat: &Matrix<T, M>) {
+        self.control_points.iter_mut().for_each(|vec| *vec *= mat);
     }
 }
 
-impl std::ops::MulAssign<Matrix> for BSplineCurve<[f64; 4]> {
+impl<T, M> std::ops::MulAssign<Matrix<T, M>> for BSplineCurve<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul_assign(&mut self, mat: Matrix) { self.mul_assign(&mat); }
+    fn mul_assign(&mut self, mat: Matrix<T, M>) { self.mul_assign(&mat); }
 }
 
-impl std::ops::Mul<&Matrix> for &BSplineCurve<[f64; 4]> {
-    type Output = BSplineCurve<[f64; 4]>;
+impl<T, M> std::ops::Mul<&Matrix<T, M>> for &BSplineCurve<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(self, mat: &Matrix) -> BSplineCurve<[f64; 4]> {
+    fn mul(self, mat: &Matrix<T, M>) -> BSplineCurve<T> {
         let mut new_spline = self.clone();
         new_spline *= mat;
         new_spline
     }
 }
 
-impl std::ops::Mul<Matrix> for &BSplineCurve<[f64; 4]> {
-    type Output = BSplineCurve<[f64; 4]>;
+impl<T, M> std::ops::Mul<Matrix<T, M>> for &BSplineCurve<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(self, mat: Matrix) -> BSplineCurve<[f64; 4]> { self * &mat }
+    fn mul(self, mat: Matrix<T, M>) -> BSplineCurve<T> { self * &mat }
 }
 
-impl std::ops::Mul<&Matrix> for BSplineCurve<[f64; 4]> {
-    type Output = BSplineCurve<[f64; 4]>;
+impl<T, M> std::ops::Mul<&Matrix<T, M>> for BSplineCurve<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(mut self, mat: &Matrix) -> BSplineCurve<[f64; 4]> {
+    fn mul(mut self, mat: &Matrix<T, M>) -> BSplineCurve<T> {
         self *= mat;
         self
     }
 }
 
-impl std::ops::Mul<Matrix> for BSplineCurve<[f64; 4]> {
-    type Output = BSplineCurve<[f64; 4]>;
+impl<T, M> std::ops::Mul<Matrix<T, M>> for BSplineCurve<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(self, mat: Matrix) -> BSplineCurve<[f64; 4]> { self * &mat }
+    fn mul(self, mat: Matrix<T, M>) -> BSplineCurve<T> { self * &mat }
 }
 
-impl std::ops::Mul<&BSplineCurve<[f64; 4]>> for &Matrix {
-    type Output = BSplineCurve<[f64; 4]>;
+impl<T, M> std::ops::Mul<&BSplineCurve<T>> for &Matrix<T, M>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, bspline: &BSplineCurve<[f64; 4]>) -> BSplineCurve<[f64; 4]> {
+    fn mul(self, bspline: &BSplineCurve<T>) -> BSplineCurve<T> {
         let mut new_spline = bspline.clone();
         for vec in &mut new_spline.control_points {
             *vec = self * &*vec;
@@ -1012,20 +1037,28 @@ impl std::ops::Mul<&BSplineCurve<[f64; 4]>> for &Matrix {
     }
 }
 
-impl std::ops::Mul<&BSplineCurve<[f64; 4]>> for Matrix {
-    type Output = BSplineCurve<[f64; 4]>;
+impl<T, M> std::ops::Mul<&BSplineCurve<T>> for Matrix<T, M>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, bspline: &BSplineCurve<[f64; 4]>) -> BSplineCurve<[f64; 4]> { &self * bspline }
+    fn mul(self, bspline: &BSplineCurve<T>) -> BSplineCurve<T> { &self * bspline }
 }
 
-impl std::ops::Mul<BSplineCurve<[f64; 4]>> for &Matrix {
-    type Output = BSplineCurve<[f64; 4]>;
+impl<T, M> std::ops::Mul<BSplineCurve<T>> for &Matrix<T, M>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, mut bspline: BSplineCurve<[f64; 4]>) -> BSplineCurve<[f64; 4]> {
+    fn mul(self, mut bspline: BSplineCurve<T>) -> BSplineCurve<T> {
         for vec in &mut bspline.control_points {
             *vec = self * &*vec;
         }
@@ -1033,15 +1066,19 @@ impl std::ops::Mul<BSplineCurve<[f64; 4]>> for &Matrix {
     }
 }
 
-impl std::ops::Mul<BSplineCurve<[f64; 4]>> for Matrix {
-    type Output = BSplineCurve<[f64; 4]>;
+impl<T, M> std::ops::Mul<BSplineCurve<T>> for Matrix<T, M>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, bspline: BSplineCurve<[f64; 4]>) -> BSplineCurve<[f64; 4]> { &self * bspline }
+    fn mul(self, bspline: BSplineCurve<T>) -> BSplineCurve<T> { &self * bspline }
 }
 
-impl<T: VectorEntity> std::ops::Mul<&BSplineCurve<T>> for &BSplineCurve<T> {
+impl<T: EntityArray<f64>> std::ops::Mul<&BSplineCurve<T>> for &BSplineCurve<T> {
     type Output = BSplineSurface<T>;
 
     /// tensor surface
@@ -1059,7 +1096,7 @@ impl<T: VectorEntity> std::ops::Mul<&BSplineCurve<T>> for &BSplineCurve<T> {
     }
 }
 
-impl<T: VectorEntity> std::ops::MulAssign<f64> for BSplineCurve<T> {
+impl<T: EntityArray<f64>> std::ops::MulAssign<f64> for BSplineCurve<T> {
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
     fn mul_assign(&mut self, scalar: f64) {
@@ -1069,7 +1106,7 @@ impl<T: VectorEntity> std::ops::MulAssign<f64> for BSplineCurve<T> {
     }
 }
 
-impl<T: VectorEntity> std::ops::Mul<f64> for &BSplineCurve<T> {
+impl<T: EntityArray<f64>> std::ops::Mul<f64> for &BSplineCurve<T> {
     type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts to each control points.
@@ -1081,7 +1118,7 @@ impl<T: VectorEntity> std::ops::Mul<f64> for &BSplineCurve<T> {
     }
 }
 
-impl<T: VectorEntity> std::ops::Mul<f64> for BSplineCurve<T> {
+impl<T: EntityArray<f64>> std::ops::Mul<f64> for BSplineCurve<T> {
     type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts to each control points.
@@ -1092,7 +1129,7 @@ impl<T: VectorEntity> std::ops::Mul<f64> for BSplineCurve<T> {
     }
 }
 
-impl<T: VectorEntity> std::ops::Mul<&BSplineCurve<T>> for f64 {
+impl<T: EntityArray<f64>> std::ops::Mul<&BSplineCurve<T>> for f64 {
     type Output = BSplineCurve<T>;
 
     /// A matrix `mat` acts on each control points.
@@ -1112,14 +1149,14 @@ fn test_near_as_curve() {
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
     let control_points = vec![
-        vector_new!(1.0, 0.0, 0.0, 0.0),
-        vector_new!(0.0, 1.0, 0.0, 0.0),
-        vector_new!(0.0, 0.0, 1.0, 0.0),
-        vector_new!(0.0, 0.0, 0.0, 1.0),
-        vector_new!(1.0, 1.0, 0.0, 0.0),
-        vector_new!(1.0, 0.0, 1.0, 0.0),
-        vector_new!(1.0, 0.0, 0.0, 1.0),
-        vector_new!(1.0, 1.0, 1.0, 0.0),
+        vector!(1.0, 0.0, 0.0, 0.0),
+        vector!(0.0, 1.0, 0.0, 0.0),
+        vector!(0.0, 0.0, 1.0, 0.0),
+        vector!(0.0, 0.0, 0.0, 1.0),
+        vector!(1.0, 1.0, 0.0, 0.0),
+        vector!(1.0, 0.0, 1.0, 0.0),
+        vector!(1.0, 0.0, 0.0, 1.0),
+        vector!(1.0, 1.0, 1.0, 0.0),
     ];
     let bspline0 = BSplineCurve::new(knot_vec, control_points.clone());
     let knot_vec = KnotVec::from(vec![
@@ -1141,14 +1178,14 @@ fn test_near_as_curve() {
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
     let control_points = vec![
-        vector_new!(1.0, 0.0, 0.0, 0.0),
-        vector_new!(0.0, 1.0, 0.0, 0.0),
-        vector_new!(0.0, 0.0, 1.0, 0.0),
-        vector_new!(0.0, 0.0, 0.0, 1.0),
-        vector_new!(1.0, 1.01, 0.0, 0.0),
-        vector_new!(1.0, 0.0, 1.0, 0.0),
-        vector_new!(1.0, 0.0, 0.0, 1.0),
-        vector_new!(1.0, 1.0, 1.0, 0.0),
+        vector!(1.0, 0.0, 0.0, 0.0),
+        vector!(0.0, 1.0, 0.0, 0.0),
+        vector!(0.0, 0.0, 1.0, 0.0),
+        vector!(0.0, 0.0, 0.0, 1.0),
+        vector!(1.0, 1.01, 0.0, 0.0),
+        vector!(1.0, 0.0, 1.0, 0.0),
+        vector!(1.0, 0.0, 0.0, 1.0),
+        vector!(1.0, 1.0, 1.0, 0.0),
     ];
     let bspline2 = BSplineCurve::new(knot_vec, control_points.clone());
     assert!(bspline0.near_as_curve(&bspline1));

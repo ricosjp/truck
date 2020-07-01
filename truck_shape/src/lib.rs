@@ -4,7 +4,7 @@ extern crate truck_polymesh as polymesh;
 extern crate truck_topology as topology;
 use std::collections::HashMap;
 
-use geometry::Matrix;
+use geometry::Matrix4;
 type Vector = geometry::Vector4;
 type BSplineCurve = geometry::BSplineCurve<[f64; 4]>;
 type BSplineSurface = geometry::BSplineSurface<[f64; 4]>;
@@ -25,7 +25,7 @@ pub struct Mesher<'a> {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct Transform(Matrix);
+pub struct Transform(Matrix4);
 
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 

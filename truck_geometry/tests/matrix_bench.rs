@@ -1,20 +1,28 @@
+mod vector_bench;
+use truck_geometry::{Origin, Tolerance};
 use vector_bench::*;
+
+/// 4x4 matrix
+#[derive(Clone, PartialEq, Debug)]
+pub struct Matrix {
+    a: [[f64; 4]; 4],
+}
 
 impl Matrix {
     /// construct a matrix by rows
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [5.0, 6.0, 7.0, 8.0];
     /// let ar2 = [-1.0, -2.0, -3.0, -4.0];
     /// let ar3 = [-5.0, -6.0, -7.0, -8.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let v0 = vector_new!(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = vector_new!(5.0, 6.0, 7.0, 8.0);
-    /// let v2 = vector_new!(-1.0, -2.0, -3.0, -4.0);
-    /// let v3 = vector_new!(-5.0, -6.0, -7.0, -8.0);
+    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+    /// let v1 = Vector::new(5.0, 6.0, 7.0, 8.0);
+    /// let v2 = Vector::new(-1.0, -2.0, -3.0, -4.0);
+    /// let v3 = Vector::new(-5.0, -6.0, -7.0, -8.0);
     /// let mat1 = Matrix::by_rows(v0, v1, v2, v3);
     /// assert_eq!(mat0, mat1);
     /// ```
@@ -28,40 +36,40 @@ impl Matrix {
     /// construct a matrix by rows
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [5.0, 6.0, 7.0, 8.0];
     /// let ar2 = [-1.0, -2.0, -3.0, -4.0];
     /// let ar3 = [-5.0, -6.0, -7.0, -8.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let v0 = vector_new!(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = vector_new!(5.0, 6.0, 7.0, 8.0);
-    /// let v2 = vector_new!(-1.0, -2.0, -3.0, -4.0);
-    /// let v3 = vector_new!(-5.0, -6.0, -7.0, -8.0);
+    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+    /// let v1 = Vector::new(5.0, 6.0, 7.0, 8.0);
+    /// let v2 = Vector::new(-1.0, -2.0, -3.0, -4.0);
+    /// let v3 = Vector::new(-5.0, -6.0, -7.0, -8.0);
     /// let mat1 = Matrix::by_rows(v0, v1, v2, v3);
     /// assert_eq!(mat0, mat1);
     /// ```
     #[inline(always)]
-    pub fn by_rows(v0: Vector4, v1: Vector4, v2: Vector4, v3: Vector4) -> Matrix {
+    pub fn by_rows(v0: Vector, v1: Vector, v2: Vector, v3: Vector) -> Matrix {
         Matrix::new(v0.into(), v1.into(), v2.into(), v3.into())
     }
 
     /// construct a matrix by rows
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let v0 = vector_new!(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = vector_new!(5.0, 6.0, 7.0, 8.0);
-    /// let v2 = vector_new!(-1.0, -2.0, -3.0, -4.0);
-    /// let v3 = vector_new!(-5.0, -6.0, -7.0, -8.0);
+    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+    /// let v1 = Vector::new(5.0, 6.0, 7.0, 8.0);
+    /// let v2 = Vector::new(-1.0, -2.0, -3.0, -4.0);
+    /// let v3 = Vector::new(-5.0, -6.0, -7.0, -8.0);
     /// let mat0 = Matrix::by_rows_ref(&v0, &v1, &v2, &v3);
     /// let mat1 = Matrix::by_rows(v0, v1, v2, v3);
     /// assert_eq!(mat0, mat1);
     /// ```
     #[inline(always)]
-    pub fn by_rows_ref(v0: &Vector4, v1: &Vector4, v2: &Vector4, v3: &Vector4) -> Matrix {
+    pub fn by_rows_ref(v0: &Vector, v1: &Vector, v2: &Vector, v3: &Vector) -> Matrix {
         Matrix::new(
             v0.clone().into(),
             v1.clone().into(),
@@ -73,22 +81,22 @@ impl Matrix {
     /// construct a matrix by columns
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let v0 = vector_new!(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = vector_new!(5.0, 6.0, 7.0, 8.0);
-    /// let v2 = vector_new!(-1.0, -2.0, -3.0, -4.0);
-    /// let v3 = vector_new!(-5.0, -6.0, -7.0, -8.0);
+    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+    /// let v1 = Vector::new(5.0, 6.0, 7.0, 8.0);
+    /// let v2 = Vector::new(-1.0, -2.0, -3.0, -4.0);
+    /// let v3 = Vector::new(-5.0, -6.0, -7.0, -8.0);
     /// let mat0 = Matrix::by_rows_ref(&v0, &v1, &v2, &v3);
-    /// let v0 = vector_new!(1.0, 5.0, -1.0, -5.0);
-    /// let v1 = vector_new!(2.0, 6.0, -2.0, -6.0);
-    /// let v2 = vector_new!(3.0, 7.0, -3.0, -7.0);
-    /// let v3 = vector_new!(4.0, 8.0, -4.0, -8.0);
+    /// let v0 = Vector::new(1.0, 5.0, -1.0, -5.0);
+    /// let v1 = Vector::new(2.0, 6.0, -2.0, -6.0);
+    /// let v2 = Vector::new(3.0, 7.0, -3.0, -7.0);
+    /// let v3 = Vector::new(4.0, 8.0, -4.0, -8.0);
     /// let mat1 = Matrix::by_columns(&v0, &v1, &v2, &v3);
     /// assert_eq!(mat0, mat1);
     /// ```
     #[inline(always)]
-    pub fn by_columns(v0: &Vector4, v1: &Vector4, v2: &Vector4, v3: &Vector4) -> Matrix {
+    pub fn by_columns(v0: &Vector, v1: &Vector, v2: &Vector, v3: &Vector) -> Matrix {
         Matrix {
             a: [
                 [v0[0], v1[0], v2[0], v3[0]],
@@ -150,12 +158,12 @@ impl Matrix {
     /// construct a diagonal matrix
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let v0 = vector_new!(1.0, 1.0, 1.0, 1.0);
+    /// let v0 = Vector::new(1.0, 1.0, 1.0, 1.0);
     /// let mat = Matrix::diagonal(2.0, 3.0, 4.0, 5.0);
     /// let v = mat * v0;
-    /// assert_eq!(v, vector_new!(2.0, 3.0, 4.0, 5.0));
+    /// assert_eq!(v, Vector::new(2.0, 3.0, 4.0, 5.0));
     /// ```
     #[inline(always)]
     pub fn diagonal(a: f64, b: f64, c: f64, d: f64) -> Matrix {
@@ -168,48 +176,47 @@ impl Matrix {
             ],
         }
     }
-    
     /// extract a row vector
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [5.0, 6.0, 7.0, 8.0];
     /// let ar2 = [-1.0, -2.0, -3.0, -4.0];
     /// let ar3 = [-5.0, -6.0, -7.0, -8.0];
     /// let mat = Matrix::new(ar0, ar1, ar2, ar3);
-    /// assert_eq!(mat.row(1), vector_new!(5.0, 6.0, 7.0, 8.0));
+    /// assert_eq!(mat.row(1), Vector::new(5.0, 6.0, 7.0, 8.0));
     /// ```
     #[inline(always)]
-    pub fn row(&self, idx: usize) -> Vector4 { Vector4::from(&self[idx]) }
+    pub fn row(&self, idx: usize) -> Vector { Vector::from(&self[idx]) }
 
     /// extract a column vector
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [5.0, 6.0, 7.0, 8.0];
     /// let ar2 = [-1.0, -2.0, -3.0, -4.0];
     /// let ar3 = [-5.0, -6.0, -7.0, -8.0];
     /// let mat = Matrix::new(ar0, ar1, ar2, ar3);
-    /// assert_eq!(mat.column(0), vector_new!(1.0, 5.0, -1.0, -5.0));
+    /// assert_eq!(mat.column(0), Vector::new(1.0, 5.0, -1.0, -5.0));
     /// ```
     #[inline(always)]
-    pub fn column(&self, idx: usize) -> Vector4 {
-        vector_new!(self[0][idx], self[1][idx], self[2][idx], self[3][idx])
+    pub fn column(&self, idx: usize) -> Vector {
+        Vector::new(self[0][idx], self[1][idx], self[2][idx], self[3][idx])
     }
 
     /// transpose
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let v0 = vector_new!(1.0, 2.0, 3.0, 4.0);
-    /// let v1 = vector_new!(5.0, 6.0, 7.0, 8.0);
-    /// let v2 = vector_new!(-1.0, -2.0, -3.0, -4.0);
-    /// let v3 = vector_new!(-5.0, -6.0, -7.0, -8.0);
+    /// let v0 = Vector::new(1.0, 2.0, 3.0, 4.0);
+    /// let v1 = Vector::new(5.0, 6.0, 7.0, 8.0);
+    /// let v2 = Vector::new(-1.0, -2.0, -3.0, -4.0);
+    /// let v3 = Vector::new(-5.0, -6.0, -7.0, -8.0);
     /// let mat0 = Matrix::by_rows_ref(&v0, &v1, &v2, &v3);
     /// let mat1 = Matrix::by_columns(&v0, &v1, &v2, &v3);
     /// assert_eq!(mat0.transpose(), mat1);
@@ -223,7 +230,6 @@ impl Matrix {
             self.column(3),
         )
     }
-    
     /// calculate trace
     /// #Examples
     /// ```
@@ -277,11 +283,11 @@ impl Matrix {
             + self[3][0] * self[0][1] * self[2][2] * self[1][3]
     }
 
-    /// calculate `x: Vector4` such that `x * self = b`
-    pub fn solve(&self, b: &Vector4) -> Result<Vector4> {
+    /// calculate `x: Vector` such that `x * self = b`
+    pub fn solve(&self, b: &Vector) -> Option<Vector> {
         let det = self.determinant();
         if det.so_small() {
-            return Err(Error::IrregularMatrix(self.clone()));
+            return None;
         }
 
         let vec0 = self.row(0);
@@ -293,7 +299,7 @@ impl Matrix {
         let det2 = Matrix::by_rows_ref(&vec0, &vec1, &b, &vec3).determinant() / det;
         let det3 = Matrix::by_rows_ref(&vec0, &vec1, &vec2, &b).determinant() / det;
 
-        Ok(vector_new!(det0, det1, det2, det3))
+        Some(Vector::new(det0, det1, det2, det3))
     }
 
     /// calculate inverse  
@@ -311,20 +317,20 @@ impl Matrix {
     /// Matrix::assert_near2(&(mat * mat_inv), &Matrix::identity());
     /// ```
     #[inline(always)]
-    pub fn inverse(&self) -> Result<Matrix> {
+    pub fn inverse(&self) -> Option<Matrix> {
         let det = self.determinant();
         if det.so_small() {
-            return Err(Error::IrregularMatrix(self.clone()));
+            return None;
         }
 
         let vec0 = self.row(0);
         let vec1 = self.row(1);
         let vec2 = self.row(2);
         let vec3 = self.row(3);
-        let e0 = vector_new!(1.0, 0.0, 0.0, 0.0);
-        let e1 = vector_new!(0.0, 1.0, 0.0, 0.0);
-        let e2 = vector_new!(0.0, 0.0, 1.0, 0.0);
-        let e3 = vector_new!(0.0, 0.0, 0.0, 1.0);
+        let e0 = Vector::new(1.0, 0.0, 0.0, 0.0);
+        let e1 = Vector::new(0.0, 1.0, 0.0, 0.0);
+        let e2 = Vector::new(0.0, 0.0, 1.0, 0.0);
+        let e3 = Vector::new(0.0, 0.0, 0.0, 1.0);
         let mat00 = Matrix::by_rows_ref(&e0, &vec1, &vec2, &vec3);
         let mat01 = Matrix::by_rows_ref(&vec0, &e0, &vec2, &vec3);
         let mat02 = Matrix::by_rows_ref(&vec0, &vec1, &e0, &vec3);
@@ -341,34 +347,35 @@ impl Matrix {
         let mat31 = Matrix::by_rows_ref(&vec0, &e3, &vec2, &vec3);
         let mat32 = Matrix::by_rows_ref(&vec0, &vec1, &e3, &vec3);
         let mat33 = Matrix::by_rows_ref(&vec0, &vec1, &vec2, &e3);
-        Ok(Matrix::new(
-            [
-                mat00.determinant(),
-                mat01.determinant(),
-                mat02.determinant(),
-                mat03.determinant(),
-            ],
-            [
-                mat10.determinant(),
-                mat11.determinant(),
-                mat12.determinant(),
-                mat13.determinant(),
-            ],
-            [
-                mat20.determinant(),
-                mat21.determinant(),
-                mat22.determinant(),
-                mat23.determinant(),
-            ],
-            [
-                mat30.determinant(),
-                mat31.determinant(),
-                mat32.determinant(),
-                mat33.determinant(),
-            ],
-        ) / det)
+        Some(
+            Matrix::new(
+                [
+                    mat00.determinant(),
+                    mat01.determinant(),
+                    mat02.determinant(),
+                    mat03.determinant(),
+                ],
+                [
+                    mat10.determinant(),
+                    mat11.determinant(),
+                    mat12.determinant(),
+                    mat13.determinant(),
+                ],
+                [
+                    mat20.determinant(),
+                    mat21.determinant(),
+                    mat22.determinant(),
+                    mat23.determinant(),
+                ],
+                [
+                    mat30.determinant(),
+                    mat31.determinant(),
+                    mat32.determinant(),
+                    mat33.determinant(),
+                ],
+            ) / det,
+        )
     }
-    
     /// square of norm
     /// #Examples
     /// ```
@@ -399,7 +406,7 @@ impl Matrix {
     /// * `K`: an orthogonal matrix
     /// * `A`: a diagonal matrix
     /// * `N`: a unipotent upper triangle matrix
-    /// #Examples 
+    /// #Examples
     /// ```
     /// use truck_geometry::Matrix;
     /// use truck_geometry::Tolerance;
@@ -422,7 +429,7 @@ impl Matrix {
     ///        if i != j { assert_eq!(a[i][j], 0.0); }
     ///     }
     /// }
-    /// 
+    ///
     /// // n is a unipotent upper triangle matrix
     /// for i in 0..4 {
     ///     for j in 0..i {
@@ -433,7 +440,7 @@ impl Matrix {
     /// // k * a * n coinsides with mat
     /// Matrix::assert_near2(&(k * a * n), &mat);
     /// ```
-    pub fn iwasawa_decomposition(&self) -> Result<(Matrix, Matrix, Matrix)> {
+    pub fn iwasawa_decomposition(&self) -> Option<(Matrix, Matrix, Matrix)> {
         let v0 = self.column(0);
         let v1 = self.column(1);
         let v2 = self.column(2);
@@ -443,20 +450,20 @@ impl Matrix {
         let u0 = v0.clone();
         let a0 = u0.norm();
         if a0.so_small() {
-            return Err(Error::IrregularMatrix(self.clone()));
+            return None;
         }
         n[0][1] = (&v1 * &u0) / (a0 * a0);
         let u1 = &v1 - n[0][1] * &u0;
         let a1 = u1.norm();
         if a1.so_small() {
-            return Err(Error::IrregularMatrix(self.clone()));
+            return None;
         }
         n[0][2] = (&v2 * &u0) / (a0 * a0);
         n[1][2] = (&v2 * &u1) / (a1 * a1);
         let u2 = &v2 - n[0][2] * &u0 - n[1][2] * &u1;
         let a2 = u2.norm();
         if a2.so_small() {
-            return Err(Error::IrregularMatrix(self.clone()));
+            return None;
         }
         n[0][3] = (&v3 * &u0) / (a0 * a0);
         n[1][3] = (&v3 * &u1) / (a1 * a1);
@@ -464,13 +471,13 @@ impl Matrix {
         let u3 = &v3 - n[0][3] * &u0 - n[1][3] * &u1 - n[2][3] * &u2;
         let a3 = u3.norm();
         if a3.so_small() {
-            return Err(Error::IrregularMatrix(self.clone()));
+            return None;
         }
 
         let k = Matrix::by_columns(&(u0 / a0), &(u1 / a1), &(u2 / a2), &(u3 / a3));
         let a = Matrix::diagonal(a0, a1, a2, a3);
 
-        Ok((k, a, n))
+        Some((k, a, n))
     }
 }
 
@@ -517,7 +524,7 @@ impl Tolerance for Matrix {
 }
 
 impl Origin for Matrix {
-    const ORIGIN : Matrix = Matrix::zero();
+    const ORIGIN: Matrix = Matrix::zero();
 }
 
 impl std::ops::Index<usize> for Matrix {
@@ -1180,26 +1187,26 @@ impl std::ops::MulAssign<Matrix> for Matrix {
     fn mul_assign(&mut self, rhs: Matrix) { self.mul_assign(&rhs); }
 }
 
-impl std::ops::Mul<&Vector4> for &Matrix {
-    type Output = Vector4;
+impl std::ops::Mul<&Vector> for &Matrix {
+    type Output = Vector;
 
     /// multiply a matrix and a column vector
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, 5.0, 2.0];
     /// let ar2 = [-6.0, -1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, -4.0, 5.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let vec0 = vector_new!(4.0, -2.0, 1.0, -3.0);
-    /// let ans_vec = vector_new!(-9.0, -9.0, -28.0, -15.0);
+    /// let vec0 = Vector::new(4.0, -2.0, 1.0, -3.0);
+    /// let ans_vec = Vector::new(-9.0, -9.0, -28.0, -15.0);
     /// let vec = &mat0 * &vec0;
     /// assert_eq!(vec, ans_vec);
     /// ```
     #[inline(always)]
-    fn mul(self, vector: &Vector4) -> Vector4 {
+    fn mul(self, vector: &Vector) -> Vector {
         let v0 = self[0][0] * vector[0]
             + self[0][1] * vector[1]
             + self[0][2] * vector[2]
@@ -1216,96 +1223,96 @@ impl std::ops::Mul<&Vector4> for &Matrix {
             + self[3][1] * vector[1]
             + self[3][2] * vector[2]
             + self[3][3] * vector[3];
-        vector_new!(v0, v1, v2, v3)
+        Vector::new(v0, v1, v2, v3)
     }
 }
 
-impl std::ops::Mul<Vector4> for &Matrix {
-    type Output = Vector4;
+impl std::ops::Mul<Vector> for &Matrix {
+    type Output = Vector;
 
     /// multiply a matrix and a column vector
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, 5.0, 2.0];
     /// let ar2 = [-6.0, -1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, -4.0, 5.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let vec0 = vector_new!(4.0, -2.0, 1.0, -3.0);
-    /// let ans_vec = vector_new!(-9.0, -9.0, -28.0, -15.0);
+    /// let vec0 = Vector::new(4.0, -2.0, 1.0, -3.0);
+    /// let ans_vec = Vector::new(-9.0, -9.0, -28.0, -15.0);
     /// let vec = &mat0 * vec0;
     /// assert_eq!(vec, ans_vec);
     /// ```
     #[inline(always)]
-    fn mul(self, vector: Vector4) -> Vector4 { self * &vector }
+    fn mul(self, vector: Vector) -> Vector { self * &vector }
 }
 
-impl std::ops::Mul<&Vector4> for Matrix {
-    type Output = Vector4;
+impl std::ops::Mul<&Vector> for Matrix {
+    type Output = Vector;
 
     /// multiply a matrix and a column vector
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, 5.0, 2.0];
     /// let ar2 = [-6.0, -1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, -4.0, 5.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let vec0 = vector_new!(4.0, -2.0, 1.0, -3.0);
-    /// let ans_vec = vector_new!(-9.0, -9.0, -28.0, -15.0);
+    /// let vec0 = Vector::new(4.0, -2.0, 1.0, -3.0);
+    /// let ans_vec = Vector::new(-9.0, -9.0, -28.0, -15.0);
     /// let vec = mat0 * &vec0;
     /// assert_eq!(vec, ans_vec);
     /// ```
     #[inline(always)]
-    fn mul(self, vector: &Vector4) -> Vector4 { &self * vector }
+    fn mul(self, vector: &Vector) -> Vector { &self * vector }
 }
 
-impl std::ops::Mul<Vector4> for Matrix {
-    type Output = Vector4;
+impl std::ops::Mul<Vector> for Matrix {
+    type Output = Vector;
 
     /// multiply a matrix and a column vector
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, 5.0, 2.0];
     /// let ar2 = [-6.0, -1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, -4.0, 5.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let vec0 = vector_new!(4.0, -2.0, 1.0, -3.0);
-    /// let ans_vec = vector_new!(-9.0, -9.0, -28.0, -15.0);
+    /// let vec0 = Vector::new(4.0, -2.0, 1.0, -3.0);
+    /// let ans_vec = Vector::new(-9.0, -9.0, -28.0, -15.0);
     /// let vec = mat0 * vec0;
     /// assert_eq!(vec, ans_vec);
     /// ```
     #[inline(always)]
-    fn mul(self, vector: Vector4) -> Vector4 { &self * &vector }
+    fn mul(self, vector: Vector) -> Vector { &self * &vector }
 }
 
-impl std::ops::Mul<&Matrix> for &Vector4 {
-    type Output = Vector4;
+impl std::ops::Mul<&Matrix> for &Vector {
+    type Output = Vector;
 
     /// multiply a row vector and a matrix
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let vec0 = vector_new!(1.0, 2.0, 3.0, 4.0);
+    /// let vec0 = Vector::new(1.0, 2.0, 3.0, 4.0);
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, -2.0, -2.0];
     /// let ar2 = [1.0, 1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, 4.0, -3.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let ans_vec = vector_new!(2.0, 1.0, 6.0, -9.0);
+    /// let ans_vec = Vector::new(2.0, 1.0, 6.0, -9.0);
     /// let vec = &vec0 * &mat0;
     /// assert_eq!(vec, ans_vec);
     /// ```
     #[inline(always)]
-    fn mul(self, matrix: &Matrix) -> Vector4 {
+    fn mul(self, matrix: &Matrix) -> Vector {
         let v0 = matrix[0][0] * self[0]
             + matrix[1][0] * self[1]
             + matrix[2][0] * self[2]
@@ -1322,89 +1329,89 @@ impl std::ops::Mul<&Matrix> for &Vector4 {
             + matrix[1][3] * self[1]
             + matrix[2][3] * self[2]
             + matrix[3][3] * self[3];
-        vector_new!(v0, v1, v2, v3)
+        Vector::new(v0, v1, v2, v3)
     }
 }
 
-impl std::ops::Mul<Matrix> for &Vector4 {
-    type Output = Vector4;
+impl std::ops::Mul<Matrix> for &Vector {
+    type Output = Vector;
 
     /// multiply a row vector and a matrix
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let vec0 = vector_new!(1.0, 2.0, 3.0, 4.0);
+    /// let vec0 = Vector::new(1.0, 2.0, 3.0, 4.0);
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, -2.0, -2.0];
     /// let ar2 = [1.0, 1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, 4.0, -3.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let ans_vec = vector_new!(2.0, 1.0, 6.0, -9.0);
+    /// let ans_vec = Vector::new(2.0, 1.0, 6.0, -9.0);
     /// let vec = &vec0 * mat0;
     /// assert_eq!(vec, ans_vec);
     /// ```
     #[inline(always)]
-    fn mul(self, matrix: Matrix) -> Vector4 { self * &matrix }
+    fn mul(self, matrix: Matrix) -> Vector { self * &matrix }
 }
 
-impl std::ops::Mul<&Matrix> for Vector4 {
-    type Output = Vector4;
+impl std::ops::Mul<&Matrix> for Vector {
+    type Output = Vector;
 
     /// multiply a row vector and a matrix
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let vec0 = vector_new!(1.0, 2.0, 3.0, 4.0);
+    /// let vec0 = Vector::new(1.0, 2.0, 3.0, 4.0);
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, -2.0, -2.0];
     /// let ar2 = [1.0, 1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, 4.0, -3.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let ans_vec = vector_new!(2.0, 1.0, 6.0, -9.0);
+    /// let ans_vec = Vector::new(2.0, 1.0, 6.0, -9.0);
     /// let vec = vec0 * &mat0;
     /// assert_eq!(vec, ans_vec);
     /// ```
     #[inline(always)]
-    fn mul(self, matrix: &Matrix) -> Vector4 { &self * matrix }
+    fn mul(self, matrix: &Matrix) -> Vector { &self * matrix }
 }
 
-impl std::ops::Mul<Matrix> for Vector4 {
-    type Output = Vector4;
+impl std::ops::Mul<Matrix> for Vector {
+    type Output = Vector;
 
     /// multiply a row vector and a matrix
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let vec0 = vector_new!(1.0, 2.0, 3.0, 4.0);
+    /// let vec0 = Vector::new(1.0, 2.0, 3.0, 4.0);
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, -2.0, -2.0];
     /// let ar2 = [1.0, 1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, 4.0, -3.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let ans_vec = vector_new!(2.0, 1.0, 6.0, -9.0);
+    /// let ans_vec = Vector::new(2.0, 1.0, 6.0, -9.0);
     /// let vec = vec0 * mat0;
     /// assert_eq!(vec, ans_vec);
     /// ```
     #[inline(always)]
-    fn mul(self, matrix: Matrix) -> Vector4 { &self * &matrix }
+    fn mul(self, matrix: Matrix) -> Vector { &self * &matrix }
 }
 
-impl std::ops::MulAssign<&Matrix> for Vector4 {
+impl std::ops::MulAssign<&Matrix> for Vector {
     /// multiply a row vector and a matrix
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let mut vec = vector_new!(1.0, 2.0, 3.0, 4.0);
+    /// let mut vec = Vector::new(1.0, 2.0, 3.0, 4.0);
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, -2.0, -2.0];
     /// let ar2 = [1.0, 1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, 4.0, -3.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let ans_vec = vector_new!(2.0, 1.0, 6.0, -9.0);
+    /// let ans_vec = Vector::new(2.0, 1.0, 6.0, -9.0);
     /// vec *= &mat0;
     /// assert_eq!(vec, ans_vec);
     /// ```
@@ -1412,19 +1419,19 @@ impl std::ops::MulAssign<&Matrix> for Vector4 {
     fn mul_assign(&mut self, matrix: &Matrix) { *self = &*self * matrix }
 }
 
-impl std::ops::MulAssign<Matrix> for Vector4 {
+impl std::ops::MulAssign<Matrix> for Vector {
     /// multiply a row vector and a matrix
     /// # Examples
     /// ```
-    /// use truck_geometry::Vector4;
+    /// use truck_geometry::Vector;
     /// use truck_geometry::Matrix;
-    /// let mut vec = vector_new!(1.0, 2.0, 3.0, 4.0);
+    /// let mut vec = Vector::new(1.0, 2.0, 3.0, 4.0);
     /// let ar0 = [1.0, 2.0, 3.0, 4.0];
     /// let ar1 = [-1.0, 2.0, -2.0, -2.0];
     /// let ar2 = [1.0, 1.0, -3.0, 1.0];
     /// let ar3 = [0.0, -2.0, 4.0, -3.0];
     /// let mat0 = Matrix::new(ar0, ar1, ar2, ar3);
-    /// let ans_vec = vector_new!(2.0, 1.0, 6.0, -9.0);
+    /// let ans_vec = Vector::new(2.0, 1.0, 6.0, -9.0);
     /// vec *= mat0;
     /// assert_eq!(vec, ans_vec);
     /// ```
@@ -1666,11 +1673,147 @@ impl std::fmt::Display for Matrix {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "[{}    {}  {}  {}]\n[{}  {}  {}  {}]\n[{}  {}  {}  {}]\n[{}  {}  {}  {}]\n",
-            self[0][0], self[0][1], self[0][2], self[0][3],
-            self[1][0], self[1][1], self[1][2], self[1][3],
-            self[2][0], self[2][1], self[2][2], self[2][3],
-            self[3][0], self[3][1], self[3][2], self[3][3],
-            ))
+            self[0][0],
+            self[0][1],
+            self[0][2],
+            self[0][3],
+            self[1][0],
+            self[1][1],
+            self[1][2],
+            self[1][3],
+            self[2][0],
+            self[2][1],
+            self[2][2],
+            self[2][3],
+            self[3][0],
+            self[3][1],
+            self[3][2],
+            self[3][3],
+        ))
     }
 }
 
+#[test]
+#[ignore]
+fn matrix_bench_mul() {
+    let old_mul_bench = meantime(&old_mul);
+    println!("old_mul: {}", old_mul_bench);
+    let new_mul_bench = meantime(&new_mul);
+    println!("new_mul: {}", new_mul_bench);
+    assert!(new_mul_bench - old_mul_bench < 10);
+}
+
+#[test]
+#[ignore]
+fn matrix_bench_add() {
+    let old_add_bench = meantime(&old_add);
+    println!("old_mul: {}", old_add_bench);
+    let new_add_bench = meantime(&new_add);
+    println!("new_mul: {}", new_add_bench);
+    assert!(new_add_bench - old_add_bench < 10);
+}
+
+const N: usize = 100_000;
+
+fn old_mat_testdata() -> (Vec<Matrix>, Vec<Matrix>) {
+    let mat0: Vec<_> = (0..N)
+        .map(|i| {
+            let x = i as f64;
+            Matrix::new(
+                [x + 1.0, x + 2.0, x + 3.0, x + 4.0],
+                [x + 5.0, x + 6.0, x + 7.0, x + 8.0],
+                [x + 9.0, x + 10.0, x + 11.0, x + 12.0],
+                [x + 13.0, x + 14.0, x + 15.0, x + 16.0],
+            )
+        })
+        .collect();
+    let mat1: Vec<_> = (0..N)
+        .map(|i| {
+            let x = i as f64;
+            Matrix::new(
+                [x + 16.0, x + 15.0, x + 14.0, x + 13.0],
+                [x + 12.0, x + 11.0, x + 10.0, x + 9.0],
+                [x + 8.0, x + 7.0, x + 6.0, x + 5.0],
+                [x + 4.0, x + 3.0, x + 2.0, x + 1.0],
+            )
+        })
+        .collect();
+    (mat0, mat1)
+}
+
+fn old_mul() {
+    let (mat0, mat1) = old_mat_testdata();
+    mat0.iter().zip(mat1).for_each(|(mat0, mat1)| {
+        let _ = mat0 * mat1;
+    })
+}
+
+fn old_add() {
+    let (mat0, mat1) = old_mat_testdata();
+    mat0.iter().zip(mat1).for_each(|(mat0, mat1)| {
+        let _ = mat0 + mat1;
+    })
+}
+
+
+fn new_mat_testdata() -> (Vec<truck_geometry::Matrix4>, Vec<truck_geometry::Matrix4>) {
+    let mat0: Vec<_> = (0..N)
+        .map(|i| {
+            let i = i as f64;
+            truck_geometry::matrix!(
+                truck_geometry::vector!(i + 1.0, i + 2.0, i + 3.0, i + 4.0),
+                truck_geometry::vector!(i + 5.0, i + 6.0, i + 7.0, i + 8.0),
+                truck_geometry::vector!(i + 9.0, i + 10.0, i + 11.0, i + 12.0),
+                truck_geometry::vector!(i + 13.0, i + 14.0, i + 15.0, i + 16.0)
+            )
+        })
+        .collect();
+    let mat1: Vec<_> = (0..N)
+        .map(|i| {
+            let i = i as f64;
+            truck_geometry::matrix!(
+                truck_geometry::vector!(i + 16.0, i + 15.0, i + 14.0, i + 13.0),
+                truck_geometry::vector!(i + 12.0, i + 11.0, i + 10.0, i + 9.0),
+                truck_geometry::vector!(i + 8.0, i + 7.0, i + 6.0, i + 5.0),
+                truck_geometry::vector!(i + 4.0, i + 3.0, i + 2.0, i + 1.0)
+            )
+        })
+        .collect();
+    (mat0, mat1)
+}
+
+fn new_mul() {
+    let (mat0, mat1) = new_mat_testdata();
+    mat0.iter().zip(mat1).for_each(|(mat0, mat1)| {
+        let _ = mat0 * mat1;
+    })
+}
+
+fn new_add() {
+    let (mat0, mat1) = new_mat_testdata();
+    mat0.iter().zip(mat1).for_each(|(mat0, mat1)| {
+        let _ = mat0 + mat1;
+    })
+}
+
+
+
+#[allow(dead_code)]
+fn compare_matrices(mat0: &Matrix, mat1: &truck_geometry::Matrix4) -> bool {
+    mat0[0][0] == mat1[0][0]
+        && mat0[0][1] == mat1[0][1]
+        && mat0[0][2] == mat1[0][2]
+        && mat0[0][3] == mat1[0][3]
+        && mat0[1][0] == mat1[1][0]
+        && mat0[1][1] == mat1[1][1]
+        && mat0[1][2] == mat1[1][2]
+        && mat0[1][3] == mat1[1][3]
+        && mat0[2][0] == mat1[2][0]
+        && mat0[2][1] == mat1[2][1]
+        && mat0[2][2] == mat1[2][2]
+        && mat0[2][3] == mat1[2][3]
+        && mat0[3][0] == mat1[3][0]
+        && mat0[3][1] == mat1[3][1]
+        && mat0[3][2] == mat1[3][2]
+        && mat0[3][3] == mat1[3][3]
+}

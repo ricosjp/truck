@@ -1,26 +1,26 @@
 use crate::*;
-use geometry::{Matrix, Vector3};
+use geometry::{Matrix4, Vector3};
 
 impl Transform {
     #[inline(always)]
-    pub fn new(mat: Matrix) -> Transform { Transform(mat) }
+    pub fn new(mat: Matrix4) -> Transform { Transform(mat) }
 
     #[inline(always)]
     pub fn translate(vector: &Vector3) -> Transform {
-        let arr0 = [1.0, 0.0, 0.0, 0.0];
-        let arr1 = [0.0, 1.0, 0.0, 0.0];
-        let arr2 = [0.0, 0.0, 1.0, 0.0];
-        let arr3 = [vector[0], vector[1], vector[2], 1.0];
-        Transform(Matrix::new(arr0, arr1, arr2, arr3))
+        let arr0 = vector!(1, 0, 0, 0);
+        let arr1 = vector!(0, 1, 0, 0);
+        let arr2 = vector!(0, 0, 1, 0);
+        let arr3 = vector!(vector[0], vector[1], vector[2], 1);
+        Transform(matrix!(arr0, arr1, arr2, arr3))
     }
 
     #[inline(always)]
     pub fn scale(scalars: &Vector3) -> Transform {
-        let arr0 = [scalars[0], 0.0, 0.0, 0.0];
-        let arr1 = [0.0, scalars[1], 0.0, 0.0];
-        let arr2 = [0.0, 0.0, scalars[2], 0.0];
-        let arr3 = [0.0, 0.0, 0.0, 1.0];
-        Transform(Matrix::new(arr0, arr1, arr2, arr3))
+        let arr0 = vector!(scalars[0], 0, 0, 0);
+        let arr1 = vector!(0, scalars[1], 0, 0);
+        let arr2 = vector!(0, 0, scalars[2], 0);
+        let arr3 = vector!(0, 0, 0, 1);
+        Transform(matrix!(arr0, arr1, arr2, arr3))
     }
 
     #[inline(always)]
@@ -46,24 +46,24 @@ impl Transform {
             0.0,
         ];
         let arr3 = [0.0, 0.0, 0.0, 1.0];
-        Transform(Matrix::new(arr0, arr1, arr2, arr3))
+        Transform(matrix!(arr0, arr1, arr2, arr3))
     }
 
     #[inline(always)]
     pub fn by_axes(axis_x: &Vector3, axis_y: &Vector3, axis_z: &Vector3) -> Transform {
-        let arr0 = [axis_x[0], axis_x[1], axis_x[2], 0.0];
-        let arr1 = [axis_y[0], axis_y[1], axis_y[2], 0.0];
-        let arr2 = [axis_z[0], axis_z[1], axis_z[2], 0.0];
-        let arr3 = [0.0, 0.0, 0.0, 1.0];
-        let mat = Matrix::new(arr0, arr1, arr2, arr3);
+        let arr0 = vector!(axis_x[0], axis_x[1], axis_x[2], 0);
+        let arr1 = vector!(axis_y[0], axis_y[1], axis_y[2], 0);
+        let arr2 = vector!(axis_z[0], axis_z[1], axis_z[2], 0);
+        let arr3 = vector!(0, 0, 0, 1);
+        let mat = matrix!(arr0, arr1, arr2, arr3);
         Transform(mat)
     }
 
     #[inline(always)]
-    pub const fn identity() -> Transform { Transform(Matrix::identity()) }
+    pub fn identity() -> Transform { Transform(Matrix4::identity()) }
    
     #[inline(always)]
-    pub fn inverse(&self) -> Result<Transform> { Ok(Transform(self.0.inverse()?)) }
+    pub fn inverse(&self) -> Result<Transform> { Ok(Transform(self.0.inverse())) }
     
     #[inline(always)]
     pub fn mul_assign_closure<'a, T: std::ops::MulAssign<&'a Transform>>(
@@ -148,14 +148,14 @@ impl std::ops::MulAssign<Transform> for Vector3 {
     fn mul_assign(&mut self, trsf: Transform) { *self *= &trsf; }
 }
 
-impl std::convert::From<Transform> for Matrix {
+impl std::convert::From<Transform> for Matrix4 {
     #[inline(always)]
-    fn from(transform: Transform) -> Matrix { transform.0 }
+    fn from(transform: Transform) -> Matrix4 { transform.0 }
 }
 
-impl std::convert::From<Matrix> for Transform {
+impl std::convert::From<Matrix4> for Transform {
     #[inline(always)]
-    fn from(mat: Matrix) -> Transform { Transform(mat) }
+    fn from(mat: Matrix4) -> Transform { Transform(mat) }
 }
 
 macro_rules! mul_as_mat {

@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate truck_geometry;
 use std::cmp::Ordering;
 use truck_geometry::{Origin, Tolerance};
 
@@ -186,6 +184,18 @@ macro_rules! impl_vector {
             /// ```
             #[inline(always)]
             fn from(arr: [f64; $dim]) -> Self { Self(arr) }
+        }
+        
+        impl std::convert::From<&[f64; $dim]> for $classname {
+            /// construct by array
+            /// # Examples
+            /// ```
+            /// use truck_geometry::Vector;
+            /// let v = Vector::from([1.0, 2.0, 3.0, 4.0]);
+            /// assert_eq!(v, Vector::new(1.0, 2.0, 3.0, 4.0));
+            /// ```
+            #[inline(always)]
+            fn from(arr: &[f64; $dim]) -> Self { Self(arr.clone()) }
         }
 
         impl std::convert::From<$classname> for [f64; $dim] {
@@ -974,7 +984,7 @@ fn measurement<F: Fn()>(closure: &F) -> i32 {
     end_time.as_secs() as i32 * 1_000 + end_time.subsec_nanos() as i32 / 1_000_000
 }
 
-fn meantime<F: Fn()>(closure: F) -> i32 {
+pub fn meantime<F: Fn()>(closure: F) -> i32 {
     let mut a: Vec<i32> = (0..4).map(|_| measurement(&closure)).collect();
 
     let mut idx = 0;
@@ -1004,7 +1014,7 @@ fn meantime<F: Fn()>(closure: F) -> i32 {
 // This test must run in the release build.
 #[test]
 #[ignore]
-fn vector_bench() {
+fn vector_bench_add_assign() {
     let old_add_assign = meantime(&old_add_assign);
     println!("old_add_assign: {}", old_add_assign);
     let new_add_assign = meantime(&new_add_assign);
@@ -1012,28 +1022,53 @@ fn vector_bench() {
     assert!(new_add_assign - old_add_assign < 10);
 }
 
+// The benchmark of the old implementation of the vector and the new one.
+// This test must run in the release build.
+#[test]
+#[ignore]
+fn vector_bench_add0() {
+    let vecs = old_testdata();
+    let old_add_assign = meantime(|| old_add(&vecs));
+    println!("old_add: {}", old_add_assign);
+    let vecs = new_testdata();
+    let new_add_assign = meantime(|| new_add(&vecs));
+    println!("new_add: {}", new_add_assign);
+    assert!(new_add_assign - old_add_assign < 10);
+}
+
 const N: usize = 1_000_000;
 
-fn new_add_assign() {
-    let mut a: Vec<_> = (0..N)
+fn new_testdata() -> (Vec<truck_geometry::Vector4>, Vec<truck_geometry::Vector4>) {
+    let a: Vec<_> = (0..N)
         .map(|i| {
             let x = i as f64;
-            vector_new!(x, x + 1.0, x + 2.0, x + 3.0)
+            truck_geometry::vector!(x, x + 1.0, x + 2.0, x + 3.0)
         })
         .collect();
     let b: Vec<_> = (0..N)
         .map(|i| {
             let x = i as f64;
-            vector_new!(x + 1.0, x + 2.0, x + 3.0, x)
+            truck_geometry::vector!(x + 1.0, x + 2.0, x + 3.0, x)
         })
         .collect();
+    (a, b)
+}
+
+fn new_add_assign() {
+    let (mut a, b) = new_testdata();
     for (vec0, vec1) in a.iter_mut().zip(&b) {
         *vec0 += vec1;
     }
 }
 
-fn old_add_assign() {
-    let mut a: Vec<_> = (0..N)
+fn new_add((a, b): &(Vec<truck_geometry::Vector4>, Vec<truck_geometry::Vector4>)) {
+    for (vec0, vec1) in a.iter().zip(b) {
+        let _ = vec0 + vec1;
+    }
+}
+
+fn old_testdata() -> (Vec<Vector>, Vec<Vector>) {
+    let a: Vec<_> = (0..N)
         .map(|i| {
             let x = i as f64;
             Vector::new(x, x + 1.0, x + 2.0, x + 3.0)
@@ -1045,7 +1080,18 @@ fn old_add_assign() {
             Vector::new(x + 1.0, x + 2.0, x + 3.0, x)
         })
         .collect();
+    (a, b)
+}
+
+fn old_add_assign() {
+    let (mut a, b) = old_testdata();
     for (vec0, vec1) in a.iter_mut().zip(&b) {
         *vec0 += vec1;
+    }
+}
+
+fn old_add((a, b): &(Vec<Vector>, Vec<Vector>)) {
+    for (vec0, vec1) in a.iter().zip(b) {
+        let _ = vec0 + vec1;
     }
 }

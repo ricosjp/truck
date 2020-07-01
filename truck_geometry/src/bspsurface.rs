@@ -1,9 +1,8 @@
 use crate::errors::Error;
 use crate::tolerance::inv_or_zero;
 use crate::*;
-use crate::vector::VectorEntity;
 
-impl<T: VectorEntity> BSplineSurface<T> {
+impl<T: EntityArray<f64>> BSplineSurface<T> {
     /// constructor.
     /// # Arguments
     /// * `knot_vecs` - the knot vectors
@@ -712,10 +711,14 @@ impl<T: VectorEntity> BSplineSurface<T> {
     }
 }
 
-impl std::ops::MulAssign<&Matrix> for BSplineSurface<[f64; 4]> {
+impl<T, M> std::ops::MulAssign<&Matrix<T, M>> for BSplineSurface<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul_assign(&mut self, mat: &Matrix) {
+    fn mul_assign(&mut self, mat: &Matrix<T, M>) {
         for vecs in &mut self.control_points {
             for vec in vecs {
                 *vec *= mat;
@@ -724,57 +727,81 @@ impl std::ops::MulAssign<&Matrix> for BSplineSurface<[f64; 4]> {
     }
 }
 
-impl std::ops::MulAssign<Matrix> for BSplineSurface<[f64; 4]> {
+impl<T, M> std::ops::MulAssign<Matrix<T, M>> for BSplineSurface<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul_assign(&mut self, mat: Matrix) { self.mul_assign(&mat); }
+    fn mul_assign(&mut self, mat: Matrix<T, M>) { self.mul_assign(&mat); }
 }
 
-impl std::ops::Mul<&Matrix> for &BSplineSurface<[f64; 4]> {
-    type Output = BSplineSurface<[f64; 4]>;
+impl<T, M> std::ops::Mul<&Matrix<T, M>> for &BSplineSurface<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(self, mat: &Matrix) -> BSplineSurface<[f64; 4]> {
+    fn mul(self, mat: &Matrix<T, M>) -> BSplineSurface<T> {
         let mut new_spline = self.clone();
         new_spline *= mat;
         new_spline
     }
 }
 
-impl std::ops::Mul<Matrix> for &BSplineSurface<[f64; 4]> {
-    type Output = BSplineSurface<[f64; 4]>;
+impl<T, M> std::ops::Mul<Matrix<T, M>> for &BSplineSurface<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(self, mat: Matrix) -> BSplineSurface<[f64; 4]> { self * &mat }
+    fn mul(self, mat: Matrix<T, M>) -> BSplineSurface<T> { self * &mat }
 }
 
-impl std::ops::Mul<&Matrix> for BSplineSurface<[f64; 4]> {
-    type Output = BSplineSurface<[f64; 4]>;
+impl<T, M> std::ops::Mul<&Matrix<T, M>> for BSplineSurface<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(mut self, mat: &Matrix) -> BSplineSurface<[f64; 4]> {
+    fn mul(mut self, mat: &Matrix<T, M>) -> BSplineSurface<T> {
         self *= mat;
         self
     }
 }
 
-impl std::ops::Mul<Matrix> for BSplineSurface<[f64; 4]> {
-    type Output = BSplineSurface<[f64; 4]>;
+impl<T, M> std::ops::Mul<Matrix<T, M>> for BSplineSurface<T>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
-    fn mul(self, mat: Matrix) -> BSplineSurface<[f64; 4]> { self * &mat }
+    fn mul(self, mat: Matrix<T, M>) -> BSplineSurface<T> { self * &mat }
 }
 
-impl std::ops::Mul<&BSplineSurface<[f64; 4]>> for &Matrix {
-    type Output = BSplineSurface<[f64; 4]>;
+impl<T, M> std::ops::Mul<&BSplineSurface<T>> for &Matrix<T, M>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, bspline: &BSplineSurface<[f64; 4]>) -> BSplineSurface<[f64; 4]> {
+    fn mul(self, bspline: &BSplineSurface<T>) -> BSplineSurface<T> {
         let mut new_spline = bspline.clone();
         for vecs in &mut new_spline.control_points {
             for vec in vecs {
@@ -785,20 +812,28 @@ impl std::ops::Mul<&BSplineSurface<[f64; 4]>> for &Matrix {
     }
 }
 
-impl std::ops::Mul<&BSplineSurface<[f64; 4]>> for Matrix {
-    type Output = BSplineSurface<[f64; 4]>;
+impl<T, M> std::ops::Mul<&BSplineSurface<T>> for Matrix<T, M>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, bspline: &BSplineSurface<[f64; 4]>) -> BSplineSurface<[f64; 4]> { &self * bspline }
+    fn mul(self, bspline: &BSplineSurface<T>) -> BSplineSurface<T> { &self * bspline }
 }
 
-impl std::ops::Mul<BSplineSurface<[f64; 4]>> for &Matrix {
-    type Output = BSplineSurface<[f64; 4]>;
+impl<T, M> std::ops::Mul<BSplineSurface<T>> for &Matrix<T, M>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, mut bspline: BSplineSurface<[f64; 4]>) -> BSplineSurface<[f64; 4]> {
+    fn mul(self, mut bspline: BSplineSurface<T>) -> BSplineSurface<T> {
         for vecs in &mut bspline.control_points {
             for vec in vecs {
                 *vec = self * &*vec;
@@ -808,15 +843,19 @@ impl std::ops::Mul<BSplineSurface<[f64; 4]>> for &Matrix {
     }
 }
 
-impl std::ops::Mul<BSplineSurface<[f64; 4]>> for Matrix {
-    type Output = BSplineSurface<[f64; 4]>;
+impl<T, M> std::ops::Mul<BSplineSurface<T>> for Matrix<T, M>
+where
+    T: EntityArray<f64>,
+    M: EntityArray<Vector<T>>,
+{
+    type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts on each control points.
     #[inline(always)]
-    fn mul(self, bspline: BSplineSurface<[f64; 4]>) -> BSplineSurface<[f64; 4]> { &self * bspline }
+    fn mul(self, bspline: BSplineSurface<T>) -> BSplineSurface<T> { &self * bspline }
 }
 
-impl<T: VectorEntity> std::ops::MulAssign<f64> for BSplineSurface<T> {
+impl<T: EntityArray<f64>> std::ops::MulAssign<f64> for BSplineSurface<T> {
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
     fn mul_assign(&mut self, scalar: f64) {
@@ -828,7 +867,7 @@ impl<T: VectorEntity> std::ops::MulAssign<f64> for BSplineSurface<T> {
     }
 }
 
-impl<T: VectorEntity> std::ops::Mul<f64> for &BSplineSurface<T> {
+impl<T: EntityArray<f64>> std::ops::Mul<f64> for &BSplineSurface<T> {
     type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts to each control points.
@@ -840,7 +879,7 @@ impl<T: VectorEntity> std::ops::Mul<f64> for &BSplineSurface<T> {
     }
 }
 
-impl<T: VectorEntity> std::ops::Mul<f64> for BSplineSurface<T> {
+impl<T: EntityArray<f64>> std::ops::Mul<f64> for BSplineSurface<T> {
     type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts to each control points.
@@ -851,7 +890,7 @@ impl<T: VectorEntity> std::ops::Mul<f64> for BSplineSurface<T> {
     }
 }
 
-impl<T: VectorEntity> std::ops::Mul<&BSplineSurface<T>> for f64 {
+impl<T: EntityArray<f64>> std::ops::Mul<&BSplineSurface<T>> for f64 {
     type Output = BSplineSurface<T>;
 
     /// A matrix `mat` acts on each control points.

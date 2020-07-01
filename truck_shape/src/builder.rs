@@ -194,8 +194,8 @@ fn test_circle_arc() {
     const N: usize = 100;
     let mut pt0 = Vector4::new3(0.17_f64.cos(), 0.17_f64.sin(), 0.0);
     let mut pt1 = Vector4::new3(1.64_f64.cos(), 1.64_f64.sin(), 0.0);
-    let vector = vector_new!(-2, 5, 10);
-    let mut axis = vector_new!(2, 5, 4);
+    let vector = vector!(-2, 5, 10);
+    let mut axis = vector!(2, 5, 4);
     axis /= axis.norm();
     let trsf = Transform::rotate(&axis, 0.56) * Transform::translate(&vector);
     let mut transit = Vector4::new3(1.12_f64.cos(), 1.12_f64.sin(), 0.0);
@@ -207,7 +207,7 @@ fn test_circle_arc() {
     let edge = director.building(|builder| {
         let vertex0 = builder.create_topology(pt0.clone()).unwrap();
         let vertex1 = builder.create_topology(pt1.clone()).unwrap();
-        let transit = vector_new!(transit[0], transit[1], transit[2]);
+        let transit = vector!(transit[0], transit[1], transit[2]);
 
         builder.circle_arc(vertex0, vertex1, &transit).unwrap()
     });
@@ -218,7 +218,7 @@ fn test_circle_arc() {
     for i in 0..N {
         let t = (i as f64) / (N as f64);
         let pt = curve.subs(t).projection();
-        let pt = vector_new!(pt[0], pt[1], pt[2]);
+        let pt = vector!(pt[0], pt[1], pt[2]);
         f64::assert_near(&(&pt - &vector).norm(), &1.0);
     }
 }
