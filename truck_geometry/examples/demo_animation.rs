@@ -15,11 +15,11 @@ fn main() {
 
     let mut control_points = Vec::new();
     control_points.push(vec![
-        Vector4::new3(0.0, 0.0, 0.0),
-        Vector4::new3(0.25, 0.0, 0.0),
-        Vector4::new3(0.5, 0.0, 0.0),
-        Vector4::new3(0.75, 0.0, 0.0),
-        Vector4::new3(1.0, 0.0, 0.0),
+        rvector!(0.0, 0.0, 0.0),
+        rvector!(0.25, 0.0, 0.0),
+        rvector!(0.5, 0.0, 0.0),
+        rvector!(0.75, 0.0, 0.0),
+        rvector!(1.0, 0.0, 0.0),
     ]);
     control_points.push(control_points[0].iter().map(|x| shift(x, 0.2)).collect());
     control_points.push(control_points[0].iter().map(|x| shift(x, 0.4)).collect());

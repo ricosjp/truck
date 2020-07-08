@@ -150,12 +150,12 @@ impl Integrity for Edge {
         return_not_integrate!(back.check_integrity(director));
         let q0 = got_or_return_integrity!(director, &front);
         let q1 = got_or_return_integrity!(director, &back);
-        if !p0.projection().near(&q0.projection()) {
+        if !p0.rational_projection().near(&q0.rational_projection()) {
             TopoGeomIntegrity::NotEndPoint {
                 edge_id: self.id(),
                 vertex_id: front.id(),
             }
-        } else if !p1.projection().near(&q1.projection()) {
+        } else if !p1.rational_projection().near(&q1.rational_projection()) {
             TopoGeomIntegrity::NotEndPoint {
                 edge_id: self.id(),
                 vertex_id: back.id(),
@@ -180,7 +180,7 @@ impl Integrity for Face {
         let surface = got_or_return_integrity!(director, self);
         let mut boundary = surface.boundary();
         boundary
-            .make_locally_projected_injective()
+            .make_rational_locally_injective()
             .optimize()
             .knot_normalize();
         let mut boundary0 = boundary.clone();
@@ -188,17 +188,15 @@ impl Integrity for Face {
         boundary
             .knot_translate(-1.0)
             .concat(&mut boundary0)
-            .unwrap()
-            .concat(boundary1.knot_translate(1.0))
-            .unwrap();
+            .concat(boundary1.knot_translate(1.0));
         let mut hint = 0.0;
         for edge in self.boundary_iter() {
             return_not_integrate!(edge.check_integrity(director));
             let mut curve = got_or_return_integrity!(director, &edge).clone();
             if edge.absolute_front() != edge.front() {
-                curve.inverse();
+                curve.invert();
             }
-            match curve.is_projected_arc_of(&mut boundary, hint) {
+            match curve.is_rational_arc_of(&mut boundary, hint) {
                 Some(res) => hint = res,
                 None => {
                     return TopoGeomIntegrity::NotBoundary {

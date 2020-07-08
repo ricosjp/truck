@@ -1,15 +1,16 @@
-use crate::{EntityArray, Matrix, Matrix2, Matrix3, Matrix4, Origin, Tolerance, Vector};
+use crate::*;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::ops::*;
 
-/// an trait for the multiplication matrix
-pub trait Multiplicable<T>: EntityArray<Vector<T>>
-where T: EntityArray<f64> {
+/// a trait for the entity array of a matrix
+pub trait MatrixEntity<T>: EntityArray<Vector<T>> {
     #[doc(hidden)]
     fn vec_multiply(vec: &Vector<T>, mat: &Self) -> Vector<T>;
     #[doc(hidden)]
     fn multiply(&self, other: &Self) -> Self;
+    #[doc(hidden)]
+    fn vec_multiplied(&self, vec: &Vector<T>) -> Vector<T>;
 }
 
 macro_rules! impl_entity_array {
@@ -55,43 +56,92 @@ macro_rules! vector_type {
     ($($a:expr), *) => { $crate::Vector<[f64; $crate::count!($($a), *)]> };
 }
 
+/// Creates a matrix.
+/// # Examples
+/// ```
+/// use truck_geometry::*;
+/// let mat0 = matrix!((1, 2), (3, 4));
+/// let mat1 = matrix![[1, 2], [3, 4]];
+/// let mat2 = matrix!(vector!(1, 2), vector!(3, 4));
+/// let mat3 = [vector!(1, 2), vector!(3, 4)].into();
+/// let mat4 = [[1.0, 2.0], [3.0, 4.0]].into();
+/// assert_eq!(mat0, mat1);
+/// assert_eq!(mat1, mat2);
+/// assert_eq!(mat2, mat3);
+/// assert_eq!(mat3, mat4);
+/// ```
+/// # Remarks
+/// The created matrix is required to be a square one.
+/// If you try to non-square matrix, the compile fails.
+/// ```compile_fail
+/// use truck_geometry::*;
+/// let _ = matrix!((1, 2), (3, 4), (5, 6));
+/// ```
 #[macro_export]
 macro_rules! matrix {
+    ($(($($a: expr), *)), *) => {
+        $crate::matrix!($($crate::vector!($($a), *)), *)
+    };
+    ($([$($a: expr), *]), *) => {
+        $crate::matrix!($($crate::vector!($($a), *)), *)
+    };
+    ($(($($a: expr), *),) *) => {
+        $crate::matrix!($($crate::vector!($($a), *)), *)
+    };
+    ($([$($a: expr), *],) *) => {
+        $crate::matrix!($($crate::vector!($($a), *)), *)
+    };
+    ($(($($a: expr,) *)), *) => {
+        $crate::matrix!($($crate::vector!($($a), *)), *)
+    };
+    ($([$($a: expr,) *]), *) => {
+        $crate::matrix!($($crate::vector!($($a), *)), *)
+    };
+    ($(($($a: expr,) *),) *) => {
+        $crate::matrix!($($crate::vector!($($a), *)), *)
+    };
+    ($([$($a: expr,) *],) *) => {
+        $crate::matrix!($($crate::vector!($($a), *)), *)
+    };
     ($($a: expr), *) => {
+        $crate::Matrix::<$crate::array_type!(f64, $($a), *),
+        $crate::array_type!($crate::vector_type!($($a),*), $($a), *)>::from([$($a), *])
+    };
+    ($($a: expr,) *) => {
         $crate::Matrix::<$crate::array_type!(f64, $($a), *),
         $crate::array_type!($crate::vector_type!($($a),*), $($a), *)>::from([$($a), *])
     };
 }
 
-impl<T, M: EntityArray<Vector<T>>> Deref for Matrix<T, M> {
+impl<T, M: MatrixEntity<T>> Deref for Matrix<T, M> {
     type Target = [Vector<T>];
     #[inline(always)]
     fn deref(&self) -> &[Vector<T>] { self.0.as_ref() }
 }
 
-impl<T, M: EntityArray<Vector<T>>> DerefMut for Matrix<T, M> {
+impl<T, M: MatrixEntity<T>> DerefMut for Matrix<T, M> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut [Vector<T>] { self.0.as_mut() }
 }
 
-impl<T, M: EntityArray<Vector<T>>> AsRef<[Vector<T>]> for Matrix<T, M> {
+impl<T, M: MatrixEntity<T>> AsRef<[Vector<T>]> for Matrix<T, M> {
     #[inline(always)]
     fn as_ref(&self) -> &[Vector<T>] { self.0.as_ref() }
 }
 
-impl<T, M: EntityArray<Vector<T>>> AsMut<[Vector<T>]> for Matrix<T, M> {
+impl<T, M: MatrixEntity<T>> AsMut<[Vector<T>]> for Matrix<T, M> {
     #[inline(always)]
     fn as_mut(&mut self) -> &mut [Vector<T>] { self.0.as_mut() }
 }
 
-impl<'a, T, M: EntityArray<Vector<T>>> IntoIterator for &'a Matrix<T, M> {
+impl<'a, T, M: MatrixEntity<T>> IntoIterator for &'a Matrix<T, M> {
     type Item = &'a Vector<T>;
     type IntoIter = std::slice::Iter<'a, Vector<T>>;
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter { self.iter() }
 }
 
-impl<'a, T, M: EntityArray<Vector<T>>> IntoIterator for &'a mut Matrix<T, M> {
+impl<'a, T, M: MatrixEntity<T>> IntoIterator for &'a mut Matrix<T, M> {
     type Item = &'a mut Vector<T>;
     type IntoIter = std::slice::IterMut<'a, Vector<T>>;
     #[inline(always)]
@@ -101,7 +151,7 @@ impl<'a, T, M: EntityArray<Vector<T>>> IntoIterator for &'a mut Matrix<T, M> {
 impl<T, M> FromIterator<Vector<T>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Creates a vector by an iterator over `Vector<T>`.  
     /// If the length of the iterator is large, then the latter elements are truncated.  
@@ -117,7 +167,7 @@ where
 impl<'a, T, M> FromIterator<&'a Vector<T>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Creates a vector by an iterator over `Vector<T>`.  
     /// If the length of the iterator is large, then the latter elements are truncated.  
@@ -141,15 +191,15 @@ impl<T, M: Clone> From<&M> for Matrix<T, M> {
 impl<T, M> AddAssign<&Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Adds and assigns two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mut mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// mat += &matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(mat, matrix!(vector!(-1, 3), vector!(0, 1)));
+    /// let mut mat = matrix!((1, 2), (3, -4));
+    /// mat += &matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(mat, matrix!((-1, 3), (0, 1)));
     /// ```
     #[inline(always)]
     fn add_assign(&mut self, other: &Matrix<T, M>) {
@@ -160,15 +210,15 @@ where
 impl<T, M> AddAssign<Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Adds and assigns two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mut mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// mat += matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(mat, matrix!(vector!(-1, 3), vector!(0, 1)));
+    /// let mut mat = matrix!((1, 2), (3, -4));
+    /// mat += matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(mat, matrix!((-1, 3), (0, 1)));
     /// ```
     #[inline(always)]
     fn add_assign(&mut self, other: Matrix<T, M>) { *self += &other }
@@ -177,16 +227,16 @@ where
 impl<T, M> Add<&Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Adds two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(3, -4));
-    /// let mat1 = matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(mat0 + &mat1, matrix!(vector!(-1, 3), vector!(0, 1)));
+    /// let mat0 = matrix!((1, 2), (3, -4));
+    /// let mat1 = matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(mat0 + &mat1, matrix!((-1, 3), (0, 1)));
     /// ```
     #[inline(always)]
     fn add(mut self, other: &Matrix<T, M>) -> Matrix<T, M> {
@@ -198,16 +248,16 @@ where
 impl<T, M> Add<&Matrix<T, M>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Adds two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(3, -4));
-    /// let mat1 = matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(&mat0 + &mat1, matrix!(vector!(-1, 3), vector!(0, 1)));
+    /// let mat0 = matrix!((1, 2), (3, -4));
+    /// let mat1 = matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(&mat0 + &mat1, matrix!((-1, 3), (0, 1)));
     /// ```
     #[inline(always)]
     fn add(self, other: &Matrix<T, M>) -> Matrix<T, M> { self.clone() + other }
@@ -216,16 +266,16 @@ where
 impl<T, M> Add<Matrix<T, M>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Adds two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(3, -4));
-    /// let mat1 = matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(&mat0 + mat1, matrix!(vector!(-1, 3), vector!(0, 1)));
+    /// let mat0 = matrix!((1, 2), (3, -4));
+    /// let mat1 = matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(&mat0 + mat1, matrix!((-1, 3), (0, 1)));
     /// ```
     #[inline(always)]
     fn add(self, other: Matrix<T, M>) -> Matrix<T, M> { other + self }
@@ -234,16 +284,16 @@ where
 impl<T, M> Add<Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Adds two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(3, -4));
-    /// let mat1 = matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(mat0 + mat1, matrix!(vector!(-1, 3), vector!(0, 1)));
+    /// let mat0 = matrix!((1, 2), (3, -4));
+    /// let mat1 = matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(mat0 + mat1, matrix!((-1, 3), (0, 1)));
     /// ```
     #[inline(always)]
     fn add(self, other: Matrix<T, M>) -> Matrix<T, M> { self + &other }
@@ -252,15 +302,15 @@ where
 impl<T, M> SubAssign<&Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Subtracts and assigns two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mut mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// mat -= &matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(mat, matrix!(vector!(3, 1), vector!(6, -9)));
+    /// let mut mat = matrix!((1, 2), (3, -4));
+    /// mat -= &matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(mat, matrix!((3, 1), (6, -9)));
     /// ```
     #[inline(always)]
     fn sub_assign(&mut self, other: &Matrix<T, M>) {
@@ -271,15 +321,15 @@ where
 impl<T, M> SubAssign<Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Subtracts and assigns two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mut mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// mat -= matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(mat, matrix!(vector!(3, 1), vector!(6, -9)));
+    /// let mut mat = matrix!((1, 2), (3, -4));
+    /// mat -= matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(mat, matrix!((3, 1), (6, -9)));
     /// ```
     #[inline(always)]
     fn sub_assign(&mut self, other: Matrix<T, M>) { *self -= &other }
@@ -288,16 +338,16 @@ where
 impl<T, M> Sub<&Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Subtracts two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(3, -4));
-    /// let mat1 = matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(mat0 - &mat1, matrix!(vector!(3, 1), vector!(6, -9)));
+    /// let mat0 = matrix!((1, 2), (3, -4));
+    /// let mat1 = matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(mat0 - &mat1, matrix!((3, 1), (6, -9)));
     /// ```
     #[inline(always)]
     fn sub(mut self, other: &Matrix<T, M>) -> Matrix<T, M> {
@@ -309,16 +359,16 @@ where
 impl<T, M> Sub<&Matrix<T, M>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Subtracs two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(3, -4));
-    /// let mat1 = matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(&mat0 - &mat1, matrix!(vector!(3, 1), vector!(6, -9)));
+    /// let mat0 = matrix!((1, 2), (3, -4));
+    /// let mat1 = matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(&mat0 - &mat1, matrix!((3, 1), (6, -9)));
     /// ```
     #[inline(always)]
     fn sub(self, other: &Matrix<T, M>) -> Matrix<T, M> { self.clone() - other }
@@ -327,16 +377,16 @@ where
 impl<T, M> Sub<Matrix<T, M>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Subtracs two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(3, -4));
-    /// let mat1 = matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(&mat0 - mat1, matrix!(vector!(3, 1), vector!(6, -9)));
+    /// let mat0 = matrix!((1, 2), (3, -4));
+    /// let mat1 = matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(&mat0 - mat1, matrix!((3, 1), (6, -9)));
     /// ```
     #[inline(always)]
     fn sub(self, other: Matrix<T, M>) -> Matrix<T, M> { -(other - self) }
@@ -345,16 +395,16 @@ where
 impl<T, M> Sub<Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Subtracs two matrices.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(3, -4));
-    /// let mat1 = matrix!(vector!(-2, 1), vector!(-3, 5));
-    /// assert_eq!(mat0 - mat1, matrix!(vector!(3, 1), vector!(6, -9)));
+    /// let mat0 = matrix!((1, 2), (3, -4));
+    /// let mat1 = matrix!((-2, 1), (-3, 5));
+    /// assert_eq!(mat0 - mat1, matrix!((3, 1), (6, -9)));
     /// ```
     #[inline(always)]
     fn sub(self, other: Matrix<T, M>) -> Matrix<T, M> { self - &other }
@@ -363,15 +413,15 @@ where
 impl<T, M> Neg for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Returns the negative matrix
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// assert_eq!(-mat, matrix!(vector!(-1, -2), vector!(-3, 4)));
+    /// let mat = matrix!((1, 2), (3, -4));
+    /// assert_eq!(-mat, matrix!((-1, -2), (-3, 4)));
     /// ```
     #[inline(always)]
     fn neg(mut self) -> Matrix<T, M> {
@@ -384,15 +434,15 @@ where
 impl<T, M> Neg for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Returns the negative matrix
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// assert_eq!(-&mat, matrix!(vector!(-1, -2), vector!(-3, 4)));
+    /// let mat = matrix!((1, 2), (3, -4));
+    /// assert_eq!(-&mat, matrix!((-1, -2), (-3, 4)));
     /// ```
     #[inline(always)]
     fn neg(self) -> Matrix<T, M> { -self.clone() }
@@ -401,15 +451,15 @@ where
 impl<T, M> MulAssign<f64> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Multiplies a scalar to a matrix.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mut mat = matrix!(vector!(1, 2), vector!(3, -4));
+    /// let mut mat = matrix!((1, 2), (3, -4));
     /// mat *= 2.0;
-    /// assert_eq!(mat, matrix!(vector!(2, 4), vector!(6, -8)));
+    /// assert_eq!(mat, matrix!((2, 4), (6, -8)));
     /// ```
     #[inline(always)]
     fn mul_assign(&mut self, scalar: f64) { self.iter_mut().for_each(move |a| *a *= scalar) }
@@ -418,15 +468,15 @@ where
 impl<T, M> Mul<f64> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Multiplies a scalar to a matrix.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// assert_eq!(mat * 2.0, matrix!(vector!(2, 4), vector!(6, -8)));
+    /// let mat = matrix!((1, 2), (3, -4));
+    /// assert_eq!(mat * 2.0, matrix!((2, 4), (6, -8)));
     /// ```
     #[inline(always)]
     fn mul(mut self, scalar: f64) -> Matrix<T, M> {
@@ -438,15 +488,15 @@ where
 impl<T, M> Mul<f64> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Multiplies a scalar to a matrix.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// assert_eq!(&mat * 2.0, matrix!(vector!(2, 4), vector!(6, -8)));
+    /// let mat = matrix!((1, 2), (3, -4));
+    /// assert_eq!(&mat * 2.0, matrix!((2, 4), (6, -8)));
     /// ```
     #[inline(always)]
     fn mul(self, scalar: f64) -> Matrix<T, M> { self.clone() * scalar }
@@ -455,15 +505,15 @@ where
 impl<T, M> Mul<&Matrix<T, M>> for f64
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Multiplies a scalar to a matrix.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// assert_eq!(2.0 * &mat, matrix!(vector!(2, 4), vector!(6, -8)));
+    /// let mat = matrix!((1, 2), (3, -4));
+    /// assert_eq!(2.0 * &mat, matrix!((2, 4), (6, -8)));
     /// ```
     #[inline(always)]
     fn mul(self, matrix: &Matrix<T, M>) -> Matrix<T, M> { matrix * self }
@@ -472,15 +522,15 @@ where
 impl<T, M> Mul<Matrix<T, M>> for f64
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Multiplies a scalar to a matrix.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// assert_eq!(2.0 * &mat, matrix!(vector!(2, 4), vector!(6, -8)));
+    /// let mat = matrix!((1, 2), (3, -4));
+    /// assert_eq!(2.0 * &mat, matrix!((2, 4), (6, -8)));
     /// ```
     #[inline(always)]
     fn mul(self, matrix: Matrix<T, M>) -> Matrix<T, M> { matrix * self }
@@ -489,7 +539,7 @@ where
 impl<T, M> Mul<&Matrix<T, M>> for &Vector<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Multiplies a matrix to the vector
@@ -497,24 +547,17 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let vec = vector!(1, 2);
-    /// let mat = matrix!(vector!(2, 3), vector!(4, 5));
+    /// let mat = matrix!((2, 3), (4, 5));
     /// assert_eq!(&vec * &mat, vector!(10, 13));
     /// ```
     #[inline(always)]
-    fn mul(self, matrix: &Matrix<T, M>) -> Vector<T> {
-        let mut res = Vector::ORIGIN;
-        matrix
-            .iter()
-            .zip(self)
-            .for_each(|(vec, a)| res.iter_mut().zip(vec).for_each(move |(p, q)| *p += q * a));
-        res
-    }
+    fn mul(self, matrix: &Matrix<T, M>) -> Vector<T> { matrix.0.vec_multiplied(self) }
 }
 
 impl<T, M> Mul<Matrix<T, M>> for &Vector<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Multiplies a matrix to the vector
@@ -522,7 +565,7 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let vec = vector!(1, 2);
-    /// let mat = matrix!(vector!(2, 3), vector!(4, 5));
+    /// let mat = matrix!((2, 3), (4, 5));
     /// assert_eq!(&vec * mat, vector!(10, 13));
     /// ```
     #[inline(always)]
@@ -532,7 +575,7 @@ where
 impl<T, M> Mul<&Matrix<T, M>> for Vector<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Multiplies a matrix to the vector
@@ -540,7 +583,7 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let vec = vector!(1, 2);
-    /// let mat = matrix!(vector!(2, 3), vector!(4, 5));
+    /// let mat = matrix!((2, 3), (4, 5));
     /// assert_eq!(&vec * mat, vector!(10, 13));
     /// ```
     #[inline(always)]
@@ -550,7 +593,7 @@ where
 impl<T, M> Mul<Matrix<T, M>> for Vector<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Multiplies a matrix to the vector
@@ -558,7 +601,7 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let vec = vector!(1, 2);
-    /// let mat = matrix!(vector!(2, 3), vector!(4, 5));
+    /// let mat = matrix!((2, 3), (4, 5));
     /// assert_eq!(vec * mat, vector!(10, 13));
     /// ```
     #[inline(always)]
@@ -568,14 +611,14 @@ where
 impl<T, M> MulAssign<&Matrix<T, M>> for Vector<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Multiplies a matrix to the vector
     /// # Examples
     /// ```
     /// use truck_geometry::*;
     /// let mut vec = vector!(1, 2);
-    /// vec *= &matrix!(vector!(2, 3), vector!(4, 5));
+    /// vec *= &matrix!((2, 3), (4, 5));
     /// assert_eq!(vec, vector!(10, 13));
     /// ```
     #[inline(always)]
@@ -585,14 +628,14 @@ where
 impl<T, M> MulAssign<Matrix<T, M>> for Vector<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Multiplies a matrix to the vector
     /// # Examples
     /// ```
     /// use truck_geometry::*;
     /// let mut vec = vector!(1, 2);
-    /// vec *= matrix!(vector!(2, 3), vector!(4, 5));
+    /// vec *= matrix!((2, 3), (4, 5));
     /// assert_eq!(vec, vector!(10, 13));
     /// ```
     #[inline(always)]
@@ -602,7 +645,7 @@ where
 impl<T, M> Mul<&Vector<T>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Multiplies a matrix to the vector
@@ -610,7 +653,7 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let vec = vector!(1, 2);
-    /// let mat = matrix!(vector!(2, 3), vector!(4, 5));
+    /// let mat = matrix!((2, 3), (4, 5));
     /// assert_eq!(&mat * &vec, vector!(8, 14));
     /// ```
     #[inline(always)]
@@ -620,7 +663,7 @@ where
 impl<T, M> Mul<&Vector<T>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Multiplies a matrix to the vector
@@ -628,7 +671,7 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let vec = vector!(1, 2);
-    /// let mat = matrix!(vector!(2, 3), vector!(4, 5));
+    /// let mat = matrix!((2, 3), (4, 5));
     /// assert_eq!(mat * &vec, vector!(8, 14));
     /// ```
     #[inline(always)]
@@ -638,7 +681,7 @@ where
 impl<T, M> Mul<Vector<T>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Multiplies a matrix to the vector
@@ -646,7 +689,7 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let vec = vector!(1, 2);
-    /// let mat = matrix!(vector!(2, 3), vector!(4, 5));
+    /// let mat = matrix!((2, 3), (4, 5));
     /// assert_eq!(&mat * vec, vector!(8, 14));
     /// ```
     #[inline(always)]
@@ -656,7 +699,7 @@ where
 impl<T, M> Mul<Vector<T>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Multiplies a matrix to the vector
@@ -664,17 +707,25 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let vec = vector!(1, 2);
-    /// let mat = matrix!(vector!(2, 3), vector!(4, 5));
+    /// let mat = matrix!((2, 3), (4, 5));
     /// assert_eq!(mat * vec, vector!(8, 14));
     /// ```
     #[inline(always)]
     fn mul(self, vec: Vector<T>) -> Vector<T> { &self * &vec }
 }
 
+macro_rules! inverse_array {
+    ([] $($x: expr,) *) => { [$($x), *] };
+    ([$first: expr, $($x: expr,) *] $($y: expr,) *) => {
+        inverse_array!([$($x,) *] $first, $($y,)*)
+    };
+}
+
 macro_rules! sub_impl_mul {
     ($a: expr, $b: expr) => {};
     ($dim: expr, $($num: expr), *) => {
-        impl Multiplicable<[f64; $dim]> for [Vector<[f64; $dim]>; $dim] {
+        impl MatrixEntity<[f64; $dim]> for [Vector<[f64; $dim]>; $dim] {
+            #[doc(hidden)]
             #[inline(always)]
             fn vec_multiply(vec: &Vector<[f64; $dim]>, matrix: &Self) -> Vector<[f64; $dim]> {
                 let mut res = Vector::ORIGIN;
@@ -685,12 +736,16 @@ macro_rules! sub_impl_mul {
                 });
                 res
             }
+            #[doc(hidden)]
+            #[inline(always)]
+            fn vec_multiplied(&self, vec: &Vector<[f64; $dim]>) -> Vector<[f64; $dim]> {
+                Vector(inverse_array!([$(&self[$num] * vec,) *]))
+            }
 
+            #[doc(hidden)]
             #[inline(always)]
             fn multiply(&self, other: &Self) -> Self {
-                let mut arr = [$(Self::vec_multiply(&self[$num], other)), *];
-                arr.reverse();
-                arr
+                Self::from(inverse_array!([$(Self::vec_multiply(&self[$num], other),) *]))
             }
         }
         sub_impl_mul!($($num), *);
@@ -705,16 +760,16 @@ sub_impl_mul!(
 impl<T, M> Mul<&Matrix<T, M>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: Multiplicable<T>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Multiplies a matrix to another matrix
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(-2, 1));
-    /// let mat1 = matrix!(vector!(2, 3), vector!(4, 5));
-    /// assert_eq!(&mat0 * &mat1, matrix!(vector!(10, 13), vector!(0, -1)));
+    /// let mat0 = matrix!((1, 2), (-2, 1));
+    /// let mat1 = matrix!((2, 3), (4, 5));
+    /// assert_eq!(&mat0 * &mat1, matrix!((10, 13), (0, -1)));
     /// ```
     #[inline(always)]
     fn mul(self, mat: &Matrix<T, M>) -> Matrix<T, M> { Matrix::from(self.0.multiply(&mat.0)) }
@@ -723,16 +778,16 @@ where
 impl<T, M> Mul<Matrix<T, M>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: Multiplicable<T>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Multiplies a matrix to another matrix
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(-2, 1));
-    /// let mat1 = matrix!(vector!(2, 3), vector!(4, 5));
-    /// assert_eq!(&mat0 * mat1, matrix!(vector!(10, 13), vector!(0, -1)));
+    /// let mat0 = matrix!((1, 2), (-2, 1));
+    /// let mat1 = matrix!((2, 3), (4, 5));
+    /// assert_eq!(&mat0 * mat1, matrix!((10, 13), (0, -1)));
     /// ```
     #[inline(always)]
     fn mul(self, mat: Matrix<T, M>) -> Self::Output { self * &mat }
@@ -741,16 +796,16 @@ where
 impl<T, M> Mul<&Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: Multiplicable<T>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Multiplies a matrix to another matrix
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(-2, 1));
-    /// let mat1 = matrix!(vector!(2, 3), vector!(4, 5));
-    /// assert_eq!(mat0 * &mat1, matrix!(vector!(10, 13), vector!(0, -1)));
+    /// let mat0 = matrix!((1, 2), (-2, 1));
+    /// let mat1 = matrix!((2, 3), (4, 5));
+    /// assert_eq!(mat0 * &mat1, matrix!((10, 13), (0, -1)));
     /// ```
     #[inline(always)]
     fn mul(self, mat: &Matrix<T, M>) -> Self::Output { &self * mat }
@@ -759,16 +814,16 @@ where
 impl<T, M> Mul<Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: Multiplicable<T>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Multiplies a matrix to another matrix
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat0 = matrix!(vector!(1, 2), vector!(-2, 1));
-    /// let mat1 = matrix!(vector!(2, 3), vector!(4, 5));
-    /// assert_eq!(mat0 * mat1, matrix!(vector!(10, 13), vector!(0, -1)));
+    /// let mat0 = matrix!((1, 2), (-2, 1));
+    /// let mat1 = matrix!((2, 3), (4, 5));
+    /// assert_eq!(mat0 * mat1, matrix!((10, 13), (0, -1)));
     /// ```
     #[inline(always)]
     fn mul(self, mat: Matrix<T, M>) -> Self::Output { &self * &mat }
@@ -777,15 +832,15 @@ where
 impl<T, M> MulAssign<&Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: Multiplicable<T>,
+    M: MatrixEntity<T>,
 {
     /// Multiplies a matrix to another matrix
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mut mat = matrix!(vector!(1, 2), vector!(-2, 1));
-    /// mat *= &matrix!(vector!(2, 3), vector!(4, 5));
-    /// assert_eq!(mat, matrix!(vector!(10, 13), vector!(0, -1)));
+    /// let mut mat = matrix!((1, 2), (-2, 1));
+    /// mat *= &matrix!((2, 3), (4, 5));
+    /// assert_eq!(mat, matrix!((10, 13), (0, -1)));
     /// ```
     #[inline(always)]
     fn mul_assign(&mut self, mat: &Matrix<T, M>) { *self = &*self * mat; }
@@ -794,15 +849,15 @@ where
 impl<T, M> MulAssign<Matrix<T, M>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: Multiplicable<T>,
+    M: MatrixEntity<T>,
 {
     /// Multiplies a matrix to another matrix
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mut mat = matrix!(vector!(1, 2), vector!(-2, 1));
-    /// mat *= matrix!(vector!(2, 3), vector!(4, 5));
-    /// assert_eq!(mat, matrix!(vector!(10, 13), vector!(0, -1)));
+    /// let mut mat = matrix!((1, 2), (-2, 1));
+    /// mat *= matrix!((2, 3), (4, 5));
+    /// assert_eq!(mat, matrix!((10, 13), (0, -1)));
     /// ```
     #[inline(always)]
     fn mul_assign(&mut self, mat: Matrix<T, M>) { *self = &*self * &mat; }
@@ -811,15 +866,15 @@ where
 impl<T, M> DivAssign<f64> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Divides a matrix by a scalar.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mut mat = matrix!(vector!(1, 2), vector!(3, -4));
+    /// let mut mat = matrix!((1, 2), (3, -4));
     /// mat /= 2.0;
-    /// assert_eq!(mat, matrix!(vector!(0.5, 1), vector!(1.5, -2)));
+    /// assert_eq!(mat, matrix!((0.5, 1), (1.5, -2)));
     /// ```
     #[inline(always)]
     fn div_assign(&mut self, scalar: f64) { self.iter_mut().for_each(move |a| *a /= scalar); }
@@ -828,15 +883,15 @@ where
 impl<T, M> Div<f64> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Divides a matrix by a scalar.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// assert_eq!(mat / 2.0, matrix!(vector!(0.5, 1), vector!(1.5, -2)));
+    /// let mat = matrix!((1, 2), (3, -4));
+    /// assert_eq!(mat / 2.0, matrix!((0.5, 1), (1.5, -2)));
     /// ```
     #[inline(always)]
     fn div(mut self, scalar: f64) -> Matrix<T, M> {
@@ -848,15 +903,15 @@ where
 impl<T, M> Div<f64> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Matrix<T, M>;
     /// Divides a matrix by a scalar.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, -4));
-    /// assert_eq!(&mat / 2.0, matrix!(vector!(0.5, 1), vector!(1.5, -2)));
+    /// let mat = matrix!((1, 2), (3, -4));
+    /// assert_eq!(&mat / 2.0, matrix!((0.5, 1), (1.5, -2)));
     /// ```
     #[inline(always)]
     fn div(self, scalar: f64) -> Matrix<T, M> { self.clone() / scalar }
@@ -865,7 +920,7 @@ where
 impl<T, M> Index<usize> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = Vector<T>;
     /// Returns the `idx`th row vector.
@@ -876,7 +931,7 @@ where
 impl<T, M> IndexMut<usize> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Returns the `idx`th row vector.
     #[inline(always)]
@@ -886,17 +941,17 @@ where
 impl<T, M> Tolerance for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// The components of each of the two matrices are close enough.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
     /// let eps = f64::TOLERANCE / 2.0;
-    /// let v0 = matrix!(vector!(0.0, 0.0), vector!(0.0, 0.0));
-    /// let v1 = matrix!(vector!(eps, -eps), vector!(-eps, eps));
-    /// let v2 = matrix!(vector!(1.0, 0.0), vector!(0.0, 0.0));
-    /// let v3 = matrix!(vector!(0.0, 0.0), vector!(0.0, 1.0));
+    /// let v0 = matrix!((0.0, 0.0), (0.0, 0.0));
+    /// let v1 = matrix!((eps, -eps), (-eps, eps));
+    /// let v2 = matrix!((1.0, 0.0), (0.0, 0.0));
+    /// let v3 = matrix!((0.0, 0.0), (0.0, 1.0));
     /// assert!(v0.near(&v1));
     /// assert!(!v0.near(&v2));
     /// assert!(!v0.near(&v3));
@@ -910,10 +965,10 @@ where
     /// use truck_geometry::*;
     /// let eps = f64::TOLERANCE / 2.0;
     /// let eps2 = f64::TOLERANCE2 / 2.0;
-    /// let v0 = matrix!(vector!(0.0, 0.0), vector!(0.0, 0.0));
-    /// let v1 = matrix!(vector!(eps2, -eps2), vector!(-eps2, eps2));
-    /// let v2 = matrix!(vector!(eps, 0.0), vector!(0.0, 0.0));
-    /// let v3 = matrix!(vector!(0.0, 0.0), vector!(0.0, eps));
+    /// let v0 = matrix!((0.0, 0.0), (0.0, 0.0));
+    /// let v1 = matrix!((eps2, -eps2), (-eps2, eps2));
+    /// let v2 = matrix!((eps, 0.0), (0.0, 0.0));
+    /// let v3 = matrix!((0.0, 0.0), (0.0, eps));
     /// assert!(v0.near2(&v1));
     /// assert!(!v0.near2(&v2));
     /// assert!(!v0.near2(&v3));
@@ -925,21 +980,29 @@ where
 impl<T, M> Origin for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     const ORIGIN: Self = Self(M::ORIGIN, PhantomData);
+    fn round_by_tolerance(&mut self) -> &mut Self {
+        self.iter_mut().for_each(|vec| {
+            vec.iter_mut().for_each(|v| {
+                v.round_by_tolerance();
+            })
+        });
+        self
+    }
 }
 
 impl<T, M> Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// Creates the zero matrix.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
+    /// let mat = matrix!((1, 2), (3, 4));
     /// assert_eq!(mat * Matrix2::zero(), Matrix2::zero());
     /// ```
     #[inline(always)]
@@ -949,7 +1012,7 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
+    /// let mat = matrix!((1, 2), (3, 4));
     /// assert_eq!(&mat * Matrix2::identity(), mat);
     /// ```
     #[inline(always)]
@@ -983,7 +1046,7 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
+    /// let mat = matrix!((1, 2), (3, 4));
     /// assert_eq!(mat.row(1), vector!(3, 4));
     /// ```
     #[inline(always)]
@@ -993,7 +1056,7 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
+    /// let mat = matrix!((1, 2), (3, 4));
     /// assert_eq!(mat.column(1), vector!(2, 4));
     /// ```
     #[inline(always)]
@@ -1003,8 +1066,8 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
-    /// assert_eq!(mat.transpose(), matrix!(vector!(1, 3), vector!(2, 4)));
+    /// let mat = matrix!((1, 2), (3, 4));
+    /// assert_eq!(mat.transpose(), matrix!((1, 3), (2, 4)));
     /// ```
     #[inline(always)]
     pub fn transpose(&self) -> Matrix<T, M> {
@@ -1015,7 +1078,7 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
+    /// let mat = matrix!((1, 2), (3, 4));
     /// assert_eq!(mat.trace(), 5.0);
     /// ```
     #[inline(always)]
@@ -1025,7 +1088,7 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
+    /// let mat = matrix!((1, 2), (3, 4));
     /// assert_eq!(mat.norm2(), 30.0);
     /// ```
     #[inline(always)]
@@ -1034,7 +1097,7 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
+    /// let mat = matrix!((1, 2), (3, 4));
     /// assert_eq!(mat.norm(), 30.0_f64.sqrt());
     /// ```
     #[inline(always)]
@@ -1050,8 +1113,8 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, 2), vector!(3, 4));
-    /// assert_eq!(mat.adjugate(), matrix!(vector!(4, -2), vector!(-3, 1)));
+    /// let mat = matrix!((1, 2), (3, 4));
+    /// assert_eq!(mat.adjugate(), matrix!((4, -2), (-3, 1)));
     /// ```
     #[inline(always)]
     pub fn adjugate(&self) -> Self
@@ -1063,7 +1126,7 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(1, -3, 2), vector!(-4, 5, 1), vector!(6, -2, -4));
+    /// let mat = matrix!((1, -3, 2), (-4, 5, 1), (6, -2, -4));
     /// let vec = vector!(1, 8, -3);
     /// Vector::assert_near2(&mat.solve(&vec), &vector!(1, 3, 2));
     /// ```
@@ -1078,10 +1141,10 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let mat = matrix!(
-    ///     vector!(1, -3, 3, 2),
-    ///     vector!(4, 3, -2, 1),
-    ///     vector!(5, 2, 1, 3),
-    ///     vector!(5, 6, 1, 2)
+    ///     (1, -3, 3, 2),
+    ///     (4, 3, -2, 1),
+    ///     (5, 2, 1, 3),
+    ///     (5, 6, 1, 2),
     /// );
     /// Matrix::assert_near2(&(&mat * mat.inverse()), &Matrix::identity());
     /// ```
@@ -1099,10 +1162,10 @@ where
     /// ```
     /// use truck_geometry::*;
     /// let mat = matrix!(
-    ///     vector!(1, -3, 3, 2),
-    ///     vector!(4, 3, -2, 1),
-    ///     vector!(5, 2, 1, 3),
-    ///     vector!(5, 6, 1, 2)
+    ///     (1, -3, 3, 2),
+    ///     (4, 3, -2, 1),
+    ///     (5, 2, 1, 3),
+    ///     (5, 6, 1, 2),
     /// );
     /// let (n, a, k) = mat.iwasawa_decomposition();
     ///
@@ -1179,7 +1242,7 @@ impl Determinant<[f64; 2]> for Matrix2 {
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(4, 5), vector!(2, 3));
+    /// let mat = matrix!((4, 5), (2, 3));
     /// assert_eq!(mat.determinant(), 2.0);
     /// ```
     #[inline(always)]
@@ -1191,7 +1254,7 @@ impl Determinant<[f64; 3]> for Matrix3 {
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let mat = matrix!(vector!(2, 1, 3), vector!(-1, 5, 2), vector!(4, 1, -1));
+    /// let mat = matrix!((2, 1, 3), (-1, 5, 2), (4, 1, -1));
     /// assert_eq!(mat.determinant(), -70.0);
     /// ```
     #[inline(always)]
@@ -1208,10 +1271,10 @@ impl Determinant<[f64; 4]> for Matrix4 {
     /// ```
     /// use truck_geometry::*;
     /// let mat = matrix!(
-    ///     vector!(1, -3, 3, 2),
-    ///     vector!(4, 3, -2, 1),
-    ///     vector!(5, 2, 1, 3),
-    ///     vector!(5, 6, 1, 2)
+    ///     (1, -3, 3, 2),
+    ///     (4, 3, -2, 1),
+    ///     (5, 2, 1, 3),
+    ///     (5, 6, 1, 2)
     /// );
     /// assert_eq!(mat.determinant(), -28.0);
     /// ```

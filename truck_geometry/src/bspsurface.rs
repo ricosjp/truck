@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::matrix::MatrixEntity;
 use crate::tolerance::inv_or_zero;
 use crate::*;
 
@@ -13,7 +14,11 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
     /// * There exist at least two different knots.
     /// * There are at least one control point.
     #[inline(always)]
-    pub fn new(knot_vecs: (KnotVec, KnotVec), control_points: Vec<Vec<Vector<T>>>) -> BSplineSurface<T> {
+    pub fn new(
+        knot_vecs: (KnotVec, KnotVec),
+        control_points: Vec<Vec<Vector<T>>>,
+    ) -> BSplineSurface<T>
+    {
         match BSplineSurface::try_new(knot_vecs, control_points) {
             Ok(got) => got,
             Err(error) => panic!("{}", error),
@@ -69,9 +74,9 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
     /// * `knot_vecs` - the knot vectors
     /// * `control_points` - the vector of the control points
     /// # Failures
-    /// This method is prepared only for performance-critical development and is not recommended.
-    /// This method does NOT check the 3 rules for constructing B-spline surface.
-    /// The programmer must guarantee these conditions before using this method.
+    /// This method is prepared only for performance-critical development and is not recommended.  
+    /// This method does NOT check the 3 rules for constructing B-spline surface.  
+    /// The programmer must guarantee these conditions before using this method.  
     #[inline(always)]
     pub fn new_unchecked(
         knot_vecs: (KnotVec, KnotVec),
@@ -84,27 +89,40 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         }
     }
 
-    /// the reference of the knot vectors
+    /// Returns the reference of the knot vectors
     #[inline(always)]
     pub fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.knot_vecs }
 
-    /// the control points
+    /// Returns the reference of the vector of the control points
     #[inline(always)]
     pub fn control_points(&self) -> &Vec<Vec<Vector<T>>> { &self.control_points }
 
-    /// the control point corresponding to the index `(idx0, idx1)`.
+    /// Returns the reference of the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]
     pub fn control_point(&self, idx0: usize, idx1: usize) -> &Vector<T> {
         &self.control_points[idx0][idx1]
     }
 
-    /// the mutable reference of the control point corresponding to index `(idx0, idx1)`.
+    /// Returns the mutable reference of the control point corresponding to index `(idx0, idx1)`.
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx0: usize, idx1: usize) -> &mut Vector<T> {
         &mut self.control_points[idx0][idx1]
     }
 
-    /// the degrees of B-spline surface
+    /// Returns the degrees of B-spline surface
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vec1 = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
+    /// let knot_vecs = (knot_vec0, knot_vec1);
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0, 0), vector!(1, 0, 1), vector!(2, 0, 2)],
+    ///     vec![vector!(0, 1, 0), vector!(1, 1, 1), vector!(2, 1, 2)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// assert_eq!(bspsurface.degrees(), (1, 2));
+    /// ```
     #[inline(always)]
     pub fn degrees(&self) -> (usize, usize) {
         (
@@ -113,29 +131,72 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         )
     }
 
-    /// substitution to B-spline surface. private method
+    /// Substitutes to a B-spline surface.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
+    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// 
+    /// // bspsurface: (v, 2v(1 - v)(2u - 1) + u)
+    /// const N: usize = 100; // sample size
+    /// for i in 0..=N {
+    ///     let u = (i as f64) / (N as f64);
+    ///     for j in 0..=N {
+    ///         let v = (j as f64) / (N as f64);
+    ///         Vector::assert_near2(
+    ///             &bspsurface.subs(u, v),
+    ///             &vector!(v, 2.0 * v * (1.0 - v) * (2.0 * u - 1.0) + u),
+    ///         );
+    ///     }
+    /// }
+    /// ```
     #[inline(always)]
     pub fn subs(&self, u: f64, v: f64) -> Vector<T> {
         let (degree0, degree1) = self.degrees();
-        let basis0 = self
-            .knot_vecs
-            .0
-            .bspline_basis_functions(degree0, u)
-            .unwrap();
-        let basis1 = self
-            .knot_vecs
-            .1
-            .bspline_basis_functions(degree1, v)
-            .unwrap();
+        let (knot_vec0, knot_vec1) = &self.knot_vecs;
+        let basis0 = knot_vec0.bspline_basis_functions(degree0, u);
+        let basis1 = knot_vec1.bspline_basis_functions(degree1, v);
         let mut res = Vector::zero();
-        for i in 0..self.control_points.len() {
-            for j in 0..self.control_points[i].len() {
-                res += self.control_point(i, j) * (basis0[i] * basis1[j]);
-            }
-        }
+        self.control_points
+            .iter()
+            .zip(&basis0)
+            .for_each(|(vec, b0)| {
+                vec.iter()
+                    .zip(&basis1)
+                    .for_each(|(pt, b1)| res += pt * (b0 * b1))
+            });
         res
     }
 
+    /// Substitutes to a B-spline surface.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
+    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// 
+    /// // bspsurface: (v, 2v(1 - v)(2u - 1) + u)
+    /// const N: usize = 100; // sample size
+    /// for i in 0..=N {
+    ///     let u = (i as f64) / (N as f64);
+    ///     for j in 0..=N {
+    ///         let v = (j as f64) / (N as f64);
+    ///         Vector::assert_near2(
+    ///             &bspsurface.subs(u, v),
+    ///             &vector!(v, 2.0 * v * (1.0 - v) * (2.0 * u - 1.0) + u),
+    ///         );
+    ///     }
+    /// }
+    /// ```
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> Vector<T> + '_ { move |u, v| self.subs(u, v) }
 
@@ -208,33 +269,6 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         };
 
         BSplineSurface::new_unchecked((knot_vec0, knot_vec1), new_points)
-    }
-
-    /// get the normal unit vector at the parameter `(u, v)`.
-    pub fn normal_vector(&self, u: f64, v: f64) -> Vector<T>
-    where Vector<T>: std::ops::BitXor<Vector<T>, Output=Vector<T>>{
-        let pt = self.subs(u, v);
-        let der0 = self.first_derivation().subs(u, v);
-        let der1 = self.second_derivation().subs(u, v);
-        let vec0 = pt.derivation_projection(&der0);
-        let vec1 = pt.derivation_projection(&der1);
-        vec0 ^ vec1
-    }
-
-    pub fn normal_vectors<I: Iterator<Item = (f64, f64)>>(&self, params: I) -> Vec<Vector<T>>
-    where Vector<T>: std::ops::BitXor<Vector<T>, Output=Vector<T>>{
-        let derivation0 = self.first_derivation();
-        let derivation1 = self.second_derivation();
-        params
-            .map(|(u, v)| {
-                let pt = self.subs(u, v);
-                let der0 = derivation0.subs(u, v);
-                let der1 = derivation1.subs(u, v);
-                let vec0 = pt.derivation_projection(&der0);
-                let vec1 = pt.derivation_projection(&der1);
-                vec0 ^ vec1
-            })
-            .collect()
     }
 
     /// swap two parameters.
@@ -519,7 +553,11 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         Ok(self)
     }
 
-    pub fn homotopy(mut bspcurve0: BSplineCurve<T>, mut bspcurve1: BSplineCurve<T>) -> BSplineSurface<T> {
+    pub fn homotopy(
+        mut bspcurve0: BSplineCurve<T>,
+        mut bspcurve1: BSplineCurve<T>,
+    ) -> BSplineSurface<T>
+    {
         bspcurve0.syncro_degree(&mut bspcurve1);
 
         bspcurve0.optimize();
@@ -545,8 +583,8 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         mut curve3: BSplineCurve<T>,
     ) -> BSplineSurface<T>
     {
-        curve2.inverse();
-        curve3.inverse();
+        curve2.invert();
+        curve3.invert();
         curve0.syncro_degree(&mut curve2);
         curve0.optimize();
         curve2.optimize();
@@ -580,8 +618,8 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
 
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
-        self.knot_vecs.0.normalize().unwrap();
-        self.knot_vecs.1.normalize().unwrap();
+        self.knot_vecs.0.try_normalize().unwrap();
+        self.knot_vecs.1.try_normalize().unwrap();
         self
     }
 
@@ -602,8 +640,6 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         }
         self
     }
-
-    
 
     pub fn splitted_boundary(&self) -> [BSplineCurve<T>; 4] {
         let (knot_vec0, knot_vec1) = self.knot_vecs.clone();
@@ -630,11 +666,8 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         let [mut bspline0, mut bspline1, mut bspline2, mut bspline3] = self.splitted_boundary();
         bspline0
             .concat(&mut bspline1.knot_translate(range0))
-            .unwrap()
-            .concat(&mut bspline2.inverse().knot_translate(range0 + range1))
-            .unwrap()
-            .concat(&mut bspline3.inverse().knot_translate(range0 * 2.0 + range1))
-            .unwrap();
+            .concat(&mut bspline2.invert().knot_translate(range0 + range1))
+            .concat(&mut bspline3.invert().knot_translate(range0 * 2.0 + range1));
         bspline0
     }
 
@@ -703,18 +736,22 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
     }
     #[inline(always)]
     pub fn near_as_projected_surface(&self, other: &BSplineSurface<T>) -> bool {
-        self.sub_near_as_surface(other, 2, |x, y| x.projection().near(&y.projection()))
+        self.sub_near_as_surface(other, 2, |x, y| {
+            x.rational_projection().near(&y.rational_projection())
+        })
     }
     #[inline(always)]
     pub fn near2_as_projected_surface(&self, other: &BSplineSurface<T>) -> bool {
-        self.sub_near_as_surface(other, 2, |x, y| x.projection().near2(&y.projection()))
+        self.sub_near_as_surface(other, 2, |x, y| {
+            x.rational_projection().near2(&y.rational_projection())
+        })
     }
 }
 
 impl<T, M> std::ops::MulAssign<&Matrix<T, M>> for BSplineSurface<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
@@ -730,7 +767,7 @@ where
 impl<T, M> std::ops::MulAssign<Matrix<T, M>> for BSplineSurface<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     /// A matrix `mat` acts to each control points.
     #[inline(always)]
@@ -740,7 +777,7 @@ where
 impl<T, M> std::ops::Mul<&Matrix<T, M>> for &BSplineSurface<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = BSplineSurface<T>;
 
@@ -756,7 +793,7 @@ where
 impl<T, M> std::ops::Mul<Matrix<T, M>> for &BSplineSurface<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = BSplineSurface<T>;
 
@@ -768,7 +805,7 @@ where
 impl<T, M> std::ops::Mul<&Matrix<T, M>> for BSplineSurface<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = BSplineSurface<T>;
 
@@ -783,7 +820,7 @@ where
 impl<T, M> std::ops::Mul<Matrix<T, M>> for BSplineSurface<T>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = BSplineSurface<T>;
 
@@ -795,7 +832,7 @@ where
 impl<T, M> std::ops::Mul<&BSplineSurface<T>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = BSplineSurface<T>;
 
@@ -815,7 +852,7 @@ where
 impl<T, M> std::ops::Mul<&BSplineSurface<T>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = BSplineSurface<T>;
 
@@ -827,7 +864,7 @@ where
 impl<T, M> std::ops::Mul<BSplineSurface<T>> for &Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = BSplineSurface<T>;
 
@@ -846,7 +883,7 @@ where
 impl<T, M> std::ops::Mul<BSplineSurface<T>> for Matrix<T, M>
 where
     T: EntityArray<f64>,
-    M: EntityArray<Vector<T>>,
+    M: MatrixEntity<T>,
 {
     type Output = BSplineSurface<T>;
 
@@ -903,5 +940,64 @@ impl<T: EntityArray<f64>> std::ops::Mul<&BSplineSurface<T>> for f64 {
             }
         }
         new_spline
+    }
+}
+
+impl BSplineSurface<[f64; 3]> {
+    /// Returns the normal unit vector at the parameter `(u, v)`.
+    pub fn normal_vector(&self, u: f64, v: f64) -> Vector<[f64; 3]> {
+        let der0 = self.first_derivation().subs(u, v);
+        let der1 = self.second_derivation().subs(u, v);
+        let vec = der0 ^ der1;
+        let norm = vec.norm();
+        vec / norm
+    }
+    /// Returns the array of normal vectors at the parameters generated by iterator `params`.
+    pub fn normal_vectors<I>(&self, params: I) -> Vec<Vector<[f64; 3]>>
+    where I: Iterator<Item = (f64, f64)> {
+        let derivation0 = self.first_derivation();
+        let derivation1 = self.second_derivation();
+        params
+            .map(|(u, v)| {
+                let der0 = derivation0.subs(u, v);
+                let der1 = derivation1.subs(u, v);
+                let vec = der0 ^ der1;
+                let norm = vec.norm();
+                vec / norm
+            })
+            .collect()
+    }
+}
+
+impl BSplineSurface<[f64; 4]> {
+    /// Returns the normal unit vector of rational surface at the parameter `(u, v)`.
+    pub fn rational_normal_vector(&self, u: f64, v: f64) -> Vector<[f64; 3]> {
+        let pt = self.subs(u, v);
+        let der0 = self.first_derivation().subs(u, v);
+        let der1 = self.second_derivation().subs(u, v);
+        let vec0: Vector<[f64; 3]> = pt.rational_derivation(&der0).into();
+        let vec1: Vector<[f64; 3]> = pt.rational_derivation(&der1).into();
+        let vec = vec0 ^ vec1;
+        let norm = vec.norm();
+        vec / norm
+    }
+    /// Returns the array of normal unit vectors of rational surface at the parameters
+    /// generated by iterator `params`.
+    pub fn rational_normal_vectors<I>(&self, params: I) -> Vec<Vector<[f64; 3]>>
+    where I: Iterator<Item = (f64, f64)> {
+        let derivation0 = self.first_derivation();
+        let derivation1 = self.second_derivation();
+        params
+            .map(|(u, v)| {
+                let pt = self.subs(u, v);
+                let der0 = derivation0.subs(u, v);
+                let der1 = derivation1.subs(u, v);
+                let vec0: Vector<[f64; 3]> = pt.rational_derivation(&der0).into();
+                let vec1: Vector<[f64; 3]> = pt.rational_derivation(&der1).into();
+                let vec = vec0 ^ vec1;
+                let norm = vec.norm();
+                vec / norm
+            })
+            .collect()
     }
 }

@@ -36,7 +36,7 @@ fn is_far(bspsurface: &BSplineSurface, u0: f64, u1: f64, v0: f64, v1: f64, tol: 
                 + bspsurface(u0, v1) * p * (1.0 - q)
                 + bspsurface(u1, v0) * (1.0 - p) * q
                 + bspsurface(u1, v1) * (1.0 - p) * (1.0 - q);
-            let res = val_mid.projection() - par_mid.projection();
+            let res = val_mid.rational_projection() - par_mid.rational_projection();
             if res.norm2() > tol * tol {
                 return true;
             }
@@ -105,15 +105,15 @@ fn create_mesh(bspsurface: &BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) -> S
         let prow = div1
             .iter()
             .map(|v| {
-                let pt = bspsurface.subs(*u, *v).projection();
+                let pt = bspsurface.subs(*u, *v).rational_projection();
                 vector!(pt[0], pt[1], pt[2])
             })
             .collect();
         let nrow = bspsurface
-            .normal_vectors(div1.iter().map(|v| (*u, *v)))
+            .rational_normal_vectors(div1.iter().map(|v| (*u, *v)))
             .iter()
             .map(|normal| {
-                let normal = normal.projection();
+                let normal = normal.rational_projection();
                 vector!(normal[0], normal[1], normal[2])
             })
             .collect();

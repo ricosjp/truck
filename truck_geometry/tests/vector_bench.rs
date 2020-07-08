@@ -167,6 +167,10 @@ macro_rules! impl_vector {
 
         impl Origin for $classname {
             const ORIGIN: Self = Self::zero();
+            fn round_by_tolerance(&mut self) -> &mut Self {
+                $(self[$num].round_by_tolerance();)*
+                self
+            }
         }
 
         impl std::convert::AsRef<[f64]> for $classname {

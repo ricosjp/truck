@@ -135,7 +135,7 @@ impl std::ops::SubAssign<Vector3> for Transform {
 impl std::ops::MulAssign<&Transform> for Vector3 {
     #[inline(always)]
     fn mul_assign(&mut self, trsf: &Transform) {
-        let mut vector = Vector::new3(self[0], self[1], self[2]);
+        let mut vector = rvector!(self[0], self[1], self[2]);
         vector *= trsf;
         self[0] = vector[0] / vector[3];
         self[1] = vector[1] / vector[3];

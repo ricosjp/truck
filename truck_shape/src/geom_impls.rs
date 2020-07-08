@@ -13,9 +13,9 @@ pub(super) fn circle_arc_by_three_points(
     transit: &Vector3,
 ) -> BSplineCurve
 {
-    let tmp = point0.projection();
+    let tmp = point0.rational_projection();
     let pt0 = vector!(tmp[0], tmp[1], tmp[2]);
-    let tmp = point1.projection();
+    let tmp = point1.rational_projection();
     let pt1 = vector!(tmp[0], tmp[1], tmp[2]);
     let origin = circum_center(&pt0, &pt1, transit);
     let vec0 = &pt0 - transit;
@@ -45,7 +45,7 @@ pub(super) fn circle_arc(
     angle: f64,
 ) -> BSplineCurve
 {
-    let tmp: Vector3 = point.projection().into();
+    let tmp: Vector3 = point.rational_projection().into();
     let origin = origin + (axis * (tmp - origin)) * axis;
     let axis_trsf = if (axis[2] * axis[2]).near(&1.0) {
         Transform::identity()
@@ -114,7 +114,7 @@ pub(super) fn rsweep_surface(
 pub(super) fn bezier_curve(control_points: Vec<Vector3>) -> BSplineCurve {
     let knot_vec = KnotVec::bezier_knot(control_points.len() - 1);
     let control_points = control_points.into_iter().map(|pt| {
-        Vector::new3(pt[0], pt[1], pt[2])
+        rvector!(pt[0], pt[1], pt[2])
     }).collect();
     BSplineCurve::new(knot_vec, control_points)
 }

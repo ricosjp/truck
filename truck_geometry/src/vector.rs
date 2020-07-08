@@ -1,8 +1,8 @@
 use crate::*;
 use std::cmp::Ordering;
-use std::ops::*;
-use std::iter::FromIterator;
 use std::convert::TryFrom;
+use std::iter::FromIterator;
+use std::ops::*;
 
 macro_rules! impl_entity_array {
     ($($dim: expr), *) => {
@@ -44,19 +44,20 @@ impl_entity_array!(24, 25, 26, 27, 28, 29, 30, 31, 32);
 /// ```
 #[macro_export]
 macro_rules! vector {
-    ($($x: expr), *) => { $crate::Vector::from([$($x.into()), *]) };
+    ($($x: expr), *) => { $crate::Vector::from([$(Into::<f64>::into($x)), *]) };
+    ($($x: expr,) *) => { $crate::Vector::from([$(Into::<f64>::into($x)), *]) };
 }
 
 /// Creates a new vector by the homogeneous coordinate.
 /// i.e. creates a `n + 1`-dim vector with the final component is 1.0.
 /// # Examples
 /// ```
-/// truck_geometry::*;
+/// use truck_geometry::*;
 /// assert_eq!(hvector!(1, 2, 3), vector!(1, 2, 3, 1));
 /// ```
 #[macro_export]
-macro_rules! hvector {
-    ($($x: expr), *) => { vector!($x, 1) };
+macro_rules! rvector {
+    ($($x: expr), *) => { vector!($($x), *, 1) };
 }
 
 impl<T: EntityArray<f64>> Deref for Vector<T> {
@@ -106,7 +107,7 @@ impl<T: EntityArray<f64>> std::iter::FromIterator<f64> for Vector<T> {
     /// assert_eq!(Vector4::from_iter(vec![1.0, 2.0, 3.0]), vector!(1, 2, 3, 0));
     /// ```
     #[inline(always)]
-    fn from_iter<I: IntoIterator<Item=f64>>(iter: I) -> Vector<T> {
+    fn from_iter<I: IntoIterator<Item = f64>>(iter: I) -> Vector<T> {
         let mut res = Vector::ORIGIN;
         res.iter_mut().zip(iter).for_each(|(a, b)| *a = b);
         res
@@ -125,7 +126,7 @@ impl<'a, T: EntityArray<f64>> FromIterator<&'a f64> for Vector<T> {
     /// assert_eq!(Vector4::from_iter(&[1.0, 2.0, 3.0]), vector!(1, 2, 3, 0));
     /// ```
     #[inline(always)]
-    fn from_iter<I: IntoIterator<Item=&'a f64>>(iter: I) -> Vector<T> {
+    fn from_iter<I: IntoIterator<Item = &'a f64>>(iter: I) -> Vector<T> {
         let mut res = Vector::ORIGIN;
         res.iter_mut().zip(iter).for_each(|(a, b)| *a = *b);
         res
@@ -657,6 +658,12 @@ impl<T: EntityArray<f64>> Tolerance for Vector<T> {
 
 impl<T: EntityArray<f64>> Origin for Vector<T> {
     const ORIGIN: Self = Self(T::ORIGIN);
+    fn round_by_tolerance(&mut self) -> &mut Self {
+        self.iter_mut().for_each(|val| {
+            val.round_by_tolerance();
+        });
+        self
+    }
 }
 
 impl<T: EntityArray<f64>> Vector<T> {
@@ -732,13 +739,13 @@ impl<T: EntityArray<f64>> Vector<T> {
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let v = vector!(8, 4, 6, 2).projection();
+    /// let v = vector!(8, 4, 6, 2).rational_projection();
     /// assert_eq!(v, vector!(4, 2, 3, 1));
     /// ```
     #[inline(always)]
-    pub fn projection(&self) -> Self { self / self[self.len() - 1] }
+    pub fn rational_projection(&self) -> Self { self / self[self.len() - 1] }
 
-    /// Returns the derivation of the projected curve.
+    /// Returns the derivation of the rational curve.
     ///
     /// For a curve c(t) = (c_0(t), c_1(t), c_2(t), c_3(t)), returns the derivation
     /// of the projected curve (c_0 / c_3, c_1 / c_3, c_2 / c_3, 1.0).
@@ -757,16 +764,16 @@ impl<T: EntityArray<f64>> Vector<T> {
     /// // the projected curve: \bar{c}(t) = (t, t^2, t^3, 1)
     /// // the derivation of the proj'ed curve: \bar{c}'(t) = (1, 2t, 3t^2, 0)
     /// let ans = vector!(1.0, 2.0 * t, 3.0 * t * t, 0.0);
-    /// assert_eq!(pt.derivation_projection(&der), ans);
+    /// assert_eq!(pt.rational_derivation(&der), ans);
     /// ```
     #[inline(always)]
-    pub fn derivation_projection(&self, der: &Self) -> Self {
+    pub fn rational_derivation(&self, der: &Self) -> Self {
         let self_last = self[self.len() - 1];
         let coef = der[der.len() - 1] / self_last / self_last;
         (der / self_last) - (self * coef)
     }
 
-    /// Returns the derivation of the projected curve.
+    /// Returns the derivation of the rational curve.
     ///
     /// For a curve c(t) = (c_0(t), c_1(t), c_2(t), c_3(t)), returns the 2nd ordered derivation
     /// of the projected curve (c_0 / c_3, c_1 / c_3, c_2 / c_3, 1.0).
@@ -789,10 +796,10 @@ impl<T: EntityArray<f64>> Vector<T> {
     /// // the derivation of the proj'ed curve: \bar{c}'(t) = (1, 2t, 3t^2, 0)
     /// // the 2nd ord. deri. of the proj'ed curve: \bar{c}''(t) = (0, 2, 6t, 0)
     /// let ans = vector!(0.0, 2.0, 6.0 * t, 0.0);
-    /// assert_eq!(pt.derivation2_projection(&der, &der2), ans);
+    /// assert_eq!(pt.rational_derivation2(&der, &der2), ans);
     /// ```
     #[inline(always)]
-    pub fn derivation2_projection(&self, der: &Self, der2: &Self) -> Self {
+    pub fn rational_derivation2(&self, der: &Self, der2: &Self) -> Self {
         let self_last = self[self.len() - 1];
         let self_last2 = self_last * self_last;
         let der_last = der[der.len() - 1];
@@ -800,28 +807,6 @@ impl<T: EntityArray<f64>> Vector<T> {
         let coef2 = (2.0 * der_last * der_last - der2[der2.len() - 1] * self_last)
             / (self_last * self_last2);
         (der2 / self_last) - (der * coef1) + (self * coef2)
-    }
-}
-
-impl BitXor<&Vector4> for &Vector4 {
-    type Output = Vector4;
-
-    /// cross product for the first three componets.  
-    /// The 3rd component is the norm of the above three components.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let v0 = Vector4::new3(1.0, 0.0, 0.0);
-    /// let v1 = Vector4::new3(0.0, 1.0, 0.0);
-    /// let v = &v0 ^ &v1;
-    /// assert_eq!(v, vector!(0.0, 0.0, 1.0, 1.0));
-    /// ```
-    #[inline(always)]
-    fn bitxor(self, other: &Vector4) -> Vector4 {
-        let x = self[1] * other[2] - self[2] * other[1];
-        let y = self[2] * other[0] - self[0] * other[2];
-        let z = self[0] * other[1] - self[1] * other[0];
-        vector!(x, y, z, (x * x + y * y + z * z).sqrt())
     }
 }
 
@@ -903,68 +888,58 @@ macro_rules! impl_bitxor_others {
         }
     };
 }
-
-impl_bitxor_others!(Vector4);
 impl_bitxor_others!(Vector3);
 impl_bitxor_others!(Vector2);
 
-macro_rules! impl_bitxor_assign {
-    ($classname: ty) => {
-        impl BitXorAssign<&$classname> for $classname {
-            /// cross product
-            /// # Examples
-            /// ```
-            /// use truck_geometry::*;
-            /// let mut v = vector!(1, 2, 3);
-            /// v ^= &vector!(2, 4, 7);
-            /// assert_eq!(v, vector!(2, -1, 0));
-            /// ```
-            #[inline(always)]
-            fn bitxor_assign(&mut self, rhs: &$classname) { *self = &*self ^ rhs; }
-        }
+impl BitXorAssign<&Vector3> for Vector3 {
+    /// cross product
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let mut v = vector!(1, 2, 3);
+    /// v ^= &vector!(2, 4, 7);
+    /// assert_eq!(v, vector!(2, -1, 0));
+    /// ```
+    #[inline(always)]
+    fn bitxor_assign(&mut self, rhs: &Vector3) { *self = &*self ^ rhs; }
+}
 
-        impl BitXorAssign<$classname> for $classname {
-            /// cross product
-            /// # Examples
-            /// ```
-            /// use truck_geometry::*;
-            /// let mut v = vector!(1, 2, 3);
-            /// v ^= vector!(2, 4, 7);
-            /// assert_eq!(v, vector!(2, -1, 0));
-            /// ```
-            #[inline(always)]
-            fn bitxor_assign(&mut self, rhs: $classname) { self.bitxor_assign(&rhs); }
+impl BitXorAssign<Vector3> for Vector3 {
+    /// cross product
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let mut v = vector!(1, 2, 3);
+    /// v ^= vector!(2, 4, 7);
+    /// assert_eq!(v, vector!(2, -1, 0));
+    /// ```
+    #[inline(always)]
+    fn bitxor_assign(&mut self, rhs: Vector3) { self.bitxor_assign(&rhs); }
+}
+
+macro_rules! sub_impl_lesser_convert {
+    ($a: expr, $b: expr) => {
+        /// Truncates the latter components.
+        impl From<Vector<[f64; $a]>> for Vector<[f64; $b]> {
+            fn from(vec: Vector<[f64; $a]>) -> Vector<[f64; $b]> {
+                Vector::from(<[f64; $b]>::try_from(&vec.0[0..$b]).unwrap())
+            }
         }
     };
 }
-
-impl_bitxor_assign!(Vector4);
-impl_bitxor_assign!(Vector3);
 
 macro_rules! impl_lesser_convert {
     ($a: expr) => {};
     ($a: expr, $($b: expr), *) => {
-        $(
-            /// project to the lower dimensional Euclidian space
-            /// # Examples
-            /// ```
-            /// use truck_geometry::*;
-            /// let vec = vector!(1, 2, 3, 4);
-            /// assert_eq!(Vector2::from(vec), vector!(1, 2));
-            /// ```
-            impl From<Vector<[f64; $a]>> for Vector<[f64; $b]> {
-                fn from(vec: Vector<[f64; $a]>) -> Vector<[f64; $b]> {
-                    Vector::from(<[f64; $b]>::try_from(&vec.0[0..$b]).unwrap())
-                }
-            }
-        )*
+        $(sub_impl_lesser_convert!($a, $b);)*
         impl_lesser_convert!($($b), *);
     };
 }
 
-impl_lesser_convert!(32, 31, 30, 29, 28, 27, 26, 25,
-    24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11,
-    10, 9, 8, 7, 6, 5, 4, 3, 2);
+impl_lesser_convert!(
+    32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9,
+    8, 7, 6, 5, 4, 3, 2
+);
 
 #[test]
 fn test_lesser_convert() {
@@ -991,16 +966,4 @@ impl std::fmt::Display for Vector2 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.write_fmt(format_args!("[{}    {}]", self[0], self[1]))
     }
-}
-
-impl Vector4 {
-    /// construct a vector whose 4th component is 1.0.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let v = Vector::new3(1.0, 2.0, 3.0);
-    /// assert_eq!(v, vector!(1.0, 2.0, 3.0, 1.0));
-    /// ```
-    #[inline(always)]
-    pub fn new3<T: Into<f64>>(x: T, y: T, z: T) -> Vector4 { vector!(x, y, z, 1) }
 }

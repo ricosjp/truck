@@ -6,24 +6,24 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 /// # Examples
 /// ```
 /// use truck_polymesh::PolygonMesh;
-/// use truck_geometry::{Vector2, Vector3};
+/// use truck_geometry::*;
 /// let positions = vec![
-///     Vector3::new(0.0, 0.0, 0.0),
-///     Vector3::new(1.0, 0.0, 0.0),
-///     Vector3::new(0.0, 1.0, 0.0),
-///     Vector3::new(0.0, 0.0, 1.0),
-///     Vector3::new(1.0, 1.0, 0.0),
-///     Vector3::new(1.0, 0.0, 1.0),
-///     Vector3::new(0.0, 1.0, 1.0),
-///     Vector3::new(1.0, 1.0, 1.0),
+///     vector!(0.0, 0.0, 0.0),
+///     vector!(1.0, 0.0, 0.0),
+///     vector!(0.0, 1.0, 0.0),
+///     vector!(0.0, 0.0, 1.0),
+///     vector!(1.0, 1.0, 0.0),
+///     vector!(1.0, 0.0, 1.0),
+///     vector!(0.0, 1.0, 1.0),
+///     vector!(1.0, 1.0, 1.0),
 /// ];
 /// let normals = vec![
-///     Vector3::new(1.0, 0.0, 0.0),
-///     Vector3::new(0.0, 1.0, 0.0),
-///     Vector3::new(0.0, 0.0, 1.0),
-///     Vector3::new(-1.0, 0.0, 0.0),
-///     Vector3::new(0.0, -1.0, 0.0),
-///     Vector3::new(0.0, 0.0, -1.0),
+///     vector!(1.0, 0.0, 0.0),
+///     vector!(0.0, 1.0, 0.0),
+///     vector!(0.0, 0.0, 1.0),
+///     vector!(-1.0, 0.0, 0.0),
+///     vector!(0.0, -1.0, 0.0),
+///     vector!(0.0, 0.0, -1.0),
 /// ];
 /// let faces = vec![
 ///     [[0, 0, 5], [1, 0, 5], [2, 0, 5]],
