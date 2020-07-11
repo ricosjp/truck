@@ -168,12 +168,8 @@ trait RemoveTry<T> {
 }
 
 impl<T> RemoveTry<T> for Result<T> {
-    fn remove_try(self) -> T {
-        match self {
-            Ok(got) => got,
-            Err(error) => panic!("{}", error),
-        }
-    }
+    #[inline(always)]
+    fn remove_try(self) -> T { self.unwrap_or_else(|e| panic!("{}", e)) }
 }
 
 #[doc(hidden)]

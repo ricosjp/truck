@@ -1,4 +1,4 @@
-use geometry::{Vector2, Vector3};
+use geometry::{Vector3};
 use crate::errors::Error;
 use crate::{PolygonMesh, StructuredMesh};
 
@@ -78,7 +78,7 @@ impl StructuredMesh {
         mesh.uv_coords = self.uv_division.0.iter()
             .flat_map(|u| {
                 self.uv_division.1.iter().map(move |v| {
-                    Vector2::new(*u, *v)
+                    vector!(*u, *v)
                 })
             })
             .collect();

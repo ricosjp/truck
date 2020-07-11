@@ -1,27 +1,57 @@
-macro_rules! vector_define {
-    ($classname: ident, $dim: expr) => {
-        /// vector
-        #[derive(Clone, PartialEq, Debug)]
-        pub struct $classname([f64; $dim]);
-    };
-}
+use std::fmt::Debug;
 
-vector_define!(Vector, 4);
-vector_define!(Vector3, 3);
-vector_define!(Vector2, 2);
+/// vector
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct Vector<T>(T);
 
+/// 2-dim vector
+///
+/// The cross product `^` returns the signed area of the parallelogram streched by the two vectors.
+/// ```
+/// use truck_geometry::*;
+/// assert_eq!(vector!(2, 3) ^ vector!(4, 7), 2.0);
+/// ```
+pub type Vector2 = Vector<[f64; 2]>;
+/// 3-dim vector
+///
+/// The cross product is represented by the operator `^`.
+/// ```
+/// use truck_geometry::*;
+/// assert_eq!(vector!(1, 2, 3) ^ vector!(2, 4, 7), vector!(2, -1, 0));
+/// ```
+pub type Vector3 = Vector<[f64; 3]>;
+/// 4-dim vector
+///
+/// To creates the rational vector by a 3-dimentional coordinate, use `rvector!()`.
+/// ```
+/// use truck_geometry::*;
+/// assert_eq!(rvector!(1, 2, 3), vector!(1, 2, 3, 1));
+/// ```
+pub type Vector4 = Vector<[f64; 4]>;
+
+/// square matrix
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct Matrix<T, M>(M, std::marker::PhantomData<fn() -> T>);
+/// 2x2 matrix
+pub type Matrix2 = Matrix<[f64; 2], [Vector2; 2]>;
+/// 3x3 matrix
+pub type Matrix3 = Matrix<[f64; 3], [Vector3; 3]>;
 /// 4x4 matrix
-#[derive(Clone, PartialEq, Debug)]
-pub struct Matrix {
-    a: [[f64; 4]; 4],
+pub type Matrix4 = Matrix<[f64; 4], [Vector4; 4]>;
+
+/// Abstraction of the arrays which is the entity of `Vector` or `Matrix`.
+pub trait EntityArray<T>:
+    Sized + Clone + PartialEq + AsRef<[T]> + AsMut<[T]> + Debug + Default {
+    const ORIGIN: Self;
+    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self;
 }
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug)]
-pub struct KnotVec(std::vec::Vec<f64>);
+pub struct KnotVec(Vec<f64>);
 
-/// define a tolerance in the whole package
-pub trait Tolerance: Sized + std::fmt::Debug {
+/// Defines a tolerance in the whole package
+pub trait Tolerance: Sized + Debug {
     /// general tolerance
     const TOLERANCE: f64 = 1.0e-7;
 
@@ -55,9 +85,18 @@ pub trait Tolerance: Sized + std::fmt::Debug {
     }
 }
 
+/// The structs defined the origin. `f64`, `Vector`, and so on.
 pub trait Origin: Tolerance {
     /// origin point
     const ORIGIN: Self;
+
+    /// Rounds the value by tolerance
+    /// # Example
+    /// ```
+    /// use truck_geometry::*;
+    /// assert_eq!(1.23456789_f64.round_by_tolerance(), &1.2345678);
+    /// ```
+    fn round_by_tolerance(&mut self) -> &mut Self;
 
     /// near origin
     #[inline(always)]
@@ -68,32 +107,34 @@ pub trait Origin: Tolerance {
     fn so_small2(&self) -> bool { self.near2(&Self::ORIGIN) }
 }
 
-/// 4-dimensional B-spline curve
+/// B-spline curve
 /// # Examples
 /// ```
 /// use truck_geometry::*;
-/// const N : usize = 100; // sample size in test
 ///
 /// // the knot vector
-/// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0]);
+/// let knot_vec = KnotVec::from(
+///     vec![0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0]
+/// );
 ///
 /// // sign up the control points in the vector of all points
-/// let control_points = vec![ // the vector of the indices of control points
-///     Vector::new(0.0, -2.0, 0.0, 2.0),
-///     Vector::new(1.0, -1.0, 0.0, 1.0),
-///     Vector::new(1.0, 0.0, 0.0, 1.0),
-///     Vector::new(1.0, 1.0, 0.0, 1.0),
-///     Vector::new(0.0, 2.0, 0.0, 2.0),
-///     Vector::new(-1.0, 1.0, 0.0, 1.0),
-///     Vector::new(-1.0, 0.0, 0.0, 1.0),
-///     Vector::new(-1.0, -1.0, 0.0, 1.0),
-///     Vector::new(0.0, -2.0, 0.0, 2.0),
+/// let ctrl_pts = vec![ // the vector of the indices of control points
+///     vector!(0, -2, 0, 2),
+///     vector!(1, -1, 0, 1),
+///     vector!(1, 0, 0, 1),
+///     vector!(1, 1, 0, 1),
+///     vector!(0, 2, 0, 2),
+///     vector!(-1, 1, 0, 1),
+///     vector!(-1, 0, 0, 1),
+///     vector!(-1, -1, 0, 1),
+///     vector!(0, -2, 0, 2),
 /// ];
 ///
-/// // cunstruct the B-spline curve
-/// let bspline = BSplineCurve::new(knot_vec, control_points);
+/// // construct the B-spline curve
+/// let bspline = BSplineCurve::new(knot_vec, ctrl_pts);
 ///
 /// // This B-spline curve is a nurbs representation of the unit circle.
+/// const N : usize = 100; // sample size in test
 /// for i in 0..N {
 ///     let t = 1.0 / (N as f64) * (i as f64);
 ///     let v = bspline.subs(t); // We can use the instances as a function.
@@ -102,10 +143,14 @@ pub trait Origin: Tolerance {
 /// }
 /// ```
 #[derive(Clone, PartialEq, Debug)]
-pub struct BSplineCurve {
-    knot_vec: KnotVec,           // the knot vector
-    control_points: Vec<Vector>, // the indices of control points
+pub struct BSplineCurve<T> {
+    knot_vec: KnotVec,              // the knot vector
+    control_points: Vec<Vector<T>>, // the indices of control points
 }
+
+/// NRUBS-curve
+#[derive(Clone, PartialEq, Debug)]
+pub struct NURBSCurve<T>(BSplineCurve<T>);
 
 /// 4-dimensional B-spline surface
 /// # Examples
@@ -114,34 +159,36 @@ pub struct BSplineCurve {
 /// const N : usize = 100; // sample size in test
 ///
 /// // the knot vectors
-/// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]);
-/// let knot_vec1 = KnotVec::from(vec![0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0]);
+/// let knot_vec0 = KnotVec::bezier_knot(3);
+/// let knot_vec1 = KnotVec::from(
+///     vec![0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0]
+/// );
 /// let knot_vecs = (knot_vec0, knot_vec1);
 ///
 /// // the control points
 /// let mut v = vec![vec![Vector::zero(); 7]; 4];
-/// v[0][0] = Vector::new3(0.0, 0.0, 1.0);
+/// v[0][0] = rvector!(0, 0, 1);
 /// v[0][1] = &v[0][0] / 3.0;
 /// v[0][2] = v[0][1].clone();
 /// v[0][3] = v[0][0].clone();
 /// v[0][4] = v[0][1].clone();
 /// v[0][5] = v[0][1].clone();
 /// v[0][6] = v[0][0].clone();
-/// v[1][0] = Vector::new3(2.0, 0.0, 1.0) / 3.0;
-/// v[1][1] = Vector::new3(2.0, 4.0, 1.0) / 9.0;
-/// v[1][2] = Vector::new3(-2.0, 4.0, 1.0) / 9.0;
-/// v[1][3] = Vector::new3(-2.0, 0.0, 1.0) / 3.0;
-/// v[1][4] = Vector::new3(-2.0, -4.0, 1.0) / 9.0;
-/// v[1][5] = Vector::new3(2.0, -4.0, 1.0) / 9.0;
-/// v[1][6] = Vector::new3(2.0, 0.0, 1.0) / 3.0;
-/// v[2][0] = Vector::new3(2.0, 0.0, -1.0) / 3.0;
-/// v[2][1] = Vector::new3(2.0, 4.0, -1.0) / 9.0;
-/// v[2][2] = Vector::new3(-2.0, 4.0, -1.0) / 9.0;
-/// v[2][3] = Vector::new3(-2.0, 0.0, -1.0) / 3.0;
-/// v[2][4] = Vector::new3(-2.0, -4.0, -1.0) / 9.0;
-/// v[2][5] = Vector::new3(2.0, -4.0, -1.0) / 9.0;
-/// v[2][6] = Vector::new3(2.0, 0.0, -1.0) / 3.0;
-/// v[3][0] = Vector::new3(0.0, 0.0, -1.0);
+/// v[1][0] = rvector!(2, 0, 1) / 3.0;
+/// v[1][1] = rvector!(2, 4, 1) / 9.0;
+/// v[1][2] = rvector!(-2, 4, 1) / 9.0;
+/// v[1][3] = rvector!(-2, 0, 1) / 3.0;
+/// v[1][4] = rvector!(-2, -4, 1) / 9.0;
+/// v[1][5] = rvector!(2, -4, 1) / 9.0;
+/// v[1][6] = rvector!(2, 0, 1) / 3.0;
+/// v[2][0] = rvector!(2, 0, -1) / 3.0;
+/// v[2][1] = rvector!(2, 4, -1) / 9.0;
+/// v[2][2] = rvector!(-2, 4, -1) / 9.0;
+/// v[2][3] = rvector!(-2, 0, -1) / 3.0;
+/// v[2][4] = rvector!(-2, -4, -1) / 9.0;
+/// v[2][5] = rvector!(2, -4, -1) / 9.0;
+/// v[2][6] = rvector!(2, 0, -1) / 3.0;
+/// v[3][0] = rvector!(0, 0, -1);
 /// v[3][1] = &v[3][0] / 3.0;
 /// v[3][2] = v[3][1].clone();
 /// v[3][3] = v[3][0].clone();
@@ -164,17 +211,19 @@ pub struct BSplineCurve {
 /// }
 /// ```
 #[derive(Clone, PartialEq, Debug)]
-pub struct BSplineSurface {
+pub struct BSplineSurface<T> {
     knot_vecs: (KnotVec, KnotVec),
-    control_points: Vec<Vec<Vector>>,
+    control_points: Vec<Vec<Vector<T>>>,
 }
 
+/// Error handler for [`Error`](./errors/enum.Error.html)
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
+#[macro_use]
+pub mod vector;
 pub mod bspcurve;
 pub mod bspsurface;
 pub mod errors;
 pub mod knot_vec;
 pub mod matrix;
 pub mod tolerance;
-pub mod vector;

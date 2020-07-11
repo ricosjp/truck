@@ -1,5 +1,5 @@
-use crate::Transform;
-use geometry::*;
+use crate::*;
+use geometry::{Vector3, KnotVec, Tolerance};
 use std::f64::consts::PI;
 
 pub(super) fn line(pt0: Vector, pt1: Vector) -> BSplineCurve {
@@ -13,10 +13,10 @@ pub(super) fn circle_arc_by_three_points(
     transit: &Vector3,
 ) -> BSplineCurve
 {
-    let tmp = point0.projection();
-    let pt0 = Vector3::new(tmp[0], tmp[1], tmp[2]);
-    let tmp = point1.projection();
-    let pt1 = Vector3::new(tmp[0], tmp[1], tmp[2]);
+    let tmp = point0.rational_projection();
+    let pt0 = vector!(tmp[0], tmp[1], tmp[2]);
+    let tmp = point1.rational_projection();
+    let pt1 = vector!(tmp[0], tmp[1], tmp[2]);
     let origin = circum_center(&pt0, &pt1, transit);
     let vec0 = &pt0 - transit;
     let vec1 = &pt1 - transit;
@@ -45,18 +45,18 @@ pub(super) fn circle_arc(
     angle: f64,
 ) -> BSplineCurve
 {
-    let tmp: Vector3 = point.projection().into();
+    let tmp: Vector3 = point.rational_projection().into();
     let origin = origin + (axis * (tmp - origin)) * axis;
     let axis_trsf = if (axis[2] * axis[2]).near(&1.0) {
         Transform::identity()
     } else {
         let axis_angle = axis[2].acos();
-        let mut axis_axis = Vector3::new(-axis[1], axis[0], 0.0);
+        let mut axis_axis = vector!(-axis[1], axis[0], 0.0);
         axis_axis /= axis_axis.norm();
         Transform::rotate(&axis_axis, axis_angle) * Transform::translate(&origin)
     };
     let trsf_inverse = &axis_trsf.inverse().unwrap();
-    let rotation = Transform::rotate(&Vector3::new(0, 0, 1), angle / 2.0);
+    let rotation = Transform::rotate(&vector!(0, 0, 1), angle / 2.0);
     let rotation2 = &rotation * &rotation * &axis_trsf;
     let cos = (angle / 2.0).cos();
     let pt = point * &trsf_inverse.0;
@@ -114,7 +114,7 @@ pub(super) fn rsweep_surface(
 pub(super) fn bezier_curve(control_points: Vec<Vector3>) -> BSplineCurve {
     let knot_vec = KnotVec::bezier_knot(control_points.len() - 1);
     let control_points = control_points.into_iter().map(|pt| {
-        Vector::new3(pt[0], pt[1], pt[2])
+        rvector!(pt[0], pt[1], pt[2])
     }).collect();
     BSplineCurve::new(knot_vec, control_points)
 }

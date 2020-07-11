@@ -6,7 +6,7 @@ use crate::topological_curve::TopologicalCurve;
 use crate::transformed::Transformed;
 use crate::tsweep::TSweep;
 
-use crate::{Builder, Result, Transform};
+use crate::{Builder, Result, Transform, BSplineCurve};
 use geometry::*;
 use topology::*;
 
@@ -18,7 +18,7 @@ impl<'a> Builder<'a> {
 
     #[inline(always)]
     pub fn vertex(&mut self, coord: Vector3) -> Result<Vertex> {
-        self.create_topology(Vector::new3(coord[0], coord[1], coord[2]))
+        self.create_topology(rvector!(coord[0], coord[1], coord[2]))
     }
 
     pub fn line(&mut self, vertex0: Vertex, vertex1: Vertex) -> Result<Edge> {
@@ -48,12 +48,12 @@ impl<'a> Builder<'a> {
             .director
             .get_geometry(&vertex0)
             .ok_or(vertex0.no_geometry())?
-            .projection();
+            .rational_projection();
         let pt1 = self
             .director
             .get_geometry(&vertex1)
             .ok_or(vertex1.no_geometry())?
-            .projection();
+            .rational_projection();
         control_points.push(pt0.into());
         control_points.append(&mut inter_points);
         control_points.push(pt1.into());
@@ -75,11 +75,11 @@ impl<'a> Builder<'a> {
         let pt0 = director
             .get_geometry(&vertex0)
             .ok_or(vertex0.no_geometry())?
-            .projection();
+            .rational_projection();
         let pt1 = director
             .get_geometry(&vertex1)
             .ok_or(vertex1.no_geometry())?
-            .projection();
+            .rational_projection();
         let edge = Edge::new(vertex0, vertex1);
         director.attach(&edge, circle_arc_by_three_points(pt0, pt1, transit));
         Ok(edge)
@@ -192,13 +192,13 @@ fn split_wire(wire: &Wire) -> [Wire; 4] {
 #[test]
 fn test_circle_arc() {
     const N: usize = 100;
-    let mut pt0 = Vector::new3(0.17_f64.cos(), 0.17_f64.sin(), 0.0);
-    let mut pt1 = Vector::new3(1.64_f64.cos(), 1.64_f64.sin(), 0.0);
-    let vector = Vector3::new(-2, 5, 10);
-    let mut axis = Vector3::new(2, 5, 4);
+    let mut pt0 = rvector!(0.17_f64.cos(), 0.17_f64.sin(), 0.0);
+    let mut pt1 = rvector!(1.64_f64.cos(), 1.64_f64.sin(), 0.0);
+    let vector = vector!(-2, 5, 10);
+    let mut axis = vector!(2, 5, 4);
     axis /= axis.norm();
     let trsf = Transform::rotate(&axis, 0.56) * Transform::translate(&vector);
-    let mut transit = Vector::new3(1.12_f64.cos(), 1.12_f64.sin(), 0.0);
+    let mut transit = rvector!(1.12_f64.cos(), 1.12_f64.sin(), 0.0);
     pt0 *= &trsf.0;
     pt1 *= &trsf.0;
     transit *= &trsf.0;
@@ -207,18 +207,18 @@ fn test_circle_arc() {
     let edge = director.building(|builder| {
         let vertex0 = builder.create_topology(pt0.clone()).unwrap();
         let vertex1 = builder.create_topology(pt1.clone()).unwrap();
-        let transit = Vector3::new(transit[0], transit[1], transit[2]);
+        let transit = vector!(transit[0], transit[1], transit[2]);
 
         builder.circle_arc(vertex0, vertex1, &transit).unwrap()
     });
 
     let curve = director.get_geometry(&edge).unwrap();
-    Vector::assert_near(&pt0.projection(), &curve.subs(0.0).projection());
-    Vector::assert_near(&pt1.projection(), &curve.subs(1.0).projection());
+    Vector::assert_near(&pt0.rational_projection(), &curve.subs(0.0).rational_projection());
+    Vector::assert_near(&pt1.rational_projection(), &curve.subs(1.0).rational_projection());
     for i in 0..N {
         let t = (i as f64) / (N as f64);
-        let pt = curve.subs(t).projection();
-        let pt = Vector3::new(pt[0], pt[1], pt[2]);
+        let pt = curve.subs(t).rational_projection();
+        let pt = vector!(pt[0], pt[1], pt[2]);
         f64::assert_near(&(&pt - &vector).norm(), &1.0);
     }
 }

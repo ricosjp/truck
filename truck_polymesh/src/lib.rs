@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
 use geometry::{Vector2, Vector3};

@@ -1,7 +1,7 @@
 use crate::elements::TopologicalElement;
 use crate::geom_impls::*;
 use crate::transformed::Transformed;
-use crate::{Director, Result};
+use crate::{Director, Result, Vector, BSplineSurface};
 use geometry::*;
 use std::collections::HashMap;
 use std::f64::consts::PI;

@@ -52,8 +52,14 @@ impl Tolerance for &[f64] {
 
 impl Origin for f64 {
     const ORIGIN : f64 = 0.0;
+    
+    fn round_by_tolerance(&mut self) -> &mut f64 {
+        *self = (*self / f64::TOLERANCE).floor() * f64::TOLERANCE;
+        self
+    }
 }
 
+#[doc(hidden)]
 #[inline(always)]
 pub fn inv_or_zero(delta : f64) -> f64 {
     if delta.so_small() {
@@ -61,14 +67,4 @@ pub fn inv_or_zero(delta : f64) -> f64 {
     } else {
         1.0 / delta
     }
-}
-
-/// round the value by tolerance
-/// # Example
-/// ```
-/// # use truck_geometry::tolerance::round_by_tolerance;
-/// assert_eq!(round_by_tolerance(1.23456789), 1.2345678);
-/// ```
-pub fn round_by_tolerance(val: f64) -> f64 {
-    (val / f64::TOLERANCE).floor() * f64::TOLERANCE
 }

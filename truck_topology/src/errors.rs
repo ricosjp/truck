@@ -4,8 +4,8 @@ pub enum Error {
     /// Two same vertices cannot construct an edge.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
     /// let v = Vertex::new();
     /// assert_eq!(Edge::try_new(v, v), Err(Error::SameVertex));
     /// ```
@@ -13,16 +13,16 @@ pub enum Error {
     /// The empty wire cannot contruct a face.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
     /// assert_eq!(Face::try_new(Wire::new()), Err(Error::EmptyWire));
     /// ```
     EmptyWire,
     /// The boundary of a face must be closed.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
     /// let v = Vertex::news(2);
     /// let wire: Wire = vec![Edge::new(v[0], v[1])].into();
     /// assert_eq!(Face::try_new(wire), Err(Error::NotClosedWire));
@@ -31,8 +31,8 @@ pub enum Error {
     /// The boundary of a face must be simple.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
     /// let v = Vertex::news(4);
     /// let wire: Wire = vec![
     ///     Edge::new(v[0], v[1]),
@@ -47,16 +47,16 @@ pub enum Error {
     /// The empty shell cannot construct a solid.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
     /// assert_eq!(Solid::try_new(vec![Shell::new()]), Err(Error::EmptyShell));
     /// ```
     EmptyShell,
     /// The vector of boundaries of the solid must consist connected shells.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
     /// let v = Vertex::news(4);
     /// let wire = vec![
     ///     Wire::from(vec![Edge::new(v[0], v[1]), Edge::new(v[1], v[0])]),
@@ -69,8 +69,8 @@ pub enum Error {
     /// The boundary of the solid must be closed.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
     /// let v = Vertex::news(2);
     /// let wire = Wire::from(vec![Edge::new(v[0], v[1]), Edge::new(v[1], v[0])]);
     /// let shell: Shell = vec![Face::new(wire)].into();
@@ -81,8 +81,8 @@ pub enum Error {
     /// # Examples
     /// ```
     /// // the wedge sum of two spheres
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
     /// let v = Vertex::news(3);
     /// let edge = [
     ///     Edge::new(v[0], v[1]),
