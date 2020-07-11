@@ -1,33 +1,49 @@
 use crate::*;
+use crate::errors::Error;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
 use std::ops::*;
 
-macro_rules! impl_entity_array {
-    ($($dim: expr), *) => {
-        $(
-            impl EntityArray<f64> for [f64; $dim] {
-                const ORIGIN: Self = [0.0; $dim];
-            }
-            impl From<Vector<[f64; $dim]>> for [f64; $dim] {
-                #[inline(always)]
-                fn from(vec: Vector<[f64; $dim]>) -> [f64; $dim] { vec.0 }
-            }
-            impl From<Vector<[f64; $dim]>> for [f32; $dim] {
-                #[inline(always)]
-                fn from(vec: Vector<[f64; $dim]>) -> [f32; $dim] {
-                    let mut res = <[f32; $dim]>::default();
-                    res.iter_mut().zip(&vec).for_each(|(a, b)| *a = *b as f32);
-                    res
-                }
-            }
-        )*
+macro_rules! inverse_array {
+    ([] $($x: expr,) *) => { [$($x), *] };
+    ([$first: expr, $($x: expr,) *] $($y: expr,) *) => {
+        inverse_array!([$($x,) *] $first, $($y,)*)
     };
 }
-impl_entity_array!(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
-impl_entity_array!(14, 15, 16, 17, 18, 19, 20, 21, 22, 23);
-impl_entity_array!(24, 25, 26, 27, 28, 29, 30, 31, 32);
+
+macro_rules! impl_entity_array {
+    ($a: expr, $b: expr) => {};
+    ($dim: expr, $($num: expr),*) => {
+        impl EntityArray<f64> for [f64; $dim] {
+            const ORIGIN: Self = [0.0; $dim];
+            #[inline(always)]
+            fn from_iter<I: IntoIterator<Item=f64>> (iter: I) -> Self {
+                let mut iter = iter.into_iter();
+                [$({
+                    $num;
+                    iter.next().expect(&format!("{}", Error::TooShortIterator))
+                }),*]
+            }
+        }
+        impl From<Vector<[f64; $dim]>> for [f64; $dim] {
+            #[inline(always)]
+            fn from(vec: Vector<[f64; $dim]>) -> [f64; $dim] { vec.0 }
+        }
+        impl From<Vector<[f64; $dim]>> for [f32; $dim] {
+            #[inline(always)]
+            fn from(vec: Vector<[f64; $dim]>) -> [f32; $dim] {
+                inverse_array!([$(vec[$num] as f32,)*])
+            }
+        }
+
+        impl_entity_array!($($num),*);
+    };
+}
+impl_entity_array!(
+    32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9,
+    8, 7, 6, 5, 4, 3, 2, 1, 0
+);
 
 /// Creates a new `Vector<[f64; N]>`.
 /// # Arguments
@@ -53,7 +69,7 @@ macro_rules! vector {
 /// # Examples
 /// ```
 /// use truck_geometry::*;
-/// assert_eq!(hvector!(1, 2, 3), vector!(1, 2, 3, 1));
+/// assert_eq!(rvector!(1, 2, 3), vector!(1, 2, 3, 1));
 /// ```
 #[macro_export]
 macro_rules! rvector {
@@ -95,44 +111,6 @@ impl<'a, T: EntityArray<f64>> IntoIterator for &'a mut Vector<T> {
     fn into_iter(self) -> Self::IntoIter { self.iter_mut() }
 }
 
-impl<T: EntityArray<f64>> std::iter::FromIterator<f64> for Vector<T> {
-    /// Creates a vector by an iterator over `f64`.  
-    /// If the length of the iterator is large, then the latter elements are truncated.  
-    /// If the length of the iterator is small, then the latter components are made zero.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// use std::iter::FromIterator;
-    /// assert_eq!(Vector2::from_iter(vec![1.0, 2.0, 3.0]), vector!(1, 2));
-    /// assert_eq!(Vector4::from_iter(vec![1.0, 2.0, 3.0]), vector!(1, 2, 3, 0));
-    /// ```
-    #[inline(always)]
-    fn from_iter<I: IntoIterator<Item = f64>>(iter: I) -> Vector<T> {
-        let mut res = Vector::ORIGIN;
-        res.iter_mut().zip(iter).for_each(|(a, b)| *a = b);
-        res
-    }
-}
-
-impl<'a, T: EntityArray<f64>> FromIterator<&'a f64> for Vector<T> {
-    /// Creates a vector by an iterator over `f64`.  
-    /// If the length of the iterator is large, then the latter elements are truncated.  
-    /// If the length of the iterator is small, then the latter components are made zero.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// use std::iter::FromIterator;
-    /// assert_eq!(Vector2::from_iter(&[1.0, 2.0, 3.0]), vector!(1, 2));
-    /// assert_eq!(Vector4::from_iter(&[1.0, 2.0, 3.0]), vector!(1, 2, 3, 0));
-    /// ```
-    #[inline(always)]
-    fn from_iter<I: IntoIterator<Item = &'a f64>>(iter: I) -> Vector<T> {
-        let mut res = Vector::ORIGIN;
-        res.iter_mut().zip(iter).for_each(|(a, b)| *a = *b);
-        res
-    }
-}
-
 impl<T> From<T> for Vector<T> {
     #[inline(always)]
     fn from(arr: T) -> Vector<T> { Vector(arr) }
@@ -141,6 +119,18 @@ impl<T> From<T> for Vector<T> {
 impl<T: Clone> From<&T> for Vector<T> {
     #[inline(always)]
     fn from(arr: &T) -> Vector<T> { Vector(arr.clone()) }
+}
+
+impl<T: EntityArray<f64>> FromIterator<f64> for Vector<T> {
+    #[inline(always)]
+    fn from_iter<I: IntoIterator<Item = f64>>(iter: I) -> Self { Vector(T::from_iter(iter)) }
+}
+
+impl<'a, T: EntityArray<f64>> FromIterator<&'a f64> for Vector<T> {
+    #[inline(always)]
+    fn from_iter<I: IntoIterator<Item = &'a f64>>(iter: I) -> Self {
+        iter.into_iter().map(|x| *x).collect()
+    }
 }
 
 impl<T: EntityArray<f64>> AddAssign<&Vector<T>> for Vector<T> {

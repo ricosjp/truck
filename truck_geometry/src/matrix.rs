@@ -1,3 +1,4 @@
+use crate::errors::Error;
 use crate::*;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
@@ -6,7 +7,7 @@ use std::ops::*;
 /// a trait for the entity array of a matrix
 pub trait MatrixEntity<T>: EntityArray<Vector<T>> {
     #[doc(hidden)]
-    fn vec_multiply(vec: &Vector<T>, mat: &Self) -> Vector<T>;
+    fn vec_multiply(&self, vec: &Vector<T>) -> Vector<T>;
     #[doc(hidden)]
     fn multiply(&self, other: &Self) -> Self;
     #[doc(hidden)]
@@ -14,34 +15,79 @@ pub trait MatrixEntity<T>: EntityArray<Vector<T>> {
 }
 
 macro_rules! impl_entity_array {
-    ($dim: expr) => {
+    ($a: expr, $b: expr) => {};
+    ($dim: expr, $($num: expr), *) => {
         impl EntityArray<Vector<[f64; $dim]>> for [Vector<[f64; $dim]>; $dim] {
             const ORIGIN: Self = [Vector::<[f64; $dim]>::ORIGIN; $dim];
-        }
-        impl From<[[f64; $dim]; $dim]> for Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]> {
-            fn from(arr: [[f64; $dim]; $dim]) -> Self {
-                let mut mat = Self::ORIGIN;
-                mat.iter_mut().zip(&arr).for_each(|(a, b)| *a = Vector::from(b));
-                mat
+            #[inline(always)]
+            fn from_iter<I: IntoIterator<Item=Vector<[f64; $dim]>>>(iter: I) -> Self {
+                let mut iter = iter.into_iter();
+                [$({
+                    iter.next().unwrap_or_else(|| {
+                        $num;
+                        panic!("{}", Error::TooShortIterator)
+                    })
+                }),*]
             }
         }
-    };
-    ($first: expr, $($latter: expr), *) => {
-        impl_entity_array!($first);
-        impl_entity_array!($($latter), *);
+        impl From<[[f64; $dim]; $dim]> for Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]> {
+            #[inline(always)]
+            fn from(arr: [[f64; $dim]; $dim]) -> Self {
+                let arr = unsafe {
+                    std::mem::transmute::<[[f64; $dim]; $dim], [Vector<[f64; $dim]>; $dim]>(arr)
+                };
+                Matrix(arr, PhantomData)
+            }
+        }
+        
+        impl MatrixEntity<[f64; $dim]> for [Vector<[f64; $dim]>; $dim] {
+            #[doc(hidden)]
+            #[inline(always)]
+            fn vec_multiply(&self, vec: &Vector<[f64; $dim]>) -> Vector<[f64; $dim]> {
+                Vector(inverse_array!([$(&self[$num] * vec,) *]))
+            }
+            #[doc(hidden)]
+            #[inline(always)]
+            fn vec_multiplied(&self, vec: &Vector<[f64; $dim]>) -> Vector<[f64; $dim]> {
+                let mut res = Vector::zero();
+                self.iter().zip(vec).for_each(|(v, a)|
+                    res.iter_mut().zip(v).for_each(|(b, c)| *b += c * a)
+                );
+                res
+            }
+
+            #[doc(hidden)]
+            #[inline(always)]
+            fn multiply(&self, other: &Self) -> Self {
+                Self::from(inverse_array!([$(other.vec_multiplied(&self[$num]),) *]))
+            }
+        }
+        impl_entity_array!($($num), *);
     };
 }
-impl_entity_array!(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
-impl_entity_array!(14, 15, 16, 17, 18, 19, 20, 21, 22, 23);
-impl_entity_array!(24, 25, 26, 27, 28, 29, 30, 31, 32);
+impl_entity_array!(
+    32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9,
+    8, 7, 6, 5, 4, 3, 2, 1, 0
+);
+
+#[test]
+fn from_array() {
+    let arr0 = [[0.0, 1.0, 2.0], [3.0, 4.0, -5.0], [-6.0, 7.0, 8.0]];
+    let mat0 = Matrix::from(arr0);
+    let arr1 = [
+        Vector::from([0.0, 1.0, 2.0]),
+        Vector::from([3.0, 4.0, -5.0]),
+        Vector::from([-6.0, 7.0, 8.0]),
+    ];
+    let mat1 = Matrix::from(arr1);
+    assert_eq!(mat0, mat1);
+}
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! count {
     ($a: expr) => {1_usize};
-    ($a: expr, $($b: expr), *) => {
-        1_usize + $crate::count!($($b), *)
-    };
+    ($a: expr, $($b: expr), *) => { 1_usize + $crate::count!($($b), *) };
 }
 
 #[doc(hidden)]
@@ -54,6 +100,20 @@ macro_rules! array_type {
 #[macro_export]
 macro_rules! vector_type {
     ($($a:expr), *) => { $crate::Vector<[f64; $crate::count!($($a), *)]> };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! matrix_entity {
+    ($($a: expr), *) => { $crate::array_type!($crate::vector_type!($($a),*), $($a), *) };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! matrix_type {
+    ($($a:expr), *) => {
+        $crate::Matrix::<$crate::array_type!(f64, $($a), *), $crate::matrix_entity!($($a), *)>
+    };
 }
 
 /// Creates a matrix.
@@ -104,12 +164,10 @@ macro_rules! matrix {
         $crate::matrix!($($crate::vector!($($a), *)), *)
     };
     ($($a: expr), *) => {
-        $crate::Matrix::<$crate::array_type!(f64, $($a), *),
-        $crate::array_type!($crate::vector_type!($($a),*), $($a), *)>::from([$($a), *])
+        <$crate::matrix_type!($($a), *)>::from([$($a), *])
     };
     ($($a: expr,) *) => {
-        $crate::Matrix::<$crate::array_type!(f64, $($a), *),
-        $crate::array_type!($crate::vector_type!($($a),*), $($a), *)>::from([$($a), *])
+        <$crate::matrix_type!($($a), *)>::from([$($a), *])
     };
 }
 
@@ -158,9 +216,7 @@ where
     /// If the length of the iterator is small, then the latter components are made zero.
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = Vector<T>>>(iter: I) -> Matrix<T, M> {
-        let mut res = Matrix::ORIGIN;
-        res.iter_mut().zip(iter).for_each(|(a, b)| *a = b);
-        res
+        Matrix(M::from_iter(iter), PhantomData)
     }
 }
 
@@ -657,7 +713,7 @@ where
     /// assert_eq!(&mat * &vec, vector!(8, 14));
     /// ```
     #[inline(always)]
-    fn mul(self, vec: &Vector<T>) -> Vector<T> { self.iter().map(move |tmp| tmp * vec).collect() }
+    fn mul(self, vec: &Vector<T>) -> Vector<T> { self.0.vec_multiply(vec) }
 }
 
 impl<T, M> Mul<&Vector<T>> for Matrix<T, M>
@@ -713,49 +769,6 @@ where
     #[inline(always)]
     fn mul(self, vec: Vector<T>) -> Vector<T> { &self * &vec }
 }
-
-macro_rules! inverse_array {
-    ([] $($x: expr,) *) => { [$($x), *] };
-    ([$first: expr, $($x: expr,) *] $($y: expr,) *) => {
-        inverse_array!([$($x,) *] $first, $($y,)*)
-    };
-}
-
-macro_rules! sub_impl_mul {
-    ($a: expr, $b: expr) => {};
-    ($dim: expr, $($num: expr), *) => {
-        impl MatrixEntity<[f64; $dim]> for [Vector<[f64; $dim]>; $dim] {
-            #[doc(hidden)]
-            #[inline(always)]
-            fn vec_multiply(vec: &Vector<[f64; $dim]>, matrix: &Self) -> Vector<[f64; $dim]> {
-                let mut res = Vector::ORIGIN;
-                matrix.iter().zip(vec).for_each(|(vec, a)| {
-                    res.iter_mut().zip(vec).for_each(move |(p, q)| {
-                        *p += q * a;
-                    });
-                });
-                res
-            }
-            #[doc(hidden)]
-            #[inline(always)]
-            fn vec_multiplied(&self, vec: &Vector<[f64; $dim]>) -> Vector<[f64; $dim]> {
-                Vector(inverse_array!([$(&self[$num] * vec,) *]))
-            }
-
-            #[doc(hidden)]
-            #[inline(always)]
-            fn multiply(&self, other: &Self) -> Self {
-                Self::from(inverse_array!([$(Self::vec_multiply(&self[$num], other),) *]))
-            }
-        }
-        sub_impl_mul!($($num), *);
-    };
-}
-
-sub_impl_mul!(
-    32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9,
-    8, 7, 6, 5, 4, 3, 2, 1, 0
-);
 
 impl<T, M> Mul<&Matrix<T, M>> for &Matrix<T, M>
 where
@@ -1207,7 +1220,9 @@ where
 
 pub trait Determinant<T>:
     Clone + Deref<Target = [Vector<T>]> + DerefMut + Div<f64, Output = Self> + FromIterator<Vector<T>>
-where T: EntityArray<f64> {
+where
+    T: EntityArray<f64>,
+    Vector<T>: FromIterator<f64>, {
     /// Returns the determinant.
     fn determinant(&self) -> f64;
 

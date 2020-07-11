@@ -43,6 +43,7 @@ pub type Matrix4 = Matrix<[f64; 4], [Vector4; 4]>;
 pub trait EntityArray<T>:
     Sized + Clone + PartialEq + AsRef<[T]> + AsMut<[T]> + Debug + Default {
     const ORIGIN: Self;
+    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self;
 }
 
 /// knot vector

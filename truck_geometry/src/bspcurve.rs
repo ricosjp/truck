@@ -14,10 +14,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// * There exist at least two different knots.
     /// * There are at least one control point.
     pub fn new(knot_vec: KnotVec, control_points: Vec<Vector<T>>) -> BSplineCurve<T> {
-        match BSplineCurve::try_new(knot_vec, control_points) {
-            Ok(got) => got,
-            Err(error) => panic!("{}", error),
-        }
+        BSplineCurve::try_new(knot_vec, control_points).unwrap_or_else(|e| panic!("{}", e))
     }
     /// constructor.
     /// # Arguments
@@ -92,7 +89,8 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     #[inline(always)]
     pub fn degree(&self) -> usize { self.knot_vec.len() - self.control_points.len() - 1 }
 
-    /// Returns whether constant curve or not, i.e. all control points are same or not.
+    /// Returns whether all control points are the same or not.
+    /// If the knot vector is clamped, it means whether the curve is constant or not.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -106,6 +104,22 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// ctrl_pts.push(vector!(2, 3));
     /// let bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
     /// assert!(!bspcurve.is_const());
+    /// ```
+    /// # Remarks
+    /// If the knot vector is not clamped and the BSpline basis function is not partition of unity,
+    /// then perhaps returns true even if the curve is not constant.
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(1, 5);
+    /// let ctrl_pts = vec![vector!(1, 2), vector!(1, 2)];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// 
+    /// // bspcurve is not constant.
+    /// assert_eq!(bspcurve.subs(0.0), vector!(0, 0));
+    /// assert_ne!(bspcurve.subs(0.5), vector!(0, 0));
+    /// 
+    /// // bspcurve.is_const() is true
+    /// assert!(bspcurve.is_const());
     /// ```
     pub fn is_const(&self) -> bool {
         for vec in &self.control_points {
@@ -123,7 +137,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let pt = rvector!(1, 2);
-    /// // allowed differences up to scalar
+    /// // allows differences upto scalars
     /// let mut ctrl_pts = vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0];
     /// let const_bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
     /// assert!(const_bspcurve.is_rational_const());
@@ -296,34 +310,6 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         BSplineCurve::new_unchecked(knot_vec, new_points)
     }
 
-    /// Returns the higher degree derived B-spline curve.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(3);
-    /// let ctrl_pts = vec![
-    ///     vector!(0, 0),
-    ///     vector!(1.0 / 3.0, 0),
-    ///     vector!(2.0 / 3.0, 0),
-    ///     vector!(1, 1)
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let derived2 = bspcurve.derivation_with_degree(2);
-    ///
-    /// // `bpscurve = (t, t^3), derived2 = (0, 6t), `
-    /// const N : usize = 100; // sample size
-    /// for i in 0..=N {
-    ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     Vector::assert_near2(&derived2.subs(t), &vector!(0.0, 6.0 * t));
-    /// }
-    pub fn derivation_with_degree(&self, degree: usize) -> BSplineCurve<T> {
-        if degree == 0 {
-            self.clone()
-        } else {
-            self.derivation().derivation_with_degree(degree - 1)
-        }
-    }
-
     /// Adds a knot `x`, and do not change `self` as a curve.  
     /// # Examples
     /// ```
@@ -433,7 +419,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         new_points.push(self.control_point(idx - k - 1).clone());
         for i in (idx - k)..idx {
             let delta = knot_vec[i + k + 1] - knot_vec[i];
-            let a = inv_or_zero(delta) * &(knot_vec[idx] - knot_vec[i]);
+            let a = inv_or_zero(delta) * (knot_vec[idx] - knot_vec[i]);
             if a.so_small() {
                 break;
             } else {
@@ -1167,45 +1153,40 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// 
+    ///
     /// // Defines the half unit circle in x > 0 as a rational curve `bspcurve`
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![vector!(0, -1, 1), vector!(1, 0, 0), vector!(0, 1, 1)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// 
+    ///
     /// // search rational nearest parameter
     /// let pt = rvector!(1, 2);
     /// let hint = 0.6;
     /// let t = bspcurve.search_rational_nearest_parameter(&pt, hint).unwrap();
-    /// 
+    ///
     /// // check the answer
+    /// let res: Vector2 = bspcurve.subs(t).rational_projection().into();
     /// let ans: Vector2 = pt.rational_projection().into();
-    /// let myans: Vector2 = bspcurve.subs(t).rational_projection().into();
-    /// Vector::assert_near2(&(&ans / ans.norm()), &myans);
+    /// Vector::assert_near2(&(&ans / ans.norm()), &res);
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// ```
     /// use truck_geometry::*;
-    /// 
+    ///
     /// // Same curve and point as above example
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![vector!(0, -1, 1), vector!(1, 0, 0), vector!(0, 1, 1)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let pt = rvector!(1, 2);
-    /// 
+    ///
     /// // another hint
     /// let hint = 0.5;
-    /// 
+    ///
     /// // Newton's method is vibration divergent.
     /// assert!(bspcurve.search_rational_nearest_parameter(&pt, hint).is_none());
     /// ```
-    pub fn search_rational_nearest_parameter(
-        &self,
-        point: &Vector<T>,
-        hint: f64,
-    ) -> Option<f64>
-    {
+    pub fn search_rational_nearest_parameter(&self, point: &Vector<T>, hint: f64) -> Option<f64> {
         let derived = self.derivation();
         let derived2 = derived.derivation();
         self.sub_srnp(&derived, &derived2, point, hint, 0)
@@ -1331,7 +1312,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     }
 
     /// Determine whether `self` and `other` is near as the B-spline curves or not.  
-    /// 
+    ///
     /// Divides each knot interval into the number of degree equal parts,
     /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
     /// # Examples

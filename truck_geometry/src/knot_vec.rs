@@ -94,7 +94,7 @@ impl KnotVec {
     /// let degree = 2;
     /// for i in 0..N {
     ///     let t = 2.0 + 4.0 / (N as f64) * (i as f64);
-    ///     let res = knot_vec.bspline_basis_functions(degree, t).unwrap();
+    ///     let res = knot_vec.bspline_basis_functions(degree, t);
     ///     let sum = res.iter().fold(0.0, |sum, a| sum + a);
     ///     f64::assert_near2(&sum, &1.0);
     /// }
@@ -109,7 +109,7 @@ impl KnotVec {
     /// let degree = 3;
     /// for i in 0..=N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     let res = knot_vec.bspline_basis_functions(degree, t).unwrap();
+    ///     let res = knot_vec.bspline_basis_functions(degree, t);
     ///     let ans = [
     ///         1.0 * (1.0 - t) * (1.0 - t) * (1.0 - t),
     ///         3.0 * t * (1.0 - t) * (1.0 - t),
@@ -280,15 +280,12 @@ impl KnotVec {
     /// use truck_geometry::KnotVec;
     /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vec1 = KnotVec::from(vec![1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
-    /// knot_vec0.concat(&knot_vec1, 2);
+    /// knot_vec0.try_concat(&knot_vec1, 2);
     /// assert_eq!(knot_vec0.as_slice(), &[0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
     /// ```
     pub fn try_concat(&mut self, other: &KnotVec, degree: usize) -> Result<()> {
         if !self.is_clamped(degree) || !other.is_clamped(degree) {
-            return Err(Error::NotClampedKnotVector(
-                self.clone().into(),
-                other.clone().into(),
-            ));
+            return Err(Error::NotClampedKnotVector);
         }
         let back = self.0.last().unwrap();
         let front = other.0.first().unwrap();

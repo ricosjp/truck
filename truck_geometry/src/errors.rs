@@ -1,10 +1,71 @@
 use crate::*;
 
+/// Geometrical Errors
 #[derive(Debug, PartialEq)]
 pub enum Error {
+    /// The iterator is too short to construct the given dimensional vector.  
+    /// This error is only for the output panic error message.
+    /// # Examples
+    /// ```should_panic
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// let arr = vec![0.0, 1.0, 2.0];
+    /// let _: Vector<[f64; 4]> = arr.into_iter().collect();
+    /// ```
+    TooShortIterator,
+    /// The following operations are failed if the knot vector has zero range.
+    /// * Creating `BSplineCurve` or `BSplineSurface`,
+    /// * Calculating bspline basis functions, or
+    /// * Normalizing the knot vector.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// let mut knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 0.0]);
+    /// assert_eq!(knot_vec.try_normalize(), Err(Error::ZeroRange));
+    /// assert_eq!(knot_vec.try_bspline_basis_functions(1, 0.0), Err(Error::ZeroRange));
+    /// 
+    /// let ctrl_pts = vec![vector!(0, 0), vector!(1, 1)];
+    /// assert_eq!(BSplineCurve::try_new(knot_vec, ctrl_pts), Err(Error::ZeroRange));
+    /// ```
     ZeroRange,
+    /// Fails concatting two knot vectors if there is a difference between the back knot of
+    /// the former knot vector and the front knot of the latter knot vector.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
+    /// assert_eq!(knot_vec0.try_concat(&knot_vec1, 1), Err(Error::DifferentBackFront(1.0, 2.0)));
+    /// ```
     DifferentBackFront(f64, f64),
-    NotClampedKnotVector(Vec<f64>, Vec<f64>),
+    /// If the knot vector is not clamped, then one cannot concat the vector with another knot vector.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
+    /// assert_eq!(knot_vec0.try_concat(&knot_vec1, 2), Err(Error::NotClampedKnotVector));
+    /// ```
+    NotClampedKnotVector,
+    /// Creating a knot vector by `KnotVec::try_from()` is failed if the given vector is not sorted.
+    /// `<KnotVec as From<Vec<f64>>>::from()` does not panic by this error because sorts the given
+    /// vector before creating the knot vector. So, `KnotVec::try_from()` is more efficient than
+    /// `<KnotVec as From<Vec<f64>>>::from()`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// use std::convert::*;
+    /// 
+    /// assert_eq!(KnotVec::try_from(vec![1.0, 3.0, 0.0, 2.0]), Err(Error::NotSortedVector));
+    /// assert_eq!(
+    ///     <KnotVec as From<Vec<f64>>>::from(vec![1.0, 3.0, 0.0, 2.0]),
+    ///     KnotVec::try_from(vec![0.0, 1.0, 2.0, 3.0]).unwrap(),
+    /// );
+    /// ```
     NotSortedVector,
     EmptyKnotVector,
     SmallerThanSmallestKnot(f64, f64),
@@ -21,9 +82,10 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            Error::TooShortIterator => f.pad("The length of the iterator is too short."),
             Error::ZeroRange => f.pad("This knot vector consists single value."),
             Error::DifferentBackFront(knot0, knot1) => f.pad(&format!("Cannot concat two knot vectors whose the back of the first and the front of the second are different.\nthe back of the first knot vector: {}\nthe front of the second knot vector: {}", knot0, knot1)),
-            Error::NotClampedKnotVector(_, _) => f.pad("This knot vector is not clamped."),
+            Error::NotClampedKnotVector => f.pad("This knot vector is not clamped."),
             Error::NotSortedVector => f.pad("This knot vector is not sorted."),
             Error::EmptyKnotVector => f.pad("This knot vector is empty."),
             Error::SmallerThanSmallestKnot(x, smallest) => f.pad(
@@ -56,6 +118,7 @@ impl std::error::Error for Error {}
 fn print_messages() {
     use std::io::Write;
     writeln!(&mut std::io::stderr(), "****** test of the expressions of error messages ******\n").unwrap();
+    writeln!(&mut std::io::stderr(), "{}\n", Error::TooShortIterator).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::ZeroRange).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::DifferentBackFront(0.0, 1.0)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotSortedVector).unwrap();
