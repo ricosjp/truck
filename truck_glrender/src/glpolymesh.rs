@@ -44,11 +44,10 @@ fn signup_vertex(
     glpolymesh.indices.push(idx);
 }
 
-impl std::convert::TryFrom<&PolygonMesh> for GLPolygonMesh {
-    type Error = ();
-    fn try_from(polymesh: &PolygonMesh) -> Result<GLPolygonMesh, ()> {
+impl From<&PolygonMesh> for GLPolygonMesh {
+    fn from(polymesh: &PolygonMesh) -> GLPolygonMesh {
         if polymesh.normals.is_empty() {
-            return Err(());
+            panic!("There is no normal.");
         }
         let mut glpolymesh = GLPolygonMesh::default();
         let mut vertex_map = HashMap::<[usize; 2], u32>::new();
@@ -72,6 +71,29 @@ impl std::convert::TryFrom<&PolygonMesh> for GLPolygonMesh {
                 signup_vertex(polymesh, &face[i], &mut glpolymesh, &mut vertex_map);
             }
         }
-        Ok(glpolymesh)
+        glpolymesh
+    }
+}
+
+impl Default for GLPolygonMesh {
+    fn default() -> GLPolygonMesh {
+        GLPolygonMesh {
+            vertices: Vec::new(),
+            indices: Vec::new(),
+            color: [1.0; 3],
+            reflect_ratio: [0.2, 0.6, 0.2],
+        }
+    }
+}
+
+impl From<PolygonMesh> for GLPolygonMesh {
+    #[inline(always)]
+    fn from(polymesh: PolygonMesh) -> GLPolygonMesh { (&polymesh).into() }
+}
+
+impl From<MeshHandler> for GLPolygonMesh {
+    #[inline(always)]
+    fn from(mesh_handler: MeshHandler) -> GLPolygonMesh {
+        Into::<PolygonMesh>::into(mesh_handler).into()
     }
 }

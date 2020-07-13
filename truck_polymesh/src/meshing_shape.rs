@@ -110,13 +110,7 @@ fn create_mesh(bspsurface: &BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) -> S
             })
             .collect();
         let nrow = bspsurface
-            .rational_normal_vectors(div1.iter().map(|v| (*u, *v)))
-            .iter()
-            .map(|normal| {
-                let normal = normal.rational_projection();
-                vector!(normal[0], normal[1], normal[2])
-            })
-            .collect();
+            .rational_normal_vectors(div1.iter().map(|v| (*u, *v)));
         positions.push(prow);
         normals.push(nrow);
     }

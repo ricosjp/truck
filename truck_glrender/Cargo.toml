@@ -10,3 +10,6 @@ edition = "2018"
 glium = "0.27.0"
 truck_geometry = {path = "../truck_geometry"}
 truck_polymesh = {path = "../truck_polymesh"}
+
+[dev-dependencies]
+truck_io = {path = "../truck_io"}

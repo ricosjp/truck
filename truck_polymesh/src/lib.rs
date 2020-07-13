@@ -39,6 +39,7 @@ pub mod extract_topology;
 pub mod healing;
 pub mod mesh_handler;
 pub mod meshing_shape;
+pub mod polygon_mesh;
 pub mod smoothing;
 pub mod splitting;
 pub mod structured_mesh;

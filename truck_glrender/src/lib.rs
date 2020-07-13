@@ -1,38 +1,79 @@
 extern crate glium;
-extern crate truck_polymesh as polymesh;
 extern crate truck_geometry as geometry;
-pub type Matrix4 = geometry::Matrix;
+extern crate truck_polymesh as polymesh;
+pub use geometry::{matrix, vector, Matrix4, Vector3};
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct GLVertex {
     position: [f32; 3],
     normal: [f32; 3],
 }
 glium::implement_vertex!(GLVertex, position, normal);
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct GLPolygonMesh {
     vertices: Vec<GLVertex>,
     indices: Vec<u32>,
+    pub color: [f32; 3],
+    pub reflect_ratio: [f32; 3],
 }
 
+#[derive(Debug)]
+pub struct RenderObject {
+    vertex_buffer: glium::VertexBuffer<GLVertex>,
+    indices: glium::IndexBuffer<u32>,
+    color: [f32; 3],
+    reflect_ratio: [f32; 3],
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ProjectionType {
     Perspective,
     Parallel,
 }
 
+#[derive(Debug, Clone)]
 pub struct Camera {
-    /// the matrix of camera
-    pub matrix: Matrix4,
-    /// the field of view. If `None`, this camera is parallel projection.
-    pub larger_screen_size: f64,
-    /// the distance to the front clipping plane
-    pub front_clipping_plane: f64,
-    /// the distance to the back clipping plane
-    pub back_clipping_plane: f64,
-    /// parallel or perspective
-    pub projection_type: ProjectionType,
+    matrix: Matrix4,
+    screen_size: f64,
+    front_clipping_plane: f64,
+    back_clipping_plane: f64,
+    projection_type: ProjectionType,
 }
 
-pub mod glpolymesh;
+#[derive(Clone, Debug, PartialEq)]
+pub enum Light {
+    Point {
+        position: [f64; 3],
+        strength: f64,
+    },
+    Uniform {
+        direction: [f64; 3],
+        strength: f64,
+    },
+}
+
+impl Default for Light {
+    #[inline(always)]
+    fn default() -> Light {
+        Light::Point {
+            position: [0.0; 3],
+            strength: 1.0,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Scene {
+    objects: Vec<RenderObject>,
+    program: glium::Program,
+    pub camera: Camera,
+    pub light: Light,
+}
+
+pub use renderer::Renderer;
+
 pub mod camera;
+pub mod glpolymesh;
+pub mod renderer;
+pub mod scene;

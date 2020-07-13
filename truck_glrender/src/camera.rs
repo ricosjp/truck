@@ -1,57 +1,101 @@
 use crate::*;
 
-impl Default for Camera {
-    fn default() -> Camera {
+impl Camera {
+    #[inline(always)]
+    pub fn matrix(&mut self) -> &mut Matrix4 { &mut self.matrix }
+
+    #[inline(always)]
+    pub fn perspective_camera(
+        matrix: Matrix4,
+        field_of_view: f64,
+        front_clipping_plane: f64,
+        back_clipping_plane: f64,
+    ) -> Camera
+    {
         Camera {
-            matrix: Matrix4::identity(),
-            larger_screen_size: 2.0,
-            front_clipping_plane: 0.1,
-            back_clipping_plane: 1.0,
+            matrix,
+            screen_size: (field_of_view / 4.0).tan() * 2.0,
+            front_clipping_plane,
+            back_clipping_plane,
             projection_type: ProjectionType::Perspective,
         }
     }
-}
 
-impl std::ops::MulAssign<&Matrix4> for Camera {
     #[inline(always)]
-    fn mul_assign(&mut self, mat: &Matrix4) {
-        self.matrix *= mat;
+    pub fn parallel_camera(
+        matrix: Matrix4,
+        screen_size: f64,
+        front_clipping_plane: f64,
+        back_clipping_plane: f64,
+    ) -> Camera
+    {
+        Camera {
+            matrix,
+            screen_size,
+            front_clipping_plane,
+            back_clipping_plane,
+            projection_type: ProjectionType::Parallel,
+        }
     }
-}
 
-impl Camera {
     fn perspective_projection(&self) -> Matrix4 {
         let matrix = &self.matrix;
-        let a = self.larger_screen_size;
+        let a = self.screen_size / 2.0;
         let z_min = self.front_clipping_plane;
         let z_max = self.back_clipping_plane;
+        let d = z_min / z_max;
 
-        matrix.inverse().unwrap() *  Matrix4::new(
-            [1.0 / a, 0.0, 0.0, 0.0],
-            [0.0, 1.0 / a, 0.0, 0.0],
-            [0.0, 0.0, -1.0 / (z_max * (1.0 - z_min)), 0.0],
-            [0.0, 0.0, -z_min / (1.0 - z_min), 1.0],
-        )
+        matrix.inverse()
+            * matrix!(
+                [1.0 / (a * z_max), 0.0, 0.0, 0.0],
+                [0.0, 1.0 / (a * z_max), 0.0, 0.0],
+                [0.0, 0.0, -1.0 / (z_max * (1.0 - d)), -1.0 / z_max],
+                [0.0, 0.0, -d / (1.0 - d), 0.0],
+            )
     }
 
     fn parallel_projection(&self) -> Matrix4 {
         let matrix = &self.matrix;
-        let a = self.larger_screen_size;
+        let a = self.screen_size;
         let z_min = self.front_clipping_plane;
         let z_max = self.back_clipping_plane;
 
-        matrix.inverse().unwrap() * Matrix4::new(
-            [2.0 / a, 0.0, 0.0, 0.0],
-            [0.0, 2.0 / a, 0.0, 0.0],
-            [0.0, 0.0, 1.0 / (z_max - z_min), 0.0],
-            [0.0, 0.0, -z_min / (z_max - z_min), 1.0],
-        )
+        matrix.inverse()
+            * matrix!(
+                [2.0 / a, 0.0, 0.0, 0.0],
+                [0.0, 2.0 / a, 0.0, 0.0],
+                [0.0, 0.0, 1.0 / (z_max - z_min), 0.0],
+                [0.0, 0.0, -z_min / (z_max - z_min), 1.0],
+            )
     }
 
     pub fn projection(&self) -> Matrix4 {
         match self.projection_type {
             ProjectionType::Perspective => self.perspective_projection(),
             ProjectionType::Parallel => self.parallel_projection(),
+        }
+    }
+}
+
+impl std::ops::MulAssign<&Matrix4> for Camera {
+    #[inline(always)]
+    fn mul_assign(&mut self, mat: &Matrix4) { self.matrix *= mat; }
+}
+
+impl std::ops::MulAssign<Matrix4> for Camera {
+    #[inline(always)]
+    fn mul_assign(&mut self, mat: Matrix4) { self.matrix *= mat; }
+}
+
+impl Default for Camera {
+    #[inline(always)]
+    fn default() -> Camera {
+        Camera {
+            matrix: Matrix4::identity(),
+            screen_size: 1.0,
+            front_clipping_plane: 0.1,
+            back_clipping_plane: 1000.0,
+            projection_type: ProjectionType::Perspective,
         }
     }
 }
