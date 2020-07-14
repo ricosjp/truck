@@ -69,11 +69,11 @@ impl KnotVec {
             Some(idx) => {
                 self.0.insert(idx + 1, knot);
                 idx + 1
-            },
+            }
             None => {
                 self.0.insert(0, knot);
                 0
-            },
+            }
         }
     }
 
@@ -217,6 +217,12 @@ impl KnotVec {
         Ok(self)
     }
 
+    #[inline(always)]
+    pub fn normalize(&mut self) -> &mut Self {
+        self.try_normalize()
+            .unwrap_or_else(|error| panic!("{}", error))
+    }
+
     /// translate the knot vector
     /// # Example
     /// ```
@@ -283,7 +289,7 @@ impl KnotVec {
     /// knot_vec0.try_concat(&knot_vec1, 2);
     /// assert_eq!(knot_vec0.as_slice(), &[0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
     /// ```
-    pub fn try_concat(&mut self, other: &KnotVec, degree: usize) -> Result<()> {
+    pub fn try_concat(&mut self, other: &KnotVec, degree: usize) -> Result<&mut Self> {
         if !self.is_clamped(degree) || !other.is_clamped(degree) {
             return Err(Error::NotClampedKnotVector);
         }
@@ -298,8 +304,15 @@ impl KnotVec {
             self.0.push(*knot);
         }
 
-        Ok(())
+        Ok(self)
     }
+
+    #[inline(always)]
+    pub fn concat(&mut self, other: &KnotVec, degree: usize) -> &mut Self {
+        self.try_concat(other, degree)
+            .unwrap_or_else(|error| panic!("{}", error))
+    }
+
     #[inline(always)]
     pub fn sub_vec<I: SliceIndex<[f64], Output = [f64]>>(&self, range: I) -> KnotVec {
         KnotVec {
@@ -451,7 +464,7 @@ impl std::convert::From<KnotVec> for Vec<f64> {
 
 impl std::iter::FromIterator<f64> for KnotVec {
     #[inline(always)]
-    fn from_iter<I: IntoIterator<Item=f64>>(iter: I) -> KnotVec {
+    fn from_iter<I: IntoIterator<Item = f64>>(iter: I) -> KnotVec {
         KnotVec::try_from(iter.into_iter().collect::<Vec<_>>()).unwrap()
     }
 }

@@ -848,6 +848,66 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
     }
 
+    /// Creats a surface by its boundary.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let curve0 = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(1),
+    ///     vec![vector!(0, 0), vector!(1, 0)],
+    /// );
+    /// let curve1 = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(2),
+    ///     vec![vector!(1, 0), vector!(2, 0.5), vector!(1, 1)],
+    /// );
+    /// let curve2 = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(1),
+    ///     vec![vector!(1, 1), vector!(0, 1)],
+    /// );
+    /// let curve3 = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(2),
+    ///     vec![vector!(0, 1), vector!(-1, 0.5), vector!(0, 0)],
+    /// );
+    /// let surface = BSplineSurface::by_boundary(curve0, curve1, curve2, curve3);
+    /// assert_eq!(
+    ///     surface.control_points(),
+    ///     &vec![
+    ///         vec![vector!(0, 0), vector!(-1, 0.5), vector!(0, 1)],
+    ///         vec![vector!(1, 0), vector!(2, 0.5), vector!(1, 1)],
+    ///     ],
+    /// );
+    /// ```
+    /// # Remarks
+    /// If the end points of curves are not connected, `curve1` and `curve3` take precedence. i.e.
+    /// `curve1` and `curve3` are contained in the boundary of the surface and `curve0` and
+    /// `curve2` are not contained.
+    /// ```
+    /// use truck_geometry::*;
+    /// let curve0 = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(1),
+    ///     vec![vector!(0, 0), vector!(1, 0)],
+    /// );
+    /// let curve1 = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(2),
+    ///     vec![vector!(2, 0), vector!(3, 0.5), vector!(2, 1)],
+    /// );
+    /// let curve2 = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(1),
+    ///     vec![vector!(1, 1), vector!(0, 1)],
+    /// );
+    /// let curve3 = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(2),
+    ///     vec![vector!(-1, 1), vector!(-2, 0.5), vector!(-1, 0)],
+    /// );
+    /// let surface = BSplineSurface::by_boundary(
+    ///     curve0.clone(),
+    ///     curve1.clone(),
+    ///     curve2.clone(),
+    ///     curve3.clone()
+    /// );
+    /// assert_ne!(surface.subs(0.0, 0.0), curve0.subs(0.0));
+    /// assert_eq!(surface.subs(0.0, 0.0), curve3.subs(1.0));
+    /// ```
     pub fn by_boundary(
         mut curve0: BSplineCurve<T>,
         mut curve1: BSplineCurve<T>,
@@ -897,24 +957,20 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
     /// Normalizes the knot vectors
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
-        self.knot_vecs.0.try_normalize().unwrap();
-        self.knot_vecs.1.try_normalize().unwrap();
+        self.knot_vecs.0.normalize();
+        self.knot_vecs.1.normalize();
         self
     }
 
-    /// Translates the knot vector of the first parameter `u`.
+    /// Translates the knot vectors.
     #[inline(always)]
-    pub fn uknot_translate(&mut self, x: f64) -> &mut Self {
+    pub fn knot_translate(&mut self, x: f64, y: f64) -> &mut Self {
         self.knot_vecs.0.translate(x);
+        self.knot_vecs.1.translate(y);
         self
     }
-    /// Translates the knot vector of the second parameter `v`.
-    #[inline(always)]
-    pub fn vknot_translate(&mut self, x: f64) -> &mut Self {
-        self.knot_vecs.1.translate(x);
-        self
-    }
-    /// remove knots in order from the back
+
+    /// Removes knots in order from the back
     pub fn optimize(&mut self) -> &mut Self {
         loop {
             let (n0, n1) = (self.knot_vecs.0.len(), self.knot_vecs.1.len());
@@ -942,12 +998,13 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
             .map(|x| x.last().unwrap().clone())
             .collect();
         let control_points3 = self.control_points[0].clone();
-        [
-            BSplineCurve::new_unchecked(uknot_vec.clone(), control_points0),
-            BSplineCurve::new_unchecked(vknot_vec.clone(), control_points1),
-            BSplineCurve::new_unchecked(uknot_vec.clone(), control_points2),
-            BSplineCurve::new_unchecked(vknot_vec.clone(), control_points3),
-        ]
+        let curve0 = BSplineCurve::new_unchecked(uknot_vec.clone(), control_points0);
+        let curve1 = BSplineCurve::new_unchecked(vknot_vec.clone(), control_points1);
+        let mut curve2 = BSplineCurve::new_unchecked(uknot_vec, control_points2);
+        curve2.invert();
+        let mut curve3 = BSplineCurve::new_unchecked(vknot_vec, control_points3);
+        curve3.invert();
+        [curve0, curve1, curve2, curve3]
     }
 
     /// extract boundary of surface

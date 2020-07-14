@@ -62,6 +62,32 @@ macro_rules! impl_entity_array {
                 Self::from(inverse_array!([$(other.vec_multiplied(&self[$num]),) *]))
             }
         }
+
+        impl From<Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>> for [[f64; $dim]; $dim] {
+            fn from(mat: Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>) -> [[f64; $dim]; $dim] {
+                unsafe {
+                    std::mem::transmute::<_, [[f64; $dim]; $dim]>(mat)
+                }
+            }
+        }
+        
+        impl From<&Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>> for [[f64; $dim]; $dim] {
+            fn from(mat: &Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>) -> [[f64; $dim]; $dim] {
+                inverse_array!([$(Into::<[f64; $dim]>::into(&mat[$num]),)*])
+            }
+        }
+        
+        impl From<Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>> for [[f32; $dim]; $dim] {
+            fn from(mat: Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>) -> [[f32; $dim]; $dim] {
+                inverse_array!([$(Into::<[f32; $dim]>::into(&mat[$num]),)*])
+            }
+        }
+        
+        impl From<&Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>> for [[f32; $dim]; $dim] {
+            fn from(mat: &Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>) -> [[f32; $dim]; $dim] {
+                inverse_array!([$(Into::<[f32; $dim]>::into(&mat[$num]),)*])
+            }
+        }
         impl_entity_array!($($num), *);
     };
 }
@@ -1311,5 +1337,107 @@ impl Determinant<[f64; 4]> for Matrix4 {
                 * (self[0][1] * (self[1][2] * self[2][3] - self[1][3] * self[2][2])
                     + self[1][1] * (self[2][2] * self[0][3] - self[2][3] * self[0][2])
                     + self[2][1] * (self[0][2] * self[1][3] - self[0][3] * self[1][2]))
+    }
+}
+
+impl Matrix2 {
+    /// Returns the rotation matrix for 2 dimentional row vectors.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let mut vec = vector!(1, 1);
+    /// let mat = Matrix2::rotation(std::f64::consts::PI / 4.0);
+    /// vec *= mat;
+    /// Vector::assert_near2(&vec, &vector!(0, 2.0_f64.sqrt()));
+    /// ```
+    #[inline(always)]
+    pub fn rotation(angle: f64) -> Matrix2 {
+        let cos = angle.cos();
+        let sin = angle.sin();
+        matrix!((cos, sin), (-sin, cos))
+    }
+
+    /// Returns the 2-dimentional affine transform matrix
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let vec = rvector!(1, 2);
+    /// let mat = matrix!((1, 2), (3, 4));
+    /// let move_vec = vector!(-1, -2);
+    /// let affine = mat.affine(&move_vec);
+    /// assert_eq!(vec * affine, rvector!(6, 8));
+    /// ```
+    #[inline(always)]
+    pub fn affine(&self, move_vec: &Vector2) -> Matrix3 {
+        matrix![
+            [self[0][0], self[0][1], 0.0],
+            [self[1][0], self[1][1], 0.0],
+            [move_vec[0], move_vec[1], 1.0],
+        ]
+    }
+}
+
+impl Matrix3 {
+    /// Returns the rotation matrix for 3 dimentional row vectors.
+    /// # Remarks
+    /// The vector `axis` must be a unit vector.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let mut axis = vector!(1, 2, 3);
+    /// axis /= axis.norm();
+    /// let angle = 0.52;
+    /// let rot_mat = Matrix3::rotation(&axis, angle);
+    /// 
+    /// // axis is fixed vector of rot_mat
+    /// Vector::assert_near2(&axis, &(&axis * &rot_mat));
+    /// 
+    /// let vec = vector!(2, -3, 6);
+    /// let perp = &vec - (&axis * &vec) * &axis;
+    /// let rotted_perp = &perp * &rot_mat;
+    /// 
+    /// // the angle between perpedicular vector and its rotated vector is `angle`.
+    /// f64::assert_near2(&rotted_perp.angle(&perp), &angle);
+    /// ```
+    #[inline(always)]
+    pub fn rotation(axis: &Vector3, angle: f64) -> Matrix3 {
+        let cos = angle.cos();
+        let sin = angle.sin();
+        let arr0 = [
+            cos + axis[0] * axis[0] * (1.0 - cos),
+            axis[0] * axis[1] * (1.0 - cos) + axis[2] * sin,
+            axis[2] * axis[0] * (1.0 - cos) - axis[1] * sin,
+        ];
+        let arr1 = [
+            axis[0] * axis[1] * (1.0 - cos) - axis[2] * sin,
+            cos + axis[1] * axis[1] * (1.0 - cos),
+            axis[1] * axis[2] * (1.0 - cos) + axis[0] * sin,
+        ];
+        let arr2 = [
+            axis[2] * axis[0] * (1.0 - cos) + axis[1] * sin,
+            axis[1] * axis[2] * (1.0 - cos) - axis[0] * sin,
+            cos + axis[2] * axis[2] * (1.0 - cos),
+        ];
+        matrix!(Vector(arr0), Vector(arr1), Vector(arr2))
+    }
+    
+    /// Returns the 3-dimentional affine transform matrix
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let vec = rvector!(1, 2, 3);
+    /// let mat = matrix!((1, -2, 3), (3, -4, 5), (-6, 7, -8));
+    /// let move_vec = vector!(-1, -2, -3);
+    /// let affine = mat.affine(&move_vec);
+    /// assert_eq!(vec * affine, rvector!(-12, 9, -14));
+    /// ```
+    #[inline(always)]
+    pub fn affine(&self, move_vec: &Vector3) -> Matrix4 {
+        matrix![
+            [self[0][0], self[0][1], self[0][2], 0.0],
+            [self[1][0], self[1][1], self[1][2], 0.0],
+            [self[2][0], self[2][1], self[2][2], 0.0],
+            [move_vec[0], move_vec[1], move_vec[2], 1.0],
+        ]
     }
 }
