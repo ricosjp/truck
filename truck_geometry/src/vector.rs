@@ -30,9 +30,19 @@ macro_rules! impl_entity_array {
             #[inline(always)]
             fn from(vec: Vector<[f64; $dim]>) -> [f64; $dim] { vec.0 }
         }
+        impl From<&Vector<[f64; $dim]>> for [f64; $dim] {
+            #[inline(always)]
+            fn from(vec: &Vector<[f64; $dim]>) -> [f64; $dim] { vec.0.clone() }
+        }
         impl From<Vector<[f64; $dim]>> for [f32; $dim] {
             #[inline(always)]
             fn from(vec: Vector<[f64; $dim]>) -> [f32; $dim] {
+                inverse_array!([$(vec[$num] as f32,)*])
+            }
+        }
+        impl From<&Vector<[f64; $dim]>> for [f32; $dim] {
+            #[inline(always)]
+            fn from(vec: &Vector<[f64; $dim]>) -> [f32; $dim] {
                 inverse_array!([$(vec[$num] as f32,)*])
             }
         }

@@ -225,7 +225,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         (self.subs(t0), self.subs(t1))
     }
 
-    /// inverse as curve
+    /// Inverts a curve
     /// # Examples
     /// ```
     /// use truck_geometry::*;
