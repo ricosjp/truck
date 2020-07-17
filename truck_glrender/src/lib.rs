@@ -44,11 +44,11 @@ pub struct Camera {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Light {
     Point {
-        position: [f64; 3],
+        position: Vector3,
         strength: f64,
     },
     Uniform {
-        direction: [f64; 3],
+        direction: Vector3,
         strength: f64,
     },
 }
@@ -57,7 +57,7 @@ impl Default for Light {
     #[inline(always)]
     fn default() -> Light {
         Light::Point {
-            position: [0.0; 3],
+            position: Vector3::zero(),
             strength: 1.0,
         }
     }
@@ -71,7 +71,7 @@ pub struct Scene {
     pub light: Light,
 }
 
-pub use renderer::Renderer;
+pub use renderer::Render;
 
 pub mod camera;
 pub mod glpolymesh;

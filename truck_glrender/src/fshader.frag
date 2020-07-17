@@ -21,21 +21,24 @@ float ambient() {
 }
 
 float diffuse() {
+    vec3 normal = normalize(vertex_normal);
     vec3 dir = normalize(light_position - vertex_position);
-    float res = dot(dir, vertex_normal) * reflect_ratio[1];
+    float res = dot(dir, normal) * reflect_ratio[1];
     return max(res, 0.0);
 }
 
 float specular() {
+    vec3 normal = normalize(vertex_normal);
     vec3 light_dir = normalize(vertex_position - light_position);
-    vec3 reflect_dir = reflect(light_dir, vertex_normal);
+    vec3 reflect_dir = reflect(light_dir, normal);
     vec3 camera_position = vec3(
         camera_matrix[3][0],
         camera_matrix[3][1],
         camera_matrix[3][2]
     );
     vec3 camera_dir = normalize(camera_position - vertex_position);
-    float res = dot(camera_dir, reflect_dir) * reflect_ratio[2];
+    float alpha = dot(camera_dir, reflect_dir);
+    float res = pow(alpha, 1) * reflect_ratio[2];
     return max(res, 0.0);
 }
 

@@ -2,7 +2,25 @@ use crate::*;
 
 impl Camera {
     #[inline(always)]
-    pub fn matrix(&mut self) -> &mut Matrix4 { &mut self.matrix }
+    pub fn matrix(&self) -> &Matrix4 { &self.matrix }
+
+    #[inline(always)]
+    pub fn matrix_mut(&mut self) -> &mut Matrix4 { &mut self.matrix }
+
+    #[inline(always)]
+    pub fn position(&self) -> Vector3 {
+        vector!(self.matrix[3][0], self.matrix[3][1], self.matrix[3][2])
+    }
+
+    #[inline(always)]
+    pub fn eye_direction(&self) -> Vector3 {
+        vector!(-self.matrix[2][0], -self.matrix[2][1], -self.matrix[2][2])
+    }
+
+    #[inline(always)]
+    pub fn head_direction(&self) -> Vector3 {
+        vector!(self.matrix[1][0], self.matrix[1][1], self.matrix[1][2])
+    }
 
     #[inline(always)]
     pub fn perspective_camera(

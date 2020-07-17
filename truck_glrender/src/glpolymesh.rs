@@ -1,18 +1,19 @@
 use crate::*;
+use glium::*;
 use polymesh::*;
 use std::collections::HashMap;
 
 impl GLPolygonMesh {
     pub fn signup(
         &self,
-        display: &glium::Display,
-    ) -> (glium::VertexBuffer<GLVertex>, glium::IndexBuffer<u32>)
+        display: &Display,
+    ) -> (VertexBuffer<GLVertex>, IndexBuffer<u32>)
     {
         (
-            glium::VertexBuffer::new(display, &self.vertices).unwrap(),
-            glium::index::IndexBuffer::new(
+            VertexBuffer::new(display, &self.vertices).unwrap(),
+            IndexBuffer::new(
                 display,
-                glium::index::PrimitiveType::TrianglesList,
+                index::PrimitiveType::TrianglesList,
                 &self.indices,
             )
             .unwrap(),
@@ -33,8 +34,8 @@ fn signup_vertex(
         None => {
             let idx = glpolymesh.vertices.len() as u32;
             let glvertex = GLVertex {
-                position: polymesh.positions[key[0]].clone().into(),
-                normal: polymesh.normals[key[1]].clone().into(),
+                position: (&polymesh.positions[key[0]]).into(),
+                normal: (&polymesh.normals[key[1]]).into(),
             };
             vertex_map.insert(key, idx);
             glpolymesh.vertices.push(glvertex);
@@ -42,6 +43,17 @@ fn signup_vertex(
         }
     };
     glpolymesh.indices.push(idx);
+}
+
+impl Default for GLPolygonMesh {
+    fn default() -> GLPolygonMesh {
+        GLPolygonMesh {
+            vertices: Vec::new(),
+            indices: Vec::new(),
+            color: [1.0; 3],
+            reflect_ratio: [0.2, 0.6, 0.2],
+        }
+    }
 }
 
 impl From<&PolygonMesh> for GLPolygonMesh {
@@ -72,17 +84,6 @@ impl From<&PolygonMesh> for GLPolygonMesh {
             }
         }
         glpolymesh
-    }
-}
-
-impl Default for GLPolygonMesh {
-    fn default() -> GLPolygonMesh {
-        GLPolygonMesh {
-            vertices: Vec::new(),
-            indices: Vec::new(),
-            color: [1.0; 3],
-            reflect_ratio: [0.2, 0.6, 0.2],
-        }
     }
 }
 

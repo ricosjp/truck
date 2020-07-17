@@ -3,8 +3,8 @@ use glium::*;
 
 impl Scene {
     #[inline(always)]
-    pub fn new(display: &glium::Display) -> Scene {
-        let program = glium::Program::from_source(
+    pub fn new(display: &Display) -> Scene {
+        let program = Program::from_source(
             display,
             include_str!("vshader.vert"),
             include_str!("fshader.frag"),
@@ -19,6 +19,25 @@ impl Scene {
         }
     }
 
+    #[inline(always)]
+    pub fn with_shader(
+        display: &Display,
+        vertex_shader: &str,
+        fragment_shader: &str,
+        geometry_shader: Option<&str>,
+    ) -> Scene
+    {
+        let program =
+            Program::from_source(display, vertex_shader, fragment_shader, geometry_shader).unwrap();
+        Scene {
+            objects: Default::default(),
+            program,
+            camera: Default::default(),
+            light: Default::default(),
+        }
+    }
+
+    #[inline(always)]
     pub fn add_glpolymesh(&mut self, glpolymesh: &GLPolygonMesh, display: &glium::Display) {
         let (vertex_buffer, indices) = glpolymesh.signup(&display);
         self.objects.push(RenderObject {
@@ -40,8 +59,7 @@ impl Scene {
         for object in self.objects.iter() {
             for vert in object.vertex_buffer.as_slice().read().unwrap() {
                 let tmp = vert.position;
-                let pos = vector!(tmp[0], tmp[1], tmp[2], 1)
-                    * self.camera.matrix.inverse();
+                let pos = vector!(tmp[0], tmp[1], tmp[2], 1) * self.camera.matrix.inverse();
                 if pos[0] < bdd_box[0].0 {
                     bdd_box[0].0 = pos[0];
                 }
@@ -67,12 +85,10 @@ impl Scene {
 
     fn fit_perspective(&mut self, bdd_box: &[(f64, f64); 3]) {
         let camera = &self.camera;
-        
         let size_x = bdd_box[0].1 - bdd_box[0].0;
         let size_y = bdd_box[1].1 - bdd_box[1].0;
         let size = if size_x < size_y { size_y } else { size_x };
         let length = size / self.camera.screen_size;
-        
         let mut move_mat = Matrix4::identity();
         move_mat[3][0] = (bdd_box[0].0 + bdd_box[0].1) / 2.0;
         move_mat[3][1] = (bdd_box[1].0 + bdd_box[1].1) / 2.0;
@@ -93,30 +109,25 @@ impl Scene {
         }
     }
 
-    pub fn render_scene(&mut self, target: &mut glium::Frame) {
+    fn camera_projection(&self, target: &glium::Frame) -> [[f32; 4]; 4] {
         let dim = target.get_dimensions();
         let as_rat = (dim.1 as f64) / (dim.0 as f64);
-        let mat = &self.camera.matrix;
-        let proj = self.camera.projection() * Matrix4::diagonal(&vector!(as_rat, 1, 1, 1));
-        let camera_matrix = [
-                [mat[0][0] as f32, mat[0][1] as f32, mat[0][2] as f32, mat[0][3] as f32],
-                [mat[1][0] as f32, mat[1][1] as f32, mat[1][2] as f32, mat[1][3] as f32],
-                [mat[2][0] as f32, mat[2][1] as f32, mat[2][2] as f32, mat[2][3] as f32],
-                [mat[3][0] as f32, mat[3][1] as f32, mat[3][2] as f32, mat[3][3] as f32],
-        ];
-        let camera_projection = [
-                [proj[0][0] as f32, proj[0][1] as f32, proj[0][2] as f32, proj[0][3] as f32],
-                [proj[1][0] as f32, proj[1][1] as f32, proj[1][2] as f32, proj[1][3] as f32],
-                [proj[2][0] as f32, proj[2][1] as f32, proj[2][2] as f32, proj[2][3] as f32],
-                [proj[3][0] as f32, proj[3][1] as f32, proj[3][2] as f32, proj[3][3] as f32],
-        ];
+        let mat = self.camera.projection() * Matrix4::diagonal(&vector!(as_rat, 1, 1, 1));
+        mat.into()
+    }
+
+    pub fn render_scene(&mut self, target: &mut glium::Frame) {
+        let camera_projection = self.camera_projection(target);
+        let camera_matrix: [[f32; 4]; 4] = self.camera.matrix().into();
         let (light_position, light_strength) = match &self.light {
-            Light::Point { position: pos, strength } => {
-                ([pos[0] as f32, pos[1] as f32, pos[2] as f32], *strength as f32)
-            },
-            Light::Uniform { .. } => {
-                todo!()
-            },
+            Light::Point {
+                position: pos,
+                strength,
+            } => (
+                [pos[0] as f32, pos[1] as f32, pos[2] as f32],
+                *strength as f32,
+            ),
+            Light::Uniform { .. } => todo!(),
         };
         let params = glium::DrawParameters {
             depth: glium::Depth {
@@ -124,7 +135,7 @@ impl Scene {
                 write: true,
                 ..Default::default()
             },
-            backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
+            //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
             ..Default::default()
         };
         for object in &self.objects {
@@ -148,4 +159,3 @@ impl Scene {
         }
     }
 }
-

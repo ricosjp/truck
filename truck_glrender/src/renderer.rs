@@ -5,10 +5,10 @@ use glium::glutin::event_loop::ControlFlow;
 use glium::Display;
 use std::time::*;
 
-pub trait Renderer: Sized + 'static {
+pub trait Render: Sized + 'static {
     fn create_display(event_loop: &glium::glutin::event_loop::EventLoop<()>) -> glium::Display {
-        let wb = glium::glutin::window::WindowBuilder::new();
         let cb = glium::glutin::ContextBuilder::new();
+        let wb = glium::glutin::window::WindowBuilder::new();
         glium::Display::new(wb, cb, &event_loop).unwrap()
     }
     fn init(display: &Display) -> Self;
@@ -17,7 +17,7 @@ pub trait Renderer: Sized + 'static {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         glium::glutin::event_loop::ControlFlow::WaitUntil(next_frame_time)
     }
-    fn draw(&mut self, target: &mut glium::Frame);
+    fn draw(&mut self, _target: &mut glium::Frame) {}
     fn resized(&mut self, _size: PhysicalSize<u32>) -> ControlFlow { Self::default_control_flow() }
     fn moved(&mut self, _position: PhysicalPosition<i32>) -> ControlFlow {
         Self::default_control_flow()
