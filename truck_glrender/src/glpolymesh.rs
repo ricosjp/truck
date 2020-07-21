@@ -25,18 +25,24 @@ fn signup_vertex(
     polymesh: &PolygonMesh,
     vertex: &[usize; 3],
     glpolymesh: &mut GLPolygonMesh,
-    vertex_map: &mut HashMap<[usize; 2], u32>,
+    vertex_map: &mut HashMap<[usize; 3], u32>,
 )
 {
-    let key = [vertex[0], vertex[2]];
+    let key = [vertex[0], vertex[1], vertex[2]];
     let idx = match vertex_map.get(&key) {
         Some(idx) => *idx,
         None => {
             let idx = glpolymesh.vertices.len() as u32;
-            let glvertex = GLVertex {
-                position: (&polymesh.positions[key[0]]).into(),
-                normal: (&polymesh.normals[key[1]]).into(),
+            let position = (&polymesh.positions[key[0]]).into();
+            let uv_coord = match polymesh.uv_coords.is_empty() {
+                true => [0.0, 0.0],
+                false => (&polymesh.uv_coords[key[1]]).into(),
             };
+            let normal = match polymesh.normals.is_empty() {
+                true => [0.0, 0.0, 0.0],
+                false => (&polymesh.normals[key[2]]).into(),
+            };
+            let glvertex = GLVertex { position, uv_coord, normal };
             vertex_map.insert(key, idx);
             glpolymesh.vertices.push(glvertex);
             idx
@@ -50,6 +56,7 @@ impl Default for GLPolygonMesh {
         GLPolygonMesh {
             vertices: Vec::new(),
             indices: Vec::new(),
+            matrix: Matrix4::identity(),
             color: [1.0; 3],
             reflect_ratio: [0.2, 0.6, 0.2],
         }
@@ -58,11 +65,8 @@ impl Default for GLPolygonMesh {
 
 impl From<&PolygonMesh> for GLPolygonMesh {
     fn from(polymesh: &PolygonMesh) -> GLPolygonMesh {
-        if polymesh.normals.is_empty() {
-            panic!("There is no normal.");
-        }
         let mut glpolymesh = GLPolygonMesh::default();
-        let mut vertex_map = HashMap::<[usize; 2], u32>::new();
+        let mut vertex_map = HashMap::<[usize; 3], u32>::new();
         for tri in &polymesh.tri_faces {
             signup_vertex(polymesh, &tri[0], &mut glpolymesh, &mut vertex_map);
             signup_vertex(polymesh, &tri[1], &mut glpolymesh, &mut vertex_map);

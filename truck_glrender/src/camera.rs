@@ -18,6 +18,9 @@ impl Camera {
     }
 
     #[inline(always)]
+    pub fn projection_type(&self) -> ProjectionType { self.projection_type }
+
+    #[inline(always)]
     pub fn head_direction(&self) -> Vector3 {
         vector!(self.matrix[1][0], self.matrix[1][1], self.matrix[1][2])
     }
@@ -82,7 +85,7 @@ impl Camera {
             * matrix!(
                 [2.0 / a, 0.0, 0.0, 0.0],
                 [0.0, 2.0 / a, 0.0, 0.0],
-                [0.0, 0.0, 1.0 / (z_max - z_min), 0.0],
+                [0.0, 0.0, -1.0 / (z_max - z_min), 0.0],
                 [0.0, 0.0, -z_min / (z_max - z_min), 1.0],
             )
     }

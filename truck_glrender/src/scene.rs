@@ -14,6 +14,7 @@ impl Scene {
         Scene {
             objects: Default::default(),
             program,
+            clock: std::time::Instant::now(),
             camera: Default::default(),
             light: Default::default(),
         }
@@ -32,6 +33,7 @@ impl Scene {
         Scene {
             objects: Default::default(),
             program,
+            clock: std::time::Instant::now(),
             camera: Default::default(),
             light: Default::default(),
         }
@@ -43,6 +45,7 @@ impl Scene {
         self.objects.push(RenderObject {
             vertex_buffer,
             indices,
+            matrix: (&glpolymesh.matrix).into(),
             color: glpolymesh.color,
             reflect_ratio: glpolymesh.reflect_ratio,
         })
@@ -54,52 +57,71 @@ impl Scene {
     #[inline(always)]
     pub fn number_of_objects(&self) -> usize { self.objects.len() }
 
-    pub fn objects_bounding_box(&self) -> [(f64, f64); 3] {
-        let mut bdd_box = [(std::f64::MAX, std::f64::MIN); 3];
+    pub fn objects_bounding_box(&self) -> (Vector3, Vector3) {
+        let mut bdd_box = (
+            vector!(std::f64::MAX, std::f64::MAX, std::f64::MAX),
+            vector!(std::f64::MIN, std::f64::MIN, std::f64::MIN),
+        );
         for object in self.objects.iter() {
             for vert in object.vertex_buffer.as_slice().read().unwrap() {
                 let tmp = vert.position;
                 let pos = vector!(tmp[0], tmp[1], tmp[2], 1) * self.camera.matrix.inverse();
-                if pos[0] < bdd_box[0].0 {
-                    bdd_box[0].0 = pos[0];
+                if pos[0] < bdd_box.0[0] {
+                    bdd_box.0[0] = pos[0];
                 }
-                if pos[0] > bdd_box[0].1 {
-                    bdd_box[0].1 = pos[0];
+                if pos[0] > bdd_box.1[0] {
+                    bdd_box.1[0] = pos[0];
                 }
-                if pos[1] < bdd_box[1].0 {
-                    bdd_box[1].0 = pos[1];
+                if pos[1] < bdd_box.0[1] {
+                    bdd_box.0[1] = pos[1];
                 }
-                if pos[1] > bdd_box[1].1 {
-                    bdd_box[1].1 = pos[1];
+                if pos[1] > bdd_box.1[1] {
+                    bdd_box.1[1] = pos[1];
                 }
-                if pos[2] < bdd_box[2].0 {
-                    bdd_box[2].0 = pos[2];
+                if pos[2] < bdd_box.0[2] {
+                    bdd_box.0[2] = pos[2];
                 }
-                if pos[2] > bdd_box[2].1 {
-                    bdd_box[2].1 = pos[2];
+                if pos[2] > bdd_box.1[2] {
+                    bdd_box.1[2] = pos[2];
                 }
             }
         }
         bdd_box
     }
 
-    fn fit_perspective(&mut self, bdd_box: &[(f64, f64); 3]) {
-        let camera = &self.camera;
-        let size_x = bdd_box[0].1 - bdd_box[0].0;
-        let size_y = bdd_box[1].1 - bdd_box[1].0;
-        let size = if size_x < size_y { size_y } else { size_x };
+    fn fit_perspective(&mut self, bdd_box: &(Vector3, Vector3)) {
+        let bdd_box = (&bdd_box.0, &bdd_box.1);
+        let size_vec = bdd_box.1 - bdd_box.0;
+        let size = if size_vec[0] < size_vec[1] {
+            size_vec[1]
+        } else {
+            size_vec[0]
+        };
         let length = size / self.camera.screen_size;
-        let mut move_mat = Matrix4::identity();
-        move_mat[3][0] = (bdd_box[0].0 + bdd_box[0].1) / 2.0;
-        move_mat[3][1] = (bdd_box[1].0 + bdd_box[1].1) / 2.0;
-        move_mat[3][2] = bdd_box[2].1 + length;
+        let mut move_vec = (bdd_box.0 + bdd_box.1) / 2.0;
+        move_vec[2] = bdd_box.1[2] + length;
+        let move_mat = Matrix3::identity().affine(&move_vec);
 
-        let cammat = camera.matrix.clone();
+        let cammat = self.camera.matrix.clone();
         let caminv = cammat.inverse();
         self.camera *= &caminv * move_mat * &cammat;
     }
 
-    fn fit_parallel(&mut self, _: &[(f64, f64); 3]) {}
+    fn fit_parallel(&mut self, bdd_box: &(Vector3, Vector3)) {
+        let bdd_box = (&bdd_box.0, &bdd_box.1);
+        let size_vec = bdd_box.1 - bdd_box.0;
+        self.camera.screen_size = if size_vec[0] < size_vec[1] {
+            size_vec[1]
+        } else {
+            size_vec[0]
+        };
+        let mut move_vec = (bdd_box.0 + bdd_box.1) / 2.0;
+        move_vec[2] = bdd_box.1[2] + 1.0;
+        let move_mat = Matrix3::identity().affine(&move_vec);
+        let cammat = self.camera.matrix.clone();
+        let caminv = cammat.inverse();
+        self.camera *= &caminv * move_mat * &cammat;
+    }
 
     pub fn fit_camera(&mut self) {
         let bdd_box = self.objects_bounding_box();
@@ -117,18 +139,6 @@ impl Scene {
     }
 
     pub fn render_scene(&mut self, target: &mut glium::Frame) {
-        let camera_projection = self.camera_projection(target);
-        let camera_matrix: [[f32; 4]; 4] = self.camera.matrix().into();
-        let (light_position, light_strength) = match &self.light {
-            Light::Point {
-                position: pos,
-                strength,
-            } => (
-                [pos[0] as f32, pos[1] as f32, pos[2] as f32],
-                *strength as f32,
-            ),
-            Light::Uniform { .. } => todo!(),
-        };
         let params = glium::DrawParameters {
             depth: glium::Depth {
                 test: glium::DepthTest::IfLess,
@@ -140,12 +150,15 @@ impl Scene {
         };
         for object in &self.objects {
             let uniform = uniform!(
-                camera_matrix: camera_matrix,
-                camera_projection: camera_projection,
-                light_position: light_position,
-                light_strength: light_strength,
+                model_matrix: object.matrix,
+                camera_matrix: Into::<[[f32; 4]; 4]>::into(self.camera.matrix()),
+                camera_projection: self.camera_projection(target),
+                light_position: Into::<[f32; 3]>::into(&self.light.position),
+                light_strength: self.light.strength as f32,
+                light_type: self.light.light_type.type_id(),
                 material: object.color,
                 reflect_ratio: object.reflect_ratio,
+                elapsed_time: self.clock.elapsed().as_secs_f32(),
             );
             target
                 .draw(

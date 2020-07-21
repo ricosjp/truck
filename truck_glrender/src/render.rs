@@ -30,6 +30,9 @@ pub trait Render: Sized + 'static {
     fn hovered_file(&mut self, _path: std::path::PathBuf) -> ControlFlow {
         Self::default_control_flow()
     }
+    fn keyboard_input(&mut self, _input: KeyboardInput, _is_synthetic: bool) -> ControlFlow {
+        Self::default_control_flow()
+    }
     fn mouse_input(&mut self, _state: ElementState, _button: MouseButton) -> ControlFlow {
         Self::default_control_flow()
     }
@@ -53,6 +56,11 @@ pub trait Render: Sized + 'static {
                     WindowEvent::Destroyed => renderer.destroyed(),
                     WindowEvent::DroppedFile(path) => renderer.dropped_file(path),
                     WindowEvent::HoveredFile(path) => renderer.hovered_file(path),
+                    WindowEvent::KeyboardInput {
+                        input,
+                        is_synthetic,
+                        ..
+                    } => renderer.keyboard_input(input, is_synthetic),
                     WindowEvent::MouseInput { state, button, .. } => {
                         renderer.mouse_input(state, button)
                     }

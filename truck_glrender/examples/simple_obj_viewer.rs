@@ -10,17 +10,24 @@ struct MyRenderer {
     prev_cursor: Option<Vector2>,
     rotate_flag: bool,
     new_object: Option<std::path::PathBuf>,
+    light_changed: Option<std::time::Instant>,
+    camera_changed: Option<std::time::Instant>,
 }
 
 impl MyRenderer {
     fn fit_scene(&mut self) {
         let scene = &mut self.scene;
         scene.fit_camera();
-        let bdd_box = scene.objects_bounding_box();
-        let light_strength = bdd_box[2].1 * bdd_box[2].1 * 0.25;
-        scene.light = Light::Point {
-            position: scene.camera.position(),
-            strength: light_strength,
+        match scene.light.light_type {
+            LightType::Point => {
+                scene.light.position = scene.camera.position();
+                let bdd_box = scene.objects_bounding_box();
+                scene.light.strength = bdd_box.1[2] * bdd_box.1[2] * 0.25;
+            }
+            LightType::Uniform => {
+                scene.light.position = scene.camera.position();
+                scene.light.position /= scene.light.position.norm();
+            }
         }
     }
 
@@ -33,7 +40,7 @@ impl MyRenderer {
         vec2 /= vec2.norm();
         let vec3 = vector!(10, 12, 10, 1);
         let matrix = matrix!(vec0, vec1, vec2, vec3);
-        Camera::perspective_camera(matrix, std::f64::consts::PI / 2.0, 0.1, 40.0)
+        Camera::perspective_camera(matrix, std::f64::consts::PI / 4.0, 0.1, 40.0)
     }
 
     fn obj_normalize(mut mesh: PolygonMesh) -> PolygonMesh {
@@ -101,6 +108,8 @@ impl Render for MyRenderer {
             prev_cursor: None,
             rotate_flag: false,
             new_object: None,
+            light_changed: None,
+            camera_changed: None,
         }
     }
 
@@ -110,6 +119,70 @@ impl Render for MyRenderer {
     }
 
     fn closed_requested(&mut self) -> ControlFlow { glium::glutin::event_loop::ControlFlow::Exit }
+
+    fn keyboard_input(&mut self, input: KeyboardInput, _: bool) -> ControlFlow {
+        let keycode = match input.virtual_keycode {
+            Some(keycode) => keycode,
+            None => return Self::default_control_flow(),
+        };
+        match keycode {
+            VirtualKeyCode::P => {
+                if let Some(ref instant) = self.camera_changed {
+                    let time = instant.elapsed().as_secs_f64();
+                    if time < 0.2 {
+                        return Self::default_control_flow();
+                    }
+                }
+                self.camera_changed = Some(std::time::Instant::now());
+                self.scene.camera = match self.scene.camera.projection_type() {
+                    ProjectionType::Parallel => Camera::perspective_camera(
+                        self.scene.camera.matrix().clone(),
+                        std::f64::consts::PI / 4.0,
+                        0.1,
+                        40.0,
+                    ),
+                    ProjectionType::Perspective => Camera::parallel_camera(
+                        self.scene.camera.matrix().clone(),
+                        1.0,
+                        0.1,
+                        40.0,
+                    ),
+                }
+            }
+            VirtualKeyCode::L => {
+                if let Some(ref instant) = self.light_changed {
+                    let time = instant.elapsed().as_secs_f64();
+                    if time < 0.2 {
+                        return Self::default_control_flow();
+                    }
+                }
+                self.light_changed = Some(std::time::Instant::now());
+                match self.scene.light.light_type {
+                    LightType::Point => {
+                        let mut vec = self.scene.camera.position();
+                        vec /= vec.norm();
+                        self.scene.light = Light {
+                            position: vec,
+                            strength: 0.25,
+                            light_type: LightType::Uniform,
+                        }
+                    }
+                    LightType::Uniform => {
+                        let position = self.scene.camera.position();
+                        let bdd_box = self.scene.objects_bounding_box();
+                        let strength = bdd_box.1[2] * bdd_box.1[2] * 0.25;
+                        self.scene.light = Light {
+                            position,
+                            strength,
+                            light_type: LightType::Point,
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        Self::default_control_flow()
+    }
 
     fn mouse_input(&mut self, state: ElementState, button: MouseButton) -> ControlFlow {
         if state == ElementState::Pressed && button == MouseButton::Right {

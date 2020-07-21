@@ -40,9 +40,10 @@ impl BSpAnimation {
         let vec3 = vector!(1.5, 0.8, 1.5, 1);
         let matrix = matrix!(vec0, vec1, vec2, vec3);
         scene.camera = Camera::perspective_camera(matrix, std::f64::consts::PI / 2.0, 0.1, 40.0);
-        scene.light = Light::Point {
+        scene.light = Light {
             position: vector!(0.5, 2.0, 0.5),
             strength: 1.0,
+            light_type: LightType::Point,
         };
         scene
     }
