@@ -23,6 +23,30 @@ impl KnotVec {
         }
     }
 
+    /// Returns whether two knot vectors have the same range.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec0 = KnotVec::new(); // empty knot vector
+    /// let knot_vec1 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vec2 = KnotVec::from(vec![0.0, 0.5, 1.0]);
+    /// let knot_vec3 = KnotVec::from(vec![0.0, 0.0, 2.0, 2.0]);
+    /// assert!(knot_vec0.same_range(&KnotVec::new())); // both empty knot vector
+    /// assert!(!knot_vec0.same_range(&knot_vec1));
+    /// assert!(knot_vec1.same_range(&knot_vec2)); // the range of both knot vector is [0, 1].
+    /// assert!(!knot_vec1.same_range(&knot_vec3));
+    /// ```
+    #[inline(always)]
+    pub fn same_range(&self, other: &KnotVec) -> bool {
+        match (self.is_empty(), other.is_empty()) {
+            (false, false) => {
+                self[0].near(&other[0]) && self.range_length().near(&other.range_length())
+            }
+            (true, true) => true,
+            _ => false,
+        }
+    }
+
     /// Removes one item.
     #[inline(always)]
     pub fn remove(&mut self, idx: usize) -> f64 { self.0.remove(idx) }

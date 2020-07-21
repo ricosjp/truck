@@ -148,10 +148,6 @@ pub struct BSplineCurve<T> {
     control_points: Vec<Vector<T>>, // the indices of control points
 }
 
-/// NRUBS-curve
-#[derive(Clone, PartialEq, Debug)]
-pub struct NURBSCurve<T>(BSplineCurve<T>);
-
 /// 4-dimensional B-spline surface
 /// # Examples
 /// ```

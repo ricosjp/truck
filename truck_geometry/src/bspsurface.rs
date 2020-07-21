@@ -754,10 +754,7 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
             }
         }
 
-        for (pt0, pt1) in self
-            .ctrl_pts_row_iter(idx)
-            .zip(new_points.last().unwrap())
-        {
+        for (pt0, pt1) in self.ctrl_pts_row_iter(idx).zip(new_points.last().unwrap()) {
             if !pt0.near(pt1) {
                 return Err(Error::CannotRemoveKnot(idx));
             }
@@ -810,11 +807,11 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
     /// let knot_vec0 = KnotVec::bezier_knot(2);
     /// let ctrl_pts0 = vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)];
     /// let bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// 
+    ///
     /// let knot_vec1 = KnotVec::bezier_knot(2);
     /// let ctrl_pts1 = vec![vector!(0, 2), vector!(0.5, 1), vector!(1, 2)];
     /// let bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// 
+    ///
     /// let homotopy_surface = BSplineSurface::homotopy(bspcurve0, bspcurve1);
     /// assert_eq!(
     ///     homotopy_surface.control_points(),
@@ -988,6 +985,36 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         self
     }
 
+    /// Get the boundary by four splitted curves.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
+    ///     vec![vector!(0, 1), vector!(0.5, 1), vector!(1, 1)],
+    ///     vec![vector!(0, 2), vector!(0.5, 2), vector!(1, 2)],
+    ///     vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let curves = bspsurface.splitted_boundary();
+    /// assert_eq!(
+    ///     curves[0].control_points(),
+    ///     &vec![vector!(0, 0), vector!(0, 1), vector!(0, 2), vector!(0, 3)],
+    /// );
+    /// assert_eq!(
+    ///     curves[1].control_points(),
+    ///     &vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    /// );
+    /// assert_eq!(
+    ///     curves[2].control_points(),
+    ///     &vec![vector!(1, 3), vector!(1, 2), vector!(1, 1), vector!(1, 0)],
+    /// );
+    /// assert_eq!(
+    ///     curves[3].control_points(),
+    ///     &vec![vector!(1, 0), vector!(0.5, -1), vector!(0, 0)],
+    /// );
+    /// ```
     pub fn splitted_boundary(&self) -> [BSplineCurve<T>; 4] {
         let (uknot_vec, vknot_vec) = self.knot_vecs.clone();
         let control_points0 = self.control_points.iter().map(|x| x[0].clone()).collect();
@@ -1007,7 +1034,7 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         [curve0, curve1, curve2, curve3]
     }
 
-    /// extract boundary of surface
+    /// Extracts the boundary of surface
     pub fn boundary(&self) -> BSplineCurve<T> {
         let (uknot_vec, vknot_vec) = self.knot_vecs.clone();
         let (range0, range1) = (uknot_vec.range_length(), vknot_vec.range_length());
@@ -1026,22 +1053,10 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         ord: F,
     ) -> bool
     {
-        if !self.knot_vecs.0[0].near(&other.knot_vecs.0[0])
-            || !self
-                .knot_vecs
-                .0
-                .range_length()
-                .near(&other.knot_vecs.0.range_length())
-        {
+        if !self.knot_vecs.0.same_range(&other.knot_vecs.0) {
             return false;
         }
-        if !self.knot_vecs.1[0].near(&other.knot_vecs.1[0])
-            || !self
-                .knot_vecs
-                .1
-                .range_length()
-                .near(&other.knot_vecs.1.range_length())
-        {
+        if !self.knot_vecs.1.same_range(&other.knot_vecs.1) {
             return false;
         }
 

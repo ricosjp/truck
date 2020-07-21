@@ -1081,6 +1081,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         let f = &der * &pt;
         let fprime = &der2 * &pt + der.norm2();
         let t = hint - f / fprime;
+        println!("{} {} {}", f, fprime, t);
         if t.near(&hint) {
             Some(t)
         } else if counter == 100 {
@@ -1286,11 +1287,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         ord: F,
     ) -> bool
     {
-        let self_range_length = self.knot_vec.range_length();
-        let other_range_length = other.knot_vec.range_length();
-        if !self.knot_vec[0].near(&other.knot_vec[0])
-            || !self_range_length.near(&other_range_length)
-        {
+        if !self.knot_vec.same_range(&other.knot_vec) {
             return false;
         }
 
