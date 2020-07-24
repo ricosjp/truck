@@ -1,0 +1,20 @@
+[package]
+name = "truck_featwgpu"
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wgpu = "0.5.2"
+bytemuck = "*"
+glsl-to-spirv = "*"
+truck_polymesh = {path = "../truck_polymesh"}
+truck_geometry = {path = "../truck_geometry"}
+
+[dev-dependencies]
+winit = "*"
+wgpu-core = "*"
+futures = "*"
+truck_io = {path = "../truck_io"}

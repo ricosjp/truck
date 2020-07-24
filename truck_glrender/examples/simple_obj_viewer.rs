@@ -1,7 +1,6 @@
 use glium::glutin::event::*;
 use glium::glutin::event_loop::ControlFlow;
 use glium::*;
-use truck_geometry::*;
 use truck_glrender::*;
 use truck_polymesh::*;
 

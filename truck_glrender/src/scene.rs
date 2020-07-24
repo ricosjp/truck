@@ -1,5 +1,4 @@
 use crate::*;
-use glium::*;
 
 impl Scene {
     #[inline(always)]
@@ -41,14 +40,7 @@ impl Scene {
 
     #[inline(always)]
     pub fn add_glpolymesh(&mut self, glpolymesh: &GLPolygonMesh, display: &glium::Display) {
-        let (vertex_buffer, indices) = glpolymesh.signup(&display);
-        self.objects.push(RenderObject {
-            vertex_buffer,
-            indices,
-            matrix: (&glpolymesh.matrix).into(),
-            color: glpolymesh.color,
-            reflect_ratio: glpolymesh.reflect_ratio,
-        })
+        self.objects.push(RenderObject::new(glpolymesh, display))
     }
 
     #[inline(always)]

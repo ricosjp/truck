@@ -2,33 +2,32 @@ use crate::*;
 use polymesh::*;
 use std::collections::HashMap;
 
-impl GLPolygonMesh {
-    fn signup(
-        &self,
-        display: &Display,
-    ) -> (VertexBuffer<GLVertex>, IndexBuffer<u32>)
-    {
-        (
-            VertexBuffer::new(display, &self.vertices).unwrap(),
-            IndexBuffer::new(
-                display,
-                index::PrimitiveType::TrianglesList,
-                &self.indices,
-            )
-            .unwrap(),
-        )
+impl WGPUPolygonMesh {
+    pub fn signup(&self, device: &Device) -> (Buffer, Buffer) {
+        let vertex_buffer = device.create_buffer_with_data(
+            bytemuck::cast_slice(&self.vertices),
+            BufferUsage::VERTEX,
+        );
+        let index_buffer = device.create_buffer_with_data(
+            bytemuck::cast_slice(&self.indices),
+            BufferUsage::INDEX,
+        );
+        (vertex_buffer, index_buffer)
     }
 }
 
 impl RenderObject {
-    pub fn new(glpolymesh: &GLPolygonMesh, display: &Display) -> RenderObject {
-        let (vertex_buffer, indices) = glpolymesh.signup(&display);
+    pub fn new(wgpupolymesh: &WGPUPolygonMesh, display: &Device) -> RenderObject {
+        let (vertex_buffer, index_buffer) = wgpupolymesh.signup(&display);
         RenderObject {
             vertex_buffer,
-            indices,
-            matrix: (&glpolymesh.matrix).into(),
-            color: glpolymesh.color,
-            reflect_ratio: glpolymesh.reflect_ratio,
+            vertex_size: wgpupolymesh.vertices.len(),
+            index_buffer,
+            index_size: wgpupolymesh.indices.len(),
+            matrix: (&wgpupolymesh.matrix).into(),
+            color: wgpupolymesh.color,
+            reflect_ratio: wgpupolymesh.reflect_ratio,
+            bind_group: None,
         }
     }
 }
@@ -36,7 +35,7 @@ impl RenderObject {
 fn signup_vertex(
     polymesh: &PolygonMesh,
     vertex: &[usize; 3],
-    glpolymesh: &mut GLPolygonMesh,
+    glpolymesh: &mut WGPUPolygonMesh,
     vertex_map: &mut HashMap<[usize; 3], u32>,
 )
 {
@@ -54,18 +53,22 @@ fn signup_vertex(
                 true => [0.0, 0.0, 0.0],
                 false => (&polymesh.normals[key[2]]).into(),
             };
-            let glvertex = GLVertex { position, uv_coord, normal };
+            let wgpuvertex = WGPUVertex {
+                position,
+                uv_coord,
+                normal,
+            };
             vertex_map.insert(key, idx);
-            glpolymesh.vertices.push(glvertex);
+            glpolymesh.vertices.push(wgpuvertex);
             idx
         }
     };
-    glpolymesh.indices.push(idx);
+    glpolymesh.indices.push(idx as u16);
 }
 
-impl Default for GLPolygonMesh {
-    fn default() -> GLPolygonMesh {
-        GLPolygonMesh {
+impl Default for WGPUPolygonMesh {
+    fn default() -> WGPUPolygonMesh {
+        WGPUPolygonMesh {
             vertices: Vec::new(),
             indices: Vec::new(),
             matrix: Matrix4::identity(),
@@ -75,9 +78,9 @@ impl Default for GLPolygonMesh {
     }
 }
 
-impl From<&PolygonMesh> for GLPolygonMesh {
-    fn from(polymesh: &PolygonMesh) -> GLPolygonMesh {
-        let mut glpolymesh = GLPolygonMesh::default();
+impl From<&PolygonMesh> for WGPUPolygonMesh {
+    fn from(polymesh: &PolygonMesh) -> WGPUPolygonMesh {
+        let mut glpolymesh = WGPUPolygonMesh::default();
         let mut vertex_map = HashMap::<[usize; 3], u32>::new();
         for tri in &polymesh.tri_faces {
             signup_vertex(polymesh, &tri[0], &mut glpolymesh, &mut vertex_map);
@@ -103,14 +106,14 @@ impl From<&PolygonMesh> for GLPolygonMesh {
     }
 }
 
-impl From<PolygonMesh> for GLPolygonMesh {
+impl From<PolygonMesh> for WGPUPolygonMesh {
     #[inline(always)]
-    fn from(polymesh: PolygonMesh) -> GLPolygonMesh { (&polymesh).into() }
+    fn from(polymesh: PolygonMesh) -> WGPUPolygonMesh { (&polymesh).into() }
 }
 
-impl From<MeshHandler> for GLPolygonMesh {
+impl From<MeshHandler> for WGPUPolygonMesh {
     #[inline(always)]
-    fn from(mesh_handler: MeshHandler) -> GLPolygonMesh {
+    fn from(mesh_handler: MeshHandler) -> WGPUPolygonMesh {
         Into::<PolygonMesh>::into(mesh_handler).into()
     }
 }
