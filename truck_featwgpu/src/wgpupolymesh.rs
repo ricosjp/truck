@@ -16,22 +16,6 @@ impl WGPUPolygonMesh {
     }
 }
 
-impl RenderObject {
-    pub fn new(wgpupolymesh: &WGPUPolygonMesh, display: &Device) -> RenderObject {
-        let (vertex_buffer, index_buffer) = wgpupolymesh.signup(&display);
-        RenderObject {
-            vertex_buffer,
-            vertex_size: wgpupolymesh.vertices.len(),
-            index_buffer,
-            index_size: wgpupolymesh.indices.len(),
-            matrix: (&wgpupolymesh.matrix).into(),
-            color: wgpupolymesh.color,
-            reflect_ratio: wgpupolymesh.reflect_ratio,
-            bind_group: None,
-        }
-    }
-}
-
 fn signup_vertex(
     polymesh: &PolygonMesh,
     vertex: &[usize; 3],
@@ -71,9 +55,6 @@ impl Default for WGPUPolygonMesh {
         WGPUPolygonMesh {
             vertices: Vec::new(),
             indices: Vec::new(),
-            matrix: Matrix4::identity(),
-            color: [1.0; 3],
-            reflect_ratio: [0.2, 0.6, 0.2],
         }
     }
 }

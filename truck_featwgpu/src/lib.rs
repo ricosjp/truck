@@ -3,9 +3,10 @@ extern crate wgpu;
 extern crate glsl_to_spirv;
 extern crate truck_geometry as geometry;
 extern crate truck_polymesh as polymesh;
+use std::sync::Arc;
 use wgpu::*;
 use bytemuck::*;
-pub use geometry::{Vector2, Vector3, Matrix3, Matrix4, vector, matrix};
+pub use geometry::{Vector2, Vector3, Vector4, Matrix3, Matrix4, vector, matrix};
 
 #[derive(Debug, Clone, Copy)]
 pub struct WGPUVertex {
@@ -34,32 +35,30 @@ unsafe impl Zeroable for LightInfo {}
 unsafe impl Pod for LightInfo {}
 
 #[derive(Clone, Copy, Debug)]
-struct MaterialInfo {
+struct ObjectInfo {
+    matrix: [[f32; 4]; 4],
     material: [f32; 4],
     reflect_ratio: [f32; 3],
 }
-unsafe impl Zeroable for MaterialInfo {}
-unsafe impl Pod for MaterialInfo {}
+unsafe impl Zeroable for ObjectInfo {}
+unsafe impl Pod for ObjectInfo {}
 
 #[derive(Debug, Clone)]
 pub struct WGPUPolygonMesh {
     vertices: Vec<WGPUVertex>,
     indices: Vec<u16>,
-    pub matrix: Matrix4,
-    pub color: [f32; 3],
-    pub reflect_ratio: [f32; 3],
 }
 
 #[derive(Debug)]
 pub struct RenderObject {
-    vertex_buffer: Buffer,
+    vertex_buffer: Arc<Buffer>,
     vertex_size: usize,
-    index_buffer: Buffer,
+    index_buffer: Arc<Buffer>,
     index_size: usize,
-    matrix: [[f32; 4]; 4],
-    color: [f32; 3],
-    reflect_ratio: [f32; 3],
     bind_group: Option<BindGroup>,
+    pub matrix: Matrix4,
+    pub color: Vector4,
+    pub reflect_ratio: [f32; 3],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -107,5 +106,6 @@ pub struct Scene {
 
 pub mod camera;
 pub mod light;
-pub mod wgpupolymesh;
 pub mod scene;
+pub mod render_object;
+pub mod wgpupolymesh;

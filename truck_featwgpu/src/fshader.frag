@@ -14,7 +14,8 @@ layout(set = 0, binding = 1) uniform Light {
     int light_type;
 };
 
-layout(set = 0, binding = 2) uniform Material {
+layout(set = 0, binding = 2) uniform ModelStatus {
+    mat4 _matrix;
     vec4 material;
     vec3 reflect_ratio;
 };

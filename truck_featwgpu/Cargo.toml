@@ -17,4 +17,5 @@ truck_geometry = {path = "../truck_geometry"}
 winit = "*"
 wgpu-core = "*"
 futures = "*"
+stringreader = "*"
 truck_io = {path = "../truck_io"}

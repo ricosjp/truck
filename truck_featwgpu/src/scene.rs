@@ -18,12 +18,18 @@ impl Scene {
                     visibility: ShaderStage::FRAGMENT,
                     ty: BindingType::UniformBuffer { dynamic: false },
                 },
-                // Material
+                // Model Status
                 BindGroupLayoutEntry {
                     binding: 2,
-                    visibility: ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
                     ty: BindingType::UniformBuffer { dynamic: false },
                 },
+                // Scene Status
+                BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    ty: BindingType::UniformBuffer { dynamic: false },
+                }
             ],
         };
         device.create_bind_group_layout(&descriptor)
@@ -83,7 +89,7 @@ impl Scene {
         let vertex_shader = read_spirv(vertex_shader, ShaderType::Vertex, device);
         let fragment_shader = read_spirv(fragment_shader, ShaderType::Fragment, device);
         let geometry_shader = geometry_shader
-            .map(|geometry_shader| read_spirv(geometry_shader, ShaderType::Fragment, device));
+            .map(|geometry_shader| read_spirv(geometry_shader, ShaderType::Geometry, device));
         let bind_group_layout = Scene::default_bind_group_layout(device);
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             bind_group_layouts: &[&bind_group_layout],
@@ -103,16 +109,45 @@ impl Scene {
             light: Default::default(),
         }
     }
+
     #[inline(always)]
-    pub fn add_glpolymesh(&mut self, glpolymesh: &WGPUPolygonMesh, display: &Device) {
-        self.objects.push(RenderObject::new(glpolymesh, display))
+    pub fn add_polymesh<T: Into<WGPUPolygonMesh>>(
+        &mut self,
+        polymesh: T,
+        device: &Device,
+    ) -> usize
+    {
+        self.add_object(RenderObject::new(polymesh, device))
     }
+
+    #[inline(always)]
+    pub fn add_object(&mut self, object: RenderObject) -> usize {
+        self.objects.push(object);
+        self.objects.len() - 1
+    }
+
+    #[inline(always)]
+    pub fn get_object(&mut self, idx: usize) -> &RenderObject { &self.objects[idx] }
+    #[inline(always)]
+    pub fn get_object_mut(&mut self, idx: usize) -> &mut RenderObject { &mut self.objects[idx] }
 
     #[inline(always)]
     pub fn remove_object(&mut self, idx: usize) -> RenderObject { self.objects.remove(idx) }
 
     #[inline(always)]
+    pub fn clear_objects(&mut self) { self.objects.clear() }
+
+    #[inline(always)]
+    pub fn objects(&self) -> &Vec<RenderObject> { &self.objects }
+
+    #[inline(always)]
+    pub fn objects_mut(&mut self) -> &mut Vec<RenderObject> { &mut self.objects }
+
+    #[inline(always)]
     pub fn number_of_objects(&self) -> usize { self.objects.len() }
+
+    #[inline(always)]
+    pub fn elapsed(&self) -> f64 { self.clock.elapsed().as_secs_f64() }
 
     pub fn camera_projection(&self, as_rat: f64) -> [[f32; 4]; 4] {
         let mat = self.camera.projection() * Matrix4::diagonal(&vector!(as_rat, 1, 1, 1));
@@ -208,13 +243,22 @@ impl Scene {
         )
     }
 
+    fn scene_status_buffer(&self, device: &Device) -> Buffer {
+        device.create_buffer_with_data(
+            bytemuck::cast_slice(&[self.elapsed() as f32]),
+            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+        )
+    }
+
     pub fn create_bind_group(&mut self, device: &Device, sc_desc: &SwapChainDescriptor) {
         let camera_buffer = self.camera_buffer(device, sc_desc);
         let light_buffer = self.light_buffer(device);
+        let scene_status_buffer = self.scene_status_buffer(device);
         for object in &mut self.objects {
             object.create_bind_group(
                 &camera_buffer,
                 &light_buffer,
+                &scene_status_buffer,
                 &self.bind_group_layout,
                 device,
             );
@@ -222,6 +266,7 @@ impl Scene {
     }
 
     pub fn prepare_render(&mut self, device: &Device, sc_desc: &SwapChainDescriptor) {
+        self.update_depth_texture(device, sc_desc);
         self.create_pipeline(device, sc_desc);
         self.create_bind_group(device, sc_desc);
     }
@@ -229,7 +274,10 @@ impl Scene {
     pub fn render_scene<'a>(&'a self, rpass: &mut RenderPass<'a>) {
         rpass.set_pipeline(self.pipeline.as_ref().unwrap());
         for object in &self.objects {
-            rpass.set_bind_group(0, &object.bind_group.as_ref().unwrap(), &[]);
+            if object.bind_group.is_none() {
+                continue;
+            }
+            rpass.set_bind_group(0, object.bind_group.as_ref().unwrap(), &[]);
             rpass.set_index_buffer(&object.index_buffer, 0, 0);
             rpass.set_vertex_buffer(0, &object.vertex_buffer, 0, 0);
             rpass.draw_indexed(0..object.index_size as u32, 0, 0..1);
@@ -254,59 +302,4 @@ impl Scene {
 fn read_spirv(code: &str, shadertype: ShaderType, device: &Device) -> ShaderModule {
     let spirv = glsl_to_spirv::compile(code, shadertype).unwrap();
     device.create_shader_module(&wgpu::read_spirv(spirv).unwrap())
-}
-
-impl RenderObject {
-    fn material_buffer(&self, device: &Device) -> Buffer {
-        let material_info = MaterialInfo {
-            material: [self.color[0], self.color[1], self.color[2], 1.0],
-            reflect_ratio: self.reflect_ratio,
-        };
-        device.create_buffer_with_data(
-            bytemuck::cast_slice(&[material_info]),
-            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-        )
-    }
-
-    fn create_bind_group(
-        &mut self,
-        camera_buffer: &Buffer,
-        light_buffer: &Buffer,
-        bind_group_layout: &BindGroupLayout,
-        device: &Device,
-    )
-    {
-        let material_buffer = self.material_buffer(device);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: bind_group_layout,
-            bindings: &[
-                // Camera
-                Binding {
-                    binding: 0,
-                    resource: BindingResource::Buffer {
-                        buffer: &camera_buffer,
-                        range: 0..std::mem::size_of::<CameraInfo>() as u64,
-                    },
-                },
-                // Light
-                Binding {
-                    binding: 1,
-                    resource: BindingResource::Buffer {
-                        buffer: &light_buffer,
-                        range: 0..std::mem::size_of::<LightInfo>() as u64,
-                    },
-                },
-                // Material
-                Binding {
-                    binding: 2,
-                    resource: BindingResource::Buffer {
-                        buffer: &material_buffer,
-                        range: 0..std::mem::size_of::<MaterialInfo>() as u64,
-                    },
-                },
-            ],
-            label: None,
-        });
-        self.bind_group = Some(bind_group);
-    }
 }
