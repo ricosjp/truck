@@ -68,7 +68,6 @@ impl Scene {
             objects: Default::default(),
             vertex_shader,
             fragment_shader,
-            geometry_shader: None,
             bind_group_layout,
             pipeline_layout,
             pipeline: None,
@@ -78,18 +77,16 @@ impl Scene {
             light: Default::default(),
         }
     }
+    
     pub fn with_glsl_shader(
         device: &Device,
         sc_desc: &SwapChainDescriptor,
         vertex_shader: &str,
         fragment_shader: &str,
-        geometry_shader: Option<&str>,
     ) -> Scene
     {
         let vertex_shader = read_spirv(vertex_shader, ShaderType::Vertex, device);
         let fragment_shader = read_spirv(fragment_shader, ShaderType::Fragment, device);
-        let geometry_shader = geometry_shader
-            .map(|geometry_shader| read_spirv(geometry_shader, ShaderType::Geometry, device));
         let bind_group_layout = Scene::default_bind_group_layout(device);
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             bind_group_layouts: &[&bind_group_layout],
@@ -99,7 +96,6 @@ impl Scene {
             objects: Default::default(),
             vertex_shader,
             fragment_shader,
-            geometry_shader,
             bind_group_layout,
             pipeline_layout,
             pipeline: None,

@@ -7,6 +7,7 @@ use std::sync::Arc;
 use wgpu::*;
 use bytemuck::*;
 pub use geometry::{Vector2, Vector3, Vector4, Matrix3, Matrix4, vector, matrix};
+pub use polymesh::PolygonMesh;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WGPUVertex {
@@ -94,7 +95,6 @@ pub struct Scene {
     objects: Vec<RenderObject>,
     vertex_shader: ShaderModule,
     fragment_shader: ShaderModule,
-    geometry_shader: Option<ShaderModule>,
     bind_group_layout: BindGroupLayout,
     pipeline_layout: PipelineLayout,
     pipeline: Option<RenderPipeline>,
