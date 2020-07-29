@@ -14,20 +14,25 @@ pub trait MatrixEntity<T>: EntityArray<Vector<T>> {
     fn vec_multiplied(&self, vec: &Vector<T>) -> Vector<T>;
 }
 
+macro_rules! replace_value {
+    ($a: expr, $value: expr) => { $value };
+}
+
 macro_rules! impl_entity_array {
     ($a: expr, $b: expr) => {};
     ($dim: expr, $($num: expr), *) => {
         impl EntityArray<Vector<[f64; $dim]>> for [Vector<[f64; $dim]>; $dim] {
             const ORIGIN: Self = [Vector::<[f64; $dim]>::ORIGIN; $dim];
+            const INFINITY: Self = [$(replace_value!($num, Vector([f64::INFINITY; $dim]))), *];
+            const NEG_INFINITY: Self = [$(replace_value!($num, Vector([f64::NEG_INFINITY; $dim]))), *];
             #[inline(always)]
             fn from_iter<I: IntoIterator<Item=Vector<[f64; $dim]>>>(iter: I) -> Self {
                 let mut iter = iter.into_iter();
-                [$({
-                    iter.next().unwrap_or_else(|| {
-                        $num;
-                        panic!("{}", Error::TooShortIterator)
-                    })
-                }),*]
+                [$(replace_value!(
+                    $num,
+                    iter.next()
+                        .unwrap_or_else(|| panic!("{}", Error::TooShortIterator))
+                )),*]
             }
         }
         impl From<[[f64; $dim]; $dim]> for Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]> {

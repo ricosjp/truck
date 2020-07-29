@@ -76,6 +76,12 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     pub fn control_point_mut(&mut self, idx: usize) -> &mut Vector<T> {
         &mut self.control_points[idx]
     }
+    
+    /// Returns the bounding box including all control points.
+    #[inline(always)]
+    pub fn roughly_bounding_box(&self) -> BoundingBox<T> {
+        self.control_points.iter().collect()
+    }
 
     /// Returns the degree of B-spline curve
     /// # Examples

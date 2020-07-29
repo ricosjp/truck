@@ -17,6 +17,8 @@ macro_rules! impl_entity_array {
     ($dim: expr, $($num: expr),*) => {
         impl EntityArray<f64> for [f64; $dim] {
             const ORIGIN: Self = [0.0; $dim];
+            const INFINITY: Self = [f64::INFINITY; $dim];
+            const NEG_INFINITY: Self = [f64::NEG_INFINITY; $dim];
             #[inline(always)]
             fn from_iter<I: IntoIterator<Item=f64>> (iter: I) -> Self {
                 let mut iter = iter.into_iter();
@@ -72,6 +74,7 @@ impl_entity_array!(
 macro_rules! vector {
     ($($x: expr), *) => { $crate::Vector::from([$(Into::<f64>::into($x)), *]) };
     ($($x: expr,) *) => { $crate::Vector::from([$(Into::<f64>::into($x)), *]) };
+    ($x: expr; $n: expr) => { $crate::Vector::from([Into::<f64>::into($x); $n]) };
 }
 
 /// Creates a new vector by the homogeneous coordinate.

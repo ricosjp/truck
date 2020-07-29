@@ -43,12 +43,18 @@ pub type Matrix4 = Matrix<[f64; 4], [Vector4; 4]>;
 pub trait EntityArray<T>:
     Sized + Clone + PartialEq + AsRef<[T]> + AsMut<[T]> + Debug + Default {
     const ORIGIN: Self;
-    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self;
+    const INFINITY: Self;
+    const NEG_INFINITY: Self;
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self;
 }
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug)]
 pub struct KnotVec(Vec<f64>);
+
+/// bounding box
+#[derive(Clone, PartialEq, Debug)]
+pub struct BoundingBox<T>(Vector<T>, Vector<T>);
 
 /// Defines a tolerance in the whole package
 pub trait Tolerance: Sized + Debug {
@@ -217,6 +223,7 @@ pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
 #[macro_use]
 pub mod vector;
+pub mod bounding_box;
 pub mod bspcurve;
 pub mod bspsurface;
 pub mod errors;
