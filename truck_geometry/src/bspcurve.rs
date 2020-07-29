@@ -9,22 +9,26 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// * `knot_vec` - the knot vector
     /// * `control_points` - the vector of the control points
     /// # Panics
-    /// There are 3 rules for construct B-spline curve.
+    /// Panics occurs if:
+    /// * There are no control points.
     /// * The number of knots is more than the one of control points.
-    /// * There exist at least two different knots.
-    /// * There are at least one control point.
+    /// * The range of the knot vector is zero.
     pub fn new(knot_vec: KnotVec, control_points: Vec<Vector<T>>) -> BSplineCurve<T> {
         BSplineCurve::try_new(knot_vec, control_points).unwrap_or_else(|e| panic!("{}", e))
     }
+
     /// constructor.
     /// # Arguments
     /// * `knot_vec` - the knot vector
     /// * `control_points` - the vector of the control points
     /// # Failures
-    /// There are 3 rules for construct B-spline curve.
-    /// * The number of knots is more than the one of control points.
-    /// * There exist at least two different knots.
-    /// * There are at least one control point.
+    /// * If there are no control points, returns [`Error::EmptyControlPoints`].
+    /// * If the number of knots is more than the one of control points, returns [`Error::TooShortKnotVector`].
+    /// * If the range of the knot vector is zero, returns [`Error::ZeroRange`].
+    /// 
+    /// [`Error::EmptyControlPoints`]: errors/enum.Error.html#variant.EmptyControlPoints
+    /// [`Error::TooShortKnotVector`]: errors/enum.Error.html#variant.TooShortKnotVector
+    /// [`Error::ZeroRange`]: errors/enum.Error.html#variant.ZeroRange
     pub fn try_new(knot_vec: KnotVec, control_points: Vec<Vector<T>>) -> Result<BSplineCurve<T>> {
         if control_points.is_empty() {
             Err(Error::EmptyControlPoints)
@@ -1317,7 +1321,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// Determine whether `self` and `other` is near as the B-spline curves or not.  
     ///
     /// Divides each knot interval into the number of degree equal parts,
-    /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
+    /// and check `|self(t) - other(t)| < TOLERANCE` for each end points `t`.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -1343,7 +1347,8 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         self.sub_near_as_curve(other, 1, |x, y| x.near(y))
     }
 
-    /// determine `self` and `other` is near in square order as the B-spline curves.  
+    /// Determines `self` and `other` is near in square order as the B-spline curves or not.  
+    /// 
     /// Divide each knot interval into the number of degree equal parts,
     /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
     /// # Examples

@@ -1,3 +1,18 @@
+//! # Overview
+//! `truck_geometry` is a crate for describing geometrical information.
+//! It contains definision basic mathematical objects, vectors and matrices.
+
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications
+)]
+
 use std::fmt::Debug;
 
 /// vector
@@ -42,9 +57,13 @@ pub type Matrix4 = Matrix<[f64; 4], [Vector4; 4]>;
 /// Abstraction of the arrays which is the entity of `Vector` or `Matrix`.
 pub trait EntityArray<T>:
     Sized + Clone + PartialEq + AsRef<[T]> + AsMut<[T]> + Debug + Default {
+    /// the array of all components are `0.0`.
     const ORIGIN: Self;
+    /// the array of all components are `f64::INFINITY`.
     const INFINITY: Self;
+    /// the array of all components are `f64::NEG_INFINITY`.
     const NEG_INFINITY: Self;
+    /// Creats array from iterator. Panic occurs if the length of iterator is too short.
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self;
 }
 
@@ -222,11 +241,19 @@ pub struct BSplineSurface<T> {
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
 #[macro_use]
+#[doc(hidden)]
 pub mod vector;
+#[doc(hidden)]
 pub mod bounding_box;
+#[doc(hidden)]
 pub mod bspcurve;
+/// Defines some iterators on control points of B-spline surface.
 pub mod bspsurface;
+/// Enumerats `Error`.
 pub mod errors;
+#[doc(hidden)]
 pub mod knot_vec;
+/// Defines some traits: `MatrixEntity` and `Determinant`.
 pub mod matrix;
+#[doc(hidden)]
 pub mod tolerance;

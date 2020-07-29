@@ -38,6 +38,7 @@ macro_rules! impl_entity_array {
         impl From<[[f64; $dim]; $dim]> for Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]> {
             #[inline(always)]
             fn from(arr: [[f64; $dim]; $dim]) -> Self {
+                #[allow(unsafe_code)]
                 let arr = unsafe {
                     std::mem::transmute::<[[f64; $dim]; $dim], [Vector<[f64; $dim]>; $dim]>(arr)
                 };
@@ -70,6 +71,7 @@ macro_rules! impl_entity_array {
 
         impl From<Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>> for [[f64; $dim]; $dim] {
             fn from(mat: Matrix<[f64; $dim], [Vector<[f64; $dim]>; $dim]>) -> [[f64; $dim]; $dim] {
+                #[allow(unsafe_code)]
                 unsafe {
                     std::mem::transmute::<_, [[f64; $dim]; $dim]>(mat)
                 }
@@ -1249,6 +1251,8 @@ where
     }
 }
 
+/// Matrix entity arrays implemented the determinant calculating.
+/// This package gives the implementation to the 2, 3 and 4 degree matrices.
 pub trait Determinant<T>:
     Clone + Deref<Target = [Vector<T>]> + DerefMut + Div<f64, Output = Self> + FromIterator<Vector<T>>
 where
