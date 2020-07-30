@@ -167,6 +167,12 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
     pub fn control_point_mut(&mut self, idx0: usize, idx1: usize) -> &mut Vector<T> {
         &mut self.control_points[idx0][idx1]
     }
+    
+    /// Returns the bounding box including all control points.
+    #[inline(always)]
+    pub fn roughly_bounding_box(&self) -> BoundingBox<T> {
+        self.control_points.iter().flat_map(move |vec| vec).collect()
+    }
 
     /// Returns the degrees of B-spline surface
     /// # Examples
@@ -754,10 +760,7 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
             }
         }
 
-        for (pt0, pt1) in self
-            .ctrl_pts_row_iter(idx)
-            .zip(new_points.last().unwrap())
-        {
+        for (pt0, pt1) in self.ctrl_pts_row_iter(idx).zip(new_points.last().unwrap()) {
             if !pt0.near(pt1) {
                 return Err(Error::CannotRemoveKnot(idx));
             }
@@ -810,11 +813,11 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
     /// let knot_vec0 = KnotVec::bezier_knot(2);
     /// let ctrl_pts0 = vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)];
     /// let bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// 
+    ///
     /// let knot_vec1 = KnotVec::bezier_knot(2);
     /// let ctrl_pts1 = vec![vector!(0, 2), vector!(0.5, 1), vector!(1, 2)];
     /// let bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// 
+    ///
     /// let homotopy_surface = BSplineSurface::homotopy(bspcurve0, bspcurve1);
     /// assert_eq!(
     ///     homotopy_surface.control_points(),
@@ -988,6 +991,36 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         self
     }
 
+    /// Get the boundary by four splitted curves.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
+    ///     vec![vector!(0, 1), vector!(0.5, 1), vector!(1, 1)],
+    ///     vec![vector!(0, 2), vector!(0.5, 2), vector!(1, 2)],
+    ///     vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let curves = bspsurface.splitted_boundary();
+    /// assert_eq!(
+    ///     curves[0].control_points(),
+    ///     &vec![vector!(0, 0), vector!(0, 1), vector!(0, 2), vector!(0, 3)],
+    /// );
+    /// assert_eq!(
+    ///     curves[1].control_points(),
+    ///     &vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    /// );
+    /// assert_eq!(
+    ///     curves[2].control_points(),
+    ///     &vec![vector!(1, 3), vector!(1, 2), vector!(1, 1), vector!(1, 0)],
+    /// );
+    /// assert_eq!(
+    ///     curves[3].control_points(),
+    ///     &vec![vector!(1, 0), vector!(0.5, -1), vector!(0, 0)],
+    /// );
+    /// ```
     pub fn splitted_boundary(&self) -> [BSplineCurve<T>; 4] {
         let (uknot_vec, vknot_vec) = self.knot_vecs.clone();
         let control_points0 = self.control_points.iter().map(|x| x[0].clone()).collect();
@@ -1007,7 +1040,7 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         [curve0, curve1, curve2, curve3]
     }
 
-    /// extract boundary of surface
+    /// Extracts the boundary of surface
     pub fn boundary(&self) -> BSplineCurve<T> {
         let (uknot_vec, vknot_vec) = self.knot_vecs.clone();
         let (range0, range1) = (uknot_vec.range_length(), vknot_vec.range_length());
@@ -1026,22 +1059,10 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         ord: F,
     ) -> bool
     {
-        if !self.knot_vecs.0[0].near(&other.knot_vecs.0[0])
-            || !self
-                .knot_vecs
-                .0
-                .range_length()
-                .near(&other.knot_vecs.0.range_length())
-        {
+        if !self.knot_vecs.0.same_range(&other.knot_vecs.0) {
             return false;
         }
-        if !self.knot_vecs.1[0].near(&other.knot_vecs.1[0])
-            || !self
-                .knot_vecs
-                .1
-                .range_length()
-                .near(&other.knot_vecs.1.range_length())
-        {
+        if !self.knot_vecs.1.same_range(&other.knot_vecs.1) {
             return false;
         }
 
@@ -1074,22 +1095,115 @@ impl<T: EntityArray<f64>> BSplineSurface<T> {
         }
         true
     }
+
+    /// Determines whether `self` and `other` is near as the B-spline surfaces or not.  
+    ///
+    /// Divides each knot domain into the number of degree equal parts,
+    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
+    ///     vec![vector!(0, 1), vector!(0.5, 1), vector!(1, 1)],
+    ///     vec![vector!(0, 2), vector!(0.5, 2), vector!(1, 2)],
+    ///     vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    /// ];
+    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let mut bspsurface1 = bspsurface0.clone();
+    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
+    /// 
+    /// *bspsurface1.control_point_mut(1, 1) = vector!(0.4, 1);
+    /// assert!(!bspsurface0.near_as_surface(&bspsurface1));
+    /// ```
     #[inline(always)]
     pub fn near_as_surface(&self, other: &BSplineSurface<T>) -> bool {
         self.sub_near_as_surface(other, 1, |x, y| x.near(y))
     }
+    
+    /// Determines whether `self` and `other` is near in square order as the B-spline surfaces or not.  
+    ///
+    /// Divides each knot domain into the number of degree equal parts,
+    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let eps = f64::TOLERANCE;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
+    ///     vec![vector!(0, 1), vector!(0.5, 1), vector!(1, 1)],
+    ///     vec![vector!(0, 2), vector!(0.5, 2), vector!(1, 2)],
+    ///     vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    /// ];
+    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let mut bspsurface1 = bspsurface0.clone();
+    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
+    /// 
+    /// *bspsurface1.control_point_mut(1, 1) += vector!(eps, eps / 2.0);
+    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
+    /// assert!(!bspsurface0.near2_as_surface(&bspsurface1));
+    /// ```
     #[inline(always)]
     pub fn near2_as_surface(&self, other: &BSplineSurface<T>) -> bool {
         self.sub_near_as_surface(other, 1, |x, y| x.near2(y))
     }
+    
+    /// Determines whether `self` and `other` is near as the B-spline rational surfaces or not.  
+    ///
+    /// Divides each knot domain into the number of degree equal parts,
+    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0, 1), vector!(0.5, -1, 2), vector!(1, 0, 1)],
+    ///     vec![vector!(0, 1, 1), vector!(0.5, 1, 1), vector!(1, 1, 1)],
+    ///     vec![vector!(0, 2, 1), vector!(0.5, 2, 3), vector!(1, 2, 1)],
+    ///     vec![vector!(0, 3, 1), vector!(0.5, 3.5, 2), vector!(1, 3, 1)],
+    /// ];
+    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let mut bspsurface1 = bspsurface0.clone();
+    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
+    /// 
+    /// *bspsurface1.control_point_mut(1, 1) = vector!(0.5, 1, 0.9);
+    /// assert!(!bspsurface0.near_as_rational_surface(&bspsurface1));
+    /// ```
     #[inline(always)]
-    pub fn near_as_projected_surface(&self, other: &BSplineSurface<T>) -> bool {
+    pub fn near_as_rational_surface(&self, other: &BSplineSurface<T>) -> bool {
         self.sub_near_as_surface(other, 2, |x, y| {
             x.rational_projection().near(&y.rational_projection())
         })
     }
+    
+    /// Determines whether `self` and `other` is near in square order as the B-spline rational
+    /// surfaces or not.  
+    ///
+    /// Divides each knot domain into the number of degree equal parts,
+    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let eps = f64::TOLERANCE;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(0, 0, 1), vector!(0.5, -1, 2), vector!(1, 0, 1)],
+    ///     vec![vector!(0, 1, 1), vector!(0.5, 1, 1), vector!(1, 1, 1)],
+    ///     vec![vector!(0, 2, 1), vector!(0.5, 2, 3), vector!(1, 2, 1)],
+    ///     vec![vector!(0, 3, 1), vector!(0.5, 3.5, 2), vector!(1, 3, 1)],
+    /// ];
+    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let mut bspsurface1 = bspsurface0.clone();
+    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
+    /// 
+    /// *bspsurface1.control_point_mut(1, 1) = vector!(0.5, 1, 1.0 - eps);
+    /// assert!(bspsurface0.near_as_rational_surface(&bspsurface1));
+    /// assert!(!bspsurface0.near2_as_rational_surface(&bspsurface1));
+    /// ```
     #[inline(always)]
-    pub fn near2_as_projected_surface(&self, other: &BSplineSurface<T>) -> bool {
+    pub fn near2_as_rational_surface(&self, other: &BSplineSurface<T>) -> bool {
         self.sub_near_as_surface(other, 2, |x, y| {
             x.rational_projection().near2(&y.rational_projection())
         })
@@ -1350,8 +1464,17 @@ impl BSplineSurface<[f64; 4]> {
     }
 }
 
+/// The iterator on the control points in the specified column.
+/// This iterator is generated by [`BSplineSurface::ctrl_pts_column_iter()`].
+/// 
+/// [`BSplineSurface::ctrl_pts_column_iter()`]: struct.BSplineSurface.html#method.ctrl_pts_column_iter
 pub type CPColumnIter<'a, T> = std::slice::Iter<'a, Vector<T>>;
 
+/// The iterator on the control points in the specified row.
+/// This iterator is generated by [`BSplineSurface::ctrl_pts_row_iter()`].
+/// 
+/// [`BSplineSurface::ctrl_pts_row_iter()`]: struct.BSplineSurface.html#method.ctrl_pts_row_iter
+#[derive(Debug)]
 pub struct CPRowIter<'a, T> {
     iter: std::slice::Iter<'a, Vec<Vector<T>>>,
     idx: usize,

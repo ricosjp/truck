@@ -67,16 +67,78 @@ pub enum Error {
     /// );
     /// ```
     NotSortedVector,
-    EmptyKnotVector,
-    SmallerThanSmallestKnot(f64, f64),
+    /// The given degree is too large to calculate bspline basis functions.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// 
+    /// // a knot vector with length = 4.
+    /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// assert_eq!(
+    ///     knot_vec.try_bspline_basis_functions(5, 0.5),
+    ///     Err(Error::TooLargeDegree(4, 5)),
+    /// );
+    /// ```
     TooLargeDegree(usize, usize),
+    /// The specified knot cannot be removed.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// let knot_vec = KnotVec::bezier_knot(2);
+    /// let ctrl_pts = vec![vector!(-1, 1), vector!(0, -1), vector!(1, 1)];
+    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let org_curve = bspcurve.clone();
+    /// bspcurve.add_knot(0.5).add_knot(0.5).add_knot(0.25).add_knot(0.75);
+    /// assert!(bspcurve.try_remove_knot(3).is_ok());
+    /// assert_eq!(bspcurve.try_remove_knot(2), Err(Error::CannotRemoveKnot(2)));
+    /// ```
     CannotRemoveKnot(usize),
+    /// Empty vector of points cannot construct B-spline.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// 
+    /// let knot_vec = KnotVec::bezier_knot(2);
+    /// let ctrl_pts: Vec<Vector4> = Vec::new();
+    /// assert_eq!(
+    ///     BSplineCurve::try_new(knot_vec, ctrl_pts),
+    ///     Err(Error::EmptyControlPoints),
+    /// );
+    /// ```
     EmptyControlPoints,
+    /// The knot vector of B-spline curves or B-spline surfaces must be longer than the corresponded
+    /// array of control points.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0]);
+    /// let ctrl_pts = vec![vector!(0, 0), vector!(0, 0), vector!(0, 0), vector!(0, 0)];
+    /// assert_eq!(
+    ///     BSplineCurve::try_new(knot_vec, ctrl_pts),
+    ///     Err(Error::TooShortKnotVector(3, 4)),
+    /// );
+    /// ```
     TooShortKnotVector(usize, usize),
-    TooSmallNewKnot(f64, f64),
-    ConstantCurve,
+    /// The length of the given arrays of control points to create a B-spline surface is irregular.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![vector!(1, 2), vector!(1, 2)], // length = 2
+    ///     vec![vector!(1, 2)] // length = 1
+    /// ];
+    /// assert_eq!(
+    ///     BSplineSurface::try_new(knot_vecs, ctrl_pts),
+    ///     Err(Error::IrregularControlPoints),
+    /// );
+    /// ```
     IrregularControlPoints,
-    NotConverge,
 }
 
 impl std::fmt::Display for Error {
@@ -87,10 +149,6 @@ impl std::fmt::Display for Error {
             Error::DifferentBackFront(knot0, knot1) => f.pad(&format!("Cannot concat two knot vectors whose the back of the first and the front of the second are different.\nthe back of the first knot vector: {}\nthe front of the second knot vector: {}", knot0, knot1)),
             Error::NotClampedKnotVector => f.pad("This knot vector is not clamped."),
             Error::NotSortedVector => f.pad("This knot vector is not sorted."),
-            Error::EmptyKnotVector => f.pad("This knot vector is empty."),
-            Error::SmallerThanSmallestKnot(x, smallest) => f.pad(
-                &format!("The input value is smaller than the smallest knot.\nthe input value: {}\nthe smaller knot: {}", x, smallest)
-                ),
             Error::TooLargeDegree(knot_len, degree) => f.pad(
                 &format!("This knot vector is too short compared to the degree.\nthe length of knot_vec: {}\nthe degree: {}",
                     knot_len, degree)
@@ -101,13 +159,7 @@ impl std::fmt::Display for Error {
                 &format!("The knot vector must be more than the control points.\nthe length of knot_vec: {}\nthe number of control points: {}",
                     knot_len, cont_len)
                 ),
-            Error::TooSmallNewKnot(new_knot, smallest) => f.pad(
-                &format!("The new knot must be smaller than the minimum knot.\nthe new knot: {}\nthe smallest knot: {}",
-                    new_knot, smallest)
-                ),
-            Error::ConstantCurve => f.pad("This curve is global"),
             Error::IrregularControlPoints => f.pad("The number of control points is irregular"),
-            Error::NotConverge => f.pad("Newton method did not converge."),
         }
     }
 }
@@ -122,14 +174,10 @@ fn print_messages() {
     writeln!(&mut std::io::stderr(), "{}\n", Error::ZeroRange).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::DifferentBackFront(0.0, 1.0)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotSortedVector).unwrap();
-    writeln!(&mut std::io::stderr(), "{}\n", Error::EmptyKnotVector).unwrap();
-    writeln!(&mut std::io::stderr(), "{}\n", Error::SmallerThanSmallestKnot(0.0, 1.0)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::TooLargeDegree(2, 1)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::CannotRemoveKnot(7)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::EmptyControlPoints).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::TooShortKnotVector(1, 2)).unwrap();
-    writeln!(&mut std::io::stderr(), "{}\n", Error::TooSmallNewKnot(1.0, 2.0)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::IrregularControlPoints).unwrap();
-    writeln!(&mut std::io::stderr(), "{}\n", Error::NotConverge).unwrap();
     writeln!(&mut std::io::stderr(), "*******************************************************").unwrap();
 }
