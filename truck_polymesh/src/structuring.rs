@@ -102,10 +102,8 @@ impl PolygonMesh {
         let mut n = &vec0 ^ &vec1;
         n /= n.norm();
         let vec2 = &self.positions[face1[k][0]] - &self.positions[face0[0][0]];
-        let coef = match vec2.divide(&vec0, &vec1, &n) {
-            Some(coef) => coef,
-            None => return None,
-        };
+        let mat = matrix!(vec0.clone(), vec1.clone(), n.clone());
+        let coef = mat.solve(&vec2);
 
         if coef[2] > tol {
             None

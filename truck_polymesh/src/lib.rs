@@ -1,6 +1,9 @@
+#[macro_use]
 extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
-use geometry::{Vector2, Vector3};
+pub use geometry::{
+    matrix, vector, BoundingBox, Matrix2, Matrix3, Matrix4, Vector2, Vector3, Vector4,
+};
 
 /// mesh data
 #[derive(Clone, Debug, Default)]

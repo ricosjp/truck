@@ -1,7 +1,7 @@
 use crate::elements::{TopologicalElement, GeometricalElement};
 use crate::Result;
 use crate::*;
-use geometry::*;
+use geometry::Vector3;
 use std::collections::HashMap;
 use topology::*;
 

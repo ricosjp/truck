@@ -1,5 +1,6 @@
 extern crate obj as extern_obj;
 extern crate serde;
+#[macro_use]
 extern crate truck_geometry as geometry;
 extern crate truck_polymesh as polymesh;
 extern crate truck_topology as topology;
@@ -7,7 +8,8 @@ extern crate truck_topology as topology;
 extern crate serde_derive;
 extern crate serde_json;
 
-use truck_geometry::*;
+type BSplineCurve = geometry::BSplineCurve<[f64; 4]>;
+type BSplineSurface = geometry::BSplineSurface<[f64; 4]>;
 
 /// geometric data
 #[derive(Clone, Debug, Default)]

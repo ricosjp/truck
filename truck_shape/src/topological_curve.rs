@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::elements::TopologicalElement;
-use crate::{Director, Result};
-use geometry::{BSplineCurve, BSplineSurface, Tolerance};
+use crate::{Director, Result, BSplineCurve, BSplineSurface};
+use geometry::Tolerance;
 use std::iter::FromIterator;
 use topology::*;
 
@@ -89,7 +89,7 @@ impl TopologicalCurve for Edge {
             .ok_or(self.no_geometry())?
             .clone();
         if self.front() != self.absolute_front() {
-            curve.inverse();
+            curve.invert();
         }
         Ok(curve)
     }
@@ -115,7 +115,7 @@ impl TopologicalCurve for Wire {
                 tmp_curve *= scalar;
             }
             tmp_curve.knot_normalize().knot_translate((i + 1) as f64);
-            curve.concat(&mut tmp_curve).unwrap();
+            curve.concat(&mut tmp_curve);
         }
         Ok(curve)
     }
