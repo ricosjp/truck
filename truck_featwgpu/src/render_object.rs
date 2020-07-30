@@ -57,7 +57,7 @@ impl RenderObject {
                         range: 0..std::mem::size_of::<LightInfo>() as u64,
                     },
                 },
-                // Material
+                // Model Status
                 Binding {
                     binding: 2,
                     resource: BindingResource::Buffer {

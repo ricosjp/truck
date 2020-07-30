@@ -185,7 +185,7 @@ impl Scene {
                 stencil_write_mask: 0,
             }),
             vertex_state: VertexStateDescriptor {
-                index_format: IndexFormat::Uint16,
+                index_format: IndexFormat::Uint32,
                 vertex_buffers: &[VertexBufferDescriptor {
                     stride: std::mem::size_of::<WGPUVertex>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
@@ -267,7 +267,7 @@ impl Scene {
         self.create_bind_group(device, sc_desc);
     }
 
-    pub fn render_scene<'a>(&'a self, rpass: &mut RenderPass<'a>) {
+    pub fn render_scene<'b>(&'b self, rpass: &mut RenderPass<'b>) {
         rpass.set_pipeline(self.pipeline.as_ref().unwrap());
         for object in &self.objects {
             if object.bind_group.is_none() {

@@ -8,6 +8,7 @@ use wgpu::*;
 use bytemuck::*;
 pub use geometry::{Vector2, Vector3, Vector4, Matrix3, Matrix4, vector, matrix};
 pub use polymesh::PolygonMesh;
+pub type BSplineSurface = geometry::BSplineSurface<[f64; 4]>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WGPUVertex {
@@ -47,12 +48,18 @@ unsafe impl Pod for ObjectInfo {}
 #[derive(Debug, Clone)]
 pub struct WGPUPolygonMesh {
     vertices: Vec<WGPUVertex>,
-    indices: Vec<u16>,
+    indices: Vec<u32>,
+}
+
+#[derive(Debug)]
+pub struct WGPUMesher {
+    bind_group_layout: BindGroupLayout,
+    pipeline: ComputePipeline,
 }
 
 #[derive(Debug)]
 pub struct RenderObject {
-    vertex_buffer: Arc<Buffer>,
+    pub vertex_buffer: Arc<Buffer>,
     vertex_size: usize,
     index_buffer: Arc<Buffer>,
     index_size: usize,
@@ -72,8 +79,8 @@ pub enum ProjectionType {
 pub struct Camera {
     matrix: Matrix4,
     screen_size: f64,
-    front_clipping_plane: f64,
-    back_clipping_plane: f64,
+    near_clip: f64,
+    far_clip: f64,
     projection_type: ProjectionType,
 }
 
@@ -109,3 +116,4 @@ pub mod light;
 pub mod scene;
 pub mod render_object;
 pub mod wgpupolymesh;
+pub mod wgpumesher;

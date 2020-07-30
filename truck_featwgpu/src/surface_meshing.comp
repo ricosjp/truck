@@ -1,0 +1,186 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1) in;
+
+const uint MESHING_SIZE = 75;
+
+layout(set = 0, binding = 0) buffer UKnot {
+    double uknot[];
+};
+
+layout(set = 0, binding = 1) buffer VKnot {
+    double vknot[];
+};
+
+layout(set = 0, binding = 2) buffer ControlPoints {
+    dvec4 control_points[];
+};
+
+layout(set = 0, binding = 3) buffer UDerivedControlPoints {
+    dvec4 uderived_control_points[];
+};
+
+layout(set = 0, binding = 4) buffer VDerivedControlPoints {
+    dvec4 vderived_control_points[];
+};
+
+layout(set = 0, binding = 5) uniform SurfaceInfo {
+    uint uknot_length;
+    uint vknot_length;
+    uint ucp_length;
+    uint vcp_length;
+};
+
+layout(set = 0, binding = 6) buffer VertexBuffer {
+    float vertex_buffer[];
+};
+
+double inv_or_zero(double a) {
+    if (abs(a) < 1.0e-7) {
+        return 0.0;
+    } else {
+        return 1.0 / a;
+    }
+}
+
+uint udegree() {
+    return uknot_length - ucp_length - 1;
+}
+
+uint vdegree() {
+    return vknot_length - vcp_length - 1;
+}
+
+// bspline basis function
+double[100] u_bbf(double u, uint degree, uint len) {
+    double[100] res;
+    for (uint i = 0; i < len; i++) {
+        res[i] = 0.0;
+    }
+    
+    uint idx = len - 1;
+    for (uint i = 0; i < len; i++) {
+        if (u < uknot[i]) {
+            idx = i - 1;
+            break;
+        }
+    }
+    res[idx] = 1.0;
+
+    for (uint k = 1; k <= degree; k++) {
+        uint base = 0;
+        if (idx >= k) base = idx - k;
+        double delta = uknot[base + k] - uknot[base];
+        uint maximum = idx;
+        if (idx + k + 1 >= len)  maximum = len - k - 2;
+        double a = inv_or_zero(delta) * (u - uknot[base]);
+        for (uint i = base; i <= maximum; i++) {
+            double delta = uknot[i + k + 1] - uknot[i + 1];
+            double b = inv_or_zero(delta) * (uknot[i + k + 1] - u);
+            res[i] = a * res[i] + b * res[i + 1];
+            a = 1.0 - b;
+        }
+    }
+
+    return res;
+}
+
+// bspline basis function
+double[100] v_bbf(double v, uint degree, uint len) {
+    double[100] res;
+    for (uint i = 0; i < len; i++) {
+        res[i] = 0.0;
+    }
+    
+    uint idx = len - 1;
+    for (uint i = 0; i < len; i++) {
+        if (v < vknot[i]) {
+            idx = i - 1;
+            break;
+        }
+    }
+    res[idx] = 1.0;
+
+    for (uint k = 1; k <= degree; k++) {
+        uint base = 0;
+        if (idx >= k) base = idx - k;
+        double delta = vknot[base + k] - vknot[base];
+        uint maximum = idx;
+        if (idx + k + 1 >= len)  maximum = len - k - 2;
+        double a = inv_or_zero(delta) * (v - vknot[base]);
+        for (uint i = base; i <= maximum; i++) {
+            double delta = vknot[i + k + 1] - vknot[i + 1];
+            double b = inv_or_zero(delta) * (vknot[i + k + 1] - v);
+            res[i] = a * res[i] + b * res[i + 1];
+            a = 1.0 - b;
+        }
+    }
+
+    return res;
+}
+
+dvec4 surface(double u, double v) {
+    double[100] ubasis = u_bbf(u, udegree(), uknot_length);
+    double[100] vbasis = v_bbf(v, vdegree(), vknot_length);
+    dvec4 res = dvec4(0.0, 0.0, 0.0, 0.0);
+    for (uint i = 0; i < ucp_length; i++) {
+        for (uint j = 0; j < vcp_length; j++) {
+            res += ubasis[i] * vbasis[j] * control_points[i * vcp_length + j];
+        }
+    }
+    return res;
+}
+
+dvec4 uderived_surface(double u, double v) {
+    double[100] ubasis = u_bbf(u, udegree() - 1, uknot_length);
+    double[100] vbasis = v_bbf(v, vdegree(), vknot_length);
+    dvec4 res = dvec4(0.0, 0.0, 0.0, 0.0);
+
+    for (uint i = 0; i < ucp_length + 1; i++) {
+        for (uint j = 0; j < vcp_length; j++) {
+            res += ubasis[i] * vbasis[j] * uderived_control_points[i * vcp_length + j];
+        }
+    }
+    return res;
+}
+
+dvec4 vderived_surface(double u, double v) {
+    double[100] ubasis = u_bbf(u, udegree(), uknot_length);
+    double[100] vbasis = v_bbf(v, vdegree() - 1, vknot_length);
+    dvec4 res = dvec4(0.0, 0.0, 0.0, 0.0);
+
+    for (uint i = 0; i < ucp_length; i++) {
+        for (uint j = 0; j < vcp_length + 1; j++) {
+            res += ubasis[i] * vbasis[j] * vderived_control_points[i * (vcp_length + 1) + j];
+        }
+    }
+    return res;
+}
+
+void main() {
+    double u = double(gl_GlobalInvocationID.x) / double(MESHING_SIZE);
+    double v = double(gl_GlobalInvocationID.y) / double(MESHING_SIZE);
+    dvec4 pt = surface(u, v);
+    dvec4 uder = uderived_surface(u, v);
+    dvec4 vder = vderived_surface(u, v);
+    dvec3 uder_rat = dvec3(
+        uder[0] * pt[3] - pt[0] * uder[3],
+        uder[1] * pt[3] - pt[1] * uder[3],
+        uder[2] * pt[3] - pt[2] * uder[3]
+    ) / (pt[3] * pt[3]);
+    dvec3 vder_rat = dvec3(
+        vder[0] * pt[3] - pt[0] * vder[3],
+        vder[1] * pt[3] - pt[1] * vder[3],
+        vder[2] * pt[3] - pt[2] * vder[3]
+    ) / (pt[3] * pt[3]);
+    dvec3 n = normalize(cross(uder_rat, vder_rat));
+    uint offset = (gl_GlobalInvocationID.x * MESHING_SIZE + gl_GlobalInvocationID.y) * 8;
+
+    vertex_buffer[offset + 0] = float(pt[0] / pt[3]);
+    vertex_buffer[offset + 1] = float(pt[1] / pt[3]);
+    vertex_buffer[offset + 2] = float(pt[2] / pt[3]);
+    vertex_buffer[offset + 3] = float(u);
+    vertex_buffer[offset + 4] = float(v);
+    vertex_buffer[offset + 5] = float(n[0]);
+    vertex_buffer[offset + 6] = float(n[1]);
+    vertex_buffer[offset + 7] = float(n[2]);
+}

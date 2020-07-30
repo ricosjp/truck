@@ -61,9 +61,10 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(device: &Device, sc_desc: &SwapChainDescriptor) -> MyApp {
+    fn init(handler: &WGPUHandler) -> MyApp {
+        let (device, sc_desc) = (&handler.device, &handler.sc_desc);
         let mut render = MyApp {
-            scene: Scene::new(&device, &sc_desc),
+            scene: Scene::new(device, sc_desc),
             rotate_flag: false,
             prev_cursor: None,
             path: None,
@@ -211,7 +212,8 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, device: &Device, sc_desc: &SwapChainDescriptor) {
+    fn update(&mut self, handler: &WGPUHandler) {
+        let (device, sc_desc) = (&handler.device, &handler.sc_desc);
         if let Some(path) = self.path.take() {
             self.load_obj(path, device);
         }
@@ -223,4 +225,4 @@ impl App for MyApp {
     fn render<'a>(&'a self, rpass: &mut RenderPass<'a>) { self.scene.render_scene(rpass); }
 }
 
-fn main() { futures::executor::block_on(app::run::<MyApp>()); }
+fn main() { MyApp::run(); }

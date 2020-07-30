@@ -29,15 +29,15 @@ impl Camera {
     pub fn perspective_camera(
         matrix: Matrix4,
         field_of_view: f64,
-        front_clipping_plane: f64,
-        back_clipping_plane: f64,
+        near_clip: f64,
+        far_clip: f64,
     ) -> Camera
     {
         Camera {
             matrix,
             screen_size: (field_of_view / 4.0).tan() * 2.0,
-            front_clipping_plane,
-            back_clipping_plane,
+            near_clip,
+            far_clip,
             projection_type: ProjectionType::Perspective,
         }
     }
@@ -46,15 +46,15 @@ impl Camera {
     pub fn parallel_camera(
         matrix: Matrix4,
         screen_size: f64,
-        front_clipping_plane: f64,
-        back_clipping_plane: f64,
+        near_clip: f64,
+        far_clip: f64,
     ) -> Camera
     {
         Camera {
             matrix,
             screen_size,
-            front_clipping_plane,
-            back_clipping_plane,
+            near_clip,
+            far_clip,
             projection_type: ProjectionType::Parallel,
         }
     }
@@ -62,8 +62,8 @@ impl Camera {
     fn perspective_projection(&self) -> Matrix4 {
         let matrix = &self.matrix;
         let a = self.screen_size / 2.0;
-        let z_min = self.front_clipping_plane;
-        let z_max = self.back_clipping_plane;
+        let z_min = self.near_clip;
+        let z_max = self.far_clip;
         let d = z_min / z_max;
 
         matrix.inverse()
@@ -78,8 +78,8 @@ impl Camera {
     fn parallel_projection(&self) -> Matrix4 {
         let matrix = &self.matrix;
         let a = self.screen_size;
-        let z_min = self.front_clipping_plane;
-        let z_max = self.back_clipping_plane;
+        let z_min = self.near_clip;
+        let z_max = self.far_clip;
 
         matrix.inverse()
             * matrix!(
@@ -114,8 +114,8 @@ impl Default for Camera {
         Camera {
             matrix: Matrix4::identity(),
             screen_size: 1.0,
-            front_clipping_plane: 0.1,
-            back_clipping_plane: 1000.0,
+            near_clip: 0.1,
+            far_clip: 1000.0,
             projection_type: ProjectionType::Perspective,
         }
     }

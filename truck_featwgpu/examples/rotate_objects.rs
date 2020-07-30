@@ -108,9 +108,11 @@ impl MyRender {
 }
 
 impl App for MyRender {
-    fn init(device: &Device, sc_desc: &SwapChainDescriptor) -> MyRender {
+    fn init(handler: &WGPUHandler) -> MyRender {
+        let device = &handler.device;
+        let sc_desc = &handler.sc_desc;
         let mut render = MyRender {
-            scene: Scene::new(&device, &sc_desc),
+            scene: Scene::new(device, sc_desc),
             rotate_flag: false,
             prev_cursor: None,
             prev_time: 0.0,
@@ -259,7 +261,9 @@ impl App for MyRender {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, device: &Device, sc_desc: &SwapChainDescriptor) {
+    fn update(&mut self, handler: &WGPUHandler) {
+        let device = &handler.device;
+        let sc_desc = &handler.sc_desc;
         if let Some(path) = self.path.take() {
             self.load_obj(path, device);
             self.arrange_objects();
@@ -275,4 +279,4 @@ impl App for MyRender {
     fn render<'a>(&'a self, rpass: &mut RenderPass<'a>) { self.scene.render_scene(rpass); }
 }
 
-fn main() { futures::executor::block_on(app::run::<MyRender>()); }
+fn main() { MyRender::run() }
