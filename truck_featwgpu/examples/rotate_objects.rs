@@ -32,30 +32,6 @@ impl MyRender {
         Camera::perspective_camera(matrix, std::f64::consts::PI / 4.0, 0.1, 200.0)
     }
 
-    fn obj_bounding(mesh: &PolygonMesh) -> (f64, Vector3) {
-        let bdd_box = mesh.bounding_box();
-        let center = vector![
-            (bdd_box[0].0 + bdd_box[0].1) / 2.0,
-            (bdd_box[1].0 + bdd_box[1].1) / 2.0,
-            (bdd_box[2].0 + bdd_box[2].1) / 2.0,
-        ];
-        let size_vector = vector![
-            bdd_box[0].1 - bdd_box[0].0,
-            bdd_box[1].1 - bdd_box[1].0,
-            bdd_box[2].1 - bdd_box[2].0,
-        ];
-        let pre_size = if size_vector[0] < size_vector[1] {
-            size_vector[1]
-        } else {
-            size_vector[0]
-        };
-        let size = if pre_size < size_vector[2] {
-            size_vector[2]
-        } else {
-            pre_size
-        };
-        (size, center)
-    }
     fn set_normals(mesh: PolygonMesh) -> PolygonMesh {
         match mesh.normals.is_empty() {
             false => mesh,
@@ -74,9 +50,10 @@ impl MyRender {
         let file = std::fs::File::open(path).unwrap();
         let mesh = truck_io::obj::read(file).unwrap();
         let mesh = MyRender::set_normals(mesh);
-        let (size, center) = MyRender::obj_bounding(&mesh);
-        let mut object = RenderObject::new(mesh, device);
+        let bdd_box = mesh.bounding_box();
+        let (size, center) = (bdd_box.size(), bdd_box.center());
         let diag = vector!(size / 2.0, size / 2.0, size / 2.0);
+        let mut object = RenderObject::new(mesh, device);
         let mut mat = Matrix3::diagonal(&diag).affine(&center).inverse();
         mat *= Matrix3::identity().affine(&vector!(0.0, 0.5, 0.0));
         object.matrix = mat;

@@ -44,26 +44,8 @@ impl MyRenderer {
 
     fn obj_normalize(mut mesh: PolygonMesh) -> PolygonMesh {
         let bdd_box = mesh.bounding_box();
-        let center = vector![
-            (bdd_box[0].0 + bdd_box[0].1) / 2.0,
-            (bdd_box[1].0 + bdd_box[1].1) / 2.0,
-            (bdd_box[2].0 + bdd_box[2].1) / 2.0,
-        ];
-        let size_vector = vector![
-            bdd_box[0].1 - bdd_box[0].0,
-            bdd_box[1].1 - bdd_box[1].0,
-            bdd_box[2].1 - bdd_box[2].0,
-        ];
-        let pre_size = if size_vector[0] < size_vector[1] {
-            size_vector[1]
-        } else {
-            size_vector[0]
-        };
-        let size = if pre_size < size_vector[2] {
-            size_vector[2]
-        } else {
-            pre_size
-        };
+        let center = bdd_box.center();
+        let size = bdd_box.size();
         for pos in &mut mesh.positions {
             *pos -= &center;
             *pos /= size;
