@@ -1,8 +1,6 @@
 #version 450
 layout(local_size_x = 1, local_size_y = 1) in;
 
-const uint MESHING_SIZE = 50;
-
 layout(set = 0, binding = 0) buffer UKnot {
     double uknot[];
 };
@@ -11,26 +9,36 @@ layout(set = 0, binding = 1) buffer VKnot {
     double vknot[];
 };
 
-layout(set = 0, binding = 2) buffer ControlPoints {
+layout(set = 0, binding = 2) buffer UDiv {
+    double udiv[];
+};
+
+layout(set = 0, binding = 3) buffer VDiv {
+    double vdiv[];
+};
+
+layout(set = 0, binding = 4) buffer ControlPoints {
     dvec4 control_points[];
 };
 
-layout(set = 0, binding = 3) buffer UDerivedControlPoints {
+layout(set = 0, binding = 5) buffer UDerivedControlPoints {
     dvec4 uderived_control_points[];
 };
 
-layout(set = 0, binding = 4) buffer VDerivedControlPoints {
+layout(set = 0, binding = 6) buffer VDerivedControlPoints {
     dvec4 vderived_control_points[];
 };
 
-layout(set = 0, binding = 5) uniform SurfaceInfo {
+layout(set = 0, binding = 7) uniform SurfaceInfo {
     uint uknot_length;
     uint vknot_length;
+    uint udiv_length;
+    uint vdiv_length;
     uint ucp_length;
     uint vcp_length;
 };
 
-layout(set = 0, binding = 6) buffer VertexBuffer {
+layout(set = 0, binding = 8) buffer VertexBuffer {
     float vertex_buffer[];
 };
 
@@ -57,12 +65,16 @@ double[100] u_bbf(double u, uint degree, uint len) {
         res[i] = 0.0;
     }
     
-    uint idx = len - 1;
+    uint idx = len;
     for (uint i = 0; i < len; i++) {
         if (u < uknot[i]) {
             idx = i - 1;
             break;
         }
+    }
+    if (idx == len) {
+        res[len - degree - 2] = 1.0;
+        return res;
     }
     res[idx] = 1.0;
 
@@ -91,12 +103,16 @@ double[100] v_bbf(double v, uint degree, uint len) {
         res[i] = 0.0;
     }
     
-    uint idx = len - 1;
+    uint idx = len;
     for (uint i = 0; i < len; i++) {
         if (v < vknot[i]) {
             idx = i - 1;
             break;
         }
+    }
+    if (idx == len) {
+        res[len - degree - 2] = 1.0;
+        return res;
     }
     res[idx] = 1.0;
 
@@ -157,8 +173,8 @@ dvec4 vderived_surface(double u, double v) {
 }
 
 void main() {
-    double u = double(gl_GlobalInvocationID.x) / double(MESHING_SIZE);
-    double v = double(gl_GlobalInvocationID.y) / double(MESHING_SIZE);
+    double u = udiv[gl_GlobalInvocationID.x];
+    double v = vdiv[gl_GlobalInvocationID.y];
     dvec4 pt = surface(u, v);
     dvec4 uder = uderived_surface(u, v);
     dvec4 vder = vderived_surface(u, v);
@@ -173,7 +189,7 @@ void main() {
         vder[2] * pt[3] - pt[2] * vder[3]
     ) / (pt[3] * pt[3]);
     dvec3 n = normalize(cross(uder_rat, vder_rat));
-    uint offset = (gl_GlobalInvocationID.x * MESHING_SIZE + gl_GlobalInvocationID.y) * 8;
+    uint offset = (gl_GlobalInvocationID.x * vdiv_length + gl_GlobalInvocationID.y) * 8;
 
     vertex_buffer[offset + 0] = float(pt[0] / pt[3]);
     vertex_buffer[offset + 1] = float(pt[1] / pt[3]);

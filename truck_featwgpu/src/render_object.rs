@@ -15,17 +15,13 @@ impl RenderObject {
             bind_group: None,
         }
     }
-    
     pub(super) fn object_buffer(&self, device: &Device) -> Buffer {
         let material_info = ObjectInfo {
             matrix: (&self.matrix).into(),
             material: (&self.color).into(),
             reflect_ratio: self.reflect_ratio,
         };
-        device.create_buffer_with_data(
-            bytemuck::cast_slice(&[material_info]),
-            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-        )
+        device.create_buffer_with_data(bytemuck::cast_slice(&[material_info]), BufferUsage::UNIFORM)
     }
 
     pub(super) fn create_bind_group(
@@ -96,9 +92,8 @@ impl Clone for RenderObject {
 }
 
 impl<T> std::ops::MulAssign<T> for RenderObject
-where Matrix4: std::ops::MulAssign<T> {
+where Matrix4: std::ops::MulAssign<T>
+{
     #[inline(always)]
-    fn mul_assign(&mut self, mat: T) {
-        self.matrix *= mat;
-    }
+    fn mul_assign(&mut self, mat: T) { self.matrix *= mat; }
 }

@@ -5,7 +5,6 @@ use truck_geometry::KnotVec;
 use wgpu::*;
 mod app;
 use app::*;
-const VERTEX_SIZE: u64 = 10000 * 8 * std::mem::size_of::<f32>() as u64;
 
 struct MyApp {
     scene: Scene,
@@ -65,7 +64,9 @@ impl MyApp {
                     std::thread::sleep(std::time::Duration::from_millis(10));
                     continue;
                 }
-                *object_mut = Some(mesher.meshing(&bspsurface));
+                let object = mesher.meshing(&bspsurface);
+                *object_mut = Some(object);
+                drop(object_mut);
                 count += 1;
                 bspsurface.control_point_mut(3, 3)[1] = time.sin();
                 time += 0.1;
@@ -117,7 +118,7 @@ impl App for MyApp {
                 }
                 self.scene.add_object(object);
             }
-            None => return,
+            None => {},
         }
         self.scene.prepare_render(&handler.sc_desc);
     }
@@ -131,20 +132,19 @@ impl App for MyApp {
 }
 
 #[allow(dead_code)]
-async fn get_vertex(buffer: &Buffer, device: &Device) -> Vec<[[f32; 4]; 3]> {
-    let buffer_future = buffer.map_read(0, VERTEX_SIZE);
+async fn get_vertex(object: &RenderObject, device: &Device) -> Vec<[f32; 8]> {
+    let byte_size = object.vertex_size * 4 * 8;
+    let buffer_future = object.vertex_buffer.map_read(0, byte_size as u64);
     device.poll(wgpu::Maintain::Wait);
 
     if let Ok(mapping) = buffer_future.await {
         mapping
             .as_slice()
-            .chunks_exact(48)
+            .chunks_exact(32)
             .map(|b| {
                 let vec = bytemuck::cast_slice::<u8, f32>(b);
                 [
-                    [vec[0], vec[1], vec[2], vec[3]],
-                    [vec[4], vec[5], vec[6], vec[7]],
-                    [vec[8], vec[9], vec[10], vec[11]],
+                    vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], vec[6], vec[7],
                 ]
             })
             .collect()

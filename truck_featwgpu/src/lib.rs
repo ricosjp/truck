@@ -53,7 +53,7 @@ pub struct WGPUPolygonMesh {
 
 #[derive(Debug)]
 pub struct WGPUMesher {
-    device: Arc<Device>,
+    pub device: Arc<Device>,
     queue: Arc<Queue>,
     bind_group_layout: BindGroupLayout,
     pipeline: ComputePipeline,
@@ -62,7 +62,7 @@ pub struct WGPUMesher {
 #[derive(Debug)]
 pub struct RenderObject {
     pub vertex_buffer: Arc<Buffer>,
-    vertex_size: usize,
+    pub vertex_size: usize,
     index_buffer: Arc<Buffer>,
     index_size: usize,
     bind_group: Option<BindGroup>,
@@ -104,11 +104,8 @@ pub struct Scene {
     device: Arc<Device>,
     queue: Arc<Queue>,
     objects: Vec<RenderObject>,
-    vertex_shader: ShaderModule,
-    fragment_shader: ShaderModule,
     bind_group_layout: BindGroupLayout,
-    pipeline_layout: PipelineLayout,
-    pipeline: Option<RenderPipeline>,
+    pipeline: RenderPipeline,
     foward_depth: TextureView,
     clock: std::time::Instant,
     pub camera: Camera,

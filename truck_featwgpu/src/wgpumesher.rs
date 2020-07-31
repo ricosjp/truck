@@ -1,10 +1,7 @@
 use crate::*;
 
-const MESHING_SIZE: u32 = 50;
-const MESHING_SIZE2: u64 = (MESHING_SIZE * MESHING_SIZE) as u64;
-const VERTEX_SIZE: u64 = MESHING_SIZE2 * 12 * std::mem::size_of::<f32>() as u64;
-
 const F64_SIZE: usize = std::mem::size_of::<f64>();
+const F32_SIZE: usize = std::mem::size_of::<f32>();
 const U32_SIZE: usize = std::mem::size_of::<u32>();
 
 impl WGPUMesher {
@@ -60,7 +57,7 @@ impl WGPUMesher {
                         readonly: true,
                     },
                 },
-                // control points
+                // uknot division
                 BindGroupLayoutEntry {
                     binding: 2,
                     visibility: ShaderStage::COMPUTE,
@@ -69,7 +66,7 @@ impl WGPUMesher {
                         readonly: true,
                     },
                 },
-                // uderived control points
+                // vknot division
                 BindGroupLayoutEntry {
                     binding: 3,
                     visibility: ShaderStage::COMPUTE,
@@ -78,7 +75,7 @@ impl WGPUMesher {
                         readonly: true,
                     },
                 },
-                // vderived control points
+                // control points
                 BindGroupLayoutEntry {
                     binding: 4,
                     visibility: ShaderStage::COMPUTE,
@@ -87,15 +84,33 @@ impl WGPUMesher {
                         readonly: true,
                     },
                 },
-                // Surface info
+                // uderived control points
                 BindGroupLayoutEntry {
                     binding: 5,
+                    visibility: ShaderStage::COMPUTE,
+                    ty: BindingType::StorageBuffer {
+                        dynamic: false,
+                        readonly: true,
+                    },
+                },
+                // vderived control points
+                BindGroupLayoutEntry {
+                    binding: 6,
+                    visibility: ShaderStage::COMPUTE,
+                    ty: BindingType::StorageBuffer {
+                        dynamic: false,
+                        readonly: true,
+                    },
+                },
+                // Surface info
+                BindGroupLayoutEntry {
+                    binding: 7,
                     visibility: ShaderStage::COMPUTE,
                     ty: BindingType::UniformBuffer { dynamic: false },
                 },
                 // created vertex buffer
                 BindGroupLayoutEntry {
-                    binding: 6,
+                    binding: 8,
                     visibility: ShaderStage::COMPUTE,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
@@ -107,68 +122,65 @@ impl WGPUMesher {
         })
     }
 
-    fn create_bind_group(&self, surface: &BSplineSurface, device: &Device) -> (BindGroup, Buffer, [u32; 6]) {
-        let mut ranges = [0; 6];
-        let uder = surface.uderivation();
-        let vder = surface.vderivation();
-        let uknot_buffer = device.create_buffer_with_data(
-            bytemuck::cast_slice(surface.uknot_vec()),
-            BufferUsage::STORAGE_READ,
-        );
-        ranges[0] = (surface.uknot_vec().len() * F64_SIZE) as u32;
-        let vknot_buffer = device.create_buffer_with_data(
-            bytemuck::cast_slice(surface.vknot_vec()),
-            BufferUsage::STORAGE_READ,
-        );
-        ranges[1] = (surface.vknot_vec().len() * F64_SIZE) as u32;
-        let control_points: Vec<[f64; 4]> = surface
-            .control_points()
+    fn create_vec_buffer<T>(&self, knot_vec: &T) -> (Buffer, u32)
+    where T: Clone + Into<Vec<f64>> {
+        let knot_vec: Vec<f64> = knot_vec.clone().into();
+        let knot_buffer = self
+            .device
+            .create_buffer_with_data(bytemuck::cast_slice(&knot_vec), BufferUsage::STORAGE_READ);
+        (knot_buffer, (knot_vec.len() * F64_SIZE) as u32)
+    }
+
+    fn create_control_points_buffer(&self, control_points: &Vec<Vec<Vector4>>) -> (Buffer, u32) {
+        let control_points: Vec<[f64; 4]> = control_points
             .iter()
-            .flat_map(|vec| vec.iter())
+            .flat_map(|vec| vec)
             .map(|pt| pt.clone().into())
             .collect();
-        let ctrlpts_buffer = device.create_buffer_with_data(
+        let ctrlpts_buffer = self.device.create_buffer_with_data(
             bytemuck::cast_slice(&control_points),
             BufferUsage::STORAGE_READ,
         );
-        ranges[2] = (control_points.len() * F64_SIZE * 4) as u32;
-        let uder_control_points: Vec<[f64; 4]> = uder
-            .control_points()
-            .iter()
-            .flat_map(|vec| vec.iter())
-            .map(|pt| pt.clone().into())
-            .collect();
-        let uder_ctrlpts_buffer = device.create_buffer_with_data(
-            bytemuck::cast_slice(&uder_control_points),
-            BufferUsage::STORAGE_READ,
-        );
-        ranges[3] = (uder_control_points.len() * F64_SIZE * 4) as u32;
-        let vder_control_points: Vec<[f64; 4]> = vder
-            .control_points()
-            .iter()
-            .flat_map(|vec| vec.iter())
-            .map(|pt| pt.clone().into())
-            .collect();
-        let vder_ctrlpts_buffer = device.create_buffer_with_data(
-            bytemuck::cast_slice(&vder_control_points),
-            BufferUsage::STORAGE_READ,
-        );
-        ranges[4] = (vder_control_points.len() * F64_SIZE * 4) as u32;
+        (ctrlpts_buffer, (control_points.len() * F64_SIZE * 4) as u32)
+    }
+
+    fn create_vertex_buffer(&self, udivision: &Vec<f64>, vdivision: &Vec<f64>) -> (Buffer, u32) {
+        let mesh_size = udivision.len() * vdivision.len() * F32_SIZE * 8;
+        let vertex_storage = self.device.create_buffer(&BufferDescriptor {
+            size: mesh_size as u64,
+            usage: BufferUsage::all(),
+            label: None,
+        });
+        (vertex_storage, mesh_size as u32)
+    }
+
+    fn create_bind_group(&self, surface: &BSplineSurface) -> (BindGroup, Buffer, [usize; 2]) {
+        let device = &self.device;
+        let uder = surface.uderivation();
+        let vder = surface.vderivation();
+        let (udivision, vdivision) = create_space_division(surface, 0.01);
+        let (uknot_buffer, uknot_byte) = self.create_vec_buffer(surface.uknot_vec());
+        let (vknot_buffer, vknot_byte) = self.create_vec_buffer(surface.vknot_vec());
+        let (udiv_buffer, udiv_byte) = self.create_vec_buffer(&udivision);
+        let (vdiv_buffer, vdiv_byte) = self.create_vec_buffer(&vdivision);
+        let (ctrlpts_buffer, ctrlpts_byte) =
+            self.create_control_points_buffer(surface.control_points());
+        let (uder_ctrlpts_buffer, uder_ctrlpts_byte) =
+            self.create_control_points_buffer(uder.control_points());
+        let (vder_ctrlpts_buffer, vder_ctrlpts_byte) =
+            self.create_control_points_buffer(vder.control_points());
         let surface_info = [
             surface.uknot_vec().len() as u32,
             surface.vknot_vec().len() as u32,
+            udivision.len() as u32,
+            vdivision.len() as u32,
             surface.control_points().len() as u32,
             surface.control_points()[0].len() as u32,
         ];
         let surface_info_buffer = device
             .create_buffer_with_data(bytemuck::cast_slice(&surface_info), BufferUsage::UNIFORM);
-        let surface_info_length = U32_SIZE * 4;
-        let vertex_storage = device.create_buffer(&BufferDescriptor {
-            size: VERTEX_SIZE,
-            usage: BufferUsage::STORAGE | BufferUsage::COPY_SRC,
-            label: None,
-        });
-        ranges[5] = VERTEX_SIZE as u32;
+        let surface_info_length = U32_SIZE * surface_info.len();
+        let (vertex_storage, vertex_size) = self.create_vertex_buffer(&udivision, &vdivision);
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &self.bind_group_layout,
             bindings: &[
@@ -177,7 +189,7 @@ impl WGPUMesher {
                     binding: 0,
                     resource: BindingResource::Buffer {
                         buffer: &uknot_buffer,
-                        range: 0..ranges[0] as u64,
+                        range: 0..uknot_byte as u64,
                     },
                 },
                 // vknot
@@ -185,36 +197,52 @@ impl WGPUMesher {
                     binding: 1,
                     resource: BindingResource::Buffer {
                         buffer: &vknot_buffer,
-                        range: 0..ranges[1] as u64,
+                        range: 0..vknot_byte as u64,
+                    },
+                },
+                // udiv buffer
+                Binding {
+                    binding: 2,
+                    resource: BindingResource::Buffer {
+                        buffer: &udiv_buffer,
+                        range: 0..udiv_byte as u64,
+                    },
+                },
+                // vdiv buffer
+                Binding {
+                    binding: 3,
+                    resource: BindingResource::Buffer {
+                        buffer: &vdiv_buffer,
+                        range: 0..vdiv_byte as u64,
                     },
                 },
                 // control points
                 Binding {
-                    binding: 2,
+                    binding: 4,
                     resource: BindingResource::Buffer {
                         buffer: &ctrlpts_buffer,
-                        range: 0..ranges[2] as u64,
+                        range: 0..ctrlpts_byte as u64,
                     },
                 },
                 // uderived control points
                 Binding {
-                    binding: 3,
+                    binding: 5,
                     resource: BindingResource::Buffer {
                         buffer: &uder_ctrlpts_buffer,
-                        range: 0..ranges[3] as u64,
+                        range: 0..uder_ctrlpts_byte as u64,
                     },
                 },
                 // vderived control points
                 Binding {
-                    binding: 4,
+                    binding: 6,
                     resource: BindingResource::Buffer {
                         buffer: &vder_ctrlpts_buffer,
-                        range: 0..ranges[4] as u64,
+                        range: 0..vder_ctrlpts_byte as u64,
                     },
                 },
                 // surface info
                 Binding {
-                    binding: 5,
+                    binding: 7,
                     resource: BindingResource::Buffer {
                         buffer: &surface_info_buffer,
                         range: 0..surface_info_length as u64,
@@ -222,60 +250,70 @@ impl WGPUMesher {
                 },
                 // vertex storage
                 Binding {
-                    binding: 6,
+                    binding: 8,
                     resource: BindingResource::Buffer {
                         buffer: &vertex_storage,
-                        range: 0..ranges[5] as u64,
+                        range: 0..vertex_size as u64,
                     },
                 },
             ],
             label: None,
         });
-        (bind_group, vertex_storage, ranges)
+        (
+            bind_group,
+            vertex_storage,
+            [udivision.len(), vdivision.len()],
+        )
     }
 
     pub fn meshing(&self, surface: &BSplineSurface) -> RenderObject {
         let device = &self.device;
-        let (bind_group, vertex_storage, _ranges) = self.create_bind_group(surface, device);
+        let (bind_group, vertex_storage, div_lens) = self.create_bind_group(surface);
+        let [udiv_length, vdiv_length] = [div_lens[0] as u32, div_lens[1] as u32];
         let mut indices = Vec::new();
-        for i in 0..(MESHING_SIZE - 1) {
-            for j in 0..(MESHING_SIZE - 1) {
-                indices.push(i * MESHING_SIZE + j);
-                indices.push((i + 1) * MESHING_SIZE + j);
-                indices.push(i * MESHING_SIZE + j + 1);
-                indices.push(i * MESHING_SIZE + j + 1);
-                indices.push((i + 1) * MESHING_SIZE + j);
-                indices.push((i + 1) * MESHING_SIZE + j + 1);
+        for i in 0..(udiv_length - 1) {
+            for j in 0..(vdiv_length - 1) {
+                indices.push(i * vdiv_length + j);
+                indices.push((i + 1) * vdiv_length + j);
+                indices.push(i * vdiv_length + j + 1);
+                indices.push(i * vdiv_length + j + 1);
+                indices.push((i + 1) * vdiv_length + j);
+                indices.push((i + 1) * vdiv_length + j + 1);
             }
         }
         let index_buffer =
             device.create_buffer_with_data(bytemuck::cast_slice(&indices), BufferUsage::INDEX);
+        let vertex_buffer_size = udiv_length as u64 * vdiv_length as u64 * F32_SIZE as u64 * 8;
         let vertex_buffer = device.create_buffer(&BufferDescriptor {
-            size: VERTEX_SIZE,
-            usage: BufferUsage::VERTEX | BufferUsage::COPY_DST,
+            size: vertex_buffer_size,
+            usage: BufferUsage::VERTEX | BufferUsage::COPY_DST | BufferUsage::MAP_READ,
             label: None,
         });
-        let mut encoder =
-            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
             let mut cpass = encoder.begin_compute_pass();
             cpass.set_pipeline(&self.pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
-            cpass.dispatch(MESHING_SIZE, MESHING_SIZE, 1);
+            cpass.dispatch(udiv_length as u32, vdiv_length as u32, 1);
         }
-        encoder.copy_buffer_to_buffer(&vertex_storage, 0, &vertex_buffer, 0, VERTEX_SIZE);
-        let render_object = RenderObject {
+        encoder.copy_buffer_to_buffer(
+            &vertex_storage,
+            0,
+            &vertex_buffer,
+            0,
+            vertex_buffer_size as u64,
+        );
+        self.queue.submit(&[encoder.finish()]);
+        RenderObject {
             vertex_buffer: Arc::new(vertex_buffer),
-            vertex_size: MESHING_SIZE2 as usize,
+            vertex_size: (udiv_length * vdiv_length) as usize,
             index_buffer: Arc::new(index_buffer),
-            index_size: ((MESHING_SIZE - 1) * (MESHING_SIZE - 1) * 6) as usize,
+            index_size: ((udiv_length - 1) * (vdiv_length - 1) * 6) as usize,
             matrix: Matrix4::identity(),
             color: Vector4::from([1.0; 4]),
             reflect_ratio: [0.2, 0.6, 0.2],
             bind_group: None,
-        };
-        self.queue.submit(&[encoder.finish()]);
-        render_object
+        }
     }
 }
 
@@ -304,7 +342,7 @@ fn is_far(bspsurface: &BSplineSurface, u0: f64, u1: f64, v0: f64, v1: f64, tol: 
     false
 }
 
-fn create_space_division(
+fn sub_create_space_division(
     bspsurface: &BSplineSurface,
     tol: f64,
     mut div0: &mut Vec<f64>,
@@ -359,6 +397,18 @@ fn create_space_division(
         *div1 = new_div1;
     }
     if divided0 || divided1 {
-        create_space_division(bspsurface, tol, &mut div0, &mut div1);
+        sub_create_space_division(bspsurface, tol, &mut div0, &mut div1);
     }
+}
+
+fn create_space_division(bspsurface: &BSplineSurface, tol: f64) -> (Vec<f64>, Vec<f64>) {
+    let (knot_vec0, knot_vec1) = bspsurface.knot_vecs();
+    let u0 = knot_vec0[0];
+    let u1 = knot_vec0[knot_vec0.len() - 1];
+    let mut div0 = vec![u0, u1];
+    let v0 = knot_vec1[0];
+    let v1 = knot_vec1[knot_vec1.len() - 1];
+    let mut div1 = vec![v0, v1];
+    sub_create_space_division(bspsurface, tol, &mut div0, &mut div1);
+    (div0, div1)
 }

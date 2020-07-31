@@ -29,7 +29,7 @@ impl Scene {
                     binding: 3,
                     visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
                     ty: BindingType::UniformBuffer { dynamic: false },
-                }
+                },
             ],
         };
         device.create_bind_group_layout(&descriptor)
@@ -68,18 +68,20 @@ impl Scene {
             device: Arc::clone(device),
             queue: Arc::clone(queue),
             objects: Default::default(),
-            vertex_shader,
-            fragment_shader,
             bind_group_layout,
-            pipeline_layout,
-            pipeline: None,
+            pipeline: Self::init_pipeline(
+                &vertex_shader,
+                &fragment_shader,
+                &pipeline_layout,
+                device,
+                sc_desc,
+            ),
             foward_depth: depth_texture.create_default_view(),
             clock: std::time::Instant::now(),
             camera: Default::default(),
             light: Default::default(),
         }
     }
-    
     pub fn with_glsl_shader(
         device: &Arc<Device>,
         queue: &Arc<Queue>,
@@ -99,11 +101,14 @@ impl Scene {
             device: Arc::clone(device),
             queue: Arc::clone(queue),
             objects: Default::default(),
-            vertex_shader,
-            fragment_shader,
             bind_group_layout,
-            pipeline_layout,
-            pipeline: None,
+            pipeline: Self::init_pipeline(
+                &vertex_shader,
+                &fragment_shader,
+                &pipeline_layout,
+                device,
+                sc_desc,
+            ),
             foward_depth: depth_texture.create_default_view(),
             clock: std::time::Instant::now(),
             camera: Default::default(),
@@ -112,11 +117,7 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn add_polymesh<T: Into<WGPUPolygonMesh>>(
-        &mut self,
-        polymesh: T,
-    ) -> usize
-    {
+    pub fn add_polymesh<T: Into<WGPUPolygonMesh>>(&mut self, polymesh: T) -> usize {
         self.add_object(RenderObject::new(polymesh, &self.device))
     }
 
@@ -154,15 +155,22 @@ impl Scene {
         mat.into()
     }
 
-    pub fn create_pipeline(&mut self, sc_desc: &SwapChainDescriptor) {
-        let pipeline = self.device.create_render_pipeline(&RenderPipelineDescriptor {
-            layout: &self.pipeline_layout,
+    pub fn init_pipeline(
+        vertex_shader: &ShaderModule,
+        fragment_shader: &ShaderModule,
+        pipeline_layout: &PipelineLayout,
+        device: &Device,
+        sc_desc: &SwapChainDescriptor,
+    ) -> RenderPipeline
+    {
+        device.create_render_pipeline(&RenderPipelineDescriptor {
+            layout: &pipeline_layout,
             vertex_stage: ProgrammableStageDescriptor {
-                module: &self.vertex_shader,
+                module: vertex_shader,
                 entry_point: "main",
             },
             fragment_stage: Some(ProgrammableStageDescriptor {
-                module: &self.fragment_shader,
+                module: fragment_shader,
                 entry_point: "main",
             }),
             rasterization_state: Some(RasterizationStateDescriptor {
@@ -215,8 +223,7 @@ impl Scene {
             sample_count: 1,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
-        });
-        self.pipeline = Some(pipeline);
+        })
     }
 
     fn camera_buffer(&self, device: &Device, sc_desc: &SwapChainDescriptor) -> Buffer {
@@ -267,12 +274,11 @@ impl Scene {
 
     pub fn prepare_render(&mut self, sc_desc: &SwapChainDescriptor) {
         self.update_depth_texture(sc_desc);
-        self.create_pipeline(sc_desc);
         self.create_bind_group(sc_desc);
     }
 
     pub fn render_scene<'b>(&'b self, rpass: &mut RenderPass<'b>) {
-        rpass.set_pipeline(self.pipeline.as_ref().unwrap());
+        rpass.set_pipeline(&self.pipeline);
         for object in &self.objects {
             if object.bind_group.is_none() {
                 continue;

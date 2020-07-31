@@ -4,11 +4,6 @@ use std::collections::HashMap;
 
 impl WGPUPolygonMesh {
     pub fn signup(&self, device: &Device) -> (Buffer, Buffer) {
-        #[cfg(debug_assertions)]
-        println!("Signup lender object\nvertices: {}\nindices: {}",
-            self.vertices.len(),
-            self.indices.len()
-        );
         let vertex_buffer = device.create_buffer_with_data(
             bytemuck::cast_slice(&self.vertices),
             BufferUsage::VERTEX,
