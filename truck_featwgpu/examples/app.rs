@@ -3,10 +3,11 @@ use wgpu::*;
 use winit::dpi::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;
+use std::sync::Arc;
 
 pub struct WGPUHandler {
-    pub device: Device,
-    pub queue: Queue,
+    pub device: Arc<Device>,
+    pub queue: Arc<Queue>,
     pub sc_desc: SwapChainDescriptor,
 }
 
@@ -78,8 +79,8 @@ pub trait App: Sized + 'static {
         };
 
         let mut handler = WGPUHandler {
-            device,
-            queue,
+            device: Arc::new(device),
+            queue: Arc::new(queue),
             sc_desc,
         };
 

@@ -109,10 +109,9 @@ impl MyRender {
 
 impl App for MyRender {
     fn init(handler: &WGPUHandler) -> MyRender {
-        let device = &handler.device;
-        let sc_desc = &handler.sc_desc;
+        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
         let mut render = MyRender {
-            scene: Scene::new(device, sc_desc),
+            scene: Scene::new(device, queue, sc_desc),
             rotate_flag: false,
             prev_cursor: None,
             prev_time: 0.0,
@@ -273,7 +272,7 @@ impl App for MyRender {
         if self.scene.number_of_objects() != 0 {
             self.update_objects();
         }
-        self.scene.prepare_render(device, sc_desc);
+        self.scene.prepare_render(sc_desc);
     }
 
     fn render<'a>(&'a self, rpass: &mut RenderPass<'a>) { self.scene.render_scene(rpass); }

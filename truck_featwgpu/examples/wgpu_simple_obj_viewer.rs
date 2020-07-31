@@ -62,9 +62,9 @@ impl MyApp {
 
 impl App for MyApp {
     fn init(handler: &WGPUHandler) -> MyApp {
-        let (device, sc_desc) = (&handler.device, &handler.sc_desc);
+        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
         let mut render = MyApp {
-            scene: Scene::new(device, sc_desc),
+            scene: Scene::new(device, queue, sc_desc),
             rotate_flag: false,
             prev_cursor: None,
             path: None,
@@ -219,7 +219,7 @@ impl App for MyApp {
         }
         self.width = sc_desc.width;
         self.height = sc_desc.height;
-        self.scene.prepare_render(device, sc_desc);
+        self.scene.prepare_render(sc_desc);
     }
 
     fn render<'a>(&'a self, rpass: &mut RenderPass<'a>) { self.scene.render_scene(rpass); }

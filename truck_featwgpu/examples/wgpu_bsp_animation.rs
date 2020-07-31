@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+use std::thread::*;
 use truck_featwgpu::*;
 use truck_geometry::KnotVec;
 use wgpu::*;
@@ -7,10 +9,9 @@ const VERTEX_SIZE: u64 = 10000 * 8 * std::mem::size_of::<f32>() as u64;
 
 struct MyApp {
     scene: Scene,
-    mesher: WGPUMesher,
-    surface: BSplineSurface,
-    time: usize,
-    since: std::time::Instant,
+    object: Arc<Mutex<Option<RenderObject>>>,
+    closed: Arc<Mutex<bool>>,
+    thread: Option<JoinHandle<()>>,
 }
 
 impl MyApp {
@@ -40,21 +41,56 @@ impl MyApp {
         let matrix = matrix!(vec0, vec1, vec2, vec3);
         Camera::perspective_camera(matrix, std::f64::consts::PI / 2.0, 0.1, 40.0)
     }
-    fn update_surface(&mut self) {
-        self.surface.control_point_mut(3, 3)[1] = (self.time as f64 * 0.1).sin();
-        self.time += 1;
+    fn init_thread(
+        handler: &WGPUHandler,
+        object: &Arc<Mutex<Option<RenderObject>>>,
+        closed: &Arc<Mutex<bool>>,
+    ) -> JoinHandle<()>
+    {
+        let mesher = WGPUMesher::new(&handler.device, &handler.queue);
+        let object = Arc::clone(object);
+        let closed = Arc::clone(closed);
+        std::thread::spawn(move || {
+            let mut bspsurface = Self::init_surface(3, 4);
+            let mut time: f64 = 0.0;
+            let mut count = 0;
+            let mut instant = std::time::Instant::now();
+            loop {
+                if *closed.lock().unwrap() {
+                    break;
+                }
+                let mut object_mut = object.lock().unwrap();
+                if object_mut.is_some() {
+                    drop(object_mut);
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    continue;
+                }
+                *object_mut = Some(mesher.meshing(&bspsurface));
+                count += 1;
+                bspsurface.control_point_mut(3, 3)[1] = time.sin();
+                time += 0.1;
+                if count == 100 {
+                    let fps_inv = instant.elapsed().as_secs_f64();
+                    println!("{}", 100.0 / fps_inv);
+                    instant = std::time::Instant::now();
+                    count = 0;
+                }
+            }
+        })
     }
 }
 
 impl App for MyApp {
     fn init(handler: &WGPUHandler) -> MyApp {
-        let (device, sc_desc) = (&handler.device, &handler.sc_desc);
+        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
+        let object = Arc::new(Mutex::new(None));
+        let closed = Arc::new(Mutex::new(false));
+        let thread = Some(MyApp::init_thread(handler, &object, &closed));
         let mut render = MyApp {
-            scene: Scene::new(device, sc_desc),
-            mesher: WGPUMesher::new(device),
-            surface: Self::init_surface(3, 4),
-            time: 0,
-            since: std::time::Instant::now(),
+            scene: Scene::new(device, queue, sc_desc),
+            object,
+            closed,
+            thread,
         };
         render.scene.camera = MyApp::init_camera();
         render.scene.light = Light {
@@ -74,23 +110,24 @@ impl App for MyApp {
     }
 
     fn update(&mut self, handler: &WGPUHandler) {
-        self.update_surface();
-        if self.time % 100 == 0 {
-            let time = self.since.elapsed().as_secs_f64();
-            println!("FPS: {}", 100.0 / time);
-            self.since = std::time::Instant::now();
+        match self.object.lock().unwrap().take() {
+            Some(object) => {
+                if self.scene.number_of_objects() > 0 {
+                    self.scene.remove_object(0);
+                }
+                self.scene.add_object(object);
+            }
+            None => return,
         }
-        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
-        let (render_object, command_buffer) = self.mesher.meshing(&self.surface, device);
-        queue.submit(&[command_buffer]);
-        if self.scene.number_of_objects() > 0 {
-            self.scene.remove_object(0);
-        }
-        self.scene.add_object(render_object);
-        self.scene.prepare_render(device, sc_desc);
+        self.scene.prepare_render(&handler.sc_desc);
     }
 
     fn render<'a>(&'a self, rpass: &mut RenderPass<'a>) { self.scene.render_scene(rpass); }
+    fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
+        *self.closed.lock().unwrap() = true;
+        self.thread.take().unwrap().join().unwrap();
+        winit::event_loop::ControlFlow::Exit
+    }
 }
 
 #[allow(dead_code)]

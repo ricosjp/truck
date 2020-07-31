@@ -50,21 +50,23 @@ impl Scene {
             label: None,
         })
     }
-    pub fn update_depth_texture(&mut self, device: &Device, sc_desc: &SwapChainDescriptor) {
-        let depth_texture = Self::default_depth_texture(&device, &sc_desc);
+    pub fn update_depth_texture(&mut self, sc_desc: &SwapChainDescriptor) {
+        let depth_texture = Self::default_depth_texture(&self.device, &sc_desc);
         self.foward_depth = depth_texture.create_default_view();
     }
 
-    pub fn new(device: &Device, sc_desc: &SwapChainDescriptor) -> Scene {
+    pub fn new(device: &Arc<Device>, queue: &Arc<Queue>, sc_desc: &SwapChainDescriptor) -> Scene {
         let vertex_shader = read_spirv(include_str!("vshader.vert"), ShaderType::Vertex, device);
         let fragment_shader =
             read_spirv(include_str!("fshader.frag"), ShaderType::Fragment, device);
-        let bind_group_layout = Self::default_bind_group_layout(&device);
+        let bind_group_layout = Self::default_bind_group_layout(device);
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             bind_group_layouts: &[&bind_group_layout],
         });
         let depth_texture = Self::default_depth_texture(&device, &sc_desc);
         Scene {
+            device: Arc::clone(device),
+            queue: Arc::clone(queue),
             objects: Default::default(),
             vertex_shader,
             fragment_shader,
@@ -79,7 +81,8 @@ impl Scene {
     }
     
     pub fn with_glsl_shader(
-        device: &Device,
+        device: &Arc<Device>,
+        queue: &Arc<Queue>,
         sc_desc: &SwapChainDescriptor,
         vertex_shader: &str,
         fragment_shader: &str,
@@ -93,6 +96,8 @@ impl Scene {
         });
         let depth_texture = Self::default_depth_texture(device, sc_desc);
         Scene {
+            device: Arc::clone(device),
+            queue: Arc::clone(queue),
             objects: Default::default(),
             vertex_shader,
             fragment_shader,
@@ -110,10 +115,9 @@ impl Scene {
     pub fn add_polymesh<T: Into<WGPUPolygonMesh>>(
         &mut self,
         polymesh: T,
-        device: &Device,
     ) -> usize
     {
-        self.add_object(RenderObject::new(polymesh, device))
+        self.add_object(RenderObject::new(polymesh, &self.device))
     }
 
     #[inline(always)]
@@ -150,8 +154,8 @@ impl Scene {
         mat.into()
     }
 
-    pub fn create_pipeline(&mut self, device: &Device, sc_desc: &SwapChainDescriptor) {
-        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+    pub fn create_pipeline(&mut self, sc_desc: &SwapChainDescriptor) {
+        let pipeline = self.device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: &self.pipeline_layout,
             vertex_stage: ProgrammableStageDescriptor {
                 module: &self.vertex_shader,
@@ -227,44 +231,44 @@ impl Scene {
         )
     }
 
-    fn light_buffer(&self, device: &Device) -> Buffer {
+    fn light_buffer(&self) -> Buffer {
         let light_info = LightInfo {
             light_position: (&self.light.position).into(),
             light_strength: self.light.strength as f32,
             light_type: self.light.light_type.type_id(),
         };
-        device.create_buffer_with_data(
+        self.device.create_buffer_with_data(
             bytemuck::cast_slice(&[light_info]),
             BufferUsage::UNIFORM | BufferUsage::COPY_DST,
         )
     }
 
-    fn scene_status_buffer(&self, device: &Device) -> Buffer {
-        device.create_buffer_with_data(
+    fn scene_status_buffer(&self) -> Buffer {
+        self.device.create_buffer_with_data(
             bytemuck::cast_slice(&[self.elapsed() as f32]),
             BufferUsage::UNIFORM | BufferUsage::COPY_DST,
         )
     }
 
-    pub fn create_bind_group(&mut self, device: &Device, sc_desc: &SwapChainDescriptor) {
-        let camera_buffer = self.camera_buffer(device, sc_desc);
-        let light_buffer = self.light_buffer(device);
-        let scene_status_buffer = self.scene_status_buffer(device);
+    pub fn create_bind_group(&mut self, sc_desc: &SwapChainDescriptor) {
+        let camera_buffer = self.camera_buffer(&self.device, sc_desc);
+        let light_buffer = self.light_buffer();
+        let scene_status_buffer = self.scene_status_buffer();
         for object in &mut self.objects {
             object.create_bind_group(
                 &camera_buffer,
                 &light_buffer,
                 &scene_status_buffer,
                 &self.bind_group_layout,
-                device,
+                &self.device,
             );
         }
     }
 
-    pub fn prepare_render(&mut self, device: &Device, sc_desc: &SwapChainDescriptor) {
-        self.update_depth_texture(device, sc_desc);
-        self.create_pipeline(device, sc_desc);
-        self.create_bind_group(device, sc_desc);
+    pub fn prepare_render(&mut self, sc_desc: &SwapChainDescriptor) {
+        self.update_depth_texture(sc_desc);
+        self.create_pipeline(sc_desc);
+        self.create_bind_group(sc_desc);
     }
 
     pub fn render_scene<'b>(&'b self, rpass: &mut RenderPass<'b>) {

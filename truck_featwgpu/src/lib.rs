@@ -53,6 +53,8 @@ pub struct WGPUPolygonMesh {
 
 #[derive(Debug)]
 pub struct WGPUMesher {
+    device: Arc<Device>,
+    queue: Arc<Queue>,
     bind_group_layout: BindGroupLayout,
     pipeline: ComputePipeline,
 }
@@ -99,6 +101,8 @@ pub struct Light {
 
 #[derive(Debug)]
 pub struct Scene {
+    device: Arc<Device>,
+    queue: Arc<Queue>,
     objects: Vec<RenderObject>,
     vertex_shader: ShaderModule,
     fragment_shader: ShaderModule,
