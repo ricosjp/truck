@@ -584,3 +584,8 @@ impl std::ops::Deref for KnotVec {
     #[inline(always)]
     fn deref(&self) -> &Vec<f64> { &self.0 }
 }
+
+impl AsRef<[f64]> for KnotVec {
+    #[inline(always)]
+    fn as_ref(&self) -> &[f64] { &self.0 }
+}

@@ -59,16 +59,16 @@ impl BSpAnimation {
             let mut count = 0;
             let mut instant = std::time::Instant::now();
             loop {
-                let mut bspsurface0 = bspsurface.clone();
-                bspsurface0.optimize();
-                count += 1;
-                let mesh = StructuredMesh::from_surface(&bspsurface0, 0.01).destruct();
-                *arc_mesh.lock().unwrap() = Some(mesh);
-                bspsurface.control_point_mut(3, 3)[1] = time.sin();
-                time += 0.1;
                 if *closed.lock().unwrap() {
                     break;
                 }
+                //let mut bspsurface0 = bspsurface.clone();
+                //bspsurface0.optimize();
+                count += 1;
+                let mesh = StructuredMesh::from_surface(&bspsurface, 0.01).destruct();
+                *arc_mesh.lock().unwrap() = Some(mesh);
+                bspsurface.control_point_mut(3, 3)[1] = time.sin();
+                time += 0.1;
                 if count == 100 {
                     let fps_inv = instant.elapsed().as_secs_f64();
                     println!("{}", 100.0 / fps_inv);

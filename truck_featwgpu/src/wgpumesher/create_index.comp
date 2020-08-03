@@ -1,0 +1,23 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1) in;
+
+layout(set = 0, binding = 0) uniform DivisionLength {
+    uint udiv_length;
+    uint vdiv_length;
+};
+
+layout(set = 0, binding = 1) buffer IndexBuffer {
+    uint index_buffer[];
+};
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    uint j = gl_GlobalInvocationID.y;
+    uint idx = (i * vdiv_length + j) * 6;
+    index_buffer[idx + 0] = i * vdiv_length + j;
+    index_buffer[idx + 1] = (i + 1) * vdiv_length + j;
+    index_buffer[idx + 2] = i * vdiv_length + (j + 1);
+    index_buffer[idx + 3] = (i + 1) * vdiv_length + (j + 1);
+    index_buffer[idx + 4] = i * vdiv_length + (j + 1);
+    index_buffer[idx + 5] = (i + 1) * vdiv_length + j;
+}

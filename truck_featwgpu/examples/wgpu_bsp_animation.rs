@@ -46,8 +46,8 @@ impl MyApp {
         closed: &Arc<Mutex<bool>>,
     ) -> JoinHandle<()>
     {
-        let mesher = WGPUMesher::new(&handler.device, &handler.queue);
-        let object = Arc::clone(object);
+        let mesher = WGPUMesher::with_device(&handler.device, &handler.queue);
+        let arc_object = Arc::clone(object);
         let closed = Arc::clone(closed);
         std::thread::spawn(move || {
             let mut bspsurface = Self::init_surface(3, 4);
@@ -58,15 +58,10 @@ impl MyApp {
                 if *closed.lock().unwrap() {
                     break;
                 }
-                let mut object_mut = object.lock().unwrap();
-                if object_mut.is_some() {
-                    drop(object_mut);
-                    std::thread::sleep(std::time::Duration::from_millis(10));
-                    continue;
-                }
-                let object = mesher.meshing(&bspsurface);
-                *object_mut = Some(object);
-                drop(object_mut);
+                std::thread::sleep(std::time::Duration::from_millis(1));
+                let mut bspsurface0 = bspsurface.clone();
+                bspsurface0.optimize();
+                let object = mesher.meshing(&bspsurface0, 0.01);
                 count += 1;
                 bspsurface.control_point_mut(3, 3)[1] = time.sin();
                 time += 0.1;
@@ -75,6 +70,10 @@ impl MyApp {
                     println!("{}", 100.0 / fps_inv);
                     instant = std::time::Instant::now();
                     count = 0;
+                }
+                let mut object_mut = arc_object.lock().unwrap();
+                if object_mut.is_none() {
+                    *object_mut = Some(object);
                 }
             }
         })
@@ -147,6 +146,23 @@ async fn get_vertex(object: &RenderObject, device: &Device) -> Vec<[f32; 8]> {
                     vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], vec[6], vec[7],
                 ]
             })
+            .collect()
+    } else {
+        panic!("failed to run compute on gpu!")
+    }
+}
+
+#[allow(dead_code)]
+async fn get_index(object: &RenderObject, device: &Device) -> Vec<u32> {
+    let byte_size = object.index_size * 4;
+    let buffer_future = object.index_buffer.map_read(0, byte_size as u64);
+    device.poll(wgpu::Maintain::Wait);
+
+    if let Ok(mapping) = buffer_future.await {
+        mapping
+            .as_slice()
+            .chunks_exact(4)
+            .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
             .collect()
     } else {
         panic!("failed to run compute on gpu!")

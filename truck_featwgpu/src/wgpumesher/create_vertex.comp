@@ -1,4 +1,6 @@
 #version 450
+const uint BBF_SIZE = 25;
+
 layout(local_size_x = 1, local_size_y = 1) in;
 
 layout(set = 0, binding = 0) buffer UKnot {
@@ -59,8 +61,8 @@ uint vdegree() {
 }
 
 // bspline basis function
-double[100] u_bbf(double u, uint degree, uint len) {
-    double[100] res;
+double[BBF_SIZE] u_bbf(double u, uint degree, uint len) {
+    double[BBF_SIZE] res;
     for (uint i = 0; i < len; i++) {
         res[i] = 0.0;
     }
@@ -97,8 +99,8 @@ double[100] u_bbf(double u, uint degree, uint len) {
 }
 
 // bspline basis function
-double[100] v_bbf(double v, uint degree, uint len) {
-    double[100] res;
+double[BBF_SIZE] v_bbf(double v, uint degree, uint len) {
+    double[BBF_SIZE] res;
     for (uint i = 0; i < len; i++) {
         res[i] = 0.0;
     }
@@ -135,8 +137,8 @@ double[100] v_bbf(double v, uint degree, uint len) {
 }
 
 dvec4 surface(double u, double v) {
-    double[100] ubasis = u_bbf(u, udegree(), uknot_length);
-    double[100] vbasis = v_bbf(v, vdegree(), vknot_length);
+    double[BBF_SIZE] ubasis = u_bbf(u, udegree(), uknot_length);
+    double[BBF_SIZE] vbasis = v_bbf(v, vdegree(), vknot_length);
     dvec4 res = dvec4(0.0, 0.0, 0.0, 0.0);
     for (uint i = 0; i < ucp_length; i++) {
         for (uint j = 0; j < vcp_length; j++) {
@@ -147,8 +149,8 @@ dvec4 surface(double u, double v) {
 }
 
 dvec4 uderived_surface(double u, double v) {
-    double[100] ubasis = u_bbf(u, udegree() - 1, uknot_length);
-    double[100] vbasis = v_bbf(v, vdegree(), vknot_length);
+    double[BBF_SIZE] ubasis = u_bbf(u, udegree() - 1, uknot_length);
+    double[BBF_SIZE] vbasis = v_bbf(v, vdegree(), vknot_length);
     dvec4 res = dvec4(0.0, 0.0, 0.0, 0.0);
 
     for (uint i = 0; i < ucp_length + 1; i++) {
@@ -160,8 +162,8 @@ dvec4 uderived_surface(double u, double v) {
 }
 
 dvec4 vderived_surface(double u, double v) {
-    double[100] ubasis = u_bbf(u, udegree(), uknot_length);
-    double[100] vbasis = v_bbf(v, vdegree() - 1, vknot_length);
+    double[BBF_SIZE] ubasis = u_bbf(u, udegree(), uknot_length);
+    double[BBF_SIZE] vbasis = v_bbf(v, vdegree() - 1, vknot_length);
     dvec4 res = dvec4(0.0, 0.0, 0.0, 0.0);
 
     for (uint i = 0; i < ucp_length; i++) {

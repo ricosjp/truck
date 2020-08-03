@@ -59,7 +59,7 @@ impl Camera {
         }
     }
 
-    fn perspective_projection(&self) -> Matrix4 {
+    fn perspective_projection(&self, as_rat: f64) -> Matrix4 {
         let matrix = &self.matrix;
         let a = self.screen_size / 2.0;
         let z_min = self.near_clip;
@@ -68,14 +68,14 @@ impl Camera {
 
         matrix.inverse()
             * matrix!(
-                [1.0 / (a * z_max), 0.0, 0.0, 0.0],
+                [1.0 / (a * z_max) * as_rat, 0.0, 0.0, 0.0],
                 [0.0, 1.0 / (a * z_max), 0.0, 0.0],
                 [0.0, 0.0, -1.0 / (z_max * (1.0 - d)), -1.0 / z_max],
                 [0.0, 0.0, -d / (1.0 - d), 0.0],
             )
     }
 
-    fn parallel_projection(&self) -> Matrix4 {
+    fn parallel_projection(&self, as_rat: f64) -> Matrix4 {
         let matrix = &self.matrix;
         let a = self.screen_size;
         let z_min = self.near_clip;
@@ -83,18 +83,29 @@ impl Camera {
 
         matrix.inverse()
             * matrix!(
-                [2.0 / a, 0.0, 0.0, 0.0],
+                [2.0 / a * as_rat, 0.0, 0.0, 0.0],
                 [0.0, 2.0 / a, 0.0, 0.0],
                 [0.0, 0.0, -1.0 / (z_max - z_min), 0.0],
                 [0.0, 0.0, -z_min / (z_max - z_min), 1.0],
             )
     }
 
-    pub fn projection(&self) -> Matrix4 {
+    pub fn projection(&self, as_rat: f64) -> Matrix4 {
         match self.projection_type {
-            ProjectionType::Perspective => self.perspective_projection(),
-            ProjectionType::Parallel => self.parallel_projection(),
+            ProjectionType::Perspective => self.perspective_projection(as_rat),
+            ProjectionType::Parallel => self.parallel_projection(as_rat),
         }
+    }
+
+    pub fn buffer(&self, as_rat: f64, device: &Device) -> BufferHandler {
+        let camera_info = CameraInfo {
+            camera_matrix: (&self.matrix).into(),
+            camera_projection: self.projection(as_rat).into(),
+        };
+        let buffer = device.create_buffer_with_data(
+            bytemuck::cast_slice(&[camera_info]), BufferUsage::UNIFORM,
+        );
+        BufferHandler::new(buffer, std::mem::size_of::<CameraInfo>() as u64)
     }
 }
 

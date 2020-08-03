@@ -1,5 +1,20 @@
 use crate::*;
 
+impl Light {
+    pub fn buffer(&self, device: &Device) -> BufferHandler {
+        let light_info = LightInfo {
+            light_position: (&self.position).into(),
+            light_strength: self.strength as f32,
+            light_type: self.light_type.type_id(),
+        };
+        let buffer = device.create_buffer_with_data(
+            bytemuck::cast_slice(&[light_info]),
+            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+        );
+        BufferHandler::new(buffer, std::mem::size_of::<LightInfo>() as u64)
+    }
+}
+
 impl Default for Light {
     #[inline(always)]
     fn default() -> Light {

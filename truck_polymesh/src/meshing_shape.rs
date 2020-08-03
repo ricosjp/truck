@@ -25,6 +25,10 @@ fn is_far(bspsurface: &BSplineSurface, u0: f64, u1: f64, v0: f64, v1: f64, tol: 
     let bspsurface = bspsurface.get_closure();
     degree0 *= 2;
     degree1 *= 2;
+    let pt00 = bspsurface(u0, v0);
+    let pt01 = bspsurface(u0, v1);
+    let pt10 = bspsurface(u1, v0);
+    let pt11 = bspsurface(u1, v1);
     for i in 0..=degree0 {
         for j in 0..=degree1 {
             let p = (i as f64) / (degree0 as f64);
@@ -32,10 +36,10 @@ fn is_far(bspsurface: &BSplineSurface, u0: f64, u1: f64, v0: f64, v1: f64, tol: 
             let u = u0 * p + u1 * (1.0 - p);
             let v = v0 * q + v1 * (1.0 - q);
             let val_mid = bspsurface(u, v);
-            let par_mid = bspsurface(u0, v0) * p * q
-                + bspsurface(u0, v1) * p * (1.0 - q)
-                + bspsurface(u1, v0) * (1.0 - p) * q
-                + bspsurface(u1, v1) * (1.0 - p) * (1.0 - q);
+            let par_mid = &pt00 * p * q
+                + &pt01 * p * (1.0 - q)
+                + &pt10 * (1.0 - p) * q
+                + &pt11 * (1.0 - p) * (1.0 - q);
             let res = val_mid.rational_projection() - par_mid.rational_projection();
             if res.norm2() > tol * tol {
                 return true;

@@ -150,11 +150,6 @@ impl Scene {
     #[inline(always)]
     pub fn elapsed(&self) -> f64 { self.clock.elapsed().as_secs_f64() }
 
-    pub fn camera_projection(&self, as_rat: f64) -> [[f32; 4]; 4] {
-        let mat = self.camera.projection() * Matrix4::diagonal(&vector!(as_rat, 1, 1, 1));
-        mat.into()
-    }
-
     pub fn init_pipeline(
         vertex_shader: &ShaderModule,
         fragment_shader: &ShaderModule,
@@ -226,45 +221,21 @@ impl Scene {
         })
     }
 
-    fn camera_buffer(&self, device: &Device, sc_desc: &SwapChainDescriptor) -> Buffer {
-        let as_rat = sc_desc.height as f64 / sc_desc.width as f64;
-        let camera_info = CameraInfo {
-            camera_matrix: (&self.camera.matrix).into(),
-            camera_projection: self.camera_projection(as_rat).into(),
-        };
-        device.create_buffer_with_data(
-            bytemuck::cast_slice(&[camera_info]),
-            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-        )
-    }
-
-    fn light_buffer(&self) -> Buffer {
-        let light_info = LightInfo {
-            light_position: (&self.light.position).into(),
-            light_strength: self.light.strength as f32,
-            light_type: self.light.light_type.type_id(),
-        };
-        self.device.create_buffer_with_data(
-            bytemuck::cast_slice(&[light_info]),
-            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-        )
-    }
-
-    fn scene_status_buffer(&self) -> Buffer {
-        self.device.create_buffer_with_data(
+    pub fn scene_status_buffer(&self) -> BufferHandler {
+        let buffer = self.device.create_buffer_with_data(
             bytemuck::cast_slice(&[self.elapsed() as f32]),
             BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-        )
+        );
+        BufferHandler::new(buffer, std::mem::size_of::<f32>() as u64)
     }
 
-    pub fn create_bind_group(&mut self, sc_desc: &SwapChainDescriptor) {
-        let camera_buffer = self.camera_buffer(&self.device, sc_desc);
-        let light_buffer = self.light_buffer();
+    pub fn update_bind_group(&mut self, sc_desc: &SwapChainDescriptor) {
+        let as_rat = sc_desc.height as f64 / sc_desc.width as f64;
         let scene_status_buffer = self.scene_status_buffer();
         for object in &mut self.objects {
-            object.create_bind_group(
-                &camera_buffer,
-                &light_buffer,
+            object.update_bind_group(
+                &self.camera.buffer(as_rat, &self.device),
+                &self.light.buffer(&self.device),
                 &scene_status_buffer,
                 &self.bind_group_layout,
                 &self.device,
@@ -274,15 +245,12 @@ impl Scene {
 
     pub fn prepare_render(&mut self, sc_desc: &SwapChainDescriptor) {
         self.update_depth_texture(sc_desc);
-        self.create_bind_group(sc_desc);
+        self.update_bind_group(sc_desc);
     }
 
     pub fn render_scene<'b>(&'b self, rpass: &mut RenderPass<'b>) {
         rpass.set_pipeline(&self.pipeline);
         for object in &self.objects {
-            if object.bind_group.is_none() {
-                continue;
-            }
             rpass.set_bind_group(0, object.bind_group.as_ref().unwrap(), &[]);
             rpass.set_index_buffer(&object.index_buffer, 0, 0);
             rpass.set_vertex_buffer(0, &object.vertex_buffer, 0, 0);

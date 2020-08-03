@@ -12,10 +12,10 @@ bytemuck = "*"
 glsl-to-spirv = "*"
 truck_polymesh = {path = "../truck_polymesh"}
 truck_geometry = {path = "../truck_geometry"}
+futures = "*"
 
 [dev-dependencies]
 winit = "*"
 wgpu-core = "*"
 stringreader = "*"
 truck_io = {path = "../truck_io"}
-futures = "*"

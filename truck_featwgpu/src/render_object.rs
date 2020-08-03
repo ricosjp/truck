@@ -15,63 +15,28 @@ impl RenderObject {
             bind_group: None,
         }
     }
-    pub(super) fn object_buffer(&self, device: &Device) -> Buffer {
+    pub fn object_buffer(&self, device: &Device) -> BufferHandler {
         let material_info = ObjectInfo {
             matrix: (&self.matrix).into(),
             material: (&self.color).into(),
             reflect_ratio: self.reflect_ratio,
         };
-        device.create_buffer_with_data(bytemuck::cast_slice(&[material_info]), BufferUsage::UNIFORM)
+        let buffer = device.create_buffer_with_data(bytemuck::cast_slice(&[material_info]), BufferUsage::UNIFORM);
+        BufferHandler::new(buffer, std::mem::size_of::<ObjectInfo>() as u64)
     }
 
-    pub(super) fn create_bind_group(
+    pub fn update_bind_group(
         &mut self,
-        camera_buffer: &Buffer,
-        light_buffer: &Buffer,
-        scene_status_buffer: &Buffer,
+        camera_buffer: &BufferHandler,
+        light_buffer: &BufferHandler,
+        scene_status_buffer: &BufferHandler,
         bind_group_layout: &BindGroupLayout,
         device: &Device,
     )
     {
         let object_buffer = self.object_buffer(device);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: bind_group_layout,
-            bindings: &[
-                // Camera
-                Binding {
-                    binding: 0,
-                    resource: BindingResource::Buffer {
-                        buffer: &camera_buffer,
-                        range: 0..std::mem::size_of::<CameraInfo>() as u64,
-                    },
-                },
-                // Light
-                Binding {
-                    binding: 1,
-                    resource: BindingResource::Buffer {
-                        buffer: &light_buffer,
-                        range: 0..std::mem::size_of::<LightInfo>() as u64,
-                    },
-                },
-                // Model Status
-                Binding {
-                    binding: 2,
-                    resource: BindingResource::Buffer {
-                        buffer: &object_buffer,
-                        range: 0..std::mem::size_of::<ObjectInfo>() as u64,
-                    },
-                },
-                // Scene Status
-                Binding {
-                    binding: 3,
-                    resource: BindingResource::Buffer {
-                        buffer: &scene_status_buffer,
-                        range: 0..std::mem::size_of::<f32>() as u64,
-                    },
-                },
-            ],
-            label: None,
-        });
+        let buffers = vec![camera_buffer, light_buffer, &object_buffer, scene_status_buffer];
+        let bind_group = buffer_handler::create_bind_group(device, bind_group_layout, buffers);
         self.bind_group = Some(bind_group);
     }
 }

@@ -1,13 +1,14 @@
 extern crate bytemuck;
-extern crate wgpu;
+extern crate futures;
 extern crate glsl_to_spirv;
 extern crate truck_geometry as geometry;
 extern crate truck_polymesh as polymesh;
+extern crate wgpu;
+use bytemuck::{Pod, Zeroable};
+pub use geometry::{matrix, vector, Matrix3, Matrix4, Vector2, Vector3, Vector4};
+pub use polymesh::PolygonMesh;
 use std::sync::Arc;
 use wgpu::*;
-use bytemuck::*;
-pub use geometry::{Vector2, Vector3, Vector4, Matrix3, Matrix4, vector, matrix};
-pub use polymesh::PolygonMesh;
 pub type BSplineSurface = geometry::BSplineSurface<[f64; 4]>;
 
 #[derive(Debug, Clone, Copy)]
@@ -52,19 +53,11 @@ pub struct WGPUPolygonMesh {
 }
 
 #[derive(Debug)]
-pub struct WGPUMesher {
-    pub device: Arc<Device>,
-    queue: Arc<Queue>,
-    bind_group_layout: BindGroupLayout,
-    pipeline: ComputePipeline,
-}
-
-#[derive(Debug)]
 pub struct RenderObject {
     pub vertex_buffer: Arc<Buffer>,
     pub vertex_size: usize,
-    index_buffer: Arc<Buffer>,
-    index_size: usize,
+    pub index_buffer: Arc<Buffer>,
+    pub index_size: usize,
     bind_group: Option<BindGroup>,
     pub matrix: Matrix4,
     pub color: Vector4,
@@ -99,6 +92,19 @@ pub struct Light {
     pub light_type: LightType,
 }
 
+pub struct BufferHandler {
+    pub buffer: Buffer,
+    pub size: u64,
+}
+
+#[derive(Debug)]
+pub struct WGPUMesher {
+    pub device: Arc<Device>,
+    queue: Arc<Queue>,
+    vertex_creator: wgpumesher::VertexCreator,
+    index_creator: wgpumesher::IndexCreator,
+}
+
 #[derive(Debug)]
 pub struct Scene {
     device: Arc<Device>,
@@ -112,9 +118,9 @@ pub struct Scene {
     pub light: Light,
 }
 
+mod buffer_handler;
 pub mod camera;
 pub mod light;
-pub mod scene;
 pub mod render_object;
-pub mod wgpupolymesh;
-pub mod wgpumesher;
+pub mod scene;
+pub mod wgpumesher;pub mod wgpupolymesh;
