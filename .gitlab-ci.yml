@@ -9,9 +9,8 @@ test:
         paths:
             - target
     before_script:
-        - apt-get update
-        - apt-get dist-upgrade
-        - apt-get install cmake
+        - apt-get update -y
+        - apt-get install cmake -y
     script:
         - cargo test
     except:
