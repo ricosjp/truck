@@ -8,6 +8,8 @@ test:
     cache:
         paths:
             - target
+    before_script:
+        - apt install cmake
     script:
         - cargo test
     except:
