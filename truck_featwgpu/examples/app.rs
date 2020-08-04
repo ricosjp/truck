@@ -29,7 +29,7 @@ pub trait App: Sized + 'static {
     }
     fn update(&mut self, _handler: &WGPUHandler) {}
     fn default_control_flow() -> ControlFlow {
-        let next_frame_time = Instant::now() + Duration::from_nanos(1_666_667);
+        let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         ControlFlow::WaitUntil(next_frame_time)
     }
     fn render<'a>(&'a self, _target: &mut RenderPass<'a>) {}

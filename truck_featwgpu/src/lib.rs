@@ -101,8 +101,7 @@ pub struct BufferHandler {
 pub struct WGPUMesher {
     pub device: Arc<Device>,
     queue: Arc<Queue>,
-    vertex_creator: wgpumesher::VertexCreator,
-    index_creator: wgpumesher::IndexCreator,
+    vertex_creator: wgpumesher::MeshCreator,
 }
 
 #[derive(Debug)]

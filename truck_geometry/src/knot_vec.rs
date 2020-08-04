@@ -579,6 +579,13 @@ impl std::iter::FromIterator<f64> for KnotVec {
     }
 }
 
+impl<'a> IntoIterator for &'a KnotVec {
+    type Item = &'a f64;
+    type IntoIter = std::slice::Iter<'a, f64>;
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
 impl std::ops::Deref for KnotVec {
     type Target = Vec<f64>;
     #[inline(always)]

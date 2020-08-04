@@ -49,6 +49,7 @@ impl MyApp {
         let mesher = WGPUMesher::with_device(&handler.device, &handler.queue);
         let arc_object = Arc::clone(object);
         let closed = Arc::clone(closed);
+        let mut first = true;
         std::thread::spawn(move || {
             let mut bspsurface = Self::init_surface(3, 4);
             let mut time: f64 = 0.0;
@@ -61,7 +62,12 @@ impl MyApp {
                 std::thread::sleep(std::time::Duration::from_millis(1));
                 let mut bspsurface0 = bspsurface.clone();
                 bspsurface0.optimize();
-                let object = mesher.meshing(&bspsurface0, 0.01);
+                let object = mesher.meshing(&bspsurface0, 0.02);
+                if first {
+                    let vec = futures::executor::block_on(get_vertex(&object, &mesher.device));
+                    println!("{:?}", vec);
+                    first = false;
+                }
                 count += 1;
                 bspsurface.control_point_mut(3, 3)[1] = time.sin();
                 time += 0.1;

@@ -170,7 +170,7 @@ impl Scene {
             }),
             rasterization_state: Some(RasterizationStateDescriptor {
                 front_face: FrontFace::Ccw,
-                cull_mode: CullMode::Back,
+                cull_mode: CullMode::None,
                 depth_bias: 1,
                 depth_bias_slope_scale: 1.0,
                 depth_bias_clamp: 0.0,

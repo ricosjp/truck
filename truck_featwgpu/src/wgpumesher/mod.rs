@@ -1,7 +1,10 @@
 use crate::*;
 
+#[allow(dead_code)]
 const F64_SIZE: usize = std::mem::size_of::<f64>();
+#[allow(dead_code)]
 const F32_SIZE: usize = std::mem::size_of::<f32>();
+#[allow(dead_code)]
 const U32_SIZE: usize = std::mem::size_of::<u32>();
 
 #[derive(Debug)]
@@ -14,10 +17,7 @@ struct ComputeHandler {
 pub(super) struct FarChecker(ComputeHandler);
 
 #[derive(Debug)]
-pub(super) struct VertexCreator(ComputeHandler);
-
-#[derive(Debug)]
-pub(super) struct IndexCreator(ComputeHandler);
+pub(super) struct MeshCreator(ComputeHandler);
 
 impl ComputeHandler {
     fn new(
@@ -57,15 +57,13 @@ impl WGPUMesher {
         WGPUMesher {
             device: Arc::clone(device),
             queue: Arc::clone(queue),
-            vertex_creator: VertexCreator::new(device),
-            index_creator: IndexCreator::new(device),
+            vertex_creator: MeshCreator::new(device),
         }
     }
 
     pub fn meshing(&self, surface: &BSplineSurface, tol: f64) -> RenderObject {
         let (device, queue) = (&self.device, &self.queue);
-        let (vertex_buffer, div_lens) = self.vertex_creator.vertex_buffer(device, queue, surface, tol);
-        let index_buffer = self.index_creator.index_buffer(device, queue, &div_lens);
+        let (vertex_buffer, index_buffer, div_lens) = self.vertex_creator.vertex_buffer(device, queue, surface, tol);
         RenderObject {
             vertex_buffer: Arc::new(vertex_buffer),
             vertex_size: div_lens[0] * div_lens[1],
@@ -108,9 +106,7 @@ fn is_far(bspsurface: &BSplineSurface, u0: f64, u1: f64, v0: f64, v1: f64, tol: 
     false
 }
 
-mod create_vertex;
-mod create_index;
-mod is_far;
+mod create_mesh;
 
 fn sub_create_space_division(
     bspsurface: &BSplineSurface,
