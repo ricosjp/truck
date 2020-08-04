@@ -19,6 +19,9 @@ test:
 pages:
     image: rust:latest
     stage: pages
+    before_script:
+        - apt-get update -y
+        - apt-get install cmake -y
     script:
         - cargo clean
         - cargo test
