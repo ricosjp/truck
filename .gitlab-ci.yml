@@ -8,6 +8,9 @@ test:
     cache:
         paths:
             - target
+    before_script:
+        - apt-get update -y
+        - apt-get install cmake -y
     script:
         - cargo test
     except:

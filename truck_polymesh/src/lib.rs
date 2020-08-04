@@ -2,8 +2,9 @@
 extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
 pub use geometry::{
-    matrix, vector, BoundingBox, Matrix2, Matrix3, Matrix4, Vector2, Vector3, Vector4,
+    matrix, vector, Matrix2, Matrix3, Matrix4, Vector2, Vector3, Vector4,
 };
+pub type BoundingBox = geometry::BoundingBox<[f64; 3]>;
 
 /// mesh data
 #[derive(Clone, Debug, Default)]
@@ -41,6 +42,7 @@ pub mod extract_topology;
 pub mod healing;
 pub mod mesh_handler;
 pub mod meshing_shape;
+pub mod polygon_mesh;
 pub mod smoothing;
 pub mod splitting;
 pub mod structured_mesh;

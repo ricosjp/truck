@@ -1,6 +1,6 @@
-use geometry::{Vector3};
 use crate::errors::Error;
 use crate::{PolygonMesh, StructuredMesh};
+use geometry::Vector3;
 
 impl StructuredMesh {
     pub fn new(
@@ -59,45 +59,50 @@ impl StructuredMesh {
         }
 
         StructuredMesh {
-            positions: positions,
+            positions,
             uv_division: (Vec::new(), Vec::new()),
             normals: Vec::new(),
         }
     }
 
     pub fn destruct(self) -> PolygonMesh {
-        let mut mesh = PolygonMesh::default();
-        let m = self.positions.len();
-        let n = self.positions[0].len();
-        mesh.positions = self
-            .positions
-            .iter()
-            .flat_map(|vec| vec.iter())
-            .map(|x| x.clone())
-            .collect();
-        mesh.uv_coords = self.uv_division.0.iter()
-            .flat_map(|u| {
-                self.uv_division.1.iter().map(move |v| {
-                    vector!(*u, *v)
-                })
-            })
-            .collect();
-        mesh.normals = self
-            .normals
+        let StructuredMesh {
+            positions,
+            uv_division: (udiv, vdiv),
+            normals,
+        } = self;
+        let m = positions.len();
+        let n = positions[0].len();
+        let positions = positions
             .into_iter()
-            .flat_map(|vec| vec.into_iter())
+            .flat_map(move |vec| vec.into_iter())
             .collect();
-        for i in 1..m {
-            for j in 1..n {
-                let face = [
+        let uv_coords = udiv
+            .iter()
+            .flat_map(|u| vdiv.iter().map(move |v| vector!(*u, *v)))
+            .collect();
+        let normals = normals
+            .into_iter()
+            .flat_map(move |vec| vec.into_iter())
+            .collect();
+        let quad_faces = (1..m)
+            .flat_map(|i| (1..n).map(move |j| (i, j)))
+            .map(move |(i, j)| {
+                [
                     [(i - 1) * n + j - 1; 3],
                     [i * n + j - 1; 3],
                     [i * n + j; 3],
                     [(i - 1) * n + j; 3],
-                ];
-                mesh.quad_faces.push(face);
-            }
+                ]
+            })
+            .collect();
+        PolygonMesh {
+            positions,
+            uv_coords,
+            normals,
+            tri_faces: Vec::new(),
+            quad_faces,
+            other_faces: Vec::new(),
         }
-        mesh
     }
 }
