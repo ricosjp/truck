@@ -1,37 +1,34 @@
 use crate::*;
-use geometry::{Vector3, KnotVec, Tolerance};
 use std::f64::consts::PI;
-
-pub(super) fn line(pt0: Vector, pt1: Vector) -> BSplineCurve {
+use cgmath::Rad;
+pub(super) fn line(pt0: Vector4, pt1: Vector4) -> BSplineCurve {
     let knot_vec = KnotVec::bezier_knot(1);
     BSplineCurve::new_unchecked(knot_vec, vec![pt0, pt1])
 }
 
 pub(super) fn circle_arc_by_three_points(
-    point0: Vector,
-    point1: Vector,
-    transit: &Vector3,
+    point0: Vector4,
+    point1: Vector4,
+    transit: &Point3,
 ) -> BSplineCurve
 {
-    let tmp = point0.rational_projection();
-    let pt0 = vector!(tmp[0], tmp[1], tmp[2]);
-    let tmp = point1.rational_projection();
-    let pt1 = vector!(tmp[0], tmp[1], tmp[2]);
+    let pt0 = Point3::from_homogeneous(point0);
+    let pt1 = Point3::from_homogeneous(point1);
     let origin = circum_center(&pt0, &pt1, transit);
     let vec0 = &pt0 - transit;
     let vec1 = &pt1 - transit;
-    let angle = PI - vec0.angle(&vec1);
-    let mut axis = &vec1 ^ &vec0;
-    axis /= axis.norm();
-    circle_arc(&point0, &origin, &axis, angle * 2.0)
+    let angle = cgmath::Rad(PI) - vec0.angle(vec1);
+    let mut axis = vec1.cross(vec0);
+    axis /= axis.magnitude();
+    circle_arc(point0, origin, axis, angle * 2.0)
 }
 
-fn circum_center(pt0: &Vector3, pt1: &Vector3, pt2: &Vector3) -> Vector3 {
+fn circum_center(pt0: &Point3, pt1: &Point3, pt2: &Point3) -> Point3 {
     let vec0 = pt1 - pt0;
     let vec1 = pt2 - pt0;
-    let a2 = &vec0 * &vec0;
-    let ab = &vec0 * &vec1;
-    let b2 = &vec1 * &vec1;
+    let a2 = vec0.dot(vec0);
+    let ab = vec0.dot(vec1);
+    let b2 = vec1.dot(vec1);
     let det = a2 * b2 - ab * ab;
     let u = (b2 * a2 - ab * b2) / (2.0 * det);
     let v = (-ab * a2 + b2 * a2) / (2.0 * det);
@@ -39,30 +36,30 @@ fn circum_center(pt0: &Vector3, pt1: &Vector3, pt2: &Vector3) -> Vector3 {
 }
 
 pub(super) fn circle_arc(
-    point: &Vector,
-    origin: &Vector3,
-    axis: &Vector3,
-    angle: f64,
+    point: Vector4,
+    origin: Point3,
+    axis: Vector3,
+    angle: Rad<f64>,
 ) -> BSplineCurve
 {
-    let tmp: Vector3 = point.rational_projection().into();
-    let origin = origin + (axis * (tmp - origin)) * axis;
+    let tmp = Point3::from_homogeneous(point);
+    let origin = origin + (axis.dot(tmp - origin)) * axis;
     let axis_trsf = if (axis[2] * axis[2]).near(&1.0) {
-        Transform::identity()
+        Matrix4::identity()
     } else {
-        let axis_angle = axis[2].acos();
-        let mut axis_axis = vector!(-axis[1], axis[0], 0.0);
-        axis_axis /= axis_axis.norm();
-        Transform::rotate(&axis_axis, axis_angle) * Transform::translate(&origin)
+        let axis_angle = cgmath::Rad(axis[2].acos());
+        let mut axis_axis = Vector3::new(-axis[1], axis[0], 0.0);
+        axis_axis /= axis_axis.magnitude();
+        Matrix4::from_axis_angle(axis_axis, axis_angle) * Matrix4::from_translation(origin.to_vec())
     };
-    let trsf_inverse = &axis_trsf.inverse().unwrap();
-    let rotation = Transform::rotate(&vector!(0, 0, 1), angle / 2.0);
+    let trsf_inverse = axis_trsf.invert().unwrap();
+    let rotation = Matrix4::from_angle_z(angle / 2.0);
     let rotation2 = &rotation * &rotation * &axis_trsf;
     let cos = (angle / 2.0).cos();
     let pt = point * &trsf_inverse.0;
     let mut point1 = &pt * &rotation.0;
     point1[3] *= cos;
-    point1 *= &axis_trsf;
+    point1 = axis_trsf * point1;
     let mut curve = BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![point.clone(), point1, pt * rotation2.0]

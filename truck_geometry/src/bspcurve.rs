@@ -1,9 +1,11 @@
 use crate::errors::Error;
-use crate::matrix::MatrixEntity;
-use crate::tolerance::inv_or_zero;
+use crate::traits::inv_or_zero;
 use crate::*;
+use std::ops::*;
 
-impl<T: EntityArray<f64>> BSplineCurve<T> {
+impl<V: ExVectorSpace> BSplineCurve<V>
+where V::Rationalized: cgmath::AbsDiffEq<Epsilon=f64>
+{
     /// constructor.
     /// # Arguments
     /// * `knot_vec` - the knot vector
@@ -13,7 +15,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// * There are no control points.
     /// * The number of knots is more than the one of control points.
     /// * The range of the knot vector is zero.
-    pub fn new(knot_vec: KnotVec, control_points: Vec<Vector<T>>) -> BSplineCurve<T> {
+    pub fn new(knot_vec: KnotVec, control_points: Vec<V>) -> BSplineCurve<V> {
         BSplineCurve::try_new(knot_vec, control_points).unwrap_or_else(|e| panic!("{}", e))
     }
 
@@ -25,11 +27,11 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// * If there are no control points, returns [`Error::EmptyControlPoints`].
     /// * If the number of knots is more than the one of control points, returns [`Error::TooShortKnotVector`].
     /// * If the range of the knot vector is zero, returns [`Error::ZeroRange`].
-    /// 
+    ///
     /// [`Error::EmptyControlPoints`]: errors/enum.Error.html#variant.EmptyControlPoints
     /// [`Error::TooShortKnotVector`]: errors/enum.Error.html#variant.TooShortKnotVector
     /// [`Error::ZeroRange`]: errors/enum.Error.html#variant.ZeroRange
-    pub fn try_new(knot_vec: KnotVec, control_points: Vec<Vector<T>>) -> Result<BSplineCurve<T>> {
+    pub fn try_new(knot_vec: KnotVec, control_points: Vec<V>) -> Result<BSplineCurve<V>> {
         if control_points.is_empty() {
             Err(Error::EmptyControlPoints)
         } else if knot_vec.len() <= control_points.len() {
@@ -52,8 +54,8 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// This method is prepared only for performance-critical development and is not recommended.  
     /// This method does NOT check the rules for constructing B-spline curve.  
     /// The programmer must guarantee these conditions before using this method.
-    pub fn new_unchecked(knot_vec: KnotVec, control_points: Vec<Vector<T>>) -> BSplineCurve<T> {
-        BSplineCurve::<T> {
+    pub fn new_unchecked(knot_vec: KnotVec, control_points: Vec<V>) -> BSplineCurve<V> {
+        BSplineCurve::<V> {
             knot_vec: knot_vec,
             control_points: control_points,
         }
@@ -69,24 +71,15 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
 
     /// Returns the reference of the control points.
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<Vector<T>> { &self.control_points }
+    pub fn control_points(&self) -> &Vec<V> { &self.control_points }
 
     /// Returns the reference of the control point corresponding to the index `idx`.
     #[inline(always)]
-    pub fn control_point(&self, idx: usize) -> &Vector<T> { &self.control_points[idx] }
+    pub fn control_point(&self, idx: usize) -> &V { &self.control_points[idx] }
 
     /// Returns the mutable reference of the control point corresponding to index `idx`.
     #[inline(always)]
-    pub fn control_point_mut(&mut self, idx: usize) -> &mut Vector<T> {
-        &mut self.control_points[idx]
-    }
-    
-    /// Returns the bounding box including all control points.
-    #[inline(always)]
-    pub fn roughly_bounding_box(&self) -> BoundingBox<T> {
-        self.control_points.iter().collect()
-    }
-
+    pub fn control_point_mut(&mut self, idx: usize) -> &mut V { &mut self.control_points[idx] }
     /// Returns the degree of B-spline curve
     /// # Examples
     /// ```
@@ -123,11 +116,11 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// let knot_vec = KnotVec::uniform_knot(1, 5);
     /// let ctrl_pts = vec![vector!(1, 2), vector!(1, 2)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// 
+    ///
     /// // bspcurve is not constant.
     /// assert_eq!(bspcurve.subs(0.0), vector!(0, 0));
     /// assert_ne!(bspcurve.subs(0.5), vector!(0, 0));
-    /// 
+    ///
     /// // bspcurve.is_const() is true
     /// assert!(bspcurve.is_const());
     /// ```
@@ -165,6 +158,9 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         }
         true
     }
+    /// Returns the bounding box including all control points.
+    #[inline(always)]
+    pub fn roughly_bounding_box(&self) -> BoundingBox<V> { self.control_points.iter().collect() }
 
     /// substitution to B-spline curve.
     /// # Examples
@@ -182,14 +178,14 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn subs(&self, t: f64) -> Vector<T> {
+    pub fn subs(&self, t: f64) -> V {
         let basis = self
             .knot_vec
             .try_bspline_basis_functions(self.degree(), t)
             .unwrap();
         let iter = self.control_points.iter().zip(basis.iter());
-        let mut sum = Vector::zero();
-        iter.for_each(|(vec, basis)| sum += vec * *basis);
+        let mut sum = V::zero();
+        iter.for_each(|(vec, basis)| sum += *vec * *basis);
         sum
     }
 
@@ -209,7 +205,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// res.iter().zip(&ans).for_each(|(v0, v1)| Vector::assert_near2(v0, v1));
     /// ```
     #[inline(always)]
-    pub fn get_closure(&self) -> impl Fn(f64) -> Vector<T> + '_ { move |t| self.subs(t) }
+    pub fn get_closure(&self) -> impl Fn(f64) -> V + '_ { move |t| self.subs(t) }
 
     /// Returns the end points of a curve.
     /// # Examples
@@ -229,7 +225,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// assert_eq!(bspcurve.end_points(), (vector!(0, 0), vector!(0, 0)));
     /// ```
     #[inline(always)]
-    pub fn end_points(&self) -> (Vector<T>, Vector<T>) {
+    pub fn end_points(&self) -> (V, V) {
         let t0 = self.knot_vec[0];
         let t1 = self.knot_vec[self.knot_vec.len() - 1];
         (self.subs(t0), self.subs(t1))
@@ -277,13 +273,13 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     }
 
     #[inline(always)]
-    fn delta_control_points(&self, i: usize) -> Vector<T> {
+    fn delta_control_points(&self, i: usize) -> V {
         if i == 0 {
             self.control_point(i).clone()
         } else if i == self.control_points.len() {
-            -self.control_point(i - 1)
+            self.control_points[i - 1] * (-1.0)
         } else {
-            self.control_point(i) - self.control_point(i - 1)
+            self.control_points[i] - self.control_points[i - 1]
         }
     }
 
@@ -303,7 +299,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     ///     Vector::assert_near2(&derived.subs(t), &vector!(1.0, 2.0 * t));
     /// }
     /// ```
-    pub fn derivation(&self) -> BSplineCurve<T> {
+    pub fn derivation(&self) -> BSplineCurve<V> {
         let n = self.control_points.len();
         let k = self.degree();
         let knot_vec = self.knot_vec.clone();
@@ -311,11 +307,11 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         if k > 0 {
             for i in 0..=n {
                 let delta = knot_vec[i + k] - knot_vec[i];
-                let coef = (k as f64) * &inv_or_zero(delta);
+                let coef = (k as f64) * inv_or_zero(delta);
                 new_points.push(self.delta_control_points(i) * coef);
             }
         } else {
-            new_points = vec![Vector::zero(); n];
+            new_points = vec![V::zero(); n];
         }
         BSplineCurve::new_unchecked(knot_vec, new_points)
     }
@@ -353,7 +349,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
         if x < self.knot_vec[0] {
             self.knot_vec.add_knot(x);
-            self.control_points.insert(0, Vector::zero());
+            self.control_points.insert(0, V::zero());
             return self;
         }
 
@@ -363,7 +359,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         let idx = self.knot_vec.add_knot(x);
         let start = if idx > k { idx - k } else { 0 };
         let end = if idx > n {
-            self.control_points.push(Vector::zero());
+            self.control_points.push(V::zero());
             n + 1
         } else {
             self.control_points
@@ -416,7 +412,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// assert!(bspcurve.try_remove_knot(3).is_ok());
     /// assert_eq!(bspcurve.try_remove_knot(2), Err(Error::CannotRemoveKnot(2)));
     /// ```
-    pub fn try_remove_knot(&mut self, idx: usize) -> Result<&mut BSplineCurve<T>> {
+    pub fn try_remove_knot(&mut self, idx: usize) -> Result<&mut BSplineCurve<V>> {
         let k = self.degree();
         let n = self.control_points.len();
         let knot_vec = &self.knot_vec;
@@ -433,7 +429,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
             if a.so_small() {
                 break;
             } else {
-                let p = self.control_point(i) / a - new_points.last().unwrap() * (1.0 - a) / a;
+                let p = self.control_points[i] / a - *new_points.last().unwrap() * (1.0 - a) / a;
                 new_points.push(p);
             }
         }
@@ -457,7 +453,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         self.knot_vec.add_knot(self.knot_vec[0]);
         self.knot_vec
             .add_knot(self.knot_vec[self.knot_vec.len() - 1]);
-        self.control_points.push(Vector::zero());
+        self.control_points.push(V::zero());
         for i in 0..=(k + 1) {
             let i0 = k + 1 - i;
             let a = (i0 as f64) / ((k + 1) as f64);
@@ -611,16 +607,16 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// assert!(bspcurve0.near2_as_curve(org_curve0.knot_normalize()));
     /// assert!(bspcurve1.near2_as_curve(org_curve1.knot_normalize()));
     /// ```
-    pub fn syncro_knot(&mut self, other: &mut BSplineCurve<T>) {
+    pub fn syncro_knot(&mut self, other: &mut BSplineCurve<V>) {
         self.knot_normalize();
         other.knot_normalize();
 
         let mut i = 0;
         let mut j = 0;
         while !self.knot(i).near2(&1.0) || !other.knot(j).near2(&1.0) {
-            if self.knot(i) - other.knot(j) > f64::TOLERANCE {
+            if self.knot(i) - other.knot(j) > TOLERANCE {
                 self.add_knot(other.knot(j));
-            } else if other.knot(j) - self.knot(i) > f64::TOLERANCE {
+            } else if other.knot(j) - self.knot(i) > TOLERANCE {
                 other.add_knot(self.knot(i));
             }
             i += 1;
@@ -665,7 +661,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     ///     Vector::assert_near2(&bspcurve.subs(t), &part1.subs(t));
     /// }
     /// ```
-    pub fn cut(&mut self, mut t: f64) -> BSplineCurve<T> {
+    pub fn cut(&mut self, mut t: f64) -> BSplineCurve<V> {
         let degree = self.degree();
 
         let idx = match self.knot_vec.floor(t) {
@@ -673,7 +669,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
             None => {
                 let bspline = self.clone();
                 let knot_vec = KnotVec::from(vec![t, self.knot_vec[0]]);
-                let ctrl_pts = vec![Vector::zero()];
+                let ctrl_pts = vec![V::zero()];
                 *self = BSplineCurve::new(knot_vec, ctrl_pts);
                 return bspline;
             }
@@ -720,7 +716,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     ///     Vector::assert_near2(&bspcurve.subs(t), &beziers[1].subs(t));
     /// }
     /// ```
-    pub fn bezier_decomposition(&self) -> Vec<BSplineCurve<T>> {
+    pub fn bezier_decomposition(&self) -> Vec<BSplineCurve<V>> {
         let mut bspline = self.clone();
         bspline.clamp();
         let (knots, _) = self.knot_vec.to_single_multi();
@@ -792,7 +788,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// // The degree is changed.
     /// assert_ne!(bspcurve1.degree(), org_curve1.degree());
     /// ```
-    pub fn try_concat(&mut self, other: &mut BSplineCurve<T>) -> Result<&mut Self> {
+    pub fn try_concat(&mut self, other: &mut BSplineCurve<V>) -> Result<&mut Self> {
         self.syncro_degree(other);
         self.clamp();
         other.clamp();
@@ -1007,9 +1003,12 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
             if bezier.is_rational_const() {
                 x += bezier.knot_vec.range_length();
             } else {
-                let s0 = *self.control_points.last().unwrap().last().unwrap();
-                let s1 = *bezier.control_points[0].last().unwrap();
-                bezier *= s0 / s1;
+                let s0 = self.control_points.last().unwrap().last();
+                let s1 = bezier.control_points[0].last();
+                bezier
+                    .control_points
+                    .iter_mut()
+                    .for_each(|vec| *vec *= s0 / s1);
                 self.concat(bezier.knot_translate(-x));
             }
         }
@@ -1059,7 +1058,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// // the globally nearest point in the curve.
     /// assert!((pt0 - &pt).norm() > (pt1 - &pt).norm());
     /// ```
-    pub fn search_nearest_parameter(&self, point: &Vector<T>, hint: f64) -> Option<f64> {
+    pub fn search_nearest_parameter(&self, point: V, hint: f64) -> Option<f64> {
         let derived = self.derivation();
         let derived2 = derived.derivation();
         self.sub_snp(&derived, &derived2, point, hint, 0)
@@ -1067,9 +1066,9 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
 
     fn optimized_snp(
         &self,
-        derived: &BSplineCurve<T>,
-        derived2: &BSplineCurve<T>,
-        point: &Vector<T>,
+        derived: &BSplineCurve<V>,
+        derived2: &BSplineCurve<V>,
+        point: V,
         hint: f64,
     ) -> Option<f64>
     {
@@ -1078,9 +1077,9 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
 
     fn sub_snp(
         &self,
-        derived: &BSplineCurve<T>,
-        derived2: &BSplineCurve<T>,
-        point: &Vector<T>,
+        derived: &BSplineCurve<V>,
+        derived2: &BSplineCurve<V>,
+        point: V,
         hint: f64,
         counter: usize,
     ) -> Option<f64>
@@ -1088,8 +1087,8 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         let pt = self.subs(hint) - point;
         let der = derived.subs(hint);
         let der2 = derived2.subs(hint);
-        let f = &der * &pt;
-        let fprime = &der2 * &pt + der.norm2();
+        let f = der.dot(pt);
+        let fprime = der2.dot(pt) + der.magnitude2();
         let t = hint - f / fprime;
         println!("{} {} {}", f, fprime, t);
         if t.near(&hint) {
@@ -1134,7 +1133,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// *part.control_point_mut(2) += vector!(1.0, 2.0, 3.0);
     /// assert!(part.is_arc_of(&bspcurve, 0.6).is_none());
     /// ```
-    pub fn is_arc_of(&self, curve: &BSplineCurve<T>, mut hint: f64) -> Option<f64> {
+    pub fn is_arc_of(&self, curve: &BSplineCurve<V>, mut hint: f64) -> Option<f64> {
         let degree = std::cmp::max(self.degree(), curve.degree()) * 3 + 1;
         let (knots, _) = self.knot_vec.to_single_multi();
         if !self.subs(knots[0]).near(&curve.subs(hint)) {
@@ -1148,7 +1147,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
                 let pt = self.subs(t);
-                let res = curve.optimized_snp(&derived, &derived2, &pt, hint);
+                let res = curve.optimized_snp(&derived, &derived2, pt, hint);
                 let flag = res.map(|res| hint <= res && curve.subs(res).near(&pt));
                 hint = match flag {
                     Some(true) => res.unwrap(),
@@ -1197,7 +1196,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// // Newton's method is vibration divergent.
     /// assert!(bspcurve.search_rational_nearest_parameter(&pt, hint).is_none());
     /// ```
-    pub fn search_rational_nearest_parameter(&self, point: &Vector<T>, hint: f64) -> Option<f64> {
+    pub fn search_rational_nearest_parameter(&self, point: &V, hint: f64) -> Option<f64> {
         let derived = self.derivation();
         let derived2 = derived.derivation();
         self.sub_srnp(&derived, &derived2, point, hint, 0)
@@ -1205,9 +1204,9 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
 
     fn optimized_srnp(
         &self,
-        derived: &BSplineCurve<T>,
-        derived2: &BSplineCurve<T>,
-        point: &Vector<T>,
+        derived: &BSplineCurve<V>,
+        derived2: &BSplineCurve<V>,
+        point: &V,
         hint: f64,
     ) -> Option<f64>
     {
@@ -1216,9 +1215,9 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
 
     fn sub_srnp(
         &self,
-        derived: &BSplineCurve<T>,
-        derived2: &BSplineCurve<T>,
-        point: &Vector<T>,
+        derived: &BSplineCurve<V>,
+        derived2: &BSplineCurve<V>,
+        point: &V,
         hint: f64,
         counter: usize,
     ) -> Option<f64>
@@ -1226,11 +1225,11 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         let pt = self.subs(hint);
         let der = derived.subs(hint);
         let der2 = derived2.subs(hint);
-        let der2 = pt.rational_derivation2(&der, &der2);
-        let der = pt.rational_derivation(&der);
+        let der2 = pt.rational_derivation2(der, der2);
+        let der = pt.rational_derivation(der);
         let pt = pt.rational_projection() - point.rational_projection();
-        let f = &der * &pt;
-        let fprime = &der2 * &pt + der.norm2();
+        let f = der.dot(pt);
+        let fprime = der2.dot(pt) + der.magnitude2();
         let t = hint - f / fprime;
         println!("{}", t);
         if t.near2(&hint) {
@@ -1248,7 +1247,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// # let geomdata = truck_io::tgb::read(file).unwrap();
     /// # let mut bspline = geomdata.curves[2].clone();
     ///
-    /// // let bspline = BSplineCurve<T>::new(...).unwrap();
+    /// // let bspline = BSplineCurve<V>::new(...).unwrap();
     /// let (knots, _) = bspline.knot_vec().to_single_multi();
     /// assert_eq!(&knots, &[0.0, 0.5, 1.0]);
     ///
@@ -1259,7 +1258,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// *part.control_point_mut(1) += vector!(1, 2, 3, 4);
     /// assert!(part.is_rational_arc_of(&mut bspline, 0.2).is_none());
     /// ```
-    pub fn is_rational_arc_of(&self, curve: &mut BSplineCurve<T>, mut hint: f64) -> Option<f64> {
+    pub fn is_rational_arc_of(&self, curve: &mut BSplineCurve<V>, mut hint: f64) -> Option<f64> {
         let degree = std::cmp::max(self.degree(), curve.degree()) * 3 + 1;
         let (knots, _) = self.knot_vec.to_single_multi();
         let pt0 = self.subs(knots[0]).rational_projection();
@@ -1290,9 +1289,9 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
         Some(hint)
     }
 
-    fn sub_near_as_curve<F: Fn(&Vector<T>, &Vector<T>) -> bool>(
+    fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
         &self,
-        other: &BSplineCurve<T>,
+        other: &BSplineCurve<V>,
         div_coef: usize,
         ord: F,
     ) -> bool
@@ -1343,12 +1342,12 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// assert!(!bspcurve0.near_as_curve(&bspcurve1));
     /// ```
     #[inline(always)]
-    pub fn near_as_curve(&self, other: &BSplineCurve<T>) -> bool {
+    pub fn near_as_curve(&self, other: &BSplineCurve<V>) -> bool {
         self.sub_near_as_curve(other, 1, |x, y| x.near(y))
     }
 
     /// Determines `self` and `other` is near in square order as the B-spline curves or not.  
-    /// 
+    ///
     /// Divide each knot interval into the number of degree equal parts,
     /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
     /// # Examples
@@ -1373,7 +1372,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// assert!(!bspcurve0.near2_as_curve(&bspcurve1));
     /// ```
     #[inline(always)]
-    pub fn near2_as_curve(&self, other: &BSplineCurve<T>) -> bool {
+    pub fn near2_as_curve(&self, other: &BSplineCurve<V>) -> bool {
         self.sub_near_as_curve(other, 1, |x, y| x.near2(y))
     }
 
@@ -1381,7 +1380,7 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// Divide each knot interval into the number of degree + 1 equal parts,
     /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
     #[inline(always)]
-    pub fn near_as_rational_curve(&self, other: &BSplineCurve<T>) -> bool {
+    pub fn near_as_rational_curve(&self, other: &BSplineCurve<V>) -> bool {
         self.sub_near_as_curve(other, 2, |x, y| {
             x.rational_projection().near(&y.rational_projection())
         })
@@ -1391,213 +1390,52 @@ impl<T: EntityArray<f64>> BSplineCurve<T> {
     /// Divide each knot interval into the number of degree + 1 equal parts,
     /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
     #[inline(always)]
-    pub fn near2_as_rational_curve(&self, other: &BSplineCurve<T>) -> bool {
+    pub fn near2_as_rational_curve(&self, other: &BSplineCurve<V>) -> bool {
         self.sub_near_as_curve(other, 2, |x, y| {
             x.rational_projection().near2(&y.rational_projection())
         })
     }
 }
 
-impl<T, M> std::ops::MulAssign<&Matrix<T, M>> for BSplineCurve<T>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul_assign(&mut self, mat: &Matrix<T, M>) {
-        self.control_points.iter_mut().for_each(|vec| *vec *= mat);
-    }
-}
-
-impl<T, M> std::ops::MulAssign<Matrix<T, M>> for BSplineCurve<T>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul_assign(&mut self, mat: Matrix<T, M>) { self.mul_assign(&mat); }
-}
-
-impl<T, M> std::ops::Mul<&Matrix<T, M>> for &BSplineCurve<T>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul(self, mat: &Matrix<T, M>) -> BSplineCurve<T> {
-        let mut new_spline = self.clone();
-        new_spline *= mat;
-        new_spline
-    }
-}
-
-impl<T, M> std::ops::Mul<Matrix<T, M>> for &BSplineCurve<T>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul(self, mat: Matrix<T, M>) -> BSplineCurve<T> { self * &mat }
-}
-
-impl<T, M> std::ops::Mul<&Matrix<T, M>> for BSplineCurve<T>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul(mut self, mat: &Matrix<T, M>) -> BSplineCurve<T> {
-        self *= mat;
-        self
-    }
-}
-
-impl<T, M> std::ops::Mul<Matrix<T, M>> for BSplineCurve<T>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul(self, mat: Matrix<T, M>) -> BSplineCurve<T> { self * &mat }
-}
-
-impl<T, M> std::ops::Mul<&BSplineCurve<T>> for &Matrix<T, M>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts on each control points.
-    #[inline(always)]
-    fn mul(self, bspline: &BSplineCurve<T>) -> BSplineCurve<T> {
-        let mut new_spline = bspline.clone();
-        for vec in &mut new_spline.control_points {
-            *vec = self * &*vec;
-        }
-        new_spline
-    }
-}
-
-impl<T, M> std::ops::Mul<&BSplineCurve<T>> for Matrix<T, M>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts on each control points.
-    #[inline(always)]
-    fn mul(self, bspline: &BSplineCurve<T>) -> BSplineCurve<T> { &self * bspline }
-}
-
-impl<T, M> std::ops::Mul<BSplineCurve<T>> for &Matrix<T, M>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts on each control points.
-    #[inline(always)]
-    fn mul(self, mut bspline: BSplineCurve<T>) -> BSplineCurve<T> {
-        for vec in &mut bspline.control_points {
-            *vec = self * &*vec;
-        }
-        bspline
-    }
-}
-
-impl<T, M> std::ops::Mul<BSplineCurve<T>> for Matrix<T, M>
-where
-    T: EntityArray<f64>,
-    M: MatrixEntity<T>,
-{
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts on each control points.
-    #[inline(always)]
-    fn mul(self, bspline: BSplineCurve<T>) -> BSplineCurve<T> { &self * bspline }
-}
-
-impl<T: EntityArray<f64>> std::ops::Mul<&BSplineCurve<T>> for &BSplineCurve<T> {
-    type Output = BSplineSurface<T>;
-
-    /// tensor surface
-    #[inline(always)]
-    fn mul(self, other: &BSplineCurve<T>) -> BSplineSurface<T> {
-        let knot_vecs = (self.knot_vec.clone(), other.knot_vec.clone());
-        let mut control_points = Vec::new();
-        for i in 0..self.control_points.len() {
-            control_points.push(Vec::new());
-            for j in 0..other.control_points.len() {
-                control_points[i].push(self.control_point(i) % other.control_point(j));
+macro_rules! impl_mat_multi {
+    ($vector: ty, $matrix: ty) => {
+        impl Mul<BSplineCurve<$vector>> for $matrix {
+            type Output = BSplineCurve<$vector>;
+            fn mul(self, mut spline: BSplineCurve<$vector>) -> Self::Output {
+                spline
+                    .control_points
+                    .iter_mut()
+                    .for_each(|vec| *vec = self * *vec);
+                spline
             }
         }
-        BSplineSurface::new_unchecked(knot_vecs, control_points)
-    }
-}
-
-impl<T: EntityArray<f64>> std::ops::MulAssign<f64> for BSplineCurve<T> {
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul_assign(&mut self, scalar: f64) {
-        for vec in &mut self.control_points {
-            *vec *= scalar;
+        impl Mul<&BSplineCurve<$vector>> for $matrix {
+            type Output = BSplineCurve<$vector>;
+            fn mul(self, spline: &BSplineCurve<$vector>) -> Self::Output { self * spline.clone() }
         }
-    }
+    };
 }
 
-impl<T: EntityArray<f64>> std::ops::Mul<f64> for &BSplineCurve<T> {
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul(self, scalar: f64) -> BSplineCurve<T> {
-        let mut new_spline = self.clone();
-        new_spline *= scalar;
-        new_spline
-    }
-}
-
-impl<T: EntityArray<f64>> std::ops::Mul<f64> for BSplineCurve<T> {
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts to each control points.
-    #[inline(always)]
-    fn mul(mut self, scalar: f64) -> BSplineCurve<T> {
-        self *= scalar;
-        self
-    }
-}
-
-impl<T: EntityArray<f64>> std::ops::Mul<&BSplineCurve<T>> for f64 {
-    type Output = BSplineCurve<T>;
-
-    /// A matrix `mat` acts on each control points.
-    #[inline(always)]
-    fn mul(self, bspline: &BSplineCurve<T>) -> BSplineCurve<T> {
-        let mut new_spline = bspline.clone();
-        for vec in &mut new_spline.control_points {
-            *vec = self * &*vec;
+macro_rules! impl_scalar_multi {
+    ($vector: ty, $scalar: ty) => {
+        impl_mat_multi!($vector, $scalar);
+        impl Mul<$scalar> for &BSplineCurve<$vector> {
+            type Output = BSplineCurve<$vector>;
+            fn mul(self, scalar: $scalar) -> Self::Output { scalar * self }
         }
-        new_spline
-    }
+        impl Mul<$scalar> for BSplineCurve<$vector> {
+            type Output = BSplineCurve<$vector>;
+            fn mul(self, scalar: $scalar) -> Self::Output { scalar * self }
+        }
+    };
 }
+
+impl_mat_multi!(Vector2, Matrix2);
+impl_scalar_multi!(Vector2, f64);
+impl_mat_multi!(Vector3, Matrix3);
+impl_scalar_multi!(Vector3, f64);
+impl_mat_multi!(Vector4, Matrix4);
+impl_scalar_multi!(Vector4, f64);
 
 #[test]
 fn test_near_as_curve() {
@@ -1605,14 +1443,14 @@ fn test_near_as_curve() {
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
     let control_points = vec![
-        vector!(1.0, 0.0, 0.0, 0.0),
-        vector!(0.0, 1.0, 0.0, 0.0),
-        vector!(0.0, 0.0, 1.0, 0.0),
-        vector!(0.0, 0.0, 0.0, 1.0),
-        vector!(1.0, 1.0, 0.0, 0.0),
-        vector!(1.0, 0.0, 1.0, 0.0),
-        vector!(1.0, 0.0, 0.0, 1.0),
-        vector!(1.0, 1.0, 1.0, 0.0),
+        Vector4::new(1.0, 0.0, 0.0, 0.0),
+        Vector4::new(0.0, 1.0, 0.0, 0.0),
+        Vector4::new(0.0, 0.0, 1.0, 0.0),
+        Vector4::new(0.0, 0.0, 0.0, 1.0),
+        Vector4::new(1.0, 1.0, 0.0, 0.0),
+        Vector4::new(1.0, 0.0, 1.0, 0.0),
+        Vector4::new(1.0, 0.0, 0.0, 1.0),
+        Vector4::new(1.0, 1.0, 1.0, 0.0),
     ];
     let bspline0 = BSplineCurve::new(knot_vec, control_points.clone());
     let knot_vec = KnotVec::from(vec![
@@ -1634,14 +1472,14 @@ fn test_near_as_curve() {
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
     let control_points = vec![
-        vector!(1.0, 0.0, 0.0, 0.0),
-        vector!(0.0, 1.0, 0.0, 0.0),
-        vector!(0.0, 0.0, 1.0, 0.0),
-        vector!(0.0, 0.0, 0.0, 1.0),
-        vector!(1.0, 1.01, 0.0, 0.0),
-        vector!(1.0, 0.0, 1.0, 0.0),
-        vector!(1.0, 0.0, 0.0, 1.0),
-        vector!(1.0, 1.0, 1.0, 0.0),
+        Vector4::new(1.0, 0.0, 0.0, 0.0),
+        Vector4::new(0.0, 1.0, 0.0, 0.0),
+        Vector4::new(0.0, 0.0, 1.0, 0.0),
+        Vector4::new(0.0, 0.0, 0.0, 1.0),
+        Vector4::new(1.0, 1.01, 0.0, 0.0),
+        Vector4::new(1.0, 0.0, 1.0, 0.0),
+        Vector4::new(1.0, 0.0, 0.0, 1.0),
+        Vector4::new(1.0, 1.0, 1.0, 0.0),
     ];
     let bspline2 = BSplineCurve::new(knot_vec, control_points.clone());
     assert!(bspline0.near_as_curve(&bspline1));

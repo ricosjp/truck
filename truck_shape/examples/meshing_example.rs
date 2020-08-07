@@ -43,12 +43,7 @@ fn bottle(builder: &mut Builder) -> Solid {
     let transit = vector!(-thick / 2.0, 0.0, 0.0);
     let edge0 = builder.circle_arc(v0, v1, &transit).unwrap();
     let edge1 = builder
-        .rotated(
-            &edge0,
-            &vector!(0.0, 0.0, 0.0),
-            &vector!(0.0, 0.0, 1.0),
-            PI,
-        )
+        .rotated(&edge0, &vector!(0.0, 0.0, 0.0), &vector!(0.0, 0.0, 1.0), PI)
         .unwrap();
     let wire0 = Wire::from_iter(&[edge0]);
     let wire1 = Wire::from_iter(&[edge1]);
@@ -66,12 +61,7 @@ fn tsudsumi(builder: &mut Builder) -> Solid {
     let v1 = builder.vertex(vector!(0.0, 0.0, 1.0)).unwrap();
     let edge = builder.line(v0, v1).unwrap();
     let mut shell = builder
-        .rsweep(
-            edge,
-            &vector!(0, 0, 0),
-            &vector!(0, 1, 0),
-            PI * 2.0,
-        )
+        .rsweep(edge, &vector!(0, 0, 0), &vector!(0, 1, 0), PI * 2.0)
         .unwrap();
     let wire = shell.extract_boundaries();
     for mut wire in wire {
@@ -91,9 +81,7 @@ fn truck3d(builder: &mut Builder) -> Solid {
     ];
     let edge = vec![
         builder.line(v[1], v[0]).unwrap(),
-        builder
-            .circle_arc(v[3], v[2], &vector!(2, 0, 1))
-            .unwrap(),
+        builder.circle_arc(v[3], v[2], &vector!(2, 0, 1)).unwrap(),
     ];
     let mut shell = builder.homotopy(&edge[0], &edge[1]).unwrap();
     let face1 = builder
@@ -122,11 +110,7 @@ fn large_box(builder: &mut Builder) -> Solid {
 
     let v: Vec<_> = (0..N)
         .flat_map(|i| (0..N).map(move |j| (i, j)))
-        .map(|(i, j)| {
-            builder
-                .vertex(vector!(i as f64, j as f64, 0.0))
-                .unwrap()
-        })
+        .map(|(i, j)| builder.vertex(vector!(i as f64, j as f64, 0.0)).unwrap())
         .collect();
     let row_edge: Vec<Vec<_>> = (0..N)
         .map(|i| {
@@ -225,9 +209,7 @@ fn truck_torus(builder: &mut Builder) -> Solid {
     ];
     let edge = vec![
         builder.line(v[1], v[0]).unwrap(),
-        builder
-            .circle_arc(v[3], v[2], &vector!(2, 0, 5))
-            .unwrap(),
+        builder.circle_arc(v[3], v[2], &vector!(2, 0, 5)).unwrap(),
     ];
     let mut shell = builder.homotopy(&edge[0], &edge[1]).unwrap();
     let face1 = builder

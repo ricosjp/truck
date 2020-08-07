@@ -1,5 +1,5 @@
-use crate::MeshHandler;
-use geometry::Vector3;
+use crate::*;
+use geometry::{InnerSpace, Zero};
 use std::collections::HashMap;
 
 /// mesh smoothing filters
@@ -49,10 +49,10 @@ impl MeshHandler {
         for (pos_id, vecs) in vnmap.iter() {
             for vec in vecs {
                 let mut tmp = get_normal_sum(vec);
-                tmp /= tmp.norm();
+                tmp /= tmp.magnitude();
                 new_normals.push(tmp);
                 let normal_id = new_normals.len() - 1;
-                for FaceNormal { face_id, normal: _ } in vec {
+                for FaceNormal { face_id, .. } in vec {
                     if face_id < &tri_faces.len() {
                         signup_vertex_normal(*pos_id, *face_id, normal_id, tri_faces);
                     } else if face_id < &(tri_faces.len() + quad_faces.len()) {
@@ -95,7 +95,7 @@ fn add_face_normal(
 {
     let vec0 = &positions[face[idx1][0]] - &positions[face[idx0][0]];
     let vec1 = &positions[face[idx2][0]] - &positions[face[idx0][0]];
-    let normal = vec0 ^ vec1;
+    let normal = vec0.cross(vec1);
     let face_normal = FaceNormal { face_id, normal };
     add_to_vnmap(face[idx0][0], face_normal.clone(), vnmap, inf);
     add_to_vnmap(face[idx1][0], face_normal.clone(), vnmap, inf);

@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::tolerance::inv_or_zero;
+use crate::traits::inv_or_zero;
 use crate::{KnotVec, Origin, Result, Tolerance};
 use std::slice::SliceIndex;
 use std::vec::Vec;

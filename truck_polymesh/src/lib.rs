@@ -1,10 +1,7 @@
 #[macro_use]
 extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
-pub use geometry::{
-    matrix, vector, Matrix2, Matrix3, Matrix4, Vector2, Vector3, Vector4,
-};
-pub type BoundingBox = geometry::BoundingBox<[f64; 3]>;
+use geometry::*;
 
 /// mesh data
 #[derive(Clone, Debug, Default)]
@@ -51,4 +48,14 @@ pub mod structuring;
 #[inline(always)]
 fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {
     [face[idx0].clone(), face[idx1].clone(), face[idx2].clone()]
+}
+
+trait CosAngle {
+    fn cos_angle(&self, other: &Self) -> f64;
+}
+
+impl CosAngle for Vector3 {
+    fn cos_angle(&self, other: &Self) -> f64 {
+        self.dot(*other) / (self.magnitude() * other.magnitude())
+    }
 }

@@ -123,7 +123,7 @@ impl App for MyApp {
                 }
                 self.scene.add_object(object);
             }
-            None => {},
+            None => {}
         }
         self.scene.prepare_render(&handler.sc_desc);
     }

@@ -13,59 +13,19 @@
     unused_qualifications
 )]
 
+extern crate cgmath;
 use std::fmt::Debug;
 
-/// vector
-#[derive(Clone, PartialEq, Debug, Default)]
-pub struct Vector<T>(T);
+pub use cgmath::prelude::*;
 
-/// 2-dim vector
-///
-/// The cross product `^` returns the signed area of the parallelogram streched by the two vectors.
-/// ```
-/// use truck_geometry::*;
-/// assert_eq!(vector!(2, 3) ^ vector!(4, 7), 2.0);
-/// ```
-pub type Vector2 = Vector<[f64; 2]>;
-/// 3-dim vector
-///
-/// The cross product is represented by the operator `^`.
-/// ```
-/// use truck_geometry::*;
-/// assert_eq!(vector!(1, 2, 3) ^ vector!(2, 4, 7), vector!(2, -1, 0));
-/// ```
-pub type Vector3 = Vector<[f64; 3]>;
-/// 4-dim vector
-///
-/// To creates the rational vector by a 3-dimentional coordinate, use `rvector!()`.
-/// ```
-/// use truck_geometry::*;
-/// assert_eq!(rvector!(1, 2, 3), vector!(1, 2, 3, 1));
-/// ```
-pub type Vector4 = Vector<[f64; 4]>;
-
-/// square matrix
-#[derive(Clone, PartialEq, Debug, Default)]
-pub struct Matrix<T, M>(M, std::marker::PhantomData<fn() -> T>);
-/// 2x2 matrix
-pub type Matrix2 = Matrix<[f64; 2], [Vector2; 2]>;
-/// 3x3 matrix
-pub type Matrix3 = Matrix<[f64; 3], [Vector3; 3]>;
-/// 4x4 matrix
-pub type Matrix4 = Matrix<[f64; 4], [Vector4; 4]>;
-
-/// Abstraction of the arrays which is the entity of `Vector` or `Matrix`.
-pub trait EntityArray<T>:
-    Sized + Clone + PartialEq + AsRef<[T]> + AsMut<[T]> + Debug + Default {
-    /// the array of all components are `0.0`.
-    const ORIGIN: Self;
-    /// the array of all components are `f64::INFINITY`.
-    const INFINITY: Self;
-    /// the array of all components are `f64::NEG_INFINITY`.
-    const NEG_INFINITY: Self;
-    /// Creats array from iterator. Panic occurs if the length of iterator is too short.
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self;
+macro_rules! f64_type {
+    ($typename: ident) => {
+        /// redefinition, scalar = f64
+        pub type $typename = cgmath::$typename<f64>;
+    };
+    ($a: ident, $($b: ident), *) => { f64_type!($a); f64_type!($($b),*); }
 }
+f64_type!(Vector1, Vector2, Vector3, Vector4, Matrix2, Matrix3, Matrix4);
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug)]
@@ -73,64 +33,15 @@ pub struct KnotVec(Vec<f64>);
 
 /// bounding box
 #[derive(Clone, PartialEq, Debug)]
-pub struct BoundingBox<T>(Vector<T>, Vector<T>);
+pub struct BoundingBox<V>(V, V);
 
-/// Defines a tolerance in the whole package
-pub trait Tolerance: Sized + Debug {
-    /// general tolerance
-    const TOLERANCE: f64 = 1.0e-7;
+/// general tolerance
+pub const TOLERANCE: f64 = 1.0e-7;
 
-    /// general tolerance of square order
-    const TOLERANCE2: f64 = Self::TOLERANCE * Self::TOLERANCE;
+/// general tolerance of square order
+pub const TOLERANCE2: f64 = TOLERANCE * TOLERANCE;
 
-    /// The "distance" is less than EPSILON.
-    fn near(&self, other: &Self) -> bool;
-
-    /// The "distance" is less than EPSILON2.
-    fn near2(&self, other: &Self) -> bool;
-
-    /// assert if `one` is not near `other`.
-    fn assert_near(one: &Self, other: &Self) {
-        assert!(
-            one.near(other),
-            "not near two values.\nvalue0: {:?}\nvalue1: {:?}",
-            one,
-            other
-        );
-    }
-
-    /// assertion if `one` is not near `other` in square order.
-    fn assert_near2(one: &Self, other: &Self) {
-        assert!(
-            one.near2(other),
-            "not near two values in square order.\nvalue0: {:?}\nvalue1: {:?}",
-            one,
-            other
-        );
-    }
-}
-
-/// The structs defined the origin. `f64`, `Vector`, and so on.
-pub trait Origin: Tolerance {
-    /// origin point
-    const ORIGIN: Self;
-
-    /// Rounds the value by tolerance
-    /// # Example
-    /// ```
-    /// use truck_geometry::*;
-    /// assert_eq!(1.23456789_f64.round_by_tolerance(), &1.2345678);
-    /// ```
-    fn round_by_tolerance(&mut self) -> &mut Self;
-
-    /// near origin
-    #[inline(always)]
-    fn so_small(&self) -> bool { self.near(&Self::ORIGIN) }
-
-    /// near origin in square order
-    #[inline(always)]
-    fn so_small2(&self) -> bool { self.near2(&Self::ORIGIN) }
-}
+pub use traits::*;
 
 /// B-spline curve
 /// # Examples
@@ -168,9 +79,9 @@ pub trait Origin: Tolerance {
 /// }
 /// ```
 #[derive(Clone, PartialEq, Debug)]
-pub struct BSplineCurve<T> {
-    knot_vec: KnotVec,              // the knot vector
-    control_points: Vec<Vector<T>>, // the indices of control points
+pub struct BSplineCurve<V> {
+    knot_vec: KnotVec,      // the knot vector
+    control_points: Vec<V>, // the indices of control points
 }
 
 /// 4-dimensional B-spline surface
@@ -232,17 +143,14 @@ pub struct BSplineCurve<T> {
 /// }
 /// ```
 #[derive(Clone, PartialEq, Debug)]
-pub struct BSplineSurface<T> {
+pub struct BSplineSurface<V> {
     knot_vecs: (KnotVec, KnotVec),
-    control_points: Vec<Vec<Vector<T>>>,
+    control_points: Vec<Vec<V>>,
 }
 
 /// Error handler for [`Error`](./errors/enum.Error.html)
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
-#[macro_use]
-#[doc(hidden)]
-pub mod vector;
 #[doc(hidden)]
 pub mod bounding_box;
 #[doc(hidden)]
@@ -253,7 +161,9 @@ pub mod bspsurface;
 pub mod errors;
 #[doc(hidden)]
 pub mod knot_vec;
-/// Defines some traits: `MatrixEntity` and `Determinant`.
-pub mod matrix;
-#[doc(hidden)]
-pub mod tolerance;
+/// Defines traits: [`Tolerance`], [`Origin`], and [`RationalProjective`].
+///
+/// [`Toleramce`]: ./traits/trait.Tolerance.html
+/// [`Origin`]: ./traits/trait.Origin.html
+/// [`RationalProjective`]: ./traits/trait.RationalProjective.html
+pub mod traits;

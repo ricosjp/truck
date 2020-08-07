@@ -18,7 +18,7 @@ impl<'a> Builder<'a> {
 
     #[inline(always)]
     pub fn vertex(&mut self, coord: Vector3) -> Result<Vertex> {
-        self.create_topology(rvector!(coord[0], coord[1], coord[2]))
+        self.create_topology(Vector4::new(coord[0], coord[1], coord[2], 1.0))
     }
 
     pub fn line(&mut self, vertex0: Vertex, vertex1: Vertex) -> Result<Edge> {

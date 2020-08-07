@@ -82,7 +82,8 @@ impl MyRender {
         let mat0 = Matrix3::rotation(&vector!(0, 1, 0), delta_time).affine(&Vector3::zero());
         for (i, object) in scene.objects_mut().iter_mut().enumerate() {
             let k = (-1_f64).powi(i as i32) * 5.0;
-            let mat1 = Matrix3::rotation(&vector!(0, 1, 0), k * delta_time).affine(&Vector3::zero());
+            let mat1 =
+                Matrix3::rotation(&vector!(0, 1, 0), k * delta_time).affine(&Vector3::zero());
             let obj_mat = &object.matrix;
             let x = obj_mat[3][2];
             let mat = obj_mat.inverse() * &mat1 * obj_mat * &mat0;

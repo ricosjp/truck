@@ -1,7 +1,26 @@
-use crate::{get_tri, MeshHandler};
-use geometry::{Tolerance, Vector3};
+use crate::*;
+use geometry::{Tolerance, TOLERANCE, VectorSpace};
 use std::collections::HashMap;
 use std::iter::Iterator;
+
+trait CastIntVector: VectorSpace<Scalar=f64>  {
+    type IntVector: std::hash::Hash + Eq;
+    fn cast_int(&self) -> Self::IntVector;
+}
+
+mod impl_cast_int {
+    use cgmath::{Vector2, Vector3};
+    macro_rules! impl_cast_int {
+        ($typename: ident) => {
+            impl super::CastIntVector for $typename<f64> {
+                type IntVector = $typename<i64>;
+                fn cast_int(&self) -> $typename<i64> { self.cast::<i64>().unwrap() }
+            }
+        };
+    }
+    impl_cast_int!(Vector2);
+    impl_cast_int!(Vector3);
+}
 
 /// mesh healing algorithms
 impl MeshHandler {
@@ -79,7 +98,7 @@ impl MeshHandler {
     }
 }
 
-impl crate::PolygonMesh {
+impl PolygonMesh {
     fn sub_remove_unused_attrs(&mut self, idx: usize, old_len: usize) -> Vec<usize> {
         let vec0 = self.tri_faces.iter_mut().flat_map(|arr| arr.iter_mut());
         let vec1 = self.quad_faces.iter_mut().flat_map(|arr| arr.iter_mut());
@@ -116,15 +135,11 @@ fn sub_remove_unused_attrs<'a, I: Iterator<Item = &'a mut [usize; 3]>>(
     new2old
 }
 
-fn sub_put_together_same_attrs<T: AsRef<[f64]>>(attrs: &[T]) -> Vec<usize> {
+fn sub_put_together_same_attrs<T: CastIntVector>(attrs: &[T]) -> Vec<usize> {
     let mut res = Vec::new();
     let mut map = HashMap::new();
     for (i, attr) in attrs.iter().enumerate() {
-        let v: Vec<_> = attr
-            .as_ref()
-            .iter()
-            .map(|x| (x / f64::TOLERANCE) as i64)
-            .collect();
+        let v = (*attr / TOLERANCE).cast_int();
         match map.get(&v) {
             Some(j) => res.push(*j),
             None => {

@@ -1,9 +1,9 @@
+use std::sync::Arc;
 use std::time::*;
 use wgpu::*;
 use winit::dpi::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;
-use std::sync::Arc;
 
 pub struct WGPUHandler {
     pub device: Arc<Device>,

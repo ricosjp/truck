@@ -85,7 +85,10 @@ impl Render for BSpAnimation {
         let scene = BSpAnimation::init_scene(display);
         let mesh = Arc::new(Mutex::new(None));
         let closed = Arc::new(Mutex::new(false));
-        let thread = Some(BSpAnimation::init_thread(Arc::clone(&mesh), Arc::clone(&closed)));
+        let thread = Some(BSpAnimation::init_thread(
+            Arc::clone(&mesh),
+            Arc::clone(&closed),
+        ));
         BSpAnimation {
             scene,
             mesh,

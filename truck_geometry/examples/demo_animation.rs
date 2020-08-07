@@ -1,3 +1,4 @@
+use cgmath::Point3;
 use std::f64::consts::PI;
 use truck_geometry::*;
 
@@ -15,11 +16,11 @@ fn main() {
 
     let mut control_points = Vec::new();
     control_points.push(vec![
-        rvector!(0.0, 0.0, 0.0),
-        rvector!(0.25, 0.0, 0.0),
-        rvector!(0.5, 0.0, 0.0),
-        rvector!(0.75, 0.0, 0.0),
-        rvector!(1.0, 0.0, 0.0),
+        Point3::new(0.0, 0.0, 0.0).to_homogeneous(),
+        Point3::new(0.25, 0.0, 0.0).to_homogeneous(),
+        Point3::new(0.5, 0.0, 0.0).to_homogeneous(),
+        Point3::new(0.75, 0.0, 0.0).to_homogeneous(),
+        Point3::new(1.0, 0.0, 0.0).to_homogeneous(),
     ]);
     control_points.push(control_points[0].iter().map(|x| shift(x, 0.2)).collect());
     control_points.push(control_points[0].iter().map(|x| shift(x, 0.4)).collect());

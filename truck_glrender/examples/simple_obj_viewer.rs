@@ -122,12 +122,9 @@ impl Render for MyRenderer {
                         0.1,
                         40.0,
                     ),
-                    ProjectionType::Perspective => Camera::parallel_camera(
-                        self.scene.camera.matrix().clone(),
-                        1.0,
-                        0.1,
-                        40.0,
-                    ),
+                    ProjectionType::Perspective => {
+                        Camera::parallel_camera(self.scene.camera.matrix().clone(), 1.0, 0.1, 40.0)
+                    }
                 }
             }
             VirtualKeyCode::L => {

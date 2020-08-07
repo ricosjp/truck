@@ -1,6 +1,5 @@
 use crate::errors::Error;
-use crate::{PolygonMesh, StructuredMesh};
-use geometry::Vector3;
+use crate::*;
 
 impl StructuredMesh {
     pub fn new(
@@ -79,7 +78,7 @@ impl StructuredMesh {
             .collect();
         let uv_coords = udiv
             .iter()
-            .flat_map(|u| vdiv.iter().map(move |v| vector!(*u, *v)))
+            .flat_map(|u| vdiv.iter().map(move |v| Vector2::new(*u, *v)))
             .collect();
         let normals = normals
             .into_iter()
