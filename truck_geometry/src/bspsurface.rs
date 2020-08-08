@@ -1102,8 +1102,14 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         dist2: F,
     ) -> (Vec<f64>, Vec<f64>)
     {
-        let mut div0 = self.uknot_vec().clone().into();
-        let mut div1 = self.vknot_vec().clone().into();
+        let (knot_vec0, knot_vec1) = self.knot_vecs();
+        let u0 = knot_vec0[0];
+        let u1 = knot_vec0[knot_vec0.len() - 1];
+        let mut div0 = vec![u0, u1];
+        let v0 = knot_vec1[0];
+        let v1 = knot_vec1[knot_vec1.len() - 1];
+        let mut div1 = vec![v0, v1];
+
         self.sub_create_space_division(tol, dist2, &mut div0, &mut div1);
         (div0, div1)
     }
