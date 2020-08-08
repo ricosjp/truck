@@ -23,22 +23,24 @@ impl MyApp {
             let mut vec = Vec::new();
             for j in 0..=range {
                 let v = (j as f64) / (range as f64);
-                vec.push(vector!(v, 0, u, 1));
+                vec.push(Vector4::new(v, 0.0, u, 1.0));
             }
             ctrl_pts.push(vec);
         }
         BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts)
     }
     fn init_camera() -> Camera {
-        let mut vec0 = vector!(1.5, 0.0, -1.5, 0.0);
-        vec0 /= vec0.norm();
-        let mut vec1 = vector!(-0.5, 1, -0.5, 0.0);
-        vec1 /= vec1.norm();
-        let mut vec2 = vector!(1, 1, 1, 0);
-        vec2 /= vec2.norm();
-        let vec3 = vector!(1.5, 0.8, 1.5, 1);
-        let matrix = matrix!(vec0, vec1, vec2, vec3);
-        Camera::perspective_camera(matrix, std::f64::consts::PI / 2.0, 0.1, 40.0)
+        let mut vec0 = Vector4::new(1.5, 0.0, -1.5, 0.0);
+        vec0 /= vec0.magnitude();
+        let mut vec1 = Vector4::new(-0.5, 1.0, -0.5, 0.0);
+        vec1 /= vec1.magnitude();
+        let mut vec2 = Vector4::new(1.0, 1.0, 1.0, 0.0);
+        vec2 /= vec2.magnitude();
+        let vec3 = Vector4::new(1.5, 0.8, 1.5, 1.0);
+        let matrix = Matrix4::from_cols(vec0, vec1, vec2, vec3);
+        let camera = Camera::default();
+        camera.matrix = matrix;
+        camera
     }
     fn init_thread(
         handler: &WGPUHandler,

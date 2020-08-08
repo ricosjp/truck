@@ -5,11 +5,11 @@ extern crate truck_geometry as geometry;
 extern crate truck_polymesh as polymesh;
 extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
-pub use geometry::{matrix, vector, Matrix3, Matrix4, Vector2, Vector3, Vector4};
+pub use geometry::*;
 pub use polymesh::PolygonMesh;
 use std::sync::Arc;
 use wgpu::*;
-pub type BSplineSurface = geometry::BSplineSurface<[f64; 4]>;
+pub type BSplineSurface = geometry::BSplineSurface<Vector4>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WGPUVertex {
@@ -32,6 +32,7 @@ unsafe impl Pod for CameraInfo {}
 struct LightInfo {
     light_position: [f32; 3],
     light_strength: f32,
+    light_color: [f32; 3],
     light_type: i32,
 }
 unsafe impl Zeroable for LightInfo {}
@@ -65,18 +66,15 @@ pub struct RenderObject {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ProjectionType {
-    Perspective,
-    Parallel,
+pub enum Projection {
+    Perspective(cgmath::PerspectiveFov<f64>),
+    Parallel(cgmath::Ortho<f64>),
 }
 
 #[derive(Debug, Clone)]
 pub struct Camera {
-    matrix: Matrix4,
-    screen_size: f64,
-    near_clip: f64,
-    far_clip: f64,
-    projection_type: ProjectionType,
+    pub matrix: Matrix4,
+    pub projection: Projection,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -87,8 +85,9 @@ pub enum LightType {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Light {
-    pub position: Vector3,
+    pub position: Point3,
     pub strength: f64,
+    pub color: Vector3,
     pub light_type: LightType,
 }
 
@@ -97,12 +96,12 @@ pub struct BufferHandler {
     pub size: u64,
 }
 
-#[derive(Debug)]
-pub struct WGPUMesher {
-    pub device: Arc<Device>,
-    queue: Arc<Queue>,
-    vertex_creator: wgpumesher::MeshCreator,
-}
+//#[derive(Debug)]
+//pub struct WGPUMesher {
+//    pub device: Arc<Device>,
+//    queue: Arc<Queue>,
+//    vertex_creator: wgpumesher::MeshCreator,
+//}
 
 #[derive(Debug)]
 pub struct Scene {
@@ -122,5 +121,5 @@ pub mod camera;
 pub mod light;
 pub mod render_object;
 pub mod scene;
-pub mod wgpumesher;
+//pub mod wgpumesher;
 pub mod wgpupolymesh;

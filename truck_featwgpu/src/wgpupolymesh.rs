@@ -28,14 +28,14 @@ fn signup_vertex(
         Some(idx) => *idx,
         None => {
             let idx = glpolymesh.vertices.len() as u32;
-            let position = (&polymesh.positions[key[0]]).into();
+            let position = (&polymesh.positions[key[0]]).cast().unwrap().into();
             let uv_coord = match polymesh.uv_coords.is_empty() {
                 true => [0.0, 0.0],
-                false => (&polymesh.uv_coords[key[1]]).into(),
+                false => (&polymesh.uv_coords[key[1]]).cast().unwrap().into(),
             };
             let normal = match polymesh.normals.is_empty() {
                 true => [0.0, 0.0, 0.0],
-                false => (&polymesh.normals[key[2]]).into(),
+                false => (&polymesh.normals[key[2]]).cast().unwrap().into(),
             };
             let wgpuvertex = WGPUVertex {
                 position,
