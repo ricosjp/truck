@@ -67,7 +67,7 @@ float specular() {
 }
 
 void main() {
-    float strength = radiance() * (ambient() + diffuse()) + specular();
+    float strength = radiance() * (ambient() + diffuse() + specular());
     strength = clamp(strength, 0.0, 1.0);
     color = vec4(light_color, 1.0) * material * strength;
 }

@@ -243,7 +243,7 @@ mod impl_bounded {
                 }
                 fn diagonal(self, other: Self) -> Self::Vector { self - other }
                 fn mid(self, other: Self) -> Self {
-                    self + (self - other) / (S::one() + S::one())
+                    self + (other - self) / (S::one() + S::one())
                 }
             }
         };

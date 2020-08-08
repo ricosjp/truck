@@ -1,4 +1,5 @@
 extern crate bytemuck;
+extern crate cgmath;
 extern crate futures;
 extern crate glsl_to_spirv;
 extern crate truck_geometry as geometry;
@@ -66,15 +67,16 @@ pub struct RenderObject {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Projection {
-    Perspective(cgmath::PerspectiveFov<f64>),
-    Parallel(cgmath::Ortho<f64>),
+pub enum ProjectionType {
+    Perspective,
+    Parallel,
 }
 
 #[derive(Debug, Clone)]
 pub struct Camera {
     pub matrix: Matrix4,
-    pub projection: Projection,
+    projection: Matrix4,
+    projection_type: ProjectionType,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

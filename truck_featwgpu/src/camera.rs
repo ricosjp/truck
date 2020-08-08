@@ -12,7 +12,7 @@ impl Camera {
     }
 
     #[inline(always)]
-    pub fn projection_type(&self) -> Projection { self.projection }
+    pub fn projection_type(&self) -> ProjectionType { self.projection_type }
 
     #[inline(always)]
     pub fn head_direction(&self) -> Vector3 {
@@ -21,62 +21,41 @@ impl Camera {
 
     #[inline(always)]
     pub fn perspective_camera(
-        eye: Point3,
-        center: Point3,
-        up: Vector3,
+        matrix: Matrix4,
         field_of_view: f64,
         near_clip: f64,
         far_clip: f64,
     ) -> Camera
     {
-        let per_fov = cgmath::PerspectiveFov {
-            fovy: cgmath::Rad(field_of_view),
-            aspect: 1.0,
-            near: near_clip,
-            far: far_clip,
-        };
+        let projection = cgmath::perspective(cgmath::Rad(field_of_view), 1.0, near_clip, far_clip);
         Camera {
-            matrix: Matrix4::look_at(eye, center, up).invert().unwrap(),
-            projection: Projection::Perspective(per_fov),
+            matrix,
+            projection,
+            projection_type: ProjectionType::Perspective,
         }
     }
 
     #[inline(always)]
     pub fn parallel_camera(
-        eye: Point3,
-        center: Point3,
-        up: Vector3,
+        matrix: Matrix4,
         screen_size: f64,
         near_clip: f64,
         far_clip: f64,
     ) -> Camera
     {
-        let ortho = cgmath::Ortho {
-            left: -screen_size / 2.0,
-            right: screen_size / 2.0,
-            bottom: -screen_size / 2.0,
-            top: screen_size / 2.0,
-            near: near_clip,
-            far: far_clip,
-        };
+        let a = screen_size / 2.0;
+        let ortho = cgmath::ortho(-a, a, -a, a, near_clip, far_clip);
         Camera {
-            matrix: Matrix4::look_at(eye, center, up).invert().unwrap(),
-            projection: Projection::Parallel(ortho),
+            matrix: matrix,
+            projection: ortho,
+            projection_type: ProjectionType::Parallel,
         }
     }
 
     pub fn projection(&self, as_rat: f64) -> Matrix4 {
-        match self.projection {
-            Projection::Perspective(mut per_fov) => {
-                per_fov.aspect = 1.0 / as_rat;
-                Matrix4::from(per_fov) * self.matrix.invert().unwrap()
-            },
-            Projection::Parallel(mut ortho) => {
-                ortho.top /= as_rat;
-                ortho.bottom /= as_rat;
-                Matrix4::from(ortho) * self.matrix.invert().unwrap()
-            },
-        }
+        Matrix4::from_nonuniform_scale(1.0 / as_rat, 1.0, 1.0)
+            * self.projection
+            * self.matrix.invert().unwrap()
     }
 
     pub fn buffer(&self, as_rat: f64, device: &Device) -> BufferHandler {
@@ -84,9 +63,8 @@ impl Camera {
             camera_matrix: (&self.matrix).cast().unwrap().into(),
             camera_projection: self.projection(as_rat).cast().unwrap().into(),
         };
-        let buffer = device.create_buffer_with_data(
-            bytemuck::cast_slice(&[camera_info]), BufferUsage::UNIFORM,
-        );
+        let buffer = device
+            .create_buffer_with_data(bytemuck::cast_slice(&[camera_info]), BufferUsage::UNIFORM);
         BufferHandler::new(buffer, std::mem::size_of::<CameraInfo>() as u64)
     }
 }
@@ -95,9 +73,7 @@ impl Default for Camera {
     #[inline(always)]
     fn default() -> Camera {
         Camera::perspective_camera(
-            Point3::new(0.0, 0.0, 1.0),
-            Point3::origin(),
-            Vector3::unit_y(),
+            Matrix4::identity(),
             std::f64::consts::PI / 4.0,
             0.1,
             10.0,
