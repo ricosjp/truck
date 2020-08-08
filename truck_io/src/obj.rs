@@ -1,5 +1,5 @@
 use crate::Error;
-use geometry::{Vector2, Vector3};
+use geometry::{Vector2, Vector3, Point3};
 use polymesh::PolygonMesh;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 
@@ -197,7 +197,7 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
                 let x = args.next().unwrap().parse::<f64>()?;
                 let y = args.next().unwrap().parse::<f64>()?;
                 let z = args.next().unwrap().parse::<f64>()?;
-                mesh.positions.push(Vector3::new(x, y, z));
+                mesh.positions.push(Point3::new(x, y, z));
             } else if first_str == "vt" {
                 let u = args.next().unwrap().parse::<f64>()?;
                 let v = args.next().unwrap().parse::<f64>()?;

@@ -1,4 +1,4 @@
-use crate::{Builder, Director, Mesher};
+use crate::*;
 use polymesh::{PolygonMesh, StructuredMesh};
 use std::collections::HashMap;
 use topology::*;
@@ -12,7 +12,7 @@ impl<'a> Mesher<'a> {
         let v: Vec<_> = mesh
             .positions
             .iter()
-            .map(|v| builder.vertex(v.clone()).unwrap())
+            .map(|pt| builder.vertex(*pt).unwrap())
             .collect();
 
         let mut shell = Shell::new();

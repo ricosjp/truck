@@ -51,13 +51,13 @@ impl Scene {
 
     pub fn objects_bounding_box(&self) -> (Vector3, Vector3) {
         let mut bdd_box = (
-            vector!(std::f64::MAX, std::f64::MAX, std::f64::MAX),
-            vector!(std::f64::MIN, std::f64::MIN, std::f64::MIN),
+            Vector3::new(std::f64::MAX, std::f64::MAX, std::f64::MAX),
+            Vector3::new(std::f64::MIN, std::f64::MIN, std::f64::MIN),
         );
         for object in self.objects.iter() {
             for vert in object.vertex_buffer.as_slice().read().unwrap() {
                 let tmp = vert.position;
-                let pos = vector!(tmp[0], tmp[1], tmp[2], 1) * self.camera.matrix.inverse();
+                let pos = self.camera.matrix.invert().unwrap() * Vector4::new(tmp[0] as f64, tmp[1] as f64, tmp[2] as f64, 1.0);
                 if pos[0] < bdd_box.0[0] {
                     bdd_box.0[0] = pos[0];
                 }
@@ -92,10 +92,10 @@ impl Scene {
         let length = size / self.camera.screen_size;
         let mut move_vec = (bdd_box.0 + bdd_box.1) / 2.0;
         move_vec[2] = bdd_box.1[2] + length;
-        let move_mat = Matrix3::identity().affine(&move_vec);
+        let move_mat = Matrix4::from_translation(move_vec);
 
         let cammat = self.camera.matrix.clone();
-        let caminv = cammat.inverse();
+        let caminv = cammat.invert().unwrap();
         self.camera *= &caminv * move_mat * &cammat;
     }
 
@@ -109,9 +109,9 @@ impl Scene {
         };
         let mut move_vec = (bdd_box.0 + bdd_box.1) / 2.0;
         move_vec[2] = bdd_box.1[2] + 1.0;
-        let move_mat = Matrix3::identity().affine(&move_vec);
+        let move_mat = Matrix4::from_translation(move_vec);
         let cammat = self.camera.matrix.clone();
-        let caminv = cammat.inverse();
+        let caminv = cammat.invert().unwrap();
         self.camera *= &caminv * move_mat * &cammat;
     }
 
@@ -123,11 +123,11 @@ impl Scene {
         }
     }
 
-    fn camera_projection(&self, target: &glium::Frame) -> [[f32; 4]; 4] {
+    fn camera_projection(&self, target: &glium::Frame) -> cgmath::Matrix4<f32> {
         let dim = target.get_dimensions();
         let as_rat = (dim.1 as f64) / (dim.0 as f64);
-        let mat = self.camera.projection() * Matrix4::diagonal(&vector!(as_rat, 1, 1, 1));
-        mat.into()
+        let mat = Matrix4::from_nonuniform_scale(as_rat, 1.0, 1.0) * self.camera.projection();
+        mat.cast().unwrap()
     }
 
     pub fn render_scene(&mut self, target: &mut glium::Frame) {
@@ -140,12 +140,15 @@ impl Scene {
             //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
             ..Default::default()
         };
+        let camera_matrix: [[f32; 4]; 4] = self.camera.matrix().cast().unwrap().into();
+        let camera_projection: [[f32; 4]; 4] = self.camera_projection(target).cast().unwrap().into();
+        let light_position: [f32; 3] = self.light.position.cast().unwrap().into();
         for object in &self.objects {
             let uniform = uniform!(
                 model_matrix: object.matrix,
-                camera_matrix: Into::<[[f32; 4]; 4]>::into(self.camera.matrix()),
-                camera_projection: self.camera_projection(target),
-                light_position: Into::<[f32; 3]>::into(&self.light.position),
+                camera_matrix: camera_matrix,
+                camera_projection: camera_projection,
+                light_position: light_position,
                 light_strength: self.light.strength as f32,
                 light_type: self.light.light_type.type_id(),
                 material: object.color,

@@ -25,7 +25,7 @@ macro_rules! f64_type {
     };
     ($a: ident, $($b: ident), *) => { f64_type!($a); f64_type!($($b),*); }
 }
-f64_type!(Vector1, Vector2, Vector3, Vector4, Matrix2, Matrix3, Matrix4);
+f64_type!(Vector1, Vector2, Vector3, Vector4, Matrix2, Matrix3, Matrix4, Point1, Point2, Point3);
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug)]

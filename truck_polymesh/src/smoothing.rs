@@ -83,7 +83,7 @@ fn get_normal_sum(normals: &Vec<FaceNormal>) -> Vector3 {
 }
 
 fn add_face_normal(
-    positions: &Vec<Vector3>,
+    positions: &Vec<Point3>,
     face_id: usize,
     face: &[[usize; 3]],
     idx0: usize,

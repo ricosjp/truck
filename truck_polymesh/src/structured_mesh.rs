@@ -3,7 +3,7 @@ use crate::*;
 
 impl StructuredMesh {
     pub fn new(
-        positions: Vec<Vec<Vector3>>,
+        positions: Vec<Vec<Point3>>,
         (u_div, v_div): (Vec<f64>, Vec<f64>),
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh
@@ -32,25 +32,25 @@ impl StructuredMesh {
             }
         }
         StructuredMesh {
-            positions: positions,
+            positions,
             uv_division: (u_div, v_div),
-            normals: normals,
+            normals,
         }
     }
 
     pub fn new_unchecked(
-        positions: Vec<Vec<Vector3>>,
+        positions: Vec<Vec<Point3>>,
         (u_div, v_div): (Vec<f64>, Vec<f64>),
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh
     {
         StructuredMesh {
-            positions: positions,
+            positions,
             uv_division: (u_div, v_div),
-            normals: normals,
+            normals,
         }
     }
-    pub fn by_positions(positions: Vec<Vec<Vector3>>) -> StructuredMesh {
+    pub fn by_positions(positions: Vec<Vec<Point3>>) -> StructuredMesh {
         for arr in &positions {
             if arr.len() != positions[0].len() {
                 panic!("{}", Error::IrregularArray);

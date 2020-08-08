@@ -1,15 +1,16 @@
 use crate::*;
-use geometry::{Tolerance, TOLERANCE, VectorSpace};
+use geometry::{Tolerance, TOLERANCE};
 use std::collections::HashMap;
 use std::iter::Iterator;
+use std::ops::{Mul, Div};
 
-trait CastIntVector: VectorSpace<Scalar=f64>  {
+trait CastIntVector: Sized + Mul<f64, Output = Self> + Div<f64, Output = Self> {
     type IntVector: std::hash::Hash + Eq;
     fn cast_int(&self) -> Self::IntVector;
 }
 
 mod impl_cast_int {
-    use cgmath::{Vector2, Vector3};
+    use cgmath::{Vector2, Vector3, Point3};
     macro_rules! impl_cast_int {
         ($typename: ident) => {
             impl super::CastIntVector for $typename<f64> {
@@ -20,6 +21,7 @@ mod impl_cast_int {
     }
     impl_cast_int!(Vector2);
     impl_cast_int!(Vector3);
+    impl_cast_int!(Point3);
 }
 
 /// mesh healing algorithms
@@ -107,7 +109,7 @@ impl PolygonMesh {
     }
 }
 
-fn is_degenerate_tri(positions: &Vec<Vector3>, i0: usize, i1: usize, i2: usize) -> bool {
+fn is_degenerate_tri(positions: &Vec<Point3>, i0: usize, i1: usize, i2: usize) -> bool {
     positions[i0].near(&positions[i1])
         || positions[i0].near(&positions[i2])
         || positions[i1].near(&positions[i2])
@@ -135,7 +137,7 @@ fn sub_remove_unused_attrs<'a, I: Iterator<Item = &'a mut [usize; 3]>>(
     new2old
 }
 
-fn sub_put_together_same_attrs<T: CastIntVector>(attrs: &[T]) -> Vec<usize> {
+fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usize> {
     let mut res = Vec::new();
     let mut map = HashMap::new();
     for (i, attr) in attrs.iter().enumerate() {

@@ -25,20 +25,20 @@ impl MyRenderer {
             }
             LightType::Uniform => {
                 scene.light.position = scene.camera.position();
-                scene.light.position /= scene.light.position.norm();
+                scene.light.position /= scene.light.position.magnitude();
             }
         }
     }
 
     fn create_camera() -> Camera {
-        let mut vec0 = vector!(1.5, 0.0, -1.5, 0.0);
-        vec0 /= vec0.norm();
-        let mut vec1 = vector!(-0.5, 1, -0.5, 0.0);
-        vec1 /= vec1.norm();
-        let mut vec2 = vector!(1, 1, 1, 0);
-        vec2 /= vec2.norm();
-        let vec3 = vector!(10, 12, 10, 1);
-        let matrix = matrix!(vec0, vec1, vec2, vec3);
+        let mut vec0 = Vector4::new(1.5, 0.0, -1.5, 0.0);
+        vec0 /= vec0.magnitude();
+        let mut vec1 = Vector4::new(-0.5, 1.0, -0.5, 0.0);
+        vec1 /= vec1.magnitude();
+        let mut vec2 = Vector4::new(1.0, 1.0, 1.0, 0.0);
+        vec2 /= vec2.magnitude();
+        let vec3 = Vector4::new(10.0, 12.0, 10.0, 1.0);
+        let matrix = Matrix4::from_cols(vec0, vec1, vec2, vec3);
         Camera::perspective_camera(matrix, std::f64::consts::PI / 4.0, 0.1, 40.0)
     }
 
@@ -47,7 +47,7 @@ impl MyRenderer {
         let center = bdd_box.center();
         let size = bdd_box.size();
         for pos in &mut mesh.positions {
-            *pos -= &center;
+            *pos -= center.to_vec();
             *pos /= size;
         }
         mesh
@@ -138,7 +138,7 @@ impl Render for MyRenderer {
                 match self.scene.light.light_type {
                     LightType::Point => {
                         let mut vec = self.scene.camera.position();
-                        vec /= vec.norm();
+                        vec /= vec.magnitude();
                         self.scene.light = Light {
                             position: vec,
                             strength: 0.25,
@@ -183,7 +183,7 @@ impl Render for MyRenderer {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let trans_vec = self.scene.camera.eye_direction() * 0.2 * y as f64;
-                self.scene.camera *= Matrix3::identity().affine(&trans_vec);
+                self.scene.camera *= Matrix4::from_translation(trans_vec);
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
@@ -194,15 +194,15 @@ impl Render for MyRenderer {
         if !self.rotate_flag {
             return Self::default_control_flow();
         }
-        let position = vector!(position.x, position.y);
+        let position = Vector2::new(position.x, position.y);
         if let Some(ref prev_position) = self.prev_cursor {
             let dir2d = &position - prev_position;
             let mut axis = dir2d[1] * &self.scene.camera.matrix()[0];
             axis += dir2d[0] * &self.scene.camera.matrix()[1];
-            axis /= axis.norm();
-            let angle = dir2d.norm() * 0.01;
-            let mat = Matrix3::rotation(&axis.into(), angle).affine(&Vector3::zero());
-            self.scene.camera *= mat.inverse();
+            axis /= axis.magnitude();
+            let angle = dir2d.magnitude() * 0.01;
+            let mat = Matrix4::from_axis_angle(axis.truncate(), cgmath::Rad(angle));
+            self.scene.camera.matrix_mut() = mat.invert().unwrap();
         }
         self.prev_cursor = Some(position);
         Self::default_control_flow()

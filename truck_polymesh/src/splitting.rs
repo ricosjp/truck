@@ -229,7 +229,7 @@ fn get_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
 }
 
 fn is_in_the_plane(
-    positions: &Vec<Vector3>,
+    positions: &Vec<Point3>,
     normals: &Vec<Vector3>,
     face: &[[usize; 3]],
     tol2: f64,
@@ -268,7 +268,7 @@ fn is_signed_up_upper(
 }
 
 fn get_angle(
-    positions: &Vec<Vector3>,
+    positions: &Vec<Point3>,
     face: &[[usize; 3]],
     idx0: usize,
     idx1: usize,
@@ -280,7 +280,7 @@ fn get_angle(
     vec0.angle(vec1).0
 }
 
-fn add_weights(weights: &mut Vec<f64>, positions: &Vec<Vector3>, face: &[[usize; 3]]) {
+fn add_weights(weights: &mut Vec<f64>, positions: &Vec<Point3>, face: &[[usize; 3]]) {
     let area = (2..face.len()).fold(0.0, |sum, i| {
         let vec0 = &positions[face[i - 1][0]] - &positions[face[0][0]];
         let vec1 = &positions[face[i][0]] - &positions[face[0][0]];

@@ -13,7 +13,7 @@ struct BSpAnimation {
 }
 
 impl BSpAnimation {
-    fn init_surface(degree: usize, division: usize) -> BSplineSurface<[f64; 4]> {
+    fn init_surface(degree: usize, division: usize) -> BSplineSurface<Vector4> {
         let range = degree + division - 1;
         let knot_vec = KnotVec::uniform_knot(degree, division);
         let mut ctrl_pts = Vec::new();
@@ -22,7 +22,7 @@ impl BSpAnimation {
             let mut vec = Vec::new();
             for j in 0..=range {
                 let v = (j as f64) / (range as f64);
-                vec.push(vector!(v, 0, u, 1));
+                vec.push(Vector4::new(v, 0.0, u, 1.0));
             }
             ctrl_pts.push(vec);
         }
@@ -31,17 +31,17 @@ impl BSpAnimation {
 
     fn init_scene(display: &Display) -> Scene {
         let mut scene = Scene::new(display);
-        let mut vec0 = vector!(1.5, 0.0, -1.5, 0.0);
-        vec0 /= vec0.norm();
-        let mut vec1 = vector!(-0.5, 1, -0.5, 0.0);
-        vec1 /= vec1.norm();
-        let mut vec2 = vector!(1, 1, 1, 0);
-        vec2 /= vec2.norm();
-        let vec3 = vector!(1.5, 0.8, 1.5, 1);
-        let matrix = matrix!(vec0, vec1, vec2, vec3);
+        let mut vec0 = Vector4::new(1.5, 0.0, -1.5, 0.0);
+        vec0 /= vec0.magnitude();
+        let mut vec1 = Vector4::new(-0.5, 1.0, -0.5, 0.0);
+        vec1 /= vec1.magnitude();
+        let mut vec2 = Vector4::new(1.0, 1.0, 1.0, 0.0);
+        vec2 /= vec2.magnitude();
+        let vec3 = Vector4::new(1.5, 0.8, 1.5, 1.0);
+        let matrix = Matrix4::from_cols(vec0, vec1, vec2, vec3);
         scene.camera = Camera::perspective_camera(matrix, std::f64::consts::PI / 2.0, 0.1, 40.0);
         scene.light = Light {
-            position: vector!(0.5, 2.0, 0.5),
+            position: Vector3::new(0.5, 2.0, 0.5),
             strength: 1.0,
             light_type: LightType::Point,
         };
@@ -62,8 +62,8 @@ impl BSpAnimation {
                 if *closed.lock().unwrap() {
                     break;
                 }
-                //let mut bspsurface0 = bspsurface.clone();
-                //bspsurface0.optimize();
+                let mut bspsurface0 = bspsurface.clone();
+                bspsurface0.optimize();
                 count += 1;
                 let mesh = StructuredMesh::from_surface(&bspsurface, 0.01).destruct();
                 *arc_mesh.lock().unwrap() = Some(mesh);

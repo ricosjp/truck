@@ -1,12 +1,12 @@
-use crate::*;
 use crate::traits::Bounded;
+use crate::*;
 use cgmath::BaseFloat;
 use std::ops::Index;
 
 impl<F, V> BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Index<usize, Output = F> + Bounded<F> + Copy,
 {
     /// Creats an empty bounding box
     #[inline(always)]
@@ -103,7 +103,7 @@ where
     /// assert_eq!(bdd_box.diagonal(), Vector2::new[f64::NEG_INFINITY; 2]);
     /// ```
     #[inline(always)]
-    pub fn diagonal(&self) -> V { self.1 - self.0 }
+    pub fn diagonal(&self) -> V::Vector { self.1.diagonal(self.0) }
 
     /// Returns the diameter of the bounding box.
     /// # Examples
@@ -122,11 +122,11 @@ where
     /// assert_eq!(bdd_box.diameter(), f64::NEG_INFINITY);
     /// ```
     #[inline(always)]
-    pub fn diameter(&self) -> V::Scalar {
+    pub fn diameter(&self) -> F {
         if self.is_empty() {
-            V::Scalar::neg_infinity()
+            F::neg_infinity()
         } else {
-            self.diagonal().magnitude()
+            self.0.distance(self.1)
         }
     }
 
@@ -147,7 +147,7 @@ where
     /// assert_eq!(bdd_box.size(), f64::NEG_INFINITY);
     /// ```
     #[inline(always)]
-    pub fn size(&self) -> V::Scalar { self.diagonal().max_component() }
+    pub fn size(&self) -> F { V::max_component(self.diagonal()) }
 
     /// Returns the center of the bounding box.
     /// # Examples
@@ -166,14 +166,14 @@ where
     /// assert!(bdd_box.center().iter().all(|x| x.is_nan()));
     /// ```
     #[inline(always)]
-    pub fn center(&self) -> V { (self.0 + self.1) / (V::Scalar::one() + V::Scalar::one()) }
+    pub fn center(&self) -> V { self.0.mid(self.1) }
 }
 
 impl<'a, F, V> std::iter::FromIterator<&'a V> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
-    {
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
+{
     fn from_iter<I: IntoIterator<Item = &'a V>>(iter: I) -> BoundingBox<V> {
         let mut bdd_box = BoundingBox::new();
         let bdd_box_mut = &mut bdd_box;
@@ -185,8 +185,8 @@ where
 impl<F, V> std::iter::FromIterator<V> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
-    {
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
+{
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> BoundingBox<V> {
         let mut bdd_box = BoundingBox::new();
         let bdd_box_mut = &mut bdd_box;
@@ -198,7 +198,7 @@ where
 impl<F, V> std::ops::AddAssign<&BoundingBox<V>> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     /// Puts the points in `other` into `self`.
     /// # Examples
@@ -228,7 +228,7 @@ where
 impl<F, V> std::ops::AddAssign<BoundingBox<V>> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     /// Puts the points in `other` into `self`.
     /// # Examples
@@ -255,7 +255,7 @@ where
 impl<F, V> std::ops::Add<&BoundingBox<V>> for &BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     type Output = BoundingBox<V>;
     /// Returns the direct sum of `self` and other.
@@ -284,7 +284,7 @@ where
 impl<F, V> std::ops::Add<&BoundingBox<V>> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     type Output = BoundingBox<V>;
     /// Returns the direct sum of `self` and other.
@@ -316,7 +316,7 @@ where
 impl<F, V> std::ops::Add<BoundingBox<V>> for &BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     type Output = BoundingBox<V>;
     /// Returns the direct sum of `self` and other.
@@ -345,7 +345,7 @@ where
 impl<F, V> std::ops::Add<BoundingBox<V>> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     type Output = BoundingBox<V>;
     /// Returns the direct sum of `self` and other.
@@ -374,7 +374,7 @@ where
 impl<F, V> std::ops::BitXorAssign<&BoundingBox<V>> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     /// Assigns the intersection of `self` and `other` to `self`.
     /// # Examples
@@ -403,7 +403,7 @@ where
 impl<F, V> std::ops::BitXorAssign<BoundingBox<V>> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     /// Assigns the intersection of `self` and `other` to `self`.
     /// # Examples
@@ -429,7 +429,7 @@ where
 impl<F, V> std::ops::BitXor<&BoundingBox<V>> for &BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     type Output = BoundingBox<V>;
     /// Returns the intersection of `self` and `other`.
@@ -457,7 +457,7 @@ where
 impl<F, V> std::ops::BitXor<&BoundingBox<V>> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     type Output = BoundingBox<V>;
     /// Returns the intersection of `self` and `other`.
@@ -488,7 +488,7 @@ where
 impl<F, V> std::ops::BitXor<BoundingBox<V>> for &BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     type Output = BoundingBox<V>;
     /// Returns the intersection of `self` and `other`.
@@ -516,7 +516,7 @@ where
 impl<F, V> std::ops::BitXor<BoundingBox<V>> for BoundingBox<V>
 where
     F: BaseFloat,
-    V: InnerSpace<Scalar = F> + Index<usize, Output = F> + Bounded<F>,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
 {
     type Output = BoundingBox<V>;
     /// Returns the intersection of `self` and `other`.

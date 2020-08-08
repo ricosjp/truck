@@ -1,7 +1,7 @@
 extern crate glium;
 extern crate truck_geometry as geometry;
 extern crate truck_polymesh as polymesh;
-pub use geometry::{matrix, vector, Matrix3, Matrix4, Vector2, Vector3};
+pub use geometry::*;
 use glium::*;
 
 #[derive(Debug, Clone, Copy)]

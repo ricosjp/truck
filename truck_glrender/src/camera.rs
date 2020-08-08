@@ -9,12 +9,12 @@ impl Camera {
 
     #[inline(always)]
     pub fn position(&self) -> Vector3 {
-        vector!(self.matrix[3][0], self.matrix[3][1], self.matrix[3][2])
+        Vector3::new(self.matrix[3][0], self.matrix[3][1], self.matrix[3][2])
     }
 
     #[inline(always)]
     pub fn eye_direction(&self) -> Vector3 {
-        vector!(-self.matrix[2][0], -self.matrix[2][1], -self.matrix[2][2])
+        Vector3::new(-self.matrix[2][0], -self.matrix[2][1], -self.matrix[2][2])
     }
 
     #[inline(always)]
@@ -22,7 +22,7 @@ impl Camera {
 
     #[inline(always)]
     pub fn head_direction(&self) -> Vector3 {
-        vector!(self.matrix[1][0], self.matrix[1][1], self.matrix[1][2])
+        Vector3::new(self.matrix[1][0], self.matrix[1][1], self.matrix[1][2])
     }
 
     #[inline(always)]
@@ -66,13 +66,12 @@ impl Camera {
         let z_max = self.back_clipping_plane;
         let d = z_min / z_max;
 
-        matrix.inverse()
-            * matrix!(
-                [1.0 / (a * z_max), 0.0, 0.0, 0.0],
-                [0.0, 1.0 / (a * z_max), 0.0, 0.0],
-                [0.0, 0.0, -1.0 / (z_max * (1.0 - d)), -1.0 / z_max],
-                [0.0, 0.0, -d / (1.0 - d), 0.0],
-            )
+        Matrix4::from_cols(
+            Vector4::new(1.0 / (a * z_max), 0.0, 0.0, 0.0),
+            Vector4::new(0.0, 1.0 / (a * z_max), 0.0, 0.0),
+            Vector4::new(0.0, 0.0, -1.0 / (z_max * (1.0 - d)), -1.0 / z_max),
+            Vector4::new(0.0, 0.0, -d / (1.0 - d), 0.0),
+        ) * matrix.invert().unwrap()
     }
 
     fn parallel_projection(&self) -> Matrix4 {
@@ -81,13 +80,13 @@ impl Camera {
         let z_min = self.front_clipping_plane;
         let z_max = self.back_clipping_plane;
 
-        matrix.inverse()
-            * matrix!(
-                [2.0 / a, 0.0, 0.0, 0.0],
-                [0.0, 2.0 / a, 0.0, 0.0],
-                [0.0, 0.0, -1.0 / (z_max - z_min), 0.0],
-                [0.0, 0.0, -z_min / (z_max - z_min), 1.0],
+        Matrix4::from_cols(
+                Vector4::new(2.0 / a, 0.0, 0.0, 0.0),
+                Vector4::new(0.0, 2.0 / a, 0.0, 0.0),
+                Vector4::new(0.0, 0.0, -1.0 / (z_max - z_min), 0.0),
+                Vector4::new(0.0, 0.0, -z_min / (z_max - z_min), 1.0),
             )
+        * matrix.invert().unwrap()
     }
 
     pub fn projection(&self) -> Matrix4 {
@@ -100,12 +99,12 @@ impl Camera {
 
 impl std::ops::MulAssign<&Matrix4> for Camera {
     #[inline(always)]
-    fn mul_assign(&mut self, mat: &Matrix4) { self.matrix *= mat; }
+    fn mul_assign(&mut self, mat: &Matrix4) { self.matrix = mat * self.matrix; }
 }
 
 impl std::ops::MulAssign<Matrix4> for Camera {
     #[inline(always)]
-    fn mul_assign(&mut self, mat: Matrix4) { self.matrix *= mat; }
+    fn mul_assign(&mut self, mat: Matrix4) { self.matrix = mat * self.matrix; }
 }
 
 impl Default for Camera {

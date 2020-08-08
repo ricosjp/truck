@@ -4,7 +4,7 @@ use crate::*;
 use std::ops::*;
 
 impl<V: ExVectorSpace> BSplineCurve<V>
-where V::Rationalized: cgmath::AbsDiffEq<Epsilon=f64>
+where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
 {
     /// constructor.
     /// # Arguments
@@ -80,6 +80,13 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon=f64>
     /// Returns the mutable reference of the control point corresponding to index `idx`.
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx: usize) -> &mut V { &mut self.control_points[idx] }
+
+    /// Apply the given transformation to all control points.
+    #[inline(always)]
+    pub fn transform_control_points<F: FnMut(&mut V)>(&mut self, f: F) {
+        self.control_points.iter_mut().for_each(f)
+    }
+
     /// Returns the degree of B-spline curve
     /// # Examples
     /// ```

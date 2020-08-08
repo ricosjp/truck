@@ -76,6 +76,10 @@ impl_tolerance!(Matrix2, 0, 1, 2, 3);
 impl_tolerance!(Matrix3, 0, 1, 2, 3, 4, 5, 6, 7, 8);
 impl_tolerance!(Matrix4, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
+impl Tolerance for Point1 {}
+impl Tolerance for Point2 {}
+impl Tolerance for Point3 {}
+
 /// The projection to the plane whose the last component is `1.0`.
 /// In other words, the transform to the homogeneous coordinate of
 /// the (n-1)-dim affine space.
@@ -175,6 +179,8 @@ impl_rational!(Vector4, Vector3, 3, 0, 1, 2);
 
 /// The trait for defining the bounding box
 pub trait Bounded<S> {
+    /// the result of subtraction
+    type Vector;
     #[doc(hidden)]
     fn infinity() -> Self;
     #[doc(hidden)]
@@ -184,19 +190,24 @@ pub trait Bounded<S> {
     #[doc(hidden)]
     fn min(&self, other: &Self) -> Self;
     #[doc(hidden)]
-    fn max_component(&self) -> S;
+    fn max_component(one: Self::Vector) -> S;
+    #[doc(hidden)]
+    fn diagonal(self, other: Self) -> Self::Vector;
+    #[doc(hidden)]
+    fn mid(self, other: Self) -> Self;
 }
 
 mod impl_bounded {
-    use cgmath::{Vector1, Vector2, Vector3, Vector4};
+    use cgmath::{Vector1, Vector2, Vector3, Vector4, Point1, Point2, Point3};
     macro_rules! pr2 {
         ($a: expr, $b: expr) => {
             $b
         };
     }
     macro_rules! impl_bounded {
-        ($typename: ident, $($num: expr),*) => {
+        ($typename: ident, $vectortype: ident, $($num: expr),*) => {
             impl<S: cgmath::BaseFloat> super::Bounded<S> for $typename<S> {
+                type Vector = $vectortype<S>;
                 fn infinity() -> $typename<S> {
                     $typename::new($(pr2!($num, S::infinity())),*)
                 }
@@ -225,18 +236,25 @@ mod impl_bounded {
                         ),*
                     )
                 }
-                fn max_component(&self) -> S {
+                fn max_component(one: Self::Vector) -> S {
                     let mut max = S::neg_infinity();
-                    $(if max < self[$num] { max = self[$num] })*
+                    $(if max < one[$num] { max = one[$num] })*
                     max
+                }
+                fn diagonal(self, other: Self) -> Self::Vector { self - other }
+                fn mid(self, other: Self) -> Self {
+                    self + (self - other) / (S::one() + S::one())
                 }
             }
         };
     }
-    impl_bounded!(Vector1, 0);
-    impl_bounded!(Vector2, 0, 1);
-    impl_bounded!(Vector3, 0, 1, 2);
-    impl_bounded!(Vector4, 0, 1, 2, 3);
+    impl_bounded!(Vector1, Vector1, 0);
+    impl_bounded!(Point1, Vector1, 0);
+    impl_bounded!(Vector2, Vector2, 0, 1);
+    impl_bounded!(Point2, Vector2, 0, 1);
+    impl_bounded!(Vector3, Vector3, 0, 1, 2);
+    impl_bounded!(Point3, Vector3, 0, 1, 2);
+    impl_bounded!(Vector4, Vector4, 0, 1, 2, 3);
 }
 
 /// The greedy trait for treating B-splines.

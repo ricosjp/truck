@@ -12,20 +12,15 @@ impl StructuredMesh {
     }
 }
 
-
 fn create_mesh(bspsurface: &BSplineSurface, div0: Vec<f64>, div1: Vec<f64>) -> StructuredMesh {
     let mut positions = Vec::new();
     let mut normals = Vec::new();
     for u in &div0 {
         let prow = div1
             .iter()
-            .map(|v| {
-                let pt = bspsurface.subs(*u, *v).rational_projection();
-                Vector3::new(pt[0], pt[1], pt[2])
-            })
+            .map(|v| Point3::from_homogeneous(bspsurface.subs(*u, *v)))
             .collect();
-        let nrow = bspsurface
-            .rational_normal_vectors(div1.iter().map(|v| (*u, *v)));
+        let nrow = bspsurface.rational_normal_vectors(div1.iter().map(|v| (*u, *v)));
         positions.push(prow);
         normals.push(nrow);
     }

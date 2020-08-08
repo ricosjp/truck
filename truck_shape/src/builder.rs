@@ -6,8 +6,8 @@ use crate::topological_curve::TopologicalCurve;
 use crate::transformed::Transformed;
 use crate::tsweep::TSweep;
 
-use crate::{Builder, Result, Transform, BSplineCurve};
-use geometry::*;
+use crate::Result;
+use crate::*;
 use topology::*;
 
 impl<'a> Builder<'a> {
@@ -17,8 +17,8 @@ impl<'a> Builder<'a> {
     }
 
     #[inline(always)]
-    pub fn vertex(&mut self, coord: Vector3) -> Result<Vertex> {
-        self.create_topology(Vector4::new(coord[0], coord[1], coord[2], 1.0))
+    pub fn vertex(&mut self, point: Point3) -> Result<Vertex> {
+        self.create_topology(point.to_homogeneous())
     }
 
     pub fn line(&mut self, vertex0: Vertex, vertex1: Vertex) -> Result<Edge> {
@@ -68,18 +68,16 @@ impl<'a> Builder<'a> {
         &mut self,
         vertex0: Vertex,
         vertex1: Vertex,
-        transit: &Vector3,
+        transit: Point3,
     ) -> Result<Edge>
     {
         let director = &mut self.director;
-        let pt0 = director
+        let pt0 = *director
             .get_geometry(&vertex0)
-            .ok_or(vertex0.no_geometry())?
-            .rational_projection();
-        let pt1 = director
+            .ok_or(vertex0.no_geometry())?;
+        let pt1 = *director
             .get_geometry(&vertex1)
-            .ok_or(vertex1.no_geometry())?
-            .rational_projection();
+            .ok_or(vertex1.no_geometry())?;
         let edge = Edge::new(vertex0, vertex1);
         director.attach(&edge, circle_arc_by_three_points(pt0, pt1, transit));
         Ok(edge)
@@ -120,35 +118,35 @@ impl<'a> Builder<'a> {
     }
     pub fn copy<T: Transformed>(&mut self, elem: &T) -> Result<T> { elem.copy(self.director) }
 
-    pub fn transformed<T: Transformed>(&mut self, elem: &T, trsf: &Transform) -> Result<T> {
+    pub fn transformed<T: Transformed>(&mut self, elem: &T, trsf: Matrix4) -> Result<T> {
         elem.transformed(trsf, self.director)
     }
-    pub fn translated<T: Transformed>(&mut self, elem: &T, vector: &Vector3) -> Result<T> {
+    pub fn translated<T: Transformed>(&mut self, elem: &T, vector: Vector3) -> Result<T> {
         elem.translated(vector, self.director)
     }
 
     pub fn rotated<T: Transformed>(
         &mut self,
         elem: &T,
-        origin: &Vector3,
-        axis: &Vector3,
+        origin: Point3,
+        axis: Vector3,
         angle: f64,
     ) -> Result<T>
     {
-        elem.rotated(origin, axis, angle, self.director)
+        elem.rotated(origin, axis, cgmath::Rad(angle), self.director)
     }
 
     pub fn scaled<T: Transformed>(
         &mut self,
         elem: &T,
-        origin: &Vector3,
-        scalar: &Vector3,
+        origin: Point3,
+        scalar: Vector3,
     ) -> Result<T>
     {
         elem.scaled(origin, scalar, self.director)
     }
 
-    pub fn tsweep<T: TSweep>(&mut self, elem: T, vector: &Vector3) -> Result<T::Output> {
+    pub fn tsweep<T: TSweep>(&mut self, elem: T, vector: Vector3) -> Result<T::Output> {
         if vector.so_small() {
             Err(Error::ZeroVectorTSweep)
         } else {
@@ -158,12 +156,12 @@ impl<'a> Builder<'a> {
     pub fn rsweep<T: RSweep>(
         &mut self,
         elem: T,
-        origin: &Vector3,
-        axis: &Vector3,
+        origin: Point3,
+        axis: Vector3,
         angle: f64,
     ) -> Result<T::Output>
     {
-        elem.rsweep(origin, axis, angle, self.director)
+        elem.rsweep(origin, axis, cgmath::Rad(angle), self.director)
     }
 }
 
@@ -192,33 +190,33 @@ fn split_wire(wire: &Wire) -> [Wire; 4] {
 #[test]
 fn test_circle_arc() {
     const N: usize = 100;
-    let mut pt0 = rvector!(0.17_f64.cos(), 0.17_f64.sin(), 0.0);
-    let mut pt1 = rvector!(1.64_f64.cos(), 1.64_f64.sin(), 0.0);
-    let vector = vector!(-2, 5, 10);
-    let mut axis = vector!(2, 5, 4);
-    axis /= axis.norm();
-    let trsf = Transform::rotate(&axis, 0.56) * Transform::translate(&vector);
-    let mut transit = rvector!(1.12_f64.cos(), 1.12_f64.sin(), 0.0);
-    pt0 *= &trsf.0;
-    pt1 *= &trsf.0;
-    transit *= &trsf.0;
+    let mut pt0 = Point3::new(0.17_f64.cos(), 0.17_f64.sin(), 0.0);
+    let mut pt1 = Point3::new(1.64_f64.cos(), 1.64_f64.sin(), 0.0);
+    let vector = Vector3::new(-2.0, 5.0, 10.0);
+    let mut axis = Vector3::new(2.0, 5.0, 4.0);
+    axis /= axis.magnitude();
+    let trsf = Matrix4::from_axis_angle(axis, cgmath::Rad(0.56)) * Matrix4::from_translation(vector);
+    let mut transit = Point3::new(1.12_f64.cos(), 1.12_f64.sin(), 0.0);
+    pt0 = trsf.transform_point(pt0);
+    pt1 = trsf.transform_point(pt1);
+    transit = trsf.transform_point(transit);
 
     let mut director = crate::Director::new();
     let edge = director.building(|builder| {
-        let vertex0 = builder.create_topology(pt0.clone()).unwrap();
-        let vertex1 = builder.create_topology(pt1.clone()).unwrap();
-        let transit = vector!(transit[0], transit[1], transit[2]);
+        let vertex0 = builder.vertex(pt0).unwrap();
+        let vertex1 = builder.vertex(pt1).unwrap();
+        let transit = Point3::new(transit[0], transit[1], transit[2]);
 
-        builder.circle_arc(vertex0, vertex1, &transit).unwrap()
+        builder.circle_arc(vertex0, vertex1, transit).unwrap()
     });
 
     let curve = director.get_geometry(&edge).unwrap();
-    Vector::assert_near(&pt0.rational_projection(), &curve.subs(0.0).rational_projection());
-    Vector::assert_near(&pt1.rational_projection(), &curve.subs(1.0).rational_projection());
+    Vector3::assert_near(&pt0.to_vec(), &curve.subs(0.0).rational_projection());
+    Vector3::assert_near(&pt1.to_vec(), &curve.subs(1.0).rational_projection());
     for i in 0..N {
         let t = (i as f64) / (N as f64);
         let pt = curve.subs(t).rational_projection();
-        let pt = vector!(pt[0], pt[1], pt[2]);
-        f64::assert_near(&(&pt - &vector).norm(), &1.0);
+        let pt = Vector3::new(pt[0], pt[1], pt[2]);
+        f64::assert_near(&(pt - vector).magnitude(), &1.0);
     }
 }

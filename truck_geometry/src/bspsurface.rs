@@ -109,6 +109,12 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// Returns the reference of the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]
     pub fn control_point(&self, idx0: usize, idx1: usize) -> &V { &self.control_points[idx0][idx1] }
+    
+    /// Apply the given transformation to all control points.
+    #[inline(always)]
+    pub fn transform_control_points<F: FnMut(&mut V)>(&mut self, f: F) {
+        self.control_points.iter_mut().flat_map(|vec| vec).for_each(f)
+    }
 
     /// Returns the iterator over the control points in the `column_idx`th row.
     /// # Examples

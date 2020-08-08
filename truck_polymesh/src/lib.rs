@@ -7,7 +7,7 @@ use geometry::*;
 #[derive(Clone, Debug, Default)]
 pub struct PolygonMesh {
     /// List of positions
-    pub positions: Vec<Vector3>,
+    pub positions: Vec<Point3>,
     /// List of texture matrix
     pub uv_coords: Vec<Vector2>,
     /// List of normal vectors
@@ -23,7 +23,7 @@ pub struct PolygonMesh {
 /// structured quadrangle mesh
 #[derive(Clone, Debug)]
 pub struct StructuredMesh {
-    positions: Vec<Vec<Vector3>>,
+    positions: Vec<Vec<Point3>>,
     uv_division: (Vec<f64>, Vec<f64>),
     normals: Vec<Vec<Vector3>>,
 }

@@ -1,8 +1,8 @@
 use crate::elements::TopologicalElement;
 use crate::geom_impls::*;
 use crate::transformed::Transformed;
-use crate::{Director, Result, Vector, BSplineSurface};
-use geometry::*;
+use crate::{*, Result};
+use geometry::TOLERANCE;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::iter::FromIterator;
@@ -12,30 +12,30 @@ pub trait RSweep: Sized {
     type Output: Sized;
     fn partial_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
-        angle: f64,
+        origin: Point3,
+        axis: Vector3,
+        angle: Rad,
         builder: &mut Director,
     ) -> Result<Self::Output>;
     fn full_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
+        origin: Point3,
+        axis: Vector3,
         orientation: bool,
         builder: &mut Director,
     ) -> Result<Self::Output>;
     fn rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
-        angle: f64,
+        origin: Point3,
+        axis: Vector3,
+        angle: Rad,
         builder: &mut Director,
     ) -> Result<Self::Output>
     {
-        if 2.0 * PI - angle.abs() > Vector::TOLERANCE {
+        if 2.0 * PI - angle.0.abs() > TOLERANCE {
             self.partial_rsweep(origin, axis, angle, builder)
         } else {
-            self.full_rsweep(origin, axis, angle > 0.0, builder)
+            self.full_rsweep(origin, axis, angle.0 > 0.0, builder)
         }
     }
 }
@@ -44,14 +44,14 @@ impl RSweep for Vertex {
     type Output = Wire;
     fn partial_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
-        angle: f64,
+        origin: Point3,
+        axis: Vector3,
+        angle: Rad,
         director: &mut Director,
     ) -> Result<Wire>
     {
         let pt = director.get_geometry(&self).ok_or(self.no_geometry())?;
-        let curve = circle_arc(pt, origin, axis, angle);
+        let curve = circle_arc(*pt, origin, axis, angle);
         let v = self.rotated(origin, axis, angle, director)?;
         let edge = Edge::new_unchecked(self, v);
         director.attach(&edge, curve);
@@ -59,16 +59,16 @@ impl RSweep for Vertex {
     }
     fn full_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
+        origin: Point3,
+        axis: Vector3,
         orientation: bool,
         director: &mut Director,
     ) -> Result<Wire>
     {
         let pt = director.get_geometry(&self).ok_or(self.no_geometry())?;
-        let curve0 = circle_arc(pt, origin, axis, PI);
-        let curve1 = circle_arc(pt, origin, axis, -PI);
-        let v = self.rotated(origin, axis, PI, director)?;
+        let curve0 = circle_arc(*pt, origin, axis, cgmath::Rad(PI));
+        let curve1 = circle_arc(*pt, origin, axis, -cgmath::Rad(PI));
+        let v = self.rotated(origin, axis, cgmath::Rad(PI), director)?;
         let edge0 = Edge::new_unchecked(self, v);
         let edge1 = Edge::new_unchecked(self, v);
         director.attach(&edge0, curve0);
@@ -85,9 +85,9 @@ impl RSweep for Edge {
     type Output = Shell;
     fn partial_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
-        angle: f64,
+        origin: Point3,
+        axis: Vector3,
+        angle: Rad,
         director: &mut Director,
     ) -> Result<Shell>
     {
@@ -99,17 +99,17 @@ impl RSweep for Edge {
     }
     fn full_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
+        origin: Point3,
+        axis: Vector3,
         orientation: bool,
         director: &mut Director,
     ) -> Result<Shell>
     {
-        let edge2 = self.rotated(origin, axis, PI, director)?;
+        let edge2 = self.rotated(origin, axis, cgmath::Rad(PI), director)?;
         let (mut wire0, mut surface0) =
-            sub_partial_sweep_edge(&self, &edge2, origin, axis, PI, director)?;
+            sub_partial_sweep_edge(&self, &edge2, origin, axis, cgmath::Rad(PI), director)?;
         let (mut wire1, mut surface1) =
-            sub_partial_sweep_edge(&self, &edge2, origin, axis, -PI, director)?;
+            sub_partial_sweep_edge(&self, &edge2, origin, axis, -cgmath::Rad(PI), director)?;
         if orientation {
             wire1.invert();
             surface1.swap_axes();
@@ -128,22 +128,22 @@ impl RSweep for Edge {
 fn sub_partial_sweep_edge(
     edge0: &Edge,
     edge2: &Edge,
-    origin: &Vector3,
-    axis: &Vector3,
-    angle: f64,
+    origin: Point3,
+    axis: Vector3,
+    angle: Rad,
     director: &mut Director,
 ) -> Result<(Wire, BSplineSurface)>
 {
     let pt = director
         .get_geometry(&edge0.back())
         .ok_or(edge0.back().no_geometry())?;
-    let curve1 = circle_arc(&pt, origin, axis, angle);
+    let curve1 = circle_arc(*pt, origin, axis, angle);
     let edge1 = Edge::new_unchecked(edge0.back(), edge2.back());
     director.attach(&edge1, curve1);
     let pt = director
         .get_geometry(&edge0.front())
         .ok_or(edge0.front().no_geometry())?;
-    let curve3 = circle_arc(&pt, origin, axis, angle);
+    let curve3 = circle_arc(*pt, origin, axis, angle);
     let edge3 = Edge::new_unchecked(edge0.front(), edge2.front());
     director.attach(&edge3, curve3);
     let wire0 = Wire::from_iter(&[*edge0, edge1, edge2.inverse(), edge3.inverse()]);
@@ -156,9 +156,9 @@ impl RSweep for Wire {
     type Output = Shell;
     fn partial_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
-        angle: f64,
+        origin: Point3,
+        axis: Vector3,
+        angle: Rad,
         director: &mut Director,
     ) -> Result<Shell>
     {
@@ -167,14 +167,14 @@ impl RSweep for Wire {
     }
     fn full_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
+        origin: Point3,
+        axis: Vector3,
         orientation: bool,
         director: &mut Director,
     ) -> Result<Shell>
     {
-        let wire = self.rotated(origin, axis, PI, director)?;
-        let angle = if orientation { PI } else { -PI };
+        let wire = self.rotated(origin, axis, cgmath::Rad(PI), director)?;
+        let angle = if orientation { cgmath::Rad(PI) } else { -cgmath::Rad(PI) };
         let mut shell0 = connect_by_circle_arc(&self, &wire, origin, axis, angle, director)?;
         let mut shell1 = connect_by_circle_arc(&wire, &self, origin, axis, angle, director)?;
         shell0.append(&mut shell1);
@@ -185,9 +185,9 @@ impl RSweep for Wire {
 fn connect_by_circle_arc(
     wire0: &Wire,
     wire1: &Wire,
-    origin: &Vector3,
-    axis: &Vector3,
-    angle: f64,
+    origin: Point3,
+    axis: Vector3,
+    angle: Rad,
     director: &mut Director,
 ) -> Result<Shell>
 {
@@ -195,7 +195,7 @@ fn connect_by_circle_arc(
     for (v0, v1) in wire0.vertex_iter().zip(wire1.vertex_iter()) {
         if vemap.get(&v0).is_none() {
             let pt0 = director.get_geometry(&v0).ok_or(v0.no_geometry())?;
-            let curve = circle_arc(&pt0, origin, axis, angle);
+            let curve = circle_arc(*pt0, origin, axis, angle);
             let edge = Edge::new_unchecked(v0, v1);
             director.attach(&edge, curve);
             vemap.insert(v0, edge);
@@ -219,9 +219,9 @@ impl RSweep for Face {
     type Output = Solid;
     fn partial_rsweep(
         mut self,
-        origin: &Vector3,
-        axis: &Vector3,
-        angle: f64,
+        origin: Point3,
+        axis: Vector3,
+        angle: Rad,
         director: &mut Director,
     ) -> Result<Solid>
     {
@@ -241,8 +241,8 @@ impl RSweep for Face {
     }
     fn full_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
+        origin: Point3,
+        axis: Vector3,
         orientation: bool,
         builder: &mut Director,
     ) -> Result<Solid>
@@ -257,9 +257,9 @@ impl RSweep for Shell {
     type Output = Vec<Solid>;
     fn partial_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
-        angle: f64,
+        origin: Point3,
+        axis: Vector3,
+        angle: Rad,
         director: &mut Director,
     ) -> Result<Vec<Solid>>
     {
@@ -279,8 +279,8 @@ impl RSweep for Shell {
     }
     fn full_rsweep(
         self,
-        origin: &Vector3,
-        axis: &Vector3,
+        origin: Point3,
+        axis: Vector3,
         orientation: bool,
         director: &mut Director,
     ) -> Result<Vec<Solid>>
@@ -288,11 +288,11 @@ impl RSweep for Shell {
         let mut res = Vec::new();
         for shell0 in self.connected_components() {
             let angle = if orientation { PI } else { -PI };
-            let shell1 = shell0.rotated(origin, axis, angle, director)?;
+            let shell1 = shell0.rotated(origin, axis, cgmath::Rad(angle), director)?;
             let mut new_shell =
-                connected_shell_sweep(&shell0, &shell1, origin, axis, angle, director)?;
+                connected_shell_sweep(&shell0, &shell1, origin, axis, cgmath::Rad(angle), director)?;
             new_shell.append(&mut connected_shell_sweep(
-                &shell1, &shell0, origin, axis, angle, director,
+                &shell1, &shell0, origin, axis, cgmath::Rad(angle), director,
             )?);
             res.push(Solid::new_unchecked(new_shell.connected_components()));
         }
@@ -303,9 +303,9 @@ impl RSweep for Shell {
 fn connected_shell_sweep(
     shell0: &Shell,
     shell1: &Shell,
-    origin: &Vector3,
-    axis: &Vector3,
-    angle: f64,
+    origin: Point3,
+    axis: Vector3,
+    angle: Rad,
     director: &mut Director,
 ) -> Result<Shell>
 {

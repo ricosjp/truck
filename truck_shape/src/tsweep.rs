@@ -8,14 +8,14 @@ pub trait TSweep: Sized {
     #[doc(hidden)]
     type Output: Sized;
     #[doc(hidden)]
-    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Self::Output>;
+    fn tsweep(self, vector: Vector3, director: &mut Director) -> Result<Self::Output>;
 }
 
 impl TSweep for Vertex {
     #[doc(hidden)]
     type Output = Edge;
     #[doc(hidden)]
-    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Edge> {
+    fn tsweep(self, vector: Vector3, director: &mut Director) -> Result<Edge> {
         let vertex = self.translated(vector, director)?;
         director.get_builder().line(self, vertex)
     }
@@ -25,7 +25,7 @@ impl TSweep for Edge {
     #[doc(hidden)]
     type Output = Face;
     #[doc(hidden)]
-    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Face> {
+    fn tsweep(self, vector: Vector3, director: &mut Director) -> Result<Face> {
         let edge2 = self.translated(vector, director)?;
         let edge1 = director.get_builder().line(self.back(), edge2.back())?;
         let edge3 = director.get_builder().line(edge2.front(), self.front())?;
@@ -55,7 +55,7 @@ fn sub_wire_sweep(
 
 impl TSweep for Wire {
     type Output = Shell;
-    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Shell> {
+    fn tsweep(self, vector: Vector3, director: &mut Director) -> Result<Shell> {
         let wire = self.translated(vector, director)?;
         sub_wire_sweep(&self, &wire, &mut director.get_builder())
     }
@@ -63,7 +63,7 @@ impl TSweep for Wire {
 
 impl TSweep for Face {
     type Output = Solid;
-    fn tsweep(mut self, vector: &Vector3, director: &mut Director) -> Result<Solid> {
+    fn tsweep(mut self, vector: Vector3, director: &mut Director) -> Result<Solid> {
         let face = self.translated(vector, director)?;
         let mut shell = director
             .building(|builder| sub_wire_sweep(&self.boundary(), &face.boundary(), builder))?;
@@ -76,7 +76,7 @@ impl TSweep for Face {
 
 impl TSweep for Shell {
     type Output = Vec<Solid>;
-    fn tsweep(self, vector: &Vector3, director: &mut Director) -> Result<Vec<Solid>> {
+    fn tsweep(self, vector: Vector3, director: &mut Director) -> Result<Vec<Solid>> {
         let mut res = Vec::new();
         for shell in self.connected_components() {
             res.push(connected_shell_sweep(shell, vector, director)?)
@@ -87,7 +87,7 @@ impl TSweep for Shell {
 
 fn connected_shell_sweep(
     mut shell0: Shell,
-    vector: &Vector3,
+    vector: Vector3,
     director: &mut Director,
 ) -> Result<Solid>
 {
