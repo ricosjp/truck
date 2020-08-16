@@ -20,13 +20,13 @@ struct MyApp {
 impl MyApp {
     fn create_camera() -> Camera {
         let matrix = Matrix4::look_at(
-            Point3::new(0.0, 0.0, 1.0),
+            Point3::new(1.0, 1.0, 1.0),
             Point3::origin(),
             Vector3::unit_y(),
         );
         Camera::perspective_camera(
             matrix.invert().unwrap(),
-            std::f64::consts::PI / 2.0,
+            std::f64::consts::PI / 4.0,
             0.1,
             40.0,
         )
@@ -56,7 +56,7 @@ impl MyApp {
         let mut object = RenderObject::new(mesh, device);
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
         object.matrix = mat.invert().unwrap();
-        object.color = Vector4::new(1.0, 1.0, 1.0, 1.0);
+        object.color = Vector4::new(1.0, 0.0, 0.0, 1.0);
         object.reflect_ratio = [0.2, 0.6, 0.2];
         self.scene.add_object(object);
     }
@@ -77,8 +77,8 @@ impl App for MyApp {
         };
         render.scene.camera = MyApp::create_camera();
         render.scene.light = Light {
-            position: Point3::new(2.0, 2.0, 2.0),
-            strength: 2.0,
+            position: Point3::new(1.0, 1.0, 1.0),
+            strength: 1.0,
             color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
         };
@@ -117,10 +117,11 @@ impl App for MyApp {
                 match scene.light.light_type {
                     LightType::Point => {
                         scene.light.position = scene.camera.position();
-                        scene.light.strength = 2.5;
+                        scene.light.strength = 1.0;
                     }
                     LightType::Uniform => {
                         scene.light.position = scene.camera.position();
+                        scene.light.strength = 0.5;
                         scene.light.position /= scene.light.position.to_vec().magnitude();
                     }
                 }
@@ -179,7 +180,7 @@ impl App for MyApp {
                         40.0,
                     ),
                     ProjectionType::Perspective => {
-                        Camera::parallel_camera(self.scene.camera.matrix, 1.0, 0.1, 40.0)
+                        Camera::parallel_camera(self.scene.camera.matrix, 1.0, 0.1, 100.0)
                     }
                 }
             }
@@ -197,7 +198,7 @@ impl App for MyApp {
                         vec /= vec.to_vec().magnitude();
                         self.scene.light = Light {
                             position: vec,
-                            strength: 0.25,
+                            strength: 0.5,
                             color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Uniform,
                         }
@@ -206,7 +207,7 @@ impl App for MyApp {
                         let position = self.scene.camera.position();
                         self.scene.light = Light {
                             position,
-                            strength: 2.0,
+                            strength: 1.0,
                             color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Point,
                         }

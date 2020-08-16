@@ -44,10 +44,10 @@ impl Camera {
     ) -> Camera
     {
         let a = screen_size / 2.0;
-        let ortho = cgmath::ortho(-a, a, -a, a, near_clip, far_clip);
+        let projection = cgmath::ortho(-a, a, -a, a, near_clip, far_clip);
         Camera {
-            matrix: matrix,
-            projection: ortho,
+            matrix,
+            projection,
             projection_type: ProjectionType::Parallel,
         }
     }
