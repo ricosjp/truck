@@ -3,16 +3,6 @@ use crate::*;
 /// Geometrical Errors
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    /// The iterator is too short to construct the given dimensional vector.  
-    /// This error is only for the output panic error message.
-    /// # Examples
-    /// ```should_panic
-    /// use truck_geometry::*;
-    /// use errors::Error;
-    /// let arr = vec![0.0, 1.0, 2.0];
-    /// let _: Vector<[f64; 4]> = arr.into_iter().collect();
-    /// ```
-    TooShortIterator,
     /// The following operations are failed if the knot vector has zero range.
     /// * Creating `BSplineCurve` or `BSplineSurface`,
     /// * Calculating bspline basis functions, or
@@ -25,7 +15,7 @@ pub enum Error {
     /// assert_eq!(knot_vec.try_normalize(), Err(Error::ZeroRange));
     /// assert_eq!(knot_vec.try_bspline_basis_functions(1, 0.0), Err(Error::ZeroRange));
     /// 
-    /// let ctrl_pts = vec![vector!(0, 0), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
     /// assert_eq!(BSplineCurve::try_new(knot_vec, ctrl_pts), Err(Error::ZeroRange));
     /// ```
     ZeroRange,
@@ -87,7 +77,7 @@ pub enum Error {
     /// use truck_geometry::*;
     /// use errors::Error;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(-1, 1), vector!(0, -1), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let org_curve = bspcurve.clone();
     /// bspcurve.add_knot(0.5).add_knot(0.5).add_knot(0.25).add_knot(0.75);
@@ -116,7 +106,7 @@ pub enum Error {
     /// use truck_geometry::*;
     /// use errors::Error;
     /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0]);
-    /// let ctrl_pts = vec![vector!(0, 0), vector!(0, 0), vector!(0, 0), vector!(0, 0)];
+    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)];
     /// assert_eq!(
     ///     BSplineCurve::try_new(knot_vec, ctrl_pts),
     ///     Err(Error::TooShortKnotVector(3, 4)),
@@ -130,8 +120,8 @@ pub enum Error {
     /// use errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(1, 2), vector!(1, 2)], // length = 2
-    ///     vec![vector!(1, 2)] // length = 1
+    ///     vec![Vector2::new(1.0, 2.0), Vector2::new(1.0, 2.0)], // length = 2
+    ///     vec![Vector2::new(1.0, 2.0)] // length = 1
     /// ];
     /// assert_eq!(
     ///     BSplineSurface::try_new(knot_vecs, ctrl_pts),
@@ -144,7 +134,6 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Error::TooShortIterator => f.pad("The length of the iterator is too short."),
             Error::ZeroRange => f.pad("This knot vector consists single value."),
             Error::DifferentBackFront(knot0, knot1) => f.pad(&format!("Cannot concat two knot vectors whose the back of the first and the front of the second are different.\nthe back of the first knot vector: {}\nthe front of the second knot vector: {}", knot0, knot1)),
             Error::NotClampedKnotVector => f.pad("This knot vector is not clamped."),
@@ -170,7 +159,6 @@ impl std::error::Error for Error {}
 fn print_messages() {
     use std::io::Write;
     writeln!(&mut std::io::stderr(), "****** test of the expressions of error messages ******\n").unwrap();
-    writeln!(&mut std::io::stderr(), "{}\n", Error::TooShortIterator).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::ZeroRange).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::DifferentBackFront(0.0, 1.0)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotSortedVector).unwrap();

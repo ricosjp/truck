@@ -15,7 +15,7 @@ impl Scene {
                 // Light
                 BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
                     ty: BindingType::UniformBuffer { dynamic: false },
                 },
                 // Model Status

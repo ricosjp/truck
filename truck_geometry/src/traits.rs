@@ -119,8 +119,8 @@ pub trait RationalProjective: InnerSpace<Scalar = f64> + Origin {
     /// let der = Vector4::new(2.0 * t, 3.0 * t * t, 4.0 * t * t * t, 1.0);
     /// // the projected curve: \bar{c}(t) = (t, t^2, t^3, 1)
     /// // the derivation of the proj'ed curve: \bar{c}'(t) = (1, 2t, 3t^2, 0)
-    /// let ans = Vector4::new(1.0, 2.0 * t, 3.0 * t * t, 0.0);
-    /// assert_eq!(pt.rational_derivation(&der), ans);
+    /// let ans = Vector3::new(1.0, 2.0 * t, 3.0 * t * t);
+    /// assert_eq!(pt.rational_derivation(der), ans);
     /// ```
     #[inline(always)]
     fn rational_derivation(&self, der: Self) -> Self::Rationalized {
@@ -141,16 +141,16 @@ pub trait RationalProjective: InnerSpace<Scalar = f64> + Origin {
     /// // calculate the derivation at t = 1.5
     /// let t = 1.5;
     /// // the curve: c(t) = (t^2, t^3, t^4, t)
-    /// let pt = vector!(t * t, t * t * t, t * t * t * t, t);
+    /// let pt = Vector4::new(t * t, t * t * t, t * t * t * t, t);
     /// // the derivation: c'(t) = (2t, 3t^2, 4t^3, 1)
-    /// let der = vector!(2.0 * t, 3.0 * t * t, 4.0 * t * t * t, 1.0);
+    /// let der = Vector4::new(2.0 * t, 3.0 * t * t, 4.0 * t * t * t, 1.0);
     /// // the 2nd ord. deri.: c''(t) = (2, 6t, 12t^2, 0)
-    /// let der2 = vector!(2.0, 6.0 * t, 12.0 * t * t, 0.0);
+    /// let der2 = Vector4::new(2.0, 6.0 * t, 12.0 * t * t, 0.0);
     /// // the projected curve: \bar{c}(t) = (t, t^2, t^3, 1)
     /// // the derivation of the proj'ed curve: \bar{c}'(t) = (1, 2t, 3t^2, 0)
     /// // the 2nd ord. deri. of the proj'ed curve: \bar{c}''(t) = (0, 2, 6t, 0)
-    /// let ans = vector!(0.0, 2.0, 6.0 * t, 0.0);
-    /// assert_eq!(pt.rational_derivation2(&der, &der2), ans);
+    /// let ans = Vector3::new(0.0, 2.0, 6.0 * t);
+    /// assert_eq!(pt.rational_derivation2(der, der2), ans);
     /// ```
     #[inline(always)]
     fn rational_derivation2(&self, der: Self, der2: Self) -> Self::Rationalized {
@@ -217,10 +217,10 @@ mod impl_bounded {
                 fn max(&self, other: &Self) -> Self {
                     $typename::new(
                         $(
-                            if self[$num] > other[$num] {
-                                self[$num]
-                            } else {
+                            if self[$num] < other[$num] {
                                 other[$num]
+                            } else {
+                                self[$num]
                             }
                         ),*
                     )
@@ -228,10 +228,10 @@ mod impl_bounded {
                 fn min(&self, other: &Self) -> Self {
                     $typename::new(
                         $(
-                            if self[$num] < other[$num] {
-                                self[$num]
-                            } else {
+                            if self[$num] > other[$num] {
                                 other[$num]
+                            } else {
+                                self[$num]
                             }
                         ),*
                     )

@@ -124,13 +124,13 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let vknot_vec = KnotVec::bezier_knot(2);
     /// let knot_vecs = (uknot_vec, vknot_vec);
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0, 0), vector!(1, 0, 1), vector!(2, 0, 2)],
-    ///     vec![vector!(0, 1, 0), vector!(1, 1, 1), vector!(2, 1, 2)],
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let mut iter = bspsurface.ctrl_pts_row_iter(1);
-    /// assert_eq!(iter.next(), Some(&vector!(1, 0, 1)));
-    /// assert_eq!(iter.next(), Some(&vector!(1, 1, 1)));
+    /// assert_eq!(iter.next(), Some(&Vector3::new(1.0, 0.0, 1.0)));
+    /// assert_eq!(iter.next(), Some(&Vector3::new(1.0, 1.0, 1.0)));
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
@@ -149,14 +149,14 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let vknot_vec = KnotVec::bezier_knot(2);
     /// let knot_vecs = (uknot_vec, vknot_vec);
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0, 0), vector!(1, 0, 1), vector!(2, 0, 2)],
-    ///     vec![vector!(0, 1, 0), vector!(1, 1, 1), vector!(2, 1, 2)],
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let mut iter = bspsurface.ctrl_pts_column_iter(1);
-    /// assert_eq!(iter.next(), Some(&vector!(0, 1, 0)));
-    /// assert_eq!(iter.next(), Some(&vector!(1, 1, 1)));
-    /// assert_eq!(iter.next(), Some(&vector!(2, 1, 2)));
+    /// assert_eq!(iter.next(), Some(&Vector3::new(0.0, 1.0, 0.0)));
+    /// assert_eq!(iter.next(), Some(&Vector3::new(1.0, 1.0, 1.0)));
+    /// assert_eq!(iter.next(), Some(&Vector3::new(2.0, 1.0, 2.0)));
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
@@ -186,8 +186,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vecs = (uknot_vec, vknot_vec);
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0, 0), vector!(1, 0, 1), vector!(2, 0, 2)],
-    ///     vec![vector!(0, 1, 0), vector!(1, 1, 1), vector!(2, 1, 2)],
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// assert_eq!(bspsurface.udegree(), 1);
@@ -203,8 +203,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vecs = (uknot_vec, vknot_vec);
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0, 0), vector!(1, 0, 1), vector!(2, 0, 2)],
-    ///     vec![vector!(0, 1, 0), vector!(1, 1, 1), vector!(2, 1, 2)],
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// assert_eq!(bspsurface.vdegree(), 2);
@@ -220,8 +220,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vecs = (uknot_vec, vknot_vec);
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0, 0), vector!(1, 0, 1), vector!(2, 0, 2)],
-    ///     vec![vector!(0, 1, 0), vector!(1, 1, 1), vector!(2, 1, 2)],
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// assert_eq!(bspsurface.degrees(), (1, 2));
@@ -236,7 +236,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let uknot_vec = KnotVec::bezier_knot(1);
     /// let vknot_vec = KnotVec::bezier_knot(2);
-    /// let pt = vector!(1, 2);
+    /// let pt = Vector2::new(1.0, 2.0);
     /// let ctrl_pts = vec![
     ///     vec![pt.clone(), pt.clone(), pt.clone()],
     ///     vec![pt.clone(), pt.clone(), pt.clone()],
@@ -244,7 +244,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
     /// assert!(bspsurface.is_const());
     ///
-    /// *bspsurface.control_point_mut(1, 2) = vector!(2, 3);
+    /// *bspsurface.control_point_mut(1, 2) = Vector2::new(2.0, 3.0);
     /// assert!(!bspsurface.is_const());
     /// ```
     /// # Remarks
@@ -254,7 +254,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let uknot_vec = KnotVec::uniform_knot(1, 5);
     /// let vknot_vec = KnotVec::uniform_knot(1, 5);
-    /// let pt = vector!(1, 2);
+    /// let pt = Vector2::new(1.0, 2.0);
     /// let ctrl_pts = vec![
     ///     vec![pt.clone(), pt.clone(), pt.clone()],
     ///     vec![pt.clone(), pt.clone(), pt.clone()],
@@ -262,8 +262,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
     ///
     /// // bspsurface is not constant.
-    /// assert_eq!(bspsurface.subs(0.0, 0.0), vector!(0.0, 0.0));
-    /// assert_ne!(bspsurface.subs(0.5, 0.5), vector!(0.0, 0.0));
+    /// assert_eq!(bspsurface.subs(0.0, 0.0), Vector2::new(0.0, 0.0));
+    /// assert_ne!(bspsurface.subs(0.5, 0.5), Vector2::new(0.0, 0.0));
     ///
     /// // bspsurface.is_const() is true.
     /// assert!(bspsurface.is_const());
@@ -284,7 +284,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let uknot_vec = KnotVec::bezier_knot(1);
     /// let vknot_vec = KnotVec::bezier_knot(2);
-    /// let pt = rvector!(1, 2);
+    /// let pt = Vector3::new(1.0, 2.0, 1.0);
     /// // allows differences upto scalars
     /// let ctrl_pts = vec![
     ///     vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0],
@@ -293,7 +293,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
     /// assert!(bspsurface.is_rational_const());
     ///
-    /// *bspsurface.control_point_mut(1, 2) = rvector!(2, 3);
+    /// *bspsurface.control_point_mut(1, 2) = Vector3::new(2.0, 3.0, 1.0);
     /// assert!(!bspsurface.is_rational_const());
     /// ```
     #[inline(always)]
@@ -313,8 +313,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     ///
@@ -324,9 +324,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector::assert_near2(
+    ///         Vector2::assert_near2(
     ///             &bspsurface.subs(u, v),
-    ///             &vector!(v, 2.0 * v * (1.0 - v) * (2.0 * u - 1.0) + u),
+    ///             &Vector2::new(v, 2.0 * v * (1.0 - v) * (2.0 * u - 1.0) + u),
     ///         );
     ///     }
     /// }
@@ -381,8 +381,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let uderivation = bspsurface.uderivation();
@@ -393,9 +393,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector::assert_near2(
+    ///         Vector2::assert_near2(
     ///             &uderivation.subs(u, v),
-    ///             &vector!(0.0, 4.0 * v * (1.0 - v) + 1.0),
+    ///             &Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
     ///         );
     ///     }
     /// }
@@ -429,8 +429,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let vderivation = bspsurface.vderivation();
@@ -441,9 +441,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector::assert_near2(
+    ///         Vector2::assert_near2(
     ///             &vderivation.subs(u, v),
-    ///             &vector!(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
+    ///             &Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
     ///         );
     ///     }
     /// }
@@ -478,16 +478,16 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs0 = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2));
     /// let ctrl_pts0 = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
     /// ];
     /// let mut bspsurface0 = BSplineSurface::new(knot_vecs0, ctrl_pts0);
     ///
     /// let knot_vecs1 = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(1));
     /// let ctrl_pts1 = vec![
-    ///     vec![vector!(0, 0), vector!(0, 1)],
-    ///     vec![vector!(0.5, -1), vector!(0.5, 2)],
-    ///     vec![vector!(1, 0), vector!(1, 1)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0)],
+    ///     vec![Vector2::new(0.5, -1.0), Vector2::new(0.5, 2.0)],
+    ///     vec![Vector2::new(1.0, 0.0), Vector2::new(1.0, 1.0)],
     /// ];
     /// let mut bspsurface1 = BSplineSurface::new(knot_vecs1, ctrl_pts1);
     /// assert_eq!(bspsurface0.swap_axes(), &bspsurface1);
@@ -515,8 +515,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
@@ -565,8 +565,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
@@ -621,9 +621,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
-    ///     vec![vector!(0, 2), vector!(0.5, -1), vector!(1, 2)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 2.0)],
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
@@ -692,9 +692,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
-    ///     vec![vector!(0, 2), vector!(0.5, -1), vector!(1, 2)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 2.0)],
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
@@ -720,9 +720,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
-    ///     vec![vector!(0, 2), vector!(0.5, -1), vector!(1, 2)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 2.0)],
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
@@ -791,9 +791,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 2), vector!(1, 1)],
-    ///     vec![vector!(0, 2), vector!(0.5, -1), vector!(1, 2)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 2.0)],
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
@@ -815,20 +815,20 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)];
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)];
     /// let bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
     ///
     /// let knot_vec1 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts1 = vec![vector!(0, 2), vector!(0.5, 1), vector!(1, 2)];
+    /// let ctrl_pts1 = vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 2.0)];
     /// let bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     ///
     /// let homotopy_surface = BSplineSurface::homotopy(bspcurve0, bspcurve1);
     /// assert_eq!(
     ///     homotopy_surface.control_points(),
     ///     &vec![
-    ///         vec![vector!(0, 0), vector!(0, 2)],
-    ///         vec![vector!(0.5, -1), vector!(0.5, 1)],
-    ///         vec![vector!(1, 0), vector!(1, 2)],
+    ///         vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 2.0)],
+    ///         vec![Vector2::new(0.5, -1.0), Vector2::new(0.5, 1.0)],
+    ///         vec![Vector2::new(1.0, 0.0), Vector2::new(1.0, 2.0)],
     ///     ],
     /// );
     /// ```
@@ -861,26 +861,26 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let curve0 = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
-    ///     vec![vector!(0, 0), vector!(1, 0)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 0.0)],
     /// );
     /// let curve1 = BSplineCurve::new(
     ///     KnotVec::bezier_knot(2),
-    ///     vec![vector!(1, 0), vector!(2, 0.5), vector!(1, 1)],
+    ///     vec![Vector2::new(1.0, 0.0), Vector2::new(2.0, 0.5), Vector2::new(1.0, 1.0)],
     /// );
     /// let curve2 = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
-    ///     vec![vector!(1, 1), vector!(0, 1)],
+    ///     vec![Vector2::new(1.0, 1.0), Vector2::new(0.0, 1.0)],
     /// );
     /// let curve3 = BSplineCurve::new(
     ///     KnotVec::bezier_knot(2),
-    ///     vec![vector!(0, 1), vector!(-1, 0.5), vector!(0, 0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(-1.0, 0.5), Vector2::new(0.0, 0.0)],
     /// );
     /// let surface = BSplineSurface::by_boundary(curve0, curve1, curve2, curve3);
     /// assert_eq!(
     ///     surface.control_points(),
     ///     &vec![
-    ///         vec![vector!(0, 0), vector!(-1, 0.5), vector!(0, 1)],
-    ///         vec![vector!(1, 0), vector!(2, 0.5), vector!(1, 1)],
+    ///         vec![Vector2::new(0.0, 0.0), Vector2::new(-1.0, 0.5), Vector2::new(0.0, 1.0)],
+    ///         vec![Vector2::new(1.0, 0.0), Vector2::new(2.0, 0.5), Vector2::new(1.0, 1.0)],
     ///     ],
     /// );
     /// ```
@@ -892,19 +892,19 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let curve0 = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
-    ///     vec![vector!(0, 0), vector!(1, 0)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 0.0)],
     /// );
     /// let curve1 = BSplineCurve::new(
     ///     KnotVec::bezier_knot(2),
-    ///     vec![vector!(2, 0), vector!(3, 0.5), vector!(2, 1)],
+    ///     vec![Vector2::new(2.0, 0.0), Vector2::new(3.0, 0.5), Vector2::new(2.0, 1.0)],
     /// );
     /// let curve2 = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
-    ///     vec![vector!(1, 1), vector!(0, 1)],
+    ///     vec![Vector2::new(1.0, 1.0), Vector2::new(0.0, 1.0)],
     /// );
     /// let curve3 = BSplineCurve::new(
     ///     KnotVec::bezier_knot(2),
-    ///     vec![vector!(-1, 1), vector!(-2, 0.5), vector!(-1, 0)],
+    ///     vec![Vector2::new(-1.0, 1.0), Vector2::new(-2.0, 0.5), Vector2::new(-1.0, 0.0)],
     /// );
     /// let surface = BSplineSurface::by_boundary(
     ///     curve0.clone(),
@@ -1001,28 +1001,28 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 1), vector!(1, 1)],
-    ///     vec![vector!(0, 2), vector!(0.5, 2), vector!(1, 2)],
-    ///     vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 2.0)],
+    ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let curves = bspsurface.splitted_boundary();
     /// assert_eq!(
     ///     curves[0].control_points(),
-    ///     &vec![vector!(0, 0), vector!(0, 1), vector!(0, 2), vector!(0, 3)],
+    ///     &vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(0.0, 2.0), Vector2::new(0.0, 3.0)],
     /// );
     /// assert_eq!(
     ///     curves[1].control_points(),
-    ///     &vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    ///     &vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
     /// );
     /// assert_eq!(
     ///     curves[2].control_points(),
-    ///     &vec![vector!(1, 3), vector!(1, 2), vector!(1, 1), vector!(1, 0)],
+    ///     &vec![Vector2::new(1.0, 3.0), Vector2::new(1.0, 2.0), Vector2::new(1.0, 1.0), Vector2::new(1.0, 0.0)],
     /// );
     /// assert_eq!(
     ///     curves[3].control_points(),
-    ///     &vec![vector!(1, 0), vector!(0.5, -1), vector!(0, 0)],
+    ///     &vec![Vector2::new(1.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(0.0, 0.0)],
     /// );
     /// ```
     pub fn splitted_boundary(&self) -> [BSplineCurve<V>; 4] {
@@ -1221,16 +1221,16 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 1), vector!(1, 1)],
-    ///     vec![vector!(0, 2), vector!(0.5, 2), vector!(1, 2)],
-    ///     vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 2.0)],
+    ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
     /// ];
     /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let mut bspsurface1 = bspsurface0.clone();
     /// assert!(bspsurface0.near_as_surface(&bspsurface1));
     ///
-    /// *bspsurface1.control_point_mut(1, 1) = vector!(0.4, 1);
+    /// *bspsurface1.control_point_mut(1, 1) = Vector2::new(0.4, 1.0);
     /// assert!(!bspsurface0.near_as_surface(&bspsurface1));
     /// ```
     #[inline(always)]
@@ -1244,19 +1244,19 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let eps = f64::TOLERANCE;
+    /// let eps = TOLERANCE;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0), vector!(0.5, -1), vector!(1, 0)],
-    ///     vec![vector!(0, 1), vector!(0.5, 1), vector!(1, 1)],
-    ///     vec![vector!(0, 2), vector!(0.5, 2), vector!(1, 2)],
-    ///     vec![vector!(0, 3), vector!(0.5, 3.5), vector!(1, 3)],
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 2.0)],
+    ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
     /// ];
     /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let mut bspsurface1 = bspsurface0.clone();
     /// assert!(bspsurface0.near_as_surface(&bspsurface1));
     ///
-    /// *bspsurface1.control_point_mut(1, 1) += vector!(eps, eps / 2.0);
+    /// *bspsurface1.control_point_mut(1, 1) += Vector2::new(eps, eps / 2.0);
     /// assert!(bspsurface0.near_as_surface(&bspsurface1));
     /// assert!(!bspsurface0.near2_as_surface(&bspsurface1));
     /// ```
@@ -1273,16 +1273,16 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0, 1), vector!(0.5, -1, 2), vector!(1, 0, 1)],
-    ///     vec![vector!(0, 1, 1), vector!(0.5, 1, 1), vector!(1, 1, 1)],
-    ///     vec![vector!(0, 2, 1), vector!(0.5, 2, 3), vector!(1, 2, 1)],
-    ///     vec![vector!(0, 3, 1), vector!(0.5, 3.5, 2), vector!(1, 3, 1)],
+    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.5, 1.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
     /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let mut bspsurface1 = bspsurface0.clone();
     /// assert!(bspsurface0.near_as_surface(&bspsurface1));
     ///
-    /// *bspsurface1.control_point_mut(1, 1) = vector!(0.5, 1, 0.9);
+    /// *bspsurface1.control_point_mut(1, 1) = Vector3::new(0.5, 1.0, 0.9);
     /// assert!(!bspsurface0.near_as_rational_surface(&bspsurface1));
     /// ```
     #[inline(always)]
@@ -1299,19 +1299,19 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let eps = f64::TOLERANCE;
+    /// let eps = TOLERANCE;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
-    ///     vec![vector!(0, 0, 1), vector!(0.5, -1, 2), vector!(1, 0, 1)],
-    ///     vec![vector!(0, 1, 1), vector!(0.5, 1, 1), vector!(1, 1, 1)],
-    ///     vec![vector!(0, 2, 1), vector!(0.5, 2, 3), vector!(1, 2, 1)],
-    ///     vec![vector!(0, 3, 1), vector!(0.5, 3.5, 2), vector!(1, 3, 1)],
+    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.5, 1.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
     /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let mut bspsurface1 = bspsurface0.clone();
     /// assert!(bspsurface0.near_as_surface(&bspsurface1));
     ///
-    /// *bspsurface1.control_point_mut(1, 1) = vector!(0.5, 1, 1.0 - eps);
+    /// *bspsurface1.control_point_mut(1, 1) = Vector3::new(0.5, 1.0, 1.0 - eps);
     /// assert!(bspsurface0.near_as_rational_surface(&bspsurface1));
     /// assert!(!bspsurface0.near2_as_rational_surface(&bspsurface1));
     /// ```

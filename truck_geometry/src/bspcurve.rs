@@ -92,7 +92,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(1, 2), vector!(2, 3), vector!(3, 4)];
+    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// assert_eq!(bspcurve.degree(), 2);
     /// ```
@@ -106,12 +106,12 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let pt = vector!(1, 2);
+    /// let pt = Vector2::new(1.0, 2.0);
     /// let mut ctrl_pts = vec![pt.clone(), pt.clone(), pt.clone()];
     /// let const_bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
     /// assert!(const_bspcurve.is_const());
     ///
-    /// ctrl_pts.push(vector!(2, 3));
+    /// ctrl_pts.push(Vector2::new(2.0, 3.0));
     /// let bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
     /// assert!(!bspcurve.is_const());
     /// ```
@@ -121,12 +121,12 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::uniform_knot(1, 5);
-    /// let ctrl_pts = vec![vector!(1, 2), vector!(1, 2)];
+    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(1.0, 2.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
     /// // bspcurve is not constant.
-    /// assert_eq!(bspcurve.subs(0.0), vector!(0, 0));
-    /// assert_ne!(bspcurve.subs(0.5), vector!(0, 0));
+    /// assert_eq!(bspcurve.subs(0.0), Vector2::new(0.0, 0.0));
+    /// assert_ne!(bspcurve.subs(0.5), Vector2::new(0.0, 0.0));
     ///
     /// // bspcurve.is_const() is true
     /// assert!(bspcurve.is_const());
@@ -146,13 +146,13 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let pt = rvector!(1, 2);
+    /// let pt = Vector3::new(1.0, 2.0, 1.0);
     /// // allows differences upto scalars
     /// let mut ctrl_pts = vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0];
     /// let const_bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
     /// assert!(const_bspcurve.is_rational_const());
     ///
-    /// ctrl_pts.push(rvector!(2, 3));
+    /// ctrl_pts.push(Vector3::new(2.0, 3.0, 1.0));
     /// let bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
     /// assert!(!bspcurve.is_rational_const());
     /// ```
@@ -174,14 +174,14 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::from(vec![-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
-    /// let ctrl_pts = vec![vector!(-1, 1), vector!(0, -1), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
     /// // bspcurve coincides with (t, t * t) in the range [-1.0..1.0].
     /// const N: usize = 100; // sample size
     /// for i in 0..=N {
     ///     let t = -1.0 + 2.0 * (i as f64) / (N as f64);
-    ///     Vector::assert_near2(&bspcurve.subs(t), &vector!(t, t * t));
+    ///     Vector2::assert_near2(&bspcurve.subs(t), &Vector2::new(t, t * t));
     /// }
     /// ```
     #[inline(always)]
@@ -202,14 +202,14 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::from(vec![-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
-    /// let ctrl_pts = vec![vector!(-1, 1), vector!(0, -1), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
     /// const N: usize = 100; // sample size
     /// let get_t = |i: usize| -1.0 + 2.0 * (i as f64) / (N as f64);
     /// let res: Vec<_> = (0..=N).map(get_t).map(bspcurve.get_closure()).collect();
-    /// let ans: Vec<_> = (0..=N).map(get_t).map(|t| vector!(t, t * t)).collect();
-    /// res.iter().zip(&ans).for_each(|(v0, v1)| Vector::assert_near2(v0, v1));
+    /// let ans: Vec<_> = (0..=N).map(get_t).map(|t| Vector2::new(t, t * t)).collect();
+    /// res.iter().zip(&ans).for_each(|(v0, v1)| Vector2::assert_near2(v0, v1));
     /// ```
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V + '_ { move |t| self.subs(t) }
@@ -219,17 +219,17 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(1, 2), vector!(2, 3), vector!(3, 4)];
+    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// assert_eq!(bspcurve.end_points(), (vector!(1, 2), vector!(3, 4)));
+    /// assert_eq!(bspcurve.end_points(), (Vector2::new(1.0, 2.0), Vector2::new(3.0, 4.0)));
     /// ```
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(1, 2), vector!(2, 3)];
+    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// // Since the knot vector is too long to the number of control points,
-    /// assert_eq!(bspcurve.end_points(), (vector!(0, 0), vector!(0, 0)));
+    /// assert_eq!(bspcurve.end_points(), (Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)));
     /// ```
     #[inline(always)]
     pub fn end_points(&self) -> (V, V) {
@@ -243,7 +243,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![vector!(1, 2), vector!(2, 3), vector!(3, 4), vector!(4, 5)];
+    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0), Vector2::new(4.0, 5.0)];
     /// let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let mut bspcurve1 = bspcurve0.clone();
     /// bspcurve1.invert();
@@ -251,7 +251,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// const N: usize = 100; // sample size
     /// for i in 0..=N {
     ///     let t = (i as f64) / (N as f64);
-    ///     Vector::assert_near2(&bspcurve0.subs(t), &bspcurve1.subs(1.0 - t));
+    ///     Vector2::assert_near2(&bspcurve0.subs(t), &bspcurve1.subs(1.0 - t));
     /// }
     /// ```
     #[inline(always)]
@@ -295,7 +295,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(0, 0), vector!(0.5, 0), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, 0.0), Vector2::new(1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let derived = bspcurve.derivation();
     ///
@@ -303,7 +303,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// const N : usize = 100; // sample size
     /// for i in 0..=N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     Vector::assert_near2(&derived.subs(t), &vector!(1.0, 2.0 * t));
+    ///     Vector2::assert_near2(&derived.subs(t), &Vector2::new(1.0, 2.0 * t));
     /// }
     /// ```
     pub fn derivation(&self) -> BSplineCurve<V> {
@@ -328,7 +328,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(-1, 1), vector!(0, -1), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let org_curve = bspcurve.clone();
     ///
@@ -343,15 +343,15 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(-1, 1), vector!(0, -1), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// assert_eq!(bspcurve.knot_vec().range_length(), 1.0);
-    /// assert_eq!(bspcurve.end_points(), (vector!(-1, 1), vector!(1, 1)));
+    /// assert_eq!(bspcurve.end_points(), (Vector2::new(-1.0, 1.0), Vector2::new(1.0, 1.0)));
     ///
     /// // add knots out of the range of the knot vectors.
     /// bspcurve.add_knot(-1.0).add_knot(2.0);
     /// assert_eq!(bspcurve.knot_vec().range_length(), 3.0);
-    /// assert_eq!(bspcurve.end_points(), (vector!(0, 0), vector!(0, 0)));
+    /// assert_eq!(bspcurve.end_points(), (Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)));
     /// ```
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
         if x < self.knot_vec[0] {
@@ -389,7 +389,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(-1, 1), vector!(0, -1), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let org_curve = bspcurve.clone();
     ///
@@ -412,7 +412,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// use errors::Error;
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(-1, 1), vector!(0, -1), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let org_curve = bspcurve.clone();
     /// bspcurve.add_knot(0.5).add_knot(0.5).add_knot(0.25).add_knot(0.75);
@@ -475,12 +475,12 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::bezier_knot(1);
-    /// let ctrl_pts = vec![vector!(0, 0), vector!(1, 1)];
+    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// bspcurve.elevate_degree();
     /// assert_eq!(bspcurve.degree(), 2);
     /// assert_eq!(bspcurve.knot_vec(), &KnotVec::bezier_knot(2));
-    /// assert_eq!(bspcurve.control_point(1), &vector!(0.5, 0.5));
+    /// assert_eq!(bspcurve.control_point(1), &Vector2::new(0.5, 0.5));
     /// ```
     pub fn elevate_degree(&mut self) -> &mut Self {
         let mut bezier_iter = self.bezier_decomposition().into_iter();
@@ -498,7 +498,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
-    /// let ctrl_pts = vec![vector!(0, 1), vector!(1, 2), vector!(2, 3)];
+    /// let ctrl_pts = vec![Vector2::new(0.0, 1.0), Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// assert!(!bspcurve.is_clamped());
     /// bspcurve.clamp();
@@ -528,7 +528,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(1, 2), vector!(2, 3), vector!(3, 4)];
+    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let org_curve = bspcurve.clone();
     ///
@@ -561,10 +561,10 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec0 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts0 = vec![vector!(1, 2), vector!(2, 3)];
+    /// let ctrl_pts0 = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0)];
     /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
     /// let knot_vec1 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts1 = vec![vector!(1, 2), vector!(2, 3), vector!(3, 4)];
+    /// let ctrl_pts1 = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
     /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     /// assert_ne!(bspcurve0.degree(), bspcurve1.degree());
     ///
@@ -591,11 +591,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0]);
-    /// let ctrl_pts0 = vec![vector!(0, 0), vector!(1, 1), vector!(2, 2), vector!(3, 3)];
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
     /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
     /// let mut org_curve0 = bspcurve0.clone();
     /// let knot_vec1 = KnotVec::from(vec![0.0, 0.0, 1.0, 3.0, 4.0, 4.0]);
-    /// let ctrl_pts1 = vec![vector!(0, 0), vector!(1, 1), vector!(2, 2), vector!(3, 3)];
+    /// let ctrl_pts1 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
     /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     /// let mut org_curve1 = bspcurve1.clone();
     ///
@@ -648,11 +648,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///
     /// let knot_vec = KnotVec::uniform_knot(2, 3);
     /// let ctrl_pts = vec![
-    ///     vector!(0, 0),
-    ///     vector!(1, 0),
-    ///     vector!(2, 2),
-    ///     vector!(4, 3),
-    ///     vector!(5, 6),
+    ///     Vector2::new(0.0, 0.0),
+    ///     Vector2::new(1.0, 0.0),
+    ///     Vector2::new(2.0, 2.0),
+    ///     Vector2::new(4.0, 3.0),
+    ///     Vector2::new(5.0, 6.0),
     /// ];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
@@ -661,11 +661,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// const N: usize = 100;
     /// for i in 0..=N {
     ///     let t = 0.56 * (i as f64) / (N as f64);
-    ///     Vector::assert_near2(&bspcurve.subs(t), &part0.subs(t));
+    ///     Vector2::assert_near2(&bspcurve.subs(t), &part0.subs(t));
     /// }
     /// for i in 0..=N {
     ///     let t = 0.56 + 0.44 * (i as f64) / (N as f64);
-    ///     Vector::assert_near2(&bspcurve.subs(t), &part1.subs(t));
+    ///     Vector2::assert_near2(&bspcurve.subs(t), &part1.subs(t));
     /// }
     /// ```
     pub fn cut(&mut self, mut t: f64) -> BSplineCurve<V> {
@@ -709,18 +709,18 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![vector!(0, 1), vector!(1, 2), vector!(2, 3), vector!(3, 4)];
+    /// let ctrl_pts = vec![Vector2::new(0.0, 1.0), Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let beziers = bspcurve.bezier_decomposition();
     ///
     /// const N: usize = 100;
     /// for i in 0..=N {
     ///     let t = 0.5 * (i as f64) / (N as f64);
-    ///     Vector::assert_near2(&bspcurve.subs(t), &beziers[0].subs(t));
+    ///     Vector2::assert_near2(&bspcurve.subs(t), &beziers[0].subs(t));
     /// }
     /// for i in 0..=N {
     ///     let t = 0.5 + 0.5 * (i as f64) / (N as f64);
-    ///     Vector::assert_near2(&bspcurve.subs(t), &beziers[1].subs(t));
+    ///     Vector2::assert_near2(&bspcurve.subs(t), &beziers[1].subs(t));
     /// }
     /// ```
     pub fn bezier_decomposition(&self) -> Vec<BSplineCurve<V>> {
@@ -744,11 +744,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::uniform_knot(2, 3);
     /// let ctrl_pts = vec![
-    ///     vector!(0, 0),
-    ///     vector!(1, 0),
-    ///     vector!(2, 2),
-    ///     vector!(4, 3),
-    ///     vector!(5, 6),
+    ///     Vector2::new(0.0, 0.0),
+    ///     Vector2::new(1.0, 0.0),
+    ///     Vector2::new(2.0, 2.0),
+    ///     Vector2::new(4.0, 3.0),
+    ///     Vector2::new(5.0, 6.0),
     /// ];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
@@ -765,10 +765,10 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use errors::Error;
     ///
     /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let ctrl_pts0 = vec![vector!(0, 0), vector!(1, 1)];
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
     /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
-    /// let ctrl_pts1 = vec![vector!(1, 1), vector!(2, 2)];
+    /// let ctrl_pts1 = vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)];
     /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     ///
     /// assert_eq!(bspcurve0.try_concat(&mut bspcurve1), Err(Error::DifferentBackFront(1.0, 2.0)));
@@ -780,10 +780,10 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![vector!(0, 0), vector!(0, 1), vector!(2, 2)];
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(2.0, 2.0)];
     /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
     /// let knot_vec1 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts1 = vec![vector!(2, 2), vector!(3, 3)];
+    /// let ctrl_pts1 = vec![Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
     /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     /// bspcurve1.knot_translate(1.0);
     /// let org_curve1 = bspcurve1.clone();
@@ -814,11 +814,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     vector!(0, 0),
-    ///     vector!(1, 0),
-    ///     vector!(2, 2),
-    ///     vector!(4, 3),
-    ///     vector!(5, 6),
+    ///     Vector2::new(0.0, 0.0),
+    ///     Vector2::new(1.0, 0.0),
+    ///     Vector2::new(2.0, 2.0),
+    ///     Vector2::new(4.0, 3.0),
+    ///     Vector2::new(5.0, 6.0),
     /// ];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
@@ -834,10 +834,10 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let ctrl_pts0 = vec![vector!(0, 0), vector!(1, 1)];
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
     /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
-    /// let ctrl_pts1 = vec![vector!(1, 1), vector!(2, 2)];
+    /// let ctrl_pts1 = vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)];
     /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     /// bspcurve0.concat(&mut bspcurve1);
     /// ```
@@ -848,10 +848,10 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     ///
     /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![vector!(0, 0), vector!(0, 1), vector!(2, 2)];
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(2.0, 2.0)];
     /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
     /// let knot_vec1 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts1 = vec![vector!(2, 2), vector!(3, 3)];
+    /// let ctrl_pts1 = vec![Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
     /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     /// bspcurve1.knot_translate(1.0);
     /// let org_curve1 = bspcurve1.clone();
@@ -881,11 +881,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     vec![0.0, 0.0, 0.0, 1.0, 3.0, 4.0, 4.0, 4.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     vector!(1, 0, 0),
-    ///     vector!(0, 1, 0),
-    ///     vector!(0, 1, 0),
-    ///     vector!(0, 1, 0),
-    ///     vector!(0, 0, 1),
+    ///     Vector3::new(1.0, 0.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 0.0, 1.0),
     /// ];
     ///
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -911,7 +911,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]);
-    /// let ctrl_pts = vec![vector!(1, 1); 4];
+    /// let ctrl_pts = vec![Vector2::new(1.0, 1.0); 4];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let org_curve = bspcurve.clone();
     /// bspcurve.make_locally_injective();
@@ -946,11 +946,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     vec![0.0, 0.0, 0.0, 1.0, 3.0, 4.0, 4.0, 4.0]
     /// );
     /// let control_points = vec![
-    ///     vector!(1, 0, 0, 1),
-    ///     vector!(0, 1, 0, 1),
-    ///     vector!(0, 2, 0, 2),
-    ///     vector!(0, 3, 0, 3),
-    ///     vector!(0, 0, 3, 3),
+    ///     Vector4::new(1.0, 0.0, 0.0, 1.0),
+    ///     Vector4::new(0.0, 1.0, 0.0, 1.0),
+    ///     Vector4::new(0.0, 2.0, 0.0, 2.0),
+    ///     Vector4::new(0.0, 3.0, 0.0, 3.0),
+    ///     Vector4::new(0.0, 0.0, 3.0, 3.0),
     /// ];
     ///
     /// let mut bspcurve = BSplineCurve::new(knot_vec, control_points);
@@ -977,7 +977,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///
     /// // the last control points is not the same, however, has the same rational projection.
     /// let pt0 = bspcurve.end_points().1;
-    /// let pt1 = vector!(0, 0, 3, 3);
+    /// let pt1 = Vector4::new(0.0, 0.0, 3.0, 3.0);
     /// assert_ne!(pt0, pt1);
     /// assert_eq!(pt0.rational_projection(), pt1.rational_projection());
     /// ```
@@ -987,10 +987,10 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]);
     /// let ctrl_pts = vec![
-    ///     rvector!(1, 1),
-    ///     rvector!(1, 1) * 2.0,
-    ///     rvector!(1, 1) * 3.0,
-    ///     rvector!(1, 1) * 4.0,
+    ///     Vector3::new(1.0, 1.0, 1.0),
+    ///     Vector3::new(2.0, 2.0, 2.0),
+    ///     Vector3::new(3.0, 3.0, 3.0),
+    ///     Vector3::new(4.0, 4.0, 4.0),
     /// ];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let org_curve = bspcurve.clone();
@@ -1031,15 +1031,15 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     vector!(0.0, 0.0, 0.0),
-    ///     vector!(1.0, 0.0, 0.0),
-    ///     vector!(1.0, 1.0, 0.0),
-    ///     vector!(0.0, 1.0, 0.0),
-    ///     vector!(0.0, 1.0, 1.0),
+    ///     Vector3::new(0.0, 0.0, 0.0),
+    ///     Vector3::new(1.0, 0.0, 0.0),
+    ///     Vector3::new(1.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 1.0),
     /// ];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let pt = bspcurve.subs(1.2);
-    /// let t = bspcurve.search_nearest_parameter(&pt, 0.8).unwrap();
+    /// let t = bspcurve.search_nearest_parameter(pt, 0.8).unwrap();
     /// assert_eq!(t, 1.2);
     /// ```
     /// # Remarks
@@ -1050,20 +1050,20 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     vector!(0.0, 0.0, 0.0),
-    ///     vector!(1.0, 0.0, 0.0),
-    ///     vector!(1.0, 1.0, 0.0),
-    ///     vector!(0.0, 1.0, 0.0),
-    ///     vector!(0.0, 1.0, 1.0),
+    ///     Vector3::new(0.0, 0.0, 0.0),
+    ///     Vector3::new(1.0, 0.0, 0.0),
+    ///     Vector3::new(1.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 1.0),
     /// ];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = vector!(0.0, 0.5, 1.0);
-    /// let t = bspcurve.search_nearest_parameter(&pt, 0.8).unwrap();
+    /// let pt = Vector3::new(0.0, 0.5, 1.0);
+    /// let t = bspcurve.search_nearest_parameter(pt, 0.8).unwrap();
     /// let pt0 = bspcurve.subs(t);
     /// let pt1 = bspcurve.subs(3.0);
     /// // the point corresponding the obtained parameter is not
     /// // the globally nearest point in the curve.
-    /// assert!((pt0 - &pt).norm() > (pt1 - &pt).norm());
+    /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
     /// ```
     pub fn search_nearest_parameter(&self, point: V, hint: f64) -> Option<f64> {
         let derived = self.derivation();
@@ -1120,11 +1120,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     vector!(0.0, 0.0, 0.0),
-    ///     vector!(1.0, 0.0, 0.0),
-    ///     vector!(1.0, 1.0, 0.0),
-    ///     vector!(0.0, 1.0, 0.0),
-    ///     vector!(0.0, 1.0, 1.0),
+    ///     Vector3::new(0.0, 0.0, 0.0),
+    ///     Vector3::new(1.0, 0.0, 0.0),
+    ///     Vector3::new(1.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 1.0),
     /// ];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
@@ -1137,7 +1137,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// assert!(part.is_arc_of(&bspcurve, 0.7).is_none());
     ///
     /// // normal failure
-    /// *part.control_point_mut(2) += vector!(1.0, 2.0, 3.0);
+    /// *part.control_point_mut(2) += Vector3::new(1.0, 2.0, 3.0);
     /// assert!(part.is_arc_of(&bspcurve, 0.6).is_none());
     /// ```
     pub fn is_arc_of(&self, curve: &BSplineCurve<V>, mut hint: f64) -> Option<f64> {
@@ -1173,18 +1173,18 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///
     /// // Defines the half unit circle in x > 0 as a rational curve `bspcurve`
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(0, -1, 1), vector!(1, 0, 0), vector!(0, 1, 1)];
+    /// let ctrl_pts = vec![Vector3::new(0.0, -1.0, 1.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
     /// // search rational nearest parameter
-    /// let pt = rvector!(1, 2);
+    /// let pt = Vector3::new(1.0, 2.0, 1.0);
     /// let hint = 0.6;
-    /// let t = bspcurve.search_rational_nearest_parameter(&pt, hint).unwrap();
+    /// let t = bspcurve.search_rational_nearest_parameter(pt, hint).unwrap();
     ///
     /// // check the answer
     /// let res: Vector2 = bspcurve.subs(t).rational_projection().into();
     /// let ans: Vector2 = pt.rational_projection().into();
-    /// Vector::assert_near2(&(&ans / ans.norm()), &res);
+    /// Vector2::assert_near2(&(&ans / ans.magnitude()), &res);
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
@@ -1193,17 +1193,17 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///
     /// // Same curve and point as above example
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![vector!(0, -1, 1), vector!(1, 0, 0), vector!(0, 1, 1)];
+    /// let ctrl_pts = vec![Vector3::new(0.0, -1.0, 1.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = rvector!(1, 2);
+    /// let pt = Vector3::new(1.0, 2.0, 1.0);
     ///
     /// // another hint
     /// let hint = 0.5;
     ///
     /// // Newton's method is vibration divergent.
-    /// assert!(bspcurve.search_rational_nearest_parameter(&pt, hint).is_none());
+    /// assert!(bspcurve.search_rational_nearest_parameter(pt, hint).is_none());
     /// ```
-    pub fn search_rational_nearest_parameter(&self, point: &V, hint: f64) -> Option<f64> {
+    pub fn search_rational_nearest_parameter(&self, point: V, hint: f64) -> Option<f64> {
         let derived = self.derivation();
         let derived2 = derived.derivation();
         self.sub_srnp(&derived, &derived2, point, hint, 0)
@@ -1213,7 +1213,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         &self,
         derived: &BSplineCurve<V>,
         derived2: &BSplineCurve<V>,
-        point: &V,
+        point: V,
         hint: f64,
     ) -> Option<f64>
     {
@@ -1224,7 +1224,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         &self,
         derived: &BSplineCurve<V>,
         derived2: &BSplineCurve<V>,
-        point: &V,
+        point: V,
         hint: f64,
         counter: usize,
     ) -> Option<f64>
@@ -1262,7 +1262,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let mut part = part.cut(0.2);
     /// part.cut(0.8);
     /// assert!(part.is_rational_arc_of(&mut bspline, 0.2).is_some());
-    /// *part.control_point_mut(1) += vector!(1, 2, 3, 4);
+    /// *part.control_point_mut(1) += Vector4::new(1.0, 2.0, 3.0, 4.0);
     /// assert!(part.is_rational_arc_of(&mut bspline, 0.2).is_none());
     /// ```
     pub fn is_rational_arc_of(&self, curve: &mut BSplineCurve<V>, mut hint: f64) -> Option<f64> {
@@ -1281,7 +1281,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
                 let pt = self.subs(t);
-                let res = curve.optimized_srnp(&derived, &derived2, &pt, hint);
+                let res = curve.optimized_srnp(&derived, &derived2, pt, hint);
                 let flag = res.map(|res| {
                     let pt0 = curve.subs(res).rational_projection();
                     let pt1 = pt.rational_projection();
@@ -1335,17 +1335,17 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     vector!(1, 1),
-    ///     vector!(3, 2),
-    ///     vector!(2, 3),
-    ///     vector!(4, 5),
-    ///     vector!(5, 4),
-    ///     vector!(1, 1),
+    ///     Vector2::new(1.0, 1.0),
+    ///     Vector2::new(3.0, 2.0),
+    ///     Vector2::new(2.0, 3.0),
+    ///     Vector2::new(4.0, 5.0),
+    ///     Vector2::new(5.0, 4.0),
+    ///     Vector2::new(1.0, 1.0),
     /// ];
     /// let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let mut bspcurve1 = bspcurve0.clone();
     /// assert!(bspcurve0.near_as_curve(&bspcurve1));
-    /// *bspcurve1.control_point_mut(1) += vector!(0.01, 0.0002);
+    /// *bspcurve1.control_point_mut(1) += Vector2::new(0.01, 0.0002);
     /// assert!(!bspcurve0.near_as_curve(&bspcurve1));
     /// ```
     #[inline(always)]
@@ -1360,22 +1360,22 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let eps = f64::TOLERANCE;
+    /// let eps = TOLERANCE;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     vector!(1, 1),
-    ///     vector!(3, 2),
-    ///     vector!(2, 3),
-    ///     vector!(4, 5),
-    ///     vector!(5, 4),
-    ///     vector!(1, 1),
+    ///     Vector2::new(1.0, 1.0),
+    ///     Vector2::new(3.0, 2.0),
+    ///     Vector2::new(2.0, 3.0),
+    ///     Vector2::new(4.0, 5.0),
+    ///     Vector2::new(5.0, 4.0),
+    ///     Vector2::new(1.0, 1.0),
     /// ];
     /// let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let mut bspcurve1 = bspcurve0.clone();
     /// assert!(bspcurve0.near_as_curve(&bspcurve1));
-    /// *bspcurve1.control_point_mut(1) += vector!(eps, 0);
+    /// *bspcurve1.control_point_mut(1) += Vector2::new(eps, 0.0);
     /// assert!(!bspcurve0.near2_as_curve(&bspcurve1));
     /// ```
     #[inline(always)]

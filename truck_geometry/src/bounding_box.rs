@@ -63,8 +63,8 @@ where
     /// If the bounding box is empty, returned vector consists `NEG_INFINITY` components.
     /// ```
     /// use truck_geometry::*;
-    /// let bdd_box = BoundingBox::new();
-    /// assert_eq!(bdd_box.max(), &Vector2::from(f64::NEG_INFINITY; 2));
+    /// let bdd_box = BoundingBox::<Vector2>::new();
+    /// assert_eq!(bdd_box.max(), &Vector2::from([f64::NEG_INFINITY; 2]));
     /// ```
     #[inline(always)]
     pub fn max(&self) -> &V { &self.1 }
@@ -81,7 +81,7 @@ where
     /// If the bounding box is empty, returned vector consists `INFINITY` components.
     /// ```
     /// use truck_geometry::*;
-    /// let bdd_box = BoundingBox::new();
+    /// let bdd_box = BoundingBox::<Vector2>::new();
     /// assert_eq!(bdd_box.min(), &Vector2::from([f64::INFINITY; 2]));
     /// ```
     #[inline(always)]
@@ -99,8 +99,8 @@ where
     /// If the bounding box is empty, returned vector consists `f64::NEG_INFINITY` components.
     /// ```
     /// use truck_geometry::*;
-    /// let bdd_box = BoundingBox::new();
-    /// assert_eq!(bdd_box.diagonal(), Vector2::new[f64::NEG_INFINITY; 2]);
+    /// let bdd_box = BoundingBox::<Vector2>::new();
+    /// assert_eq!(bdd_box.diagonal(), Vector2::new(f64::NEG_INFINITY, f64::NEG_INFINITY));
     /// ```
     #[inline(always)]
     pub fn diagonal(&self) -> V::Vector { self.1.diagonal(self.0) }
@@ -118,7 +118,7 @@ where
     /// If the bounding box is empty, returnes `f64::NEG_INFINITY`.
     /// ```
     /// use truck_geometry::*;
-    /// let bdd_box = BoundingBox::<[f64; 3]>::new();
+    /// let bdd_box = BoundingBox::<Vector3>::new();
     /// assert_eq!(bdd_box.diameter(), f64::NEG_INFINITY);
     /// ```
     #[inline(always)]
@@ -143,7 +143,7 @@ where
     /// If the bounding box is empty, returnes `f64::NEG_INFINITY`.
     /// ```
     /// use truck_geometry::*;
-    /// let bdd_box = BoundingBox::<[f64; 3]>::new();
+    /// let bdd_box = BoundingBox::<Vector3>::new();
     /// assert_eq!(bdd_box.size(), f64::NEG_INFINITY);
     /// ```
     #[inline(always)]
@@ -162,8 +162,11 @@ where
     /// If the bounding box is empty, returned vector consists `std::f64::NAN` components.
     /// ```
     /// use truck_geometry::*;
-    /// let bdd_box = BoundingBox::<[f64; 6]>::new();
-    /// assert!(bdd_box.center().iter().all(|x| x.is_nan()));
+    /// let bdd_box = BoundingBox::<Vector3>::new();
+    /// let center = bdd_box.center();
+    /// assert!(center[0].is_nan());
+    /// assert!(center[1].is_nan());
+    /// assert!(center[2].is_nan());
     /// ```
     #[inline(always)]
     pub fn center(&self) -> V { self.0.mid(self.1) }
@@ -220,8 +223,8 @@ where
     /// ```
     #[inline(always)]
     fn add_assign(&mut self, other: &BoundingBox<V>) {
-        self.0.min(&other.0);
-        self.1.max(&other.1);
+        self.0 = self.0.min(&other.0);
+        self.1 = self.1.max(&other.1);
     }
 }
 
@@ -264,18 +267,18 @@ where
     /// use truck_geometry::*;
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
-    ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
+    ///     Vector2::new(3.0, 2.0), Vector2::new(5.0, 6.0),
     /// ]);
     /// let bdd_box1 = BoundingBox::from_iter(&[
-    ///     Vector2::new(4.0, 1.0), Vector2::new(7.0,  4.0),
+    ///     Vector2::new(4.0, 1.0), Vector2::new(7.0, 4.0),
     /// ]);
     /// let bdd_box = &bdd_box0 + &bdd_box1;
-    /// assert_eq!(bdd_box.min(), &Vector2::new(3.0,  1.0));
-    /// assert_eq!(bdd_box.max(), &Vector2::new(7.0,  6.0));
+    /// assert_eq!(bdd_box.min(), &Vector2::new(3.0, 1.0));
+    /// assert_eq!(bdd_box.max(), &Vector2::new(7.0, 6.0));
     ///
     /// let cloned_bdd_box = &bdd_box + &BoundingBox::new();
-    /// assert_eq!(cloned_bdd_box.min(), &Vector2::new(3.0,  1.0));
-    /// assert_eq!(cloned_bdd_box.max(), &Vector2::new(7.0,  6.0));
+    /// assert_eq!(cloned_bdd_box.min(), &Vector2::new(3.0, 1.0));
+    /// assert_eq!(cloned_bdd_box.max(), &Vector2::new(7.0, 6.0));
     /// ```
     #[inline(always)]
     fn add(self, other: &BoundingBox<V>) -> BoundingBox<V> { self.clone() + other }
