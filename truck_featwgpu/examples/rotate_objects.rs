@@ -21,10 +21,13 @@ struct MyRender {
 
 impl MyRender {
     fn create_camera() -> Camera {
-        Camera::perspective_camera(
+        let mat = Matrix4::look_at(
             Point3::new(15.0, 15.0, 15.0),
             Point3::origin(),
             Vector3::unit_y(),
+        );
+        Camera::perspective_camera(
+            mat.invert().unwrap(),
             std::f64::consts::PI / 8.0,
             0.1,
             200.0
@@ -217,25 +220,19 @@ impl App for MyRender {
                 }
                 self.camera_changed = Some(std::time::Instant::now());
                 self.scene.camera = match self.scene.camera.projection_type() {
-                    Projection::Parallel(_) => {
+                    ProjectionType::Parallel => {
                         let mut camera = Camera::default();
                         camera.matrix = self.scene.camera.matrix;
                         camera
                     }
-                    Projection::Perspective(_) => {
+                    ProjectionType::Perspective => {
                         let matrix = self.scene.camera.matrix;
-                        let ortho = cgmath::Ortho {
-                            top: 1.0,
-                            bottom: -1.0,
-                            left: -1.0,
-                            right: 1.0,
-                            near: 0.1,
-                            far: 40.0,
-                        };
-                        Camera {
+                        Camera::parallel_camera(
                             matrix,
-                            projection: Projection::Parallel(ortho)
-                        }
+                            2.0,
+                            0.1,
+                            40.0,
+                        )
                     }
                 }
             }

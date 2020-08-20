@@ -202,7 +202,7 @@ impl Render for MyRenderer {
             axis /= axis.magnitude();
             let angle = dir2d.magnitude() * 0.01;
             let mat = Matrix4::from_axis_angle(axis.truncate(), cgmath::Rad(angle));
-            self.scene.camera.matrix_mut() = mat.invert().unwrap();
+            *self.scene.camera.matrix_mut() = mat.invert().unwrap();
         }
         self.prev_cursor = Some(position);
         Self::default_control_flow()

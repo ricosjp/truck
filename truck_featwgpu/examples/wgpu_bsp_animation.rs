@@ -38,7 +38,7 @@ impl MyApp {
         vec2 /= vec2.magnitude();
         let vec3 = Vector4::new(1.5, 0.8, 1.5, 1.0);
         let matrix = Matrix4::from_cols(vec0, vec1, vec2, vec3);
-        let camera = Camera::default();
+        let mut camera = Camera::default();
         camera.matrix = matrix;
         camera
     }
@@ -48,7 +48,7 @@ impl MyApp {
         closed: &Arc<Mutex<bool>>,
     ) -> JoinHandle<()>
     {
-        let mesher = WGPUMesher::with_device(&handler.device, &handler.queue);
+        let device = Arc::clone(&handler.device);
         let arc_object = Arc::clone(object);
         let closed = Arc::clone(closed);
         let mut first = true;
@@ -64,9 +64,10 @@ impl MyApp {
                 std::thread::sleep(std::time::Duration::from_millis(1));
                 let mut bspsurface0 = bspsurface.clone();
                 bspsurface0.optimize();
-                let object = mesher.meshing(&bspsurface0, 0.02);
+                let mesh = truck_polymesh::StructuredMesh::from_surface(&bspsurface0, 0.01);
+                let object = RenderObject::new(mesh.destruct(), &device);
                 if first {
-                    let vec = futures::executor::block_on(get_vertex(&object, &mesher.device));
+                    let vec = futures::executor::block_on(get_vertex(&object, &device));
                     println!("{:?}", vec);
                     first = false;
                 }
@@ -102,8 +103,9 @@ impl App for MyApp {
         };
         render.scene.camera = MyApp::init_camera();
         render.scene.light = Light {
-            position: vector!(0.5, 2.0, 0.5),
+            position: Point3::new(0.5, 2.0, 0.5),
             strength: 1.0,
+            color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
         };
         render
