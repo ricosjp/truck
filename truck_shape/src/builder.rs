@@ -192,10 +192,10 @@ fn test_circle_arc() {
     const N: usize = 100;
     let mut pt0 = Point3::new(0.17_f64.cos(), 0.17_f64.sin(), 0.0);
     let mut pt1 = Point3::new(1.64_f64.cos(), 1.64_f64.sin(), 0.0);
-    let vector = Vector3::new(-2.0, 5.0, 10.0);
+    let center = Vector3::new(-2.0, 5.0, 10.0);
     let mut axis = Vector3::new(2.0, 5.0, 4.0);
     axis /= axis.magnitude();
-    let trsf = Matrix4::from_axis_angle(axis, cgmath::Rad(0.56)) * Matrix4::from_translation(vector);
+    let trsf = Matrix4::from_translation(center) * Matrix4::from_axis_angle(axis, cgmath::Rad(0.56));
     let mut transit = Point3::new(1.12_f64.cos(), 1.12_f64.sin(), 0.0);
     pt0 = trsf.transform_point(pt0);
     pt1 = trsf.transform_point(pt1);
@@ -205,8 +205,6 @@ fn test_circle_arc() {
     let edge = director.building(|builder| {
         let vertex0 = builder.vertex(pt0).unwrap();
         let vertex1 = builder.vertex(pt1).unwrap();
-        let transit = Point3::new(transit[0], transit[1], transit[2]);
-
         builder.circle_arc(vertex0, vertex1, transit).unwrap()
     });
 
@@ -216,7 +214,6 @@ fn test_circle_arc() {
     for i in 0..N {
         let t = (i as f64) / (N as f64);
         let pt = curve.subs(t).rational_projection();
-        let pt = Vector3::new(pt[0], pt[1], pt[2]);
-        f64::assert_near(&(pt - vector).magnitude(), &1.0);
+        f64::assert_near(&(pt - center).magnitude(), &1.0);
     }
 }

@@ -9,22 +9,22 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 /// use truck_polymesh::PolygonMesh;
 /// use truck_geometry::*;
 /// let positions = vec![
-///     vector!(0.0, 0.0, 0.0),
-///     vector!(1.0, 0.0, 0.0),
-///     vector!(0.0, 1.0, 0.0),
-///     vector!(0.0, 0.0, 1.0),
-///     vector!(1.0, 1.0, 0.0),
-///     vector!(1.0, 0.0, 1.0),
-///     vector!(0.0, 1.0, 1.0),
-///     vector!(1.0, 1.0, 1.0),
+///     Point3::new(0.0, 0.0, 0.0),
+///     Point3::new(1.0, 0.0, 0.0),
+///     Point3::new(0.0, 1.0, 0.0),
+///     Point3::new(0.0, 0.0, 1.0),
+///     Point3::new(1.0, 1.0, 0.0),
+///     Point3::new(1.0, 0.0, 1.0),
+///     Point3::new(0.0, 1.0, 1.0),
+///     Point3::new(1.0, 1.0, 1.0),
 /// ];
 /// let normals = vec![
-///     vector!(1.0, 0.0, 0.0),
-///     vector!(0.0, 1.0, 0.0),
-///     vector!(0.0, 0.0, 1.0),
-///     vector!(-1.0, 0.0, 0.0),
-///     vector!(0.0, -1.0, 0.0),
-///     vector!(0.0, 0.0, -1.0),
+///     Vector3::new(1.0, 0.0, 0.0),
+///     Vector3::new(0.0, 1.0, 0.0),
+///     Vector3::new(0.0, 0.0, 1.0),
+///     Vector3::new(-1.0, 0.0, 0.0),
+///     Vector3::new(0.0, -1.0, 0.0),
+///     Vector3::new(0.0, 0.0, -1.0),
 /// ];
 /// let faces = vec![
 ///     [[0, 0, 5], [1, 0, 5], [2, 0, 5]],
