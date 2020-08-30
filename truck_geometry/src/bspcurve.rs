@@ -555,7 +555,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         self
     }
 
-    /// make two splines have the same degrees.
+    /// Makes two splines having the same degrees.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -599,7 +599,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     /// let mut org_curve1 = bspcurve1.clone();
     ///
-    /// bspcurve0.syncro_knot(&mut bspcurve1);
+    /// bspcurve0.syncro_knots(&mut bspcurve1);
     ///
     /// // The knot vectors are made the same.
     /// assert_eq!(bspcurve0.knot_vec(), bspcurve1.knot_vec());
@@ -614,7 +614,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// assert!(bspcurve0.near2_as_curve(org_curve0.knot_normalize()));
     /// assert!(bspcurve1.near2_as_curve(org_curve1.knot_normalize()));
     /// ```
-    pub fn syncro_knot(&mut self, other: &mut BSplineCurve<V>) {
+    pub fn syncro_knots(&mut self, other: &mut BSplineCurve<V>) {
         self.knot_normalize();
         other.knot_normalize();
 
