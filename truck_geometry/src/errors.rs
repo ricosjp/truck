@@ -129,6 +129,17 @@ pub enum Error {
     /// );
     /// ```
     IrregularControlPoints,
+    /// Attempted to get the curve from the empty curve collector.
+    /// # Example
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    /// use std::convert::TryInto;
+    /// let cc = CurveCollector::<Vector2>::Singleton;
+    /// let error: Result<BSplineCurve<Vector2>> = cc.try_into();
+    /// assert_eq!(error, Err(Error::EmptyCurveCollector));
+    /// ```
+    EmptyCurveCollector,
 }
 
 impl std::fmt::Display for Error {
@@ -149,6 +160,7 @@ impl std::fmt::Display for Error {
                     knot_len, cont_len)
                 ),
             Error::IrregularControlPoints => f.pad("The number of control points is irregular"),
+            Error::EmptyCurveCollector => f.pad("The curve collector is empty."),
         }
     }
 }

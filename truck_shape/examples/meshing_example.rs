@@ -251,6 +251,18 @@ fn vase(builder: &mut Builder) -> Shell {
 }
 
 #[allow(dead_code)]
+fn screw(director: &mut Director) {
+    let mut builder = director.get_builder();
+    let v = builder.vertex(Point3::new(0.0, 0.0, 1.0)).unwrap();
+    let circle = builder.rsweep(v, Point3::origin(), Vector3::unit_y(), 2.0 * std::f64::consts::PI).unwrap();
+    let cylinder = builder.tsweep(circle, Vector3::unit_y() * 2.0).unwrap();
+    let n = cylinder.len();
+    for _ in 0..2 * n {
+
+    }
+} 
+
+#[allow(dead_code)]
 fn assert_integrity<T: Integrity>(elem: &T, director: &mut Director, filename: &str) {
     let integrity = director.check_integrity(elem);
     assert_eq!(

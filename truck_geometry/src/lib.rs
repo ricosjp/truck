@@ -84,6 +84,35 @@ pub struct BSplineCurve<V> {
     control_points: Vec<V>, // the indices of control points
 }
 
+/// Curve for the recursive concatting.
+/// # Examples
+/// ```
+/// use truck_geometry::*;
+/// use std::convert::TryInto;
+/// let mut cc = CurveCollector::<Vector2>::Singleton;
+/// cc.concat(&mut BSplineCurve::new(
+///     KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]),
+///     vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)],
+/// ));
+/// cc.concat(&mut BSplineCurve::new(
+///     KnotVec::from(vec![1.0, 1.0, 2.0, 2.0]),
+///     vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)],
+/// ));
+/// let res: BSplineCurve<Vector2> = cc.try_into().unwrap();
+/// let line = BSplineCurve::new(
+///     KnotVec::from(vec![0.0, 0.0, 2.0, 2.0]),
+///     vec![Vector2::new(0.0, 0.0), Vector2::new(2.0, 2.0)],
+/// );
+/// assert!(res.near2_as_curve(&line));
+/// ```
+#[derive(Clone, PartialEq, Debug)]
+pub enum CurveCollector<V> {
+    /// the empty curve
+    Singleton,
+    /// a non-empty curve
+    Curve(BSplineCurve<V>),
+}
+
 /// 4-dimensional B-spline surface
 /// # Examples
 /// ```

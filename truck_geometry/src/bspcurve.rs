@@ -1,6 +1,7 @@
 use crate::errors::Error;
 use crate::traits::inv_or_zero;
 use crate::*;
+use std::convert::TryInto;
 use std::ops::*;
 
 impl<V: ExVectorSpace> BSplineCurve<V>
@@ -483,13 +484,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// assert_eq!(bspcurve.control_point(1), &Vector2::new(0.5, 0.5));
     /// ```
     pub fn elevate_degree(&mut self) -> &mut Self {
-        let mut bezier_iter = self.bezier_decomposition().into_iter();
-        let mut result = bezier_iter.next().unwrap();
-        result.elevate_degree_bezier();
-        for mut bezier in bezier_iter {
+        let mut result = CurveCollector::Singleton;
+        for mut bezier in self.bezier_decomposition() {
             result.concat(bezier.elevate_degree_bezier());
         }
-        *self = result;
+        *self = result.try_into().unwrap();
         self
     }
 
@@ -641,7 +640,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         }
     }
 
-    /// cut the curve to two curves at the parameter `t`
+    /// Cuts the curve to two curves at the parameter `t`
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -865,10 +864,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     #[inline(always)]
     pub fn concat(&mut self, other: &mut Self) -> &mut Self {
-        match self.try_concat(other) {
-            Ok(got) => got,
-            Err(error) => panic!("{}", error),
-        }
+        self.try_concat(other).unwrap_or_else(|error| panic!("{}", error))
     }
 
     /// Makes the curve locally injective.
@@ -1443,6 +1439,40 @@ impl_mat_multi!(Vector3, Matrix3);
 impl_scalar_multi!(Vector3, f64);
 impl_mat_multi!(Vector4, Matrix4);
 impl_scalar_multi!(Vector4, f64);
+
+impl<V: ExVectorSpace> CurveCollector<V>
+where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64> {
+    /// Concats two B-spline curves.
+    #[inline(always)]
+    pub fn try_concat(&mut self, curve: &mut BSplineCurve<V>) -> Result<&mut Self> {
+        match self {
+            CurveCollector::Singleton => {
+                *self = CurveCollector::Curve(curve.clone());
+            }
+            CurveCollector::Curve(ref mut curve0) => {
+                curve0.try_concat(curve)?;
+            }
+        }
+        Ok(self)
+    }
+    
+    /// Concats two B-spline curves.
+    #[inline(always)]
+    pub fn concat(&mut self, curve: &mut BSplineCurve<V>) -> &mut Self {
+        self.try_concat(curve).unwrap_or_else(|error| panic!("{}", error))
+    }
+}
+
+impl<V> std::convert::TryFrom<CurveCollector<V>> for BSplineCurve<V> {
+    type Error = Error;
+    #[inline(always)]
+    fn try_from(collector: CurveCollector<V>) -> Result<Self> {
+        match collector {
+            CurveCollector::Singleton => Err(Error::EmptyCurveCollector),
+            CurveCollector::Curve(curve) => Ok(curve),
+        }
+    }
+}
 
 #[test]
 fn test_near_as_curve() {

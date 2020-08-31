@@ -1,6 +1,7 @@
 use crate::errors::Error;
 use crate::traits::inv_or_zero;
 use crate::*;
+use std::convert::TryInto;
 use std::ops::*;
 
 impl<V: ExVectorSpace> BSplineSurface<V>
@@ -109,11 +110,13 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// Returns the reference of the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]
     pub fn control_point(&self, idx0: usize, idx1: usize) -> &V { &self.control_points[idx0][idx1] }
-    
     /// Apply the given transformation to all control points.
     #[inline(always)]
     pub fn transform_control_points<F: FnMut(&mut V)>(&mut self, f: F) {
-        self.control_points.iter_mut().flat_map(|vec| vec).for_each(f)
+        self.control_points
+            .iter_mut()
+            .flat_map(|vec| vec)
+            .for_each(f)
     }
 
     /// Returns the iterator over the control points in the `column_idx`th row.
@@ -823,7 +826,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let bspcurve = bspsurface.column_curve(1);
-    /// 
+    ///
     /// assert_eq!(bspcurve.knot_vec(), &KnotVec::bezier_knot(2));
     /// assert_eq!(
     ///     bspcurve.control_points(),
@@ -835,7 +838,6 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         let ctrl_pts = self.control_points[row_idx].clone();
         BSplineCurve::new_unchecked(knot_vec, ctrl_pts)
     }
-    
     /// Creates the column sectional curve.
     /// # Examples
     /// ```
@@ -849,7 +851,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let bspcurve = bspsurface.row_curve(1);
-    /// 
+    ///
     /// assert_eq!(bspcurve.knot_vec(), &KnotVec::bezier_knot(1));
     /// assert_eq!(
     ///     bspcurve.control_points(),
@@ -877,9 +879,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
-    /// 
+    ///
     /// bspsurface.elevate_vdegree();
-    /// 
+    ///
     /// assert_eq!(bspsurface.udegree(), org_surface.udegree());
     /// assert_eq!(bspsurface.vdegree(), org_surface.vdegree() + 1);
     /// assert!(bspsurface.near2_as_surface(&org_surface));
@@ -912,9 +914,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
-    /// 
+    ///
     /// bspsurface.elevate_udegree();
-    /// 
+    ///
     /// assert_eq!(bspsurface.udegree(), org_surface.udegree() + 1);
     /// assert_eq!(bspsurface.vdegree(), org_surface.vdegree());
     /// assert!(bspsurface.near2_as_surface(&org_surface));
@@ -939,7 +941,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
-    /// 
+    ///
     /// assert_ne!(bspsurface.udegree(), bspsurface.vdegree());
     /// bspsurface.syncro_uvdegrees();
     /// assert_eq!(bspsurface.udegree(), bspsurface.vdegree());
@@ -973,15 +975,13 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let org_surface = bspsurface.clone();
-    /// 
+    ///
     /// assert_ne!(bspsurface.uknot_vec(), bspsurface.vknot_vec());
     /// bspsurface.syncro_uvknots();
     /// assert_eq!(bspsurface.uknot_vec(), bspsurface.vknot_vec());
     /// assert!(bspsurface.near2_as_surface(&org_surface));
     /// ```
     pub fn syncro_uvknots(&mut self) -> &mut Self {
-        self.syncro_uvdegrees();
-
         self.knot_vecs.0.normalize();
         self.knot_vecs.1.normalize();
 
@@ -1075,7 +1075,6 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         *self = BSplineSurface::new_unchecked((knot_vec0, vknot_vec.clone()), control_points0);
         BSplineSurface::new_unchecked((knot_vec1, vknot_vec), control_points1)
     }
-    
     /// Cuts the curve to two curves at the parameter `t`
     /// # Examples
     /// ```
@@ -1122,6 +1121,83 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         self.swap_axes();
         res.swap_axes();
         res
+    }
+
+    /// Creates a sectional curve with normalized knot vector from the parameter `p` to the parameter `q`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use std::iter::FromIterator;
+    /// 
+    /// // a parabola surface: x = 2u - 1, y = 2v - 1, z = x^2 + y^z
+    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(-1.0, -1.0, 2.0), Vector3::new(-1.0, 0.0, 0.0), Vector3::new(-1.0, 1.0, 2.0)],
+    ///     vec![Vector3::new(0.0, -1.0, 0.0), Vector3::new(0.0, 0.0, -2.0), Vector3::new(0.0, 1.0, 0.0)],
+    ///     vec![Vector3::new(1.0, -1.0, 2.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(1.0, 1.0, 2.0)],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// 
+    /// // add some knots for the test!
+    /// bspsurface.add_uknot(0.26);
+    /// # bspsurface.add_uknot(0.64);
+    /// bspsurface.add_vknot(0.23);
+    /// # bspsurface.add_vknot(0.82);
+    /// 
+    /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
+    /// let curve = bspsurface.sectional_curve(bnd_box);
+    /// const N: usize = 100;
+    /// Vector3::assert_near2(&curve.subs(0.0), &bspsurface.subs(0.2, 0.3));
+    /// Vector3::assert_near2(&curve.subs(1.0), &bspsurface.subs(0.8, 0.6));
+    /// for i in 0..=N {
+    ///     println!("{}", i);
+    ///     let t = i as f64 / N as f64;
+    ///     let pt = curve.subs(t);
+    ///     f64::assert_near2(&pt[1], &(pt[0] * 0.5 - 0.1));
+    ///     f64::assert_near2(&pt[2], &(pt[0] * pt[0] + pt[1] * pt[1]));
+    /// }
+    /// ```
+    pub fn sectional_curve(&self, bnd_box: BoundingBox<Vector2>) -> BSplineCurve<V> {
+        let p = bnd_box.min();
+        let q = bnd_box.max();
+        let mut bspsurface = self.clone();
+        bspsurface = bspsurface.ucut(p[0]);
+        bspsurface.ucut(q[0]);
+        bspsurface = bspsurface.vcut(p[1]);
+        bspsurface.vcut(q[1]);
+        bspsurface.syncro_uvdegrees();
+        bspsurface.syncro_uvknots();
+        let degree = bspsurface.udegree();
+        let comb = combinatorial(degree);
+        let comb2 = combinatorial(degree * 2);
+        let (knots, _) = bspsurface.uknot_vec().to_single_multi();
+        let mut cc = CurveCollector::<V>::Singleton;
+        for p in 1..knots.len() {
+            let mut backup = None;
+            if p + 1 != knots.len() {
+                backup = Some(bspsurface.ucut(knots[p]));
+                bspsurface.vcut(knots[p]);
+            }
+            let mut knot_vec = KnotVec::bezier_knot(degree * 2);
+            knot_vec.translate(p as f64 - 1.0);
+            let ctrl_pts: Vec<_> = (0..=degree * 2).map(|k| {
+                (0..=k).fold(V::zero(), |sum, i| {
+                    if i <= degree && k - i <= degree {
+                        let coef = (comb[i] * comb[k - i]) as f64 / comb2[k] as f64;
+                        sum + bspsurface.control_points[i][k - i] * coef
+                    } else {
+                        sum
+                    }
+                })
+            }).collect();
+            cc.concat(&mut BSplineCurve::new(knot_vec, ctrl_pts));
+            if p + 1 != knots.len() {
+                bspsurface = backup.unwrap().vcut(knots[p]);
+            }
+        }
+        let mut curve: BSplineCurve<V> = cc.try_into().unwrap();
+        curve.knot_normalize();
+        curve
     }
 
     /// Creates a surface with normailized knot vectors connecting two curves.
@@ -1779,3 +1855,12 @@ impl<'a, V: VectorSpace> ExactSizeIterator for CPRowIter<'a, V> {
 }
 
 impl<'a, V: VectorSpace> std::iter::FusedIterator for CPRowIter<'a, V> {}
+
+fn combinatorial(n: usize) -> Vec<usize> {
+    let mut res = Vec::new();
+    res.push(1);
+    for i in 1..=n {
+        res.push(res[i - 1] * (n - i + 1) / i);
+    }
+    res
+}
