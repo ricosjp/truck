@@ -54,16 +54,21 @@ pub struct WGPUPolygonMesh {
     indices: Vec<u32>,
 }
 
+pub trait ModelStatus {
+    fn bind_group(&self) -> BindGroup;
+}
+
+pub struct StandardModelStatus {
+}
+
 #[derive(Debug)]
-pub struct RenderObject {
+pub struct RenderObject<B> {
     pub vertex_buffer: Arc<Buffer>,
     pub vertex_size: usize,
     pub index_buffer: Arc<Buffer>,
     pub index_size: usize,
-    bind_group: Option<BindGroup>,
-    pub matrix: Matrix4,
-    pub color: Vector4,
-    pub reflect_ratio: [f32; 3],
+    pipeline: Arc<RenderPipeline>,
+    params: B,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
