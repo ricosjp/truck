@@ -891,7 +891,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         for (i, vec) in self.control_points.iter_mut().enumerate() {
             let knot_vec = self.knot_vecs.1.clone();
             let ctrl_pts = vec.clone();
-            let mut curve = BSplineCurve::new_unchecked(knot_vec, ctrl_pts);
+            let mut curve = BSplineCurve::new(knot_vec, ctrl_pts);
             curve.elevate_degree();
             if i == 0 {
                 new_knot_vec = curve.knot_vec().clone();
@@ -1072,8 +1072,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         let knot_vec1 = self.uknot_vec().sub_vec((k - degree)..m);
         let control_points0 = Vec::from(&self.control_points[0..(k - degree)]);
         let control_points1 = Vec::from(&self.control_points[(k - degree)..n]);
-        *self = BSplineSurface::new_unchecked((knot_vec0, vknot_vec.clone()), control_points0);
-        BSplineSurface::new_unchecked((knot_vec1, vknot_vec), control_points1)
+        *self = BSplineSurface::new((knot_vec0, vknot_vec.clone()), control_points0);
+        BSplineSurface::new((knot_vec1, vknot_vec), control_points1)
     }
     /// Cuts the curve to two curves at the parameter `t`
     /// # Examples
@@ -1161,10 +1161,18 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         let p = bnd_box.min();
         let q = bnd_box.max();
         let mut bspsurface = self.clone();
-        bspsurface = bspsurface.ucut(p[0]);
-        bspsurface.ucut(q[0]);
-        bspsurface = bspsurface.vcut(p[1]);
-        bspsurface.vcut(q[1]);
+        if !p[0].near(&bspsurface.uknot(0)) {
+            bspsurface = bspsurface.ucut(p[0]);
+        }
+        if !q[0].near(&bspsurface.uknot(bspsurface.uknot_vec().len() - 1)) {
+            bspsurface.ucut(q[0]);
+        }
+        if !p[0].near(&bspsurface.vknot(0)) {
+            bspsurface = bspsurface.vcut(p[1]);
+        }
+        if !q[0].near(&bspsurface.vknot(bspsurface.vknot_vec().len() - 1)) {
+            bspsurface.vcut(q[1]);
+        }
         bspsurface.syncro_uvdegrees();
         bspsurface.syncro_uvknots();
         let degree = bspsurface.udegree();

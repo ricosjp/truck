@@ -1,6 +1,7 @@
 use std::f64::consts::PI;
 use std::fs::DirBuilder;
 use std::iter::FromIterator;
+use std::convert::TryInto;
 use truck_geometry::*;
 use truck_polymesh::PolygonMesh;
 use truck_shape::elements::{Integrity, TopoGeomIntegrity};
@@ -12,7 +13,7 @@ use truck_topology::*;
 fn n_gon_prism(builder: &mut Builder, n: usize) -> Solid {
     let v: Vec<_> = (0..n)
         .map(|i| {
-            let t = 2.0 * std::f64::consts::PI * (i as f64) / (n as f64);
+            let t = 2.0 * PI * (i as f64) / (n as f64);
             builder.vertex(Point3::new(t.sin(), 0.0, t.cos())).unwrap()
         })
         .collect();
@@ -250,16 +251,42 @@ fn vase(builder: &mut Builder) -> Shell {
     builder.rsweep(wire, origin, axis, -PI * 2.0).unwrap()
 }
 
-#[allow(dead_code)]
-fn screw(director: &mut Director) {
-    let mut builder = director.get_builder();
-    let v = builder.vertex(Point3::new(0.0, 0.0, 1.0)).unwrap();
-    let circle = builder.rsweep(v, Point3::origin(), Vector3::unit_y(), 2.0 * std::f64::consts::PI).unwrap();
-    let cylinder = builder.tsweep(circle, Vector3::unit_y() * 2.0).unwrap();
+fn sub_screw(director: &mut Director, radius: f64) -> Wire {
+    let mut v = director.get_builder().vertex(Point3::new(0.0, 0.0, radius)).unwrap();
+    let circle = director.get_builder().rsweep(v, Point3::origin(), Vector3::unit_y(), 2.0 * PI).unwrap();
+    let cylinder = director.get_builder().tsweep(circle, Vector3::unit_y()).unwrap();
     let n = cylinder.len();
-    for _ in 0..2 * n {
-
+    let mut wire = Wire::new();
+    for i in 1..=2 {
+        let surface = director.get_geometry(&cylinder[i % n]).unwrap().clone();
+        if i == 1 {
+            v = director.get_builder().create_topology(surface.subs(0.0, i as f64 / (2 * n) as f64)).unwrap();
+        }
+        let new_v: Vertex = director.get_builder().create_topology(surface.subs(1.0, (i + 1) as f64 / (2 * n) as f64)).unwrap();
+        let bnd_box = BoundingBox::from_iter(&[
+            Vector2::new(0.0, i as f64 / (2 * n) as f64),
+            Vector2::new(1.0, (i + 1) as f64 / (2 * n) as f64),
+        ]);
+        let curve = surface.sectional_curve(bnd_box);
+        let edge: Edge = Edge::new(v, new_v);
+        director.attach(&edge, curve);
+        wire.push_back(edge);
+        v = new_v;
     }
+    wire
+}
+
+#[allow(dead_code)]
+fn screw(director: &mut Director) -> Shell {
+    let wire = sub_screw(director, 1.0);
+    let mut shell = director.get_builder().tsweep(wire, -Vector3::unit_y() * 0.2).unwrap();
+    let wire = sub_screw(director, 1.1);
+    let mut shell0 = director.get_builder().tsweep(wire, Vector3::unit_y() * 0.1).unwrap();
+    shell0 = director.get_builder().translated(&shell0, -0.15 * Vector3::unit_y()).unwrap();
+    shell.append(&mut shell0);
+    let mut shell3 = director.get_builder().translated(&shell, 0.5 * Vector3::unit_y()).unwrap();
+    shell.append(&mut shell3);
+    shell
 } 
 
 #[allow(dead_code)]
@@ -293,6 +320,26 @@ where
     truck_io::obj::write(&mesh, file).unwrap();
 }
 
+fn semi_output_mesh<F, T>(director: &mut Director, function: F, filename: &str)
+where
+    F: FnOnce(&mut Director) -> T,
+    T: Meshed<MeshType = PolygonMesh> + Integrity, {
+    let path = "./output/".to_string() + filename;
+    let instant = std::time::Instant::now();
+    let solid = function(director);
+    //assert_integrity(&solid, director, filename);
+    let mesh = director.get_mesher().meshing(&solid, 0.02);
+    let end_time = instant.elapsed();
+    println!(
+        "{}: {}.{:03} sec",
+        filename,
+        end_time.as_secs(),
+        end_time.subsec_nanos() / 1_000_000,
+    );
+    let file = std::fs::File::create(path).unwrap();
+    truck_io::obj::write(&mesh, file).unwrap();
+}
+
 fn main() {
     let mut director = Director::new();
     DirBuilder::new().recursive(true).create("output").unwrap();
@@ -304,9 +351,10 @@ fn main() {
         let filename = format!("{}-gon-prism.obj", n);
         output_mesh(&mut director, |d| n_gon_prism(d, n), &filename);
     }
-    output_mesh(&mut director, large_box, "large_plane.obj");
+    //output_mesh(&mut director, large_box, "large_plane.obj");
     output_mesh(&mut director, torus, "torus.obj");
     output_mesh(&mut director, half_torus, "half_torus.obj");
-    output_mesh(&mut director, truck_torus, "truck_torus.obj");
-    output_mesh(&mut director, vase, "vase.obj");
+    //output_mesh(&mut director, truck_torus, "truck_torus.obj");
+    //output_mesh(&mut director, vase, "vase.obj");
+    semi_output_mesh(&mut director, screw, "screw.obj");
 }
