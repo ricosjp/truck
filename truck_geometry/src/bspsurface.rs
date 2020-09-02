@@ -984,7 +984,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     pub fn syncro_uvknots(&mut self) -> &mut Self {
         self.knot_vecs.0.normalize();
         self.knot_vecs.1.normalize();
-
+        
         let mut i = 0;
         let mut j = 0;
         while !self.uknot(i).near2(&1.0) || !self.vknot(j).near2(&1.0) {
@@ -996,6 +996,19 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
             i += 1;
             j += 1;
         }
+
+        let ulen = self.uknot_vec().len();
+        let vlen = self.vknot_vec().len();
+        if ulen > vlen {
+            for _ in 0..ulen - vlen {
+                self.add_vknot(1.0);
+            }
+        } else if ulen < vlen {
+            for _ in 0..vlen - ulen {
+                self.add_uknot(1.0);
+            }
+        }
+
         self
     }
 

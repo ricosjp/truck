@@ -1,7 +1,6 @@
 use std::f64::consts::PI;
 use std::fs::DirBuilder;
 use std::iter::FromIterator;
-use std::convert::TryInto;
 use truck_geometry::*;
 use truck_polymesh::PolygonMesh;
 use truck_shape::elements::{Integrity, TopoGeomIntegrity};
