@@ -1,13 +1,12 @@
-use crate::elements::{TopologicalElement, GeometricalElement};
+use crate::elements::{GeometricalElement, TopologicalElement};
 use crate::Result;
 use crate::*;
-use geometry::Vector3;
 use std::collections::HashMap;
 use topology::*;
 
 pub trait Transformed: Sized {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
         &self,
         vector_closure: &F0,
         curve_closure: &F1,
@@ -19,45 +18,45 @@ pub trait Transformed: Sized {
         self.mapped(&|_| {}, &|_| {}, &|_| {}, director)
     }
     #[doc(hidden)]
-    fn transformed(&self, trsf: &Transform, director: &mut Director) -> Result<Self> {
+    fn transformed(&self, trsf: Matrix4, director: &mut Director) -> Result<Self> {
         self.mapped(
-            &trsf.mul_assign_closure(),
-            &trsf.mul_assign_closure(),
-            &trsf.mul_assign_closure(),
+            &|v| *v = trsf * *v,
+            &|c| c.transform_control_points(|v| *v = trsf * *v),
+            &|s| s.transform_control_points(|v| *v = trsf * *v),
             director,
         )
     }
     #[doc(hidden)]
-    fn translated(&self, vector: &Vector3, director: &mut Director) -> Result<Self> {
-        self.transformed(&Transform::translate(vector), director)
+    fn translated(&self, vector: Vector3, director: &mut Director) -> Result<Self> {
+        self.transformed(Matrix4::from_translation(vector), director)
     }
     #[doc(hidden)]
     fn rotated(
         &self,
-        origin: &Vector3,
-        axis: &Vector3,
-        angle: f64,
+        origin: Point3,
+        axis: Vector3,
+        angle: Rad,
         director: &mut Director,
     ) -> Result<Self>
     {
-        let trsf0 = Transform::translate(&-origin);
-        let trsf1 = Transform::rotate(axis, angle);
-        let trsf2 = Transform::translate(origin);
-        self.transformed(&(trsf0 * trsf1 * trsf2), director)
+        let trsf0 = Matrix4::from_translation(-origin.to_vec());
+        let trsf1 = Matrix4::from_axis_angle(axis, angle);
+        let trsf2 = Matrix4::from_translation(origin.to_vec());
+        self.transformed(trsf2 * trsf1 * trsf0, director)
     }
 
     #[doc(hidden)]
-    fn scaled(&self, origin: &Vector3, scalars: &Vector3, director: &mut Director) -> Result<Self> {
-        let trsf0 = Transform::translate(&-origin);
-        let trsf1 = Transform::scale(scalars);
-        let trsf2 = Transform::translate(origin);
-        self.transformed(&(trsf0 * trsf1 * trsf2), director)
+    fn scaled(&self, origin: Point3, scalars: Vector3, director: &mut Director) -> Result<Self> {
+        let trsf0 = Matrix4::from_translation(-origin.to_vec());
+        let trsf1 = Matrix4::from_nonuniform_scale(scalars[0], scalars[1], scalars[2]);
+        let trsf2 = Matrix4::from_translation(origin.to_vec());
+        self.transformed(trsf2 * trsf1 * trsf0, director)
     }
 }
 
 impl Transformed for Vertex {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
         &self,
         vector_closure: &F0,
         _: &F1,
@@ -76,7 +75,7 @@ impl Transformed for Vertex {
 
 impl Transformed for Edge {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
         &self,
         vector_closure: &F0,
         curve_closure: &F1,
@@ -113,7 +112,7 @@ impl Transformed for Edge {
 
 impl Transformed for Wire {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
         &self,
         vector_closure: &F0,
         curve_closure: &F1,
@@ -161,7 +160,7 @@ impl Transformed for Wire {
 
 impl Transformed for Face {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
         &self,
         vector_closure: &F0,
         curve_closure: &F1,
@@ -185,7 +184,7 @@ impl Transformed for Face {
 
 impl Transformed for Shell {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
         &self,
         vector_closure: &F0,
         curve_closure: &F1,
@@ -248,7 +247,7 @@ impl Transformed for Shell {
 
 impl Transformed for Solid {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
         &self,
         vector_closure: &F0,
         curve_closure: &F1,

@@ -8,8 +8,9 @@ extern crate truck_topology as topology;
 extern crate serde_derive;
 extern crate serde_json;
 
-type BSplineCurve = geometry::BSplineCurve<[f64; 4]>;
-type BSplineSurface = geometry::BSplineSurface<[f64; 4]>;
+use geometry::Vector4;
+type BSplineCurve = geometry::BSplineCurve<Vector4>;
+type BSplineSurface = geometry::BSplineSurface<Vector4>;
 
 /// geometric data
 #[derive(Clone, Debug, Default)]

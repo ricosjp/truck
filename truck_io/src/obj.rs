@@ -1,4 +1,5 @@
 use crate::Error;
+use geometry::{Vector2, Vector3, Point3};
 use polymesh::PolygonMesh;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 
@@ -8,22 +9,22 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 /// use truck_polymesh::PolygonMesh;
 /// use truck_geometry::*;
 /// let positions = vec![
-///     vector!(0.0, 0.0, 0.0),
-///     vector!(1.0, 0.0, 0.0),
-///     vector!(0.0, 1.0, 0.0),
-///     vector!(0.0, 0.0, 1.0),
-///     vector!(1.0, 1.0, 0.0),
-///     vector!(1.0, 0.0, 1.0),
-///     vector!(0.0, 1.0, 1.0),
-///     vector!(1.0, 1.0, 1.0),
+///     Point3::new(0.0, 0.0, 0.0),
+///     Point3::new(1.0, 0.0, 0.0),
+///     Point3::new(0.0, 1.0, 0.0),
+///     Point3::new(0.0, 0.0, 1.0),
+///     Point3::new(1.0, 1.0, 0.0),
+///     Point3::new(1.0, 0.0, 1.0),
+///     Point3::new(0.0, 1.0, 1.0),
+///     Point3::new(1.0, 1.0, 1.0),
 /// ];
 /// let normals = vec![
-///     vector!(1.0, 0.0, 0.0),
-///     vector!(0.0, 1.0, 0.0),
-///     vector!(0.0, 0.0, 1.0),
-///     vector!(-1.0, 0.0, 0.0),
-///     vector!(0.0, -1.0, 0.0),
-///     vector!(0.0, 0.0, -1.0),
+///     Vector3::new(1.0, 0.0, 0.0),
+///     Vector3::new(0.0, 1.0, 0.0),
+///     Vector3::new(0.0, 0.0, 1.0),
+///     Vector3::new(-1.0, 0.0, 0.0),
+///     Vector3::new(0.0, -1.0, 0.0),
+///     Vector3::new(0.0, 0.0, -1.0),
 /// ];
 /// let faces = vec![
 ///     [[0, 0, 5], [1, 0, 5], [2, 0, 5]],
@@ -196,16 +197,16 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
                 let x = args.next().unwrap().parse::<f64>()?;
                 let y = args.next().unwrap().parse::<f64>()?;
                 let z = args.next().unwrap().parse::<f64>()?;
-                mesh.positions.push(vector!(x, y, z));
+                mesh.positions.push(Point3::new(x, y, z));
             } else if first_str == "vt" {
                 let u = args.next().unwrap().parse::<f64>()?;
                 let v = args.next().unwrap().parse::<f64>()?;
-                mesh.uv_coords.push(vector!(u, v));
+                mesh.uv_coords.push(Vector2::new(u, v));
             } else if first_str == "vn" {
                 let x = args.next().unwrap().parse::<f64>()?;
                 let y = args.next().unwrap().parse::<f64>()?;
                 let z = args.next().unwrap().parse::<f64>()?;
-                mesh.normals.push(vector!(x, y, z));
+                mesh.normals.push(Vector3::new(x, y, z));
             } else if first_str == "f" {
                 let mut face = Vec::new();
                 for vert_str in args {

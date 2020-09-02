@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 glium = "0.27.0"
+cgmath = "*"
 truck_geometry = {path = "../truck_geometry"}
 truck_polymesh = {path = "../truck_polymesh"}
 

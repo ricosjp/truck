@@ -17,8 +17,8 @@ impl RenderObject {
     }
     pub fn object_buffer(&self, device: &Device) -> BufferHandler {
         let material_info = ObjectInfo {
-            matrix: (&self.matrix).into(),
-            material: (&self.color).into(),
+            matrix: (&self.matrix).cast().unwrap().into(),
+            material: (&self.color).cast().unwrap().into(),
             reflect_ratio: self.reflect_ratio,
         };
         let buffer = device.create_buffer_with_data(bytemuck::cast_slice(&[material_info]), BufferUsage::UNIFORM);

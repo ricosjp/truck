@@ -10,6 +10,7 @@ edition = "2018"
 wgpu = "0.5.2"
 bytemuck = "*"
 glsl-to-spirv = "*"
+cgmath = "*"
 truck_polymesh = {path = "../truck_polymesh"}
 truck_geometry = {path = "../truck_geometry"}
 futures = "*"

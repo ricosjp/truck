@@ -1,4 +1,4 @@
-use crate::{Director, Vector, BSplineCurve, BSplineSurface};
+use crate::{Director, Vector4, BSplineCurve, BSplineSurface};
 use crate::errors::Error;
 use std::iter::FromIterator;
 use geometry::*;
@@ -16,7 +16,7 @@ pub trait TopologicalElement {
 }
 
 impl TopologicalElement for Vertex {
-    type Geometry = Vector;
+    type Geometry = Vector4;
     fn id(&self) -> usize { self.id() }
     fn geom_container(director: &Director) -> &HashMap<usize, Self::Geometry> { &director.points }
     fn geom_mut_container(director: &mut Director) -> &mut HashMap<usize, Self::Geometry> {
@@ -47,7 +47,7 @@ pub trait GeometricalElement: Sized {
     fn create_topology(self, director: &mut Director) -> Self::Topology;
 }
 
-impl GeometricalElement for Vector {
+impl GeometricalElement for Vector4 {
     type Topology = Vertex;
     fn create_topology(self, director: &mut Director) -> Vertex {
         let vert = Vertex::new();
@@ -75,9 +75,9 @@ impl GeometricalElement for BSplineSurface {
         let [curve0, curve1, curve2, curve3] = self.splitted_boundary();
         let edge0 = curve0.create_topology(director);
         let edge2 = curve2.create_topology(director);
-        let edge1 = Edge::new_unchecked(edge0.back(), edge2.front());
+        let edge1 = Edge::new_unchecked(edge0.back(), edge2.back());
         director.attach(&edge1, curve1);
-        let edge3 = Edge::new_unchecked(edge2.back(), edge0.front());
+        let edge3 = Edge::new_unchecked(edge2.front(), edge0.front());
         director.attach(&edge3, curve3);
         let wire = Wire::from_iter(&[edge0, edge1, edge2, edge3]);
         let face = Face::new_unchecked(wire);
@@ -94,7 +94,7 @@ pub enum TopoGeomIntegrity {
     Integrate,
     /// The face with id = `face_id` does not correspond to a surface.
     NoGeometryElement { typename: &'static str, id: usize },
-    /// The 4th component of Vector is not positive.
+    /// The 4th component of Vector4 is not positive.
     NonPositiveWeightedPoint,
     /// The curve which corresponds to the edge with id = `edge_id` is not in the boundary of
     /// the surface which corresponds to the face with id = `face_id`.
@@ -134,7 +134,7 @@ macro_rules! got_or_return_integrity {
 impl Integrity for Vertex {
     fn check_integrity(&self, director: &Director) -> TopoGeomIntegrity {
         let pt = got_or_return_integrity!(director, self);
-        match pt[3] > f64::TOLERANCE {
+        match pt[3] > geometry::TOLERANCE {
             true => TopoGeomIntegrity::Integrate,
             false => TopoGeomIntegrity::NonPositiveWeightedPoint,
         }

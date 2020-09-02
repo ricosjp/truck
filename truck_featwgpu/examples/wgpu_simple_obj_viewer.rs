@@ -19,15 +19,17 @@ struct MyApp {
 
 impl MyApp {
     fn create_camera() -> Camera {
-        let mut vec0 = vector!(1.5, 0.0, -1.5, 0.0);
-        vec0 /= vec0.norm();
-        let mut vec1 = vector!(-0.5, 1, -0.5, 0.0);
-        vec1 /= vec1.norm();
-        let mut vec2 = vector!(1, 1, 1, 0);
-        vec2 /= vec2.norm();
-        let vec3 = vector!(2, 2, 2, 1);
-        let matrix = matrix!(vec0, vec1, vec2, vec3);
-        Camera::perspective_camera(matrix, std::f64::consts::PI / 4.0, 0.1, 40.0)
+        let matrix = Matrix4::look_at(
+            Point3::new(1.0, 1.0, 1.0),
+            Point3::origin(),
+            Vector3::unit_y(),
+        );
+        Camera::perspective_camera(
+            matrix.invert().unwrap(),
+            std::f64::consts::PI / 4.0,
+            0.1,
+            40.0,
+        )
     }
     fn set_normals(mesh: PolygonMesh) -> PolygonMesh {
         match mesh.normals.is_empty() {
@@ -51,10 +53,10 @@ impl MyApp {
         let mesh = MyApp::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
-        let diag = vector!(size, size, size);
         let mut object = RenderObject::new(mesh, device);
-        object.matrix = Matrix3::diagonal(&diag).affine(&center).inverse();
-        object.color = vector![1.0, 1.0, 1.0, 1.0];
+        let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
+        object.matrix = mat.invert().unwrap();
+        object.color = Vector4::new(1.0, 0.0, 0.0, 1.0);
         object.reflect_ratio = [0.2, 0.6, 0.2];
         self.scene.add_object(object);
     }
@@ -75,8 +77,9 @@ impl App for MyApp {
         };
         render.scene.camera = MyApp::create_camera();
         render.scene.light = Light {
-            position: vector!(2, 2, 2),
-            strength: 2.0,
+            position: Point3::new(1.0, 1.0, 1.0),
+            strength: 1.0,
+            color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
         };
         render
@@ -114,11 +117,12 @@ impl App for MyApp {
                 match scene.light.light_type {
                     LightType::Point => {
                         scene.light.position = scene.camera.position();
-                        scene.light.strength = 2.5;
+                        scene.light.strength = 1.0;
                     }
                     LightType::Uniform => {
                         scene.light.position = scene.camera.position();
-                        scene.light.position /= scene.light.position.norm();
+                        scene.light.strength = 0.5;
+                        scene.light.position /= scene.light.position.to_vec().magnitude();
                     }
                 }
             }
@@ -130,7 +134,8 @@ impl App for MyApp {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let trans_vec = self.scene.camera.eye_direction() * 0.2 * y as f64;
-                self.scene.camera *= Matrix3::identity().affine(&trans_vec);
+                self.scene.camera.matrix =
+                    Matrix4::from_translation(trans_vec) * self.scene.camera.matrix;
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
@@ -139,15 +144,15 @@ impl App for MyApp {
 
     fn cursor_moved(&mut self, position: PhysicalPosition<f64>) -> ControlFlow {
         if self.rotate_flag {
-            let position = vector!(position.x, position.y);
+            let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
                 let dir2d = &position - prev_position;
-                let mut axis = dir2d[1] * &self.scene.camera.matrix()[0];
-                axis += dir2d[0] * &self.scene.camera.matrix()[1];
-                axis /= axis.norm();
-                let angle = dir2d.norm() * 0.01;
-                let mat = Matrix3::rotation(&axis.into(), angle).affine(&Vector3::zero());
-                self.scene.camera *= mat.inverse();
+                let mut axis = dir2d[1] * &self.scene.camera.matrix[0].truncate();
+                axis += dir2d[0] * &self.scene.camera.matrix[1].truncate();
+                axis /= axis.magnitude();
+                let angle = dir2d.magnitude() * 0.01;
+                let mat = Matrix4::from_axis_angle(axis, cgmath::Rad(angle));
+                self.scene.camera.matrix = mat.invert().unwrap() * self.scene.camera.matrix;
             }
             self.prev_cursor = Some(position);
         }
@@ -169,13 +174,13 @@ impl App for MyApp {
                 self.camera_changed = Some(std::time::Instant::now());
                 self.scene.camera = match self.scene.camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
-                        self.scene.camera.matrix().clone(),
+                        self.scene.camera.matrix,
                         std::f64::consts::PI / 4.0,
                         0.1,
                         40.0,
                     ),
                     ProjectionType::Perspective => {
-                        Camera::parallel_camera(self.scene.camera.matrix().clone(), 1.0, 0.1, 40.0)
+                        Camera::parallel_camera(self.scene.camera.matrix, 1.0, 0.1, 100.0)
                     }
                 }
             }
@@ -190,10 +195,11 @@ impl App for MyApp {
                 match self.scene.light.light_type {
                     LightType::Point => {
                         let mut vec = self.scene.camera.position();
-                        vec /= vec.norm();
+                        vec /= vec.to_vec().magnitude();
                         self.scene.light = Light {
                             position: vec,
-                            strength: 0.25,
+                            strength: 0.5,
+                            color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Uniform,
                         }
                     }
@@ -201,7 +207,8 @@ impl App for MyApp {
                         let position = self.scene.camera.position();
                         self.scene.light = Light {
                             position,
-                            strength: 2.0,
+                            strength: 1.0,
+                            color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Point,
                         }
                     }

@@ -21,15 +21,17 @@ struct MyRender {
 
 impl MyRender {
     fn create_camera() -> Camera {
-        let mut vec0 = vector!(1.5, 0.0, -1.5, 0.0);
-        vec0 /= vec0.norm();
-        let mut vec1 = vector!(-0.5, 1, -0.5, 0.0);
-        vec1 /= vec1.norm();
-        let mut vec2 = vector!(1, 1, 1, 0);
-        vec2 /= vec2.norm();
-        let vec3 = vector!(15, 15, 15, 1);
-        let matrix = matrix!(vec0, vec1, vec2, vec3);
-        Camera::perspective_camera(matrix, std::f64::consts::PI / 4.0, 0.1, 200.0)
+        let mat = Matrix4::look_at(
+            Point3::new(15.0, 15.0, 15.0),
+            Point3::origin(),
+            Vector3::unit_y(),
+        );
+        Camera::perspective_camera(
+            mat.invert().unwrap(),
+            std::f64::consts::PI / 8.0,
+            0.1,
+            200.0
+        )
     }
 
     fn set_normals(mesh: PolygonMesh) -> PolygonMesh {
@@ -52,12 +54,13 @@ impl MyRender {
         let mesh = MyRender::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
-        let diag = vector!(size / 2.0, size / 2.0, size / 2.0);
         let mut object = RenderObject::new(mesh, device);
-        let mut mat = Matrix3::diagonal(&diag).affine(&center).inverse();
-        mat *= Matrix3::identity().affine(&vector!(0.0, 0.5, 0.0));
+        let mut mat = Matrix4::from_scale(size / 2.0);
+        mat = Matrix4::from_translation(center.to_vec()) * mat;
+        mat = mat.invert().unwrap();
+        mat = Matrix4::from_translation(Vector3::new(0.0, 0.5, 0.0)) * mat;
         object.matrix = mat;
-        object.color = vector![1.0, 1.0, 1.0, 1.0];
+        object.color = Vector4::new(1.0, 1.0, 1.0, 1.0);
         object.reflect_ratio = [0.2, 0.6, 0.2];
         self.scene.add_object(object);
     }
@@ -65,11 +68,11 @@ impl MyRender {
     fn arrange_objects(&mut self) {
         let scene = &mut self.scene;
         let object = scene.get_object_mut(0);
-        object.matrix *= Matrix3::identity().affine(&vector!(0, 0, 5));
-        let mat = Matrix3::rotation(&vector!(0, 1, 0), PI / 4.0).affine(&Vector3::zero());
+        object.matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, 5.0)) * object.matrix;
+        let mat = Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(PI / 4.0));
         for i in 1..8 {
             let mut new_object = scene.get_object(i - 1).clone();
-            new_object *= &mat;
+            new_object.matrix = mat * new_object.matrix;
             scene.add_object(new_object);
         }
     }
@@ -79,26 +82,26 @@ impl MyRender {
         let time = scene.elapsed();
         let delta_time = time - self.prev_time;
         self.prev_time = time;
-        let mat0 = Matrix3::rotation(&vector!(0, 1, 0), delta_time).affine(&Vector3::zero());
+        let mat0 = Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(delta_time));
         for (i, object) in scene.objects_mut().iter_mut().enumerate() {
             let k = (-1_f64).powi(i as i32) * 5.0;
-            let mat1 = Matrix3::rotation(&vector!(0, 1, 0), k * delta_time).affine(&Vector3::zero());
-            let obj_mat = &object.matrix;
-            let x = obj_mat[3][2];
-            let mat = obj_mat.inverse() * &mat1 * obj_mat * &mat0;
-            *object *= mat;
-            let obj_pos: Vector3 = object.matrix[3].clone().into();
+            let mat1 =
+                Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(k * delta_time));
+            let x = object.matrix[3][2];
+            let mat = mat0 * object.matrix * mat1 * object.matrix.invert().unwrap();
+            object.matrix = mat * object.matrix;
+            let obj_pos = object.matrix[3].truncate();
             let new_length = 5.0 + time.sin() + (time * 3.0).sin() / 3.0;
-            let obj_dir = &obj_pos / obj_pos.norm();
-            let move_vec = obj_dir * (new_length - obj_pos.norm());
-            let mat = Matrix3::identity().affine(&move_vec);
-            *object *= mat;
+            let obj_dir = &obj_pos / obj_pos.magnitude();
+            let move_vec = obj_dir * (new_length - obj_pos.magnitude());
+            let mat = Matrix4::from_translation(move_vec);
+            object.matrix = mat * object.matrix;
             object.color = Self::calculate_color(x / 14.0 + 0.5);
         }
     }
 
     fn calculate_color(x: f64) -> Vector4 {
-        vector!(
+        Vector4::new(
             (-25.0 * (x - 0.2) * (x - 0.2)).exp() + (-25.0 * (x - 1.3) * (x - 1.3)).exp(),
             (-25.0 * (x - 0.5) * (x - 0.5)).exp(),
             (-25.0 * (x - 0.8) * (x - 0.8)).exp(),
@@ -123,8 +126,9 @@ impl App for MyRender {
         };
         render.scene.camera = MyRender::create_camera();
         render.scene.light = Light {
-            position: vector!(0, 20, 0),
+            position: Point3::new(0.0, 20.0, 0.0),
             strength: 100.0,
+            color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
         };
         render
@@ -166,7 +170,7 @@ impl App for MyRender {
                     }
                     LightType::Uniform => {
                         scene.light.position = scene.camera.position();
-                        scene.light.position /= scene.light.position.norm();
+                        scene.light.position /= scene.light.position.to_vec().magnitude();
                     }
                 }
             }
@@ -178,7 +182,7 @@ impl App for MyRender {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let trans_vec = self.scene.camera.eye_direction() * 0.2 * y as f64;
-                self.scene.camera *= Matrix3::identity().affine(&trans_vec);
+                self.scene.camera.matrix = Matrix4::from_translation(trans_vec) * self.scene.camera.matrix;
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
@@ -187,15 +191,15 @@ impl App for MyRender {
 
     fn cursor_moved(&mut self, position: PhysicalPosition<f64>) -> ControlFlow {
         if self.rotate_flag {
-            let position = vector!(position.x, position.y);
+            let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
                 let dir2d = &position - prev_position;
-                let mut axis = dir2d[1] * &self.scene.camera.matrix()[0];
-                axis += dir2d[0] * &self.scene.camera.matrix()[1];
-                axis /= axis.norm();
-                let angle = dir2d.norm() * 0.01;
-                let mat = Matrix3::rotation(&axis.into(), angle).affine(&Vector3::zero());
-                self.scene.camera *= mat.inverse();
+                let mut axis = dir2d[1] * &self.scene.camera.matrix[0];
+                axis += dir2d[0] * &self.scene.camera.matrix[1];
+                axis /= axis.magnitude();
+                let angle = dir2d.magnitude() * 0.01;
+                let mat = Matrix4::from_axis_angle(axis.truncate(), cgmath::Rad(angle));
+                self.scene.camera.matrix = mat.invert().unwrap() * self.scene.camera.matrix;
             }
             self.prev_cursor = Some(position);
         }
@@ -216,14 +220,19 @@ impl App for MyRender {
                 }
                 self.camera_changed = Some(std::time::Instant::now());
                 self.scene.camera = match self.scene.camera.projection_type() {
-                    ProjectionType::Parallel => Camera::perspective_camera(
-                        self.scene.camera.matrix().clone(),
-                        std::f64::consts::PI / 4.0,
-                        0.1,
-                        40.0,
-                    ),
+                    ProjectionType::Parallel => {
+                        let mut camera = Camera::default();
+                        camera.matrix = self.scene.camera.matrix;
+                        camera
+                    }
                     ProjectionType::Perspective => {
-                        Camera::parallel_camera(self.scene.camera.matrix().clone(), 1.0, 0.1, 40.0)
+                        let matrix = self.scene.camera.matrix;
+                        Camera::parallel_camera(
+                            matrix,
+                            2.0,
+                            0.1,
+                            40.0,
+                        )
                     }
                 }
             }
@@ -238,10 +247,11 @@ impl App for MyRender {
                 match self.scene.light.light_type {
                     LightType::Point => {
                         let mut vec = self.scene.camera.position();
-                        vec /= vec.norm();
+                        vec /= vec.to_vec().magnitude();
                         self.scene.light = Light {
                             position: vec,
                             strength: 0.5,
+                            color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Uniform,
                         }
                     }
@@ -250,6 +260,7 @@ impl App for MyRender {
                         self.scene.light = Light {
                             position,
                             strength: 125.0,
+                            color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Point,
                         }
                     }

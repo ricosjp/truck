@@ -1,6 +1,5 @@
 use crate::errors::Error;
-use crate::{MeshHandler, PolygonMesh};
-use geometry::Vector3;
+use crate::*;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
@@ -230,7 +229,7 @@ fn get_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
 }
 
 fn is_in_the_plane(
-    positions: &Vec<Vector3>,
+    positions: &Vec<Point3>,
     normals: &Vec<Vector3>,
     face: &[[usize; 3]],
     tol2: f64,
@@ -238,10 +237,10 @@ fn is_in_the_plane(
 {
     let vec0 = &positions[face[1][0]] - &positions[face[0][0]];
     let vec1 = &positions[face[2][0]] - &positions[face[0][0]];
-    let mut n = vec0 ^ vec1;
-    n /= n.norm();
+    let mut n = vec0.cross(vec1);
+    n /= n.magnitude();
     for [_, _, idx] in face {
-        if (&n - &normals[*idx]).norm2() < tol2 {
+        if (&n - &normals[*idx]).magnitude2() < tol2 {
             return true;
         }
     }
@@ -269,7 +268,7 @@ fn is_signed_up_upper(
 }
 
 fn get_angle(
-    positions: &Vec<Vector3>,
+    positions: &Vec<Point3>,
     face: &[[usize; 3]],
     idx0: usize,
     idx1: usize,
@@ -278,14 +277,14 @@ fn get_angle(
 {
     let vec0 = &positions[face[idx1][0]] - &positions[face[idx0][0]];
     let vec1 = &positions[face[idx2][0]] - &positions[face[idx0][0]];
-    vec0.angle(&vec1)
+    vec0.angle(vec1).0
 }
 
-fn add_weights(weights: &mut Vec<f64>, positions: &Vec<Vector3>, face: &[[usize; 3]]) {
+fn add_weights(weights: &mut Vec<f64>, positions: &Vec<Point3>, face: &[[usize; 3]]) {
     let area = (2..face.len()).fold(0.0, |sum, i| {
         let vec0 = &positions[face[i - 1][0]] - &positions[face[0][0]];
         let vec1 = &positions[face[i][0]] - &positions[face[0][0]];
-        sum + (vec0 ^ vec1).norm() / 2.0
+        sum + (vec0.cross(vec1)).magnitude() / 2.0
     }) / (face.len() as f64);
     for v in face {
         weights[v[0]] += area;

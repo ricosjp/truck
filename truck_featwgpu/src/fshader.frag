@@ -11,6 +11,7 @@ layout(set = 0, binding = 0) uniform Camera {
 layout(set = 0, binding = 1) uniform Light {
     vec3 light_position;
     float light_strength;
+    vec3 light_color;
     int light_type;
 };
 
@@ -68,5 +69,5 @@ float specular() {
 void main() {
     float strength = radiance() * (ambient() + diffuse() + specular());
     strength = clamp(strength, 0.0, 1.0);
-    color = material * strength;
+    color = vec4(light_color, 1.0) * material * strength;
 }

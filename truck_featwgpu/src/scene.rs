@@ -15,7 +15,7 @@ impl Scene {
                 // Light
                 BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
                     ty: BindingType::UniformBuffer { dynamic: false },
                 },
                 // Model Status
@@ -230,7 +230,7 @@ impl Scene {
     }
 
     pub fn update_bind_group(&mut self, sc_desc: &SwapChainDescriptor) {
-        let as_rat = sc_desc.height as f64 / sc_desc.width as f64;
+        let as_rat = sc_desc.width as f64 / sc_desc.height as f64;
         let scene_status_buffer = self.scene_status_buffer();
         for object in &mut self.objects {
             object.update_bind_group(

@@ -1,5 +1,4 @@
-use crate::{get_tri, MeshHandler, PolygonMesh};
-use geometry::Vector3;
+use crate::*;
 
 /// triangulation, quadrangulation, give a structure
 impl MeshHandler {
@@ -99,11 +98,11 @@ impl PolygonMesh {
             .unwrap();
         let vec0 = &self.positions[face0[1][0]] - &self.positions[face0[0][0]];
         let vec1 = &self.positions[face0[2][0]] - &self.positions[face0[0][0]];
-        let mut n = &vec0 ^ &vec1;
-        n /= n.norm();
+        let mut n = vec0.cross(vec1);
+        n /= n.magnitude();
         let vec2 = &self.positions[face1[k][0]] - &self.positions[face0[0][0]];
-        let mat = matrix!(vec0.clone(), vec1.clone(), n.clone());
-        let coef = mat.solve(&vec2);
+        let mat = geometry::Matrix3::from_cols(vec0.clone(), vec1.clone(), n.clone());
+        let coef = mat.invert().unwrap() * vec2;
 
         if coef[2] > tol {
             None

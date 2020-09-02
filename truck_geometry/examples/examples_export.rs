@@ -1,7 +1,7 @@
 use truck_geometry::*;
 use truck_io::GeomDataRef;
-type BSplineCurve = truck_geometry::BSplineCurve<[f64; 4]>;
-type BSplineSurface = truck_geometry::BSplineSurface<[f64; 4]>;
+type BSplineCurve = truck_geometry::BSplineCurve<Vector4>;
+type BSplineSurface = truck_geometry::BSplineSurface<Vector4>;
 
 // exporting sample geometric data to:
 const EXPORT_PATH: &str = "tests/data/examples.tgb";
@@ -9,11 +9,11 @@ const EXPORT_PATH: &str = "tests/data/examples.tgb";
 fn typical_2degree_curve() -> BSplineCurve {
     let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]);
     let control_points = vec![
-        vector!(0.0, 0.0, 0.0, 0.0),
-        vector!(1.0, 0.0, 0.0, 0.0),
-        vector!(0.0, 1.0, 0.0, 0.0),
-        vector!(0.0, 0.0, 1.0, 0.0),
-        vector!(0.0, 0.0, 0.0, 1.0),
+        Vector4::new(0.0, 0.0, 0.0, 0.0),
+        Vector4::new(1.0, 0.0, 0.0, 0.0),
+        Vector4::new(0.0, 1.0, 0.0, 0.0),
+        Vector4::new(0.0, 0.0, 1.0, 0.0),
+        Vector4::new(0.0, 0.0, 0.0, 1.0),
     ];
 
     BSplineCurve::new(knot_vec, control_points)
@@ -23,9 +23,9 @@ fn unclamped() -> BSplineCurve {
     let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
 
     let control_points = vec![
-        rvector!(1.0, 0.0, 0.0),
-        rvector!(0.0, 1.0, 0.0),
-        rvector!(0.0, 0.0, 1.0),
+        Vector4::new(1.0, 0.0, 0.0, 1.0),
+        Vector4::new(0.0, 1.0, 0.0, 1.0),
+        Vector4::new(0.0, 0.0, 1.0, 1.0),
     ];
 
     BSplineCurve::new(knot_vec, control_points)
@@ -37,15 +37,15 @@ fn circle_in_projection() -> BSplineCurve {
     ]);
 
     let control_points = vec![
-        rvector!(0.0, 0.0, -1.0) * 2.0,
-        rvector!(1.0, 0.0, -1.0),
-        rvector!(1.0, 0.0, 0.0),
-        rvector!(1.0, 0.0, 1.0),
-        rvector!(0.0, 0.0, 1.0) * 2.0,
-        rvector!(-1.0, 0.0, 1.0),
-        rvector!(-1.0, 0.0, 0.0),
-        rvector!(-1.0, 0.0, -1.0),
-        rvector!(0.0, 0.0, -1.0) * 2.0,
+        Vector4::new(0.0, 0.0, -1.0, 1.0) * 2.0,
+        Vector4::new(1.0, 0.0, -1.0, 1.0),
+        Vector4::new(1.0, 0.0, 0.0, 1.0),
+        Vector4::new(1.0, 0.0, 1.0, 1.0),
+        Vector4::new(0.0, 0.0, 1.0, 1.0) * 2.0,
+        Vector4::new(-1.0, 0.0, 1.0, 1.0),
+        Vector4::new(-1.0, 0.0, 0.0, 1.0),
+        Vector4::new(-1.0, 0.0, -1.0, 1.0),
+        Vector4::new(0.0, 0.0, -1.0, 1.0) * 2.0,
     ];
 
     let mut bspcurve = BSplineCurve::new(knot_vec, control_points);
@@ -60,28 +60,28 @@ fn full_sphere() -> BSplineSurface {
 
     // sign up the control points in the vector of all points
     let mut v = vec![vec![Vector4::zero(); 7]; 4];
-    v[0][0] = rvector!(0.0, 0.0, 1.0);
+    v[0][0] = Vector4::new(0.0, 0.0, 1.0, 1.0);
     v[0][1] = &v[0][0] / 3.0;
     v[0][2] = v[0][1].clone();
     v[0][3] = v[0][0].clone();
     v[0][4] = v[0][1].clone();
     v[0][5] = v[0][1].clone();
     v[0][6] = v[0][0].clone();
-    v[1][0] = rvector!(2.0, 0.0, 1.0) / 3.0;
-    v[1][1] = rvector!(2.0, 4.0, 1.0) / 9.0;
-    v[1][2] = rvector!(-2.0, 4.0, 1.0) / 9.0;
-    v[1][3] = rvector!(-2.0, 0.0, 1.0) / 3.0;
-    v[1][4] = rvector!(-2.0, -4.0, 1.0) / 9.0;
-    v[1][5] = rvector!(2.0, -4.0, 1.0) / 9.0;
-    v[1][6] = rvector!(2.0, 0.0, 1.0) / 3.0;
-    v[2][0] = rvector!(2.0, 0.0, -1.0) / 3.0;
-    v[2][1] = rvector!(2.0, 4.0, -1.0) / 9.0;
-    v[2][2] = rvector!(-2.0, 4.0, -1.0) / 9.0;
-    v[2][3] = rvector!(-2.0, 0.0, -1.0) / 3.0;
-    v[2][4] = rvector!(-2.0, -4.0, -1.0) / 9.0;
-    v[2][5] = rvector!(2.0, -4.0, -1.0) / 9.0;
-    v[2][6] = rvector!(2.0, 0.0, -1.0) / 3.0;
-    v[3][0] = rvector!(0.0, 0.0, -1.0);
+    v[1][0] = Vector4::new(2.0, 0.0, 1.0, 1.0) / 3.0;
+    v[1][1] = Vector4::new(2.0, 4.0, 1.0, 1.0) / 9.0;
+    v[1][2] = Vector4::new(-2.0, 4.0, 1.0, 1.0) / 9.0;
+    v[1][3] = Vector4::new(-2.0, 0.0, 1.0, 1.0) / 3.0;
+    v[1][4] = Vector4::new(-2.0, -4.0, 1.0, 1.0) / 9.0;
+    v[1][5] = Vector4::new(2.0, -4.0, 1.0, 1.0) / 9.0;
+    v[1][6] = Vector4::new(2.0, 0.0, 1.0, 1.0) / 3.0;
+    v[2][0] = Vector4::new(2.0, 0.0, -1.0, 1.0) / 3.0;
+    v[2][1] = Vector4::new(2.0, 4.0, -1.0, 1.0) / 9.0;
+    v[2][2] = Vector4::new(-2.0, 4.0, -1.0, 1.0) / 9.0;
+    v[2][3] = Vector4::new(-2.0, 0.0, -1.0, 1.0) / 3.0;
+    v[2][4] = Vector4::new(-2.0, -4.0, -1.0, 1.0) / 9.0;
+    v[2][5] = Vector4::new(2.0, -4.0, -1.0, 1.0) / 9.0;
+    v[2][6] = Vector4::new(2.0, 0.0, -1.0, 1.0) / 3.0;
+    v[3][0] = Vector4::new(0.0, 0.0, -1.0, 1.0);
     v[3][1] = &v[3][0] / 3.0;
     v[3][2] = v[3][1].clone();
     v[3][3] = v[3][0].clone();
@@ -103,26 +103,26 @@ fn one_sheet_hyperboloid() -> BSplineSurface {
 
     // the control points
     let control_points0 = vec![
-        vector!(0.0, -2.0, 2.0, 2.0),
-        vector!(1.0, -1.0, 1.0, 1.0),
-        vector!(1.0, 0.0, 1.0, 1.0),
-        vector!(1.0, 1.0, 1.0, 1.0),
-        vector!(0.0, 2.0, 2.0, 2.0),
-        vector!(-1.0, 1.0, 1.0, 1.0),
-        vector!(-1.0, 0.0, 1.0, 1.0),
-        vector!(-1.0, -1.0, 1.0, 1.0),
-        vector!(0.0, -2.0, 2.0, 2.0),
+        Vector4::new(0.0, -2.0, 2.0, 2.0),
+        Vector4::new(1.0, -1.0, 1.0, 1.0),
+        Vector4::new(1.0, 0.0, 1.0, 1.0),
+        Vector4::new(1.0, 1.0, 1.0, 1.0),
+        Vector4::new(0.0, 2.0, 2.0, 2.0),
+        Vector4::new(-1.0, 1.0, 1.0, 1.0),
+        Vector4::new(-1.0, 0.0, 1.0, 1.0),
+        Vector4::new(-1.0, -1.0, 1.0, 1.0),
+        Vector4::new(0.0, -2.0, 2.0, 2.0),
     ];
     let control_points1 = vec![
-        vector!(2.0, 0.0, -2.0, 2.0),
-        vector!(1.0, 1.0, -1.0, 1.0),
-        vector!(0.0, 1.0, -1.0, 1.0),
-        vector!(-1.0, 1.0, -1.0, 1.0),
-        vector!(-2.0, 0.0, -2.0, 2.0),
-        vector!(-1.0, -1.0, -1.0, 1.0),
-        vector!(0.0, -1.0, -1.0, 1.0),
-        vector!(1.0, -1.0, -1.0, 1.0),
-        vector!(2.0, 0.0, -2.0, 2.0),
+        Vector4::new(2.0, 0.0, -2.0, 2.0),
+        Vector4::new(1.0, 1.0, -1.0, 1.0),
+        Vector4::new(0.0, 1.0, -1.0, 1.0),
+        Vector4::new(-1.0, 1.0, -1.0, 1.0),
+        Vector4::new(-2.0, 0.0, -2.0, 2.0),
+        Vector4::new(-1.0, -1.0, -1.0, 1.0),
+        Vector4::new(0.0, -1.0, -1.0, 1.0),
+        Vector4::new(1.0, -1.0, -1.0, 1.0),
+        Vector4::new(2.0, 0.0, -2.0, 2.0),
     ];
 
     // construct the B-spline surface
@@ -135,21 +135,21 @@ fn disk() -> BSplineSurface {
     let knot_vec1 = knot_vec0.clone();
 
     let control_points0 = vec![
-        vector!(1.0, 0.0, 0.0, 1.0),
-        vector!(1.0, 0.0, 1.0, 1.0),
-        vector!(0.0, 0.0, 2.0, 2.0),
+        Vector4::new(1.0, 0.0, 0.0, 1.0),
+        Vector4::new(1.0, 0.0, 1.0, 1.0),
+        Vector4::new(0.0, 0.0, 2.0, 2.0),
     ];
 
     let control_points1 = vec![
-        vector!(1.0, 0.0, -1.0, 1.0),
-        vector!(0.0, 0.0, 0.0, 1.0),
-        vector!(-2.0, 0.0, 2.0, 2.0),
+        Vector4::new(1.0, 0.0, -1.0, 1.0),
+        Vector4::new(0.0, 0.0, 0.0, 1.0),
+        Vector4::new(-2.0, 0.0, 2.0, 2.0),
     ];
 
     let control_points2 = vec![
-        vector!(0.0, 0.0, -2.0, 2.0),
-        vector!(-2.0, 0.0, -2.0, 2.0),
-        vector!(-4.0, 0.0, 0.0, 4.0),
+        Vector4::new(0.0, 0.0, -2.0, 2.0),
+        Vector4::new(-2.0, 0.0, -2.0, 2.0),
+        Vector4::new(-4.0, 0.0, 0.0, 4.0),
     ];
 
     let control_points = vec![control_points0, control_points1, control_points2];

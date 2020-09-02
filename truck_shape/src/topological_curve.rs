@@ -112,7 +112,7 @@ impl TopologicalCurve for Wire {
             let pt1 = tmp_curve.control_point(0);
             if !pt0[3].near(&pt1[3]) {
                 let scalar = pt0[3] / pt1[3];
-                tmp_curve *= scalar;
+                tmp_curve = tmp_curve * scalar;
             }
             tmp_curve.knot_normalize().knot_translate((i + 1) as f64);
             curve.concat(&mut tmp_curve);

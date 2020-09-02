@@ -23,22 +23,24 @@ impl MyApp {
             let mut vec = Vec::new();
             for j in 0..=range {
                 let v = (j as f64) / (range as f64);
-                vec.push(vector!(v, 0, u, 1));
+                vec.push(Vector4::new(v, 0.0, u, 1.0));
             }
             ctrl_pts.push(vec);
         }
         BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts)
     }
     fn init_camera() -> Camera {
-        let mut vec0 = vector!(1.5, 0.0, -1.5, 0.0);
-        vec0 /= vec0.norm();
-        let mut vec1 = vector!(-0.5, 1, -0.5, 0.0);
-        vec1 /= vec1.norm();
-        let mut vec2 = vector!(1, 1, 1, 0);
-        vec2 /= vec2.norm();
-        let vec3 = vector!(1.5, 0.8, 1.5, 1);
-        let matrix = matrix!(vec0, vec1, vec2, vec3);
-        Camera::perspective_camera(matrix, std::f64::consts::PI / 2.0, 0.1, 40.0)
+        let mut vec0 = Vector4::new(1.5, 0.0, -1.5, 0.0);
+        vec0 /= vec0.magnitude();
+        let mut vec1 = Vector4::new(-0.5, 1.0, -0.5, 0.0);
+        vec1 /= vec1.magnitude();
+        let mut vec2 = Vector4::new(1.0, 1.0, 1.0, 0.0);
+        vec2 /= vec2.magnitude();
+        let vec3 = Vector4::new(1.5, 0.8, 1.5, 1.0);
+        let matrix = Matrix4::from_cols(vec0, vec1, vec2, vec3);
+        let mut camera = Camera::default();
+        camera.matrix = matrix;
+        camera
     }
     fn init_thread(
         handler: &WGPUHandler,
@@ -46,7 +48,7 @@ impl MyApp {
         closed: &Arc<Mutex<bool>>,
     ) -> JoinHandle<()>
     {
-        let mesher = WGPUMesher::with_device(&handler.device, &handler.queue);
+        let device = Arc::clone(&handler.device);
         let arc_object = Arc::clone(object);
         let closed = Arc::clone(closed);
         let mut first = true;
@@ -62,9 +64,10 @@ impl MyApp {
                 std::thread::sleep(std::time::Duration::from_millis(1));
                 let mut bspsurface0 = bspsurface.clone();
                 bspsurface0.optimize();
-                let object = mesher.meshing(&bspsurface0, 0.02);
+                let mesh = truck_polymesh::StructuredMesh::from_surface(&bspsurface0, 0.01);
+                let object = RenderObject::new(mesh.destruct(), &device);
                 if first {
-                    let vec = futures::executor::block_on(get_vertex(&object, &mesher.device));
+                    let vec = futures::executor::block_on(get_vertex(&object, &device));
                     println!("{:?}", vec);
                     first = false;
                 }
@@ -100,8 +103,9 @@ impl App for MyApp {
         };
         render.scene.camera = MyApp::init_camera();
         render.scene.light = Light {
-            position: vector!(0.5, 2.0, 0.5),
+            position: Point3::new(0.5, 2.0, 0.5),
             strength: 1.0,
+            color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
         };
         render
@@ -123,7 +127,7 @@ impl App for MyApp {
                 }
                 self.scene.add_object(object);
             }
-            None => {},
+            None => {}
         }
         self.scene.prepare_render(&handler.sc_desc);
     }
