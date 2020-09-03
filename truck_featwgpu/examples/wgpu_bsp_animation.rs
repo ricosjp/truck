@@ -8,7 +8,7 @@ use app::*;
 
 struct MyApp {
     scene: Scene,
-    object: Arc<Mutex<Option<RenderObject>>>,
+    object: Arc<Mutex<Option<PolygonInstance>>>,
     closed: Arc<Mutex<bool>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -43,15 +43,12 @@ impl MyApp {
         camera
     }
     fn init_thread(
-        handler: &WGPUHandler,
-        object: &Arc<Mutex<Option<RenderObject>>>,
+        object: &Arc<Mutex<Option<PolygonInstance>>>,
         closed: &Arc<Mutex<bool>>,
     ) -> JoinHandle<()>
     {
-        let device = Arc::clone(&handler.device);
         let arc_object = Arc::clone(object);
         let closed = Arc::clone(closed);
-        let mut first = true;
         std::thread::spawn(move || {
             let mut bspsurface = Self::init_surface(3, 4);
             let mut time: f64 = 0.0;
@@ -65,12 +62,7 @@ impl MyApp {
                 let mut bspsurface0 = bspsurface.clone();
                 bspsurface0.optimize();
                 let mesh = truck_polymesh::StructuredMesh::from_surface(&bspsurface0, 0.01);
-                let object = RenderObject::new(mesh.destruct(), &device);
-                if first {
-                    let vec = futures::executor::block_on(get_vertex(&object, &device));
-                    println!("{:?}", vec);
-                    first = false;
-                }
+                let object = PolygonInstance::new(mesh.destruct());
                 count += 1;
                 bspsurface.control_point_mut(3, 3)[1] = time.sin();
                 time += 0.1;
@@ -94,7 +86,7 @@ impl App for MyApp {
         let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
         let object = Arc::new(Mutex::new(None));
         let closed = Arc::new(Mutex::new(false));
-        let thread = Some(MyApp::init_thread(handler, &object, &closed));
+        let thread = Some(MyApp::init_thread(&object, &closed));
         let mut render = MyApp {
             scene: Scene::new(device, queue, sc_desc),
             object,
@@ -122,60 +114,28 @@ impl App for MyApp {
     fn update(&mut self, handler: &WGPUHandler) {
         match self.object.lock().unwrap().take() {
             Some(object) => {
-                if self.scene.number_of_objects() > 0 {
-                    self.scene.remove_object(0);
-                }
-                self.scene.add_object(object);
+                if self.scene.number_of_objects() == 0 {
+                    let object = object.render_object(&self.scene, &handler.sc_desc, None);
+                    self.scene.add_object(object);
+                } else {
+                    let (vertex_buffer, index_buffer) = object.polygon.buffers(&handler.device);
+                    let object = self.scene.get_object_mut(0);
+                    object.vertex_buffer = Arc::new(vertex_buffer);
+                    object.index_buffer = Some(Arc::new(index_buffer));
+                };
             }
             None => {}
         }
         self.scene.prepare_render(&handler.sc_desc);
     }
 
-    fn render<'a>(&'a self, rpass: &mut RenderPass<'a>) { self.scene.render_scene(rpass); }
+    fn render(&self, frame: &SwapChainFrame) {
+        self.scene.render_scene(&frame.output);
+    }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         *self.closed.lock().unwrap() = true;
         self.thread.take().unwrap().join().unwrap();
         winit::event_loop::ControlFlow::Exit
-    }
-}
-
-#[allow(dead_code)]
-async fn get_vertex(object: &RenderObject, device: &Device) -> Vec<[f32; 8]> {
-    let byte_size = object.vertex_size * 4 * 8;
-    let buffer_future = object.vertex_buffer.map_read(0, byte_size as u64);
-    device.poll(wgpu::Maintain::Wait);
-
-    if let Ok(mapping) = buffer_future.await {
-        mapping
-            .as_slice()
-            .chunks_exact(32)
-            .map(|b| {
-                let vec = bytemuck::cast_slice::<u8, f32>(b);
-                [
-                    vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], vec[6], vec[7],
-                ]
-            })
-            .collect()
-    } else {
-        panic!("failed to run compute on gpu!")
-    }
-}
-
-#[allow(dead_code)]
-async fn get_index(object: &RenderObject, device: &Device) -> Vec<u32> {
-    let byte_size = object.index_size * 4;
-    let buffer_future = object.index_buffer.map_read(0, byte_size as u64);
-    device.poll(wgpu::Maintain::Wait);
-
-    if let Ok(mapping) = buffer_future.await {
-        mapping
-            .as_slice()
-            .chunks_exact(4)
-            .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
-            .collect()
-    } else {
-        panic!("failed to run compute on gpu!")
     }
 }
 

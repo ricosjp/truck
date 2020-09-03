@@ -9,10 +9,8 @@ layout(set = 0, binding = 0) uniform Camera {
     mat4 camera_projection;
 };
 
-layout(set = 0, binding = 2) uniform ModelStatus {
+layout(set = 1, binding = 0) uniform ModelMatrix {
     mat4 matrix;
-    vec4 _color;
-    vec3 _reflect_ratio;
 };
 
 layout(location = 0) out vec3 vertex_position;

@@ -44,7 +44,7 @@ impl MyApp {
         }
     }
 
-    fn load_obj<P: AsRef<std::path::Path>>(&mut self, path: P, device: &Device) {
+    fn load_obj<P: AsRef<std::path::Path>>(&mut self, path: P, sc_desc: &SwapChainDescriptor) {
         if self.scene.number_of_objects() != 0 {
             self.scene.remove_object(0);
         }
@@ -53,11 +53,14 @@ impl MyApp {
         let mesh = MyApp::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
-        let mut object = RenderObject::new(mesh, device);
+        let mut mesh = PolygonInstance::new(mesh);
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
-        object.matrix = mat.invert().unwrap();
-        object.color = Vector4::new(1.0, 0.0, 0.0, 1.0);
-        object.reflect_ratio = [0.2, 0.6, 0.2];
+        mesh.matrix = mat.invert().unwrap();
+        mesh.color.ambient = Vector4::new(0.7, 0.7, 0.7, 1.0);
+        mesh.color.diffuse = Vector4::new(0.7, 0.7, 0.7, 1.0);
+        mesh.color.specular = Vector4::new(1.0, 1.0, 1.0, 1.0);
+        mesh.color.reflect_ratio = Vector3::new(0.2, 0.6, 0.2);
+        let object = mesh.render_object(&self.scene, sc_desc, None);
         self.scene.add_object(object);
     }
 }
@@ -220,16 +223,16 @@ impl App for MyApp {
     }
 
     fn update(&mut self, handler: &WGPUHandler) {
-        let (device, sc_desc) = (&handler.device, &handler.sc_desc);
+        let sc_desc = &handler.sc_desc;
         if let Some(path) = self.path.take() {
-            self.load_obj(path, device);
+            self.load_obj(path, sc_desc);
         }
         self.width = sc_desc.width;
         self.height = sc_desc.height;
         self.scene.prepare_render(sc_desc);
     }
 
-    fn render<'a>(&'a self, rpass: &mut RenderPass<'a>) { self.scene.render_scene(rpass); }
+    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output); }
 }
 
 fn main() { MyApp::run(); }
