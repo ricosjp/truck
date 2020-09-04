@@ -15,10 +15,11 @@ layout(set = 0, binding = 1) uniform Light {
     int light_type;
 };
 
-layout(set = 0, binding = 2) uniform ModelStatus {
-    mat4 _matrix;
-    vec4 material;
-    vec3 reflect_ratio;
+layout(set = 1, binding = 1) uniform ModelColor {
+    vec4 ambient;
+    vec4 diffuse;
+    vec4 specular;
+    vec4 reflect_ratio;
 };
 
 layout(location = 0) out vec4 color;
@@ -32,11 +33,11 @@ float radiance() {
     }
 }
 
-float ambient() {
+float ambient_strength() {
     return reflect_ratio[0];
 }
 
-float diffuse() {
+float diffuse_strength() {
     vec3 normal = normalize(vertex_normal);
     vec3 dir;
     if (light_type == 0) {
@@ -47,7 +48,7 @@ float diffuse() {
     return clamp(dot(dir, normal), 0.0, 1.0) * reflect_ratio[1];
 }
 
-float specular() {
+float specular_strength() {
     vec3 normal = normalize(vertex_normal);
     vec3 light_dir;
     if (light_type == 0) {
@@ -63,11 +64,14 @@ float specular() {
     );
     vec3 camera_dir = normalize(camera_position - vertex_position);
     float cos_alpha = clamp(dot(camera_dir, reflect_dir), 0.0, 1.0);
-    return pow(cos_alpha, 1) * reflect_ratio[2];
+    return pow(cos_alpha, 5) * reflect_ratio[2];
 }
 
 void main() {
-    float strength = radiance() * (ambient() + diffuse() + specular());
-    strength = clamp(strength, 0.0, 1.0);
-    color = vec4(light_color, 1.0) * material * strength;
+    vec4 material = radiance() * (
+        ambient_strength() * ambient
+        + diffuse_strength() * diffuse
+        + specular_strength() * specular
+        );
+    color = vec4(light_color, 1.0) * vec4(material.xyz, 1.0);
 }

@@ -8,10 +8,11 @@ impl Light {
             light_color: self.color.cast().unwrap().into(),
             light_type: self.light_type.type_id(),
         };
-        let buffer = device.create_buffer_with_data(
-            bytemuck::cast_slice(&[light_info]),
-            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-        );
+        let buffer = device.create_buffer_init(&BufferInitDescriptor {
+            contents: bytemuck::cast_slice(&[light_info]),
+            usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+            label: None,
+        });
         BufferHandler::new(buffer, std::mem::size_of::<LightInfo>() as u64)
     }
 }

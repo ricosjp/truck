@@ -7,14 +7,15 @@ use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
 
+const NUM_OF_OBJECTS: usize = 8;
+
 struct MyRender {
     scene: Scene,
+    instances: Vec<PolygonInstance>,
     rotate_flag: bool,
     prev_cursor: Option<Vector2>,
     prev_time: f64,
     path: Option<PathBuf>,
-    width: u32,
-    height: u32,
     light_changed: Option<std::time::Instant>,
     camera_changed: Option<std::time::Instant>,
 }
@@ -30,7 +31,7 @@ impl MyRender {
             mat.invert().unwrap(),
             std::f64::consts::PI / 8.0,
             0.1,
-            200.0
+            200.0,
         )
     }
 
@@ -47,56 +48,63 @@ impl MyRender {
         }
     }
 
-    fn load_obj<P: AsRef<std::path::Path>>(&mut self, path: P, device: &Device) {
-        self.scene.clear_objects();
+    fn load_obj<P: AsRef<std::path::Path>>(
+        &mut self,
+        path: P,
+    )
+    {
+        let scene = &mut self.scene;
+        scene.clear_objects();
+        self.instances.clear();
         let file = std::fs::File::open(path).unwrap();
         let mesh = truck_io::obj::read(file).unwrap();
         let mesh = MyRender::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
-        let mut object = RenderObject::new(mesh, device);
+        let original_mesh = PolygonInstance::new(mesh, scene.device());
+        let rad = cgmath::Rad(2.0 * PI / NUM_OF_OBJECTS as f64);
         let mut mat = Matrix4::from_scale(size / 2.0);
         mat = Matrix4::from_translation(center.to_vec()) * mat;
         mat = mat.invert().unwrap();
-        mat = Matrix4::from_translation(Vector3::new(0.0, 0.5, 0.0)) * mat;
-        object.matrix = mat;
-        object.color = Vector4::new(1.0, 1.0, 1.0, 1.0);
-        object.reflect_ratio = [0.2, 0.6, 0.2];
-        self.scene.add_object(object);
-    }
-
-    fn arrange_objects(&mut self) {
-        let scene = &mut self.scene;
-        let object = scene.get_object_mut(0);
-        object.matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, 5.0)) * object.matrix;
-        let mat = Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(PI / 4.0));
-        for i in 1..8 {
-            let mut new_object = scene.get_object(i - 1).clone();
-            new_object.matrix = mat * new_object.matrix;
-            scene.add_object(new_object);
+        mat = Matrix4::from_translation(Vector3::new(0.0, 0.5, 5.0)) * mat;
+        for _ in 0..NUM_OF_OBJECTS {
+            let mut instance = original_mesh.clone();
+            instance.matrix = mat;
+            instance.color.ambient = Vector4::new(1.0, 1.0, 1.0, 1.0);
+            instance.color.diffuse = Vector4::new(1.0, 1.0, 1.0, 1.0);
+            instance.color.specular = Vector4::new(1.0, 1.0, 1.0, 1.0);
+            instance.color.reflect_ratio = Vector3::new(0.2, 0.6, 0.2);
+            scene.add_object(&instance);
+            self.instances.push(instance);
+            mat = Matrix4::from_axis_angle(Vector3::unit_y(), rad) * mat;
         }
     }
 
     fn update_objects(&mut self) {
-        let scene = &mut self.scene;
-        let time = scene.elapsed();
+        let time = self.scene.elapsed();
         let delta_time = time - self.prev_time;
         self.prev_time = time;
         let mat0 = Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(delta_time));
-        for (i, object) in scene.objects_mut().iter_mut().enumerate() {
-            let k = (-1_f64).powi(i as i32) * 5.0;
-            let mat1 =
-                Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(k * delta_time));
-            let x = object.matrix[3][2];
-            let mat = mat0 * object.matrix * mat1 * object.matrix.invert().unwrap();
-            object.matrix = mat * object.matrix;
-            let obj_pos = object.matrix[3].truncate();
+        for (idx, instance) in self.instances.iter_mut().enumerate() {
+            let k = (-1_f64).powi(idx as i32) * 5.0;
+            let mat1 = Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(k * delta_time));
+            let x = instance.matrix[3][2];
+            let mat = mat0 * instance.matrix * mat1 * instance.matrix.invert().unwrap();
+            instance.matrix = mat * instance.matrix;
+            let obj_pos = instance.matrix[3].truncate();
             let new_length = 5.0 + time.sin() + (time * 3.0).sin() / 3.0;
             let obj_dir = &obj_pos / obj_pos.magnitude();
             let move_vec = obj_dir * (new_length - obj_pos.magnitude());
             let mat = Matrix4::from_translation(move_vec);
-            object.matrix = mat * object.matrix;
-            object.color = Self::calculate_color(x / 14.0 + 0.5);
+            instance.matrix = mat * instance.matrix;
+            let color = Self::calculate_color(x / 14.0 + 0.5);
+            instance.color = ColorConfig {
+                ambient: color,
+                diffuse: color,
+                specular: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                reflect_ratio: Vector3::new(0.2, 0.6, 0.2),
+            };
+            self.scene.update_bind_group(&*instance, idx);
         }
     }
 
@@ -115,12 +123,11 @@ impl App for MyRender {
         let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
         let mut render = MyRender {
             scene: Scene::new(device, queue, sc_desc),
+            instances: Vec::new(),
             rotate_flag: false,
             prev_cursor: None,
             prev_time: 0.0,
             path: None,
-            width: sc_desc.width,
-            height: sc_desc.height,
             camera_changed: None,
             light_changed: None,
         };
@@ -144,12 +151,6 @@ impl App for MyRender {
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         self.path = Some(path);
-        Self::default_control_flow()
-    }
-
-    fn resized(&mut self, size: PhysicalSize<u32>) -> ControlFlow {
-        self.width = size.width;
-        self.height = size.height;
         Self::default_control_flow()
     }
 
@@ -182,7 +183,8 @@ impl App for MyRender {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let trans_vec = self.scene.camera.eye_direction() * 0.2 * y as f64;
-                self.scene.camera.matrix = Matrix4::from_translation(trans_vec) * self.scene.camera.matrix;
+                self.scene.camera.matrix =
+                    Matrix4::from_translation(trans_vec) * self.scene.camera.matrix;
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
@@ -227,12 +229,7 @@ impl App for MyRender {
                     }
                     ProjectionType::Perspective => {
                         let matrix = self.scene.camera.matrix;
-                        Camera::parallel_camera(
-                            matrix,
-                            2.0,
-                            0.1,
-                            40.0,
-                        )
+                        Camera::parallel_camera(matrix, 2.0, 0.1, 40.0)
                     }
                 }
             }
@@ -271,22 +268,17 @@ impl App for MyRender {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, handler: &WGPUHandler) {
-        let device = &handler.device;
-        let sc_desc = &handler.sc_desc;
+    fn update(&mut self, _: &WGPUHandler) {
         if let Some(path) = self.path.take() {
-            self.load_obj(path, device);
-            self.arrange_objects();
+            self.load_obj(path);
         }
-        self.width = sc_desc.width;
-        self.height = sc_desc.height;
         if self.scene.number_of_objects() != 0 {
             self.update_objects();
         }
-        self.scene.prepare_render(sc_desc);
+        self.scene.prepare_render();
     }
 
-    fn render<'a>(&'a self, rpass: &mut RenderPass<'a>) { self.scene.render_scene(rpass); }
+    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output); }
 }
 
 fn main() { MyRender::run() }

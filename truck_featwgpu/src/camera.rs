@@ -63,8 +63,11 @@ impl Camera {
             camera_matrix: (&self.matrix).cast().unwrap().into(),
             camera_projection: self.projection(as_rat).cast().unwrap().into(),
         };
-        let buffer = device
-            .create_buffer_with_data(bytemuck::cast_slice(&[camera_info]), BufferUsage::UNIFORM);
+        let buffer = device.create_buffer_init(&BufferInitDescriptor {
+            contents: bytemuck::cast_slice(&[camera_info]),
+            usage: BufferUsage::UNIFORM,
+            label: None,
+        });
         BufferHandler::new(buffer, std::mem::size_of::<CameraInfo>() as u64)
     }
 }
@@ -72,11 +75,6 @@ impl Camera {
 impl Default for Camera {
     #[inline(always)]
     fn default() -> Camera {
-        Camera::perspective_camera(
-            Matrix4::identity(),
-            std::f64::consts::PI / 4.0,
-            0.1,
-            10.0,
-        )
+        Camera::perspective_camera(Matrix4::identity(), std::f64::consts::PI / 4.0, 0.1, 10.0)
     }
 }

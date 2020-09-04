@@ -2,3 +2,4 @@
 /Cargo.lock
 *.obj
 /.vscode
+*.spv

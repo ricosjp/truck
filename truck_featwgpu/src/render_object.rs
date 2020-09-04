@@ -1,14 +1,30 @@
 use crate::*;
+use lazy_static::*;
 
 impl RenderObject {
-    pub fn new<T: Into<WGPUPolygonMesh>>(mesh: T, display: &Device) -> RenderObject {
+    pub fn from_polygon<T: Into<WGPUPolygonMesh>>(mesh: T, device: &Device) -> RenderObject {
         let wgpupolymesh = mesh.into();
-        let (vertex_buffer, index_buffer) = wgpupolymesh.signup(&display);
+        let (vertex_buffer, index_buffer) = wgpupolymesh.signup(&device);
+        let matrix_data: [[f32; 4]; 4] = wgpupolymesh.matrix.cast::<f32>().unwrap().into();
+        let matrix_buffer = device.create_buffer_init(
+            &BufferInitDescriptor {
+                contents: bytemuck::cast_slice(&matrix_data),
+                usage: BufferUsage::UNIFORM,
+                label: None,
+            }
+        );
+        let rr = wgpupolymesh.reflect_ratio;
+        let color_data: [[f32; 4]; 4] = [
+            wgpupolymesh.ambient.cast::<f32>().unwrap().into(),
+            wgpupolymesh.diffuse.cast::<f32>().unwrap().into(),
+            wgpupolymesh.specular.cast::<f32>().unwrap().into(),
+            [rr[0] as f32, rr[1] as f32, rr[2] as f32, 0.0],
+        ];
         RenderObject {
             vertex_buffer: Arc::new(vertex_buffer),
             vertex_size: wgpupolymesh.vertices.len(),
-            index_buffer: Arc::new(index_buffer),
-            index_size: wgpupolymesh.indices.len(),
+            index_buffer: Some(Arc::new(index_buffer)),
+            index_size: Some(wgpupolymesh.indices.len()),
             matrix: Matrix4::identity(),
             color: Vector4::from([1.0; 4]),
             reflect_ratio: [0.2, 0.6, 0.2],
