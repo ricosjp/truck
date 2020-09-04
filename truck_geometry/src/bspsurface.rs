@@ -1,6 +1,7 @@
 use crate::errors::Error;
 use crate::traits::inv_or_zero;
 use crate::*;
+use std::convert::TryInto;
 use std::ops::*;
 
 impl<V: ExVectorSpace> BSplineSurface<V>
@@ -109,11 +110,13 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// Returns the reference of the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]
     pub fn control_point(&self, idx0: usize, idx1: usize) -> &V { &self.control_points[idx0][idx1] }
-    
     /// Apply the given transformation to all control points.
     #[inline(always)]
     pub fn transform_control_points<F: FnMut(&mut V)>(&mut self, f: F) {
-        self.control_points.iter_mut().flat_map(|vec| vec).for_each(f)
+        self.control_points
+            .iter_mut()
+            .flat_map(|vec| vec)
+            .for_each(f)
     }
 
     /// Returns the iterator over the control points in the `column_idx`th row.
@@ -810,6 +813,414 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         self
     }
 
+    /// Creates the column sectional curve.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let uknot_vec = KnotVec::bezier_knot(1);
+    /// let vknot_vec = KnotVec::bezier_knot(2);
+    /// let knot_vecs = (uknot_vec, vknot_vec);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let bspcurve = bspsurface.column_curve(1);
+    ///
+    /// assert_eq!(bspcurve.knot_vec(), &KnotVec::bezier_knot(2));
+    /// assert_eq!(
+    ///     bspcurve.control_points(),
+    ///     &vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
+    /// );
+    /// ```
+    pub fn column_curve(&self, row_idx: usize) -> BSplineCurve<V> {
+        let knot_vec = self.vknot_vec().clone();
+        let ctrl_pts = self.control_points[row_idx].clone();
+        BSplineCurve::new_unchecked(knot_vec, ctrl_pts)
+    }
+    /// Creates the column sectional curve.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let uknot_vec = KnotVec::bezier_knot(1);
+    /// let vknot_vec = KnotVec::bezier_knot(2);
+    /// let knot_vecs = (uknot_vec, vknot_vec);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let bspcurve = bspsurface.row_curve(1);
+    ///
+    /// assert_eq!(bspcurve.knot_vec(), &KnotVec::bezier_knot(1));
+    /// assert_eq!(
+    ///     bspcurve.control_points(),
+    ///     &vec![Vector3::new(1.0, 0.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
+    /// );
+    /// ```
+    pub fn row_curve(&self, column_idx: usize) -> BSplineCurve<V> {
+        let knot_vec = self.uknot_vec().clone();
+        let ctrl_pts: Vec<_> = self
+            .ctrl_pts_row_iter(column_idx)
+            .map(|pt| pt.clone())
+            .collect();
+        BSplineCurve::new_unchecked(knot_vec, ctrl_pts)
+    }
+
+    /// Elevates the vdegree.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 2.0)],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let org_surface = bspsurface.clone();
+    ///
+    /// bspsurface.elevate_vdegree();
+    ///
+    /// assert_eq!(bspsurface.udegree(), org_surface.udegree());
+    /// assert_eq!(bspsurface.vdegree(), org_surface.vdegree() + 1);
+    /// assert!(bspsurface.near2_as_surface(&org_surface));
+    /// ```
+    pub fn elevate_vdegree(&mut self) -> &mut Self {
+        let mut new_knot_vec = KnotVec::new();
+        for (i, vec) in self.control_points.iter_mut().enumerate() {
+            let knot_vec = self.knot_vecs.1.clone();
+            let ctrl_pts = vec.clone();
+            let mut curve = BSplineCurve::new(knot_vec, ctrl_pts);
+            curve.elevate_degree();
+            if i == 0 {
+                new_knot_vec = curve.knot_vec().clone();
+            }
+            *vec = curve.control_points;
+        }
+        self.knot_vecs.1 = new_knot_vec;
+        self
+    }
+
+    /// Elevates the udegree.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 2.0)],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let org_surface = bspsurface.clone();
+    ///
+    /// bspsurface.elevate_udegree();
+    ///
+    /// assert_eq!(bspsurface.udegree(), org_surface.udegree() + 1);
+    /// assert_eq!(bspsurface.vdegree(), org_surface.vdegree());
+    /// assert!(bspsurface.near2_as_surface(&org_surface));
+    /// ```
+    pub fn elevate_udegree(&mut self) -> &mut Self {
+        self.swap_axes();
+        self.elevate_vdegree();
+        self.swap_axes();
+        self
+    }
+
+    /// Aligns the udegree with the same degrees.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let uknot_vec = KnotVec::bezier_knot(1);
+    /// let vknot_vec = KnotVec::bezier_knot(2);
+    /// let knot_vecs = (uknot_vec, vknot_vec);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let org_surface = bspsurface.clone();
+    ///
+    /// assert_ne!(bspsurface.udegree(), bspsurface.vdegree());
+    /// bspsurface.syncro_uvdegrees();
+    /// assert_eq!(bspsurface.udegree(), bspsurface.vdegree());
+    /// assert!(bspsurface.near2_as_surface(&org_surface));
+    /// ```
+    pub fn syncro_uvdegrees(&mut self) -> &mut Self {
+        if self.udegree() > self.vdegree() {
+            for _ in 0..(self.udegree() - self.vdegree()) {
+                self.elevate_vdegree();
+            }
+        }
+        if self.vdegree() > self.udegree() {
+            for _ in 0..(self.vdegree() - self.udegree()) {
+                self.elevate_udegree();
+            }
+        }
+        self
+    }
+
+    /// Makes the uknot vector and the vknot vector the same knot vector.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let uknot_vec = KnotVec::uniform_knot(1, 2);
+    /// let vknot_vec = KnotVec::bezier_knot(2);
+    /// let knot_vecs = (uknot_vec, vknot_vec);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 2.0, 0.0), Vector3::new(1.0, 2.0, 1.0), Vector3::new(2.0, 2.0, 2.0)],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let org_surface = bspsurface.clone();
+    ///
+    /// assert_ne!(bspsurface.uknot_vec(), bspsurface.vknot_vec());
+    /// bspsurface.syncro_uvknots();
+    /// assert_eq!(bspsurface.uknot_vec(), bspsurface.vknot_vec());
+    /// assert!(bspsurface.near2_as_surface(&org_surface));
+    /// ```
+    pub fn syncro_uvknots(&mut self) -> &mut Self {
+        self.knot_vecs.0.normalize();
+        self.knot_vecs.1.normalize();
+        
+        let mut i = 0;
+        let mut j = 0;
+        while !self.uknot(i).near2(&1.0) || !self.vknot(j).near2(&1.0) {
+            if self.uknot(i) - self.vknot(j) > TOLERANCE {
+                self.add_uknot(self.vknot(j));
+            } else if self.vknot(j) - self.uknot(i) > TOLERANCE {
+                self.add_vknot(self.uknot(i));
+            }
+            i += 1;
+            j += 1;
+        }
+
+        let ulen = self.uknot_vec().len();
+        let vlen = self.vknot_vec().len();
+        if ulen > vlen {
+            for _ in 0..ulen - vlen {
+                self.add_vknot(1.0);
+            }
+        } else if ulen < vlen {
+            for _ in 0..vlen - ulen {
+                self.add_uknot(1.0);
+            }
+        }
+
+        self
+    }
+
+    /// Cuts the surface into two surfaces at the parameter `u`
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    ///
+    /// let knot_vec0 = KnotVec::uniform_knot(2, 2);
+    /// let knot_vec1 = KnotVec::uniform_knot(2, 2);
+    /// let ctrl_pts0 = vec![
+    ///     Vector2::new(0.0, 0.0), Vector2::new(0.5, 0.0), Vector2::new(2.0, 0.0), Vector2::new(2.5, 0.0),
+    /// ];
+    /// let ctrl_pts1 = vec![
+    ///     Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(2.0, 1.0), Vector2::new(2.5, 1.0),
+    /// ];
+    /// let ctrl_pts2 = vec![
+    ///     Vector2::new(0.0, 1.5), Vector2::new(0.5, 1.5), Vector2::new(2.0, 1.5), Vector2::new(2.5, 1.5),
+    /// ];
+    /// let ctrl_pts3 = vec![
+    ///     Vector2::new(0.0, 2.5), Vector2::new(0.5, 2.5), Vector2::new(2.0, 2.5), Vector2::new(2.5, 2.5),
+    /// ];
+    /// let ctrl_pts = vec![ctrl_pts0, ctrl_pts1, ctrl_pts2, ctrl_pts3];
+    /// let bspsurface = BSplineSurface::new((knot_vec0, knot_vec1), ctrl_pts);
+    ///
+    /// let mut part0 = bspsurface.clone();
+    /// let part1 = part0.ucut(0.68);
+    /// const N: usize = 100;
+    /// for i in 0..=N {
+    ///     for j in 0..=N {
+    ///         let u = 0.68 * (i as f64) / (N as f64);
+    ///         let v = 1.0 * (j as f64) / (N as f64);
+    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part0.subs(u, v));
+    ///     }
+    /// }
+    /// for i in 0..=N {
+    ///     for j in 0..=N {
+    ///         let u = 0.68 + 0.32 * (i as f64) / (N as f64);
+    ///         let v = 1.0 * (j as f64) / (N as f64);
+    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part1.subs(u, v));
+    ///     }
+    /// }
+    /// ```
+    pub fn ucut(&mut self, mut u: f64) -> BSplineSurface<V> {
+        let degree = self.udegree();
+
+        let idx = match self.uknot_vec().floor(u) {
+            Some(idx) => idx,
+            None => {
+                let bspline = self.clone();
+                let uknot_vec = KnotVec::from(vec![u, self.vknot_vec()[0]]);
+                let vknot_vec = self.vknot_vec().clone();
+                let ctrl_pts = vec![vec![V::zero(); vknot_vec.len()]];
+                *self = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
+                return bspline;
+            }
+        };
+        let s = if u.near(&self.uknot_vec()[idx]) {
+            u = self.uknot_vec()[idx];
+            self.uknot_vec().multiplicity(idx)
+        } else {
+            0
+        };
+
+        for _ in s..=degree {
+            self.add_uknot(u);
+        }
+
+        let vknot_vec = self.vknot_vec().clone();
+        let k = self.uknot_vec().floor(u).unwrap();
+        let m = self.uknot_vec().len();
+        let n = self.control_points.len();
+        let knot_vec0 = self.uknot_vec().sub_vec(0..=k);
+        let knot_vec1 = self.uknot_vec().sub_vec((k - degree)..m);
+        let control_points0 = Vec::from(&self.control_points[0..(k - degree)]);
+        let control_points1 = Vec::from(&self.control_points[(k - degree)..n]);
+        *self = BSplineSurface::new((knot_vec0, vknot_vec.clone()), control_points0);
+        BSplineSurface::new((knot_vec1, vknot_vec), control_points1)
+    }
+    /// Cuts the curve to two curves at the parameter `t`
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    ///
+    /// let knot_vec0 = KnotVec::uniform_knot(2, 2);
+    /// let knot_vec1 = KnotVec::uniform_knot(2, 2);
+    /// let ctrl_pts0 = vec![
+    ///     Vector2::new(0.0, 0.0), Vector2::new(0.5, 0.0), Vector2::new(2.0, 0.0), Vector2::new(2.5, 0.0),
+    /// ];
+    /// let ctrl_pts1 = vec![
+    ///     Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(2.0, 1.0), Vector2::new(2.5, 1.0),
+    /// ];
+    /// let ctrl_pts2 = vec![
+    ///     Vector2::new(0.0, 1.5), Vector2::new(0.5, 1.5), Vector2::new(2.0, 1.5), Vector2::new(2.5, 1.5),
+    /// ];
+    /// let ctrl_pts3 = vec![
+    ///     Vector2::new(0.0, 2.5), Vector2::new(0.5, 2.5), Vector2::new(2.0, 2.5), Vector2::new(2.5, 2.5),
+    /// ];
+    /// let ctrl_pts = vec![ctrl_pts0, ctrl_pts1, ctrl_pts2, ctrl_pts3];
+    /// let bspsurface = BSplineSurface::new((knot_vec0, knot_vec1), ctrl_pts);
+    ///
+    /// let mut part0 = bspsurface.clone();
+    /// let part1 = part0.vcut(0.68);
+    /// const N: usize = 100;
+    /// for i in 0..=N {
+    ///     for j in 0..=N {
+    ///         let u = 1.0 * (i as f64) / (N as f64);
+    ///         let v = 0.68 * (j as f64) / (N as f64);
+    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part0.subs(u, v));
+    ///     }
+    /// }
+    /// for i in 0..=N {
+    ///     for j in 0..=N {
+    ///         let u = 1.0 * (i as f64) / (N as f64);
+    ///         let v = 0.68 + 0.32 * (j as f64) / (N as f64);
+    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part1.subs(u, v));
+    ///     }
+    /// }
+    /// ```
+    pub fn vcut(&mut self, v: f64) -> BSplineSurface<V> {
+        self.swap_axes();
+        let mut res = self.ucut(v);
+        self.swap_axes();
+        res.swap_axes();
+        res
+    }
+
+    /// Creates a sectional curve with normalized knot vector from the parameter `p` to the parameter `q`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use std::iter::FromIterator;
+    /// 
+    /// // a parabola surface: x = 2u - 1, y = 2v - 1, z = x^2 + y^z
+    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(-1.0, -1.0, 2.0), Vector3::new(-1.0, 0.0, 0.0), Vector3::new(-1.0, 1.0, 2.0)],
+    ///     vec![Vector3::new(0.0, -1.0, 0.0), Vector3::new(0.0, 0.0, -2.0), Vector3::new(0.0, 1.0, 0.0)],
+    ///     vec![Vector3::new(1.0, -1.0, 2.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(1.0, 1.0, 2.0)],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// 
+    /// // add some knots for the test!
+    /// bspsurface.add_uknot(0.26);
+    /// # bspsurface.add_uknot(0.64);
+    /// bspsurface.add_vknot(0.23);
+    /// # bspsurface.add_vknot(0.82);
+    /// 
+    /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
+    /// let curve = bspsurface.sectional_curve(bnd_box);
+    /// const N: usize = 100;
+    /// Vector3::assert_near2(&curve.subs(0.0), &bspsurface.subs(0.2, 0.3));
+    /// Vector3::assert_near2(&curve.subs(1.0), &bspsurface.subs(0.8, 0.6));
+    /// for i in 0..=N {
+    ///     println!("{}", i);
+    ///     let t = i as f64 / N as f64;
+    ///     let pt = curve.subs(t);
+    ///     f64::assert_near2(&pt[1], &(pt[0] * 0.5 - 0.1));
+    ///     f64::assert_near2(&pt[2], &(pt[0] * pt[0] + pt[1] * pt[1]));
+    /// }
+    /// ```
+    pub fn sectional_curve(&self, bnd_box: BoundingBox<Vector2>) -> BSplineCurve<V> {
+        let p = bnd_box.min();
+        let q = bnd_box.max();
+        let mut bspsurface = self.clone();
+        if !p[0].near(&bspsurface.uknot(0)) {
+            bspsurface = bspsurface.ucut(p[0]);
+        }
+        if !q[0].near(&bspsurface.uknot(bspsurface.uknot_vec().len() - 1)) {
+            bspsurface.ucut(q[0]);
+        }
+        if !p[0].near(&bspsurface.vknot(0)) {
+            bspsurface = bspsurface.vcut(p[1]);
+        }
+        if !q[0].near(&bspsurface.vknot(bspsurface.vknot_vec().len() - 1)) {
+            bspsurface.vcut(q[1]);
+        }
+        bspsurface.syncro_uvdegrees();
+        bspsurface.syncro_uvknots();
+        let degree = bspsurface.udegree();
+        let comb = combinatorial(degree);
+        let comb2 = combinatorial(degree * 2);
+        let (knots, _) = bspsurface.uknot_vec().to_single_multi();
+        let mut cc = CurveCollector::<V>::Singleton;
+        for p in 1..knots.len() {
+            let mut backup = None;
+            if p + 1 != knots.len() {
+                backup = Some(bspsurface.ucut(knots[p]));
+                bspsurface.vcut(knots[p]);
+            }
+            let mut knot_vec = KnotVec::bezier_knot(degree * 2);
+            knot_vec.translate(p as f64 - 1.0);
+            let ctrl_pts: Vec<_> = (0..=degree * 2).map(|k| {
+                (0..=k).fold(V::zero(), |sum, i| {
+                    if i <= degree && k - i <= degree {
+                        let coef = (comb[i] * comb[k - i]) as f64 / comb2[k] as f64;
+                        sum + bspsurface.control_points[i][k - i] * coef
+                    } else {
+                        sum
+                    }
+                })
+            }).collect();
+            cc.concat(&mut BSplineCurve::new(knot_vec, ctrl_pts));
+            if p + 1 != knots.len() {
+                bspsurface = backup.unwrap().vcut(knots[p]);
+            }
+        }
+        let mut curve: BSplineCurve<V> = cc.try_into().unwrap();
+        curve.knot_normalize();
+        curve
+    }
+
     /// Creates a surface with normailized knot vectors connecting two curves.
     /// # Examples
     /// ```
@@ -842,7 +1253,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         bspcurve0.optimize();
         bspcurve1.optimize();
 
-        bspcurve0.syncro_knot(&mut bspcurve1);
+        bspcurve0.syncro_knots(&mut bspcurve1);
 
         let uknot_vec = bspcurve0.knot_vec().clone();
         let vknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
@@ -927,11 +1338,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         curve0.syncro_degree(&mut curve2);
         curve0.optimize();
         curve2.optimize();
-        curve0.syncro_knot(&mut curve2);
+        curve0.syncro_knots(&mut curve2);
         curve1.syncro_degree(&mut curve3);
         curve1.optimize();
         curve3.optimize();
-        curve1.syncro_knot(&mut curve3);
+        curve1.syncro_knots(&mut curve3);
 
         let knot_vecs = (curve0.knot_vec().clone(), curve3.knot_vec().clone());
         let mut control_points = Vec::new();
@@ -1465,3 +1876,12 @@ impl<'a, V: VectorSpace> ExactSizeIterator for CPRowIter<'a, V> {
 }
 
 impl<'a, V: VectorSpace> std::iter::FusedIterator for CPRowIter<'a, V> {}
+
+fn combinatorial(n: usize) -> Vec<usize> {
+    let mut res = Vec::new();
+    res.push(1);
+    for i in 1..=n {
+        res.push(res[i - 1] * (n - i + 1) / i);
+    }
+    res
+}

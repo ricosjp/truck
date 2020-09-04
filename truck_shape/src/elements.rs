@@ -75,9 +75,9 @@ impl GeometricalElement for BSplineSurface {
         let [curve0, curve1, curve2, curve3] = self.splitted_boundary();
         let edge0 = curve0.create_topology(director);
         let edge2 = curve2.create_topology(director);
-        let edge1 = Edge::new_unchecked(edge0.back(), edge2.front());
+        let edge1 = Edge::new_unchecked(edge0.back(), edge2.back());
         director.attach(&edge1, curve1);
-        let edge3 = Edge::new_unchecked(edge2.back(), edge0.front());
+        let edge3 = Edge::new_unchecked(edge2.front(), edge0.front());
         director.attach(&edge3, curve3);
         let wire = Wire::from_iter(&[edge0, edge1, edge2, edge3]);
         let face = Face::new_unchecked(wire);
