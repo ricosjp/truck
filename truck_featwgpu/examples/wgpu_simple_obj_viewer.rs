@@ -11,8 +11,6 @@ struct MyApp {
     rotate_flag: bool,
     prev_cursor: Option<Vector2>,
     path: Option<PathBuf>,
-    width: u32,
-    height: u32,
     light_changed: Option<std::time::Instant>,
     camera_changed: Option<std::time::Instant>,
 }
@@ -44,24 +42,22 @@ impl MyApp {
         }
     }
 
-    fn load_obj<P: AsRef<std::path::Path>>(&mut self, path: P, sc_desc: &SwapChainDescriptor) {
-        if self.scene.number_of_objects() != 0 {
-            self.scene.remove_object(0);
-        }
+    fn load_obj<P: AsRef<std::path::Path>>(&mut self, path: P) {
+        let scene = &mut self.scene;
+        scene.clear_objects();
         let file = std::fs::File::open(path).unwrap();
         let mesh = truck_io::obj::read(file).unwrap();
         let mesh = MyApp::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
-        let mut mesh = PolygonInstance::new(mesh);
+        let mut mesh = PolygonInstance::new(mesh, scene.device());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
         mesh.matrix = mat.invert().unwrap();
         mesh.color.ambient = Vector4::new(0.7, 0.7, 0.7, 1.0);
         mesh.color.diffuse = Vector4::new(0.7, 0.7, 0.7, 1.0);
         mesh.color.specular = Vector4::new(1.0, 1.0, 1.0, 1.0);
         mesh.color.reflect_ratio = Vector3::new(0.2, 0.6, 0.2);
-        let object = mesh.render_object(&self.scene, sc_desc, None);
-        self.scene.add_object(object);
+        scene.add_object(&mesh);
     }
 }
 
@@ -73,8 +69,6 @@ impl App for MyApp {
             rotate_flag: false,
             prev_cursor: None,
             path: None,
-            width: sc_desc.width,
-            height: sc_desc.height,
             camera_changed: None,
             light_changed: None,
         };
@@ -98,12 +92,6 @@ impl App for MyApp {
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         self.path = Some(path);
-        Self::default_control_flow()
-    }
-
-    fn resized(&mut self, size: PhysicalSize<u32>) -> ControlFlow {
-        self.width = size.width;
-        self.height = size.height;
         Self::default_control_flow()
     }
 
@@ -222,14 +210,11 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, handler: &WGPUHandler) {
-        let sc_desc = &handler.sc_desc;
+    fn update(&mut self, _: &WGPUHandler) {
         if let Some(path) = self.path.take() {
-            self.load_obj(path, sc_desc);
+            self.load_obj(path);
         }
-        self.width = sc_desc.width;
-        self.height = sc_desc.height;
-        self.scene.prepare_render(sc_desc);
+        self.scene.prepare_render();
     }
 
     fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output); }

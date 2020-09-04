@@ -1,16 +1,13 @@
 extern crate bytemuck;
 extern crate cgmath;
 extern crate futures;
-extern crate glsl_to_spirv;
 extern crate truck_geometry as geometry;
 extern crate truck_polymesh as polymesh;
 extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
 pub use geometry::*;
-use glsl_to_spirv::ShaderType;
 pub use polymesh::PolygonMesh;
-use std::io::Read;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
@@ -59,7 +56,7 @@ pub struct ColorConfig {
 
 #[derive(Debug, Clone)]
 pub struct PolygonInstance {
-    pub polygon: Arc<ExpandedPolygon>,
+    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     pub matrix: Matrix4,
     pub color: ColorConfig,
     pub texture: Option<Vec<u8>>,
@@ -67,11 +64,43 @@ pub struct PolygonInstance {
 
 #[derive(Debug, Clone)]
 pub struct RenderObject {
-    pub vertex_buffer: Arc<BufferHandler>,
-    pub index_buffer: Option<Arc<BufferHandler>>,
-    pub bind_group_layout: Arc<BindGroupLayout>,
-    pub bind_group: Arc<BindGroup>,
-    pub pipeline: Arc<RenderPipeline>,
+    vertex_buffer: Arc<BufferHandler>,
+    index_buffer: Option<Arc<BufferHandler>>,
+    pipeline: Arc<RenderPipeline>,
+    bind_group_layout: Arc<BindGroupLayout>,
+    bind_group: Arc<BindGroup>,
+}
+
+pub trait Rendered {
+    fn vertex_buffer(&self, device: &Device) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
+    fn bind_group_layout(&self, device: &Device) -> Arc<BindGroupLayout>;
+    fn bind_group(&self, device: &Device, layout: &BindGroupLayout) -> Arc<BindGroup>;
+    fn pipeline(
+        &self,
+        device: &Device,
+        sc_desc: &SwapChainDescriptor,
+        layout: &PipelineLayout,
+    ) -> Arc<RenderPipeline>;
+    fn render_object(&self, scene: &Scene) -> RenderObject {
+        let (vertex_buffer, index_buffer) = self.vertex_buffer(&scene.device);
+        let bind_group_layout = self.bind_group_layout(&scene.device);
+        let bind_group = self.bind_group(&scene.device, &bind_group_layout);
+        let pipeline_layout = scene
+            .device
+            .create_pipeline_layout(&PipelineLayoutDescriptor {
+                bind_group_layouts: &[&scene.bind_group_layout, &bind_group_layout],
+                push_constant_ranges: &[],
+                label: None,
+            });
+        let pipeline = self.pipeline(&scene.device, &scene.sc_desc.try_lock().unwrap(), &pipeline_layout);
+        RenderObject {
+            vertex_buffer,
+            index_buffer,
+            bind_group_layout,
+            bind_group,
+            pipeline,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -107,17 +136,11 @@ pub struct BufferHandler {
     pub size: u64,
 }
 
-//#[derive(Debug)]
-//pub struct WGPUMesher {
-//    pub device: Arc<Device>,
-//    queue: Arc<Queue>,
-//    vertex_creator: wgpumesher::MeshCreator,
-//}
-
 #[derive(Debug)]
 pub struct Scene {
     device: Arc<Device>,
     queue: Arc<Queue>,
+    sc_desc: Arc<Mutex<SwapChainDescriptor>>,
     objects: Vec<RenderObject>,
     bind_group_layout: BindGroupLayout,
     bind_group: Option<BindGroup>,
@@ -136,9 +159,10 @@ pub mod scene;
 //pub mod wgpumesher;
 pub mod render_polygon;
 
-fn read_spirv(code: &str, shadertype: ShaderType, device: &Device) -> ShaderModule {
-    let mut spirv = glsl_to_spirv::compile(code, shadertype).unwrap();
-    let mut code = Vec::new();
-    spirv.read_to_end(&mut code).unwrap();
-    device.create_shader_module(wgpu::util::make_spirv(&code))
-}
+//#[derive(Debug)]
+//pub struct WGPUMesher {
+//    pub device: Arc<Device>,
+//    queue: Arc<Queue>,
+//    vertex_creator: wgpumesher::MeshCreator,
+//}
+

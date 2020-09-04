@@ -43,10 +43,12 @@ impl MyApp {
         camera
     }
     fn init_thread(
+        device: &Arc<Device>,
         object: &Arc<Mutex<Option<PolygonInstance>>>,
         closed: &Arc<Mutex<bool>>,
     ) -> JoinHandle<()>
     {
+        let device = Arc::clone(&device);
         let arc_object = Arc::clone(object);
         let closed = Arc::clone(closed);
         std::thread::spawn(move || {
@@ -62,7 +64,7 @@ impl MyApp {
                 let mut bspsurface0 = bspsurface.clone();
                 bspsurface0.optimize();
                 let mesh = truck_polymesh::StructuredMesh::from_surface(&bspsurface0, 0.01);
-                let object = PolygonInstance::new(mesh.destruct());
+                let object = PolygonInstance::new(mesh.destruct(), &device);
                 count += 1;
                 bspsurface.control_point_mut(3, 3)[1] = time.sin();
                 time += 0.1;
@@ -86,7 +88,7 @@ impl App for MyApp {
         let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
         let object = Arc::new(Mutex::new(None));
         let closed = Arc::new(Mutex::new(false));
-        let thread = Some(MyApp::init_thread(&object, &closed));
+        let thread = Some(MyApp::init_thread(&handler.device, &object, &closed));
         let mut render = MyApp {
             scene: Scene::new(device, queue, sc_desc),
             object,
@@ -111,22 +113,18 @@ impl App for MyApp {
         Some(self.scene.depth_stencil_attachment_descriptor())
     }
 
-    fn update(&mut self, handler: &WGPUHandler) {
+    fn update(&mut self, _: &WGPUHandler) {
         match self.object.lock().unwrap().take() {
             Some(object) => {
                 if self.scene.number_of_objects() == 0 {
-                    let object = object.render_object(&self.scene, &handler.sc_desc, None);
-                    self.scene.add_object(object);
+                    self.scene.add_object(&object);
                 } else {
-                    let (vertex_buffer, index_buffer) = object.polygon.buffers(&handler.device);
-                    let object = self.scene.get_object_mut(0);
-                    object.vertex_buffer = Arc::new(vertex_buffer);
-                    object.index_buffer = Some(Arc::new(index_buffer));
+                    self.scene.update_vertex_buffer(&object, 0);
                 };
             }
             None => {}
         }
-        self.scene.prepare_render(&handler.sc_desc);
+        self.scene.prepare_render();
     }
 
     fn render(&self, frame: &SwapChainFrame) {

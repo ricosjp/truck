@@ -36,54 +36,12 @@ impl Default for ColorConfig {
     }
 }
 
-impl PolygonInstance {
-    pub fn new<T: Into<ExpandedPolygon>>(polygon: T) -> PolygonInstance {
-        PolygonInstance {
-            polygon: Arc::new(polygon.into()),
-            matrix: Matrix4::identity(),
-            color: Default::default(),
-            texture: None,
-        }
+impl Rendered for PolygonInstance {
+    fn vertex_buffer(&self, _: &Device) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
+        (Arc::clone(&self.polygon.0), Some(Arc::clone(&self.polygon.1)))
     }
-
-    pub fn render_object(
-        &self,
-        scene: &Scene,
-        sc_desc: &SwapChainDescriptor,
-        shaders: Option<(&str, &str)>,
-    ) -> RenderObject
-    {
-        let device = &scene.device;
-        let (vertex_buffer, index_buffer) = self.polygon.buffers(device);
-        let bind_group_layout = Self::default_bind_group_layout(device, self.texture.is_some());
-        let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            bind_group_layouts: &[&scene.bind_group_layout, &bind_group_layout],
-            push_constant_ranges: &[],
-            label: None,
-        });
-        let shaders = match shaders {
-            Some(got) => got,
-            None => (include_str!("polygon.vert"), include_str!("polygon.frag")),
-        };
-        let pipeline = Self::init_pipeline(
-            &read_spirv(shaders.0, ShaderType::Vertex, device),
-            &read_spirv(shaders.1, ShaderType::Fragment, device),
-            &pipeline_layout,
-            device,
-            sc_desc,
-        );
-        let bind_group = self.bind_group(&bind_group_layout, device);
-        RenderObject {
-            vertex_buffer: Arc::new(vertex_buffer),
-            index_buffer: Some(Arc::new(index_buffer)),
-            bind_group_layout: Arc::new(bind_group_layout),
-            bind_group: Arc::new(bind_group),
-            pipeline: Arc::new(pipeline),
-        }
-    }
-
-    fn default_bind_group_layout(device: &Device, textured: bool) -> BindGroupLayout {
-        if textured {
+    fn bind_group_layout(&self, device: &Device) -> Arc<BindGroupLayout> {
+        let layout = if self.texture.is_some() {
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[
                     // matrix
@@ -153,10 +111,10 @@ impl PolygonInstance {
                 ],
                 label: None,
             })
-        }
+        };
+        Arc::new(layout)
     }
-
-    pub fn bind_group(&self, bind_group_layout: &BindGroupLayout, device: &Device) -> BindGroup {
+    fn bind_group(&self, device: &Device, layout: &BindGroupLayout) -> Arc<BindGroup> {
         let matrix_data: [[f32; 4]; 4] = self.matrix.cast::<f32>().unwrap().into();
         let matrix_buffer = BufferHandler::new(
             device.create_buffer_init(&BufferInitDescriptor {
@@ -181,24 +139,20 @@ impl PolygonInstance {
             }),
             std::mem::size_of::<[[f32; 4]; 4]>() as u64,
         );
-        buffer_handler::create_bind_group(device, bind_group_layout, &[matrix_buffer, color_buffer])
+        let bind_group = buffer_handler::create_bind_group(device, layout, &[matrix_buffer, color_buffer]);
+        Arc::new(bind_group)
     }
-    fn init_pipeline(
-        vertex_shader: &ShaderModule,
-        fragment_shader: &ShaderModule,
-        pipeline_layout: &PipelineLayout,
-        device: &Device,
-        sc_desc: &SwapChainDescriptor,
-    ) -> RenderPipeline
-    {
-        device.create_render_pipeline(&RenderPipelineDescriptor {
-            layout: Some(pipeline_layout),
+    fn pipeline(&self, device: &Device, sc_desc: &SwapChainDescriptor, layout: &PipelineLayout) -> Arc<RenderPipeline> {
+        let vertex_module = device.create_shader_module(include_spirv!("polygon.vert.spv"));
+        let fragment_module = device.create_shader_module(include_spirv!("polygon.frag.spv"));
+        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            layout: Some(layout),
             vertex_stage: ProgrammableStageDescriptor {
-                module: vertex_shader,
+                module: &vertex_module,
                 entry_point: "main",
             },
             fragment_stage: Some(ProgrammableStageDescriptor {
-                module: fragment_shader,
+                module: &fragment_module,
                 entry_point: "main",
             }),
             rasterization_state: Some(RasterizationStateDescriptor {
@@ -255,7 +209,20 @@ impl PolygonInstance {
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
             label: None,
-        })
+        });
+        Arc::new(pipeline)
+    }
+}
+
+impl PolygonInstance {
+    pub fn new<T: Into<ExpandedPolygon>>(polygon: T, device: &Device) -> PolygonInstance {
+        let (vb, ib) = polygon.into().buffers(device);
+        PolygonInstance {
+            polygon: (Arc::new(vb), Arc::new(ib)),
+            matrix: Matrix4::identity(),
+            color: Default::default(),
+            texture: None,
+        }
     }
 }
 
@@ -333,6 +300,11 @@ impl From<&PolygonMesh> for ExpandedPolygon {
 impl From<PolygonMesh> for ExpandedPolygon {
     #[inline(always)]
     fn from(polymesh: PolygonMesh) -> ExpandedPolygon { (&polymesh).into() }
+}
+
+impl From<StructuredMesh> for ExpandedPolygon {
+    #[inline(always)]
+    fn from(mesh: StructuredMesh) -> ExpandedPolygon { mesh.destruct().into() }
 }
 
 impl From<MeshHandler> for ExpandedPolygon {

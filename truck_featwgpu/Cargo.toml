@@ -3,18 +3,20 @@ name = "truck_featwgpu"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
+build = "src/build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wgpu = "0.6.0"
+wgpu = "*"
 bytemuck = "*"
-glsl-to-spirv = "*"
 cgmath = "*"
 truck_polymesh = {path = "../truck_polymesh"}
 truck_geometry = {path = "../truck_geometry"}
 futures = "*"
-lazy_static = "*"
+
+[build-dependencies]
+glsl-to-spirv = "*"
 
 [dev-dependencies]
 winit = "*"

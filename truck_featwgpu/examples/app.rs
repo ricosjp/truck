@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::*;
 use wgpu::*;
 use winit::dpi::*;
@@ -8,7 +8,7 @@ use winit::event_loop::ControlFlow;
 pub struct WGPUHandler {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
-    pub sc_desc: SwapChainDescriptor,
+    pub sc_desc: Arc<Mutex<SwapChainDescriptor>>,
 }
 
 pub trait App: Sized + 'static {
@@ -79,13 +79,13 @@ pub trait App: Sized + 'static {
             present_mode: PresentMode::Mailbox,
         };
 
-        let mut handler = WGPUHandler {
+        let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+        let handler = WGPUHandler {
             device: Arc::new(device),
             queue: Arc::new(queue),
-            sc_desc,
+            sc_desc: Arc::new(Mutex::new(sc_desc)),
         };
 
-        let mut swap_chain = handler.device.create_swap_chain(&surface, &handler.sc_desc);
         let mut app = Self::init(&handler);
 
         event_loop.run(move |ev, _, control_flow| {
@@ -104,9 +104,10 @@ pub trait App: Sized + 'static {
                 }
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::Resized(size) => {
-                        handler.sc_desc.width = size.width;
-                        handler.sc_desc.height = size.height;
-                        swap_chain = handler.device.create_swap_chain(&surface, &handler.sc_desc);
+                        let mut sc_desc = handler.sc_desc.try_lock().unwrap();
+                        sc_desc.width = size.width;
+                        sc_desc.height = size.height;
+                        swap_chain = handler.device.create_swap_chain(&surface, &sc_desc);
                         Self::default_control_flow()
                     }
                     WindowEvent::Moved(position) => app.moved(position),

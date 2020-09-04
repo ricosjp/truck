@@ -1,6 +1,5 @@
 use std::f64::consts::PI;
 use std::path::PathBuf;
-use std::sync::Arc;
 use truck_featwgpu::*;
 use truck_polymesh::{MeshHandler, PolygonMesh};
 use wgpu::*;
@@ -10,26 +9,13 @@ use app::*;
 
 const NUM_OF_OBJECTS: usize = 8;
 
-struct ModelInstance {
-    instance: PolygonInstance,
-    idx: usize,
-}
-
-impl ModelInstance {
-    fn new(instance: PolygonInstance, idx: usize) -> ModelInstance {
-        ModelInstance { instance, idx }
-    }
-}
-
 struct MyRender {
     scene: Scene,
-    instances: Vec<ModelInstance>,
+    instances: Vec<PolygonInstance>,
     rotate_flag: bool,
     prev_cursor: Option<Vector2>,
     prev_time: f64,
     path: Option<PathBuf>,
-    width: u32,
-    height: u32,
     light_changed: Option<std::time::Instant>,
     camera_changed: Option<std::time::Instant>,
 }
@@ -65,31 +51,31 @@ impl MyRender {
     fn load_obj<P: AsRef<std::path::Path>>(
         &mut self,
         path: P,
-        sc_desc: &SwapChainDescriptor,
     )
     {
-        self.scene.clear_objects();
+        let scene = &mut self.scene;
+        scene.clear_objects();
+        self.instances.clear();
         let file = std::fs::File::open(path).unwrap();
         let mesh = truck_io::obj::read(file).unwrap();
         let mesh = MyRender::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
-        let original_mesh = PolygonInstance::new(mesh);
+        let original_mesh = PolygonInstance::new(mesh, scene.device());
         let rad = cgmath::Rad(2.0 * PI / NUM_OF_OBJECTS as f64);
         let mut mat = Matrix4::from_scale(size / 2.0);
         mat = Matrix4::from_translation(center.to_vec()) * mat;
         mat = mat.invert().unwrap();
         mat = Matrix4::from_translation(Vector3::new(0.0, 0.5, 5.0)) * mat;
-        for idx in 0..NUM_OF_OBJECTS {
+        for _ in 0..NUM_OF_OBJECTS {
             let mut instance = original_mesh.clone();
             instance.matrix = mat;
             instance.color.ambient = Vector4::new(1.0, 1.0, 1.0, 1.0);
             instance.color.diffuse = Vector4::new(1.0, 1.0, 1.0, 1.0);
             instance.color.specular = Vector4::new(1.0, 1.0, 1.0, 1.0);
             instance.color.reflect_ratio = Vector3::new(0.2, 0.6, 0.2);
-            let object = instance.render_object(&self.scene, sc_desc, None);
-            self.scene.add_object(object);
-            self.instances.push(ModelInstance::new(instance, idx));
+            scene.add_object(&instance);
+            self.instances.push(instance);
             mat = Matrix4::from_axis_angle(Vector3::unit_y(), rad) * mat;
         }
     }
@@ -99,9 +85,7 @@ impl MyRender {
         let delta_time = time - self.prev_time;
         self.prev_time = time;
         let mat0 = Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(delta_time));
-        for instance in self.instances.iter_mut() {
-            let idx = instance.idx;
-            let instance = &mut instance.instance;
+        for (idx, instance) in self.instances.iter_mut().enumerate() {
             let k = (-1_f64).powi(idx as i32) * 5.0;
             let mat1 = Matrix4::from_axis_angle(Vector3::unit_y(), cgmath::Rad(k * delta_time));
             let x = instance.matrix[3][2];
@@ -120,11 +104,7 @@ impl MyRender {
                 specular: Vector4::new(1.0, 1.0, 1.0, 1.0),
                 reflect_ratio: Vector3::new(0.2, 0.6, 0.2),
             };
-            let object = self.scene.get_object(idx);
-            let device = self.scene.device();
-            let bind_group = instance.bind_group(&object.bind_group_layout, device);
-            let object = self.scene.get_object_mut(idx);
-            object.bind_group = Arc::new(bind_group);
+            self.scene.update_bind_group(&*instance, idx);
         }
     }
 
@@ -148,8 +128,6 @@ impl App for MyRender {
             prev_cursor: None,
             prev_time: 0.0,
             path: None,
-            width: sc_desc.width,
-            height: sc_desc.height,
             camera_changed: None,
             light_changed: None,
         };
@@ -173,12 +151,6 @@ impl App for MyRender {
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         self.path = Some(path);
-        Self::default_control_flow()
-    }
-
-    fn resized(&mut self, size: PhysicalSize<u32>) -> ControlFlow {
-        self.width = size.width;
-        self.height = size.height;
         Self::default_control_flow()
     }
 
@@ -296,17 +268,14 @@ impl App for MyRender {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, handler: &WGPUHandler) {
-        let sc_desc = &handler.sc_desc;
+    fn update(&mut self, _: &WGPUHandler) {
         if let Some(path) = self.path.take() {
-            self.load_obj(path, &handler.sc_desc);
+            self.load_obj(path);
         }
-        self.width = sc_desc.width;
-        self.height = sc_desc.height;
         if self.scene.number_of_objects() != 0 {
             self.update_objects();
         }
-        self.scene.prepare_render(sc_desc);
+        self.scene.prepare_render();
     }
 
     fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output); }

@@ -42,8 +42,10 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn update_bind_group(&mut self, sc_desc: &SwapChainDescriptor) {
+    pub fn update_scene_bind_group(&mut self) {
+        let sc_desc = self.sc_desc.try_lock().unwrap();
         let as_rat = sc_desc.width as f64 / sc_desc.height as f64;
+        drop(sc_desc);
         let bind_group = buffer_handler::create_bind_group(
             &self.device,
             &self.bind_group_layout,
@@ -74,22 +76,23 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn update_depth_texture(&mut self, sc_desc: &SwapChainDescriptor) {
-        let depth_texture = Self::default_depth_texture(&self.device, &sc_desc);
+    pub fn update_depth_texture(&mut self) {
+        let depth_texture = Self::default_depth_texture(&self.device, &self.sc_desc.try_lock().unwrap());
         self.foward_depth = depth_texture.create_view(&Default::default());
     }
 
-    pub fn prepare_render(&mut self, sc_desc: &SwapChainDescriptor) {
-        self.update_depth_texture(sc_desc);
-        self.update_bind_group(sc_desc);
+    pub fn prepare_render(&mut self) {
+        self.update_depth_texture();
+        self.update_scene_bind_group();
     }
 
     #[inline(always)]
-    pub fn new(device: &Arc<Device>, queue: &Arc<Queue>, sc_desc: &SwapChainDescriptor) -> Scene {
-        let depth_texture = Self::default_depth_texture(&device, &sc_desc);
+    pub fn new(device: &Arc<Device>, queue: &Arc<Queue>, sc_desc: &Arc<Mutex<SwapChainDescriptor>>) -> Scene {
+        let depth_texture = Self::default_depth_texture(&device, &sc_desc.try_lock().unwrap());
         Scene {
             device: Arc::clone(device),
             queue: Arc::clone(queue),
+            sc_desc: Arc::clone(sc_desc),
             objects: Default::default(),
             bind_group_layout: Self::init_scene_bind_group_layout(device),
             bind_group: None,
@@ -110,30 +113,31 @@ impl Scene {
     pub fn device(&self) -> &Device { &self.device }
 
     #[inline(always)]
-    pub fn add_object(&mut self, object: RenderObject) -> usize {
+    pub fn add_object<R: Rendered>(&mut self, object: &R) -> usize {
+        let object = object.render_object(&*self);
         self.objects.push(object);
         self.objects.len() - 1
     }
-
     #[inline(always)]
-    pub fn get_object(&self, idx: usize) -> &RenderObject { &self.objects[idx] }
-    #[inline(always)]
-    pub fn get_object_mut(&mut self, idx: usize) -> &mut RenderObject { &mut self.objects[idx] }
-
-    #[inline(always)]
-    pub fn remove_object(&mut self, idx: usize) -> RenderObject { self.objects.remove(idx) }
+    pub fn remove_object(&mut self, idx: usize) { self.objects.remove(idx); }
 
     #[inline(always)]
     pub fn clear_objects(&mut self) { self.objects.clear() }
-
-    #[inline(always)]
-    pub fn objects(&self) -> &Vec<RenderObject> { &self.objects }
-
-    #[inline(always)]
-    pub fn objects_mut(&mut self) -> &mut Vec<RenderObject> { &mut self.objects }
-
     #[inline(always)]
     pub fn number_of_objects(&self) -> usize { self.objects.len() }
+
+    #[inline(always)]
+    pub fn update_vertex_buffer<R: Rendered>(&mut self, rendered: &R, idx: usize) {
+        let (vb, ib) = rendered.vertex_buffer(&self.device);
+        self.objects[idx].vertex_buffer = vb;
+        self.objects[idx].index_buffer = ib;
+    }
+
+    #[inline(always)]
+    pub fn update_bind_group<R: Rendered>(&mut self, rendered: &R, idx: usize) {
+        let bind_group = rendered.bind_group(&self.device, &self.objects[idx].bind_group_layout);
+        self.objects[idx].bind_group = bind_group;
+    }
 
     #[inline(always)]
     pub fn elapsed(&self) -> f64 { self.clock.elapsed().as_secs_f64() }
@@ -141,13 +145,11 @@ impl Scene {
     pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
 
     pub fn timer_buffer(&self) -> BufferHandler {
-        let buffer = self.device.create_buffer_init(
-            &BufferInitDescriptor {
-                contents: bytemuck::cast_slice(&[self.elapsed() as f32]),
-                usage: BufferUsage::UNIFORM,
-                label: None,
-            }
-        );
+        let buffer = self.device.create_buffer_init(&BufferInitDescriptor {
+            contents: bytemuck::cast_slice(&[self.elapsed() as f32]),
+            usage: BufferUsage::UNIFORM,
+            label: None,
+        });
         BufferHandler::new(buffer, std::mem::size_of::<f32>() as u64)
     }
 
@@ -163,7 +165,7 @@ impl Scene {
                     ops: Operations {
                         load: LoadOp::Clear(self.back_ground),
                         store: true,
-                    }
+                    },
                 }],
                 depth_stencil_attachment: Some(self.depth_stencil_attachment_descriptor()),
             });
