@@ -161,3 +161,25 @@ pub mod scene;
 //pub mod wgpumesher;
 pub mod render_polygon;
 
+fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>> (
+    device: &Device,
+    layout: &BindGroupLayout,
+    resources: T,
+) -> BindGroup
+{
+    let entries: &Vec<BindGroupEntry> = &resources
+        .into_iter()
+        .enumerate()
+        .map(|(i, resource)|
+            BindGroupEntry {
+                binding: i as u32,
+                resource,
+            }
+        )
+        .collect();
+    device.create_bind_group(&BindGroupDescriptor {
+        layout,
+        entries,
+        label: None,
+    })
+}

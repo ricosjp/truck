@@ -46,13 +46,13 @@ impl Scene {
         let sc_desc = self.sc_desc.try_lock().unwrap();
         let as_rat = sc_desc.width as f64 / sc_desc.height as f64;
         drop(sc_desc);
-        let bind_group = buffer_handler::create_bind_group(
+        let bind_group = crate::create_bind_group(
             &self.device,
             &self.bind_group_layout,
-            &[
-                self.camera.buffer(as_rat, &self.device),
-                self.light.buffer(&self.device),
-                self.timer_buffer(),
+            vec![
+                self.camera.buffer(as_rat, &self.device).binding_resource(),
+                self.light.buffer(&self.device).binding_resource(),
+                self.timer_buffer().binding_resource(),
             ],
         );
         self.bind_group = Some(bind_group);

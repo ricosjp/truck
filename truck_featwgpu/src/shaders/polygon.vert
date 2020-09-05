@@ -14,12 +14,14 @@ layout(set = 1, binding = 0) uniform ModelMatrix {
 };
 
 layout(location = 0) out vec3 vertex_position;
-layout(location = 1) out vec3 vertex_normal;
+layout(location = 1) out vec2 uv;
+layout(location = 2) out vec3 vertex_normal;
 
 void main() {
     vec4 world_position = matrix * vec4(position, 1.0);
     vec4 world_normal = normalize(matrix * vec4(normal, 0.0));
     gl_Position = camera_projection * world_position;
     vertex_position = world_position.xyz;
+    uv = uv_coord;
     vertex_normal = world_normal.xyz;
 }

@@ -177,7 +177,7 @@ impl PolygonInstance {
                     },
                     count: None,
                 },
-                // texture
+                // texture view
                 BindGroupLayoutEntry {
                     binding: 2,
                     visibility: ShaderStage::FRAGMENT,
@@ -237,7 +237,7 @@ impl PolygonInstance {
     ) -> (TextureView, Sampler)
     {
         let texture_image = self.texture.as_ref().unwrap();
-        let rgba = texture_image.as_rgba8().unwrap();
+        let rgba = texture_image.to_rgba();
         let dim = texture_image.dimensions();
         let size = Extent3d {
             width: dim.0,
@@ -279,19 +279,44 @@ impl PolygonInstance {
 
         let view = texture.create_view(&Default::default());
         let sampler = device.create_sampler(&SamplerDescriptor {
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
+            address_mode_u: AddressMode::ClampToEdge,
+            address_mode_v: AddressMode::ClampToEdge,
+            address_mode_w: AddressMode::ClampToEdge,
+            mag_filter: FilterMode::Linear,
+            min_filter: FilterMode::Nearest,
+            mipmap_filter: FilterMode::Nearest,
             lod_min_clamp: -100.0,
             lod_max_clamp: 100.0,
-            compare: Some(CompareFunction::Always),
+            compare: None,
             anisotropy_clamp: None,
             label: None,
         });
         (view, sampler)
+    }
+
+    fn non_textured_bg(&self, device: &Device, layout: &BindGroupLayout) -> BindGroup {
+        crate::create_bind_group(
+            device,
+            layout,
+            vec![
+                self.matrix_buffer(device).binding_resource(),
+                self.color_config_buffer(device).binding_resource(),
+            ],
+        )
+    }
+    
+    fn textured_bg(&self, device: &Device, queue: &Queue, layout: &BindGroupLayout) -> BindGroup {
+        let (view, sampler) = self.textureview_and_sampler(device, queue);
+        crate::create_bind_group(
+            device,
+            layout,
+            vec![
+                self.matrix_buffer(device).binding_resource(),
+                self.color_config_buffer(device).binding_resource(),
+                BindingResource::TextureView(&view),
+                BindingResource::Sampler(&sampler),
+            ],
+        )
     }
 }
 
@@ -311,9 +336,11 @@ impl Rendered for PolygonInstance {
         Arc::new(layout)
     }
     fn bind_group(&self, scene: &Scene, layout: &BindGroupLayout) -> Arc<BindGroup> {
-        let device = &scene.device;
-        let uniform = [self.matrix_buffer(device), self.color_config_buffer(device)];
-        let bind_group = buffer_handler::create_bind_group(device, layout, &uniform);
+        let bind_group = if self.texture.is_some() {
+            self.textured_bg(&scene.device, &scene.queue, layout)
+        } else {
+            self.non_textured_bg(&scene.device, layout)
+        };
         Arc::new(bind_group)
     }
     fn pipeline(
@@ -323,9 +350,15 @@ impl Rendered for PolygonInstance {
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>
     {
+        let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
+        let fragment_shader = if self.texture.is_some() {
+            include_spirv!("shaders/textured_polygon.frag.spv")
+        } else {
+            include_spirv!("shaders/polygon.frag.spv")
+        };
         self.pipeline_with_shader(
-            include_spirv!("shaders/polygon.vert.spv"),
-            include_spirv!("shaders/polygon.frag.spv"),
+            vertex_shader,
+            fragment_shader,
             device,
             sc_desc,
             layout,
