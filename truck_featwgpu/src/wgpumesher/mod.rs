@@ -1,5 +1,12 @@
 use crate::*;
 
+#[derive(Debug)]
+pub struct WGPUMesher {
+    pub device: Arc<Device>,
+    queue: Arc<Queue>,
+    vertex_creator: wgpumesher::MeshCreator,
+}
+
 #[allow(dead_code)]
 const F64_SIZE: usize = std::mem::size_of::<f64>();
 #[allow(dead_code)]

@@ -6,7 +6,7 @@ impl BufferHandler {
     pub fn binding(&self, idx: u32) -> BindGroupEntry {
         BindGroupEntry {
             binding: idx,
-            resource: BindingResource::Buffer(self.buffer.slice(0..self.size)),
+            resource: BindingResource::Buffer(self.buffer.slice(..)),
         }
     }
 }

@@ -1,4 +1,5 @@
 use crate::*;
+use image::GenericImageView;
 use polymesh::*;
 use std::collections::HashMap;
 
@@ -36,115 +37,27 @@ impl Default for ColorConfig {
     }
 }
 
-impl Rendered for PolygonInstance {
-    fn vertex_buffer(&self, _: &Device) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        (Arc::clone(&self.polygon.0), Some(Arc::clone(&self.polygon.1)))
+impl PolygonInstance {
+    pub fn new<T: Into<ExpandedPolygon>>(polygon: T, device: &Device) -> PolygonInstance {
+        let (vb, ib) = polygon.into().buffers(device);
+        PolygonInstance {
+            polygon: (Arc::new(vb), Arc::new(ib)),
+            matrix: Matrix4::identity(),
+            color: Default::default(),
+            texture: None,
+        }
     }
-    fn bind_group_layout(&self, device: &Device) -> Arc<BindGroupLayout> {
-        let layout = if self.texture.is_some() {
-            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                entries: &[
-                    // matrix
-                    BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-                        ty: BindingType::UniformBuffer {
-                            dynamic: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    // color
-                    BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: ShaderStage::FRAGMENT,
-                        ty: BindingType::UniformBuffer {
-                            dynamic: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    // texture
-                    BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: ShaderStage::FRAGMENT,
-                        ty: BindingType::SampledTexture {
-                            dimension: TextureViewDimension::D2,
-                            component_type: TextureComponentType::Uint,
-                            multisampled: false,
-                        },
-                        count: None,
-                    },
-                    // sampler
-                    BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: ShaderStage::FRAGMENT,
-                        ty: BindingType::Sampler { comparison: false },
-                        count: None,
-                    },
-                ],
-                label: None,
-            })
-        } else {
-            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                entries: &[
-                    // matrix
-                    BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-                        ty: BindingType::UniformBuffer {
-                            dynamic: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    // color
-                    BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: ShaderStage::FRAGMENT,
-                        ty: BindingType::UniformBuffer {
-                            dynamic: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-                label: None,
-            })
-        };
-        Arc::new(layout)
-    }
-    fn bind_group(&self, device: &Device, layout: &BindGroupLayout) -> Arc<BindGroup> {
-        let matrix_data: [[f32; 4]; 4] = self.matrix.cast::<f32>().unwrap().into();
-        let matrix_buffer = BufferHandler::new(
-            device.create_buffer_init(&BufferInitDescriptor {
-                contents: bytemuck::cast_slice(&matrix_data),
-                usage: BufferUsage::UNIFORM,
-                label: None,
-            }),
-            std::mem::size_of::<[[f32; 4]; 4]>() as u64,
-        );
-        let rr = self.color.reflect_ratio;
-        let color_data: [[f32; 4]; 4] = [
-            self.color.ambient.cast::<f32>().unwrap().into(),
-            self.color.diffuse.cast::<f32>().unwrap().into(),
-            self.color.specular.cast::<f32>().unwrap().into(),
-            [rr[0] as f32, rr[1] as f32, rr[2] as f32, 0.0],
-        ];
-        let color_buffer = BufferHandler::new(
-            device.create_buffer_init(&BufferInitDescriptor {
-                contents: bytemuck::cast_slice(&color_data),
-                usage: BufferUsage::UNIFORM,
-                label: None,
-            }),
-            std::mem::size_of::<[[f32; 4]; 4]>() as u64,
-        );
-        let bind_group = buffer_handler::create_bind_group(device, layout, &[matrix_buffer, color_buffer]);
-        Arc::new(bind_group)
-    }
-    fn pipeline(&self, device: &Device, sc_desc: &SwapChainDescriptor, layout: &PipelineLayout) -> Arc<RenderPipeline> {
-        let vertex_module = device.create_shader_module(include_spirv!("polygon.vert.spv"));
-        let fragment_module = device.create_shader_module(include_spirv!("polygon.frag.spv"));
+    pub fn pipeline_with_shader(
+        &self,
+        vertex_shader: ShaderModuleSource,
+        fragment_shader: ShaderModuleSource,
+        device: &Device,
+        sc_desc: &SwapChainDescriptor,
+        layout: &PipelineLayout,
+    ) -> Arc<RenderPipeline>
+    {
+        let vertex_module = device.create_shader_module(vertex_shader);
+        let fragment_module = device.create_shader_module(fragment_shader);
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
             vertex_stage: ProgrammableStageDescriptor {
@@ -212,17 +125,211 @@ impl Rendered for PolygonInstance {
         });
         Arc::new(pipeline)
     }
+
+    fn non_textured_bdl(&self, device: &Device) -> BindGroupLayout {
+        device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[
+                // matrix
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    ty: BindingType::UniformBuffer {
+                        dynamic: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                // color
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStage::FRAGMENT,
+                    ty: BindingType::UniformBuffer {
+                        dynamic: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+            label: None,
+        })
+    }
+
+    fn textured_bdl(&self, device: &Device) -> BindGroupLayout {
+        device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[
+                // matrix
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    ty: BindingType::UniformBuffer {
+                        dynamic: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                // color
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStage::FRAGMENT,
+                    ty: BindingType::UniformBuffer {
+                        dynamic: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                // texture
+                BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: ShaderStage::FRAGMENT,
+                    ty: BindingType::SampledTexture {
+                        dimension: TextureViewDimension::D2,
+                        component_type: TextureComponentType::Uint,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                // sampler
+                BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: ShaderStage::FRAGMENT,
+                    ty: BindingType::Sampler { comparison: false },
+                    count: None,
+                },
+            ],
+            label: None,
+        })
+    }
+
+    pub fn matrix_buffer(&self, device: &Device) -> BufferHandler {
+        let matrix_data: [[f32; 4]; 4] = self.matrix.cast::<f32>().unwrap().into();
+        BufferHandler::new(
+            device.create_buffer_init(&BufferInitDescriptor {
+                contents: bytemuck::cast_slice(&matrix_data),
+                usage: BufferUsage::UNIFORM,
+                label: None,
+            }),
+            std::mem::size_of::<[[f32; 4]; 4]>() as u64,
+        )
+    }
+
+    pub fn color_config_buffer(&self, device: &Device) -> BufferHandler {
+        let rr = self.color.reflect_ratio;
+        let color_data: [[f32; 4]; 4] = [
+            self.color.ambient.cast::<f32>().unwrap().into(),
+            self.color.diffuse.cast::<f32>().unwrap().into(),
+            self.color.specular.cast::<f32>().unwrap().into(),
+            [rr[0] as f32, rr[1] as f32, rr[2] as f32, 0.0],
+        ];
+        BufferHandler::new(
+            device.create_buffer_init(&BufferInitDescriptor {
+                contents: bytemuck::cast_slice(&color_data),
+                usage: BufferUsage::UNIFORM,
+                label: None,
+            }),
+            std::mem::size_of::<[[f32; 4]; 4]>() as u64,
+        )
+    }
+
+    pub fn textureview_and_sampler(
+        &self,
+        device: &Device,
+        queue: &Queue,
+    ) -> (TextureView, Sampler)
+    {
+        let texture_image = self.texture.as_ref().unwrap();
+        let rgba = texture_image.as_rgba8().unwrap();
+        let dim = texture_image.dimensions();
+        let size = Extent3d {
+            width: dim.0,
+            height: dim.1,
+            depth: 1,
+        };
+        let texture = device.create_texture(&TextureDescriptor {
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Rgba8UnormSrgb,
+            usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
+            label: None,
+        });
+        let buffer = device.create_buffer_init(&BufferInitDescriptor {
+            contents: &rgba,
+            usage: BufferUsage::COPY_SRC,
+            label: None,
+        });
+        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
+        encoder.copy_buffer_to_texture(
+            BufferCopyView {
+                buffer: &buffer,
+                layout: TextureDataLayout {
+                    offset: 0,
+                    bytes_per_row: 4 * dim.0,
+                    rows_per_image: dim.1,
+                },
+            },
+            TextureCopyView {
+                texture: &texture,
+                mip_level: 0,
+                origin: Origin3d::ZERO,
+            },
+            size,
+        );
+        queue.submit(vec![encoder.finish()]);
+
+        let view = texture.create_view(&Default::default());
+        let sampler = device.create_sampler(&SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            lod_min_clamp: -100.0,
+            lod_max_clamp: 100.0,
+            compare: Some(CompareFunction::Always),
+            anisotropy_clamp: None,
+            label: None,
+        });
+        (view, sampler)
+    }
 }
 
-impl PolygonInstance {
-    pub fn new<T: Into<ExpandedPolygon>>(polygon: T, device: &Device) -> PolygonInstance {
-        let (vb, ib) = polygon.into().buffers(device);
-        PolygonInstance {
-            polygon: (Arc::new(vb), Arc::new(ib)),
-            matrix: Matrix4::identity(),
-            color: Default::default(),
-            texture: None,
-        }
+impl Rendered for PolygonInstance {
+    fn vertex_buffer(&self, _: &Scene) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
+        (
+            Arc::clone(&self.polygon.0),
+            Some(Arc::clone(&self.polygon.1)),
+        )
+    }
+    fn bind_group_layout(&self, scene: &Scene) -> Arc<BindGroupLayout> {
+        let layout = if self.texture.is_some() {
+            self.textured_bdl(&scene.device)
+        } else {
+            self.non_textured_bdl(&scene.device)
+        };
+        Arc::new(layout)
+    }
+    fn bind_group(&self, scene: &Scene, layout: &BindGroupLayout) -> Arc<BindGroup> {
+        let device = &scene.device;
+        let uniform = [self.matrix_buffer(device), self.color_config_buffer(device)];
+        let bind_group = buffer_handler::create_bind_group(device, layout, &uniform);
+        Arc::new(bind_group)
+    }
+    fn pipeline(
+        &self,
+        device: &Device,
+        sc_desc: &SwapChainDescriptor,
+        layout: &PipelineLayout,
+    ) -> Arc<RenderPipeline>
+    {
+        self.pipeline_with_shader(
+            include_spirv!("shaders/polygon.vert.spv"),
+            include_spirv!("shaders/polygon.frag.spv"),
+            device,
+            sc_desc,
+            layout,
+        )
     }
 }
 
@@ -311,5 +418,19 @@ impl From<MeshHandler> for ExpandedPolygon {
     #[inline(always)]
     fn from(mesh_handler: MeshHandler) -> ExpandedPolygon {
         Into::<PolygonMesh>::into(mesh_handler).into()
+    }
+}
+
+impl std::fmt::Debug for PolygonInstance {
+    #[inline(always)]
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+        f.pad("PolygonInstance {\n")?;
+        f.write_fmt(format_args!("  polygon: {:?}\n", self.polygon))?;
+        f.write_fmt(format_args!("  matrix: {:?}\n", self.matrix))?;
+        f.write_fmt(format_args!("  color: {:?}\n", self.color))?;
+        match self.texture {
+            Some(_) => f.write_fmt(format_args!("Some(<omitted>)\n}}")),
+            None => f.write_fmt(format_args!("None\n}}")),
+        }
     }
 }

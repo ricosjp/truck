@@ -8,18 +8,18 @@ build = "src/build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wgpu = "*"
 bytemuck = "*"
 cgmath = "*"
+futures = "*"
+image = "*"
 truck_polymesh = {path = "../truck_polymesh"}
 truck_geometry = {path = "../truck_geometry"}
-futures = "*"
+wgpu = "*"
 
 [build-dependencies]
 glsl-to-spirv = "*"
 
 [dev-dependencies]
 winit = "*"
-wgpu-core = "*"
 stringreader = "*"
 truck_io = {path = "../truck_io"}

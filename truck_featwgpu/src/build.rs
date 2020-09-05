@@ -17,6 +17,7 @@ fn save_spirv(filename: &str, shadertype: ShaderType) {
 
 fn main() {
     std::env::set_current_dir("src").unwrap();
-    save_spirv("polygon.vert", ShaderType::Vertex);
-    save_spirv("polygon.frag", ShaderType::Fragment);
+    save_spirv("shaders/polygon.vert", ShaderType::Vertex);
+    save_spirv("shaders/polygon.frag", ShaderType::Fragment);
+    //save_spirv("shaders/textured_polygon.frag", ShaderType::Fragment);
 }

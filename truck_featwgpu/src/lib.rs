@@ -1,10 +1,12 @@
 extern crate bytemuck;
 extern crate cgmath;
 extern crate futures;
+extern crate image;
 extern crate truck_geometry as geometry;
 extern crate truck_polymesh as polymesh;
 extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
+use image::DynamicImage;
 pub use geometry::*;
 pub use polymesh::PolygonMesh;
 use std::sync::{Arc, Mutex};
@@ -54,12 +56,12 @@ pub struct ColorConfig {
     pub reflect_ratio: Vector3,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     pub matrix: Matrix4,
     pub color: ColorConfig,
-    pub texture: Option<Vec<u8>>,
+    pub texture: Option<DynamicImage>,
 }
 
 #[derive(Debug, Clone)]
@@ -72,9 +74,9 @@ pub struct RenderObject {
 }
 
 pub trait Rendered {
-    fn vertex_buffer(&self, device: &Device) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
-    fn bind_group_layout(&self, device: &Device) -> Arc<BindGroupLayout>;
-    fn bind_group(&self, device: &Device, layout: &BindGroupLayout) -> Arc<BindGroup>;
+    fn vertex_buffer(&self, scene: &Scene) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
+    fn bind_group_layout(&self, scene: &Scene) -> Arc<BindGroupLayout>;
+    fn bind_group(&self, scene: &Scene, layout: &BindGroupLayout) -> Arc<BindGroup>;
     fn pipeline(
         &self,
         device: &Device,
@@ -82,9 +84,9 @@ pub trait Rendered {
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>;
     fn render_object(&self, scene: &Scene) -> RenderObject {
-        let (vertex_buffer, index_buffer) = self.vertex_buffer(&scene.device);
-        let bind_group_layout = self.bind_group_layout(&scene.device);
-        let bind_group = self.bind_group(&scene.device, &bind_group_layout);
+        let (vertex_buffer, index_buffer) = self.vertex_buffer(scene);
+        let bind_group_layout = self.bind_group_layout(scene);
+        let bind_group = self.bind_group(scene, &bind_group_layout);
         let pipeline_layout = scene
             .device
             .create_pipeline_layout(&PipelineLayoutDescriptor {
@@ -158,11 +160,4 @@ pub mod light;
 pub mod scene;
 //pub mod wgpumesher;
 pub mod render_polygon;
-
-//#[derive(Debug)]
-//pub struct WGPUMesher {
-//    pub device: Arc<Device>,
-//    queue: Arc<Queue>,
-//    vertex_creator: wgpumesher::MeshCreator,
-//}
 

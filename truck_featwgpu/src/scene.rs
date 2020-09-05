@@ -113,6 +113,9 @@ impl Scene {
     pub fn device(&self) -> &Device { &self.device }
 
     #[inline(always)]
+    pub fn queue(&self) -> &Queue { &self.queue }
+
+    #[inline(always)]
     pub fn add_object<R: Rendered>(&mut self, object: &R) -> usize {
         let object = object.render_object(&*self);
         self.objects.push(object);
@@ -128,14 +131,14 @@ impl Scene {
 
     #[inline(always)]
     pub fn update_vertex_buffer<R: Rendered>(&mut self, rendered: &R, idx: usize) {
-        let (vb, ib) = rendered.vertex_buffer(&self.device);
+        let (vb, ib) = rendered.vertex_buffer(&self);
         self.objects[idx].vertex_buffer = vb;
         self.objects[idx].index_buffer = ib;
     }
 
     #[inline(always)]
     pub fn update_bind_group<R: Rendered>(&mut self, rendered: &R, idx: usize) {
-        let bind_group = rendered.bind_group(&self.device, &self.objects[idx].bind_group_layout);
+        let bind_group = rendered.bind_group(&self, &self.objects[idx].bind_group_layout);
         self.objects[idx].bind_group = bind_group;
     }
 
