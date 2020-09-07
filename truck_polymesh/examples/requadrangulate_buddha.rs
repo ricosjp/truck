@@ -12,7 +12,7 @@ fn main() {
     let first_quads = mesh.quad_faces.len();
     let instant = std::time::Instant::now();
     let mut handler = MeshHandler::new(mesh);
-    handler.triangulate().quadrangulate(0.01);
+    handler.triangulate().quadrangulate(0.01, 1.0);
     let filter_time = instant.elapsed();
     let mesh: PolygonMesh = handler.into();
     let tris = mesh.tri_faces.len();

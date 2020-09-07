@@ -23,7 +23,8 @@ impl MeshHandler {
 
     /// join two triangles into one quadrangle.
     /// # Arguments
-    /// * `tol` - the tolerance for determining that four points are in the same plane
+    /// * `plane_tol` - the tolerance for determining that four points are in the same plane
+    /// * `score_tol` - The upper limit of the score to determine if the four points form an uncrushed rectangle
     /// # Details
     /// The overview of the algorithm is the following:
     /// 1. make the list of pairs of triangles satisfying the following conditions:
@@ -34,13 +35,13 @@ impl MeshHandler {
     /// 1. sort the list of the pairs of triangles by the score
     /// 1. take a pair of triangles in order from the top of the list and register a new one
     /// if it doesn't conflict with the one has been already registered.
-    pub fn quadrangulate(&mut self, tol: f64) -> &mut Self {
-        let list = self.create_face_edge_list(tol);
+    pub fn quadrangulate(&mut self, plane_tol: f64, score_tol: f64) -> &mut Self {
+        let list = self.create_face_edge_list(plane_tol, score_tol);
         self.reflect_face_edge_list(list);
         self
     }
 
-    fn create_face_edge_list(&self, tol: f64) -> Vec<FaceEdge> {
+    fn create_face_edge_list(&self, plane_tol: f64, score_tol: f64) -> Vec<FaceEdge> {
         let face_adjacency = self.face_adjacency();
         let mesh = &self.mesh;
 
@@ -49,7 +50,7 @@ impl MeshHandler {
             for j in &face_adjacency[i] {
                 if i > *j {
                     continue;
-                } else if let Some(face_edge) = mesh.get_face_edge(i, *j, tol) {
+                } else if let Some(face_edge) = mesh.get_face_edge(i, *j, plane_tol, score_tol) {
                     passed.push(face_edge);
                 }
             }
@@ -89,7 +90,14 @@ struct FaceEdge {
 }
 
 impl PolygonMesh {
-    fn get_face_edge(&self, face0_id: usize, face1_id: usize, tol: f64) -> Option<FaceEdge> {
+    fn get_face_edge(
+        &self,
+        face0_id: usize,
+        face1_id: usize,
+        plane_tol: f64,
+        score_tol: f64,
+    ) -> Option<FaceEdge>
+    {
         let face0 = &self.tri_faces[face0_id];
         let face1 = &self.tri_faces[face1_id];
 
@@ -104,41 +112,56 @@ impl PolygonMesh {
         let mat = geometry::Matrix3::from_cols(vec0.clone(), vec1.clone(), n.clone());
         let coef = mat.invert().unwrap() * vec2;
 
-        if coef[2] > tol {
+        if coef[2] > plane_tol {
             None
         } else if coef[0] > 0.0 && coef[1] > 0.0 {
-            Some(FaceEdge {
-                faces: (face0_id, face1_id),
-                positions: [
-                    face0[0].clone(),
-                    face0[1].clone(),
-                    face1[k].clone(),
-                    face0[2].clone(),
-                ],
-                score: calc_score(&vec0, &(&vec2 - &vec0), &(&vec1 - &vec2), &vec1),
-            })
+            let score = calc_score(&vec0, &(&vec2 - &vec0), &(&vec1 - &vec2), &vec1);
+            if score < score_tol {
+                Some(FaceEdge {
+                    faces: (face0_id, face1_id),
+                    positions: [
+                        face0[0].clone(),
+                        face0[1].clone(),
+                        face1[k].clone(),
+                        face0[2].clone(),
+                    ],
+                    score,
+                })
+            } else {
+                None
+            }
         } else if coef[0] < 0.0 && coef[1] > 0.0 && coef[0] + coef[1] < 1.0 {
-            Some(FaceEdge {
-                faces: (face0_id, face1_id),
-                positions: [
-                    face0[0].clone(),
-                    face0[1].clone(),
-                    face0[2].clone(),
-                    face1[k].clone(),
-                ],
-                score: calc_score(&vec0, &(&vec1 - &vec0), &(&vec2 - &vec1), &vec2),
-            })
+            let score = calc_score(&vec0, &(&vec1 - &vec0), &(&vec2 - &vec1), &vec2);
+            if score < score_tol {
+                Some(FaceEdge {
+                    faces: (face0_id, face1_id),
+                    positions: [
+                        face0[0].clone(),
+                        face0[1].clone(),
+                        face0[2].clone(),
+                        face1[k].clone(),
+                    ],
+                    score,
+                })
+            } else {
+                None
+            }
         } else if coef[0] > 0.0 && coef[1] < 0.0 && coef[0] + coef[1] < 1.0 {
-            Some(FaceEdge {
-                faces: (face0_id, face1_id),
-                positions: [
-                    face0[0].clone(),
-                    face1[k].clone(),
-                    face0[1].clone(),
-                    face0[2].clone(),
-                ],
-                score: calc_score(&vec2, &(&vec0 - &vec2), &(&vec1 - &vec0), &vec1),
-            })
+            let score = calc_score(&vec2, &(&vec0 - &vec2), &(&vec1 - &vec0), &vec1);
+            if score < score_tol {
+                Some(FaceEdge {
+                    faces: (face0_id, face1_id),
+                    positions: [
+                        face0[0].clone(),
+                        face1[k].clone(),
+                        face0[1].clone(),
+                        face0[2].clone(),
+                    ],
+                    score,
+                })
+            } else {
+                None
+            }
         } else {
             None
         }

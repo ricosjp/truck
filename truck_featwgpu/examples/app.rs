@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::*;
 use wgpu::*;
 use winit::dpi::*;
@@ -8,7 +8,7 @@ use winit::event_loop::ControlFlow;
 pub struct WGPUHandler {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
-    pub sc_desc: SwapChainDescriptor,
+    pub sc_desc: Arc<Mutex<SwapChainDescriptor>>,
 }
 
 pub trait App: Sized + 'static {
@@ -32,7 +32,7 @@ pub trait App: Sized + 'static {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         ControlFlow::WaitUntil(next_frame_time)
     }
-    fn render<'a>(&'a self, _target: &mut RenderPass<'a>) {}
+    fn render(&self, _frame: &SwapChainFrame) {}
     fn resized(&mut self, _size: PhysicalSize<u32>) -> ControlFlow { Self::default_control_flow() }
     fn moved(&mut self, _position: PhysicalPosition<i32>) -> ControlFlow {
         Self::default_control_flow()
@@ -66,9 +66,10 @@ pub trait App: Sized + 'static {
         }
         let window = wb.build(&event_loop).unwrap();
         let size = window.inner_size();
-        let surface = wgpu::Surface::create(&window);
+        let instance = Instance::new(BackendBit::PRIMARY);
+        let surface = unsafe { instance.create_surface(&window) };
 
-        let (device, queue) = futures::executor::block_on(init_device(&surface));
+        let (device, queue) = futures::executor::block_on(init_device(&instance, &surface));
 
         let sc_desc = SwapChainDescriptor {
             usage: TextureUsage::OUTPUT_ATTACHMENT,
@@ -78,13 +79,13 @@ pub trait App: Sized + 'static {
             present_mode: PresentMode::Mailbox,
         };
 
-        let mut handler = WGPUHandler {
+        let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+        let handler = WGPUHandler {
             device: Arc::new(device),
             queue: Arc::new(queue),
-            sc_desc,
+            sc_desc: Arc::new(Mutex::new(sc_desc)),
         };
 
-        let mut swap_chain = handler.device.create_swap_chain(&surface, &handler.sc_desc);
         let mut app = Self::init(&handler);
 
         event_loop.run(move |ev, _, control_flow| {
@@ -96,32 +97,17 @@ pub trait App: Sized + 'static {
                 Event::RedrawRequested(_) => {
                     app.update(&handler);
                     let frame = swap_chain
-                        .get_next_texture()
+                        .get_current_frame()
                         .expect("Timeout when acquiring next swap chain texture");
-                    let mut encoder = handler
-                        .device
-                        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-                    {
-                        let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                            color_attachments: &[RenderPassColorAttachmentDescriptor {
-                                attachment: &frame.view,
-                                resolve_target: None,
-                                load_op: LoadOp::Clear,
-                                store_op: StoreOp::Store,
-                                clear_color: Self::clear_color(),
-                            }],
-                            depth_stencil_attachment: app.depth_stencil_attachment_descriptor(),
-                        });
-                        app.render(&mut rpass);
-                    }
-                    handler.queue.submit(&[encoder.finish()]);
+                    app.render(&frame);
                     Self::default_control_flow()
                 }
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::Resized(size) => {
-                        handler.sc_desc.width = size.width;
-                        handler.sc_desc.height = size.height;
-                        swap_chain = handler.device.create_swap_chain(&surface, &handler.sc_desc);
+                        let mut sc_desc = handler.sc_desc.try_lock().unwrap();
+                        sc_desc.width = size.width;
+                        sc_desc.height = size.height;
+                        swap_chain = handler.device.create_swap_chain(&surface, &sc_desc);
                         Self::default_control_flow()
                     }
                     WindowEvent::Moved(position) => app.moved(position),
@@ -145,25 +131,26 @@ pub trait App: Sized + 'static {
     }
 }
 
-async fn init_device(surface: &Surface) -> (Device, Queue) {
-    let adapter = Adapter::request(
-        &RequestAdapterOptions {
+async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) {
+    let adapter = instance
+        .request_adapter(&RequestAdapterOptions {
             power_preference: PowerPreference::Default,
-            compatible_surface: Some(&surface),
-        },
-        BackendBit::PRIMARY,
-    )
-    .await
-    .unwrap();
-
-    adapter
-        .request_device(&DeviceDescriptor {
-            extensions: Extensions {
-                anisotropic_filtering: false,
-            },
-            limits: Limits::default(),
+            compatible_surface: Some(surface),
         })
         .await
+        .unwrap();
+
+    adapter
+        .request_device(
+            &DeviceDescriptor {
+                features: Default::default(),
+                limits: Limits::default(),
+                shader_validation: true,
+            },
+            None,
+        )
+        .await
+        .unwrap()
 }
 
 #[allow(dead_code)]
