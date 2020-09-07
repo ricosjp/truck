@@ -14,8 +14,10 @@
 )]
 
 extern crate cgmath;
+extern crate serde;
 use std::fmt::Debug;
 
+use serde::{Serialize, Deserialize};
 pub use cgmath::prelude::*;
 
 macro_rules! f64_type {
@@ -28,11 +30,11 @@ macro_rules! f64_type {
 f64_type!(Vector1, Vector2, Vector3, Vector4, Matrix2, Matrix3, Matrix4, Point1, Point2, Point3);
 
 /// knot vector
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct KnotVec(Vec<f64>);
 
 /// bounding box
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct BoundingBox<V>(V, V);
 
 /// general tolerance
@@ -78,7 +80,7 @@ pub use traits::*;
 ///     f64::assert_near2(&c, &1.0);
 /// }
 /// ```
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct BSplineCurve<V> {
     knot_vec: KnotVec,      // the knot vector
     control_points: Vec<V>, // the indices of control points
@@ -105,7 +107,7 @@ pub struct BSplineCurve<V> {
 /// );
 /// assert!(res.near2_as_curve(&line));
 /// ```
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum CurveCollector<V> {
     /// the empty curve
     Singleton,
@@ -171,7 +173,7 @@ pub enum CurveCollector<V> {
 ///     }
 /// }
 /// ```
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct BSplineSurface<V> {
     knot_vecs: (KnotVec, KnotVec),
     control_points: Vec<Vec<V>>,

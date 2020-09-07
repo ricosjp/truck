@@ -10,4 +10,4 @@ edition = "2018"
 lazy_static = "1.2.0"
 
 [dev-dependencies]
-truck_io = {path = "../truck_io"}
+truck_geometry = {path = "../truck_geometry"}

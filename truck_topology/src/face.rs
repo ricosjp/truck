@@ -1,52 +1,34 @@
 use crate::errors::Error;
-use crate::id::IDGenerator;
 use crate::wire::EdgeIter;
-use crate::{Edge, Face, RemoveTry, Result, Wire};
+use crate::*;
 use std::collections::HashMap;
 
-lazy_static! {
-    static ref ID_GENERATOR: IDGenerator = IDGenerator::new();
-}
-
-impl Face {
+impl<P, C, S> Face<P, C, S> {
     /// Creates a new face by a wire.
     /// # Failure
     /// `boundary` must be non-empty, simple and closed. If not, returns the following errors:
-    /// * If `boundary` is empty, then returns `Error::EmptyWire`.
-    /// * If `boundary` is not closed, then returns `Error::NotClosedWire`.
-    /// * If `boundary` is closed but not simple, then returns `Error::NotSimpleWire`.
+    /// * If `boundary` is empty, then returns [`Error::EmptyWire`].
+    /// * If `boundary` is not closed, then returns [`Error::NotClosedWire`].
+    /// * If `boundary` is closed but not simple, then returns [`Error::NotSimpleWire`].
+    /// 
+    /// [`Error::EmptyWire`]: errors/enum.Error.html#variant.EmptyWire
+    /// [`Error::NotClosedWire`]: errors/enum.Error.html#variant.NotClosedWire
+    /// [`Error::NotSimpleWire`]: errors/enum.Error.html#variant.NotSimpleWire
     /// # Examples
     /// ```
     /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
-    /// let v = Vertex::news(4);
+    /// # use errors::Error;
+    /// let v = Vertex::news(&[(); 4]);
     /// let mut wire = Wire::from(vec![
-    ///     Edge::new(v[0], v[1]),
-    ///     Edge::new(v[1], v[2]),
-    ///     Edge::new(v[2], v[3]),
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[3], ()),
+    ///     Edge::new(&v[3], &v[0], ()),
     /// ]);
-    ///
-    /// // wire is not closed.
-    /// assert_eq!(Face::try_new(wire.clone()), Err(Error::NotClosedWire));
-    ///
-    /// // wire becomes closed and simple.
-    /// wire.push_back(Edge::new(v[3], v[0]));
-    /// assert!(Face::try_new(wire.clone()).is_ok());
-    ///
-    /// // wire becomes not simple.
-    /// wire.pop_back();
-    /// wire.push_back(Edge::new(v[3], v[1]));
-    /// wire.push_back(Edge::new(v[1], v[0]));
-    /// assert_eq!(Face::try_new(wire), Err(Error::NotSimpleWire));
-    /// ```
-    /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
-    /// // empty wire cannot construct a face
-    /// assert_eq!(Face::try_new(Wire::new()), Err(Error::EmptyWire));
+    /// assert!(Face::try_new(wire.clone(), ()).is_ok());
     /// ```
     #[inline(always)]
-    pub fn try_new(boundary: Wire) -> Result<Face> {
+    pub fn try_new(boundary: Wire<P, C>, surface: S) -> Result<Face<P, C, S>> {
         if boundary.is_empty() {
             Err(Error::EmptyWire)
         } else if !boundary.is_closed() {
@@ -54,7 +36,7 @@ impl Face {
         } else if !boundary.is_simple() {
             Err(Error::NotSimpleWire)
         } else {
-            Ok(Face::new_unchecked(boundary))
+            Ok(Face::new_unchecked(boundary, surface))
         }
     }
 
@@ -62,7 +44,9 @@ impl Face {
     /// # Panic
     /// `boundary` must be non-empty, simple and closed.
     #[inline(always)]
-    pub fn new(boundary: Wire) -> Face { Face::try_new(boundary).remove_try() }
+    pub fn new(boundary: Wire<P, C>, surface: S) -> Face<P, C, S> {
+        Face::try_new(boundary, surface).remove_try()
+    }
 
     /// Creates a new face by a wire.
     /// # Remarks
@@ -70,11 +54,11 @@ impl Face {
     /// This method does NOT check the regularity conditions of `Face::try_new()`.  
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
-    pub fn new_unchecked(boundary: Wire) -> Face {
+    pub fn new_unchecked(boundary: Wire<P, C>, surface: S) -> Face<P, C, S> {
         Face {
             boundary: boundary,
             orientation: true,
-            id: ID_GENERATOR.generate(),
+            surface: Arc::new(Mutex::new(surface)),
         }
     }
 
@@ -82,51 +66,50 @@ impl Face {
     /// # Examples
     /// ```
     /// # use truck_topology::*;
-    /// let v = Vertex::news(3);
+    /// let v = Vertex::news(&[(); 3]);
     /// let wire = Wire::from(vec![
-    ///     Edge::new(v[0], v[1]),
-    ///     Edge::new(v[1], v[2]),
-    ///     Edge::new(v[2], v[0]),
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let mut face = Face::new(wire);
+    /// let mut face = Face::new(wire, ());
     /// let boundary = face.boundary();
     /// for (i, vert) in boundary.vertex_iter().enumerate() {
     ///     assert_eq!(vert, v[i]);
     /// }
-    /// 
+    ///
     /// // If invert the face, the boundary is also inverted.
     /// face.invert();
     /// assert_eq!(boundary.inverse(), face.boundary());
     /// ```
     #[inline(always)]
-    pub fn boundary(&self) -> Wire {
+    pub fn boundary(&self) -> Wire<P, C> {
         match self.orientation {
             true => self.boundary.clone(),
             false => self.boundary.inverse(),
         }
     }
-    
     /// Consumes `self` and returns the entity of its boundary.
     /// ```
     /// # use truck_topology::*;
-    /// let v = Vertex::news(3);
+    /// let v = Vertex::news(&[(), (), ()]);
     /// let wire = Wire::from(vec![
-    ///     Edge::new(v[0], v[1]),
-    ///     Edge::new(v[1], v[2]),
-    ///     Edge::new(v[2], v[0]),
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let mut face = Face::new(wire);
+    /// let mut face = Face::new(wire, ());
     /// let boundary = face.clone().into_boundary();
     /// for (i, vert) in boundary.vertex_iter().enumerate() {
     ///     assert_eq!(vert, v[i]);
     /// }
-    /// 
+    ///
     /// // If invert the face, the boundary is also inverted.
     /// face.invert();
     /// assert_eq!(boundary.inverse(), face.into_boundary());
     /// ```
     #[inline(always)]
-    pub fn into_boundary(self) -> Wire {
+    pub fn into_boundary(self) -> Wire<P, C> {
         match self.orientation {
             true => self.boundary,
             false => self.boundary.inverse(),
@@ -136,46 +119,44 @@ impl Face {
     /// Returns the reference of the boundary wire which is generated by constructor.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # let v = Vertex::news(3);
-    /// # let wire = Wire::from(vec![
-    /// #     Edge::new(v[0], v[1]),
-    /// #     Edge::new(v[1], v[2]),
-    /// #     Edge::new(v[2], v[0]),
-    /// # ]);
-    /// # let mut face = Face::new(wire);
-    /// // let mut face: Face = ...;
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let mut face = Face::new(wire, ());
     /// let boundary = face.boundary();
     /// face.invert();
-    /// 
+    ///
     /// // The result of face.boudnary() is already inversed.
     /// assert_eq!(face.boundary(), boundary.inverse());
-    /// 
+    ///
     /// // The absolute boundary does never change.
     /// assert_eq!(face.absolute_boundary(), &boundary);
     /// ```
     #[inline(always)]
-    pub fn absolute_boundary(&self) -> &Wire { &self.boundary }
+    pub fn absolute_boundary(&self) -> &Wire<P, C> { &self.boundary }
 
     /// Returns an iterator over all edges in the boundary.
     /// ```
-    /// # use truck_topology::*;
-    /// # let v = Vertex::news(3);
-    /// # let wire = Wire::from(vec![
-    /// #     Edge::new(v[0], v[1]),
-    /// #     Edge::new(v[1], v[2]),
-    /// #     Edge::new(v[2], v[0]),
-    /// # ]);
-    /// # let mut face = Face::new(wire);
-    /// # face.invert();
-    /// // let mut face: Face = ...;
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let mut face = Face::new(wire, ());
+    /// face.invert();
     /// let boundary = face.boundary();
     /// for (edge0, edge1) in boundary.edge_iter().zip(face.boundary_iter()) {
     ///     assert_eq!(edge0, &edge1);
     /// }
     /// ```
     #[inline(always)]
-    pub fn boundary_iter(&self) -> BoundaryIter {
+    pub fn boundary_iter(&self) -> BoundaryIter<P, C> {
         BoundaryIter {
             edge_iter: self.boundary.edge_iter(),
             orientation: self.orientation,
@@ -183,38 +164,65 @@ impl Face {
     }
 
     /// Returns the orientation of face.
-    /// 
+    ///
     /// The result of this method is the same with `self.boundary() == self.absolute_boundary().clone()`.
     /// Moreover, if this method returns false, `self.boundary() == self.absolute_boundary().inverse()`.
     #[inline(always)]
     pub fn orientation(&self) -> bool { self.orientation }
 
     /// Returns the id of face.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let face0 = Face::new(wire, 0);
+    /// let face1 = face0.clone();
+    ///
+    /// // Two faces have the same content.
+    /// assert_eq!(*face0.try_lock_surface().unwrap(), 0);
+    /// assert_eq!(*face1.try_lock_surface().unwrap(), 0);
+    ///
+    /// {
+    ///     let mut surface = face0.try_lock_surface().unwrap();
+    ///     *surface = 1;
+    /// }
+    /// // The contents of two vertices are synchronized.
+    /// assert_eq!(*face0.try_lock_surface().unwrap(), 1);
+    /// assert_eq!(*face1.try_lock_surface().unwrap(), 1);
+    ///
+    /// // Check the behavior of `try_lock`
+    /// let lock = face0.try_lock_surface();
+    /// assert!(face1.try_lock_surface().is_err());
+    /// ```
     #[inline(always)]
-    pub fn id(&self) -> usize { self.id }
+    pub fn try_lock_surface(&self) -> TryLockResult<MutexGuard<S>> { self.surface.try_lock() }
 
     /// Inverts the direction of the face.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
-    /// # let v = Vertex::news(3);
-    /// # let wire = Wire::from(vec![
-    /// #    Edge::new(v[0], v[1]),
-    /// #    Edge::new(v[1], v[2]),
-    /// #    Edge::new(v[2], v[0]),
-    /// # ]);
-    /// # let mut face = Face::new(wire);
-    /// // let mut face: Face = ...;
-    /// let id_backup = face.id();
-    /// let boundary_backup = face.boundary();
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
+    /// let v = Vertex::news(&[(), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let mut face = Face::new(wire, ());
+    /// let org_face = face.clone();
+    /// let org_bdry = face.boundary();
     /// face.invert();
-    /// 
-    /// // The id of the face does not change.
-    /// assert_eq!(face.id(), id_backup);
-    /// 
+    ///
+    /// // Two faces are the same face.
+    /// face.is_same(&org_face);
+    ///
     /// // The boundary is inverted.
-    /// let inversed_edge_iter = boundary_backup.inverse().edge_into_iter();
+    /// let inversed_edge_iter = org_bdry.inverse().edge_into_iter();
     /// let face_edge_iter = face.boundary_iter();
     /// for (edge0, edge1) in inversed_edge_iter.zip(face_edge_iter) {
     ///     assert_eq!(edge0, edge1);
@@ -226,24 +234,71 @@ impl Face {
         self
     }
 
+    /// Returns whether two faces are the same. Returns `true` even if the orientaions are different.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(); 3]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let face0 = Face::new(wire, ());
+    /// let face1 = face0.inverse();
+    /// assert_ne!(face0, face1);
+    /// assert!(face0.is_same(&face1));
+    /// ```
+    #[inline(always)]
+    pub fn is_same(&self, other: &Self) -> bool {
+        std::ptr::eq(Arc::as_ptr(&self.surface), Arc::as_ptr(&other.surface))
+    }
+
+    /// Returns the id that does not depend on the direction of the face.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(); 3]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let face0 = Face::new(wire.clone(), ());
+    /// let face1 = face0.inverse();
+    /// let face2 = Face::new(wire, ());
+    /// assert_ne!(face0, face1);
+    /// assert_ne!(face0, face2);
+    /// assert_eq!(face0.id(), face1.id());
+    /// assert_ne!(face0.id(), face2.id());
+    /// ```
+    #[inline(always)]
+    pub fn id(&self) -> FaceID<S> {
+        FaceID {
+            entity: Arc::as_ptr(&self.surface),
+        }
+    }
+
     /// Returns the inverse face.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use truck_topology::errors::Error;
-    /// # let v = Vertex::news(3);
-    /// # let wire = Wire::from(vec![
-    /// #    Edge::new(v[0], v[1]),
-    /// #    Edge::new(v[1], v[2]),
-    /// #    Edge::new(v[2], v[0]),
-    /// # ]);
-    /// # let mut face = Face::new(wire);
-    /// // let mut face: Face = ...;
+    /// use truck_topology::*;
+    /// use truck_topology::errors::Error;
+    /// let v = Vertex::news(&[(), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let mut face = Face::new(wire, ());
     /// let inverted = face.inverse();
-    /// 
-    /// // The id of the inverted face coincides with the one of the original face.
-    /// assert_eq!(inverted.id(), face.id());
-    /// 
+    ///
+    /// // Two faces are the same face.
+    /// assert!(face.is_same(&inverted));
+    ///
+    /// // Two faces has the same id.
+    /// assert_eq!(face.id(), inverted.id());
+    ///
     /// // The boundary is inverted.
     /// let inversed_edge_iter = face.boundary().inverse().edge_into_iter();
     /// let face_edge_iter = inverted.boundary_iter();
@@ -252,7 +307,7 @@ impl Face {
     /// }
     /// ```
     #[inline(always)]
-    pub fn inverse(&self) -> Face {
+    pub fn inverse(&self) -> Face<P, C, S> {
         let mut face = self.clone();
         face.invert();
         face
@@ -261,23 +316,24 @@ impl Face {
     /// Returns whether two faces `self` and `other` have a shared edge.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// let v = Vertex::news(4);
-    /// let shared_edge = Edge::new(v[0], v[1]);
-    /// let another_edge = Edge::new(v[0], v[1]);
+    /// use truck_topology::*;
+    /// use std::iter::FromIterator;
+    /// let v = Vertex::news(&[(); 4]);
+    /// let shared_edge = Edge::new(&v[0], &v[1], ());
+    /// let another_edge = Edge::new(&v[0], &v[1], ());
     /// let inversed_edge = shared_edge.inverse();
     /// let wire = vec![
-    ///     Wire::from(vec![Edge::new(v[2], v[0]), shared_edge, Edge::new(v[1], v[2])]),
-    ///     Wire::from(vec![Edge::new(v[2], v[0]), another_edge, Edge::new(v[1], v[2])]),
-    ///     Wire::from(vec![Edge::new(v[3], v[0]), shared_edge, Edge::new(v[1], v[3])]),
-    ///     Wire::from(vec![Edge::new(v[3], v[1]), inversed_edge, Edge::new(v[0], v[3])]),
+    ///     Wire::from_iter(vec![&Edge::new(&v[2], &v[0], ()), &shared_edge, &Edge::new(&v[1], &v[2], ())]),
+    ///     Wire::from_iter(vec![&Edge::new(&v[2], &v[0], ()), &another_edge, &Edge::new(&v[1], &v[2], ())]),
+    ///     Wire::from_iter(vec![&Edge::new(&v[3], &v[0], ()), &shared_edge, &Edge::new(&v[1], &v[3], ())]),
+    ///     Wire::from_iter(vec![&Edge::new(&v[3], &v[1], ()), &inversed_edge, &Edge::new(&v[0], &v[3], ())]),
     /// ];
-    /// let face: Vec<Face> = wire.into_iter().map(|w| Face::new(w)).collect();
+    /// let face: Vec<_> = wire.into_iter().map(|w| Face::new(w, ())).collect();
     /// assert!(face[0].border_on(&face[2]));
     /// assert!(!face[1].border_on(&face[2]));
     /// assert!(face[0].border_on(&face[3]));
     /// ```
-    pub fn border_on(&self, other: &Face) -> bool {
+    pub fn border_on(&self, other: &Face<P, C, S>) -> bool {
         let mut hashmap = HashMap::new();
         for edge in self.boundary.edge_iter() {
             hashmap.insert(edge.id(), edge);
@@ -291,37 +347,66 @@ impl Face {
     }
 }
 
+impl<P, C, S> Clone for Face<P, C, S> {
+    #[inline(always)]
+    fn clone(&self) -> Face<P, C, S> {
+        Face {
+            boundary: self.boundary.clone(),
+            orientation: self.orientation,
+            surface: Arc::clone(&self.surface),
+        }
+    }
+}
+
+impl<P, C, S> PartialEq for Face<P, C, S> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(Arc::as_ptr(&self.surface), Arc::as_ptr(&other.surface))
+            && self.orientation == other.orientation
+    }
+}
+
+impl<P, C, S> Eq for Face<P, C, S> {}
+
+impl<P, C, S> Hash for Face<P, C, S> {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(Arc::as_ptr(&self.surface), state);
+        self.orientation.hash(state);
+    }
+}
+
 /// An iterator over the edges in the boundary of a face.
 /// # Examples
 /// ```
-/// # use truck_topology::*;
-/// let v = Vertex::news(4);
+/// use truck_topology::*;
+/// let v = Vertex::news(&[(); 4]);
 /// let wire = Wire::from(vec![
-///     Edge::new(v[0], v[1]),
-///     Edge::new(v[1], v[2]),
-///     Edge::new(v[2], v[3]),
-///     Edge::new(v[3], v[0]),
+///     Edge::new(&v[0], &v[1], ()),
+///     Edge::new(&v[1], &v[2], ()),
+///     Edge::new(&v[2], &v[3], ()),
+///     Edge::new(&v[3], &v[0], ()),
 /// ]);
-/// let face = Face::new(wire.clone());
-/// 
+/// let face = Face::new(wire.clone(), ());
+///
 /// let mut iter = face.boundary_iter();
-/// assert_eq!(iter.next(), Some(wire[0]));
-/// assert_eq!(iter.next_back(), Some(wire[3])); // double ended
-/// assert_eq!(iter.next(), Some(wire[1]));
-/// assert_eq!(iter.next(), Some(wire[2]));
-/// assert_eq!(iter.next_back(), None);
-/// assert_eq!(iter.next(), None); // fused
+/// assert_eq!(iter.next().as_ref(), Some(&wire[0]));
+/// assert_eq!(iter.next_back().as_ref(), Some(&wire[3])); // double ended
+/// assert_eq!(iter.next().as_ref(), Some(&wire[1]));
+/// assert_eq!(iter.next().as_ref(), Some(&wire[2]));
+/// assert_eq!(iter.next_back().as_ref(), None);
+/// assert_eq!(iter.next().as_ref(), None); // fused
 /// ```
 #[derive(Clone, Debug)]
-pub struct BoundaryIter<'a> {
-    edge_iter: EdgeIter<'a>,
+pub struct BoundaryIter<'a, P, C> {
+    edge_iter: EdgeIter<'a, P, C>,
     orientation: bool,
 }
 
-impl<'a> Iterator for BoundaryIter<'a> {
-    type Item = Edge;
+impl<'a, P, C> Iterator for BoundaryIter<'a, P, C> {
+    type Item = Edge<P, C>;
     #[inline(always)]
-    fn next(&mut self) -> Option<Edge> {
+    fn next(&mut self) -> Option<Edge<P, C>> {
         match self.orientation {
             true => self.edge_iter.next().map(|edge| edge.clone()),
             false => self.edge_iter.next_back().map(|edge| edge.inverse()),
@@ -332,12 +417,12 @@ impl<'a> Iterator for BoundaryIter<'a> {
     fn size_hint(&self) -> (usize, Option<usize>) { (self.len(), Some(self.len())) }
 
     #[inline(always)]
-    fn last(mut self) -> Option<Edge> { self.next_back() }
+    fn last(mut self) -> Option<Edge<P, C>> { self.next_back() }
 }
 
-impl<'a> DoubleEndedIterator for BoundaryIter<'a> {
+impl<'a, P, C> DoubleEndedIterator for BoundaryIter<'a, P, C> {
     #[inline(always)]
-    fn next_back(&mut self) -> Option<Edge> {
+    fn next_back(&mut self) -> Option<Edge<P, C>> {
         match self.orientation {
             true => self.edge_iter.next_back().map(|edge| edge.clone()),
             false => self.edge_iter.next().map(|edge| edge.inverse()),
@@ -345,9 +430,38 @@ impl<'a> DoubleEndedIterator for BoundaryIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for BoundaryIter<'a> {
+impl<'a, P, C> ExactSizeIterator for BoundaryIter<'a, P, C> {
     #[inline(always)]
     fn len(&self) -> usize { self.edge_iter.len() }
 }
 
-impl<'a> std::iter::FusedIterator for BoundaryIter<'a> {}
+impl<'a, P, C> std::iter::FusedIterator for BoundaryIter<'a, P, C> {}
+
+impl<S> Hash for FaceID<S> {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(self.entity, state); }
+}
+
+impl<S> PartialEq for FaceID<S> {
+    #[inline(always)]
+    fn eq(&self, other: &FaceID<S>) -> bool { std::ptr::eq(self.entity, other.entity) }
+}
+
+impl<S> Eq for FaceID<S> {}
+
+impl<S> Clone for FaceID<S> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        FaceID {
+            entity: self.entity,
+        }
+    }
+}
+
+impl<S> Copy for FaceID<S> {}
+
+impl<S> std::fmt::Debug for FaceID<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+        f.write_fmt(format_args!("{:p}", self.entity))
+    }
+}

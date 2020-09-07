@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 cgmath = "*"
+serde = { version = "*", features = ["derive"]}
 
 [dev-dependencies]
 truck_io = {path = "../truck_io"}

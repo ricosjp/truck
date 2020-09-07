@@ -5,36 +5,37 @@
 //! by this package.
 //! ```
 //! use truck_topology::*;
+//! use std::iter::FromIterator;
 //!
 //! // Create vertices. A tetrahedron has four vertices.
-//! let v = Vertex::news(4);
+//! let v = Vertex::news(&[(), (), (), ()]);
 //!
 //! // Create edges. Vertex is implemented the Copy trait.
 //! let edge = [
-//!     Edge::new(v[0], v[1]),
-//!     Edge::new(v[0], v[2]),
-//!     Edge::new(v[0], v[3]),
-//!     Edge::new(v[1], v[2]),
-//!     Edge::new(v[1], v[3]),
-//!     Edge::new(v[2], v[3]),
+//!     Edge::new(&v[0], &v[1], ()),
+//!     Edge::new(&v[0], &v[2], ()),
+//!     Edge::new(&v[0], &v[3], ()),
+//!     Edge::new(&v[1], &v[2], ()),
+//!     Edge::new(&v[1], &v[3], ()),
+//!     Edge::new(&v[2], &v[3], ()),
 //! ];
 //!
 //! // Create boundaries of faces as the wire.
 //! // Edge is implemented the Copy trait.
 //! let wire = vec![
-//!     Wire::from(vec![edge[0], edge[3], edge[1].inverse()]),
-//!     Wire::from(vec![edge[1], edge[5], edge[2].inverse()]),
-//!     Wire::from(vec![edge[2], edge[4].inverse(), edge[0].inverse()]),
-//!     Wire::from(vec![edge[3], edge[5], edge[4].inverse()]),
+//!     Wire::from_iter(vec![&edge[0], &edge[3], &edge[1].inverse()]),
+//!     Wire::from_iter(vec![&edge[1], &edge[5], &edge[2].inverse()]),
+//!     Wire::from_iter(vec![&edge[2], &edge[4].inverse(), &edge[0].inverse()]),
+//!     Wire::from_iter(vec![&edge[3], &edge[5], &edge[4].inverse()]),
 //! ];
 //!
 //! // Create faces by the boundary wires.
 //! // The boundary of face must be simple and closed.
-//! let mut face: Vec<Face> = wire.into_iter().map(|wire| Face::new(wire)).collect();
+//! let mut face: Vec<Face<_, _, _>> = wire.into_iter().map(|wire| Face::new(wire, ())).collect();
 //! face[3].invert();
 //!
 //! // Create shell of faces. Shell can be created by the Vec<Face>.
-//! let shell: Shell = face.into();
+//! let shell: Shell<_, _, _> = face.into();
 //!
 //! // Create a tetrahedron solid by the boundary shell.
 //! // The boundaries of a solid must be closed and oriented.
@@ -74,10 +75,9 @@
     unused_qualifications
 )]
 
-#[macro_use]
-extern crate lazy_static;
-
 use std::collections::VecDeque;
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex, MutexGuard, TryLockResult};
 
 /// Vertex, the minimum topological unit.
 ///
@@ -85,13 +85,13 @@ use std::collections::VecDeque;
 /// These vertices are uniquely identified by their `id`.
 /// ```
 /// # use truck_topology::Vertex;
-/// let v0 = Vertex::new(); // one vertex
-/// let v1 = Vertex::new(); // another vertex
-/// assert_ne!(v0.id(), v1.id()); // two vertices are different
+/// let v0 = Vertex::new(()); // one vertex
+/// let v1 = Vertex::new(()); // another vertex
+/// assert_ne!(v0, v1); // two vertices are different
 /// ```
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct Vertex {
-    id: usize,
+#[derive(Debug)]
+pub struct Vertex<P> {
+    point: Arc<Mutex<P>>,
 }
 
 /// Edge, which consists two vertices.
@@ -101,25 +101,25 @@ pub struct Vertex {
 /// An edge is uniquely identified by their `id`.
 /// ```
 /// # use truck_topology::*;
-/// let v = Vertex::news(2);
-/// let edge0 = Edge::new(v[0], v[1]);
-/// let edge1 = Edge::new(v[0], v[1]);
+/// let v = Vertex::news(&[(), ()]);
+/// let edge0 = Edge::new(&v[0], &v[1], ());
+/// let edge1 = Edge::new(&v[0], &v[1], ());
 /// assert_ne!(edge0.id(), edge1.id());
 /// ```
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct Edge {
-    vertices: (Vertex, Vertex),
+#[derive(Debug)]
+pub struct Edge<P, C> {
+    vertices: (Vertex<P>, Vertex<P>),
     orientation: bool,
-    id: usize,
+    curve: Arc<Mutex<C>>,
 }
 
 /// Wire, a path or cycle which consists some edges.
 ///
 /// The entity of this struct is `VecDeque<Edge>` and almost methods are inherited from
 /// `VecDeque<Edge>` by `Deref` and `DerefMut` traits.
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-pub struct Wire {
-    edge_list: VecDeque<Edge>,
+#[derive(Hash, Debug)]
+pub struct Wire<P, C> {
+    edge_list: VecDeque<Edge<P, C>>,
 }
 
 /// Face, attatched to a simple and closed wire.
@@ -128,21 +128,21 @@ pub struct Wire {
 /// create a different faces each time, even if the boundary wires are the same one.
 /// A face is uniquely identified by their `id`.
 /// ```
-/// # use truck_topology::*;
-/// # let v = Vertex::news(2);
-/// # let edge0 = Edge::new(v[0], v[1]);
-/// # let edge1 = Edge::new(v[1], v[0]);
-/// # let wire = Wire::from(vec![edge0, edge1]);
-/// // let wire: Wire = ...;
-/// let face0 = Face::new(wire.clone());
-/// let face1 = Face::new(wire);
+/// use truck_topology::*;
+/// use std::iter::FromIterator;
+/// let v = Vertex::news(&[(), ()]);
+/// let edge0 = Edge::new(&v[0], &v[1], ());
+/// let edge1 = Edge::new(&v[1], &v[0], ());
+/// let wire = Wire::from_iter(vec![&edge0, &edge1]);
+/// let face0 = Face::new(wire.clone(), ());
+/// let face1 = Face::new(wire, ());
 /// assert_ne!(face0.id(), face1.id());
 /// ```
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-pub struct Face {
-    boundary: Wire,
+#[derive(Debug)]
+pub struct Face<P, C, S> {
+    boundary: Wire<P, C>,
     orientation: bool,
-    id: usize,
+    surface: Arc<Mutex<S>>,
 }
 
 /// Shell, a connected compounded faces.
@@ -150,14 +150,14 @@ pub struct Face {
 /// The entity of this struct is `Vec<Face>` and almost methods are inherited from
 /// `Vec<Face>` by `Deref` and `DerefMut` traits.
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Shell {
-    face_list: Vec<Face>,
+pub struct Shell<P, C, S> {
+    face_list: Vec<Face<P, C, S>>,
 }
 
 /// Solid, attached to a closed shells.
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Solid {
-    boundaries: Vec<Shell>,
+pub struct Solid<P, C, S> {
+    boundaries: Vec<Shell<P, C, S>>,
 }
 
 /// `Result` with crate's errors.
@@ -172,14 +172,48 @@ impl<T> RemoveTry<T> for Result<T> {
     fn remove_try(self) -> T { self.unwrap_or_else(|e| panic!("{}", e)) }
 }
 
+/// The id that does not depend on the direction of the edge.
+/// # Examples
+/// ```
+/// use truck_topology::*;
+/// let v = Vertex::news(&[(), ()]);
+/// let edge0 = Edge::new(&v[0], &v[1], ());
+/// let edge1 = edge0.inverse();
+/// assert_ne!(edge0, edge1);
+/// assert_eq!(edge0.id(), edge1.id());
+/// ```
+pub struct EdgeID<C> {
+    entity: *const Mutex<C>,
+}
+
+/// The id that does not depend on the direction of the face.
+/// # Examples
+/// ```
+/// use truck_topology::*;
+/// let v = Vertex::news(&[(); 3]);
+/// let wire = Wire::from(vec![
+///     Edge::new(&v[0], &v[1], ()),
+///     Edge::new(&v[1], &v[2], ()),
+///     Edge::new(&v[2], &v[0], ()),
+/// ]);
+/// let face0 = Face::new(wire.clone(), ());
+/// let face1 = face0.inverse();
+/// let face2 = Face::new(wire, ());
+/// assert_ne!(face0, face1);
+/// assert_ne!(face0, face2);
+/// assert_eq!(face0.id(), face1.id());
+/// assert_ne!(face0.id(), face2.id());
+/// ```
+pub struct FaceID<S> {
+    entity: *const Mutex<S>,
+}
+
 #[doc(hidden)]
 pub mod edge;
 /// classifies the errors that can occur in this crate.
 pub mod errors;
 /// Defines the boundary iterator.
 pub mod face;
-#[doc(hidden)]
-pub mod id;
 /// classifies shell conditions and defines the face iterators.
 pub mod shell;
 #[doc(hidden)]

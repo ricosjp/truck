@@ -1,20 +1,21 @@
-use std::vec::Vec;
 use crate::errors::Error;
-use crate::{RemoveTry, Result, Shell, Solid};
 use crate::shell::ShellCondition;
+use crate::*;
+use std::vec::Vec;
 
-impl Solid {
+impl<P, C, S> Solid<P, C, S> {
     /// create the shell whose boundaries is boundary.
     /// # Panic
     /// All boundary must be non-empty, connected, and closed manifold.
     #[inline(always)]
-    pub fn new(boundaries: Vec<Shell>) -> Solid { Solid::try_new(boundaries).remove_try() }
-    
+    pub fn new(boundaries: Vec<Shell<P, C, S>>) -> Solid<P, C, S> {
+        Solid::try_new(boundaries).remove_try()
+    }
     /// create the shell whose boundaries is boundary.
     /// # Failure
     /// All boundary must be non-empty, connected, and closed manifold.
     #[inline(always)]
-    pub fn try_new(boundaries: Vec<Shell>) -> Result<Solid> {
+    pub fn try_new(boundaries: Vec<Shell<P, C, S>>) -> Result<Solid<P, C, S>> {
         for shell in &boundaries {
             if shell.is_empty() {
                 return Err(Error::EmptyShell);
@@ -28,97 +29,96 @@ impl Solid {
         }
         Ok(Solid::new_unchecked(boundaries))
     }
-    
     /// create the shell whose boundaries is boundary.
     /// # Remarks
     /// This method is prepared only for performance-critical development and is not recommended.
     /// This method does NOT check whether all boundary is non-empty, connected, and closed.
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
-    pub fn new_unchecked(boundaries: Vec<Shell>) -> Solid { Solid { boundaries: boundaries } }
+    pub fn new_unchecked(boundaries: Vec<Shell<P, C, S>>) -> Solid<P, C, S> {
+        Solid {
+            boundaries: boundaries,
+        }
+    }
 
     /// get the reference of boundary shells
     #[inline(always)]
-    pub fn boundaries(&self) -> &Vec<Shell> { &self.boundaries }
+    pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
 }
 
 #[test]
 fn cube() {
     use crate::*;
-    let v = Vertex::news(8);
+    use std::iter::FromIterator;
+    let v = Vertex::news(&[(); 8]);
     let edge = [
-        Edge::new(v[0], v[1]), // 0
-        Edge::new(v[1], v[2]), // 1
-        Edge::new(v[2], v[3]), // 2
-        Edge::new(v[3], v[0]), // 3
-        Edge::new(v[0], v[4]), // 4
-        Edge::new(v[1], v[5]), // 5
-        Edge::new(v[2], v[6]), // 6
-        Edge::new(v[3], v[7]), // 7
-        Edge::new(v[4], v[5]), // 8
-        Edge::new(v[5], v[6]), // 9
-        Edge::new(v[6], v[7]), // 10
-        Edge::new(v[7], v[4]), // 11
+        Edge::new(&v[0], &v[1], ()), // 0
+        Edge::new(&v[1], &v[2], ()), // 1
+        Edge::new(&v[2], &v[3], ()), // 2
+        Edge::new(&v[3], &v[0], ()), // 3
+        Edge::new(&v[0], &v[4], ()), // 4
+        Edge::new(&v[1], &v[5], ()), // 5
+        Edge::new(&v[2], &v[6], ()), // 6
+        Edge::new(&v[3], &v[7], ()), // 7
+        Edge::new(&v[4], &v[5], ()), // 8
+        Edge::new(&v[5], &v[6], ()), // 9
+        Edge::new(&v[6], &v[7], ()), // 10
+        Edge::new(&v[7], &v[4], ()), // 11
     ];
 
-    let mut wire0 = Wire::new();
-    wire0.push_back(edge[0]);
-    wire0.push_back(edge[1]);
-    wire0.push_back(edge[2]);
-    wire0.push_back(edge[3]);
-    let face0 = Face::new(wire0);
+    let wire0 = Wire::from_iter(vec![&edge[0], &edge[1], &edge[2], &edge[3]]);
+    let face0 = Face::new(wire0, ());
 
-    let mut wire1 = Wire::new();
-    wire1.push_back(edge[4]);
-    wire1.push_back(edge[8]);
-    wire1.push_back(edge[5].inverse());
-    wire1.push_back(edge[0].inverse());
-    let face1 = Face::new(wire1);
+    let wire1 = Wire::from_iter(vec![
+        &edge[4],
+        &edge[8],
+        &edge[5].inverse(),
+        &edge[0].inverse(),
+    ]);
+    let face1 = Face::new(wire1, ());
 
-    let mut wire2 = Wire::new();
-    wire2.push_back(edge[5]);
-    wire2.push_back(edge[9]);
-    wire2.push_back(edge[6].inverse());
-    wire2.push_back(edge[1].inverse());
-    let face2 = Face::new(wire2);
+    let wire2 = Wire::from_iter(vec![
+        &edge[5],
+        &edge[9],
+        &edge[6].inverse(),
+        &edge[1].inverse(),
+    ]);
+    let face2 = Face::new(wire2, ());
 
-    let mut wire3 = Wire::new();
-    wire3.push_back(edge[6]);
-    wire3.push_back(edge[10]);
-    wire3.push_back(edge[7].inverse());
-    wire3.push_back(edge[2].inverse());
-    let face3 = Face::new(wire3);
+    let wire3 = Wire::from_iter(vec![
+        &edge[6],
+        &edge[10],
+        &edge[7].inverse(),
+        &edge[2].inverse(),
+    ]);
+    let face3 = Face::new(wire3, ());
     
-    let mut wire4 = Wire::new();
-    wire4.push_back(edge[7]);
-    wire4.push_back(edge[11]);
-    wire4.push_back(edge[4].inverse());
-    wire4.push_back(edge[3].inverse());
-    let face4 = Face::new(wire4);
-
-    let mut wire5 = Wire::new();
-    wire5.push_back(edge[11].inverse());
-    wire5.push_back(edge[10].inverse());
-    wire5.push_back(edge[9].inverse());
-    wire5.push_back(edge[8].inverse());
-    let face5 = Face::new(wire5);
+    let wire4 = Wire::from_iter(vec![
+        &edge[7],
+        &edge[11],
+        &edge[4].inverse(),
+        &edge[3].inverse(),
+    ]);
+    let face4 = Face::new(wire4, ());
+    
+    let wire5 = Wire::from_iter(vec![
+        &edge[11].inverse(),
+        &edge[10].inverse(),
+        &edge[9].inverse(),
+        &edge[8].inverse(),
+    ]);
+    let face5 = Face::new(wire5, ());
 
     let mut shell = Shell::new();
-     
     shell.push(face0);
     shell.push(face5);
-    
     assert!(!shell.is_connected());
-    
     shell.push(face1);
-    
     assert_eq!(shell.shell_condition(), ShellCondition::Oriented);
     assert!(shell.is_connected());
-    
     shell.push(face2);
     shell.push(face3);
     shell.push(face4);
 
     Solid::new(vec![shell]);
 }
-
