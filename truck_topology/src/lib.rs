@@ -140,7 +140,7 @@ pub struct Wire<P, C> {
 /// ```
 #[derive(Debug)]
 pub struct Face<P, C, S> {
-    boundary: Wire<P, C>,
+    boundaries: Vec<Wire<P, C>>,
     orientation: bool,
     surface: Arc<Mutex<S>>,
 }

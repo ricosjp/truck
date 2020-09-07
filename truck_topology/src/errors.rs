@@ -44,6 +44,8 @@ pub enum Error {
     /// assert_eq!(Face::try_new(wire, ()), Err(Error::NotSimpleWire));
     /// ```
     NotSimpleWire,
+    /// Some boundaries has a shared vertex.
+    NotDisjointWires,
     /// The empty shell cannot construct a solid.
     /// # Examples
     /// ```
@@ -110,6 +112,7 @@ impl std::fmt::Display for Error {
             Error::EmptyWire => f.pad("This wire is empty."),
             Error::NotClosedWire => f.pad("This wire is not closed."),
             Error::NotSimpleWire => f.pad("This wire is not simple."),
+            Error::NotDisjointWires => f.pad("Some wires has a shared vertex."),
             Error::EmptyShell => f.pad("This shell is empty."),
             Error::NotConnected => f.pad("This shell is not connected."),
             Error::NotClosedShell => f.pad("This shell is not oriented and closed."),

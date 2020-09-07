@@ -33,7 +33,9 @@ impl<P, C, S> Shell<P, C, S> {
 
     /// Moves all the faces of `other` into `self`, leaving `other` empty.
     #[inline(always)]
-    pub fn append(&mut self, other: &mut Shell<P, C, S>) { self.face_list.append(&mut other.face_list); }
+    pub fn append(&mut self, other: &mut Shell<P, C, S>) {
+        self.face_list.append(&mut other.face_list);
+    }
 
     /// Returns a tuple.
     /// * The 0th component is whether the shell is regular or not.
@@ -46,7 +48,7 @@ impl<P, C, S> Shell<P, C, S> {
 
         let mut regular = true;
         let mut oriented = true;
-        for edge in self.face_iter().flat_map(Face::boundary_iter) {
+        for edge in self.face_iter().flat_map(Face::boundary_iters).flatten() {
             let new_ori = edge.absolute_front() == edge.front();
             if let Some(ori) = all_edges.insert(edge.id(), new_ori) {
                 regular = regular && inner_edges.insert(edge.id());
@@ -111,7 +113,7 @@ impl<P, C, S> Shell<P, C, S> {
         let (_, _, _, inner_edges) = self.inner_edge_extraction();
         let mut boundary_edges = Vec::new();
         let mut vemap: HashMap<Vertex<P>, Edge<P, C>> = HashMap::new();
-        let edge_iter = self.face_iter().flat_map(Face::boundary_iter);
+        let edge_iter = self.face_iter().flat_map(Face::boundary_iters).flatten();
         for edge in edge_iter {
             if inner_edges.get(&edge.id()).is_none() {
                 boundary_edges.push(edge.clone());
@@ -167,9 +169,11 @@ impl<P, C, S> Shell<P, C, S> {
     pub fn vertex_adjacency(&self) -> HashMap<VertexID<P>, Vec<VertexID<P>>> {
         let mut adjacency: HashMap<VertexID<P>, Vec<VertexID<P>>> = HashMap::new();
         let mut done_edge: HashSet<EdgeID<C>> = HashSet::new();
-        let edge_iter = self
-            .face_iter()
-            .flat_map(|face| face.absolute_boundary().edge_iter());
+        let edge_iter = self.face_iter().flat_map(|face| {
+            face.absolute_boundaries()
+                .iter()
+                .flat_map(|wire| wire.edge_iter())
+        });
         for edge in edge_iter {
             if !done_edge.insert(edge.id()) {
                 continue;
@@ -220,7 +224,11 @@ impl<P, C, S> Shell<P, C, S> {
         let mut adjacency: HashMap<&Face<P, C, S>, Vec<&Face<P, C, S>>> = HashMap::new();
         let mut edge_face_map: HashMap<EdgeID<C>, Vec<&Face<P, C, S>>> = HashMap::new();
         for face in self.face_iter() {
-            for edge in face.absolute_boundary().edge_iter() {
+            let edge_iter = face
+                .absolute_boundaries()
+                .iter()
+                .flat_map(|wire| wire.edge_iter());
+            for edge in edge_iter {
                 if let Some(vec) = edge_face_map.get_mut(&edge.id()) {
                     for tmp in vec {
                         adjacency.entry(face).or_insert(Vec::new()).push(tmp);
@@ -397,10 +405,15 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(shell.singular_vertices(), vec![v[0].clone()]);
     /// ```
     pub fn singular_vertices(&self) -> Vec<Vertex<P>> {
-        let mut vert_wise_adjacency: HashMap<Vertex<P>, HashMap<EdgeID<C>, Vec<EdgeID<C>>>> = HashMap::new();
+        let mut vert_wise_adjacency: HashMap<Vertex<P>, HashMap<EdgeID<C>, Vec<EdgeID<C>>>> =
+            HashMap::new();
         for face in self.face_iter() {
-            let first_edge = &face.absolute_boundary()[0];
-            let mut edge_iter = face.absolute_boundary().edge_iter().peekable();
+            let first_edge = &face.absolute_boundaries()[0][0];
+            let mut edge_iter = face
+                .absolute_boundaries()
+                .iter()
+                .flat_map(|wire| wire.edge_iter())
+                .peekable();
             while let Some(edge) = edge_iter.next() {
                 let adjacency = vert_wise_adjacency
                     .entry(edge.back().clone())

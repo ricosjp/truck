@@ -254,9 +254,23 @@ impl<P, C> Wire<P, C> {
     pub fn is_simple(&self) -> bool {
         let mut set = HashSet::new();
         for vertex in self.vertex_iter() {
-            if !set.insert(vertex) {
+            if !set.insert(vertex.id()) {
                 return false;
             }
+        }
+        true
+    }
+
+    /// Determines whether all the wires in `wires` has no same vertices.
+    pub fn disjoint_wires(wires: &Vec<Wire<P, C>>) -> bool {
+        let mut set = HashSet::new();
+        for vertex in wires.iter().flat_map(|wire| wire.vertex_iter()) {
+            if set.get(&vertex.id()).is_some() {
+                return false;
+            }
+        }
+        for vertex in wires.iter().flat_map(|wire| wire.vertex_iter()) {
+            set.insert(vertex.id());
         }
         true
     }

@@ -6,11 +6,11 @@ use std::collections::HashMap;
 impl<P, C, S> Face<P, C, S> {
     /// Creates a new face by a wire.
     /// # Failure
-    /// `boundary` must be non-empty, simple and closed. If not, returns the following errors:
-    /// * If `boundary` is empty, then returns [`Error::EmptyWire`].
-    /// * If `boundary` is not closed, then returns [`Error::NotClosedWire`].
-    /// * If `boundary` is closed but not simple, then returns [`Error::NotSimpleWire`].
-    /// 
+    /// All wires in `boundaries` must be non-empty, simple and closed. If not, returns the following errors:
+    /// * If a wire is empty, then returns [`Error::EmptyWire`].
+    /// * If a wire is not closed, then returns [`Error::NotClosedWire`].
+    /// * If a wire is closed but not simple, then returns [`Error::NotSimpleWire`].
+    ///
     /// [`Error::EmptyWire`]: errors/enum.Error.html#variant.EmptyWire
     /// [`Error::NotClosedWire`]: errors/enum.Error.html#variant.NotClosedWire
     /// [`Error::NotSimpleWire`]: errors/enum.Error.html#variant.NotSimpleWire
@@ -25,27 +25,32 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[2], &v[3], ()),
     ///     Edge::new(&v[3], &v[0], ()),
     /// ]);
-    /// assert!(Face::try_new(wire.clone(), ()).is_ok());
+    /// assert!(Face::try_new(vec![wire], ()).is_ok());
     /// ```
     #[inline(always)]
-    pub fn try_new(boundary: Wire<P, C>, surface: S) -> Result<Face<P, C, S>> {
-        if boundary.is_empty() {
-            Err(Error::EmptyWire)
-        } else if !boundary.is_closed() {
-            Err(Error::NotClosedWire)
-        } else if !boundary.is_simple() {
+    pub fn try_new(boundaries: Vec<Wire<P, C>>, surface: S) -> Result<Face<P, C, S>> {
+        for wire in &boundaries {
+            if wire.is_empty() {
+                return Err(Error::EmptyWire);
+            } else if !wire.is_closed() {
+                return Err(Error::NotClosedWire);
+            } else if !wire.is_simple() {
+                return Err(Error::NotSimpleWire);
+            }
+        }
+        if !Wire::disjoint_wires(&boundaries) {
             Err(Error::NotSimpleWire)
         } else {
-            Ok(Face::new_unchecked(boundary, surface))
+            Ok(Face::new_unchecked(boundaries, surface))
         }
     }
 
     /// Creates a new face by a wire.
     /// # Panic
-    /// `boundary` must be non-empty, simple and closed.
+    /// All wires in `boundaries` must be non-empty, simple and closed.
     #[inline(always)]
-    pub fn new(boundary: Wire<P, C>, surface: S) -> Face<P, C, S> {
-        Face::try_new(boundary, surface).remove_try()
+    pub fn new(boundaries: Vec<Wire<P, C>>, surface: S) -> Face<P, C, S> {
+        Face::try_new(boundaries, surface).remove_try()
     }
 
     /// Creates a new face by a wire.
@@ -54,15 +59,15 @@ impl<P, C, S> Face<P, C, S> {
     /// This method does NOT check the regularity conditions of `Face::try_new()`.  
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
-    pub fn new_unchecked(boundary: Wire<P, C>, surface: S) -> Face<P, C, S> {
+    pub fn new_unchecked(boundaries: Vec<Wire<P, C>>, surface: S) -> Face<P, C, S> {
         Face {
-            boundary: boundary,
+            boundaries: boundaries,
             orientation: true,
             surface: Arc::new(Mutex::new(surface)),
         }
     }
 
-    /// Returns the boundary of the wire.
+    /// Returns the boundaries of the face.
     /// # Examples
     /// ```
     /// # use truck_topology::*;
@@ -72,24 +77,25 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[1], &v[2], ()),
     ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let mut face = Face::new(wire, ());
-    /// let boundary = face.boundary();
-    /// for (i, vert) in boundary.vertex_iter().enumerate() {
+    /// let mut face = Face::new(vec![wire], ());
+    /// let boundaries = face.boundaries();
+    /// for (i, vert) in boundaries.vertex_iter().enumerate() {
     ///     assert_eq!(vert, v[i]);
     /// }
     ///
-    /// // If invert the face, the boundary is also inverted.
+    /// // If invert the face, the boundaries is also inverted.
     /// face.invert();
-    /// assert_eq!(boundary.inverse(), face.boundary());
+    /// assert_eq!(boundaies[0].inverse(), face.boundaries()[0]);
     /// ```
     #[inline(always)]
-    pub fn boundary(&self) -> Wire<P, C> {
+    pub fn boundaries(&self) -> Vec<Wire<P, C>> {
         match self.orientation {
-            true => self.boundary.clone(),
-            false => self.boundary.inverse(),
+            true => self.boundaries.clone(),
+            false => self.boundaries.iter().map(|wire| wire.inverse()).collect(),
         }
     }
-    /// Consumes `self` and returns the entity of its boundary.
+
+    /// Consumes `self` and returns the entity of its boundaries.
     /// ```
     /// # use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
@@ -98,25 +104,25 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[1], &v[2], ()),
     ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let mut face = Face::new(wire, ());
-    /// let boundary = face.clone().into_boundary();
-    /// for (i, vert) in boundary.vertex_iter().enumerate() {
+    /// let mut face = Face::new(vec![wire], ());
+    /// let boundaries = face.clone().into_boundaries();
+    /// for (i, vert) in boundaries[0].vertex_iter().enumerate() {
     ///     assert_eq!(vert, v[i]);
     /// }
     ///
-    /// // If invert the face, the boundary is also inverted.
+    /// // If invert the face, the boundaries is also inverted.
     /// face.invert();
-    /// assert_eq!(boundary.inverse(), face.into_boundary());
+    /// assert_eq!(boundaries[0].inverse(), face.into_boundaries()[0]);
     /// ```
     #[inline(always)]
-    pub fn into_boundary(self) -> Wire<P, C> {
+    pub fn into_boundaries(self) -> Vec<Wire<P, C>> {
         match self.orientation {
-            true => self.boundary,
-            false => self.boundary.inverse(),
+            true => self.boundaries,
+            false => self.boundaries(),
         }
     }
 
-    /// Returns the reference of the boundary wire which is generated by constructor.
+    /// Returns the reference of the boundaries wire which is generated by constructor.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -126,20 +132,20 @@ impl<P, C, S> Face<P, C, S> {
     ///      Edge::new(&v[1], &v[2], ()),
     ///      Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let mut face = Face::new(wire, ());
-    /// let boundary = face.boundary();
+    /// let mut face = Face::new(vec![wire], ());
+    /// let boundaries = face.boundaries();
     /// face.invert();
     ///
     /// // The result of face.boudnary() is already inversed.
-    /// assert_eq!(face.boundary(), boundary.inverse());
+    /// assert_eq!(face.boundaries()[0], boundaries[0].inverse());
     ///
-    /// // The absolute boundary does never change.
-    /// assert_eq!(face.absolute_boundary(), &boundary);
+    /// // The absolute boundaries does never change.
+    /// assert_eq!(face.absolute_boundaries(), &boundaries);
     /// ```
     #[inline(always)]
-    pub fn absolute_boundary(&self) -> &Wire<P, C> { &self.boundary }
+    pub fn absolute_boundaries(&self) -> &Vec<Wire<P, C>> { &self.boundaries }
 
-    /// Returns an iterator over all edges in the boundary.
+    /// Returns an iterator over all edges in the boundaries.
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
@@ -148,25 +154,30 @@ impl<P, C, S> Face<P, C, S> {
     ///      Edge::new(&v[1], &v[2], ()),
     ///      Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let mut face = Face::new(wire, ());
+    /// let mut face = Face::new(vec![wire], ());
     /// face.invert();
-    /// let boundary = face.boundary();
-    /// for (edge0, edge1) in boundary.edge_iter().zip(face.boundary_iter()) {
-    ///     assert_eq!(edge0, &edge1);
+    /// let boundaries = face.boundaries();
+    /// let edge_iter0 = boundaries.iter().flat_map(Wire::edge_iter);
+    /// let edge_iter1 = face.boundary_iters().iter().flat_map(Wire::edge_iter);
+    /// for (edge0, edge1) in edge_iter0.zip(edge_iter1) {
+    ///     assert_eq!(&edge0, &edge1);
     /// }
     /// ```
     #[inline(always)]
-    pub fn boundary_iter(&self) -> BoundaryIter<P, C> {
-        BoundaryIter {
-            edge_iter: self.boundary.edge_iter(),
-            orientation: self.orientation,
-        }
+    pub fn boundary_iters(&self) -> Vec<BoundaryIter<P, C>> {
+        self.boundaries
+            .iter()
+            .map(|wire| BoundaryIter {
+                edge_iter: wire.edge_iter(),
+                orientation: self.orientation,
+            })
+            .collect()
     }
 
     /// Returns the orientation of face.
     ///
-    /// The result of this method is the same with `self.boundary() == self.absolute_boundary().clone()`.
-    /// Moreover, if this method returns false, `self.boundary() == self.absolute_boundary().inverse()`.
+    /// The result of this method is the same with `self.boundaries() == self.absolute_boundaries().clone()`.
+    /// Moreover, if this method returns false, `self.boundaries() == self.absolute_boundaries().inverse()`.
     #[inline(always)]
     pub fn orientation(&self) -> bool { self.orientation }
 
@@ -180,7 +191,7 @@ impl<P, C, S> Face<P, C, S> {
     ///      Edge::new(&v[1], &v[2], ()),
     ///      Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let face0 = Face::new(wire, 0);
+    /// let face0 = Face::new(vec![wire], 0);
     /// let face1 = face0.clone();
     ///
     /// // Two faces have the same content.
@@ -213,17 +224,17 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[1], &v[2], ()),
     ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let mut face = Face::new(wire, ());
+    /// let mut face = Face::new(vec![wire], ());
     /// let org_face = face.clone();
-    /// let org_bdry = face.boundary();
+    /// let org_bdry = face.boundaries();
     /// face.invert();
     ///
     /// // Two faces are the same face.
     /// face.is_same(&org_face);
     ///
-    /// // The boundary is inverted.
+    /// // The boundaries is inverted.
     /// let inversed_edge_iter = org_bdry.inverse().edge_into_iter();
-    /// let face_edge_iter = face.boundary_iter();
+    /// let face_edge_iter = face.boundaries_iter();
     /// for (edge0, edge1) in inversed_edge_iter.zip(face_edge_iter) {
     ///     assert_eq!(edge0, edge1);
     /// }
@@ -244,7 +255,7 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[1], &v[2], ()),
     ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let face0 = Face::new(wire, ());
+    /// let face0 = Face::new(vec![wire], ());
     /// let face1 = face0.inverse();
     /// assert_ne!(face0, face1);
     /// assert!(face0.is_same(&face1));
@@ -264,9 +275,9 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[1], &v[2], ()),
     ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let face0 = Face::new(wire.clone(), ());
+    /// let face0 = Face::new(vec![wire.clone()], ());
     /// let face1 = face0.inverse();
-    /// let face2 = Face::new(wire, ());
+    /// let face2 = Face::new(vec![wire], ());
     /// assert_ne!(face0, face1);
     /// assert_ne!(face0, face2);
     /// assert_eq!(face0.id(), face1.id());
@@ -290,7 +301,7 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[1], &v[2], ()),
     ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// let mut face = Face::new(wire, ());
+    /// let mut face = Face::new(vec![wire], ());
     /// let inverted = face.inverse();
     ///
     /// // Two faces are the same face.
@@ -299,9 +310,9 @@ impl<P, C, S> Face<P, C, S> {
     /// // Two faces has the same id.
     /// assert_eq!(face.id(), inverted.id());
     ///
-    /// // The boundary is inverted.
-    /// let inversed_edge_iter = face.boundary().inverse().edge_into_iter();
-    /// let face_edge_iter = inverted.boundary_iter();
+    /// // The boundaries is inverted.
+    /// let inversed_edge_iter = face.boundaries().inverse().edge_into_iter();
+    /// let face_edge_iter = inverted.boundaries_iter();
     /// for (edge0, edge1) in inversed_edge_iter.zip(face_edge_iter) {
     ///     assert_eq!(edge0, edge1);
     /// }
@@ -328,17 +339,17 @@ impl<P, C, S> Face<P, C, S> {
     ///     Wire::from_iter(vec![&Edge::new(&v[3], &v[0], ()), &shared_edge, &Edge::new(&v[1], &v[3], ())]),
     ///     Wire::from_iter(vec![&Edge::new(&v[3], &v[1], ()), &inversed_edge, &Edge::new(&v[0], &v[3], ())]),
     /// ];
-    /// let face: Vec<_> = wire.into_iter().map(|w| Face::new(w, ())).collect();
+    /// let face: Vec<_> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     /// assert!(face[0].border_on(&face[2]));
     /// assert!(!face[1].border_on(&face[2]));
     /// assert!(face[0].border_on(&face[3]));
     /// ```
     pub fn border_on(&self, other: &Face<P, C, S>) -> bool {
         let mut hashmap = HashMap::new();
-        for edge in self.boundary.edge_iter() {
+        for edge in self.boundaries.iter().flat_map(|wire| wire.edge_iter()) {
             hashmap.insert(edge.id(), edge);
         }
-        for edge in other.boundary.edge_iter() {
+        for edge in other.boundaries.iter().flat_map(|wire| wire.edge_iter()) {
             if hashmap.insert(edge.id(), edge).is_some() {
                 return true;
             }
@@ -351,7 +362,7 @@ impl<P, C, S> Clone for Face<P, C, S> {
     #[inline(always)]
     fn clone(&self) -> Face<P, C, S> {
         Face {
-            boundary: self.boundary.clone(),
+            boundaries: self.boundaries.clone(),
             orientation: self.orientation,
             surface: Arc::clone(&self.surface),
         }
@@ -376,7 +387,7 @@ impl<P, C, S> Hash for Face<P, C, S> {
     }
 }
 
-/// An iterator over the edges in the boundary of a face.
+/// An iterator over the edges in the boundaries of a face.
 /// # Examples
 /// ```
 /// use truck_topology::*;
@@ -387,9 +398,9 @@ impl<P, C, S> Hash for Face<P, C, S> {
 ///     Edge::new(&v[2], &v[3], ()),
 ///     Edge::new(&v[3], &v[0], ()),
 /// ]);
-/// let face = Face::new(wire.clone(), ());
+/// let face = Face::new(vec![wire], ());
 ///
-/// let mut iter = face.boundary_iter();
+/// let mut iter = face.boundaries_iter();
 /// assert_eq!(iter.next().as_ref(), Some(&wire[0]));
 /// assert_eq!(iter.next_back().as_ref(), Some(&wire[3])); // double ended
 /// assert_eq!(iter.next().as_ref(), Some(&wire[1]));
