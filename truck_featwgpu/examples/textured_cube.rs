@@ -6,6 +6,7 @@ use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
+use std::sync::Arc;
 
 struct MyApp {
     scene: Scene,
@@ -43,8 +44,8 @@ impl MyApp {
         mesh.color.diffuse = Vector4::new(0.0, 1.0, 0.0, 1.0);
         mesh.color.specular = Vector4::new(1.0, 1.0, 1.0, 1.0);
         mesh.color.reflect_ratio = Vector3::new(0.2, 0.8, 0.0);
-        mesh.texture =
-            Some(image::load_from_memory(include_bytes!("WoodFloor024_2K_Color.png")).unwrap());
+        let texture = image::load_from_memory(include_bytes!("WoodFloor024_2K_Color.png")).unwrap();
+        mesh.texture = Some(Arc::new(texture));
         scene.add_object(&mesh);
     }
 }

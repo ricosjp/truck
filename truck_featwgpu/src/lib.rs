@@ -61,7 +61,7 @@ pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     pub matrix: Matrix4,
     pub color: ColorConfig,
-    pub texture: Option<DynamicImage>,
+    pub texture: Option<Arc<DynamicImage>>,
 }
 
 #[derive(Debug, Clone)]
