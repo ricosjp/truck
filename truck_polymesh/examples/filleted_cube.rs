@@ -7,7 +7,7 @@ fn main() {
     let mut handler = MeshHandler::new(mesh);
     handler
         .put_together_same_attrs()
-        .quadrangulate(0.1)
+        .quadrangulate(0.1, 1.0)
         .add_smooth_normal(std::f64::consts::PI / 3.0);
 
     let (planes, others) = handler.extract_planes(0.01);
