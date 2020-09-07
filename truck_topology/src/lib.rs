@@ -172,6 +172,11 @@ impl<T> RemoveTry<T> for Result<T> {
     fn remove_try(self) -> T { self.unwrap_or_else(|e| panic!("{}", e)) }
 }
 
+/// The id of vertex. Copy trait is implemented.
+pub struct VertexID<P> {
+    entity: *const Mutex<P>,
+}
+
 /// The id that does not depend on the direction of the edge.
 /// # Examples
 /// ```

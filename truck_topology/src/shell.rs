@@ -164,8 +164,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// let v0_ads: HashSet<&Vertex<()>> = HashSet::from_iter(v0_ads_vec);
     /// assert_eq!(v0_ads, HashSet::from_iter(vec![&v[2], &v[3]]));
     /// ```
-    pub fn vertex_adjacency(&self) -> HashMap<Vertex<P>, Vec<Vertex<P>>> {
-        let mut adjacency: HashMap<Vertex<P>, Vec<Vertex<P>>> = HashMap::new();
+    pub fn vertex_adjacency(&self) -> HashMap<VertexID<P>, Vec<VertexID<P>>> {
+        let mut adjacency: HashMap<VertexID<P>, Vec<VertexID<P>>> = HashMap::new();
         let mut done_edge: HashSet<EdgeID<C>> = HashSet::new();
         let edge_iter = self
             .face_iter()
@@ -174,10 +174,10 @@ impl<P, C, S> Shell<P, C, S> {
             if !done_edge.insert(edge.id()) {
                 continue;
             }
-            let v0 = edge.front();
-            let v1 = edge.back();
-            adjacency.entry(v0.clone()).or_insert(Vec::new()).push(v1.clone());
-            adjacency.entry(v1.clone()).or_insert(Vec::new()).push(v0.clone());
+            let v0 = edge.front().id();
+            let v1 = edge.back().id();
+            adjacency.entry(v0).or_insert(Vec::new()).push(v1);
+            adjacency.entry(v1).or_insert(Vec::new()).push(v0);
         }
         adjacency
     }

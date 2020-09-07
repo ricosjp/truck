@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::iter::FromIterator;
 
 // type definition for test
@@ -8,7 +6,6 @@ type Edge = truck_topology::Edge<(), ()>;
 type Wire = truck_topology::Wire<(), ()>;
 type Face = truck_topology::Face<(), (), ()>;
 type Shell = truck_topology::Shell<(), (), ()>;
-type Solid = truck_topology::Solid<(), (), ()>;
 
 fn large_plane() -> Shell {
     const N: usize = 100;
@@ -147,14 +144,14 @@ fn regular() -> Shell {
 }
 
 fn main() {
-    let _file = std::fs::File::create("tests/data/irregular.tts").unwrap();
-    //truck_io::tts::write(&irregular(), file).unwrap();
-    let _file = std::fs::File::create("tests/data/regular.tts").unwrap();
-    //truck_io::tts::write(&regular(), file).unwrap();
-    let _file = std::fs::File::create("tests/data/large_plane.tts").unwrap();
-    //truck_io::tts::write(&large_plane(), file).unwrap();
-    let _file = std::fs::File::create("tests/data/large_torus.tts").unwrap();
-    //truck_io::tts::write(&large_torus(), file).unwrap();
-    let _file = std::fs::File::create("tests/data/cube.tts").unwrap();
-    //truck_io::tts::write(&cube(), file).unwrap();
+    let file = std::fs::File::create("tests/data/irregular.tts").unwrap();
+    truck_io::tts::write(&irregular(), file).unwrap();
+    let file = std::fs::File::create("tests/data/regular.tts").unwrap();
+    truck_io::tts::write(&regular(), file).unwrap();
+    let file = std::fs::File::create("tests/data/large_plane.tts").unwrap();
+    truck_io::tts::write(&large_plane(), file).unwrap();
+    let file = std::fs::File::create("tests/data/large_torus.tts").unwrap();
+    truck_io::tts::write(&large_torus(), file).unwrap();
+    let file = std::fs::File::create("tests/data/cube.tts").unwrap();
+    truck_io::tts::write(&cube(), file).unwrap();
 }
