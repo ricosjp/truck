@@ -9,7 +9,7 @@ fn main() {
     handler
         .put_together_same_attrs()
         .add_smooth_normal(std::f64::consts::PI / 3.0)
-        .quadrangulate(0.1);
+        .quadrangulate(0.1, 1.0);
     let file = std::fs::File::create("quaded_pot.obj").unwrap();
     io::obj::write(&handler.into(), file).unwrap()
 }
