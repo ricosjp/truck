@@ -14,8 +14,8 @@ fn main() {
     let others = handler.create_mesh_by_face_indices(&others);
     let planes_handler = MeshHandler::new(planes);
     let others_handler = MeshHandler::new(others);
-    let planes_parts = planes_handler.clustering_face();
-    let others_parts = others_handler.clustering_face();
+    let planes_parts = planes_handler.clustering_faces();
+    let others_parts = others_handler.clustering_faces();
 
     std::fs::DirBuilder::new()
         .recursive(true)

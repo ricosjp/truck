@@ -46,7 +46,7 @@ impl MeshHandler {
     /// the indices of faces are serial number of all kinds of faces, i.e.
     /// * the `i`th quad face is identified as the `i + tri_faces.len()`th face, and
     /// * the `i`th other face is identified as the `i + tri_faces.len() + quad_faces.len()`th face.
-    pub fn clustering_face(&self) -> Vec<Vec<usize>> {
+    pub fn clustering_faces(&self) -> Vec<Vec<usize>> {
         if self.mesh.normals.is_empty() {
             panic!("{}", Error::NoNormal);
         }
