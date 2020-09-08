@@ -31,7 +31,7 @@
 //!
 //! // Create faces by the boundary wires.
 //! // The boundary of face must be simple and closed.
-//! let mut face: Vec<Face<_, _, _>> = wire.into_iter().map(|wire| Face::new(wire, ())).collect();
+//! let mut face: Vec<Face<_, _, _>> = wire.into_iter().map(|wire| Face::new(vec![wire], ())).collect();
 //! face[3].invert();
 //!
 //! // Create shell of faces. Shell can be created by the Vec<Face>.
@@ -134,8 +134,8 @@ pub struct Wire<P, C> {
 /// let edge0 = Edge::new(&v[0], &v[1], ());
 /// let edge1 = Edge::new(&v[1], &v[0], ());
 /// let wire = Wire::from_iter(vec![&edge0, &edge1]);
-/// let face0 = Face::new(wire.clone(), ());
-/// let face1 = Face::new(wire, ());
+/// let face0 = Face::new(vec![wire.clone()], ());
+/// let face1 = Face::new(vec![wire], ());
 /// assert_ne!(face0.id(), face1.id());
 /// ```
 #[derive(Debug)]
@@ -201,9 +201,9 @@ pub struct EdgeID<C> {
 ///     Edge::new(&v[1], &v[2], ()),
 ///     Edge::new(&v[2], &v[0], ()),
 /// ]);
-/// let face0 = Face::new(wire.clone(), ());
+/// let face0 = Face::new(vec![wire.clone()], ());
 /// let face1 = face0.inverse();
-/// let face2 = Face::new(wire, ());
+/// let face2 = Face::new(vec![wire], ());
 /// assert_ne!(face0, face1);
 /// assert_ne!(face0, face2);
 /// assert_eq!(face0.id(), face1.id());

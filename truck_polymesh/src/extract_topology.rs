@@ -24,7 +24,7 @@ impl MeshHandler {
             wire.push_back(create_edge(&v[i], &v[j], &mut edges));
             wire.push_back(create_edge(&v[j], &v[k], &mut edges));
             wire.push_back(create_edge(&v[k], &v[i], &mut edges));
-            shell.push(Face::new(wire, ()));
+            shell.push(Face::new(vec![wire], ()));
         }
         for face in &mesh.quad_faces {
             let i = face[0][0];
@@ -36,7 +36,7 @@ impl MeshHandler {
             wire.push_back(create_edge(&v[j], &v[k], &mut edges));
             wire.push_back(create_edge(&v[k], &v[l], &mut edges));
             wire.push_back(create_edge(&v[l], &v[i], &mut edges));
-            shell.push(Face::new(wire, ()));
+            shell.push(Face::new(vec![wire], ()));
         }
         for face in &mesh.other_faces {
             let idx: Vec<_> = face.iter().map(|x| x[0]).collect();
@@ -46,7 +46,7 @@ impl MeshHandler {
                 let idx1 = idx[(i + 1) % idx.len()];
                 wire.push_back(create_edge(&v[idx0], &v[idx1], &mut edges));
             }
-            shell.push(Face::new(wire, ()));
+            shell.push(Face::new(vec![wire], ()));
         }
 
         shell

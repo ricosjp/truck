@@ -30,12 +30,13 @@ fn large_torus() -> Solid {
     let shell: Shell = (0..N)
         .flat_map(|i| (0..N).map(move |j| (i, j)))
         .map(|(i, j)| {
-            Face::new(Wire::from_iter(vec![
+            let wire = Wire::from_iter(vec![
                 &row_edge[i][j],
                 &col_edge[i][(j + 1) % N],
                 &row_edge[(i + 1) % N][j].inverse(),
                 &col_edge[i][j].inverse(),
-            ]), ())
+            ]);
+            Face::new(vec![wire], ())
         })
         .collect();
     Solid::new(vec![shell])

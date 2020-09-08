@@ -29,12 +29,13 @@ fn large_plane() -> Shell {
     (1..N)
         .flat_map(|i| (1..N).map(move |j| (i, j)))
         .map(|(i, j)| {
-            Face::new(Wire::from_iter(vec![
+            let wire = Wire::from_iter(vec![
                 &row_edge[i - 1][j - 1],
                 &col_edge[i - 1][j],
                 &row_edge[i][j - 1].inverse(),
                 &col_edge[i - 1][j - 1].inverse(),
-            ]), ())
+            ]);
+            Face::new(vec![wire], ())
         })
         .collect()
 }
@@ -61,12 +62,13 @@ fn large_torus() -> Shell {
     (0..N)
         .flat_map(|i| (0..N).map(move |j| (i, j)))
         .map(|(i, j)| {
-            Face::new(Wire::from_iter(vec![
+            let wire = Wire::from_iter(vec![
                 &row_edge[i][j],
                 &col_edge[i][(j + 1) % N],
                 &row_edge[(i + 1) % N][j].inverse(),
                 &col_edge[i][j].inverse(),
-            ]), ())
+            ]);
+            Face::new(vec![wire], ())
         })
         .collect()
 }
@@ -97,7 +99,7 @@ fn cube() -> Shell {
         Wire::from_iter(vec![&edge[8], &edge[9], &edge[10], &edge[11]]),
     ];
 
-    let mut shell: Shell = wire.into_iter().map(|w| Face::new(w, ())).collect();
+    let mut shell: Shell = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     shell[5].invert();
     shell
 }
@@ -118,7 +120,7 @@ fn irregular() -> Shell {
         Wire::from_iter(vec![&edge[0], &edge[5], &edge[2].inverse()]),
         Wire::from_iter(vec![&edge[0], &edge[6], &edge[3].inverse()]),
     ];
-    wire.into_iter().map(|w| Face::new(w, ())).collect()
+    wire.into_iter().map(|w| Face::new(vec![w], ())).collect()
 }
 
 fn regular() -> Shell {
@@ -140,7 +142,7 @@ fn regular() -> Shell {
         Wire::from_iter(vec![&edge[5], &edge[8], &edge[6].inverse()]),
         Wire::from_iter(vec![&edge[2], &edge[5], &edge[4].inverse()]),
     ];
-    wire.into_iter().map(|w| Face::new(w, ())).collect()
+    wire.into_iter().map(|w| Face::new(vec![w], ())).collect()
 }
 
 fn main() {

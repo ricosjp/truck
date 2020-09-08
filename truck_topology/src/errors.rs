@@ -15,7 +15,7 @@ pub enum Error {
     /// ```
     /// use truck_topology::*;
     /// use truck_topology::errors::Error;
-    /// assert_eq!(Face::try_new(Wire::<(), ()>::new(), ()), Err(Error::EmptyWire));
+    /// assert_eq!(Face::try_new(vec![Wire::<(), ()>::new()], ()), Err(Error::EmptyWire));
     /// ```
     EmptyWire,
     /// The boundary of a face must be closed.
@@ -25,7 +25,7 @@ pub enum Error {
     /// use truck_topology::errors::Error;
     /// let v = Vertex::news(&[(), ()]);
     /// let wire: Wire<(), ()> = vec![Edge::new(&v[0], &v[1], ())].into();
-    /// assert_eq!(Face::try_new(wire, ()), Err(Error::NotClosedWire));
+    /// assert_eq!(Face::try_new(vec![wire], ()), Err(Error::NotClosedWire));
     /// ```
     NotClosedWire,
     /// The boundary of a face must be simple.
@@ -41,7 +41,7 @@ pub enum Error {
     ///     Edge::new(&v[3], &v[1], ()),
     ///     Edge::new(&v[1], &v[0], ()),
     /// ].into();
-    /// assert_eq!(Face::try_new(wire, ()), Err(Error::NotSimpleWire));
+    /// assert_eq!(Face::try_new(vec![wire], ()), Err(Error::NotSimpleWire));
     /// ```
     NotSimpleWire,
     /// Some boundaries has a shared vertex.
@@ -64,7 +64,7 @@ pub enum Error {
     ///     Wire::from(vec![Edge::new(&v[0], &v[1], ()), Edge::new(&v[1], &v[0], ())]),
     ///     Wire::from(vec![Edge::new(&v[2], &v[3], ()), Edge::new(&v[3], &v[2], ())]),
     /// ];
-    /// let shell: Shell<(), (), ()> = wire.into_iter().map(|w| Face::new(w, ())).collect();
+    /// let shell: Shell<(), (), ()> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     /// assert_eq!(Solid::try_new(vec![shell]), Err(Error::NotConnected));
     /// ```
     NotConnected,
@@ -75,7 +75,7 @@ pub enum Error {
     /// use truck_topology::errors::Error;
     /// let v = Vertex::news(&[(), ()]);
     /// let wire = Wire::from(vec![Edge::new(&v[0], &v[1], ()), Edge::new(&v[1], &v[0], ())]);
-    /// let shell: Shell<(), (), ()> = vec![Face::new(wire, ())].into();
+    /// let shell: Shell<(), (), ()> = vec![Face::new(vec![wire], ())].into();
     /// assert_eq!(Solid::try_new(vec![shell]), Err(Error::NotClosedShell));
     /// ```
     NotClosedShell,
@@ -99,7 +99,7 @@ pub enum Error {
     ///     Wire::from_iter(vec![&edge[2], &edge[3]]),
     ///     Wire::from_iter(vec![&edge[3].inverse(), &edge[2].inverse()]),
     /// ];
-    /// let shell: Shell<(), (), ()> = wire.into_iter().map(|w| Face::new(w, ())).collect();
+    /// let shell: Shell<(), (), ()> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     /// assert_eq!(Solid::try_new(vec![shell]), Err(Error::NotManifold));
     /// ```
     NotManifold,

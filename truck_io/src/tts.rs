@@ -57,10 +57,10 @@ fn wrap_up_face<P, C, S>(
 ) -> (bool, bool, Vec<usize>)
 {
     let orientation = face.orientation();
-    let edge = &face.absolute_boundary()[0];
+    let edge = &face.absolute_boundaries()[0][0];
     let first_orientation = edge.absolute_front() == edge.front();
     let vec = face
-        .absolute_boundary()
+        .absolute_boundaries()[0]
         .edge_iter()
         .map(|edge| get_edge(edge, vmap, vertices, emap, edges))
         .collect();
@@ -107,7 +107,7 @@ fn extract(topodata: &WrappedUpShell) -> Shell<(), (), ()> {
             }
         }
 
-        let mut face = Face::new(wire, ());
+        let mut face = Face::new(vec![wire], ());
         if !orientation {
             face.invert();
         }
