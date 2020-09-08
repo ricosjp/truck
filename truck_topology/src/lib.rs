@@ -227,3 +227,5 @@ pub mod solid;
 pub mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
+// /// Integrity
+//pub mod integrity;
