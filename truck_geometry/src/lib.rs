@@ -115,7 +115,7 @@ pub enum CurveCollector<V> {
     Curve(BSplineCurve<V>),
 }
 
-/// 4-dimensional B-spline surface
+/// B-spline surface
 /// # Examples
 /// ```
 /// use truck_geometry::*;

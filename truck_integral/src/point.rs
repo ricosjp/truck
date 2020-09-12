@@ -1,9 +1,9 @@
 use crate::*;
-use geometry::*;
 
 macro_rules! impl_point_for_integers {
     ($int: ty) => {
         impl Point for $int {
+            #[inline(always)]
             fn near(&self, other: &Self) -> bool { self == other }
         }
     };
@@ -20,6 +20,7 @@ impl_point_for_integers!(
 macro_rules! impl_point_for_tolerance {
     ($point: ty) => {
         impl Point for $point {
+            #[inline(always)]
             fn near(&self, other: &Self) -> bool { Tolerance::near(self, other) }
         }
     };
@@ -34,6 +35,7 @@ impl_point_for_tolerance!(
 );
 
 impl Point for Vector4 {
+    #[inline(always)]
     fn near(&self, other: &Self) -> bool {
         let point0 = Point3::from_homogeneous(*self);
         let point1 = Point3::from_homogeneous(*other);

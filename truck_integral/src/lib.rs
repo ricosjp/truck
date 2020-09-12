@@ -1,5 +1,7 @@
 extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
+pub use geometry::*;
+pub use topology::*;
 
 /// a geometry of vertex
 pub trait Point: Clone {
@@ -16,7 +18,15 @@ pub trait Curve: Clone {
     /// The back end point of the curve.
     fn back(&self) -> Self::Point;
     /// Returns whether `self` is a part of the curve `other`.
-    fn is_arc_of(&self, longer: &Self) -> bool;
+    fn is_arc_of(&self, longer: &Self, hint: f64) -> Option<f64>;
+    /// Returns the inverse of a curve
+    fn inverse(&self) -> Self;
+}
+
+/// a geometry of face
+pub trait Surface: Clone {
+    type Curve: Curve;
+    
 }
 
 pub mod point;

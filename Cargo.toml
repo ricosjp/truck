@@ -7,5 +7,5 @@ members = [
 	"truck_glrender",
 	"truck_featwgpu",
 	"truck_io",
-	"truck_shape",
+	# "truck_shape",
 ]

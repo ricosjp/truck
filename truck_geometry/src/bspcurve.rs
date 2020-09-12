@@ -864,7 +864,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     #[inline(always)]
     pub fn concat(&mut self, other: &mut Self) -> &mut Self {
-        self.try_concat(other).unwrap_or_else(|error| panic!("{}", error))
+        self.try_concat(other)
+            .unwrap_or_else(|error| panic!("{}", error))
     }
 
     /// Makes the curve locally injective.
@@ -1092,8 +1093,10 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         let der2 = derived2.subs(hint);
         let f = der.dot(pt);
         let fprime = der2.dot(pt) + der.magnitude2();
+        if fprime.so_small() {
+            return Some(hint);
+        }
         let t = hint - f / fprime;
-        println!("{} {} {}", f, fprime, t);
         if t.near(&hint) {
             Some(t)
         } else if counter == 100 {
@@ -1173,14 +1176,14 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     ///
     /// // search rational nearest parameter
-    /// let pt = Vector3::new(1.0, 2.0, 1.0);
+    /// let pt = Vector2::new(1.0, 2.0);
     /// let hint = 0.6;
     /// let t = bspcurve.search_rational_nearest_parameter(pt, hint).unwrap();
     ///
     /// // check the answer
-    /// let res: Vector2 = bspcurve.subs(t).rational_projection().into();
-    /// let ans: Vector2 = pt.rational_projection().into();
-    /// Vector2::assert_near2(&(&ans / ans.magnitude()), &res);
+    /// let res = bspcurve.subs(t).rational_projection();
+    /// let ans = pt / pt.magnitude();
+    /// Vector2::assert_near2(&res, &ans);
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
@@ -1191,7 +1194,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector3::new(0.0, -1.0, 1.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = Vector3::new(1.0, 2.0, 1.0);
+    /// let pt = Vector2::new(1.0, 2.0);
     ///
     /// // another hint
     /// let hint = 0.5;
@@ -1199,7 +1202,12 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// // Newton's method is vibration divergent.
     /// assert!(bspcurve.search_rational_nearest_parameter(pt, hint).is_none());
     /// ```
-    pub fn search_rational_nearest_parameter(&self, point: V, hint: f64) -> Option<f64> {
+    pub fn search_rational_nearest_parameter(
+        &self,
+        point: V::Rationalized,
+        hint: f64,
+    ) -> Option<f64>
+    {
         let derived = self.derivation();
         let derived2 = derived.derivation();
         self.sub_srnp(&derived, &derived2, point, hint, 0)
@@ -1209,7 +1217,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         &self,
         derived: &BSplineCurve<V>,
         derived2: &BSplineCurve<V>,
-        point: V,
+        point: V::Rationalized,
         hint: f64,
     ) -> Option<f64>
     {
@@ -1220,7 +1228,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         &self,
         derived: &BSplineCurve<V>,
         derived2: &BSplineCurve<V>,
-        point: V,
+        point: V::Rationalized,
         hint: f64,
         counter: usize,
     ) -> Option<f64>
@@ -1230,11 +1238,10 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         let der2 = derived2.subs(hint);
         let der2 = pt.rational_derivation2(der, der2);
         let der = pt.rational_derivation(der);
-        let pt = pt.rational_projection() - point.rational_projection();
+        let pt = pt.rational_projection() - point;
         let f = der.dot(pt);
         let fprime = der2.dot(pt) + der.magnitude2();
         let t = hint - f / fprime;
-        println!("{}", t);
         if t.near2(&hint) {
             Some(t)
         } else if counter == 100 {
@@ -1261,7 +1268,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// *part.control_point_mut(1) += Vector4::new(1.0, 2.0, 3.0, 4.0);
     /// assert!(part.is_rational_arc_of(&mut bspline, 0.2).is_none());
     /// ```
-    pub fn is_rational_arc_of(&self, curve: &mut BSplineCurve<V>, mut hint: f64) -> Option<f64> {
+    pub fn is_rational_arc_of(&self, curve: &BSplineCurve<V>, mut hint: f64) -> Option<f64> {
         let degree = std::cmp::max(self.degree(), curve.degree()) * 3 + 1;
         let (knots, _) = self.knot_vec.to_single_multi();
         let pt0 = self.subs(knots[0]).rational_projection();
@@ -1276,12 +1283,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
             let range = knots[i] - knots[i - 1];
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
-                let pt = self.subs(t);
+                let pt = self.subs(t).rational_projection();
                 let res = curve.optimized_srnp(&derived, &derived2, pt, hint);
                 let flag = res.map(|res| {
                     let pt0 = curve.subs(res).rational_projection();
-                    let pt1 = pt.rational_projection();
-                    hint <= res && pt0.near(&pt1)
+                    hint <= res && pt0.near(&pt)
                 });
                 hint = match flag {
                     Some(true) => res.unwrap(),
@@ -1318,6 +1324,110 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
             }
         }
         true
+    }
+
+    fn create_division<F: Fn(V, V) -> f64>(&self, tol: f64, dist2: F) -> Vec<f64> {
+        let knot_vec = self.knot_vec();
+        let mut div = vec![knot_vec[0], knot_vec[0] + knot_vec.range_length()];
+        self.sub_create_division(tol * 0.9, dist2, &mut div);
+        div
+    }
+
+    fn sub_create_division<F: Fn(V, V) -> f64>(&self, tol: f64, dist2: F, div: &mut Vec<f64>) {
+        let degree = self.degree() * 2;
+        let mut new_div = vec![div[0]];
+        for i in 1..div.len() {
+            let pt0 = self.subs(div[i - 1]);
+            let pt1 = self.subs(div[i]);
+            let mut div_flag = false;
+            for j in 0..=degree {
+                let p = j as f64 / degree as f64;
+                let t = (1.0 - p) * div[i - 1] + p * div[i];
+                let par_mid = self.subs(t);
+                let val_mid = pt0 * (1.0 - p) + pt1 * p;
+                let res = dist2(val_mid, par_mid);
+                if res > tol * tol {
+                    div_flag = true;
+                    break;
+                }
+            }
+            if div_flag {
+                for j in 1..=degree {
+                    let p = j as f64 / degree as f64;
+                    let t = (1.0 - p) * div[i - 1] + p * div[i];
+                    new_div.push(t)
+                }
+            } else {
+                new_div.push(div[i]);
+            }
+        }
+        if new_div.len() != div.len() {
+            *div = new_div;
+            self.sub_create_division(tol, dist2, div);
+        }
+    }
+    
+    /// Creates the curve division
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(2, 3);
+    /// let ctrl_pts = vec![
+    ///     Vector3::new(0.0, 0.0, 0.0),
+    ///     Vector3::new(1.0, 0.0, 0.0),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    ///     Vector3::new(0.0, 0.0, 1.0),
+    ///     Vector3::new(1.0, 1.0, 1.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let tol = 0.01;
+    /// let div = bspcurve.parameter_division(tol);
+    /// let knot_vec = bspcurve.knot_vec();
+    /// assert_eq!(knot_vec[0], div[0]);
+    /// assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
+    /// for i in 1..div.len() {
+    ///     let pt0 = bspcurve.subs(div[i - 1]);
+    ///     let pt1 = bspcurve.subs(div[i]);
+    ///     let value_middle = (pt0 + pt1) / 2.0;
+    ///     let param_middle = bspcurve.subs((div[i - 1] + div[i]) / 2.0);
+    ///     assert!(value_middle.distance(param_middle) < tol);
+    /// }
+    /// ```
+    pub fn parameter_division(&self, tol: f64) -> Vec<f64> {
+        self.create_division(tol, |v0, v1| v0.distance2(v1))
+    }
+    
+    /// Creates the curve division
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(2, 3);
+    /// let ctrl_pts = vec![
+    ///     Vector4::new(0.0, 0.0, 0.0, 1.0),
+    ///     Vector4::new(2.0, 0.0, 0.0, 2.0),
+    ///     Vector4::new(0.0, 3.0, 0.0, 3.0),
+    ///     Vector4::new(0.0, 0.0, 2.0, 2.0),
+    ///     Vector4::new(1.0, 1.0, 1.0, 1.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let tol = 0.01;
+    /// let div = bspcurve.rational_parameter_division(tol);
+    /// let knot_vec = bspcurve.knot_vec();
+    /// assert_eq!(knot_vec[0], div[0]);
+    /// assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
+    /// for i in 1..div.len() {
+    ///     let pt0 = bspcurve.subs(div[i - 1]).rational_projection();
+    ///     let pt1 = bspcurve.subs(div[i]).rational_projection();
+    ///     let value_middle = (pt0 + pt1) / 2.0;
+    ///     let param_middle = bspcurve.subs((div[i - 1] + div[i]) / 2.0).rational_projection();
+    ///     println!("{}", value_middle.distance(param_middle));
+    ///     assert!(value_middle.distance(param_middle) < tol);
+    /// }
+    /// ```
+    pub fn rational_parameter_division(&self, tol: f64) -> Vec<f64> {
+        self.create_division(tol, |v0, v1|
+            v0.rational_projection().distance2(v1.rational_projection())
+        )
     }
 
     /// Determine whether `self` and `other` is near as the B-spline curves or not.  
@@ -1441,7 +1551,8 @@ impl_mat_multi!(Vector4, Matrix4);
 impl_scalar_multi!(Vector4, f64);
 
 impl<V: ExVectorSpace> CurveCollector<V>
-where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64> {
+where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
+{
     /// Concats two B-spline curves.
     #[inline(always)]
     pub fn try_concat(&mut self, curve: &mut BSplineCurve<V>) -> Result<&mut Self> {
@@ -1455,11 +1566,11 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64> {
         }
         Ok(self)
     }
-    
     /// Concats two B-spline curves.
     #[inline(always)]
     pub fn concat(&mut self, curve: &mut BSplineCurve<V>) -> &mut Self {
-        self.try_concat(curve).unwrap_or_else(|error| panic!("{}", error))
+        self.try_concat(curve)
+            .unwrap_or_else(|error| panic!("{}", error))
     }
 }
 
