@@ -1,0 +1,11 @@
+[package]
+name = "truck_modeling"
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cgmath = "*"
+truck_integral = { path = "../truck_integral" }

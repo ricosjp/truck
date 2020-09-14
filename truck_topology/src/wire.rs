@@ -1,6 +1,6 @@
-use crate::{Edge, Vertex, Wire};
+use crate::{Edge, EdgeID, Vertex, VertexID, Wire};
 use std::collections::vec_deque;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::Peekable;
 
 impl<P, C> Wire<P, C> {
@@ -22,7 +22,6 @@ impl<P, C> Wire<P, C> {
     /// Returns an iterator over the edges. Practically, an alias of `iter()`.
     #[inline(always)]
     pub fn edge_iter(&self) -> EdgeIter<P, C> { self.iter() }
-    
     /// Returns a mutable iterator over the edges. Practically, an alias of `iter_mut()`.
     #[inline(always)]
     pub fn edge_iter_mut(&mut self) -> EdgeIterMut<P, C> { self.iter_mut() }
@@ -274,6 +273,126 @@ impl<P, C> Wire<P, C> {
         }
         true
     }
+
+    /// Returns a new wire whose curves are mapped by `curve_closure` and
+    /// whose points are mapped by `point_closure`.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[0, 1, 2, 3, 4]);
+    /// let wire0: Wire<usize, usize> = vec![
+    ///     Edge::new(&v[0], &v[1], 100),
+    ///     Edge::new(&v[2], &v[1], 110).inverse(),
+    ///     Edge::new(&v[3], &v[4], 120),
+    ///     Edge::new(&v[4], &v[0], 130),
+    /// ].into();
+    /// let wire1 = wire0.mapped(
+    ///     &move |i: &usize| *i + 10,
+    ///     &move |j: &usize| *j + 1000,
+    /// );
+    ///
+    /// // Check the points
+    /// for (v0, v1) in wire0.vertex_iter().zip(wire1.vertex_iter()) {
+    ///     let i = *v0.lock_point().unwrap();
+    ///     let j = *v1.lock_point().unwrap();
+    ///     assert_eq!(i + 10, j);
+    /// }
+    ///
+    /// // Check the curves
+    /// for (edge0, edge1) in wire0.edge_iter().zip(wire1.edge_iter()) {
+    ///     let i = *edge0.lock_curve().unwrap();
+    ///     let j = *edge1.lock_curve().unwrap();
+    ///     assert_eq!(i + 1000, j);
+    /// }
+    ///
+    /// // Check the connection
+    /// assert_eq!(wire1[0].back(), wire1[1].front());
+    /// assert_ne!(wire1[1].back(), wire1[2].front());
+    /// assert_eq!(wire1[2].back(), wire1[3].front());
+    /// assert_eq!(wire1[3].back(), wire1[0].front());
+    /// ```
+    pub fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C>(
+        &self,
+        point_closure: &FP,
+        curve_closure: &FC,
+    ) -> Self
+    {
+        let mut vertex_map: HashMap<VertexID<P>, Vertex<P>> = HashMap::new();
+        for v in self.vertex_iter() {
+            if vertex_map.get(&v.id()).is_none() {
+                let vert = v.mapped(point_closure);
+                vertex_map.insert(v.id(), vert);
+            }
+        }
+        let mut wire = Wire::new();
+        let mut edge_map: HashMap<EdgeID<C>, Edge<P, C>> = HashMap::new();
+        for edge in self.edge_iter() {
+            if let Some(new_edge) = edge_map.get(&edge.id()) {
+                if edge.absolute_front() == edge.front() {
+                    wire.push_back(new_edge.clone());
+                } else {
+                    wire.push_back(new_edge.inverse());
+                }
+            } else {
+                let vertex0 = vertex_map.get(&edge.absolute_front().id()).unwrap().clone();
+                let vertex1 = vertex_map.get(&edge.absolute_back().id()).unwrap().clone();
+                let curve = curve_closure(&*edge.lock_curve().unwrap());
+                let new_edge = Edge::new_unchecked(&vertex0, &vertex1, curve);
+                if edge.orientation() {
+                    wire.push_back(new_edge.clone());
+                } else {
+                    wire.push_back(new_edge.inverse());
+                }
+                edge_map.insert(edge.id(), new_edge);
+            }
+        }
+        wire
+    }
+
+    /// Returns another edge whose curve and its vertices' points are the same.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[0, 1, 2, 3, 4]);
+    /// let wire0: Wire<usize, usize> = vec![
+    ///     Edge::new(&v[0], &v[1], 100),
+    ///     Edge::new(&v[2], &v[1], 110).inverse(),
+    ///     Edge::new(&v[3], &v[4], 120),
+    ///     Edge::new(&v[4], &v[0], 130),
+    /// ].into();
+    /// let wire1 = wire0.topological_clone();
+    ///
+    /// // Check the points
+    /// for (v0, v1) in wire0.vertex_iter().zip(wire1.vertex_iter()) {
+    ///     assert_eq!(
+    ///         *v0.lock_point().unwrap(),
+    ///         *v1.lock_point().unwrap(),
+    ///     );
+    ///     assert_ne!(v0, v1);
+    /// }
+    ///
+    /// // Check the curves
+    /// for (edge0, edge1) in wire0.edge_iter().zip(wire1.edge_iter()) {
+    ///     assert_eq!(
+    ///         *edge0.lock_curve().unwrap(),
+    ///         *edge1.lock_curve().unwrap(),
+    ///     );
+    ///     assert_ne!(edge0, edge1);
+    /// }
+    ///
+    /// // Check the connection
+    /// assert_eq!(wire1[0].back(), wire1[1].front());
+    /// assert_ne!(wire1[1].back(), wire1[2].front());
+    /// assert_eq!(wire1[2].back(), wire1[3].front());
+    /// assert_eq!(wire1[3].back(), wire1[0].front());
+    /// ```
+    #[inline(always)]
+    pub fn topological_clone(&self) -> Self
+    where
+        P: Clone,
+        C: Clone, {
+        self.mapped(&move |pt: &P| pt.clone(), &move |curve: &C| curve.clone())
+    }
 }
 
 impl<T, P, C> From<T> for Wire<P, C>
@@ -410,9 +529,13 @@ impl<'a, P, C> Iterator for VertexIter<'a, P, C> {
 
     fn last(self) -> Option<Vertex<P>> {
         let closed = self.cyclic;
-        self.edge_iter
-            .last()
-            .map(|edge| if closed { edge.front().clone() } else { edge.back().clone() })
+        self.edge_iter.last().map(|edge| {
+            if closed {
+                edge.front().clone()
+            } else {
+                edge.back().clone()
+            }
+        })
     }
 }
 
@@ -441,16 +564,14 @@ impl<P, C> Clone for Wire<P, C> {
     #[inline(always)]
     fn clone(&self) -> Self {
         Self {
-            edge_list: self.edge_list.clone()
+            edge_list: self.edge_list.clone(),
         }
     }
 }
 
 impl<P, C> PartialEq for Wire<P, C> {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.edge_list == other.edge_list
-    }
+    fn eq(&self, other: &Self) -> bool { self.edge_list == other.edge_list }
 }
 
 impl<P, C> Eq for Wire<P, C> {}

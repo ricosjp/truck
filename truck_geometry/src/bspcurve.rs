@@ -1572,6 +1572,17 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         self.try_concat(curve)
             .unwrap_or_else(|error| panic!("{}", error))
     }
+
+    /// Returns the entity curve.
+    /// # Panics
+    /// If `self` is `Singleton`, then panics occurs.
+    #[inline(always)]
+    pub fn unwrap(self) -> BSplineCurve<V> {
+        match self {
+            CurveCollector::Curve(curve) => curve,
+            CurveCollector::Singleton => panic!("This curve collector is singleton."),
+        }
+    }
 }
 
 impl<V> std::convert::TryFrom<CurveCollector<V>> for BSplineCurve<V> {

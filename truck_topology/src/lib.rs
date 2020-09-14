@@ -77,7 +77,7 @@
 
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex, MutexGuard, TryLockResult};
+use std::sync::{Arc, Mutex, MutexGuard, LockResult, TryLockResult};
 
 /// Vertex, the minimum topological unit.
 ///
@@ -172,7 +172,37 @@ impl<T> RemoveTry<T> for Result<T> {
     fn remove_try(self) -> T { self.unwrap_or_else(|e| panic!("{}", e)) }
 }
 
-/// The id of vertex. Copy trait is implemented.
+/// The id of vertex. `Copy` trait is implemented.
+/// # Details
+/// Since this struct is implemented `Copy` trait,
+/// it is useful to use as a key of hashmaps.
+/// ```
+/// use truck_topology::*;
+/// use std::collections::HashMap;
+/// 
+/// let v = Vertex::new(0);
+/// let v_id = v.id();
+/// 
+/// let mut entity_map = HashMap::new();
+/// let mut id_map = HashMap::new();
+/// 
+/// entity_map.insert(v.clone(), 0); // v must be cloned for sign up the hashmap.
+/// id_map.insert(v_id, 0); // v_id is implemented Copy trait!
+/// ```
+/// The id does not changed even if the value of point changes.
+/// ```
+/// use truck_topology::*;
+/// let v = Vertex::new(0);
+/// 
+/// let entity = *v.try_lock_point().unwrap();
+/// let v_id: VertexID<usize> = v.id();
+/// 
+/// // Change the point!
+/// *v.try_lock_point().unwrap() = 1;
+/// 
+/// assert_ne!(entity, *v.try_lock_point().unwrap());
+/// assert_eq!(v_id, v.id());
+/// ```
 pub struct VertexID<P> {
     entity: *const Mutex<P>,
 }

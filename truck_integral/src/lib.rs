@@ -1,7 +1,7 @@
-extern crate truck_geometry as geometry;
-extern crate truck_topology as topology;
-pub use geometry::*;
-pub use topology::*;
+extern crate truck_geometry;
+extern crate truck_topology;
+pub use truck_geometry::*;
+pub use truck_topology::*;
 
 /// a geometry of vertex
 pub trait Point: Clone {
@@ -27,6 +27,20 @@ pub trait Curve: Clone {
 pub trait Surface: Clone {
     type Curve: Curve;
     
+}
+
+pub trait EdgeEx<C>: Clone {
+    fn oriented_curve(&self) -> C;
+}
+
+impl<C: Curve> EdgeEx<C> for Edge<C::Point, C> {
+    fn oriented_curve(&self) -> C {
+        if self.orientation() {
+            self.lock_curve().unwrap().clone()
+        } else {
+            self.lock_curve().unwrap().inverse()
+        }
+    }
 }
 
 pub mod point;

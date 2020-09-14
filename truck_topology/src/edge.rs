@@ -45,6 +45,20 @@ impl<P, C> Edge<P, C> {
             curve: Arc::new(Mutex::new(curve)),
         }
     }
+
+    /// Returns the orientation of the curve.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), ()]);
+    /// let edge0 = Edge::new(&v[0], &v[1], ());
+    /// let edge1 = edge0.inverse();
+    /// assert!(edge0.orientation());
+    /// assert!(!edge1.orientation());
+    /// ```
+    #[inline(always)]
+    pub fn orientation(&self) -> bool { self.orientation }
+
     /// Inverts the direction of edge.
     /// ```
     /// use truck_topology::*;
@@ -78,7 +92,7 @@ impl<P, C> Edge<P, C> {
     ///
     /// // Two edges has the same id.
     /// assert_eq!(edge.id(), inv_edge.id());
-    /// 
+    ///
     /// // the front and back are exchanged.
     /// assert_eq!(edge.front(), inv_edge.back());
     /// assert_eq!(edge.back(), inv_edge.front());
@@ -89,6 +103,7 @@ impl<P, C> Edge<P, C> {
         res.invert();
         res
     }
+
     /// Returns the front vertex
     /// ```
     /// # use truck_topology::*;
@@ -185,6 +200,7 @@ impl<P, C> Edge<P, C> {
     }
 
     /// Tries to lock the mutex of the contained curve.
+    /// The thread will not blocked.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -204,12 +220,41 @@ impl<P, C> Edge<P, C> {
     /// assert_eq!(*edge0.try_lock_curve().unwrap(), 1);
     /// assert_eq!(*edge1.try_lock_curve().unwrap(), 1);
     ///
-    /// // Check the behavior of `try_lock`.
+    /// // The thread is not blocked even if the curve is already locked.
     /// let lock = edge0.try_lock_curve();
     /// assert!(edge1.try_lock_curve().is_err());    
     /// ```
     #[inline(always)]
     pub fn try_lock_curve(&self) -> TryLockResult<MutexGuard<C>> { self.curve.try_lock() }
+    /// Acquires the mutex of the contained curve,
+    /// blocking the current thread until it is able to do so.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), ()]);
+    /// let edge0 = Edge::new(&v[0], &v[1], 0);
+    /// let edge1 = edge0.clone();
+    ///
+    /// // Two edges have the same content.
+    /// assert_eq!(*edge0.lock_curve().unwrap(), 0);
+    /// assert_eq!(*edge1.lock_curve().unwrap(), 0);
+    ///
+    /// {
+    ///     let mut curve = edge0.lock_curve().unwrap();
+    ///     *curve = 1;
+    /// }
+    /// // The contents of two edges are synchronized.
+    /// assert_eq!(*edge0.lock_curve().unwrap(), 1);
+    /// assert_eq!(*edge1.lock_curve().unwrap(), 1);
+    ///
+    /// // Check the behavior of `lock`.
+    /// std::thread::spawn(move || {
+    ///     *edge0.lock_curve().unwrap() = 2;
+    /// }).join().expect("thread::spawn failed");
+    /// assert_eq!(*edge1.lock_curve().unwrap(), 2);    
+    /// ```
+    #[inline(always)]
+    pub fn lock_curve(&self) -> LockResult<MutexGuard<C>> { self.curve.lock() }
 
     /// Returns the id that does not depend on the direction of the edge.
     /// # Examples
@@ -226,6 +271,74 @@ impl<P, C> Edge<P, C> {
         EdgeID {
             entity: Arc::as_ptr(&self.curve),
         }
+    }
+
+    /// Returns a new edge whose curve is mapped by `curve_closure` and
+    /// whose end points are mapped by `point_closure`.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v0 = Vertex::new(0);
+    /// let v1 = Vertex::new(1);
+    /// let edge0 = Edge::new(&v0, &v1, 2);
+    /// let edge1 = edge0.mapped(
+    ///     &move |i: &usize| *i + 10,
+    ///     &move |j: &usize| *j + 20,
+    /// );
+    ///
+    /// assert_eq!(*edge1.front().lock_point().unwrap(), 10);
+    /// assert_eq!(*edge1.back().lock_point().unwrap(), 11);
+    /// assert_eq!(*edge1.lock_curve().unwrap(), 22);
+    /// ```
+    #[inline(always)]
+    pub fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C>(
+        &self,
+        point_closure: &FP,
+        curve_closure: &FC,
+    ) -> Self
+    {
+        let v0 = self.absolute_front().mapped(point_closure);
+        let v1 = self.absolute_back().mapped(point_closure);
+        let curve = curve_closure(&*self.lock_curve().unwrap());
+        let mut edge = Edge::new_unchecked(&v0, &v1, curve);
+        edge.orientation = self.orientation;
+        edge
+    }
+
+    /// Returns another edge whose curve and its vertices' points are the same.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v0 = Vertex::new(0);
+    /// let v1 = Vertex::new(1);
+    /// let edge0 = Edge::new(&v0, &v1, 2);
+    /// let edge1 = edge0.topological_clone();
+    ///
+    /// // The points and curve are the same ones.
+    /// assert_eq!(
+    ///     *edge0.front().lock_point().unwrap(),
+    ///     *edge1.front().lock_point().unwrap(),
+    /// );
+    /// assert_eq!(
+    ///     *edge0.back().lock_point().unwrap(),
+    ///     *edge1.back().lock_point().unwrap(),
+    /// );
+    /// assert_eq!(
+    ///     *edge0.lock_curve().unwrap(),
+    ///     *edge1.lock_curve().unwrap(),
+    /// );
+    ///
+    /// // The vertices and edges are the different ones!
+    /// assert_ne!(edge0.front(), edge1.front());
+    /// assert_ne!(edge0.back(), edge1.back());
+    /// assert_ne!(edge0, edge1);
+    /// ```
+    #[inline(always)]
+    pub fn topological_clone(&self) -> Self
+    where
+        P: Clone,
+        C: Clone, {
+        self.mapped(&move |pt: &P| pt.clone(), &move |curve: &C| curve.clone())
     }
 }
 

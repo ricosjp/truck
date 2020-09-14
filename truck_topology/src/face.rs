@@ -206,12 +206,46 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_eq!(*face0.try_lock_surface().unwrap(), 1);
     /// assert_eq!(*face1.try_lock_surface().unwrap(), 1);
     ///
-    /// // Check the behavior of `try_lock`
+    /// // The thread is not blocked even if the surface is already locked.
     /// let lock = face0.try_lock_surface();
     /// assert!(face1.try_lock_surface().is_err());
     /// ```
     #[inline(always)]
     pub fn try_lock_surface(&self) -> TryLockResult<MutexGuard<S>> { self.surface.try_lock() }
+    
+    /// Returns the id of face.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let face0 = Face::new(vec![wire], 0);
+    /// let face1 = face0.clone();
+    ///
+    /// // Two faces have the same content.
+    /// assert_eq!(*face0.lock_surface().unwrap(), 0);
+    /// assert_eq!(*face1.lock_surface().unwrap(), 0);
+    ///
+    /// {
+    ///     let mut surface = face0.lock_surface().unwrap();
+    ///     *surface = 1;
+    /// }
+    /// // The contents of two vertices are synchronized.
+    /// assert_eq!(*face0.lock_surface().unwrap(), 1);
+    /// assert_eq!(*face1.lock_surface().unwrap(), 1);
+    ///
+    /// // Check the behavior of `lock`.
+    /// std::thread::spawn(move || {
+    ///     *face0.lock_surface().unwrap() = 2;
+    /// }).join().expect("thread::spawn failed");
+    /// assert_eq!(*face1.lock_surface().unwrap(), 2);    
+    /// ```
+    #[inline(always)]
+    pub fn lock_surface(&self) -> LockResult<MutexGuard<S>> { self.surface.lock() }
 
     /// Inverts the direction of the face.
     /// # Examples
@@ -355,6 +389,23 @@ impl<P, C, S> Face<P, C, S> {
             }
         }
         false
+    }
+
+    /// Returns a new face whose surface is mapped by `surface_closure`,
+    /// curves are mapped by `curve_closure` and points are mapped by `point_closure`.
+    pub fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
+        &self,
+        point_closure: &FP,
+        curve_closure: &FC,
+        surface_closure: &FS,
+    ) -> Self {
+        let wires: Vec<_> = self.absolute_boundaries().iter().map(|wire|
+            wire.mapped(point_closure, curve_closure)
+        ).collect();
+        let surface = surface_closure(&*self.lock_surface().unwrap());
+        let mut face = Face::new_unchecked(wires, surface);
+        face.orientation = self.orientation;
+        face
     }
 }
 
