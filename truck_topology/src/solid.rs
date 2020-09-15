@@ -41,7 +41,7 @@ impl<P, C, S> Solid<P, C, S> {
         }
     }
 
-    /// get the reference of boundary shells
+    /// Returns the reference of boundary shells
     #[inline(always)]
     pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
 }
@@ -92,7 +92,6 @@ fn cube() {
         &edge[2].inverse(),
     ]);
     let face3 = Face::new(vec![wire3], ());
-    
     let wire4 = Wire::from_iter(vec![
         &edge[7],
         &edge[11],
@@ -100,7 +99,6 @@ fn cube() {
         &edge[3].inverse(),
     ]);
     let face4 = Face::new(vec![wire4], ());
-    
     let wire5 = Wire::from_iter(vec![
         &edge[11].inverse(),
         &edge[10].inverse(),

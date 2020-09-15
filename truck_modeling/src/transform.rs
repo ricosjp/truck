@@ -1,24 +1,26 @@
 use crate::*;
 use std::collections::HashMap;
 
+type Point = Vector4;
+type Curve = BSplineCurve;
+type Surface = BSplineSurface;
+
 pub trait Transformed: Sized {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<FP: Fn(&Point) -> Point, FC: Fn(&Curve) -> Curve, FS: Fn(&Surface) -> Surface>(
         &self,
-        vector_closure: &F0,
-        curve_closure: &F1,
-        surface_closure: &F2,
+        point_closure: &FP,
+        curve_closure: &FC,
+        surface_closure: &FS,
     ) -> Self;
     #[doc(hidden)]
-    fn copy(&self) -> Self {
-        self.mapped(&|_| {}, &|_| {}, &|_| {})
-    }
+    fn copy(&self) -> Self { self.mapped(&Clone::clone, &Clone::clone, &Clone::clone) }
     #[doc(hidden)]
     fn transformed(&self, trsf: Matrix4) -> Self {
         self.mapped(
-            &|v| *v = trsf * *v,
-            &|c| c.transform_control_points(|v| *v = trsf * *v),
-            &|s| s.transform_control_points(|v| *v = trsf * *v),
+            &|p: &Vector4| trsf * p,
+            &|c: &BSplineCurve| trsf * c,
+            &|s: &BSplineSurface| trsf * s,
         )
     }
     #[doc(hidden)]
@@ -26,13 +28,7 @@ pub trait Transformed: Sized {
         self.transformed(Matrix4::from_translation(vector))
     }
     #[doc(hidden)]
-    fn rotated(
-        &self,
-        origin: Point3,
-        axis: Vector3,
-        angle: f64,
-    ) -> Self
-    {
+    fn rotated(&self, origin: Point3, axis: Vector3, angle: f64) -> Self {
         let trsf0 = Matrix4::from_translation(-origin.to_vec());
         let trsf1 = Matrix4::from_axis_angle(axis, cgmath::Rad(angle));
         let trsf2 = Matrix4::from_translation(origin.to_vec());
@@ -50,38 +46,32 @@ pub trait Transformed: Sized {
 
 impl Transformed for Vertex {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<FP: Fn(&Point) -> Point, FC: Fn(&Curve) -> Curve, FS: Fn(&Surface) -> Surface>(
         &self,
-        vector_closure: &F0,
-        _: &F1,
-        _: &F2,
+        point_closure: &FP,
+        _: &FC,
+        _: &FS,
     ) -> Self
     {
-        let mut pt = *self.lock_point().unwrap();
-        vector_closure(&mut pt);
-        Vertex::new(pt)
+        self.mapped(point_closure)
     }
 }
 
 impl Transformed for Edge {
     #[doc(hidden)]
-    fn mapped<F0: Fn(&mut Vector4), F1: Fn(&mut BSplineCurve), F2: Fn(&mut BSplineSurface)>(
+    fn mapped<FP: Fn(&Point) -> Point, F1: Fn(&Curve) -> Curve, F2: Fn(&mut BSplineSurface)>(
         &self,
         vector_closure: &F0,
         curve_closure: &F1,
         surface_closure: &F2,
     ) -> Self
     {
-        let v0 = self.absolute_front().mapped(
-            vector_closure,
-            curve_closure,
-            surface_closure,
-        );
-        let v1 = self.absolute_back().mapped(
-            vector_closure,
-            curve_closure,
-            surface_closure,
-        );
+        let v0 = self
+            .absolute_front()
+            .mapped(vector_closure, curve_closure, surface_closure);
+        let v1 = self
+            .absolute_back()
+            .mapped(vector_closure, curve_closure, surface_closure);
         let mut curve = self.lock_curve().unwrap().clone();
         curve_closure(&mut curve);
         let new_edge = Edge::new(&v0, &v1, curve);
@@ -145,12 +135,11 @@ impl Transformed for Face {
         surface_closure: &F2,
     ) -> Self
     {
-        let wires: Vec<_> =
-            self.absolute_boundaries()
-                .iter()
-                .map(|wire| {
-                    wire.mapped(vector_closure, curve_closure, surface_closure)
-                }).collect();
+        let wires: Vec<_> = self
+            .absolute_boundaries()
+            .iter()
+            .map(|wire| wire.mapped(vector_closure, curve_closure, surface_closure))
+            .collect();
         let mut surface = self.lock_surface().unwrap().clone();
         surface_closure(&mut surface);
         let face = Face::new(wires, surface);

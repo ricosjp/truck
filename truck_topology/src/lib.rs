@@ -243,6 +243,24 @@ pub struct FaceID<S> {
     entity: *const Mutex<S>,
 }
 
+/// A trait for a unified definition of the function `mapped`.
+pub trait Mapped<P, C, S>: Sized {
+    /// Returns a new topology whose points are mapped by `point_closure`,
+    /// curves are mapped by `curve_closure`,
+    /// and surfaces are mapped by `surface_closure`.
+    fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
+        &self,
+        point_closure: &FP,
+        curve_closure: &FC,
+        surface_closure: &FS,
+    ) -> Self;
+
+    /// Returns another topology whose points, curves, and surfaces are cloned.
+    fn topological_clone(&self) -> Self where P: Clone, C: Clone, S: Clone {
+        self.mapped(&Clone::clone, &Clone::clone, &Clone::clone)
+    }
+}
+
 #[doc(hidden)]
 pub mod edge;
 /// classifies the errors that can occur in this crate.
@@ -257,5 +275,7 @@ pub mod solid;
 pub mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
+#[doc(hidden)]
+pub mod mapped;
 // /// Integrity
 //pub mod integrity;

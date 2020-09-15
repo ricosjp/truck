@@ -212,7 +212,6 @@ impl<P, C, S> Face<P, C, S> {
     /// ```
     #[inline(always)]
     pub fn try_lock_surface(&self) -> TryLockResult<MutexGuard<S>> { self.surface.try_lock() }
-    
     /// Returns the id of face.
     /// # Examples
     /// ```
@@ -389,23 +388,6 @@ impl<P, C, S> Face<P, C, S> {
             }
         }
         false
-    }
-
-    /// Returns a new face whose surface is mapped by `surface_closure`,
-    /// curves are mapped by `curve_closure` and points are mapped by `point_closure`.
-    pub fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-        &self,
-        point_closure: &FP,
-        curve_closure: &FC,
-        surface_closure: &FS,
-    ) -> Self {
-        let wires: Vec<_> = self.absolute_boundaries().iter().map(|wire|
-            wire.mapped(point_closure, curve_closure)
-        ).collect();
-        let surface = surface_closure(&*self.lock_surface().unwrap());
-        let mut face = Face::new_unchecked(wires, surface);
-        face.orientation = self.orientation;
-        face
     }
 }
 

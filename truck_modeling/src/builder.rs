@@ -40,12 +40,53 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
         line(edge0.back(), edge1.front()),
         edge1.inverse(),
         line(edge1.front(), edge1.back()),
-    ].into();
-    let surface = BSplineSurface::homotopy(
-        edge0.oriented_curve(),
-        edge1.oriented_curve(),
-    );
+    ]
+    .into();
+    let surface = BSplineSurface::homotopy(edge0.oriented_curve(), edge1.oriented_curve());
     Face::new(vec![wire], surface)
 }
 
+pub fn clone<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(elem: &T) -> T {
+    elem.topological_clone()
+}
 
+pub fn transformed<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(elem: &T, mat: Matrix4) -> T {
+    elem.mapped(
+        &move |pt: &Vector4| mat * pt,
+        &move |curve: &BSplineCurve| mat * curve,
+        &move |surface: &BSplineSurface| mat * surface,
+    )
+}
+
+pub fn translated<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
+    elem: &T,
+    vector: Vector3,
+) -> T
+{
+    builder::transformed(elem, Matrix4::from_translation(vector))
+}
+
+pub fn rotated<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
+    elem: &T,
+    origin: Point3,
+    axis: Vector3,
+    angle: f64,
+) -> T
+{
+    let mat0 = Matrix4::from_translation(-origin.to_vec());
+    let mat1 = Matrix4::from_axis_angle(axis, cgmath::Rad(angle));
+    let mat2 = Matrix4::from_translation(origin.to_vec());
+    builder::transformed(elem, mat2 * mat1 * mat0)
+}
+
+pub fn scaled<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
+    elem: &T,
+    origin: Point3,
+    scalars: Vector3,
+) -> T
+{
+    let mat0 = Matrix4::from_translation(-origin.to_vec());
+    let mat1 = Matrix4::from_nonuniform_scale(scalars[0], scalars[1], scalars[2]);
+    let mat2 = Matrix4::from_translation(origin.to_vec());
+    builder::transformed(elem, mat2 * mat1 * mat0)
+}

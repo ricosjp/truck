@@ -94,42 +94,6 @@ impl<P> Vertex<P> {
             entity: Arc::as_ptr(&self.point),
         }
     }
-
-    /// Returns a new vertex whose point is mapped by `point_closure`.
-    /// # Examples
-    /// ```
-    /// use truck_topology::*;
-    /// let v0 = Vertex::new(1);
-    /// let v1 = v0.mapped(&move |i: &usize| *i + 1);
-    /// assert_eq!(*v1.try_lock_point().unwrap(), 2);
-    /// ```
-    #[inline(always)]
-    pub fn mapped<FP: Fn(&P) -> P>(&self, point_closure: &FP) -> Vertex<P> {
-        Vertex::new(point_closure(&*self.lock_point().unwrap()))
-    }
-
-    /// Returns another vertex whose point is cloned.
-    /// # Examples
-    /// ```
-    /// use truck_topology::*;
-    /// let v0 = Vertex::new(1);
-    /// let v1 = v0.clone();
-    /// let v2 = v0.topological_clone();
-    ///
-    /// // All entities are the same value.
-    /// assert_eq!(*v0.try_lock_point().unwrap(), 1);
-    /// assert_eq!(*v1.try_lock_point().unwrap(), 1);
-    /// assert_eq!(*v2.try_lock_point().unwrap(), 1);
-    ///
-    /// // the topological clone is not the same vertex!
-    /// assert_eq!(v0, v1);
-    /// assert_ne!(v0, v2);
-    /// ```
-    #[inline(always)]
-    pub fn topological_clone(&self) -> Vertex<P>
-    where P: Clone {
-        self.mapped(&move |pt: &P| pt.clone())
-    }
 }
 
 impl<P> Clone for Vertex<P> {
