@@ -90,3 +90,39 @@ pub fn scaled<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
     let mat2 = Matrix4::from_translation(origin.to_vec());
     builder::transformed(elem, mat2 * mat1 * mat0)
 }
+
+pub fn tsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
+    elem: &T,
+    vector: Vector3,
+) -> T::Sweeped
+{
+    let trsl = Matrix4::from_translation(vector);
+    elem.sweep(
+        &move |pt| trsl * pt,
+        &move |curve| trsl * curve,
+        &move |surface| trsl * surface,
+        &move |pt0, pt1| geom_impls::line(*pt0, *pt1),
+        &move |curve0, curve1| BSplineSurface::homotopy(curve0.clone(), curve1.clone()),
+    )
+}
+
+pub fn partial_rsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
+    elem: &T,
+    origin: Point3,
+    axis: Vector3,
+    angle: f64,
+) -> T::Sweeped
+{
+    let angle = cgmath::Rad(angle);
+    let mat0 = Matrix4::from_translation(-origin.to_vec());
+    let mat1 = Matrix4::from_axis_angle(axis, angle);
+    let mat2 = Matrix4::from_translation(origin.to_vec());
+    let trsl = mat2 * mat1 * mat0;
+    elem.sweep(
+        &move |pt| trsl * pt,
+        &move |curve| trsl * curve,
+        &move |surface| trsl * surface,
+        &move |pt, _| geom_impls::circle_arc(*pt, origin, axis, angle),
+        &move |curve, _| geom_impls::rsweep_surface(curve, origin, axis, angle),
+    )
+}

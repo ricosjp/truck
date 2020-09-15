@@ -77,7 +77,7 @@
 
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex, MutexGuard, LockResult, TryLockResult};
+use std::sync::{Arc, LockResult, Mutex, MutexGuard, TryLockResult};
 
 /// Vertex, the minimum topological unit.
 ///
@@ -179,13 +179,13 @@ impl<T> RemoveTry<T> for Result<T> {
 /// ```
 /// use truck_topology::*;
 /// use std::collections::HashMap;
-/// 
+///
 /// let v = Vertex::new(0);
 /// let v_id = v.id();
-/// 
+///
 /// let mut entity_map = HashMap::new();
 /// let mut id_map = HashMap::new();
-/// 
+///
 /// entity_map.insert(v.clone(), 0); // v must be cloned for sign up the hashmap.
 /// id_map.insert(v_id, 0); // v_id is implemented Copy trait!
 /// ```
@@ -193,13 +193,13 @@ impl<T> RemoveTry<T> for Result<T> {
 /// ```
 /// use truck_topology::*;
 /// let v = Vertex::new(0);
-/// 
+///
 /// let entity = *v.try_lock_point().unwrap();
 /// let v_id: VertexID<usize> = v.id();
-/// 
+///
 /// // Change the point!
 /// *v.try_lock_point().unwrap() = 1;
-/// 
+///
 /// assert_ne!(entity, *v.try_lock_point().unwrap());
 /// assert_eq!(v_id, v.id());
 /// ```
@@ -250,15 +250,40 @@ pub trait Mapped<P, C, S>: Sized {
     /// and surfaces are mapped by `surface_closure`.
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
         &self,
-        point_closure: &FP,
-        curve_closure: &FC,
-        surface_closure: &FS,
+        point_mapping: &FP,
+        curve_mapping: &FC,
+        surface_mapping: &FS,
     ) -> Self;
 
     /// Returns another topology whose points, curves, and surfaces are cloned.
-    fn topological_clone(&self) -> Self where P: Clone, C: Clone, S: Clone {
+    fn topological_clone(&self) -> Self
+    where
+        P: Clone,
+        C: Clone,
+        S: Clone, {
         self.mapped(&Clone::clone, &Clone::clone, &Clone::clone)
     }
+}
+
+/// Abstruct sweeping
+pub trait Sweep<P, C, S> {
+    /// The struct of sweeped topology.
+    type Sweeped;
+    /// Transform topologies and connect vertices and edges in boundaries.
+    fn sweep<
+        FP: Fn(&P) -> P,
+        FC: Fn(&C) -> C,
+        FS: Fn(&S) -> S,
+        CP: Fn(&P, &P) -> C,
+        CE: Fn(&C, &C) -> S,
+    >(
+        &self,
+        point_mapping: &FP,
+        curve_mapping: &FC,
+        surface_mapping: &FS,
+        connect_points: &CP,
+        connect_curve: &CE,
+    ) -> Self::Sweeped;
 }
 
 #[doc(hidden)]
@@ -267,15 +292,15 @@ pub mod edge;
 pub mod errors;
 /// Defines the boundary iterator.
 pub mod face;
+#[doc(hidden)]
+pub mod mapped;
 /// classifies shell conditions and defines the face iterators.
 pub mod shell;
 #[doc(hidden)]
 pub mod solid;
 #[doc(hidden)]
+pub mod sweep;
+#[doc(hidden)]
 pub mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
-#[doc(hidden)]
-pub mod mapped;
-// /// Integrity
-//pub mod integrity;

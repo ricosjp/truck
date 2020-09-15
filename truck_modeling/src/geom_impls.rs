@@ -69,29 +69,6 @@ pub(super) fn circle_arc(
     curve
 }
 
-
-pub(super) fn plane_by_two_curves(
-    mut curve0: BSplineCurve,
-    mut curve2: BSplineCurve,
-) -> BSplineSurface
-{
-    let t = curve0.knot_vec()[0] + curve0.knot_vec().range_length() / 2.0;
-    let curve1 = curve0.cut(t);
-    let t = curve2.knot_vec()[0] + curve2.knot_vec().range_length() / 2.0;
-    let curve3 = curve2.cut(t);
-    BSplineSurface::by_boundary(curve0, curve1, curve2, curve3)
-}
-
-pub(super) fn plane_by_three_curves(
-    curve0: BSplineCurve,
-    curve1: BSplineCurve,
-    curve3: BSplineCurve,
-) -> BSplineSurface
-{
-    let curve2 = line(curve1.end_points().1, curve3.end_points().0);
-    BSplineSurface::by_boundary(curve0, curve1, curve2, curve3)
-}
-
 pub(super) fn rsweep_surface(
     curve: &BSplineCurve,
     origin: Point3,

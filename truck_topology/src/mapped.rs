@@ -2,27 +2,31 @@ use crate::*;
 use std::collections::HashMap;
 
 impl<P, C, S> Mapped<P, C, S> for Vertex<P> {
-    /// Returns a new vertex whose point is mapped by `point_closure`.
+    /// Returns a new vertex whose point is mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;
     /// let v0 = Vertex::new(1);
-    /// let v1 = v0.mapped(&move |i: &usize| *i + 1);
+    /// let v1 = v0.mapped(
+    ///     &move |i: &usize| *i + 1,
+    ///     &<()>::clone,
+    ///     &<()>::clone,
+    /// );
     /// assert_eq!(*v1.try_lock_point().unwrap(), 2);
     /// ```
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
         &self,
-        point_closure: &FP,
+        point_mapping: &FP,
         _: &FC,
         _: &FS,
     ) -> Self {
-        Vertex::new(point_closure(&*self.lock_point().unwrap()))
+        Vertex::new(point_mapping(&*self.lock_point().unwrap()))
     }
 }
 
 impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
-    /// Returns a new edge whose curve is mapped by `curve_closure` and
-    /// whose end points are mapped by `point_closure`.
+    /// Returns a new edge whose curve is mapped by `curve_mapping` and
+    /// whose end points are mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -32,6 +36,7 @@ impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
     /// let edge1 = edge0.mapped(
     ///     &move |i: &usize| *i + 10,
     ///     &move |j: &usize| *j + 20,
+    ///     &<()>::clone,
     /// );
     ///
     /// assert_eq!(*edge1.front().lock_point().unwrap(), 10);
@@ -40,13 +45,13 @@ impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
     /// ```
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
         &self,
-        point_closure: &FP,
-        curve_closure: &FC,
-        surface_closure: &FS,
+        point_mapping: &FP,
+        curve_mapping: &FC,
+        surface_mapping: &FS,
     ) -> Self {
-        let v0 = self.absolute_front().mapped(point_closure, curve_closure, surface_closure);
-        let v1 = self.absolute_back().mapped(point_closure, curve_closure, surface_closure);
-        let curve = curve_closure(&*self.lock_curve().unwrap());
+        let v0 = self.absolute_front().mapped(point_mapping, curve_mapping, surface_mapping);
+        let v1 = self.absolute_back().mapped(point_mapping, curve_mapping, surface_mapping);
+        let curve = curve_mapping(&*self.lock_curve().unwrap());
         let mut edge = Edge::new_unchecked(&v0, &v1, curve);
         edge.orientation = self.orientation;
         edge
@@ -54,8 +59,8 @@ impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
 }
 
 impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
-    /// Returns a new wire whose curves are mapped by `curve_closure` and
-    /// whose points are mapped by `point_closure`.
+    /// Returns a new wire whose curves are mapped by `curve_mapping` and
+    /// whose points are mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -69,6 +74,7 @@ impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
     /// let wire1 = wire0.mapped(
     ///     &move |i: &usize| *i + 10,
     ///     &move |j: &usize| *j + 1000,
+    ///     &<()>::clone,
     /// );
     ///
     /// // Check the points
@@ -93,14 +99,14 @@ impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
     /// ```
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
         &self,
-        point_closure: &FP,
-        curve_closure: &FC,
-        surface_closure: &FS,
+        point_mapping: &FP,
+        curve_mapping: &FC,
+        surface_mapping: &FS,
     ) -> Self {
         let mut vertex_map: HashMap<VertexID<P>, Vertex<P>> = HashMap::new();
         for v in self.vertex_iter() {
             if vertex_map.get(&v.id()).is_none() {
-                let vert = v.mapped(point_closure, curve_closure, surface_closure);
+                let vert = v.mapped(point_mapping, curve_mapping, surface_mapping);
                 vertex_map.insert(v.id(), vert);
             }
         }
@@ -116,7 +122,7 @@ impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
             } else {
                 let vertex0 = vertex_map.get(&edge.absolute_front().id()).unwrap().clone();
                 let vertex1 = vertex_map.get(&edge.absolute_back().id()).unwrap().clone();
-                let curve = curve_closure(&*edge.lock_curve().unwrap());
+                let curve = curve_mapping(&*edge.lock_curve().unwrap());
                 let new_edge = Edge::new_unchecked(&vertex0, &vertex1, curve);
                 if edge.orientation() {
                     wire.push_back(new_edge.clone());
@@ -131,8 +137,8 @@ impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
 }
 
 impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
-    /// Returns a new face whose surface is mapped by `surface_closure`,
-    /// curves are mapped by `curve_closure` and points are mapped by `point_closure`.
+    /// Returns a new face whose surface is mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -184,17 +190,17 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
     /// ```
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
         &self,
-        point_closure: &FP,
-        curve_closure: &FC,
-        surface_closure: &FS,
+        point_mapping: &FP,
+        curve_mapping: &FC,
+        surface_mapping: &FS,
     ) -> Self
     {
         let wires: Vec<_> = self
             .absolute_boundaries()
             .iter()
-            .map(|wire| wire.mapped(point_closure, curve_closure, surface_closure))
+            .map(|wire| wire.mapped(point_mapping, curve_mapping, surface_mapping))
             .collect();
-        let surface = surface_closure(&*self.lock_surface().unwrap());
+        let surface = surface_mapping(&*self.lock_surface().unwrap());
         let mut face = Face::new_unchecked(wires, surface);
         face.orientation = self.orientation;
         face
@@ -202,8 +208,8 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
 }
 
 impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
-    /// Returns a new shell whose surfaces are mapped by `surface_closure`,
-    /// curves are mapped by `curve_closure` and points are mapped by `point_closure`.
+    /// Returns a new shell whose surfaces are mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -265,9 +271,9 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
     /// ```
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
         &self,
-        point_closure: &FP,
-        curve_closure: &FC,
-        surface_closure: &FS,
+        point_mapping: &FP,
+        curve_mapping: &FC,
+        surface_mapping: &FS,
     ) -> Self
     {
         let mut shell = Shell::new();
@@ -278,7 +284,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
             .flat_map(Wire::vertex_iter);
         for vertex in vertex_iter {
             if vmap.get(&vertex.id()).is_none() {
-                let new_vertex = vertex.mapped(point_closure, curve_closure, surface_closure);
+                let new_vertex = vertex.mapped(point_mapping, curve_mapping, surface_mapping);
                 vmap.insert(vertex.id(), new_vertex);
             }
         }
@@ -297,7 +303,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
                     } else {
                         let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
                         let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
-                        let curve = curve_closure(&*edge.lock_curve().unwrap());
+                        let curve = curve_mapping(&*edge.lock_curve().unwrap());
                         let new_edge = Edge::new_unchecked(v0, v1, curve);
                         if edge.orientation() {
                             wire.push_back(new_edge.clone());
@@ -309,7 +315,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
                 }
                 wires.push(wire);
             }
-            let surface = surface_closure(&*face.lock_surface().unwrap());
+            let surface = surface_mapping(&*face.lock_surface().unwrap());
             let new_face = Face::new_unchecked(wires, surface);
             shell.push(new_face);
         }
@@ -318,20 +324,20 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
 }
 
 impl<P, C, S> Mapped<P, C, S> for Solid<P, C, S> {
-    /// Returns a new solid whose surfaces are mapped by `surface_closure`,
-    /// curves are mapped by `curve_closure` and points are mapped by `point_closure`.
+    /// Returns a new solid whose surfaces are mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
     #[inline(always)]
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
         &self,
-        point_closure: &FP,
-        curve_closure: &FC,
-        surface_closure: &FS,
+        point_mapping: &FP,
+        curve_mapping: &FC,
+        surface_mapping: &FS,
     ) -> Self
     {
         Solid::new_unchecked(
             self.boundaries()
                 .iter()
-                .map(|shell| shell.mapped(point_closure, curve_closure, surface_closure))
+                .map(|shell| shell.mapped(point_mapping, curve_mapping, surface_mapping))
                 .collect(),
         )
     }
