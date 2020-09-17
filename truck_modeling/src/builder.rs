@@ -70,11 +70,11 @@ pub fn rotated<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-    angle: f64,
+    angle: Rad<f64>,
 ) -> T
 {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
-    let mat1 = Matrix4::from_axis_angle(axis, cgmath::Rad(angle));
+    let mat1 = Matrix4::from_axis_angle(axis, angle);
     let mat2 = Matrix4::from_translation(origin.to_vec());
     builder::transformed(elem, mat2 * mat1 * mat0)
 }
@@ -91,6 +91,42 @@ pub fn scaled<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
     builder::transformed(elem, mat2 * mat1 * mat0)
 }
 
+/// Sweeps a vertex, an edge, a wire, a face, or a shell by a vector.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+/// let v = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let line = builder::tsweep(&v, Vector3::unit_x());
+/// let square = builder::tsweep(&line, Vector3::unit_y());
+/// let cube = builder::tsweep(&square, Vector3::unit_z());
+///
+/// let b_shell = &cube.boundaries()[0];
+/// assert_eq!(b_shell.len(), 6); // This solid is a cube!
+///
+/// let b_loop = &b_shell[0].boundaries()[0];
+/// let mut loop_iter = b_loop.vertex_iter();
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 0.0, 0.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 0.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 0.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 0.0, 0.0, 1.0));
+/// assert_eq!(loop_iter.next(), None);
+///
+/// let b_loop = &b_shell[3].boundaries()[0];
+/// let mut loop_iter = b_loop.vertex_iter();
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 0.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 0.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 1.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 1.0, 1.0));
+/// assert_eq!(loop_iter.next(), None);
+///
+/// let b_loop = &b_shell[5].boundaries()[0];
+/// let mut loop_iter = b_loop.vertex_iter();
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 0.0, 1.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 0.0, 1.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 1.0, 1.0));
+/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 1.0, 1.0));
+/// assert_eq!(loop_iter.next(), None);
+/// ```
 pub fn tsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
     elem: &T,
     vector: Vector3,
@@ -106,14 +142,41 @@ pub fn tsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
     )
 }
 
+/// Sweeps a vertex, an edge, a wire, a face, or a shell by a circle.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+/// const PI: Rad<f64> = Rad(std::f64::consts::PI);
+/// const N: usize = 100;
+///
+/// let v = builder::vertex(Point3::new(0.0, 0.0, 1.0));
+/// let edge = builder::partial_rsweep(&v, Point3::new(0.0, 0.0, 2.0), Vector3::unit_x(), PI);
+/// let face = builder::partial_rsweep(&edge, Point3::origin(), Vector3::unit_y(), PI *  2.0 / 3.0);
+///
+/// let surface = face.lock_surface().unwrap().clone();
+/// for i in 0..=N {
+///     for j in 0..=N {
+///         let u = i as f64 / N as f64;
+///         let v = j as f64 / N as f64;
+///         let pt = Point3::from_homogeneous(surface.subs(v, u));
+///
+///         // the y coordinate is positive.
+///         assert!(pt[1] >= 0.0);
+///
+///         // this surface is a part of torus.
+///         let tmp = f64::sqrt(pt[0] * pt[0] + pt[2] * pt[2]) - 2.0;
+///         let res = tmp * tmp + pt[1] * pt[1];
+///         assert!(Tolerance::near(&res, &1.0));
+///     }
+/// }
+/// ```
 pub fn partial_rsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-    angle: f64,
+    angle: Rad<f64>,
 ) -> T::Sweeped
 {
-    let angle = cgmath::Rad(angle);
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -125,4 +188,13 @@ pub fn partial_rsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
         &move |pt, _| geom_impls::circle_arc(*pt, origin, axis, angle),
         &move |curve, _| geom_impls::rsweep_surface(curve, origin, axis, angle),
     )
+}
+
+pub fn rsweep<T: closed_sweep::CompleteRSweep>(
+    elem: &T,
+    origin: Point3,
+    axis: Vector3,
+) -> T::RSweeped
+{
+    elem.rsweep(origin, axis)
 }

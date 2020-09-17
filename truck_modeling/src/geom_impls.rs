@@ -1,6 +1,6 @@
 use crate::*;
+use geometry::KnotVec;
 use std::f64::consts::PI;
-use cgmath::Rad;
 
 pub(super) fn line(pt0: Vector4, pt1: Vector4) -> BSplineCurve {
     let knot_vec = KnotVec::bezier_knot(1);
@@ -65,7 +65,9 @@ pub(super) fn circle_arc(
         KnotVec::bezier_knot(2),
         vec![point.clone(), point1, rotation2 * pt]
     );
+    curve.add_knot(0.25);
     curve.add_knot(0.5);
+    curve.add_knot(0.75);
     curve
 }
 
@@ -77,7 +79,7 @@ pub(super) fn rsweep_surface(
 ) -> BSplineSurface
 {
     let knot_vec0 = curve.knot_vec().clone();
-    let knot_vec1 = KnotVec::try_from(vec![0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0]).unwrap();
+    let knot_vec1 = KnotVec::try_from(vec![0.0, 0.0, 0.0, 0.25, 0.5, 0.75, 1.0, 1.0, 1.0]).unwrap();
     let mut control_points = Vec::new();
     for point in curve.control_points() {
         let curve = circle_arc(*point, origin, axis, angle);

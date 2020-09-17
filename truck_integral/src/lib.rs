@@ -1,7 +1,7 @@
-extern crate truck_geometry;
-extern crate truck_topology;
-pub use truck_geometry::*;
-pub use truck_topology::*;
+pub extern crate truck_geometry as geometry;
+pub extern crate truck_topology as topology;
+use geometry::*;
+use topology::*;
 
 /// a geometry of vertex
 pub trait Point: Clone {
