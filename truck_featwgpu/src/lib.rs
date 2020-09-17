@@ -49,18 +49,17 @@ pub struct ExpandedPolygon {
 }
 
 #[derive(Debug, Clone)]
-pub struct ColorConfig {
-    pub ambient: Vector4,
-    pub diffuse: Vector4,
-    pub specular: Vector4,
-    pub reflect_ratio: Vector3,
+pub struct Material {
+    pub albedo: Vector4,
+    pub roughness: f64,
+    pub reflectance: f64,
 }
 
 #[derive(Clone)]
 pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     pub matrix: Matrix4,
-    pub color: ColorConfig,
+    pub material: Material,
     pub texture: Option<Arc<DynamicImage>>,
 }
 

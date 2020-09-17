@@ -25,15 +25,36 @@ impl ExpandedPolygon {
     }
 }
 
-impl Default for ColorConfig {
+impl Default for Material {
     #[inline(always)]
-    fn default() -> ColorConfig {
-        ColorConfig {
-            ambient: Vector4::new(1.0, 1.0, 1.0, 1.0),
-            diffuse: Vector4::new(1.0, 1.0, 1.0, 1.0),
-            specular: Vector4::new(1.0, 1.0, 1.0, 1.0),
-            reflect_ratio: Vector3::new(0.2, 0.6, 0.2),
+    fn default() -> Material {
+        Material {
+            albedo: Vector4::new(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0),
+            roughness: 0.5,
+            reflectance: 0.5,
         }
+    }
+}
+
+impl Material {
+    pub fn buffer(&self, device: &Device) -> BufferHandler {
+        let material_data: [f32; 6] = [
+            self.albedo[0] as f32,
+            self.albedo[1] as f32,
+            self.albedo[2] as f32,
+            self.albedo[3] as f32,
+            self.roughness as f32,
+            self.reflectance as f32,
+            
+        ];
+        BufferHandler::new(
+            device.create_buffer_init(&BufferInitDescriptor {
+                contents: bytemuck::cast_slice(&material_data),
+                usage: BufferUsage::UNIFORM,
+                label: None,
+            }),
+            std::mem::size_of::<[f32; 6]>() as u64,
+        )
     }
 }
 
@@ -43,7 +64,7 @@ impl PolygonInstance {
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             matrix: Matrix4::identity(),
-            color: Default::default(),
+            material: Default::default(),
             texture: None,
         }
     }
@@ -212,24 +233,6 @@ impl PolygonInstance {
         )
     }
 
-    pub fn color_config_buffer(&self, device: &Device) -> BufferHandler {
-        let rr = self.color.reflect_ratio;
-        let color_data: [[f32; 4]; 4] = [
-            self.color.ambient.cast::<f32>().unwrap().into(),
-            self.color.diffuse.cast::<f32>().unwrap().into(),
-            self.color.specular.cast::<f32>().unwrap().into(),
-            [rr[0] as f32, rr[1] as f32, rr[2] as f32, 0.0],
-        ];
-        BufferHandler::new(
-            device.create_buffer_init(&BufferInitDescriptor {
-                contents: bytemuck::cast_slice(&color_data),
-                usage: BufferUsage::UNIFORM,
-                label: None,
-            }),
-            std::mem::size_of::<[[f32; 4]; 4]>() as u64,
-        )
-    }
-
     pub fn textureview_and_sampler(
         &self,
         device: &Device,
@@ -300,7 +303,7 @@ impl PolygonInstance {
             layout,
             vec![
                 self.matrix_buffer(device).binding_resource(),
-                self.color_config_buffer(device).binding_resource(),
+                self.material.buffer(device).binding_resource(),
             ],
         )
     }
@@ -312,7 +315,7 @@ impl PolygonInstance {
             layout,
             vec![
                 self.matrix_buffer(device).binding_resource(),
-                self.color_config_buffer(device).binding_resource(),
+                self.material.buffer(device).binding_resource(),
                 BindingResource::TextureView(&view),
                 BindingResource::Sampler(&sampler),
             ],
@@ -460,7 +463,7 @@ impl std::fmt::Debug for PolygonInstance {
         f.pad("PolygonInstance {\n")?;
         f.write_fmt(format_args!("  polygon: {:?}\n", self.polygon))?;
         f.write_fmt(format_args!("  matrix: {:?}\n", self.matrix))?;
-        f.write_fmt(format_args!("  color: {:?}\n", self.color))?;
+        f.write_fmt(format_args!("  material: {:?}\n", self.material))?;
         match self.texture {
             Some(_) => f.write_fmt(format_args!("Some(<omitted>)\n}}")),
             None => f.write_fmt(format_args!("None\n}}")),
