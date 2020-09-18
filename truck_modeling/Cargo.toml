@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 cgmath = "*"
 truck_integral = { path = "../truck_integral" }
+
+[dev-dependencies]
+rand = "*"

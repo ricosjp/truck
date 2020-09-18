@@ -1,20 +1,17 @@
 extern crate truck_integral;
-use cgmath::prelude::*;
+pub use cgmath::prelude::*;
 pub use cgmath::Rad;
 use truck_integral::EdgeEx;
 
 // geometrical elements
 pub mod geometry {
-    pub use geometry::{
-        errors::Error, traits::*, BoundingBox, KnotVec, Matrix2, Matrix3, Matrix4, Point2, Point3,
-        Result, Vector2, Vector3, Vector4,
-    };
+    pub use geometry::{cgmath64::*, errors::Error, traits::*, BoundingBox, KnotVec, Result};
     use truck_integral::*;
     pub type BSplineCurve = geometry::BSplineCurve<Vector4>;
     pub type BSplineSurface = geometry::BSplineSurface<Vector4>;
     pub type CurveCollector = geometry::CurveCollector<Vector4>;
 }
-use geometry::*;
+pub use geometry::*;
 
 // topological elements
 pub mod topology {
@@ -31,9 +28,9 @@ pub mod topology {
     pub type EdgeID = topology::EdgeID<BSplineCurve>;
     pub type FaceID = topology::FaceID<BSplineSurface>;
 
-    pub use topology::{errors::Error, Mapped, Result, Sweep};
+    pub use topology::{errors::Error, shell::ShellCondition, Mapped, Result, Sweep};
 }
-use topology::*;
+pub use topology::*;
 
 pub mod builder;
 pub mod closed_sweep;

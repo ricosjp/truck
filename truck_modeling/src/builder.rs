@@ -1,7 +1,14 @@
 use crate::*;
 
+/// Creates and returns a vertex by a three dimensional point.
+/// # Remarks
+/// **This remark is for the developer.**  
+/// The vertex created by this method is not `Vertex<Point3>` but `Vertex<Vector4>`.
+#[inline(always)]
 pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt.to_homogeneous()) }
 
+/// Returns a line from `vertex0` to `vertex1`.
+#[inline(always)]
 pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
     let curve = geom_impls::line(
         *vertex0.lock_point().unwrap(),
@@ -10,6 +17,8 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
     Edge::new(vertex0, vertex1, curve)
 }
 
+/// Returns a circle arc from `vertex0` to `vertex1` via `transit`.
+#[inline(always)]
 pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
     let curve = geom_impls::circle_arc_by_three_points(
         *vertex0.lock_point().unwrap(),
@@ -19,6 +28,8 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
     Edge::new(vertex0, vertex1, curve)
 }
 
+/// Returns a bezier curve from `vertex0` to `vertex1` with inter control points `inter_points`.
+#[inline(always)]
 pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>) -> Edge {
     let pt0 = Point3::from_homogeneous(*vertex0.lock_point().unwrap());
     let pt1 = Point3::from_homogeneous(*vertex1.lock_point().unwrap());
@@ -34,6 +45,8 @@ pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>)
     Edge::new(vertex0, vertex1, curve)
 }
 
+/// Returns a homotopic face from `edge0` to `edge1`.
+#[inline(always)]
 pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     let wire: Wire = vec![
         edge0.clone(),
@@ -46,10 +59,16 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     Face::new(vec![wire], surface)
 }
 
+/// Returns another topology whose points, curves, and surfaces are cloned.
+/// 
+/// This method is a redefinition of `Mapped::topological_clone()`.
+#[inline(always)]
 pub fn clone<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(elem: &T) -> T {
     elem.topological_clone()
 }
 
+/// Returns a transformed vertex, edge, wire, face, shell or solid.
+#[inline(always)]
 pub fn transformed<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(elem: &T, mat: Matrix4) -> T {
     elem.mapped(
         &move |pt: &Vector4| mat * pt,
@@ -58,6 +77,8 @@ pub fn transformed<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(elem: &T, m
     )
 }
 
+/// Returns a translated vertex, edge, wire, face, shell or solid.
+#[inline(always)]
 pub fn translated<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
     elem: &T,
     vector: Vector3,
@@ -66,6 +87,8 @@ pub fn translated<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
     builder::transformed(elem, Matrix4::from_translation(vector))
 }
 
+/// Returns a rotated vertex, edge, wire, face, shell or solid.
+#[inline(always)]
 pub fn rotated<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
     elem: &T,
     origin: Point3,
@@ -79,6 +102,8 @@ pub fn rotated<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
     builder::transformed(elem, mat2 * mat1 * mat0)
 }
 
+/// Returns a scaled vertex, edge, wire, face, shell or solid.
+#[inline(always)]
 pub fn scaled<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
     elem: &T,
     origin: Point3,
@@ -95,37 +120,37 @@ pub fn scaled<T: Mapped<Vector4, BSplineCurve, BSplineSurface>>(
 /// # Examples
 /// ```
 /// use truck_modeling::*;
-/// let v = builder::vertex(Point3::new(0.0, 0.0, 0.0));
-/// let line = builder::tsweep(&v, Vector3::unit_x());
-/// let square = builder::tsweep(&line, Vector3::unit_y());
-/// let cube = builder::tsweep(&square, Vector3::unit_z());
-///
-/// let b_shell = &cube.boundaries()[0];
-/// assert_eq!(b_shell.len(), 6); // This solid is a cube!
-///
-/// let b_loop = &b_shell[0].boundaries()[0];
-/// let mut loop_iter = b_loop.vertex_iter();
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 0.0, 0.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 0.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 0.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 0.0, 0.0, 1.0));
-/// assert_eq!(loop_iter.next(), None);
-///
-/// let b_loop = &b_shell[3].boundaries()[0];
-/// let mut loop_iter = b_loop.vertex_iter();
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 0.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 0.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 1.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 1.0, 1.0));
-/// assert_eq!(loop_iter.next(), None);
-///
-/// let b_loop = &b_shell[5].boundaries()[0];
-/// let mut loop_iter = b_loop.vertex_iter();
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 0.0, 1.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 0.0, 1.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 1.0, 1.0));
-/// assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 1.0, 1.0));
-/// assert_eq!(loop_iter.next(), None);
+/// let vertex: Vertex = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let line: Edge = builder::tsweep(&vertex, Vector3::unit_x());
+/// let square: Face = builder::tsweep(&line, Vector3::unit_y());
+/// let cube: Solid = builder::tsweep(&square, Vector3::unit_z());
+/// #
+/// # let b_shell = &cube.boundaries()[0];
+/// # assert_eq!(b_shell.len(), 6); // This solid is a cube!
+/// #
+/// # let b_loop = &b_shell[0].boundaries()[0];
+/// # let mut loop_iter = b_loop.vertex_iter();
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 0.0, 0.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 0.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 0.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 0.0, 0.0, 1.0));
+/// # assert_eq!(loop_iter.next(), None);
+/// # 
+/// # let b_loop = &b_shell[3].boundaries()[0];
+/// # let mut loop_iter = b_loop.vertex_iter();
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 0.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 0.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 1.0, 1.0));
+/// # assert_eq!(loop_iter.next(), None);
+/// # 
+/// # let b_loop = &b_shell[5].boundaries()[0];
+/// # let mut loop_iter = b_loop.vertex_iter();
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 0.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 0.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 1.0, 1.0));
+/// # assert_eq!(loop_iter.next(), None);
 /// ```
 pub fn tsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
     elem: &T,
@@ -142,33 +167,58 @@ pub fn tsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
     )
 }
 
-/// Sweeps a vertex, an edge, a wire, a face, or a shell by a circle.
+/// Sweeps a vertex, an edge, a wire, a face, or a shell by the rotation.
 /// # Examples
 /// ```
+/// // Modeling a pipe.
 /// use truck_modeling::*;
 /// const PI: Rad<f64> = Rad(std::f64::consts::PI);
-/// const N: usize = 100;
-///
-/// let v = builder::vertex(Point3::new(0.0, 0.0, 1.0));
-/// let edge = builder::partial_rsweep(&v, Point3::new(0.0, 0.0, 2.0), Vector3::unit_x(), PI);
-/// let face = builder::partial_rsweep(&edge, Point3::origin(), Vector3::unit_y(), PI *  2.0 / 3.0);
-///
-/// let surface = face.lock_surface().unwrap().clone();
-/// for i in 0..=N {
-///     for j in 0..=N {
-///         let u = i as f64 / N as f64;
-///         let v = j as f64 / N as f64;
-///         let pt = Point3::from_homogeneous(surface.subs(v, u));
-///
-///         // the y coordinate is positive.
-///         assert!(pt[1] >= 0.0);
-///
-///         // this surface is a part of torus.
-///         let tmp = f64::sqrt(pt[0] * pt[0] + pt[2] * pt[2]) - 2.0;
-///         let res = tmp * tmp + pt[1] * pt[1];
-///         assert!(Tolerance::near(&res, &1.0));
-///     }
-/// }
+/// 
+/// // Creates the base circle
+/// let v: Vertex = builder::vertex(Point3::new(1.0, 0.0, 4.0));
+/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 4.0), -Vector3::unit_z());
+/// 
+/// // the result shell of the pipe.
+/// let mut pipe: Shell = Shell::new();
+/// 
+/// // Draw the first line pipe
+/// let mut first_line_part: Shell = builder::tsweep(&circle, Vector3::new(0.0, 0.0, -4.0));
+/// pipe.append(&mut first_line_part);
+/// 
+/// // Get the new wire
+/// let boundaries: Vec<Wire> = pipe.extract_boundaries();
+/// let another_circle: Wire = boundaries.into_iter().find(|wire| wire != &circle).unwrap().inverse();
+/// 
+/// // Draw the bent part
+/// let mut bend_part: Shell = builder::partial_rsweep(&another_circle, Point3::origin(), Vector3::unit_y(), PI / 2.0);
+/// # let surface = bend_part[0].lock_surface().unwrap().clone();
+/// pipe.append(&mut bend_part);
+/// 
+/// // Get the new wire
+/// let boundaries: Vec<Wire> = pipe.extract_boundaries();
+/// let another_circle: Wire = boundaries.into_iter().find(|wire| wire != &circle).unwrap().inverse();
+/// 
+/// // Draw the second line pipe
+/// let mut second_line_part: Shell = builder::tsweep(&another_circle, Vector3::new(-4.0, 0.0, 0.0));
+/// pipe.append(&mut second_line_part);
+/// 
+/// assert_eq!(pipe.shell_condition(), ShellCondition::Oriented);
+/// # const N: usize = 100;
+/// # for i in 0..=N {
+/// #    for j in 0..=N {
+/// #        let u = i as f64 / N as f64;
+/// #        let v = j as f64 / N as f64;
+/// #        let pt = Point3::from_homogeneous(surface.subs(u, v));
+/// #
+/// #        // the y coordinate is positive.
+/// #        //assert!(pt[1] >= 0.0);
+/// # 
+/// #        // this surface is a part of torus.
+/// #        let tmp = f64::sqrt(pt[0] * pt[0] + pt[2] * pt[2]) - 2.0;
+/// #        let res = tmp * tmp + pt[1] * pt[1];
+/// #        assert!(Tolerance::near(&res, &1.0));
+/// #    }
+/// # }
 /// ```
 pub fn partial_rsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
     elem: &T,
@@ -190,6 +240,36 @@ pub fn partial_rsweep<T: Sweep<Vector4, BSplineCurve, BSplineSurface>>(
     )
 }
 
+/// Sweeps a vertex, an edge, a wire, a face, or a shell by the whole circle.
+/// # Examples
+/// ```
+/// // Torus
+/// use truck_modeling::*;
+/// const PI: Rad<f64> = Rad(std::f64::consts::PI);
+/// 
+/// let v: Vertex = builder::vertex(Point3::new(3.0, 0.0, 0.0));
+/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 0.0), Vector3::unit_z());
+/// let torus: Shell = builder::rsweep(&circle, Point3::origin(), Vector3::unit_y());
+/// let solid: Solid = Solid::new(vec![torus]);
+/// # 
+/// # const N: usize = 100;
+/// # let shell = &solid.boundaries()[0];
+/// # for face in shell.iter() {
+/// #   let surface = face.lock_surface().unwrap().clone();
+/// #   for i in 0..=N {
+/// #       for j in 0..=N {
+/// #           let u = i as f64 / N as f64;
+/// #           let v = j as f64 / N as f64;
+/// #           let pt = Point3::from_homogeneous(surface.subs(u, v));
+/// #
+/// #           // this surface is a part of torus.
+/// #           let tmp = f64::sqrt(pt[0] * pt[0] + pt[2] * pt[2]) - 2.0;
+/// #           let res = tmp * tmp + pt[1] * pt[1];
+/// #           assert!(Tolerance::near(&res, &1.0));
+/// #       }
+/// #    }
+/// # }
+/// ```
 pub fn rsweep<T: closed_sweep::CompleteRSweep>(
     elem: &T,
     origin: Point3,
