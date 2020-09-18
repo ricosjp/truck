@@ -6,6 +6,7 @@ use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
+use std::sync::Arc;
 
 struct MyApp {
     scene: Scene,
@@ -39,12 +40,11 @@ impl MyApp {
         let mut mesh = PolygonInstance::new(mesh, scene.device());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
         mesh.matrix = mat.invert().unwrap();
-        mesh.color.ambient = Vector4::new(0.402, 0.262, 0.176, 1.0);
-        mesh.color.diffuse = Vector4::new(0.0, 1.0, 0.0, 1.0);
-        mesh.color.specular = Vector4::new(1.0, 1.0, 1.0, 1.0);
-        mesh.color.reflect_ratio = Vector3::new(0.2, 0.8, 0.0);
-        mesh.texture =
-            Some(image::load_from_memory(include_bytes!("WoodFloor024_2K_Color.png")).unwrap());
+        mesh.material.albedo = Vector4::new(0.402, 0.262, 0.176, 1.0);
+        mesh.material.roughness = 0.9;
+        mesh.material.reflectance = 0.04;
+        let texture = image::load_from_memory(include_bytes!("WoodFloor024_2K_Color.png")).unwrap();
+        mesh.texture = Some(Arc::new(texture));
         scene.add_object(&mesh);
     }
 }

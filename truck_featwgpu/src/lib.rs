@@ -49,19 +49,19 @@ pub struct ExpandedPolygon {
 }
 
 #[derive(Debug, Clone)]
-pub struct ColorConfig {
-    pub ambient: Vector4,
-    pub diffuse: Vector4,
-    pub specular: Vector4,
-    pub reflect_ratio: Vector3,
+pub struct Material {
+    pub albedo: Vector4,
+    pub roughness: f64,
+    pub reflectance: f64,
 }
 
 #[derive(Clone)]
 pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     pub matrix: Matrix4,
-    pub color: ColorConfig,
-    pub texture: Option<DynamicImage>,
+    pub material: Material,
+    pub texture: Option<Arc<DynamicImage>>,
+    pub bf_culling: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -79,8 +79,7 @@ pub trait Rendered {
     fn bind_group(&self, scene: &Scene, layout: &BindGroupLayout) -> Arc<BindGroup>;
     fn pipeline(
         &self,
-        device: &Device,
-        sc_desc: &SwapChainDescriptor,
+        scene: &Scene,
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>;
     fn render_object(&self, scene: &Scene) -> RenderObject {
@@ -94,7 +93,7 @@ pub trait Rendered {
                 push_constant_ranges: &[],
                 label: None,
             });
-        let pipeline = self.pipeline(&scene.device, &scene.sc_desc.try_lock().unwrap(), &pipeline_layout);
+        let pipeline = self.pipeline(&scene, &pipeline_layout);
         RenderObject {
             vertex_buffer,
             index_buffer,
@@ -156,9 +155,7 @@ pub struct Scene {
 mod buffer_handler;
 pub mod camera;
 pub mod light;
-//pub mod render_object;
 pub mod scene;
-//pub mod wgpumesher;
 pub mod render_polygon;
 
 fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>> (
