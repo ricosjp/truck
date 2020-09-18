@@ -984,7 +984,6 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     pub fn syncro_uvknots(&mut self) -> &mut Self {
         self.knot_vecs.0.normalize();
         self.knot_vecs.1.normalize();
-        
         let mut i = 0;
         let mut j = 0;
         while !self.uknot(i).near2(&1.0) || !self.vknot(j).near2(&1.0) {
@@ -1141,7 +1140,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// ```
     /// use truck_geometry::*;
     /// use std::iter::FromIterator;
-    /// 
+    ///
     /// // a parabola surface: x = 2u - 1, y = 2v - 1, z = x^2 + y^z
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
@@ -1150,13 +1149,13 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     ///     vec![Vector3::new(1.0, -1.0, 2.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(1.0, 1.0, 2.0)],
     /// ];
     /// let mut bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// 
+    ///
     /// // add some knots for the test!
     /// bspsurface.add_uknot(0.26);
     /// # bspsurface.add_uknot(0.64);
     /// bspsurface.add_vknot(0.23);
     /// # bspsurface.add_vknot(0.82);
-    /// 
+    ///
     /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
     /// let curve = bspsurface.sectional_curve(bnd_box);
     /// const N: usize = 100;
@@ -1201,16 +1200,18 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
             }
             let mut knot_vec = KnotVec::bezier_knot(degree * 2);
             knot_vec.translate(p as f64 - 1.0);
-            let ctrl_pts: Vec<_> = (0..=degree * 2).map(|k| {
-                (0..=k).fold(V::zero(), |sum, i| {
-                    if i <= degree && k - i <= degree {
-                        let coef = (comb[i] * comb[k - i]) as f64 / comb2[k] as f64;
-                        sum + bspsurface.control_points[i][k - i] * coef
-                    } else {
-                        sum
-                    }
+            let ctrl_pts: Vec<_> = (0..=degree * 2)
+                .map(|k| {
+                    (0..=k).fold(V::zero(), |sum, i| {
+                        if i <= degree && k - i <= degree {
+                            let coef = (comb[i] * comb[k - i]) as f64 / comb2[k] as f64;
+                            sum + bspsurface.control_points[i][k - i] * coef
+                        } else {
+                            sum
+                        }
+                    })
                 })
-            }).collect();
+                .collect();
             cc.concat(&mut BSplineCurve::new(knot_vec, ctrl_pts));
             if p + 1 != knots.len() {
                 bspsurface = backup.unwrap().vcut(knots[p]);
@@ -1491,8 +1492,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
                 let q = (j as f64) / (degree1 as f64);
                 let u = u0 * p + u1 * (1.0 - p);
                 let v = v0 * q + v1 * (1.0 - q);
-                let val_mid = bspsurface(u, v);
-                let par_mid = pt00 * p * q
+                let par_mid = bspsurface(u, v);
+                let val_mid = pt00 * p * q
                     + pt01 * p * (1.0 - q)
                     + pt10 * (1.0 - p) * q
                     + pt11 * (1.0 - p) * (1.0 - q);
@@ -1529,8 +1530,8 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         &self,
         tol: f64,
         dist2: F,
-        mut div0: &mut Vec<f64>,
-        mut div1: &mut Vec<f64>,
+        div0: &mut Vec<f64>,
+        div1: &mut Vec<f64>,
     )
     {
         let (mut degree0, mut degree1) = self.degrees();
@@ -1575,7 +1576,217 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         if div0.len() != new_div0.len() || div1.len() != new_div1.len() {
             *div0 = new_div0;
             *div1 = new_div1;
-            self.sub_create_space_division(tol, dist2, &mut div0, &mut div1);
+            self.sub_create_space_division(tol, dist2, div0, div1);
+        }
+    }
+    
+    /// Creates the surface division
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.5, 1.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(1.5, 6.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(1.0, 7.0, 2.0), Vector3::new(1.0, 3.0, 1.0)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let tol = 0.01;
+    /// let (div0, div1) = bspsurface.parameter_division(tol);
+    /// for i in 1..div0.len() {
+    ///     for j in 1..div1.len() {
+    ///         let pt0 = bspsurface.subs(div0[i - 1], div1[j - 1]);
+    ///         let pt1 = bspsurface.subs(div0[i - 1], div1[j]);
+    ///         let pt2 = bspsurface.subs(div0[i], div1[j - 1]);
+    ///         let pt3 = bspsurface.subs(div0[i], div1[j]);
+    ///         let value_middle = (pt0 + pt1 + pt2 + pt3) / 4.0;
+    ///         let u = (div0[i - 1] + div0[i]) / 2.0;
+    ///         let v = (div1[j - 1] + div1[j]) / 2.0;
+    ///         let parameter_middle = bspsurface.subs(u, v);
+    ///         println!("{}", value_middle.distance(parameter_middle));
+    ///         assert!(value_middle.distance(parameter_middle) < tol);
+    ///     }
+    /// }
+    /// ```
+    pub fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        self.create_space_division(tol, |v0, v1| v0.distance2(v1))
+    }
+    
+    /// Creates the surface division
+    pub fn rational_parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        self.create_space_division(tol, |v0, v1| {
+            v0.rational_projection().distance2(v1.rational_projection())
+        })
+    }
+
+    /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
+    /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 2.0)],
+    ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let pt = bspsurface.subs(0.3, 0.7);
+    /// let (u, v) = bspsurface.search_nearest_parameter(pt, (0.5, 0.5)).unwrap();
+    /// assert!(u.near2(&0.3) && v.near2(&0.7));
+    /// ```
+    /// # Remarks
+    /// It may converge to a local solution depending on the hint.
+    /// cf. [`BSplineCurve::search_nearest_parameter`](struct.BSplineCurve.html#method.search_nearest_parameter)
+    pub fn search_nearest_parameter(&self, pt: V, (u0, v0): (f64, f64))
+    -> Option<(f64, f64)> {
+        let uder = self.uderivation();
+        let vder = self.vderivation();
+        let uuder = uder.uderivation();
+        let uvder = uder.vderivation();
+        let vvder = vder.vderivation();
+        self.optimized_snp(&uder, &vder, &uuder, &uvder, &vvder, pt, (u0, v0))
+    }
+
+    fn optimized_snp(
+        &self,
+        uder: &Self,
+        vder: &Self,
+        uuder: &Self,
+        uvder: &Self,
+        vvder: &Self,
+        pt: V,
+        (u0, v0): (f64, f64),
+    ) -> Option<(f64, f64)>
+    {
+        self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u0, v0), 0)
+    }
+
+    fn sub_snp(
+        &self,
+        uder: &Self,
+        vder: &Self,
+        uuder: &Self,
+        uvder: &Self,
+        vvder: &Self,
+        pt: V,
+        (u0, v0): (f64, f64),
+        count: usize,
+    ) -> Option<(f64, f64)>
+    {
+        let s = self.subs(u0, v0);
+        let ud = uder.subs(u0, v0);
+        let vd = vder.subs(u0, v0);
+        let uud = uuder.subs(u0, v0);
+        let uvd = uvder.subs(u0, v0);
+        let vvd = vvder.subs(u0, v0);
+        let f_u = ud.dot(s - pt);
+        let f_v = vd.dot(s - pt);
+        let a = uud.dot(s - pt) + ud.dot(ud);
+        let c = uvd.dot(s - pt) + ud.dot(vd);
+        let b = vvd.dot(s - pt) + vd.dot(vd);
+        let det = a * b - c * c;
+        if det.so_small() {
+            return Some((u0, v0));
+        }
+        let u = u0 - (b * f_u - c * f_v) / det;
+        let v = v0 - (-c * f_u + a * f_v) / det;
+        if u.near(&u0) && v.near(&v0) {
+            Some((u, v))
+        } else if count == 100 {
+            None
+        } else {
+            self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u, v), count + 1)
+        }
+    }
+    
+    /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
+    /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(1.0, -2.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 2.0, 2.0), Vector3::new(2.0, 4.0, 4.0), Vector3::new(2.0, 2.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 4.0, 2.0), Vector3::new(2.0, 8.0, 4.0), Vector3::new(2.0, 4.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(1.0, 7.0, 2.0), Vector3::new(1.0, 3.0, 1.0)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let pt = bspsurface.subs(0.3, 0.7).rational_projection();
+    /// let (u, v) = bspsurface.search_rational_nearest_parameter(pt, (0.5, 0.5)).unwrap();
+    /// assert!(u.near2(&0.3) && v.near2(&0.7));
+    /// ```
+    /// # Remarks
+    /// It may converge to a local solution depending on the hint.
+    /// cf. [`BSplineCurve::search_rational_nearest_parameter`](struct.BSplineCurve.html#method.search_rational_nearest_parameter)
+    pub fn search_rational_nearest_parameter(&self, pt: V::Rationalized, (u0, v0): (f64, f64))
+    -> Option<(f64, f64)> {
+        let uder = self.uderivation();
+        let vder = self.vderivation();
+        let uuder = uder.uderivation();
+        let uvder = uder.vderivation();
+        let vvder = vder.vderivation();
+        self.optimized_srnp(&uder, &vder, &uuder, &uvder, &vvder, pt, (u0, v0))
+    }
+
+    fn optimized_srnp(
+        &self,
+        uder: &Self,
+        vder: &Self,
+        uuder: &Self,
+        uvder: &Self,
+        vvder: &Self,
+        pt: V::Rationalized,
+        (u0, v0): (f64, f64),
+    ) -> Option<(f64, f64)>
+    {
+        self.sub_srnp(uder, vder, uuder, uvder, vvder, pt, (u0, v0), 0)
+    }
+
+    fn sub_srnp(
+        &self,
+        uder: &Self,
+        vder: &Self,
+        uuder: &Self,
+        uvder: &Self,
+        vvder: &Self,
+        pt: V::Rationalized,
+        (u0, v0): (f64, f64),
+        count: usize,
+    ) -> Option<(f64, f64)>
+    {
+        let s = self.subs(u0, v0);
+        let rs = s.rational_projection();
+        let ud = uder.subs(u0, v0);
+        let rud = s.rational_derivation(ud);
+        let vd = vder.subs(u0, v0);
+        let rvd = s.rational_derivation(vd);
+        let uud = uuder.subs(u0, v0);
+        let ruud = s.rational_derivation2(ud, uud);
+        let uvd = uvder.subs(u0, v0);
+        let ruvd = s.rational_cross_derivation(ud, vd, uvd);
+        let vvd = vvder.subs(u0, v0);
+        let rvvd = s.rational_derivation2(vd, vvd);
+        let f_u = rud.dot(rs - pt);
+        let f_v = rvd.dot(rs - pt);
+        let a = ruud.dot(rs - pt) + rud.dot(rud);
+        let c = ruvd.dot(rs - pt) + rud.dot(rvd);
+        let b = rvvd.dot(rs - pt) + rvd.dot(rvd);
+        let det = a * b - c * c;
+        if det.so_small() {
+            return Some((u0, v0));
+        }
+        let u = u0 - (b * f_u - c * f_v) / det;
+        let v = v0 - (-c * f_u + a * f_v) / det;
+        if u.near(&u0) && v.near(&v0) {
+            Some((u, v))
+        } else if count == 100 {
+            None
+        } else {
+            self.sub_srnp(uder, vder, uuder, uvder, vvder, pt, (u, v), count + 1)
         }
     }
 
@@ -1776,10 +1987,6 @@ impl_mat_multi!(Vector4, Matrix4);
 impl_scalar_multi!(Vector4, f64);
 
 impl BSplineSurface<Vector3> {
-    /// Creates the surface division
-    pub fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        self.create_space_division(tol, |v0, v1| v0.distance2(v1))
-    }
     /// Returns the normal unit vector at the parameter `(u, v)`.
     pub fn normal_vector(&self, u: f64, v: f64) -> Vector3 {
         let der0 = self.uderivation().subs(u, v);
@@ -1806,12 +2013,6 @@ impl BSplineSurface<Vector3> {
 }
 
 impl BSplineSurface<Vector4> {
-    /// Creates the surface division
-    pub fn rational_parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        self.create_space_division(tol, |v0, v1| {
-            v0.rational_projection().distance2(v1.rational_projection())
-        })
-    }
     /// Returns the normal unit vector of rational surface at the parameter `(u, v)`.
     pub fn rational_normal_vector(&self, u: f64, v: f64) -> Vector3 {
         let pt = self.subs(u, v);

@@ -1,5 +1,5 @@
 [package]
-name = "truck_shape"
+name = "truck_modeling"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
@@ -8,9 +8,7 @@ edition = "2018"
 
 [dependencies]
 cgmath = "*"
-truck_geometry = {path = "../truck_geometry"}
-truck_topology = {path = "../truck_topology"}
-truck_polymesh = {path = "../truck_polymesh"}
+truck_integral = { path = "../truck_integral" }
 
 [dev-dependencies]
-truck_io = {path = "../truck_io"}
+rand = "*"
