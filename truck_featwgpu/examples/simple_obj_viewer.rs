@@ -53,10 +53,9 @@ impl MyApp {
         let mut mesh = PolygonInstance::new(mesh, scene.device());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
         mesh.matrix = mat.invert().unwrap();
-        mesh.color.ambient = Vector4::new(0.7, 0.7, 0.7, 1.0);
-        mesh.color.diffuse = Vector4::new(0.7, 0.7, 0.7, 1.0);
-        mesh.color.specular = Vector4::new(1.0, 1.0, 1.0, 1.0);
-        mesh.color.reflect_ratio = Vector3::new(0.2, 0.6, 0.2);
+        mesh.material.albedo = Vector4::new(0.75, 0.75, 0.75, 1.0);
+        mesh.material.reflectance = 0.9;
+        mesh.material.roughness = 0.1;
         scene.add_object(&mesh);
     }
 }

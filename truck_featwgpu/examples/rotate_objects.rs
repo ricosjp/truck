@@ -70,10 +70,6 @@ impl MyRender {
         for _ in 0..NUM_OF_OBJECTS {
             let mut instance = original_mesh.clone();
             instance.matrix = mat;
-            instance.color.ambient = Vector4::new(1.0, 1.0, 1.0, 1.0);
-            instance.color.diffuse = Vector4::new(1.0, 1.0, 1.0, 1.0);
-            instance.color.specular = Vector4::new(1.0, 1.0, 1.0, 1.0);
-            instance.color.reflect_ratio = Vector3::new(0.2, 0.6, 0.2);
             scene.add_object(&instance);
             self.instances.push(instance);
             mat = Matrix4::from_axis_angle(Vector3::unit_y(), rad) * mat;
@@ -98,11 +94,10 @@ impl MyRender {
             let mat = Matrix4::from_translation(move_vec);
             instance.matrix = mat * instance.matrix;
             let color = Self::calculate_color(x / 14.0 + 0.5);
-            instance.color = ColorConfig {
-                ambient: color,
-                diffuse: color,
-                specular: Vector4::new(1.0, 1.0, 1.0, 1.0),
-                reflect_ratio: Vector3::new(0.2, 0.6, 0.2),
+            instance.material = Material {
+                albedo: color,
+                roughness: (0.5 + (time / 5.0).sin() / 2.0),
+                reflectance: 0.04 + 0.96 * (0.5 + (time / 2.0).sin() / 2.0),
             };
             self.scene.update_bind_group(&*instance, idx);
         }
