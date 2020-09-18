@@ -73,7 +73,9 @@ vec3 specular_brdf(vec3 camera_dir, vec3 light_dir) {
         fresnel(specular_color[1], middle, camera_dir),
         fresnel(specular_color[2], middle, camera_dir)
     );
-    float denom = 4.0 * clamp(dot(camera_dir, normal), 0.0, 1.0) * clamp(dot(light_dir, normal), 0.0, 1.0);
+    float dotCN = clamp(dot(camera_dir, normal), 0.0, 1.0);
+    float dotLN = clamp(dot(light_dir, normal), 0.0, 1.0);
+    float denom = 4.0 * dotCN * dotLN;
     if (denom == 0.0) {
         return vec3(0.0, 0.0, 0.0);
     }

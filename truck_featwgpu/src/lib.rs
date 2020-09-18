@@ -61,6 +61,7 @@ pub struct PolygonInstance {
     pub matrix: Matrix4,
     pub material: Material,
     pub texture: Option<Arc<DynamicImage>>,
+    pub bf_culling: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -78,8 +79,7 @@ pub trait Rendered {
     fn bind_group(&self, scene: &Scene, layout: &BindGroupLayout) -> Arc<BindGroup>;
     fn pipeline(
         &self,
-        device: &Device,
-        sc_desc: &SwapChainDescriptor,
+        scene: &Scene,
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>;
     fn render_object(&self, scene: &Scene) -> RenderObject {
@@ -93,7 +93,7 @@ pub trait Rendered {
                 push_constant_ranges: &[],
                 label: None,
             });
-        let pipeline = self.pipeline(&scene.device, &scene.sc_desc.try_lock().unwrap(), &pipeline_layout);
+        let pipeline = self.pipeline(&scene, &pipeline_layout);
         RenderObject {
             vertex_buffer,
             index_buffer,
@@ -155,9 +155,7 @@ pub struct Scene {
 mod buffer_handler;
 pub mod camera;
 pub mod light;
-//pub mod render_object;
 pub mod scene;
-//pub mod wgpumesher;
 pub mod render_polygon;
 
 fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>> (

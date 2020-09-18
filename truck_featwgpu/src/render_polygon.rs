@@ -45,7 +45,6 @@ impl Material {
             self.albedo[3] as f32,
             self.roughness as f32,
             self.reflectance as f32,
-            
         ];
         BufferHandler::new(
             device.create_buffer_init(&BufferInitDescriptor {
@@ -66,17 +65,24 @@ impl PolygonInstance {
             matrix: Matrix4::identity(),
             material: Default::default(),
             texture: None,
+            bf_culling: true,
         }
     }
     pub fn pipeline_with_shader(
         &self,
         vertex_shader: ShaderModuleSource,
         fragment_shader: ShaderModuleSource,
-        device: &Device,
-        sc_desc: &SwapChainDescriptor,
+        scene: &Scene,
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>
     {
+        let device = scene.device();
+        let sc_desc = scene.sc_desc();
+        let cull_mode = if self.bf_culling {
+            CullMode::Back
+        } else {
+            CullMode::None
+        };
         let vertex_module = device.create_shader_module(vertex_shader);
         let fragment_module = device.create_shader_module(fragment_shader);
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
@@ -91,7 +97,7 @@ impl PolygonInstance {
             }),
             rasterization_state: Some(RasterizationStateDescriptor {
                 front_face: FrontFace::Ccw,
-                cull_mode: CullMode::None,
+                cull_mode,
                 depth_bias: 0,
                 depth_bias_slope_scale: 0.0,
                 depth_bias_clamp: 0.0,
@@ -307,7 +313,6 @@ impl PolygonInstance {
             ],
         )
     }
-    
     fn textured_bg(&self, device: &Device, queue: &Queue, layout: &BindGroupLayout) -> BindGroup {
         let (view, sampler) = self.textureview_and_sampler(device, queue);
         crate::create_bind_group(
@@ -348,8 +353,7 @@ impl Rendered for PolygonInstance {
     }
     fn pipeline(
         &self,
-        device: &Device,
-        sc_desc: &SwapChainDescriptor,
+        scene: &Scene,
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>
     {
@@ -359,13 +363,7 @@ impl Rendered for PolygonInstance {
         } else {
             include_spirv!("shaders/polygon.frag.spv")
         };
-        self.pipeline_with_shader(
-            vertex_shader,
-            fragment_shader,
-            device,
-            sc_desc,
-            layout,
-        )
+        self.pipeline_with_shader(vertex_shader, fragment_shader, scene, layout)
     }
 }
 

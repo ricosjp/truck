@@ -77,7 +77,8 @@ impl Scene {
 
     #[inline(always)]
     pub fn update_depth_texture(&mut self) {
-        let depth_texture = Self::default_depth_texture(&self.device, &self.sc_desc.try_lock().unwrap());
+        let depth_texture =
+            Self::default_depth_texture(&self.device, &self.sc_desc.try_lock().unwrap());
         self.foward_depth = depth_texture.create_view(&Default::default());
     }
 
@@ -87,7 +88,12 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn new(device: &Arc<Device>, queue: &Arc<Queue>, sc_desc: &Arc<Mutex<SwapChainDescriptor>>) -> Scene {
+    pub fn new(
+        device: &Arc<Device>,
+        queue: &Arc<Queue>,
+        sc_desc: &Arc<Mutex<SwapChainDescriptor>>,
+    ) -> Scene
+    {
         let depth_texture = Self::default_depth_texture(&device, &sc_desc.try_lock().unwrap());
         Scene {
             device: Arc::clone(device),
@@ -114,6 +120,9 @@ impl Scene {
 
     #[inline(always)]
     pub fn queue(&self) -> &Queue { &self.queue }
+
+    #[inline(always)]
+    pub fn sc_desc(&self) -> SwapChainDescriptor { self.sc_desc.lock().unwrap().clone() }
 
     #[inline(always)]
     pub fn add_object<R: Rendered>(&mut self, object: &R) -> usize {
