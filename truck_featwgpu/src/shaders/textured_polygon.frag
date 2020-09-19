@@ -44,7 +44,7 @@ vec3 light_direction() {
 }
 
 vec3 light_irradiance(vec3 light_dir) {
-    return light_color * clamp(dot(light_dir, vertex_normal), 0.0, 1.0);
+    return light_color * clamp(dot(light_dir, normal), 0.0, 1.0);
 }
 
 vec3 diffuse_brdf() {
