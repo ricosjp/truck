@@ -1,13 +1,16 @@
 use crate::*;
 
 impl Light {
-    pub fn buffer(&self, device: &Device) -> BufferHandler {
-        let light_info = LightInfo {
-            light_position: (&self.position).cast().unwrap().into(),
-            light_strength: self.strength as f32,
-            light_color: self.color.cast().unwrap().into(),
+    pub(super) fn light_info(&self) -> LightInfo {
+        LightInfo {
+            light_position: self.position.to_homogeneous().cast().unwrap().into(),
+            light_color: self.color.cast().unwrap().extend(1.0).into(),
             light_type: self.light_type.type_id(),
-        };
+        }
+    }
+
+    pub fn buffer(&self, device: &Device) -> BufferHandler {
+        let light_info = self.light_info();
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             contents: bytemuck::cast_slice(&[light_info]),
             usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
@@ -22,7 +25,6 @@ impl Default for Light {
     fn default() -> Light {
         Light {
             position: Point3::origin(),
-            strength: 1.0,
             color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
         }

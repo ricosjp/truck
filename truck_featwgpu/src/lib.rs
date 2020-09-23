@@ -34,13 +34,20 @@ unsafe impl Pod for CameraInfo {}
 
 #[derive(Clone, Copy, Debug)]
 struct LightInfo {
-    light_position: [f32; 3],
-    light_strength: f32,
-    light_color: [f32; 3],
+    light_position: [f32; 4],
+    light_color: [f32; 4],
     light_type: i32,
 }
 unsafe impl Zeroable for LightInfo {}
 unsafe impl Pod for LightInfo {}
+
+#[derive(Clone, Copy, Debug)]
+struct SceneInfo {
+    time: f32,
+    num_of_lights: u32,
+}
+unsafe impl Zeroable for SceneInfo {}
+unsafe impl Pod for SceneInfo {}
 
 #[derive(Debug, Clone)]
 pub struct ExpandedPolygon {
@@ -126,7 +133,6 @@ pub enum LightType {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Light {
     pub position: Point3,
-    pub strength: f64,
     pub color: Vector3,
     pub light_type: LightType,
 }
@@ -149,7 +155,7 @@ pub struct Scene {
     clock: std::time::Instant,
     pub back_ground: Color,
     pub camera: Camera,
-    pub light: Light,
+    pub lights: Vec<Light>,
 }
 
 mod buffer_handler;

@@ -96,12 +96,11 @@ impl App for MyApp {
             thread,
         };
         render.scene.camera = MyApp::init_camera();
-        render.scene.light = Light {
+        render.scene.lights.push(Light {
             position: Point3::new(0.5, 2.0, 0.5),
-            strength: 1.0,
             color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
-        };
+        });
         render
     }
 

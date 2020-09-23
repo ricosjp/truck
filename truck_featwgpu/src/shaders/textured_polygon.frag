@@ -9,11 +9,13 @@ layout(set = 0, binding = 0) uniform Camera {
     mat4 camera_projection;
 };
 
-layout(set = 0, binding = 1) uniform Light {
-    vec3 light_position;
-    float light_strength;
-    vec3 light_color;
-    int light_type;
+layout(set = 0, binding = 1) buffer Lights {
+    vec4 lights[];
+};
+
+layout(set = 0, binding = 2) uniform Scene {
+    float _time;
+    uint nlights;
 };
 
 layout(set = 1, binding = 1) uniform Material {
@@ -35,7 +37,7 @@ vec4 textured_material() {
     else return texture(sampler2D(texture_view, texture_sampler), uv);
 }
 
-vec3 light_direction() {
+vec3 light_direction(vec3 light_position, uint light_type) {
     if (light_type == 0) {
         return normalize(light_position - vertex_position);
     } else {
@@ -43,8 +45,8 @@ vec3 light_direction() {
     }
 }
 
-vec3 light_irradiance(vec3 light_dir) {
-    return light_color * clamp(dot(light_dir, normal), 0.0, 1.0);
+vec3 light_irradiance(vec3 light_dir, vec3 light_color) {
+    return light_color * clamp(dot(light_dir, vertex_normal), 0.0, 1.0);
 }
 
 vec3 diffuse_brdf() {
@@ -83,7 +85,9 @@ vec3 specular_brdf(vec3 camera_dir, vec3 light_dir) {
         fresnel(specular_color[1], middle, camera_dir),
         fresnel(specular_color[2], middle, camera_dir)
     );
-    float denom = 4.0 * clamp(dot(camera_dir, normal), 0.0, 1.0) * clamp(dot(light_dir, normal), 0.0, 1.0);
+    float dotCN = clamp(dot(camera_dir, normal), 0.0, 1.0);
+    float dotLN = clamp(dot(light_dir, normal), 0.0, 1.0);
+    float denom = 4.0 * dotCN * dotLN;
     if (denom == 0.0) {
         return vec3(0.0, 0.0, 0.0);
     }
@@ -92,10 +96,17 @@ vec3 specular_brdf(vec3 camera_dir, vec3 light_dir) {
 
 void main() {
     albedo = textured_material();
-    vec3 camera_dir = normalize(camera_matrix[3].xyz - vertex_position);
-    vec3 light_dir = light_direction();
-    vec3 irradiance = light_irradiance(light_dir);
-    vec3 diffuse = diffuse_brdf();
-    vec3 specular = specular_brdf(camera_dir, light_dir);
-    color = vec4((diffuse + specular) * irradiance * 0.98 + albedo.xyz * 0.02, 1.0);
+    vec3 pre_color = vec3(0.0, 0.0, 0.0);
+    for (uint i = 0; i < nlights; i++) {
+        vec3 light_position = lights[3 * i].xyz;
+        vec3 light_color = lights[3 * i + 1].xyz;
+        uint light_type = uint(lights[3 * i + 2][0]);
+        vec3 camera_dir = normalize(camera_matrix[3].xyz - vertex_position);
+        vec3 light_dir = light_direction(light_position, light_type);
+        vec3 irradiance = light_irradiance(light_dir, light_color);
+        vec3 diffuse = diffuse_brdf();
+        vec3 specular = specular_brdf(camera_dir, light_dir);
+        pre_color += (diffuse + specular) * irradiance * 0.98 + albedo.xyz * 0.02;
+    }
+    color = vec4(pre_color, 1.0);
 }
