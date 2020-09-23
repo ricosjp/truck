@@ -169,7 +169,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
 
     /// Returns the mutable reference of the control point corresponding to index `(idx0, idx1)`.
     #[inline(always)]
-    pub fn control_point_mut(&mut self, idx0: usize, idx1: usize) -> &mut V {
+    pub fn control_points_mut(&mut self, idx0: usize, idx1: usize) -> &mut V {
         &mut self.control_points[idx0][idx1]
     }
     /// Returns the bounding box including all control points.
@@ -1693,7 +1693,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
         }
         let u = u0 - (b * f_u - c * f_v) / det;
         let v = v0 - (-c * f_u + a * f_v) / det;
-        if u.near(&u0) && v.near(&v0) {
+        if u.near2(&u0) && v.near2(&v0) {
             Some((u, v))
         } else if count == 100 {
             None
