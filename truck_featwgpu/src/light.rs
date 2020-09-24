@@ -5,7 +5,7 @@ impl Light {
         LightInfo {
             light_position: self.position.to_homogeneous().cast().unwrap().into(),
             light_color: self.color.cast().unwrap().extend(1.0).into(),
-            light_type: self.light_type.type_id(),
+            light_type: [self.light_type.type_id() as u32, 0, 0, 0],
         }
     }
 

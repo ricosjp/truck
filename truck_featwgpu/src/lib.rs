@@ -36,7 +36,7 @@ unsafe impl Pod for CameraInfo {}
 struct LightInfo {
     light_position: [f32; 4],
     light_color: [f32; 4],
-    light_type: i32,
+    light_type: [u32; 4],
 }
 unsafe impl Zeroable for LightInfo {}
 unsafe impl Pod for LightInfo {}

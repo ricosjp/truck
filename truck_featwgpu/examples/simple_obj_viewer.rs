@@ -72,11 +72,11 @@ impl App for MyApp {
             light_changed: None,
         };
         render.scene.camera = MyApp::create_camera();
-        render.scene.lights = vec![Light {
+        render.scene.lights.push(Light {
             position: Point3::new(1.0, 1.0, 1.0),
             color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
-        }];
+        });
         render
     }
 

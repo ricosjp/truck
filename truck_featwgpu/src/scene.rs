@@ -171,20 +171,16 @@ impl Scene {
     }
 
     pub fn lights_buffer(&self) -> BufferHandler {
-        let mut light_vec: Vec<[f32; 4]> = Vec::new();
+        let mut light_vec: Vec<LightInfo> = Vec::new();
         for light in &self.lights {
-            light_vec.push(light.position.to_homogeneous().cast().unwrap().into());
-            light_vec.push(light.color.extend(1.0).cast().unwrap().into());
-            light_vec.push(
-                [light.light_type.type_id() as f32, 0.0, 0.0, 0.0]
-            );
+            light_vec.push(light.light_info());
         }
         let buffer = self.device.create_buffer_init(&BufferInitDescriptor {
             contents: bytemuck::cast_slice(&light_vec),
             usage: BufferUsage::STORAGE,
             label: None,
         });
-        BufferHandler::new(buffer, (light_vec.len() * std::mem::size_of::<[f32; 4]>()) as u64)
+        BufferHandler::new(buffer, (light_vec.len() * std::mem::size_of::<LightInfo>()) as u64)
     }
 
     pub fn render_scene(&self, sc_texture: &SwapChainTexture) {
