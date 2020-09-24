@@ -8,8 +8,14 @@ layout(set = 0, binding = 0) uniform Camera {
     mat4 camera_projection;
 };
 
+struct Light {
+    vec4 position;
+    vec4 color;
+    uvec4 light_type;
+};
+
 layout(set = 0, binding = 1) buffer Lights {
-    vec4 lights[];
+    Light lights[];
 };
 
 layout(set = 0, binding = 2) uniform Scene {
@@ -87,9 +93,9 @@ vec3 specular_brdf(vec3 camera_dir, vec3 light_dir) {
 void main() {
     vec3 pre_color = vec3(0.0, 0.0, 0.0);
     for (uint i = 0; i < nlights; i++) {
-        vec3 light_position = lights[3 * i].xyz;
-        vec3 light_color = lights[3 * i + 1].xyz;
-        uint light_type = uint(lights[3 * i + 2][0]);
+        vec3 light_position = lights[i].position.xyz;
+        vec3 light_color = lights[i].color.xyz;
+        uint light_type = lights[i].light_type[0];
         vec3 camera_dir = normalize(camera_matrix[3].xyz - vertex_position);
         vec3 light_dir = light_direction(light_position, light_type);
         vec3 irradiance = light_irradiance(light_dir, light_color);
