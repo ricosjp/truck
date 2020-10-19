@@ -169,7 +169,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
 
     /// Returns the mutable reference of the control point corresponding to index `(idx0, idx1)`.
     #[inline(always)]
-    pub fn control_points_mut(&mut self, idx0: usize, idx1: usize) -> &mut V {
+    pub fn control_point_mut(&mut self, idx0: usize, idx1: usize) -> &mut V {
         &mut self.control_points[idx0][idx1]
     }
     /// Returns the bounding box including all control points.
