@@ -1579,7 +1579,6 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
             self.sub_create_space_division(tol, dist2, div0, div1);
         }
     }
-    
     /// Creates the surface division
     /// # Examples
     /// ```
@@ -1612,7 +1611,6 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     pub fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
         self.create_space_division(tol, |v0, v1| v0.distance2(v1))
     }
-    
     /// Creates the surface division
     pub fn rational_parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
         self.create_space_division(tol, |v0, v1| {
@@ -1640,8 +1638,7 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// cf. [`BSplineCurve::search_nearest_parameter`](struct.BSplineCurve.html#method.search_nearest_parameter)
-    pub fn search_nearest_parameter(&self, pt: V, (u0, v0): (f64, f64))
-    -> Option<(f64, f64)> {
+    pub fn search_nearest_parameter(&self, pt: V, (u0, v0): (f64, f64)) -> Option<(f64, f64)> {
         let uder = self.uderivation();
         let vder = self.vderivation();
         let uuder = uder.uderivation();
@@ -1701,7 +1698,6 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
             self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u, v), count + 1)
         }
     }
-    
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
     /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
     /// # Examples
@@ -1722,8 +1718,12 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// cf. [`BSplineCurve::search_rational_nearest_parameter`](struct.BSplineCurve.html#method.search_rational_nearest_parameter)
-    pub fn search_rational_nearest_parameter(&self, pt: V::Rationalized, (u0, v0): (f64, f64))
-    -> Option<(f64, f64)> {
+    pub fn search_rational_nearest_parameter(
+        &self,
+        pt: V::Rationalized,
+        (u0, v0): (f64, f64),
+    ) -> Option<(f64, f64)>
+    {
         let uder = self.uderivation();
         let vder = self.vderivation();
         let uuder = uder.uderivation();
@@ -1986,7 +1986,160 @@ impl_scalar_multi!(Vector3, f64);
 impl_mat_multi!(Vector4, Matrix4);
 impl_scalar_multi!(Vector4, f64);
 
+impl BSplineSurface<Vector2> {
+    /// Serach the parameter `(u, v)` such that `self.subs(u, v)` is near `pt`.
+    /// If cannot find, then return `None`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(2, 3);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.1, 0.0), Vector2::new(0.5, 0.0), Vector2::new(0.7, 0.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 0.1), Vector2::new(0.2, 0.2), Vector2::new(0.4, 0.3), Vector2::new(0.6, 0.2), Vector2::new(1.0, 0.3)],
+    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.3, 0.6), Vector2::new(0.6, 0.4), Vector2::new(0.9, 0.6), Vector2::new(1.0, 0.5)],
+    ///     vec![Vector2::new(0.0, 0.7), Vector2::new(0.2, 0.8), Vector2::new(0.3, 0.6), Vector2::new(0.5, 0.9), Vector2::new(1.0, 0.7)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.1, 1.0), Vector2::new(0.5, 1.0), Vector2::new(0.7, 1.0), Vector2::new(1.0, 1.0)],
+    /// ];
+    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    ///
+    /// let pt = Vector2::new(0.3, 0.7);
+    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
+    /// Vector2::assert_near2(&surface.subs(u, v), &pt);
+    /// ```
+    pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
+        let uder = self.uderivation();
+        let vder = self.vderivation();
+        self.sub_search_parameter(&uder, &vder, pt, hint.into(), 0)
+            .map(move |res| res.into())
+    }
+
+    fn sub_search_parameter(
+        &self,
+        uder: &BSplineSurface<Vector2>,
+        vder: &BSplineSurface<Vector2>,
+        pt0: Vector2,
+        hint: Vector2,
+        count: usize,
+    ) -> Option<Vector2>
+    {
+        if count == 100 {
+            return None;
+        }
+        let (u0, v0) = (hint[0], hint[1]);
+        let pt = self.subs(u0, v0);
+        let jacobi = Matrix2::from_cols(uder.subs(u0, v0), vder.subs(u0, v0));
+        let res = jacobi.invert().map(move |inv| hint - inv * (pt - pt0));
+        match res {
+            Some(entity) => match self.subs(entity[0], entity[1]).near(&pt0) {
+                true => res,
+                false => self.sub_search_parameter(uder, vder, pt0, entity, count + 1),
+            },
+            None => res,
+        }
+    }
+}
+
 impl BSplineSurface<Vector3> {
+    /// Serach the parameter `(u, v)` such that `self.subs(u, v)` is near `pt`.
+    /// If cannot find, then return `None`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(2, 2);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.1, 0.0, 0.5), Vector3::new(0.5, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 0.1, 0.1), Vector3::new(0.2, 0.2, 0.1), Vector3::new(0.4, 0.3, 0.4), Vector3::new(1.0, 0.3, 0.7)],
+    ///     vec![Vector3::new(0.0, 0.5, 0.4), Vector3::new(0.3, 0.6, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(1.0, 0.5, 0.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
+    /// ];
+    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    ///
+    /// let pt = surface.subs(0.32, 0.76);
+    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
+    /// Vector3::assert_near2(&surface.subs(u, v), &pt);
+    ///
+    /// let pt = surface.subs(0.32, 0.76) + Vector3::new(0.0, 0.0, 0.001);
+    /// assert!(surface.search_parameter(pt, (0.5, 0.5)).is_none());
+    /// ```
+    pub fn search_parameter(&self, pt: Vector3, hint: (f64, f64)) -> Option<(f64, f64)> {
+        let normal = self.normal_vector(hint.0, hint.1);
+        let tmp = if normal[0] < normal[1] { 0 } else { 1 };
+        let min = if normal[tmp] < normal[2] { tmp } else { 2 };
+        let idx0 = (min + 1) % 3;
+        let idx1 = (min + 2) % 3;
+        let knot_vecs = self.knot_vecs().clone();
+        let control_points: Vec<Vec<_>> = self
+            .control_points()
+            .iter()
+            .map(move |vec| {
+                vec.iter()
+                    .map(move |pt| Vector2::new(pt[idx0], pt[idx1]))
+                    .collect()
+            })
+            .collect();
+        let newsurface = BSplineSurface::new(knot_vecs, control_points);
+        let newpt = Vector2::new(pt[idx0], pt[idx1]);
+        newsurface
+            .search_parameter(newpt, hint)
+            .filter(|(u, v)| self.subs(*u, *v).near(&pt))
+    }
+
+    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
+    /// If cannot find, then return `None`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(2, 2);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.1, 0.0, 0.5), Vector3::new(0.5, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 0.1, 0.1), Vector3::new(0.2, 0.2, 0.1), Vector3::new(0.4, 0.3, 0.4), Vector3::new(1.0, 0.3, 0.7)],
+    ///     vec![Vector3::new(0.0, 0.5, 0.4), Vector3::new(0.3, 0.6, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(1.0, 0.5, 0.4)],
+    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
+    /// ];
+    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    ///
+    /// let pt = surface.subs(0.3, 0.7).rational_projection();
+    /// let (u, v) = surface.search_rational_parameter(pt, (0.5, 0.5)).unwrap();
+    /// Vector2::assert_near2(&surface.subs(u, v).rational_projection(), &pt);
+    /// ```
+    pub fn search_rational_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
+        let uder = self.uderivation();
+        let vder = self.vderivation();
+        self.sub_search_rational_parameter(&uder, &vder, pt, hint.into(), 0)
+            .map(|res| res.into())
+    }
+
+    fn sub_search_rational_parameter(
+        &self,
+        uder: &BSplineSurface<Vector3>,
+        vder: &BSplineSurface<Vector3>,
+        pt0: Vector2,
+        hint: Vector2,
+        count: usize,
+    ) -> Option<Vector2>
+    {
+        if count == 100 {
+            return None;
+        }
+        let (u0, v0) = (hint[0], hint[1]);
+        let pt = self.subs(u0, v0);
+        let ud = pt.rational_derivation(uder.subs(u0, v0));
+        let vd = pt.rational_derivation(vder.subs(u0, v0));
+        let pt = pt.rational_projection() - pt0;
+        let jacobi = Matrix2::from_cols(ud, vd);
+        let res = jacobi.invert().map(|inv| hint - inv * pt);
+        match res {
+            Some(entity) => {
+                if Tolerance::near(&entity, &hint) {
+                    res
+                } else {
+                    self.sub_search_rational_parameter(uder, vder, pt0, entity, count + 1)
+                }
+            }
+            None => res,
+        }
+    }
+
     /// Returns the normal unit vector at the parameter `(u, v)`.
     pub fn normal_vector(&self, u: f64, v: f64) -> Vector3 {
         let der0 = self.uderivation().subs(u, v);
@@ -2013,6 +2166,46 @@ impl BSplineSurface<Vector3> {
 }
 
 impl BSplineSurface<Vector4> {
+    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
+    /// If cannot find, then return `None`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(2, 2);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector4::new(0.0, 0.0, 0.0, 1.0), Vector4::new(0.1, 0.0, 0.5, 0.4), Vector4::new(0.5, 0.0, 0.3, 2.0), Vector4::new(1.0, 0.0, 1.0, 0.4)],
+    ///     vec![Vector4::new(0.0, 0.1, 0.1, 2.0), Vector4::new(0.2, 0.2, 0.1, 1.2), Vector4::new(0.4, 0.3, 0.4, 0.6), Vector4::new(1.0, 0.3, 0.7, 1.4)],
+    ///     vec![Vector4::new(0.0, 0.5, 0.4, 3.0), Vector4::new(0.3, 0.6, 0.5, 3.4), Vector4::new(0.6, 0.4, 1.0, 0.7), Vector4::new(1.0, 0.5, 0.0, 0.6)],
+    ///     vec![Vector4::new(0.0, 1.0, 1.0, 1.0), Vector4::new(0.1, 1.0, 1.0, 2.0), Vector4::new(0.5, 1.0, 0.5, 1.7), Vector4::new(1.0, 1.0, 0.3, 1.0)],
+    /// ];
+    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    ///
+    /// let pt = surface.subs(0.3, 0.7).rational_projection();
+    /// let (u, v) = surface.search_rational_parameter(pt, (0.5, 0.5)).unwrap();
+    /// Vector3::assert_near2(&surface.subs(u, v).rational_projection(), &pt);
+    /// ```
+    pub fn search_rational_parameter(&self, pt: Vector3, hint: (f64, f64)) -> Option<(f64, f64)> {
+        let normal = self.rational_normal_vector(hint.0, hint.1);
+        let tmp = if normal[0] < normal[1] { 0 } else { 1 };
+        let min = if normal[tmp] < normal[2] { tmp } else { 2 };
+        let idx0 = (min + 1) % 3;
+        let idx1 = (min + 2) % 3;
+        let knot_vecs = self.knot_vecs().clone();
+        let control_points: Vec<Vec<_>> = self
+            .control_points()
+            .iter()
+            .map(move |vec| {
+                vec.iter()
+                    .map(move |pt| Vector3::new(pt[idx0], pt[idx1], pt[3]))
+                    .collect()
+            })
+            .collect();
+        let newsurface = BSplineSurface::new(knot_vecs, control_points);
+        let newpt = Vector2::new(pt[idx0], pt[idx1]);
+        newsurface
+            .search_rational_parameter(newpt, hint)
+            .filter(|(u, v)| self.subs(*u, *v).rational_projection().near(&pt))
+    }
     /// Returns the normal unit vector of rational surface at the parameter `(u, v)`.
     pub fn rational_normal_vector(&self, u: f64, v: f64) -> Vector3 {
         let pt = self.subs(u, v);
