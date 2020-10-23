@@ -13,7 +13,7 @@ cgmath = "*"
 futures = "*"
 image = "*"
 truck_polymesh = {path = "../truck_polymesh"}
-truck_geometry = {path = "../truck_geometry"}
+truck_modeling = {path = "../truck_modeling"}
 wgpu = "*"
 
 [build-dependencies]

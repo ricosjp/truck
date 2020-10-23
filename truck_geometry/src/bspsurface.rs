@@ -2321,12 +2321,12 @@ impl BSplineSurface<Vector3> {
             for j in 1..=degree {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
-                let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint) {
+                let pt = curve.subs(t).rational_projection();
+                hint = match self.search_rational_parameter(pt, hint) {
                     Some(got) => got,
                     None => return false,
                 };
-                if !self.subs(hint.0, hint.1).near(&pt) {
+                if !self.subs(hint.0, hint.1).rational_projection().near(&pt) {
                     return false;
                 } else if hint.0 < uknot_vec[0] - TOLERANCE
                     || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
@@ -2414,6 +2414,65 @@ impl BSplineSurface<Vector4> {
             })
             .collect()
     }
+    /// Returns whether the curve `curve` is included in the surface `surface`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(2, 3);
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.1, 0.0), Vector2::new(0.5, 0.0), Vector2::new(0.7, 0.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 0.1), Vector2::new(0.2, 0.2), Vector2::new(0.4, 0.3), Vector2::new(0.6, 0.2), Vector2::new(1.0, 0.3)],
+    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.3, 0.6), Vector2::new(0.6, 0.4), Vector2::new(0.9, 0.6), Vector2::new(1.0, 0.5)],
+    ///     vec![Vector2::new(0.0, 0.7), Vector2::new(0.2, 0.8), Vector2::new(0.3, 0.6), Vector2::new(0.5, 0.9), Vector2::new(1.0, 0.7)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.1, 1.0), Vector2::new(0.5, 1.0), Vector2::new(0.7, 1.0), Vector2::new(1.0, 1.0)],
+    /// ];
+    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    ///
+    /// let knot_vec0 = KnotVec::bezier_knot(2);
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(0.0, 1.0)];
+    /// let curve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
+    /// assert!(surface.include(&curve0));
+    ///
+    /// let knot_vec1 = KnotVec::bezier_knot(2);
+    /// let ctrl_pts1 = vec![Vector2::new(0.0, 0.0), Vector2::new(2.5, 1.0), Vector2::new(0.0, 1.0)];
+    /// let curve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
+    /// assert!(!surface.include(&curve1));
+    /// ```
+    pub fn rational_include(&self, curve: &BSplineCurve<Vector4>) -> bool {
+        let pt = curve.subs(curve.knot_vec()[0]).rational_projection();
+        let mut hint = self.rational_presearch(pt);
+        hint = match self.search_rational_parameter(pt, hint) {
+            Some(got) => got,
+            None => return false,
+        };
+        let uknot_vec = self.uknot_vec();
+        let vknot_vec = self.vknot_vec();
+        let degree = curve.degree() * 6;
+        let (knots, _) = curve.knot_vec().to_single_multi();
+        for i in 1..knots.len() {
+            for j in 1..=degree {
+                let p = j as f64 / degree as f64;
+                let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
+                let pt = curve.subs(t).rational_projection();
+                hint = match self.search_rational_parameter(pt, hint) {
+                    Some(got) => got,
+                    None => return false,
+                };
+                if !self.subs(hint.0, hint.1).rational_projection().near(&pt) {
+                    return false;
+                } else if hint.0 < uknot_vec[0] - TOLERANCE
+                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
+                {
+                    return false;
+                } else if hint.1 < vknot_vec[0] - TOLERANCE
+                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
+                {
+                    return false;
+                }
+            }
+        }
+        true
+    }    
 }
 
 macro_rules! impl_mat_multi {

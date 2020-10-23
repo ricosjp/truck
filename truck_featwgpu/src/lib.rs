@@ -2,18 +2,16 @@ extern crate bytemuck;
 extern crate cgmath;
 extern crate futures;
 extern crate image;
-extern crate truck_geometry as geometry;
+extern crate truck_modeling as modeling;
 extern crate truck_polymesh as polymesh;
 extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
-pub use geometry::*;
+pub use modeling::geometry::*;
 pub use polymesh::PolygonMesh;
 use std::sync::{Arc, Mutex};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
-
-pub type BSplineSurface = geometry::BSplineSurface<Vector4>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct AttrVertex {
