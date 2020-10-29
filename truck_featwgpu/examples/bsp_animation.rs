@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 use std::thread::*;
 use truck_featwgpu::*;
-use truck_geometry::KnotVec;
 use wgpu::*;
 mod app;
 use app::*;

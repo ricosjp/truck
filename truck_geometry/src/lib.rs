@@ -18,11 +18,11 @@ extern crate serde;
 use std::fmt::Debug;
 
 use serde::{Serialize, Deserialize};
-pub use cgmath::prelude::*;
 
 /// Redefines vectors, matrices or points with scalar = f64.
 pub mod cgmath64 {
     use crate::*;
+    pub use cgmath::prelude::*;
     macro_rules! f64_type {
         ($typename: ident) => {
             /// redefinition, scalar = f64
