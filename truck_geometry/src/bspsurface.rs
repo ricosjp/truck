@@ -172,6 +172,13 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     pub fn control_point_mut(&mut self, idx0: usize, idx1: usize) -> &mut V {
         &mut self.control_points[idx0][idx1]
     }
+
+    /// Returns the iterator on all control points
+    #[inline(always)]
+    pub fn control_points_mut(&mut self) -> impl Iterator<Item = &mut V> {
+        self.control_points.iter_mut().flatten()
+    }
+
     /// Returns the bounding box including all control points.
     #[inline(always)]
     pub fn roughly_bounding_box(&self) -> BoundingBox<V> {
@@ -2003,7 +2010,7 @@ impl BSplineSurface<Vector2> {
     ///
     /// let pt = Vector2::new(0.3, 0.7);
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector2::assert_near2(&surface.subs(u, v), &pt);
+    /// Vector2::assert_near(&surface.subs(u, v), &pt);
     /// ```
     pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
         let uder = self.uderivation();
@@ -2115,17 +2122,17 @@ impl BSplineSurface<Vector3> {
     ///
     /// let pt = surface.subs(0.32, 0.76);
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector3::assert_near2(&surface.subs(u, v), &pt);
+    /// Vector3::assert_near(&surface.subs(u, v), &pt);
     ///
     /// let pt = surface.subs(0.32, 0.76) + Vector3::new(0.0, 0.0, 0.001);
     /// assert!(surface.search_parameter(pt, (0.5, 0.5)).is_none());
     /// ```
     pub fn search_parameter(&self, pt: Vector3, hint: (f64, f64)) -> Option<(f64, f64)> {
         let normal = self.normal_vector(hint.0, hint.1);
-        let tmp = if normal[0] < normal[1] { 0 } else { 1 };
-        let min = if normal[tmp] < normal[2] { tmp } else { 2 };
-        let idx0 = (min + 1) % 3;
-        let idx1 = (min + 2) % 3;
+        let tmp = if normal[0].abs() > normal[1].abs() { 0 } else { 1 };
+        let max = if normal[tmp].abs() > normal[2].abs() { tmp } else { 2 };
+        let idx0 = (max + 1) % 3;
+        let idx1 = (max + 2) % 3;
         let knot_vecs = self.knot_vecs().clone();
         let control_points: Vec<Vec<_>> = self
             .control_points()
@@ -2227,25 +2234,22 @@ impl BSplineSurface<Vector3> {
     /// # Examples
     /// ```
     /// use truck_geometry::*;
+    /// use std::iter::FromIterator;
     /// let knot_vec = KnotVec::uniform_knot(2, 3);
     /// let ctrl_pts = vec![
-    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.1, 0.0), Vector2::new(0.5, 0.0), Vector2::new(0.7, 0.0), Vector2::new(1.0, 0.0)],
-    ///     vec![Vector2::new(0.0, 0.1), Vector2::new(0.2, 0.2), Vector2::new(0.4, 0.3), Vector2::new(0.6, 0.2), Vector2::new(1.0, 0.3)],
-    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.3, 0.6), Vector2::new(0.6, 0.4), Vector2::new(0.9, 0.6), Vector2::new(1.0, 0.5)],
-    ///     vec![Vector2::new(0.0, 0.7), Vector2::new(0.2, 0.8), Vector2::new(0.3, 0.6), Vector2::new(0.5, 0.9), Vector2::new(1.0, 0.7)],
-    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.1, 1.0), Vector2::new(0.5, 1.0), Vector2::new(0.7, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.1, 0.0, 0.5), Vector3::new(0.5, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 0.1, 0.1), Vector3::new(0.2, 0.2, 0.1), Vector3::new(0.4, 0.3, 0.4), Vector3::new(1.0, 0.3, 0.7)],
+    ///     vec![Vector3::new(0.0, 0.5, 0.4), Vector3::new(0.3, 0.6, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(1.0, 0.5, 0.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
     /// ];
     /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(0.0, 1.0)];
-    /// let curve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// assert!(surface.include(&curve0));
-    ///
-    /// let knot_vec1 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts1 = vec![Vector2::new(0.0, 0.0), Vector2::new(2.5, 1.0), Vector2::new(0.0, 1.0)];
-    /// let curve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// assert!(!surface.include(&curve1));
+    /// 
+    /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
+    /// let mut curve = surface.sectional_curve(bnd_box);
+    /// assert!(surface.include(&curve));
+    /// 
+    /// *curve.control_point_mut(2) += Vector3::new(0.0, 0.0, 0.001);
+    /// assert!(!surface.include(&curve));
     /// ```
     pub fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
@@ -2282,29 +2286,25 @@ impl BSplineSurface<Vector3> {
         }
         true
     }
-    /// Returns whether the curve `curve` is included in the surface `surface`.
+    /// Returns whether the rational curve `curve` is included in the rational surface `surface`.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
+    /// use std::iter::FromIterator;
     /// let knot_vec = KnotVec::uniform_knot(2, 3);
     /// let ctrl_pts = vec![
-    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.1, 0.0), Vector2::new(0.5, 0.0), Vector2::new(0.7, 0.0), Vector2::new(1.0, 0.0)],
-    ///     vec![Vector2::new(0.0, 0.1), Vector2::new(0.2, 0.2), Vector2::new(0.4, 0.3), Vector2::new(0.6, 0.2), Vector2::new(1.0, 0.3)],
-    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.3, 0.6), Vector2::new(0.6, 0.4), Vector2::new(0.9, 0.6), Vector2::new(1.0, 0.5)],
-    ///     vec![Vector2::new(0.0, 0.7), Vector2::new(0.2, 0.8), Vector2::new(0.3, 0.6), Vector2::new(0.5, 0.9), Vector2::new(1.0, 0.7)],
-    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.1, 1.0), Vector2::new(0.5, 1.0), Vector2::new(0.7, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.05, 0.0, 0.5), Vector3::new(0.15, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 0.01, 0.1), Vector3::new(0.02, 0.02, 0.1), Vector3::new(0.16, 0.12, 0.4), Vector3::new(0.7, 0.21, 0.7)],
+    ///     vec![Vector3::new(0.0, 0.02, 0.4), Vector3::new(0.15, 0.3, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(0.4, 0.2, 0.4)],
+    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.25, 0.5, 0.5), Vector3::new(0.3, 0.3, 0.3)],
     /// ];
     /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
     ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(0.0, 1.0)];
-    /// let curve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// assert!(surface.include(&curve0));
-    ///
-    /// let knot_vec1 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts1 = vec![Vector2::new(0.0, 0.0), Vector2::new(2.5, 1.0), Vector2::new(0.0, 1.0)];
-    /// let curve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// assert!(!surface.include(&curve1));
+    /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
+    /// let mut curve = surface.sectional_curve(bnd_box);
+    /// curve.control_points_mut().for_each(|pt| *pt *= 3.0);
+    /// assert!(!surface.include(&curve));
+    /// assert!(surface.rational_include(&curve));
     /// ```
     pub fn rational_include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]).rational_projection();
@@ -2364,10 +2364,10 @@ impl BSplineSurface<Vector4> {
     /// ```
     pub fn search_rational_parameter(&self, pt: Vector3, hint: (f64, f64)) -> Option<(f64, f64)> {
         let normal = self.rational_normal_vector(hint.0, hint.1);
-        let tmp = if normal[0] < normal[1] { 0 } else { 1 };
-        let min = if normal[tmp] < normal[2] { tmp } else { 2 };
-        let idx0 = (min + 1) % 3;
-        let idx1 = (min + 2) % 3;
+        let tmp = if normal[0].abs() > normal[1].abs() { 0 } else { 1 };
+        let max = if normal[tmp].abs() > normal[2].abs() { tmp } else { 2 };
+        let idx0 = (max + 1) % 3;
+        let idx1 = (max + 2) % 3;
         let knot_vecs = self.knot_vecs().clone();
         let control_points: Vec<Vec<_>> = self
             .control_points()
@@ -2414,29 +2414,37 @@ impl BSplineSurface<Vector4> {
             })
             .collect()
     }
-    /// Returns whether the curve `curve` is included in the surface `surface`.
+    /// Returns whether the rational curve `curve` is included in the rational surface `surface`.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
+    /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![
-    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.1, 0.0), Vector2::new(0.5, 0.0), Vector2::new(0.7, 0.0), Vector2::new(1.0, 0.0)],
-    ///     vec![Vector2::new(0.0, 0.1), Vector2::new(0.2, 0.2), Vector2::new(0.4, 0.3), Vector2::new(0.6, 0.2), Vector2::new(1.0, 0.3)],
-    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.3, 0.6), Vector2::new(0.6, 0.4), Vector2::new(0.9, 0.6), Vector2::new(1.0, 0.5)],
-    ///     vec![Vector2::new(0.0, 0.7), Vector2::new(0.2, 0.8), Vector2::new(0.3, 0.6), Vector2::new(0.5, 0.9), Vector2::new(1.0, 0.7)],
-    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.1, 1.0), Vector2::new(0.5, 1.0), Vector2::new(0.7, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector4::new(-1.0, -1.0, 2.0, 1.0), Vector4::new(-1.0, 0.0, 0.0, 1.0), Vector4::new(-1.0, 1.0, 2.0, 1.0)],
+    ///     vec![Vector4::new(0.0, -1.0, 0.0, 1.0), Vector4::new(0.0, 0.0, -2.0, 1.0), Vector4::new(0.0, 1.0, 0.0, 1.0)],
+    ///     vec![Vector4::new(1.0, -1.0, 2.0, 1.0), Vector4::new(1.0, 0.0, 0.0, 1.0), Vector4::new(1.0, 1.0, 2.0, 1.0)],
     /// ];
     /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
     ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(0.0, 1.0)];
-    /// let curve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// assert!(surface.include(&curve0));
-    ///
-    /// let knot_vec1 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts1 = vec![Vector2::new(0.0, 0.0), Vector2::new(2.5, 1.0), Vector2::new(0.0, 1.0)];
-    /// let curve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// assert!(!surface.include(&curve1));
+    /// let knot_vec = KnotVec::from(
+    ///     vec![0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0]
+    /// );
+    /// let ctrl_pts = vec![ // the vector of the indices of control points
+    ///     Vector4::new(0.0, -2.0, 2.0, 2.0),
+    ///     Vector4::new(1.0, -1.0, 1.0, 1.0),
+    ///     Vector4::new(1.0, 0.0, 1.0, 1.0),
+    ///     Vector4::new(1.0, 1.0, 1.0, 1.0),
+    ///     Vector4::new(0.0, 2.0, 2.0, 2.0),
+    ///     Vector4::new(-1.0, 1.0, 1.0, 1.0),
+    ///     Vector4::new(-1.0, 0.0, 1.0, 1.0),
+    ///     Vector4::new(-1.0, -1.0, 1.0, 1.0),
+    ///     Vector4::new(0.0, -2.0, 2.0, 2.0),
+    /// ];
+    /// let mut curve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// assert!(surface.rational_include(&curve));
+    /// 
+    /// *curve.control_point_mut(1) += Vector4::new(0.0, 0.0, 0.00001, 0.0);
+    /// assert!(!surface.rational_include(&curve));
     /// ```
     pub fn rational_include(&self, curve: &BSplineCurve<Vector4>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]).rational_projection();
