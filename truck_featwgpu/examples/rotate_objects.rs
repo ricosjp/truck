@@ -127,12 +127,11 @@ impl App for MyRender {
             light_changed: None,
         };
         render.scene.camera = MyRender::create_camera();
-        render.scene.light = Light {
+        render.scene.lights.push(Light {
             position: Point3::new(0.0, 20.0, 0.0),
-            strength: 100.0,
             color: Vector3::new(1.0, 1.0, 1.0),
             light_type: LightType::Point,
-        };
+        });
         render
     }
 
@@ -159,14 +158,14 @@ impl App for MyRender {
             }
             MouseButton::Right => {
                 let scene = &mut self.scene;
-                match scene.light.light_type {
+                match scene.lights[0].light_type {
                     LightType::Point => {
-                        scene.light.position = scene.camera.position();
-                        scene.light.strength = 200.0;
+                        scene.lights[0].position = scene.camera.position();
                     }
                     LightType::Uniform => {
-                        scene.light.position = scene.camera.position();
-                        scene.light.position /= scene.light.position.to_vec().magnitude();
+                        scene.lights[0].position = scene.camera.position();
+                        let tmp = scene.lights[0].position.to_vec().magnitude();
+                        scene.lights[0].position /= tmp
                     }
                 }
             }
@@ -236,22 +235,20 @@ impl App for MyRender {
                     }
                 }
                 self.light_changed = Some(std::time::Instant::now());
-                match self.scene.light.light_type {
+                match self.scene.lights[0].light_type {
                     LightType::Point => {
                         let mut vec = self.scene.camera.position();
                         vec /= vec.to_vec().magnitude();
-                        self.scene.light = Light {
+                        self.scene.lights[0] = Light {
                             position: vec,
-                            strength: 0.5,
                             color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Uniform,
                         }
                     }
                     LightType::Uniform => {
                         let position = self.scene.camera.position();
-                        self.scene.light = Light {
+                        self.scene.lights[0] = Light {
                             position,
-                            strength: 125.0,
                             color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Point,
                         }

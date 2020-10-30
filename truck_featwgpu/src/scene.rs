@@ -20,9 +20,10 @@ impl Scene {
                 BindGroupLayoutEntry {
                     binding: 1,
                     visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-                    ty: BindingType::UniformBuffer {
+                    ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,
+                        readonly: true,
                     },
                     count: None,
                 },
@@ -51,8 +52,8 @@ impl Scene {
             &self.bind_group_layout,
             vec![
                 self.camera.buffer(as_rat, &self.device).binding_resource(),
-                self.light.buffer(&self.device).binding_resource(),
-                self.timer_buffer().binding_resource(),
+                self.lights_buffer().binding_resource(),
+                self.scene_status_buffer().binding_resource(),
             ],
         );
         self.bind_group = Some(bind_group);
@@ -111,7 +112,7 @@ impl Scene {
                 a: 1.0,
             },
             camera: Default::default(),
-            light: Default::default(),
+            lights: Default::default(),
         }
     }
 
@@ -156,13 +157,30 @@ impl Scene {
     #[inline(always)]
     pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
 
-    pub fn timer_buffer(&self) -> BufferHandler {
+    pub fn scene_status_buffer(&self) -> BufferHandler {
+        let scene_info = SceneInfo {
+            time: self.elapsed() as f32,
+            num_of_lights: self.lights.len() as u32,
+        };
         let buffer = self.device.create_buffer_init(&BufferInitDescriptor {
-            contents: bytemuck::cast_slice(&[self.elapsed() as f32]),
+            contents: bytemuck::cast_slice(&[scene_info]),
             usage: BufferUsage::UNIFORM,
             label: None,
         });
         BufferHandler::new(buffer, std::mem::size_of::<f32>() as u64)
+    }
+
+    pub fn lights_buffer(&self) -> BufferHandler {
+        let mut light_vec: Vec<LightInfo> = Vec::new();
+        for light in &self.lights {
+            light_vec.push(light.light_info());
+        }
+        let buffer = self.device.create_buffer_init(&BufferInitDescriptor {
+            contents: bytemuck::cast_slice(&light_vec),
+            usage: BufferUsage::STORAGE,
+            label: None,
+        });
+        BufferHandler::new(buffer, (light_vec.len() * std::mem::size_of::<LightInfo>()) as u64)
     }
 
     pub fn render_scene(&self, sc_texture: &SwapChainTexture) {
