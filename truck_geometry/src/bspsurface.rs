@@ -2351,10 +2351,10 @@ impl BSplineSurface<Vector4> {
     /// use truck_geometry::*;
     /// let knot_vec = KnotVec::uniform_knot(2, 2);
     /// let ctrl_pts = vec![
-    ///     vec![Vector4::new(0.0, 0.0, 0.0, 1.0), Vector4::new(0.1, 0.0, 0.5, 0.4), Vector4::new(0.5, 0.0, 0.3, 2.0), Vector4::new(1.0, 0.0, 1.0, 0.4)],
-    ///     vec![Vector4::new(0.0, 0.1, 0.1, 2.0), Vector4::new(0.2, 0.2, 0.1, 1.2), Vector4::new(0.4, 0.3, 0.4, 0.6), Vector4::new(1.0, 0.3, 0.7, 1.4)],
-    ///     vec![Vector4::new(0.0, 0.5, 0.4, 3.0), Vector4::new(0.3, 0.6, 0.5, 3.4), Vector4::new(0.6, 0.4, 1.0, 0.7), Vector4::new(1.0, 0.5, 0.0, 0.6)],
-    ///     vec![Vector4::new(0.0, 1.0, 1.0, 1.0), Vector4::new(0.1, 1.0, 1.0, 2.0), Vector4::new(0.5, 1.0, 0.5, 1.7), Vector4::new(1.0, 1.0, 0.3, 1.0)],
+    ///     vec![Vector4::new(0.0, 0.0, 0.0, 1.0), Vector4::new(0.1, 0.0, 0.5, 0.4), Vector4::new(1.0, 0.0, 0.6, 2.0), Vector4::new(0.4, 0.0, 0.4, 0.4)],
+    ///     vec![Vector4::new(0.0, 0.2, 0.2, 2.0), Vector4::new(0.24, 0.24, 0.1, 1.2), Vector4::new(2.4, 1.8, 2.4, 0.6), Vector4::new(1.4, 0.42, 0.98, 1.4)],
+    ///     vec![Vector4::new(0.0, 1.5, 1.2, 3.0), Vector4::new(1.02, 2.04, 1.7, 3.4), Vector4::new(0.42, 0.28, 0.7, 0.7), Vector4::new(0.6, 0.3, 0.0, 0.6)],
+    ///     vec![Vector4::new(0.0, 1.0, 1.0, 1.0), Vector4::new(0.2, 2.0, 2.0, 2.0), Vector4::new(0.85, 1.7, 0.85, 1.7), Vector4::new(1.0, 1.0, 0.3, 1.0)],
     /// ];
     /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
     ///
