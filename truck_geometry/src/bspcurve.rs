@@ -81,6 +81,12 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// Returns the mutable reference of the control point corresponding to index `idx`.
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx: usize) -> &mut V { &mut self.control_points[idx] }
+    
+    /// Returns the iterator on all control points
+    #[inline(always)]
+    pub fn control_points_mut(&mut self) -> impl Iterator<Item = &mut V> {
+        self.control_points.iter_mut()
+    }
 
     /// Apply the given transformation to all control points.
     #[inline(always)]
@@ -1366,7 +1372,6 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
             self.sub_create_division(tol, dist2, div);
         }
     }
-    
     /// Creates the curve division
     /// # Examples
     /// ```
@@ -1396,7 +1401,6 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     pub fn parameter_division(&self, tol: f64) -> Vec<f64> {
         self.create_division(tol, |v0, v1| v0.distance2(v1))
     }
-    
     /// Creates the curve division
     /// # Examples
     /// ```
@@ -1425,9 +1429,9 @@ where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
     /// }
     /// ```
     pub fn rational_parameter_division(&self, tol: f64) -> Vec<f64> {
-        self.create_division(tol, |v0, v1|
+        self.create_division(tol, |v0, v1| {
             v0.rational_projection().distance2(v1.rational_projection())
-        )
+        })
     }
 
     /// Determine whether `self` and `other` is near as the B-spline curves or not.  

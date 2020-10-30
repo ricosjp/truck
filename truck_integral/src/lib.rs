@@ -26,7 +26,10 @@ pub trait Curve: Clone {
 /// a geometry of face
 pub trait Surface: Clone {
     type Curve: Curve;
-    
+    /// inverse the surface
+    fn inverse(&self) -> Self;
+    /// Returns whether the surface includes `curve` or not.
+    fn include(&self, curve: &Self::Curve) -> bool;
 }
 
 pub trait EdgeEx<C>: Clone {
@@ -45,3 +48,4 @@ impl<C: Curve> EdgeEx<C> for Edge<C::Point, C> {
 
 pub mod point;
 pub mod curve;
+pub mod surface;

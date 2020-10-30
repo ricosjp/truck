@@ -154,7 +154,7 @@ impl KnotVec {
     /// # Failures
     /// - If the range of the knot vector is zero, returns [`Error::ZeroRange`].
     /// - If the length of `self` is not more than `degree`, returns [`Error::TooLargeDegree(length, degree)`].
-    /// 
+    ///
     /// [`Error::ZeroRange`]: errors/enum.Error.html#variant.ZeroRange
     /// [`Error::TooLargeDegree(length, degree)`]: errors/enum.Error.html#variant.TooLargeDegree
     /// # Remarks
@@ -185,7 +185,7 @@ impl KnotVec {
     /// let knot_vec = KnotVec::from(vec);
     /// let degree = 3;
     /// for i in 0..=N {
-    ///     let t = 1.0 / (N as f64) * (i as f64);
+    ///     let t = i as f64 / N as f64;
     ///     let res = knot_vec.try_bspline_basis_functions(degree, t).unwrap();
     ///     let ans = [
     ///         1.0 * (1.0 - t) * (1.0 - t) * (1.0 - t),
@@ -193,6 +193,7 @@ impl KnotVec {
     ///         3.0 * t * t * (1.0 - t),
     ///         1.0 * t * t * t,
     ///     ];
+    ///     println!("{:?}", res);
     ///     for i in 0..4 { f64::assert_near2(&res[i], &ans[i]); }
     /// }
     /// ```
@@ -202,24 +203,19 @@ impl KnotVec {
             return Err(Error::ZeroRange);
         } else if n < degree {
             return Err(Error::TooLargeDegree(n + 1, degree));
-        } else if self[n] <= t {
-            let result = self
-                .clone()
-                .invert()
-                .try_bspline_basis_functions(degree, self[0] + self[n] - t);
-            return result.map(|mut x| {
-                x.reverse();
-                x
-            });
         }
 
-        let idx = self.floor(t);
-        if idx.is_none() {
-            return Ok(vec![0.0; n - degree]);
-        }
-        let idx = idx.unwrap();
-
-        let mut res = vec![0.0; n + 1];
+        let idx = {
+            let idx = self
+                .floor(t)
+                .unwrap_or_else(|| self.floor(self[0]).unwrap());
+            if idx == n {
+                n - self.multiplicity(n)
+            } else {
+                idx
+            }
+        };
+        let mut res = vec![0.0; n];
         res[idx] = 1.0;
 
         for k in 1..=degree {
@@ -265,7 +261,7 @@ impl KnotVec {
     /// Normalizes the knot vector i.e. makes the first value 0 and the last value 1.
     /// # Failures
     /// Returns [`Error::ZeroRange`] if the range of the knot vector is so small.
-    /// 
+    ///
     /// [`Error::ZeroRange`]: errors/enum.Error.html#variant.ZeroRange
     /// # Examples
     /// ```
@@ -375,7 +371,7 @@ impl KnotVec {
     /// * If at least one of `self` or `other` is not clamped, returns [`Error::NotClampedKnotVector`]
     /// * If the last knot of `self` and the first knot of `other` are different, returns
     /// [`Error::DifferentBackFront(self.last, other.first)`].
-    /// 
+    ///
     /// [`Error::NotClampedKnotVector`]: errors/enum.Error.html#variant.NotClampedKnotVector
     /// [`Error::DifferentBackFront(self.last, other.first)`]: errors/enum.Error.html#variant.DifferentBackFront
     pub fn try_concat(&mut self, other: &KnotVec, degree: usize) -> Result<&mut Self> {
