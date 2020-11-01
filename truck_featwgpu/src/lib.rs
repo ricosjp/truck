@@ -4,15 +4,17 @@ extern crate futures;
 extern crate image;
 extern crate truck_modeling as modeling;
 extern crate truck_polymesh as polymesh;
+extern crate truck_integral as integral;
 extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
-pub use modeling::geometry::*;
+pub use modeling::*;
 pub use polymesh::PolygonMesh;
 use std::sync::{Arc, Mutex};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct AttrVertex {
     pub position: [f32; 3],
@@ -22,6 +24,7 @@ pub struct AttrVertex {
 unsafe impl Zeroable for AttrVertex {}
 unsafe impl Pod for AttrVertex {}
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 struct CameraInfo {
     camera_matrix: [[f32; 4]; 4],
@@ -30,6 +33,7 @@ struct CameraInfo {
 unsafe impl Zeroable for CameraInfo {}
 unsafe impl Pod for CameraInfo {}
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 struct LightInfo {
     light_position: [f32; 4],
@@ -39,6 +43,7 @@ struct LightInfo {
 unsafe impl Zeroable for LightInfo {}
 unsafe impl Pod for LightInfo {}
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 struct SceneInfo {
     time: f32,
@@ -47,6 +52,21 @@ struct SceneInfo {
 unsafe impl Zeroable for SceneInfo {}
 unsafe impl Pod for SceneInfo {}
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+struct SurfaceInfo {
+    ctrl_row_size: u32,
+    ctrl_column_size: u32,
+    uknots_size: u32,
+    vknots_size: u32,
+    param_row_size: u32,
+    param_column_size: u32,
+    boundary_length: u32,
+}
+unsafe impl Zeroable for SurfaceInfo {}
+unsafe impl Pod for SurfaceInfo {}
+
+#[repr(C)]
 #[derive(Debug, Clone)]
 pub struct ExpandedPolygon {
     vertices: Vec<AttrVertex>,
@@ -67,6 +87,17 @@ pub struct PolygonInstance {
     pub material: Material,
     pub texture: Option<Arc<DynamicImage>>,
     pub bf_culling: bool,
+}
+
+#[derive(Clone)]
+pub struct RenderFace {
+    control_points: Arc<BufferHandler>,
+    uknot_vec: Arc<BufferHandler>,
+    vknot_vec: Arc<BufferHandler>,
+    udivision: Arc<BufferHandler>,
+    vdivision: Arc<BufferHandler>,
+    boundary: Arc<BufferHandler>,
+    surface_info: Arc<BufferHandler>,
 }
 
 #[derive(Debug, Clone)]
@@ -161,6 +192,7 @@ pub mod camera;
 pub mod light;
 pub mod scene;
 pub mod render_polygon;
+pub mod render_shell;
 
 fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>> (
     device: &Device,

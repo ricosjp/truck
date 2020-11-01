@@ -46,6 +46,23 @@ impl<C: Curve> EdgeEx<C> for Edge<C::Point, C> {
     }
 }
 
+pub trait FaceEx<S>: Clone {
+    fn oriented_surface(&self) -> S;
+}
+
+impl<S> FaceEx<S> for Face<<<S as Surface>::Curve as Curve>::Point, S::Curve, S>
+where
+    S: Surface,
+    S::Curve: Curve,
+{
+    fn oriented_surface(&self) -> S {
+        match self.orientation() {
+            true => self.lock_surface().unwrap().clone(),
+            false => self.lock_surface().unwrap().inverse(),
+        }
+    }
+}
+
 pub mod point;
 pub mod curve;
 pub mod surface;
