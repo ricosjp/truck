@@ -19,7 +19,7 @@ impl Scene {
                 // light
                 BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::FRAGMENT,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,

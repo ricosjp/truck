@@ -133,7 +133,7 @@ impl Rendered for RenderFace {
                 // control_points
                 BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::VERTEX,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,
@@ -144,7 +144,7 @@ impl Rendered for RenderFace {
                 // uknot_vec
                 BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::VERTEX,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,
@@ -155,7 +155,7 @@ impl Rendered for RenderFace {
                 // vknot_vec
                 BindGroupLayoutEntry {
                     binding: 2,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::VERTEX,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,
@@ -166,7 +166,7 @@ impl Rendered for RenderFace {
                 // udivision
                 BindGroupLayoutEntry {
                     binding: 3,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::VERTEX,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,
@@ -177,7 +177,7 @@ impl Rendered for RenderFace {
                 // vdivision
                 BindGroupLayoutEntry {
                     binding: 4,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::VERTEX,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,
@@ -188,7 +188,7 @@ impl Rendered for RenderFace {
                 // boundary
                 BindGroupLayoutEntry {
                     binding: 5,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+                    visibility: ShaderStage::FRAGMENT,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,
