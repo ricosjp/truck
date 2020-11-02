@@ -29,9 +29,7 @@ impl MyApp {
     fn create_face() -> Face {
         let v = builder::vertex(Point3::new(-0.5, -0.5, 0.0));
         let edge = builder::tsweep(&v, Vector3::unit_x());
-        let face = builder::tsweep(&edge, Vector3::unit_y());
-        let surface = face.lock_surface().unwrap().clone();
-        let mut wires = face.into_boundaries();
+        let mut face = builder::tsweep(&edge, Vector3::unit_y());
         let v = builder::vertex(Point3::new(0.2, 0.0, 0.0));
         let edge0 = builder::tsweep(&v, Vector3::new(-0.2, 0.2, 0.0));
         let edge1 = builder::partial_rsweep(
@@ -54,8 +52,8 @@ impl MyApp {
             edge1.inverse(),
             edge0.inverse(),
         ]);
-        wires.push(wire);
-        Face::new(wires, surface)
+        face.add_boundary(wire);
+        face
     }
 }
 

@@ -59,6 +59,10 @@ impl RenderFace {
             )),
         })
     }
+    
+    pub fn from_shell(shell: &Shell, tol: f64, device: &Device) -> Vec<Option<RenderFace>> {
+        shell.face_iter().map(|face| Self::new(face, tol, device)).collect()
+    }
 }
 
 impl Rendered for RenderFace {

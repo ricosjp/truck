@@ -174,6 +174,28 @@ impl<P, C, S> Face<P, C, S> {
             .collect()
     }
 
+    /// Adds a boundary to the face.
+    #[inline(always)]
+    pub fn try_add_boundary(&mut self, wire: Wire<P, C>) -> Result<()> {
+        if wire.is_empty() {
+            return Err(Error::EmptyWire);
+        } else if !wire.is_closed() {
+            return Err(Error::NotClosedWire);
+        } else if !wire.is_simple() {
+            return Err(Error::NotSimpleWire);
+        }
+        self.boundaries.push(wire);
+        if !Wire::disjoint_wires(&self.boundaries) {
+            self.boundaries.pop();
+            return Err(Error::NotDisjointWires);
+        }
+        Ok(())
+    }
+
+    /// Adds a boundary to the face.
+    #[inline(always)]
+    pub fn add_boundary(&mut self, wire: Wire<P, C>) { self.try_add_boundary(wire).remove_try() }
+
     /// Returns the orientation of face.
     ///
     /// The result of this method is the same with `self.boundaries() == self.absolute_boundaries().clone()`.
