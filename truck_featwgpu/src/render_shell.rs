@@ -1,4 +1,5 @@
 use super::*;
+use polymesh::StructuredMesh;
 use integral::{EdgeEx, FaceEx};
 
 fn presearch(surface: &BSplineSurface, point: Vector3) -> (f64, f64) {
@@ -24,83 +25,35 @@ fn presearch(surface: &BSplineSurface, point: Vector3) -> (f64, f64) {
 impl RenderFace {
     pub fn new(face: &Face, tol: f64, device: &Device) -> Option<RenderFace> {
         let surface = face.oriented_surface();
-        let control_points: Vec<[f32; 4]> = surface
-            .control_points()
-            .iter()
-            .flatten()
-            .map(|v| v.cast().unwrap().into())
-            .collect();
-        let knot_vecs: (Vec<f32>, Vec<f32>) = (
-            surface.uknot_vec().iter().map(move |k| *k as f32).collect(),
-            surface.vknot_vec().iter().map(move |k| *k as f32).collect(),
-        );
-        let surface_division = surface.rational_parameter_division(tol);
-        let mut boundary = Vec::<f32>::new();
+        let polymesh: ExpandedPolygon = StructuredMesh::from_surface(&surface, tol).into();
+        let buffers = polymesh.buffers(device);
+        let mut boundary = Vec::<[f32; 4]>::new();
         for edge in face.boundary_iters().into_iter().flatten() {
             let curve = edge.oriented_curve();
-            let division = curve.rational_parameter_division(tol);
+            let division = curve.rational_parameter_division(tol * 0.1);
             let mut hint = presearch(&surface, curve.subs(division[0]).rational_projection());
-            let mut this_boundary = Vec::<(f32, f32)>::new();
+            let mut this_boundary = Vec::new();
             for t in division {
                 let pt = curve.subs(t).rational_projection();
                 hint = match surface.search_rational_parameter(pt, hint) {
                     Some(got) => got,
                     None => return None,
                 };
-                this_boundary.push((hint.0 as f32, hint.1 as f32));
+                this_boundary.push([hint.0 as f32, hint.1 as f32]);
             }
-            let mut iter = this_boundary.into_iter().peekable();
-            while let Some(tuple) = iter.next() {
-                boundary.push(tuple.0);
-                boundary.push(tuple.1);
-                if let Some(next_tuple) = iter.peek() {
-                    boundary.push(next_tuple.0);
-                    boundary.push(next_tuple.1);
-                }
+            for window in this_boundary.as_slice().windows(2) {
+                boundary.push([window[0][0], window[0][1], window[1][0], window[1][1]]);
             }
         }
-        let surface_info = SurfaceInfo {
-            ctrl_row_size: surface.control_points().len() as u32,
-            ctrl_column_size: surface.control_points()[0].len() as u32,
-            uknots_size: surface.uknot_vec().len() as u32,
-            vknots_size: surface.vknot_vec().len() as u32,
-            param_row_size: surface_division.0.len() as u32,
-            param_column_size: surface_division.1.len() as u32,
-            boundary_length: boundary.len() as u32,
-        };
         Some(RenderFace {
-            control_points: Arc::new(BufferHandler::from_slice(
-                &control_points,
-                device,
-                BufferUsage::STORAGE,
-            )),
-            uknot_vec: Arc::new(BufferHandler::from_slice(
-                &knot_vecs.0,
-                device,
-                BufferUsage::STORAGE,
-            )),
-            vknot_vec: Arc::new(BufferHandler::from_slice(
-                &knot_vecs.1,
-                device,
-                BufferUsage::STORAGE,
-            )),
-            udivision: Arc::new(BufferHandler::from_slice(
-                &surface_division.0,
-                device,
-                BufferUsage::STORAGE,
-            )),
-            vdivision: Arc::new(BufferHandler::from_slice(
-                &surface_division.1,
-                device,
-                BufferUsage::STORAGE,
-            )),
+            polygon: (Arc::new(buffers.0), Arc::new(buffers.1)),
             boundary: Arc::new(BufferHandler::from_slice(
                 &boundary,
                 device,
                 BufferUsage::STORAGE,
             )),
-            surface_info: Arc::new(BufferHandler::from_slice(
-                &[surface_info],
+            boundary_length: Arc::new(BufferHandler::from_slice(
+                &[boundary.len() as u32],
                 device,
                 BufferUsage::UNIFORM,
             )),
@@ -109,86 +62,17 @@ impl RenderFace {
 }
 
 impl Rendered for RenderFace {
-    fn vertex_buffer(&self, scene: &Scene) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let udiv_size = self.udivision.size / 4;
-        let vdiv_size = self.vdivision.size / 4;
-        let slice: Vec<u32> = (1..udiv_size)
-            .zip(1..vdiv_size)
-            .flat_map(|(i, j)|
-                vec![
-                    (vdiv_size * (i - 1) + j - 1) as u32,
-                    (vdiv_size * i + j - 1) as u32,
-                    (vdiv_size * (i - 1) + j) as u32,
-                    (vdiv_size * (i - 1) + j) as u32,
-                    (vdiv_size * i + j - 1) as u32,
-                    (vdiv_size * i + j) as u32,
-                ]
-            ).collect();
-        let buffer = BufferHandler::from_slice(&slice, scene.device(), BufferUsage::VERTEX);
-        (Arc::new(buffer), None)
+    fn vertex_buffer(&self, _: &Scene) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
+        let (a, b) = self.polygon.clone();
+        (a, Some(b))
     }
     fn bind_group_layout(&self, scene: &Scene) -> Arc<BindGroupLayout> {
         let layout = scene.device().create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[
-                // control_points
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStage::VERTEX,
-                    ty: BindingType::StorageBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
-                        readonly: true,
-                    },
-                    count: None,
-                },
-                // uknot_vec
-                BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: ShaderStage::VERTEX,
-                    ty: BindingType::StorageBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
-                        readonly: true,
-                    },
-                    count: None,
-                },
-                // vknot_vec
-                BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: ShaderStage::VERTEX,
-                    ty: BindingType::StorageBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
-                        readonly: true,
-                    },
-                    count: None,
-                },
-                // udivision
-                BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: ShaderStage::VERTEX,
-                    ty: BindingType::StorageBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
-                        readonly: true,
-                    },
-                    count: None,
-                },
-                // vdivision
-                BindGroupLayoutEntry {
-                    binding: 4,
-                    visibility: ShaderStage::VERTEX,
-                    ty: BindingType::StorageBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
-                        readonly: true,
-                    },
-                    count: None,
-                },
                 // boundary
                 BindGroupLayoutEntry {
-                    binding: 5,
-                    visibility: ShaderStage::FRAGMENT,
+                    binding: 0,
+                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
                     ty: BindingType::StorageBuffer {
                         dynamic: false,
                         min_binding_size: None,
@@ -196,9 +80,9 @@ impl Rendered for RenderFace {
                     },
                     count: None,
                 },
-                // surface info
+                // boundary length
                 BindGroupLayoutEntry {
-                    binding: 6,
+                    binding: 1,
                     visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
                     ty: BindingType::UniformBuffer {
                         dynamic: false,
@@ -216,13 +100,8 @@ impl Rendered for RenderFace {
             scene.device(),
             layout,
             vec![
-                self.control_points.binding_resource(),
-                self.uknot_vec.binding_resource(),
-                self.vknot_vec.binding_resource(),
-                self.udivision.binding_resource(),
-                self.vdivision.binding_resource(),
                 self.boundary.binding_resource(),
-                self.surface_info.binding_resource(),
+                self.boundary_length.binding_resource(),
             ]);
         Arc::new(bind_group)
     }
@@ -272,9 +151,19 @@ impl Rendered for RenderFace {
                     step_mode: InputStepMode::Vertex,
                     attributes: &[
                         VertexAttributeDescriptor {
-                            format: VertexFormat::Uint,
+                            format: VertexFormat::Float3,
                             offset: 0,
                             shader_location: 0,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float2,
+                            offset: 3 * 4,
+                            shader_location: 1,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float3,
+                            offset: 2 * 4 + 3 * 4,
+                            shader_location: 2,
                         },
                     ],
                 }],

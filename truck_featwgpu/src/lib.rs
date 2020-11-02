@@ -91,13 +91,9 @@ pub struct PolygonInstance {
 
 #[derive(Clone)]
 pub struct RenderFace {
-    control_points: Arc<BufferHandler>,
-    uknot_vec: Arc<BufferHandler>,
-    vknot_vec: Arc<BufferHandler>,
-    udivision: Arc<BufferHandler>,
-    vdivision: Arc<BufferHandler>,
+    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
-    surface_info: Arc<BufferHandler>,
+    boundary_length: Arc<BufferHandler>,
 }
 
 #[derive(Debug, Clone)]

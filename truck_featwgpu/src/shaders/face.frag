@@ -1,6 +1,7 @@
 #version 450
 
 layout(location = 0) in vec3 vertex_position;
+layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 vertex_normal;
 
 layout(set = 0, binding = 0) uniform Camera {
@@ -23,12 +24,37 @@ layout(set = 0, binding = 2) uniform Scene {
     uint nlights;
 };
 
+layout(set = 1, binding = 0) buffer Boundary {
+    vec4 boundary[];
+};
+
+layout(set = 1, binding = 1) uniform BoundaryLength {
+    uint boundary_length;
+};
+
 layout(location = 0) out vec4 color;
 
 vec4 albedo = vec4(1.0, 1.0, 1.0, 3.0) / 3.0;
 float roughness = 0.5;
 float reflectance = 0.5;
 vec3 normal = normalize(vertex_normal);
+
+bool in_domain() {
+    int score = 0;
+    for (int i = 0; i < boundary_length; i++) {
+        vec2 start = boundary[i].xy - uv;
+        vec2 end = boundary[i].zw - uv;
+        if (start[1] * end[1] >= 0) continue;
+        float as = abs(start[1]);
+        float ae = abs(end[1]);
+        float x = (ae * start[0] + as * end[0]) / (as + ae);
+        if (x > 0) {
+            if (end[1] > 0) score += 1;
+            else score -= 1;
+        }
+    }
+    return score > 0;
+}
 
 vec3 light_direction(vec3 light_position, uint light_type) {
     if (light_type == 0) {
@@ -88,6 +114,7 @@ vec3 specular_brdf(vec3 camera_dir, vec3 light_dir) {
 }
 
 void main() {
+    if (!in_domain()) discard;
     vec3 pre_color = vec3(0.0, 0.0, 0.0);
     for (uint i = 0; i < nlights; i++) {
         vec3 light_position = lights[i].position.xyz;

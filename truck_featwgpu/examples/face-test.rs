@@ -26,10 +26,36 @@ impl MyApp {
             40.0,
         )
     }
-    fn create_cube() -> Face {
+    fn create_face() -> Face {
         let v = builder::vertex(Point3::new(-0.5, -0.5, 0.0));
         let edge = builder::tsweep(&v, Vector3::unit_x());
-        builder::tsweep(&edge, Vector3::unit_y())
+        let face = builder::tsweep(&edge, Vector3::unit_y());
+        let surface = face.lock_surface().unwrap().clone();
+        let mut wires = face.into_boundaries();
+        let v = builder::vertex(Point3::new(0.2, 0.0, 0.0));
+        let edge0 = builder::tsweep(&v, Vector3::new(-0.2, 0.2, 0.0));
+        let edge1 = builder::partial_rsweep(
+            edge0.back(),
+            Point3::origin(),
+            Vector3::unit_z(),
+            cgmath::Rad(std::f64::consts::PI / 2.0),
+        );
+        let edge2 = builder::tsweep(edge1.back(), Vector3::new(0.2, -0.2, 0.0));
+        let edge3 = builder::partial_rsweep(
+            edge2.back(),
+            Point3::origin(),
+            Vector3::unit_z(),
+            cgmath::Rad(std::f64::consts::PI / 2.0),
+        );
+        let edge3 = Edge::new(edge3.front(), edge0.front(), edge3.lock_curve().unwrap().clone());
+        let wire = Wire::from(vec![
+            edge3.inverse(),
+            edge2.inverse(),
+            edge1.inverse(),
+            edge0.inverse(),
+        ]);
+        wires.push(wire);
+        Face::new(wires, surface)
     }
 }
 
@@ -43,7 +69,7 @@ impl App for MyApp {
             camera_changed: None,
             light_changed: None,
         };
-        let face = Self::create_cube();
+        let face = Self::create_face();
         let face = RenderFace::new(&face, 0.01, render.scene.device()).unwrap();
         render.scene.add_object(&face);
         render.scene.camera = MyApp::create_camera();
