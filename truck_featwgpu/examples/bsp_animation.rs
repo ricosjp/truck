@@ -126,7 +126,7 @@ impl App for MyApp {
     }
 
     fn render(&self, frame: &SwapChainFrame) {
-        self.scene.render_scene(&frame.output);
+        self.scene.render_scene(&frame.output.view);
     }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         *self.closed.lock().unwrap() = true;
