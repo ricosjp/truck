@@ -206,7 +206,7 @@ impl App for MyApp {
         self.scene.prepare_render();
     }
 
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output); }
+    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyApp::run(); }
