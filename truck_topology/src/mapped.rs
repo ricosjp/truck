@@ -52,7 +52,7 @@ impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
         let v0 = self.absolute_front().mapped(point_mapping, curve_mapping, surface_mapping);
         let v1 = self.absolute_back().mapped(point_mapping, curve_mapping, surface_mapping);
         let curve = curve_mapping(&*self.lock_curve().unwrap());
-        let mut edge = Edge::new_unchecked(&v0, &v1, curve);
+        let mut edge = Edge::debug_new(&v0, &v1, curve);
         edge.orientation = self.orientation;
         edge
     }
@@ -123,7 +123,7 @@ impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
                 let vertex0 = vertex_map.get(&edge.absolute_front().id()).unwrap().clone();
                 let vertex1 = vertex_map.get(&edge.absolute_back().id()).unwrap().clone();
                 let curve = curve_mapping(&*edge.lock_curve().unwrap());
-                let new_edge = Edge::new_unchecked(&vertex0, &vertex1, curve);
+                let new_edge = Edge::debug_new(&vertex0, &vertex1, curve);
                 if edge.orientation() {
                     wire.push_back(new_edge.clone());
                 } else {
@@ -201,7 +201,7 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
             .map(|wire| wire.mapped(point_mapping, curve_mapping, surface_mapping))
             .collect();
         let surface = surface_mapping(&*self.lock_surface().unwrap());
-        let mut face = Face::new_unchecked(wires, surface);
+        let mut face = Face::debug_new(wires, surface);
         face.orientation = self.orientation;
         face
     }
@@ -304,7 +304,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
                         let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
                         let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
                         let curve = curve_mapping(&*edge.lock_curve().unwrap());
-                        let new_edge = Edge::new_unchecked(v0, v1, curve);
+                        let new_edge = Edge::debug_new(v0, v1, curve);
                         if edge.orientation() {
                             wire.push_back(new_edge.clone());
                         } else {
@@ -316,7 +316,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
                 wires.push(wire);
             }
             let surface = surface_mapping(&*face.lock_surface().unwrap());
-            let new_face = Face::new_unchecked(wires, surface);
+            let new_face = Face::debug_new(wires, surface);
             shell.push(new_face);
         }
         shell
@@ -334,7 +334,7 @@ impl<P, C, S> Mapped<P, C, S> for Solid<P, C, S> {
         surface_mapping: &FS,
     ) -> Self
     {
-        Solid::new_unchecked(
+        Solid::debug_new(
             self.boundaries()
                 .iter()
                 .map(|shell| shell.mapped(point_mapping, curve_mapping, surface_mapping))

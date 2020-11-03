@@ -8,7 +8,7 @@ fn create_edge<P, C, CP: Fn(&P, &P) -> C>(
 ) -> Edge<P, C>
 {
     let curve = connect_points(&*v0.lock_point().unwrap(), &*v1.lock_point().unwrap());
-    Edge::new_unchecked(v0, v1, curve)
+    Edge::debug_new(&v0, &v1, curve)
 }
 
 fn create_surface<P, C, S, CC: Fn(&C, &C) -> S>(
@@ -148,7 +148,7 @@ fn sub_sweep_wire<P, C, S, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
     };
     let wire = Wire::from(vec![edge0.clone(), edge3, edge1.inverse(), edge2.inverse()]);
     let surface = create_surface(edge0, edge1, connect_curves);
-    Face::new_unchecked(vec![wire], surface)
+    Face::debug_new(vec![wire], surface)
 }
 
 impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
@@ -295,7 +295,7 @@ impl<P, C, S> Sweep<P, C, S> for Face<P, C, S> {
             shell.push(sub_sweep_wire(&edge0, &edge1, connect_points, connect_curves, &mut vemap))
         }
         shell.push(seiling);
-        Solid::new_unchecked(vec![shell])
+        Solid::debug_new(vec![shell])
     }
 }
 

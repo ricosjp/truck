@@ -67,6 +67,18 @@ impl<P, C, S> Face<P, C, S> {
         }
     }
 
+    /// Creates a new face by a wire.
+    /// # Remarks
+    /// This method check the regularity conditions of `Face::try_new()` in the debug mode.  
+    /// The programmer must guarantee this condition before using this method.
+    #[inline(always)]
+    pub fn debug_new(boundaries: Vec<Wire<P, C>>, surface: S) -> Face<P, C, S> {
+        match cfg!(debug_assertions) {
+            true => Face::new(boundaries, surface),
+            false => Face::new_unchecked(boundaries, surface),
+        }
+    }
+
     /// Returns the boundaries of the face.
     /// # Examples
     /// ```

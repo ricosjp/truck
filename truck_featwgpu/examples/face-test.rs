@@ -26,11 +26,11 @@ impl MyApp {
             40.0,
         )
     }
-    fn create_face() -> Face {
-        let v = builder::vertex(Point3::new(-0.5, -0.5, 0.0));
+    fn create_solid() -> Solid {
+        let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
         let edge = builder::tsweep(&v, Vector3::unit_x());
         let mut face = builder::tsweep(&edge, Vector3::unit_y());
-        let v = builder::vertex(Point3::new(0.2, 0.0, 0.0));
+        let v = builder::vertex(Point3::new(0.2, 0.0, -0.5));
         let edge0 = builder::tsweep(&v, Vector3::new(-0.2, 0.2, 0.0));
         let edge1 = builder::partial_rsweep(
             edge0.back(),
@@ -43,7 +43,7 @@ impl MyApp {
             edge2.back(),
             Point3::origin(),
             Vector3::unit_z(),
-            cgmath::Rad(std::f64::consts::PI / 2.0),
+            Rad(std::f64::consts::PI / 2.0),
         );
         let edge3 = Edge::new(edge3.front(), edge0.front(), edge3.lock_curve().unwrap().clone());
         let wire = Wire::from(vec![
@@ -53,7 +53,7 @@ impl MyApp {
             edge0.inverse(),
         ]);
         face.add_boundary(wire);
-        face
+        builder::tsweep(&face, Vector3::unit_z())
     }
 }
 
@@ -67,9 +67,12 @@ impl App for MyApp {
             camera_changed: None,
             light_changed: None,
         };
-        let face = Self::create_face();
-        let face = RenderFace::new(&face, 0.01, render.scene.device()).unwrap();
-        render.scene.add_object(&face);
+        let solid = Self::create_solid();
+        let shell = RenderFace::from_shell(&solid.boundaries()[0], 0.01, render.scene.device());
+        println!("{}", shell.len());
+        shell.iter().for_each(|face| {
+            render.scene.add_object(face.as_ref().unwrap());
+        });
         render.scene.camera = MyApp::create_camera();
         render.scene.lights.push(Light {
             position: Point3::new(1.0, 1.0, 1.0),

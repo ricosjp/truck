@@ -41,6 +41,18 @@ impl<P, C, S> Solid<P, C, S> {
         }
     }
 
+    /// create the shell whose boundaries is boundary.
+    /// # Remarks
+    /// This method checks whether all boundary is non-empty, connected, and closed in the debug mode.
+    /// The programmer must guarantee this condition before using this method.
+    #[inline(always)]
+    pub fn debug_new(boundaries: Vec<Shell<P, C, S>>) -> Solid<P, C, S> {
+        match cfg!(debug_assertions) {
+            true => Solid::new(boundaries),
+            false => Solid::new_unchecked(boundaries),
+        }
+    }
+
     /// Returns the reference of boundary shells
     #[inline(always)]
     pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
