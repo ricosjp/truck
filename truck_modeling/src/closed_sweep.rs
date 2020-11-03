@@ -22,7 +22,7 @@ fn sub_sweep_edge(edge0: &Edge, edge1: &Edge, origin: Point3, axis: Vector3) -> 
     let edge3 = create_edge(edge0.back(), edge1.back(), origin, axis);
     let wire0 = Wire::from(vec![edge0.clone(), edge3, edge1.inverse(), edge2.inverse()]);
     let surface0 = create_surface(edge0, edge1, origin, axis);
-    Face::new_unchecked(vec![wire0], surface0)
+    Face::debug_new(vec![wire0], surface0)
 }
 
 impl CompleteRSweep for Edge {
@@ -47,8 +47,8 @@ fn new_fedge_bedge(
 {
     let curve0 = geom_impls::circle_arc(*v0.lock_point().unwrap(), origin, axis, PI);
     let curve1 = geom_impls::circle_arc(*v1.lock_point().unwrap(), origin, axis, PI);
-    let fedge = Edge::new_unchecked(v0, v1, curve0);
-    let bedge = Edge::new_unchecked(v1, v0, curve1);
+    let fedge = Edge::debug_new(v0, v1, curve0);
+    let bedge = Edge::debug_new(v1, v0, curve1);
     vemap.insert(v0.id(), (fedge.clone(), bedge.clone()));
     (fedge, bedge)
 }
@@ -84,8 +84,8 @@ fn sub_sweep_wire(
     let surface0 = geom_impls::rsweep_surface(&*edge0.lock_curve().unwrap(), origin, axis, PI);
     let surface1 = geom_impls::rsweep_surface(&*edge1.lock_curve().unwrap(), origin, axis, PI);
     (
-        Face::new_unchecked(vec![wire0], surface0),
-        Face::new_unchecked(vec![wire1], surface1),
+        Face::debug_new(vec![wire0], surface0),
+        Face::debug_new(vec![wire1], surface1),
     )
 }
 
@@ -132,7 +132,7 @@ impl CompleteRSweep for Shell {
 
 fn create_edge(v0: &Vertex, v1: &Vertex, origin: Point3, axis: Vector3) -> Edge {
     let curve = geom_impls::circle_arc(*v0.lock_point().unwrap(), origin, axis, PI);
-    Edge::new_unchecked(v0, v1, curve)
+    Edge::debug_new(v0, v1, curve)
 }
 
 fn create_surface(edge0: &Edge, _: &Edge, origin: Point3, axis: Vector3) -> BSplineSurface {

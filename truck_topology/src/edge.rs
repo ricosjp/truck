@@ -46,6 +46,18 @@ impl<P, C> Edge<P, C> {
         }
     }
 
+    /// Generates the edge from `front` to `back`.
+    /// # Remarks
+    /// This method check the condition `front == back` in the debug mode.  
+    /// The programmer must guarantee this condition before using this method.
+    #[inline(always)]
+    pub fn debug_new(front: &Vertex<P>, back: &Vertex<P>, curve: C) -> Edge<P, C> {
+        match cfg!(debug_assertions) {
+            true => Edge::new(front, back, curve),
+            false => Edge::new_unchecked(front, back, curve),
+        }
+    }
+
     /// Returns the orientation of the curve.
     /// # Examples
     /// ```

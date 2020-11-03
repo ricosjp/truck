@@ -278,6 +278,7 @@ impl<P, C> Wire<P, C> {
 impl<T, P, C> From<T> for Wire<P, C>
 where T: Into<VecDeque<Edge<P, C>>>
 {
+    #[inline(always)]
     fn from(edge_list: T) -> Wire<P, C> {
         Wire {
             edge_list: edge_list.into(),
@@ -286,6 +287,7 @@ where T: Into<VecDeque<Edge<P, C>>>
 }
 
 impl<P, C> std::iter::FromIterator<Edge<P, C>> for Wire<P, C> {
+    #[inline(always)]
     fn from_iter<I: IntoIterator<Item = Edge<P, C>>>(iter: I) -> Wire<P, C> {
         let edge_list = VecDeque::from_iter(iter);
         Wire::from(edge_list)
@@ -293,6 +295,7 @@ impl<P, C> std::iter::FromIterator<Edge<P, C>> for Wire<P, C> {
 }
 
 impl<'a, P, C> std::iter::FromIterator<&'a Edge<P, C>> for Wire<P, C> {
+    #[inline(always)]
     fn from_iter<I: IntoIterator<Item = &'a Edge<P, C>>>(iter: I) -> Wire<P, C> {
         let edge_list = VecDeque::from_iter(iter.into_iter().map(|edge| edge.clone()));
         Wire::from(edge_list)
@@ -302,7 +305,15 @@ impl<'a, P, C> std::iter::FromIterator<&'a Edge<P, C>> for Wire<P, C> {
 impl<P, C> IntoIterator for Wire<P, C> {
     type Item = Edge<P, C>;
     type IntoIter = std::collections::vec_deque::IntoIter<Edge<P, C>>;
+    #[inline(always)]
     fn into_iter(self) -> Self::IntoIter { self.edge_list.into_iter() }
+}
+
+impl<'a, P, C> IntoIterator for &'a Wire<P, C> {
+    type Item = &'a Edge<P, C>;
+    type IntoIter = std::collections::vec_deque::Iter<'a, Edge<P, C>>;
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter { self.edge_list.iter() }
 }
 
 /// The reference iterator over all edges in a wire.

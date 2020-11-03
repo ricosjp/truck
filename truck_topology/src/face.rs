@@ -67,6 +67,18 @@ impl<P, C, S> Face<P, C, S> {
         }
     }
 
+    /// Creates a new face by a wire.
+    /// # Remarks
+    /// This method check the regularity conditions of `Face::try_new()` in the debug mode.  
+    /// The programmer must guarantee this condition before using this method.
+    #[inline(always)]
+    pub fn debug_new(boundaries: Vec<Wire<P, C>>, surface: S) -> Face<P, C, S> {
+        match cfg!(debug_assertions) {
+            true => Face::new(boundaries, surface),
+            false => Face::new_unchecked(boundaries, surface),
+        }
+    }
+
     /// Returns the boundaries of the face.
     /// # Examples
     /// ```
@@ -173,6 +185,28 @@ impl<P, C, S> Face<P, C, S> {
             })
             .collect()
     }
+
+    /// Adds a boundary to the face.
+    #[inline(always)]
+    pub fn try_add_boundary(&mut self, wire: Wire<P, C>) -> Result<()> {
+        if wire.is_empty() {
+            return Err(Error::EmptyWire);
+        } else if !wire.is_closed() {
+            return Err(Error::NotClosedWire);
+        } else if !wire.is_simple() {
+            return Err(Error::NotSimpleWire);
+        }
+        self.boundaries.push(wire);
+        if !Wire::disjoint_wires(&self.boundaries) {
+            self.boundaries.pop();
+            return Err(Error::NotDisjointWires);
+        }
+        Ok(())
+    }
+
+    /// Adds a boundary to the face.
+    #[inline(always)]
+    pub fn add_boundary(&mut self, wire: Wire<P, C>) { self.try_add_boundary(wire).remove_try() }
 
     /// Returns the orientation of face.
     ///
