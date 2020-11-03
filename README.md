@@ -18,11 +18,11 @@ Truck is a collection of multiple crates. Users can use only the packages they n
 * If you don't like the CSG-like utility API provided here, you can create your own utility that depends only on more primitive crates.
 
 ### crates
-* [truck_geometry](https://ricos.pages.ritc.jp/truck/truck/truck_geometry/index.html)  
+* [truck-geometry](https://ricos.pages.ritc.jp/truck/truck/truck-geometry/index.html)  
 geometrical structs: vector, matrix, knot vector, and bsplines
-* [truck_topology](https://ricos.pages.ritc.jp/truck/truck/truck_topology/index.html)  
+* [truck-topology](https://ricos.pages.ritc.jp/truck/truck/truck-topology/index.html)  
 topological structs: vertex, edge, wire, face, shell, and solid.
-* [truck_polymesh](https://ricos.pages.ritc.jp/truck/truck/truck_polymesh/index.html)  
+* [truck-polymesh](https://ricos.pages.ritc.jp/truck/truck/truck-polymesh/index.html)  
 define polyline-polygon data structure and some algorithms handling mesh, including meshing the shapes
-* [truck_io](https://ricos.pages.ritc.jp/truck/truck/truck_io/index.html)  
+* [truck-io](https://ricos.pages.ritc.jp/truck/truck/truck-io/index.html)  
 input / output libraries for obj, tts, tgb, and so on.

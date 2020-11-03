@@ -1,5 +1,5 @@
 [package]
-name = "truck_featwgpu"
+name = "truck-featwgpu"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
@@ -12,9 +12,9 @@ bytemuck = "*"
 cgmath = "*"
 futures = "*"
 image = "*"
-truck_polymesh = {path = "../truck_polymesh"}
-truck_modeling = {path = "../truck_modeling"}
-truck_integral = {path = "../truck_integral"}
+truck-polymesh = {path = "../truck-polymesh"}
+truck-modeling = {path = "../truck-modeling"}
+truck-integral = {path = "../truck-integral"}
 wgpu = "*"
 
 [build-dependencies]
@@ -23,4 +23,4 @@ glsl-to-spirv = "*"
 [dev-dependencies]
 winit = "*"
 stringreader = "*"
-truck_io = {path = "../truck_io"}
+truck-io = {path = "../truck-io"}
