@@ -1,10 +1,10 @@
 [workspace]
 members = [
-	"truck_geometry",
-	"truck_topology",
-	"truck_polymesh",
-	"truck_integral",
-	"truck_modeling",
-	"truck_featwgpu",
-	"truck_io",
+	"truck-geometry",
+	"truck-topology",
+	"truck-polymesh",
+	"truck-integral",
+	"truck-modeling",
+	"truck-featwgpu",
+	"truck-io",
 ]
