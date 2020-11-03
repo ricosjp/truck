@@ -183,14 +183,14 @@ impl Scene {
         BufferHandler::new(buffer, (light_vec.len() * std::mem::size_of::<LightInfo>()) as u64)
     }
 
-    pub fn render_scene(&self, sc_texture: &SwapChainTexture) {
+    pub fn render_scene(&self, view: &TextureView) {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 color_attachments: &[RenderPassColorAttachmentDescriptor {
-                    attachment: &sc_texture.view,
+                    attachment: view,
                     resolve_target: None,
                     ops: Operations {
                         load: LoadOp::Clear(self.back_ground),

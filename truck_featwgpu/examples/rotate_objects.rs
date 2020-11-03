@@ -270,7 +270,7 @@ impl App for MyRender {
         self.scene.prepare_render();
     }
 
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output); }
+    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyRender::run() }
