@@ -1,4 +1,3 @@
-use cgmath::Point3;
 use std::f64::consts::PI;
 use truck_geometry::*;
 

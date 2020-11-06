@@ -13,42 +13,20 @@
     unused_qualifications
 )]
 
-extern crate cgmath;
+extern crate truck_base;
 extern crate serde;
+pub use truck_base::cgmath64::*;
+pub use truck_base::bounding_box::*;
+pub use truck_base::tolerance::*;
+use truck_base::geom_traits::*;
+use truck_base::bounding_box::Bounded;
 use std::fmt::Debug;
-
 use serde::{Serialize, Deserialize};
-
-/// Redefines vectors, matrices or points with scalar = f64.
-pub mod cgmath64 {
-    use crate::*;
-    pub use cgmath::prelude::*;
-    macro_rules! f64_type {
-        ($typename: ident) => {
-            /// redefinition, scalar = f64
-            pub type $typename = cgmath::$typename<f64>;
-        };
-        ($a: ident, $($b: ident), *) => { f64_type!($a); f64_type!($($b),*); }
-    }
-    f64_type!(Vector1, Vector2, Vector3, Vector4, Matrix2, Matrix3, Matrix4, Point1, Point2, Point3);
-}
-pub use cgmath64::*;
+pub use traits::*;
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct KnotVec(Vec<f64>);
-
-/// bounding box
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct BoundingBox<V>(V, V);
-
-/// general tolerance
-pub const TOLERANCE: f64 = 1.0e-7;
-
-/// general tolerance of square order
-pub const TOLERANCE2: f64 = TOLERANCE * TOLERANCE;
-
-pub use traits::*;
 
 /// B-spline curve
 /// # Examples
@@ -90,6 +68,10 @@ pub struct BSplineCurve<V> {
     knot_vec: KnotVec,      // the knot vector
     control_points: Vec<V>, // the indices of control points
 }
+
+/// NURBS curve
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct NURBSCurve<V>(BSplineCurve<V>);
 
 /// Curve for the recursive concatting.
 /// # Examples
@@ -188,9 +170,9 @@ pub struct BSplineSurface<V> {
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
 #[doc(hidden)]
-pub mod bounding_box;
-#[doc(hidden)]
 pub mod bspcurve;
+#[doc(hidden)]
+pub mod nurbscurve;
 /// Defines some iterators on control points of B-spline surface.
 pub mod bspsurface;
 /// Enumerats `Error`.

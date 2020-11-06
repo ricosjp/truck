@@ -1,5 +1,5 @@
 [package]
-name = "truck-geometry"
+name = "truck-base"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
@@ -7,9 +7,5 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-truck-base = {path = "../truck-base"}
+cgmath = "*"
 serde = { version = "*", features = ["derive"]}
-
-[dev-dependencies]
-truck-io = {path = "../truck-io"}
-truck-polymesh = {path = "../truck-polymesh"}

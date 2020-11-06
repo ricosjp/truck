@@ -5,7 +5,7 @@ use std::convert::TryInto;
 use std::ops::*;
 
 impl<V: ExVectorSpace> BSplineSurface<V>
-where V::Rationalized: cgmath::AbsDiffEq<Epsilon = f64>
+where V::Rationalized: Tolerance
 {
     /// constructor.
     /// # Arguments

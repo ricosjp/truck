@@ -1,11 +1,10 @@
 extern crate truck_integral;
-pub use cgmath::prelude::*;
 pub use cgmath::Rad;
 use truck_integral::EdgeEx;
 
 // geometrical elements
 pub mod geometry {
-    pub use geometry::{cgmath64::*, errors::Error, traits::*, BoundingBox, KnotVec, Result};
+    pub use geometry::{*, errors::Error, traits::*, BoundingBox, KnotVec, Result};
     use truck_integral::*;
     pub type BSplineCurve = geometry::BSplineCurve<Vector4>;
     pub type BSplineSurface = geometry::BSplineSurface<Vector4>;

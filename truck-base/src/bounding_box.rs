@@ -1,7 +1,87 @@
-use crate::traits::Bounded;
-use crate::*;
-use cgmath::BaseFloat;
+use serde::*;
+use cgmath::*;
 use std::ops::Index;
+
+/// bounding box
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct BoundingBox<V>(V, V);
+
+/// The trait for defining the bounding box
+pub trait Bounded<S> {
+    /// the result of subtraction
+    type Vector;
+    #[doc(hidden)]
+    fn infinity() -> Self;
+    #[doc(hidden)]
+    fn neg_infinity() -> Self;
+    #[doc(hidden)]
+    fn max(&self, other: &Self) -> Self;
+    #[doc(hidden)]
+    fn min(&self, other: &Self) -> Self;
+    #[doc(hidden)]
+    fn max_component(one: Self::Vector) -> S;
+    #[doc(hidden)]
+    fn diagonal(self, other: Self) -> Self::Vector;
+    #[doc(hidden)]
+    fn mid(self, other: Self) -> Self;
+}
+
+macro_rules! pr2 {
+    ($a: expr, $b: expr) => {
+        $b
+    };
+}
+macro_rules! impl_bounded {
+        ($typename: ident, $vectortype: ident, $($num: expr),*) => {
+            impl<S: cgmath::BaseFloat> Bounded<S> for $typename<S> {
+                type Vector = $vectortype<S>;
+                fn infinity() -> $typename<S> {
+                    $typename::new($(pr2!($num, S::infinity())),*)
+                }
+                fn neg_infinity() -> $typename<S> {
+                    $typename::new($(pr2!($num, S::neg_infinity())),*)
+                }
+                fn max(&self, other: &Self) -> Self {
+                    $typename::new(
+                        $(
+                            if self[$num] < other[$num] {
+                                other[$num]
+                            } else {
+                                self[$num]
+                            }
+                        ),*
+                    )
+                }
+                fn min(&self, other: &Self) -> Self {
+                    $typename::new(
+                        $(
+                            if self[$num] > other[$num] {
+                                other[$num]
+                            } else {
+                                self[$num]
+                            }
+                        ),*
+                    )
+                }
+                fn max_component(one: Self::Vector) -> S {
+                    let mut max = S::neg_infinity();
+                    $(if max < one[$num] { max = one[$num] })*
+                    max
+                }
+                fn diagonal(self, other: Self) -> Self::Vector { self - other }
+                fn mid(self, other: Self) -> Self {
+                    self + (other - self) / (S::one() + S::one())
+                }
+            }
+        };
+    }
+impl_bounded!(Vector1, Vector1, 0);
+impl_bounded!(Point1, Vector1, 0);
+impl_bounded!(Vector2, Vector2, 0, 1);
+impl_bounded!(Point2, Vector2, 0, 1);
+impl_bounded!(Vector3, Vector3, 0, 1, 2);
+impl_bounded!(Point3, Vector3, 0, 1, 2);
+impl_bounded!(Vector4, Vector4, 0, 1, 2, 3);
 
 impl<F, V> BoundingBox<V>
 where
@@ -14,7 +94,7 @@ where
     /// Adds a point to the bouding box.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// bdd_box.push(&Vector2::new(-1.0,  1.0));
     /// bdd_box.push(&Vector2::new(1.0,  -1.0));
@@ -24,7 +104,7 @@ where
     /// # Remarks
     /// If the added point has NAN component, then the point is not added.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// bdd_box.push(&Vector2::new(-1.0,  1.0));
     /// bdd_box.push(&Vector2::new(1.0,  -1.0));
@@ -42,7 +122,7 @@ where
     /// Returns the bounding box is empty or not.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// assert!(bdd_box.is_empty());
     /// bdd_box.push(&Vector2::new(-1.0,  1.0));
@@ -53,7 +133,7 @@ where
     /// Returns the reference to the maximum point.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// bdd_box.push(&Vector2::new(-1.0,  1.0));
     /// bdd_box.push(&Vector2::new(1.0,  -1.0));
@@ -62,7 +142,7 @@ where
     /// # Remarks
     /// If the bounding box is empty, returned vector consists `NEG_INFINITY` components.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector2>::new();
     /// assert_eq!(bdd_box.max(), &Vector2::from([f64::NEG_INFINITY; 2]));
     /// ```
@@ -71,7 +151,7 @@ where
     /// Returns the reference to the minimal point.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// bdd_box.push(&Vector2::new(-1.0,  1.0));
     /// bdd_box.push(&Vector2::new(1.0,  -1.0));
@@ -80,7 +160,7 @@ where
     /// # Remarks
     /// If the bounding box is empty, returned vector consists `INFINITY` components.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector2>::new();
     /// assert_eq!(bdd_box.min(), &Vector2::from([f64::INFINITY; 2]));
     /// ```
@@ -89,7 +169,7 @@ where
     /// Returns the diagonal vector.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// bdd_box.push(&Vector2::new(-2.0,  -3.0));
     /// bdd_box.push(&Vector2::new(6.0,  4.0));
@@ -98,7 +178,7 @@ where
     /// # Remarks
     /// If the bounding box is empty, returned vector consists `f64::NEG_INFINITY` components.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector2>::new();
     /// assert_eq!(bdd_box.diagonal(), Vector2::new(f64::NEG_INFINITY, f64::NEG_INFINITY));
     /// ```
@@ -108,7 +188,7 @@ where
     /// Returns the diameter of the bounding box.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// bdd_box.push(&Vector2::new(-1.0,  -3.0));
     /// bdd_box.push(&Vector2::new(2.0,  1.0));
@@ -117,7 +197,7 @@ where
     /// # Remarks
     /// If the bounding box is empty, returnes `f64::NEG_INFINITY`.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector3>::new();
     /// assert_eq!(bdd_box.diameter(), f64::NEG_INFINITY);
     /// ```
@@ -133,7 +213,7 @@ where
     /// Returns the maximum length of the edges of the bounding box.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// bdd_box.push(&Vector3::new(-1.0, -3.0,  2.0));
     /// bdd_box.push(&Vector3::new(2.0, 1.0,  10.0));
@@ -142,7 +222,7 @@ where
     /// # Remarks
     /// If the bounding box is empty, returnes `f64::NEG_INFINITY`.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector3>::new();
     /// assert_eq!(bdd_box.size(), f64::NEG_INFINITY);
     /// ```
@@ -152,7 +232,7 @@ where
     /// Returns the center of the bounding box.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let mut bdd_box = BoundingBox::new();
     /// bdd_box.push(&Vector2::new(-1.0,  -3.0));
     /// bdd_box.push(&Vector2::new(5.0,  1.0));
@@ -161,7 +241,7 @@ where
     /// # Remarks
     /// If the bounding box is empty, returned vector consists `std::f64::NAN` components.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector3>::new();
     /// let center = bdd_box.center();
     /// assert!(center[0].is_nan());
@@ -206,7 +286,7 @@ where
     /// Puts the points in `other` into `self`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let mut bdd_box = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
@@ -236,7 +316,7 @@ where
     /// Puts the points in `other` into `self`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let mut bdd_box = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
@@ -264,7 +344,7 @@ where
     /// Returns the direct sum of `self` and other.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0, 6.0),
@@ -293,7 +373,7 @@ where
     /// Returns the direct sum of `self` and other.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
@@ -325,7 +405,7 @@ where
     /// Returns the direct sum of `self` and other.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
@@ -354,7 +434,7 @@ where
     /// Returns the direct sum of `self` and other.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
@@ -382,7 +462,7 @@ where
     /// Assigns the intersection of `self` and `other` to `self`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let mut bdd_box = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
@@ -411,7 +491,7 @@ where
     /// Assigns the intersection of `self` and `other` to `self`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let mut bdd_box = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
@@ -438,7 +518,7 @@ where
     /// Returns the intersection of `self` and `other`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
@@ -466,7 +546,7 @@ where
     /// Returns the intersection of `self` and `other`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0,  2.0), Vector2::new(5.0,  6.0),
@@ -497,7 +577,7 @@ where
     /// Returns the intersection of `self` and `other`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0,  2.0), Vector2::new(5.0,  6.0),
@@ -525,7 +605,7 @@ where
     /// Returns the intersection of `self` and `other`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0,  2.0), Vector2::new(5.0,  6.0),
