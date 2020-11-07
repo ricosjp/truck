@@ -1,6 +1,6 @@
 use cgmath::*;
 
-pub trait TangentSpace<S>: VectorSpace<Scalar = S> {
+pub trait TangentSpace<S: BaseFloat>: VectorSpace<Scalar = S> {
     type Space: EuclideanSpace<Scalar = S, Diff = Self>;
 }
 impl<S: BaseFloat> TangentSpace<S> for Vector1<S> {
@@ -14,8 +14,9 @@ impl<S: BaseFloat> TangentSpace<S> for Vector3<S> {
 }
 
 pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
-    type Point: EuclideanSpace<Scalar = S>;
-    fn truncate(self) -> <Self::Point as EuclideanSpace>::Diff;
+    type Vector: VectorSpace<Scalar = S>;
+    type Point: EuclideanSpace<Scalar = S, Diff = Self::Vector>;
+    fn truncate(self) -> Self::Vector;
     fn weight(self) -> S;
     /// Returns the projection to the plane whose the last component is `1.0`.
     /// # Examples
@@ -94,6 +95,7 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
+    type Vector = Vector1<S>;
     type Point = Point1<S>;
     #[inline(always)]
     fn truncate(self) -> Vector1<S> { Vector1::new(self[0]) }
@@ -104,6 +106,7 @@ impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
+    type Vector = Vector2<S>;
     type Point = Point2<S>;
     #[inline(always)]
     fn truncate(self) -> Vector2<S> { self.truncate() }
@@ -114,6 +117,7 @@ impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
+    type Vector = Vector3<S>;
     type Point = Point3<S>;
     #[inline(always)]
     fn truncate(self) -> Vector3<S> { self.truncate() }
