@@ -30,7 +30,7 @@ impl RenderFace {
         let mut boundary = Vec::<[f32; 4]>::new();
         for edge in face.boundary_iters().into_iter().flatten() {
             let curve = edge.oriented_curve();
-            let division = curve.rational_parameter_division(tol * 0.1);
+            let division = curve.rational_parameter_division(tol);
             let mut hint = presearch(&surface, curve.subs(division[0]).rational_projection());
             let mut this_boundary = Vec::new();
             for t in division {
@@ -124,7 +124,7 @@ impl Rendered for RenderFace {
             }),
             rasterization_state: Some(RasterizationStateDescriptor {
                 front_face: FrontFace::Ccw,
-                cull_mode: CullMode::Back,
+                cull_mode: CullMode::None,
                 depth_bias: 0,
                 depth_bias_slope_scale: 0.0,
                 depth_bias_clamp: 0.0,
