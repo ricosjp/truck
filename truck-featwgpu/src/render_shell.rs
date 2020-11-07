@@ -30,7 +30,7 @@ impl RenderFace {
         let mut boundary = Vec::<[f32; 4]>::new();
         for edge in face.boundary_iters().into_iter().flatten() {
             let curve = edge.oriented_curve();
-            let division = curve.rational_parameter_division(tol * 0.1);
+            let division = curve.parameter_division(tol * 0.1);
             let mut hint = presearch(&surface, curve.subs(division[0]).rational_projection());
             let mut this_boundary = Vec::new();
             for t in division {

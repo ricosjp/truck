@@ -16,7 +16,7 @@ impl Curve for BSplineCurve<Vector3> {
     }
     #[inline(always)]
     fn is_arc_of(&self, longer: &Self, hint: f64) -> Option<f64> {
-        self.is_rational_arc_of(longer, hint)
+        self.is_arc_of(longer, hint)
     }
     #[inline(always)]
     fn inverse(&self) -> Self {
@@ -42,7 +42,7 @@ impl Curve for BSplineCurve<Vector4> {
     }
     #[inline(always)]
     fn is_arc_of(&self, longer: &Self, hint: f64) -> Option<f64> {
-        self.is_rational_arc_of(longer, hint)
+        self.is_arc_of(longer, hint)
     }
     #[inline(always)]
     fn inverse(&self) -> Self {

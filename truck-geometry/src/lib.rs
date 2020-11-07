@@ -18,7 +18,7 @@ extern crate serde;
 pub use truck_base::cgmath64::*;
 pub use truck_base::bounding_box::*;
 pub use truck_base::tolerance::*;
-use truck_base::geom_traits::*;
+pub use truck_base::geom_traits::*;
 use truck_base::bounding_box::Bounded;
 use std::fmt::Debug;
 use serde::{Serialize, Deserialize};

@@ -1,7 +1,7 @@
 use crate::*;
 
 impl<V> NURBSCurve<V> {
-    /// constructor
+    /// Constructs the rationalized B-spline curve.
     #[inline(always)]
     pub fn new(curve: BSplineCurve<V>) -> Self { NURBSCurve(curve) }
 
@@ -12,83 +12,74 @@ impl<V> NURBSCurve<V> {
     /// Returns the BSpline curve before rationalized.
     #[inline(always)]
     pub fn into_non_rationalized(self) -> BSplineCurve<V> { self.0 }
-    /// Returns the reference of the knot vector
+
+    /// Returns the reference of the knot vector.  
+    /// cf.[`BSplineCurve::knot_vec`](./struct.BSplineCurve.html#method.knot_vec)
     #[inline(always)]
     pub fn knot_vec(&self) -> &KnotVec { &self.0.knot_vec }
 
-    /// Returns the `idx`th knot
+    /// Returns the `idx`th knot.  
+    /// cf.[`BSplineCurve::knot`](./struct.BSplineCurve.html#method.knot)
     #[inline(always)]
     pub fn knot(&self, idx: usize) -> f64 { self.0.knot_vec[idx] }
 
-    /// Returns the reference of the control points.
+    /// Returns the reference of the control points.  
+    /// cf.[`BSplineCurve::control_points`](./struct.BSplineCurve.html#method.control_points)
     #[inline(always)]
     pub fn control_points(&self) -> &Vec<V> { &self.0.control_points }
 
-    /// Returns the reference of the control point corresponding to the index `idx`.
+    /// Returns the reference of the control point corresponding to the index `idx`.  
+    /// cf.[`BSplineCurve::control_point`](./struct.BSplineCurve.html#method.control_point)
     #[inline(always)]
     pub fn control_point(&self, idx: usize) -> &V { &self.0.control_points[idx] }
 
-    /// Returns the mutable reference of the control point corresponding to index `idx`.
+    /// Returns the mutable reference of the control point corresponding to index `idx`.  
+    /// cf.[`BSplineCurve::control_point_mut`](./struct.BSplineCurve.html#method.control_point_mut)
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx: usize) -> &mut V { &mut self.0.control_points[idx] }
-    /// Returns the iterator on all control points
+    
+    /// Returns the iterator on all control points  
+    /// cf.[`BSplineCurve::control_points_mut`](./struct.BSplineCurve.html#method.control_points_mut)
     #[inline(always)]
     pub fn control_points_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.0.control_points.iter_mut()
     }
 
-    /// Apply the given transformation to all control points.
+    /// Apply the given transformation to all control points.  
+    /// cf.[`BSplineCurve::transform_control_points`](./struct.BSplineCurve.html#method.transform_control_points)
     #[inline(always)]
     pub fn transform_control_points<F: FnMut(&mut V)>(&mut self, f: F) {
-        self.0.control_points.iter_mut().for_each(f)
+        self.0.transform_control_points(f)
     }
 
-    /// Returns the degree of B-spline curve
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// assert_eq!(bspcurve.degree(), 2);
-    /// ```
+    /// Returns the degree of NURBS curve.  
+    /// cf.[`BSplineCurve::degree`](./struct.BSplineCurve.html#method.degree)
     #[inline(always)]
-    pub fn degree(&self) -> usize { self.0.knot_vec.len() - self.0.control_points.len() - 1 }
-    /// Inverts a curve
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0), Vector2::new(4.0, 5.0)];
-    /// let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let mut bspcurve1 = bspcurve0.clone();
-    /// bspcurve1.invert();
-    ///
-    /// const N: usize = 100; // sample size
-    /// for i in 0..=N {
-    ///     let t = (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve0.subs(t), &bspcurve1.subs(1.0 - t));
-    /// }
-    /// ```
+    pub fn degree(&self) -> usize { self.0.degree() }
+
+    /// Inverts a curve.  
+    /// cf.[`BSplineCurve::invert`](./struct.BSplineCurve.html#method.invert)
     #[inline(always)]
     pub fn invert(&mut self) -> &mut Self {
-        self.0.knot_vec.invert();
-        self.0.control_points.reverse();
+        self.0.invert();
         self
     }
 
-    /// Returns whether the knot vector is clamped or not.
+    /// Returns whether the knot vector is clamped or not.  
+    /// cf.[`BSplineCurve::is_clamped`](./struct.BSplineCurve.html#method.is_clamped)
     #[inline(always)]
     pub fn is_clamped(&self) -> bool { self.0.knot_vec.is_clamped(self.0.degree()) }
 
-    /// Normalizes the knot vector  
+    /// Normalizes the knot vector.  
+    /// cf.[`BSplineCurve::knot_normalize`](./struct.BSplineCurve.html#method.knot_normalize)
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
         self.0.knot_vec.try_normalize().unwrap();
         self
     }
 
-    /// Translates the knot vector
+    /// Translates the knot vector.  
+    /// cf.[`BSplineCurve::knot_translate`](./struct.BSplineCurve.html#method.knot_translate)
     #[inline(always)]
     pub fn knot_translate(&mut self, x: f64) -> &mut Self {
         self.0.knot_vec.translate(x);
@@ -98,20 +89,7 @@ impl<V> NURBSCurve<V> {
 
 impl<V: Homogeneous<f64>> NURBSCurve<V> {
     /// Returns the closure of substitution.
-    /// # Examples
-    /// The following test code is the same test with the one of `BSplineCurve::subs()`.
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(vec![-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
-    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// const N: usize = 100; // sample size
-    /// let get_t = |i: usize| -1.0 + 2.0 * (i as f64) / (N as f64);
-    /// let res: Vec<_> = (0..=N).map(get_t).map(bspcurve.get_closure()).collect();
-    /// let ans: Vec<_> = (0..=N).map(get_t).map(|t| Vector2::new(t, t * t)).collect();
-    /// res.iter().zip(&ans).for_each(|(v0, v1)| Vector2::assert_near2(v0, v1));
-    /// ```
+    /// 
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
@@ -126,14 +104,17 @@ where V::Point: Tolerance
     /// use truck_geometry::*;
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let pt = Vector2::new(1.0, 2.0);
-    /// let mut ctrl_pts = vec![pt.clone(), pt.clone(), pt.clone()];
-    /// let const_bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
-    /// assert!(const_bspcurve.is_const());
-    ///
-    /// ctrl_pts.push(Vector2::new(2.0, 3.0));
+    /// let pt = Vector3::new(1.0, 2.0, 1.0);
+    /// // allows differences upto scalars
+    /// let mut ctrl_pts = vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0];
     /// let bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
     /// assert!(!bspcurve.is_const());
+    /// let const_curve = NURBSCurve::new(bspcurve);
+    /// assert!(const_curve.is_const());
+    ///
+    /// ctrl_pts.push(Vector3::new(2.0, 3.0, 1.0));
+    /// let curve = NURBSCurve::new(BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone()));
+    /// assert!(!curve.is_const());
     /// ```
     /// # Remarks
     /// If the knot vector is not clamped and the BSpline basis function is not partition of unity,
@@ -152,65 +133,23 @@ where V::Point: Tolerance
     /// assert!(bspcurve.is_const());
     /// ```
     pub fn is_const(&self) -> bool {
-        for vec in &self.0.control_points {
-            if !vec.to_point().near(&self.0.control_points[0].to_point()) {
-                return false;
-            }
-        }
-        true
+        let pt = self.0.control_points[0].to_point();
+        self.0
+            .control_points
+            .iter()
+            .all(move |vec| vec.to_point().near(&pt))
     }
 
     /// Adds a knot `x`, and do not change `self` as a curve.  
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let org_curve = bspcurve.clone();
-    ///
-    /// // add 4 knots
-    /// bspcurve.add_knot(0.5).add_knot(0.5).add_knot(0.25).add_knot(0.75);
-    /// assert_eq!(bspcurve.knot_vec().len(), org_curve.knot_vec().len() + 4);
-    /// // bspcurve does not change as a curve
-    /// assert!(bspcurve.near2_as_curve(&org_curve));
-    /// ```
-    /// # Remarks
-    /// If the added knot `x` is out of the range of the knot vector, then the knot vector will extended.
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// assert_eq!(bspcurve.knot_vec().range_length(), 1.0);
-    /// assert_eq!(bspcurve.end_points(), (Vector2::new(-1.0, 1.0), Vector2::new(1.0, 1.0)));
-    ///
-    /// // add knots out of the range of the knot vectors.
-    /// bspcurve.add_knot(-1.0).add_knot(2.0);
-    /// assert_eq!(bspcurve.knot_vec().range_length(), 3.0);
-    /// assert_eq!(bspcurve.end_points(), (Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)));
-    /// ```
+    /// cf.[`BSplineCurve::add_knot`](./struct.BSplineCurve.html#method.add_knot)
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
         self.0.add_knot(x);
         self
     }
 
     /// Removes a knot corresponding to the indices `idx`, and do not change `self` as a curve.
-    /// If cannot remove the knot, do not change `self` and return `self`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let org_curve = bspcurve.clone();
-    ///
-    /// // add knots and remove them.
-    /// bspcurve.add_knot(0.5).add_knot(0.5).add_knot(0.25).add_knot(0.75);
-    /// bspcurve.remove_knot(3).remove_knot(3).remove_knot(3).remove_knot(3);
-    /// assert!(bspcurve.near2_as_curve(&org_curve));
-    /// assert_eq!(bspcurve.knot_vec().len(), org_curve.knot_vec().len())
-    /// ```
+    /// If cannot remove the knot, do not change `self` and return `self`.  
+    /// cf.[`BSplineCurve::remove_knot`](./struct.BSplineCurve.html#method.remove_knot)
     pub fn remove_knot(&mut self, idx: usize) -> &mut Self {
         let _ = self.try_remove_knot(idx);
         self
@@ -218,103 +157,37 @@ where V::Point: Tolerance
 
     /// Removes a knot corresponding to the indice `idx`, and do not change `self` as a curve.  
     /// If the knot cannot be removed, returns
-    /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// use errors::Error;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let org_curve = bspcurve.clone();
-    /// bspcurve.add_knot(0.5).add_knot(0.5).add_knot(0.25).add_knot(0.75);
-    /// assert!(bspcurve.try_remove_knot(3).is_ok());
-    /// assert_eq!(bspcurve.try_remove_knot(2), Err(Error::CannotRemoveKnot(2)));
-    /// ```
+    /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).  
+    /// cf.[`BSplineCurve::try_remove_knot`](./struct.BSplineCurve.html#method.try_remove_knot)
     pub fn try_remove_knot(&mut self, idx: usize) -> Result<&mut Self> {
         self.0.try_remove_knot(idx)?;
         Ok(self)
     }
 
-    /// elevate 1 degree.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(1);
-    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// bspcurve.elevate_degree();
-    /// assert_eq!(bspcurve.degree(), 2);
-    /// assert_eq!(bspcurve.knot_vec(), &KnotVec::bezier_knot(2));
-    /// assert_eq!(bspcurve.control_point(1), &Vector2::new(0.5, 0.5));
-    /// ```
+    /// Elevates 1 degree.  
+    /// cf.[`BSplineCurve::elevate_degree`](./struct.BSplineCurve.html#method.elevate_degree)
     pub fn elevate_degree(&mut self) -> &mut Self {
         self.0.elevate_degree();
         self
     }
 
-    /// Makes the B-spline curve clamped
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
-    /// let ctrl_pts = vec![Vector2::new(0.0, 1.0), Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0)];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// assert!(!bspcurve.is_clamped());
-    /// bspcurve.clamp();
-    /// assert!(bspcurve.is_clamped());
-    /// assert_eq!(bspcurve.knot_vec().len(), 10);
-    /// ```
+    /// Makes the NURBS curve clamped  
+    /// cf.[`BSplineCurve::clamp`](./struct.BSplineCurve.html#method.clamp)
     #[inline(always)]
     pub fn clamp(&mut self) -> &mut Self {
         self.0.clamp();
         self
     }
 
-    /// Repeats `Self::try_remove_knot()` from the back knot in turn until the knot cannot be removed.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let org_curve = bspcurve.clone();
-    ///
-    /// // add 4 new knots
-    /// bspcurve.add_knot(0.5).add_knot(0.5).add_knot(0.25).add_knot(0.75);
-    /// assert_eq!(bspcurve.knot_vec().len(), KnotVec::bezier_knot(2).len() + 4);
-    ///
-    /// // By the optimization, added knots are removed.
-    /// bspcurve.optimize();
-    /// assert_eq!(bspcurve.knot_vec(), &KnotVec::bezier_knot(2));
-    /// assert!(bspcurve.near2_as_curve(&org_curve));
-    /// ```
+    /// Repeats `Self::try_remove_knot()` from the back knot in turn until the knot cannot be removed.  
+    /// cf.[`BSplineCurve::optimize`](./struct.BSplineCurve.html#method.optimize)
     pub fn optimize(&mut self) -> &mut Self {
         self.0.optimize();
         self
     }
 
-    /// Makes two splines having the same degrees.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts0 = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts1 = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// assert_ne!(bspcurve0.degree(), bspcurve1.degree());
-    ///
-    /// let org_curve0 = bspcurve0.clone();
-    /// let org_curve1 = bspcurve1.clone();
-    /// bspcurve0.syncro_degree(&mut bspcurve1);
-    /// assert_eq!(bspcurve0.degree(), bspcurve1.degree());
-    /// assert!(bspcurve0.near2_as_curve(&org_curve0));
-    /// assert!(bspcurve1.near2_as_curve(&org_curve1));
-    /// ```
+    /// Makes two splines having the same degrees.  
+    /// cf.[`BSplineCurve::syncro_degree`](./struct.BSplineCurve.html#method.syncro_degree)
     pub fn syncro_degree(&mut self, other: &mut Self) {
         let (degree0, degree1) = (self.degree(), other.degree());
         for _ in degree0..degree1 {
@@ -325,185 +198,23 @@ where V::Point: Tolerance
         }
     }
 
-    /// Makes two splines having the same normalized knot vectors.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0]);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let mut org_curve0 = bspcurve0.clone();
-    /// let knot_vec1 = KnotVec::from(vec![0.0, 0.0, 1.0, 3.0, 4.0, 4.0]);
-    /// let ctrl_pts1 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// let mut org_curve1 = bspcurve1.clone();
-    ///
-    /// bspcurve0.syncro_knots(&mut bspcurve1);
-    ///
-    /// // The knot vectors are made the same.
-    /// assert_eq!(bspcurve0.knot_vec(), bspcurve1.knot_vec());
-    /// assert_eq!(
-    ///     bspcurve0.knot_vec().as_slice(),
-    ///     &[0.0, 0.0, 0.0, 0.25, 0.5, 0.75, 1.0, 1.0, 1.0]
-    /// );
-    /// // The degrees are not changed.
-    /// assert_eq!(bspcurve0.degree(), org_curve0.degree());
-    /// assert_eq!(bspcurve1.degree(), org_curve1.degree());
-    /// // The knot vector is normalized, however, the shape of curve is not changed.
-    /// assert!(bspcurve0.near2_as_curve(org_curve0.knot_normalize()));
-    /// assert!(bspcurve1.near2_as_curve(org_curve1.knot_normalize()));
-    /// ```
+    /// Makes two splines having the same normalized knot vectors.  
+    /// cf.[`BSplineCurve::syncro_knots`](./struct.BSplineCurve.html#method.syncro_knots)
     pub fn syncro_knots(&mut self, other: &mut Self) { self.0.syncro_knots(&mut other.0) }
 
-    /// Cuts the curve to two curves at the parameter `t`
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(2.0, 2.0),
-    ///     Vector2::new(4.0, 3.0),
-    ///     Vector2::new(5.0, 6.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// let mut part0 = bspcurve.clone();
-    /// let part1 = part0.cut(0.56);
-    /// const N: usize = 100;
-    /// for i in 0..=N {
-    ///     let t = 0.56 * (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve.subs(t), &part0.subs(t));
-    /// }
-    /// for i in 0..=N {
-    ///     let t = 0.56 + 0.44 * (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve.subs(t), &part1.subs(t));
-    /// }
-    /// ```
+    /// Cuts the curve to two curves at the parameter `t`.  
+    /// cf.[`BSplineCurve::syncro_knots`](./struct.BSplineCurve.html#method.syncro_knots)
     pub fn cut(&mut self, t: f64) -> Self { NURBSCurve(self.0.cut(t)) }
 
-    /// Concats two B-spline curves.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(2.0, 2.0),
-    ///     Vector2::new(4.0, 3.0),
-    ///     Vector2::new(5.0, 6.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// let mut part0 = bspcurve.clone();
-    /// let mut part1 = part0.cut(0.56);
-    /// part0.try_concat(&mut part1).unwrap();
-    /// assert!(bspcurve.near2_as_curve(&part0));
-    /// ```
-    /// # Failure
-    /// If the back of the knot vector of `self` does not coincides with the front of the one of `other`,
-    /// returns [`Error::DifferentBackFront`](/errors/enum.Error.html#variant.DifferentBackFront).
-    /// ```
-    /// use truck_geometry::*;
-    /// use errors::Error;
-    ///
-    /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
-    /// let ctrl_pts1 = vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    ///
-    /// assert_eq!(bspcurve0.try_concat(&mut bspcurve1), Err(Error::DifferentBackFront(1.0, 2.0)));
-    /// ```
-    /// # Remarks
-    /// Unlike `Vec::append()`, this method does not change `other` as a curve.  
-    /// However, side effects, such as degree synchronization, or knot vector clamped, do occur.
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts1 = vec![Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// bspcurve1.knot_translate(1.0);
-    /// let org_curve1 = bspcurve1.clone();
-    ///
-    /// bspcurve0.try_concat(&mut bspcurve1).unwrap();
-    ///
-    /// // do not change bspcurve as a curve
-    /// assert!(bspcurve1.near2_as_curve(&org_curve1));
-    /// // The degree is changed.
-    /// assert_ne!(bspcurve1.degree(), org_curve1.degree());
-    /// ```
+    /// Concats two NURBS curves.  
+    /// cf.[`BSplineCurve::try_concat`](./struct.BSplineCurve.html#method.try_concat)
     pub fn try_concat(&mut self, other: &mut Self) -> Result<&mut Self> {
         self.0.try_concat(&mut other.0)?;
         Ok(self)
     }
 
-    /// Concats two B-spline curves.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
-    /// );
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(2.0, 2.0),
-    ///     Vector2::new(4.0, 3.0),
-    ///     Vector2::new(5.0, 6.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// let mut part0 = bspcurve.clone();
-    /// let mut part1 = part0.cut(1.8);
-    /// part0.concat(&mut part1);
-    /// assert!(bspcurve.near2_as_curve(&part0));
-    /// ```
-    /// # Panics
-    /// Panic occurs if the back of the knot vector of `self` does not coincides
-    /// with the front of the one of `other`
-    /// ```should_panic
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
-    /// let ctrl_pts1 = vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// bspcurve0.concat(&mut bspcurve1);
-    /// ```
-    /// # Remarks
-    /// Unlike `Vec::append()`, this method does not change `other` as a curve.  
-    /// However, side effects, such as degree synchronization, or knot vector clamped, do occur.
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts1 = vec![Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// bspcurve1.knot_translate(1.0);
-    /// let org_curve1 = bspcurve1.clone();
-    ///
-    /// bspcurve0.concat(&mut bspcurve1);
-    ///
-    /// // do not change bspcurve as a curve
-    /// assert!(bspcurve1.near2_as_curve(&org_curve1));
-    /// // The degree is changed.
-    /// assert_ne!(bspcurve1.degree(), org_curve1.degree());
-    /// ```
+    /// Concats two NURBS curves.  
+    /// cf.[`BSplineCurve::concat`](./struct.BSplineCurve.html#method.concat)
     #[inline(always)]
     pub fn concat(&mut self, other: &mut Self) -> &mut Self {
         self.try_concat(other)
@@ -541,8 +252,8 @@ where V::Point: Tolerance
     /// let mut flag = false;
     /// for i in 0..N {
     ///     let t = 1.0 * (i as f64) / (N as f64);
-    ///     let pt0 = bspcurve.subs(t);
-    ///     let pt1 = bspcurve.subs(t + 1.0 / (N as f64));
+    ///     let pt0 = curve.subs(t);
+    ///     let pt1 = curve.subs(t + 1.0 / (N as f64));
     ///     flag = flag || pt0.near(&pt1);
     /// }
     /// // There does not exist t such that bspcurve(t) == bspcurve(t + 0.01).
@@ -559,10 +270,10 @@ where V::Point: Tolerance
     ///     Vector3::new(3.0, 3.0, 3.0),
     ///     Vector3::new(4.0, 4.0, 4.0),
     /// ];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let org_curve = bspcurve.clone();
-    /// bspcurve.make_rational_locally_injective();
-    /// assert_eq!(bspcurve, org_curve);
+    /// let mut curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let org_curve = curve.clone();
+    /// curve.make_locally_injective();
+    /// assert_eq!(curve, org_curve);
     /// ```
     pub fn make_locally_injective(&mut self) -> &mut Self {
         let mut iter = self.0.bezier_decomposition().into_iter();
@@ -600,18 +311,18 @@ where V::Point: Tolerance
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     Vector2::new(1.0, 1.0),
-    ///     Vector2::new(3.0, 2.0),
-    ///     Vector2::new(2.0, 3.0),
-    ///     Vector2::new(4.0, 5.0),
-    ///     Vector2::new(5.0, 4.0),
-    ///     Vector2::new(1.0, 1.0),
+    ///     Vector3::new(1.0, 1.0, 1.0),
+    ///     Vector3::new(3.0, 2.0, 2.0),
+    ///     Vector3::new(2.0, 3.0, 1.0),
+    ///     Vector3::new(4.0, 5.0, 2.0),
+    ///     Vector3::new(5.0, 4.0, 1.0),
+    ///     Vector3::new(1.0, 1.0, 2.0),
     /// ];
-    /// let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let mut bspcurve1 = bspcurve0.clone();
-    /// assert!(bspcurve0.near_as_curve(&bspcurve1));
-    /// *bspcurve1.control_point_mut(1) += Vector2::new(0.01, 0.0002);
-    /// assert!(!bspcurve0.near_as_curve(&bspcurve1));
+    /// let curve0 = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let mut curve1 = curve0.clone();
+    /// assert!(curve0.near_as_curve(&curve1));
+    /// *curve1.control_point_mut(1) += Vector3::new(0.01, 0.0002, 0.0);
+    /// assert!(!curve0.near_as_curve(&curve1));
     /// ```
     #[inline(always)]
     pub fn near_as_curve(&self, other: &Self) -> bool {
@@ -626,24 +337,24 @@ where V::Point: Tolerance
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let eps = TOLERANCE;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
     /// );
     /// let ctrl_pts = vec![
-    ///     Vector2::new(1.0, 1.0),
-    ///     Vector2::new(3.0, 2.0),
-    ///     Vector2::new(2.0, 3.0),
-    ///     Vector2::new(4.0, 5.0),
-    ///     Vector2::new(5.0, 4.0),
-    ///     Vector2::new(1.0, 1.0),
+    ///     Vector3::new(1.0, 1.0, 1.0),
+    ///     Vector3::new(3.0, 2.0, 2.0),
+    ///     Vector3::new(2.0, 3.0, 1.0),
+    ///     Vector3::new(4.0, 5.0, 2.0),
+    ///     Vector3::new(5.0, 4.0, 1.0),
+    ///     Vector3::new(1.0, 1.0, 2.0),
     /// ];
-    /// let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let mut bspcurve1 = bspcurve0.clone();
-    /// assert!(bspcurve0.near_as_curve(&bspcurve1));
-    /// *bspcurve1.control_point_mut(1) += Vector2::new(eps, 0.0);
-    /// assert!(!bspcurve0.near2_as_curve(&bspcurve1));
+    /// let curve0 = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let mut curve1 = curve0.clone();
+    /// assert!(curve0.near_as_curve(&curve1));
+    /// *curve1.control_point_mut(1) += Vector3::new(0.01, TOLERANCE, 0.0);
+    /// assert!(!curve0.near2_as_curve(&curve1));
     /// ```
+    #[inline(always)]
     #[inline(always)]
     pub fn near2_as_curve(&self, other: &Self) -> bool {
         self.0
@@ -666,17 +377,17 @@ where V::Point: MetricSpace<Metric = f64>
     ///     Vector4::new(0.0, 0.0, 2.0, 2.0),
     ///     Vector4::new(1.0, 1.0, 1.0, 1.0),
     /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     /// let tol = 0.01;
-    /// let div = bspcurve.rational_parameter_division(tol);
-    /// let knot_vec = bspcurve.knot_vec();
+    /// let div = curve.parameter_division(tol);
+    /// let knot_vec = curve.knot_vec();
     /// assert_eq!(knot_vec[0], div[0]);
     /// assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
     /// for i in 1..div.len() {
-    ///     let pt0 = bspcurve.subs(div[i - 1]).rational_projection();
-    ///     let pt1 = bspcurve.subs(div[i]).rational_projection();
-    ///     let value_middle = (pt0 + pt1) / 2.0;
-    ///     let param_middle = bspcurve.subs((div[i - 1] + div[i]) / 2.0).rational_projection();
+    ///     let pt0 = curve.subs(div[i - 1]);
+    ///     let pt1 = curve.subs(div[i]);
+    ///     let value_middle = pt0.midpoint(pt1);
+    ///     let param_middle = curve.subs((div[i - 1] + div[i]) / 2.0);
     ///     println!("{}", value_middle.distance(param_middle));
     ///     assert!(value_middle.distance(param_middle) < tol);
     /// }
@@ -689,27 +400,28 @@ where V::Point: MetricSpace<Metric = f64>
 }
 
 impl<V: Homogeneous<f64>> NURBSCurve<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace {
-    /// Searches the parameter `t` which minimize |self(t) - point| in the projective space
+where <V::Point as EuclideanSpace>::Diff: InnerSpace
+{
+    /// Searches the parameter `t` which minimize |self(t) - point|
     /// by Newton's method with initial guess `hint`.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
     ///
-    /// // Defines the half unit circle in x > 0 as a rational curve `bspcurve`
+    /// // Defines the half unit circle in x > 0.
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector3::new(0.0, -1.0, 1.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 1.0)];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     ///
     /// // search rational nearest parameter
-    /// let pt = Vector2::new(1.0, 2.0);
+    /// let pt = Point2::new(1.0, 2.0);
     /// let hint = 0.6;
-    /// let t = bspcurve.search_rational_nearest_parameter(pt, hint).unwrap();
+    /// let t = curve.search_nearest_parameter(pt, hint).unwrap();
     ///
     /// // check the answer
-    /// let res = bspcurve.subs(t).rational_projection();
-    /// let ans = pt / pt.magnitude();
-    /// Vector2::assert_near2(&res, &ans);
+    /// let res = curve.subs(t);
+    /// let ans = Point2::from_vec(pt.to_vec().normalize());
+    /// Point2::assert_near2(&res, &ans);
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
@@ -719,14 +431,14 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace {
     /// // Same curve and point as above example
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector3::new(0.0, -1.0, 1.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 1.0)];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = Vector2::new(1.0, 2.0);
+    /// let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let pt = Point2::new(1.0, 2.0);
     ///
     /// // another hint
     /// let hint = 0.5;
     ///
     /// // Newton's method is vibration divergent.
-    /// assert!(bspcurve.search_rational_nearest_parameter(pt, hint).is_none());
+    /// assert!(curve.search_nearest_parameter(pt, hint).is_none());
     /// ```
     #[inline(always)]
     pub fn search_nearest_parameter(&self, point: V::Point, hint: f64) -> Option<f64> {
@@ -759,13 +471,9 @@ impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
 }
 
 impl<V: Homogeneous<f64>> BSplineCurve<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace {
-    fn search_rational_nearest_parameter(
-        &self,
-        point: V::Point,
-        hint: f64,
-    ) -> Option<f64>
-    {
+where <V::Point as EuclideanSpace>::Diff: InnerSpace
+{
+    fn search_rational_nearest_parameter(&self, point: V::Point, hint: f64) -> Option<f64> {
         let derived = self.derivation();
         let derived2 = derived.derivation();
         self.sub_srnp(&derived, &derived2, point, hint, 0)

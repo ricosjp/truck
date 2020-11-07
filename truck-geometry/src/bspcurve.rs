@@ -161,7 +161,7 @@ impl<V> BSplineCurve<V> {
 }
 
 impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
-    /// substitution to B-spline curve.
+    /// Substitutes to B-spline curve.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -187,23 +187,36 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
             .zip(basis)
             .fold(V::zero(), |sum, (vec, basis)| sum + *vec * basis)
     }
-    
+    /// Substitutes to the derived B-spline curve.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::bezier_knot(2);
+    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, 0.0), Vector2::new(1.0, 1.0)];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    ///
+    /// // `bpscurve = (t, t^2), derived = (1, 2t)`
+    /// const N : usize = 100; // sample size
+    /// for i in 0..=N {
+    ///     let t = 1.0 / (N as f64) * (i as f64);
+    ///     Vector2::assert_near2(&bspcurve.der(t), &Vector2::new(1.0, 2.0 * t));
+    /// }
+    /// ```
     #[inline(always)]
     pub fn der(&self, t: f64) -> V {
         let k = self.degree();
         let knot_vec = &self.knot_vec;
-        let basis = self
-            .knot_vec
-            .try_bspline_basis_functions(k - 1, t)
-            .unwrap();
-        self.control_points.iter().enumerate()
+        let basis = self.knot_vec.try_bspline_basis_functions(k - 1, t).unwrap();
+        self.control_points
+            .iter()
+            .enumerate()
             .fold(V::zero(), |sum, (i, pt)| {
                 let coef0 = knot_vec[i + k] - knot_vec[i];
                 let coef1 = knot_vec[i + k + 1] - knot_vec[i + 1];
                 sum + *pt * (basis[i] / coef0 - basis[i + 1] / coef1)
-            }) * k as f64
+            })
+            * k as f64
     }
-    
     /// Returns the closure of substitution.
     /// # Examples
     /// The following test code is the same test with the one of `BSplineCurve::subs()`.
@@ -221,7 +234,6 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
     /// ```
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V + '_ { move |t| self.subs(t) }
-    
     #[inline(always)]
     fn delta_control_points(&self, i: usize) -> V {
         if i == 0 {
@@ -232,7 +244,6 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
             self.control_points[i] - self.control_points[i - 1]
         }
     }
-    
     /// Returns the derived B-spline curve.
     /// # Examples
     /// ```
@@ -265,7 +276,6 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
         }
         BSplineCurve::new_unchecked(knot_vec, new_points)
     }
-    
     pub(super) fn create_division<F: Fn(V, V) -> f64>(&self, tol: f64, dist2: F) -> Vec<f64> {
         let knot_vec = self.knot_vec();
         let mut div = vec![knot_vec[0], knot_vec[knot_vec.len() - 1]];
@@ -342,12 +352,9 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     /// assert!(bspcurve.is_const());
     /// ```
     pub fn is_const(&self) -> bool {
-        for vec in &self.control_points {
-            if !vec.near(&self.control_points[0]) {
-                return false;
-            }
-        }
-        true
+        self.control_points
+            .iter()
+            .all(move |vec| vec.near(&self.control_points[0]))
     }
 
     /// Adds a knot `x`, and do not change `self` as a curve.  
@@ -893,7 +900,6 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
         self.try_concat(other)
             .unwrap_or_else(|error| panic!("{}", error))
     }
-    
     /// Makes the curve locally injective.
     /// # Example
     /// ```
@@ -958,7 +964,6 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
         }
         self
     }
-    
     pub(super) fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
         &self,
         other: &BSplineCurve<V>,
@@ -986,7 +991,6 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
         }
         true
     }
-    
     /// Determine whether `self` and `other` is near as the B-spline curves or not.  
     ///
     /// Divides each knot interval into the number of degree equal parts,
@@ -1166,7 +1170,6 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
             self.sub_snp(derived, derived2, point, t, counter + 1)
         }
     }
-    
     /// Determines whether `self` is an arc of `curve` by repeating applying Newton method.
     ///
     /// The parameter `hint` is the init value, required that `curve.subs(hint)` is the front point of `self`.
@@ -1250,167 +1253,6 @@ impl<V: TangentSpace<f64>> Curve for BSplineCurve<V> {
         let mut curve = self.clone();
         curve.invert();
         curve
-    }
-}
-
-impl<V: ExVectorSpace> BSplineCurve<V>
-where V::Rationalized: Tolerance
-{
-    /// Returns whether constant curve or not, i.e. all control points are same or not.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let pt = Vector3::new(1.0, 2.0, 1.0);
-    /// // allows differences upto scalars
-    /// let mut ctrl_pts = vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0];
-    /// let const_bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
-    /// assert!(const_bspcurve.is_rational_const());
-    ///
-    /// ctrl_pts.push(Vector3::new(2.0, 3.0, 1.0));
-    /// let bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
-    /// assert!(!bspcurve.is_rational_const());
-    /// ```
-    pub fn is_rational_const(&self) -> bool {
-        let pt = self.control_points[0].rational_projection();
-        for vec in &self.control_points {
-            if !vec.rational_projection().near(&pt) {
-                return false;
-            }
-        }
-        true
-    }
-
-    /// Returns the end points of a curve.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// assert_eq!(bspcurve.end_points(), (Vector2::new(1.0, 2.0), Vector2::new(3.0, 4.0)));
-    /// ```
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0)];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// // Since the knot vector is too long to the number of control points,
-    /// assert_eq!(bspcurve.end_points(), (Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)));
-    /// ```
-    #[inline(always)]
-    pub fn end_points(&self) -> (V, V) {
-        let t0 = self.knot_vec[0];
-        let t1 = self.knot_vec[self.knot_vec.len() - 1];
-        (self.subs(t0), self.subs(t1))
-    }
-
-
-    /// Makes the rational curve locally injective.
-    /// # Example
-    /// ```
-    /// use truck_geometry::*;
-    /// const N : usize = 100; // sample size for test
-    ///
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 3.0, 4.0, 4.0, 4.0]
-    /// );
-    /// let control_points = vec![
-    ///     Vector4::new(1.0, 0.0, 0.0, 1.0),
-    ///     Vector4::new(0.0, 1.0, 0.0, 1.0),
-    ///     Vector4::new(0.0, 2.0, 0.0, 2.0),
-    ///     Vector4::new(0.0, 3.0, 0.0, 3.0),
-    ///     Vector4::new(0.0, 0.0, 3.0, 3.0),
-    /// ];
-    ///
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, control_points);
-    /// let mut flag = false;
-    /// for i in 0..N {
-    ///     let t = 4.0 * (i as f64) / (N as f64);
-    ///     let pt0 = bspcurve.subs(t).rational_projection();
-    ///     let pt1 = bspcurve.subs(t + 1.0 / (N as f64)).rational_projection();
-    ///     flag = flag || pt0.near(&pt1);
-    /// }
-    /// // There exists t such that bspcurve(t) == bspcurve(t + 0.01) as a rational point.
-    /// assert!(flag);
-    ///
-    /// bspcurve.make_rational_locally_injective().knot_normalize();
-    /// let mut flag = false;
-    /// for i in 0..N {
-    ///     let t = 1.0 * (i as f64) / (N as f64);
-    ///     let pt0 = bspcurve.subs(t).rational_projection();
-    ///     let pt1 = bspcurve.subs(t + 1.0 / (N as f64)).rational_projection();
-    ///     flag = flag || pt0.near(&pt1);
-    /// }
-    /// // There does not exist t such that bspcurve(t) == bspcurve(t + 0.01) as a rational point.
-    /// assert!(!flag);
-    ///
-    /// // the last control points is not the same, however, has the same rational projection.
-    /// let pt0 = bspcurve.end_points().1;
-    /// let pt1 = Vector4::new(0.0, 0.0, 3.0, 3.0);
-    /// assert_ne!(pt0, pt1);
-    /// assert_eq!(pt0.rational_projection(), pt1.rational_projection());
-    /// ```
-    /// # Remarks
-    /// If `self` is a constant curve, then does nothing.
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]);
-    /// let ctrl_pts = vec![
-    ///     Vector3::new(1.0, 1.0, 1.0),
-    ///     Vector3::new(2.0, 2.0, 2.0),
-    ///     Vector3::new(3.0, 3.0, 3.0),
-    ///     Vector3::new(4.0, 4.0, 4.0),
-    /// ];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let org_curve = bspcurve.clone();
-    /// bspcurve.make_rational_locally_injective();
-    /// assert_eq!(bspcurve, org_curve);
-    /// ```
-    pub fn make_rational_locally_injective(&mut self) -> &mut Self {
-        let mut iter = self.bezier_decomposition().into_iter();
-        while let Some(bezier) = iter.next() {
-            if !bezier.is_rational_const() {
-                *self = bezier;
-                break;
-            }
-        }
-        let mut x = 0.0;
-        for mut bezier in iter {
-            if bezier.is_rational_const() {
-                x += bezier.knot_vec.range_length();
-            } else {
-                let s0 = self.control_points.last().unwrap().last();
-                let s1 = bezier.control_points[0].last();
-                bezier
-                    .control_points
-                    .iter_mut()
-                    .for_each(|vec| *vec *= s0 / s1);
-                self.concat(bezier.knot_translate(-x));
-            }
-        }
-        self
-    }
-
-    /// determine `self` and `other` is near order as the NURBS curve in 3D space.  
-    /// Divide each knot interval into the number of degree + 1 equal parts,
-    /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
-    #[inline(always)]
-    pub fn near_as_rational_curve(&self, other: &BSplineCurve<V>) -> bool {
-        self.sub_near_as_curve(other, 2, |x, y| {
-            x.rational_projection().near(&y.rational_projection())
-        })
-    }
-
-    /// determine `self` and `other` is near in square order as the NURBS curves in 3D space.  
-    /// Divide each knot interval into the number of degree + 1 equal parts,
-    /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
-    #[inline(always)]
-    pub fn near2_as_rational_curve(&self, other: &BSplineCurve<V>) -> bool {
-        self.sub_near_as_curve(other, 2, |x, y| {
-            x.rational_projection().near2(&y.rational_projection())
-        })
     }
 }
 
