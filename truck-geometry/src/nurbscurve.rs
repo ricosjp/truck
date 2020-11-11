@@ -355,7 +355,6 @@ where V::Point: Tolerance
     /// assert!(!curve0.near2_as_curve(&curve1));
     /// ```
     #[inline(always)]
-    #[inline(always)]
     pub fn near2_as_curve(&self, other: &Self) -> bool {
         self.0
             .sub_near_as_curve(&other.0, 2, move |x, y| x.to_point().near2(&y.to_point()))

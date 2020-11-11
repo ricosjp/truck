@@ -4,9 +4,7 @@ use crate::*;
 use std::convert::TryInto;
 use std::ops::*;
 
-impl<V: ExVectorSpace> BSplineSurface<V>
-where V::Rationalized: Tolerance
-{
+impl<V> BSplineSurface<V> {
     /// constructor.
     /// # Arguments
     /// * `knot_vecs` - the knot vectors
@@ -82,6 +80,25 @@ where V::Rationalized: Tolerance
         BSplineSurface {
             knot_vecs,
             control_points,
+        }
+    }
+
+    /// constructor.
+    /// # Arguments
+    /// * `knot_vecs` - the knot vectors
+    /// * `control_points` - the vector of the control points
+    /// # Failures
+    /// This method checks the 3 rules for constructing B-spline surface in the debug mode.  
+    /// The programmer must guarantee these conditions before using this method.  
+    #[inline(always)]
+    pub fn debug_new(
+        knot_vecs: (KnotVec, KnotVec),
+        control_points: Vec<Vec<V>>,
+    ) -> BSplineSurface<V>
+    {
+        match cfg!(debug_assertions) {
+            true => Self::new(knot_vecs, control_points),
+            false => Self::new_unchecked(knot_vecs, control_points),
         }
     }
 
@@ -178,16 +195,7 @@ where V::Rationalized: Tolerance
     pub fn control_points_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.control_points.iter_mut().flatten()
     }
-
-    /// Returns the bounding box including all control points.
-    #[inline(always)]
-    pub fn roughly_bounding_box(&self) -> BoundingBox<V> {
-        self.control_points
-            .iter()
-            .flat_map(move |vec| vec)
-            .collect()
-    }
-
+    
     /// Returns the degrees of B-spline surface
     /// # Examples
     /// ```
@@ -238,85 +246,16 @@ where V::Rationalized: Tolerance
     /// ```
     #[inline(always)]
     pub fn degrees(&self) -> (usize, usize) { (self.udegree(), self.vdegree()) }
-
-    /// Returns whether all control points are same or not.
-    /// If the knot vector is clamped, it means whether the curve is constant or not.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let uknot_vec = KnotVec::bezier_knot(1);
-    /// let vknot_vec = KnotVec::bezier_knot(2);
-    /// let pt = Vector2::new(1.0, 2.0);
-    /// let ctrl_pts = vec![
-    ///     vec![pt.clone(), pt.clone(), pt.clone()],
-    ///     vec![pt.clone(), pt.clone(), pt.clone()],
-    /// ];
-    /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
-    /// assert!(bspsurface.is_const());
-    ///
-    /// *bspsurface.control_point_mut(1, 2) = Vector2::new(2.0, 3.0);
-    /// assert!(!bspsurface.is_const());
-    /// ```
-    /// # Remarks
-    /// If the knot vector is not clamped and the BSpline basis function is not partition of unity,
-    /// then perhaps returns true even if the surface is not constant.
-    /// ```
-    /// use truck_geometry::*;
-    /// let uknot_vec = KnotVec::uniform_knot(1, 5);
-    /// let vknot_vec = KnotVec::uniform_knot(1, 5);
-    /// let pt = Vector2::new(1.0, 2.0);
-    /// let ctrl_pts = vec![
-    ///     vec![pt.clone(), pt.clone(), pt.clone()],
-    ///     vec![pt.clone(), pt.clone(), pt.clone()],
-    /// ];
-    /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
-    ///
-    /// // bspsurface is not constant.
-    /// assert_eq!(bspsurface.subs(0.0, 0.0), Vector2::new(0.0, 0.0));
-    /// assert_ne!(bspsurface.subs(0.5, 0.5), Vector2::new(0.0, 0.0));
-    ///
-    /// // bspsurface.is_const() is true.
-    /// assert!(bspsurface.is_const());
-    /// ```
+    
+    /// Returns whether the knot vectors are clamped or not.
     #[inline(always)]
-    pub fn is_const(&self) -> bool {
-        for vec in self.control_points.iter().flat_map(|pts| pts.iter()) {
-            if !vec.near(&self.control_points[0][0]) {
-                return false;
-            }
-        }
-        true
+    pub fn is_clamped(&self) -> bool {
+        self.knot_vecs.0.is_clamped(self.udegree()) && self.knot_vecs.1.is_clamped(self.vdegree())
     }
 
-    /// Returns whether constant curve or not, i.e. all control points are same or not.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let uknot_vec = KnotVec::bezier_knot(1);
-    /// let vknot_vec = KnotVec::bezier_knot(2);
-    /// let pt = Vector3::new(1.0, 2.0, 1.0);
-    /// // allows differences upto scalars
-    /// let ctrl_pts = vec![
-    ///     vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0],
-    ///     vec![pt.clone() * 0.5, pt.clone() * 0.25, pt.clone() * 0.125],
-    /// ];
-    /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
-    /// assert!(bspsurface.is_rational_const());
-    ///
-    /// *bspsurface.control_point_mut(1, 2) = Vector3::new(2.0, 3.0, 1.0);
-    /// assert!(!bspsurface.is_rational_const());
-    /// ```
-    #[inline(always)]
-    pub fn is_rational_const(&self) -> bool {
-        let pt = self.control_points[0][0].rational_projection();
-        for vec in self.control_points.iter().flat_map(|pts| pts.iter()) {
-            if !vec.rational_projection().near(&pt) {
-                return false;
-            }
-        }
-        true
-    }
+}
 
+impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     /// Substitutes to a B-spline surface.
     /// # Examples
     /// ```
@@ -350,11 +289,11 @@ where V::Rationalized: Tolerance
         let mut res = V::zero();
         self.control_points
             .iter()
-            .zip(&basis0)
-            .for_each(|(vec, b0)| {
+            .zip(basis0)
+            .for_each(move|(vec, b0)| {
                 vec.iter()
                     .zip(&basis1)
-                    .for_each(|(pt, b1)| res += *pt * (b0 * b1))
+                    .for_each(move|(pt, b1)| res = res + *pt * (b0 * b1))
             });
         res
     }
@@ -518,7 +457,216 @@ where V::Rationalized: Tolerance
         self.control_points = new_points;
         self
     }
+    
+    fn is_far<F: Fn(V, V) -> f64>(
+        &self,
+        u0: f64,
+        u1: f64,
+        v0: f64,
+        v1: f64,
+        tol: f64,
+        dist2: &F,
+    ) -> bool
+    {
+        let (mut degree0, mut degree1) = self.degrees();
+        let bspsurface = self.get_closure();
+        degree0 *= 2;
+        degree1 *= 2;
+        let pt00 = bspsurface(u0, v0);
+        let pt01 = bspsurface(u0, v1);
+        let pt10 = bspsurface(u1, v0);
+        let pt11 = bspsurface(u1, v1);
+        for i in 0..=degree0 {
+            for j in 0..=degree1 {
+                let p = (i as f64) / (degree0 as f64);
+                let q = (j as f64) / (degree1 as f64);
+                let u = u0 * p + u1 * (1.0 - p);
+                let v = v0 * q + v1 * (1.0 - q);
+                let par_mid = bspsurface(u, v);
+                let val_mid = pt00 * p * q
+                    + pt01 * p * (1.0 - q)
+                    + pt10 * (1.0 - p) * q
+                    + pt11 * (1.0 - p) * (1.0 - q);
+                //let res = val_mid.rational_projection() - par_mid.rational_projection();
+                let res = dist2(val_mid, par_mid);
+                if res > tol * tol {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 
+    /// Creats the division of the parametric space.
+    pub(super) fn create_space_division<F: Fn(V, V) -> f64>(
+        &self,
+        tol: f64,
+        dist2: F,
+    ) -> (Vec<f64>, Vec<f64>)
+    {
+        let (knot_vec0, knot_vec1) = self.knot_vecs();
+        let u0 = knot_vec0[0];
+        let u1 = knot_vec0[knot_vec0.len() - 1];
+        let mut div0 = vec![u0, u1];
+        let v0 = knot_vec1[0];
+        let v1 = knot_vec1[knot_vec1.len() - 1];
+        let mut div1 = vec![v0, v1];
+
+        self.sub_create_space_division(tol, dist2, &mut div0, &mut div1);
+        (div0, div1)
+    }
+
+    fn sub_create_space_division<F: Fn(V, V) -> f64>(
+        &self,
+        tol: f64,
+        dist2: F,
+        div0: &mut Vec<f64>,
+        div1: &mut Vec<f64>,
+    )
+    {
+        let (mut degree0, mut degree1) = self.degrees();
+        degree0 *= 2;
+        degree1 *= 2;
+
+        let mut divide_flag0 = vec![false; div0.len() - 1];
+        let mut divide_flag1 = vec![false; div1.len() - 1];
+
+        for i in 1..div0.len() {
+            for j in 1..div1.len() {
+                let far = self.is_far(div0[i - 1], div0[i], div1[j - 1], div1[j], tol, &dist2);
+                divide_flag0[i - 1] = divide_flag0[i - 1] || far;
+                divide_flag1[j - 1] = divide_flag1[j - 1] || far;
+            }
+        }
+
+        let mut new_div0 = vec![div0[0]];
+        for i in 1..div0.len() {
+            if divide_flag0[i - 1] {
+                for j in 1..=degree0 {
+                    let p = (j as f64) / (degree0 as f64);
+                    new_div0.push(div0[i - 1] * (1.0 - p) + div0[i] * p);
+                }
+            } else {
+                new_div0.push(div0[i]);
+            }
+        }
+
+        let mut new_div1 = vec![div1[0]];
+        for i in 1..div1.len() {
+            if divide_flag1[i - 1] {
+                for j in 1..=degree1 {
+                    let p = (j as f64) / (degree1 as f64);
+                    new_div1.push(div1[i - 1] * (1.0 - p) + div1[i] * p);
+                }
+            } else {
+                new_div1.push(div1[i]);
+            }
+        }
+
+        if div0.len() != new_div0.len() || div1.len() != new_div1.len() {
+            *div0 = new_div0;
+            *div1 = new_div1;
+            self.sub_create_space_division(tol, dist2, div0, div1);
+        }
+    }
+    
+    pub(super) fn sub_near_as_surface<F: Fn(&V, &V) -> bool>(
+        &self,
+        other: &BSplineSurface<V>,
+        div_coef: usize,
+        ord: F,
+    ) -> bool
+    {
+        if !self.knot_vecs.0.same_range(&other.knot_vecs.0) {
+            return false;
+        }
+        if !self.knot_vecs.1.same_range(&other.knot_vecs.1) {
+            return false;
+        }
+
+        let (self_degree0, self_degree1) = self.degrees();
+        let (other_degree0, other_degree1) = other.degrees();
+        let division0 = std::cmp::max(self_degree0, other_degree0) * div_coef;
+        let division1 = std::cmp::max(self_degree1, other_degree1) * div_coef;
+
+        for i0 in 1..self.knot_vecs.0.len() {
+            let delta0 = self.knot_vecs.0[i0] - self.knot_vecs.0[i0 - 1];
+            if delta0.so_small() {
+                continue;
+            }
+            for j0 in 0..division0 {
+                let u = self.knot_vecs.0[i0 - 1] + delta0 * (j0 as f64) / (division0 as f64);
+                for i1 in 1..self.knot_vecs.1.len() {
+                    let delta1 = self.knot_vecs.1[i1] - self.knot_vecs.1[i1 - 1];
+                    if delta1.so_small() {
+                        continue;
+                    }
+                    for j1 in 0..division1 {
+                        let v =
+                            self.knot_vecs.1[i1 - 1] + delta1 * (j1 as f64) / (division1 as f64);
+                        if !ord(&self.subs(u, v), &other.subs(u, v)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        true
+    }
+}
+
+impl<V: Tolerance> BSplineSurface<V> {
+    /// Returns whether all control points are same or not.
+    /// If the knot vector is clamped, it means whether the curve is constant or not.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let uknot_vec = KnotVec::bezier_knot(1);
+    /// let vknot_vec = KnotVec::bezier_knot(2);
+    /// let pt = Vector2::new(1.0, 2.0);
+    /// let ctrl_pts = vec![
+    ///     vec![pt.clone(), pt.clone(), pt.clone()],
+    ///     vec![pt.clone(), pt.clone(), pt.clone()],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
+    /// assert!(bspsurface.is_const());
+    ///
+    /// *bspsurface.control_point_mut(1, 2) = Vector2::new(2.0, 3.0);
+    /// assert!(!bspsurface.is_const());
+    /// ```
+    /// # Remarks
+    /// If the knot vector is not clamped and the BSpline basis function is not partition of unity,
+    /// then perhaps returns true even if the surface is not constant.
+    /// ```
+    /// use truck_geometry::*;
+    /// let uknot_vec = KnotVec::uniform_knot(1, 5);
+    /// let vknot_vec = KnotVec::uniform_knot(1, 5);
+    /// let pt = Vector2::new(1.0, 2.0);
+    /// let ctrl_pts = vec![
+    ///     vec![pt.clone(), pt.clone(), pt.clone()],
+    ///     vec![pt.clone(), pt.clone(), pt.clone()],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
+    ///
+    /// // bspsurface is not constant.
+    /// assert_eq!(bspsurface.subs(0.0, 0.0), Vector2::new(0.0, 0.0));
+    /// assert_ne!(bspsurface.subs(0.5, 0.5), Vector2::new(0.0, 0.0));
+    ///
+    /// // bspsurface.is_const() is true.
+    /// assert!(bspsurface.is_const());
+    /// ```
+    #[inline(always)]
+    pub fn is_const(&self) -> bool {
+        for vec in self.control_points.iter().flat_map(|pts| pts.iter()) {
+            if !vec.near(&self.control_points[0][0]) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl<V: VectorSpace<Scalar=f64> + Tolerance> BSplineSurface<V> {
     /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.  
     /// # Examples
     /// ```
@@ -560,7 +708,7 @@ where V::Rationalized: Tolerance
             let a = inv_or_zero(delta) * (self.knot_vecs.0[idx] - self.knot_vecs.0[i0]);
             for j in 0..n1 {
                 let p = self.udelta_control_points(i0, j) * (1.0 - a);
-                self.control_points[i0][j] -= p;
+                self.control_points[i0][j] = self.control_points[i0][j] - p;
             }
         }
         self
@@ -616,7 +764,7 @@ where V::Rationalized: Tolerance
             let a = inv_or_zero(delta) * (self.knot_vecs.1[idx] - self.knot_vecs.1[j0]);
             for i in 0..n0 {
                 let p = self.vdelta_control_points(i, j0) * (1.0 - a);
-                self.control_points[i][j0] -= p;
+                self.control_points[i][j0] = self.control_points[i][j0] - p;
             }
         }
         self
@@ -1374,12 +1522,6 @@ where V::Rationalized: Tolerance
         BSplineSurface::new(knot_vecs, control_points)
     }
 
-    /// Returns whether the knot vectors are clamped or not.
-    #[inline(always)]
-    pub fn is_clamped(&self) -> bool {
-        self.knot_vecs.0.is_clamped(self.udegree()) && self.knot_vecs.1.is_clamped(self.vdegree())
-    }
-
     /// Normalizes the knot vectors
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
@@ -1474,118 +1616,102 @@ where V::Rationalized: Tolerance
             .concat(&mut bspline3.invert().knot_translate(range0 * 2.0 + range1));
         bspline0
     }
+    
+    /// Determines whether `self` and `other` is near as the B-spline surfaces or not.  
+    ///
+    /// Divides each knot domain into the number of degree equal parts,
+    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 2.0)],
+    ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
+    /// ];
+    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let mut bspsurface1 = bspsurface0.clone();
+    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
+    ///
+    /// *bspsurface1.control_point_mut(1, 1) = Vector2::new(0.4, 1.0);
+    /// assert!(!bspsurface0.near_as_surface(&bspsurface1));
+    /// ```
+    #[inline(always)]
+    pub fn near_as_surface(&self, other: &BSplineSurface<V>) -> bool {
+        self.sub_near_as_surface(other, 1, |x, y| x.near(y))
+    }
+    /// Determines whether `self` and `other` is near in square order as the B-spline surfaces or not.  
+    ///
+    /// Divides each knot domain into the number of degree equal parts,
+    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let eps = TOLERANCE;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 1.0)],
+    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 2.0)],
+    ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
+    /// ];
+    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let mut bspsurface1 = bspsurface0.clone();
+    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
+    ///
+    /// *bspsurface1.control_point_mut(1, 1) += Vector2::new(eps, eps / 2.0);
+    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
+    /// assert!(!bspsurface0.near2_as_surface(&bspsurface1));
+    /// ```
+    #[inline(always)]
+    pub fn near2_as_surface(&self, other: &BSplineSurface<V>) -> bool {
+        self.sub_near_as_surface(other, 1, |x, y| x.near2(y))
+    }
+}
 
-    fn is_far<F: Fn(V, V) -> f64>(
-        &self,
-        u0: f64,
-        u1: f64,
-        v0: f64,
-        v1: f64,
-        tol: f64,
-        dist2: &F,
-    ) -> bool
-    {
-        let (mut degree0, mut degree1) = self.degrees();
-        let bspsurface = self.get_closure();
-        degree0 *= 2;
-        degree1 *= 2;
-        let pt00 = bspsurface(u0, v0);
-        let pt01 = bspsurface(u0, v1);
-        let pt10 = bspsurface(u1, v0);
-        let pt11 = bspsurface(u1, v1);
-        for i in 0..=degree0 {
-            for j in 0..=degree1 {
-                let p = (i as f64) / (degree0 as f64);
-                let q = (j as f64) / (degree1 as f64);
-                let u = u0 * p + u1 * (1.0 - p);
-                let v = v0 * q + v1 * (1.0 - q);
-                let par_mid = bspsurface(u, v);
-                let val_mid = pt00 * p * q
-                    + pt01 * p * (1.0 - q)
-                    + pt10 * (1.0 - p) * q
-                    + pt11 * (1.0 - p) * (1.0 - q);
-                //let res = val_mid.rational_projection() - par_mid.rational_projection();
-                let res = dist2(val_mid, par_mid);
-                if res > tol * tol {
-                    return true;
-                }
-            }
-        }
-        false
+impl<V: ExVectorSpace> BSplineSurface<V>
+where V::Rationalized: Tolerance
+{
+    /// Returns the bounding box including all control points.
+    #[inline(always)]
+    pub fn roughly_bounding_box(&self) -> BoundingBox<V> {
+        self.control_points
+            .iter()
+            .flat_map(move |vec| vec)
+            .collect()
     }
 
-    /// Creats the division of the parametric space.
-    fn create_space_division<F: Fn(V, V) -> f64>(
-        &self,
-        tol: f64,
-        dist2: F,
-    ) -> (Vec<f64>, Vec<f64>)
-    {
-        let (knot_vec0, knot_vec1) = self.knot_vecs();
-        let u0 = knot_vec0[0];
-        let u1 = knot_vec0[knot_vec0.len() - 1];
-        let mut div0 = vec![u0, u1];
-        let v0 = knot_vec1[0];
-        let v1 = knot_vec1[knot_vec1.len() - 1];
-        let mut div1 = vec![v0, v1];
-
-        self.sub_create_space_division(tol, dist2, &mut div0, &mut div1);
-        (div0, div1)
+    /// Returns whether constant curve or not, i.e. all control points are same or not.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let uknot_vec = KnotVec::bezier_knot(1);
+    /// let vknot_vec = KnotVec::bezier_knot(2);
+    /// let pt = Vector3::new(1.0, 2.0, 1.0);
+    /// // allows differences upto scalars
+    /// let ctrl_pts = vec![
+    ///     vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0],
+    ///     vec![pt.clone() * 0.5, pt.clone() * 0.25, pt.clone() * 0.125],
+    /// ];
+    /// let mut bspsurface = BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts);
+    /// assert!(bspsurface.is_rational_const());
+    ///
+    /// *bspsurface.control_point_mut(1, 2) = Vector3::new(2.0, 3.0, 1.0);
+    /// assert!(!bspsurface.is_rational_const());
+    /// ```
+    #[inline(always)]
+    pub fn is_rational_const(&self) -> bool {
+        let pt = self.control_points[0][0].rational_projection();
+        for vec in self.control_points.iter().flat_map(|pts| pts.iter()) {
+            if !vec.rational_projection().near(&pt) {
+                return false;
+            }
+        }
+        true
     }
 
-    fn sub_create_space_division<F: Fn(V, V) -> f64>(
-        &self,
-        tol: f64,
-        dist2: F,
-        div0: &mut Vec<f64>,
-        div1: &mut Vec<f64>,
-    )
-    {
-        let (mut degree0, mut degree1) = self.degrees();
-        degree0 *= 2;
-        degree1 *= 2;
-
-        let mut divide_flag0 = vec![false; div0.len() - 1];
-        let mut divide_flag1 = vec![false; div1.len() - 1];
-
-        for i in 1..div0.len() {
-            for j in 1..div1.len() {
-                let far = self.is_far(div0[i - 1], div0[i], div1[j - 1], div1[j], tol, &dist2);
-                divide_flag0[i - 1] = divide_flag0[i - 1] || far;
-                divide_flag1[j - 1] = divide_flag1[j - 1] || far;
-            }
-        }
-
-        let mut new_div0 = vec![div0[0]];
-        for i in 1..div0.len() {
-            if divide_flag0[i - 1] {
-                for j in 1..=degree0 {
-                    let p = (j as f64) / (degree0 as f64);
-                    new_div0.push(div0[i - 1] * (1.0 - p) + div0[i] * p);
-                }
-            } else {
-                new_div0.push(div0[i]);
-            }
-        }
-
-        let mut new_div1 = vec![div1[0]];
-        for i in 1..div1.len() {
-            if divide_flag1[i - 1] {
-                for j in 1..=degree1 {
-                    let p = (j as f64) / (degree1 as f64);
-                    new_div1.push(div1[i - 1] * (1.0 - p) + div1[i] * p);
-                }
-            } else {
-                new_div1.push(div1[i]);
-            }
-        }
-
-        if div0.len() != new_div0.len() || div1.len() != new_div1.len() {
-            *div0 = new_div0;
-            *div1 = new_div1;
-            self.sub_create_space_division(tol, dist2, div0, div1);
-        }
-    }
     /// Creates the surface division
     /// # Examples
     /// ```
@@ -1797,102 +1923,6 @@ where V::Rationalized: Tolerance
         }
     }
 
-    fn sub_near_as_surface<F: Fn(&V, &V) -> bool>(
-        &self,
-        other: &BSplineSurface<V>,
-        div_coef: usize,
-        ord: F,
-    ) -> bool
-    {
-        if !self.knot_vecs.0.same_range(&other.knot_vecs.0) {
-            return false;
-        }
-        if !self.knot_vecs.1.same_range(&other.knot_vecs.1) {
-            return false;
-        }
-
-        let (self_degree0, self_degree1) = self.degrees();
-        let (other_degree0, other_degree1) = other.degrees();
-        let division0 = std::cmp::max(self_degree0, other_degree0) * div_coef;
-        let division1 = std::cmp::max(self_degree1, other_degree1) * div_coef;
-
-        for i0 in 1..self.knot_vecs.0.len() {
-            let delta0 = self.knot_vecs.0[i0] - self.knot_vecs.0[i0 - 1];
-            if delta0.so_small() {
-                continue;
-            }
-            for j0 in 0..division0 {
-                let u = self.knot_vecs.0[i0 - 1] + delta0 * (j0 as f64) / (division0 as f64);
-                for i1 in 1..self.knot_vecs.1.len() {
-                    let delta1 = self.knot_vecs.1[i1] - self.knot_vecs.1[i1 - 1];
-                    if delta1.so_small() {
-                        continue;
-                    }
-                    for j1 in 0..division1 {
-                        let v =
-                            self.knot_vecs.1[i1 - 1] + delta1 * (j1 as f64) / (division1 as f64);
-                        if !ord(&self.subs(u, v), &other.subs(u, v)) {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-        true
-    }
-
-    /// Determines whether `self` and `other` is near as the B-spline surfaces or not.  
-    ///
-    /// Divides each knot domain into the number of degree equal parts,
-    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
-    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
-    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 1.0)],
-    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 2.0)],
-    ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
-    /// ];
-    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// let mut bspsurface1 = bspsurface0.clone();
-    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
-    ///
-    /// *bspsurface1.control_point_mut(1, 1) = Vector2::new(0.4, 1.0);
-    /// assert!(!bspsurface0.near_as_surface(&bspsurface1));
-    /// ```
-    #[inline(always)]
-    pub fn near_as_surface(&self, other: &BSplineSurface<V>) -> bool {
-        self.sub_near_as_surface(other, 1, |x, y| x.near(y))
-    }
-    /// Determines whether `self` and `other` is near in square order as the B-spline surfaces or not.  
-    ///
-    /// Divides each knot domain into the number of degree equal parts,
-    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let eps = TOLERANCE;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
-    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
-    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 1.0), Vector2::new(1.0, 1.0)],
-    ///     vec![Vector2::new(0.0, 2.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 2.0)],
-    ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
-    /// ];
-    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// let mut bspsurface1 = bspsurface0.clone();
-    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
-    ///
-    /// *bspsurface1.control_point_mut(1, 1) += Vector2::new(eps, eps / 2.0);
-    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
-    /// assert!(!bspsurface0.near2_as_surface(&bspsurface1));
-    /// ```
-    #[inline(always)]
-    pub fn near2_as_surface(&self, other: &BSplineSurface<V>) -> bool {
-        self.sub_near_as_surface(other, 1, |x, y| x.near2(y))
-    }
     /// Determines whether `self` and `other` is near as the B-spline rational surfaces or not.  
     ///
     /// Divides each knot domain into the number of degree equal parts,

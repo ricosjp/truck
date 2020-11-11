@@ -1237,7 +1237,8 @@ where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> +
     pub fn roughly_bounding_box(&self) -> BoundingBox<V> { self.control_points.iter().collect() }
 }
 
-impl<V: TangentSpace<f64>> Curve for BSplineCurve<V> {
+impl<V: TangentSpace<f64>> Curve for BSplineCurve<V>
+where V::Space: EuclideanSpace<Scalar = f64, Diff = V> {
     type Point = V::Space;
     type Vector = V;
     #[inline(always)]

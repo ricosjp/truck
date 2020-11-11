@@ -73,6 +73,10 @@ pub struct BSplineCurve<V> {
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct NURBSCurve<V>(BSplineCurve<V>);
 
+/// NURBS surface
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct NURBSSurface<V>(BSplineSurface<V>);
+
 /// Curve for the recursive concatting.
 /// # Examples
 /// ```
