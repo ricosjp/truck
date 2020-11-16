@@ -1,5 +1,4 @@
 use crate::errors::Error;
-use crate::traits::inv_or_zero;
 use crate::*;
 use std::convert::TryInto;
 use std::ops::*;

@@ -92,6 +92,62 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
         let res = der2 / self.weight() - der * coef1 + self * coef2;
         res.truncate()
     }
+    
+    /// Returns the cross derivation of the rational surface.
+    ///
+    /// For a surface s(u, v) = (s_0(u, v), s_1(u, v), s_2(u, v), s_3(u, v)), returns the derivation
+    /// of the projected surface (s_0 / s_3, s_1 / s_3, s_2 / s_3) by both u and v.
+    /// # Arguments
+    /// * `self` - the point of the surface s(u, v)
+    /// * `uder` - the u-derivation s_u(u, v) of the surface
+    /// * `vder` - the v-derivation s_v(u, v) of the surface
+    /// * `uvder` - the 2nd ordered derivation s_{uv}(u, v) of the surface
+    /// # Examples
+    /// ```
+    /// use truck_base::cgmath64::*;
+    /// // calculate the derivation at (u, v) = (1.0, 2.0).
+    /// let (u, v) = (1.0, 2.0);
+    /// // the curve: s(u, v) = (u^3 v^2, u^2 v^3, u v, u)
+    /// let pt = Vector4::new(
+    ///     u * u * u * v * v,
+    ///     u * u * v * v * v,
+    ///     u * v,
+    ///     u,
+    /// );
+    /// // the u-derivation: s_u(u, v) = (3u^2 v^2, 2u * v^3, v, 1)
+    /// let uder = Vector4::new(
+    ///     3.0 * u * u * v * v,
+    ///     2.0 * u * v * v * v,
+    ///     v,
+    ///     1.0,
+    /// );
+    /// // the v-derivation: s_v(u, v) = (2u^3 v, 3u^2 v^2, u, 0)
+    /// let vder = Vector4::new(
+    ///     2.0 * u * u * u * v,
+    ///     3.0 * u * u * v * v,
+    ///     u,
+    ///     0.0,
+    /// );
+    /// // s_{uv}(u, v) = (6u^2 v, 6u v^2, 1, 0)
+    /// let uvder = Vector4::new(6.0 * u * u * v, 6.0 * u * v * v, 1.0, 0.0);
+    /// // the projected surface: \bar{s}(u, v) = (u^2 v^2, u v^3, v)
+    /// // \bar{s}_u(u, v) = (2u v^2, v^3, 0)
+    /// // \bar{s}_v(u, v) = (2u^2 v, 3u v^2, 1)
+    /// // \bar{s}_{uv}(u, v) = (4uv, 3v^2, 0)
+    /// let ans = Vector3::new(4.0 * u * v, 3.0 * v * v, 0.0);
+    /// assert_eq!(pt.rat_cross_der(uder, vder, uvder), ans);
+    /// ```
+    #[inline(always)]
+    fn rat_cross_der(&self, uder: Self, vder: Self, uvder: Self) -> Self::Vector {
+        let self_weight2 = self.weight() * self.weight();
+        let coef1 = vder.weight() / self_weight2;
+        let coef2 = uder.weight() / self_weight2;
+        let der_weight2 = uder.weight() * vder.weight();
+        let coef3 = (der_weight2 + der_weight2 - uvder.weight() * self.weight())
+            / (self_weight2 * self.weight());
+        let res = uvder / self.weight() - uder * coef1 - vder * coef2 + *self * coef3;
+        res.truncate()
+    }
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {

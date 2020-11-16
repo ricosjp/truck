@@ -1,5 +1,4 @@
 use crate::errors::Error;
-use crate::traits::inv_or_zero;
 use crate::*;
 use std::convert::TryInto;
 use std::ops::*;
@@ -302,7 +301,6 @@ impl<V> BSplineSurface<V> {
             ),
         )
     }
-    
     /// Creates the curve whose control points are the `idx`th column control points of `self`.
     /// # Examples
     /// ```
@@ -639,7 +637,6 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
                     + pt01 * p * (1.0 - q)
                     + pt10 * (1.0 - p) * q
                     + pt11 * (1.0 - p) * (1.0 - q);
-                //let res = val_mid.rational_projection() - par_mid.rational_projection();
                 let res = dist2(val_mid, par_mid);
                 if res > tol * tol {
                     return true;
@@ -1768,62 +1765,7 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     }
 }
 
-impl<V> BSplineSurface<V>
-where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy
-{
-    /// Returns the bounding box including all control points.
-    #[inline(always)]
-    pub fn roughly_bounding_box(&self) -> BoundingBox<V> {
-        self.control_points
-            .iter()
-            .flat_map(move |vec| vec)
-            .collect()
-    }
-}
-
-impl<V: InnerSpace<Scalar = f64>> ParameterDivision2D for BSplineSurface<V> {
-    #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        self.create_space_division(tol, |v0, v1| v0.distance2(v1))
-    }
-}
-
-impl Surface for BSplineSurface<Vector3> {
-    type Point = Point3;
-    type Vector = Vector3;
-    type Curve = BSplineCurve<Vector3>;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { Point3::from_vec(self.subs(u, v)) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Self::Vector {
-        self.uder(u, v).cross(self.vder(u, v)).normalize()
-    }
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-    #[inline(always)]
-    fn inverse(&self) -> Self {
-        let mut surface = self.clone();
-        surface.swap_axes();
-        surface
-    }
-    #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool { self.include(&curve) }
-}
-
-impl<V: ExVectorSpace> BSplineSurface<V>
-where V::Rationalized: Tolerance
-{
-    /// Creates the surface division
-    pub fn rational_parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        self.create_space_division(tol, |v0, v1| {
-            v0.rational_projection().distance2(v1.rational_projection())
-        })
-    }
-
+impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
     /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
     /// # Examples
@@ -1904,156 +1846,6 @@ where V::Rationalized: Tolerance
             self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u, v), count + 1)
         }
     }
-    /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
-    /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
-    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(1.0, -2.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 2.0, 2.0), Vector3::new(2.0, 4.0, 4.0), Vector3::new(2.0, 2.0, 2.0)],
-    ///     vec![Vector3::new(0.0, 4.0, 2.0), Vector3::new(2.0, 8.0, 4.0), Vector3::new(2.0, 4.0, 2.0)],
-    ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(1.0, 7.0, 2.0), Vector3::new(1.0, 3.0, 1.0)],
-    /// ];
-    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// let pt = bspsurface.subs(0.3, 0.7).rational_projection();
-    /// let (u, v) = bspsurface.search_rational_nearest_parameter(pt, (0.5, 0.5)).unwrap();
-    /// assert!(u.near2(&0.3) && v.near2(&0.7));
-    /// ```
-    /// # Remarks
-    /// It may converge to a local solution depending on the hint.
-    /// cf. [`BSplineCurve::search_rational_nearest_parameter`](struct.BSplineCurve.html#method.search_rational_nearest_parameter)
-    pub fn search_rational_nearest_parameter(
-        &self,
-        pt: V::Rationalized,
-        (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)>
-    {
-        let uder = self.uderivation();
-        let vder = self.vderivation();
-        let uuder = uder.uderivation();
-        let uvder = uder.vderivation();
-        let vvder = vder.vderivation();
-        self.optimized_srnp(&uder, &vder, &uuder, &uvder, &vvder, pt, (u0, v0))
-    }
-
-    fn optimized_srnp(
-        &self,
-        uder: &Self,
-        vder: &Self,
-        uuder: &Self,
-        uvder: &Self,
-        vvder: &Self,
-        pt: V::Rationalized,
-        (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)>
-    {
-        self.sub_srnp(uder, vder, uuder, uvder, vvder, pt, (u0, v0), 0)
-    }
-
-    fn sub_srnp(
-        &self,
-        uder: &Self,
-        vder: &Self,
-        uuder: &Self,
-        uvder: &Self,
-        vvder: &Self,
-        pt: V::Rationalized,
-        (u0, v0): (f64, f64),
-        count: usize,
-    ) -> Option<(f64, f64)>
-    {
-        let s = self.subs(u0, v0);
-        let rs = s.rational_projection();
-        let ud = uder.subs(u0, v0);
-        let rud = s.rational_derivation(ud);
-        let vd = vder.subs(u0, v0);
-        let rvd = s.rational_derivation(vd);
-        let uud = uuder.subs(u0, v0);
-        let ruud = s.rational_derivation2(ud, uud);
-        let uvd = uvder.subs(u0, v0);
-        let ruvd = s.rational_cross_derivation(ud, vd, uvd);
-        let vvd = vvder.subs(u0, v0);
-        let rvvd = s.rational_derivation2(vd, vvd);
-        let f_u = rud.dot(rs - pt);
-        let f_v = rvd.dot(rs - pt);
-        let a = ruud.dot(rs - pt) + rud.dot(rud);
-        let c = ruvd.dot(rs - pt) + rud.dot(rvd);
-        let b = rvvd.dot(rs - pt) + rvd.dot(rvd);
-        let det = a * b - c * c;
-        if det.so_small() {
-            return Some((u0, v0));
-        }
-        let u = u0 - (b * f_u - c * f_v) / det;
-        let v = v0 - (-c * f_u + a * f_v) / det;
-        if u.near(&u0) && v.near(&v0) {
-            Some((u, v))
-        } else if count == 100 {
-            None
-        } else {
-            self.sub_srnp(uder, vder, uuder, uvder, vvder, pt, (u, v), count + 1)
-        }
-    }
-
-    /// Determines whether `self` and `other` is near as the B-spline rational surfaces or not.  
-    ///
-    /// Divides each knot domain into the number of degree equal parts,
-    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
-    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.5, 1.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
-    /// ];
-    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// let mut bspsurface1 = bspsurface0.clone();
-    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
-    ///
-    /// *bspsurface1.control_point_mut(1, 1) = Vector3::new(0.5, 1.0, 0.9);
-    /// assert!(!bspsurface0.near_as_rational_surface(&bspsurface1));
-    /// ```
-    #[inline(always)]
-    pub fn near_as_rational_surface(&self, other: &BSplineSurface<V>) -> bool {
-        self.sub_near_as_surface(other, 2, |x, y| {
-            x.rational_projection().near(&y.rational_projection())
-        })
-    }
-    /// Determines whether `self` and `other` is near in square order as the B-spline rational
-    /// surfaces or not.  
-    ///
-    /// Divides each knot domain into the number of degree equal parts,
-    /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let eps = TOLERANCE;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
-    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.5, 1.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
-    /// ];
-    /// let bspsurface0 = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// let mut bspsurface1 = bspsurface0.clone();
-    /// assert!(bspsurface0.near_as_surface(&bspsurface1));
-    ///
-    /// *bspsurface1.control_point_mut(1, 1) = Vector3::new(0.5, 1.0, 1.0 - eps);
-    /// assert!(bspsurface0.near_as_rational_surface(&bspsurface1));
-    /// assert!(!bspsurface0.near2_as_rational_surface(&bspsurface1));
-    /// ```
-    #[inline(always)]
-    pub fn near2_as_rational_surface(&self, other: &BSplineSurface<V>) -> bool {
-        self.sub_near_as_surface(other, 2, |x, y| {
-            x.rational_projection().near2(&y.rational_projection())
-        })
-    }
-
     fn presearch(&self, point: V) -> (f64, f64) {
         const N: usize = 50;
         let mut res = (0.0, 0.0);
@@ -2073,27 +1865,77 @@ where V::Rationalized: Tolerance
         }
         res
     }
+}
 
-    fn rational_presearch(&self, point: V::Rationalized) -> (f64, f64)
-    where V: RationalProjective {
-        const N: usize = 50;
-        let mut res = (0.0, 0.0);
-        let mut min = std::f64::INFINITY;
-        for i in 0..=N {
-            for j in 0..=N {
-                let p = i as f64 / N as f64;
-                let q = j as f64 / N as f64;
-                let u = self.uknot_vec()[0] + p * self.uknot_vec().range_length();
-                let v = self.vknot_vec()[0] + q * self.vknot_vec().range_length();
-                let dist = self.subs(u, v).rational_projection().distance2(point);
-                if dist < min {
-                    min = dist;
-                    res = (u, v);
-                }
-            }
-        }
-        res
+impl<V> BSplineSurface<V>
+where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy
+{
+    /// Returns the bounding box including all control points.
+    #[inline(always)]
+    pub fn roughly_bounding_box(&self) -> BoundingBox<V> {
+        self.control_points
+            .iter()
+            .flat_map(move |vec| vec)
+            .collect()
     }
+}
+
+impl<V: InnerSpace<Scalar = f64>> ParameterDivision2D for BSplineSurface<V> {
+    #[inline(always)]
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        self.create_space_division(tol, |v0, v1| v0.distance2(v1))
+    }
+}
+
+impl Surface for BSplineSurface<Vector2> {
+    type Point = Point2;
+    type Vector = Vector2;
+    type Curve = BSplineCurve<Vector2>;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Self::Point { Point2::from_vec(self.subs(u, v)) }
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    /// zero identity
+    #[inline(always)]
+    fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
+    #[inline(always)]
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        let mut surface = self.clone();
+        surface.swap_axes();
+        surface
+    }
+    #[inline(always)]
+    fn include(&self, curve: &BSplineCurve<Vector2>) -> bool { self.include(&curve) }
+}
+
+impl Surface for BSplineSurface<Vector3> {
+    type Point = Point3;
+    type Vector = Vector3;
+    type Curve = BSplineCurve<Vector3>;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Self::Point { Point3::from_vec(self.subs(u, v)) }
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    #[inline(always)]
+    fn normal(&self, u: f64, v: f64) -> Self::Vector {
+        self.uder(u, v).cross(self.vder(u, v)).normalize()
+    }
+    #[inline(always)]
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        let mut surface = self.clone();
+        surface.swap_axes();
+        surface
+    }
+    #[inline(always)]
+    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool { self.include(&curve) }
 }
 
 impl BSplineSurface<Vector2> {
@@ -2117,35 +1959,7 @@ impl BSplineSurface<Vector2> {
     /// Vector2::assert_near(&surface.subs(u, v), &pt);
     /// ```
     pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
-        let uder = self.uderivation();
-        let vder = self.vderivation();
-        self.sub_search_parameter(&uder, &vder, pt, hint.into(), 0)
-            .map(move |res| res.into())
-    }
-
-    fn sub_search_parameter(
-        &self,
-        uder: &BSplineSurface<Vector2>,
-        vder: &BSplineSurface<Vector2>,
-        pt0: Vector2,
-        hint: Vector2,
-        count: usize,
-    ) -> Option<Vector2>
-    {
-        if count == 100 {
-            return None;
-        }
-        let (u0, v0) = (hint[0], hint[1]);
-        let pt = self.subs(u0, v0);
-        let jacobi = Matrix2::from_cols(uder.subs(u0, v0), vder.subs(u0, v0));
-        let res = jacobi.invert().map(move |inv| hint - inv * (pt - pt0));
-        match res {
-            Some(entity) => match self.subs(entity[0], entity[1]).near(&pt0) {
-                true => res,
-                false => self.sub_search_parameter(uder, vder, pt0, entity, count + 1),
-            },
-            None => res,
-        }
+        sub_search_parameter2d(self, Point2::from_vec(pt), hint.into(), 0).map(|v| v.into())
     }
 
     /// Returns whether the curve `curve` is included in the surface `surface`.
@@ -2232,7 +2046,7 @@ impl BSplineSurface<Vector3> {
     /// assert!(surface.search_parameter(pt, (0.5, 0.5)).is_none());
     /// ```
     pub fn search_parameter(&self, pt: Vector3, hint: (f64, f64)) -> Option<(f64, f64)> {
-        let normal = self.normal_vector(hint.0, hint.1);
+        let normal = self.normal(hint.0, hint.1);
         let tmp = normal[0].abs() > normal[1].abs();
         let tmp_idx = if tmp { 0 } else { 1 };
         let tmp = normal[tmp_idx].abs() > normal[2].abs();
@@ -2256,85 +2070,6 @@ impl BSplineSurface<Vector3> {
             .filter(|(u, v)| self.subs(*u, *v).near(&pt))
     }
 
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
-    /// If cannot find, then return `None`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.1, 0.0, 0.5), Vector3::new(0.5, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 0.1, 0.1), Vector3::new(0.2, 0.2, 0.1), Vector3::new(0.4, 0.3, 0.4), Vector3::new(1.0, 0.3, 0.7)],
-    ///     vec![Vector3::new(0.0, 0.5, 0.4), Vector3::new(0.3, 0.6, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(1.0, 0.5, 0.4)],
-    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
-    /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let pt = surface.subs(0.3, 0.7).rational_projection();
-    /// let (u, v) = surface.search_rational_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector2::assert_near2(&surface.subs(u, v).rational_projection(), &pt);
-    /// ```
-    pub fn search_rational_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
-        let uder = self.uderivation();
-        let vder = self.vderivation();
-        self.sub_search_rational_parameter(&uder, &vder, pt, hint.into(), 0)
-            .map(|res| res.into())
-    }
-
-    fn sub_search_rational_parameter(
-        &self,
-        uder: &BSplineSurface<Vector3>,
-        vder: &BSplineSurface<Vector3>,
-        pt0: Vector2,
-        hint: Vector2,
-        count: usize,
-    ) -> Option<Vector2>
-    {
-        if count == 100 {
-            return None;
-        }
-        let (u0, v0) = (hint[0], hint[1]);
-        let pt = self.subs(u0, v0);
-        let ud = pt.rational_derivation(uder.subs(u0, v0));
-        let vd = pt.rational_derivation(vder.subs(u0, v0));
-        let pt = pt.rational_projection() - pt0;
-        let jacobi = Matrix2::from_cols(ud, vd);
-        let res = jacobi.invert().map(|inv| hint - inv * pt);
-        match res {
-            Some(entity) => {
-                if Tolerance::near(&entity, &hint) {
-                    res
-                } else {
-                    self.sub_search_rational_parameter(uder, vder, pt0, entity, count + 1)
-                }
-            }
-            None => res,
-        }
-    }
-
-    /// Returns the normal unit vector at the parameter `(u, v)`.
-    pub fn normal_vector(&self, u: f64, v: f64) -> Vector3 {
-        let der0 = self.uderivation().subs(u, v);
-        let der1 = self.vderivation().subs(u, v);
-        let vec = der0.cross(der1);
-        let norm = vec.magnitude();
-        vec / norm
-    }
-    /// Returns the array of normal vectors at the parameters generated by iterator `params`.
-    pub fn normal_vectors<I>(&self, params: I) -> Vec<Vector3>
-    where I: Iterator<Item = (f64, f64)> {
-        let derivation0 = self.uderivation();
-        let derivation1 = self.vderivation();
-        params
-            .map(|(u, v)| {
-                let der0 = derivation0.subs(u, v);
-                let der1 = derivation1.subs(u, v);
-                let vec = der0.cross(der1);
-                let norm = vec.magnitude();
-                vec / norm
-            })
-            .collect()
-    }
     /// Returns whether the curve `curve` is included in the surface `surface`.
     /// # Examples
     /// ```
@@ -2391,196 +2126,28 @@ impl BSplineSurface<Vector3> {
         }
         true
     }
-    /// Returns whether the rational curve `curve` is included in the rational surface `surface`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// use std::iter::FromIterator;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.05, 0.0, 0.5), Vector3::new(0.15, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 0.01, 0.1), Vector3::new(0.02, 0.02, 0.1), Vector3::new(0.16, 0.12, 0.4), Vector3::new(0.7, 0.21, 0.7)],
-    ///     vec![Vector3::new(0.0, 0.02, 0.4), Vector3::new(0.15, 0.3, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(0.4, 0.2, 0.4)],
-    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.25, 0.5, 0.5), Vector3::new(0.3, 0.3, 0.3)],
-    /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
-    /// let mut curve = surface.sectional_curve(bnd_box);
-    /// curve.control_points_mut().for_each(|pt| *pt *= 3.0);
-    /// assert!(!surface.include(&curve));
-    /// assert!(surface.rational_include(&curve));
-    /// ```
-    pub fn rational_include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let pt = curve.subs(curve.knot_vec()[0]).rational_projection();
-        let mut hint = self.rational_presearch(pt);
-        hint = match self.search_rational_parameter(pt, hint) {
-            Some(got) => got,
-            None => return false,
-        };
-        let uknot_vec = self.uknot_vec();
-        let vknot_vec = self.vknot_vec();
-        let degree = curve.degree() * 6;
-        let (knots, _) = curve.knot_vec().to_single_multi();
-        for i in 1..knots.len() {
-            for j in 1..=degree {
-                let p = j as f64 / degree as f64;
-                let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
-                let pt = curve.subs(t).rational_projection();
-                hint = match self.search_rational_parameter(pt, hint) {
-                    Some(got) => got,
-                    None => return false,
-                };
-                if !self.subs(hint.0, hint.1).rational_projection().near(&pt) {
-                    return false;
-                } else if hint.0 < uknot_vec[0] - TOLERANCE
-                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
-                {
-                    return false;
-                } else if hint.1 < vknot_vec[0] - TOLERANCE
-                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
-                {
-                    return false;
-                }
-            }
-        }
-        true
-    }
 }
 
-impl BSplineSurface<Vector4> {
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
-    /// If cannot find, then return `None`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector4::new(0.0, 0.0, 0.0, 1.0), Vector4::new(0.1, 0.0, 0.5, 0.4), Vector4::new(1.0, 0.0, 0.6, 2.0), Vector4::new(0.4, 0.0, 0.4, 0.4)],
-    ///     vec![Vector4::new(0.0, 0.2, 0.2, 2.0), Vector4::new(0.24, 0.24, 0.1, 1.2), Vector4::new(2.4, 1.8, 2.4, 0.6), Vector4::new(1.4, 0.42, 0.98, 1.4)],
-    ///     vec![Vector4::new(0.0, 1.5, 1.2, 3.0), Vector4::new(1.02, 2.04, 1.7, 3.4), Vector4::new(0.42, 0.28, 0.7, 0.7), Vector4::new(0.6, 0.3, 0.0, 0.6)],
-    ///     vec![Vector4::new(0.0, 1.0, 1.0, 1.0), Vector4::new(0.2, 2.0, 2.0, 2.0), Vector4::new(0.85, 1.7, 0.85, 1.7), Vector4::new(1.0, 1.0, 0.3, 1.0)],
-    /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let pt = surface.subs(0.3, 0.7).rational_projection();
-    /// let (u, v) = surface.search_rational_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector3::assert_near2(&surface.subs(u, v).rational_projection(), &pt);
-    /// ```
-    pub fn search_rational_parameter(&self, pt: Vector3, hint: (f64, f64)) -> Option<(f64, f64)> {
-        let normal = self.rational_normal_vector(hint.0, hint.1);
-        let flag = normal[0].abs() > normal[1].abs();
-        let tmp = if flag { 0 } else { 1 };
-        let flag = normal[tmp].abs() > normal[2].abs();
-        let max = if flag { tmp } else { 2 };
-        let idx0 = (max + 1) % 3;
-        let idx1 = (max + 2) % 3;
-        let knot_vecs = self.knot_vecs().clone();
-        let closure = move |pt: &Vector4| Vector3::new(pt[idx0], pt[idx1], pt[3]);
-        let closure = move |vec: &Vec<Vector4>| vec.iter().map(closure).collect::<Vec<_>>();
-        let control_points: Vec<Vec<_>> = self.control_points().iter().map(closure).collect();
-        let newsurface = BSplineSurface::new(knot_vecs, control_points);
-        let newpt = Vector2::new(pt[idx0], pt[idx1]);
-        newsurface
-            .search_rational_parameter(newpt, hint)
-            .filter(|(u, v)| self.subs(*u, *v).rational_projection().near(&pt))
+pub(super) fn sub_search_parameter2d<S: Surface<Point = Point2, Vector = Vector2>>(
+    surface: &S,
+    pt0: Point2,
+    hint: Vector2,
+    count: usize,
+) -> Option<Vector2>
+{
+    if count == 100 {
+        return None;
     }
-    /// Returns the normal unit vector of rational surface at the parameter `(u, v)`.
-    pub fn rational_normal_vector(&self, u: f64, v: f64) -> Vector3 {
-        let pt = self.subs(u, v);
-        let der0 = self.uderivation().subs(u, v);
-        let der1 = self.vderivation().subs(u, v);
-        let vec0 = pt.rational_derivation(der0);
-        let vec1 = pt.rational_derivation(der1);
-        let vec = vec0.cross(vec1);
-        let norm = vec.magnitude();
-        vec / norm
-    }
-    /// Returns the array of normal unit vectors of rational surface at the parameters
-    /// generated by iterator `params`.
-    pub fn rational_normal_vectors<I>(&self, params: I) -> Vec<Vector3>
-    where I: Iterator<Item = (f64, f64)> {
-        let derivation0 = self.uderivation();
-        let derivation1 = self.vderivation();
-        params
-            .map(|(u, v)| {
-                let pt = self.subs(u, v);
-                let der0 = derivation0.subs(u, v);
-                let der1 = derivation1.subs(u, v);
-                let vec0 = pt.rational_derivation(der0);
-                let vec1 = pt.rational_derivation(der1);
-                let vec = vec0.cross(vec1);
-                let norm = vec.magnitude();
-                vec / norm
-            })
-            .collect()
-    }
-    /// Returns whether the rational curve `curve` is included in the rational surface `surface`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector4::new(-1.0, -1.0, 2.0, 1.0), Vector4::new(-1.0, 0.0, 0.0, 1.0), Vector4::new(-1.0, 1.0, 2.0, 1.0)],
-    ///     vec![Vector4::new(0.0, -1.0, 0.0, 1.0), Vector4::new(0.0, 0.0, -2.0, 1.0), Vector4::new(0.0, 1.0, 0.0, 1.0)],
-    ///     vec![Vector4::new(1.0, -1.0, 2.0, 1.0), Vector4::new(1.0, 0.0, 0.0, 1.0), Vector4::new(1.0, 1.0, 2.0, 1.0)],
-    /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0]
-    /// );
-    /// let ctrl_pts = vec![ // the vector of the indices of control points
-    ///     Vector4::new(0.0, -2.0, 2.0, 2.0),
-    ///     Vector4::new(1.0, -1.0, 1.0, 1.0),
-    ///     Vector4::new(1.0, 0.0, 1.0, 1.0),
-    ///     Vector4::new(1.0, 1.0, 1.0, 1.0),
-    ///     Vector4::new(0.0, 2.0, 2.0, 2.0),
-    ///     Vector4::new(-1.0, 1.0, 1.0, 1.0),
-    ///     Vector4::new(-1.0, 0.0, 1.0, 1.0),
-    ///     Vector4::new(-1.0, -1.0, 1.0, 1.0),
-    ///     Vector4::new(0.0, -2.0, 2.0, 2.0),
-    /// ];
-    /// let mut curve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// assert!(surface.rational_include(&curve));
-    ///
-    /// *curve.control_point_mut(1) += Vector4::new(0.0, 0.0, 0.00001, 0.0);
-    /// assert!(!surface.rational_include(&curve));
-    /// ```
-    pub fn rational_include(&self, curve: &BSplineCurve<Vector4>) -> bool {
-        let pt = curve.subs(curve.knot_vec()[0]).rational_projection();
-        let mut hint = self.rational_presearch(pt);
-        hint = match self.search_rational_parameter(pt, hint) {
-            Some(got) => got,
-            None => return false,
-        };
-        let uknot_vec = self.uknot_vec();
-        let vknot_vec = self.vknot_vec();
-        let degree = curve.degree() * 6;
-        let (knots, _) = curve.knot_vec().to_single_multi();
-        for i in 1..knots.len() {
-            for j in 1..=degree {
-                let p = j as f64 / degree as f64;
-                let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
-                let pt = curve.subs(t).rational_projection();
-                hint = match self.search_rational_parameter(pt, hint) {
-                    Some(got) => got,
-                    None => return false,
-                };
-                if !self.subs(hint.0, hint.1).rational_projection().near(&pt) {
-                    return false;
-                } else if hint.0 < uknot_vec[0] - TOLERANCE
-                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
-                {
-                    return false;
-                } else if hint.1 < vknot_vec[0] - TOLERANCE
-                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
-                {
-                    return false;
-                }
-            }
-        }
-        true
+    let (u0, v0) = (hint[0], hint[1]);
+    let pt = surface.subs(u0, v0);
+    let jacobi = Matrix2::from_cols(surface.uder(u0, v0), surface.vder(u0, v0));
+    let res = jacobi.invert().map(move |inv| hint - inv * (pt - pt0));
+    match res {
+        Some(entity) => match surface.subs(entity[0], entity[1]).near(&pt0) {
+            true => res,
+            false => sub_search_parameter2d(surface, pt0, entity, count + 1),
+        },
+        None => res,
     }
 }
 
@@ -2671,10 +2238,26 @@ fn combinatorial(n: usize) -> Vec<usize> {
 fn test_parameter_division() {
     let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     let ctrl_pts = vec![
-        vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
-        vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.5, 1.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
-        vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(1.5, 6.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
-        vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(1.0, 7.0, 2.0), Vector3::new(1.0, 3.0, 1.0)],
+        vec![
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(0.5, -1.0, 2.0),
+            Vector3::new(1.0, 0.0, 1.0),
+        ],
+        vec![
+            Vector3::new(0.0, 1.0, 1.0),
+            Vector3::new(0.5, 1.0, 1.0),
+            Vector3::new(1.0, 1.0, 1.0),
+        ],
+        vec![
+            Vector3::new(0.0, 2.0, 1.0),
+            Vector3::new(1.5, 6.0, 3.0),
+            Vector3::new(1.0, 2.0, 1.0),
+        ],
+        vec![
+            Vector3::new(0.0, 3.0, 1.0),
+            Vector3::new(1.0, 7.0, 2.0),
+            Vector3::new(1.0, 3.0, 1.0),
+        ],
     ];
     let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     let tol = 0.01;

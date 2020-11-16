@@ -22,7 +22,6 @@ pub use truck_base::geom_traits::*;
 use truck_base::bounding_box::Bounded;
 use std::fmt::Debug;
 use serde::{Serialize, Deserialize};
-pub use traits::*;
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -185,9 +184,14 @@ pub mod bspsurface;
 pub mod errors;
 #[doc(hidden)]
 pub mod knot_vec;
-/// Defines traits: [`Tolerance`], [`Origin`], and [`RationalProjective`].
-///
-/// [`Toleramce`]: ./traits/trait.Tolerance.html
-/// [`Origin`]: ./traits/trait.Origin.html
-/// [`RationalProjective`]: ./traits/trait.RationalProjective.html
-pub mod traits;
+
+#[doc(hidden)]
+#[inline(always)]
+pub fn inv_or_zero(delta: f64) -> f64 {
+    if delta.so_small() {
+        0.0
+    } else {
+        1.0 / delta
+    }
+}
+

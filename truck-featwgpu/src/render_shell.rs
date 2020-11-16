@@ -24,7 +24,7 @@ fn presearch(surface: &BSplineSurface, point: Vector3) -> (f64, f64) {
 
 impl RenderFace {
     pub fn new(face: &Face, tol: f64, device: &Device) -> Option<RenderFace> {
-        let surface = face.oriented_surface();
+        let surface = NURBSSurface::new(face.oriented_surface());
         let polymesh: ExpandedPolygon = StructuredMesh::from_surface(&surface, tol).into();
         let buffers = polymesh.buffers(device);
         let mut boundary = Vec::<[f32; 4]>::new();
@@ -35,7 +35,7 @@ impl RenderFace {
             let mut this_boundary = Vec::new();
             for t in division {
                 let pt = curve.subs(t).rational_projection();
-                hint = match surface.search_rational_parameter(pt, hint) {
+                hint = match surface.search_parameter(pt, hint) {
                     Some(got) => got,
                     None => return None,
                 };
