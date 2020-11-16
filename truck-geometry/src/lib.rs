@@ -177,6 +177,8 @@ pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 pub mod bspcurve;
 #[doc(hidden)]
 pub mod nurbscurve;
+#[doc(hidden)]
+pub mod nurbssurface;
 /// Defines some iterators on control points of B-spline surface.
 pub mod bspsurface;
 /// Enumerats `Error`.

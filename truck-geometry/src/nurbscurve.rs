@@ -94,7 +94,7 @@ impl<V: Homogeneous<f64>> NURBSCurve<V> {
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
 
-impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V>
+impl<V: Homogeneous<f64>> NURBSCurve<V>
 where V::Point: Tolerance
 {
     /// Returns whether all control points are the same or not.
@@ -139,7 +139,69 @@ where V::Point: Tolerance
             .iter()
             .all(move |vec| vec.to_point().near(&pt))
     }
+    
+    /// Determine whether `self` and `other` is near as the B-spline curves or not.  
+    ///
+    /// Divides each knot interval into the number of degree equal parts,
+    /// and check `|self(t) - other(t)| < TOLERANCE` for each end points `t`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::from(
+    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
+    /// );
+    /// let ctrl_pts = vec![
+    ///     Vector3::new(1.0, 1.0, 1.0),
+    ///     Vector3::new(3.0, 2.0, 2.0),
+    ///     Vector3::new(2.0, 3.0, 1.0),
+    ///     Vector3::new(4.0, 5.0, 2.0),
+    ///     Vector3::new(5.0, 4.0, 1.0),
+    ///     Vector3::new(1.0, 1.0, 2.0),
+    /// ];
+    /// let curve0 = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let mut curve1 = curve0.clone();
+    /// assert!(curve0.near_as_curve(&curve1));
+    /// *curve1.control_point_mut(1) += Vector3::new(0.01, 0.0002, 0.0);
+    /// assert!(!curve0.near_as_curve(&curve1));
+    /// ```
+    #[inline(always)]
+    pub fn near_as_curve(&self, other: &Self) -> bool {
+        self.0
+            .sub_near_as_curve(&other.0, 2, move |x, y| x.to_point().near(&y.to_point()))
+    }
 
+    /// Determines `self` and `other` is near in square order as the B-spline curves or not.  
+    ///
+    /// Divide each knot interval into the number of degree equal parts,
+    /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::from(
+    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
+    /// );
+    /// let ctrl_pts = vec![
+    ///     Vector3::new(1.0, 1.0, 1.0),
+    ///     Vector3::new(3.0, 2.0, 2.0),
+    ///     Vector3::new(2.0, 3.0, 1.0),
+    ///     Vector3::new(4.0, 5.0, 2.0),
+    ///     Vector3::new(5.0, 4.0, 1.0),
+    ///     Vector3::new(1.0, 1.0, 2.0),
+    /// ];
+    /// let curve0 = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let mut curve1 = curve0.clone();
+    /// assert!(curve0.near_as_curve(&curve1));
+    /// *curve1.control_point_mut(1) += Vector3::new(0.01, TOLERANCE, 0.0);
+    /// assert!(!curve0.near2_as_curve(&curve1));
+    /// ```
+    #[inline(always)]
+    pub fn near2_as_curve(&self, other: &Self) -> bool {
+        self.0
+            .sub_near_as_curve(&other.0, 2, move |x, y| x.to_point().near2(&y.to_point()))
+    }
+}
+
+impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V> {
     /// Adds a knot `x`, and do not change `self` as a curve.  
     /// cf.[`BSplineCurve::add_knot`](./struct.BSplineCurve.html#method.add_knot)
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
@@ -209,10 +271,13 @@ where V::Point: Tolerance
     /// Concats two NURBS curves.  
     /// cf.[`BSplineCurve::try_concat`](./struct.BSplineCurve.html#method.try_concat)
     pub fn try_concat(&mut self, other: &mut Self) -> Result<&mut Self> {
+        let w0 = self.0.control_points.last().unwrap().weight();
+        let w1 = other.0.control_points[0].weight();
+        other.transform_control_points(|pt| *pt = *pt * (w0 / w1));
         self.0.try_concat(&mut other.0)?;
         Ok(self)
     }
-
+    
     /// Concats two NURBS curves.  
     /// cf.[`BSplineCurve::concat`](./struct.BSplineCurve.html#method.concat)
     #[inline(always)]
@@ -220,6 +285,10 @@ where V::Point: Tolerance
         self.try_concat(other)
             .unwrap_or_else(|error| panic!("{}", error))
     }
+}
+
+impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V>
+where V::Point: Tolerance {
     /// Makes the rational curve locally injective.
     /// # Example
     /// ```
@@ -300,99 +369,13 @@ where V::Point: Tolerance
         }
         self
     }
-    /// Determine whether `self` and `other` is near as the B-spline curves or not.  
-    ///
-    /// Divides each knot interval into the number of degree equal parts,
-    /// and check `|self(t) - other(t)| < TOLERANCE` for each end points `t`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
-    /// );
-    /// let ctrl_pts = vec![
-    ///     Vector3::new(1.0, 1.0, 1.0),
-    ///     Vector3::new(3.0, 2.0, 2.0),
-    ///     Vector3::new(2.0, 3.0, 1.0),
-    ///     Vector3::new(4.0, 5.0, 2.0),
-    ///     Vector3::new(5.0, 4.0, 1.0),
-    ///     Vector3::new(1.0, 1.0, 2.0),
-    /// ];
-    /// let curve0 = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
-    /// let mut curve1 = curve0.clone();
-    /// assert!(curve0.near_as_curve(&curve1));
-    /// *curve1.control_point_mut(1) += Vector3::new(0.01, 0.0002, 0.0);
-    /// assert!(!curve0.near_as_curve(&curve1));
-    /// ```
-    #[inline(always)]
-    pub fn near_as_curve(&self, other: &Self) -> bool {
-        self.0
-            .sub_near_as_curve(&other.0, 2, move |x, y| x.to_point().near(&y.to_point()))
-    }
-
-    /// Determines `self` and `other` is near in square order as the B-spline curves or not.  
-    ///
-    /// Divide each knot interval into the number of degree equal parts,
-    /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
-    /// );
-    /// let ctrl_pts = vec![
-    ///     Vector3::new(1.0, 1.0, 1.0),
-    ///     Vector3::new(3.0, 2.0, 2.0),
-    ///     Vector3::new(2.0, 3.0, 1.0),
-    ///     Vector3::new(4.0, 5.0, 2.0),
-    ///     Vector3::new(5.0, 4.0, 1.0),
-    ///     Vector3::new(1.0, 1.0, 2.0),
-    /// ];
-    /// let curve0 = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
-    /// let mut curve1 = curve0.clone();
-    /// assert!(curve0.near_as_curve(&curve1));
-    /// *curve1.control_point_mut(1) += Vector3::new(0.01, TOLERANCE, 0.0);
-    /// assert!(!curve0.near2_as_curve(&curve1));
-    /// ```
-    #[inline(always)]
-    pub fn near2_as_curve(&self, other: &Self) -> bool {
-        self.0
-            .sub_near_as_curve(&other.0, 2, move |x, y| x.to_point().near2(&y.to_point()))
-    }
 }
 
-impl<V: Homogeneous<f64>> NURBSCurve<V>
+impl<V: Homogeneous<f64>> ParameterDivision1D for NURBSCurve<V>
 where V::Point: MetricSpace<Metric = f64>
 {
-    /// Creates the curve division
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     Vector4::new(0.0, 0.0, 0.0, 1.0),
-    ///     Vector4::new(2.0, 0.0, 0.0, 2.0),
-    ///     Vector4::new(0.0, 3.0, 0.0, 3.0),
-    ///     Vector4::new(0.0, 0.0, 2.0, 2.0),
-    ///     Vector4::new(1.0, 1.0, 1.0, 1.0),
-    /// ];
-    /// let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
-    /// let tol = 0.01;
-    /// let div = curve.parameter_division(tol);
-    /// let knot_vec = curve.knot_vec();
-    /// assert_eq!(knot_vec[0], div[0]);
-    /// assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
-    /// for i in 1..div.len() {
-    ///     let pt0 = curve.subs(div[i - 1]);
-    ///     let pt1 = curve.subs(div[i]);
-    ///     let value_middle = pt0.midpoint(pt1);
-    ///     let param_middle = curve.subs((div[i - 1] + div[i]) / 2.0);
-    ///     println!("{}", value_middle.distance(param_middle));
-    ///     assert!(value_middle.distance(param_middle) < tol);
-    /// }
-    /// ```
     #[inline(always)]
-    pub fn parameter_division(&self, tol: f64) -> Vec<f64> {
+    fn parameter_division(&self, tol: f64) -> Vec<f64> {
         self.0
             .create_division(tol, move |v0, v1| v0.to_point().distance2(v1.to_point()))
     }
@@ -506,10 +489,28 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
     }
 }
 
-#[allow(dead_code)]
-fn hoge() {
-    let knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    let control_points = vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 1.0)];
-    let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, control_points));
-    let _pt = curve.subs(0.5);
+#[test]
+fn test_parameter_division() {
+    let knot_vec = KnotVec::uniform_knot(2, 3);
+    let ctrl_pts = vec![
+        Vector4::new(0.0, 0.0, 0.0, 1.0),
+        Vector4::new(2.0, 0.0, 0.0, 2.0),
+        Vector4::new(0.0, 3.0, 0.0, 3.0),
+        Vector4::new(0.0, 0.0, 2.0, 2.0),
+        Vector4::new(1.0, 1.0, 1.0, 1.0),
+    ];
+    let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    let tol = 0.01;
+    let div = curve.parameter_division(tol);
+    let knot_vec = curve.knot_vec();
+    assert_eq!(knot_vec[0], div[0]);
+    assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
+    for i in 1..div.len() {
+        let pt0 = curve.subs(div[i - 1]);
+        let pt1 = curve.subs(div[i]);
+        let value_middle = pt0.midpoint(pt1);
+        let param_middle = curve.subs((div[i - 1] + div[i]) / 2.0);
+        println!("{}", value_middle.distance(param_middle));
+        assert!(value_middle.distance(param_middle) < tol);
+    }
 }

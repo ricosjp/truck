@@ -205,17 +205,17 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
     #[inline(always)]
     pub fn der(&self, t: f64) -> V {
         let k = self.degree();
-        let knot_vec = &self.knot_vec;
-        let basis = self.knot_vec.try_bspline_basis_functions(k - 1, t).unwrap();
-        self.control_points
-            .iter()
-            .enumerate()
-            .fold(V::zero(), |sum, (i, pt)| {
-                let coef0 = knot_vec[i + k] - knot_vec[i];
-                let coef1 = knot_vec[i + k + 1] - knot_vec[i + 1];
-                sum + *pt * (basis[i] / coef0 - basis[i + 1] / coef1)
-            })
-            * k as f64
+        let BSplineCurve {
+            ref knot_vec,
+            ref control_points,
+        } = self;
+        let basis = knot_vec.try_bspline_basis_functions(k - 1, t).unwrap();
+        let closure = move |sum: V, (i, pt): (usize, &V)| {
+            let coef0 = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
+            let coef1 = inv_or_zero(knot_vec[i + k + 1] - knot_vec[i + 1]);
+            sum + *pt * (basis[i] * coef0 - basis[i + 1] * coef1)
+        };
+        control_points.iter().enumerate().fold(V::zero(), closure) * k as f64
     }
     /// Returns the closure of substitution.
     /// # Examples
@@ -266,11 +266,12 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
         let knot_vec = self.knot_vec.clone();
         let mut new_points = Vec::with_capacity(n + 1);
         if k > 0 {
-            for i in 0..=n {
+            let (knot_vec, new_points) = (&knot_vec, &mut new_points);
+            (0..=n).for_each(move |i| {
                 let delta = knot_vec[i + k] - knot_vec[i];
                 let coef = (k as f64) * inv_or_zero(delta);
                 new_points.push(self.delta_control_points(i) * coef);
-            }
+            });
         } else {
             new_points = vec![V::zero(); n];
         }
@@ -315,6 +316,34 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
             *div = new_div;
             self.sub_create_division(tol, dist2, div);
         }
+    }
+    
+    pub(super) fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
+        &self,
+        other: &BSplineCurve<V>,
+        div_coef: usize,
+        ord: F,
+    ) -> bool
+    {
+        if !self.knot_vec.same_range(&other.knot_vec) {
+            return false;
+        }
+
+        let division = std::cmp::max(self.degree(), other.degree()) * div_coef;
+        for i in 0..(self.knot_vec.len() - 1) {
+            let delta = self.knot_vec[i + 1] - self.knot_vec[i];
+            if delta.so_small() {
+                continue;
+            }
+
+            for j in 0..division {
+                let t = self.knot_vec[i] + delta * (j as f64) / (division as f64);
+                if !ord(&self.subs(t), &other.subs(t)) {
+                    return false;
+                }
+            }
+        }
+        true
     }
 }
 
@@ -380,12 +409,14 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// assert_eq!(bspcurve.knot_vec().range_length(), 1.0);
-    /// assert_eq!(bspcurve.end_points(), (Vector2::new(-1.0, 1.0), Vector2::new(1.0, 1.0)));
+    /// assert_eq!(bspcurve.front(), Point2::new(-1.0, 1.0));
+    /// assert_eq!(bspcurve.back(), Point2::new(1.0, 1.0));
     ///
     /// // add knots out of the range of the knot vectors.
     /// bspcurve.add_knot(-1.0).add_knot(2.0);
     /// assert_eq!(bspcurve.knot_vec().range_length(), 3.0);
-    /// assert_eq!(bspcurve.end_points(), (Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)));
+    /// assert_eq!(bspcurve.front(), Point2::new(0.0, 0.0));
+    /// assert_eq!(bspcurve.back(), Point2::new(0.0, 0.0));
     /// ```
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
         if x < self.knot_vec[0] {
@@ -576,11 +607,8 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     pub fn optimize(&mut self) -> &mut Self {
         loop {
             let n = self.knot_vec.len();
-            let mut flag = true;
-            for i in 1..=n {
-                flag = flag && self.try_remove_knot(n - i).is_err();
-            }
-            if flag {
+            let closure = |flag, i| flag && self.try_remove_knot(n - i).is_err();
+            if (1..=n).fold(true, closure) {
                 break;
             }
         }
@@ -964,33 +992,6 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
         }
         self
     }
-    pub(super) fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
-        &self,
-        other: &BSplineCurve<V>,
-        div_coef: usize,
-        ord: F,
-    ) -> bool
-    {
-        if !self.knot_vec.same_range(&other.knot_vec) {
-            return false;
-        }
-
-        let division = std::cmp::max(self.degree(), other.degree()) * div_coef;
-        for i in 0..(self.knot_vec.len() - 1) {
-            let delta = self.knot_vec[i + 1] - self.knot_vec[i];
-            if delta.so_small() {
-                continue;
-            }
-
-            for j in 0..division {
-                let t = self.knot_vec[i] + delta * (j as f64) / (division as f64);
-                if !ord(&self.subs(t), &other.subs(t)) {
-                    return false;
-                }
-            }
-        }
-        true
-    }
     /// Determine whether `self` and `other` is near as the B-spline curves or not.  
     ///
     /// Divides each knot interval into the number of degree equal parts,
@@ -1051,34 +1052,8 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     }
 }
 
-impl<V: InnerSpace<Scalar = f64>> BSplineCurve<V> {
-    /// Creates the curve division
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     Vector3::new(0.0, 0.0, 0.0),
-    ///     Vector3::new(1.0, 0.0, 0.0),
-    ///     Vector3::new(0.0, 1.0, 0.0),
-    ///     Vector3::new(0.0, 0.0, 1.0),
-    ///     Vector3::new(1.0, 1.0, 1.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let tol = 0.01;
-    /// let div = bspcurve.parameter_division(tol);
-    /// let knot_vec = bspcurve.knot_vec();
-    /// assert_eq!(knot_vec[0], div[0]);
-    /// assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
-    /// for i in 1..div.len() {
-    ///     let pt0 = bspcurve.subs(div[i - 1]);
-    ///     let pt1 = bspcurve.subs(div[i]);
-    ///     let value_middle = (pt0 + pt1) / 2.0;
-    ///     let param_middle = bspcurve.subs((div[i - 1] + div[i]) / 2.0);
-    ///     assert!(value_middle.distance(param_middle) < tol);
-    /// }
-    /// ```
-    pub fn parameter_division(&self, tol: f64) -> Vec<f64> {
+impl<V: InnerSpace<Scalar = f64>> ParameterDivision1D for BSplineCurve<V> {
+    fn parameter_division(&self, tol: f64) -> Vec<f64> {
         self.create_division(tol, |v0, v1| v0.distance2(v1))
     }
 }
@@ -1238,7 +1213,8 @@ where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> +
 }
 
 impl<V: TangentSpace<f64>> Curve for BSplineCurve<V>
-where V::Space: EuclideanSpace<Scalar = f64, Diff = V> {
+where V::Space: EuclideanSpace<Scalar = f64, Diff = V>
+{
     type Point = V::Space;
     type Vector = V;
     #[inline(always)]
@@ -1388,4 +1364,29 @@ fn test_near_as_curve() {
     let bspline2 = BSplineCurve::new(knot_vec, control_points.clone());
     assert!(bspline0.near_as_curve(&bspline1));
     assert!(!bspline0.near_as_curve(&bspline2));
+}
+
+#[test]
+fn test_parameter_division() {
+    let knot_vec = KnotVec::uniform_knot(2, 3);
+    let ctrl_pts = vec![
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(1.0, 1.0, 1.0),
+    ];
+    let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    let tol = 0.01;
+    let div = bspcurve.parameter_division(tol);
+    let knot_vec = bspcurve.knot_vec();
+    assert_eq!(knot_vec[0], div[0]);
+    assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
+    for i in 1..div.len() {
+        let pt0 = bspcurve.subs(div[i - 1]);
+        let pt1 = bspcurve.subs(div[i]);
+        let value_middle = (pt0 + pt1) / 2.0;
+        let param_middle = bspcurve.subs((div[i - 1] + div[i]) / 2.0);
+        assert!(value_middle.distance(param_middle) < tol);
+    }
 }
