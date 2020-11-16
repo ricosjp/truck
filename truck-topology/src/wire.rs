@@ -1,4 +1,4 @@
-use crate::{Edge, Vertex, Wire};
+use crate::*;
 use std::collections::vec_deque;
 use std::collections::{HashSet, VecDeque};
 use std::iter::Peekable;
@@ -272,6 +272,15 @@ impl<P, C> Wire<P, C> {
             set.insert(vertex.id());
         }
         true
+    }
+}
+
+impl<P: Tolerance, C: Curve<Point=P>> Wire<P, C> {
+    /// Returns the consistence of the geometry of end vertices
+    /// and the geometry of edge.
+    #[inline(always)]
+    pub fn is_geometric_consistent(&self) -> bool {
+        self.iter().all(|edge| edge.is_geometric_consistent())
     }
 }
 

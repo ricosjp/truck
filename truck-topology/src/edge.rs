@@ -286,6 +286,30 @@ impl<P, C> Edge<P, C> {
     }
 }
 
+impl<P, C: Curve<Point=P>> Edge<P, C> {
+    /// Returns the cloned curve in edge.
+    /// If edge is inverted, then the returned curve is also inverted.
+    #[inline(always)]
+    pub fn oriented_curve(&self) -> C {
+        match self.orientation {
+            true => self.lock_curve().unwrap().clone(),
+            false => self.lock_curve().unwrap().inverse(),
+        }
+    }
+
+    /// Returns the consistence of the geometry of end vertices
+    /// and the geometry of edge.
+    #[inline(always)]
+    pub fn is_geometric_consistent(&self) -> bool where P: Tolerance {
+        let curve = self.lock_curve().unwrap();
+        let geom_front = curve.front();
+        let geom_back = curve.back();
+        let top_front = self.absolute_front().lock_point().unwrap();
+        let top_back = self.absolute_back().lock_point().unwrap();
+        geom_front.near(&*top_front) && geom_back.near(&*top_back)
+    }
+}
+
 impl<P, C> Clone for Edge<P, C> {
     #[inline(always)]
     fn clone(&self) -> Edge<P, C> {

@@ -425,6 +425,30 @@ impl<P, C, S> Face<P, C, S> {
     }
 }
 
+impl<P, C: Curve<Point=P>, S: Surface<Point=P, Curve=C>> Face<P, C, S> {
+    /// Returns the cloned surface in face.
+    /// If face is inverted, then the returned surface is also inverted.
+    #[inline(always)]
+    pub fn oriented_surface(&self) -> S {
+        match self.orientation {
+            true => self.lock_surface().unwrap().clone(),
+            false => self.lock_surface().unwrap().inverse(),
+        }
+    }
+    /// Returns the consistence of the geometry of end vertices
+    /// and the geometry of edge.
+    #[inline(always)]
+    pub fn is_geometric_consistent(&self) -> bool where P: Tolerance {
+        let surface = &*self.lock_surface().unwrap();
+        self.boundary_iters().into_iter().flatten().all(|edge| {
+            let edge_consist = edge.is_geometric_consistent();
+            let curve = &*edge.lock_curve().unwrap();
+            let curve_consist = surface.include(curve);
+            edge_consist && curve_consist
+        })
+    }
+}
+
 impl<P, C, S> Clone for Face<P, C, S> {
     #[inline(always)]
     fn clone(&self) -> Face<P, C, S> {
