@@ -1,5 +1,4 @@
 use crate::*;
-use geometry::{InnerSpace, Zero};
 use std::collections::HashMap;
 
 /// mesh smoothing filters
