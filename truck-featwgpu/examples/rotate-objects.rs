@@ -48,11 +48,7 @@ impl MyRender {
         }
     }
 
-    fn load_obj<P: AsRef<std::path::Path>>(
-        &mut self,
-        path: P,
-    )
-    {
+    fn load_obj<P: AsRef<std::path::Path>>(&mut self, path: P) {
         let scene = &mut self.scene;
         scene.clear_objects();
         self.instances.clear();

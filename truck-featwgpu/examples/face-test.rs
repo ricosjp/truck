@@ -45,7 +45,11 @@ impl MyApp {
             Vector3::unit_z(),
             Rad(std::f64::consts::PI / 2.0),
         );
-        let edge3 = Edge::new(edge3.front(), edge0.front(), edge3.lock_curve().unwrap().clone());
+        let edge3 = Edge::new(
+            edge3.front(),
+            edge0.front(),
+            edge3.lock_curve().unwrap().clone(),
+        );
         let wire = Wire::from(vec![
             edge3.inverse(),
             edge2.inverse(),
@@ -202,9 +206,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, _: &WGPUHandler) {
-        self.scene.prepare_render();
-    }
+    fn update(&mut self, _: &WGPUHandler) { self.scene.prepare_render(); }
 
     fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }

@@ -1,10 +1,5 @@
 extern crate truck_topology as topology;
-use truck_base::{
-    cgmath64::*,
-    bounding_box::*,
-    geom_traits::*,
-    tolerance::*,
-};
+use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
 
 /// mesh data
 #[derive(Clone, Debug, Default)]

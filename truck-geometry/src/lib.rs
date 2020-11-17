@@ -13,15 +13,15 @@
     unused_qualifications
 )]
 
-extern crate truck_base;
 extern crate serde;
-pub use truck_base::cgmath64::*;
-pub use truck_base::bounding_box::*;
-pub use truck_base::tolerance::*;
-pub use truck_base::geom_traits::*;
-use truck_base::bounding_box::Bounded;
+extern crate truck_base;
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use serde::{Serialize, Deserialize};
+use truck_base::bounding_box::Bounded;
+pub use truck_base::bounding_box::*;
+pub use truck_base::cgmath64::*;
+pub use truck_base::geom_traits::*;
+pub use truck_base::tolerance::*;
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -174,16 +174,16 @@ pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
 #[doc(hidden)]
 pub mod bspcurve;
-#[doc(hidden)]
-pub mod nurbscurve;
-#[doc(hidden)]
-pub mod nurbssurface;
 /// Defines some iterators on control points of B-spline surface.
 pub mod bspsurface;
 /// Enumerats `Error`.
 pub mod errors;
 #[doc(hidden)]
 pub mod knot_vec;
+#[doc(hidden)]
+pub mod nurbscurve;
+#[doc(hidden)]
+pub mod nurbssurface;
 
 #[doc(hidden)]
 #[inline(always)]
@@ -194,4 +194,3 @@ pub fn inv_or_zero(delta: f64) -> f64 {
         1.0 / delta
     }
 }
-

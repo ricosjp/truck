@@ -108,11 +108,7 @@ pub trait Rendered {
     fn vertex_buffer(&self, scene: &Scene) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
     fn bind_group_layout(&self, scene: &Scene) -> Arc<BindGroupLayout>;
     fn bind_group(&self, scene: &Scene, layout: &BindGroupLayout) -> Arc<BindGroup>;
-    fn pipeline(
-        &self,
-        scene: &Scene,
-        layout: &PipelineLayout,
-    ) -> Arc<RenderPipeline>;
+    fn pipeline(&self, scene: &Scene, layout: &PipelineLayout) -> Arc<RenderPipeline>;
     fn render_object(&self, scene: &Scene) -> RenderObject {
         let (vertex_buffer, index_buffer) = self.vertex_buffer(scene);
         let bind_group_layout = self.bind_group_layout(scene);
@@ -185,11 +181,11 @@ pub struct Scene {
 mod buffer_handler;
 pub mod camera;
 pub mod light;
-pub mod scene;
 pub mod render_polygon;
 pub mod render_shell;
+pub mod scene;
 
-fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>> (
+fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     device: &Device,
     layout: &BindGroupLayout,
     resources: T,
@@ -198,12 +194,10 @@ fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>> (
     let entries: &Vec<BindGroupEntry> = &resources
         .into_iter()
         .enumerate()
-        .map(|(i, resource)|
-            BindGroupEntry {
-                binding: i as u32,
-                resource,
-            }
-        )
+        .map(|(i, resource)| BindGroupEntry {
+            binding: i as u32,
+            resource,
+        })
         .collect();
     device.create_bind_group(&BindGroupDescriptor {
         layout,
