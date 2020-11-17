@@ -136,10 +136,10 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// #
 /// # let b_loop = &b_shell[3].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 0.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 0.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 0.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// #
 /// # let b_loop = &b_shell[5].boundaries()[0];
