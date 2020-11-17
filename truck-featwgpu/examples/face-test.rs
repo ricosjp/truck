@@ -72,7 +72,7 @@ impl App for MyApp {
             light_changed: None,
         };
         let solid = Self::create_solid();
-        let shell = RenderFace::from_shell(&solid.boundaries()[0], 0.01, render.scene.device());
+        let shell = RenderFace::from_shell(&solid.boundaries()[0], 0.001, render.scene.device());
         println!("{}", shell.len());
         shell.iter().for_each(|face| {
             render.scene.add_object(face.as_ref().unwrap());

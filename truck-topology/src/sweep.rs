@@ -146,9 +146,18 @@ fn sub_sweep_wire<P, C, S, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
             edge
         }
     };
-    let wire = Wire::from(vec![edge0.clone(), edge3, edge1.inverse(), edge2.inverse()]);
+    let ori = edge0.orientation();
+    let wire = if ori {
+        Wire::from(vec![edge0.clone(), edge3, edge1.inverse(), edge2.inverse()])
+    } else {
+        Wire::from(vec![edge0.inverse(), edge2, edge1.clone(), edge3.inverse()])
+    };
     let surface = create_surface(edge0, edge1, connect_curves);
-    Face::debug_new(vec![wire], surface)
+    let mut face = Face::debug_new(vec![wire], surface);
+    if !ori {
+        face.invert();
+    }
+    face
 }
 
 impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
