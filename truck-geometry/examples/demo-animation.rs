@@ -1,4 +1,3 @@
-use cgmath::Point3;
 use std::f64::consts::PI;
 use truck_geometry::*;
 
@@ -28,7 +27,8 @@ fn main() {
     control_points.push(control_points[0].iter().map(|x| shift(x, 0.8)).collect());
     control_points.push(control_points[0].iter().map(|x| shift(x, 1.0)).collect());
 
-    let mut bspline = BSplineSurface::new((knot_vec0, knot_vec1), control_points);
+    let bspline = BSplineSurface::new((knot_vec0, knot_vec1), control_points);
+    let mut surface = NURBSSurface::new(bspline);
 
     std::fs::DirBuilder::new()
         .recursive(true)
@@ -36,14 +36,14 @@ fn main() {
         .unwrap();
     for i in 0..N {
         let t = PI * (i as f64) / (N as f64);
-        bspline.control_point_mut(0, 2)[1] = t.cos();
-        bspline.control_point_mut(1, 2)[1] = (t + 0.2 * PI).cos();
-        bspline.control_point_mut(2, 2)[1] = (t + 0.4 * PI).cos();
-        bspline.control_point_mut(3, 2)[1] = (t + 0.6 * PI).cos();
-        bspline.control_point_mut(4, 2)[1] = (t + 0.8 * PI).cos();
-        bspline.control_point_mut(5, 2)[1] = (t + PI).cos();
+        surface.control_point_mut(0, 2)[1] = t.cos();
+        surface.control_point_mut(1, 2)[1] = (t + 0.2 * PI).cos();
+        surface.control_point_mut(2, 2)[1] = (t + 0.4 * PI).cos();
+        surface.control_point_mut(3, 2)[1] = (t + 0.6 * PI).cos();
+        surface.control_point_mut(4, 2)[1] = (t + 0.8 * PI).cos();
+        surface.control_point_mut(5, 2)[1] = (t + PI).cos();
         let file = std::fs::File::create(&format!("frames/frame{}.obj", i)).unwrap();
-        let mesh = truck_polymesh::StructuredMesh::from_surface(&mut bspline, 0.01);
+        let mesh = truck_polymesh::StructuredMesh::from_surface(&surface, 0.01);
         truck_io::obj::write(&mesh.destruct(), file).unwrap();
     }
 }

@@ -146,9 +146,18 @@ fn sub_sweep_wire<P, C, S, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
             edge
         }
     };
-    let wire = Wire::from(vec![edge0.clone(), edge3, edge1.inverse(), edge2.inverse()]);
+    let ori = edge0.orientation();
+    let wire = if ori {
+        Wire::from(vec![edge0.clone(), edge3, edge1.inverse(), edge2.inverse()])
+    } else {
+        Wire::from(vec![edge0.inverse(), edge2, edge1.clone(), edge3.inverse()])
+    };
     let surface = create_surface(edge0, edge1, connect_curves);
-    Face::debug_new(vec![wire], surface)
+    let mut face = Face::debug_new(vec![wire], surface);
+    if !ori {
+        face.invert();
+    }
+    face
 }
 
 impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
@@ -189,17 +198,17 @@ impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
     /// let face2 = &shell[2];
     /// assert_eq!(*face2.lock_surface().unwrap(), 340);
     /// let boundary2 = &face2.boundaries()[0];
-    /// assert_eq!(*boundary2[0].lock_curve().unwrap(), 120);
-    /// assert_eq!(*boundary2[1].lock_curve().unwrap(), 48);
-    /// assert_eq!(*boundary2[2].lock_curve().unwrap(), 220);
-    /// assert_eq!(*boundary2[3].lock_curve().unwrap(), 37);
-    /// assert_eq!(*boundary2[0].front().lock_point().unwrap(), 3);
-    /// assert_eq!(*boundary2[1].front().lock_point().unwrap(), 4);
-    /// assert_eq!(*boundary2[2].front().lock_point().unwrap(), 8);
-    /// assert_eq!(*boundary2[3].front().lock_point().unwrap(), 7);
+    /// assert_eq!(*boundary2[0].lock_curve().unwrap(), 48);
+    /// assert_eq!(*boundary2[1].lock_curve().unwrap(), 220);
+    /// assert_eq!(*boundary2[2].lock_curve().unwrap(), 37);
+    /// assert_eq!(*boundary2[3].lock_curve().unwrap(), 120);
+    /// assert_eq!(*boundary2[0].front().lock_point().unwrap(), 4);
+    /// assert_eq!(*boundary2[1].front().lock_point().unwrap(), 8);
+    /// assert_eq!(*boundary2[2].front().lock_point().unwrap(), 7);
+    /// assert_eq!(*boundary2[3].front().lock_point().unwrap(), 3);
     /// 
-    /// assert_eq!(boundary1[1].id(), boundary2[3].id());
-    /// assert_ne!(boundary1[1], boundary2[3]);
+    /// assert_eq!(boundary1[1].id(), boundary2[2].id());
+    /// assert_ne!(boundary1[1], boundary2[2]);
     /// ```
     fn sweep<
         FP: Fn(&P) -> P,

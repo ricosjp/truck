@@ -446,6 +446,15 @@ impl<P, C, S> Shell<P, C, S> {
     }
 }
 
+impl<P: Tolerance, C: Curve<Point=P>, S: Surface<Point=C::Point, Vector=C::Vector, Curve=C>> Shell<P, C, S> {
+    /// Returns the consistence of the geometry of end vertices
+    /// and the geometry of edge.
+    #[inline(always)]
+    pub fn is_geometric_consistent(&self) -> bool {
+        self.iter().all(|face| face.is_geometric_consistent())
+    }
+}
+
 impl<P, C, S> From<Shell<P, C, S>> for Vec<Face<P, C, S>> {
     #[inline(always)]
     fn from(shell: Shell<P, C, S>) -> Vec<Face<P, C, S>> { shell.face_list }

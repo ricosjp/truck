@@ -58,6 +58,15 @@ impl<P, C, S> Solid<P, C, S> {
     pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
 }
 
+impl<P: Tolerance, C: Curve<Point=P>, S: Surface<Point=C::Point, Vector=C::Vector, Curve=C>> Solid<P, C, S> {
+    /// Returns the consistence of the geometry of end vertices
+    /// and the geometry of edge.
+    #[inline(always)]
+    pub fn is_geometric_consistent(&self) -> bool {
+        self.boundaries().iter().all(|shell| shell.is_geometric_consistent())
+    }
+}
+
 #[test]
 fn cube() {
     use crate::*;

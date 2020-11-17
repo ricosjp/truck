@@ -92,10 +92,30 @@ fn cube() -> Shell {
 
     let wire = vec![
         Wire::from_iter(vec![&edge[0], &edge[1], &edge[2], &edge[3]]),
-        Wire::from_iter(vec![&edge[0].inverse(), &edge[4], &edge[8], &edge[5].inverse()]),
-        Wire::from_iter(vec![&edge[1].inverse(), &edge[5], &edge[9], &edge[6].inverse()]),
-        Wire::from_iter(vec![&edge[2].inverse(), &edge[6], &edge[10], &edge[7].inverse()]),
-        Wire::from_iter(vec![&edge[3].inverse(), &edge[7], &edge[11], &edge[4].inverse()]),
+        Wire::from_iter(vec![
+            &edge[0].inverse(),
+            &edge[4],
+            &edge[8],
+            &edge[5].inverse(),
+        ]),
+        Wire::from_iter(vec![
+            &edge[1].inverse(),
+            &edge[5],
+            &edge[9],
+            &edge[6].inverse(),
+        ]),
+        Wire::from_iter(vec![
+            &edge[2].inverse(),
+            &edge[6],
+            &edge[10],
+            &edge[7].inverse(),
+        ]),
+        Wire::from_iter(vec![
+            &edge[3].inverse(),
+            &edge[7],
+            &edge[11],
+            &edge[4].inverse(),
+        ]),
         Wire::from_iter(vec![&edge[8], &edge[9], &edge[10], &edge[11]]),
     ];
 

@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1.2.0"
+truck-base = {path = "../truck-base"}
 
 [dev-dependencies]
 truck-geometry = {path = "../truck-geometry"}

@@ -45,10 +45,12 @@ fn new_fedge_bedge(
     vemap: &mut HashMap<VertexID, (Edge, Edge)>,
 ) -> (Edge, Edge)
 {
-    let curve0 = geom_impls::circle_arc(*v0.lock_point().unwrap(), origin, axis, PI);
-    let curve1 = geom_impls::circle_arc(*v1.lock_point().unwrap(), origin, axis, PI);
-    let fedge = Edge::debug_new(v0, v1, curve0);
-    let bedge = Edge::debug_new(v1, v0, curve1);
+    let pt0 = (*v0.lock_point().unwrap()).to_homogeneous();
+    let curve0 = geom_impls::circle_arc(pt0, origin, axis, PI);
+    let pt1 = (*v1.lock_point().unwrap()).to_homogeneous();
+    let curve1 = geom_impls::circle_arc(pt1, origin, axis, PI);
+    let fedge = Edge::debug_new(v0, v1, NURBSCurve::new(curve0));
+    let bedge = Edge::debug_new(v1, v0, NURBSCurve::new(curve1));
     vemap.insert(v0.id(), (fedge.clone(), bedge.clone()));
     (fedge, bedge)
 }
@@ -81,11 +83,13 @@ fn sub_sweep_wire(
         edge0.inverse(),
         bedge0.inverse(),
     ]);
-    let surface0 = geom_impls::rsweep_surface(&*edge0.lock_curve().unwrap(), origin, axis, PI);
-    let surface1 = geom_impls::rsweep_surface(&*edge1.lock_curve().unwrap(), origin, axis, PI);
+    let curve0 = edge0.oriented_curve().into_non_rationalized();
+    let surface0 = geom_impls::rsweep_surface(&curve0, origin, axis, PI);
+    let curve1 = edge1.oriented_curve().into_non_rationalized();
+    let surface1 = geom_impls::rsweep_surface(&curve1, origin, axis, PI);
     (
-        Face::debug_new(vec![wire0], surface0),
-        Face::debug_new(vec![wire1], surface1),
+        Face::debug_new(vec![wire0], NURBSSurface::new(surface0)),
+        Face::debug_new(vec![wire1], NURBSSurface::new(surface1)),
     )
 }
 
@@ -131,10 +135,13 @@ impl CompleteRSweep for Shell {
 }
 
 fn create_edge(v0: &Vertex, v1: &Vertex, origin: Point3, axis: Vector3) -> Edge {
-    let curve = geom_impls::circle_arc(*v0.lock_point().unwrap(), origin, axis, PI);
-    Edge::debug_new(v0, v1, curve)
+    let pt0 = (*v0.lock_point().unwrap()).to_homogeneous();
+    let curve = geom_impls::circle_arc(pt0, origin, axis, PI);
+    Edge::debug_new(v0, v1, NURBSCurve::new(curve))
 }
 
-fn create_surface(edge0: &Edge, _: &Edge, origin: Point3, axis: Vector3) -> BSplineSurface {
-    geom_impls::rsweep_surface(&*edge0.lock_curve().unwrap(), origin, axis, PI)
+fn create_surface(edge0: &Edge, _: &Edge, origin: Point3, axis: Vector3) -> NURBSSurface {
+    let curve = edge0.oriented_curve().into_non_rationalized();
+    let surface = geom_impls::rsweep_surface(&curve, origin, axis, PI);
+    NURBSSurface::new(surface)
 }

@@ -1,34 +1,29 @@
-extern crate truck_integral;
-pub use cgmath::prelude::*;
 pub use cgmath::Rad;
-use truck_integral::EdgeEx;
 
 // geometrical elements
 pub mod geometry {
-    pub use geometry::{cgmath64::*, errors::Error, traits::*, BoundingBox, KnotVec, Result};
-    use truck_integral::*;
-    pub type BSplineCurve = geometry::BSplineCurve<Vector4>;
-    pub type BSplineSurface = geometry::BSplineSurface<Vector4>;
-    pub type CurveCollector = geometry::CurveCollector<Vector4>;
+    pub use truck_geometry::*;
+    pub type NURBSCurve = truck_geometry::NURBSCurve<Vector4>;
+    pub type NURBSSurface = truck_geometry::NURBSSurface<Vector4>;
+    pub type CurveCollector = truck_geometry::CurveCollector<Vector4>;
 }
 pub use geometry::*;
 
 // topological elements
 pub mod topology {
     use crate::geometry::*;
-    use truck_integral::*;
-    pub type Vertex = topology::Vertex<Vector4>;
-    pub type Edge = topology::Edge<Vector4, BSplineCurve>;
-    pub type Wire = topology::Wire<Vector4, BSplineCurve>;
-    pub type Face = topology::Face<Vector4, BSplineCurve, BSplineSurface>;
-    pub type Shell = topology::Shell<Vector4, BSplineCurve, BSplineSurface>;
-    pub type Solid = topology::Solid<Vector4, BSplineCurve, BSplineSurface>;
+    pub type Vertex = truck_topology::Vertex<Point3>;
+    pub type Edge = truck_topology::Edge<Point3, NURBSCurve>;
+    pub type Wire = truck_topology::Wire<Point3, NURBSCurve>;
+    pub type Face = truck_topology::Face<Point3, NURBSCurve, NURBSSurface>;
+    pub type Shell = truck_topology::Shell<Point3, NURBSCurve, NURBSSurface>;
+    pub type Solid = truck_topology::Solid<Point3, NURBSCurve, NURBSSurface>;
 
-    pub type VertexID = topology::VertexID<Vector4>;
-    pub type EdgeID = topology::EdgeID<BSplineCurve>;
-    pub type FaceID = topology::FaceID<BSplineSurface>;
+    pub type VertexID = truck_topology::VertexID<Point3>;
+    pub type EdgeID = truck_topology::EdgeID<NURBSCurve>;
+    pub type FaceID = truck_topology::FaceID<NURBSSurface>;
 
-    pub use topology::{errors::Error, shell::ShellCondition, Mapped, Result, Sweep};
+    pub use truck_topology::{errors::Error, shell::ShellCondition, Mapped, Result, Sweep};
 }
 pub use topology::*;
 

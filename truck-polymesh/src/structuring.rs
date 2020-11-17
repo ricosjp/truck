@@ -109,7 +109,7 @@ impl PolygonMesh {
         let mut n = vec0.cross(vec1);
         n /= n.magnitude();
         let vec2 = &self.positions[face1[k][0]] - &self.positions[face0[0][0]];
-        let mat = geometry::Matrix3::from_cols(vec0.clone(), vec1.clone(), n.clone());
+        let mat = Matrix3::from_cols(vec0.clone(), vec1.clone(), n.clone());
         let coef = mat.invert().unwrap() * vec2;
 
         if coef[2] > plane_tol {

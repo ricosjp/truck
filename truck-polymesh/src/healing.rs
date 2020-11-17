@@ -1,5 +1,4 @@
 use crate::*;
-use geometry::{Tolerance, TOLERANCE};
 use std::collections::HashMap;
 use std::iter::Iterator;
 use std::ops::{Mul, Div};

@@ -1,7 +1,5 @@
-#[macro_use]
-extern crate truck_geometry as geometry;
 extern crate truck_topology as topology;
-use geometry::*;
+use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
 
 /// mesh data
 #[derive(Clone, Debug, Default)]
