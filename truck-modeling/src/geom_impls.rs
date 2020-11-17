@@ -1,6 +1,8 @@
 use crate::*;
 use geometry::KnotVec;
 use std::f64::consts::PI;
+type BSplineCurve = truck_geometry::BSplineCurve<Vector4>;
+type BSplineSurface = truck_geometry::BSplineSurface<Vector4>;
 
 pub(super) fn line(pt0: Vector4, pt1: Vector4) -> BSplineCurve {
     let knot_vec = KnotVec::bezier_knot(1);

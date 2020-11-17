@@ -13,7 +13,7 @@ struct MyApp {
 }
 
 impl MyApp {
-    fn init_surface(degree: usize, division: usize) -> BSplineSurface {
+    fn init_surface(degree: usize, division: usize) -> NURBSSurface {
         let range = degree + division - 1;
         let knot_vec = KnotVec::uniform_knot(degree, division);
         let mut ctrl_pts = Vec::new();
@@ -26,7 +26,7 @@ impl MyApp {
             }
             ctrl_pts.push(vec);
         }
-        BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts)
+        NURBSSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts))
     }
     fn init_camera() -> Camera {
         let mut vec0 = Vector4::new(1.5, 0.0, -1.5, 0.0);
@@ -61,7 +61,7 @@ impl MyApp {
                 }
                 std::thread::sleep(std::time::Duration::from_millis(1));
                 let mut bspsurface0 = bspsurface.clone();
-                bspsurface0.optimize();
+                bspsurface0.non_rationalized_mut().optimize();
                 let mesh = truck_polymesh::StructuredMesh::from_surface(&bspsurface0, 0.01);
                 let object = PolygonInstance::new(mesh.destruct(), &device);
                 count += 1;

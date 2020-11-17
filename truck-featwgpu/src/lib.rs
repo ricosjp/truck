@@ -4,7 +4,6 @@ extern crate futures;
 extern crate image;
 extern crate truck_modeling as modeling;
 extern crate truck_polymesh as polymesh;
-extern crate truck_integral as integral;
 extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;

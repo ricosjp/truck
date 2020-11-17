@@ -9,6 +9,10 @@ impl<V> NURBSSurface<V> {
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
     pub fn non_rationalized(&self) -> &BSplineSurface<V> { &self.0 }
+    
+    /// Returns the nurbs surface before rationalized
+    #[inline(always)]
+    pub fn non_rationalized_mut(&mut self) -> &mut BSplineSurface<V> { &mut self.0 }
 
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
@@ -677,7 +681,7 @@ impl NURBSSurface<Vector4> {
     /// let (u, v) = surface.search_rational_parameter(pt, (0.5, 0.5)).unwrap();
     /// Vector3::assert_near2(&surface.subs(u, v).rational_projection(), &pt);
     /// ```
-    fn search_parameter(&self, pt: Point3, hint: (f64, f64)) -> Option<(f64, f64)> {
+    pub fn search_parameter(&self, pt: Point3, hint: (f64, f64)) -> Option<(f64, f64)> {
         let normal = self.normal(hint.0, hint.1);
         let flag = normal[0].abs() > normal[1].abs();
         let tmp = if flag { 0 } else { 1 };

@@ -1,8 +1,7 @@
 use super::*;
 use polymesh::StructuredMesh;
-use integral::{EdgeEx, FaceEx};
 
-fn presearch(surface: &BSplineSurface, point: Vector3) -> (f64, f64) {
+fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
     const N: usize = 50;
     let mut res = (0.0, 0.0);
     let mut min = std::f64::INFINITY;
@@ -12,7 +11,7 @@ fn presearch(surface: &BSplineSurface, point: Vector3) -> (f64, f64) {
             let q = j as f64 / N as f64;
             let u = surface.uknot_vec()[0] + p * surface.uknot_vec().range_length();
             let v = surface.vknot_vec()[0] + q * surface.vknot_vec().range_length();
-            let dist = surface.subs(u, v).rational_projection().distance2(point);
+            let dist = surface.subs(u, v).distance2(point);
             if dist < min {
                 min = dist;
                 res = (u, v);
@@ -24,17 +23,17 @@ fn presearch(surface: &BSplineSurface, point: Vector3) -> (f64, f64) {
 
 impl RenderFace {
     pub fn new(face: &Face, tol: f64, device: &Device) -> Option<RenderFace> {
-        let surface = NURBSSurface::new(face.oriented_surface());
+        let surface = face.oriented_surface();
         let polymesh: ExpandedPolygon = StructuredMesh::from_surface(&surface, tol).into();
         let buffers = polymesh.buffers(device);
         let mut boundary = Vec::<[f32; 4]>::new();
         for edge in face.boundary_iters().into_iter().flatten() {
             let curve = edge.oriented_curve();
             let division = curve.parameter_division(tol * 0.1);
-            let mut hint = presearch(&surface, curve.subs(division[0]).rational_projection());
+            let mut hint = presearch(&surface, curve.subs(division[0]));
             let mut this_boundary = Vec::new();
             for t in division {
-                let pt = curve.subs(t).rational_projection();
+                let pt = curve.subs(t);
                 hint = match surface.search_parameter(pt, hint) {
                     Some(got) => got,
                     None => return None,
