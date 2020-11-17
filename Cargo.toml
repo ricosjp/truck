@@ -3,7 +3,6 @@ members = [
 	"truck-geometry",
 	"truck-topology",
 	"truck-polymesh",
-	"truck-integral",
 	"truck-modeling",
 	"truck-featwgpu",
 	"truck-base",
