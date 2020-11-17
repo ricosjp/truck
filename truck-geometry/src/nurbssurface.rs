@@ -418,11 +418,12 @@ impl NURBSSurface<Vector3> {
     ///     vec![Vector3::new(0.0, 0.5, 0.4), Vector3::new(0.3, 0.6, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(1.0, 0.5, 0.4)],
     ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
     /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    /// let bspsurface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    /// let surface = NURBSSurface::new(bspsurface);
     ///
-    /// let pt = surface.subs(0.3, 0.7).rational_projection();
-    /// let (u, v) = surface.search_rational_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector2::assert_near2(&surface.subs(u, v).rational_projection(), &pt);
+    /// let pt = surface.subs(0.3, 0.7);
+    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
+    /// Point2::assert_near(&surface.subs(u, v), &pt);
     /// ```
     #[inline(always)]
     pub fn search_parameter(&self, pt: Point2, hint: (f64, f64)) -> Option<(f64, f64)> {
@@ -675,11 +676,12 @@ impl NURBSSurface<Vector4> {
     ///     vec![Vector4::new(0.0, 1.5, 1.2, 3.0), Vector4::new(1.02, 2.04, 1.7, 3.4), Vector4::new(0.42, 0.28, 0.7, 0.7), Vector4::new(0.6, 0.3, 0.0, 0.6)],
     ///     vec![Vector4::new(0.0, 1.0, 1.0, 1.0), Vector4::new(0.2, 2.0, 2.0, 2.0), Vector4::new(0.85, 1.7, 0.85, 1.7), Vector4::new(1.0, 1.0, 0.3, 1.0)],
     /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    /// let bspsurface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    /// let surface = NURBSSurface::new(bspsurface);
     ///
-    /// let pt = surface.subs(0.3, 0.7).rational_projection();
-    /// let (u, v) = surface.search_rational_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector3::assert_near2(&surface.subs(u, v).rational_projection(), &pt);
+    /// let pt = surface.subs(0.3, 0.7);
+    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
+    /// Point3::assert_near(&surface.subs(u, v), &pt);
     /// ```
     pub fn search_parameter(&self, pt: Point3, hint: (f64, f64)) -> Option<(f64, f64)> {
         let normal = self.normal(hint.0, hint.1);

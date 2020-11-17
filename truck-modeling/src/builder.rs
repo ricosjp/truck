@@ -128,26 +128,26 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// #
 /// # let b_loop = &b_shell[0].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 0.0, 0.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 0.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 0.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 0.0, 0.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 0.0, 0.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 0.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 0.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 0.0, 0.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// #
 /// # let b_loop = &b_shell[3].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 0.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 0.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 1.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 0.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 0.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 1.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// #
 /// # let b_loop = &b_shell[5].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 0.0, 1.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 0.0, 1.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(1.0, 1.0, 1.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Vector4::new(0.0, 1.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 0.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 0.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 1.0));
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// ```
 pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T::Sweeped {
@@ -209,7 +209,7 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 /// #    for j in 0..=N {
 /// #        let u = i as f64 / N as f64;
 /// #        let v = j as f64 / N as f64;
-/// #        let pt = Point3::from_homogeneous(surface.subs(u, v));
+/// #        let pt = surface.subs(u, v);
 /// #
 /// #        // the y coordinate is positive.
 /// #        //assert!(pt[1] >= 0.0);
@@ -275,7 +275,7 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
 /// #       for j in 0..=N {
 /// #           let u = i as f64 / N as f64;
 /// #           let v = j as f64 / N as f64;
-/// #           let pt = Point3::from_homogeneous(surface.subs(u, v));
+/// #           let pt = surface.subs(u, v);
 /// #
 /// #           // this surface is a part of torus.
 /// #           let tmp = f64::sqrt(pt[0] * pt[0] + pt[2] * pt[2]) - 2.0;

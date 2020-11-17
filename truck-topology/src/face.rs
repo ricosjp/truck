@@ -425,7 +425,7 @@ impl<P, C, S> Face<P, C, S> {
     }
 }
 
-impl<P, C: Curve<Point=P>, S: Surface<Point=P, Curve=C>> Face<P, C, S> {
+impl<P, C: Curve<Point=P>, S: Surface<Point=C::Point, Vector=C::Vector, Curve=C>> Face<P, C, S> {
     /// Returns the cloned surface in face.
     /// If face is inverted, then the returned surface is also inverted.
     #[inline(always)]
