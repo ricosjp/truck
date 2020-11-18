@@ -1,9 +1,8 @@
-extern crate truck_io as io;
 use truck_polymesh::*;
 
 fn main() {
     let file = std::fs::File::open("tests/data/sample.obj").unwrap();
-    let mut mesh = io::obj::read(file).unwrap();
+    let mut mesh = obj::read(file).unwrap();
     mesh.uv_coords = Vec::new();
     mesh.normals = Vec::new();
     let mut handler = MeshHandler::new(mesh);
@@ -24,11 +23,11 @@ fn main() {
     for (i, faces) in planes_parts.into_iter().enumerate() {
         let mesh = planes_handler.create_mesh_by_face_indices(&faces);
         let file = std::fs::File::create(&format!("output/planes_parts_{}.obj", i)).unwrap();
-        io::obj::write(&mesh, file).unwrap();
+        obj::write(&mesh, file).unwrap();
     }
     for (i, faces) in others_parts.into_iter().enumerate() {
         let mesh = others_handler.create_mesh_by_face_indices(&faces);
         let file = std::fs::File::create(&format!("output/others_parts_{}.obj", i)).unwrap();
-        io::obj::write(&mesh, file).unwrap();
+        obj::write(&mesh, file).unwrap();
     }
 }

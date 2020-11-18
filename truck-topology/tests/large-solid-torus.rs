@@ -42,6 +42,8 @@ fn large_torus() -> Solid {
     Solid::new(vec![shell])
 }
 
+#[test]
+#[ignore]
 fn main() {
     let instant = std::time::Instant::now();
     large_torus();
