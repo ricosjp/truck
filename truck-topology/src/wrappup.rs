@@ -99,11 +99,14 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
     }
 
     #[inline(always)]
+    fn create_boundary(&mut self, boundary: &Wire<P, C>) -> Vec<(usize, bool)> {
+        boundary.iter().map(|edge| self.get_eid(edge)).collect()
+    }
+
+    #[inline(always)]
     fn create_cface<S: Clone>(&mut self, face: &Face<P, C, S>) -> CompressedFace<S> {
-        let mut edge_closure = |edge: &Edge<P, C>| self.get_eid(edge);
-        let mut wire_closure = |wire: &Wire<P, C>| wire.iter().map(&mut edge_closure).collect();
         CompressedFace {
-            boundaries: face.boundaries.iter().map(&mut wire_closure).collect(),
+            boundaries: face.boundaries.iter().map(|wire| self.create_boundary(wire)).collect(),
             orientation: face.orientation(),
             surface: face.lock_surface().unwrap().clone(),
         }
