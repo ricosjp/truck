@@ -1,6 +1,5 @@
 extern crate bytemuck;
 extern crate cgmath;
-extern crate futures;
 extern crate image;
 extern crate truck_modeling as modeling;
 extern crate truck_polymesh as polymesh;

@@ -10,7 +10,6 @@ build = "src/build.rs"
 [dependencies]
 bytemuck = "*"
 cgmath = "*"
-futures = "*"
 image = "*"
 truck-polymesh = {path = "../truck-polymesh"}
 truck-modeling = {path = "../truck-modeling"}
@@ -22,3 +21,4 @@ glsl-to-spirv = "*"
 [dev-dependencies]
 winit = "*"
 stringreader = "*"
+futures = "*"
