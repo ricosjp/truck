@@ -6,5 +6,4 @@ members = [
 	"truck-modeling",
 	"truck-featwgpu",
 	"truck-base",
-	"truck-io",
 ]

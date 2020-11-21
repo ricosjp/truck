@@ -22,4 +22,3 @@ glsl-to-spirv = "*"
 [dev-dependencies]
 winit = "*"
 stringreader = "*"
-truck-io = {path = "../truck-io"}
