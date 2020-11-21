@@ -8,9 +8,8 @@ edition = "2018"
 
 [dependencies]
 cgmath = "*"
+obj = "*"
 truck-base = {path = "../truck-base"}
 truck-topology = {path = "../truck-topology"}
 
 [dev-dependencies]
-truck-geometry = {path = "../truck-geometry"}
-truck-io = {path = "../truck-io"}

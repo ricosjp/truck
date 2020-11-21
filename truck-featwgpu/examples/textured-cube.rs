@@ -34,7 +34,7 @@ impl MyApp {
     fn load_obj(&mut self) {
         let scene = &mut self.scene;
         let cube = stringreader::StringReader::new(include_str!("cube.obj"));
-        let mesh = truck_io::obj::read(cube).unwrap();
+        let mesh = truck_polymesh::obj::read(cube).unwrap();
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mut mesh = PolygonInstance::new(mesh, scene.device());

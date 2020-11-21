@@ -305,3 +305,5 @@ pub mod sweep;
 pub mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
+#[doc(hidden)]
+pub mod wrappup;

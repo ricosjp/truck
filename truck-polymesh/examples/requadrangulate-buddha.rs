@@ -1,4 +1,3 @@
-extern crate truck_io as io;
 use truck_polymesh::*;
 
 const INPUT: &str = "tests/data/happy-buddha.obj";
@@ -7,7 +6,7 @@ const OUTPUT: &str = "requadrangulated-buddha.obj";
 fn main() {
     let instant = std::time::Instant::now();
     let file = std::fs::File::open(INPUT).unwrap();
-    let mesh = io::obj::read(file).unwrap();
+    let mesh = obj::read(file).unwrap();
     let read_time = instant.elapsed();
     let first_quads = mesh.quad_faces.len();
     let instant = std::time::Instant::now();
@@ -19,7 +18,7 @@ fn main() {
     let quads = mesh.quad_faces.len();
     let instant = std::time::Instant::now();
     let file = std::fs::File::create(OUTPUT).unwrap();
-    io::obj::write(&mesh, file).unwrap();
+    obj::write(&mesh, file).unwrap();
     let writing_time = instant.elapsed();
 
     println!("--- Excuting Status ---");

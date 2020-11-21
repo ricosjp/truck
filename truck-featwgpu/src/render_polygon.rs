@@ -246,7 +246,7 @@ impl PolygonInstance {
     ) -> (TextureView, Sampler)
     {
         let texture_image = self.texture.as_ref().unwrap();
-        let rgba = texture_image.to_rgba();
+        let rgba = texture_image.to_rgba8();
         let dim = texture_image.dimensions();
         let size = Extent3d {
             width: dim.0,

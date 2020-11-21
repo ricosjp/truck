@@ -1,13 +1,11 @@
-use crate::Error;
-use geometry::{Vector2, Vector3, Point3};
-use polymesh::PolygonMesh;
+use crate::*;
+use errors::Error;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 
 /// write obj data to output stream
 /// # Examples
 /// ```
-/// use truck_polymesh::PolygonMesh;
-/// use truck_geometry::*;
+/// use truck_polymesh::*;
 /// let positions = vec![
 ///     Point3::new(0.0, 0.0, 0.0),
 ///     Point3::new(1.0, 0.0, 0.0),
@@ -48,7 +46,7 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 ///     quad_faces: Vec::new(),
 ///     other_faces: Vec::new(),
 /// };
-/// truck_io::obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
+/// obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
 /// ```
 pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<(), Error> {
     crate::obj::sub_write(mesh, &mut BufWriter::new(writer))

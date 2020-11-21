@@ -53,7 +53,7 @@ impl MyRender {
         scene.clear_objects();
         self.instances.clear();
         let file = std::fs::File::open(path).unwrap();
-        let mesh = truck_io::obj::read(file).unwrap();
+        let mesh = truck_polymesh::obj::read(file).unwrap();
         let mesh = MyRender::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());

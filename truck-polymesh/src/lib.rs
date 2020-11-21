@@ -1,5 +1,5 @@
 extern crate truck_topology as topology;
-use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
+pub use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
 
 /// mesh data
 #[derive(Clone, Debug, Default)]
@@ -37,6 +37,7 @@ pub mod extract_topology;
 pub mod healing;
 pub mod mesh_handler;
 pub mod meshing_shape;
+pub mod obj;
 pub mod polygon_mesh;
 pub mod smoothing;
 pub mod splitting;
