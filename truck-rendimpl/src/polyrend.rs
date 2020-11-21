@@ -8,6 +8,7 @@ impl IntoInstance for PolygonMesh {
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             desc,
+            id: None,
         }
     }
 }
@@ -19,6 +20,7 @@ impl IntoInstance for StructuredMesh {
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             desc,
+            id: None,
         }
     }
 }
@@ -72,7 +74,7 @@ impl PolygonInstance {
         &self,
         vertex_shader: ShaderModuleSource,
         fragment_shader: ShaderModuleSource,
-        scene: &Scene,
+        scene: &DeviceHandler,
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>
     {
@@ -329,31 +331,40 @@ impl PolygonInstance {
 }
 
 impl Rendered for PolygonInstance {
-    fn vertex_buffer(&self, _: &Scene) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
+    #[inline(always)]
+    fn get_id(&self) -> Option<usize> { self.id }
+    #[inline(always)]
+    fn set_id(&mut self, id: usize) { self.id = Some(id) }
+
+    #[inline(always)]
+    fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         (
             Arc::clone(&self.polygon.0),
             Some(Arc::clone(&self.polygon.1)),
         )
     }
-    fn bind_group_layout(&self, scene: &Scene) -> Arc<BindGroupLayout> {
+    #[inline(always)]
+    fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout> {
         let layout = if self.desc.texture.is_some() {
-            self.textured_bdl(&scene.device())
+            self.textured_bdl(&device_handler.device())
         } else {
-            self.non_textured_bdl(&scene.device())
+            self.non_textured_bdl(&device_handler.device())
         };
         Arc::new(layout)
     }
-    fn bind_group(&self, scene: &Scene, layout: &BindGroupLayout) -> Arc<BindGroup> {
+    #[inline(always)]
+    fn bind_group(&self, device_handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
         let bind_group = if self.desc.texture.is_some() {
-            self.textured_bg(&scene.device(), &scene.queue(), layout)
+            self.textured_bg(&device_handler.device(), &device_handler.queue(), layout)
         } else {
-            self.non_textured_bg(&scene.device(), layout)
+            self.non_textured_bg(&device_handler.device(), layout)
         };
         Arc::new(bind_group)
     }
+    #[inline(always)]
     fn pipeline(
         &self,
-        scene: &Scene,
+        device_handler: &DeviceHandler,
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>
     {
@@ -363,7 +374,7 @@ impl Rendered for PolygonInstance {
         } else {
             include_spirv!("shaders/polygon.frag.spv")
         };
-        self.pipeline_with_shader(vertex_shader, fragment_shader, scene, layout)
+        self.pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
     }
 }
 

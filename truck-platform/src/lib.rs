@@ -2,6 +2,7 @@ pub extern crate wgpu;
 pub extern crate bytemuck;
 extern crate truck_base;
 use bytemuck::{Pod, Zeroable};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use truck_base::cgmath64::*;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
@@ -77,37 +78,55 @@ pub struct Light {
 }
 
 #[derive(Debug)]
-pub struct Scene {
+pub struct DeviceHandler {
     device: Arc<Device>,
     queue: Arc<Queue>,
     sc_desc: Arc<Mutex<SwapChainDescriptor>>,
-    objects: Vec<RenderObject>,
-    bind_group_layout: BindGroupLayout,
-    bind_group: Option<BindGroup>,
-    foward_depth: TextureView,
-    clock: std::time::Instant,
+}
+
+#[derive(Debug)]
+struct ObjectsHandler {
+    objects: HashMap<usize, RenderObject>,
+    objects_number: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct SceneDescriptor {
     pub back_ground: Color,
     pub camera: Camera,
     pub lights: Vec<Light>,
 }
 
+#[derive(Debug)]
+pub struct Scene {
+    device_handler: DeviceHandler,
+    objects_handler: ObjectsHandler,
+    bind_group_layout: BindGroupLayout,
+    bind_group: Option<BindGroup>,
+    foward_depth: TextureView,
+    clock: std::time::Instant,
+    scene_desc: SceneDescriptor,
+}
+
 pub trait Rendered {
-    fn vertex_buffer(&self, scene: &Scene) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
-    fn bind_group_layout(&self, scene: &Scene) -> Arc<BindGroupLayout>;
-    fn bind_group(&self, scene: &Scene, layout: &BindGroupLayout) -> Arc<BindGroup>;
-    fn pipeline(&self, scene: &Scene, layout: &PipelineLayout) -> Arc<RenderPipeline>;
+    fn get_id(&self) -> Option<usize>;
+    fn set_id(&mut self, idx: usize);
+    fn vertex_buffer(&self, device_handler: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
+    fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout>;
+    fn bind_group(&self, device_handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup>;
+    fn pipeline(&self, device_handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline>;
     fn render_object(&self, scene: &Scene) -> RenderObject {
-        let (vertex_buffer, index_buffer) = self.vertex_buffer(scene);
-        let bind_group_layout = self.bind_group_layout(scene);
-        let bind_group = self.bind_group(scene, &bind_group_layout);
+        let (vertex_buffer, index_buffer) = self.vertex_buffer(scene.device_handler());
+        let bind_group_layout = self.bind_group_layout(scene.device_handler());
+        let bind_group = self.bind_group(scene.device_handler(), &bind_group_layout);
         let pipeline_layout = scene
-            .device
+            .device()
             .create_pipeline_layout(&PipelineLayoutDescriptor {
                 bind_group_layouts: &[&scene.bind_group_layout, &bind_group_layout],
                 push_constant_ranges: &[],
                 label: None,
             });
-        let pipeline = self.pipeline(&scene, &pipeline_layout);
+        let pipeline = self.pipeline(&scene.device_handler(), &pipeline_layout);
         RenderObject {
             vertex_buffer,
             index_buffer,
@@ -143,5 +162,3 @@ fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
         label: None,
     })
 }
-
-

@@ -29,6 +29,13 @@ pub struct InstanceDescriptor {
 pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     desc: InstanceDescriptor,
+    id: Option<usize>,
+}
+
+#[derive(Clone)]
+pub struct ShapeInstance {
+    shape: Arc<Vec<(BufferHandler, BufferHandler)>>,
+    desc: InstanceDescriptor,
 }
 
 pub trait IntoInstance {
