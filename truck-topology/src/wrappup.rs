@@ -106,7 +106,11 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
     #[inline(always)]
     fn create_cface<S: Clone>(&mut self, face: &Face<P, C, S>) -> CompressedFace<S> {
         CompressedFace {
-            boundaries: face.boundaries.iter().map(|wire| self.create_boundary(wire)).collect(),
+            boundaries: face
+                .boundaries
+                .iter()
+                .map(|wire| self.create_boundary(wire))
+                .collect(),
             orientation: face.orientation(),
             surface: face.lock_surface().unwrap().clone(),
         }
@@ -154,4 +158,73 @@ impl<P: Clone, C: Clone, S: Clone> Shell<P, C, S> {
             .map(move |face| face.create_face(&edges))
             .collect()
     }
+}
+
+// -------------------------- test -------------------------- //
+
+#[test]
+fn compress_extract() {
+    let cube = solid::cube();
+    let shell0 = &cube.boundaries()[0];
+    let shell1 = Shell::extract(shell0.compress()).unwrap();
+    assert!(same_topology(&shell0, &shell1));
+}
+
+#[allow(dead_code)]
+fn vmap_subroutin<P, Q>(
+    v0: &Vertex<P>,
+    v1: &Vertex<Q>,
+    vmap: &mut HashMap<VertexID<P>, VertexID<Q>>,
+)-> bool {
+    match vmap.get(&v0.id()) {
+        Some(got) => *got == v1.id(),
+        None => {
+            vmap.insert(v0.id(), v1.id());
+            true
+        }
+    }
+}
+
+#[allow(dead_code)]
+fn emap_subroutin<P, Q, C, D>(
+    edge0: &Edge<P, C>,
+    edge1: &Edge<Q, D>,
+    vmap: &mut HashMap<VertexID<P>, VertexID<Q>>,
+    emap: &mut HashMap<EdgeID<C>, EdgeID<D>>,
+) -> bool {
+    match emap.get(&edge0.id()) {
+        Some(got) => *got == edge1.id(),
+        None => {
+            emap.insert(edge0.id(), edge1.id());
+            vmap_subroutin(edge0.front(), edge1.front(), vmap)
+            && vmap_subroutin(edge0.back(), edge1.back(), vmap)
+        }
+    }
+}
+
+#[allow(dead_code)]
+fn same_topology<P, C, S, Q, D, T>(one: &Shell<P, C, S>, other: &Shell<Q, D, T>) -> bool {
+    let mut vmap = HashMap::<VertexID<P>, VertexID<Q>>::new();
+    let mut emap = HashMap::<EdgeID<C>, EdgeID<D>>::new();
+    if one.len() != other.len() {
+        return false;
+    }
+    for (face0, face1) in one.iter().zip(other.iter()) {
+        let biters0 = face0.boundary_iters();
+        let biters1 = face1.boundary_iters();
+        if biters0.len() != biters1.len() {
+            return false;
+        }
+        for (biter0, biter1) in biters0.into_iter().zip(biters1) {
+            if biter0.len() != biter1.len() {
+                return false;
+            }
+            for (edge0, edge1) in biter0.zip(biter1) {
+                if !emap_subroutin(&edge0, &edge1, &mut vmap, &mut emap) {
+                    return false;
+                }
+            }
+        }
+    }
+    true
 }

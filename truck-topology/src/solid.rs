@@ -56,6 +56,10 @@ impl<P, C, S> Solid<P, C, S> {
     /// Returns the reference of boundary shells
     #[inline(always)]
     pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
+    
+    /// Returns the boundary shells
+    #[inline(always)]
+    pub fn into_boundaries(self) -> Vec<Shell<P, C, S>> { self.boundaries }
 }
 
 impl<P: Tolerance, C: Curve<Point=P>, S: Surface<Point=C::Point, Vector=C::Vector, Curve=C>> Solid<P, C, S> {
@@ -67,8 +71,8 @@ impl<P: Tolerance, C: Curve<Point=P>, S: Surface<Point=C::Point, Vector=C::Vecto
     }
 }
 
-#[test]
-fn cube() {
+#[allow(dead_code)]
+pub(super) fn cube() -> Solid<(), (), ()> {
     use crate::*;
     use std::iter::FromIterator;
     let v = Vertex::news(&[(); 8]);
@@ -139,5 +143,10 @@ fn cube() {
     shell.push(face3);
     shell.push(face4);
 
-    Solid::new(vec![shell]);
+    Solid::new(vec![shell])
+}
+
+#[test]
+fn cube_test() {
+    cube();
 }
