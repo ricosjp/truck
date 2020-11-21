@@ -8,9 +8,13 @@ build = "src/build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+image = "*"
 truck-platform = { path = "../truck-platform" }
 truck-modeling = { path = "../truck-modeling" }
 truck-polymesh = { path = "../truck-polymesh" }
 
 [build-dependencies]
 glsl-to-spirv = "*"
+
+[dev-dependencies]
+futures = "*"
