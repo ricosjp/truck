@@ -18,6 +18,28 @@ struct ExpandedPolygon {
     indices: Vec<u32>,
 }
 
+impl ExpandedPolygon {
+    fn buffers(&self, device: &Device) -> (BufferHandler, BufferHandler) {
+        let vertex_buffer = BufferHandler::new(
+            device.create_buffer_init(&BufferInitDescriptor {
+                contents: bytemuck::cast_slice(&self.vertices),
+                usage: BufferUsage::VERTEX,
+                label: None,
+            }),
+            (self.vertices.len() * std::mem::size_of::<AttrVertex>()) as u64,
+        );
+        let index_buffer = BufferHandler::new(
+            device.create_buffer_init(&BufferInitDescriptor {
+                contents: bytemuck::cast_slice(&self.indices),
+                usage: BufferUsage::INDEX,
+                label: None,
+            }),
+            self.indices.len() as u64,
+        );
+        (vertex_buffer, index_buffer)
+    }
+}
+
 impl Default for ExpandedPolygon {
     #[inline(always)]
     fn default() -> ExpandedPolygon {
@@ -90,4 +112,30 @@ impl From<&PolygonMesh> for ExpandedPolygon {
     }
 }
 
+impl From<&StructuredMesh> for ExpandedPolygon {
+    fn from(mesh: &StructuredMesh) -> ExpandedPolygon {
+        let mut glpolymesh = ExpandedPolygon::default();
+        let (m, n) = (mesh.uv_division.0.len(), mesh.uv_division.1.len());
+        for i in 0..m {
+            for j in 0..n {
+                glpolymesh.vertices.push(AttrVertex {
+                    position: mesh.positions[i][j].cast().unwrap().into(),
+                    uv_coord: [mesh.uv_division.0[i] as f32, mesh.uv_division.1[j] as f32],
+                    normal: mesh.normals[i][j].cast().unwrap().into(),
+                });
+            }
+        }
+        for i in 1..m {
+            for j in 1..n {
+                glpolymesh.indices.push(((i - 1) * n + j - 1) as u32);
+                glpolymesh.indices.push((i * n + j - 1) as u32);
+                glpolymesh.indices.push(((i - 1) * n + j) as u32);
+                glpolymesh.indices.push(((i - 1) * n + j) as u32);
+                glpolymesh.indices.push((i * n + j - 1) as u32);
+                glpolymesh.indices.push((i * n + j) as u32);
+            }
+        }
+        glpolymesh
+    }
+}
 

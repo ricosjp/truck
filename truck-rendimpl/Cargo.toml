@@ -3,6 +3,7 @@ name = "truck-rendimpl"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
+build = "src/build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,3 +11,6 @@ edition = "2018"
 truck-platform = { path = "../truck-platform" }
 truck-modeling = { path = "../truck-modeling" }
 truck-polymesh = { path = "../truck-polymesh" }
+
+[build-dependencies]
+glsl-to-spirv = "*"

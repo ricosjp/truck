@@ -21,9 +21,9 @@ pub struct PolygonMesh {
 /// structured quadrangle mesh
 #[derive(Clone, Debug)]
 pub struct StructuredMesh {
-    positions: Vec<Vec<Point3>>,
-    uv_division: (Vec<f64>, Vec<f64>),
-    normals: Vec<Vec<Vector3>>,
+    pub positions: Vec<Vec<Point3>>,
+    pub uv_division: (Vec<f64>, Vec<f64>),
+    pub normals: Vec<Vec<Vector3>>,
 }
 
 /// the decorator for mesh handling
