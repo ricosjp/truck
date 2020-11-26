@@ -1,7 +1,7 @@
 extern crate truck_modeling;
 extern crate truck_polymesh;
 use image::{DynamicImage, GenericImageView};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 pub use truck_modeling::*;
 use truck_platform::{
     bytemuck::*,
@@ -33,17 +33,17 @@ pub struct PolygonInstance {
 }
 
 #[derive(Clone)]
-struct FaceBuffer {
+pub struct FaceInstance {
     surface: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
     boundary_length: Arc<BufferHandler>,
     id: Option<usize>,
+    desc: Arc<Mutex<InstanceDescriptor>>,
 }
 
-#[derive(Clone)]
 pub struct ShapeInstance {
-    faces: Vec<FaceBuffer>,
-    desc: InstanceDescriptor,
+    faces: Vec<FaceInstance>,
+    desc: Arc<Mutex<InstanceDescriptor>>,
 }
 
 pub trait IntoInstance {

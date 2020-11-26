@@ -184,7 +184,13 @@ fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
     res
 }
 
-fn boundary_buffer(device: &Device, queue: &Queue, face: &Face) -> Option<FaceBuffer> {
+fn face_instance(
+    device: &Device,
+    queue: &Queue,
+    face: &Face,
+    desc: &Arc<Mutex<InstanceDescriptor>>,
+) -> Option<FaceInstance>
+{
     let surface = face.oriented_surface();
     let (vb, ib) = nurbs_buffer(device, queue, &surface, 0.01);
     let mut boundary = Vec::new();
@@ -205,7 +211,7 @@ fn boundary_buffer(device: &Device, queue: &Queue, face: &Face) -> Option<FaceBu
             boundary.push([window[0][0], window[0][1], window[1][0], window[1][1]]);
         }
     }
-    Some(FaceBuffer {
+    Some(FaceInstance {
         surface: (Arc::new(vb), Arc::new(ib)),
         boundary: Arc::new(BufferHandler::from_slice(
             &boundary,
@@ -218,6 +224,7 @@ fn boundary_buffer(device: &Device, queue: &Queue, face: &Face) -> Option<FaceBu
             BufferUsage::UNIFORM,
         )),
         id: None,
+        desc: Arc::clone(desc),
     })
 }
 
@@ -230,25 +237,15 @@ impl IntoInstance for Shell {
         desc: InstanceDescriptor,
     ) -> ShapeInstance
     {
-        let closure = move |face| boundary_buffer(device, queue, face).unwrap();
+        let desc = Arc::new(Mutex::new(desc));
+        let closure = |face| face_instance(device, queue, face, &desc).unwrap();
         let faces = self.face_iter().map(closure).collect();
         ShapeInstance { faces, desc }
     }
 }
 
-pub struct FaceInstance<'a> {
-    buffer: &'a FaceBuffer,
-    desc: &'a InstanceDescriptor,
-}
-
-pub struct FaceInstanceMut<'a> {
-    buffer: &'a mut FaceBuffer,
-    desc: &'a InstanceDescriptor,
-}
-
 mod ficonfig {
     use crate::*;
-
     #[inline(always)]
     pub fn boundary_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
@@ -309,10 +306,10 @@ mod ficonfig {
     pub(super) fn non_textured_bind_group(
         handler: &DeviceHandler,
         layout: &BindGroupLayout,
-        desc: &InstanceDescriptor,
-        buffer: &FaceBuffer,
+        buffer: &FaceInstance,
     ) -> BindGroup
     {
+        let desc = &*buffer.desc.lock().unwrap();
         crate::create_bind_group(
             handler.device(),
             layout,
@@ -328,10 +325,10 @@ mod ficonfig {
     pub(super) fn textured_bind_group(
         handler: &DeviceHandler,
         layout: &BindGroupLayout,
-        desc: &InstanceDescriptor,
-        buffer: &FaceBuffer,
+        buffer: &FaceInstance,
     ) -> BindGroup
     {
+        let desc = &*buffer.desc.lock().unwrap();
         let (view, sampler) = desc.textureview_and_sampler(handler.device(), handler.queue());
         crate::create_bind_group(
             handler.device(),
@@ -348,161 +345,55 @@ mod ficonfig {
     }
 }
 
-impl<'a> Rendered for FaceInstance<'a> {
+impl<'a> Rendered for FaceInstance {
     #[inline(always)]
-    fn get_id(&self) -> Option<usize> { self.buffer.id }
+    fn get_id(&self) -> Option<usize> { self.id }
     #[inline(always)]
-    fn set_id(&mut self, _: usize) {}
+    fn set_id(&mut self, id: usize) { self.id = Some(id) }
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let buffers = &self.buffer.surface;
+        let buffers = &self.surface;
         (Arc::clone(&buffers.0), Some(Arc::clone(&buffers.1)))
     }
     #[inline(always)]
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
+        let desc = &*self.desc.lock().unwrap();
         Arc::new(ficonfig::bind_group_layout(
             handler.device(),
-            self.desc.texture.is_some(),
+            desc.texture.is_some(),
         ))
     }
     #[inline(always)]
     fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
-        let bind_group = match self.desc.texture.is_some() {
-            true => ficonfig::textured_bind_group(handler, layout, self.desc, self.buffer),
-            false => ficonfig::non_textured_bind_group(handler, layout, self.desc, self.buffer),
+        let desc = &*self.desc.lock().unwrap();
+        let bind_group = match desc.texture.is_some() {
+            true => ficonfig::textured_bind_group(handler, layout, self),
+            false => ficonfig::non_textured_bind_group(handler, layout, self),
         };
         Arc::new(bind_group)
     }
     #[inline(always)]
     fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
+        let desc = &*self.desc.lock().unwrap();
         let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
-        let fragment_shader = match self.desc.texture.is_some() {
+        let fragment_shader = match desc.texture.is_some() {
             true => include_spirv!("shaders/textured-polygon.frag.spv"),
             false => include_spirv!("shaders/face.frag.spv"),
         };
-        self.desc
-            .pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
-    }
-}
-
-impl<'a> Rendered for FaceInstanceMut<'a> {
-    #[inline(always)]
-    fn get_id(&self) -> Option<usize> { self.buffer.id }
-    #[inline(always)]
-    fn set_id(&mut self, id: usize) { self.buffer.id = Some(id) }
-    #[inline(always)]
-    fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let buffers = &self.buffer.surface;
-        (Arc::clone(&buffers.0), Some(Arc::clone(&buffers.1)))
-    }
-    #[inline(always)]
-    fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
-        Arc::new(ficonfig::bind_group_layout(
-            handler.device(),
-            self.desc.texture.is_some(),
-        ))
-    }
-    #[inline(always)]
-    fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
-        let bind_group = match self.desc.texture.is_some() {
-            true => ficonfig::textured_bind_group(handler, layout, self.desc, self.buffer),
-            false => ficonfig::non_textured_bind_group(handler, layout, self.desc, self.buffer),
-        };
-        Arc::new(bind_group)
-    }
-    #[inline(always)]
-    fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
-        let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
-        let fragment_shader = match self.desc.texture.is_some() {
-            true => include_spirv!("shaders/textured-face.frag.spv"),
-            false => include_spirv!("shaders/face.frag.spv"),
-        };
-        self.desc
-            .pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
-    }
-}
-
-pub struct FaceInstanceIterator<'a> {
-    vec: Vec<FaceInstance<'a>>,
-    iter: Option<std::slice::Iter<'a, FaceInstance<'a>>>,
-}
-
-impl<'a> Iterator for FaceInstanceIterator<'a> {
-    type Item = &'a FaceInstance<'a>;
-    #[inline(always)]
-    fn next(&mut self) -> Option<&'a FaceInstance<'a>> { self.iter.as_mut().unwrap().next() }
-    #[inline(always)]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.iter.as_ref().unwrap().len();
-        (size, Some(size))
+        desc.pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
     }
 }
 
 impl<'a> IntoIterator for &'a ShapeInstance {
-    type Item = &'a FaceInstance<'a>;
-    type IntoIter = FaceInstanceIterator<'a>;
+    type Item = &'a FaceInstance;
+    type IntoIter = std::slice::Iter<'a, FaceInstance>;
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter {
-        let vec: Vec<_> = self.faces.iter().map(|face| FaceInstance {
-            buffer: face,
-            desc: &self.desc,
-        }).collect();
-        let mut iter = FaceInstanceIterator {
-            vec,
-            iter: None,
-        };
-        iter.iter = Some(iter.vec.iter());
-        iter
-    }
-}
-
-pub struct FaceInstanceIteratorMut<'a> {
-    vec: Vec<FaceInstanceMut<'a>>,
-    iter: std::slice::IterMut<'a, FaceInstanceMut<'a>>,
-}
-
-impl<'a> Iterator for FaceInstanceIteratorMut<'a> {
-    type Item = &'a mut FaceInstanceMut<'a>;
-    #[inline(always)]
-    fn next(&mut self) -> Option<&'a mut FaceInstanceMut<'a>> { self.iter.next() }
-    #[inline(always)]
-    fn size_hint(&self) -> (usize, Option<usize>) { (self.iter.len(), Some(self.iter.len())) }
+    fn into_iter(self) -> Self::IntoIter { self.faces.iter() }
 }
 
 impl<'a> IntoIterator for &'a mut ShapeInstance {
-    type Item = &'a mut FaceInstanceMut<'a>;
-    type IntoIter = FaceInstanceIteratorMut<'a>;
+    type Item = &'a mut FaceInstance;
+    type IntoIter = std::slice::IterMut<'a, FaceInstance>;
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter {
-        let mut vec: Vec<_> = self.faces.iter_mut().map(|face| FaceInstanceMut {
-            buffer: face,
-            desc: &self.desc,
-        }).collect();
-        FaceInstanceIteratorMut {
-            iter: vec.iter_mut(),
-            vec,
-        }
-    }
-}
-
-fn signup_cube(scene: &mut Scene) {
-    let cube = {
-        let v = builder::vertex(Point3::origin());
-        let edge = builder::tsweep(&v, Vector3::unit_x());
-        let face = builder::tsweep(&edge, Vector3::unit_y());
-        let solid = builder::tsweep(&face, Vector3::unit_z());
-        solid.into_boundaries()[0]
-    };
-    let desc = InstanceDescriptor {
-        matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
-        material: Material {
-            albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
-            roughness: 0.9,
-            reflectance: 0.04,
-        },
-        texture: None,
-        backface_culling: true,
-    };
-    let mut mesh = scene.create_instance(&cube, &desc);
-    scene.add_objects::<shaperend::FaceInstanceMut, &mut ShapeInstance>(&mut mesh);
+    fn into_iter(self) -> Self::IntoIter { self.faces.iter_mut() }
 }
