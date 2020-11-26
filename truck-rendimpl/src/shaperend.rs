@@ -377,10 +377,11 @@ impl<'a> Rendered for FaceInstance<'a> {
     fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
         let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
         let fragment_shader = match self.desc.texture.is_some() {
-            true => include_spirv!("shaders/textured_polygon.frag.spv"),
+            true => include_spirv!("shaders/textured-polygon.frag.spv"),
             false => include_spirv!("shaders/face.frag.spv"),
         };
-        self.desc.pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
+        self.desc
+            .pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
     }
 }
 
@@ -416,7 +417,8 @@ impl<'a> Rendered for FaceInstanceMut<'a> {
             true => include_spirv!("shaders/textured-face.frag.spv"),
             false => include_spirv!("shaders/face.frag.spv"),
         };
-        self.desc.pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
+        self.desc
+            .pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
     }
 }
 
@@ -459,11 +461,11 @@ pub struct FaceInstanceIteratorMut<'a> {
 }
 
 impl<'a> Iterator for FaceInstanceIteratorMut<'a> {
-    type Item = FaceInstance<'a>;
+    type Item = FaceInstanceMut<'a>;
     #[inline(always)]
-    fn next(&mut self) -> Option<FaceInstance<'a>> {
+    fn next(&mut self) -> Option<FaceInstanceMut<'a>> {
         match self.faces.next() {
-            Some(face) => Some(FaceInstance {
+            Some(face) => Some(FaceInstanceMut {
                 buffer: face,
                 desc: self.desc,
             }),
@@ -475,7 +477,7 @@ impl<'a> Iterator for FaceInstanceIteratorMut<'a> {
 }
 
 impl<'a> IntoIterator for &'a mut ShapeInstance {
-    type Item = FaceInstance<'a>;
+    type Item = FaceInstanceMut<'a>;
     type IntoIter = FaceInstanceIteratorMut<'a>;
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
@@ -484,4 +486,26 @@ impl<'a> IntoIterator for &'a mut ShapeInstance {
             desc: &self.desc,
         }
     }
+}
+
+fn signup_cube(scene: &mut Scene) {
+    let cube = {
+        let v = builder::vertex(Point3::origin());
+        let edge = builder::tsweep(&v, Vector3::unit_x());
+        let face = builder::tsweep(&edge, Vector3::unit_y());
+        let solid = builder::tsweep(&face, Vector3::unit_z());
+        solid.into_boundaries()[0]
+    };
+    let desc = InstanceDescriptor {
+        matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
+        material: Material {
+            albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
+            roughness: 0.9,
+            reflectance: 0.04,
+        },
+        texture: None,
+        backface_culling: true,
+    };
+    let mut mesh = scene.create_instance(&cube, &desc);
+    scene.add_objects::<shaperend::FaceInstanceMut, &mut ShapeInstance>(&mut mesh);
 }

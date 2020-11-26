@@ -17,4 +17,6 @@ truck-polymesh = { path = "../truck-polymesh" }
 glsl-to-spirv = "*"
 
 [dev-dependencies]
+winit = "*"
+stringreader = "*"
 futures = "*"

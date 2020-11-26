@@ -12,7 +12,7 @@ impl DeviceHandler {
 impl Default for SceneDescriptor {
     fn default() -> SceneDescriptor {
         SceneDescriptor {
-            back_ground: Color::BLACK,
+            background: Color::BLACK,
             camera: Camera::default(),
             lights: vec![Light::default()],
         }
@@ -106,11 +106,14 @@ impl Scene {
 
     #[inline(always)]
     fn init_scene_bind_group_layout(device: &Device) -> BindGroupLayout {
-        crate::create_bind_group_layout(device, &[
-            Self::camera_bgl_entry(),
-            Self::lights_bgl_entry(),
-            Self::scene_bgl_entry(),
-        ])
+        crate::create_bind_group_layout(
+            device,
+            &[
+                Self::camera_bgl_entry(),
+                Self::lights_bgl_entry(),
+                Self::scene_bgl_entry(),
+            ],
+        )
     }
 
     #[inline(always)]
@@ -171,7 +174,7 @@ impl Scene {
         device: &Arc<Device>,
         queue: &Arc<Queue>,
         sc_desc: &Arc<Mutex<SwapChainDescriptor>>,
-        scene_desc: SceneDescriptor,
+        scene_desc: &SceneDescriptor,
     ) -> Scene
     {
         let device_handler = DeviceHandler {
@@ -191,7 +194,7 @@ impl Scene {
             bind_group: None,
             foward_depth: depth_texture.create_view(&Default::default()),
             clock: std::time::Instant::now(),
-            scene_desc,
+            scene_desc: scene_desc.clone(),
         }
     }
 
@@ -273,13 +276,20 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn elapsed(&self) -> f64 { self.clock.elapsed().as_secs_f64() }
+    pub fn elapsed(&self) -> std::time::Duration { self.clock.elapsed() }
+
+    #[inline(always)]
+    pub fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
+
+    #[inline(always)]
+    pub fn descriptor_mut(&mut self) -> &mut SceneDescriptor { &mut self.scene_desc }
+
     #[inline(always)]
     pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
 
     pub fn scene_status_buffer(&self) -> BufferHandler {
         let scene_info = SceneInfo {
-            time: self.elapsed() as f32,
+            time: self.elapsed().as_secs_f32(),
             num_of_lights: self.scene_desc.lights.len() as u32,
         };
         BufferHandler::from_slice(&[scene_info], self.device(), BufferUsage::UNIFORM)
@@ -301,7 +311,7 @@ impl Scene {
                     attachment: view,
                     resolve_target: None,
                     ops: Operations {
-                        load: LoadOp::Clear(self.scene_desc.back_ground),
+                        load: LoadOp::Clear(self.scene_desc.background),
                         store: true,
                     },
                 }],
@@ -315,7 +325,8 @@ impl Scene {
                 match object.index_buffer {
                     Some(ref index_buffer) => {
                         rpass.set_index_buffer(index_buffer.buffer.slice(..));
-                        let index_size = index_buffer.size as u32 / std::mem::size_of::<u32>() as u32;
+                        let index_size =
+                            index_buffer.size as u32 / std::mem::size_of::<u32>() as u32;
                         rpass.draw_indexed(0..index_size, 0, 0..1);
                     }
                     None => rpass.draw(0..object.vertex_buffer.size as u32, 0..1),

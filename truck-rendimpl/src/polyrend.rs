@@ -39,6 +39,10 @@ impl IntoInstance for StructuredMesh {
 
 impl PolygonInstance {
     #[inline(always)]
+    pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
+    #[inline(always)]
+    pub fn descriptor_mut(&mut self) -> &mut InstanceDescriptor { &mut self.desc }
+    #[inline(always)]
     pub fn pipeline_with_shader(
         &self,
         vertex_shader: ShaderModuleSource,

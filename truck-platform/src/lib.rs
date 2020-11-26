@@ -99,7 +99,7 @@ struct ObjectsHandler {
 
 #[derive(Debug, Clone)]
 pub struct SceneDescriptor {
-    pub back_ground: Color,
+    pub background: Color,
     pub camera: Camera,
     pub lights: Vec<Light>,
 }
