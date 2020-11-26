@@ -25,22 +25,26 @@ layout(set = 0, binding = 2) uniform Scene {
 };
 
 layout(set = 1, binding = 1) uniform Material {
-    vec4 albedo;
+    vec4 default_albedo;
     float roughness;
     float reflectance;
 };
 
-layout(set = 1, binding = 2) buffer Boundary {
+layout(set = 1, binding = 2) uniform texture2D texture_view;
+layout(set = 1, binding = 3) uniform sampler texture_sampler;
+
+layout(set = 1, binding = 4) buffer Boundary {
     vec4 boundary[];
 };
 
-layout(set = 1, binding = 3) uniform BoundaryLength {
+layout(set = 1, binding = 5) uniform BoundaryLength {
     uint boundary_length;
 };
 
 layout(location = 0) out vec4 color;
 
 vec3 normal = normalize(vertex_normal);
+vec4 albedo;
 
 bool in_domain() {
     int score = 0;
@@ -57,6 +61,11 @@ bool in_domain() {
         }
     }
     return score > 0;
+}
+
+vec4 textured_material() {
+    if (uv[0] < 0.0 || 1.0 < uv[0] || uv[1] < 0.0 || 1.0 < uv[1]) return default_albedo;
+    else return texture(sampler2D(texture_view, texture_sampler), uv);
 }
 
 vec3 light_direction(vec3 light_position, uint light_type) {
@@ -118,6 +127,7 @@ vec3 specular_brdf(vec3 camera_dir, vec3 light_dir) {
 
 void main() {
     if (!in_domain()) discard;
+    albedo = textured_material();
     vec3 pre_color = vec3(0.0, 0.0, 0.0);
     for (uint i = 0; i < nlights; i++) {
         vec3 light_position = lights[i].position.xyz;

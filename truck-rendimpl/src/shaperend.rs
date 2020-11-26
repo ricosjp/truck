@@ -413,7 +413,7 @@ impl<'a> Rendered for FaceInstanceMut<'a> {
     fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
         let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
         let fragment_shader = match self.desc.texture.is_some() {
-            true => include_spirv!("shaders/textured_polygon.frag.spv"),
+            true => include_spirv!("shaders/textured-face.frag.spv"),
             false => include_spirv!("shaders/face.frag.spv"),
         };
         self.desc.pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)

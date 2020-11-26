@@ -138,7 +138,7 @@ impl Rendered for PolygonInstance {
     {
         let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
         let fragment_shader = match self.desc.texture.is_some() {
-            true => include_spirv!("shaders/textured_polygon.frag.spv"),
+            true => include_spirv!("shaders/textured-polygon.frag.spv"),
             false => include_spirv!("shaders/polygon.frag.spv"),
         };
         self.pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
