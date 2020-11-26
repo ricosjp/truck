@@ -423,67 +423,64 @@ impl<'a> Rendered for FaceInstanceMut<'a> {
 }
 
 pub struct FaceInstanceIterator<'a> {
-    faces: std::slice::Iter<'a, FaceBuffer>,
-    desc: &'a InstanceDescriptor,
+    vec: Vec<FaceInstance<'a>>,
+    iter: Option<std::slice::Iter<'a, FaceInstance<'a>>>,
 }
 
 impl<'a> Iterator for FaceInstanceIterator<'a> {
-    type Item = FaceInstance<'a>;
+    type Item = &'a FaceInstance<'a>;
     #[inline(always)]
-    fn next(&mut self) -> Option<FaceInstance<'a>> {
-        match self.faces.next() {
-            Some(face) => Some(FaceInstance {
-                buffer: face,
-                desc: self.desc,
-            }),
-            None => None,
-        }
+    fn next(&mut self) -> Option<&'a FaceInstance<'a>> { self.iter.as_mut().unwrap().next() }
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.iter.as_ref().unwrap().len();
+        (size, Some(size))
     }
-    #[inline(always)]
-    fn size_hint(&self) -> (usize, Option<usize>) { (self.faces.len(), Some(self.faces.len())) }
 }
 
 impl<'a> IntoIterator for &'a ShapeInstance {
-    type Item = FaceInstance<'a>;
+    type Item = &'a FaceInstance<'a>;
     type IntoIter = FaceInstanceIterator<'a>;
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
-        FaceInstanceIterator {
-            faces: self.faces.iter(),
+        let vec: Vec<_> = self.faces.iter().map(|face| FaceInstance {
+            buffer: face,
             desc: &self.desc,
-        }
+        }).collect();
+        let mut iter = FaceInstanceIterator {
+            vec,
+            iter: None,
+        };
+        iter.iter = Some(iter.vec.iter());
+        iter
     }
 }
 
 pub struct FaceInstanceIteratorMut<'a> {
-    faces: std::slice::IterMut<'a, FaceBuffer>,
-    desc: &'a InstanceDescriptor,
+    vec: Vec<FaceInstanceMut<'a>>,
+    iter: std::slice::IterMut<'a, FaceInstanceMut<'a>>,
 }
 
 impl<'a> Iterator for FaceInstanceIteratorMut<'a> {
-    type Item = FaceInstanceMut<'a>;
+    type Item = &'a mut FaceInstanceMut<'a>;
     #[inline(always)]
-    fn next(&mut self) -> Option<FaceInstanceMut<'a>> {
-        match self.faces.next() {
-            Some(face) => Some(FaceInstanceMut {
-                buffer: face,
-                desc: self.desc,
-            }),
-            None => None,
-        }
-    }
+    fn next(&mut self) -> Option<&'a mut FaceInstanceMut<'a>> { self.iter.next() }
     #[inline(always)]
-    fn size_hint(&self) -> (usize, Option<usize>) { (self.faces.len(), Some(self.faces.len())) }
+    fn size_hint(&self) -> (usize, Option<usize>) { (self.iter.len(), Some(self.iter.len())) }
 }
 
 impl<'a> IntoIterator for &'a mut ShapeInstance {
-    type Item = FaceInstanceMut<'a>;
+    type Item = &'a mut FaceInstanceMut<'a>;
     type IntoIter = FaceInstanceIteratorMut<'a>;
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
-        FaceInstanceIteratorMut {
-            faces: self.faces.iter_mut(),
+        let mut vec: Vec<_> = self.faces.iter_mut().map(|face| FaceInstanceMut {
+            buffer: face,
             desc: &self.desc,
+        }).collect();
+        FaceInstanceIteratorMut {
+            iter: vec.iter_mut(),
+            vec,
         }
     }
 }
