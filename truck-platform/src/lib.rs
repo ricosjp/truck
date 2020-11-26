@@ -38,8 +38,15 @@ unsafe impl Pod for SceneInfo {}
 
 #[derive(Debug)]
 pub struct BufferHandler {
-    pub buffer: Buffer,
-    pub size: u64,
+    buffer: Buffer,
+    size: u64,
+}
+
+#[derive(Debug)]
+pub struct PreBindGroupLayoutEntry {
+    pub visibility: ShaderStage,
+    pub ty: BindingType,
+    pub count: Option<core::num::NonZeroU32>,
 }
 
 #[derive(Debug, Clone)]
@@ -142,7 +149,7 @@ pub mod camera;
 pub mod light;
 pub mod scene;
 
-fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
+pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     device: &Device,
     layout: &BindGroupLayout,
     resources: T,
@@ -162,3 +169,20 @@ fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
         label: None,
     })
 }
+
+pub fn create_bind_group_layout<'a, T: IntoIterator<Item = &'a PreBindGroupLayoutEntry>>(
+    device: &Device,
+    entries: T,
+) -> BindGroupLayout {
+    let vec: Vec<_> = entries.into_iter().enumerate().map(|(i, e)| BindGroupLayoutEntry {
+        binding: i as u32,
+        visibility: e.visibility,
+        ty: e.ty.clone(),
+        count: e.count,
+    }).collect();
+    device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+        label: None,
+        entries: &vec,
+    })
+}
+

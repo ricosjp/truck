@@ -1,7 +1,10 @@
 use crate::*;
 
 impl BufferHandler {
+    #[inline(always)]
     pub fn new(buffer: Buffer, size: u64) -> Self { BufferHandler { buffer, size } }
+    #[inline(always)]
+    pub fn buffer(&self) -> &Buffer { &self.buffer }
 
     pub fn from_slice<T: Sized + Pod + Zeroable, A: AsRef<[T]>>(
         vec: &A,
@@ -20,5 +23,13 @@ impl BufferHandler {
 
     pub fn binding_resource<'a>(&'a self) -> BindingResource<'a> {
         BindingResource::Buffer(self.buffer.slice(..))
+    }
+
+    pub fn copy_buffer(&self, encoder: &mut CommandEncoder, dest: &BufferHandler) {
+        assert!(
+            self.size < dest.size,
+            "The destination buffer size must be shorter than the source buffer size."
+        );
+        encoder.copy_buffer_to_buffer(&self.buffer, 0, &dest.buffer, 0, self.size);
     }
 }

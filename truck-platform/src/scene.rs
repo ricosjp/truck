@@ -68,44 +68,49 @@ impl ObjectsHandler {
 
 impl Scene {
     #[inline(always)]
+    fn camera_bgl_entry() -> PreBindGroupLayoutEntry {
+        PreBindGroupLayoutEntry {
+            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            ty: BindingType::UniformBuffer {
+                dynamic: false,
+                min_binding_size: None,
+            },
+            count: None,
+        }
+    }
+
+    #[inline(always)]
+    fn lights_bgl_entry() -> PreBindGroupLayoutEntry {
+        PreBindGroupLayoutEntry {
+            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            ty: BindingType::StorageBuffer {
+                dynamic: false,
+                min_binding_size: None,
+                readonly: true,
+            },
+            count: None,
+        }
+    }
+
+    #[inline(always)]
+    fn scene_bgl_entry() -> PreBindGroupLayoutEntry {
+        PreBindGroupLayoutEntry {
+            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            ty: BindingType::UniformBuffer {
+                dynamic: false,
+                min_binding_size: None,
+            },
+            count: None,
+        }
+    }
+
+    #[inline(always)]
     fn init_scene_bind_group_layout(device: &Device) -> BindGroupLayout {
-        let descriptor = BindGroupLayoutDescriptor {
-            label: None,
-            entries: &[
-                // camera
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-                    ty: BindingType::UniformBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                // light
-                BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-                    ty: BindingType::StorageBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
-                        readonly: true,
-                    },
-                    count: None,
-                },
-                // timer
-                BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-                    ty: BindingType::UniformBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        };
-        device.create_bind_group_layout(&descriptor)
+        crate::create_bind_group_layout(device, &[
+            Self::camera_bgl_entry(),
+            Self::lights_bgl_entry(),
+            Self::scene_bgl_entry(),
+        ])
     }
 
     #[inline(always)]
@@ -248,9 +253,8 @@ impl Scene {
     where
         R: 'a + Rendered,
         I: IntoIterator<Item = &'a R>, {
-        objects
-            .into_iter()
-            .all(move|object| self.update_vertex_buffer(object))
+        let closure = move |flag, object: &R| flag && self.update_vertex_buffer(object);
+        objects.into_iter().fold(true, closure)
     }
 
     #[inline(always)]
@@ -264,9 +268,8 @@ impl Scene {
     where
         R: 'a + Rendered,
         I: IntoIterator<Item = &'a R>, {
-        objects
-            .into_iter()
-            .all(|object| self.update_bind_group(object))
+        let closure = move |flag, object: &R| flag && self.update_bind_group(object);
+        objects.into_iter().fold(true, closure)
     }
 
     #[inline(always)]
@@ -279,34 +282,19 @@ impl Scene {
             time: self.elapsed() as f32,
             num_of_lights: self.scene_desc.lights.len() as u32,
         };
-        let buffer = self.device().create_buffer_init(&BufferInitDescriptor {
-            contents: bytemuck::cast_slice(&[scene_info]),
-            usage: BufferUsage::UNIFORM,
-            label: None,
-        });
-        BufferHandler::new(buffer, std::mem::size_of::<f32>() as u64)
+        BufferHandler::from_slice(&[scene_info], self.device(), BufferUsage::UNIFORM)
     }
 
     pub fn lights_buffer(&self) -> BufferHandler {
-        let mut light_vec: Vec<LightInfo> = Vec::new();
-        for light in &self.scene_desc.lights {
-            light_vec.push(light.light_info());
-        }
-        let buffer = self.device().create_buffer_init(&BufferInitDescriptor {
-            contents: bytemuck::cast_slice(&light_vec),
-            usage: BufferUsage::STORAGE,
-            label: None,
-        });
-        BufferHandler::new(
-            buffer,
-            (light_vec.len() * std::mem::size_of::<LightInfo>()) as u64,
-        )
+        let (desc, device) = (&self.scene_desc, self.device());
+        let light_vec: Vec<_> = desc.lights.iter().map(Light::light_info).collect();
+        BufferHandler::from_slice(&light_vec, device, BufferUsage::STORAGE)
     }
 
     pub fn render_scene(&self, view: &TextureView) {
         let mut encoder = self
             .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 color_attachments: &[RenderPassColorAttachmentDescriptor {
@@ -327,7 +315,7 @@ impl Scene {
                 match object.index_buffer {
                     Some(ref index_buffer) => {
                         rpass.set_index_buffer(index_buffer.buffer.slice(..));
-                        let index_size = index_buffer.size as u32;
+                        let index_size = index_buffer.size as u32 / std::mem::size_of::<u32>() as u32;
                         rpass.draw_indexed(0..index_size, 0, 0..1);
                     }
                     None => rpass.draw(0..object.vertex_buffer.size as u32, 0..1),

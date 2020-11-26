@@ -33,13 +33,21 @@ pub struct PolygonInstance {
 }
 
 #[derive(Clone)]
+struct FaceBuffer {
+    surface: (Arc<BufferHandler>, Arc<BufferHandler>),
+    boundary: Arc<BufferHandler>,
+    boundary_length: Arc<BufferHandler>,
+    id: Option<usize>,
+}
+
+#[derive(Clone)]
 pub struct ShapeInstance {
-    shape: Arc<Vec<(BufferHandler, BufferHandler)>>,
+    faces: Vec<FaceBuffer>,
     desc: InstanceDescriptor,
 }
 
 pub trait IntoInstance {
-    type Instance: Rendered;
+    type Instance;
     #[doc(hidden)]
     fn into_instance(
         &self,
@@ -69,7 +77,9 @@ impl CreateInstance for Scene {
 }
 
 pub use truck_polymesh::*;
+pub mod instdesc;
 pub mod polyrend;
+pub mod shaperend;
 
 fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     device: &Device,
