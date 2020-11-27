@@ -1,5 +1,6 @@
 extern crate truck_modeling;
 extern crate truck_polymesh;
+extern crate truck_platform;
 use image::{DynamicImage, GenericImageView};
 use std::sync::{Arc, Mutex};
 pub use truck_modeling::*;
@@ -29,7 +30,7 @@ pub struct InstanceDescriptor {
 pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     desc: InstanceDescriptor,
-    id: Option<usize>,
+    id: RenderID,
 }
 
 #[derive(Clone)]
@@ -37,8 +38,8 @@ pub struct FaceInstance {
     surface: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
     boundary_length: Arc<BufferHandler>,
-    id: Option<usize>,
     desc: Arc<Mutex<InstanceDescriptor>>,
+    id: RenderID,
 }
 
 pub struct ShapeInstance {
@@ -74,6 +75,23 @@ impl CreateInstance for Scene {
     {
         object.into_instance(self.device(), self.queue(), desc.clone())
     }
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+struct AttrVertex {
+    pub position: [f32; 3],
+    pub uv_coord: [f32; 2],
+    pub normal: [f32; 3],
+}
+unsafe impl Zeroable for AttrVertex {}
+unsafe impl Pod for AttrVertex {}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+struct ExpandedPolygon {
+    vertices: Vec<AttrVertex>,
+    indices: Vec<u32>,
 }
 
 pub use truck_polymesh::*;

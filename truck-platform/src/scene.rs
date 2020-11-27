@@ -19,6 +19,20 @@ impl Default for SceneDescriptor {
     }
 }
 
+impl Default for RenderID {
+    #[inline(always)]
+    fn default() -> RenderID { RenderID(None) }
+}
+
+impl RenderID {
+    fn map<T, F: FnOnce(usize) -> T>(self, f: F) -> Option<T> {
+        match self {
+            RenderID(Some(id)) => Some(f(id)),
+            RenderID(None) => None,
+        }
+    }
+}
+
 impl ObjectsHandler {
     #[inline(always)]
     fn is_include<R: Rendered>(&self, object: &R) -> bool {
@@ -28,11 +42,14 @@ impl ObjectsHandler {
         }
     }
     #[inline(always)]
-    fn add_object<R: Rendered>(&mut self, object: &mut R, robject: RenderObject) {
-        let idx = self.objects_number;
-        self.objects.insert(idx, robject);
-        object.set_id(idx);
+    pub fn set_id(&mut self, id: &mut RenderID) {
+        *id = RenderID(Some(self.objects_number));
         self.objects_number += 1;
+    }
+    #[inline(always)]
+    fn add_object<R: Rendered>(&mut self, object: &mut R, robject: RenderObject) {
+        self.objects.insert(self.objects_number, robject);
+        object.set_id(self);
     }
     #[inline(always)]
     fn remove_object<R: Rendered>(&mut self, object: &R) -> bool {

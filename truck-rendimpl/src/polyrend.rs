@@ -14,7 +14,7 @@ impl IntoInstance for PolygonMesh {
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             desc,
-            id: None,
+            id: Default::default(),
         }
     }
 }
@@ -32,7 +32,7 @@ impl IntoInstance for StructuredMesh {
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             desc,
-            id: None,
+            id: Default::default(),
         }
     }
 }
@@ -102,10 +102,7 @@ impl PolygonInstance {
 }
 
 impl Rendered for PolygonInstance {
-    #[inline(always)]
-    fn get_id(&self) -> Option<usize> { self.id }
-    #[inline(always)]
-    fn set_id(&mut self, id: usize) { self.id = Some(id) }
+    impl_get_set_id!(id);
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
@@ -147,23 +144,6 @@ impl Rendered for PolygonInstance {
         };
         self.pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
     }
-}
-
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
-struct AttrVertex {
-    pub position: [f32; 3],
-    pub uv_coord: [f32; 2],
-    pub normal: [f32; 3],
-}
-unsafe impl Zeroable for AttrVertex {}
-unsafe impl Pod for AttrVertex {}
-
-#[repr(C)]
-#[derive(Debug, Clone)]
-struct ExpandedPolygon {
-    vertices: Vec<AttrVertex>,
-    indices: Vec<u32>,
 }
 
 impl ExpandedPolygon {

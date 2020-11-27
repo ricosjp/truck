@@ -178,10 +178,9 @@ impl InstanceDescriptor {
     {
         let device = device_handler.device();
         let sc_desc = device_handler.sc_desc();
-        let cull_mode = if self.backface_culling {
-            CullMode::Back
-        } else {
-            CullMode::None
+        let cull_mode = match self.backface_culling {
+            true => CullMode::Back,
+            false => CullMode::None,
         };
         let vertex_module = device.create_shader_module(vertex_shader);
         let fragment_module = device.create_shader_module(fragment_shader);
@@ -215,8 +214,8 @@ impl InstanceDescriptor {
                 depth_write_enabled: true,
                 depth_compare: wgpu::CompareFunction::Less,
                 stencil: StencilStateDescriptor {
-                    front: wgpu::StencilStateFaceDescriptor::IGNORE,
-                    back: wgpu::StencilStateFaceDescriptor::IGNORE,
+                    front: StencilStateFaceDescriptor::IGNORE,
+                    back: StencilStateFaceDescriptor::IGNORE,
                     read_mask: 0,
                     write_mask: 0,
                 },
@@ -224,7 +223,7 @@ impl InstanceDescriptor {
             vertex_state: VertexStateDescriptor {
                 index_format: IndexFormat::Uint32,
                 vertex_buffers: &[VertexBufferDescriptor {
-                    stride: std::mem::size_of::<[f32; 3 + 2 + 3]>() as BufferAddress,
+                    stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
                     attributes: &[
                         VertexAttributeDescriptor {

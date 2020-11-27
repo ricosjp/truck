@@ -91,8 +91,11 @@ pub struct DeviceHandler {
     sc_desc: Arc<Mutex<SwapChainDescriptor>>,
 }
 
+#[derive(Clone, Copy, PartialEq, PartialOrd, Hash, Debug)]
+pub struct RenderID(Option<usize>);
+
 #[derive(Debug)]
-struct ObjectsHandler {
+pub struct ObjectsHandler {
     objects: HashMap<usize, RenderObject>,
     objects_number: usize,
 }
@@ -115,9 +118,21 @@ pub struct Scene {
     scene_desc: SceneDescriptor,
 }
 
+#[macro_export]
+macro_rules! impl_get_set_id {
+    ($id_member: ident) => {
+        #[inline(always)]
+        fn get_id(&self) -> RenderID { self.$id_member }
+        #[inline(always)]
+        fn set_id(&mut self, objects_handler: &mut ObjectsHandler) {
+            objects_handler.set_id(&mut self.$id_member)
+        }
+    };
+}
+
 pub trait Rendered {
-    fn get_id(&self) -> Option<usize>;
-    fn set_id(&mut self, idx: usize);
+    fn get_id(&self) -> RenderID;
+    fn set_id(&mut self, objects_handler: &mut ObjectsHandler);
     fn vertex_buffer(&self, device_handler: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
     fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout>;
     fn bind_group(&self, device_handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup>;
