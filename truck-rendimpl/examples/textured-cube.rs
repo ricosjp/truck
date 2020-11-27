@@ -54,8 +54,8 @@ impl MyApp {
             texture: Some(Arc::new(texture)),
             backface_culling: true,
         };
-        let mut mesh = self.scene.create_instance(&cube, &desc);
-        self.scene.add_objects(&mut mesh);
+        let mut shape = self.scene.create_instance(&cube, &desc);
+        self.scene.add_objects(&mut shape.render_faces());
     }
 }
 

@@ -38,13 +38,12 @@ pub struct FaceInstance {
     surface: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
     boundary_length: Arc<BufferHandler>,
-    desc: Arc<Mutex<InstanceDescriptor>>,
     id: RenderID,
 }
 
 pub struct ShapeInstance {
     faces: Vec<FaceInstance>,
-    desc: Arc<Mutex<InstanceDescriptor>>,
+    desc: InstanceDescriptor,
 }
 
 pub trait IntoInstance {
