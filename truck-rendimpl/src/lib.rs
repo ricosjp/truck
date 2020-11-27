@@ -26,21 +26,25 @@ pub struct InstanceDescriptor {
     pub backface_culling: bool,
 }
 
-#[derive(Clone)]
 pub struct PolygonInstance {
-    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
+    polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
     desc: InstanceDescriptor,
     id: RenderID,
 }
 
 #[derive(Clone)]
-pub struct FaceInstance {
+struct FaceBuffer {
     surface: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
     boundary_length: Arc<BufferHandler>,
+}
+
+pub struct FaceInstance {
+    buffer: Arc<Mutex<FaceBuffer>>,
     id: RenderID,
 }
 
+#[derive(Clone)]
 pub struct ShapeInstance {
     faces: Vec<FaceInstance>,
     desc: InstanceDescriptor,
@@ -52,9 +56,14 @@ pub trait IntoInstance {
     fn into_instance(
         &self,
         device: &Device,
-        queue: &Queue,
         desc: InstanceDescriptor,
     ) -> Self::Instance;
+    #[doc(hidden)]
+    fn update_instance(
+        &self,
+        device: &Device,
+        instance: &mut Self::Instance,
+    );
 }
 
 pub trait CreateInstance {
@@ -63,16 +72,26 @@ pub trait CreateInstance {
         object: &T,
         desc: &InstanceDescriptor,
     ) -> T::Instance;
+    fn update_instance<T: IntoInstance>(
+        &self,
+        instance: &mut T::Instance,
+        object: &T,
+    );
 }
 
 impl CreateInstance for Scene {
+    #[inline(always)]
     fn create_instance<T: IntoInstance>(
         &self,
         object: &T,
         desc: &InstanceDescriptor,
     ) -> T::Instance
     {
-        object.into_instance(self.device(), self.queue(), desc.clone())
+        object.into_instance(self.device(), desc.clone())
+    }
+    #[inline(always)]
+    fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T){
+        object.update_instance(self.device(), instance)
     }
 }
 

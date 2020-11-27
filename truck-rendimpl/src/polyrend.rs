@@ -3,19 +3,24 @@ use std::collections::HashMap;
 
 impl IntoInstance for PolygonMesh {
     type Instance = PolygonInstance;
+    #[inline(always)]
     fn into_instance(
         &self,
         device: &Device,
-        _: &Queue,
         desc: InstanceDescriptor,
     ) -> Self::Instance
     {
         let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
         PolygonInstance {
-            polygon: (Arc::new(vb), Arc::new(ib)),
+            polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             desc,
             id: Default::default(),
         }
+    }
+    #[inline(always)]
+    fn update_instance(&self, device: &Device, instance: &mut Self::Instance) {
+        let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
+        *instance.polygon.lock().unwrap() = (Arc::new(vb), Arc::new(ib));
     }
 }
 
@@ -24,14 +29,29 @@ impl IntoInstance for StructuredMesh {
     fn into_instance(
         &self,
         device: &Device,
-        _: &Queue,
         desc: InstanceDescriptor,
     ) -> Self::Instance
     {
         let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
         PolygonInstance {
-            polygon: (Arc::new(vb), Arc::new(ib)),
+            polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             desc,
+            id: Default::default(),
+        }
+    }
+    #[inline(always)]
+    fn update_instance(&self, device: &Device, instance: &mut Self::Instance) {
+        let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
+        *instance.polygon.lock().unwrap() = (Arc::new(vb), Arc::new(ib));
+    }
+}
+
+impl Clone for PolygonInstance {
+    #[inline(always)]
+    fn clone(&self) -> PolygonInstance {
+        PolygonInstance {
+            polygon: self.polygon.clone(),
+            desc: self.desc.clone(),
             id: Default::default(),
         }
     }
@@ -42,6 +62,7 @@ impl PolygonInstance {
     pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
     #[inline(always)]
     pub fn descriptor_mut(&mut self) -> &mut InstanceDescriptor { &mut self.desc }
+
     #[inline(always)]
     pub fn pipeline_with_shader(
         &self,
@@ -106,10 +127,8 @@ impl Rendered for PolygonInstance {
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        (
-            Arc::clone(&self.polygon.0),
-            Some(Arc::clone(&self.polygon.1)),
-        )
+        let polygon = self.polygon.lock().unwrap().clone();
+        (polygon.0, Some(polygon.1))
     }
     #[inline(always)]
     fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout> {

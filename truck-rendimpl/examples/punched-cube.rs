@@ -1,7 +1,3 @@
-// The texture is referenced by:
-// https://cc0textures.com/view?id=WoodFloor024
-
-use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
@@ -31,11 +27,37 @@ impl MyApp {
             40.0,
         )
     }
-
-    fn create_cube() -> Solid {
-        let v = builder::vertex(Point3::origin());
+    fn create_solid() -> Solid {
+        let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
         let edge = builder::tsweep(&v, Vector3::unit_x());
-        let face = builder::tsweep(&edge, Vector3::unit_y());
+        let mut face = builder::tsweep(&edge, Vector3::unit_y());
+        let v = builder::vertex(Point3::new(0.2, 0.0, -0.5));
+        let edge0 = builder::tsweep(&v, Vector3::new(-0.2, 0.2, 0.0));
+        let edge1 = builder::partial_rsweep(
+            edge0.back(),
+            Point3::origin(),
+            Vector3::unit_z(),
+            Rad(std::f64::consts::PI / 2.0),
+        );
+        let edge2 = builder::tsweep(edge1.back(), Vector3::new(0.2, -0.2, 0.0));
+        let edge3 = builder::partial_rsweep(
+            edge2.back(),
+            Point3::origin(),
+            Vector3::unit_z(),
+            Rad(std::f64::consts::PI / 2.0),
+        );
+        let edge3 = Edge::new(
+            edge3.front(),
+            edge0.front(),
+            edge3.lock_curve().unwrap().clone(),
+        );
+        let wire = Wire::from(vec![
+            edge3.inverse(),
+            edge2.inverse(),
+            edge1.inverse(),
+            edge0.inverse(),
+        ]);
+        face.add_boundary(wire);
         builder::tsweep(&face, Vector3::unit_z())
     }
 }
@@ -43,7 +65,7 @@ impl MyApp {
 impl App for MyApp {
     fn init(handler: &WGPUHandler) -> MyApp {
         let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
-        let desc = SceneDescriptor {
+        let scene_desc = SceneDescriptor {
             camera: MyApp::create_camera(),
             lights: vec![Light {
                 position: Point3::new(1.0, 1.0, 1.0),
@@ -52,8 +74,8 @@ impl App for MyApp {
             }],
             ..Default::default()
         };
-        let mut scene = Scene::new(device, queue, sc_desc, &desc);
-        let mut shape = scene.create_instance(&Self::create_cube(), &Default::default());
+        let mut scene = Scene::new(device, queue, sc_desc, &scene_desc);
+        let mut shape = scene.create_instance(&Self::create_solid(), &Default::default());
         scene.add_objects(&mut shape.render_faces());
         MyApp {
             scene,
@@ -64,7 +86,7 @@ impl App for MyApp {
         }
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("textured cube") }
+    fn app_title<'a>() -> Option<&'a str> { Some("punched cube") }
 
     fn depth_stencil_attachment_descriptor<'a>(
         &'a self,
@@ -81,10 +103,8 @@ impl App for MyApp {
                 }
             }
             MouseButton::Right => {
-                let (light, camera) = {
-                    let desc = self.scene.descriptor_mut();
-                    (&mut desc.lights[0], &desc.camera)
-                };
+                let desc = self.scene.descriptor_mut();
+                let (light, camera) = (&mut desc.lights[0], &desc.camera);
                 match light.light_type {
                     LightType::Point => {
                         light.position = camera.position();
@@ -103,8 +123,7 @@ impl App for MyApp {
             MouseScrollDelta::LineDelta(_, y) => {
                 let camera = &mut self.scene.descriptor_mut().camera;
                 let trans_vec = camera.eye_direction() * 0.2 * y as f64;
-                camera.matrix =
-                    Matrix4::from_translation(trans_vec) * camera.matrix;
+                camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
@@ -141,8 +160,8 @@ impl App for MyApp {
                         return Self::default_control_flow();
                     }
                 }
-                let camera = &mut self.scene.descriptor_mut().camera;
                 self.camera_changed = Some(std::time::Instant::now());
+                let camera = &mut self.scene.descriptor_mut().camera;
                 *camera = match camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
                         camera.matrix,

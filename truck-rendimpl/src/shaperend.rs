@@ -1,5 +1,15 @@
 use crate::*;
 
+impl Clone for FaceInstance {
+    #[inline(always)]
+    fn clone(&self) -> FaceInstance {
+        FaceInstance {
+            buffer: self.buffer.clone(),
+            id: Default::default(),
+        }
+    }
+}
+
 fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
     const N: usize = 50;
     let mut res = (0.0, 0.0);
@@ -20,7 +30,7 @@ fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
     res
 }
 
-fn face_instance(device: &Device, face: &Face) -> Option<FaceInstance> {
+fn face_buffer(device: &Device, face: &Face) -> Option<FaceBuffer> {
     let surface = face.oriented_surface();
     let mesh = StructuredMesh::from_surface(&surface, 0.01);
     let (vb, ib) = ExpandedPolygon::from(&mesh).buffers(device);
@@ -42,7 +52,7 @@ fn face_instance(device: &Device, face: &Face) -> Option<FaceInstance> {
             boundary.push([window[0][0], window[0][1], window[1][0], window[1][1]]);
         }
     }
-    Some(FaceInstance {
+    Some(FaceBuffer {
         surface: (Arc::new(vb), Arc::new(ib)),
         boundary: Arc::new(BufferHandler::from_slice(
             &boundary,
@@ -54,21 +64,61 @@ fn face_instance(device: &Device, face: &Face) -> Option<FaceInstance> {
             device,
             BufferUsage::UNIFORM,
         )),
-        id: Default::default(),
     })
 }
 
 impl IntoInstance for Shell {
     type Instance = ShapeInstance;
-    fn into_instance(&self, device: &Device, _: &Queue, desc: InstanceDescriptor) -> ShapeInstance {
-        let closure = |face| face_instance(device, face).unwrap();
-        let faces = self.face_iter().map(closure).collect();
+    #[inline(always)]
+    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> ShapeInstance {
+        let faces = self
+            .face_iter()
+            .map(|face| FaceInstance {
+                buffer: Arc::new(Mutex::new(face_buffer(device, face).unwrap())),
+                id: Default::default(),
+            })
+            .collect();
         ShapeInstance { faces, desc }
+    }
+    #[inline(always)]
+    fn update_instance(&self, device: &Device, instance: &mut ShapeInstance) {
+        self.face_iter()
+            .zip(&mut instance.faces)
+            .for_each(|(face, instance)| {
+                *instance.buffer.lock().unwrap() = face_buffer(device, face).unwrap()
+            })
+    }
+}
+
+impl IntoInstance for Solid {
+    type Instance = ShapeInstance;
+    #[inline(always)]
+    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> ShapeInstance {
+        let faces = self
+            .boundaries()
+            .iter()
+            .flat_map(Shell::face_iter)
+            .map(|face| FaceInstance {
+                buffer: Arc::new(Mutex::new(face_buffer(device, face).unwrap())),
+                id: Default::default(),
+            })
+            .collect();
+        ShapeInstance { faces, desc }
+    }
+    #[inline(always)]
+    fn update_instance(&self, device: &Device, instance: &mut ShapeInstance) {
+        self.boundaries()
+            .iter()
+            .flat_map(Shell::face_iter)
+            .zip(&mut instance.faces)
+            .for_each(|(face, instance)| {
+                *instance.buffer.lock().unwrap() = face_buffer(device, face).unwrap()
+            })
     }
 }
 
 pub struct RenderFace<'a> {
-    buffer: &'a mut FaceInstance,
+    instance: &'a mut FaceInstance,
     desc: &'a InstanceDescriptor,
 }
 
@@ -137,7 +187,7 @@ mod ficonfig {
         face: &RenderFace,
     ) -> BindGroup
     {
-        let (buffer, desc) = (&face.buffer, &face.desc);
+        let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
         crate::create_bind_group(
             handler.device(),
             layout,
@@ -156,7 +206,7 @@ mod ficonfig {
         face: &RenderFace,
     ) -> BindGroup
     {
-        let (buffer, desc) = (&face.buffer, &face.desc);
+        let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
         let (view, sampler) = desc.textureview_and_sampler(handler.device(), handler.queue());
         crate::create_bind_group(
             handler.device(),
@@ -175,13 +225,13 @@ mod ficonfig {
 
 impl<'a> Rendered for RenderFace<'a> {
     #[inline(always)]
-    fn get_id(&self) -> RenderID { self.buffer.id }
+    fn get_id(&self) -> RenderID { self.instance.id }
     #[inline(always)]
-    fn set_id(&mut self, handler: &mut ObjectsHandler) { handler.set_id(&mut self.buffer.id) }
+    fn set_id(&mut self, handler: &mut ObjectsHandler) { handler.set_id(&mut self.instance.id) }
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let buffers = &self.buffer.surface;
+        let buffers = &self.instance.buffer.lock().unwrap().surface;
         (Arc::clone(&buffers.0), Some(Arc::clone(&buffers.1)))
     }
     #[inline(always)]
@@ -217,7 +267,12 @@ impl ShapeInstance {
         let desc = &self.desc;
         self.faces
             .iter_mut()
-            .map(move |buffer| RenderFace { buffer, desc })
+            .map(move |instance| RenderFace { instance, desc })
             .collect()
     }
+
+    #[inline(always)]
+    pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
+    #[inline(always)]
+    pub fn descriptor_mut(&mut self) -> &mut InstanceDescriptor { &mut self.desc }
 }

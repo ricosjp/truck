@@ -136,7 +136,7 @@ impl App for MyRender {
         }
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("rotation object") }
+    fn app_title<'a>() -> Option<&'a str> { Some("rotation objects") }
 
     fn depth_stencil_attachment_descriptor<'a>(
         &'a self,
