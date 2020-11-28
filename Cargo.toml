@@ -6,6 +6,5 @@ members = [
 	"truck-topology",
 	"truck-polymesh",
 	"truck-modeling",
-	"truck-featwgpu",
 	"truck-base",
 ]
