@@ -8,8 +8,9 @@ use app::*;
 
 struct MyApp {
     scene: Scene,
-    object: Arc<Mutex<Option<PolygonInstance>>>,
+    object: Arc<Mutex<ShapeInstance>>,
     closed: Arc<Mutex<bool>>,
+    updated: Arc<Mutex<bool>>,
     thread: Option<JoinHandle<()>>,
 }
 
@@ -29,6 +30,13 @@ impl MyApp {
         }
         NURBSSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts))
     }
+    fn init_shell() -> Shell {
+        let v = builder::vertex(Point3::origin());
+        let e = builder::tsweep(&v, Vector3::unit_z());
+        let f = builder::tsweep(&e, Vector3::unit_x());
+        *f.lock_surface().unwrap() = Self::init_surface(3, 4);
+        Shell::from(vec![f])
+    }
     fn init_camera() -> Camera {
         let mut vec0 = Vector4::new(1.5, 0.0, -1.5, 0.0);
         vec0 /= vec0.magnitude();
@@ -44,29 +52,32 @@ impl MyApp {
     }
     fn init_thread(
         device: &Arc<Device>,
-        object: &Arc<Mutex<Option<PolygonInstance>>>,
+        object: &Arc<Mutex<ShapeInstance>>,
         closed: &Arc<Mutex<bool>>,
+        updated: &Arc<Mutex<bool>>,
+        shell: Shell,
     ) -> JoinHandle<()>
     {
-        let device = Arc::clone(&device);
-        let arc_object = Arc::clone(object);
+        let device = Arc::clone(device);
+        let object = Arc::clone(object);
         let closed = Arc::clone(closed);
+        let updated = Arc::clone(updated);
         std::thread::spawn(move || {
-            let mut bspsurface = Self::init_surface(3, 4);
             let mut time: f64 = 0.0;
             let mut count = 0;
             let mut instant = std::time::Instant::now();
             loop {
+                std::thread::sleep(std::time::Duration::from_millis(1));
                 if *closed.lock().unwrap() {
                     break;
                 }
-                std::thread::sleep(std::time::Duration::from_millis(1));
-                let mut bspsurface0 = bspsurface.clone();
-                bspsurface0.non_rationalized_mut().optimize();
-                let mesh = truck_polymesh::StructuredMesh::from_surface(&bspsurface0, 0.01);
-                let object = mesh.into_instance(&device, Default::default());
+                let mut updated = updated.lock().unwrap();
+                if *updated {
+                    continue;
+                }
+                *updated = true;
+                drop(updated);
                 count += 1;
-                bspsurface.control_point_mut(3, 3)[1] = time.sin();
                 time += 0.1;
                 if count == 100 {
                     let fps_inv = instant.elapsed().as_secs_f64();
@@ -74,10 +85,9 @@ impl MyApp {
                     instant = std::time::Instant::now();
                     count = 0;
                 }
-                let mut object_mut = arc_object.lock().unwrap();
-                if object_mut.is_none() {
-                    *object_mut = Some(object);
-                }
+                shell[0].lock_surface().unwrap().control_point_mut(3, 3)[1] = time.sin();
+                let mut object = object.lock().unwrap();
+                shell.update_instance(&device, &mut object);
             }
         })
     }
@@ -86,9 +96,6 @@ impl MyApp {
 impl App for MyApp {
     fn init(handler: &WGPUHandler) -> MyApp {
         let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
-        let object = Arc::new(Mutex::new(None));
-        let closed = Arc::new(Mutex::new(false));
-        let thread = Some(MyApp::init_thread(&handler.device, &object, &closed));
         let desc = SceneDescriptor {
             camera: MyApp::init_camera(),
             lights: vec![Light {
@@ -98,11 +105,19 @@ impl App for MyApp {
             }],
             ..Default::default()
         };
-        let scene = Scene::new(device, queue, sc_desc, &desc);
+        let mut scene = Scene::new(device, queue, sc_desc, &desc);
+        let shell = Self::init_shell();
+        let mut object = scene.create_instance(&shell, &Default::default());
+        scene.add_objects(&mut object.render_faces());
+        let object = Arc::new(Mutex::new(object));
+        let closed = Arc::new(Mutex::new(false));
+        let updated = Arc::new(Mutex::new(false));
+        let thread = Some(MyApp::init_thread(&handler.device, &object, &closed, &updated, shell));
         MyApp {
             scene,
             object,
             closed,
+            updated,
             thread,
         }
     }
@@ -116,15 +131,11 @@ impl App for MyApp {
     }
 
     fn update(&mut self, _: &WGPUHandler) {
-        match self.object.lock().unwrap().take() {
-            Some(mut object) => {
-                if self.scene.number_of_objects() == 0 {
-                    self.scene.add_object(&mut object);
-                } else {
-                    self.scene.update_vertex_buffer(&mut object);
-                };
-            }
-            None => {}
+        let mut updated = self.updated.lock().unwrap();
+        if *updated {
+            let mut object = self.object.lock().unwrap();
+            self.scene.update_vertex_buffers(&object.render_faces());
+            *updated = false;
         }
         self.scene.prepare_render();
     }
