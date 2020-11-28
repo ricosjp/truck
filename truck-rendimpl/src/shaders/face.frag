@@ -24,19 +24,22 @@ layout(set = 0, binding = 2) uniform Scene {
     uint nlights;
 };
 
-layout(set = 1, binding = 0) buffer Boundary {
+layout(set = 1, binding = 1) uniform Material {
+    vec4 albedo;
+    float roughness;
+    float reflectance;
+};
+
+layout(set = 1, binding = 2) buffer Boundary {
     vec4 boundary[];
 };
 
-layout(set = 1, binding = 1) uniform BoundaryLength {
+layout(set = 1, binding = 3) uniform BoundaryLength {
     uint boundary_length;
 };
 
 layout(location = 0) out vec4 color;
 
-vec4 albedo = vec4(1.0, 1.0, 1.0, 3.0) / 3.0;
-float roughness = 0.5;
-float reflectance = 0.5;
 vec3 normal = normalize(vertex_normal);
 
 bool in_domain() {

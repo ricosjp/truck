@@ -27,7 +27,7 @@ impl Camera {
         far_clip: f64,
     ) -> Camera
     {
-        let projection = cgmath::perspective(cgmath::Rad(field_of_view), 1.0, near_clip, far_clip);
+        let projection = crate::perspective(Rad(field_of_view), 1.0, near_clip, far_clip);
         Camera {
             matrix,
             projection,
@@ -44,7 +44,7 @@ impl Camera {
     ) -> Camera
     {
         let a = screen_size / 2.0;
-        let projection = cgmath::ortho(-a, a, -a, a, near_clip, far_clip);
+        let projection = crate::ortho(-a, a, -a, a, near_clip, far_clip);
         Camera {
             matrix,
             projection,

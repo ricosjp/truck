@@ -1,4 +1,5 @@
-use truck_featwgpu::*;
+use truck_platform::*;
+use truck_rendimpl::*;
 use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
@@ -36,7 +37,7 @@ impl MyApp {
             edge0.back(),
             Point3::origin(),
             Vector3::unit_z(),
-            cgmath::Rad(std::f64::consts::PI / 2.0),
+            Rad(std::f64::consts::PI / 2.0),
         );
         let edge2 = builder::tsweep(edge1.back(), Vector3::new(0.2, -0.2, 0.0));
         let edge3 = builder::partial_rsweep(
@@ -64,29 +65,28 @@ impl MyApp {
 impl App for MyApp {
     fn init(handler: &WGPUHandler) -> MyApp {
         let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
-        let mut render = MyApp {
-            scene: Scene::new(device, queue, sc_desc),
+        let scene_desc = SceneDescriptor {
+            camera: MyApp::create_camera(),
+            lights: vec![Light {
+                position: Point3::new(1.0, 1.0, 1.0),
+                color: Vector3::new(1.0, 1.0, 1.0),
+                light_type: LightType::Point,
+            }],
+            ..Default::default()
+        };
+        let mut scene = Scene::new(device, queue, sc_desc, &scene_desc);
+        let mut shape = scene.create_instance(&Self::create_solid(), &Default::default());
+        scene.add_objects(&mut shape.render_faces());
+        MyApp {
+            scene,
             rotate_flag: false,
             prev_cursor: None,
             camera_changed: None,
             light_changed: None,
-        };
-        let solid = Self::create_solid();
-        let shell = RenderFace::from_shell(&solid.boundaries()[0], 0.001, render.scene.device());
-        println!("{}", shell.len());
-        shell.iter().for_each(|face| {
-            render.scene.add_object(face.as_ref().unwrap());
-        });
-        render.scene.camera = MyApp::create_camera();
-        render.scene.lights.push(Light {
-            position: Point3::new(1.0, 1.0, 1.0),
-            color: Vector3::new(1.0, 1.0, 1.0),
-            light_type: LightType::Point,
-        });
-        render
+        }
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("simple obj viewer") }
+    fn app_title<'a>() -> Option<&'a str> { Some("punched cube") }
 
     fn depth_stencil_attachment_descriptor<'a>(
         &'a self,
@@ -103,15 +103,14 @@ impl App for MyApp {
                 }
             }
             MouseButton::Right => {
-                let scene = &mut self.scene;
-                match scene.lights[0].light_type {
+                let desc = self.scene.descriptor_mut();
+                let (light, camera) = (&mut desc.lights[0], &desc.camera);
+                match light.light_type {
                     LightType::Point => {
-                        scene.lights[0].position = scene.camera.position();
+                        light.position = camera.position();
                     }
                     LightType::Uniform => {
-                        scene.lights[0].position = scene.camera.position();
-                        let strength = scene.lights[0].position.to_vec().magnitude();
-                        scene.lights[0].position /= strength;
+                        light.position = Point3::from_vec(camera.position().to_vec().normalize());
                     }
                 }
             }
@@ -122,9 +121,9 @@ impl App for MyApp {
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
-                let trans_vec = self.scene.camera.eye_direction() * 0.2 * y as f64;
-                self.scene.camera.matrix =
-                    Matrix4::from_translation(trans_vec) * self.scene.camera.matrix;
+                let camera = &mut self.scene.descriptor_mut().camera;
+                let trans_vec = camera.eye_direction() * 0.2 * y as f64;
+                camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
@@ -135,13 +134,14 @@ impl App for MyApp {
         if self.rotate_flag {
             let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
+                let matrix = &mut self.scene.descriptor_mut().camera.matrix;
                 let dir2d = &position - prev_position;
-                let mut axis = dir2d[1] * &self.scene.camera.matrix[0].truncate();
-                axis += dir2d[0] * &self.scene.camera.matrix[1].truncate();
+                let mut axis = dir2d[1] * matrix[0].truncate();
+                axis += dir2d[0] * matrix[1].truncate();
                 axis /= axis.magnitude();
                 let angle = dir2d.magnitude() * 0.01;
-                let mat = Matrix4::from_axis_angle(axis, cgmath::Rad(angle));
-                self.scene.camera.matrix = mat.invert().unwrap() * self.scene.camera.matrix;
+                let mat = Matrix4::from_axis_angle(axis, Rad(angle));
+                *matrix = mat.invert().unwrap() * *matrix;
             }
             self.prev_cursor = Some(position);
         }
@@ -161,15 +161,16 @@ impl App for MyApp {
                     }
                 }
                 self.camera_changed = Some(std::time::Instant::now());
-                self.scene.camera = match self.scene.camera.projection_type() {
+                let camera = &mut self.scene.descriptor_mut().camera;
+                *camera = match camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
-                        self.scene.camera.matrix,
+                        camera.matrix,
                         std::f64::consts::PI / 4.0,
                         0.1,
                         40.0,
                     ),
                     ProjectionType::Perspective => {
-                        Camera::parallel_camera(self.scene.camera.matrix, 1.0, 0.1, 100.0)
+                        Camera::parallel_camera(camera.matrix, 1.0, 0.1, 100.0)
                     }
                 }
             }
@@ -181,19 +182,22 @@ impl App for MyApp {
                     }
                 }
                 self.light_changed = Some(std::time::Instant::now());
-                match self.scene.lights[0].light_type {
+                let (light, camera) = {
+                    let desc = self.scene.descriptor_mut();
+                    (&mut desc.lights[0], &desc.camera)
+                };
+                *light = match light.light_type {
                     LightType::Point => {
-                        let mut vec = self.scene.camera.position();
-                        vec /= vec.to_vec().magnitude();
-                        self.scene.lights[0] = Light {
-                            position: vec,
+                        let position = Point3::from_vec(camera.position().to_vec().normalize());
+                        Light {
+                            position,
                             color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Uniform,
                         }
                     }
                     LightType::Uniform => {
-                        let position = self.scene.camera.position();
-                        self.scene.lights[0] = Light {
+                        let position = camera.position();
+                        Light {
                             position,
                             color: Vector3::new(1.0, 1.0, 1.0),
                             light_type: LightType::Point,

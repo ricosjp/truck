@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 use std::time::*;
-use wgpu::*;
+use truck_platform::wgpu::*;
 use winit::dpi::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;

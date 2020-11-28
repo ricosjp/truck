@@ -19,7 +19,8 @@ fn main() {
     std::env::set_current_dir("src").unwrap();
     save_spirv("shaders/polygon.vert", ShaderType::Vertex);
     save_spirv("shaders/polygon.frag", ShaderType::Fragment);
-    save_spirv("shaders/textured_polygon.frag", ShaderType::Fragment);
-    save_spirv("shaders/face.vert", ShaderType::Vertex);
+    save_spirv("shaders/textured-polygon.frag", ShaderType::Fragment);
+    save_spirv("shaders/face.comp", ShaderType::Compute);
     save_spirv("shaders/face.frag", ShaderType::Fragment);
+    save_spirv("shaders/textured-face.frag", ShaderType::Fragment);
 }
