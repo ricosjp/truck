@@ -1,0 +1,15 @@
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1) in;
+layout(set = 0, binding = 0) uniform image2D texture0;
+layout(set = 0, binding = 1) uniform image2D texture1;
+layout(set = 0, binding = 2) buffer Result {
+    uint result[];
+};
+
+void main() {
+    uvec2 idx = gl_GlobalInvocationID;
+    vec4 color0 = imageLoad(texture0, idx);
+    vec4 color1 = imageLoad(texture1, idx);
+    result[idx.x * 512 + idx.y] = distance(color0, color1) < 0.01 ? 0 : 1;
+}
