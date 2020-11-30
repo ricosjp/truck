@@ -3,7 +3,7 @@ stages:
     - pages
 
 test:
-    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan
+    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
         - cargo test
