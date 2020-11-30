@@ -20,7 +20,7 @@ struct MyApp {
 impl MyApp {
     fn create_camera() -> Camera {
         let matrix = Matrix4::look_at(
-            Point3::new(1.0, 1.0, 1.0),
+            Point3::new(1.5, 1.5, 1.5),
             Point3::origin(),
             Vector3::unit_y(),
         );
@@ -53,7 +53,18 @@ impl App for MyApp {
             ..Default::default()
         };
         let mut scene = Scene::new(device, queue, sc_desc, &desc);
-        let mut shape = scene.create_instance(&Self::create_cube(), &Default::default());
+        let texture = image::load_from_memory(include_bytes!("WoodFloor024_2K_Color.png")).unwrap();
+        let desc = InstanceDescriptor {
+            matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
+            material: Material {
+                albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
+                roughness: 0.9,
+                reflectance: 0.04,
+            },
+            texture: Some(std::sync::Arc::new(texture)),
+            backface_culling: true,
+        };
+        let mut shape = scene.create_instance(&Self::create_cube(), &desc);
         scene.add_objects(&mut shape.render_faces());
         MyApp {
             scene,

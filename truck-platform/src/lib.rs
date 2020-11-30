@@ -1,6 +1,6 @@
-pub extern crate wgpu;
 pub extern crate bytemuck;
 extern crate truck_base;
+pub extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -133,10 +133,21 @@ macro_rules! impl_get_set_id {
 pub trait Rendered {
     fn get_id(&self) -> RenderID;
     fn set_id(&mut self, objects_handler: &mut ObjectsHandler);
-    fn vertex_buffer(&self, device_handler: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
+    fn vertex_buffer(
+        &self,
+        device_handler: &DeviceHandler,
+    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
     fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout>;
-    fn bind_group(&self, device_handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup>;
-    fn pipeline(&self, device_handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline>;
+    fn bind_group(
+        &self,
+        device_handler: &DeviceHandler,
+        layout: &BindGroupLayout,
+    ) -> Arc<BindGroup>;
+    fn pipeline(
+        &self,
+        device_handler: &DeviceHandler,
+        layout: &PipelineLayout,
+    ) -> Arc<RenderPipeline>;
     fn render_object(&self, scene: &Scene) -> RenderObject {
         let (vertex_buffer, index_buffer) = self.vertex_buffer(scene.device_handler());
         let bind_group_layout = self.bind_group_layout(scene.device_handler());
@@ -188,16 +199,20 @@ pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
 pub fn create_bind_group_layout<'a, T: IntoIterator<Item = &'a PreBindGroupLayoutEntry>>(
     device: &Device,
     entries: T,
-) -> BindGroupLayout {
-    let vec: Vec<_> = entries.into_iter().enumerate().map(|(i, e)| BindGroupLayoutEntry {
-        binding: i as u32,
-        visibility: e.visibility,
-        ty: e.ty.clone(),
-        count: e.count,
-    }).collect();
+) -> BindGroupLayout
+{
+    let vec: Vec<_> = entries
+        .into_iter()
+        .enumerate()
+        .map(|(i, e)| BindGroupLayoutEntry {
+            binding: i as u32,
+            visibility: e.visibility,
+            ty: e.ty.clone(),
+            count: e.count,
+        })
+        .collect();
     device.create_bind_group_layout(&BindGroupLayoutDescriptor {
         label: None,
         entries: &vec,
     })
 }
-
