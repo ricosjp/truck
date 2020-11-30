@@ -3,11 +3,8 @@ stages:
     - pages
 
 test:
-    image: rust:latest
+    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan
     stage: test
-    before_script:
-        - apt-get update -y && apt-get -y dist-upgrade
-        - apt-get install cmake -y
     script:
         - cargo test
     except:
