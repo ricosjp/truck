@@ -13,15 +13,12 @@ test:
         - gpu
 
 pages:
-    image: rust:latest
+    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: pages
-    before_script:
-        - apt-get update -y
-        - apt-get install cmake -y
     script:
-        - cargo clean
-        - cargo test
-        - cargo doc --no-deps
+        - /root/.cargo/bin/cargo clean
+        - /root/.cargo/bin/cargo test
+        - /root/.cargo/bin/cargo doc --no-deps
         - cp -r target/doc public
     artifacts:
         paths:
