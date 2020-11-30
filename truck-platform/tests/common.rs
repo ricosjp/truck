@@ -1,12 +1,11 @@
 use glsl_to_spirv::ShaderType;
-use std::convert::TryInto;
 use std::io::Read;
 use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
 
-pub const PICTURE_WIDTH: u32 = 512;
-pub const PICTURE_HEIGHT: u32 = 512;
+pub const PICTURE_WIDTH: u32 = 256;
+pub const PICTURE_HEIGHT: u32 = 256;
 
 #[derive(Clone, Default, Debug)]
 pub struct Plane {
@@ -186,103 +185,42 @@ pub fn buffer_copy_view<'a>(buffer: &'a Buffer) -> BufferCopyView<'a> {
     }
 }
 
-pub fn compare_texture(handler: &DeviceHandler, texture0: &Texture, texture1: &Texture) -> bool {
-    let (device, queue) = (handler.device(), handler.queue());
-    let buffer = device.create_buffer(&BufferDescriptor {
-        label: None,
-        mapped_at_creation: false,
-        usage: BufferUsage::STORAGE | BufferUsage::MAP_READ,
-        size: (PICTURE_WIDTH * PICTURE_HEIGHT * 4) as u64,
-    });
-    let layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-        label: None,
-        entries: &[
-            BindGroupLayoutEntry {
-                binding: 0,
-                visibility: ShaderStage::COMPUTE,
-                ty: BindingType::StorageTexture {
-                    dimension: TextureViewDimension::D2,
-                    format: TextureFormat::Rgba8UnormSrgb,
-                    readonly: true,
-                },
-                count: None,
-            },
-            BindGroupLayoutEntry {
-                binding: 1,
-                visibility: ShaderStage::COMPUTE,
-                ty: BindingType::StorageTexture {
-                    dimension: TextureViewDimension::D2,
-                    format: TextureFormat::Rgba8UnormSrgb,
-                    readonly: true,
-                },
-                count: None,
-            },
-            BindGroupLayoutEntry {
-                binding: 2,
-                visibility: ShaderStage::COMPUTE,
-                ty: BindingType::StorageBuffer {
-                    dynamic: false,
-                    min_binding_size: None,
-                    readonly: true,
-                },
-                count: None,
-            },
-        ],
-    });
-    let bind_group = device.create_bind_group(&BindGroupDescriptor {
-        label: None,
-        layout: &layout,
-        entries: &[
-            BindGroupEntry {
-                binding: 0,
-                resource: BindingResource::TextureView(&texture0.create_view(&Default::default())),
-            },
-            BindGroupEntry {
-                binding: 1,
-                resource: BindingResource::TextureView(&texture1.create_view(&Default::default())),
-            },
-            BindGroupEntry {
-                binding: 2,
-                resource: BindingResource::Buffer(buffer.slice(..)),
-            },
-        ],
-    });
-    let compute_shader = read_shader(
-        device,
-        include_str!("shaders/compare.comp"),
-        ShaderType::Compute,
-    );
-    let pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
-        label: None,
-        layout: Some(&device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: None,
-            bind_group_layouts: &[&layout],
-            push_constant_ranges: &[],
-        })),
-        compute_stage: ProgrammableStageDescriptor {
-            module: &compute_shader,
-            entry_point: "main",
-        },
-    });
-    let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
-    let mut cpass = encoder.begin_compute_pass();
-    cpass.set_bind_group(0, &bind_group, &[]);
-    cpass.set_pipeline(&pipeline);
-    cpass.dispatch(PICTURE_WIDTH, PICTURE_HEIGHT, 1);
-    drop(cpass);
-    queue.submit(Some(encoder.finish()));
+pub fn read_buffer(device: &Device, buffer: &Buffer) -> Vec<u8> {
     let buffer_slice = buffer.slice(..);
     let buffer_future = buffer_slice.map_async(MapMode::Read);
     device.poll(Maintain::Wait);
-    let vec: Vec<u32> = futures::executor::block_on(async {
+    futures::executor::block_on(async {
         if let Ok(()) = buffer_future.await {
-            let data = buffer_slice.get_mapped_range();
-            data.chunks_exact(4)
-                .map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
-                .collect()
+            buffer_slice.get_mapped_range().iter().map(|b| *b).collect()
         } else {
             panic!("failed to run compute on gpu!")
         }
+    })
+}
+
+pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
+    let (device, queue) = (handler.device(), handler.queue());
+    let size = (PICTURE_WIDTH * PICTURE_HEIGHT * 4) as u64;
+    let buffer = device.create_buffer(&BufferDescriptor {
+        label: None,
+        mapped_at_creation: false,
+        usage: BufferUsage::COPY_DST | BufferUsage::MAP_READ,
+        size,
     });
-    vec.into_iter().all(|i| i == 0)
+    let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
+    encoder.copy_texture_to_buffer(
+        texture_copy_view(&texture),
+        buffer_copy_view(&buffer),
+        extend3d(),
+    );
+    queue.submit(Some(encoder.finish()));
+    read_buffer(device, &buffer)
+}
+
+pub fn same_texture(handler: &DeviceHandler, texture0: &Texture, texture1: &Texture) -> bool {
+    let vec0 = read_texture(handler, texture0);
+    let vec1 = read_texture(handler, texture1);
+    vec0.into_iter()
+        .zip(vec1)
+        .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)
 }

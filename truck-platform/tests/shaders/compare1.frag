@@ -11,5 +11,5 @@ void main() {
         1.0 - uv.x,
         1.0
     );
-    if (length(st) < 0.01) color = vec4(1.0, 1.0, 1.0, 1.0);
+    if (length(st) < 0.1) color = vec4(1.0, 1.0, 1.0, 1.0);
 }

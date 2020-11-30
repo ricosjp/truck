@@ -20,14 +20,14 @@ impl Camera {
     }
 
     #[inline(always)]
-    pub fn perspective_camera(
+    pub fn perspective_camera<R: Into<Rad<f64>>>(
         matrix: Matrix4,
-        field_of_view: f64,
+        field_of_view: R,
         near_clip: f64,
         far_clip: f64,
     ) -> Camera
     {
-        let projection = crate::perspective(Rad(field_of_view), 1.0, near_clip, far_clip);
+        let projection = crate::perspective(field_of_view.into(), 1.0, near_clip, far_clip);
         Camera {
             matrix,
             projection,
@@ -75,6 +75,6 @@ impl Camera {
 impl Default for Camera {
     #[inline(always)]
     fn default() -> Camera {
-        Camera::perspective_camera(Matrix4::identity(), std::f64::consts::PI / 4.0, 0.1, 10.0)
+        Camera::perspective_camera(Matrix4::identity(), Rad(std::f64::consts::PI / 4.0), 0.1, 10.0)
     }
 }
