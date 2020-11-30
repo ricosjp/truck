@@ -6,7 +6,7 @@ test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
-        - cargo test
+        - /root/.cargo/bin/cargo
     except:
         - master
     tags:
