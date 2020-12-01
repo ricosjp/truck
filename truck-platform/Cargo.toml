@@ -14,4 +14,3 @@ truck-base = { path = "../truck-base" }
 [dev-dependencies]
 futures = "*"
 glsl-to-spirv = "*"
-image = "*"

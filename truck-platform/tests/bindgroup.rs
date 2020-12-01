@@ -21,7 +21,7 @@ fn bind_group_test() {
         0.1,
         10.0,
     );
-    println!("{:?}", camera.projection(1.0));
+    println!("camera projection matrix:\n{:?}", camera.projection(1.0));
     let lights = vec![
         Light {
             position: Point3::new(0.1, 0.2, 0.3),
