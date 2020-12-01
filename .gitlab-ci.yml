@@ -6,7 +6,7 @@ test:
     image: rust:latest
     stage: test
     script:
-        - /root/.cargo/bin/cargo test
+        - cargo test
     except:
         - master
     tags:
