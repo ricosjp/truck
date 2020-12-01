@@ -5,6 +5,13 @@ use truck_base::cgmath64::*;
 use truck_platform::*;
 use wgpu::*;
 
+fn render_plane(scene: &mut Scene, texture: &Texture, plane: &mut Plane) {
+    scene.add_object(plane);
+    scene.prepare_render();
+    scene.render_scene(&texture.create_view(&Default::default()));
+    scene.remove_object(plane);
+}
+
 #[test]
 fn bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
@@ -12,10 +19,14 @@ fn bind_group_test() {
     let sc_desc = common::swap_chain_descriptor();
     let texture0 = device.create_texture(&common::texture_descriptor(&sc_desc));
     let texture1 = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let texture2 = device.create_texture(&common::texture_descriptor(&sc_desc));
     let sc_desc = Arc::new(Mutex::new(sc_desc));
     let camera = Camera::perspective_camera(
-        Matrix4::new(
-            1.0, 2.1, 3.2, 4.3, 5.4, 6.5, 7.6, 8.7, 9.8, 10.9, 11.0, 12.0, 13.0, 14.0, 15.0, 16.23,
+        Matrix4::from_cols(
+            [1.0, 2.1, 3.2, 4.3].into(),
+            [5.4, 6.5, 7.6, 8.7].into(),
+            [9.8, 10.9, 11.0, 12.0].into(),
+            [13.0, 14.0, 15.0, 16.23].into(),
         ),
         Rad(std::f64::consts::PI / 4.0),
         0.1,
@@ -39,29 +50,14 @@ fn bind_group_test() {
         lights,
         ..Default::default()
     };
-
     let mut scene = Scene::new(&device, &queue, &sc_desc, &desc);
-    let mut plane = Plane {
-        vertex_shader: include_str!("shaders/bindgroup.vert"),
-        fragment_shader: include_str!("shaders/bindgroup.frag"),
-        id: Default::default(),
-    };
-    scene.add_object(&mut plane);
-    scene.prepare_render();
-    scene.render_scene(&texture0.create_view(&Default::default()));
-    scene.remove_object(&plane);
-    let mut plane = Plane {
-        vertex_shader: include_str!("shaders/plane.vert"),
-        fragment_shader: include_str!("shaders/unicolor.frag"),
-        id: Default::default(),
-    };
-    scene.add_object(&mut plane);
-    scene.prepare_render();
-    scene.render_scene(&texture1.create_view(&Default::default()));
-    scene.remove_object(&plane);
-    assert!(common::same_texture(
-        scene.device_handler(),
-        &texture0,
-        &texture1
-    ));
+    let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
+    render_plane(&mut scene, &texture0, &mut plane);
+    let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
+    render_plane(&mut scene, &texture1, &mut plane);
+    let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
+    render_plane(&mut scene, &texture2, &mut plane);
+    let handler = scene.device_handler();
+    assert!(common::same_texture(handler, &texture0, &texture1));
+    assert!(!common::same_texture(handler, &texture0, &texture2));
 }

@@ -8,13 +8,24 @@ pub const PICTURE_WIDTH: u32 = 256;
 pub const PICTURE_HEIGHT: u32 = 256;
 
 #[derive(Clone, Default, Debug)]
-pub struct Plane {
-    pub vertex_shader: &'static str,
-    pub fragment_shader: &'static str,
+pub struct Plane<'a> {
+    pub vertex_shader: &'a str,
+    pub fragment_shader: &'a str,
     pub id: RenderID,
 }
 
-impl Rendered for Plane {
+#[macro_export]
+macro_rules! new_plane {
+    ($vertex_shader: expr, $fragment_shader: expr) => {
+        Plane {
+            vertex_shader: include_str!($vertex_shader),
+            fragment_shader: include_str!($fragment_shader),
+            id: Default::default(),
+        }
+    };
+}
+
+impl<'a> Rendered for Plane<'a> {
     impl_get_set_id!(id);
     fn vertex_buffer(
         &self,
@@ -190,10 +201,9 @@ pub fn read_buffer(device: &Device, buffer: &Buffer) -> Vec<u8> {
     let buffer_future = buffer_slice.map_async(MapMode::Read);
     device.poll(Maintain::Wait);
     futures::executor::block_on(async {
-        if let Ok(()) = buffer_future.await {
-            buffer_slice.get_mapped_range().iter().map(|b| *b).collect()
-        } else {
-            panic!("failed to run compute on gpu!")
+        match buffer_future.await {
+            Ok(_) => buffer_slice.get_mapped_range().iter().map(|b| *b).collect(),
+            Err(_) => panic!("failed to run compute on gpu!"),
         }
     })
 }
