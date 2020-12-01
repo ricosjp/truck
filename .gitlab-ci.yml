@@ -3,13 +3,10 @@ stages:
     - pages
 
 test:
-    image: rust:latest
+    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
-    before_script:
-        - apt-get update -y
-        - apt-get install cmake -y
     script:
-        - cargo test
+        - /root/.cargo/bin/cargo test
     except:
         - master
     tags:
