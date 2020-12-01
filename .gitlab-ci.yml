@@ -5,6 +5,9 @@ stages:
 test:
     image: rust:latest
     stage: test
+    before_script:
+        - apt-get update -y
+        - apt-get install cmake -y
     script:
         - cargo test
     except:
