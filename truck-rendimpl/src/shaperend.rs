@@ -224,10 +224,7 @@ mod ficonfig {
 }
 
 impl<'a> Rendered for RenderFace<'a> {
-    #[inline(always)]
-    fn get_id(&self) -> RenderID { self.instance.id }
-    #[inline(always)]
-    fn set_id(&mut self, handler: &mut ObjectsHandler) { handler.set_id(&mut self.instance.id) }
+    impl_get_set_id!(instance.id);
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
