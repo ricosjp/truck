@@ -107,7 +107,7 @@ fn circle_arc_test0() {
         2.0 * random::<f64>() - 1.0,
     )
     .normalize();
-    let angle = Rad(random::<f64>() * 2.0 * PI);
+    let angle = Rad(random::<f64>() * 1.5 * PI);
     let pt0 = Point3::new(
         2.0 * random::<f64>() - 1.0,
         2.0 * random::<f64>() - 1.0,
@@ -140,7 +140,7 @@ fn circle_arc_test1() {
         2.0 * random::<f64>() - 1.0,
     );
     let axis = Vector3::unit_z();
-    let angle = Rad(random::<f64>() * 2.0 * PI);
+    let angle = Rad(random::<f64>() * 1.5 * PI);
     let pt0 = Point3::new(
         2.0 * random::<f64>() - 1.0,
         2.0 * random::<f64>() - 1.0,
