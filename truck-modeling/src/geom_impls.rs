@@ -55,7 +55,8 @@ pub(super) fn circle_arc(
     } else if axis[2] > 0.0 {
         Matrix4::from_translation(origin.to_vec())
     } else {
-        Matrix4::from_translation(origin.to_vec()) * Matrix4::from_axis_angle(Vector3::unit_y(), Rad(PI))
+        Matrix4::from_translation(origin.to_vec())
+            * Matrix4::from_axis_angle(Vector3::unit_y(), Rad(PI))
     };
     let trsf_inverse = axis_trsf.invert().unwrap();
     let rotation = Matrix4::from_angle_z(angle / 2.0);
@@ -67,7 +68,7 @@ pub(super) fn circle_arc(
     point1 = &axis_trsf * point1;
     let mut curve = BSplineCurve::new(
         KnotVec::bezier_knot(2),
-        vec![point.clone(), point1, rotation2 * pt]
+        vec![point.clone(), point1, rotation2 * pt],
     );
     curve.add_knot(0.25);
     curve.add_knot(0.5);
@@ -104,7 +105,8 @@ fn circle_arc_test0() {
         2.0 * random::<f64>() - 1.0,
         2.0 * random::<f64>() - 1.0,
         2.0 * random::<f64>() - 1.0,
-    ).normalize();
+    )
+    .normalize();
     let angle = Rad(random::<f64>() * 2.0 * PI);
     let pt0 = Point3::new(
         2.0 * random::<f64>() - 1.0,
@@ -112,14 +114,20 @@ fn circle_arc_test0() {
         2.0 * random::<f64>() - 1.0,
     );
     let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-    
     const N: usize = 100;
     let vec0 = pt0 - origin;
     for i in 0..=N {
         let t = i as f64 / N as f64;
         let pt = Point3::from_homogeneous(curve.subs(t));
         let vec = pt - origin;
-        assert!(Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)));
+        assert!(
+            Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
+            "origin: {:?}\naxis: {:?}\nangle: {:?}\npt0: {:?}",
+            origin,
+            axis,
+            angle,
+            pt0
+        );
     }
 }
 
@@ -139,14 +147,20 @@ fn circle_arc_test1() {
         2.0 * random::<f64>() - 1.0,
     );
     let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-    
     const N: usize = 100;
     let vec0 = pt0 - origin;
     for i in 0..=N {
         let t = i as f64 / N as f64;
         let pt = Point3::from_homogeneous(curve.subs(t));
         let vec = pt - origin;
-        Tolerance::assert_near2(&vec.dot(axis), &vec0.dot(axis));
+        assert!(
+            Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
+            "origin: {:?}\naxis: {:?}\nangle: {:?}\npt0: {:?}",
+            origin,
+            axis,
+            angle,
+            pt0
+        );
     }
 }
 
@@ -158,7 +172,6 @@ fn circle_arc_test2() {
     let angle = Rad(random::<f64>() * PI);
     let pt0 = Point3::new(1.4, 0.0, 0.0);
     let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-    
     const N: usize = 100;
     let vec0 = pt0 - origin;
     for i in 0..=N {
@@ -166,6 +179,6 @@ fn circle_arc_test2() {
         let pt = Point3::from_homogeneous(curve.subs(t));
         let vec = pt - origin;
         Tolerance::assert_near2(&vec.dot(axis), &vec0.dot(axis));
-        assert!(pt[1] >= 0.0);
+        assert!(pt[1] >= 0.0, "angle: {:?}", angle);
     }
 }
