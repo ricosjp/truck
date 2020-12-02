@@ -124,34 +124,83 @@ fn nontex_inst_desc() -> InstanceDescriptor {
     }
 }
 
-fn exec_bind_group_test(scene: &mut Scene, instance: &PolygonInstance, shader: &str) -> bool {
+fn nontex_answer_texture(scene: &mut Scene) -> Texture {
     let sc_desc = scene.sc_desc();
     let tex_desc = common::texture_descriptor(&sc_desc);
-    let texture0 = scene.device().create_texture(&tex_desc);
-    let texture1 = scene.device().create_texture(&tex_desc);
+    let texture = scene.device().create_texture(&tex_desc);
     let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
-    common::render_one(scene, &texture0, &mut plane);
+    common::render_one(scene, &texture, &mut plane);
+    texture
+}
+
+fn exec_bgtest(
+    scene: &mut Scene,
+    instance: &PolygonInstance,
+    shader: &str,
+    answer: &Texture,
+) -> bool
+{
+    let sc_desc = scene.sc_desc();
+    let tex_desc = common::texture_descriptor(&sc_desc);
+    let texture = scene.device().create_texture(&tex_desc);
     let mut bgc_instance = BGCheckPolygonInstance {
         polygon: instance.clone(),
         fragment_shader: shader,
     };
-    common::render_one(scene, &texture1, &mut bgc_instance);
-    common::same_texture(scene.device_handler(), &texture0, &texture1)
+    common::render_one(scene, &texture, &mut bgc_instance);
+    common::same_texture(scene.device_handler(), &answer, &texture)
 }
 
 #[test]
-fn polymesh_bind_group_test() {
+fn polymesh_nontex_bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
     let mut scene = Scene::new(&device, &queue, &sc_desc, &Default::default());
-    let polygons = test_polygons();
+    let answer = nontex_answer_texture(&mut scene);
     let inst_desc = nontex_inst_desc();
-    polygons.iter().for_each(move |polygon| {
+    test_polygons().iter().for_each(move |polygon| {
         let instance = scene.create_instance(polygon, &inst_desc);
         let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
-        assert!(exec_bind_group_test(&mut scene, &instance, shader));
+        assert!(exec_bgtest(&mut scene, &instance, shader, &answer));
         let shader = include_str!("shaders/anti-mesh-nontex-bindgroup.frag");
-        assert!(!exec_bind_group_test(&mut scene, &instance, shader));
+        assert!(!exec_bgtest(&mut scene, &instance, shader, &answer));
+    })
+}
+
+fn random_texture(scene: &mut Scene) -> Texture {
+    let sc_desc = scene.sc_desc();
+    let tex_desc = common::texture_descriptor(&sc_desc);
+    let texture = scene.device().create_texture(&tex_desc);
+    let mut plane = new_plane!("shaders/plane.vert", "shaders/random.frag");
+    common::render_one(scene, &texture, &mut plane);
+    texture
+}
+
+#[test]
+fn polymesh_tex_bind_group_test() {
+    let instance = Instance::new(BackendBit::PRIMARY);
+    let (device, queue) = common::init_device(&instance);
+    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
+    let mut scene = Scene::new(&device, &queue, &sc_desc, &Default::default());
+    let answer = random_texture(&mut scene);
+    let buffer = common::read_texture(scene.device_handler(), &answer);
+    image::save_buffer(
+        "random-texture.png",
+        &buffer,
+        common::PICTURE_WIDTH,
+        common::PICTURE_HEIGHT,
+        image::ColorType::Rgba8,
+    )
+    .unwrap();
+    let mut inst_desc = nontex_inst_desc();
+    let file = std::io::BufReader::new(std::fs::File::open("random-texture.png").unwrap());
+    inst_desc.texture = Some(Arc::new(image::load(file, image::ImageFormat::Png).unwrap()));
+    test_polygons().iter().for_each(move |polygon| {
+        let instance = scene.create_instance(polygon, &inst_desc);
+        let shader = include_str!("shaders/mesh-tex-bindgroup.frag");
+        assert!(exec_bgtest(&mut scene, &instance, shader, &answer));
+        let shader = include_str!("shaders/anti-mesh-tex-bindgroup.frag");
+        assert!(!exec_bgtest(&mut scene, &instance, shader, &answer));
     })
 }

@@ -247,7 +247,8 @@ pub fn same_texture(handler: &DeviceHandler, answer: &Texture, result: &Texture)
         PICTURE_WIDTH,
         PICTURE_HEIGHT,
         image::ColorType::Rgba8,
-    ).unwrap();
+    )
+    .unwrap();
     vec0.into_iter()
         .zip(vec1)
         .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)
