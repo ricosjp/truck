@@ -10,3 +10,8 @@ edition = "2018"
 wgpu = "*"
 bytemuck = "*"
 truck-base = { path = "../truck-base" }
+
+[dev-dependencies]
+image = "*"
+futures = "*"
+glsl-to-spirv = "*"

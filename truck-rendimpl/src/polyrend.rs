@@ -76,6 +76,7 @@ impl PolygonInstance {
             .pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
     }
 
+    #[inline(always)]
     fn non_textured_bdl(&self, device: &Device) -> BindGroupLayout {
         truck_platform::create_bind_group_layout(device, {
             &[
@@ -85,6 +86,7 @@ impl PolygonInstance {
         })
     }
 
+    #[inline(always)]
     fn textured_bdl(&self, device: &Device) -> BindGroupLayout {
         truck_platform::create_bind_group_layout(
             device,
@@ -97,6 +99,7 @@ impl PolygonInstance {
         )
     }
 
+    #[inline(always)]
     fn non_textured_bg(&self, device: &Device, layout: &BindGroupLayout) -> BindGroup {
         crate::create_bind_group(
             device,
@@ -107,6 +110,8 @@ impl PolygonInstance {
             ],
         )
     }
+    
+    #[inline(always)]
     fn textured_bg(&self, device: &Device, queue: &Queue, layout: &BindGroupLayout) -> BindGroup {
         let (view, sampler) = self.desc.textureview_and_sampler(device, queue);
         crate::create_bind_group(
@@ -119,6 +124,21 @@ impl PolygonInstance {
                 BindingResource::Sampler(&sampler),
             ],
         )
+    }
+    
+    #[inline(always)]
+    pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
+        include_spirv!("shaders/polygon.vert.spv")
+    }
+
+    #[inline(always)]
+    pub fn default_fragment_shader() -> ShaderModuleSource<'static> {
+        include_spirv!("shaders/polygon.frag.spv")
+    }
+
+    #[inline(always)]
+    pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
+        include_spirv!("shaders/textured-polygon.frag.spv")
     }
 }
 
@@ -156,7 +176,7 @@ impl Rendered for PolygonInstance {
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>
     {
-        let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
+        let vertex_shader = Self::default_vertex_shader();
         let fragment_shader = match self.desc.texture.is_some() {
             true => include_spirv!("shaders/textured-polygon.frag.spv"),
             false => include_spirv!("shaders/polygon.frag.spv"),

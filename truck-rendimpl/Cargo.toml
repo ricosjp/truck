@@ -18,5 +18,6 @@ glsl-to-spirv = "*"
 
 [dev-dependencies]
 winit = "*"
+glsl-to-spirv = "*"
 stringreader = "*"
 futures = "*"

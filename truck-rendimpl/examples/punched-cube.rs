@@ -22,7 +22,7 @@ impl MyApp {
         );
         Camera::perspective_camera(
             matrix.invert().unwrap(),
-            std::f64::consts::PI / 4.0,
+            Rad(std::f64::consts::PI / 4.0),
             0.1,
             40.0,
         )
@@ -165,7 +165,7 @@ impl App for MyApp {
                 *camera = match camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
                         camera.matrix,
-                        std::f64::consts::PI / 4.0,
+                        Rad(std::f64::consts::PI / 4.0),
                         0.1,
                         40.0,
                     ),

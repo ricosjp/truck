@@ -30,7 +30,7 @@ impl MyRender {
         );
         Camera::perspective_camera(
             mat.invert().unwrap(),
-            std::f64::consts::PI / 8.0,
+            Rad(std::f64::consts::PI / 8.0),
             0.1,
             200.0,
         )
