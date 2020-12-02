@@ -22,7 +22,7 @@ layout(location = 0) out vec4 color;
 void main() {
     if (distance(position, vec3(uv.x, 2.0, uv.y)) > EPS) {
         color = vec4(1.0, 0.0, 0.0, 1.0);
-    } else if (distance(noramal, vec3(uv.y, 0.2, uv.x)) > EPS) {
+    } else if (distance(normal, vec3(uv.y, 0.2, uv.x)) > EPS) {
         color = vec4(0.0, 1.0, 0.0, 1.0);
     } else if (input_matrix != uniform_matrix) {
         color = vec4(0.0, 0.0, 1.0, 1.0);
@@ -33,8 +33,8 @@ void main() {
     } else if (distance(uniform_matrix[2], vec4(9.0, 10.0, 11.0, 12.0)) > EPS) {
         color = vec4(0.0, 0.0, 1.0, 1.0);
     } else if (distance(uniform_matrix[3], vec4(13.0, 14.0, 15.0, 16.0)) > EPS) {
-        color = vec4(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(albedo, vec4(0.2, 0.3, 0.4, 1.0)) > EPS) {
+        color = vec4(0.0, 0.0, 1.0, 1.0); 
+    } else if (distance(albedo, vec4(0.2, 0.4, 0.6, 1.0)) > EPS) {
         color = vec4(1.0, 1.0, 0.0, 1.0);
     } else if (abs(roughness - 0.31415) > EPS) {
         color = vec4(1.0, 0.0, 1.0, 1.0);

@@ -56,8 +56,10 @@ impl<'a> Rendered for Plane<'a> {
     }
     fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
-        let vertex_module = read_shader(device, self.vertex_shader, ShaderType::Vertex);
-        let fragment_module = read_shader(device, self.fragment_shader, ShaderType::Fragment);
+        let vertex_spirv = compile_shader(self.vertex_shader, ShaderType::Vertex);
+        let vertex_module = device.create_shader_module(wgpu::util::make_spirv(&vertex_spirv));
+        let fragment_spirv = compile_shader(self.fragment_shader, ShaderType::Fragment);
+        let fragment_module = device.create_shader_module(wgpu::util::make_spirv(&fragment_spirv));
         Arc::new(
             handler
                 .device()
@@ -125,11 +127,11 @@ pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mu
     scene.remove_object(object);
 }
 
-pub fn read_shader(device: &Device, code: &str, shadertype: ShaderType) -> ShaderModule {
+pub fn compile_shader(code: &str, shadertype: ShaderType) -> Vec<u8> {
     let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();
     let mut compiled = Vec::new();
     spirv.read_to_end(&mut compiled).unwrap();
-    device.create_shader_module(wgpu::util::make_spirv(&compiled))
+    compiled
 }
 
 pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
@@ -159,7 +161,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
 pub fn swap_chain_descriptor() -> SwapChainDescriptor {
     SwapChainDescriptor {
         usage: TextureUsage::OUTPUT_ATTACHMENT,
-        format: TextureFormat::Bgra8UnormSrgb,
+        format: TextureFormat::Rgba8UnormSrgb,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,
         present_mode: PresentMode::Mailbox,

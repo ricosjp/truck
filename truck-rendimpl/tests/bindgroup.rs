@@ -1,4 +1,5 @@
 mod common;
+use glsl_to_spirv::ShaderType;
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -6,7 +7,7 @@ use wgpu::*;
 
 pub struct BGCheckPolygonInstance<'a> {
     polygon: PolygonInstance,
-    fragment_shader: &'a [u8],
+    fragment_shader: &'a str,
 }
 
 impl<'a> Rendered for BGCheckPolygonInstance<'a> {
@@ -44,10 +45,13 @@ impl<'a> Rendered for BGCheckPolygonInstance<'a> {
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>
     {
-        let vertex_shader = include_spirv!("shaders/mesh-bindgroup.vert");
-        let fragment_shader = wgpu::util::make_spirv(self.fragment_shader);
+        let vertex_shader = include_str!("shaders/mesh-bindgroup.vert");
+        let vertex_spirv = common::compile_shader(vertex_shader, ShaderType::Vertex);
+        let vertex_module = wgpu::util::make_spirv(&vertex_spirv);
+        let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
+        let fragment_module = wgpu::util::make_spirv(&fragment_spirv);
         self.polygon
-            .pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
+            .pipeline_with_shader(vertex_module, fragment_module, device_handler, layout)
     }
 }
 
@@ -66,8 +70,8 @@ fn test_polygons() -> [PolygonMesh; 3] {
     ];
     let normals = vec![
         Vector3::new(-1.0, 0.2, -1.0),
-        Vector3::new(1.0, 0.2, -1.0),
         Vector3::new(-1.0, 0.2, 1.0),
+        Vector3::new(1.0, 0.2, -1.0),
         Vector3::new(1.0, 0.2, 1.0),
     ];
     let tri_faces = vec![
@@ -120,18 +124,34 @@ fn nontex_inst_desc() -> InstanceDescriptor {
     }
 }
 
+fn exec_bind_group_test(scene: &mut Scene, instance: &PolygonInstance, shader: &str) -> bool {
+    let sc_desc = scene.sc_desc();
+    let tex_desc = common::texture_descriptor(&sc_desc);
+    let texture0 = scene.device().create_texture(&tex_desc);
+    let texture1 = scene.device().create_texture(&tex_desc);
+    let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
+    common::render_one(scene, &texture0, &mut plane);
+    let mut bgc_instance = BGCheckPolygonInstance {
+        polygon: instance.clone(),
+        fragment_shader: shader,
+    };
+    common::render_one(scene, &texture1, &mut bgc_instance);
+    common::same_texture(scene.device_handler(), &texture0, &texture1)
+}
+
 #[test]
 fn polymesh_bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
     let mut scene = Scene::new(&device, &queue, &sc_desc, &Default::default());
-
-    let plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
-    
-    let [tris, quads, others] = test_polygons();
+    let polygons = test_polygons();
     let inst_desc = nontex_inst_desc();
-    let tris_instance = scene.create_instance(&tris, &inst_desc);
-    let quads_instance = scene.create_instance(&quads, &inst_desc);
-    let others_instance = scene.create_instance(&others, &inst_desc);
+    polygons.iter().for_each(move |polygon| {
+        let instance = scene.create_instance(polygon, &inst_desc);
+        let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
+        assert!(exec_bind_group_test(&mut scene, &instance, shader));
+        let shader = include_str!("shaders/anti-mesh-nontex-bindgroup.frag");
+        assert!(!exec_bind_group_test(&mut scene, &instance, shader));
+    })
 }
