@@ -1,11 +1,13 @@
 mod common;
+use common::{PICTURE_HEIGHT, PICTURE_WIDTH};
 use glsl_to_spirv::ShaderType;
+use image::{ColorType, DynamicImage, ImageBuffer, Rgba};
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
 
-pub struct BGCheckPolygonInstance<'a> {
+struct BGCheckPolygonInstance<'a> {
     polygon: PolygonInstance,
     fragment_shader: &'a str,
 }
@@ -124,16 +126,7 @@ fn nontex_inst_desc() -> InstanceDescriptor {
     }
 }
 
-fn nontex_answer_texture(scene: &mut Scene) -> Texture {
-    let sc_desc = scene.sc_desc();
-    let tex_desc = common::texture_descriptor(&sc_desc);
-    let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
-    common::render_one(scene, &texture, &mut plane);
-    texture
-}
-
-fn exec_bgtest(
+fn exec_polygon_bgtest(
     scene: &mut Scene,
     instance: &PolygonInstance,
     shader: &str,
@@ -157,24 +150,15 @@ fn polymesh_nontex_bind_group_test() {
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
     let mut scene = Scene::new(&device, &queue, &sc_desc, &Default::default());
-    let answer = nontex_answer_texture(&mut scene);
+    let answer = common::nontex_answer_texture(&mut scene);
     let inst_desc = nontex_inst_desc();
     test_polygons().iter().for_each(move |polygon| {
         let instance = scene.create_instance(polygon, &inst_desc);
         let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
-        assert!(exec_bgtest(&mut scene, &instance, shader, &answer));
+        assert!(exec_polygon_bgtest(&mut scene, &instance, shader, &answer));
         let shader = include_str!("shaders/anti-mesh-nontex-bindgroup.frag");
-        assert!(!exec_bgtest(&mut scene, &instance, shader, &answer));
+        assert!(!exec_polygon_bgtest(&mut scene, &instance, shader, &answer));
     })
-}
-
-fn random_texture(scene: &mut Scene) -> Texture {
-    let sc_desc = scene.sc_desc();
-    let tex_desc = common::texture_descriptor(&sc_desc);
-    let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/random.frag");
-    common::render_one(scene, &texture, &mut plane);
-    texture
 }
 
 #[test]
@@ -183,24 +167,25 @@ fn polymesh_tex_bind_group_test() {
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
     let mut scene = Scene::new(&device, &queue, &sc_desc, &Default::default());
-    let answer = random_texture(&mut scene);
+    let answer = common::random_texture(&mut scene);
     let buffer = common::read_texture(scene.device_handler(), &answer);
     image::save_buffer(
         "random-texture.png",
         &buffer,
-        common::PICTURE_WIDTH,
-        common::PICTURE_HEIGHT,
-        image::ColorType::Rgba8,
+        PICTURE_WIDTH,
+        PICTURE_HEIGHT,
+        ColorType::Rgba8,
     )
     .unwrap();
     let mut inst_desc = nontex_inst_desc();
-    let file = std::io::BufReader::new(std::fs::File::open("random-texture.png").unwrap());
-    inst_desc.texture = Some(Arc::new(image::load(file, image::ImageFormat::Png).unwrap()));
+    let image_buffer =
+        ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_WIDTH, PICTURE_HEIGHT, buffer).unwrap();
+    inst_desc.texture = Some(Arc::new(DynamicImage::ImageRgba8(image_buffer)));
     test_polygons().iter().for_each(move |polygon| {
         let instance = scene.create_instance(polygon, &inst_desc);
         let shader = include_str!("shaders/mesh-tex-bindgroup.frag");
-        assert!(exec_bgtest(&mut scene, &instance, shader, &answer));
+        assert!(exec_polygon_bgtest(&mut scene, &instance, shader, &answer));
         let shader = include_str!("shaders/anti-mesh-tex-bindgroup.frag");
-        assert!(!exec_bgtest(&mut scene, &instance, shader, &answer));
+        assert!(!exec_polygon_bgtest(&mut scene, &instance, shader, &answer));
     })
 }

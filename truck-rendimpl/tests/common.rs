@@ -19,7 +19,7 @@ pub struct Plane<'a> {
 #[macro_export]
 macro_rules! new_plane {
     ($vertex_shader: expr, $fragment_shader: expr) => {
-        common::Plane {
+        Plane {
             vertex_shader: include_str!($vertex_shader),
             fragment_shader: include_str!($fragment_shader),
             id: Default::default(),
@@ -127,11 +127,36 @@ pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mu
     scene.remove_object(object);
 }
 
+pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a mut R>>(scene: &mut Scene, texture: &Texture, object: I) {
+    scene.add_objects(object);
+    scene.prepare_render();
+    scene.render_scene(&texture.create_view(&Default::default()));
+    scene.clear_objects();
+}
+
 pub fn compile_shader(code: &str, shadertype: ShaderType) -> Vec<u8> {
     let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();
     let mut compiled = Vec::new();
     spirv.read_to_end(&mut compiled).unwrap();
     compiled
+}
+
+pub fn nontex_answer_texture(scene: &mut Scene) -> Texture {
+    let sc_desc = scene.sc_desc();
+    let tex_desc = texture_descriptor(&sc_desc);
+    let texture = scene.device().create_texture(&tex_desc);
+    let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
+    render_one(scene, &texture, &mut plane);
+    texture
+}
+
+pub fn random_texture(scene: &mut Scene) -> Texture {
+    let sc_desc = scene.sc_desc();
+    let tex_desc = texture_descriptor(&sc_desc);
+    let texture = scene.device().create_texture(&tex_desc);
+    let mut plane = new_plane!("shaders/plane.vert", "shaders/random.frag");
+    render_one(scene, &texture, &mut plane);
+    texture
 }
 
 pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {

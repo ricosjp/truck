@@ -127,7 +127,7 @@ mod ficonfig {
     #[inline(always)]
     pub fn boundary_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            visibility: ShaderStage::FRAGMENT,
             ty: BindingType::StorageBuffer {
                 dynamic: false,
                 min_binding_size: None,
@@ -139,7 +139,7 @@ mod ficonfig {
     #[inline(always)]
     pub fn boundary_length_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            visibility: ShaderStage::FRAGMENT,
             ty: BindingType::UniformBuffer {
                 dynamic: false,
                 min_binding_size: None,
@@ -223,6 +223,21 @@ mod ficonfig {
     }
 }
 
+impl<'a> RenderFace<'a> {
+    #[inline(always)]
+    pub fn pipeline_with_shader(
+        &self,
+        vertex_shader: ShaderModuleSource,
+        fragment_shader: ShaderModuleSource,
+        device_handler: &DeviceHandler,
+        layout: &PipelineLayout,
+    ) -> Arc<RenderPipeline>
+    {
+        self.desc
+            .pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
+    }
+}
+
 impl<'a> Rendered for RenderFace<'a> {
     impl_get_set_id!(instance.id);
 
@@ -253,8 +268,7 @@ impl<'a> Rendered for RenderFace<'a> {
             true => include_spirv!("shaders/textured-face.frag.spv"),
             false => include_spirv!("shaders/face.frag.spv"),
         };
-        self.desc
-            .pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
+        self.pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
     }
 }
 
