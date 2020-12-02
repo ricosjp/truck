@@ -238,9 +238,16 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
     read_buffer(device, &buffer)
 }
 
-pub fn same_texture(handler: &DeviceHandler, texture0: &Texture, texture1: &Texture) -> bool {
-    let vec0 = read_texture(handler, texture0);
-    let vec1 = read_texture(handler, texture1);
+pub fn same_texture(handler: &DeviceHandler, answer: &Texture, result: &Texture) -> bool {
+    let vec0 = read_texture(handler, answer);
+    let vec1 = read_texture(handler, result);
+    image::save_buffer(
+        "result.png",
+        &vec1,
+        PICTURE_WIDTH,
+        PICTURE_HEIGHT,
+        image::ColorType::Rgba8,
+    ).unwrap();
     vec0.into_iter()
         .zip(vec1)
         .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)
