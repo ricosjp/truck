@@ -5,13 +5,6 @@ use truck_base::cgmath64::*;
 use truck_platform::*;
 use wgpu::*;
 
-fn render_plane(scene: &mut Scene, texture: &Texture, plane: &mut Plane) {
-    scene.add_object(plane);
-    scene.prepare_render();
-    scene.render_scene(&texture.create_view(&Default::default()));
-    scene.remove_object(plane);
-}
-
 #[test]
 fn bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
@@ -52,11 +45,11 @@ fn bind_group_test() {
     };
     let mut scene = Scene::new(&device, &queue, &sc_desc, &desc);
     let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
-    render_plane(&mut scene, &texture0, &mut plane);
+    render_one(&mut scene, &texture0, &mut plane);
     let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
-    render_plane(&mut scene, &texture1, &mut plane);
+    render_one(&mut scene, &texture1, &mut plane);
     let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
-    render_plane(&mut scene, &texture2, &mut plane);
+    render_one(&mut scene, &texture2, &mut plane);
     let handler = scene.device_handler();
     assert!(common::same_texture(handler, &texture0, &texture1));
     assert!(!common::same_texture(handler, &texture0, &texture2));

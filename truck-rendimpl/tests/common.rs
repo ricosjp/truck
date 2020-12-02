@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use glsl_to_spirv::ShaderType;
 use std::io::Read;
 use std::sync::Arc;
@@ -6,6 +8,122 @@ use wgpu::*;
 
 pub const PICTURE_WIDTH: u32 = 256;
 pub const PICTURE_HEIGHT: u32 = 256;
+
+#[derive(Clone, Default, Debug)]
+pub struct Plane<'a> {
+    pub vertex_shader: &'a str,
+    pub fragment_shader: &'a str,
+    pub id: RenderID,
+}
+
+#[macro_export]
+macro_rules! new_plane {
+    ($vertex_shader: expr, $fragment_shader: expr) => {
+        common::Plane {
+            vertex_shader: include_str!($vertex_shader),
+            fragment_shader: include_str!($fragment_shader),
+            id: Default::default(),
+        }
+    };
+}
+
+impl<'a> Rendered for Plane<'a> {
+    impl_get_set_id!(id);
+    fn vertex_buffer(
+        &self,
+        handler: &DeviceHandler,
+    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>)
+    {
+        let buffer = BufferHandler::from_slice(
+            &[0 as u32, 1, 2, 2, 1, 3],
+            handler.device(),
+            BufferUsage::VERTEX,
+        );
+        (Arc::new(buffer), None)
+    }
+    fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
+        Arc::new(truck_platform::create_bind_group_layout(
+            handler.device(),
+            &[],
+        ))
+    }
+    fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
+        Arc::new(handler.device().create_bind_group(&BindGroupDescriptor {
+            label: None,
+            layout,
+            entries: &[],
+        }))
+    }
+    fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
+        let (device, sc_desc) = (handler.device(), handler.sc_desc());
+        let vertex_module = read_shader(device, self.vertex_shader, ShaderType::Vertex);
+        let fragment_module = read_shader(device, self.fragment_shader, ShaderType::Fragment);
+        Arc::new(
+            handler
+                .device()
+                .create_render_pipeline(&RenderPipelineDescriptor {
+                    layout: Some(layout),
+                    vertex_stage: ProgrammableStageDescriptor {
+                        module: &vertex_module,
+                        entry_point: "main",
+                    },
+                    fragment_stage: Some(ProgrammableStageDescriptor {
+                        module: &fragment_module,
+                        entry_point: "main",
+                    }),
+                    rasterization_state: Some(RasterizationStateDescriptor {
+                        front_face: FrontFace::Ccw,
+                        cull_mode: CullMode::None,
+                        depth_bias: 0,
+                        depth_bias_slope_scale: 0.0,
+                        depth_bias_clamp: 0.0,
+                        clamp_depth: false,
+                    }),
+                    primitive_topology: PrimitiveTopology::TriangleList,
+                    color_states: &[ColorStateDescriptor {
+                        format: sc_desc.format,
+                        color_blend: BlendDescriptor::REPLACE,
+                        alpha_blend: BlendDescriptor::REPLACE,
+                        write_mask: ColorWrite::ALL,
+                    }],
+                    depth_stencil_state: Some(DepthStencilStateDescriptor {
+                        format: TextureFormat::Depth32Float,
+                        depth_write_enabled: true,
+                        depth_compare: wgpu::CompareFunction::Less,
+                        stencil: StencilStateDescriptor {
+                            front: StencilStateFaceDescriptor::IGNORE,
+                            back: StencilStateFaceDescriptor::IGNORE,
+                            read_mask: 0,
+                            write_mask: 0,
+                        },
+                    }),
+                    vertex_state: VertexStateDescriptor {
+                        index_format: IndexFormat::Uint32,
+                        vertex_buffers: &[VertexBufferDescriptor {
+                            stride: std::mem::size_of::<u32>() as BufferAddress,
+                            step_mode: InputStepMode::Vertex,
+                            attributes: &[VertexAttributeDescriptor {
+                                format: VertexFormat::Uint,
+                                offset: 0,
+                                shader_location: 0,
+                            }],
+                        }],
+                    },
+                    sample_count: 1,
+                    sample_mask: !0,
+                    alpha_to_coverage_enabled: false,
+                    label: None,
+                }),
+        )
+    }
+}
+
+pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mut R) {
+    scene.add_object(object);
+    scene.prepare_render();
+    scene.render_scene(&texture.create_view(&Default::default()));
+    scene.remove_object(object);
+}
 
 pub fn read_shader(device: &Device, code: &str, shadertype: ShaderType) -> ShaderModule {
     let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();

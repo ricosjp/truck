@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use glsl_to_spirv::ShaderType;
 use std::io::Read;
 use std::sync::Arc;
@@ -114,6 +116,13 @@ impl<'a> Rendered for Plane<'a> {
                 }),
         )
     }
+}
+
+pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mut R) {
+    scene.add_object(object);
+    scene.prepare_render();
+    scene.render_scene(&texture.create_view(&Default::default()));
+    scene.remove_object(object);
 }
 
 pub fn read_shader(device: &Device, code: &str, shadertype: ShaderType) -> ShaderModule {
