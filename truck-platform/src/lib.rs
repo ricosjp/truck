@@ -36,12 +36,15 @@ struct SceneInfo {
 unsafe impl Zeroable for SceneInfo {}
 unsafe impl Pod for SceneInfo {}
 
+/// safe handler of GPU buffer
+/// [`Buffer`](../wgpu/struct.Buffer.html)
 #[derive(Debug)]
 pub struct BufferHandler {
     buffer: Buffer,
     size: u64,
 }
 
+/// Utility for [`BindGroupLayoutEntry`](../wgpu/struct.BindGroupLayoutEntry.html)
 #[derive(Debug)]
 pub struct PreBindGroupLayoutEntry {
     pub visibility: ShaderStage,
@@ -49,6 +52,8 @@ pub struct PreBindGroupLayoutEntry {
     pub count: Option<core::num::NonZeroU32>,
 }
 
+#[doc(hidden)]
+/// A collection of GPU buffers used by [`wgpu`](../wgpu/index.html) for rendering
 #[derive(Debug, Clone)]
 pub struct RenderObject {
     vertex_buffer: Arc<BufferHandler>,
@@ -58,7 +63,7 @@ pub struct RenderObject {
     bind_group: Arc<BindGroup>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProjectionType {
     Perspective,
     Parallel,
