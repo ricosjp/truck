@@ -31,6 +31,7 @@ layout(set = 1, binding = 1) uniform Material {
     vec4 default_albedo;
     float roughness;
     float reflectance;
+    float ambient_ratio;
 };
 
 layout(set = 1, binding = 2) uniform texture2D texture_view;
@@ -141,7 +142,8 @@ void main() {
         vec3 irradiance = light_irradiance(light_dir, light_color);
         vec3 diffuse = diffuse_brdf();
         vec3 specular = specular_brdf(camera_dir, light_dir);
-        pre_color += (diffuse + specular) * irradiance * 0.98 + albedo.xyz * 0.02;
+        pre_color += (diffuse + specular) * irradiance;
     }
+    pre_color = pre_color * (1.0 - ambient_ratio) + albedo.xyz * ambient_ratio;
     color = vec4(pre_color, 1.0);
 }

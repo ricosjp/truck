@@ -60,6 +60,7 @@ impl App for MyApp {
                 albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
                 roughness: 0.9,
                 reflectance: 0.04,
+                ambient_ratio: 0.05,
             },
             texture: Some(std::sync::Arc::new(texture)),
             backface_culling: true,

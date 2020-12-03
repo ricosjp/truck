@@ -115,6 +115,7 @@ fn nontex_inst_desc() -> InstanceDescriptor {
             albedo: Vector4::new(0.2, 0.4, 0.6, 1.0),
             roughness: 0.31415,
             reflectance: 0.29613,
+            ambient_ratio: 0.92,
         },
         texture: None,
         backface_culling: true,

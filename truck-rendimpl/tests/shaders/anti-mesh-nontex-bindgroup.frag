@@ -10,6 +10,7 @@ layout(set = 1, binding = 1) uniform Material {
     vec4 albedo;
     float roughness;
     float reflectance;
+    float ambient_ratio;
 };
 
 layout(location = 0) in vec3 position;
@@ -40,6 +41,8 @@ void main() {
         color = vec4(1.0, 0.0, 1.0, 1.0);
     } else if (abs(reflectance - 0.29613) > EPS) {
         color = vec4(0.0, 1.0, 1.0, 1.0);
+    } else if (abs(ambient_ratio - 0.92) > EPS) {
+        color = vec4(0.25, 0.25, 0.25, 1.0);
     } else {
         color = vec4(0.2, 0.4, 0.6, 0.8);
     }

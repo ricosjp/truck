@@ -16,6 +16,7 @@ pub struct Material {
     pub albedo: Vector4,
     pub roughness: f64,
     pub reflectance: f64,
+    pub ambient_ratio: f64,
 }
 
 #[derive(Clone)]

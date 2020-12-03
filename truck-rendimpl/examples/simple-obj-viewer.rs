@@ -58,6 +58,7 @@ impl MyApp {
                 albedo: Vector4::new(0.75, 0.75, 0.75, 1.0),
                 reflectance: 0.9,
                 roughness: 0.1,
+                ambient_ratio: 0.02,
             },
             ..Default::default()
         };
