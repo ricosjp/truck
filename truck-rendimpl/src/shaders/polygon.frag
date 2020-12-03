@@ -1,3 +1,6 @@
+// The rendering is based on the microfacet theory.
+// cf: https://qiita.com/mebiusbox2/items/e7063c5dfe1424e0d01a
+
 #version 450
 
 layout(location = 0) in vec3 vertex_position;
