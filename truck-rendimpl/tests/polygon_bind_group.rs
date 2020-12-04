@@ -13,33 +13,10 @@ struct BGCheckPolygonInstance<'a> {
 }
 
 impl<'a> Rendered for BGCheckPolygonInstance<'a> {
-    #[inline(always)]
-    fn get_id(&self) -> RenderID { self.polygon.get_id() }
-    #[inline(always)]
-    fn set_id(&mut self, object_handler: &mut ObjectsHandler) {
-        self.polygon.set_id(object_handler)
-    }
-    #[inline(always)]
-    fn vertex_buffer(
-        &self,
-        device_handler: &DeviceHandler,
-    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>)
-    {
-        self.polygon.vertex_buffer(device_handler)
-    }
-    #[inline(always)]
-    fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout> {
-        self.polygon.bind_group_layout(device_handler)
-    }
-    #[inline(always)]
-    fn bind_group(
-        &self,
-        device_handler: &DeviceHandler,
-        layout: &BindGroupLayout,
-    ) -> Arc<BindGroup>
-    {
-        self.polygon.bind_group(device_handler, layout)
-    }
+    derive_get_set_id!(polygon);
+    derive_vertex_buffer!(polygon);
+    derive_bind_group_layout!(polygon);
+    derive_bind_group!(polygon);
     #[inline(always)]
     fn pipeline(
         &self,

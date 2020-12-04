@@ -123,18 +123,6 @@ pub struct Scene {
     scene_desc: SceneDescriptor,
 }
 
-#[macro_export]
-macro_rules! impl_get_set_id {
-    ($($id_member: ident).*) => {
-        #[inline(always)]
-        fn get_id(&self) -> RenderID { self.$($id_member).* }
-        #[inline(always)]
-        fn set_id(&mut self, objects_handler: &mut ObjectsHandler) {
-            objects_handler.set_id(&mut self.$($id_member).*)
-        }
-    };
-}
-
 pub trait Rendered {
     fn get_id(&self) -> RenderID;
     fn set_id(&mut self, objects_handler: &mut ObjectsHandler);
@@ -179,6 +167,7 @@ pub mod buffer_handler;
 pub mod camera;
 pub mod light;
 pub mod scene;
+pub mod rendered_macros;
 
 pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     device: &Device,

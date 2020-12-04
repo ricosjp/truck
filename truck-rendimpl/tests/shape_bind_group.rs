@@ -34,31 +34,10 @@ impl<'a> BGCheckShapeInstance<'a> {
 }
 
 impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
-    #[inline(always)]
-    fn get_id(&self) -> RenderID { self.face.get_id() }
-    #[inline(always)]
-    fn set_id(&mut self, object_handler: &mut ObjectsHandler) { self.face.set_id(object_handler) }
-    #[inline(always)]
-    fn vertex_buffer(
-        &self,
-        device_handler: &DeviceHandler,
-    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>)
-    {
-        self.face.vertex_buffer(device_handler)
-    }
-    #[inline(always)]
-    fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout> {
-        self.face.bind_group_layout(device_handler)
-    }
-    #[inline(always)]
-    fn bind_group(
-        &self,
-        device_handler: &DeviceHandler,
-        layout: &BindGroupLayout,
-    ) -> Arc<BindGroup>
-    {
-        self.face.bind_group(device_handler, layout)
-    }
+    derive_get_set_id!(face);
+    derive_vertex_buffer!(face);
+    derive_bind_group_layout!(face);
+    derive_bind_group!(face);
     #[inline(always)]
     fn pipeline(
         &self,
