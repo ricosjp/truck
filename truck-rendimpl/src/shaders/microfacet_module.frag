@@ -1,8 +1,6 @@
 // Based on the microfacet theory
 // cf: https://qiita.com/mebiusbox2/items/e7063c5dfe1424e0d01a
 
-#version 450
-
 struct Light {
     vec4 position;
     vec4 color;
