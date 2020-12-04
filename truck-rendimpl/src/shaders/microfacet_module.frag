@@ -50,7 +50,7 @@ float geometric_decay(vec3 light_dir, vec3 camera_dir, vec3 normal, float alpha)
     return schlick_approxy(light_dir, normal, k) * schlick_approxy(camera_dir, normal, k);
 }
 
-float fresnel(float f0, vec3 middle, vec3 camera_dir) {
+vec3 fresnel(vec3 f0, vec3 middle, vec3 camera_dir) {
     return f0 + (1.0 - f0) * pow(1.0 - clamp(dot(middle, camera_dir), 0.0, 1.0), 5);
 }
 
@@ -60,11 +60,7 @@ vec3 specular_brdf(Material material, vec3 camera_dir, vec3 light_dir, vec3 norm
     float alpha = material.roughness * material.roughness;
     float distribution = microfacet_distribution(middle, normal, alpha);
     float decay = geometric_decay(light_dir, camera_dir, normal, alpha);
-    vec3 fresnel_color = vec3(
-        fresnel(specular_color[0], middle, camera_dir),
-        fresnel(specular_color[1], middle, camera_dir),
-        fresnel(specular_color[2], middle, camera_dir)
-    );
+    vec3 fresnel_color = fresnel(specular_color, middle, camera_dir);
     float dotCN = clamp(dot(camera_dir, normal), 0.0, 1.0);
     float dotLN = clamp(dot(light_dir, normal), 0.0, 1.0);
     float denom = 4.0 * dotCN * dotLN;

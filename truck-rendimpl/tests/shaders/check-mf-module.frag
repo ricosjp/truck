@@ -64,10 +64,39 @@ bool diffuse_brdf_test() {
 bool microfacet_distribution_test() {
     vec3 middle = vec3(0.5, 0.0, sqrt(3.0) / 2.0);
     vec3 normal = vec3(0.0, 0.0, 1.0);
-    vec3 alpha = 0.25;
+    float alpha = 0.25;
     float result = microfacet_distribution(middle, normal, alpha);
     float answer = pow(16.0 / 19.0, 2.0);
     return abs(result - answer) < EPS;
+}
+
+bool schlick_approxy_test() {
+    vec3 v = vec3(0.5, 0.0, sqrt(3.0) / 2.0);
+    vec3 normal = vec3(0.0, 0.0, 1.0);
+    float k = 0.25;
+    float result = schlick_approxy(v, normal, k);
+    float answer = 12.0 / (9.0 + 2.0 * sqrt(3.0));
+    return abs(result - answer) < EPS;
+}
+
+bool geometric_decay_test() {
+    vec3 light_dir = normalize(vec3(-1.0, 0.0, 1.0));
+    vec3 camera_dir = normalize(vec3(1.0, 0.0, 1.0));
+    vec3 normal = vec3(0.0, 0.0, 1.0);
+    float alpha = 0.25;
+    float result = geometric_decay(light_dir, camera_dir, normal, alpha);
+    float answer = 64.0 / (51.0 + 14.0 * sqrt(2.0));
+    return abs(result - answer) < EPS;
+}
+
+bool fresnel_test() {
+    vec3 middle = vec3(0.0, 0.0, 1.0);
+    vec3 camera_dir = vec3(1.0, 1.0, 1.0) / sqrt(3.0);
+    vec3 f0 = vec3(0.1, 0.2, 0.3);
+    vec3 result = fresnel(f0, middle, camera_dir);
+    float c = (44.0 * sqrt(3.0) - 76.0) / (9.0 * sqrt(3.0));
+    vec3 answer = f0 + (1.0 - f0) * c;
+    return distance(result, answer) < EPS;
 }
 
 void main() {
@@ -79,6 +108,12 @@ void main() {
         color = vec4(0.0, 0.0, 1.0, 1.0);
     } else if (!microfacet_distribution_test()) {
         color = vec4(1.0, 1.0, 0.0, 1.0);
+    } else if (!schlick_approxy_test()) {
+        color = vec4(1.0, 0.0, 1.0, 1.0);
+    } else if (!geometric_decay_test()) {
+        color = vec4(0.0, 1.0, 1.0, 1.0);
+    } else if (!fresnel_test()) {
+        color = vec4(0.25, 0.25, 0.25, 1.0);
     } else {
         color = vec4(0.2, 0.4, 0.6, 0.8);
     }
