@@ -14,15 +14,17 @@ struct Material {
     float ambient_ratio;
 };
 
+// light direction from point to light
 vec3 light_direction(Light light, vec3 position) {
-    if (light.light_type[0] == 0) {
+    switch(light.light_type[0]) {
+    case 0:
         return normalize(light.position.xyz - position);
-    } else {
+    default:
         return light.position.xyz;
     }
 }
 
-vec3 light_irradiance(Light light, vec3 position, vec3 normal) {
+vec3 irradiance(Light light, vec3 position, vec3 normal) {
     vec3 light_dir = light_direction(light, position);
     return light.color.xyz * clamp(dot(light_dir, normal), 0.0, 1.0);
 }
@@ -32,9 +34,9 @@ vec3 diffuse_brdf(Material material) {
 }
 
 float microfacet_distribution(vec3 middle, vec3 normal, float alpha) {
-    float dotNH = clamp(dot(normal, middle), 0.0, 1.0);
+    float dotNH = dot(normal, middle);
     float alpha2 = alpha * alpha;
-    float sqrt_denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
+    float sqrt_denom = 1.0 + dotNH * dotNH * (alpha2 - 1.0);
     return alpha2 / (sqrt_denom * sqrt_denom);
 }
 
@@ -74,7 +76,7 @@ vec3 specular_brdf(Material material, vec3 camera_dir, vec3 light_dir, vec3 norm
 
 vec3 microfacet_color(vec3 position, vec3 normal, Light light, vec3 camera_dir, Material material) {
     vec3 light_dir = light_direction(light, position);
-    vec3 irradiance = light_irradiance(light, position, normal);
+    vec3 irradiance = irradiance(light, position, normal);
     vec3 diffuse = diffuse_brdf(material);
     vec3 specular = specular_brdf(material, camera_dir, light_dir, normal);
     return (diffuse + specular) * irradiance;
