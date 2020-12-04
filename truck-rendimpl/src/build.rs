@@ -6,13 +6,12 @@ fn resolve_include<S: AsRef<str>>(code: S) -> String {
     let mut res = String::new();
     for line in code.as_ref().split("\n") {
         let words: Vec<_> = line.split_whitespace().collect();
-        if words.is_empty() {
-            res += "\n";
-            continue;
-        }
-        match words[0] == "#include" {
-            true => res += &std::fs::read_to_string(words[1].trim_matches('\"')).unwrap(),
-            false => res += &line,
+        if !words.is_empty() {
+            if words[0] == "#include" {
+                res += &std::fs::read_to_string(words[1].trim_matches('\"')).unwrap();
+            } else {
+                res += &line;
+            }
         }
         res += "\n";
     }
