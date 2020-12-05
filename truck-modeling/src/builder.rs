@@ -1,7 +1,7 @@
 use crate::*;
 use mapped::Mapped;
 use sweep::Sweep;
-use closed_sweep::CompleteRSweep;
+use complete_rsweep::CompleteRSweep;
 
 /// Creates and returns a vertex by a three dimensional point.
 #[inline(always)]
@@ -125,6 +125,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// #
 /// # let b_shell = &cube.boundaries()[0];
 /// # assert_eq!(b_shell.len(), 6); // This solid is a cube!
+/// # assert!(cube.is_geometric_consistent());
 /// #
 /// # let b_loop = &b_shell[0].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
@@ -136,10 +137,10 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// #
 /// # let b_loop = &b_shell[3].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 0.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 0.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 0.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// #
 /// # let b_loop = &b_shell[5].boundaries()[0];
@@ -204,6 +205,7 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 /// pipe.append(&mut second_line_part);
 ///
 /// assert_eq!(pipe.shell_condition(), ShellCondition::Oriented);
+/// # assert!(pipe.is_geometric_consistent());
 /// # const N: usize = 100;
 /// # for i in 0..=N {
 /// #    for j in 0..=N {
@@ -267,6 +269,7 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
 /// let torus: Shell = builder::rsweep(&circle, Point3::origin(), Vector3::unit_y());
 /// let solid: Solid = Solid::new(vec![torus]);
 /// #
+/// # assert!(solid.is_geometric_consistent());
 /// # const N: usize = 100;
 /// # let shell = &solid.boundaries()[0];
 /// # for face in shell.iter() {
