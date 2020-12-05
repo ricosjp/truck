@@ -290,7 +290,7 @@ impl<P, C, S> Sweep<P, C, S> for Shell<P, C, S> {
         connect_curves: &CC,
     ) -> Self::Sweeped
     {
-        self.connected_components().into_iter().map(|shell| {
+        self.connected_components().into_iter().map(move|shell| {
             let mut bdry = Shell::new();
             let mut seiling = shell.mapped(point_mapping, curve_mapping, surface_mapping);
             bdry.extend(shell.face_iter().map(|face| face.inverse()));
