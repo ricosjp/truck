@@ -36,12 +36,12 @@ vec3 diffuse_brdf(Material material) {
 float microfacet_distribution(vec3 middle, vec3 normal, float alpha) {
     float dotNH = dot(normal, middle);
     float alpha2 = alpha * alpha;
-    float sqrt_denom = 1.0 + dotNH * dotNH * (alpha2 - 1.0);
+    float sqrt_denom = 1.0 - dotNH * dotNH * (1.0 - alpha2);
     return alpha2 / (sqrt_denom * sqrt_denom);
 }
 
 float schlick_approxy(vec3 vec, vec3 normal, float k) {
-    float dotNV = clamp(dot(normal, vec), 0.0, 1.0);
+    float dotNV = dot(normal, vec);
     return dotNV / (dotNV * (1.0 - k) + k);
 }
 
@@ -51,12 +51,14 @@ float geometric_decay(vec3 light_dir, vec3 camera_dir, vec3 normal, float alpha)
 }
 
 vec3 fresnel(vec3 f0, vec3 middle, vec3 camera_dir) {
-    return f0 + (1.0 - f0) * pow(1.0 - clamp(dot(middle, camera_dir), 0.0, 1.0), 5);
+    float c = 1.0 - dot(middle, camera_dir);
+    c = c * c * c * c * c;
+    return f0 + (1.0 - f0) * c;
 }
 
 vec3 specular_brdf(Material material, vec3 camera_dir, vec3 light_dir, vec3 normal) {
     vec3 specular_color = material.albedo.xyz * material.reflectance;
-    vec3 middle = normalize((camera_dir + light_dir) / 2.0);
+    vec3 middle = normalize(camera_dir + light_dir);
     float alpha = material.roughness * material.roughness;
     float distribution = microfacet_distribution(middle, normal, alpha);
     float decay = geometric_decay(light_dir, camera_dir, normal, alpha);
@@ -64,7 +66,7 @@ vec3 specular_brdf(Material material, vec3 camera_dir, vec3 light_dir, vec3 norm
     float dotCN = clamp(dot(camera_dir, normal), 0.0, 1.0);
     float dotLN = clamp(dot(light_dir, normal), 0.0, 1.0);
     float denom = 4.0 * dotCN * dotLN;
-    if (denom == 0.0) {
+    if (abs(denom) < 1.0e-6) {
         return vec3(0.0, 0.0, 0.0);
     }
     return distribution * decay / denom * fresnel_color;

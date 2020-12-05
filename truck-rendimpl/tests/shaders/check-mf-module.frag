@@ -99,6 +99,22 @@ bool fresnel_test() {
     return distance(result, answer) < EPS;
 }
 
+bool specular_brdf_test() {
+    Material material;
+    material.albedo = vec4(0.01, 0.1, 1.0, 1.0);
+    material.roughness = 0.5;
+    material.reflectance = 0.5;
+    vec3 camera_dir = vec3(1.0, 0.0, 1.0) / sqrt(2.0);
+    vec3 light_dir = vec3(-1.0, 0.0, 1.0) / sqrt(2.0);
+    vec3 normal = vec3(0.0, 0.0, 1.0);
+    vec3 result = specular_brdf(material, camera_dir, light_dir, normal);
+    float a = 64.0 / (51.0 + 14.0 * sqrt(2.0));
+    float b = 41.0 * sqrt(2.0) - 50.0;
+    float c = 58.0 - 41.0 * sqrt(2.0);
+    vec3 answer = a * (vec3(0.005, 0.05, 0.5) * b + c);
+    return distance(result, answer) < EPS;
+}
+
 void main() {
     if (!light_direction_test()) {
         color = vec4(1.0, 0.0, 0.0, 1.0);
@@ -114,6 +130,8 @@ void main() {
         color = vec4(0.0, 1.0, 1.0, 1.0);
     } else if (!fresnel_test()) {
         color = vec4(0.25, 0.25, 0.25, 1.0);
+    } else if (!specular_brdf_test()) {
+        color = vec4(0.5, 0.5, 0.5, 1.0);
     } else {
         color = vec4(0.2, 0.4, 0.6, 0.8);
     }

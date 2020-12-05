@@ -59,6 +59,7 @@ void main() {
     for (uint i = 0; i < nlights; i++) {
         pre_color += microfacet_color(position, normal, lights[i], camera_dir, material);
     }
+    pre_color = clamp(pre_color, 0.0, 1.0);
     pre_color = ambient_correction(pre_color, material);
     color = vec4(pre_color, 1.0);
 }
