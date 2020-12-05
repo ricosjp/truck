@@ -1,9 +1,6 @@
 use crate::*;
 
 /// Creates and returns a vertex by a three dimensional point.
-/// # Remarks
-/// **This remark is for the developer.**  
-/// The vertex created by this method is not `Vertex<Point3>` but `Vertex<Vector4>`.
 #[inline(always)]
 pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
 
