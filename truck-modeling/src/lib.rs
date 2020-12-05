@@ -47,6 +47,5 @@ pub mod builder;
 pub mod mapped;
 pub mod sweep;
 pub mod closed_sweep;
-pub mod complete_rsweep;
 mod geom_impls;
 mod topo_impls;

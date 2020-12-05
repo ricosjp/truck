@@ -1,7 +1,8 @@
 use crate::*;
+use closed_sweep::ClosedSweep;
 use mapped::Mapped;
 use sweep::Sweep;
-use complete_rsweep::CompleteRSweep;
+const PI: Rad<f64> = Rad(std::f64::consts::PI);
 
 /// Creates and returns a vertex by a three dimensional point.
 #[inline(always)]
@@ -288,11 +289,36 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
 /// #    }
 /// # }
 /// ```
-pub fn rsweep<T: CompleteRSweep>(
+pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-) -> T::RSweeped
+) -> T::ClosedSweeped
 {
-    elem.rsweep(origin, axis)
+    let mat0 = Matrix4::from_translation(-origin.to_vec());
+    let mat1 = Matrix4::from_axis_angle(axis, PI);
+    let mat2 = Matrix4::from_translation(origin.to_vec());
+    let trsl = mat2 * mat1 * mat0;
+    elem.closed_sweep(
+        &move |pt| trsl.transform_point(*pt),
+        &move |curve| NURBSCurve::new(trsl * curve.non_rationalized()),
+        &move |surface| NURBSSurface::new(trsl * surface.non_rationalized()),
+        &move |pt, _| {
+            NURBSCurve::new(geom_impls::circle_arc(
+                pt.to_homogeneous(),
+                origin,
+                axis,
+                PI,
+            ))
+        },
+        &move |curve, _| {
+            NURBSSurface::new(geom_impls::rsweep_surface(
+                curve.non_rationalized(),
+                origin,
+                axis,
+                PI,
+            ))
+        },
+        2,
+    )
 }
