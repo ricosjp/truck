@@ -48,7 +48,7 @@ pub(super) fn circle_arc(
     let tmp = Point3::from_homogeneous(point);
     let origin = origin + (axis.dot(tmp - origin)) * axis;
     let axis_trsf = if !Tolerance::near(&(axis[2] * axis[2]), &1.0) {
-        let axis_angle = cgmath::Rad(axis[2].acos());
+        let axis_angle = Rad(axis[2].acos());
         let mut axis_axis = Vector3::new(-axis[1], axis[0], 0.0);
         axis_axis /= axis_axis.magnitude();
         Matrix4::from_translation(origin.to_vec()) * Matrix4::from_axis_angle(axis_axis, axis_angle)
