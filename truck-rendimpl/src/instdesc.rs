@@ -7,6 +7,7 @@ impl Default for Material {
             albedo: Vector4::new(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0),
             roughness: 0.5,
             reflectance: 0.5,
+            ambient_ratio: 0.02,
         }
     }
 }
@@ -14,13 +15,14 @@ impl Default for Material {
 impl Material {
     #[inline(always)]
     pub fn buffer(&self, device: &Device) -> BufferHandler {
-        let material_data: [f32; 6] = [
+        let material_data: [f32; 7] = [
             self.albedo[0] as f32,
             self.albedo[1] as f32,
             self.albedo[2] as f32,
             self.albedo[3] as f32,
             self.roughness as f32,
             self.reflectance as f32,
+            self.ambient_ratio as f32,
         ];
         BufferHandler::from_slice(&material_data, device, BufferUsage::UNIFORM)
     }

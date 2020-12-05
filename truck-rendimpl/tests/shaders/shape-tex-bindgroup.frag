@@ -10,6 +10,7 @@ layout(set = 1, binding = 1) uniform Material {
     vec4 albedo;
     float roughness;
     float reflectance;
+    float ambient_ratio;
 };
 
 layout(set = 1, binding = 2) uniform texture2D texture_view;
@@ -68,16 +69,18 @@ void main() {
         color = vec4(1.0, 0.0, 1.0, 1.0);
     } else if (abs(reflectance - 0.29613) > EPS) {
         color = vec4(0.0, 1.0, 1.0, 1.0);
+    } else if (abs(ambient_ratio - 0.92) > EPS) {
+        color = vec4(0.25, 0.25, 0.25, 1.0);
     } else if (boundary_length != 4) {
-        color = vec4(1.0, 1.0, 1.0, 1.0);
+        color = vec4(0.5, 0.5, 0.5, 1.0);
     } else if (distance(boundary[0], vec4(0.0, 0.0, 1.0, 0.0)) > EPS) {
-        color = vec4(0.5, 0.5, 0.5, 1.0);
+        color = vec4(0.75, 0.75, 0.75, 1.0);
     } else if (distance(boundary[1], vec4(1.0, 0.0, 1.0, 1.0)) > EPS) {
-        color = vec4(0.5, 0.5, 0.5, 1.0);
+        color = vec4(0.75, 0.75, 0.75, 1.0);
     } else if (distance(boundary[2], vec4(1.0, 1.0, 0.0, 1.0)) > EPS) {
-        color = vec4(0.5, 0.5, 0.5, 1.0);
+        color = vec4(0.75, 0.75, 0.75, 1.0);
     } else if (distance(boundary[3], vec4(0.0, 1.0, 0.0, 0.0)) > EPS) {
-        color = vec4(0.5, 0.5, 0.5, 1.0);
+        color = vec4(0.75, 0.75, 0.75, 1.0);
     } else {
         vec2 tex_coord = (1.0 + vec2(position.x, -position.y)) / 2.0;
         color = texture(sampler2D(texture_view, texture_sampler), tex_coord);

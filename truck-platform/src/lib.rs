@@ -36,12 +36,15 @@ struct SceneInfo {
 unsafe impl Zeroable for SceneInfo {}
 unsafe impl Pod for SceneInfo {}
 
+/// safe handler of GPU buffer
+/// [`Buffer`](../wgpu/struct.Buffer.html)
 #[derive(Debug)]
 pub struct BufferHandler {
     buffer: Buffer,
     size: u64,
 }
 
+/// Utility for [`BindGroupLayoutEntry`](../wgpu/struct.BindGroupLayoutEntry.html)
 #[derive(Debug)]
 pub struct PreBindGroupLayoutEntry {
     pub visibility: ShaderStage,
@@ -49,6 +52,8 @@ pub struct PreBindGroupLayoutEntry {
     pub count: Option<core::num::NonZeroU32>,
 }
 
+#[doc(hidden)]
+/// A collection of GPU buffers used by [`wgpu`](../wgpu/index.html) for rendering
 #[derive(Debug, Clone)]
 pub struct RenderObject {
     vertex_buffer: Arc<BufferHandler>,
@@ -58,7 +63,7 @@ pub struct RenderObject {
     bind_group: Arc<BindGroup>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProjectionType {
     Perspective,
     Parallel,
@@ -118,18 +123,6 @@ pub struct Scene {
     scene_desc: SceneDescriptor,
 }
 
-#[macro_export]
-macro_rules! impl_get_set_id {
-    ($($id_member: ident).*) => {
-        #[inline(always)]
-        fn get_id(&self) -> RenderID { self.$($id_member).* }
-        #[inline(always)]
-        fn set_id(&mut self, objects_handler: &mut ObjectsHandler) {
-            objects_handler.set_id(&mut self.$($id_member).*)
-        }
-    };
-}
-
 pub trait Rendered {
     fn get_id(&self) -> RenderID;
     fn set_id(&mut self, objects_handler: &mut ObjectsHandler);
@@ -174,6 +167,7 @@ pub mod buffer_handler;
 pub mod camera;
 pub mod light;
 pub mod scene;
+pub mod rendered_macros;
 
 pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     device: &Device,
