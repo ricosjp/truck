@@ -103,7 +103,7 @@ bool specular_brdf_test() {
     Material material;
     material.albedo = vec4(0.01, 0.1, 1.0, 1.0);
     material.roughness = 0.5;
-    material.reflectance = 0.5;
+    material.reflectance = 0.3;
     vec3 camera_dir = vec3(1.0, 0.0, 1.0) / sqrt(2.0);
     vec3 light_dir = vec3(-1.0, 0.0, 1.0) / sqrt(2.0);
     vec3 normal = vec3(0.0, 0.0, 1.0);
@@ -111,7 +111,40 @@ bool specular_brdf_test() {
     float a = 64.0 / (51.0 + 14.0 * sqrt(2.0));
     float b = 41.0 * sqrt(2.0) - 50.0;
     float c = 58.0 - 41.0 * sqrt(2.0);
-    vec3 answer = a * (vec3(0.005, 0.05, 0.5) * b + c);
+    vec3 answer = a * (vec3(0.003, 0.03, 0.3) * b + c);
+    return distance(result, answer) < EPS;
+}
+
+bool microfacet_color_test() {
+    vec3 position = vec3(0.0, 0.0, 0.0);
+    vec3 normal = vec3(0.0, 0.0, 1.0);
+    Light light;
+    light.position = vec4(-1.0, 0.0, 1.0, 1.0);
+    light.color = vec4(0.1, 0.2, 0.3, 1.0);
+    light.light_type[0] = 0;
+    vec3 camera_dir = vec3(1.0, 0.0, 1.0) / sqrt(2.0);
+    Material material;
+    material.albedo = vec4(0.01, 0.1, 1.0, 1.0);
+    material.roughness = 0.5;
+    material.reflectance = 0.3;
+    vec3 result = microfacet_color(position, normal, light, camera_dir, material);
+    vec3 diffuse = vec3(0.007, 0.07, 0.7);
+    float a = 64.0 / (51.0 + 14.0 * sqrt(2.0));
+    float b = 41.0 * sqrt(2.0) - 50.0;
+    float c = 58.0 - 41.0 * sqrt(2.0);
+    vec3 specular = a * (vec3(0.003, 0.03, 0.3) * b + c);
+    vec3 irradiance = vec3(0.1, 0.2, 0.3) / sqrt(2.0);
+    vec3 answer = (diffuse + specular) * irradiance;
+    return distance(result, answer) < EPS;
+}
+
+bool ambient_correction_test() {
+    vec3 pre_color = vec3(0.1, 0.2, 0.3);
+    Material material;
+    material.albedo = vec4(0.01, 0.1, 1.0, 1.0);
+    material.ambient_ratio = 0.02;
+    vec3 result = ambient_correction(pre_color, material);
+    vec3 answer = vec3(0.0982, 0.198, 0.314);
     return distance(result, answer) < EPS;
 }
 
@@ -132,6 +165,10 @@ void main() {
         color = vec4(0.25, 0.25, 0.25, 1.0);
     } else if (!specular_brdf_test()) {
         color = vec4(0.5, 0.5, 0.5, 1.0);
+    } else if (!microfacet_color_test()) {
+        color = vec4(0.75, 0.75, 0.75, 1.0);
+    } else if (!ambient_correction_test()) {
+        color = vec4(1.0, 1.0, 1.0, 1.0);
     } else {
         color = vec4(0.2, 0.4, 0.6, 0.8);
     }
