@@ -38,11 +38,13 @@ pub mod topology {
     /// The id that does not depend on the direction of the face.
     pub type FaceID = truck_topology::FaceID<NURBSSurface>;
 
-    pub use truck_topology::{errors::Error, shell::ShellCondition, Mapped, Result, Sweep};
+    pub use truck_topology::{errors::Error, shell::ShellCondition, Result};
 }
 pub use topology::*;
 
 /// the building model utility API
 pub mod builder;
+pub mod mapped;
+pub mod sweep;
 pub mod closed_sweep;
 mod geom_impls;

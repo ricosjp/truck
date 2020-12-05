@@ -1,4 +1,7 @@
 use crate::*;
+use mapped::Mapped;
+use sweep::Sweep;
+use closed_sweep::CompleteRSweep;
 
 /// Creates and returns a vertex by a three dimensional point.
 #[inline(always)]
@@ -282,7 +285,7 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
 /// #    }
 /// # }
 /// ```
-pub fn rsweep<T: closed_sweep::CompleteRSweep>(
+pub fn rsweep<T: CompleteRSweep>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
