@@ -1,27 +1,8 @@
 use truck_topology::*;
+use crate::topo_traits::*;
 use std::collections::HashMap;
 
 /// A trait for a unified definition of the function `mapped`.
-pub trait Mapped<P, C, S>: Sized {
-    /// Returns a new topology whose points are mapped by `point_closure`,
-    /// curves are mapped by `curve_closure`,
-    /// and surfaces are mapped by `surface_closure`.
-    fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-    ) -> Self;
-
-    /// Returns another topology whose points, curves, and surfaces are cloned.
-    fn topological_clone(&self) -> Self
-    where
-        P: Clone,
-        C: Clone,
-        S: Clone, {
-        self.mapped(&Clone::clone, &Clone::clone, &Clone::clone)
-    }
-}
 
 impl<P, C, S> Mapped<P, C, S> for Vertex<P> {
     /// Returns a new vertex whose point is mapped by `point_mapping`.

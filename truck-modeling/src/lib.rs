@@ -42,10 +42,77 @@ pub mod topology {
 }
 pub use topology::*;
 
+pub mod topo_traits {
+    pub trait Mapped<P, C, S>: Sized {
+        /// Returns a new topology whose points are mapped by `point_closure`,
+        /// curves are mapped by `curve_closure`,
+        /// and surfaces are mapped by `surface_closure`.
+        fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
+            &self,
+            point_mapping: &FP,
+            curve_mapping: &FC,
+            surface_mapping: &FS,
+        ) -> Self;
+
+        /// Returns another topology whose points, curves, and surfaces are cloned.
+        fn topological_clone(&self) -> Self
+        where
+            P: Clone,
+            C: Clone,
+            S: Clone, {
+            self.mapped(&Clone::clone, &Clone::clone, &Clone::clone)
+        }
+    }
+
+    /// Abstruct sweeping
+    pub trait Sweep<P, C, S> {
+        /// The struct of sweeped topology.
+        type Sweeped;
+        /// Transform topologies and connect vertices and edges in boundaries.
+        fn sweep<
+            FP: Fn(&P) -> P,
+            FC: Fn(&C) -> C,
+            FS: Fn(&S) -> S,
+            CP: Fn(&P, &P) -> C,
+            CE: Fn(&C, &C) -> S,
+        >(
+            &self,
+            point_mapping: &FP,
+            curve_mapping: &FC,
+            surface_mapping: &FS,
+            connect_points: &CP,
+            connect_curve: &CE,
+        ) -> Self::Sweeped;
+    }
+
+    pub trait ClosedSweep<P, C, S> {
+        type ClosedSweeped;
+        fn closed_sweep<
+            FP: Fn(&P) -> P,
+            FC: Fn(&C) -> C,
+            FS: Fn(&S) -> S,
+            CP: Fn(&P, &P) -> C,
+            CE: Fn(&C, &C) -> S,
+        >(
+            &self,
+            point_mapping: &FP,
+            curve_mapping: &FC,
+            surface_mapping: &FS,
+            connect_points: &CP,
+            connect_curves: &CE,
+            division: usize,
+        ) -> Self::ClosedSweeped;
+    }
+}
+pub use topo_traits::*;
+
 /// the building model utility API
 pub mod builder;
-pub mod mapped;
-pub mod sweep;
+#[doc(hidden)]
 pub mod closed_sweep;
 mod geom_impls;
+#[doc(hidden)]
+pub mod mapped;
+#[doc(hidden)]
+pub mod sweep;
 mod topo_impls;

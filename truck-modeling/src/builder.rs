@@ -1,7 +1,4 @@
 use crate::*;
-use closed_sweep::ClosedSweep;
-use mapped::Mapped;
-use sweep::Sweep;
 const PI: Rad<f64> = Rad(std::f64::consts::PI);
 
 /// Creates and returns a vertex by a three dimensional point.

@@ -1,27 +1,6 @@
 use truck_topology::*;
-use crate::mapped::Mapped;
+use crate::topo_traits::*;
 use crate::topo_impls::*;
-
-/// Abstruct sweeping
-pub trait Sweep<P, C, S> {
-    /// The struct of sweeped topology.
-    type Sweeped;
-    /// Transform topologies and connect vertices and edges in boundaries.
-    fn sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CE: Fn(&C, &C) -> S,
-    >(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-        connect_points: &CP,
-        connect_curve: &CE,
-    ) -> Self::Sweeped;
-}
 
 impl<P, C, S> Sweep<P, C, S> for Vertex<P> {
     type Sweeped = Edge<P, C>;
