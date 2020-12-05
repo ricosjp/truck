@@ -1,5 +1,6 @@
 use truck_topology::*;
 use std::collections::HashMap;
+use crate::mapped::Mapped;
 
 /// Abstruct sweeping
 pub trait Sweep<P, C, S> {

@@ -226,7 +226,9 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
             .collect();
         let surface = surface_mapping(&*self.lock_surface().unwrap());
         let mut face = Face::debug_new(wires, surface);
-        face.orientation = self.orientation;
+        if face.orientation() != self.orientation() {
+            face.invert();
+        }
         face
     }
 }
