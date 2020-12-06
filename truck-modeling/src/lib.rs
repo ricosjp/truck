@@ -1,6 +1,6 @@
 pub use truck_base::{cgmath64::*, geom_traits::*, tolerance::*};
 
-// geometrical elements
+/// geometrical elements
 pub mod geometry {
     use super::*;
     pub use truck_geometry::KnotVec;
@@ -15,7 +15,7 @@ pub mod geometry {
 }
 pub use geometry::*;
 
-// topological elements
+/// topological elements
 pub mod topology {
     use super::*;
     /// Vertex, the minimum topological unit.
@@ -42,7 +42,13 @@ pub mod topology {
 }
 pub use topology::*;
 
+/// topological utility: [`Mapped`], [`Sweep`], and [`ClosedSweep`].
+/// 
+/// [`Mapped`]: ./topo_traits/trait.Mapped.html
+/// [`Sweep`]: ./topo_traits/trait.Sweep.html
+/// [`ClosedSweep`]: ./topo_traits/trait.ClosedSweep.html
 pub mod topo_traits {
+    /// Mapping, duplicates and moves a topological element.
     pub trait Mapped<P, C, S>: Sized {
         /// Returns a new topology whose points are mapped by `point_closure`,
         /// curves are mapped by `curve_closure`,
@@ -64,7 +70,7 @@ pub mod topo_traits {
         }
     }
 
-    /// Abstruct sweeping
+    /// Abstract sweeping, builds a circle-arc, a prism, a half torus, and so on.
     pub trait Sweep<P, C, S> {
         /// The struct of sweeped topology.
         type Swept;
@@ -85,6 +91,7 @@ pub mod topo_traits {
         ) -> Self::Swept;
     }
 
+    /// closed sweep, builds a closed torus, and so on. 
     pub trait ClosedSweep<P, C, S> {
         type ClosedSwept;
         fn closed_sweep<
