@@ -198,7 +198,14 @@ mod geom_impl_test {
                 let vec1 = surface.subs(s, t) - origin;
                 let h0 = vec0 - vec0.dot(axis) * axis;
                 let h1 = vec1 - vec1.dot(axis) * axis;
-                assert!(f64::near(&h0.magnitude2(), &h1.magnitude2()));
+                assert!(
+                    f64::near(&h0.magnitude2(), &h1.magnitude2()),
+                    "origin\n{:?}\naxis: {:?}\nangle: {:?}\ncurve: {:?}",
+                    origin,
+                    axis,
+                    angle,
+                    curve.non_rationalized(),
+                );
             }
             let vec0 = curve.subs(s) - origin;
             let vec1 = surface.subs(s, 1.0) - origin;
@@ -206,8 +213,14 @@ mod geom_impl_test {
             let h1 = (vec1 - vec1.dot(axis) * axis).normalize();
             let axis0 = h0.cross(h1);
             let cos0 = h0.dot(h1);
-            assert!(f64::near(&cos0, &angle.cos()));
-            assert!(axis0.cross(axis).so_small());
+            assert!(
+                f64::near(&cos0, &angle.cos()) && axis0.cross(axis).so_small(),
+                "origin\n{:?}\naxis: {:?}\nangle: {:?}\ncurve: {:?}",
+                origin,
+                axis,
+                angle,
+                curve.non_rationalized(),
+            );
         }
     }
 }
