@@ -1,4 +1,4 @@
-//! `truck-modeling` is a crate for modeling shapes.
+//! `truck-modeling` is a crate for modeling shapes by integrating geometry and topology.
 
 #![warn(
     missing_docs,
