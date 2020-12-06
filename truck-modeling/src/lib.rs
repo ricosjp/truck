@@ -108,11 +108,8 @@ pub use topo_traits::*;
 
 /// the building model utility API
 pub mod builder;
-#[doc(hidden)]
-pub mod closed_sweep;
+mod closed_sweep;
 mod geom_impls;
-#[doc(hidden)]
-pub mod mapped;
-#[doc(hidden)]
-pub mod sweep;
+mod mapped;
+mod sweep;
 mod topo_impls;
