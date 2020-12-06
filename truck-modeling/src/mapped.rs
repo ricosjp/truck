@@ -9,7 +9,7 @@ impl<P, C, S> Mapped<P, C, S> for Vertex<P> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::mapped::Mapped;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v0 = Vertex::new(1);
     /// let v1 = v0.mapped(
     ///     &move |i: &usize| *i + 1,
@@ -34,7 +34,7 @@ impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::mapped::Mapped;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v0 = Vertex::new(0);
     /// let v1 = Vertex::new(1);
     /// let edge0 = Edge::new(&v0, &v1, 2);
@@ -71,7 +71,7 @@ impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::mapped::Mapped;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4]);
     /// let wire0: Wire<usize, usize> = vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -150,7 +150,7 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::mapped::Mapped;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
     /// let wire0 = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -224,7 +224,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::mapped::Mapped;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
     /// let wire0 = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], 100),

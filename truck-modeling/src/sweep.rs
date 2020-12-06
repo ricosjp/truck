@@ -8,7 +8,7 @@ impl<P, C, S> Sweep<P, C, S> for Vertex<P> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::sweep::*;
+    /// use truck_modeling::topo_traits::*;
     /// let v = Vertex::new(1);
     /// let edge = v.sweep(
     ///     &move |i: &usize| *i + 1,
@@ -47,7 +47,7 @@ impl<P, C, S> Sweep<P, C, S> for Edge<P, C> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::sweep::*;
+    /// use truck_modeling::topo_traits::*;
     /// let edge = Edge::new(
     ///     &Vertex::new(1),
     ///     &Vertex::new(2),
@@ -108,7 +108,7 @@ impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::sweep::*;
+    /// use truck_modeling::topo_traits::*;
     /// use shell::ShellCondition;
     /// let v = Vertex::news(&[1, 2, 3, 4]);
     /// let wire = Wire::from(vec![
@@ -179,7 +179,7 @@ impl<P, C, S> Sweep<P, C, S> for Face<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_modeling::sweep::*;
+    /// use truck_modeling::topo_traits::*;
     /// let v = Vertex::news(&[1, 2]);
     /// let edge = Edge::new(&v[0], &v[1], 12);
     /// let face = edge.sweep(

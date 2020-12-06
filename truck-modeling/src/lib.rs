@@ -1,4 +1,4 @@
-pub use truck_base::{cgmath64::*, tolerance::*};
+pub use truck_base::{cgmath64::*, geom_traits::*, tolerance::*};
 
 // geometrical elements
 pub mod geometry {
