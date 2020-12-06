@@ -43,14 +43,14 @@ fn bind_group_test() {
         lights,
         ..Default::default()
     };
-    let mut scene = Scene::new(&device, &queue, &sc_desc, &desc);
+    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let mut scene = Scene::new(handler.clone(), &desc);
     let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
     render_one(&mut scene, &texture0, &mut plane);
     let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
     render_one(&mut scene, &texture1, &mut plane);
     let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
     render_one(&mut scene, &texture2, &mut plane);
-    let handler = scene.device_handler();
-    assert!(common::same_texture(handler, &texture0, &texture1));
-    assert!(!common::same_texture(handler, &texture0, &texture2));
+    assert!(common::same_texture(&handler, &texture0, &texture1));
+    assert!(!common::same_texture(&handler, &texture0, &texture2));
 }

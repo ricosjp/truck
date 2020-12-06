@@ -106,7 +106,8 @@ fn shape_nontex_bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
-    let mut scene = Scene::new(&device, &queue, &sc_desc, &Default::default());
+    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let mut scene = Scene::new(handler, &Default::default());
     let answer = common::nontex_answer_texture(&mut scene);
     let inst_desc = nontex_inst_desc();
     let shell = test_shape();
@@ -122,7 +123,8 @@ fn shape_tex_bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
-    let mut scene = Scene::new(&device, &queue, &sc_desc, &Default::default());
+    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let mut scene = Scene::new(handler, &Default::default());
     let answer = common::random_texture(&mut scene);
     let buffer = common::read_texture(scene.device_handler(), &answer);
     image::save_buffer(

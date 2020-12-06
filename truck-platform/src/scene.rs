@@ -2,6 +2,19 @@ use crate::*;
 
 impl DeviceHandler {
     #[inline(always)]
+    pub fn new(
+        device: Arc<Device>,
+        queue: Arc<Queue>,
+        sc_desc: Arc<Mutex<SwapChainDescriptor>>,
+    ) -> DeviceHandler
+    {
+        DeviceHandler {
+            device,
+            queue,
+            sc_desc,
+        }
+    }
+    #[inline(always)]
     pub fn device(&self) -> &Device { &self.device }
     #[inline(always)]
     pub fn queue(&self) -> &Queue { &self.queue }
@@ -188,30 +201,24 @@ impl Scene {
 
     #[inline(always)]
     pub fn new(
-        device: &Arc<Device>,
-        queue: &Arc<Queue>,
-        sc_desc: &Arc<Mutex<SwapChainDescriptor>>,
+        device_handler: DeviceHandler,
         scene_desc: &SceneDescriptor,
     ) -> Scene
     {
-        let device_handler = DeviceHandler {
-            device: Arc::clone(device),
-            queue: Arc::clone(queue),
-            sc_desc: Arc::clone(sc_desc),
-        };
+        let (device, sc_desc) = (device_handler.device(), device_handler.sc_desc());
         let objects_handler = ObjectsHandler {
             objects: Default::default(),
             objects_number: 0,
         };
-        let depth_texture = Self::default_depth_texture(&device, &sc_desc.try_lock().unwrap());
+        let depth_texture = Self::default_depth_texture(device, &sc_desc);
         Scene {
-            device_handler,
             objects_handler,
             bind_group_layout: Self::init_scene_bind_group_layout(device),
             bind_group: None,
             foward_depth: depth_texture.create_view(&Default::default()),
             clock: std::time::Instant::now(),
             scene_desc: scene_desc.clone(),
+            device_handler,
         }
     }
 
