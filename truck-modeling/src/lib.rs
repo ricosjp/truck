@@ -1,3 +1,16 @@
+//! `truck-modeling` is a crate for modeling shapes.
+
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications
+)]
+
 pub use truck_base::{cgmath64::*, geom_traits::*, tolerance::*};
 
 /// geometrical elements
@@ -93,7 +106,9 @@ pub mod topo_traits {
 
     /// closed sweep, builds a closed torus, and so on. 
     pub trait ClosedSweep<P, C, S> {
+        /// The struct of sweeped topology.
         type ClosedSwept;
+        /// Transform topologies and connect vertices and edges in boundaries.
         fn closed_sweep<
             FP: Fn(&P) -> P,
             FC: Fn(&C) -> C,

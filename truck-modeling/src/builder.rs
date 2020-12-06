@@ -80,7 +80,7 @@ pub fn transformed<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(elem: &T, mat: M
 /// Returns a translated vertex, edge, wire, face, shell or solid.
 #[inline(always)]
 pub fn translated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T {
-    builder::transformed(elem, Matrix4::from_translation(vector))
+    transformed(elem, Matrix4::from_translation(vector))
 }
 
 /// Returns a rotated vertex, edge, wire, face, shell or solid.
@@ -95,7 +95,7 @@ pub fn rotated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
     let mat2 = Matrix4::from_translation(origin.to_vec());
-    builder::transformed(elem, mat2 * mat1 * mat0)
+    transformed(elem, mat2 * mat1 * mat0)
 }
 
 /// Returns a scaled vertex, edge, wire, face, shell or solid.
@@ -109,7 +109,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_nonuniform_scale(scalars[0], scalars[1], scalars[2]);
     let mat2 = Matrix4::from_translation(origin.to_vec());
-    builder::transformed(elem, mat2 * mat1 * mat0)
+    transformed(elem, mat2 * mat1 * mat0)
 }
 
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by a vector.
