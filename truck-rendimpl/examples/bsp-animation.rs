@@ -51,14 +51,13 @@ impl MyApp {
         camera
     }
     fn init_thread(
-        device: &Arc<Device>,
+        handler: DeviceHandler,
         object: &Arc<Mutex<ShapeInstance>>,
         closed: &Arc<Mutex<bool>>,
         updated: &Arc<Mutex<bool>>,
         shell: Shell,
     ) -> JoinHandle<()>
     {
-        let device = Arc::clone(device);
         let object = Arc::clone(object);
         let closed = Arc::clone(closed);
         let updated = Arc::clone(updated);
@@ -87,15 +86,14 @@ impl MyApp {
                 }
                 shell[0].lock_surface().unwrap().control_point_mut(3, 3)[1] = time.sin();
                 let mut object = object.lock().unwrap();
-                shell.update_instance(&device, &mut object);
+                shell.update_instance(handler.device(), &mut object);
             }
         })
     }
 }
 
 impl App for MyApp {
-    fn init(handler: &WGPUHandler) -> MyApp {
-        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
+    fn init(handler: &DeviceHandler) -> MyApp {
         let desc = SceneDescriptor {
             camera: MyApp::init_camera(),
             lights: vec![Light {
@@ -105,14 +103,14 @@ impl App for MyApp {
             }],
             ..Default::default()
         };
-        let mut scene = Scene::new(device, queue, sc_desc, &desc);
+        let mut scene = Scene::new(handler.clone(), &desc);
         let shell = Self::init_shell();
         let mut object = scene.create_instance(&shell, &Default::default());
         scene.add_objects(&mut object.render_faces());
         let object = Arc::new(Mutex::new(object));
         let closed = Arc::new(Mutex::new(false));
         let updated = Arc::new(Mutex::new(false));
-        let thread = Some(MyApp::init_thread(&handler.device, &object, &closed, &updated, shell));
+        let thread = Some(MyApp::init_thread(handler.clone(), &object, &closed, &updated, shell));
         MyApp {
             scene,
             object,
@@ -130,7 +128,7 @@ impl App for MyApp {
         Some(self.scene.depth_stencil_attachment_descriptor())
     }
 
-    fn update(&mut self, _: &WGPUHandler) {
+    fn update(&mut self, _: &DeviceHandler) {
         let mut updated = self.updated.lock().unwrap();
         if *updated {
             let mut object = self.object.lock().unwrap();

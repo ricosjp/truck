@@ -1,4 +1,5 @@
 use crate::*;
+use std::sync::{LockResult, MutexGuard};
 
 impl DeviceHandler {
     #[inline(always)]
@@ -20,6 +21,10 @@ impl DeviceHandler {
     pub fn queue(&self) -> &Queue { &self.queue }
     #[inline(always)]
     pub fn sc_desc(&self) -> SwapChainDescriptor { self.sc_desc.lock().unwrap().clone() }
+    #[inline(always)]
+    pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SwapChainDescriptor>> {
+        self.sc_desc.lock()
+    }
 }
 
 impl Default for SceneDescriptor {
@@ -200,11 +205,7 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn new(
-        device_handler: DeviceHandler,
-        scene_desc: &SceneDescriptor,
-    ) -> Scene
-    {
+    pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
         let (device, sc_desc) = (device_handler.device(), device_handler.sc_desc());
         let objects_handler = ObjectsHandler {
             objects: Default::default(),
@@ -233,6 +234,11 @@ impl Scene {
 
     #[inline(always)]
     pub fn sc_desc(&self) -> SwapChainDescriptor { self.device_handler.sc_desc() }
+    
+    #[inline(always)]
+    pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SwapChainDescriptor>> {
+        self.device_handler.lock_sc_desc()
+    }
 
     #[inline(always)]
     pub fn add_object<R: Rendered>(&mut self, object: &mut R) -> bool {

@@ -68,8 +68,7 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &WGPUHandler) -> MyApp {
-        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
+    fn init(handler: &DeviceHandler) -> MyApp {
         let scene_desc = SceneDescriptor {
             background: Color::BLACK,
             camera: MyApp::create_camera(),
@@ -80,7 +79,7 @@ impl App for MyApp {
             }],
         };
         MyApp {
-            scene: Scene::new(device, queue, sc_desc, &scene_desc),
+            scene: Scene::new(handler.clone(), &scene_desc),
             rotate_flag: false,
             prev_cursor: None,
             path: None,
@@ -223,7 +222,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, _: &WGPUHandler) {
+    fn update(&mut self, _: &DeviceHandler) {
         if let Some(path) = self.path.take() {
             self.load_obj(path);
         }
