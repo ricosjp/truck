@@ -67,7 +67,7 @@ pub mod topo_traits {
     /// Abstruct sweeping
     pub trait Sweep<P, C, S> {
         /// The struct of sweeped topology.
-        type Sweeped;
+        type Swept;
         /// Transform topologies and connect vertices and edges in boundaries.
         fn sweep<
             FP: Fn(&P) -> P,
@@ -82,11 +82,11 @@ pub mod topo_traits {
             surface_mapping: &FS,
             connect_points: &CP,
             connect_curve: &CE,
-        ) -> Self::Sweeped;
+        ) -> Self::Swept;
     }
 
     pub trait ClosedSweep<P, C, S> {
-        type ClosedSweeped;
+        type ClosedSwept;
         fn closed_sweep<
             FP: Fn(&P) -> P,
             FC: Fn(&C) -> C,
@@ -101,7 +101,7 @@ pub mod topo_traits {
             connect_points: &CP,
             connect_curves: &CE,
             division: usize,
-        ) -> Self::ClosedSweeped;
+        ) -> Self::ClosedSwept;
     }
 }
 pub use topo_traits::*;

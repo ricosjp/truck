@@ -149,7 +149,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// ```
-pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T::Sweeped {
+pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T::Swept {
     let trsl = Matrix4::from_translation(vector);
     elem.sweep(
         &move |pt| trsl.transform_point(*pt),
@@ -226,7 +226,7 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> T::Sweeped
+) -> T::Swept
 {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
@@ -290,7 +290,7 @@ pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-) -> T::ClosedSweeped
+) -> T::ClosedSwept
 {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, PI);

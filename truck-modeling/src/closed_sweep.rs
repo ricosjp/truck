@@ -3,7 +3,7 @@ use crate::topo_impls::*;
 use truck_topology::*;
 
 impl<P, C, S> ClosedSweep<P, C, S> for Vertex<P> {
-    type ClosedSweeped = Wire<P, C>;
+    type ClosedSwept = Wire<P, C>;
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -18,7 +18,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Vertex<P> {
         connect_points: &CP,
         _: &CE,
         division: usize,
-    ) -> Self::ClosedSweeped
+    ) -> Self::ClosedSwept
     {
         let mut wire = Wire::new();
         let mut vertex = self.clone();
@@ -33,7 +33,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Vertex<P> {
 }
 
 impl<P, C, S> ClosedSweep<P, C, S> for Edge<P, C> {
-    type ClosedSweeped = Shell<P, C, S>;
+    type ClosedSwept = Shell<P, C, S>;
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -48,7 +48,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Edge<P, C> {
         connect_points: &CP,
         connect_curves: &CE,
         division: usize,
-    ) -> Self::ClosedSweeped
+    ) -> Self::ClosedSwept
     {
         let mut shell = Shell::new();
         let mut edge = self.clone();
@@ -68,7 +68,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Edge<P, C> {
 }
 
 impl<P, C, S> ClosedSweep<P, C, S> for Wire<P, C> {
-    type ClosedSweeped = Shell<P, C, S>;
+    type ClosedSwept = Shell<P, C, S>;
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -83,7 +83,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Wire<P, C> {
         connect_points: &CP,
         connect_curves: &CE,
         division: usize,
-    ) -> Self::ClosedSweeped
+    ) -> Self::ClosedSwept
     {
         let mut shell = Shell::new();
         let mut wire = self.clone();
@@ -103,7 +103,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Wire<P, C> {
 }
 
 impl<P, C, S> ClosedSweep<P, C, S> for Face<P, C, S> {
-    type ClosedSweeped = Solid<P, C, S>;
+    type ClosedSwept = Solid<P, C, S>;
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -118,7 +118,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Face<P, C, S> {
         connect_points: &CP,
         connect_curves: &CE,
         division: usize,
-    ) -> Self::ClosedSweeped
+    ) -> Self::ClosedSwept
     {
         let boundaries: Vec<_> = self
             .boundaries()
@@ -145,7 +145,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Face<P, C, S> {
 }
 
 impl<P, C, S> ClosedSweep<P, C, S> for Shell<P, C, S> {
-    type ClosedSweeped = Result<Solid<P, C, S>>;
+    type ClosedSwept = Result<Solid<P, C, S>>;
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -160,7 +160,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Shell<P, C, S> {
         connect_points: &CP,
         connect_curves: &CE,
         division: usize,
-    ) -> Self::ClosedSweeped
+    ) -> Self::ClosedSwept
     {
         let boundaries: Vec<_> = self
             .extract_boundaries()

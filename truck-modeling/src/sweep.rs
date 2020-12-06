@@ -3,7 +3,7 @@ use crate::topo_traits::*;
 use crate::topo_impls::*;
 
 impl<P, C, S> Sweep<P, C, S> for Vertex<P> {
-    type Sweeped = Edge<P, C>;
+    type Swept = Edge<P, C>;
     /// Transforms a vertex and creates an edge by connecting vertices.
     /// # Examples
     /// ```
@@ -34,7 +34,7 @@ impl<P, C, S> Sweep<P, C, S> for Vertex<P> {
         surface_mapping: &FS,
         connect_points: &CP,
         _: &CC,
-    ) -> Self::Sweeped
+    ) -> Self::Swept
     {
         let v = self.mapped(point_mapping, curve_mapping, surface_mapping);
         connect_vertices(self, &v, connect_points)
@@ -42,7 +42,7 @@ impl<P, C, S> Sweep<P, C, S> for Vertex<P> {
 }
 
 impl<P, C, S> Sweep<P, C, S> for Edge<P, C> {
-    type Sweeped = Face<P, C, S>;
+    type Swept = Face<P, C, S>;
     /// Transforms an edge and creates a face by connecting vertices and edges.
     /// # Examples
     /// ```
@@ -95,7 +95,7 @@ impl<P, C, S> Sweep<P, C, S> for Edge<P, C> {
         surface_mapping: &FS,
         connect_points: &CP,
         connect_curves: &CC,
-    ) -> Self::Sweeped
+    ) -> Self::Swept
     {
         let edge = self.mapped(point_mapping, curve_mapping, surface_mapping);
         connect_edges(self, &edge, connect_points, connect_curves)
@@ -103,7 +103,7 @@ impl<P, C, S> Sweep<P, C, S> for Edge<P, C> {
 }
 
 impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
-    type Sweeped = Shell<P, C, S>;
+    type Swept = Shell<P, C, S>;
     /// Transforms a wire and creates a shell by connecting vertices and edges.
     /// # Examples
     /// ```
@@ -166,7 +166,7 @@ impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
         surface_mapping: &FS,
         connect_points: &CP,
         connect_curves: &CC,
-    ) -> Self::Sweeped
+    ) -> Self::Swept
     {
         let wire = self.mapped(point_mapping, curve_mapping, surface_mapping);
         connect_wires(self, &wire, connect_points, connect_curves).collect()
@@ -174,7 +174,7 @@ impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
 }
 
 impl<P, C, S> Sweep<P, C, S> for Face<P, C, S> {
-    type Sweeped = Solid<P, C, S>;
+    type Swept = Solid<P, C, S>;
     /// Transforms a face and creates a solid by connecting vertices, edges and faces.
     /// # Examples
     /// ```
@@ -230,7 +230,7 @@ impl<P, C, S> Sweep<P, C, S> for Face<P, C, S> {
         surface_mapping: &FS,
         connect_points: &CP,
         connect_curves: &CC,
-    ) -> Self::Sweeped
+    ) -> Self::Swept
     {
         let mut shell = Shell::new();
         shell.push(self.inverse());
@@ -244,7 +244,7 @@ impl<P, C, S> Sweep<P, C, S> for Face<P, C, S> {
 }
 
 impl<P, C, S> Sweep<P, C, S> for Shell<P, C, S> {
-    type Sweeped = Vec<Result<Solid<P, C, S>>>;
+    type Swept = Vec<Result<Solid<P, C, S>>>;
     /// Transforms a shell and tries to create solids by connecting vertices, edges and faces.
     /// 
     /// In this function, the shell is broken down into connected components and each of components
@@ -267,7 +267,7 @@ impl<P, C, S> Sweep<P, C, S> for Shell<P, C, S> {
         surface_mapping: &FS,
         connect_points: &CP,
         connect_curves: &CC,
-    ) -> Self::Sweeped
+    ) -> Self::Swept
     {
         self.connected_components().into_iter().map(move|shell| {
             let mut bdry = Shell::new();
