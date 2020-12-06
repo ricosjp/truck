@@ -119,7 +119,7 @@ impl App for MyRender {
             camera: MyRender::create_camera(),
             lights: vec![Light {
                 position: Point3::new(0.0, 20.0, 0.0),
-                color: Vector3::new(1.0, 1.0, 1.0),
+                color: Vector3::new(1.0, 1.0, 1.0) * 1.5,
                 light_type: LightType::Point,
             }],
             ..Default::default()

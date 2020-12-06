@@ -4,9 +4,9 @@ impl Default for Material {
     #[inline(always)]
     fn default() -> Material {
         Material {
-            albedo: Vector4::new(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0),
+            albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
             roughness: 0.5,
-            reflectance: 0.5,
+            reflectance: 0.25,
             ambient_ratio: 0.02,
         }
     }

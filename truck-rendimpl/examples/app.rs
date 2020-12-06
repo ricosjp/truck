@@ -67,7 +67,7 @@ pub trait App: Sized + 'static {
 
         let sc_desc = SwapChainDescriptor {
             usage: TextureUsage::OUTPUT_ATTACHMENT,
-            format: TextureFormat::Bgra8UnormSrgb,
+            format: TextureFormat::Bgra8Unorm,
             width: size.width,
             height: size.height,
             present_mode: PresentMode::Mailbox,

@@ -55,8 +55,8 @@ impl MyApp {
         let inst_desc = InstanceDescriptor {
             matrix: mat.invert().unwrap(),
             material: Material {
-                albedo: Vector4::new(0.75, 0.75, 0.75, 1.0),
-                reflectance: 0.9,
+                albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                reflectance: 0.5,
                 roughness: 0.1,
                 ambient_ratio: 0.02,
             },
