@@ -48,7 +48,7 @@ pub(super) fn circle_arc(
     let tmp = Point3::from_homogeneous(point);
     let origin = origin + (axis.dot(tmp - origin)) * axis;
     let axis_trsf = if !Tolerance::near(&(axis[2] * axis[2]), &1.0) {
-        let axis_angle = cgmath::Rad(axis[2].acos());
+        let axis_angle = Rad(axis[2].acos());
         let mut axis_axis = Vector3::new(-axis[1], axis[0], 0.0);
         axis_axis /= axis_axis.magnitude();
         Matrix4::from_translation(origin.to_vec()) * Matrix4::from_axis_angle(axis_axis, axis_angle)
@@ -93,92 +93,134 @@ pub(super) fn rsweep_surface(
     BSplineSurface::new((knot_vec0, knot_vec1), control_points)
 }
 
-#[test]
-fn circle_arc_test0() {
+#[cfg(test)]
+mod geom_impl_test {
+    use super::*;
     use rand::random;
-    let origin = Point3::new(
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-    );
-    let axis = Vector3::new(
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-    )
-    .normalize();
-    let angle = Rad(random::<f64>() * 1.5 * PI);
-    let pt0 = Point3::new(
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-    );
-    let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-    const N: usize = 100;
-    let vec0 = pt0 - origin;
-    for i in 0..=N {
-        let t = i as f64 / N as f64;
-        let pt = Point3::from_homogeneous(curve.subs(t));
-        let vec = pt - origin;
-        assert!(
-            Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
-            "origin: {:?}\naxis: {:?}\nangle: {:?}\npt0: {:?}",
-            origin,
-            axis,
-            angle,
-            pt0
-        );
-    }
-}
 
-#[test]
-fn circle_arc_test1() {
-    use rand::random;
-    let origin = Point3::new(
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-    );
-    let axis = Vector3::unit_z();
-    let angle = Rad(random::<f64>() * 1.5 * PI);
-    let pt0 = Point3::new(
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-        2.0 * random::<f64>() - 1.0,
-    );
-    let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-    const N: usize = 100;
-    let vec0 = pt0 - origin;
-    for i in 0..=N {
-        let t = i as f64 / N as f64;
-        let pt = Point3::from_homogeneous(curve.subs(t));
-        let vec = pt - origin;
-        assert!(
-            Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
-            "origin: {:?}\naxis: {:?}\nangle: {:?}\npt0: {:?}",
-            origin,
-            axis,
-            angle,
-            pt0
-        );
+    fn random_array<T: Default + AsMut<[f64]>>(inf: f64, sup: f64) -> T {
+        let mut a = T::default();
+        for s in a.as_mut() {
+            *s = inf + (sup - inf) * random::<f64>();
+        }
+        a
     }
-}
 
-#[test]
-fn circle_arc_test2() {
-    use rand::random;
-    let origin = Point3::origin();
-    let axis = Vector3::unit_z();
-    let angle = Rad(random::<f64>() * PI);
-    let pt0 = Point3::new(1.4, 0.0, 0.0);
-    let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-    const N: usize = 100;
-    let vec0 = pt0 - origin;
-    for i in 0..=N {
-        let t = i as f64 / N as f64;
-        let pt = Point3::from_homogeneous(curve.subs(t));
-        let vec = pt - origin;
-        Tolerance::assert_near2(&vec.dot(axis), &vec0.dot(axis));
-        assert!(pt[1] >= 0.0, "angle: {:?}", angle);
+    #[test]
+    fn circle_arc_test0() {
+        use rand::random;
+        let origin = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
+        let axis = Vector3::from(random_array::<[f64; 3]>(-1.0, 1.0)).normalize();
+        let angle = Rad(random::<f64>() * 1.5 * PI);
+        let pt0 = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
+        let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
+        const N: usize = 100;
+        let vec0 = pt0 - origin;
+        for i in 0..=N {
+            let t = i as f64 / N as f64;
+            let pt = Point3::from_homogeneous(curve.subs(t));
+            let vec = pt - origin;
+            assert!(
+                Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
+                "origin: {:?}\naxis: {:?}\nangle: {:?}\npt0: {:?}",
+                origin,
+                axis,
+                angle,
+                pt0
+            );
+        }
+    }
+
+    #[test]
+    fn circle_arc_test1() {
+        let origin = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
+        let axis = Vector3::unit_z();
+        let angle = Rad(random::<f64>() * 1.5 * PI);
+        let pt0 = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
+        let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
+        const N: usize = 100;
+        let vec0 = pt0 - origin;
+        for i in 0..=N {
+            let t = i as f64 / N as f64;
+            let pt = Point3::from_homogeneous(curve.subs(t));
+            let vec = pt - origin;
+            assert!(
+                Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
+                "origin: {:?}\naxis: {:?}\nangle: {:?}\npt0: {:?}",
+                origin,
+                axis,
+                angle,
+                pt0
+            );
+        }
+    }
+
+    #[test]
+    fn circle_arc_test2() {
+        let origin = Point3::origin();
+        let axis = Vector3::unit_z();
+        let angle = Rad(random::<f64>() * PI);
+        let pt0 = Point3::new(1.4, 0.0, 0.0);
+        let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
+        const N: usize = 100;
+        let vec0 = pt0 - origin;
+        for i in 0..=N {
+            let t = i as f64 / N as f64;
+            let pt = Point3::from_homogeneous(curve.subs(t));
+            let vec = pt - origin;
+            Tolerance::assert_near2(&vec.dot(axis), &vec0.dot(axis));
+            assert!(pt[1] >= 0.0, "angle: {:?}", angle);
+        }
+    }
+
+    #[test]
+    fn rsweep_surface_test0() {
+        let knot_vec = KnotVec::bezier_knot(3);
+        let ctrl_pts = vec![
+            Vector4::from(random_array::<[f64; 4]>(0.1, 100.0)),
+            Vector4::from(random_array::<[f64; 4]>(0.1, 100.0)),
+            Vector4::from(random_array::<[f64; 4]>(0.1, 100.0)),
+            Vector4::from(random_array::<[f64; 4]>(0.1, 100.0)),
+        ];
+        let curve = BSplineCurve::new(knot_vec, ctrl_pts);
+        let origin = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
+        let axis = Vector3::from(random_array::<[f64; 3]>(-1.0, 1.0)).normalize();
+        let angle = Rad(random::<f64>() * 1.5 * PI);
+        let surface = rsweep_surface(&curve, origin, axis, angle);
+        let curve = NURBSCurve::new(curve);
+        let surface = NURBSSurface::new(surface);
+        const N: usize = 100;
+        for i in 0..=N {
+            let s = i as f64 / N as f64;
+            for j in 0..=N {
+                let t = j as f64 / N as f64;
+                let vec0 = curve.subs(s) - origin;
+                let vec1 = surface.subs(s, t) - origin;
+                let h0 = vec0 - vec0.dot(axis) * axis;
+                let h1 = vec1 - vec1.dot(axis) * axis;
+                assert!(
+                    f64::near(&h0.magnitude2(), &h1.magnitude2()),
+                    "origin\n{:?}\naxis: {:?}\nangle: {:?}\ncurve: {:?}",
+                    origin,
+                    axis,
+                    angle,
+                    curve.non_rationalized(),
+                );
+            }
+            let vec0 = curve.subs(s) - origin;
+            let vec1 = surface.subs(s, 1.0) - origin;
+            let h0 = (vec0 - vec0.dot(axis) * axis).normalize();
+            let h1 = (vec1 - vec1.dot(axis) * axis).normalize();
+            let axis0 = h0.cross(h1);
+            let cos0 = h0.dot(h1);
+            assert!(
+                f64::near(&cos0, &angle.cos()) && axis0.cross(axis).so_small(),
+                "origin\n{:?}\naxis: {:?}\nangle: {:?}\ncurve: {:?}",
+                origin,
+                axis,
+                angle,
+                curve.non_rationalized(),
+            );
+        }
     }
 }

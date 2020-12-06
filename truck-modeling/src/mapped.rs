@@ -1,11 +1,15 @@
-use crate::*;
+use truck_topology::*;
+use crate::topo_traits::*;
 use std::collections::HashMap;
+
+/// A trait for a unified definition of the function `mapped`.
 
 impl<P, C, S> Mapped<P, C, S> for Vertex<P> {
     /// Returns a new vertex whose point is mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v0 = Vertex::new(1);
     /// let v1 = v0.mapped(
     ///     &move |i: &usize| *i + 1,
@@ -30,6 +34,7 @@ impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v0 = Vertex::new(0);
     /// let v1 = Vertex::new(1);
     /// let edge0 = Edge::new(&v0, &v1, 2);
@@ -53,7 +58,9 @@ impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
         let v1 = self.absolute_back().mapped(point_mapping, curve_mapping, surface_mapping);
         let curve = curve_mapping(&*self.lock_curve().unwrap());
         let mut edge = Edge::debug_new(&v0, &v1, curve);
-        edge.orientation = self.orientation;
+        if edge.orientation() != self.orientation() {
+            edge.invert();
+        }
         edge
     }
 }
@@ -64,6 +71,7 @@ impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4]);
     /// let wire0: Wire<usize, usize> = vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -142,6 +150,7 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
     /// let wire0 = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -202,7 +211,9 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
             .collect();
         let surface = surface_mapping(&*self.lock_surface().unwrap());
         let mut face = Face::debug_new(wires, surface);
-        face.orientation = self.orientation;
+        if face.orientation() != self.orientation() {
+            face.invert();
+        }
         face
     }
 }
@@ -213,6 +224,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
+    /// use truck_modeling::topo_traits::Mapped;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
     /// let wire0 = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], 100),

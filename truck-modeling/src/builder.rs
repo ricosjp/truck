@@ -1,9 +1,7 @@
 use crate::*;
+const PI: Rad<f64> = Rad(std::f64::consts::PI);
 
 /// Creates and returns a vertex by a three dimensional point.
-/// # Remarks
-/// **This remark is for the developer.**  
-/// The vertex created by this method is not `Vertex<Point3>` but `Vertex<Vector4>`.
 #[inline(always)]
 pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
 
@@ -82,7 +80,7 @@ pub fn transformed<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(elem: &T, mat: M
 /// Returns a translated vertex, edge, wire, face, shell or solid.
 #[inline(always)]
 pub fn translated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T {
-    builder::transformed(elem, Matrix4::from_translation(vector))
+    transformed(elem, Matrix4::from_translation(vector))
 }
 
 /// Returns a rotated vertex, edge, wire, face, shell or solid.
@@ -97,7 +95,7 @@ pub fn rotated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
     let mat2 = Matrix4::from_translation(origin.to_vec());
-    builder::transformed(elem, mat2 * mat1 * mat0)
+    transformed(elem, mat2 * mat1 * mat0)
 }
 
 /// Returns a scaled vertex, edge, wire, face, shell or solid.
@@ -111,7 +109,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_nonuniform_scale(scalars[0], scalars[1], scalars[2]);
     let mat2 = Matrix4::from_translation(origin.to_vec());
-    builder::transformed(elem, mat2 * mat1 * mat0)
+    transformed(elem, mat2 * mat1 * mat0)
 }
 
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by a vector.
@@ -125,6 +123,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// #
 /// # let b_shell = &cube.boundaries()[0];
 /// # assert_eq!(b_shell.len(), 6); // This solid is a cube!
+/// # assert!(cube.is_geometric_consistent());
 /// #
 /// # let b_loop = &b_shell[0].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
@@ -136,10 +135,10 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// #
 /// # let b_loop = &b_shell[3].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
+/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 0.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 0.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 1.0));
-/// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(1.0, 1.0, 0.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// #
 /// # let b_loop = &b_shell[5].boundaries()[0];
@@ -150,7 +149,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// ```
-pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T::Sweeped {
+pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T::Swept {
     let trsl = Matrix4::from_translation(vector);
     elem.sweep(
         &move |pt| trsl.transform_point(*pt),
@@ -204,6 +203,7 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 /// pipe.append(&mut second_line_part);
 ///
 /// assert_eq!(pipe.shell_condition(), ShellCondition::Oriented);
+/// # assert!(pipe.is_geometric_consistent());
 /// # const N: usize = 100;
 /// # for i in 0..=N {
 /// #    for j in 0..=N {
@@ -226,7 +226,7 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> T::Sweeped
+) -> T::Swept
 {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
@@ -267,6 +267,7 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
 /// let torus: Shell = builder::rsweep(&circle, Point3::origin(), Vector3::unit_y());
 /// let solid: Solid = Solid::new(vec![torus]);
 /// #
+/// # assert!(solid.is_geometric_consistent());
 /// # const N: usize = 100;
 /// # let shell = &solid.boundaries()[0];
 /// # for face in shell.iter() {
@@ -285,11 +286,36 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
 /// #    }
 /// # }
 /// ```
-pub fn rsweep<T: closed_sweep::CompleteRSweep>(
+pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-) -> T::RSweeped
+) -> T::ClosedSwept
 {
-    elem.rsweep(origin, axis)
+    let mat0 = Matrix4::from_translation(-origin.to_vec());
+    let mat1 = Matrix4::from_axis_angle(axis, PI);
+    let mat2 = Matrix4::from_translation(origin.to_vec());
+    let trsl = mat2 * mat1 * mat0;
+    elem.closed_sweep(
+        &move |pt| trsl.transform_point(*pt),
+        &move |curve| NURBSCurve::new(trsl * curve.non_rationalized()),
+        &move |surface| NURBSSurface::new(trsl * surface.non_rationalized()),
+        &move |pt, _| {
+            NURBSCurve::new(geom_impls::circle_arc(
+                pt.to_homogeneous(),
+                origin,
+                axis,
+                PI,
+            ))
+        },
+        &move |curve, _| {
+            NURBSSurface::new(geom_impls::rsweep_surface(
+                curve.non_rationalized(),
+                origin,
+                axis,
+                PI,
+            ))
+        },
+        2,
+    )
 }
