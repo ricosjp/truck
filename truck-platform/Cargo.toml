@@ -12,6 +12,7 @@ bytemuck = "*"
 truck-base = { path = "../truck-base" }
 
 [dev-dependencies]
+winit = "*"
 image = "*"
 futures = "*"
 glsl-to-spirv = "*"
