@@ -9,7 +9,8 @@ fn microfacet_module_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
-    let mut scene = Scene::new(&device, &queue, &sc_desc, &Default::default());
+    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let mut scene = Scene::new(handler, &Default::default());
     let answer = common::nontex_answer_texture(&mut scene);
     let sc_desc = scene.sc_desc();
     let tex_desc = common::texture_descriptor(&sc_desc);

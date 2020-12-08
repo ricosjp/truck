@@ -63,8 +63,7 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &WGPUHandler) -> MyApp {
-        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
+    fn init(handler: &DeviceHandler) -> MyApp {
         let scene_desc = SceneDescriptor {
             camera: MyApp::create_camera(),
             lights: vec![Light {
@@ -74,7 +73,7 @@ impl App for MyApp {
             }],
             ..Default::default()
         };
-        let mut scene = Scene::new(device, queue, sc_desc, &scene_desc);
+        let mut scene = Scene::new(handler.clone(), &scene_desc);
         let mut shape = scene.create_instance(&Self::create_solid(), &Default::default());
         scene.add_objects(&mut shape.render_faces());
         MyApp {
@@ -210,7 +209,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, _: &WGPUHandler) { self.scene.prepare_render(); }
+    fn update(&mut self, _: &DeviceHandler) { self.scene.prepare_render(); }
 
     fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }

@@ -114,19 +114,18 @@ impl MyRender {
 }
 
 impl App for MyRender {
-    fn init(handler: &WGPUHandler) -> MyRender {
-        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
+    fn init(handler: &DeviceHandler) -> MyRender {
         let scene_desc = SceneDescriptor {
             camera: MyRender::create_camera(),
             lights: vec![Light {
                 position: Point3::new(0.0, 20.0, 0.0),
-                color: Vector3::new(1.0, 1.0, 1.0),
+                color: Vector3::new(1.0, 1.0, 1.0) * 1.5,
                 light_type: LightType::Point,
             }],
             ..Default::default()
         };
         MyRender {
-            scene: Scene::new(device, queue, sc_desc, &scene_desc),
+            scene: Scene::new(handler.clone(), &scene_desc),
             instances: Vec::new(),
             rotate_flag: false,
             prev_cursor: None,
@@ -268,7 +267,7 @@ impl App for MyRender {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, _: &WGPUHandler) {
+    fn update(&mut self, _: &DeviceHandler) {
         if let Some(path) = self.path.take() {
             self.load_obj(path);
         }

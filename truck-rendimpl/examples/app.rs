@@ -1,18 +1,12 @@
 use std::sync::{Arc, Mutex};
 use std::time::*;
-use truck_platform::wgpu::*;
+use truck_platform::{wgpu::*, DeviceHandler};
 use winit::dpi::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;
 
-pub struct WGPUHandler {
-    pub device: Arc<Device>,
-    pub queue: Arc<Queue>,
-    pub sc_desc: Arc<Mutex<SwapChainDescriptor>>,
-}
-
 pub trait App: Sized + 'static {
-    fn init(handler: &WGPUHandler) -> Self;
+    fn init(handler: &DeviceHandler) -> Self;
     fn clear_color() -> Color {
         Color {
             r: 0.0,
@@ -27,7 +21,7 @@ pub trait App: Sized + 'static {
     ) -> Option<RenderPassDepthStencilAttachmentDescriptor> {
         None
     }
-    fn update(&mut self, _handler: &WGPUHandler) {}
+    fn update(&mut self, _handler: &DeviceHandler) {}
     fn default_control_flow() -> ControlFlow {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         ControlFlow::WaitUntil(next_frame_time)
@@ -73,18 +67,18 @@ pub trait App: Sized + 'static {
 
         let sc_desc = SwapChainDescriptor {
             usage: TextureUsage::OUTPUT_ATTACHMENT,
-            format: TextureFormat::Bgra8UnormSrgb,
+            format: TextureFormat::Bgra8Unorm,
             width: size.width,
             height: size.height,
             present_mode: PresentMode::Mailbox,
         };
 
         let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
-        let handler = WGPUHandler {
-            device: Arc::new(device),
-            queue: Arc::new(queue),
-            sc_desc: Arc::new(Mutex::new(sc_desc)),
-        };
+        let handler = DeviceHandler::new(
+            Arc::new(device),
+            Arc::new(queue),
+            Arc::new(Mutex::new(sc_desc)),
+        );
 
         let mut app = Self::init(&handler);
 
@@ -104,10 +98,10 @@ pub trait App: Sized + 'static {
                 }
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::Resized(size) => {
-                        let mut sc_desc = handler.sc_desc.try_lock().unwrap();
+                        let mut sc_desc = handler.lock_sc_desc().unwrap();
                         sc_desc.width = size.width;
                         sc_desc.height = size.height;
-                        swap_chain = handler.device.create_swap_chain(&surface, &sc_desc);
+                        swap_chain = handler.device().create_swap_chain(&surface, &sc_desc);
                         Self::default_control_flow()
                     }
                     WindowEvent::Moved(position) => app.moved(position),

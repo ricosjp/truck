@@ -41,18 +41,17 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &WGPUHandler) -> MyApp {
-        let (device, queue, sc_desc) = (&handler.device, &handler.queue, &handler.sc_desc);
+    fn init(handler: &DeviceHandler) -> MyApp {
         let desc = SceneDescriptor {
             camera: MyApp::create_camera(),
             lights: vec![Light {
                 position: Point3::new(1.0, 1.0, 1.0),
-                color: Vector3::new(1.0, 1.0, 1.0),
+                color: Vector3::new(1.0, 1.0, 1.0) * 2.0,
                 light_type: LightType::Point,
             }],
             ..Default::default()
         };
-        let mut scene = Scene::new(device, queue, sc_desc, &desc);
+        let mut scene = Scene::new(handler.clone(), &desc);
         let texture = image::load_from_memory(include_bytes!("WoodFloor024_2K_Color.png")).unwrap();
         let desc = InstanceDescriptor {
             matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
@@ -203,7 +202,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, _: &WGPUHandler) { self.scene.prepare_render(); }
+    fn update(&mut self, _: &DeviceHandler) { self.scene.prepare_render(); }
 
     fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
