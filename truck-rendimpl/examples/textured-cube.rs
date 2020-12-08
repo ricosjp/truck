@@ -46,7 +46,7 @@ impl App for MyApp {
             camera: MyApp::create_camera(),
             lights: vec![Light {
                 position: Point3::new(1.0, 1.0, 1.0),
-                color: Vector3::new(1.0, 1.0, 1.0) * 2.0,
+                color: Vector3::new(1.0, 1.0, 1.0),
                 light_type: LightType::Point,
             }],
             ..Default::default()
