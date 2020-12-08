@@ -53,10 +53,10 @@ mod plane {
         device: &Device,
         code: &str,
         shadertype: ShaderType,
-    ) -> std::io::Result<ShaderModule> {
-        let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();
+    ) -> Result<ShaderModule, String> {
+        let mut spirv = glsl_to_spirv::compile(&code, shadertype).map_err(|error| format!("{:?}", error))?;
         let mut compiled = Vec::new();
-        spirv.read_to_end(&mut compiled)?;
+        spirv.read_to_end(&mut compiled).map_err(|error| format!("{:?}", error))?;
         Ok(device.create_shader_module(wgpu::util::make_spirv(&compiled)))
     }
 
@@ -253,7 +253,10 @@ fn main() {
     let args: Vec<_> = std::env::args().collect();
     if args.len() > 1 {
         match std::fs::read_to_string(&args[1]) {
-            Ok(code) => plane.set_shader(handler.device(), code),
+            Ok(code) => {
+                plane.set_shader(handler.device(), code);
+                scene.update_pipeline(&plane);
+            }
             Err(error) => println!("{:?}", error),
         }
     }
@@ -285,7 +288,10 @@ fn main() {
                 WindowEvent::CloseRequested => ControlFlow::Exit,
                 WindowEvent::DroppedFile(path) => {
                     match std::fs::read_to_string(path) {
-                        Ok(code) => plane.set_shader(handler.device(), code),
+                        Ok(code) => {
+                            plane.set_shader(handler.device(), code);
+                            scene.update_pipeline(&plane);
+                        }
                         Err(error) => println!("{:?}", error),
                     }
                     ControlFlow::Poll
