@@ -3,7 +3,9 @@ const PI: Rad<f64> = Rad(std::f64::consts::PI);
 
 /// Creates and returns a vertex by a three dimensional point.
 #[inline(always)]
-pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
+pub fn vertex(pt: Point3) -> Vertex {
+    Vertex::new(pt)
+}
 
 /// Returns a line from `vertex0` to `vertex1`.
 #[inline(always)]
@@ -59,6 +61,68 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     Face::new(vec![wire], NURBSSurface::new(surface))
 }
 
+/// Try attatiching a plane whose boundary is `wire`.
+/// Todo: Define the crate error and make return value `Result<Face>`!
+#[inline(always)]
+pub fn try_attach_plane(wires: &Vec<Wire>) -> Option<Face> {
+    let mut pts = wires
+        .iter()
+        .flatten()
+        .flat_map(|edge| {
+            edge.lock_curve()
+                .unwrap()
+                .control_points()
+                .clone()
+                .into_iter()
+                .map(|pt| pt.to_point())
+        })
+        .collect::<Vec<_>>();
+    let pt0 = pts[0];
+    let pt1 = match pts.iter().find(|pt| !pt0.near(&pt)) {
+        Some(got) => got,
+        None => return None,
+    };
+    let pt2 = match pts
+        .iter()
+        .find(|pt| !(*pt - pt0).cross(pt1 - pt0).so_small())
+    {
+        Some(got) => got,
+        None => return None,
+    };
+    let n = (pt2 - pt0).cross(pt1 - pt0).normalize();
+    let mat = match (n.cross(Vector3::unit_z()).so_small(), n[2] > 0.0) {
+        (true, true) => Matrix4::identity(),
+        (true, false) => Matrix4::from_nonuniform_scale(1.0, 1.0, -1.0),
+        _ => {
+            let a = Vector3::new(n[1], -n[0], 0.0).normalize();
+            let b = n.cross(a);
+            Matrix3::from_cols(a, b, n).into()
+        }
+    };
+    pts.iter_mut()
+        .for_each(|pt| *pt = mat.invert().unwrap().transform_point(*pt));
+    let bnd_box: BoundingBox<Point3> = pts.iter().collect();
+    let diag = bnd_box.diagonal();
+    if !diag[2].so_small() {
+        return None;
+    }
+    let max = bnd_box.max();
+    let min = bnd_box.min();
+    let ctrl_pts = vec![
+        vec![
+            mat * Vector4::new(min[0], min[1], min[2], 1.0),
+            mat * Vector4::new(max[0], min[1], min[2], 1.0),
+        ],
+        vec![
+            mat * Vector4::new(min[0], max[1], min[2], 1.0),
+            mat * Vector4::new(max[0], max[1], min[2], 1.0),
+        ],
+    ];
+    let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1));
+    let surface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    Face::try_new(wires.clone(), surface).ok()
+}
+
 /// Returns another topology whose points, curves, and surfaces are cloned.
 ///
 /// This method is a redefinition of `Mapped::topological_clone()`.
@@ -90,8 +154,7 @@ pub fn rotated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> T
-{
+) -> T {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -104,8 +167,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     scalars: Vector3,
-) -> T
-{
+) -> T {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_nonuniform_scale(scalars[0], scalars[1], scalars[2]);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -226,8 +288,7 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> T::Swept
-{
+) -> T::Swept {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -290,8 +351,7 @@ pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-) -> T::ClosedSwept
-{
+) -> T::ClosedSwept {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, PI);
     let mat2 = Matrix4::from_translation(origin.to_vec());

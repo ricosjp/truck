@@ -13,3 +13,7 @@ truck-topology = { path = "../truck-topology" }
 
 [dev-dependencies]
 rand = "*"
+winit = "*"
+futures = "*"
+truck-platform = { path = "../truck-platform" }
+truck-rendimpl = { path = "../truck-rendimpl" }
