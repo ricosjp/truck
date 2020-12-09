@@ -186,7 +186,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
 pub fn swap_chain_descriptor() -> SwapChainDescriptor {
     SwapChainDescriptor {
         usage: TextureUsage::OUTPUT_ATTACHMENT,
-        format: TextureFormat::Rgba8UnormSrgb,
+        format: TextureFormat::Rgba8Unorm,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,
         present_mode: PresentMode::Mailbox,
