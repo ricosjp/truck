@@ -351,11 +351,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_ne!(face0.id(), face2.id());
     /// ```
     #[inline(always)]
-    pub fn id(&self) -> FaceID<S> {
-        FaceID {
-            entity: Arc::as_ptr(&self.surface),
-        }
-    }
+    pub fn id(&self) -> FaceID<S> { ID::new(Arc::as_ptr(&self.surface)) }
 
     /// Returns the inverse face.
     /// # Examples
@@ -538,32 +534,3 @@ impl<'a, P, C> ExactSizeIterator for BoundaryIter<'a, P, C> {
 }
 
 impl<'a, P, C> std::iter::FusedIterator for BoundaryIter<'a, P, C> {}
-
-impl<S> Hash for FaceID<S> {
-    #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(self.entity, state); }
-}
-
-impl<S> PartialEq for FaceID<S> {
-    #[inline(always)]
-    fn eq(&self, other: &FaceID<S>) -> bool { std::ptr::eq(self.entity, other.entity) }
-}
-
-impl<S> Eq for FaceID<S> {}
-
-impl<S> Clone for FaceID<S> {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        FaceID {
-            entity: self.entity,
-        }
-    }
-}
-
-impl<S> Copy for FaceID<S> {}
-
-impl<S> std::fmt::Debug for FaceID<S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
-        f.write_fmt(format_args!("{:p}", self.entity))
-    }
-}
