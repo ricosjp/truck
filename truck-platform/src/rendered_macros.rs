@@ -1,24 +1,16 @@
 #[macro_export]
-macro_rules! impl_get_set_id {
+macro_rules! impl_render_id {
     ($($id_member: ident).*) => {
         #[inline(always)]
-        fn get_id(&self) -> RenderID { self.$($id_member).* }
-        #[inline(always)]
-        fn set_id(&mut self, objects_handler: &mut ObjectsHandler) {
-            objects_handler.set_id(&mut self.$($id_member).*)
-        }
+        fn render_id(&self) -> RenderID { self.$($id_member).* }
     };
 }
 
 #[macro_export]
-macro_rules! derive_get_set_id {
+macro_rules! derive_render_id {
     ($($id_member: ident).*) => {
         #[inline(always)]
-        fn get_id(&self) -> RenderID { self.$($id_member).*.get_id() }
-        #[inline(always)]
-        fn set_id(&mut self, objects_handler: &mut ObjectsHandler) {
-            self.$($id_member)*.set_id(objects_handler);
-        }
+        fn render_id(&self) -> RenderID { self.$($id_member).*.render_id() }
     };
 }
 

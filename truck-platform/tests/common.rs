@@ -28,7 +28,7 @@ macro_rules! new_plane {
 }
 
 impl<'a> Rendered for Plane<'a> {
-    impl_get_set_id!(id);
+    impl_render_id!(id);
     fn vertex_buffer(
         &self,
         handler: &DeviceHandler,

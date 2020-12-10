@@ -66,7 +66,7 @@ impl App for MyApp {
         let cube = builder::tsweep(&f, Vector3::unit_z());
         let instance = scene.create_instance(&cube, &Default::default());
         let mut matrices = Vec::new();
-        let mut instances: Vec<_> = (0..N)
+        let instances: Vec<_> = (0..N)
             .flat_map(move |i| (0..N).map(move |j| (i, j)))
             .map(|(i, j)| {
                 let mut instance = instance.clone();
@@ -90,8 +90,8 @@ impl App for MyApp {
                 instance
             })
             .collect();
-        instances.iter_mut().for_each(|shape| {
-            scene.add_objects(&mut shape.render_faces());
+        instances.iter().for_each(|shape| {
+            scene.add_objects(&shape.render_faces());
         });
         MyApp {
             scene,

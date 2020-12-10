@@ -64,8 +64,8 @@ impl App for MyApp {
             texture: Some(std::sync::Arc::new(texture)),
             backface_culling: true,
         };
-        let mut shape = scene.create_instance(&Self::create_cube(), &desc);
-        scene.add_objects(&mut shape.render_faces());
+        let shape = scene.create_instance(&Self::create_cube(), &desc);
+        scene.add_objects(&shape.render_faces());
         MyApp {
             scene,
             rotate_flag: false,

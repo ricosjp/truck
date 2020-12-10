@@ -13,7 +13,7 @@ struct BGCheckPolygonInstance<'a> {
 }
 
 impl<'a> Rendered for BGCheckPolygonInstance<'a> {
-    derive_get_set_id!(polygon);
+    derive_render_id!(polygon);
     derive_vertex_buffer!(polygon);
     derive_bind_group_layout!(polygon);
     derive_bind_group!(polygon);

@@ -74,8 +74,8 @@ impl App for MyApp {
             ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
-        let mut shape = scene.create_instance(&Self::create_solid(), &Default::default());
-        scene.add_objects(&mut shape.render_faces());
+        let shape = scene.create_instance(&Self::create_solid(), &Default::default());
+        scene.add_objects(&shape.render_faces());
         MyApp {
             scene,
             rotate_flag: false,

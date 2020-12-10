@@ -143,7 +143,7 @@ impl PolygonInstance {
 }
 
 impl Rendered for PolygonInstance {
-    impl_get_set_id!(id);
+    impl_render_id!(id);
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
