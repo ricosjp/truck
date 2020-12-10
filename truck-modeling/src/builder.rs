@@ -3,7 +3,9 @@ const PI: Rad<f64> = Rad(std::f64::consts::PI);
 
 /// Creates and returns a vertex by a three dimensional point.
 #[inline(always)]
-pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
+pub fn vertex(pt: Point3) -> Vertex {
+    Vertex::new(pt)
+}
 
 /// Returns a line from `vertex0` to `vertex1`.
 #[inline(always)]
@@ -59,6 +61,25 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     Face::new(vec![wire], NURBSSurface::new(surface))
 }
 
+/// Try attatiching a plane whose boundary is `wire`.
+/// Todo: Define the crate error and make return value `Result<Face>`!
+#[inline(always)]
+pub fn try_attach_plane(wires: &Vec<Wire>) -> Option<Face> {
+    let pts = wires
+        .iter()
+        .flatten()
+        .flat_map(|edge| {
+            edge.oriented_curve()
+                .control_points()
+                .clone()
+                .into_iter()
+                .map(|pt| pt.to_point())
+        })
+        .collect::<Vec<_>>();
+    let surface = NURBSSurface::new(geom_impls::attach_plane(pts)?);
+    Face::try_new(wires.clone(), surface).ok()
+}
+
 /// Returns another topology whose points, curves, and surfaces are cloned.
 ///
 /// This method is a redefinition of `Mapped::topological_clone()`.
@@ -90,8 +111,7 @@ pub fn rotated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> T
-{
+) -> T {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -104,8 +124,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     scalars: Vector3,
-) -> T
-{
+) -> T {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_nonuniform_scale(scalars[0], scalars[1], scalars[2]);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -226,8 +245,7 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> T::Swept
-{
+) -> T::Swept {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -290,8 +308,7 @@ pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-) -> T::ClosedSwept
-{
+) -> T::ClosedSwept {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, PI);
     let mat2 = Matrix4::from_translation(origin.to_vec());

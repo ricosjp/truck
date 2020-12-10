@@ -11,7 +11,7 @@
     unused_qualifications
 )]
 
-pub use truck_base::{cgmath64::*, geom_traits::*, tolerance::*};
+pub use truck_base::{cgmath64::*, geom_traits::*, tolerance::*, bounding_box::*};
 
 /// geometrical elements
 pub mod geometry {

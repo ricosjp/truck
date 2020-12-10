@@ -32,12 +32,12 @@ fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
 
 fn face_buffer(device: &Device, face: &Face) -> Option<FaceBuffer> {
     let surface = face.oriented_surface();
-    let mesh = StructuredMesh::from_surface(&surface, 0.01);
+    let mesh = StructuredMesh::from_surface(&surface, 0.001);
     let (vb, ib) = ExpandedPolygon::from(&mesh).buffers(device);
     let mut boundary = Vec::new();
     for edge in face.boundary_iters().into_iter().flatten() {
         let curve = edge.oriented_curve();
-        let division = curve.parameter_division(0.01);
+        let division = curve.parameter_division(0.001);
         let mut hint = presearch(&surface, curve.subs(division[0]));
         let mut this_boundary = Vec::new();
         for t in division {

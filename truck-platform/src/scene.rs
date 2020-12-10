@@ -7,8 +7,7 @@ impl DeviceHandler {
         device: Arc<Device>,
         queue: Arc<Queue>,
         sc_desc: Arc<Mutex<SwapChainDescriptor>>,
-    ) -> DeviceHandler
-    {
+    ) -> DeviceHandler {
         DeviceHandler {
             device,
             queue,
@@ -234,7 +233,6 @@ impl Scene {
 
     #[inline(always)]
     pub fn sc_desc(&self) -> SwapChainDescriptor { self.device_handler.sc_desc() }
-    
     #[inline(always)]
     pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SwapChainDescriptor>> {
         self.device_handler.lock_sc_desc()
@@ -302,6 +300,40 @@ impl Scene {
         R: 'a + Rendered,
         I: IntoIterator<Item = &'a R>, {
         let closure = move |flag, object: &R| flag && self.update_bind_group(object);
+        objects.into_iter().fold(true, closure)
+    }
+    #[inline(always)]
+    pub fn update_pipeline<R: Rendered>(&mut self, object: &R) -> bool {
+        let device_handler = &self.device_handler;
+        let objects_handler = &mut self.objects_handler;
+        match object
+            .get_id()
+            .map(|idx| objects_handler.objects.get_mut(&idx))
+        {
+            Some(Some(render_object)) => {
+                let pipeline_layout =
+                    device_handler
+                        .device()
+                        .create_pipeline_layout(&PipelineLayoutDescriptor {
+                            bind_group_layouts: &[
+                                &self.bind_group_layout,
+                                &render_object.bind_group_layout,
+                            ],
+                            push_constant_ranges: &[],
+                            label: None,
+                        });
+                render_object.pipeline = object.pipeline(device_handler, &pipeline_layout);
+                true
+            }
+            _ => false,
+        }
+    }
+    #[inline(always)]
+    pub fn update_pipelines<'a, R, I>(&mut self, objects: I) -> bool
+    where
+        R: 'a + Rendered,
+        I: IntoIterator<Item = &'a R>, {
+        let closure = move |flag, object: &R| flag && self.update_pipeline(object);
         objects.into_iter().fold(true, closure)
     }
 
