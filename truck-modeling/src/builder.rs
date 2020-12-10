@@ -65,61 +65,18 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// Todo: Define the crate error and make return value `Result<Face>`!
 #[inline(always)]
 pub fn try_attach_plane(wires: &Vec<Wire>) -> Option<Face> {
-    let mut pts = wires
+    let pts = wires
         .iter()
         .flatten()
         .flat_map(|edge| {
-            edge.lock_curve()
-                .unwrap()
+            edge.oriented_curve()
                 .control_points()
                 .clone()
                 .into_iter()
                 .map(|pt| pt.to_point())
         })
         .collect::<Vec<_>>();
-    let pt0 = pts[0];
-    let pt1 = match pts.iter().find(|pt| !pt0.near(&pt)) {
-        Some(got) => got,
-        None => return None,
-    };
-    let pt2 = match pts
-        .iter()
-        .find(|pt| !(*pt - pt0).cross(pt1 - pt0).so_small())
-    {
-        Some(got) => got,
-        None => return None,
-    };
-    let n = (pt2 - pt0).cross(pt1 - pt0).normalize();
-    let mat = match (n.cross(Vector3::unit_z()).so_small(), n[2] > 0.0) {
-        (true, true) => Matrix4::identity(),
-        (true, false) => Matrix4::from_nonuniform_scale(1.0, 1.0, -1.0),
-        _ => {
-            let a = Vector3::new(n[1], -n[0], 0.0).normalize();
-            let b = n.cross(a);
-            Matrix3::from_cols(a, b, n).into()
-        }
-    };
-    pts.iter_mut()
-        .for_each(|pt| *pt = mat.invert().unwrap().transform_point(*pt));
-    let bnd_box: BoundingBox<Point3> = pts.iter().collect();
-    let diag = bnd_box.diagonal();
-    if !diag[2].so_small() {
-        return None;
-    }
-    let max = bnd_box.max();
-    let min = bnd_box.min();
-    let ctrl_pts = vec![
-        vec![
-            mat * Vector4::new(min[0], min[1], min[2], 1.0),
-            mat * Vector4::new(max[0], min[1], min[2], 1.0),
-        ],
-        vec![
-            mat * Vector4::new(min[0], max[1], min[2], 1.0),
-            mat * Vector4::new(max[0], max[1], min[2], 1.0),
-        ],
-    ];
-    let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1));
-    let surface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    let surface = NURBSSurface::new(geom_impls::attach_plane(pts)?);
     Face::try_new(wires.clone(), surface).ok()
 }
 
