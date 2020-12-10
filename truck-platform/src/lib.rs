@@ -52,8 +52,8 @@ pub struct PreBindGroupLayoutEntry {
     pub count: Option<core::num::NonZeroU32>,
 }
 
-#[doc(hidden)]
 /// A collection of GPU buffers used by [`wgpu`](../wgpu/index.html) for rendering
+#[doc(hidden)]
 #[derive(Debug, Clone)]
 pub struct RenderObject {
     vertex_buffer: Arc<BufferHandler>,
@@ -63,32 +63,49 @@ pub struct RenderObject {
     bind_group: Arc<BindGroup>,
 }
 
+/// the projection type of camera
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProjectionType {
+    /// perspective camera
     Perspective,
+    /// parallel camera
     Parallel,
 }
 
+/// Camera
 #[derive(Debug, Clone)]
 pub struct Camera {
+    /// camera matrix
     pub matrix: Matrix4,
     projection: Matrix4,
     projection_type: ProjectionType,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// the kinds of light sources: point or uniform
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LightType {
+    /// point light source
     Point,
+    /// uniform light source
     Uniform,
 }
 
+/// Light
 #[derive(Clone, Debug, PartialEq)]
 pub struct Light {
+    /// position of light
     pub position: Point3,
+    /// color of light
     pub color: Vector3,
+    /// type of light source: point or uniform
     pub light_type: LightType,
 }
 
+/// Chain that holds [`Device`], [`Queue`] and [`SwapChainDescriptor`].
+/// 
+/// [`Device`]: ../wgpu/struct.Device.html
+/// [`Queue`]: ../wgpu/struct.Queue.html
+/// [`SwapChainDescriptor`]: ../wgpu/struct.SwapChainDescriptor.html
 #[derive(Debug, Clone)]
 pub struct DeviceHandler {
     device: Arc<Device>,
