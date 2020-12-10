@@ -77,12 +77,6 @@ impl App for MyApp {
 
     fn app_title<'a>() -> Option<&'a str> { Some("textured cube") }
 
-    fn depth_stencil_attachment_descriptor<'a>(
-        &'a self,
-    ) -> Option<RenderPassDepthStencilAttachmentDescriptor<'a>> {
-        Some(self.scene.depth_stencil_attachment_descriptor())
-    }
-
     fn mouse_input(&mut self, state: ElementState, button: MouseButton) -> ControlFlow {
         match button {
             MouseButton::Left => {

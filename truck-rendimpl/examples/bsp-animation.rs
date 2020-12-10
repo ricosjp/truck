@@ -127,12 +127,6 @@ impl App for MyApp {
 
     fn app_title<'a>() -> Option<&'a str> { Some("BSpline Benchmark Animation") }
 
-    fn depth_stencil_attachment_descriptor<'a>(
-        &'a self,
-    ) -> Option<RenderPassDepthStencilAttachmentDescriptor<'a>> {
-        Some(self.scene.depth_stencil_attachment_descriptor())
-    }
-
     fn update(&mut self, _: &DeviceHandler) {
         let mut updated = self.updated.lock().unwrap();
         if *updated {
