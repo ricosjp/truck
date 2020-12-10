@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 wgpu = "*"
 bytemuck = "*"
+lazy_static = "*"
 truck-base = { path = "../truck-base" }
 
 [dev-dependencies]

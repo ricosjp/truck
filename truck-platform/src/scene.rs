@@ -1,6 +1,19 @@
 use crate::*;
 use std::sync::{LockResult, MutexGuard};
 
+lazy_static::lazy_static! {
+    static ref MAXID: Mutex<usize> = Mutex::new(0);
+}
+
+impl Default for RenderID {
+    #[inline(always)]
+    fn default() -> Self {
+        let mut id = MAXID.lock().unwrap();
+        *id += 1;
+        RenderID(*id - 1)
+    }
+}
+
 impl DeviceHandler {
     #[inline(always)]
     pub fn new(
@@ -32,70 +45,6 @@ impl Default for SceneDescriptor {
             background: Color::BLACK,
             camera: Camera::default(),
             lights: vec![Light::default()],
-        }
-    }
-}
-
-impl Default for RenderID {
-    #[inline(always)]
-    fn default() -> RenderID { RenderID(None) }
-}
-
-impl RenderID {
-    fn map<T, F: FnOnce(usize) -> T>(self, f: F) -> Option<T> {
-        match self {
-            RenderID(Some(id)) => Some(f(id)),
-            RenderID(None) => None,
-        }
-    }
-}
-
-impl ObjectsHandler {
-    #[inline(always)]
-    fn is_include<R: Rendered>(&self, object: &R) -> bool {
-        match object.get_id().map(|idx| self.objects.get(&idx)) {
-            Some(Some(_)) => true,
-            _ => false,
-        }
-    }
-    #[inline(always)]
-    pub fn set_id(&mut self, id: &mut RenderID) {
-        *id = RenderID(Some(self.objects_number));
-        self.objects_number += 1;
-    }
-    #[inline(always)]
-    fn add_object<R: Rendered>(&mut self, object: &mut R, robject: RenderObject) {
-        self.objects.insert(self.objects_number, robject);
-        object.set_id(self);
-    }
-    #[inline(always)]
-    fn remove_object<R: Rendered>(&mut self, object: &R) -> bool {
-        match object.get_id().map(|idx| self.objects.remove(&idx)) {
-            Some(None) => true,
-            _ => false,
-        }
-    }
-    #[inline(always)]
-    fn update_vertex_buffer<R: Rendered>(&mut self, object: &R, handler: &DeviceHandler) -> bool {
-        match object.get_id().map(|idx| self.objects.get_mut(&idx)) {
-            Some(Some(render_object)) => {
-                let (vb, ib) = object.vertex_buffer(handler);
-                render_object.vertex_buffer = vb;
-                render_object.index_buffer = ib;
-                true
-            }
-            _ => false,
-        }
-    }
-    #[inline(always)]
-    fn update_bind_group<R: Rendered>(&mut self, object: &R, handler: &DeviceHandler) -> bool {
-        match object.get_id().map(|idx| self.objects.get_mut(&idx)) {
-            Some(Some(render_object)) => {
-                let bind_group = object.bind_group(handler, &render_object.bind_group_layout);
-                render_object.bind_group = bind_group;
-                true
-            }
-            _ => false,
         }
     }
 }
@@ -206,13 +155,9 @@ impl Scene {
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
         let (device, sc_desc) = (device_handler.device(), device_handler.sc_desc());
-        let objects_handler = ObjectsHandler {
-            objects: Default::default(),
-            objects_number: 0,
-        };
         let depth_texture = Self::default_depth_texture(device, &sc_desc);
         Scene {
-            objects_handler,
+            objects: Default::default(),
             bind_group_layout: Self::init_scene_bind_group_layout(device),
             bind_group: None,
             foward_depth: depth_texture.create_view(&Default::default()),
@@ -239,26 +184,22 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn add_object<R: Rendered>(&mut self, object: &mut R) -> bool {
-        if self.objects_handler.is_include(object) {
-            return false;
-        }
+    pub fn add_object<R: Rendered>(&mut self, object: &R) -> bool {
         let render_object = object.render_object(self);
-        self.objects_handler.add_object(object, render_object);
-        true
+        self.objects.insert(object.render_id(), render_object).is_none()
     }
     #[inline(always)]
     pub fn add_objects<'a, R, I>(&mut self, objects: I) -> bool
     where
         R: 'a + Rendered,
-        I: IntoIterator<Item = &'a mut R>, {
+        I: IntoIterator<Item = &'a R>, {
         objects
             .into_iter()
             .fold(true, move |flag, object| flag && self.add_object(object))
     }
     #[inline(always)]
     pub fn remove_object<R: Rendered>(&mut self, object: &R) -> bool {
-        self.objects_handler.remove_object(object)
+        self.objects.remove(&object.render_id()).is_some()
     }
     #[inline(always)]
     pub fn remove_objects<'a, R, I>(&mut self, objects: I) -> bool
@@ -269,16 +210,24 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn clear_objects(&mut self) { self.objects_handler.objects.clear() }
+    pub fn clear_objects(&mut self) { self.objects.clear() }
     #[inline(always)]
-    pub fn number_of_objects(&self) -> usize { self.objects_handler.objects.len() }
+    pub fn number_of_objects(&self) -> usize { self.objects.len() }
 
     #[inline(always)]
     pub fn update_vertex_buffer<R: Rendered>(&mut self, object: &R) -> bool {
-        let device_handler = &self.device_handler;
-        self.objects_handler
-            .update_vertex_buffer(object, &device_handler)
+        let (handler, objects) = (&self.device_handler, &mut self.objects);
+        match objects.get_mut(&object.render_id()) {
+            Some(render_object) => {
+                let (vb, ib) = object.vertex_buffer(handler);
+                render_object.vertex_buffer = vb;
+                render_object.index_buffer = ib;
+                true
+            }
+            _ => false,
+        }
     }
+    
     #[inline(always)]
     pub fn update_vertex_buffers<'a, R, I>(&mut self, objects: I) -> bool
     where
@@ -290,9 +239,15 @@ impl Scene {
 
     #[inline(always)]
     pub fn update_bind_group<R: Rendered>(&mut self, object: &R) -> bool {
-        let device_handler = &self.device_handler;
-        self.objects_handler
-            .update_bind_group(object, &device_handler)
+        let (handler, objects) = (&self.device_handler, &mut self.objects);
+        match objects.get_mut(&object.render_id()) {
+            Some(render_object) => {
+                let bind_group = object.bind_group(handler, &render_object.bind_group_layout);
+                render_object.bind_group = bind_group;
+                true
+            }
+            _ => false,
+        }
     }
     #[inline(always)]
     pub fn update_bind_groups<'a, R, I>(&mut self, objects: I) -> bool
@@ -304,15 +259,11 @@ impl Scene {
     }
     #[inline(always)]
     pub fn update_pipeline<R: Rendered>(&mut self, object: &R) -> bool {
-        let device_handler = &self.device_handler;
-        let objects_handler = &mut self.objects_handler;
-        match object
-            .get_id()
-            .map(|idx| objects_handler.objects.get_mut(&idx))
-        {
-            Some(Some(render_object)) => {
+        let (handler, objects) = (&self.device_handler, &mut self.objects);
+        match objects.get_mut(&object.render_id()) {
+            Some(render_object) => {
                 let pipeline_layout =
-                    device_handler
+                    handler
                         .device()
                         .create_pipeline_layout(&PipelineLayoutDescriptor {
                             bind_group_layouts: &[
@@ -322,7 +273,7 @@ impl Scene {
                             push_constant_ranges: &[],
                             label: None,
                         });
-                render_object.pipeline = object.pipeline(device_handler, &pipeline_layout);
+                render_object.pipeline = object.pipeline(handler, &pipeline_layout);
                 true
             }
             _ => false,
@@ -380,7 +331,7 @@ impl Scene {
                 depth_stencil_attachment: Some(self.depth_stencil_attachment_descriptor()),
             });
             rpass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
-            for (_, object) in self.objects_handler.objects.iter() {
+            for (_, object) in self.objects.iter() {
                 rpass.set_pipeline(&object.pipeline);
                 rpass.set_bind_group(1, &object.bind_group, &[]);
                 rpass.set_vertex_buffer(0, object.vertex_buffer.buffer.slice(..));

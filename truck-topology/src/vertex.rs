@@ -89,11 +89,7 @@ impl<P> Vertex<P> {
 
     /// Returns the id of the vertex.
     #[inline(always)]
-    pub fn id(&self) -> VertexID<P> {
-        VertexID {
-            entity: Arc::as_ptr(&self.point),
-        }
-    }
+    pub fn id(&self) -> VertexID<P> { ID::new(Arc::as_ptr(&self.point)) }
 }
 
 impl<P> Clone for Vertex<P> {
@@ -117,33 +113,4 @@ impl<P> Eq for Vertex<P> {}
 impl<P> Hash for Vertex<P> {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(Arc::as_ptr(&self.point), state); }
-}
-
-impl<P> Clone for VertexID<P> {
-    #[inline(always)]
-    fn clone(&self) -> VertexID<P> {
-        VertexID {
-            entity: self.entity,
-        }
-    }
-}
-
-impl<P> Copy for VertexID<P> {}
-
-impl<P> Hash for VertexID<P> {
-    #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(self.entity, state); }
-}
-
-impl<P> PartialEq for VertexID<P> {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.entity, other.entity) }
-}
-
-impl<P> Eq for VertexID<P> {}
-
-impl<P> std::fmt::Debug for VertexID<P> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
-        f.write_fmt(format_args!("{:p}", self.entity))
-    }
 }

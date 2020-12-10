@@ -279,11 +279,7 @@ impl<P, C> Edge<P, C> {
     /// assert_eq!(edge0.id(), edge1.id());
     /// ```
     #[inline(always)]
-    pub fn id(&self) -> EdgeID<C> {
-        EdgeID {
-            entity: Arc::as_ptr(&self.curve),
-        }
-    }
+    pub fn id(&self) -> EdgeID<C> { ID::new(Arc::as_ptr(&self.curve)) }
 }
 
 impl<P, C: Curve<Point=P>> Edge<P, C> {
@@ -336,34 +332,5 @@ impl<P, C> Hash for Edge<P, C> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         std::ptr::hash(Arc::as_ptr(&self.curve), state);
         self.orientation.hash(state);
-    }
-}
-
-impl<C> Hash for EdgeID<C> {
-    #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(self.entity, state); }
-}
-
-impl<C> PartialEq for EdgeID<C> {
-    #[inline(always)]
-    fn eq(&self, other: &EdgeID<C>) -> bool { std::ptr::eq(self.entity, other.entity) }
-}
-
-impl<C> Eq for EdgeID<C> {}
-
-impl<C> Clone for EdgeID<C> {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        EdgeID {
-            entity: self.entity,
-        }
-    }
-}
-
-impl<C> Copy for EdgeID<C> {}
-
-impl<C> std::fmt::Debug for EdgeID<C> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
-        f.write_fmt(format_args!("{:p}", self.entity))
     }
 }

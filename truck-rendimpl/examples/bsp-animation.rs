@@ -105,8 +105,8 @@ impl App for MyApp {
         };
         let mut scene = Scene::new(handler.clone(), &desc);
         let shell = Self::init_shell();
-        let mut object = scene.create_instance(&shell, &Default::default());
-        scene.add_objects(&mut object.render_faces());
+        let object = scene.create_instance(&shell, &Default::default());
+        scene.add_objects(&object.render_faces());
         let object = Arc::new(Mutex::new(object));
         let closed = Arc::new(Mutex::new(false));
         let updated = Arc::new(Mutex::new(false));
@@ -131,7 +131,7 @@ impl App for MyApp {
     fn update(&mut self, _: &DeviceHandler) {
         let mut updated = self.updated.lock().unwrap();
         if *updated {
-            let mut object = self.object.lock().unwrap();
+            let object = self.object.lock().unwrap();
             self.scene.update_vertex_buffers(&object.render_faces());
             *updated = false;
         }

@@ -34,7 +34,7 @@ impl<'a> BGCheckShapeInstance<'a> {
 }
 
 impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
-    derive_get_set_id!(face);
+    derive_render_id!(face);
     derive_vertex_buffer!(face);
     derive_bind_group_layout!(face);
     derive_bind_group!(face);
@@ -78,7 +78,7 @@ fn exec_shape_bgtest(
         shape: instance.clone(),
         fragment_shader: shader,
     };
-    common::render_ones(scene, &texture, &mut bgc_instance.render_faces());
+    common::render_ones(scene, &texture, &bgc_instance.render_faces());
     common::same_texture(scene.device_handler(), &answer, &texture)
 }
 
