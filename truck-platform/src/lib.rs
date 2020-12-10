@@ -103,9 +103,54 @@ pub struct Light {
 
 /// Chain that holds [`Device`], [`Queue`] and [`SwapChainDescriptor`].
 /// 
+/// This struct is used for creating [`Scene`].
+/// [`Device`] and [`Queue`] must be wrapped `Arc`,
+/// and [`SwapChainDescriptor`] `Arc<Mutex>`.
+/// # Examples
+/// ```
+/// use std::sync::{Arc, Mutex};
+/// use truck_platform::*;
+/// use wgpu::*;
+/// let instance = Instance::new(BackendBit::PRIMARY);
+/// let (device, queue) = futures::executor::block_on(async {
+///     let adapter = instance
+///         .request_adapter(&RequestAdapterOptions {
+///             power_preference: PowerPreference::Default,
+///             compatible_surface: None,
+///         })
+///         .await
+///         .unwrap();
+///     adapter
+///         .request_device(
+///             &DeviceDescriptor {
+///                 features: Default::default(),
+///                 limits: Limits::default(),
+///                 shader_validation: true,
+///             },
+///             None,
+///         )
+///         .await
+///         .unwrap()
+/// });
+/// let sc_desc = SwapChainDescriptor {
+///     usage: TextureUsage::OUTPUT_ATTACHMENT,
+///     format: TextureFormat::Bgra8UnormSrgb,
+///     width: 512,
+///     height: 512,
+///     present_mode: PresentMode::Mailbox,
+/// };
+/// // creates SwapChain or Texture to draw by Scene.
+/// let device_handler = DeviceHandler::new(
+///     Arc::new(device),
+///     Arc::new(queue),
+///     Arc::new(Mutex::new(sc_desc)),
+/// );
+/// ```
+/// 
 /// [`Device`]: ../wgpu/struct.Device.html
 /// [`Queue`]: ../wgpu/struct.Queue.html
 /// [`SwapChainDescriptor`]: ../wgpu/struct.SwapChainDescriptor.html
+/// [`Scene`]: ./struct.Scene.html
 #[derive(Debug, Clone)]
 pub struct DeviceHandler {
     device: Arc<Device>,
@@ -163,6 +208,7 @@ pub trait Rendered {
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
     ) -> Arc<RenderPipeline>;
+    #[doc(hidden)]
     fn render_object(&self, scene: &Scene) -> RenderObject {
         let (vertex_buffer, index_buffer) = self.vertex_buffer(scene.device_handler());
         let bind_group_layout = self.bind_group_layout(scene.device_handler());
