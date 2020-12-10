@@ -244,7 +244,6 @@ pub struct FaceID<S> {
     entity: *const Mutex<S>,
 }
 
-
 #[doc(hidden)]
 pub mod edge;
 /// classifies the errors that can occur in this crate.

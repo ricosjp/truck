@@ -54,9 +54,12 @@ mod plane {
         code: &str,
         shadertype: ShaderType,
     ) -> Result<ShaderModule, String> {
-        let mut spirv = glsl_to_spirv::compile(&code, shadertype).map_err(|error| format!("{:?}", error))?;
+        let mut spirv =
+            glsl_to_spirv::compile(&code, shadertype).map_err(|error| format!("{:?}", error))?;
         let mut compiled = Vec::new();
-        spirv.read_to_end(&mut compiled).map_err(|error| format!("{:?}", error))?;
+        spirv
+            .read_to_end(&mut compiled)
+            .map_err(|error| format!("{:?}", error))?;
         Ok(device.create_shader_module(wgpu::util::make_spirv(&compiled)))
     }
 

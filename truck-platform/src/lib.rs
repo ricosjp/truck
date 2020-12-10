@@ -166,15 +166,14 @@ pub trait Rendered {
 pub mod buffer_handler;
 pub mod camera;
 pub mod light;
-pub mod scene;
 pub mod rendered_macros;
+pub mod scene;
 
 pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     device: &Device,
     layout: &BindGroupLayout,
     resources: T,
-) -> BindGroup
-{
+) -> BindGroup {
     let entries: &Vec<BindGroupEntry> = &resources
         .into_iter()
         .enumerate()
@@ -193,8 +192,7 @@ pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
 pub fn create_bind_group_layout<'a, T: IntoIterator<Item = &'a PreBindGroupLayoutEntry>>(
     device: &Device,
     entries: T,
-) -> BindGroupLayout
-{
+) -> BindGroupLayout {
     let vec: Vec<_> = entries
         .into_iter()
         .enumerate()

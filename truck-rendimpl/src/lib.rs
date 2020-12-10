@@ -1,6 +1,6 @@
 extern crate truck_modeling;
-extern crate truck_polymesh;
 extern crate truck_platform;
+extern crate truck_polymesh;
 use image::{DynamicImage, GenericImageView};
 use std::sync::{Arc, Mutex};
 pub use truck_modeling::*;
@@ -54,17 +54,9 @@ pub struct ShapeInstance {
 pub trait IntoInstance {
     type Instance;
     #[doc(hidden)]
-    fn into_instance(
-        &self,
-        device: &Device,
-        desc: InstanceDescriptor,
-    ) -> Self::Instance;
+    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance;
     #[doc(hidden)]
-    fn update_instance(
-        &self,
-        device: &Device,
-        instance: &mut Self::Instance,
-    );
+    fn update_instance(&self, device: &Device, instance: &mut Self::Instance);
 }
 
 pub trait CreateInstance {
@@ -73,11 +65,7 @@ pub trait CreateInstance {
         object: &T,
         desc: &InstanceDescriptor,
     ) -> T::Instance;
-    fn update_instance<T: IntoInstance>(
-        &self,
-        instance: &mut T::Instance,
-        object: &T,
-    );
+    fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T);
 }
 
 impl CreateInstance for Scene {
@@ -86,12 +74,11 @@ impl CreateInstance for Scene {
         &self,
         object: &T,
         desc: &InstanceDescriptor,
-    ) -> T::Instance
-    {
+    ) -> T::Instance {
         object.into_instance(self.device(), desc.clone())
     }
     #[inline(always)]
-    fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T){
+    fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T) {
         object.update_instance(self.device(), instance)
     }
 }
@@ -122,8 +109,7 @@ fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     device: &Device,
     layout: &BindGroupLayout,
     resources: T,
-) -> BindGroup
-{
+) -> BindGroup {
     let entries: &Vec<BindGroupEntry> = &resources
         .into_iter()
         .enumerate()

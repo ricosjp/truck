@@ -56,8 +56,7 @@ impl MyApp {
         closed: &Arc<Mutex<bool>>,
         updated: &Arc<Mutex<bool>>,
         shell: Shell,
-    ) -> JoinHandle<()>
-    {
+    ) -> JoinHandle<()> {
         let object = Arc::clone(object);
         let closed = Arc::clone(closed);
         let updated = Arc::clone(updated);
@@ -97,9 +96,9 @@ impl App for MyApp {
         let desc = SceneDescriptor {
             camera: MyApp::init_camera(),
             lights: vec![Light {
-            position: Point3::new(0.5, 2.0, 0.5),
-            color: Vector3::new(1.0, 1.0, 1.0),
-            light_type: LightType::Point,
+                position: Point3::new(0.5, 2.0, 0.5),
+                color: Vector3::new(1.0, 1.0, 1.0),
+                light_type: LightType::Point,
             }],
             ..Default::default()
         };
@@ -110,7 +109,13 @@ impl App for MyApp {
         let object = Arc::new(Mutex::new(object));
         let closed = Arc::new(Mutex::new(false));
         let updated = Arc::new(Mutex::new(false));
-        let thread = Some(MyApp::init_thread(handler.clone(), &object, &closed, &updated, shell));
+        let thread = Some(MyApp::init_thread(
+            handler.clone(),
+            &object,
+            &closed,
+            &updated,
+            shell,
+        ));
         MyApp {
             scene,
             object,

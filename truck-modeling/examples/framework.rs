@@ -14,7 +14,7 @@ pub struct ShapeViewer {
 }
 
 impl ShapeViewer {
-    fn init<T: IntoInstance<Instance=ShapeInstance>>(handler: &DeviceHandler, shape: T) -> Self {
+    fn init<T: IntoInstance<Instance = ShapeInstance>>(handler: &DeviceHandler, shape: T) -> Self {
         let scene_desc = SceneDescriptor {
             background: Color::BLACK,
             camera: create_camera(),
@@ -95,7 +95,7 @@ impl ShapeViewer {
         }
         Self::default_control_flow()
     }
-    pub fn run<I: IntoInstance<Instance=ShapeInstance>>(shape: I) {
+    pub fn run<I: IntoInstance<Instance = ShapeInstance>>(shape: I) {
         let event_loop = winit::event_loop::EventLoop::new();
         let mut wb = winit::window::WindowBuilder::new();
         wb = wb.with_title("Shape Viewer");

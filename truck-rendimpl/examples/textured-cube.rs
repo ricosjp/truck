@@ -114,8 +114,7 @@ impl App for MyApp {
             MouseScrollDelta::LineDelta(_, y) => {
                 let camera = &mut self.scene.descriptor_mut().camera;
                 let trans_vec = camera.eye_direction() * 0.2 * y as f64;
-                camera.matrix =
-                    Matrix4::from_translation(trans_vec) * camera.matrix;
+                camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };

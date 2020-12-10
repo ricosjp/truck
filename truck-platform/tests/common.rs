@@ -32,8 +32,7 @@ impl<'a> Rendered for Plane<'a> {
     fn vertex_buffer(
         &self,
         handler: &DeviceHandler,
-    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>)
-    {
+    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         let buffer = BufferHandler::from_slice(
             &[0 as u32, 1, 2, 2, 1, 3],
             handler.device(),
@@ -245,7 +244,8 @@ pub fn same_texture(handler: &DeviceHandler, answer: &Texture, result: &Texture)
         PICTURE_WIDTH,
         PICTURE_HEIGHT,
         image::ColorType::Rgba8,
-    ).unwrap();
+    )
+    .unwrap();
     vec0.into_iter()
         .zip(vec1)
         .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)
