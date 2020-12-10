@@ -64,7 +64,7 @@ mod plane {
     }
 
     impl Rendered for Plane {
-        impl_get_set_id!(id);
+        impl_render_id!(id);
         fn vertex_buffer(
             &self,
             handler: &DeviceHandler,

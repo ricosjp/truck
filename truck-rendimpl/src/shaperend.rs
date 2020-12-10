@@ -118,7 +118,7 @@ impl IntoInstance for Solid {
 }
 
 pub struct RenderFace<'a> {
-    instance: &'a mut FaceInstance,
+    instance: &'a FaceInstance,
     desc: &'a InstanceDescriptor,
 }
 
@@ -239,7 +239,7 @@ impl<'a> RenderFace<'a> {
 }
 
 impl<'a> Rendered for RenderFace<'a> {
-    impl_get_set_id!(instance.id);
+    impl_render_id!(instance.id);
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
@@ -274,10 +274,10 @@ impl<'a> Rendered for RenderFace<'a> {
 
 impl ShapeInstance {
     #[inline(always)]
-    pub fn render_faces(&mut self) -> Vec<RenderFace> {
+    pub fn render_faces(&self) -> Vec<RenderFace> {
         let desc = &self.desc;
         self.faces
-            .iter_mut()
+            .iter()
             .map(move |instance| RenderFace { instance, desc })
             .collect()
     }

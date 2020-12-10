@@ -34,8 +34,8 @@ impl ShapeViewer {
             },
             ..Default::default()
         };
-        let mut instance = scene.create_instance(&shape, &inst_desc);
-        scene.add_objects(&mut instance.render_faces());
+        let instance = scene.create_instance(&shape, &inst_desc);
+        scene.add_objects(&instance.render_faces());
         ShapeViewer {
             scene,
             rotate_flag: false,

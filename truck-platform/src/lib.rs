@@ -113,14 +113,8 @@ pub struct DeviceHandler {
     sc_desc: Arc<Mutex<SwapChainDescriptor>>,
 }
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Hash, Debug)]
-pub struct RenderID(Option<usize>);
-
-#[derive(Debug)]
-pub struct ObjectsHandler {
-    objects: HashMap<usize, RenderObject>,
-    objects_number: usize,
-}
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
+pub struct RenderID(usize);
 
 #[derive(Debug, Clone)]
 pub struct SceneDescriptor {
@@ -132,7 +126,7 @@ pub struct SceneDescriptor {
 #[derive(Debug)]
 pub struct Scene {
     device_handler: DeviceHandler,
-    objects_handler: ObjectsHandler,
+    objects: HashMap<RenderID, RenderObject>,
     bind_group_layout: BindGroupLayout,
     bind_group: Option<BindGroup>,
     foward_depth: TextureView,
@@ -141,8 +135,7 @@ pub struct Scene {
 }
 
 pub trait Rendered {
-    fn get_id(&self) -> RenderID;
-    fn set_id(&mut self, objects_handler: &mut ObjectsHandler);
+    fn render_id(&self) -> RenderID;
     fn vertex_buffer(
         &self,
         device_handler: &DeviceHandler,

@@ -78,7 +78,7 @@
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, LockResult, Mutex, MutexGuard, TryLockResult};
-use truck_base::{geom_traits::*, tolerance::*};
+use truck_base::{geom_traits::*, tolerance::*, id::ID};
 
 /// Vertex, the minimum topological unit.
 ///
@@ -204,9 +204,7 @@ impl<T> RemoveTry<T> for Result<T> {
 /// assert_ne!(entity, *v.try_lock_point().unwrap());
 /// assert_eq!(v_id, v.id());
 /// ```
-pub struct VertexID<P> {
-    entity: *const Mutex<P>,
-}
+pub type VertexID<P> = ID<Mutex<P>>;
 
 /// The id that does not depend on the direction of the edge.
 /// # Examples
@@ -218,9 +216,7 @@ pub struct VertexID<P> {
 /// assert_ne!(edge0, edge1);
 /// assert_eq!(edge0.id(), edge1.id());
 /// ```
-pub struct EdgeID<C> {
-    entity: *const Mutex<C>,
-}
+pub type EdgeID<C> = ID<Mutex<C>>;
 
 /// The id that does not depend on the direction of the face.
 /// # Examples
@@ -240,9 +236,7 @@ pub struct EdgeID<C> {
 /// assert_eq!(face0.id(), face1.id());
 /// assert_ne!(face0.id(), face2.id());
 /// ```
-pub struct FaceID<S> {
-    entity: *const Mutex<S>,
-}
+pub type FaceID<S> = ID<Mutex<S>>;
 
 #[doc(hidden)]
 pub mod edge;

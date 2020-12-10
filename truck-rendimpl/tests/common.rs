@@ -28,7 +28,7 @@ macro_rules! new_plane {
 }
 
 impl<'a> Rendered for Plane<'a> {
-    impl_get_set_id!(id);
+    impl_render_id!(id);
     fn vertex_buffer(
         &self,
         handler: &DeviceHandler,
@@ -126,7 +126,7 @@ pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mu
     scene.remove_object(object);
 }
 
-pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a mut R>>(
+pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(
     scene: &mut Scene,
     texture: &Texture,
     object: I,
