@@ -1,3 +1,34 @@
+//! `truck-platform` is a graphic utility library based on wgpu.
+//! 
+//! This crate is independent from other truck crates except `truck-base`.
+//! It provides an API that allows users to handle drawing elements in a unified manner.
+//! By implementing the [`Rendered`] trait, developers can define
+//! their own rendering elements and have them rendered in [`Scene`]
+//! in the same way as other rendering elements provided by truck.
+//! 
+//! This documentation is intended to be read by two kinds of people: users and developers.
+//! Users, those who just want to draw the shape of an existing mesh or boundary representation,
+//! will only use:
+//! - [`Scene`],
+//! - [`SceneDescriptor`],
+//! - [`DeviceHandler`],
+//! - [`Camera`], and
+//! - [`Light`].
+//! 
+//! If you are a developer, who wants to try out new
+//! visual representations, you can implement Rendered in your own structure and standardize it in
+//! a form that can be used by users in [`Scene`].
+//! 
+//! The sample code in this crate is for developers.
+//! Users may wish to refer to the one in `truck-rendimpl`.
+//! 
+//! [`Rendered`]: (./trait.Rendered.html)
+//! [`Scene`]: (./struct.Scene.html)
+//! [`DeviceHandler`]: (./struct.DeviceHandler.html)
+//! [`SceneDescriptor`]: (./struct.SceneDescriptor.html)
+//! [`Camera`]: (./struct.Camera.html)
+//! [`Light`]: (./struct.Light.html)
+
 pub extern crate bytemuck;
 extern crate truck_base;
 pub extern crate wgpu;
@@ -44,7 +75,60 @@ pub struct BufferHandler {
     size: u64,
 }
 
-/// Utility for [`BindGroupLayoutEntry`](../wgpu/struct.BindGroupLayoutEntry.html)
+/// Utility for [`BindGroupLayoutEntry`]
+/// 
+/// The member variables of this struct are the ones of [`BindGroupLayoutEntry`]
+/// with only `binding` removed. We can create `BindGroupLayout` by
+/// giving its iterator to the function truck_platform::[`create_bind_group_layout`].
+/// # Examples
+/// ```
+/// use std::sync::{Arc, Mutex};
+/// use truck_platform::*;
+/// use wgpu::*;
+/// // let device: Device = ...
+/// # let instance = Instance::new(BackendBit::PRIMARY);
+/// # let (device, queue) = futures::executor::block_on(async {
+/// #    let adapter = instance
+/// #        .request_adapter(&RequestAdapterOptions {
+/// #            power_preference: PowerPreference::Default,
+/// #            compatible_surface: None,
+/// #        })
+/// #        .await
+/// #        .unwrap();
+/// #    adapter
+/// #        .request_device(
+/// #            &DeviceDescriptor {
+/// #                features: Default::default(),
+/// #                limits: Limits::default(),
+/// #                shader_validation: true,
+/// #            },
+/// #            None,
+/// #        )
+/// #        .await
+/// #        .unwrap()
+/// # });
+/// let entries = [
+///     PreBindGroupLayoutEntry {
+///         visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+///         ty: BindingType::UniformBuffer {
+///             dynamic: false,
+///             min_binding_size: None,
+///         },
+///         count: None,
+///     },
+///     PreBindGroupLayoutEntry {
+///         visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+///         ty: BindingType::UniformBuffer {
+///             dynamic: false,
+///             min_binding_size: None,
+///         },
+///         count: None,
+///     },
+/// ];
+/// let layout: BindGroupLayout = truck_platform::create_bind_group_layout(&device, &entries);
+/// ```
+/// 
+/// [`BindGroupLayoutEntry`]: ../wgpu/struct.BindGroupLayoutEntry.html
 #[derive(Debug)]
 pub struct PreBindGroupLayoutEntry {
     pub visibility: ShaderStage,
@@ -73,9 +157,13 @@ pub enum ProjectionType {
 }
 
 /// Camera
+/// 
+/// A [`Scene`](./struct.Scene.html) holds only one `Camera`.
 #[derive(Debug, Clone)]
 pub struct Camera {
     /// camera matrix
+    /// 
+    /// This matrix must be in the Euclidean momentum group, the semi-direct product of O(3) and R^3.
     pub matrix: Matrix4,
     projection: Matrix4,
     projection_type: ProjectionType,
@@ -91,11 +179,15 @@ pub enum LightType {
 }
 
 /// Light
+/// 
+/// There is no limit to the number of lights that can be added to a [`Scene`](./struct.Scene.html). 
+/// The information about the lights is sent to the shader as a storage buffer
+/// (cf: [`Scene::lights_buffer()`](./struct.Scene.html#method.lights_buffer)).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Light {
     /// position of light
     pub position: Point3,
-    /// color of light
+    /// [0, 1] range RGB color of light
     pub color: Vector3,
     /// type of light source: point or uniform
     pub light_type: LightType,
@@ -173,13 +265,22 @@ pub struct DeviceHandler {
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct RenderID(usize);
 
+/// The configures of [`Scene`](./struct.Scene.html).
 #[derive(Debug, Clone)]
 pub struct SceneDescriptor {
+    /// background color. Default is `Color::BLACK`.
     pub background: Color,
+    /// camera of the scene. Default is `Camera::default()`.
     pub camera: Camera,
+    /// All lights in the scene. Default is `vec![Light::default()]`.
     pub lights: Vec<Light>,
 }
 
+/// Wraps `wgpu` and provides an intuitive graphics API.
+/// 
+/// `Scene` is the most important in `truck-platform`.
+/// This structure holds information about rendering and
+/// serves as a bridge to the actual rendering of `Rendered` objects.
 #[derive(Debug)]
 pub struct Scene {
     device_handler: DeviceHandler,
@@ -191,18 +292,27 @@ pub struct Scene {
     scene_desc: SceneDescriptor,
 }
 
+/// Rendered objects in the scene.
 pub trait Rendered {
+    /// Returns the render id.
+    /// 
+    /// [`RenderID`](./struct.RenderID.html) is a key that maps `self` to a drawing element.
+    /// Each object must have a RenderID to ensure that there are no duplicates.
     fn render_id(&self) -> RenderID;
+    /// Creates the pair (vertex buffer, index buffer).
     fn vertex_buffer(
         &self,
         device_handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>);
+    /// Creates the bind group layout.
     fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout>;
+    /// Creates the bind group in `set = 1`.
     fn bind_group(
         &self,
         device_handler: &DeviceHandler,
         layout: &BindGroupLayout,
     ) -> Arc<BindGroup>;
+    /// Creates the render pipeline.
     fn pipeline(
         &self,
         device_handler: &DeviceHandler,
@@ -231,10 +341,15 @@ pub trait Rendered {
     }
 }
 
+#[doc(hidden)]
 pub mod buffer_handler;
+#[doc(hidden)]
 pub mod camera;
+#[doc(hidden)]
 pub mod light;
+#[doc(hidden)]
 pub mod rendered_macros;
+#[doc(hidden)]
 pub mod scene;
 
 pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
