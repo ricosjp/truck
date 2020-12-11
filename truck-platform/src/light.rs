@@ -9,7 +9,7 @@ impl Light {
         }
     }
 
-    /// Creates a `UNIFORM` and `COPY_DST` buffer of light.
+    /// Creates a `UNIFORM` buffer of light.
     /// 
     /// This method is provided only for the advanced developer utility,
     /// and not used by [`Scene`](./struct.Scene.html).
@@ -26,7 +26,7 @@ impl Light {
         let light_info = self.light_info();
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             contents: bytemuck::cast_slice(&[light_info]),
-            usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+            usage: BufferUsage::UNIFORM,
             label: None,
         });
         BufferHandler::new(buffer, std::mem::size_of::<LightInfo>() as u64)
