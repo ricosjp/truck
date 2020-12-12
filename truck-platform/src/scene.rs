@@ -15,6 +15,7 @@ impl Default for RenderID {
 }
 
 impl DeviceHandler {
+    /// constructor
     #[inline(always)]
     pub fn new(
         device: Arc<Device>,
@@ -27,12 +28,16 @@ impl DeviceHandler {
             sc_desc,
         }
     }
+    /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Device { &self.device }
+    pub fn device(&self) -> &Arc<Device> { &self.device }
+    /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Queue { &self.queue }
+    pub fn queue(&self) -> &Arc<Queue> { &self.queue }
+    /// Returns the copy of swap chain descriptor.
     #[inline(always)]
     pub fn sc_desc(&self) -> SwapChainDescriptor { self.sc_desc.lock().unwrap().clone() }
+    /// Locks the swap chain descriptor.
     #[inline(always)]
     pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SwapChainDescriptor>> {
         self.sc_desc.lock()
