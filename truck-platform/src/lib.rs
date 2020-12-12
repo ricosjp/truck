@@ -129,6 +129,7 @@ pub struct BufferHandler {
 /// ```
 /// 
 /// [`BindGroupLayoutEntry`]: ../wgpu/struct.BindGroupLayoutEntry.html
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct PreBindGroupLayoutEntry {
     pub visibility: ShaderStage,
@@ -352,6 +353,7 @@ pub mod rendered_macros;
 #[doc(hidden)]
 pub mod scene;
 
+#[doc(hidden)]
 pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     device: &Device,
     layout: &BindGroupLayout,
@@ -372,6 +374,7 @@ pub fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
     })
 }
 
+#[doc(hidden)]
 pub fn create_bind_group_layout<'a, T: IntoIterator<Item = &'a PreBindGroupLayoutEntry>>(
     device: &Device,
     entries: T,
