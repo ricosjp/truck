@@ -32,8 +32,7 @@ impl<'a> Rendered for Plane<'a> {
     fn vertex_buffer(
         &self,
         handler: &DeviceHandler,
-    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>)
-    {
+    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         let buffer = BufferHandler::from_slice(
             &[0 as u32, 1, 2, 2, 1, 3],
             handler.device(),
@@ -42,7 +41,7 @@ impl<'a> Rendered for Plane<'a> {
         (Arc::new(buffer), None)
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
-        Arc::new(truck_platform::create_bind_group_layout(
+        Arc::new(bind_group_util::create_bind_group_layout(
             handler.device(),
             &[],
         ))
@@ -122,14 +121,16 @@ impl<'a> Rendered for Plane<'a> {
 
 pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mut R) {
     scene.add_object(object);
-    scene.prepare_render();
     scene.render_scene(&texture.create_view(&Default::default()));
     scene.remove_object(object);
 }
 
-pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(scene: &mut Scene, texture: &Texture, object: I) {
+pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(
+    scene: &mut Scene,
+    texture: &Texture,
+    object: I,
+) {
     scene.add_objects(object);
-    scene.prepare_render();
     scene.render_scene(&texture.create_view(&Default::default()));
     scene.clear_objects();
 }

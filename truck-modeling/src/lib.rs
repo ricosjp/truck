@@ -11,7 +11,7 @@
     unused_qualifications
 )]
 
-pub use truck_base::{cgmath64::*, geom_traits::*, tolerance::*, bounding_box::*};
+pub use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
 
 /// geometrical elements
 pub mod geometry {
@@ -56,7 +56,7 @@ pub mod topology {
 pub use topology::*;
 
 /// topological utility: [`Mapped`], [`Sweep`], and [`ClosedSweep`].
-/// 
+///
 /// [`Mapped`]: ./topo_traits/trait.Mapped.html
 /// [`Sweep`]: ./topo_traits/trait.Sweep.html
 /// [`ClosedSweep`]: ./topo_traits/trait.ClosedSweep.html
@@ -104,7 +104,7 @@ pub mod topo_traits {
         ) -> Self::Swept;
     }
 
-    /// closed sweep, builds a closed torus, and so on. 
+    /// closed sweep, builds a closed torus, and so on.
     pub trait ClosedSweep<P, C, S> {
         /// The struct of sweeped topology.
         type ClosedSwept;

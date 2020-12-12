@@ -43,8 +43,7 @@ impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
         &self,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
-    ) -> Arc<RenderPipeline>
-    {
+    ) -> Arc<RenderPipeline> {
         let vertex_shader = include_str!("shaders/shape-bindgroup.vert");
         let vertex_spirv = common::compile_shader(vertex_shader, ShaderType::Vertex);
         let vertex_module = wgpu::util::make_spirv(&vertex_spirv);
@@ -69,8 +68,7 @@ fn exec_shape_bgtest(
     instance: &ShapeInstance,
     shader: &str,
     answer: &Texture,
-) -> bool
-{
+) -> bool {
     let sc_desc = scene.sc_desc();
     let tex_desc = common::texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);

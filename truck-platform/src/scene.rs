@@ -15,6 +15,7 @@ impl Default for RenderID {
 }
 
 impl DeviceHandler {
+    /// constructor
     #[inline(always)]
     pub fn new(
         device: Arc<Device>,
@@ -27,12 +28,16 @@ impl DeviceHandler {
             sc_desc,
         }
     }
+    /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Device { &self.device }
+    pub fn device(&self) -> &Arc<Device> { &self.device }
+    /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Queue { &self.queue }
+    pub fn queue(&self) -> &Arc<Queue> { &self.queue }
+    /// Returns the copy of swap chain descriptor.
     #[inline(always)]
     pub fn sc_desc(&self) -> SwapChainDescriptor { self.sc_desc.lock().unwrap().clone() }
+    /// Locks the swap chain descriptor.
     #[inline(always)]
     pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SwapChainDescriptor>> {
         self.sc_desc.lock()
@@ -40,12 +45,55 @@ impl DeviceHandler {
 }
 
 impl Default for SceneDescriptor {
+    #[inline(always)]
     fn default() -> SceneDescriptor {
         SceneDescriptor {
             background: Color::BLACK,
             camera: Camera::default(),
             lights: vec![Light::default()],
         }
+    }
+}
+
+impl SceneDescriptor {
+    /// Creates a `UNIFORM` buffer of camera.
+    ///
+    /// The bind group provides [`Scene`] holds this uniform buffer.
+    ///
+    /// # Shader Example
+    /// ```glsl
+    /// layout(set = 0, binding = 0) uniform Camera {
+    ///     mat4 camera_matrix;     // the camera matrix
+    ///     mat4 camera_projection; // the projection into the normalized view volume
+    /// };
+    /// ```
+    #[inline(always)]
+    pub fn camera_buffer(&self, handler: &DeviceHandler) -> BufferHandler {
+        let sc_desc = handler.sc_desc();
+        let as_rat = sc_desc.width as f64 / sc_desc.height as f64;
+        self.camera.buffer(as_rat, handler.device())
+    }
+
+    /// Creates a `STORAGE` buffer of all lights.
+    ///
+    /// The bind group provides [`Scene`] holds this uniform buffer.
+    ///
+    /// # Shader Example
+    /// ```glsl
+    /// struct Light {
+    ///     vec4 position;      // the position of light, position.w == 1.0
+    ///     vec4 color;         // the color of light, color.w == 1.0
+    ///     uvec4 light_type;   // Point => uvec4(0, 0, 0, 0), Uniform => uvec4(1, 0, 0, 0)
+    /// };
+    ///
+    /// layout(set = 0, binding = 1) buffer Lights {
+    ///     Light lights[];
+    /// };
+    /// ```
+    #[inline(always)]
+    pub fn lights_buffer(&self, device: &Device) -> BufferHandler {
+        let light_vec: Vec<_> = self.lights.iter().map(Light::light_info).collect();
+        BufferHandler::from_slice(&light_vec, device, BufferUsage::STORAGE)
     }
 }
 
@@ -89,7 +137,7 @@ impl Scene {
 
     #[inline(always)]
     fn init_scene_bind_group_layout(device: &Device) -> BindGroupLayout {
-        crate::create_bind_group_layout(
+        bind_group_util::create_bind_group_layout(
             device,
             &[
                 Self::camera_bgl_entry(),
@@ -100,32 +148,7 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn update_scene_bind_group(&mut self) {
-        let DeviceHandler {
-            ref device,
-            ref sc_desc,
-            ..
-        } = &self.device_handler;
-        let sc_desc = sc_desc.try_lock().unwrap();
-        let as_rat = sc_desc.width as f64 / sc_desc.height as f64;
-        drop(sc_desc);
-        let bind_group = crate::create_bind_group(
-            device,
-            &self.bind_group_layout,
-            vec![
-                self.scene_desc
-                    .camera
-                    .buffer(as_rat, device)
-                    .binding_resource(),
-                self.lights_buffer().binding_resource(),
-                self.scene_status_buffer().binding_resource(),
-            ],
-        );
-        self.bind_group = Some(bind_group);
-    }
-
-    #[inline(always)]
-    fn default_depth_texture(device: &Device, sc_desc: &SwapChainDescriptor) -> Texture {
+    fn depth_texture(device: &Device, sc_desc: &SwapChainDescriptor) -> Texture {
         device.create_texture(&TextureDescriptor {
             size: Extent3d {
                 width: sc_desc.width,
@@ -142,92 +165,232 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn update_depth_texture(&mut self) {
-        let depth_texture = Self::default_depth_texture(&self.device(), &self.sc_desc());
-        self.foward_depth = depth_texture.create_view(&Default::default());
+    fn update_depth_texture(&mut self) {
+        let sc_desc = self.sc_desc();
+        if self.depth_texture_size != (sc_desc.width, sc_desc.height) {
+            self.depth_texture_size = (sc_desc.width, sc_desc.height);
+            self.foward_depth = Self::depth_texture(&self.device(), &sc_desc);
+        }
     }
 
-    pub fn prepare_render(&mut self) {
-        self.update_depth_texture();
-        self.update_scene_bind_group();
-    }
-
+    /// constructor
+    // About `scene_desc`, entity is better than reference for the performance.
+    // This is referece because only for as wgpu is.
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
         let (device, sc_desc) = (device_handler.device(), device_handler.sc_desc());
-        let depth_texture = Self::default_depth_texture(device, &sc_desc);
+        let bind_group_layout = Self::init_scene_bind_group_layout(device);
         Scene {
             objects: Default::default(),
-            bind_group_layout: Self::init_scene_bind_group_layout(device),
-            bind_group: None,
-            foward_depth: depth_texture.create_view(&Default::default()),
+            bind_group_layout,
+            foward_depth: Self::depth_texture(device, &sc_desc),
+            depth_texture_size: (sc_desc.width, sc_desc.height),
             clock: std::time::Instant::now(),
             scene_desc: scene_desc.clone(),
             device_handler,
         }
     }
 
+    /// Returns the reference of its own `DeviceHandler`.
     #[inline(always)]
     pub fn device_handler(&self) -> &DeviceHandler { &self.device_handler }
 
+    /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Device { &self.device_handler.device }
+    pub fn device(&self) -> &Arc<Device> { &self.device_handler.device }
 
+    /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Queue { &self.device_handler.queue }
+    pub fn queue(&self) -> &Arc<Queue> { &self.device_handler.queue }
 
+    /// Returns the copy of swap chain descriptor.
     #[inline(always)]
     pub fn sc_desc(&self) -> SwapChainDescriptor { self.device_handler.sc_desc() }
+    /// Locks the swap chain descriptor.
     #[inline(always)]
     pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SwapChainDescriptor>> {
         self.device_handler.lock_sc_desc()
     }
+    /// Returns the elapsed time since the scene was created.
+    #[inline(always)]
+    pub fn elapsed(&self) -> std::time::Duration { self.clock.elapsed() }
 
+    /// Returns the reference of the descriptor.
+    #[inline(always)]
+    pub fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
+
+    /// Returns the mutable reference of the descriptor.
+    #[inline(always)]
+    pub fn descriptor_mut(&mut self) -> &mut SceneDescriptor { &mut self.scene_desc }
+    
+    /// Returns the bind group layout in the scene.
+    #[inline(always)]
+    pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
+
+    /// Creates a `UNIFORM` buffer of the camera.
+    ///
+    /// The bind group provides [`Scene`] holds this uniform buffer.
+    ///
+    /// # Shader Example
+    /// ```glsl
+    /// layout(set = 0, binding = 0) uniform Camera {
+    ///     mat4 camera_matrix;     // the camera matrix
+    ///     mat4 camera_projection; // the projection into the normalized view volume
+    /// };
+    /// ```
+    #[inline(always)]
+    pub fn camera_buffer(&self) -> BufferHandler {
+        self.scene_desc.camera_buffer(self.device_handler())
+    }
+
+    /// Creates a `STORAGE` buffer of all lights.
+    ///
+    /// The bind group provides [`Scene`] holds this uniform buffer.
+    ///
+    /// # Shader Example
+    /// ```glsl
+    /// struct Light {
+    ///     vec4 position;      // the position of light, position.w == 1.0
+    ///     vec4 color;         // the color of light, color.w == 1.0
+    ///     uvec4 light_type;   // Point => uvec4(0, 0, 0, 0), Uniform => uvec4(1, 0, 0, 0)
+    /// };
+    ///
+    /// layout(set = 0, binding = 1) buffer Lights {
+    ///     Light lights[]; // the number of lights must be gotten from another place
+    /// };
+    /// ```
+    #[inline(always)]
+    pub fn lights_buffer(&self) -> BufferHandler { self.scene_desc.lights_buffer(self.device()) }
+
+    /// Creates a `UNIFORM` buffer of the scene status.
+    ///
+    /// The bind group provides [`Scene`] holds this uniform buffer.
+    ///
+    /// # Shader Example
+    /// ```glsl
+    /// layout(set = 0, binding = 2) uniform Scene {
+    ///     float time;     // elapsed time since the scene was created.
+    ///     uint nlights;   // the number of lights
+    /// };
+    /// ```
+    #[inline(always)]
+    pub fn scene_status_buffer(&self) -> BufferHandler {
+        let scene_info = SceneInfo {
+            time: self.elapsed().as_secs_f32(),
+            num_of_lights: self.scene_desc.lights.len() as u32,
+        };
+        BufferHandler::from_slice(&[scene_info], self.device(), BufferUsage::UNIFORM)
+    }
+
+    /// Creates bind group.
+    /// # Shader Examples
+    /// Suppose binded as `set = 0`.
+    /// ```glsl
+    /// layout(set = 0, binding = 0) uniform Camera {
+    ///     mat4 camera_matrix;     // the camera matrix
+    ///     mat4 camera_projection; // the projection into the normalized view volume
+    /// };
+    ///
+    /// struct Light {
+    ///     vec4 position;      // the position of light, position.w == 1.0
+    ///     vec4 color;         // the color of light, color.w == 1.0
+    ///     uvec4 light_type;   // Point => uvec4(0, 0, 0, 0), Uniform => uvec4(1, 0, 0, 0)
+    /// };
+    ///
+    /// layout(set = 0, binding = 1) buffer Lights {
+    ///     Light lights[];
+    /// };
+    ///
+    /// layout(set = 0, binding = 2) uniform Scene {
+    ///     float time;     // elapsed time since the scene was created.
+    ///     uint nlights;   // the number of lights
+    /// };
+    /// ```
+    #[inline(always)]
+    pub fn scene_bind_group(&self) -> BindGroup {
+        bind_group_util::create_bind_group(
+            self.device(),
+            &self.bind_group_layout,
+            vec![
+                self.camera_buffer().binding_resource(),
+                self.lights_buffer().binding_resource(),
+                self.scene_status_buffer().binding_resource(),
+            ],
+        )
+    }
+
+    /// Adds a render object to the scene.
+    ///
+    /// If there already exists a render object with the same ID,
+    /// replaces the render object and returns false.
     #[inline(always)]
     pub fn add_object<R: Rendered>(&mut self, object: &R) -> bool {
         let render_object = object.render_object(self);
-        self.objects.insert(object.render_id(), render_object).is_none()
+        self.objects
+            .insert(object.render_id(), render_object)
+            .is_none()
     }
+    /// Adds render objects to the scene.
+    ///
+    /// If there already exists a render object with the same ID,
+    /// replaces the render object and returns false.
     #[inline(always)]
     pub fn add_objects<'a, R, I>(&mut self, objects: I) -> bool
     where
         R: 'a + Rendered,
         I: IntoIterator<Item = &'a R>, {
-        objects
-            .into_iter()
-            .fold(true, move |flag, object| flag && self.add_object(object))
+        let closure = move |flag, object| flag && self.add_object(object);
+        objects.into_iter().fold(true, closure)
     }
+    /// Removes a render object from the scene.
+    ///
+    /// If there does not exist the render object in the scene, does nothing and returns false.
     #[inline(always)]
     pub fn remove_object<R: Rendered>(&mut self, object: &R) -> bool {
         self.objects.remove(&object.render_id()).is_some()
     }
+    /// Removes render objects from the scene.
+    ///
+    /// If there exists a render object which does not exist in the scene, returns false.
     #[inline(always)]
     pub fn remove_objects<'a, R, I>(&mut self, objects: I) -> bool
     where
         R: 'a + Rendered,
-        I: IntoIterator<Item = &'a mut R>, {
-        objects.into_iter().all(|object| self.remove_object(object))
+        I: IntoIterator<Item = &'a R>, {
+        let closure = move |flag, object| flag && self.remove_object(object);
+        objects.into_iter().fold(true, closure)
     }
 
+    /// Removes all render objects from the scene.
     #[inline(always)]
     pub fn clear_objects(&mut self) { self.objects.clear() }
+
+    /// Returns the number of the render objects in the scene.
     #[inline(always)]
     pub fn number_of_objects(&self) -> usize { self.objects.len() }
 
+    /// Syncronizes the information of vertices of `object` in the CPU memory
+    /// and that in the GPU memory.
+    ///
+    /// If there does not exist the render object in the scene, does nothing and returns false.
     #[inline(always)]
     pub fn update_vertex_buffer<R: Rendered>(&mut self, object: &R) -> bool {
         let (handler, objects) = (&self.device_handler, &mut self.objects);
         match objects.get_mut(&object.render_id()) {
+            None => false,
             Some(render_object) => {
                 let (vb, ib) = object.vertex_buffer(handler);
                 render_object.vertex_buffer = vb;
                 render_object.index_buffer = ib;
                 true
             }
-            _ => false,
         }
     }
-    
+
+    /// Syncronizes the information of vertices of `objects` in the CPU memory
+    /// and that in the GPU memory.
+    ///
+    /// If there exists a render object which does not exist in the scene, returns false.
     #[inline(always)]
     pub fn update_vertex_buffers<'a, R, I>(&mut self, objects: I) -> bool
     where
@@ -237,6 +400,10 @@ impl Scene {
         objects.into_iter().fold(true, closure)
     }
 
+    /// Syncronizes the information of bind group of `object` in the CPU memory
+    /// and that in the GPU memory.
+    ///
+    /// If there does not exist the render object in the scene, does nothing and returns false.
     #[inline(always)]
     pub fn update_bind_group<R: Rendered>(&mut self, object: &R) -> bool {
         let (handler, objects) = (&self.device_handler, &mut self.objects);
@@ -249,6 +416,10 @@ impl Scene {
             _ => false,
         }
     }
+    /// Syncronizes the information of bind group of `object` in the CPU memory
+    /// and that in the GPU memory.
+    ///
+    /// If there exists a render object which does not exist in the scene, returns false.
     #[inline(always)]
     pub fn update_bind_groups<'a, R, I>(&mut self, objects: I) -> bool
     where
@@ -257,28 +428,36 @@ impl Scene {
         let closure = move |flag, object: &R| flag && self.update_bind_group(object);
         objects.into_iter().fold(true, closure)
     }
+    
+    /// Syncronizes the information of pipeline of `object` in the CPU memory
+    /// and that in the GPU memory.
+    ///
+    /// If there does not exist the render object in the scene, does nothing and returns false.
     #[inline(always)]
     pub fn update_pipeline<R: Rendered>(&mut self, object: &R) -> bool {
         let (handler, objects) = (&self.device_handler, &mut self.objects);
         match objects.get_mut(&object.render_id()) {
             Some(render_object) => {
-                let pipeline_layout =
-                    handler
-                        .device()
-                        .create_pipeline_layout(&PipelineLayoutDescriptor {
-                            bind_group_layouts: &[
-                                &self.bind_group_layout,
-                                &render_object.bind_group_layout,
-                            ],
-                            push_constant_ranges: &[],
-                            label: None,
-                        });
+                let device = handler.device();
+                let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                    bind_group_layouts: &[
+                        &self.bind_group_layout,
+                        &render_object.bind_group_layout,
+                    ],
+                    push_constant_ranges: &[],
+                    label: None,
+                });
                 render_object.pipeline = object.pipeline(handler, &pipeline_layout);
                 true
             }
             _ => false,
         }
     }
+    
+    /// Syncronizes the information of pipeline of `object` in the CPU memory
+    /// and that in the GPU memory.
+    ///
+    /// If there exists a render object which does not exist in the scene, returns false.
     #[inline(always)]
     pub fn update_pipelines<'a, R, I>(&mut self, objects: I) -> bool
     where
@@ -287,39 +466,34 @@ impl Scene {
         let closure = move |flag, object: &R| flag && self.update_pipeline(object);
         objects.into_iter().fold(true, closure)
     }
-
+    
     #[inline(always)]
-    pub fn elapsed(&self) -> std::time::Duration { self.clock.elapsed() }
-
-    #[inline(always)]
-    pub fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
-
-    #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> &mut SceneDescriptor { &mut self.scene_desc }
-
-    #[inline(always)]
-    pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
-
-    pub fn scene_status_buffer(&self) -> BufferHandler {
-        let scene_info = SceneInfo {
-            time: self.elapsed().as_secs_f32(),
-            num_of_lights: self.scene_desc.lights.len() as u32,
-        };
-        BufferHandler::from_slice(&[scene_info], self.device(), BufferUsage::UNIFORM)
+    fn depth_stencil_attachment_descriptor(
+        depth_view: &TextureView,
+    ) -> RenderPassDepthStencilAttachmentDescriptor {
+        RenderPassDepthStencilAttachmentDescriptor {
+            attachment: depth_view,
+            depth_ops: Some(Operations {
+                load: LoadOp::Clear(1.0),
+                store: true,
+            }),
+            stencil_ops: Some(Operations {
+                load: LoadOp::Clear(0),
+                store: true,
+            }),
+        }
     }
 
-    pub fn lights_buffer(&self) -> BufferHandler {
-        let (desc, device) = (&self.scene_desc, self.device());
-        let light_vec: Vec<_> = desc.lights.iter().map(Light::light_info).collect();
-        BufferHandler::from_slice(&light_vec, device, BufferUsage::STORAGE)
-    }
-
-    pub fn render_scene(&self, view: &TextureView) {
+    /// Renders the scene to `view`.
+    pub fn render_scene(&mut self, view: &TextureView) {
+        self.update_depth_texture();
+        let bind_group = self.scene_bind_group();
+        let depth_view = self.foward_depth.create_view(&Default::default());
         let mut encoder = self
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
                 color_attachments: &[RenderPassColorAttachmentDescriptor {
                     attachment: view,
                     resolve_target: None,
@@ -328,9 +502,11 @@ impl Scene {
                         store: true,
                     },
                 }],
-                depth_stencil_attachment: Some(self.depth_stencil_attachment_descriptor()),
+                depth_stencil_attachment: Some(Self::depth_stencil_attachment_descriptor(
+                    &depth_view,
+                )),
             });
-            rpass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
+            rpass.set_bind_group(0, &bind_group, &[]);
             for (_, object) in self.objects.iter() {
                 rpass.set_pipeline(&object.pipeline);
                 rpass.set_bind_group(1, &object.bind_group, &[]);
@@ -347,21 +523,5 @@ impl Scene {
             }
         }
         self.queue().submit(vec![encoder.finish()]);
-    }
-
-    pub fn depth_stencil_attachment_descriptor(
-        &self,
-    ) -> RenderPassDepthStencilAttachmentDescriptor {
-        RenderPassDepthStencilAttachmentDescriptor {
-            attachment: &self.foward_depth,
-            depth_ops: Some(Operations {
-                load: LoadOp::Clear(1.0),
-                store: true,
-            }),
-            stencil_ops: Some(Operations {
-                load: LoadOp::Clear(0),
-                store: true,
-            }),
-        }
     }
 }

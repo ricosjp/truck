@@ -90,12 +90,6 @@ impl App for MyApp {
 
     fn app_title<'a>() -> Option<&'a str> { Some("simple obj viewer") }
 
-    fn depth_stencil_attachment_descriptor<'a>(
-        &'a self,
-    ) -> Option<RenderPassDepthStencilAttachmentDescriptor<'a>> {
-        Some(self.scene.depth_stencil_attachment_descriptor())
-    }
-
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         self.path = Some(path);
         Self::default_control_flow()
@@ -226,10 +220,9 @@ impl App for MyApp {
         if let Some(path) = self.path.take() {
             self.load_obj(path);
         }
-        self.scene.prepare_render();
     }
 
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyApp::run(); }

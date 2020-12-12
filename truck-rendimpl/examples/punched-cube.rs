@@ -87,12 +87,6 @@ impl App for MyApp {
 
     fn app_title<'a>() -> Option<&'a str> { Some("punched cube") }
 
-    fn depth_stencil_attachment_descriptor<'a>(
-        &'a self,
-    ) -> Option<RenderPassDepthStencilAttachmentDescriptor<'a>> {
-        Some(self.scene.depth_stencil_attachment_descriptor())
-    }
-
     fn mouse_input(&mut self, state: ElementState, button: MouseButton) -> ControlFlow {
         match button {
             MouseButton::Left => {
@@ -209,9 +203,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, _: &DeviceHandler) { self.scene.prepare_render(); }
-
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyApp::run(); }

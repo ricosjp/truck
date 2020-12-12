@@ -1,3 +1,6 @@
+/// Implements [`Rendered::render_id()`](./trait.Rendered.html#tymethod.render_id).
+/// # Arguments
+/// `id_member`: the member variant of render id.
 #[macro_export]
 macro_rules! impl_render_id {
     ($($id_member: ident).*) => {
@@ -6,6 +9,9 @@ macro_rules! impl_render_id {
     };
 }
 
+/// Derives [`Rendred::render_id()`](./trait.Rendered.html#tymethod.render_id)
+/// # Arguments
+/// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_render_id {
     ($($id_member: ident).*) => {
@@ -14,6 +20,9 @@ macro_rules! derive_render_id {
     };
 }
 
+/// Derives [`Rendred::vertex_buffer()`](./trait.Rendered.html#tymethod.vertex_buffer)
+/// # Arguments
+/// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_vertex_buffer {
     ($($id_member: ident).*) => {
@@ -28,6 +37,9 @@ macro_rules! derive_vertex_buffer {
     };
 }
 
+/// Derives [`Rendred::bind_group_layout()`](./trait.Rendered.html#tymethod.bind_group_layout)
+/// # Arguments
+/// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_bind_group_layout {
     ($($id_member: ident).*) => {
@@ -38,6 +50,9 @@ macro_rules! derive_bind_group_layout {
     };
 }
 
+/// Derives [`Rendred::bind_group()`](./trait.Rendered.html#tymethod.bind_group)
+/// # Arguments
+/// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_bind_group {
     ($($id_member: ident).*) => {
@@ -53,6 +68,9 @@ macro_rules! derive_bind_group {
     };
 }
 
+/// Derives [`Rendred::pipeline()`](./trait.Rendered.html#tymethod.pipeline)
+/// # Arguments
+/// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_pipeline {
     ($($id_member: ident).*) => {

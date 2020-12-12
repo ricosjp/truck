@@ -15,7 +15,7 @@ fn microfacet_module_test() {
     let sc_desc = scene.sc_desc();
     let tex_desc = common::texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    
+
     let mut fragment_shader = "#version 450\n\n".to_string();
     fragment_shader += include_str!("../src/shaders/microfacet-module.frag");
     fragment_shader += include_str!("shaders/check-mf-module.frag");
@@ -25,8 +25,12 @@ fn microfacet_module_test() {
         id: Default::default(),
     };
     common::render_one(&mut scene, &texture, &mut plane);
-    assert!(common::same_texture(scene.device_handler(), &answer, &texture));
-    
+    assert!(common::same_texture(
+        scene.device_handler(),
+        &answer,
+        &texture
+    ));
+
     let mut fragment_shader = "#version 450\n\n".to_string();
     fragment_shader += include_str!("../src/shaders/microfacet-module.frag");
     fragment_shader += include_str!("shaders/anti-check-mf-module.frag");
@@ -36,5 +40,9 @@ fn microfacet_module_test() {
         id: Default::default(),
     };
     common::render_one(&mut scene, &texture, &mut plane);
-    assert!(!common::same_texture(scene.device_handler(), &answer, &texture));
+    assert!(!common::same_texture(
+        scene.device_handler(),
+        &answer,
+        &texture
+    ));
 }

@@ -56,8 +56,7 @@ impl MyApp {
         closed: &Arc<Mutex<bool>>,
         updated: &Arc<Mutex<bool>>,
         shell: Shell,
-    ) -> JoinHandle<()>
-    {
+    ) -> JoinHandle<()> {
         let object = Arc::clone(object);
         let closed = Arc::clone(closed);
         let updated = Arc::clone(updated);
@@ -97,9 +96,9 @@ impl App for MyApp {
         let desc = SceneDescriptor {
             camera: MyApp::init_camera(),
             lights: vec![Light {
-            position: Point3::new(0.5, 2.0, 0.5),
-            color: Vector3::new(1.0, 1.0, 1.0),
-            light_type: LightType::Point,
+                position: Point3::new(0.5, 2.0, 0.5),
+                color: Vector3::new(1.0, 1.0, 1.0),
+                light_type: LightType::Point,
             }],
             ..Default::default()
         };
@@ -110,7 +109,13 @@ impl App for MyApp {
         let object = Arc::new(Mutex::new(object));
         let closed = Arc::new(Mutex::new(false));
         let updated = Arc::new(Mutex::new(false));
-        let thread = Some(MyApp::init_thread(handler.clone(), &object, &closed, &updated, shell));
+        let thread = Some(MyApp::init_thread(
+            handler.clone(),
+            &object,
+            &closed,
+            &updated,
+            shell,
+        ));
         MyApp {
             scene,
             object,
@@ -122,12 +127,6 @@ impl App for MyApp {
 
     fn app_title<'a>() -> Option<&'a str> { Some("BSpline Benchmark Animation") }
 
-    fn depth_stencil_attachment_descriptor<'a>(
-        &'a self,
-    ) -> Option<RenderPassDepthStencilAttachmentDescriptor<'a>> {
-        Some(self.scene.depth_stencil_attachment_descriptor())
-    }
-
     fn update(&mut self, _: &DeviceHandler) {
         let mut updated = self.updated.lock().unwrap();
         if *updated {
@@ -135,10 +134,9 @@ impl App for MyApp {
             self.scene.update_vertex_buffers(&object.render_faces());
             *updated = false;
         }
-        self.scene.prepare_render();
     }
 
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         *self.closed.lock().unwrap() = true;
         self.thread.take().unwrap().join().unwrap();

@@ -78,7 +78,7 @@ impl PolygonInstance {
 
     #[inline(always)]
     fn non_textured_bdl(&self, device: &Device) -> BindGroupLayout {
-        truck_platform::create_bind_group_layout(device, {
+        bind_group_util::create_bind_group_layout(device, {
             &[
                 InstanceDescriptor::matrix_bgl_entry(),
                 InstanceDescriptor::material_bgl_entry(),
@@ -88,7 +88,7 @@ impl PolygonInstance {
 
     #[inline(always)]
     fn textured_bdl(&self, device: &Device) -> BindGroupLayout {
-        truck_platform::create_bind_group_layout(
+        bind_group_util::create_bind_group_layout(
             device,
             &[
                 InstanceDescriptor::matrix_bgl_entry(),

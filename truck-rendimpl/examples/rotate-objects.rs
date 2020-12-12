@@ -138,12 +138,6 @@ impl App for MyRender {
 
     fn app_title<'a>() -> Option<&'a str> { Some("rotation objects") }
 
-    fn depth_stencil_attachment_descriptor<'a>(
-        &'a self,
-    ) -> Option<RenderPassDepthStencilAttachmentDescriptor<'a>> {
-        Some(self.scene.depth_stencil_attachment_descriptor())
-    }
-
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         self.path = Some(path);
         Self::default_control_flow()
@@ -274,10 +268,9 @@ impl App for MyRender {
         if self.scene.number_of_objects() != 0 {
             self.update_objects();
         }
-        self.scene.prepare_render();
     }
 
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyRender::run() }
