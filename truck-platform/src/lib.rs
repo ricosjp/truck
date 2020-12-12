@@ -287,6 +287,7 @@ pub struct Scene {
     objects: HashMap<RenderID, RenderObject>,
     bind_group_layout: BindGroupLayout,
     foward_depth: Texture,
+    depth_texture_size: (u32, u32), // (width, height)
     clock: std::time::Instant,
     scene_desc: SceneDescriptor,
 }

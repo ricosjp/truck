@@ -268,10 +268,9 @@ impl App for MyRender {
         if self.scene.number_of_objects() != 0 {
             self.update_objects();
         }
-        self.scene.prepare_render();
     }
 
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyRender::run() }

@@ -220,10 +220,9 @@ impl App for MyApp {
         if let Some(path) = self.path.take() {
             self.load_obj(path);
         }
-        self.scene.prepare_render();
     }
 
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyApp::run(); }

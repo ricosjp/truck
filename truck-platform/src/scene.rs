@@ -153,12 +153,12 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn update_depth_texture(&mut self) {
-        self.foward_depth = Self::default_depth_texture(&self.device(), &self.sc_desc());
-    }
-
-    pub fn prepare_render(&mut self) {
-        self.update_depth_texture();
+    fn update_depth_texture(&mut self) {
+        let sc_desc = self.sc_desc();
+        if self.depth_texture_size != (sc_desc.width, sc_desc.height) {
+            self.depth_texture_size = (sc_desc.width, sc_desc.height);
+            self.foward_depth = Self::default_depth_texture(&self.device(), &sc_desc);
+        }
     }
 
     #[inline(always)]
@@ -169,6 +169,7 @@ impl Scene {
             objects: Default::default(),
             bind_group_layout,
             foward_depth: Self::default_depth_texture(device, &sc_desc),
+            depth_texture_size: (sc_desc.width, sc_desc.height),
             clock: std::time::Instant::now(),
             scene_desc: scene_desc.clone(),
             device_handler,
@@ -323,7 +324,8 @@ impl Scene {
         BufferHandler::from_slice(&light_vec, device, BufferUsage::STORAGE)
     }
 
-    pub fn render_scene(&self, view: &TextureView) {
+    pub fn render_scene(&mut self, view: &TextureView) {
+        self.update_depth_texture();
         let bind_group = self.bind_group();
         let depth_view = self.foward_depth.create_view(&Default::default());
         let mut encoder = self

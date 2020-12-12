@@ -273,7 +273,6 @@ fn main() {
             }
             Event::RedrawRequested(_) => {
                 scene.update_bind_group(&plane);
-                scene.prepare_render();
                 let frame = swap_chain
                     .get_current_frame()
                     .expect("Timeout when acquiring next swap chain texture");

@@ -111,9 +111,8 @@ impl App for MyApp {
                 self.matrices[i] * Matrix4::from_axis_angle(axis, Rad(time * PI / 2.0));
             self.scene.update_bind_groups(&shape.render_faces());
         }
-        self.scene.prepare_render();
     }
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyApp::run() }

@@ -46,8 +46,7 @@ impl ShapeViewer {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         ControlFlow::WaitUntil(next_frame_time)
     }
-    fn update(&mut self, _: &DeviceHandler) { self.scene.prepare_render(); }
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
     fn mouse_input(&mut self, state: ElementState, button: MouseButton) -> ControlFlow {
         match button {
             MouseButton::Left => {
@@ -130,7 +129,6 @@ impl ShapeViewer {
                     Self::default_control_flow()
                 }
                 Event::RedrawRequested(_) => {
-                    app.update(&handler);
                     let frame = swap_chain
                         .get_current_frame()
                         .expect("Timeout when acquiring next swap chain texture");

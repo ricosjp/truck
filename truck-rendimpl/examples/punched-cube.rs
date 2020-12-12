@@ -203,9 +203,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, _: &DeviceHandler) { self.scene.prepare_render(); }
-
-    fn render(&self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
 }
 
 fn main() { MyApp::run(); }

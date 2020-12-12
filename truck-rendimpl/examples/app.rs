@@ -8,12 +8,12 @@ use winit::event_loop::ControlFlow;
 pub trait App: Sized + 'static {
     fn init(handler: &DeviceHandler) -> Self;
     fn app_title<'a>() -> Option<&'a str> { None }
-    fn update(&mut self, _handler: &DeviceHandler) {}
     fn default_control_flow() -> ControlFlow {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         ControlFlow::WaitUntil(next_frame_time)
     }
-    fn render(&self, _frame: &SwapChainFrame) {}
+    fn update(&mut self, _handler: &DeviceHandler) {}
+    fn render(&mut self, _frame: &SwapChainFrame) {}
     fn resized(&mut self, _size: PhysicalSize<u32>) -> ControlFlow { Self::default_control_flow() }
     fn moved(&mut self, _position: PhysicalPosition<i32>) -> ControlFlow {
         Self::default_control_flow()
