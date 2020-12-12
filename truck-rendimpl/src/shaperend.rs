@@ -149,7 +149,7 @@ mod ficonfig {
     }
     #[inline(always)]
     pub fn non_textured_bdl(device: &Device) -> BindGroupLayout {
-        truck_platform::create_bind_group_layout(
+        bind_group_util::create_bind_group_layout(
             device,
             &[
                 InstanceDescriptor::matrix_bgl_entry(),
@@ -161,7 +161,7 @@ mod ficonfig {
     }
     #[inline(always)]
     pub fn textured_bdl(device: &Device) -> BindGroupLayout {
-        truck_platform::create_bind_group_layout(
+        bind_group_util::create_bind_group_layout(
             device,
             &[
                 InstanceDescriptor::matrix_bgl_entry(),

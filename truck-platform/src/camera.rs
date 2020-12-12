@@ -93,7 +93,7 @@ impl Camera {
         near_clip: f64,
         far_clip: f64,
     ) -> Camera {
-        let projection = crate::perspective(field_of_view.into(), 1.0, near_clip, far_clip);
+        let projection = perspective(field_of_view.into(), 1.0, near_clip, far_clip);
         Camera {
             matrix,
             projection,
@@ -135,7 +135,7 @@ impl Camera {
         far_clip: f64,
     ) -> Camera {
         let a = screen_size / 2.0;
-        let projection = crate::ortho(-a, a, -a, a, near_clip, far_clip);
+        let projection = ortho(-a, a, -a, a, near_clip, far_clip);
         Camera {
             matrix,
             projection,

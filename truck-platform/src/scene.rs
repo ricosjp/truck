@@ -137,7 +137,7 @@ impl Scene {
 
     #[inline(always)]
     fn init_scene_bind_group_layout(device: &Device) -> BindGroupLayout {
-        crate::create_bind_group_layout(
+        bind_group_util::create_bind_group_layout(
             device,
             &[
                 Self::camera_bgl_entry(),
@@ -308,7 +308,7 @@ impl Scene {
     /// ```
     #[inline(always)]
     pub fn scene_bind_group(&self) -> BindGroup {
-        crate::create_bind_group(
+        bind_group_util::create_bind_group(
             self.device(),
             &self.bind_group_layout,
             vec![
@@ -493,7 +493,7 @@ impl Scene {
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
                 color_attachments: &[RenderPassColorAttachmentDescriptor {
                     attachment: view,
                     resolve_target: None,

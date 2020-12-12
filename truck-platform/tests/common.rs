@@ -41,7 +41,7 @@ impl<'a> Rendered for Plane<'a> {
         (Arc::new(buffer), None)
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
-        Arc::new(truck_platform::create_bind_group_layout(
+        Arc::new(bind_group_util::create_bind_group_layout(
             handler.device(),
             &[],
         ))

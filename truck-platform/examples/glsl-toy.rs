@@ -97,7 +97,7 @@ mod plane {
         fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
             let sc_desc = handler.sc_desc();
             let resolution = [sc_desc.width as f32, sc_desc.height as f32, 1.0];
-            Arc::new(truck_platform::create_bind_group(
+            Arc::new(bind_group_util::create_bind_group(
                 handler.device(),
                 layout,
                 Some(
