@@ -23,13 +23,7 @@ impl Light {
     /// };
     /// ```
     pub fn buffer(&self, device: &Device) -> BufferHandler {
-        let light_info = self.light_info();
-        let buffer = device.create_buffer_init(&BufferInitDescriptor {
-            contents: bytemuck::cast_slice(&[light_info]),
-            usage: BufferUsage::UNIFORM,
-            label: None,
-        });
-        BufferHandler::new(buffer, std::mem::size_of::<LightInfo>() as u64)
+        BufferHandler::from_slice(&[self.light_info()], device, BufferUsage::UNIFORM)
     }
 }
 

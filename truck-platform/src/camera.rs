@@ -225,6 +225,13 @@ impl Camera {
             * self.matrix.invert().unwrap()
     }
 
+    fn camera_info(&self, as_rat: f64) -> CameraInfo {
+        CameraInfo {
+            camera_matrix: (&self.matrix).cast().unwrap().into(),
+            camera_projection: self.projection(as_rat).cast().unwrap().into(),
+        }
+    }
+
     /// Creates a `UNIFORM` buffer of camera.
     /// 
     /// The bind group provides [`Scene`] holds this uniform buffer.
@@ -237,16 +244,7 @@ impl Camera {
     /// };
     /// ```
     pub fn buffer(&self, as_rat: f64, device: &Device) -> BufferHandler {
-        let camera_info = CameraInfo {
-            camera_matrix: (&self.matrix).cast().unwrap().into(),
-            camera_projection: self.projection(as_rat).cast().unwrap().into(),
-        };
-        let buffer = device.create_buffer_init(&BufferInitDescriptor {
-            contents: bytemuck::cast_slice(&[camera_info]),
-            usage: BufferUsage::UNIFORM,
-            label: None,
-        });
-        BufferHandler::new(buffer, std::mem::size_of::<CameraInfo>() as u64)
+        BufferHandler::from_slice(&[self.camera_info(as_rat)], device, BufferUsage::UNIFORM)
     }
 }
 

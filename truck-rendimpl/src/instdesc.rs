@@ -56,14 +56,7 @@ impl InstanceDescriptor {
     #[inline(always)]
     pub fn matrix_buffer(&self, device: &Device) -> BufferHandler {
         let matrix_data: [[f32; 4]; 4] = self.matrix.cast::<f32>().unwrap().into();
-        BufferHandler::new(
-            device.create_buffer_init(&BufferInitDescriptor {
-                contents: bytemuck::cast_slice(&matrix_data),
-                usage: BufferUsage::UNIFORM,
-                label: None,
-            }),
-            std::mem::size_of::<[[f32; 4]; 4]>() as u64,
-        )
+        BufferHandler::from_slice(&matrix_data, device, BufferUsage::UNIFORM)
     }
 
     #[inline(always)]
