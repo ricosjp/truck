@@ -4,8 +4,8 @@ extern crate truck_polymesh;
 use image::{DynamicImage, GenericImageView};
 use std::sync::{Arc, Mutex};
 pub use truck_modeling::*;
+use bytemuck::{Pod, Zeroable};
 use truck_platform::{
-    bytemuck::*,
     wgpu::util::{BufferInitDescriptor, DeviceExt},
     wgpu::*,
     *,

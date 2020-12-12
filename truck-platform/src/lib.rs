@@ -34,15 +34,13 @@
     missing_debug_implementations,
     trivial_casts,
     trivial_numeric_casts,
-    // unsafe is necessary to communicate with GPU.
-    // These code is in the module `unsafe_impls`
     unsafe_code,
     unstable_features,
     unused_import_braces,
     unused_qualifications
 )]
 
-pub extern crate bytemuck;
+extern crate bytemuck;
 extern crate truck_base;
 pub extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
