@@ -154,8 +154,7 @@ impl Scene {
 
     #[inline(always)]
     pub fn update_depth_texture(&mut self) {
-        let depth_texture = Self::default_depth_texture(&self.device(), &self.sc_desc());
-        self.foward_depth = depth_texture.create_view(&Default::default());
+        self.foward_depth = Self::default_depth_texture(&self.device(), &self.sc_desc());
     }
 
     pub fn prepare_render(&mut self) {
@@ -165,12 +164,11 @@ impl Scene {
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
         let (device, sc_desc) = (device_handler.device(), device_handler.sc_desc());
-        let depth_texture = Self::default_depth_texture(device, &sc_desc);
         let bind_group_layout = Self::init_scene_bind_group_layout(device);
         Scene {
             objects: Default::default(),
             bind_group_layout,
-            foward_depth: depth_texture.create_view(&Default::default()),
+            foward_depth: Self::default_depth_texture(device, &sc_desc),
             clock: std::time::Instant::now(),
             scene_desc: scene_desc.clone(),
             device_handler,
@@ -327,6 +325,7 @@ impl Scene {
 
     pub fn render_scene(&self, view: &TextureView) {
         let bind_group = self.bind_group();
+        let depth_view = self.foward_depth.create_view(&Default::default());
         let mut encoder = self
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
@@ -340,7 +339,7 @@ impl Scene {
                         store: true,
                     },
                 }],
-                depth_stencil_attachment: Some(self.depth_stencil_attachment_descriptor()),
+                depth_stencil_attachment: Some(Self::depth_stencil_attachment_descriptor(&depth_view)),
             });
             rpass.set_bind_group(0, &bind_group, &[]);
             for (_, object) in self.objects.iter() {
@@ -362,10 +361,10 @@ impl Scene {
     }
 
     pub fn depth_stencil_attachment_descriptor(
-        &self,
+        depth_view: &TextureView,
     ) -> RenderPassDepthStencilAttachmentDescriptor {
         RenderPassDepthStencilAttachmentDescriptor {
-            attachment: &self.foward_depth,
+            attachment: depth_view,
             depth_ops: Some(Operations {
                 load: LoadOp::Clear(1.0),
                 store: true,
