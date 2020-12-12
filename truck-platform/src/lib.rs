@@ -53,14 +53,14 @@ use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct CameraInfo {
     camera_matrix: [[f32; 4]; 4],
     camera_projection: [[f32; 4]; 4],
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct LightInfo {
     light_position: [f32; 4],
     light_color: [f32; 4],
@@ -68,22 +68,10 @@ struct LightInfo {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct SceneInfo {
     time: f32,
     num_of_lights: u32,
-}
-
-mod unsafe_impls {
-    #![allow(unsafe_code)]
-    use super::*;
-
-    unsafe impl Zeroable for CameraInfo {}
-    unsafe impl Pod for CameraInfo {}
-    unsafe impl Zeroable for LightInfo {}
-    unsafe impl Pod for LightInfo {}
-    unsafe impl Zeroable for SceneInfo {}
-    unsafe impl Pod for SceneInfo {}
 }
 
 /// safe handler of GPU buffer

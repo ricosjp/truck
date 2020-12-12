@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 wgpu = "*"
-bytemuck = "*"
+bytemuck = { version = "*", features = ["derive"] }
 lazy_static = "*"
 truck-base = { path = "../truck-base" }
 

@@ -84,14 +84,12 @@ impl CreateInstance for Scene {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
 struct AttrVertex {
     pub position: [f32; 3],
     pub uv_coord: [f32; 2],
     pub normal: [f32; 3],
 }
-unsafe impl Zeroable for AttrVertex {}
-unsafe impl Pod for AttrVertex {}
 
 #[repr(C)]
 #[derive(Debug, Clone)]
