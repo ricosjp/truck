@@ -111,6 +111,9 @@ impl Scene {
         )
     }
 
+    /// Creates bind group.
+    /// # Shader Examples
+    /// Suppose binding as `set = 0`.
     #[inline(always)]
     pub fn bind_group(&self) -> BindGroup {
         let DeviceHandler {

@@ -121,7 +121,6 @@ impl<'a> Rendered for Plane<'a> {
 
 pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mut R) {
     scene.add_object(object);
-    scene.prepare_render();
     scene.render_scene(&texture.create_view(&Default::default()));
     scene.remove_object(object);
 }
@@ -132,7 +131,6 @@ pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(
     object: I,
 ) {
     scene.add_objects(object);
-    scene.prepare_render();
     scene.render_scene(&texture.create_view(&Default::default()));
     scene.clear_objects();
 }
