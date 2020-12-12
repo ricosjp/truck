@@ -34,7 +34,9 @@
     missing_debug_implementations,
     trivial_casts,
     trivial_numeric_casts,
-    //unsafe_code, <- unsafe is necessary to communicate with GPU!
+    // unsafe is necessary to communicate with GPU.
+    // These code is in the module `unsafe_impls`
+    unsafe_code,
     unstable_features,
     unused_import_braces,
     unused_qualifications
@@ -56,8 +58,6 @@ struct CameraInfo {
     camera_matrix: [[f32; 4]; 4],
     camera_projection: [[f32; 4]; 4],
 }
-unsafe impl Zeroable for CameraInfo {}
-unsafe impl Pod for CameraInfo {}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -66,8 +66,6 @@ struct LightInfo {
     light_color: [f32; 4],
     light_type: [u32; 4],
 }
-unsafe impl Zeroable for LightInfo {}
-unsafe impl Pod for LightInfo {}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -75,8 +73,18 @@ struct SceneInfo {
     time: f32,
     num_of_lights: u32,
 }
-unsafe impl Zeroable for SceneInfo {}
-unsafe impl Pod for SceneInfo {}
+
+mod unsafe_impls {
+    #![allow(unsafe_code)]
+    use super::*;
+
+    unsafe impl Zeroable for CameraInfo {}
+    unsafe impl Pod for CameraInfo {}
+    unsafe impl Zeroable for LightInfo {}
+    unsafe impl Pod for LightInfo {}
+    unsafe impl Zeroable for SceneInfo {}
+    unsafe impl Pod for SceneInfo {}
+}
 
 /// safe handler of GPU buffer
 /// [`Buffer`](../wgpu/struct.Buffer.html)
