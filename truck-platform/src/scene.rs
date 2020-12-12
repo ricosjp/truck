@@ -54,6 +54,13 @@ impl Default for SceneDescriptor {
     }
 }
 
+impl SceneDescriptor {
+    pub fn lights_buffer(&self, device: &Device) -> BufferHandler {
+        let light_vec: Vec<_> = self.lights.iter().map(Light::light_info).collect();
+        BufferHandler::from_slice(&light_vec, device, BufferUsage::STORAGE)
+    }
+}
+
 impl Scene {
     #[inline(always)]
     fn camera_bgl_entry() -> PreBindGroupLayoutEntry {
@@ -105,7 +112,7 @@ impl Scene {
     }
 
     #[inline(always)]
-    pub fn update_scene_bind_group(&mut self) {
+    pub fn bind_group(&self) -> BindGroup {
         let DeviceHandler {
             ref device,
             ref sc_desc,
@@ -114,7 +121,7 @@ impl Scene {
         let sc_desc = sc_desc.try_lock().unwrap();
         let as_rat = sc_desc.width as f64 / sc_desc.height as f64;
         drop(sc_desc);
-        let bind_group = crate::create_bind_group(
+        crate::create_bind_group(
             device,
             &self.bind_group_layout,
             vec![
@@ -125,8 +132,7 @@ impl Scene {
                 self.lights_buffer().binding_resource(),
                 self.scene_status_buffer().binding_resource(),
             ],
-        );
-        self.bind_group = Some(bind_group);
+        )
     }
 
     #[inline(always)]
@@ -154,17 +160,16 @@ impl Scene {
 
     pub fn prepare_render(&mut self) {
         self.update_depth_texture();
-        self.update_scene_bind_group();
     }
 
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
         let (device, sc_desc) = (device_handler.device(), device_handler.sc_desc());
         let depth_texture = Self::default_depth_texture(device, &sc_desc);
+        let bind_group_layout = Self::init_scene_bind_group_layout(device);
         Scene {
             objects: Default::default(),
-            bind_group_layout: Self::init_scene_bind_group_layout(device),
-            bind_group: None,
+            bind_group_layout,
             foward_depth: depth_texture.create_view(&Default::default()),
             clock: std::time::Instant::now(),
             scene_desc: scene_desc.clone(),
@@ -191,7 +196,9 @@ impl Scene {
     #[inline(always)]
     pub fn add_object<R: Rendered>(&mut self, object: &R) -> bool {
         let render_object = object.render_object(self);
-        self.objects.insert(object.render_id(), render_object).is_none()
+        self.objects
+            .insert(object.render_id(), render_object)
+            .is_none()
     }
     #[inline(always)]
     pub fn add_objects<'a, R, I>(&mut self, objects: I) -> bool
@@ -232,7 +239,6 @@ impl Scene {
             _ => false,
         }
     }
-    
     #[inline(always)]
     pub fn update_vertex_buffers<'a, R, I>(&mut self, objects: I) -> bool
     where
@@ -320,6 +326,7 @@ impl Scene {
     }
 
     pub fn render_scene(&self, view: &TextureView) {
+        let bind_group = self.bind_group();
         let mut encoder = self
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
@@ -335,7 +342,7 @@ impl Scene {
                 }],
                 depth_stencil_attachment: Some(self.depth_stencil_attachment_descriptor()),
             });
-            rpass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
+            rpass.set_bind_group(0, &bind_group, &[]);
             for (_, object) in self.objects.iter() {
                 rpass.set_pipeline(&object.pipeline);
                 rpass.set_bind_group(1, &object.bind_group, &[]);

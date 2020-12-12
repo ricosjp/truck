@@ -286,7 +286,6 @@ pub struct Scene {
     device_handler: DeviceHandler,
     objects: HashMap<RenderID, RenderObject>,
     bind_group_layout: BindGroupLayout,
-    bind_group: Option<BindGroup>,
     foward_depth: TextureView,
     clock: std::time::Instant,
     scene_desc: SceneDescriptor,
