@@ -286,6 +286,8 @@ pub struct SceneDescriptor {
     pub camera: Camera,
     /// All lights in the scene. Default is `vec![Light::default()]`.
     pub lights: Vec<Light>,
+    /// sample count for anti-aliasing by MSAA. 1, 2, 4, 8, or 16.
+    pub sample_count: u32,
 }
 
 /// Wraps `wgpu` and provides an intuitive graphics API.
@@ -300,6 +302,8 @@ pub struct Scene {
     bind_group_layout: BindGroupLayout,
     foward_depth: Texture,
     depth_texture_size: (u32, u32), // (width, height)
+    sampling_buffer: Texture,
+    previous_sample_count: u32,
     clock: std::time::Instant,
     scene_desc: SceneDescriptor,
 }

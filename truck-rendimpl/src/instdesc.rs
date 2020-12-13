@@ -239,7 +239,7 @@ impl InstanceDescriptor {
                     ],
                 }],
             },
-            sample_count: 1,
+            sample_count: 2,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
             label: None,

@@ -51,6 +51,7 @@ impl Default for SceneDescriptor {
             background: Color::BLACK,
             camera: Camera::default(),
             lights: vec![Light::default()],
+            sample_count: 1,
         }
     }
 }
@@ -148,7 +149,11 @@ impl Scene {
     }
 
     #[inline(always)]
-    fn depth_texture(device: &Device, sc_desc: &SwapChainDescriptor) -> Texture {
+    fn sampling_buffer(
+        device: &Device,
+        sc_desc: &SwapChainDescriptor,
+        sample_count: u32,
+    ) -> Texture {
         device.create_texture(&TextureDescriptor {
             size: Extent3d {
                 width: sc_desc.width,
@@ -156,7 +161,24 @@ impl Scene {
                 depth: 1,
             },
             mip_level_count: 1,
-            sample_count: 1,
+            sample_count,
+            dimension: TextureDimension::D2,
+            format: sc_desc.format,
+            usage: TextureUsage::OUTPUT_ATTACHMENT,
+            label: None,
+        })
+    }
+
+    #[inline(always)]
+    fn depth_texture(device: &Device, sc_desc: &SwapChainDescriptor, sample_count: u32) -> Texture {
+        device.create_texture(&TextureDescriptor {
+            size: Extent3d {
+                width: sc_desc.width,
+                height: sc_desc.height,
+                depth: 1,
+            },
+            mip_level_count: 1,
+            sample_count,
             dimension: TextureDimension::D2,
             format: TextureFormat::Depth32Float,
             usage: TextureUsage::OUTPUT_ATTACHMENT,
@@ -167,9 +189,14 @@ impl Scene {
     #[inline(always)]
     fn update_depth_texture(&mut self) {
         let sc_desc = self.sc_desc();
-        if self.depth_texture_size != (sc_desc.width, sc_desc.height) {
+        let sample_count = self.scene_desc.sample_count;
+        if self.depth_texture_size != (sc_desc.width, sc_desc.height)
+            || sample_count != self.previous_sample_count
+        {
             self.depth_texture_size = (sc_desc.width, sc_desc.height);
-            self.foward_depth = Self::depth_texture(&self.device(), &sc_desc);
+            self.previous_sample_count = sample_count;
+            self.foward_depth = Self::depth_texture(self.device(), &sc_desc, sample_count);
+            self.sampling_buffer = Self::sampling_buffer(self.device(), &sc_desc, sample_count);
         }
     }
 
@@ -183,8 +210,10 @@ impl Scene {
         Scene {
             objects: Default::default(),
             bind_group_layout,
-            foward_depth: Self::depth_texture(device, &sc_desc),
+            foward_depth: Self::depth_texture(device, &sc_desc, scene_desc.sample_count),
             depth_texture_size: (sc_desc.width, sc_desc.height),
+            sampling_buffer: Self::sampling_buffer(device, &sc_desc, scene_desc.sample_count),
+            previous_sample_count: scene_desc.sample_count,
             clock: std::time::Instant::now(),
             scene_desc: scene_desc.clone(),
             device_handler,
@@ -222,7 +251,6 @@ impl Scene {
     /// Returns the mutable reference of the descriptor.
     #[inline(always)]
     pub fn descriptor_mut(&mut self) -> &mut SceneDescriptor { &mut self.scene_desc }
-    
     /// Returns the bind group layout in the scene.
     #[inline(always)]
     pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
@@ -428,7 +456,6 @@ impl Scene {
         let closure = move |flag, object: &R| flag && self.update_bind_group(object);
         objects.into_iter().fold(true, closure)
     }
-    
     /// Syncronizes the information of pipeline of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
@@ -453,7 +480,6 @@ impl Scene {
             _ => false,
         }
     }
-    
     /// Syncronizes the information of pipeline of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
@@ -466,7 +492,6 @@ impl Scene {
         let closure = move |flag, object: &R| flag && self.update_pipeline(object);
         objects.into_iter().fold(true, closure)
     }
-    
     #[inline(always)]
     fn depth_stencil_attachment_descriptor(
         depth_view: &TextureView,
@@ -489,14 +514,18 @@ impl Scene {
         self.update_depth_texture();
         let bind_group = self.scene_bind_group();
         let depth_view = self.foward_depth.create_view(&Default::default());
+        let sampled_view = self.sampling_buffer.create_view(&Default::default());
         let mut encoder = self
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
+            let sampled = self.scene_desc.sample_count != 1;
+            let attachment = if sampled { &sampled_view } else { view };
+            let resolve_target = if sampled { Some(view) } else { None };
             let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
                 color_attachments: &[RenderPassColorAttachmentDescriptor {
-                    attachment: view,
-                    resolve_target: None,
+                    attachment,
+                    resolve_target,
                     ops: Operations {
                         load: LoadOp::Clear(self.scene_desc.background),
                         store: true,
