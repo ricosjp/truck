@@ -169,6 +169,7 @@ impl InstanceDescriptor {
         fragment_shader: ShaderModuleSource,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
+        sample_count: u32,
     ) -> Arc<RenderPipeline>
     {
         let device = device_handler.device();
@@ -239,7 +240,7 @@ impl InstanceDescriptor {
                     ],
                 }],
             },
-            sample_count: 2,
+            sample_count,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
             label: None,

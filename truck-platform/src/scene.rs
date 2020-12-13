@@ -187,7 +187,7 @@ impl Scene {
     }
 
     #[inline(always)]
-    fn update_depth_texture(&mut self) {
+    fn update_textures(&mut self) {
         let sc_desc = self.sc_desc();
         let sample_count = self.scene_desc.sample_count;
         if self.depth_texture_size != (sc_desc.width, sc_desc.height)
@@ -474,7 +474,8 @@ impl Scene {
                     push_constant_ranges: &[],
                     label: None,
                 });
-                render_object.pipeline = object.pipeline(handler, &pipeline_layout);
+                render_object.pipeline =
+                    object.pipeline(handler, &pipeline_layout, self.scene_desc.sample_count);
                 true
             }
             _ => false,
@@ -511,7 +512,7 @@ impl Scene {
 
     /// Renders the scene to `view`.
     pub fn render_scene(&mut self, view: &TextureView) {
-        self.update_depth_texture();
+        self.update_textures();
         let bind_group = self.scene_bind_group();
         let depth_view = self.foward_depth.create_view(&Default::default());
         let sampled_view = self.sampling_buffer.create_view(&Default::default());

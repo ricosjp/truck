@@ -53,7 +53,7 @@ impl<'a> Rendered for Plane<'a> {
             entries: &[],
         }))
     }
-    fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
+    fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout, sample_count: u32) -> Arc<RenderPipeline> {
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
         let vertex_spirv = compile_shader(self.vertex_shader, ShaderType::Vertex);
         let vertex_module = device.create_shader_module(wgpu::util::make_spirv(&vertex_spirv));
@@ -110,7 +110,7 @@ impl<'a> Rendered for Plane<'a> {
                             }],
                         }],
                     },
-                    sample_count: 1,
+                    sample_count,
                     sample_mask: !0,
                     alpha_to_coverage_enabled: false,
                     label: None,

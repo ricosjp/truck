@@ -185,8 +185,7 @@ mod ficonfig {
         handler: &DeviceHandler,
         layout: &BindGroupLayout,
         face: &RenderFace,
-    ) -> BindGroup
-    {
+    ) -> BindGroup {
         let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
         crate::create_bind_group(
             handler.device(),
@@ -204,8 +203,7 @@ mod ficonfig {
         handler: &DeviceHandler,
         layout: &BindGroupLayout,
         face: &RenderFace,
-    ) -> BindGroup
-    {
+    ) -> BindGroup {
         let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
         let (view, sampler) = desc.textureview_and_sampler(handler.device(), handler.queue());
         crate::create_bind_group(
@@ -231,10 +229,15 @@ impl<'a> RenderFace<'a> {
         fragment_shader: ShaderModuleSource,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
-    ) -> Arc<RenderPipeline>
-    {
-        self.desc
-            .pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
+        sample_count: u32,
+    ) -> Arc<RenderPipeline> {
+        self.desc.pipeline_with_shader(
+            vertex_shader,
+            fragment_shader,
+            device_handler,
+            layout,
+            sample_count,
+        )
     }
 }
 
@@ -262,13 +265,24 @@ impl<'a> Rendered for RenderFace<'a> {
         Arc::new(bind_group)
     }
     #[inline(always)]
-    fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
+    fn pipeline(
+        &self,
+        handler: &DeviceHandler,
+        layout: &PipelineLayout,
+        sample_count: u32,
+    ) -> Arc<RenderPipeline> {
         let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
         let fragment_shader = match self.desc.texture.is_some() {
             true => include_spirv!("shaders/textured-face.frag.spv"),
             false => include_spirv!("shaders/face.frag.spv"),
         };
-        self.pipeline_with_shader(vertex_shader, fragment_shader, handler, layout)
+        self.pipeline_with_shader(
+            vertex_shader,
+            fragment_shader,
+            handler,
+            layout,
+            sample_count,
+        )
     }
 }
 

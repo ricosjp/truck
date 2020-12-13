@@ -333,6 +333,7 @@ pub trait Rendered {
         &self,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
+        sample_count: u32,
     ) -> Arc<RenderPipeline>;
     #[doc(hidden)]
     fn render_object(&self, scene: &Scene) -> RenderObject {
@@ -346,7 +347,11 @@ pub trait Rendered {
                 push_constant_ranges: &[],
                 label: None,
             });
-        let pipeline = self.pipeline(&scene.device_handler(), &pipeline_layout);
+        let pipeline = self.pipeline(
+            &scene.device_handler(),
+            &pipeline_layout,
+            scene.scene_desc.sample_count,
+        );
         RenderObject {
             vertex_buffer,
             index_buffer,

@@ -43,6 +43,7 @@ impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
         &self,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
+        sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let vertex_shader = include_str!("shaders/shape-bindgroup.vert");
         let vertex_spirv = common::compile_shader(vertex_shader, ShaderType::Vertex);
@@ -50,7 +51,7 @@ impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
         let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
         let fragment_module = wgpu::util::make_spirv(&fragment_spirv);
         self.face
-            .pipeline_with_shader(vertex_module, fragment_module, device_handler, layout)
+            .pipeline_with_shader(vertex_module, fragment_module, device_handler, layout, sample_count)
     }
 }
 

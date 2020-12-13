@@ -77,6 +77,7 @@ impl App for MyApp {
                 color: Vector3::new(1.0, 1.0, 1.0),
                 light_type: LightType::Point,
             }],
+            sample_count: 2,
         };
         MyApp {
             scene: Scene::new(handler.clone(), &scene_desc),
