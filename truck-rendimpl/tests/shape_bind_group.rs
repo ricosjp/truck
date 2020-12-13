@@ -50,8 +50,13 @@ impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
         let vertex_module = wgpu::util::make_spirv(&vertex_spirv);
         let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
         let fragment_module = wgpu::util::make_spirv(&fragment_spirv);
-        self.face
-            .pipeline_with_shader(vertex_module, fragment_module, device_handler, layout, sample_count)
+        self.face.pipeline_with_shader(
+            vertex_module,
+            fragment_module,
+            device_handler,
+            layout,
+            sample_count,
+        )
     }
 }
 

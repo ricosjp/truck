@@ -29,8 +29,13 @@ impl<'a> Rendered for BGCheckPolygonInstance<'a> {
         let vertex_module = wgpu::util::make_spirv(&vertex_spirv);
         let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
         let fragment_module = wgpu::util::make_spirv(&fragment_spirv);
-        self.polygon
-            .pipeline_with_shader(vertex_module, fragment_module, device_handler, layout, sample_count)
+        self.polygon.pipeline_with_shader(
+            vertex_module,
+            fragment_module,
+            device_handler,
+            layout,
+            sample_count,
+        )
     }
 }
 
