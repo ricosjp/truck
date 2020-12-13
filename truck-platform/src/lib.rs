@@ -356,16 +356,12 @@ pub trait Rendered {
     }
 }
 
-#[doc(hidden)]
-pub mod buffer_handler;
-#[doc(hidden)]
-pub mod camera;
-#[doc(hidden)]
-pub mod light;
+mod buffer_handler;
+mod camera;
+mod light;
 #[doc(hidden)]
 pub mod rendered_macros;
-#[doc(hidden)]
-pub mod scene;
+mod scene;
 
 #[doc(hidden)]
 pub mod bind_group_util {
