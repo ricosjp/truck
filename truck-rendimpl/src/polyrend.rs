@@ -4,12 +4,7 @@ use std::collections::HashMap;
 impl IntoInstance for PolygonMesh {
     type Instance = PolygonInstance;
     #[inline(always)]
-    fn into_instance(
-        &self,
-        device: &Device,
-        desc: InstanceDescriptor,
-    ) -> Self::Instance
-    {
+    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance {
         let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
@@ -26,12 +21,7 @@ impl IntoInstance for PolygonMesh {
 
 impl IntoInstance for StructuredMesh {
     type Instance = PolygonInstance;
-    fn into_instance(
-        &self,
-        device: &Device,
-        desc: InstanceDescriptor,
-    ) -> Self::Instance
-    {
+    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance {
         let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
@@ -70,10 +60,15 @@ impl PolygonInstance {
         fragment_shader: ShaderModuleSource,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
-    ) -> Arc<RenderPipeline>
-    {
-        self.desc
-            .pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
+        sample_count: u32,
+    ) -> Arc<RenderPipeline> {
+        self.desc.pipeline_with_shader(
+            vertex_shader,
+            fragment_shader,
+            device_handler,
+            layout,
+            sample_count,
+        )
     }
 
     #[inline(always)]
@@ -110,7 +105,6 @@ impl PolygonInstance {
             ],
         )
     }
-    
     #[inline(always)]
     fn textured_bg(&self, device: &Device, queue: &Queue, layout: &BindGroupLayout) -> BindGroup {
         let (view, sampler) = self.desc.textureview_and_sampler(device, queue);
@@ -125,7 +119,6 @@ impl PolygonInstance {
             ],
         )
     }
-    
     #[inline(always)]
     pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
         include_spirv!("shaders/polygon.vert.spv")
@@ -162,8 +155,7 @@ impl Rendered for PolygonInstance {
         &self,
         device_handler: &DeviceHandler,
         layout: &BindGroupLayout,
-    ) -> Arc<BindGroup>
-    {
+    ) -> Arc<BindGroup> {
         Arc::new(match self.desc.texture.is_some() {
             true => self.textured_bg(&device_handler.device(), &device_handler.queue(), layout),
             false => self.non_textured_bg(&device_handler.device(), layout),
@@ -174,14 +166,20 @@ impl Rendered for PolygonInstance {
         &self,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
-    ) -> Arc<RenderPipeline>
-    {
+        sample_count: u32,
+    ) -> Arc<RenderPipeline> {
         let vertex_shader = Self::default_vertex_shader();
         let fragment_shader = match self.desc.texture.is_some() {
             true => include_spirv!("shaders/textured-polygon.frag.spv"),
             false => include_spirv!("shaders/polygon.frag.spv"),
         };
-        self.pipeline_with_shader(vertex_shader, fragment_shader, device_handler, layout)
+        self.pipeline_with_shader(
+            vertex_shader,
+            fragment_shader,
+            device_handler,
+            layout,
+            sample_count,
+        )
     }
 }
 
@@ -198,8 +196,7 @@ fn signup_vertex(
     vertex: &[usize; 3],
     glpolymesh: &mut ExpandedPolygon,
     vertex_map: &mut HashMap<[usize; 3], u32>,
-)
-{
+) {
     let key = [vertex[0], vertex[1], vertex[2]];
     let idx = match vertex_map.get(&key) {
         Some(idx) => *idx,

@@ -23,6 +23,7 @@ impl ShapeViewer {
                 color: Vector3::new(1.0, 1.0, 1.0),
                 light_type: LightType::Point,
             }],
+            sample_count: 1,
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
         let inst_desc = InstanceDescriptor {

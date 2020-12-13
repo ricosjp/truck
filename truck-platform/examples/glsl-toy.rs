@@ -110,6 +110,7 @@ mod plane {
             &self,
             handler: &DeviceHandler,
             layout: &PipelineLayout,
+            sample_count: u32,
         ) -> Arc<RenderPipeline> {
             let sc_desc = handler.sc_desc();
             Arc::new(
@@ -163,7 +164,7 @@ mod plane {
                                 }],
                             }],
                         },
-                        sample_count: 1,
+                        sample_count,
                         sample_mask: !0,
                         alpha_to_coverage_enabled: false,
                         label: None,

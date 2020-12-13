@@ -53,7 +53,12 @@ impl<'a> Rendered for Plane<'a> {
             entries: &[],
         }))
     }
-    fn pipeline(&self, handler: &DeviceHandler, layout: &PipelineLayout) -> Arc<RenderPipeline> {
+    fn pipeline(
+        &self,
+        handler: &DeviceHandler,
+        layout: &PipelineLayout,
+        sample_count: u32,
+    ) -> Arc<RenderPipeline> {
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
         let vertex_module = read_shader(device, self.vertex_shader, ShaderType::Vertex);
         let fragment_module = read_shader(device, self.fragment_shader, ShaderType::Fragment);
@@ -108,7 +113,7 @@ impl<'a> Rendered for Plane<'a> {
                             }],
                         }],
                     },
-                    sample_count: 1,
+                    sample_count,
                     sample_mask: !0,
                     alpha_to_coverage_enabled: false,
                     label: None,

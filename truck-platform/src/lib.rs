@@ -280,6 +280,8 @@ pub struct SceneDescriptor {
     pub camera: Camera,
     /// All lights in the scene. Default is `vec![Light::default()]`.
     pub lights: Vec<Light>,
+    /// sample count for anti-aliasing by MSAA. 1, 2, 4, 8, or 16.
+    pub sample_count: u32,
 }
 
 /// Wraps `wgpu` and provides an intuitive graphics API.
@@ -294,6 +296,8 @@ pub struct Scene {
     bind_group_layout: BindGroupLayout,
     foward_depth: Texture,
     depth_texture_size: (u32, u32), // (width, height)
+    sampling_buffer: Texture,
+    previous_sample_count: u32,
     clock: std::time::Instant,
     scene_desc: SceneDescriptor,
 }
@@ -323,6 +327,7 @@ pub trait Rendered {
         &self,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
+        sample_count: u32,
     ) -> Arc<RenderPipeline>;
     #[doc(hidden)]
     fn render_object(&self, scene: &Scene) -> RenderObject {
@@ -336,7 +341,11 @@ pub trait Rendered {
                 push_constant_ranges: &[],
                 label: None,
             });
-        let pipeline = self.pipeline(&scene.device_handler(), &pipeline_layout);
+        let pipeline = self.pipeline(
+            &scene.device_handler(),
+            &pipeline_layout,
+            scene.scene_desc.sample_count,
+        );
         RenderObject {
             vertex_buffer,
             index_buffer,
