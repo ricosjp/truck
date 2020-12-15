@@ -1,3 +1,16 @@
+//! `truck-rendimpl` is the crate for rendering shapes and polygons.
+
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications
+)]
+
 extern crate truck_modeling;
 extern crate truck_platform;
 extern crate truck_polymesh;

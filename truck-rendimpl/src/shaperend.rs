@@ -217,6 +217,31 @@ mod ficonfig {
 }
 
 impl<'a> RenderFace<'a> {
+    /// Returns the default vertex shader module source.
+    /// 
+    /// The GLSL original code is `src/shaders/polygon.vert`.
+    #[inline(always)]
+    pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
+        include_spirv!("shaders/polygon.vert.spv")
+    }
+
+    /// Returns the default fragment shader module source for non-textured polygons.
+    /// 
+    /// The GLSL original code is `src/shaders/face.frag`.
+    #[inline(always)]
+    pub fn default_fragment_shader() -> ShaderModuleSource<'static> {
+        include_spirv!("shaders/face.frag.spv")
+    }
+
+    /// Returns the default fragment shader module source for textured polygons.
+    /// 
+    /// The GLSL original code is `src/shaders/textured-face.frag`.
+    #[inline(always)]
+    pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
+        include_spirv!("shaders/textured-face.frag.spv")
+    }
+
+    /// Returns the pipeline with developer's custom shader.
     #[inline(always)]
     pub fn pipeline_with_shader(
         &self,
@@ -266,13 +291,12 @@ impl<'a> Rendered for RenderFace<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        let vertex_shader = include_spirv!("shaders/polygon.vert.spv");
         let fragment_shader = match self.desc.texture.is_some() {
-            true => include_spirv!("shaders/textured-face.frag.spv"),
-            false => include_spirv!("shaders/face.frag.spv"),
+            true => Self::default_textured_fragment_shader(),
+            false => Self::default_fragment_shader(),
         };
         self.pipeline_with_shader(
-            vertex_shader,
+            Self::default_vertex_shader(),
             fragment_shader,
             handler,
             layout,
@@ -282,6 +306,14 @@ impl<'a> Rendered for RenderFace<'a> {
 }
 
 impl ShapeInstance {
+    /// Returns a reference to the instance descriptor.
+    #[inline(always)]
+    pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
+    /// Returns the mutable reference to the instance descriptor.
+    #[inline(always)]
+    pub fn descriptor_mut(&mut self) -> &mut InstanceDescriptor { &mut self.desc }
+    
+    /// Creates the vector of `RenderFace` for rendering the shape.
     #[inline(always)]
     pub fn render_faces(&self) -> Vec<RenderFace> {
         let desc = &self.desc;
@@ -290,9 +322,4 @@ impl ShapeInstance {
             .map(move |instance| RenderFace { instance, desc })
             .collect()
     }
-
-    #[inline(always)]
-    pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
-    #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> &mut InstanceDescriptor { &mut self.desc }
 }
