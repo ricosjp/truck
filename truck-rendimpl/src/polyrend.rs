@@ -299,17 +299,3 @@ impl From<&StructuredMesh> for ExpandedPolygon {
         glpolymesh
     }
 }
-
-impl std::fmt::Debug for PolygonInstance {
-    #[inline(always)]
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
-        f.pad("PolygonInstance {\n")?;
-        f.write_fmt(format_args!("  polygon: {:?}\n", self.polygon))?;
-        f.write_fmt(format_args!("  matrix: {:?}\n", self.desc.matrix))?;
-        f.write_fmt(format_args!("  material: {:?}\n", self.desc.material))?;
-        match self.desc.texture {
-            Some(_) => f.write_fmt(format_args!("Some(<omitted>)\n}}")),
-            None => f.write_fmt(format_args!("None\n}}")),
-        }
-    }
-}

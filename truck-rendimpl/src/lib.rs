@@ -72,19 +72,21 @@ pub struct InstanceDescriptor {
 ///
 /// The duplicated polygon by `Clone::clone` has the same mesh data and descriptor
 /// with original, however, its render id is different from the one of original.
+#[derive(Debug)]
 pub struct PolygonInstance {
     polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
     desc: InstanceDescriptor,
     id: RenderID,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct FaceBuffer {
     surface: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
     boundary_length: Arc<BufferHandler>,
 }
 
+#[derive(Debug)]
 struct FaceInstance {
     buffer: Arc<Mutex<FaceBuffer>>,
     id: RenderID,
@@ -98,13 +100,14 @@ struct FaceInstance {
 ///
 /// The duplicated shape by `Clone::clone` has the same mesh data and descriptor
 /// with original, however, its render id is different from the one of original.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ShapeInstance {
     faces: Vec<FaceInstance>,
     desc: InstanceDescriptor,
 }
 
 /// Iterated face for rendering `ShapeInstance`.
+#[derive(Clone, Copy, Debug)]
 pub struct RenderFace<'a> {
     instance: &'a FaceInstance,
     desc: &'a InstanceDescriptor,
@@ -113,6 +116,7 @@ pub struct RenderFace<'a> {
 /// The trait for generate `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
 /// `ShapeInstance` from `Shell` and `Solid`.
 pub trait IntoInstance {
+    /// the type of instance
     type Instance;
     #[doc(hidden)]
     fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance;
