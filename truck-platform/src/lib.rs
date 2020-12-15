@@ -271,7 +271,7 @@ pub struct DeviceHandler {
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct RenderID(usize);
 
-/// The configures of [`Scene`](./struct.Scene.html).
+/// Configures of [`Scene`](./struct.Scene.html).
 #[derive(Debug, Clone)]
 pub struct SceneDescriptor {
     /// background color. Default is `Color::BLACK`.

@@ -11,7 +11,11 @@
     unused_qualifications
 )]
 
-pub use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
+/// re-export `truck_base`.
+pub mod base {
+    pub use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
+}
+pub use base::*;
 
 /// geometrical elements
 pub mod geometry {

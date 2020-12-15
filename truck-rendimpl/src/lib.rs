@@ -4,29 +4,59 @@ extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
 use image::{DynamicImage, GenericImageView};
 use std::sync::{Arc, Mutex};
-pub use truck_modeling::*;
 use truck_platform::{
     wgpu::util::{BufferInitDescriptor, DeviceExt},
     wgpu::*,
     *,
 };
 
+pub mod modeling {
+    pub use truck_modeling::*;
+}
+pub use modeling::*;
+
+pub mod polymesh {
+    pub use truck_polymesh::*;
+}
+pub use polymesh::*;
+
+/// Material information.
+/// 
+/// Each instance is rendered based on the microfacet theory.
 #[derive(Debug, Clone, Copy)]
 pub struct Material {
+    /// albedo, base color, [0, 1]-normalized rgba. Default is `Vector4::new(1.0, 1.0, 1.0, 1.0)`.  
+    /// Transparent by alpha is not yet supported in the current standard shader.
     pub albedo: Vector4,
+    /// roughness of the surface: [0, 1]. Default is 0.5.
     pub roughness: f64,
+    /// ratio of specular: [0, 1]. Default is 0.25.
     pub reflectance: f64,
+    /// ratio of ambient: [0, 1]. Default is 0.02.
     pub ambient_ratio: f64,
 }
 
+/// Configures of instances.
 #[derive(Clone)]
 pub struct InstanceDescriptor {
+    /// instance matrix
     pub matrix: Matrix4,
+    /// material of instance
     pub material: Material,
+    /// texture of instance
     pub texture: Option<Arc<DynamicImage>>,
+    /// If this parameter is true, the backface culling will be activated.
     pub backface_culling: bool,
 }
 
+/// Instance of polygon
+/// 
+/// One can duplicate polygons with different postures and materials
+/// that have the same mesh data.
+/// To save memory, mesh data on the GPU can be used again.
+/// 
+/// The duplicated polygon by `Clone::clone` has the same mesh data and descriptor
+/// with original, however, its render id is different from the one of original.
 pub struct PolygonInstance {
     polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
     desc: InstanceDescriptor,
@@ -98,7 +128,6 @@ struct ExpandedPolygon {
     indices: Vec<u32>,
 }
 
-pub use truck_polymesh::*;
 pub mod instdesc;
 pub mod polyrend;
 pub mod shaperend;
