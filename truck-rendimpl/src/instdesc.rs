@@ -13,6 +13,18 @@ impl Default for Material {
 }
 
 impl Material {
+    /// Creates a `UNIFORM` buffer of material.
+    ///
+    /// The bind group provided by the instances holds this uniform buffer.
+    /// # Shader Examples
+    /// ```glsl
+    /// layout(set = 1, binding = 1) uniform Material {
+    ///     vec4 albedo;
+    ///     float roughness;
+    ///     float reflectance;
+    ///     float ambient_ratio;
+    /// };
+    /// ```
     #[inline(always)]
     pub fn buffer(&self, device: &Device) -> BufferHandler {
         let material_data: [f32; 7] = [
@@ -27,6 +39,7 @@ impl Material {
         BufferHandler::from_slice(&material_data, device, BufferUsage::UNIFORM)
     }
 
+    #[doc(hidden)]
     #[inline(always)]
     pub fn bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
@@ -53,12 +66,22 @@ impl Default for InstanceDescriptor {
 }
 
 impl InstanceDescriptor {
+    /// Creates a `UNIFORM` buffer of instance matrix.
+    ///
+    /// The bind group provided by the instances holds this uniform buffer.
+    /// # Shader Examples
+    /// ```glsl
+    /// layout(set = 1, binding = 0) uniform ModelMatrix {
+    ///     mat4 uniform_matrix;
+    /// };
+    /// ```
     #[inline(always)]
     pub fn matrix_buffer(&self, device: &Device) -> BufferHandler {
         let matrix_data: [[f32; 4]; 4] = self.matrix.cast::<f32>().unwrap().into();
         BufferHandler::from_slice(&matrix_data, device, BufferUsage::UNIFORM)
     }
 
+    #[doc(hidden)]
     #[inline(always)]
     pub fn matrix_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
@@ -71,18 +94,38 @@ impl InstanceDescriptor {
         }
     }
 
+    /// Creates a `UNIFORM` buffer of material.
+    ///
+    /// The bind group provided by the instances holds this uniform buffer.
+    /// # Shader Examples
+    /// ```glsl
+    /// layout(set = 1, binding = 1) uniform Material {
+    ///     vec4 albedo;
+    ///     float roughness;
+    ///     float reflectance;
+    ///     float ambient_ratio;
+    /// };
+    /// ```
     #[inline(always)]
     pub fn material_buffer(&self, device: &Device) -> BufferHandler { self.material.buffer(device) }
 
+    #[doc(hidden)]
     #[inline(always)]
     pub fn material_bgl_entry() -> PreBindGroupLayoutEntry { Material::bgl_entry() }
 
+    /// Creates texture view and sampler of the instance's texture image.
+    ///
+    /// The bind group provided by the instances holds this uniform buffer.
+    /// # Shader Examples
+    /// ```glsl
+    /// layout(set = 1, binding = 2) uniform texture2D texture_view;
+    /// layout(set = 1, binding = 3) uniform sampler texture_sampler;
+    /// ```
     pub fn textureview_and_sampler(
         &self,
         device: &Device,
         queue: &Queue,
-    ) -> (TextureView, Sampler)
-    {
+    ) -> (TextureView, Sampler) {
         let texture_image = self.texture.as_ref().unwrap();
         let rgba = texture_image.to_rgba8();
         let dim = texture_image.dimensions();
@@ -141,6 +184,7 @@ impl InstanceDescriptor {
         (view, sampler)
     }
 
+    #[doc(hidden)]
     #[inline(always)]
     pub fn textureview_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
@@ -154,6 +198,7 @@ impl InstanceDescriptor {
         }
     }
 
+    #[doc(hidden)]
     #[inline(always)]
     pub fn sampler_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
@@ -170,8 +215,7 @@ impl InstanceDescriptor {
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
         sample_count: u32,
-    ) -> Arc<RenderPipeline>
-    {
+    ) -> Arc<RenderPipeline> {
         let device = device_handler.device();
         let sc_desc = device_handler.sc_desc();
         let cull_mode = match self.backface_culling {

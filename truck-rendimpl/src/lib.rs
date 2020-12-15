@@ -23,7 +23,7 @@ pub mod polymesh {
 pub use polymesh::*;
 
 /// Material information.
-/// 
+///
 /// Each instance is rendered based on the microfacet theory.
 #[derive(Debug, Clone, Copy)]
 pub struct Material {
@@ -52,11 +52,11 @@ pub struct InstanceDescriptor {
 }
 
 /// Instance of polygon
-/// 
+///
 /// One can duplicate polygons with different postures and materials
 /// that have the same mesh data.
 /// To save memory, mesh data on the GPU can be used again.
-/// 
+///
 /// The duplicated polygon by `Clone::clone` has the same mesh data and descriptor
 /// with original, however, its render id is different from the one of original.
 pub struct PolygonInstance {
@@ -78,11 +78,11 @@ struct FaceInstance {
 }
 
 /// Instance of shape: `Shell` and `Solid` with geometric data.
-/// 
+///
 /// One can duplicate shapes with different postures and materials
 /// that have the same mesh data.
 /// To save memory, mesh data on the GPU can be used again.
-/// 
+///
 /// The duplicated shape by `Clone::clone` has the same mesh data and descriptor
 /// with original, however, its render id is different from the one of original.
 #[derive(Clone)]
