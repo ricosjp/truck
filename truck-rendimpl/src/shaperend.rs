@@ -117,11 +117,6 @@ impl IntoInstance for Solid {
     }
 }
 
-pub struct RenderFace<'a> {
-    instance: &'a FaceInstance,
-    desc: &'a InstanceDescriptor,
-}
-
 mod ficonfig {
     use super::*;
     #[inline(always)]
@@ -187,7 +182,7 @@ mod ficonfig {
         face: &RenderFace,
     ) -> BindGroup {
         let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
-        crate::create_bind_group(
+        bind_group_util::create_bind_group(
             handler.device(),
             layout,
             vec![
@@ -206,7 +201,7 @@ mod ficonfig {
     ) -> BindGroup {
         let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
         let (view, sampler) = desc.textureview_and_sampler(handler.device(), handler.queue());
-        crate::create_bind_group(
+        bind_group_util::create_bind_group(
             handler.device(),
             layout,
             vec![

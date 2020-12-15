@@ -96,7 +96,7 @@ impl PolygonInstance {
 
     #[inline(always)]
     fn non_textured_bg(&self, device: &Device, layout: &BindGroupLayout) -> BindGroup {
-        crate::create_bind_group(
+        bind_group_util::create_bind_group(
             device,
             layout,
             vec![
@@ -108,7 +108,7 @@ impl PolygonInstance {
     #[inline(always)]
     fn textured_bg(&self, device: &Device, queue: &Queue, layout: &BindGroupLayout) -> BindGroup {
         let (view, sampler) = self.desc.textureview_and_sampler(device, queue);
-        crate::create_bind_group(
+        bind_group_util::create_bind_group(
             device,
             layout,
             vec![

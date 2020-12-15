@@ -2,7 +2,6 @@ mod common;
 use common::{PICTURE_HEIGHT, PICTURE_WIDTH};
 use glsl_to_spirv::ShaderType;
 use image::{ColorType, DynamicImage, ImageBuffer, Rgba};
-use shaperend::RenderFace;
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use truck_rendimpl::*;

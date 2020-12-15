@@ -75,12 +75,28 @@ pub struct FaceInstance {
     id: RenderID,
 }
 
+/// Instance of shape: `Shell` and `Solid` with geometric data.
+/// 
+/// One can duplicate shapes with different postures and materials
+/// that have the same mesh data.
+/// To save memory, mesh data on the GPU can be used again.
+/// 
+/// The duplicated shape by `Clone::clone` has the same mesh data and descriptor
+/// with original, however, its render id is different from the one of original.
 #[derive(Clone)]
 pub struct ShapeInstance {
     faces: Vec<FaceInstance>,
     desc: InstanceDescriptor,
 }
 
+/// Iterated face for rendering `ShapeInstance`.
+pub struct RenderFace<'a> {
+    instance: &'a FaceInstance,
+    desc: &'a InstanceDescriptor,
+}
+
+/// The trait for generate `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
+/// `ShapeInstance` from `Shell` and `Solid`.
 pub trait IntoInstance {
     type Instance;
     #[doc(hidden)]
@@ -89,12 +105,16 @@ pub trait IntoInstance {
     fn update_instance(&self, device: &Device, instance: &mut Self::Instance);
 }
 
+/// Extend trait for `Scene` to create instance.
 pub trait CreateInstance {
+    /// Creates `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
+    /// `ShapeInstance` from `Shell` and `Solid`.
     fn create_instance<T: IntoInstance>(
         &self,
         object: &T,
         desc: &InstanceDescriptor,
     ) -> T::Instance;
+    /// Update the mesh data by original polygon (shape) structures.
     fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T);
 }
 
@@ -121,33 +141,12 @@ struct AttrVertex {
     pub normal: [f32; 3],
 }
 
-#[repr(C)]
 #[derive(Debug, Clone)]
 struct ExpandedPolygon {
     vertices: Vec<AttrVertex>,
     indices: Vec<u32>,
 }
 
-pub mod instdesc;
-pub mod polyrend;
-pub mod shaperend;
-
-fn create_bind_group<'a, T: IntoIterator<Item = BindingResource<'a>>>(
-    device: &Device,
-    layout: &BindGroupLayout,
-    resources: T,
-) -> BindGroup {
-    let entries: &Vec<BindGroupEntry> = &resources
-        .into_iter()
-        .enumerate()
-        .map(|(i, resource)| BindGroupEntry {
-            binding: i as u32,
-            resource,
-        })
-        .collect();
-    device.create_bind_group(&BindGroupDescriptor {
-        layout,
-        entries,
-        label: None,
-    })
-}
+mod instdesc;
+mod polyrend;
+mod shaperend;
