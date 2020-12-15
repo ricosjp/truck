@@ -10,11 +10,13 @@ use truck_platform::{
     *,
 };
 
+/// Re-exports `truck_modeling`.
 pub mod modeling {
     pub use truck_modeling::*;
 }
 pub use modeling::*;
 
+/// Re-exports `truck_polymesh`.
 pub mod polymesh {
     pub use truck_polymesh::*;
 }
@@ -70,7 +72,7 @@ struct FaceBuffer {
     boundary_length: Arc<BufferHandler>,
 }
 
-pub struct FaceInstance {
+struct FaceInstance {
     buffer: Arc<Mutex<FaceBuffer>>,
     id: RenderID,
 }
