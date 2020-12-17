@@ -53,13 +53,15 @@ bool in_domain() {
 
 void main() {
     if (!in_domain()) discard;
+    Material mat = material;
     vec3 camera_dir = normalize(camera_matrix[3].xyz - position);
     vec3 normal = normalize(vertex_normal);
     vec3 pre_color = vec3(0.0, 0.0, 0.0);
     for (uint i = 0; i < nlights; i++) {
-        pre_color += microfacet_color(position, normal, lights[i], camera_dir, material);
+        Light light = lights[i];
+        pre_color += microfacet_color(position, normal, light, camera_dir, mat);
     }
     pre_color = clamp(pre_color, 0.0, 1.0);
-    pre_color = ambient_correction(pre_color, material);
+    pre_color = ambient_correction(pre_color, mat);
     color = vec4(pre_color, 1.0);
 }

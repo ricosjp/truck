@@ -57,7 +57,7 @@ impl App for MyApp {
                 b: BACKGROUND[2],
                 a: BACKGROUND[3],
             },
-            sample_count: 2,
+            sample_count: 1,
             ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
@@ -101,7 +101,7 @@ impl App for MyApp {
         }
     }
     fn update(&mut self, _: &DeviceHandler) {
-        let time = 0.2;//self.scene.elapsed().as_secs_f64();
+        let time = self.scene.elapsed().as_secs_f64();
         for (i, shape) in self.instances.iter_mut().enumerate() {
             let axis = if i % 2 == 0 {
                 (-1.0_f64).powi(i as i32 / 2) * Vector3::unit_y()
