@@ -33,19 +33,19 @@ impl MyApp {
         let mut face = builder::tsweep(&edge, Vector3::unit_y());
         let v = builder::vertex(Point3::new(0.2, 0.0, -0.5));
         let edge0 = builder::tsweep(&v, Vector3::new(-0.2, 0.2, 0.0));
-        let edge1 = builder::partial_rsweep(
+        let edge1 = builder::rsweep(
             edge0.back(),
             Point3::origin(),
             Vector3::unit_z(),
             Rad(std::f64::consts::PI / 2.0),
-        );
+        ).pop_back().unwrap();
         let edge2 = builder::tsweep(edge1.back(), Vector3::new(0.2, -0.2, 0.0));
-        let edge3 = builder::partial_rsweep(
+        let edge3 = builder::rsweep(
             edge2.back(),
             Point3::origin(),
             Vector3::unit_z(),
             Rad(std::f64::consts::PI / 2.0),
-        );
+        ).pop_back().unwrap();
         let edge3 = Edge::new(
             edge3.front(),
             edge0.front(),
