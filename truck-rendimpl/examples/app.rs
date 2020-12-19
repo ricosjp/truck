@@ -5,6 +5,8 @@ use winit::dpi::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;
 
+/// The framework of applications with `winit`.
+/// The main function of this file is the smallest usecase of this trait.
 pub trait App: Sized + 'static {
     fn init(handler: &DeviceHandler) -> Self;
     fn app_title<'a>() -> Option<&'a str> { None }
@@ -134,5 +136,13 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) 
         .unwrap()
 }
 
+/// The smallest example of the trait `App`.
+/// Creates an empty window whose back ground is black.
 #[allow(dead_code)]
-fn main() {}
+fn main() {
+    struct MyApp;
+    impl App for MyApp {
+        fn init(_: &DeviceHandler) -> MyApp { MyApp }
+    }
+    MyApp::run()
+}

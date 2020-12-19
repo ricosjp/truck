@@ -1,5 +1,10 @@
 extern crate truck_topology as topology;
-pub use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
+
+/// re-export `truck_base`.
+pub mod base {
+    pub use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
+}
+pub use base::*;
 
 /// mesh data
 #[derive(Clone, Debug, Default)]
@@ -33,16 +38,16 @@ pub struct MeshHandler {
 }
 
 pub mod errors;
-pub mod extract_topology;
-pub mod healing;
-pub mod mesh_handler;
-pub mod meshing_shape;
+mod extract_topology;
+mod healing;
+mod mesh_handler;
+mod meshing_shape;
 pub mod obj;
-pub mod polygon_mesh;
-pub mod smoothing;
-pub mod splitting;
-pub mod structured_mesh;
-pub mod structuring;
+mod polygon_mesh;
+mod smoothing;
+mod splitting;
+mod structured_mesh;
+mod structuring;
 
 #[inline(always)]
 fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {

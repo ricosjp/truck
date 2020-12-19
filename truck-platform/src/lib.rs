@@ -34,13 +34,13 @@
     missing_debug_implementations,
     trivial_casts,
     trivial_numeric_casts,
-    //unsafe_code, <- unsafe is necessary to communicate with GPU!
+    unsafe_code,
     unstable_features,
     unused_import_braces,
     unused_qualifications
 )]
 
-pub extern crate bytemuck;
+extern crate bytemuck;
 extern crate truck_base;
 pub extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
@@ -51,32 +51,26 @@ use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct CameraInfo {
     camera_matrix: [[f32; 4]; 4],
     camera_projection: [[f32; 4]; 4],
 }
-unsafe impl Zeroable for CameraInfo {}
-unsafe impl Pod for CameraInfo {}
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct LightInfo {
     light_position: [f32; 4],
     light_color: [f32; 4],
     light_type: [u32; 4],
 }
-unsafe impl Zeroable for LightInfo {}
-unsafe impl Pod for LightInfo {}
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct SceneInfo {
     time: f32,
     num_of_lights: u32,
 }
-unsafe impl Zeroable for SceneInfo {}
-unsafe impl Pod for SceneInfo {}
 
 /// safe handler of GPU buffer
 /// [`Buffer`](../wgpu/struct.Buffer.html)
@@ -277,7 +271,7 @@ pub struct DeviceHandler {
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct RenderID(usize);
 
-/// The configures of [`Scene`](./struct.Scene.html).
+/// Configures of [`Scene`](./struct.Scene.html).
 #[derive(Debug, Clone)]
 pub struct SceneDescriptor {
     /// background color. Default is `Color::BLACK`.
@@ -362,16 +356,12 @@ pub trait Rendered {
     }
 }
 
-#[doc(hidden)]
-pub mod buffer_handler;
-#[doc(hidden)]
-pub mod camera;
-#[doc(hidden)]
-pub mod light;
+mod buffer_handler;
+mod camera;
+mod light;
 #[doc(hidden)]
 pub mod rendered_macros;
-#[doc(hidden)]
-pub mod scene;
+mod scene;
 
 #[doc(hidden)]
 pub mod bind_group_util {
