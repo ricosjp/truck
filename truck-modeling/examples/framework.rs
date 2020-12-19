@@ -7,6 +7,7 @@ use winit::dpi::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;
 
+/// Shape Viewer
 pub struct ShapeViewer {
     scene: Scene,
     rotate_flag: bool,
@@ -14,6 +15,7 @@ pub struct ShapeViewer {
 }
 
 impl ShapeViewer {
+    /// Initializes the application
     fn init<T: IntoInstance<Instance = ShapeInstance>>(handler: &DeviceHandler, shape: T) -> Self {
         let scene_desc = SceneDescriptor {
             background: Color::BLACK,
@@ -43,11 +45,17 @@ impl ShapeViewer {
             prev_cursor: None,
         }
     }
+
+    /// The default control flow
     fn default_control_flow() -> ControlFlow {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         ControlFlow::WaitUntil(next_frame_time)
     }
+
+    /// Render scene
     fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+
+    /// Processing when a mouse click occurs.
     fn mouse_input(&mut self, state: ElementState, button: MouseButton) -> ControlFlow {
         match button {
             MouseButton::Left => {
@@ -60,6 +68,8 @@ impl ShapeViewer {
         }
         Self::default_control_flow()
     }
+
+    /// Processing when the mouse wheel is moved.
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
@@ -75,6 +85,7 @@ impl ShapeViewer {
         Self::default_control_flow()
     }
 
+    /// Processing when the cursor moved.
     fn cursor_moved(&mut self, position: PhysicalPosition<f64>) -> ControlFlow {
         if self.rotate_flag {
             let sc_desc = self.scene.descriptor_mut();
@@ -95,6 +106,8 @@ impl ShapeViewer {
         }
         Self::default_control_flow()
     }
+
+    /// Running the shape viewer viewing `shape`.
     pub fn run<I: IntoInstance<Instance = ShapeInstance>>(shape: I) {
         let event_loop = winit::event_loop::EventLoop::new();
         let mut wb = winit::window::WindowBuilder::new();
