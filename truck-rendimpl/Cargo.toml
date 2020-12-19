@@ -9,6 +9,7 @@ build = "src/build.rs"
 
 [dependencies]
 image = "*"
+bytemuck = { version = "*", features = ["derive"] }
 truck-platform = { path = "../truck-platform" }
 truck-modeling = { path = "../truck-modeling" }
 truck-polymesh = { path = "../truck-polymesh" }

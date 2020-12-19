@@ -8,8 +8,8 @@ const vec2 ONE = vec2(1.0, 0.0);
 
 const vec2 ROOTS[3] = vec2[](
     ONE,
-    vec2(0.5, sqrt(3.0) / 2.0),
-    vec2(0.5, -sqrt(3.0) / 2.0)
+    vec2(1.0, sqrt(3.0)) / 2.0,
+    vec2(1.0, -sqrt(3.0)) / 2.0
 );
 
 vec2 cmult(vec2 z, vec2 w) {

@@ -2,7 +2,6 @@ mod common;
 use common::{PICTURE_HEIGHT, PICTURE_WIDTH};
 use glsl_to_spirv::ShaderType;
 use image::{ColorType, DynamicImage, ImageBuffer, Rgba};
-use shaperend::RenderFace;
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -50,8 +49,13 @@ impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
         let vertex_module = wgpu::util::make_spirv(&vertex_spirv);
         let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
         let fragment_module = wgpu::util::make_spirv(&fragment_spirv);
-        self.face
-            .pipeline_with_shader(vertex_module, fragment_module, device_handler, layout, sample_count)
+        self.face.pipeline_with_shader(
+            vertex_module,
+            fragment_module,
+            device_handler,
+            layout,
+            sample_count,
+        )
     }
 }
 

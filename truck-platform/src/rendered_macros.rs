@@ -3,7 +3,7 @@
 /// `id_member`: the member variant of render id.
 #[macro_export]
 macro_rules! impl_render_id {
-    ($($id_member: ident).*) => {
+    ($($id_member: tt).*) => {
         #[inline(always)]
         fn render_id(&self) -> RenderID { self.$($id_member).* }
     };
@@ -14,7 +14,7 @@ macro_rules! impl_render_id {
 /// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_render_id {
-    ($($id_member: ident).*) => {
+    ($($id_member: tt).*) => {
         #[inline(always)]
         fn render_id(&self) -> RenderID { self.$($id_member).*.render_id() }
     };
@@ -25,7 +25,7 @@ macro_rules! derive_render_id {
 /// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_vertex_buffer {
-    ($($id_member: ident).*) => {
+    ($($id_member: tt).*) => {
         #[inline(always)]
         fn vertex_buffer(
             &self,
@@ -42,7 +42,7 @@ macro_rules! derive_vertex_buffer {
 /// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_bind_group_layout {
-    ($($id_member: ident).*) => {
+    ($($id_member: tt).*) => {
         #[inline(always)]
         fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout> {
             self.$($id_member)*.bind_group_layout(device_handler)
@@ -55,7 +55,7 @@ macro_rules! derive_bind_group_layout {
 /// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_bind_group {
-    ($($id_member: ident).*) => {
+    ($($id_member: tt).*) => {
         #[inline(always)]
         fn bind_group(
             &self,
@@ -73,13 +73,14 @@ macro_rules! derive_bind_group {
 /// `id_member`: the member variant of the super `Rendered` struct.
 #[macro_export]
 macro_rules! derive_pipeline {
-    ($($id_member: ident).*) => {
+    ($($id_member: tt).*) => {
         fn pipeline(
             &self,
             device_handler: &DeviceHandler,
             layout: &PipelineLayout,
+            sample_count: u32,
         ) -> Arc<RenderPipeline> {
-            self.$($id_member)*.pipeline(device_handler, layout)
+            self.$($id_member)*.pipeline(device_handler, layout, sample_count)
         }
     };
 }

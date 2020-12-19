@@ -78,7 +78,7 @@
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, LockResult, Mutex, MutexGuard, TryLockResult};
-use truck_base::{geom_traits::*, tolerance::*, id::ID};
+use truck_base::{geom_traits::*, id::ID, tolerance::*};
 
 /// Vertex, the minimum topological unit.
 ///

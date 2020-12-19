@@ -18,10 +18,16 @@ extern crate truck_base;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use truck_base::bounding_box::Bounded;
-pub use truck_base::bounding_box::*;
-pub use truck_base::cgmath64::*;
-pub use truck_base::geom_traits::*;
-pub use truck_base::tolerance::*;
+
+/// re-export `truck_base`
+pub mod base {
+    pub use truck_base::bounding_box::*;
+    pub use truck_base::cgmath64::*;
+    pub use truck_base::geom_traits::*;
+    pub use truck_base::tolerance::*;
+}
+pub use base::*;
+
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]

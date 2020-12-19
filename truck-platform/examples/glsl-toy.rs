@@ -1,3 +1,13 @@
+//! A sample of creating a render object by implementing "Rendered" in a new structure.
+//! 
+//! One can use xyr fragment shader in the following way:
+//! - Enter the shader path as an argument when executing the program.
+//! - Drag and drop the shader into the window.
+//! 
+//! The shader syntax follows that of shadertoy.
+//! Since this is a simple sample, not supports buffering textures, sounds, and so on.
+//! The default shader sample is "newton-cuberoot.frag" in the same directory.
+
 use std::io::Read;
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
@@ -9,12 +19,15 @@ use winit::event_loop::ControlFlow;
 mod plane {
     use super::*;
     use glsl_to_spirv::ShaderType;
+
+    /// Canvas to draw by fragment shader.
     pub struct Plane {
         vertex_module: ShaderModule,
         fragment_module: ShaderModule,
         id: RenderID,
     }
 
+    /// GLSL vertex shader of Plane
     const VERTEX_SHADER: &str = "
         #version 450
         layout(location = 0) in uint idx;
@@ -30,6 +43,7 @@ mod plane {
         }
     ";
 
+    /// prefix of GLSL fragment shader
     const FRAGMENT_SHADER_PREFIX: &str = "
         #version 450
         layout(location = 0) out vec4 color;
@@ -42,6 +56,7 @@ mod plane {
         };
     ";
 
+    /// suffix of GLSL fragment shader
     const FRAGMENT_SHADER_SUFFIX: &str = "
         void main() {
             vec2 fragCoord = vec2(gl_FragCoord.x, iResolution.y - gl_FragCoord.y);
@@ -49,6 +64,7 @@ mod plane {
         }    
     ";
 
+    /// Reads the GLSL fragment shader with `void mainImage(out vec4 fragColor, in vec2 fragCoord)`.
     fn read_shader(
         device: &Device,
         code: &str,
@@ -63,19 +79,26 @@ mod plane {
         Ok(device.create_shader_module(wgpu::util::make_spirv(&compiled)))
     }
 
+    // Implementation of Rendered for Plane.
     impl Rendered for Plane {
+        // `Rendered::render_id()` can be implemented by macro.
         impl_render_id!(id);
+
+        // Vertices: [0, 1, 2, 2, 1, 3] as [u32; 6].
+        // There is not the index buffer.
         fn vertex_buffer(
             &self,
             handler: &DeviceHandler,
         ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
             let buffer = BufferHandler::from_slice(
-                &[0, 1, 2, 2, 1, 3],
+                &[0 as u32, 1, 2, 2, 1, 3],
                 handler.device(),
                 BufferUsage::VERTEX,
             );
             (Arc::new(buffer), None)
         }
+
+        // bind group is only one uniform buffer: resolution
         fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
             Arc::new(
                 handler
@@ -94,6 +117,8 @@ mod plane {
                     }),
             )
         }
+        
+        // bind group is only one uniform buffer: resolution
         fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
             let sc_desc = handler.sc_desc();
             let resolution = [sc_desc.width as f32, sc_desc.height as f32, 1.0];
@@ -106,6 +131,8 @@ mod plane {
                 ),
             ))
         }
+
+        // Describe pipeline
         fn pipeline(
             &self,
             handler: &DeviceHandler,
@@ -126,14 +153,7 @@ mod plane {
                             module: &self.fragment_module,
                             entry_point: "main",
                         }),
-                        rasterization_state: Some(RasterizationStateDescriptor {
-                            front_face: FrontFace::Ccw,
-                            cull_mode: CullMode::None,
-                            depth_bias: 0,
-                            depth_bias_slope_scale: 0.0,
-                            depth_bias_clamp: 0.0,
-                            clamp_depth: false,
-                        }),
+                        rasterization_state: None,
                         primitive_topology: PrimitiveTopology::TriangleList,
                         color_states: &[ColorStateDescriptor {
                             format: sc_desc.format,
@@ -141,17 +161,14 @@ mod plane {
                             alpha_blend: BlendDescriptor::REPLACE,
                             write_mask: ColorWrite::ALL,
                         }],
+                        // Depth test cannot be disabled.
                         depth_stencil_state: Some(DepthStencilStateDescriptor {
                             format: TextureFormat::Depth32Float,
                             depth_write_enabled: true,
                             depth_compare: wgpu::CompareFunction::Less,
-                            stencil: StencilStateDescriptor {
-                                front: StencilStateFaceDescriptor::IGNORE,
-                                back: StencilStateFaceDescriptor::IGNORE,
-                                read_mask: 0,
-                                write_mask: 0,
-                            },
+                            stencil: Default::default(),
                         }),
+                        // the vertex attribute is only `u32`.
                         vertex_state: VertexStateDescriptor {
                             index_format: IndexFormat::Uint32,
                             vertex_buffers: &[VertexBufferDescriptor {
@@ -174,6 +191,10 @@ mod plane {
     }
 
     impl Plane {
+        /// constructor
+        /// # Arguments
+        /// - device: Device, provided by wgpu.
+        /// - shader: the inputed fragment shader
         pub fn new(device: &Device, shader: String) -> Plane {
             let vertex_module = read_shader(device, VERTEX_SHADER, ShaderType::Vertex).unwrap();
             let fragment_shader =
@@ -187,6 +208,7 @@ mod plane {
             }
         }
 
+        /// Change the shader of fragment.
         pub fn set_shader(&mut self, device: &Device, shader: String) {
             let fragment_shader =
                 FRAGMENT_SHADER_PREFIX.to_string() + &shader + FRAGMENT_SHADER_SUFFIX;
@@ -264,6 +286,7 @@ fn main() {
             Err(error) => println!("{:?}", error),
         }
     }
+    // Adds a plane to the scene!
     scene.add_object(&mut plane);
 
     event_loop.run(move |ev, _, control_flow| {
