@@ -150,7 +150,7 @@ pub struct Face<P, C, S> {
 ///
 /// The entity of this struct is `Vec<Face>` and almost methods are inherited from
 /// `Vec<Face>` by `Deref` and `DerefMut` traits.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Shell<P, C, S> {
     face_list: Vec<Face<P, C, S>>,
 }

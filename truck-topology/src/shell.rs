@@ -455,6 +455,11 @@ impl<P: Tolerance, C: Curve<Point=P>, S: Surface<Point=C::Point, Vector=C::Vecto
     }
 }
 
+impl<P, C, S> Clone for Shell<P, C, S> {
+    #[inline(always)]
+    fn clone(&self) -> Shell<P, C, S> { Shell{ face_list: self.face_list.clone() } }
+}
+
 impl<P, C, S> From<Shell<P, C, S>> for Vec<Face<P, C, S>> {
     #[inline(always)]
     fn from(shell: Shell<P, C, S>) -> Vec<Face<P, C, S>> { shell.face_list }

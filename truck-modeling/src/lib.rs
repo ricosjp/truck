@@ -109,11 +109,33 @@ pub mod topo_traits {
             connect_curve: &CE,
         ) -> Self::Swept;
     }
+    
+    /// Abstract multi sweeping, builds a circle-arc, a prism, a half torus, and so on.
+    pub trait MultiSweep<P, C, S> {
+        /// The struct of sweeped topology.
+        type Swept;
+        /// Transform topologies and connect vertices and edges in boundaries.
+        fn multi_sweep<
+            FP: Fn(&P) -> P,
+            FC: Fn(&C) -> C,
+            FS: Fn(&S) -> S,
+            CP: Fn(&P, &P) -> C,
+            CE: Fn(&C, &C) -> S,
+        >(
+            &self,
+            point_mapping: &FP,
+            curve_mapping: &FC,
+            surface_mapping: &FS,
+            connect_points: &CP,
+            connect_curve: &CE,
+            division: usize,
+        ) -> Self::Swept;
+    }
 
     /// closed sweep, builds a closed torus, and so on.
     pub trait ClosedSweep<P, C, S> {
         /// The struct of sweeped topology.
-        type ClosedSwept;
+        type Swept;
         /// Transform topologies and connect vertices and edges in boundaries.
         fn closed_sweep<
             FP: Fn(&P) -> P,
@@ -129,7 +151,7 @@ pub mod topo_traits {
             connect_points: &CP,
             connect_curves: &CE,
             division: usize,
-        ) -> Self::ClosedSwept;
+        ) -> Self::Swept;
     }
 }
 pub use topo_traits::*;
@@ -137,6 +159,7 @@ pub use topo_traits::*;
 /// the building model utility API
 pub mod builder;
 mod closed_sweep;
+mod multi_sweep;
 mod geom_impls;
 mod mapped;
 mod sweep;

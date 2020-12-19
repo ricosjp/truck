@@ -308,7 +308,7 @@ pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-) -> T::ClosedSwept {
+) -> T::Swept {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, PI);
     let mat2 = Matrix4::from_translation(origin.to_vec());
