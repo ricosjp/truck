@@ -133,9 +133,7 @@ pub mod topo_traits {
     }
 
     /// closed sweep, builds a closed torus, and so on.
-    pub trait ClosedSweep<P, C, S> {
-        /// The struct of sweeped topology.
-        type Swept;
+    pub trait ClosedSweep<P, C, S>: MultiSweep<P, C, S> {
         /// Transform topologies and connect vertices and edges in boundaries.
         fn closed_sweep<
             FP: Fn(&P) -> P,

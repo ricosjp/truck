@@ -187,7 +187,40 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 }
 
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by the rotation.
+/// # Details
+/// If the absolute value of `angle` is more than 2π rad, then the result is closed shape.
+/// For example, the result of sweeping a disk is a bent cylinder if `angle` is less than 2π rad
+/// and a solid torus if `angle` is more than 2π rad.
 /// # Examples
+/// ```
+/// // Torus
+/// use truck_modeling::*;
+/// const PI: Rad<f64> = Rad(std::f64::consts::PI);
+///
+/// let v: Vertex = builder::vertex(Point3::new(3.0, 0.0, 0.0));
+/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 0.0), Vector3::unit_z(), PI * 2.0);
+/// let torus: Shell = builder::rsweep(&circle, Point3::origin(), Vector3::unit_y(), PI * 2.0);
+/// let solid: Solid = Solid::new(vec![torus]);
+/// #
+/// # assert!(solid.is_geometric_consistent());
+/// # const N: usize = 100;
+/// # let shell = &solid.boundaries()[0];
+/// # for face in shell.iter() {
+/// #   let surface = face.lock_surface().unwrap().clone();
+/// #   for i in 0..=N {
+/// #       for j in 0..=N {
+/// #           let u = i as f64 / N as f64;
+/// #           let v = j as f64 / N as f64;
+/// #           let pt = surface.subs(u, v);
+/// #
+/// #           // this surface is a part of torus.
+/// #           let tmp = f64::sqrt(pt[0] * pt[0] + pt[2] * pt[2]) - 2.0;
+/// #           let res = tmp * tmp + pt[1] * pt[1];
+/// #           assert!(Tolerance::near(&res, &1.0));
+/// #       }
+/// #    }
+/// # }
+/// ```
 /// ```
 /// // Modeling a pipe.
 /// use truck_modeling::*;
@@ -195,7 +228,7 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 ///
 /// // Creates the base circle
 /// let v: Vertex = builder::vertex(Point3::new(1.0, 0.0, 4.0));
-/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 4.0), -Vector3::unit_z());
+/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 4.0), -Vector3::unit_z(), PI * 2.0);
 ///
 /// // the result shell of the pipe.
 /// let mut pipe: Shell = Shell::new();
@@ -209,7 +242,12 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 /// let another_circle: Wire = boundaries.into_iter().find(|wire| wire != &circle).unwrap().inverse();
 ///
 /// // Draw the bent part
-/// let mut bend_part: Shell = builder::partial_rsweep(&another_circle, Point3::origin(), Vector3::unit_y(), PI / 2.0);
+/// let mut bend_part: Shell = builder::rsweep(
+///     &another_circle,
+///     Point3::origin(),
+///     Vector3::unit_y(),
+///     PI / 2.0,
+/// );
 /// # let surface = bend_part[0].lock_surface().unwrap().clone();
 /// pipe.append(&mut bend_part);
 ///
@@ -240,17 +278,34 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 /// #    }
 /// # }
 /// ```
-pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
+#[inline(always)]
+pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
 ) -> T::Swept {
+    if angle.0.abs() < 2.0 * PI.0 {
+        partial_rsweep(elem, origin, axis, angle)
+    } else if angle.0 > 0.0 {
+        whole_rsweep(elem, origin, axis)
+    } else {
+        whole_rsweep(elem, origin, -axis)
+    }
+}
+
+fn partial_rsweep<T: MultiSweep<Point3, NURBSCurve, NURBSSurface>>(
+    elem: &T,
+    origin: Point3,
+    axis: Vector3,
+    angle: Rad<f64>,
+) -> T::Swept {
+    let division = if angle.0.abs() < PI.0 { 1 } else { 2 };
     let mat0 = Matrix4::from_translation(-origin.to_vec());
-    let mat1 = Matrix4::from_axis_angle(axis, angle);
+    let mat1 = Matrix4::from_axis_angle(axis, angle / division as f64);
     let mat2 = Matrix4::from_translation(origin.to_vec());
     let trsl = mat2 * mat1 * mat0;
-    elem.sweep(
+    elem.multi_sweep(
         &move |pt| trsl.transform_point(*pt),
         &move |curve| NURBSCurve::new(trsl * curve.non_rationalized()),
         &move |surface| NURBSSurface::new(trsl * surface.non_rationalized()),
@@ -270,41 +325,11 @@ pub fn partial_rsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(
                 angle,
             ))
         },
+        division,
     )
 }
 
-/// Sweeps a vertex, an edge, a wire, a face, or a shell by the whole circle.
-/// # Examples
-/// ```
-/// // Torus
-/// use truck_modeling::*;
-/// const PI: Rad<f64> = Rad(std::f64::consts::PI);
-///
-/// let v: Vertex = builder::vertex(Point3::new(3.0, 0.0, 0.0));
-/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 0.0), Vector3::unit_z());
-/// let torus: Shell = builder::rsweep(&circle, Point3::origin(), Vector3::unit_y());
-/// let solid: Solid = Solid::new(vec![torus]);
-/// #
-/// # assert!(solid.is_geometric_consistent());
-/// # const N: usize = 100;
-/// # let shell = &solid.boundaries()[0];
-/// # for face in shell.iter() {
-/// #   let surface = face.lock_surface().unwrap().clone();
-/// #   for i in 0..=N {
-/// #       for j in 0..=N {
-/// #           let u = i as f64 / N as f64;
-/// #           let v = j as f64 / N as f64;
-/// #           let pt = surface.subs(u, v);
-/// #
-/// #           // this surface is a part of torus.
-/// #           let tmp = f64::sqrt(pt[0] * pt[0] + pt[2] * pt[2]) - 2.0;
-/// #           let res = tmp * tmp + pt[1] * pt[1];
-/// #           assert!(Tolerance::near(&res, &1.0));
-/// #       }
-/// #    }
-/// # }
-/// ```
-pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
+fn whole_rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
