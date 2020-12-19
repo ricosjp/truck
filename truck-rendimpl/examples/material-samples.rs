@@ -57,7 +57,7 @@ impl App for MyApp {
                 b: BACKGROUND[2],
                 a: BACKGROUND[3],
             },
-            sample_count: 2,
+            sample_count: 1,
             ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
