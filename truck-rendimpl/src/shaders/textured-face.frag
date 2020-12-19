@@ -67,7 +67,7 @@ void main() {
     vec3 normal = normalize(vertex_normal);
     vec3 pre_color = vec3(0.0, 0.0, 0.0);
     for (uint i = 0; i < nlights; i++) {
-	Light light = lights[i];
+        Light light = lights[i];
         pre_color += microfacet_color(position, normal, light, camera_dir, material);
     }
     pre_color = clamp(pre_color, 0.0, 1.0);

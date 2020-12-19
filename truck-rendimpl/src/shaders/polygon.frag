@@ -29,9 +29,9 @@ void main() {
     vec3 camera_dir = normalize(camera_matrix[3].xyz - position);
     vec3 normal = normalize(vertex_normal);
     vec3 pre_color = vec3(0.0, 0.0, 0.0);
-    Material mat = material;
+    Material mat = material; // <- a kind of stupid for metal
     for (uint i = 0; i < nlights; i++) {
-	Light light = lights[i];
+        Light light = lights[i]; // <- a kind of stupid for metal
         pre_color += microfacet_color(position, normal, light, camera_dir, mat);
     }
     pre_color = clamp(pre_color, 0.0, 1.0);
