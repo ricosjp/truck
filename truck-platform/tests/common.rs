@@ -119,7 +119,7 @@ impl<'a> Rendered for Plane<'a> {
     }
 }
 
-pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mut R) {
+pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &R) {
     scene.add_object(object);
     scene.render_scene(&texture.create_view(&Default::default()));
     scene.remove_object(object);

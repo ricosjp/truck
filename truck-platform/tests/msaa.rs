@@ -1,12 +1,11 @@
 mod common;
 use common::*;
 use std::sync::{Arc, Mutex};
-use truck_base::cgmath64::*;
 use truck_platform::*;
 use wgpu::*;
 
-pub const PICTURE_WIDTH: u32 = 1024;
-pub const PICTURE_HEIGHT: u32 = 1024;
+pub const PICTURE_WIDTH: u32 = 512;
+pub const PICTURE_HEIGHT: u32 = 512;
 
 fn init_device_with_adptinfo(instance: &Instance) -> (Arc<Device>, Arc<Queue>, AdapterInfo) {
     futures::executor::block_on(async {
@@ -55,12 +54,14 @@ fn msaa_test() {
     let texture1 = device.create_texture(&common::texture_descriptor(&sc_desc));
     let sc_desc = Arc::new(Mutex::new(sc_desc));
     let handler = DeviceHandler::new(device, queue, sc_desc);
-    let mut scene = Scene::new(handler.clone(), &Default::default());
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
-    render_one(&mut scene, &texture0, &mut plane);
-    let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
-    render_one(&mut scene, &texture1, &mut plane);
-    let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
-    assert!(common::same_texture(&handler, &texture0, &texture1));
+    let mut scene = Scene::new(handler.clone(), &SceneDescriptor {
+        sample_count: 1,
+        ..Default::default()
+    });
+    let plane = new_plane!("shaders/trapezoid.vert", "shaders/trapezoid.frag");
+    render_one(&mut scene, &texture0, &plane);
+    scene.descriptor_mut().sample_count = 2;
+    let plane = new_plane!("shaders/trapezoid.vert", "shaders/trapezoid.frag");
+    render_one(&mut scene, &texture1, &plane);
+    assert!(!common::same_texture(&handler, &texture0, &texture1));
 }
-
