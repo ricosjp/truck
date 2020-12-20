@@ -1,6 +1,6 @@
 layout(location = 0) out vec4 color;
 
-const float EPS = 1.0e-6;
+const float EPS = 1.0e-5;
 
 bool light_direction_test() {
     vec3 position = vec3(1.0, 0.0, 0.0);
