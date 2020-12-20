@@ -3,7 +3,7 @@ use crate::*;
 impl<V> NURBSCurve<V> {
     /// Constructs the rationalized B-spline curve.
     #[inline(always)]
-    pub fn new(curve: BSplineCurve<V>) -> Self { NURBSCurve(curve) }
+    pub const fn new(curve: BSplineCurve<V>) -> Self { NURBSCurve(curve) }
 
     /// Returns the BSpline curve before rationalized.
     #[inline(always)]

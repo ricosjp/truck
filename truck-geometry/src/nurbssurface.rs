@@ -4,7 +4,7 @@ use crate::*;
 impl<V> NURBSSurface<V> {
     /// constructor
     #[inline(always)]
-    pub fn new(bspsurface: BSplineSurface<V>) -> Self { NURBSSurface(bspsurface) }
+    pub const fn new(bspsurface: BSplineSurface<V>) -> Self { NURBSSurface(bspsurface) }
 
     /// Returns the nurbs surface before rationalized
     #[inline(always)]

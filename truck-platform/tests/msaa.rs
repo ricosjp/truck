@@ -5,32 +5,10 @@ use truck_base::cgmath64::*;
 use truck_platform::*;
 use wgpu::*;
 
-const PICTURE_WIDTH: u32 = 256;
-const PICTURE_HEIGHT: u32 = 256;
-const PICTURE_ASP: f64 = PICTURE_WIDTH as f64 / PICTURE_HEIGHT as f64;
+pub const PICTURE_WIDTH: u32 = 1024;
+pub const PICTURE_HEIGHT: u32 = 1024;
 
-const CAMERA_MATRIX: Matrix4 = Matrix4::from_cols(
-    Vector4::new(1.0, 2.1, 3.2, 4.3),
-    Vector4::new(5.4, 6.5, 7.6, 8.7),
-    Vector4::new(9.8, 10.9, 11.0, 12.0),
-    Vector4::new(13.0, 14.0, 15.0, 16.23),
-);
-const CAMERA_FOV: Rad<f64> = Rad(std::f64::consts::PI / 4.0);
-const CAMERA_NEARCLIP: f64 = 0.1;
-const CAMERA_FARCLIP: f64 = 10.0;
-
-const POINT_LIGHT: Light = Light {
-    position: Point3::new(0.1, 0.2, 0.3),
-    color: Vector3::new(0.4, 0.5, 0.6),
-    light_type: LightType::Point,
-};
-const UNIFORM_LIGHT: Light = Light {
-    position: Point3::new(1.1, 1.2, 1.3),
-    color: Vector3::new(1.4, 1.5, 1.6),
-    light_type: LightType::Uniform,
-};
-
-fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
+fn init_device_with_adptinfo(instance: &Instance) -> (Arc<Device>, Arc<Queue>, AdapterInfo) {
     futures::executor::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
@@ -43,21 +21,29 @@ fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
             .request_device(
                 &DeviceDescriptor {
                     features: Default::default(),
-                    limits: Default::default(),
+                    limits: Limits::default(),
                     shader_validation: true,
                 },
                 None,
             )
             .await
             .unwrap();
-        (Arc::new(device), Arc::new(queue))
+        (Arc::new(device), Arc::new(queue), adapter.get_info())
     })
 }
 
 #[test]
-fn bind_group_test() {
+fn msaa_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
-    let (device, queue) = init_device(&instance);
+    let (device, queue, info) = init_device_with_adptinfo(&instance);
+    match info.backend {
+        Backend::Vulkan => {}
+        Backend::Dx12 => {}
+        _ => {
+            eprintln!("Backend: {:?} is not compatible with wgpu MSAA.", info.backend);
+            return;
+        }
+    }
     let sc_desc = SwapChainDescriptor {
         usage: TextureUsage::OUTPUT_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
@@ -67,29 +53,14 @@ fn bind_group_test() {
     };
     let texture0 = device.create_texture(&common::texture_descriptor(&sc_desc));
     let texture1 = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let texture2 = device.create_texture(&common::texture_descriptor(&sc_desc));
     let sc_desc = Arc::new(Mutex::new(sc_desc));
-    let camera = Camera::perspective_camera(
-        CAMERA_MATRIX.into(),
-        CAMERA_FOV,
-        CAMERA_NEARCLIP,
-        CAMERA_FARCLIP,
-    );
-    println!("camera projection:\n{:?}", camera.projection(PICTURE_ASP));
-    let lights = vec![POINT_LIGHT, UNIFORM_LIGHT];
-    let desc = SceneDescriptor {
-        camera,
-        lights,
-        ..Default::default()
-    };
     let handler = DeviceHandler::new(device, queue, sc_desc);
-    let mut scene = Scene::new(handler.clone(), &desc);
+    let mut scene = Scene::new(handler.clone(), &Default::default());
     let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
     render_one(&mut scene, &texture0, &mut plane);
     let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
     render_one(&mut scene, &texture1, &mut plane);
     let mut plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
-    render_one(&mut scene, &texture2, &mut plane);
     assert!(common::same_texture(&handler, &texture0, &texture1));
-    assert!(!common::same_texture(&handler, &texture0, &texture2));
 }
+

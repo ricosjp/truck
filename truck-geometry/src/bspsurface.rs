@@ -71,7 +71,7 @@ impl<V> BSplineSurface<V> {
     /// This method does NOT check the 3 rules for constructing B-spline surface.  
     /// The programmer must guarantee these conditions before using this method.  
     #[inline(always)]
-    pub fn new_unchecked(
+    pub const fn new_unchecked(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<V>>,
     ) -> BSplineSurface<V>
