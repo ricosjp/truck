@@ -4,11 +4,13 @@ use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use wgpu::*;
 
+const PICTURE_SIZE: (u32, u32) = (256, 256);
+
 #[test]
 fn microfacet_module_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
+    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler, &Default::default());
     let answer = common::nontex_answer_texture(&mut scene);
@@ -34,12 +36,12 @@ fn microfacet_module_test() {
     let mut fragment_shader = "#version 450\n\n".to_string();
     fragment_shader += include_str!("../src/shaders/microfacet-module.frag");
     fragment_shader += include_str!("shaders/anti-check-mf-module.frag");
-    let mut plane = Plane {
+    let plane = Plane {
         vertex_shader: include_str!("shaders/plane.vert"),
         fragment_shader: &fragment_shader,
         id: Default::default(),
     };
-    common::render_one(&mut scene, &texture, &mut plane);
+    common::render_one(&mut scene, &texture, &plane);
     assert!(!common::same_texture(
         scene.device_handler(),
         &answer,

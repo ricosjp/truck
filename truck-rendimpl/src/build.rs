@@ -8,7 +8,8 @@ fn resolve_include<S: AsRef<str>>(code: S) -> String {
         let words: Vec<_> = line.split_whitespace().collect();
         if !words.is_empty() {
             if words[0] == "#include" {
-                res += &std::fs::read_to_string(words[1].trim_matches('\"')).unwrap();
+                let filename = words[1].trim_matches('\"');
+                res += &std::fs::read_to_string(filename).unwrap();
             } else {
                 res += &line;
             }

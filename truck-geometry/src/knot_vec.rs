@@ -5,7 +5,7 @@ use std::vec::Vec;
 
 impl KnotVec {
     /// empty constructor
-    pub fn new() -> KnotVec { KnotVec(Vec::new()) }
+    pub const fn new() -> KnotVec { KnotVec(Vec::new()) }
 
     /// Returns the length of range.
     /// # Examples

@@ -520,9 +520,10 @@ impl Scene {
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
-            let sampled = self.scene_desc.sample_count != 1;
-            let attachment = if sampled { &sampled_view } else { view };
-            let resolve_target = if sampled { Some(view) } else { None };
+            let (attachment, resolve_target) = match self.scene_desc.sample_count != 1 {
+                true => (&sampled_view, Some(view)),
+                false => (view, None),
+            };
             let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
                 color_attachments: &[RenderPassColorAttachmentDescriptor {
                     attachment,

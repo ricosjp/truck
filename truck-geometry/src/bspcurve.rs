@@ -53,7 +53,7 @@ impl<V> BSplineCurve<V> {
     /// This method does NOT check the rules for constructing B-spline curve.  
     /// The programmer must guarantee these conditions before using this method.
     #[inline(always)]
-    pub fn new_unchecked(knot_vec: KnotVec, control_points: Vec<V>) -> BSplineCurve<V> {
+    pub const fn new_unchecked(knot_vec: KnotVec, control_points: Vec<V>) -> BSplineCurve<V> {
         BSplineCurve::<V> {
             knot_vec: knot_vec,
             control_points: control_points,

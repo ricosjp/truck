@@ -6,9 +6,6 @@ use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
 
-pub const PICTURE_WIDTH: u32 = 256;
-pub const PICTURE_HEIGHT: u32 = 256;
-
 #[derive(Clone, Default, Debug)]
 pub struct Plane<'a> {
     pub vertex_shader: &'a str,
@@ -122,7 +119,7 @@ impl<'a> Rendered for Plane<'a> {
     }
 }
 
-pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &mut R) {
+pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &R) {
     scene.add_object(object);
     scene.render_scene(&texture.create_view(&Default::default()));
     scene.remove_object(object);
@@ -135,52 +132,14 @@ pub fn read_shader(device: &Device, code: &str, shadertype: ShaderType) -> Shade
     device.create_shader_module(wgpu::util::make_spirv(&compiled))
 }
 
-pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
-    futures::executor::block_on(async {
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
-                compatible_surface: None,
-            })
-            .await
-            .unwrap();
-        let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Limits::default(),
-                    shader_validation: true,
-                },
-                None,
-            )
-            .await
-            .unwrap();
-        (Arc::new(device), Arc::new(queue))
-    })
-}
-
-pub fn swap_chain_descriptor() -> SwapChainDescriptor {
-    SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
-        format: TextureFormat::Rgba8UnormSrgb,
-        width: PICTURE_WIDTH,
-        height: PICTURE_HEIGHT,
-        present_mode: PresentMode::Mailbox,
-    }
-}
-
-pub fn extend3d() -> Extent3d {
-    Extent3d {
-        width: PICTURE_WIDTH,
-        height: PICTURE_HEIGHT,
-        depth: 1,
-    }
-}
-
 pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'static> {
     TextureDescriptor {
         label: None,
-        size: extend3d(),
+        size: Extent3d {
+            width: sc_desc.width,
+            height: sc_desc.height,
+            depth: 1,
+        },
         mip_level_count: 1,
         sample_count: 1,
         dimension: TextureDimension::D2,
@@ -197,13 +156,13 @@ pub fn texture_copy_view<'a>(texture: &'a Texture) -> TextureCopyView<'a> {
     }
 }
 
-pub fn buffer_copy_view<'a>(buffer: &'a Buffer) -> BufferCopyView<'a> {
+pub fn buffer_copy_view<'a>(buffer: &'a Buffer, size: (u32, u32)) -> BufferCopyView<'a> {
     BufferCopyView {
         buffer: &buffer,
         layout: TextureDataLayout {
             offset: 0,
-            bytes_per_row: PICTURE_WIDTH * 4,
-            rows_per_image: PICTURE_HEIGHT,
+            bytes_per_row: size.0 * 4,
+            rows_per_image: size.1,
         },
     }
 }
@@ -221,8 +180,8 @@ pub fn read_buffer(device: &Device, buffer: &Buffer) -> Vec<u8> {
 }
 
 pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
-    let (device, queue) = (handler.device(), handler.queue());
-    let size = (PICTURE_WIDTH * PICTURE_HEIGHT * 4) as u64;
+    let (device, queue, sc_desc) = (handler.device(), handler.queue(), handler.sc_desc());
+    let size = (sc_desc.width * sc_desc.height * 4) as u64;
     let buffer = device.create_buffer(&BufferDescriptor {
         label: None,
         mapped_at_creation: false,
@@ -232,21 +191,26 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
     let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
     encoder.copy_texture_to_buffer(
         texture_copy_view(&texture),
-        buffer_copy_view(&buffer),
-        extend3d(),
+        buffer_copy_view(&buffer, (sc_desc.width, sc_desc.height)),
+        Extent3d {
+            width: sc_desc.width,
+            height: sc_desc.height,
+            depth: 1,
+        },
     );
     queue.submit(Some(encoder.finish()));
     read_buffer(device, &buffer)
 }
 
 pub fn same_texture(handler: &DeviceHandler, answer: &Texture, result: &Texture) -> bool {
+    let sc_desc = handler.sc_desc();
     let vec0 = read_texture(handler, answer);
     let vec1 = read_texture(handler, result);
     image::save_buffer(
         "result.png",
         &vec1,
-        PICTURE_WIDTH,
-        PICTURE_HEIGHT,
+        sc_desc.width,
+        sc_desc.height,
         image::ColorType::Rgba8,
     )
     .unwrap();
