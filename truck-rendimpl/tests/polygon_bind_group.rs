@@ -1,11 +1,12 @@
 mod common;
-use common::{PICTURE_HEIGHT, PICTURE_WIDTH};
 use glsl_to_spirv::ShaderType;
 use image::{ColorType, DynamicImage, ImageBuffer, Rgba};
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
+
+const PICTURE_SIZE: (u32, u32) = (256, 256);
 
 struct BGCheckPolygonInstance<'a> {
     polygon: PolygonInstance,
@@ -130,7 +131,7 @@ fn exec_polygon_bgtest(
 fn polymesh_nontex_bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
+    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler, &Default::default());
     let answer = common::nontex_answer_texture(&mut scene);
@@ -148,7 +149,7 @@ fn polymesh_nontex_bind_group_test() {
 fn polymesh_tex_bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor()));
+    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler, &Default::default());
     let answer = common::random_texture(&mut scene);
@@ -156,14 +157,14 @@ fn polymesh_tex_bind_group_test() {
     image::save_buffer(
         "random-texture.png",
         &buffer,
-        PICTURE_WIDTH,
-        PICTURE_HEIGHT,
+        PICTURE_SIZE.0,
+        PICTURE_SIZE.1,
         ColorType::Rgba8,
     )
     .unwrap();
     let mut inst_desc = nontex_inst_desc();
     let image_buffer =
-        ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_WIDTH, PICTURE_HEIGHT, buffer).unwrap();
+        ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer).unwrap();
     inst_desc.texture = Some(Arc::new(DynamicImage::ImageRgba8(image_buffer)));
     test_polygons().iter().for_each(move |polygon| {
         let instance = scene.create_instance(polygon, &inst_desc);
