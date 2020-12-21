@@ -19,8 +19,8 @@ fn test_scene() -> Scene {
         &SceneDescriptor {
             camera: Camera::perspective_camera(
                 Matrix4::look_at(
-                    Point3::new(-2.0, 5.0, 4.0),
-                    Point3::origin(),
+                    Point3::new(-1.0, 2.5, 2.0),
+                    Point3::new(0.25, 0.25, 0.25),
                     Vector3::unit_y(),
                 )
                 .invert()
@@ -175,9 +175,9 @@ fn nontex_render_test() {
     println!("{}% difference: ray-marching and polymesh", diff0 * 100.0);
     println!("{}% difference: polymesh and shape", diff1 * 100.0);
     println!("{}% difference: ray-marching and shape", diff2 * 100.0);
-    assert!(diff0 < 1.0e-3);
-    assert!(diff1 < 1.0e-3);
-    assert!(diff2 < 1.0e-3);
+    assert!(diff0 < 5.0e-3);
+    assert!(diff1 < 5.0e-3);
+    assert!(diff2 < 5.0e-3);
 }
 
 fn generate_texture(scene: &mut Scene) -> DynamicImage {
@@ -288,8 +288,8 @@ fn tex_render_test() {
     println!("{}% difference: ray-marching and polymesh", diff0 * 100.0);
     println!("{}% difference: polymesh and shape", diff1 * 100.0);
     println!("{}% difference: ray-marching and shape", diff2 * 100.0);
-    assert!(diff0 < 1.0e-3);
-    assert!(diff1 < 1.0e-3);
-    assert!(diff2 < 1.0e-3);
-    assert!(anti_diff > 1.0e-3);
+    assert!(diff0 < 5.0e-3);
+    assert!(diff1 < 5.0e-3);
+    assert!(diff2 < 5.0e-3);
+    assert!(anti_diff > 1.0e-2);
 }

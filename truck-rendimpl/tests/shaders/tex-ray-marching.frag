@@ -41,8 +41,8 @@ vec3 texture_material(vec3 position, vec3 normal) {
 
 Camera test_camera() {
     Camera camera;
-    camera.position = vec3(-2.0, 5.0, 4.0);
-    camera.direction = normalize(-camera.position);
+    camera.position = vec3(-1.0, 2.5, 2.0);
+    camera.direction = normalize(vec3(0.25) - camera.position);
     camera.up = vec3(0.0, 1.0, 0.0);
     camera.fov = PI / 4.0;
     camera.aspect = PICTURE_ASPECT;
