@@ -292,7 +292,7 @@ pub fn same_texture(handler: &DeviceHandler, answer: &Texture, result: &Texture)
         .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)
 }
 
-pub fn buffer_differnce(vec0: &Vec<u8>, vec1: &Vec<u8>) -> f64 {
+pub fn buffer_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> f64 {
     vec0.into_iter().zip(vec1).fold(0.0, move |sum, (i, j)| {
         let a = *i as f64 / 255.0;
         let b = *j as f64 / 255.0;

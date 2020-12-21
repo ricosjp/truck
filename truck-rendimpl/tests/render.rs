@@ -169,9 +169,9 @@ fn nontex_render_test() {
         ColorType::Rgba8,
     ).unwrap();
     let whole_rgb = (PICTURE_SIZE.0 * PICTURE_SIZE.1 * 3) as f64;
-    let diff0 = common::buffer_differnce(&buffer0, &buffer1) / whole_rgb;
-    let diff1 = common::buffer_differnce(&buffer1, &buffer2) / whole_rgb;
-    let diff2 = common::buffer_differnce(&buffer2, &buffer0) / whole_rgb;
+    let diff0 = common::buffer_difference(&buffer0, &buffer1) / whole_rgb;
+    let diff1 = common::buffer_difference(&buffer1, &buffer2) / whole_rgb;
+    let diff2 = common::buffer_difference(&buffer2, &buffer0) / whole_rgb;
     println!("{}% difference: ray-marching and polymesh", diff0 * 100.0);
     println!("{}% difference: polymesh and shape", diff1 * 100.0);
     println!("{}% difference: ray-marching and shape", diff2 * 100.0);
@@ -255,6 +255,7 @@ fn tex_shape(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
 fn tex_render_test() {
     let mut scene = test_scene();
     let image = Arc::new(generate_texture(&mut scene));
+    let anti_buffer = nontex_raymarching(&mut scene);
     let buffer0 = tex_raymarching(&mut scene);
     let buffer1 = tex_polygon(&mut scene, &image);
     let buffer2 = tex_shape(&mut scene, &image);
@@ -280,14 +281,15 @@ fn tex_render_test() {
         ColorType::Rgba8,
     ).unwrap();
     let whole_rgb = (PICTURE_SIZE.0 * PICTURE_SIZE.1 * 3) as f64;
-    let diff0 = common::buffer_differnce(&buffer0, &buffer1) / whole_rgb;
-    let diff1 = common::buffer_differnce(&buffer1, &buffer2) / whole_rgb;
-    let diff2 = common::buffer_differnce(&buffer2, &buffer0) / whole_rgb;
+    let diff0 = common::buffer_difference(&buffer0, &buffer1) / whole_rgb;
+    let diff1 = common::buffer_difference(&buffer1, &buffer2) / whole_rgb;
+    let diff2 = common::buffer_difference(&buffer2, &buffer0) / whole_rgb;
+    let anti_diff = common::buffer_difference(&anti_buffer, &buffer0) / whole_rgb;
     println!("{}% difference: ray-marching and polymesh", diff0 * 100.0);
     println!("{}% difference: polymesh and shape", diff1 * 100.0);
     println!("{}% difference: ray-marching and shape", diff2 * 100.0);
     assert!(diff0 < 1.0e-3);
     assert!(diff1 < 1.0e-3);
     assert!(diff2 < 1.0e-3);
+    assert!(anti_diff > 1.0e-3);
 }
-
