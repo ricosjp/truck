@@ -162,6 +162,15 @@ pub fn random_texture(scene: &mut Scene) -> Texture {
     texture
 }
 
+pub fn gradation_texture(scene: &mut Scene) -> Texture {
+    let sc_desc = scene.sc_desc();
+    let tex_desc = texture_descriptor(&sc_desc);
+    let texture = scene.device().create_texture(&tex_desc);
+    let mut plane = new_plane!("shaders/plane.vert", "shaders/gradation.frag");
+    render_one(scene, &texture, &mut plane);
+    texture
+}
+
 pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
     futures::executor::block_on(async {
         let adapter = instance

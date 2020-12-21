@@ -23,7 +23,23 @@ struct Ray {
     vec3 direction;
 };
 
-Camera testCamera() {
+vec3 texture_material(vec3 position, vec3 normal) {
+    vec2 uv;
+    for (int i = 0; i < 3; i++) {
+        if (abs(normal[i]) > 0.5) {
+            uv = vec2(position[(i + 1) % 3], position[(i + 2) % 3]);
+        }
+    }
+    uv = 2.0 * uv - 1.0;
+
+    float r = length(uv) / sqrt(2.0);
+    float l = 1.0 - r;
+    vec3 col0 = vec3(r, r * r, r * r * r);
+    vec3 col1 = vec3(l * l * l, l, l * l);
+    return clamp(col0 + col1, 0.0, 1.0);
+}
+
+Camera test_camera() {
     Camera camera;
     camera.position = vec3(-2.0, 5.0, 4.0);
     camera.direction = normalize(-camera.position);
@@ -33,16 +49,16 @@ Camera testCamera() {
     return camera;
 }
 
-Material testMaterial() {
+Material test_material(in vec3 position, in vec3 normal) {
     Material mat;
-    mat.albedo = vec4(1.0);
+    mat.albedo = vec4(texture_material(position, normal), 1.0);
     mat.roughness = 0.5;
     mat.reflectance = 0.25;
     mat.ambient_ratio = 0.02;
     return mat;
 }
 
-Ray cameraRay(in Camera camera, in vec2 uv) {
+Ray camera_ray(in Camera camera, in vec2 uv) {
     Ray ray;
     ray.origin = camera.position;
     vec3 camera_dir = camera.direction;
@@ -54,7 +70,7 @@ Ray cameraRay(in Camera camera, in vec2 uv) {
     return ray;
 }
 
-bool rayMarching(out vec3 position, out vec3 normal, in Ray ray) {
+bool ray_marching(out vec3 position, out vec3 normal, in Ray ray) {
     float t = 1000.0;
     for (int i = 0; i < 3; i++) {
         float tmp = -ray.origin[i] / ray.direction[i];
@@ -92,17 +108,17 @@ bool rayMarching(out vec3 position, out vec3 normal, in Ray ray) {
 }
 
 void main() {
-    Camera camera = testCamera();
-    Ray ray = cameraRay(camera, uv);
+    Camera camera = test_camera();
+    Ray ray = camera_ray(camera, uv);
 
     vec3 position, normal;
-    if(!rayMarching(position, normal, ray)) {
+    if(!ray_marching(position, normal, ray)) {
         color = vec4(0.0, 0.0, 0.0, 1.0);
         return;
     }
 
     Light light = lights[0];
-    Material mat = testMaterial();
+    Material mat = test_material(position, normal);
     
     vec3 pre_color = microfacet_color(position, normal, light, ray.direction, mat);
     pre_color = clamp(pre_color, 0.0, 1.0);
