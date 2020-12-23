@@ -23,11 +23,13 @@ pub trait Curve: Clone {
     /// Returns the inverse of the curve.
     fn inverse(&self) -> Self;
 }
+/// Parametric surface
 pub trait Surface: Clone {
     /// The surface is in the space of `Self::Point`.
     type Point;
     /// The derivation vector of the curve.
     type Vector;
+    /// The boundary curve
     type Curve: Curve<Point = Self::Point, Vector = Self::Vector>;
     /// Substitutes the parameter `(u, v)`.
     fn subs(&self, u: f64, v: f64) -> Self::Point;
@@ -41,14 +43,17 @@ pub trait Surface: Clone {
     fn parameter_range(&self) -> ((f64, f64), (f64, f64));
     /// Returns the inverse of the surface.
     fn inverse(&self) -> Self;
+    /// Returns whether the curve `curve` is included in the surface `self`.
     fn include(&self, curve: &Self::Curve) -> bool;
 }
 
+/// Dividable curve
 pub trait ParameterDivision1D {
     /// Creates the curve division
     fn parameter_division(&self, tol: f64) -> Vec<f64>;
 }
 
+/// Dividable surface
 pub trait ParameterDivision2D {
     /// Creates the surface division
     fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>);

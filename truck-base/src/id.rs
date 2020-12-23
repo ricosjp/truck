@@ -1,8 +1,10 @@
 use std::hash::{Hash, Hasher};
 
+/// ID structure with `Copy`, `Hash` and `Eq` using raw pointers
 pub struct ID<T>(*const T);
 
 impl<T> ID<T> {
+    /// Creates the ID by a raw pointer.
     #[inline(always)]
     pub fn new(ptr: *const T) -> ID<T> { ID(ptr) }
 }
@@ -27,7 +29,7 @@ impl<T> PartialEq for ID<T> {
 impl<T> Eq for ID<T> {}
 
 impl<T> std::fmt::Debug for ID<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         f.write_fmt(format_args!("{:p}", self.0))
     }
 }
