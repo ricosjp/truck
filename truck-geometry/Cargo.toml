@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 truck-base = {path = "../truck-base"}
-serde = { version = "*", features = ["derive"]}
+serde = { version = "1.0.118", features = ["derive"] }
 
 [dev-dependencies]

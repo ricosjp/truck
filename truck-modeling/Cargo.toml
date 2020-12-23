@@ -12,8 +12,8 @@ truck-geometry = { path = "../truck-geometry" }
 truck-topology = { path = "../truck-topology" }
 
 [dev-dependencies]
-rand = "*"
-winit = "*"
-futures = "*"
+rand = "0.8.0"
+winit = "0.24.0"
+futures = "0.3.8"
 truck-platform = { path = "../truck-platform" }
 truck-rendimpl = { path = "../truck-rendimpl" }
