@@ -1,8 +1,11 @@
 use crate::*;
 
 impl PolygonMesh {
+    /// Creates the bounding box of the polygon mesh.
+    #[inline(always)]
     pub fn bounding_box(&self) -> BoundingBox<Point3> { self.positions.iter().collect() }
 
+    /// merge `mesh` to `self`.
     pub fn merge(&mut self, mesh: PolygonMesh) {
         let n_pos = self.positions.len();
         let n_uv = self.uv_coords.len();

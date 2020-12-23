@@ -2,7 +2,7 @@ use crate::*;
 use errors::Error;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 
-/// write obj data to output stream
+/// Writes obj data to output stream
 /// # Examples
 /// ```
 /// use truck_polymesh::*;
@@ -49,9 +49,10 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 /// obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
 /// ```
 pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<(), Error> {
-    crate::obj::sub_write(mesh, &mut BufWriter::new(writer))
+    sub_write(mesh, &mut BufWriter::new(writer))
 }
 
+/// Writes obj data to output stream
 pub fn write_vec<W: Write>(mesh: &Vec<PolygonMesh>, writer: W) -> Result<(), Error> {
     let mut writer = BufWriter::new(writer);
     for (i, mesh) in mesh.iter().enumerate() {
@@ -185,6 +186,7 @@ fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<
     Ok(())
 }
 
+/// Reads mesh data from wavefront obj file.
 pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
     let mut mesh = PolygonMesh::default();
     let reader = BufReader::new(reader);

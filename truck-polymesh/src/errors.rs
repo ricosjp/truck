@@ -1,9 +1,15 @@
+/// Errors occured by polygon mesh handling
 #[derive(Debug)]
 pub enum Error {
+    /// There are no normal in polygon mesh.
     NoNormal,
+    /// The length of arrays of `StructuredMesh` is incorrect.
     DifferentLengthArrays,
+    /// The length of arrays of `StructuredMesh` is incorrect.
     IrregularArray,
+    /// The division of uv coords of `StructuredMesh` is not sorted.
     UnsortedDivision,
+    /// Errors caused by obj files I/O.
     FromIO(std::io::Error),
 }
 
@@ -25,13 +31,13 @@ impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Error { Error::FromIO(error) }
 }
 
-impl std::convert::From<std::num::ParseFloatError> for Error {
+impl From<std::num::ParseFloatError> for Error {
     fn from(error: std::num::ParseFloatError) -> Error {
         std::io::Error::new(std::io::ErrorKind::InvalidData, error).into()
     }
 }
 
-impl std::convert::From<std::num::ParseIntError> for Error {
+impl From<std::num::ParseIntError> for Error {
     fn from(error: std::num::ParseIntError) -> Error {
         std::io::Error::new(std::io::ErrorKind::InvalidData, error).into()
     }
