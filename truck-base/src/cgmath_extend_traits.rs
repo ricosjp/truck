@@ -1,6 +1,9 @@
 use cgmath::*;
 
+/// Tangent spaces of euclidean spaces
+/// The inverse of [`EuclideanSpace::Diff`](../cgmath/trait.EuclideanSpace.html)
 pub trait TangentSpace<S: BaseFloat>: VectorSpace<Scalar = S> {
+    /// The Euclidean space whose tangent space is `Self`.
     type Space: EuclideanSpace<Scalar = S, Diff = Self>;
 }
 impl<S: BaseFloat> TangentSpace<S> for Vector1<S> {
@@ -13,20 +16,28 @@ impl<S: BaseFloat> TangentSpace<S> for Vector3<S> {
     type Space = Point3<S>;
 }
 
+/// Homogeneous coordinate of an Euclidean space and a vector space.
+/// # Examples
+/// ```
+/// use truck_base::cgmath64::*;
+/// use truck_base::cgmath_extend_traits::*;
+/// assert_eq!(Vector4::new(8.0, 6.0, 4.0, 2.0).truncate(), Vector3::new(8.0, 6.0, 4.0));
+/// assert_eq!(Vector4::new(8.0, 6.0, 4.0, 2.0).weight(), 2.0);
+/// assert_eq!(Vector4::new(8.0, 6.0, 4.0, 2.0).to_point(), Point3::new(4.0, 3.0, 2.0));
+/// assert_eq!(Vector4::from_point(Point3::new(4.0, 3.0, 2.0)), Vector4::new(4.0, 3.0, 2.0, 1.0));
+/// ```
 pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
+    /// The tangent vector of `Self::Point`
     type Vector: VectorSpace<Scalar = S>;
+    /// The point expressed by homogeneous coordinate
     type Point: EuclideanSpace<Scalar = S, Diff = Self::Vector>;
+    /// Returns the first dim - 1 components.
     fn truncate(self) -> Self::Vector;
+    /// Returns the last component.
     fn weight(self) -> S;
-    /// Returns the projection to the plane whose the last component is `1.0`.
-    /// # Examples
-    /// ```
-    /// use truck_base::cgmath64::*;
-    /// use truck_base::cgmath_extend_traits::*;
-    /// let pt = Vector4::new(8.0, 4.0, 6.0, 2.0).to_point();
-    /// assert_eq!(pt, Point3::new(4.0, 2.0, 3.0));
-    /// ```
+    /// Returns homogeneous coordinate.
     fn from_point(point: Self::Point) -> Self;
+    /// Returns the projection to the plane whose the last component is `1.0`.
     #[inline(always)]
     fn to_point(self) -> Self::Point { Self::Point::from_vec(self.truncate() / self.weight()) }
     /// Returns the derivation of the rational curve.

@@ -33,7 +33,7 @@ macro_rules! pr2 {
 }
 macro_rules! impl_bounded {
         ($typename: ident, $vectortype: ident, $($num: expr),*) => {
-            impl<S: cgmath::BaseFloat> Bounded<S> for $typename<S> {
+            impl<S: BaseFloat> Bounded<S> for $typename<S> {
                 type Vector = $vectortype<S>;
                 fn infinity() -> $typename<S> {
                     $typename::new($(pr2!($num, S::infinity())),*)
