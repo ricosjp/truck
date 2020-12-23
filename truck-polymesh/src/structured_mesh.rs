@@ -2,6 +2,9 @@ use crate::errors::Error;
 use crate::*;
 
 impl StructuredMesh {
+    /// Creates new structured mesh.
+    /// Checks whether the size of vectors are compatible before creation.
+    #[inline(always)]
     pub fn new(
         positions: Vec<Vec<Point3>>,
         (u_div, v_div): (Vec<f64>, Vec<f64>),
@@ -38,6 +41,9 @@ impl StructuredMesh {
         }
     }
 
+    /// Creates new structured mesh.
+    /// Does not check whether the size of vectors are compatible before creation.
+    #[inline(always)]
     pub fn new_unchecked(
         positions: Vec<Vec<Point3>>,
         (u_div, v_div): (Vec<f64>, Vec<f64>),
@@ -50,6 +56,9 @@ impl StructuredMesh {
             normals,
         }
     }
+    
+    /// Creates structured polygon without `uv_division` and `normal`.
+    #[inline(always)]
     pub fn by_positions(positions: Vec<Vec<Point3>>) -> StructuredMesh {
         for arr in &positions {
             if arr.len() != positions[0].len() {
@@ -64,6 +73,8 @@ impl StructuredMesh {
         }
     }
 
+    /// Creates new polygon by destructing `self`.
+    #[inline(always)]
     pub fn destruct(self) -> PolygonMesh {
         let StructuredMesh {
             positions,

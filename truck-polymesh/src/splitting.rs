@@ -90,12 +90,14 @@ impl MeshHandler {
         (true_faces, false_faces)
     }
 
+    #[doc(hidden)]
     pub fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
         self.faces_into_two_clusters(|face: &[[usize; 3]]| {
             is_in_the_plane(&self.mesh.positions, &self.mesh.normals, face, tol * tol)
         })
     }
 
+    #[doc(hidden)]
     pub fn clustering_faces_by_gcurvature(
         &self,
         threshold: f64,
@@ -108,6 +110,7 @@ impl MeshHandler {
         })
     }
 
+    #[doc(hidden)]
     pub fn create_mesh_by_face_indices(&self, indices: &Vec<usize>) -> PolygonMesh {
         let mut mesh = PolygonMesh::default();
         mesh.positions = self.mesh.positions.clone();
@@ -132,6 +135,7 @@ impl MeshHandler {
         handler.mesh
     }
 
+    #[doc(hidden)]
     pub fn get_gcurve(&self) -> Vec<f64> {
         let positions = &self.mesh.positions;
         let mut angles = vec![0.0; positions.len()];
