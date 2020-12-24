@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cgmath = "*"
-obj = "*"
+cgmath = "0.17.0"
+obj = "0.10.2"
 truck-base = {path = "../truck-base"}
 truck-topology = {path = "../truck-topology"}
 

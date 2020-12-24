@@ -25,7 +25,7 @@ geometrical structs: knot vector, and bsplines
 * [truck-topology](https://ricos.pages.ritc.jp/truck/truck/truck_topology/index.html)  
 topological structs: vertex, edge, wire, face, shell, and solid.
 * [truck-polymesh](https://ricos.pages.ritc.jp/truck/truck/truck_polymesh/index.html)  
-define polyline-polygon data structure and some algorithms handling mesh, including meshing the shapes
+defines polygon data structure and some algorithms handling mesh, including meshing the shapes
 * [truck-modeling](https://ricos.pages.ritc.jp/truck/truck/truck_modeling/index.html)  
 integrated modeling algorithms by geometry and topology
 * [truck-platform](https://ricos.pages.ritc.jp/truck/truck/truck_platform/index.html)  

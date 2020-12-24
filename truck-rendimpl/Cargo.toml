@@ -8,17 +8,17 @@ build = "src/build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-image = "*"
-bytemuck = { version = "*", features = ["derive"] }
+image = "0.23.12"
+bytemuck = { version = "1.4.1", features = ["derive"] }
 truck-platform = { path = "../truck-platform" }
 truck-modeling = { path = "../truck-modeling" }
 truck-polymesh = { path = "../truck-polymesh" }
 
 [build-dependencies]
-glsl-to-spirv = "*"
+glsl-to-spirv = "0.1.7"
 
 [dev-dependencies]
-winit = "*"
-glsl-to-spirv = "*"
-stringreader = "*"
-futures = "*"
+winit = "0.24.0"
+glsl-to-spirv = "0.1.7"
+stringreader = "0.1.1"
+futures = "0.3.8"
