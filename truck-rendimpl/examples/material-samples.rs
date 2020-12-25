@@ -1,3 +1,10 @@
+//! Material Samples
+//! - The more right the model, the higher the reflectance.
+//! - The upper the model, the higher the roughness.
+//! 
+//! The most right and lowest model is black because it does not diffuse light
+//! and no roughness in microfacet. 
+
 mod app;
 use app::*;
 use std::f64::consts::PI;
