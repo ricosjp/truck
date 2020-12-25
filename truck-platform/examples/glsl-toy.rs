@@ -306,8 +306,9 @@ fn main() {
     // Adds a plane to the scene!
     scene.add_object(&mut plane);
 
-    let mut mouse_state = None;
     let mut dragging = false;
+    let mut clicked = false;
+    let mut cursor = [0.0; 2];
     event_loop.run(move |ev, _, control_flow| {
         *control_flow = match ev {
             Event::MainEventsCleared => {
@@ -320,6 +321,10 @@ fn main() {
                     .get_current_frame()
                     .expect("Timeout when acquiring next swap chain texture");
                 scene.render_scene(&frame.output.view);
+                if clicked {
+                    plane.mouse[3] = -plane.mouse[3];
+                    clicked = false;
+                }
                 ControlFlow::Poll
             }
             Event::WindowEvent { event, .. } => match event {
@@ -343,25 +348,23 @@ fn main() {
                 }
                 WindowEvent::MouseInput { state, .. } => {
                     dragging = state == ElementState::Pressed;
-                    mouse_state = Some(dragging);
+                    clicked = dragging;
+                    if dragging {
+                        plane.mouse[0] = cursor[0];
+                        plane.mouse[1] = cursor[1];
+                        plane.mouse[2] = cursor[0];
+                        plane.mouse[3] = cursor[1];
+                    } else {
+                        plane.mouse[2] = -plane.mouse[2];
+                    }
                     ControlFlow::Poll
                 }
                 WindowEvent::CursorMoved { position, .. } => {
                     let height = scene.sc_desc().height as f32;
-                    match mouse_state.take() {
-                        Some(true) => {
-                            plane.mouse[2] = position.x as f32;
-                            plane.mouse[3] = position.y as f32 - height;
-                        }
-                        Some(false) => {
-                            plane.mouse[2] = -position.x as f32;
-                            plane.mouse[3] = position.y as f32 - height;
-                        }
-                        None => {}
-                    }
+                    cursor = [position.x as f32, height - position.y as f32];
                     if dragging {
-                        plane.mouse[0] = position.x as f32;
-                        plane.mouse[1] = height - position.y as f32;
+                        plane.mouse[0] = cursor[0];
+                        plane.mouse[1] = cursor[1];
                     }
                     ControlFlow::Poll
                 }
