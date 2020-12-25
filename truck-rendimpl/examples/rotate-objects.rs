@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
-use std::path::PathBuf;
+use std::io::Read;
+use stringreader::StringReader;
 use truck_platform::*;
 use truck_polymesh::{MeshHandler, PolygonMesh};
 use truck_rendimpl::*;
@@ -16,7 +17,7 @@ struct MyRender {
     rotate_flag: bool,
     prev_cursor: Option<Vector2>,
     prev_time: f64,
-    path: Option<PathBuf>,
+    path: Option<std::path::PathBuf>,
     light_changed: Option<std::time::Instant>,
     camera_changed: Option<std::time::Instant>,
 }
@@ -32,7 +33,7 @@ impl MyRender {
             mat.invert().unwrap(),
             Rad(std::f64::consts::PI / 8.0),
             0.1,
-            200.0,
+            40.0,
         )
     }
 
@@ -49,12 +50,11 @@ impl MyRender {
         }
     }
 
-    fn load_obj<P: AsRef<std::path::Path>>(&mut self, path: P) {
+    fn load_obj<R: Read>(&mut self, reader: R) {
         let scene = &mut self.scene;
         scene.clear_objects();
         self.instances.clear();
-        let file = std::fs::File::open(path).unwrap();
-        let mesh = truck_polymesh::obj::read(file).unwrap();
+        let mesh = truck_polymesh::obj::read(reader).unwrap();
         let mesh = MyRender::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
@@ -130,7 +130,7 @@ impl App for MyRender {
             sample_count,
             ..Default::default()
         };
-        MyRender {
+        let mut app = MyRender {
             scene: Scene::new(handler.clone(), &scene_desc),
             instances: Vec::new(),
             rotate_flag: false,
@@ -139,10 +139,12 @@ impl App for MyRender {
             path: None,
             camera_changed: None,
             light_changed: None,
-        }
+        };
+        app.load_obj(StringReader::new(include_str!("teapot.obj")));
+        app
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("rotation objects") }
+    fn app_title<'a>() -> Option<&'a str> { Some("rotate objects") }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         self.path = Some(path);
@@ -220,13 +222,14 @@ impl App for MyRender {
                 let camera = &mut self.scene.descriptor_mut().camera;
                 self.camera_changed = Some(std::time::Instant::now());
                 *camera = match camera.projection_type() {
-                    ProjectionType::Parallel => {
-                        let mut camera = Camera::default();
-                        camera.matrix = camera.matrix;
-                        camera
-                    }
+                    ProjectionType::Parallel => Camera::perspective_camera(
+                        camera.matrix,
+                        Rad(std::f64::consts::PI / 8.0),
+                        0.1,
+                        40.0,
+                    ),
                     ProjectionType::Perspective => {
-                        Camera::parallel_camera(camera.matrix, 2.0, 0.1, 40.0)
+                        Camera::parallel_camera(camera.matrix, 10.0, 0.1, 40.0)
                     }
                 }
             }
@@ -269,7 +272,8 @@ impl App for MyRender {
 
     fn update(&mut self, _: &DeviceHandler) {
         if let Some(path) = self.path.take() {
-            self.load_obj(path);
+            let file = std::fs::File::open(path).unwrap();
+            self.load_obj(file);
         }
         if self.scene.number_of_objects() != 0 {
             self.update_objects();
