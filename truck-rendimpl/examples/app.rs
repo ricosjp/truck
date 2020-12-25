@@ -8,7 +8,7 @@ use winit::event_loop::ControlFlow;
 /// The framework of applications with `winit`.
 /// The main function of this file is the smallest usecase of this trait.
 pub trait App: Sized + 'static {
-    fn init(handler: &DeviceHandler) -> Self;
+    fn init(handler: &DeviceHandler, info: AdapterInfo) -> Self;
     fn app_title<'a>() -> Option<&'a str> { None }
     fn default_control_flow() -> ControlFlow {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
@@ -52,7 +52,7 @@ pub trait App: Sized + 'static {
         let instance = Instance::new(BackendBit::PRIMARY);
         let surface = unsafe { instance.create_surface(&window) };
 
-        let (device, queue) = futures::executor::block_on(init_device(&instance, &surface));
+        let (device, queue, info) = futures::executor::block_on(init_device(&instance, &surface));
 
         let sc_desc = SwapChainDescriptor {
             usage: TextureUsage::OUTPUT_ATTACHMENT,
@@ -69,7 +69,7 @@ pub trait App: Sized + 'static {
             Arc::new(Mutex::new(sc_desc)),
         );
 
-        let mut app = Self::init(&handler);
+        let mut app = Self::init(&handler, info);
 
         event_loop.run(move |ev, _, control_flow| {
             *control_flow = match ev {
@@ -114,7 +114,7 @@ pub trait App: Sized + 'static {
     }
 }
 
-async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) {
+async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, AdapterInfo) {
     let adapter = instance
         .request_adapter(&RequestAdapterOptions {
             power_preference: PowerPreference::Default,
@@ -123,7 +123,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) 
         .await
         .unwrap();
 
-    adapter
+    let tuple = adapter
         .request_device(
             &DeviceDescriptor {
                 features: Default::default(),
@@ -133,7 +133,8 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) 
             None,
         )
         .await
-        .unwrap()
+        .unwrap();
+    (tuple.0, tuple.1, adapter.get_info())
 }
 
 /// The smallest example of the trait `App`.
@@ -142,7 +143,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) 
 fn main() {
     struct MyApp;
     impl App for MyApp {
-        fn init(_: &DeviceHandler) -> MyApp { MyApp }
+        fn init(_: &DeviceHandler, _: AdapterInfo) -> MyApp { MyApp }
     }
     MyApp::run()
 }

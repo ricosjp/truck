@@ -96,7 +96,12 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler) -> MyApp {
+    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
+        let sample_count = match info.backend {
+            Backend::Vulkan => 2,
+            Backend::Dx12 => 2,
+            _ => 1,
+        };
         let desc = SceneDescriptor {
             camera: MyApp::init_camera(),
             lights: vec![Light {
@@ -104,6 +109,7 @@ impl App for MyApp {
                 color: Vector3::new(1.0, 1.0, 1.0),
                 light_type: LightType::Point,
             }],
+            sample_count,
             ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &desc);
