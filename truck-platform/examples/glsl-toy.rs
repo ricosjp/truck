@@ -1,11 +1,11 @@
 //! A sample of creating a render object by implementing "Rendered" in a new structure.
-//! 
+//!
 //! One can use xyr fragment shader in the following way:
 //! - Enter the shader path as an argument when executing the program.
 //! - Drag and drop the shader into the window.
-//! 
-//! The shader syntax follows that of shadertoy.
-//! Since this is a simple sample, not supports buffering textures, sounds, and so on.
+//!
+//! The shader syntax follows that of shadertoy. One can use `iResolution`, `iTime` and `iMouse`.
+//! Since this is a simple sample, not supports `iChannel`s, i.e. buffering textures, sounds, and so on.
 //! The default shader sample is "newton-cuberoot.frag" in the same directory.
 
 use std::io::Read;
@@ -24,6 +24,7 @@ mod plane {
     pub struct Plane {
         vertex_module: ShaderModule,
         fragment_module: ShaderModule,
+        pub mouse: [f32; 4],
         id: RenderID,
     }
 
@@ -53,6 +54,9 @@ mod plane {
         };
         layout(set = 1, binding = 0) uniform Resolution {
             vec3 iResolution;
+        };
+        layout(set = 1, binding = 1) uniform Mouse {
+            vec4 iMouse;
         };
     ";
 
@@ -105,19 +109,29 @@ mod plane {
                     .device()
                     .create_bind_group_layout(&BindGroupLayoutDescriptor {
                         label: None,
-                        entries: &[BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: ShaderStage::FRAGMENT,
-                            ty: BindingType::UniformBuffer {
-                                dynamic: false,
-                                min_binding_size: None,
+                        entries: &[
+                            BindGroupLayoutEntry {
+                                binding: 0,
+                                visibility: ShaderStage::FRAGMENT,
+                                ty: BindingType::UniformBuffer {
+                                    dynamic: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
                             },
-                            count: None,
-                        }],
+                            BindGroupLayoutEntry {
+                                binding: 1,
+                                visibility: ShaderStage::FRAGMENT,
+                                ty: BindingType::UniformBuffer {
+                                    dynamic: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
+                            },
+                        ],
                     }),
             )
         }
-        
         // bind group is only one uniform buffer: resolution
         fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
             let sc_desc = handler.sc_desc();
@@ -125,10 +139,12 @@ mod plane {
             Arc::new(bind_group_util::create_bind_group(
                 handler.device(),
                 layout,
-                Some(
+                vec![
                     BufferHandler::from_slice(&resolution, handler.device(), BufferUsage::UNIFORM)
                         .binding_resource(),
-                ),
+                    BufferHandler::from_slice(&self.mouse, handler.device(), BufferUsage::UNIFORM)
+                        .binding_resource(),
+                ],
             ))
         }
 
@@ -204,6 +220,7 @@ mod plane {
             Plane {
                 vertex_module,
                 fragment_module,
+                mouse: [0.0; 4],
                 id: Default::default(),
             }
         }
@@ -289,6 +306,8 @@ fn main() {
     // Adds a plane to the scene!
     scene.add_object(&mut plane);
 
+    let mut mouse_state = None;
+    let mut dragging = false;
     event_loop.run(move |ev, _, control_flow| {
         *control_flow = match ev {
             Event::MainEventsCleared => {
@@ -319,6 +338,30 @@ fn main() {
                             scene.update_pipeline(&plane);
                         }
                         Err(error) => println!("{:?}", error),
+                    }
+                    ControlFlow::Poll
+                }
+                WindowEvent::MouseInput { state, .. } => {
+                    dragging = state == ElementState::Pressed;
+                    mouse_state = Some(dragging);
+                    ControlFlow::Poll
+                }
+                WindowEvent::CursorMoved { position, .. } => {
+                    let height = scene.sc_desc().height as f32;
+                    match mouse_state.take() {
+                        Some(true) => {
+                            plane.mouse[2] = position.x as f32;
+                            plane.mouse[3] = position.y as f32 - height;
+                        }
+                        Some(false) => {
+                            plane.mouse[2] = -position.x as f32;
+                            plane.mouse[3] = position.y as f32 - height;
+                        }
+                        None => {}
+                    }
+                    if dragging {
+                        plane.mouse[0] = position.x as f32;
+                        plane.mouse[1] = height - position.y as f32;
                     }
                     ControlFlow::Poll
                 }
