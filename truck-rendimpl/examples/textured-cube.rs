@@ -127,6 +127,9 @@ impl App for MyApp {
             if let Some(ref prev_position) = self.prev_cursor {
                 let matrix = &mut self.scene.descriptor_mut().camera.matrix;
                 let dir2d = &position - prev_position;
+                if dir2d.so_small() {
+                    return Self::default_control_flow();
+                }
                 let mut axis = dir2d[1] * matrix[0].truncate();
                 axis += dir2d[0] * matrix[1].truncate();
                 axis /= axis.magnitude();

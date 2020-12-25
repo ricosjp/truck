@@ -195,6 +195,9 @@ impl App for MyRender {
             if let Some(ref prev_position) = self.prev_cursor {
                 let camera = &mut self.scene.descriptor_mut().camera;
                 let dir2d = &position - prev_position;
+                if dir2d.so_small() {
+                    return Self::default_control_flow();
+                }
                 let mut axis = dir2d[1] * camera.matrix[0];
                 axis += dir2d[0] * camera.matrix[1];
                 axis /= axis.magnitude();
