@@ -135,7 +135,12 @@ impl Camera {
         far_clip: f64,
     ) -> Camera {
         let a = screen_size / 2.0;
-        let projection = ortho(-a, a, -a, a, near_clip, far_clip);
+        let projection = Matrix4::new(
+            1.0 / a, 0.0, 0.0, 0.0,
+            0.0, 1.0 / a, 0.0, 0.0,
+            0.0, 0.0, -1.0 / (far_clip - near_clip), 0.0,
+            0.0, 0.0, -near_clip / (far_clip - near_clip), 1.0,
+        );
         Camera {
             matrix,
             projection,

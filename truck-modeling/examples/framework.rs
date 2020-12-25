@@ -16,7 +16,12 @@ pub struct ShapeViewer {
 
 impl ShapeViewer {
     /// Initializes the application
-    fn init<T: IntoInstance<Instance = ShapeInstance>>(handler: &DeviceHandler, shape: T) -> Self {
+    fn init<T: IntoInstance<Instance = ShapeInstance>>(handler: &DeviceHandler, info: AdapterInfo, shape: T) -> Self {
+        let sample_count = match info.backend {
+            Backend::Vulkan => 2,
+            Backend::Dx12 => 2,
+            _ => 1,
+        };
         let scene_desc = SceneDescriptor {
             background: Color::BLACK,
             camera: create_camera(),
@@ -25,7 +30,7 @@ impl ShapeViewer {
                 color: Vector3::new(1.0, 1.0, 1.0),
                 light_type: LightType::Point,
             }],
-            sample_count: 1,
+            sample_count,
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
         let inst_desc = InstanceDescriptor {
@@ -94,6 +99,9 @@ impl ShapeViewer {
             let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
                 let dir2d = &position - prev_position;
+                if dir2d.so_small() {
+                    return Self::default_control_flow();
+                }
                 let mut axis = dir2d[1] * matrix[0].truncate();
                 axis += dir2d[0] * &matrix[1].truncate();
                 axis /= axis.magnitude();
@@ -117,7 +125,7 @@ impl ShapeViewer {
         let instance = Instance::new(BackendBit::PRIMARY);
         let surface = unsafe { instance.create_surface(&window) };
 
-        let (device, queue) = futures::executor::block_on(init_device(&instance, &surface));
+        let (device, queue, info) = futures::executor::block_on(init_device(&instance, &surface));
 
         let sc_desc = SwapChainDescriptor {
             usage: TextureUsage::OUTPUT_ATTACHMENT,
@@ -134,7 +142,7 @@ impl ShapeViewer {
             Arc::new(Mutex::new(sc_desc)),
         );
 
-        let mut app = Self::init(&handler, shape);
+        let mut app = Self::init(&handler, info, shape);
 
         event_loop.run(move |ev, _, control_flow| {
             *control_flow = match ev {
@@ -169,7 +177,7 @@ impl ShapeViewer {
     }
 }
 
-async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) {
+async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, AdapterInfo) {
     let adapter = instance
         .request_adapter(&RequestAdapterOptions {
             power_preference: PowerPreference::Default,
@@ -178,7 +186,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) 
         .await
         .unwrap();
 
-    adapter
+    let tuple = adapter
         .request_device(
             &DeviceDescriptor {
                 features: Default::default(),
@@ -188,7 +196,8 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue) 
             None,
         )
         .await
-        .unwrap()
+        .unwrap();
+    (tuple.0, tuple.1, adapter.get_info())
 }
 
 fn create_camera() -> Camera {

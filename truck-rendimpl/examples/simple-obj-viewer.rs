@@ -1,4 +1,12 @@
-use std::path::PathBuf;
+//! Simple OBJ viewer
+//! - Drag the mouse to rotate the model.
+//! - Drag and drop obj files into the window to switch models.
+//! - Right-click to move the light to the camera's position.
+//! - Enter "P" on the keyboard to switch between parallel projection and perspective projection of the camera.
+//! - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
+
+use std::io::Read;
+use stringreader::StringReader;
 use truck_platform::*;
 use truck_polymesh::*;
 use truck_rendimpl::*;
@@ -11,7 +19,7 @@ struct MyApp {
     scene: Scene,
     rotate_flag: bool,
     prev_cursor: Option<Vector2>,
-    path: Option<PathBuf>,
+    path: Option<std::path::PathBuf>,
     light_changed: Option<std::time::Instant>,
     camera_changed: Option<std::time::Instant>,
 }
@@ -43,11 +51,10 @@ impl MyApp {
         }
     }
 
-    fn load_obj<P: AsRef<std::path::Path>>(&mut self, path: P) {
+    fn load_obj<R: Read>(&mut self, reader: R) {
         let scene = &mut self.scene;
         scene.clear_objects();
-        let file = std::fs::File::open(path).unwrap();
-        let mesh = truck_polymesh::obj::read(file).unwrap();
+        let mesh = truck_polymesh::obj::read(reader).unwrap();
         let mesh = MyApp::set_normals(mesh);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
@@ -68,7 +75,12 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler) -> MyApp {
+    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
+        let sample_count = match info.backend {
+            Backend::Vulkan => 2,
+            Backend::Dx12 => 2,
+            _ => 1,
+        };
         let scene_desc = SceneDescriptor {
             background: Color::BLACK,
             camera: MyApp::create_camera(),
@@ -77,16 +89,18 @@ impl App for MyApp {
                 color: Vector3::new(1.0, 1.0, 1.0),
                 light_type: LightType::Point,
             }],
-            sample_count: 1,
+            sample_count,
         };
-        MyApp {
+        let mut app = MyApp {
             scene: Scene::new(handler.clone(), &scene_desc),
             rotate_flag: false,
             prev_cursor: None,
             path: None,
             camera_changed: None,
             light_changed: None,
-        }
+        };
+        app.load_obj(StringReader::new(include_str!("teapot.obj")));
+        app
     }
 
     fn app_title<'a>() -> Option<&'a str> { Some("simple obj viewer") }
@@ -142,6 +156,9 @@ impl App for MyApp {
             let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
                 let dir2d = &position - prev_position;
+                if dir2d.so_small() {
+                    return Self::default_control_flow();
+                }
                 let mut axis = dir2d[1] * matrix[0].truncate();
                 axis += dir2d[0] * &matrix[1].truncate();
                 axis /= axis.magnitude();
@@ -176,9 +193,9 @@ impl App for MyApp {
                         40.0,
                     ),
                     ProjectionType::Perspective => {
-                        Camera::parallel_camera(camera.matrix, 1.0, 0.1, 100.0)
+                        Camera::parallel_camera(camera.matrix, 1.0, 0.1, 40.0)
                     }
-                }
+                };
             }
             VirtualKeyCode::L => {
                 if let Some(ref instant) = self.light_changed {
@@ -219,7 +236,8 @@ impl App for MyApp {
 
     fn update(&mut self, _: &DeviceHandler) {
         if let Some(path) = self.path.take() {
-            self.load_obj(path);
+            let file = std::fs::File::open(path).unwrap();
+            self.load_obj(file);
         }
     }
 
