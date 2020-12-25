@@ -54,8 +54,20 @@ fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
     })
 }
 
+fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
+    image::save_buffer(
+        path,
+        &vec,
+        PICTURE_WIDTH,
+        PICTURE_HEIGHT,
+        image::ColorType::Rgba8,
+    )
+    .unwrap();
+}
+
 #[test]
 fn bind_group_test() {
+    std::fs::create_dir_all("output").unwrap();
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = init_device(&instance);
     let sc_desc = SwapChainDescriptor {
@@ -90,6 +102,12 @@ fn bind_group_test() {
     render_one(&mut scene, &texture1, &plane);
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
     render_one(&mut scene, &texture2, &plane);
-    assert!(common::same_texture(&handler, &texture0, &texture1));
-    assert!(!common::same_texture(&handler, &texture0, &texture2));
+    let buffer0 = read_texture(&handler, &texture0);
+    let buffer1 = read_texture(&handler, &texture1);
+    let buffer2 = read_texture(&handler, &texture2);
+    save_buffer("output/unicolor.png", &buffer0);
+    save_buffer("output/bindgroup.png", &buffer1);
+    save_buffer("output/anti-bindgroup.png", &buffer2);
+    assert!(common::same_buffer(&buffer0, &buffer1));
+    assert!(!common::same_buffer(&buffer0, &buffer2));
 }

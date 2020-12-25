@@ -275,18 +275,7 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
     read_buffer(device, &buffer)
 }
 
-pub fn same_texture(handler: &DeviceHandler, answer: &Texture, result: &Texture) -> bool {
-    let sc_desc = handler.sc_desc();
-    let vec0 = read_texture(handler, answer);
-    let vec1 = read_texture(handler, result);
-    image::save_buffer(
-        "result.png",
-        &vec1,
-        sc_desc.width,
-        sc_desc.height,
-        image::ColorType::Rgba8,
-    )
-    .unwrap();
+pub fn same_buffer(vec0: &Vec<u8>, vec1: &Vec<u8>) -> bool {
     vec0.into_iter()
         .zip(vec1)
         .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)

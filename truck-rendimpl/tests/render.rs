@@ -1,6 +1,6 @@
 mod common;
 use common::Plane;
-use image::{ColorType, DynamicImage, ImageBuffer, Rgba};
+use image::{DynamicImage, ImageBuffer, Rgba};
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -99,7 +99,7 @@ fn nontex_raymarching(scene: &mut Scene) -> Vec<u8> {
         fragment_shader: &fragment_shader,
         id: Default::default(),
     };
-    common::render_one(scene, &texture, &plane);    
+    common::render_one(scene, &texture, &plane);
     common::read_texture(scene.device_handler(), &texture)
 }
 
@@ -141,33 +141,27 @@ fn nontex_shape(scene: &mut Scene) -> Vec<u8> {
     common::read_texture(scene.device_handler(), &texture)
 }
 
+fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
+    image::save_buffer(
+        path,
+        &vec,
+        PICTURE_SIZE.0,
+        PICTURE_SIZE.1,
+        image::ColorType::Rgba8,
+    )
+    .unwrap();
+}
+
 #[test]
 fn nontex_render_test() {
+    std::fs::create_dir_all("output").unwrap();
     let mut scene = test_scene();
     let buffer0 = nontex_raymarching(&mut scene);
     let buffer1 = nontex_polygon(&mut scene);
     let buffer2 = nontex_shape(&mut scene);
-    image::save_buffer(
-        "nontex-raymarching.png",
-        &buffer0,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        ColorType::Rgba8,
-    ).unwrap();
-    image::save_buffer(
-        "nontex-polygon.png",
-        &buffer1,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        ColorType::Rgba8,
-    ).unwrap();
-    image::save_buffer(
-        "nontex-shape.png",
-        &buffer2,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        ColorType::Rgba8,
-    ).unwrap();
+    save_buffer("output/nontex-raymarching.png", &buffer0);
+    save_buffer("output/nontex-polygon.png", &buffer1);
+    save_buffer("output/nontex-shape.png", &buffer2);
     let whole_rgb = (PICTURE_SIZE.0 * PICTURE_SIZE.1 * 3) as f64;
     let diff0 = common::buffer_difference(&buffer0, &buffer1) / whole_rgb;
     let diff1 = common::buffer_difference(&buffer1, &buffer2) / whole_rgb;
@@ -183,14 +177,7 @@ fn nontex_render_test() {
 fn generate_texture(scene: &mut Scene) -> DynamicImage {
     let texture = common::gradation_texture(scene);
     let buffer = common::read_texture(scene.device_handler(), &texture);
-    image::save_buffer(
-        "gradation-texture.png",
-        &buffer,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        ColorType::Rgba8,
-    )
-    .unwrap();
+    save_buffer("output/gradation-texture.png", &buffer);
     let image_buffer =
         ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer).unwrap();
     DynamicImage::ImageRgba8(image_buffer)
@@ -207,7 +194,7 @@ fn tex_raymarching(scene: &mut Scene) -> Vec<u8> {
         fragment_shader: &fragment_shader,
         id: Default::default(),
     };
-    common::render_one(scene, &texture, &plane);    
+    common::render_one(scene, &texture, &plane);
     common::read_texture(scene.device_handler(), &texture)
 }
 
@@ -253,33 +240,16 @@ fn tex_shape(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
 
 #[test]
 fn tex_render_test() {
+    std::fs::create_dir_all("output").unwrap();
     let mut scene = test_scene();
     let image = Arc::new(generate_texture(&mut scene));
     let anti_buffer = nontex_raymarching(&mut scene);
     let buffer0 = tex_raymarching(&mut scene);
     let buffer1 = tex_polygon(&mut scene, &image);
     let buffer2 = tex_shape(&mut scene, &image);
-    image::save_buffer(
-        "tex-raymarching.png",
-        &buffer0,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        ColorType::Rgba8,
-    ).unwrap();
-    image::save_buffer(
-        "tex-polygon.png",
-        &buffer1,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        ColorType::Rgba8,
-    ).unwrap();
-    image::save_buffer(
-        "tex-shape.png",
-        &buffer2,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        ColorType::Rgba8,
-    ).unwrap();
+    save_buffer("output/tex-raymarching.png", &buffer0);
+    save_buffer("output/tex-polygon.png", &buffer1);
+    save_buffer("output/tex-shape.png", &buffer2);
     let whole_rgb = (PICTURE_SIZE.0 * PICTURE_SIZE.1 * 3) as f64;
     let diff0 = common::buffer_difference(&buffer0, &buffer1) / whole_rgb;
     let diff1 = common::buffer_difference(&buffer1, &buffer2) / whole_rgb;
