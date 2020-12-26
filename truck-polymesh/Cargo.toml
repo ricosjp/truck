@@ -3,6 +3,10 @@ name = "truck-polymesh"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
+description = "defines polygon data structure and some algorithms handling mesh, including meshing the shapes"
+license = "Apache License 2.0"
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

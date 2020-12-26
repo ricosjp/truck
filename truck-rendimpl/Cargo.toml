@@ -3,6 +3,11 @@ name = "truck-rendimpl"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
+description = "visualization of shape and polygon mesh based on platform"
+license = "Apache License 2.0"
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
+
 build = "src/build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
