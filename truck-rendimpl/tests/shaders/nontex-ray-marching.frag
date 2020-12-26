@@ -104,7 +104,7 @@ void main() {
     Light light = lights[0];
     Material mat = test_material();
     
-    vec3 pre_color = microfacet_color(position, normal, light, ray.direction, mat);
+    vec3 pre_color = microfacet_color(position, normal, light, -ray.direction, mat);
     pre_color = clamp(pre_color, 0.0, 1.0);
     pre_color = ambient_correction(pre_color, mat);
     color = vec4(pre_color, 1.0);

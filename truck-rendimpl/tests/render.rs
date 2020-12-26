@@ -162,16 +162,15 @@ fn nontex_render_test() {
     save_buffer("output/nontex-raymarching.png", &buffer0);
     save_buffer("output/nontex-polygon.png", &buffer1);
     save_buffer("output/nontex-shape.png", &buffer2);
-    let whole_rgb = (PICTURE_SIZE.0 * PICTURE_SIZE.1 * 3) as f64;
-    let diff0 = common::buffer_difference(&buffer0, &buffer1) / whole_rgb;
-    let diff1 = common::buffer_difference(&buffer1, &buffer2) / whole_rgb;
-    let diff2 = common::buffer_difference(&buffer2, &buffer0) / whole_rgb;
-    println!("{}% difference: ray-marching and polymesh", diff0 * 100.0);
-    println!("{}% difference: polymesh and shape", diff1 * 100.0);
-    println!("{}% difference: ray-marching and shape", diff2 * 100.0);
-    assert!(diff0 < 5.0e-3);
-    assert!(diff1 < 5.0e-3);
-    assert!(diff2 < 5.0e-3);
+    let diff0 = common::count_difference(&buffer0, &buffer1);
+    let diff1 = common::count_difference(&buffer1, &buffer2);
+    let diff2 = common::count_difference(&buffer2, &buffer0);
+    println!("{} pixel difference: ray-marching and polymesh", diff0);
+    println!("{} pixel difference: polymesh and shape", diff1);
+    println!("{} pixel difference: ray-marching and shape", diff2);
+    assert!(diff0 < 10);
+    assert!(diff1 == 0);
+    assert!(diff2 < 10);
 }
 
 fn generate_texture(scene: &mut Scene) -> DynamicImage {
@@ -250,16 +249,15 @@ fn tex_render_test() {
     save_buffer("output/tex-raymarching.png", &buffer0);
     save_buffer("output/tex-polygon.png", &buffer1);
     save_buffer("output/tex-shape.png", &buffer2);
-    let whole_rgb = (PICTURE_SIZE.0 * PICTURE_SIZE.1 * 3) as f64;
-    let diff0 = common::buffer_difference(&buffer0, &buffer1) / whole_rgb;
-    let diff1 = common::buffer_difference(&buffer1, &buffer2) / whole_rgb;
-    let diff2 = common::buffer_difference(&buffer2, &buffer0) / whole_rgb;
-    let anti_diff = common::buffer_difference(&anti_buffer, &buffer0) / whole_rgb;
-    println!("{}% difference: ray-marching and polymesh", diff0 * 100.0);
-    println!("{}% difference: polymesh and shape", diff1 * 100.0);
-    println!("{}% difference: ray-marching and shape", diff2 * 100.0);
-    assert!(diff0 < 5.0e-3);
-    assert!(diff1 < 5.0e-3);
-    assert!(diff2 < 5.0e-3);
-    assert!(anti_diff > 1.0e-2);
+    let diff0 = common::count_difference(&buffer0, &buffer1);
+    let diff1 = common::count_difference(&buffer1, &buffer2);
+    let diff2 = common::count_difference(&buffer2, &buffer0);
+    let anti_diff = common::count_difference(&anti_buffer, &buffer0);
+    println!("{} pixel difference: ray-marching and polymesh", diff0);
+    println!("{} pixel difference: polymesh and shape", diff1);
+    println!("{} pixel difference: ray-marching and shape", diff2);
+    assert!(diff0 < 10);
+    assert!(diff1 == 0);
+    assert!(diff2 < 10);
+    assert!(anti_diff > 1000);
 }
