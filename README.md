@@ -1,23 +1,47 @@
-# truck: Truck is a rust CAD kernel
+# truck - Truck is a rust CAD kernel
 
 ## Overview
-Truck is an open-source shape processing kernel by Rust.
-These crates are focused on performance, simplification and accessibility.
+Truck is an open-source shape processing kernel by Rust.  
+The broad concept consists of the following three elements.
+ - Trendy Tools
+ - Traditional Arts
+ - Theseus' ship
 
-### performance
-The whole package is written in Rust, with the algorithm as well as the timing of memory allocation and release explicitly chosen.
+### Trendy Tools
+ - We are targeting the next generation of market share using developmental tools: Rust and WebGPU.
+ - Advanced optimizations using Rust and WebGPU maximize the performance of each crate.
 
-### simplification
-I avoided abstraction and specialization as much as possible to make it easier to grasp the whole. For example, `track_geometry` does the following.
-* The distinction between coordinates and vectors, as seen in the STEP standard, has been removed.
-* We do not define memory optimization by CSG representation or Bezier splines, but use 4D B-spline to display all geometric information.
+### Traditional Arts
+ - We will break away from the legacy by re-implementing the B-rep with NURBS in the above trendy tools.
+ - Safe implementation using Rust to eliminate core dumped for CPU-derived processes.
+ - Cargo's extensive maintenance features ensure thorough continuous integration.
 
-### accessibility
-Truck is a collection of multiple crates. Users can use only the packages they need individually. For example:
-* Even if an OpenGL viewer is incorporated in the future, web app developers will be able to create apps that are independent from that viewer.
-* If you don't like the CSG-like utility API provided here, you can create your own utility that depends only on more primitive crates.
+### Theseus' ship
+ - We are modularizing into smaller crates that can be replaced, like [the Ship of Teseus](https://en.wikipedia.org/wiki/Ship_of_Theseus).
+ - Based on the many lessons learned in the past, we have given up on overall optimization as a single application, and design as a collection of individual optimized crates.
+ - Since unexpected expansions are bound to occur, we deal with uncontrolled expansions in the form of small modules.
 
-### crates
+## License
+Apache License 2.0
+
+## Usage
+### Dependencies
+The following crates require [CMake](https://cmake.org/https://cmake.org/) to building.
+ - truck-rendimpl
+ - truck-platform and truck-modeling (only test and examples)
+
+### How to Run Examples
+All examples are located under the examples directory in each crates.  
+
+These examples use the default syntax for running examples, as found in the [Cargo](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples) documentation. At first, let's run the following example!
+
+```bash
+cargo run --example rotate-objects
+```
+
+## crates
+<img src = "dependencies.svg">
+
 * [truck-base](https://ricos.pages.ritc.jp/truck/truck/truck_base/index.html)  
 basic structs and traits: importing cgmath, curve and surface traits, tolerance
 * [truck-geometry](https://ricos.pages.ritc.jp/truck/truck/truck_geometry/index.html)  
