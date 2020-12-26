@@ -66,7 +66,7 @@ vec3 specular_brdf(Material material, vec3 camera_dir, vec3 light_dir, vec3 norm
     float dotCN = clamp(dot(camera_dir, normal), 0.0, 1.0);
     float dotLN = clamp(dot(light_dir, normal), 0.0, 1.0);
     float denom = 4.0 * dotCN * dotLN;
-    if (abs(denom) < 1.0e-6) {
+    if (denom < 1.0e-6) {
         return vec3(0.0, 0.0, 0.0);
     }
     return distribution * decay / denom * fresnel_color;

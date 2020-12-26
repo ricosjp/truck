@@ -288,3 +288,19 @@ pub fn buffer_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> f64 {
         sum + (a - b).abs()
     })
 }
+
+pub fn max_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> u8 {
+    vec0.into_iter()
+        .zip(vec1)
+        .fold(0, move |max, (i, j)| {
+            let diff = if i > j { i - j } else { j - i };
+            if max < diff { diff } else { max }
+        })
+}
+
+pub fn count_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> usize {
+    vec0.into_iter()
+        .zip(vec1)
+        .filter(move |(i, j)| *std::cmp::max(i, j) - *std::cmp::min(i, j) > 2 )
+        .count()
+}
