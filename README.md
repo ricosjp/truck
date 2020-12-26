@@ -32,20 +32,18 @@ The following crates require [CMake](https://cmake.org/https://cmake.org/) to bu
 
 ### How to Run Examples
 All examples are located under the examples directory in each crates.  
+These examples use the default syntax for running examples, as found in the [Cargo](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples) documentation.
 
-These examples use the default syntax for running examples, as found in the [Cargo](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples) documentation. At first, let's run the following example!
-
+At first, let's run the following example!
 ```bash
 cargo run --example rotate-objects
 ```
 
 ## crates
-<img src = "dependencies.svg">
-
 * [truck-base](https://ricos.pages.ritc.jp/truck/truck/truck_base/index.html)  
-basic structs and traits: importing cgmath, curve and surface traits, tolerance
+basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc...
 * [truck-geometry](https://ricos.pages.ritc.jp/truck/truck/truck_geometry/index.html)  
-geometrical structs: knot vector, and bsplines
+geometrical structs: knot vector, B-spline and NURBS.
 * [truck-topology](https://ricos.pages.ritc.jp/truck/truck/truck_topology/index.html)  
 topological structs: vertex, edge, wire, face, shell, and solid.
 * [truck-polymesh](https://ricos.pages.ritc.jp/truck/truck/truck_polymesh/index.html)  
@@ -56,3 +54,5 @@ integrated modeling algorithms by geometry and topology
 graphic utility library based on wgpu
 * [truck-rendimpl](https://ricos.pages.ritc.jp/truck/truck/truck_rendimpl/index.html)  
 visualization of shape and polygon mesh based on platform
+
+<img src = "dependencies.svg">
