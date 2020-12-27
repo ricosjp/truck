@@ -7,6 +7,7 @@ description = "defines polygon data structure and some algorithms handling mesh,
 license = "Apache License 2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
+exclude = ["tests/**/*.obj"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
