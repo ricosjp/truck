@@ -1,4 +1,3 @@
-//! # Overview
 //! `truck_geometry` is a crate for describing geometrical information.
 //! It contains definision basic mathematical objects, vectors and matrices.
 

@@ -1,8 +1,5 @@
 # truck-rendimpl
-
 `truck-rendimpl` is the crate for rendering shapes and polygons.
-
-License: Apache License 2.0
 
 # Sample Codes
 ## app
