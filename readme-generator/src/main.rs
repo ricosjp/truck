@@ -10,7 +10,29 @@ const WORKSPACES: [&str; 6] = [
     "truck-topology",
 ];
 
-fn create_readme() {
+const DEPENDS_CMAKE: [&str; 1] = ["truck-rendimpl"];
+
+const DEVDEPENDS_CMAKE: [&str; 2] = ["truck-modeling", "truck-platform"];
+
+const DEPENDS_CMAKE_MESSAGE: &str = "## Dependencies
+This crate depends on [CMake](https://cmake.org).
+";
+
+const DEVDEPENDS_CMAKE_MESSAGE: &str = "## Dependencies
+The dev-dependencies of this crate includes [CMake](https://cmake.org).
+";
+
+fn cmake_flag(path: &&str) -> usize {
+    if DEPENDS_CMAKE.iter().any(|s| s == path) {
+        1
+    } else if DEVDEPENDS_CMAKE.iter().any(|s| s == path) {
+        2
+    } else {
+        0
+    }
+}
+
+fn create_readme(cmake_flag: usize) {
     let mut readme = std::fs::File::create("README.md").unwrap();
     let output = Command::new("cargo").args(&["readme"]).output().unwrap();
     let output = String::from_utf8(output.stdout).unwrap();
@@ -22,6 +44,17 @@ fn create_readme() {
         Ok(got) => got,
         Err(_) => return,
     };
+
+    match cmake_flag {
+        1 => {
+            readme.write(DEPENDS_CMAKE_MESSAGE.as_bytes()).unwrap();
+        }
+        2 => {
+            readme.write(DEVDEPENDS_CMAKE_MESSAGE.as_bytes()).unwrap();
+        }
+        _ => {}
+    }
+
     readme
         .write_fmt(format_args!("\n# Sample Codes\n"))
         .unwrap();
@@ -46,7 +79,7 @@ fn create_readme() {
 fn main() {
     for path in &WORKSPACES {
         std::env::set_current_dir(path).unwrap();
-        create_readme();
+        create_readme(cmake_flag(path));
         std::env::set_current_dir("..").unwrap();
     }
 }

@@ -1,5 +1,7 @@
 # truck-platform
 Graphic utility library based on wgpu.
+## Dependencies
+The dev-dependencies of this crate includes [CMake](https://cmake.org).
 
 # Sample Codes
 ## glsl-toy

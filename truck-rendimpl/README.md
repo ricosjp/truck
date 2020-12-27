@@ -1,5 +1,7 @@
 # truck-rendimpl
 Visualization of shape and polygon mesh based on platform
+## Dependencies
+This crate depends on [CMake](https://cmake.org).
 
 # Sample Codes
 ## app

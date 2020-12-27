@@ -1,5 +1,7 @@
 # truck-modeling
 Integrated modeling algorithms by geometry and topology
+## Dependencies
+The dev-dependencies of this crate includes [CMake](https://cmake.org).
 
 # Sample Codes
 ## cube
