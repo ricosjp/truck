@@ -4,7 +4,11 @@ version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "defines polygon data structure and some algorithms handling mesh, including meshing the shapes"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
 license = "Apache License 2.0"
+license-file = "../LICENSE"
+
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 exclude = ["tests/**/*.obj"]
@@ -14,7 +18,7 @@ exclude = ["tests/**/*.obj"]
 [dependencies]
 cgmath = "0.17.0"
 obj = "0.10.2"
-truck-base = {path = "../truck-base"}
-truck-topology = {path = "../truck-topology"}
+truck-base = { version = "0.1.0", path = "../truck-base" }
+truck-topology = { version = "0.1.0", path = "../truck-topology" }
 
 [dev-dependencies]

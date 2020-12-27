@@ -4,7 +4,11 @@ version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "topological structs: vertex, edge, wire, face, shell, and solid"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
 license = "Apache License 2.0"
+license-file = "../LICENSE"
+
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
@@ -12,6 +16,6 @@ categories = ["graphics"]
 
 [dependencies]
 serde = { version = "1.0.118", features = ["derive"] }
-truck-base = {path = "../truck-base"}
+truck-base = { version = "0.1.0", path = "../truck-base" }
 
 [dev-dependencies]

@@ -4,7 +4,11 @@ version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "visualization of shape and polygon mesh based on platform"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
 license = "Apache License 2.0"
+license-file = "../LICENSE"
+
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
@@ -15,9 +19,9 @@ build = "src/build.rs"
 [dependencies]
 image = "0.23.12"
 bytemuck = { version = "1.4.1", features = ["derive"] }
-truck-platform = { path = "../truck-platform" }
-truck-modeling = { path = "../truck-modeling" }
-truck-polymesh = { path = "../truck-polymesh" }
+truck-platform = { version = "0.1.0", path = "../truck-platform" }
+truck-modeling = { version = "0.1.0", path = "../truck-modeling" }
+truck-polymesh = { version = "0.1.0", path = "../truck-polymesh" }
 
 [build-dependencies]
 glsl-to-spirv = "0.1.7"

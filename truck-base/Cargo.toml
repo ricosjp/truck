@@ -4,7 +4,11 @@ version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "Basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc..."
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
 license = "Apache License 2.0"
+license-file = "../LICENSE"
+
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
