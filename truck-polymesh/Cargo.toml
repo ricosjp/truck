@@ -7,7 +7,6 @@ description = "defines polygon data structure and some algorithms handling mesh,
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
 license = "Apache License 2.0"
-license-file = "../LICENSE"
 
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
