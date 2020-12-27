@@ -26,7 +26,7 @@ Apache License 2.0
 
 ## Usage
 ### Dependencies
-The following crates require [CMake](https://cmake.org/https://cmake.org/) to building.
+The following crates require [CMake](https://cmake.org) to building.
  - truck-rendimpl
  - truck-platform and truck-modeling (only test and examples)
 
