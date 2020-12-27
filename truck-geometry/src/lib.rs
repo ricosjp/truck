@@ -1,5 +1,4 @@
-//! `truck_geometry` is a crate for describing geometrical information.
-//! It contains definision basic mathematical objects, vectors and matrices.
+//! Geometrical structs: knot vector, B-spline and NURBS
 
 #![warn(
     missing_docs,

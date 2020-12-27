@@ -1,5 +1,5 @@
 # truck-rendimpl
-`truck-rendimpl` is the crate for rendering shapes and polygons.
+Visualization of shape and polygon mesh based on platform
 
 # Sample Codes
 ## app

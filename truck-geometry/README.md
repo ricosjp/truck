@@ -1,2 +1,2 @@
 # truck-geometry
-`truck_geometry` is a crate for describing geometrical information.
+Geometrical structs: knot vector, B-spline and NURBS

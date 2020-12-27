@@ -1,2 +1,2 @@
 # truck-topology
-`truck_topology` is a crate for describing topological information in a boundary representation.
+Topological structs: vertex, edge, wire, face, shell, and solid

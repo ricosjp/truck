@@ -1,5 +1,5 @@
 # truck-platform
-`truck-platform` is a graphic utility library based on wgpu.
+Graphic utility library based on wgpu.
 
 # Sample Codes
 ## glsl-toy

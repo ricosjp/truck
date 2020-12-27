@@ -1,4 +1,4 @@
-//! `truck-platform` is a graphic utility library based on wgpu.
+//! Graphic utility library based on wgpu.
 //!
 //! This crate is independent from other truck crates except `truck-base`.
 //! It provides an API that allows users to handle drawing elements in a unified manner.

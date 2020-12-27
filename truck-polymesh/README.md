@@ -1,5 +1,5 @@
 # truck-polymesh
-`truck_polymesh`: define polyline-polygon data structure and some algorithms handling mesh.
+Defines polyline-polygon data structure and some algorithms handling mesh.
 
 # Sample Codes
 ## buddha-topology

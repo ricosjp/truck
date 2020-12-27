@@ -1,4 +1,4 @@
-//! `truck_polymesh`: define polyline-polygon data structure and some algorithms handling mesh.
+//! Defines polyline-polygon data structure and some algorithms handling mesh.
 //!
 //! # Warning
 //! This crate is WIP, despite the fact that it is used extensively in the sample code.

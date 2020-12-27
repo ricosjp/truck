@@ -1,4 +1,4 @@
-//! `truck_base`: basic structs and traits: importing cgmath, curve and surface traits, tolerance
+//! Basic structs and traits: importing cgmath, curve and surface traits, tolerance
 
 #![warn(
     missing_docs,
