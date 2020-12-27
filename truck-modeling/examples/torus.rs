@@ -1,3 +1,5 @@
+//! Modeling a torus by two sweeps.
+
 mod framework;
 use framework::ShapeViewer;
 use truck_modeling::*;

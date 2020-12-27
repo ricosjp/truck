@@ -1,3 +1,5 @@
+//! Modeling a one-leaf hyperboloid.
+
 mod framework;
 use framework::ShapeViewer;
 use truck_modeling::*;

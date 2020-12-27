@@ -3,7 +3,7 @@ Visualization of shape and polygon mesh based on platform
 
 # Sample Codes
 ## app
-
+A GUI framework module providing MFC-like API.
 ## bsp-animation
 Benchmark Animation
 
@@ -30,4 +30,4 @@ Simple OBJ viewer
 - Enter "P" on the keyboard to switch between parallel projection and perspective projection of the camera.
 - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
 ## textured-cube
-
+An example of using texture.

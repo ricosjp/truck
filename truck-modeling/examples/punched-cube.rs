@@ -1,3 +1,5 @@
+//! Modeling a unit cube with a hole through it.
+
 mod framework;
 use framework::ShapeViewer;
 use truck_modeling::*;
