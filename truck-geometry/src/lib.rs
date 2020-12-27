@@ -28,7 +28,6 @@ pub mod base {
 }
 pub use base::*;
 
-
 /// knot vector
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct KnotVec(Vec<f64>);
