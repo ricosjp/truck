@@ -22,12 +22,12 @@
 //! The sample code in this crate is for developers.
 //! Users may wish to refer to the one in `truck-rendimpl`.
 //!
-//! [`Rendered`]: (./trait.Rendered.html)
-//! [`Scene`]: (./struct.Scene.html)
-//! [`DeviceHandler`]: (./struct.DeviceHandler.html)
-//! [`SceneDescriptor`]: (./struct.SceneDescriptor.html)
-//! [`Camera`]: (./struct.Camera.html)
-//! [`Light`]: (./struct.Light.html)
+//! [`Rendered`]: ./trait.Rendered.html
+//! [`Scene`]: ./struct.Scene.html
+//! [`DeviceHandler`]: ./struct.DeviceHandler.html
+//! [`SceneDescriptor`]: ./struct.SceneDescriptor.html
+//! [`Camera`]: ./struct.Camera.html
+//! [`Light`]: ./struct.Light.html
 
 #![warn(
     missing_docs,
@@ -73,7 +73,7 @@ struct SceneInfo {
 }
 
 /// safe handler of GPU buffer
-/// [`Buffer`](../wgpu/struct.Buffer.html)
+/// [`Buffer`](https://docs.rs/wgpu/0.6.2/wgpu/struct.Buffer.html)
 #[derive(Debug)]
 pub struct BufferHandler {
     buffer: Buffer,
@@ -133,7 +133,7 @@ pub struct BufferHandler {
 /// let layout: BindGroupLayout = bind_group_util::create_bind_group_layout(&device, &entries);
 /// ```
 ///
-/// [`BindGroupLayoutEntry`]: ../wgpu/struct.BindGroupLayoutEntry.html
+/// [`BindGroupLayoutEntry`]: https://docs.rs/wgpu/0.6.2/wgpu/struct.BindGroupLayoutEntry.html
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct PreBindGroupLayoutEntry {
@@ -142,7 +142,7 @@ pub struct PreBindGroupLayoutEntry {
     pub count: Option<core::num::NonZeroU32>,
 }
 
-/// A collection of GPU buffers used by [`wgpu`](../wgpu/index.html) for rendering
+/// A collection of GPU buffers used by `wgpu` for rendering
 #[doc(hidden)]
 #[derive(Debug, Clone)]
 pub struct RenderObject {
@@ -245,9 +245,9 @@ pub struct Light {
 /// );
 /// ```
 ///
-/// [`Device`]: ../wgpu/struct.Device.html
-/// [`Queue`]: ../wgpu/struct.Queue.html
-/// [`SwapChainDescriptor`]: ../wgpu/struct.SwapChainDescriptor.html
+/// [`Device`]: https://docs.rs/wgpu/0.6.2/wgpu/struct.Device.html
+/// [`Queue`]: https://docs.rs/wgpu/0.6.2/wgpu/struct.Queue.html
+/// [`SwapChainDescriptor`]: https://docs.rs/wgpu/0.6.2/wgpu/struct.SwapChainDescriptor.html
 /// [`Scene`]: ./struct.Scene.html
 #[derive(Debug, Clone)]
 pub struct DeviceHandler {
