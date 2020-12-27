@@ -1,3 +1,5 @@
+//! Modeling a unit cube by three sweeps.
+
 mod framework;
 use framework::ShapeViewer;
 use truck_modeling::*;

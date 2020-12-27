@@ -1,3 +1,5 @@
+//! A GUI framework module providing MFC-like API.
+
 use std::sync::{Arc, Mutex};
 use std::time::*;
 use truck_platform::{wgpu::*, DeviceHandler};

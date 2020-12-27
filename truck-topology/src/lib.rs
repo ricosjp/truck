@@ -1,6 +1,6 @@
-//! # Overview
-//! `truck_topology` is a crate for describing topological information in a boundary representation.
-//! ## Example
+//! Topological structs: vertex, edge, wire, face, shell, and solid
+//!
+//! ## Examples
 //! The following sample code is a description of a topological tetrahedron as a solid model
 //! by this package.
 //! ```

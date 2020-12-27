@@ -1,2 +1,2 @@
 # truck-topology
-Topological structs: vertex, edge, wire, face, shell, and solid.
+Topological structs: vertex, edge, wire, face, shell, and solid

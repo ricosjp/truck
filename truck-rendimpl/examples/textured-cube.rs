@@ -1,3 +1,5 @@
+//! An example of using texture.
+
 // The texture is referenced by:
 // https://cc0textures.com/view?id=WoodFloor024
 

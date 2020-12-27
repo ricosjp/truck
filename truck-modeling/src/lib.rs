@@ -1,4 +1,4 @@
-//! `truck-modeling` is a crate for modeling shapes by integrating geometry and topology.
+//! Integrated modeling algorithms by geometry and topology
 //!
 //! There are some examples in `truck-modeling/examples`.
 

@@ -1,6 +1,14 @@
 # truck-modeling
 Integrated modeling algorithms by geometry and topology
 
-## Sample Codes
-Modeling shapes and visualize by `truck-rendimpl`.  
-`cube` and `torus` are as their names, and `tsudumi` is the hyperboloid of one sheet.
+# Sample Codes
+## cube
+Modeling a unit cube by three sweeps.
+## framework
+Module for visualizing models.
+## punched-cube
+Modeling a unit cube with a hole through it.
+## torus
+Modeling a torus by two sweeps.
+## tsudumi
+Modeling a one-leaf hyperboloid.

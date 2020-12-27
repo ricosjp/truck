@@ -1,3 +1,5 @@
+//! Module for visualizing models.
+
 use std::sync::{Arc, Mutex};
 use std::time::*;
 use truck_base::cgmath64::*;
