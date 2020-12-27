@@ -7,4 +7,5 @@ members = [
 	"truck-polymesh",
 	"truck-rendimpl",
 	"truck-topology",
+	"readme-generator",
 ]
