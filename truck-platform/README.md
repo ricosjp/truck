@@ -12,7 +12,7 @@ This documentation is intended to be read by two kinds of people: users and deve
 Users, those who just want to draw the shape of an existing mesh or boundary representation,
 will only use:
 - [`Scene`],
-- [`SceneDescriptor`],
+- `SceneDescriptor`,
 - [`DeviceHandler`],
 - [`Camera`], and
 - [`Light`].
