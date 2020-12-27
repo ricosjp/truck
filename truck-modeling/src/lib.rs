@@ -1,5 +1,5 @@
 //! `truck-modeling` is a crate for modeling shapes by integrating geometry and topology.
-//! 
+//!
 //! There are some examples in `truck-modeling/examples`.
 
 #![warn(
@@ -109,7 +109,7 @@ pub mod topo_traits {
             connect_curve: &CE,
         ) -> Self::Swept;
     }
-    
+
     /// Abstract multi sweeping, builds a circle-arc, a prism, a half torus, and so on.
     pub trait MultiSweep<P, C, S> {
         /// The struct of sweeped topology.
@@ -157,8 +157,8 @@ pub use topo_traits::*;
 /// the building model utility API
 pub mod builder;
 mod closed_sweep;
-mod multi_sweep;
 mod geom_impls;
 mod mapped;
+mod multi_sweep;
 mod sweep;
 mod topo_impls;

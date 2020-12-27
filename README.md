@@ -43,9 +43,9 @@ cargo run --example rotate-objects
 * [truck-base](https://ricos.pages.ritc.jp/truck/truck/truck_base/index.html)  
 basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc...
 * [truck-geometry](https://ricos.pages.ritc.jp/truck/truck/truck_geometry/index.html)  
-geometrical structs: knot vector, B-spline and NURBS.
+geometrical structs: knot vector, B-spline and NURBS
 * [truck-topology](https://ricos.pages.ritc.jp/truck/truck/truck_topology/index.html)  
-topological structs: vertex, edge, wire, face, shell, and solid.
+topological structs: vertex, edge, wire, face, shell, and solid
 * [truck-polymesh](https://ricos.pages.ritc.jp/truck/truck/truck_polymesh/index.html)  
 defines polygon data structure and some algorithms handling mesh, including meshing the shapes
 * [truck-modeling](https://ricos.pages.ritc.jp/truck/truck/truck_modeling/index.html)  

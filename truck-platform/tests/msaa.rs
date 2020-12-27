@@ -51,7 +51,10 @@ fn msaa_test() {
         Backend::Vulkan => {}
         Backend::Dx12 => {}
         _ => {
-            eprintln!("Backend: {:?} is not compatible with wgpu MSAA.", info.backend);
+            eprintln!(
+                "Backend: {:?} is not compatible with wgpu MSAA.",
+                info.backend
+            );
             return;
         }
     }
@@ -66,10 +69,13 @@ fn msaa_test() {
     let texture1 = device.create_texture(&common::texture_descriptor(&sc_desc));
     let sc_desc = Arc::new(Mutex::new(sc_desc));
     let handler = DeviceHandler::new(device, queue, sc_desc);
-    let mut scene = Scene::new(handler.clone(), &SceneDescriptor {
-        sample_count: 1,
-        ..Default::default()
-    });
+    let mut scene = Scene::new(
+        handler.clone(),
+        &SceneDescriptor {
+            sample_count: 1,
+            ..Default::default()
+        },
+    );
     let plane = new_plane!("shaders/trapezoid.vert", "shaders/trapezoid.frag");
     render_one(&mut scene, &texture0, &plane);
     let buffer0 = common::read_texture(&handler, &texture0);

@@ -3,6 +3,13 @@ name = "truck-platform"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
+description = "graphic utility library based on wgpu"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
+license = "Apache License 2.0"
+
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,7 +17,7 @@ edition = "2018"
 wgpu = "0.6.2"
 bytemuck = { version = "1.4.1", features = ["derive"] }
 lazy_static = "1.4.0"
-truck-base = { path = "../truck-base" }
+truck-base = { version = "0.1.0", path = "../truck-base" }
 
 [dev-dependencies]
 winit = "0.24.0"

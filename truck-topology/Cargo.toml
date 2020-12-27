@@ -3,11 +3,18 @@ name = "truck-topology"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
+description = "topological structs: vertex, edge, wire, face, shell, and solid"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
+license = "Apache License 2.0"
+
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 serde = { version = "1.0.118", features = ["derive"] }
-truck-base = {path = "../truck-base"}
+truck-base = { version = "0.1.0", path = "../truck-base" }
 
 [dev-dependencies]

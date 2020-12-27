@@ -16,7 +16,11 @@ pub struct ShapeViewer {
 
 impl ShapeViewer {
     /// Initializes the application
-    fn init<T: IntoInstance<Instance = ShapeInstance>>(handler: &DeviceHandler, info: AdapterInfo, shape: T) -> Self {
+    fn init<T: IntoInstance<Instance = ShapeInstance>>(
+        handler: &DeviceHandler,
+        info: AdapterInfo,
+        shape: T,
+    ) -> Self {
         let sample_count = match info.backend {
             Backend::Vulkan => 2,
             Backend::Dx12 => 2,

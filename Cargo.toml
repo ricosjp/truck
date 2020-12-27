@@ -1,10 +1,10 @@
 [workspace]
 members = [
+	"truck-base",
 	"truck-geometry",
+	"truck-modeling",
 	"truck-platform",
+	"truck-polymesh",
 	"truck-rendimpl",
 	"truck-topology",
-	"truck-polymesh",
-	"truck-modeling",
-	"truck-base",
 ]

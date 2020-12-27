@@ -134,10 +134,14 @@ fn shape_nontex_bind_group_test() {
     let instance = scene.create_instance(&shell, &inst_desc);
     let shader = include_str!("shaders/shape-nontex-bindgroup.frag");
     let pngpath = "output/shape-nontex-bindgroup.png";
-    assert!(exec_shape_bgtest(&mut scene, &instance, shader, &answer, pngpath));
+    assert!(exec_shape_bgtest(
+        &mut scene, &instance, shader, &answer, pngpath
+    ));
     let shader = include_str!("shaders/anti-shape-nontex-bindgroup.frag");
     let pngpath = "output/anti-shape-nontex-bindgroup.png";
-    assert!(!exec_shape_bgtest(&mut scene, &instance, shader, &answer, pngpath));
+    assert!(!exec_shape_bgtest(
+        &mut scene, &instance, shader, &answer, pngpath
+    ));
 }
 
 #[test]
@@ -152,14 +156,19 @@ fn shape_tex_bind_group_test() {
     let buffer = common::read_texture(scene.device_handler(), &answer);
     let mut inst_desc = nontex_inst_desc();
     let image_buffer =
-        ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer.clone()).unwrap();
+        ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer.clone())
+            .unwrap();
     inst_desc.texture = Some(Arc::new(DynamicImage::ImageRgba8(image_buffer)));
     let shell = test_shape();
     let instance = scene.create_instance(&shell, &inst_desc);
     let shader = include_str!("shaders/shape-tex-bindgroup.frag");
     let pngpath = "output/shape-tex-bindgroup.png";
-    assert!(exec_shape_bgtest(&mut scene, &instance, shader, &buffer, pngpath));
+    assert!(exec_shape_bgtest(
+        &mut scene, &instance, shader, &buffer, pngpath
+    ));
     let shader = include_str!("shaders/anti-shape-tex-bindgroup.frag");
     let pngpath = "output/anti-shape-tex-bindgroup.png";
-    assert!(!exec_shape_bgtest(&mut scene, &instance, shader, &buffer, pngpath));
+    assert!(!exec_shape_bgtest(
+        &mut scene, &instance, shader, &buffer, pngpath
+    ));
 }

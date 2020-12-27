@@ -1,5 +1,5 @@
 //! Benchmark Animation
-//! 
+//!
 //! In each frame, the NURBS surface is devided into mesh.
 
 use std::sync::{Arc, Mutex};

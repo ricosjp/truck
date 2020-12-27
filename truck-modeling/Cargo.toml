@@ -3,17 +3,24 @@ name = "truck-modeling"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
+description = "integrated modeling algorithms by geometry and topology"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
+license = "Apache License 2.0"
+
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-truck-base = { path = "../truck-base" }
-truck-geometry = { path = "../truck-geometry" }
-truck-topology = { path = "../truck-topology" }
+truck-base = { version = "0.1.0", path = "../truck-base" }
+truck-geometry = { version = "0.1.0", path = "../truck-geometry" }
+truck-topology = { version = "0.1.0", path = "../truck-topology" }
 
 [dev-dependencies]
 rand = "0.8.0"
 winit = "0.24.0"
 futures = "0.3.8"
-truck-platform = { path = "../truck-platform" }
-truck-rendimpl = { path = "../truck-rendimpl" }
+truck-platform = { version = "0.1.0", path = "../truck-platform" }
+truck-rendimpl = { version = "0.1.0", path = "../truck-rendimpl" }

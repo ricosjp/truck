@@ -153,13 +153,20 @@ fn polymesh_nontex_bind_group_test() {
     let answer = common::nontex_answer_texture(&mut scene);
     let answer = common::read_texture(scene.device_handler(), &answer);
     let inst_desc = nontex_inst_desc();
-    test_polygons().iter().enumerate().for_each(move |(i, polygon)| {
-        let instance = scene.create_instance(polygon, &inst_desc);
-        let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
-        assert!(exec_polygon_bgtest(&mut scene, &instance, shader, &answer, i));
-        let shader = include_str!("shaders/anti-mesh-nontex-bindgroup.frag");
-        assert!(!exec_polygon_bgtest(&mut scene, &instance, shader, &answer, i));
-    })
+    test_polygons()
+        .iter()
+        .enumerate()
+        .for_each(move |(i, polygon)| {
+            let instance = scene.create_instance(polygon, &inst_desc);
+            let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
+            assert!(exec_polygon_bgtest(
+                &mut scene, &instance, shader, &answer, i
+            ));
+            let shader = include_str!("shaders/anti-mesh-nontex-bindgroup.frag");
+            assert!(!exec_polygon_bgtest(
+                &mut scene, &instance, shader, &answer, i
+            ));
+        })
 }
 
 #[test]
@@ -178,11 +185,26 @@ fn polymesh_tex_bind_group_test() {
         ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer.clone())
             .unwrap();
     inst_desc.texture = Some(Arc::new(DynamicImage::ImageRgba8(image_buffer)));
-    test_polygons().iter().enumerate().for_each(move |(i, polygon)| {
-        let instance = scene.create_instance(polygon, &inst_desc);
-        let shader = include_str!("shaders/mesh-tex-bindgroup.frag");
-        assert!(exec_polygon_bgtest(&mut scene, &instance, shader, &buffer, i + 3));
-        let shader = include_str!("shaders/anti-mesh-tex-bindgroup.frag");
-        assert!(!exec_polygon_bgtest(&mut scene, &instance, shader, &buffer, i + 3));
-    })
+    test_polygons()
+        .iter()
+        .enumerate()
+        .for_each(move |(i, polygon)| {
+            let instance = scene.create_instance(polygon, &inst_desc);
+            let shader = include_str!("shaders/mesh-tex-bindgroup.frag");
+            assert!(exec_polygon_bgtest(
+                &mut scene,
+                &instance,
+                shader,
+                &buffer,
+                i + 3
+            ));
+            let shader = include_str!("shaders/anti-mesh-tex-bindgroup.frag");
+            assert!(!exec_polygon_bgtest(
+                &mut scene,
+                &instance,
+                shader,
+                &buffer,
+                i + 3
+            ));
+        })
 }
