@@ -2,7 +2,7 @@
 
 mod framework;
 use framework::ShapeViewer;
-use truck_modeling::*;
+use truck_rendimpl::*;
 
 fn main() {
     let v = builder::vertex(Point3::new(0.5, 0.0, 0.0));
