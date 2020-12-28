@@ -2,9 +2,10 @@
 
 use std::sync::{Arc, Mutex};
 use std::time::*;
-use truck_base::cgmath64::*;
-use truck_platform::{wgpu::*, *};
-use truck_rendimpl::*;
+use truck_platform::{wgpu::Surface, wgpu::*, *};
+use truck_rendimpl::{
+    modeling::*, CreateInstance, InstanceDescriptor, IntoInstance, Material, ShapeInstance,
+};
 use winit::dpi::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;

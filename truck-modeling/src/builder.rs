@@ -314,7 +314,7 @@ fn partial_rsweep<T: MultiSweep<Point3, NURBSCurve, NURBSSurface>>(
                 pt.to_homogeneous(),
                 origin,
                 axis,
-                angle,
+                angle / division as f64,
             ))
         },
         &move |curve, _| {
@@ -322,7 +322,7 @@ fn partial_rsweep<T: MultiSweep<Point3, NURBSCurve, NURBSSurface>>(
                 curve.non_rationalized(),
                 origin,
                 axis,
-                angle,
+                angle / division as f64,
             ))
         },
         division,
@@ -360,4 +360,22 @@ fn whole_rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
         },
         2,
     )
+}
+
+#[test]
+fn partial_torus() {
+    let v = vertex(Point3::new(0.5, 0.0, 0.0));
+    let w = rsweep(&v, Point3::new(0.75, 0.0, 0.0), Vector3::unit_y(), Rad(7.0));
+    let face = try_attach_plane(&vec![w]).unwrap();
+    let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(2.0));
+    assert!(torus.is_geometric_consistent());
+    
+    let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(5.0));
+    assert!(torus.is_geometric_consistent());
+    
+    let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-2.0));
+    assert!(torus.is_geometric_consistent());
+    
+    let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-5.0));
+    assert!(torus.is_geometric_consistent());
 }
