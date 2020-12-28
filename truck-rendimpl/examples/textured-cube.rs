@@ -3,6 +3,7 @@
 // The texture is referenced by:
 // https://cc0textures.com/view?id=WoodFloor024
 
+use std::io::Read;
 use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -60,7 +61,10 @@ impl App for MyApp {
             ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &desc);
-        let texture = image::load_from_memory(include_bytes!("WoodFloor024_2K_Color.png")).unwrap();
+        let mut tex_file = std::fs::File::open("examples/WoodFloor024_2K_Color.png").unwrap();
+        let mut bytes = Vec::new();
+        tex_file.read_to_end(&mut bytes).unwrap();
+        let texture = image::load_from_memory(&bytes).unwrap();
         let desc = InstanceDescriptor {
             matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
             material: Material {
