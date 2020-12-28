@@ -314,7 +314,7 @@ fn partial_rsweep<T: MultiSweep<Point3, NURBSCurve, NURBSSurface>>(
                 pt.to_homogeneous(),
                 origin,
                 axis,
-                angle,
+                angle / division as f64,
             ))
         },
         &move |curve, _| {
@@ -322,7 +322,7 @@ fn partial_rsweep<T: MultiSweep<Point3, NURBSCurve, NURBSSurface>>(
                 curve.non_rationalized(),
                 origin,
                 axis,
-                angle,
+                angle / division as f64,
             ))
         },
         division,
