@@ -20,7 +20,7 @@ truck-topology = { version = "0.1.0", path = "../truck-topology" }
 
 [dev-dependencies]
 rand = "0.8.0"
-winit = "0.24.0"
-futures = "0.3.8"
-truck-platform = { version = "0.1.0", path = "../truck-platform" }
-truck-rendimpl = { version = "0.1.0", path = "../truck-rendimpl" }
+# winit = "0.24.0"
+# futures = "0.3.8"
+# truck-platform = { version = "0.1.0", path = "../truck-platform" }
+# truck-rendimpl = { version = "0.1.0", path = "../truck-rendimpl" }
