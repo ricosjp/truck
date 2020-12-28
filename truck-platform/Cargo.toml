@@ -6,7 +6,7 @@ edition = "2018"
 description = "graphic utility library based on wgpu"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
-license = "Apache License 2.0"
+license = "Apache-2.0"
 
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
