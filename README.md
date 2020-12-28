@@ -41,19 +41,19 @@ cargo run --example rotate-objects
 ```
 
 ## crates
-* [truck-base](https://ricos.pages.ritc.jp/truck/truck/truck_base/index.html)  
+* [truck-base](https://docs.rs/truck-base/0.1.0/truck_base/)  
 basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc...
-* [truck-geometry](https://ricos.pages.ritc.jp/truck/truck/truck_geometry/index.html)  
+* [truck-geometry](https://docs.rs/truck-geometry/0.1.0/truck_geometry/)  
 geometrical structs: knot vector, B-spline and NURBS
-* [truck-topology](https://ricos.pages.ritc.jp/truck/truck/truck_topology/index.html)  
+* [truck-topology](https://docs.rs/truck-topology/0.1.0/truck_topology/)  
 topological structs: vertex, edge, wire, face, shell, and solid
-* [truck-polymesh](https://ricos.pages.ritc.jp/truck/truck/truck_polymesh/index.html)  
+* [truck-polymesh](https://docs.rs/truck-polymesh/0.1.0/truck_polymesh/)  
 defines polygon data structure and some algorithms handling mesh, including meshing the shapes
-* [truck-modeling](https://ricos.pages.ritc.jp/truck/truck/truck_modeling/index.html)  
+* [truck-modeling](https://docs.rs/truck-modeling/0.1.0/truck_modeling/)  
 integrated modeling algorithms by geometry and topology
-* [truck-platform](https://ricos.pages.ritc.jp/truck/truck/truck_platform/index.html)  
+* [truck-platform](https://docs.rs/truck-platform/0.1.0/truck_platform/)  
 graphic utility library based on wgpu
-* [truck-rendimpl](https://ricos.pages.ritc.jp/truck/truck/truck_rendimpl/index.html)  
+* [truck-rendimpl](https://docs.rs/truck-rendimpl/0.1.0/truck_rendimpl/)  
 visualization of shape and polygon mesh based on platform
 
 <img src = "dependencies.svg">
