@@ -11,8 +11,6 @@ license = "Apache-2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
-build = "src/build.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -21,9 +19,6 @@ bytemuck = { version = "1.4.1", features = ["derive"] }
 truck-platform = { version = "0.1.0", path = "../truck-platform" }
 truck-modeling = { version = "0.1.0", path = "../truck-modeling" }
 truck-polymesh = { version = "0.1.0", path = "../truck-polymesh" }
-
-[build-dependencies]
-glsl-to-spirv = "0.1.7"
 
 [dev-dependencies]
 winit = "0.24.0"

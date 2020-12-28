@@ -26,9 +26,10 @@ Apache License 2.0
 
 ## Usage
 ### Dependencies
-The following crates require [CMake](https://cmake.org) to building.
+The dev-dependencies of the following crate includes [CMake](https://cmake.org).
  - truck-rendimpl
- - truck-platform and truck-modeling (only test and examples)
+ - truck-platform
+ - truck-modeling
 
 ### How to Run Examples
 All examples are located under the examples directory in each crates.  

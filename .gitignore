@@ -2,5 +2,4 @@
 /Cargo.lock
 *.obj
 /.vscode
-*.spv
 *.png

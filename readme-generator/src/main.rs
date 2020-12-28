@@ -10,23 +10,15 @@ const WORKSPACES: [&str; 6] = [
     "truck-topology",
 ];
 
-const DEPENDS_CMAKE: [&str; 1] = ["truck-rendimpl"];
-
-const DEVDEPENDS_CMAKE: [&str; 2] = ["truck-modeling", "truck-platform"];
-
-const DEPENDS_CMAKE_MESSAGE: &str = "## Dependencies
-This crate depends on [CMake](https://cmake.org).
-";
+const DEVDEPENDS_CMAKE: [&str; 3] = ["truck-rendimpl", "truck-modeling", "truck-platform"];
 
 const DEVDEPENDS_CMAKE_MESSAGE: &str = "## Dependencies
 The dev-dependencies of this crate includes [CMake](https://cmake.org).
 ";
 
 fn cmake_flag(path: &&str) -> usize {
-    if DEPENDS_CMAKE.iter().any(|s| s == path) {
+    if DEVDEPENDS_CMAKE.iter().any(|s| s == path) {
         1
-    } else if DEVDEPENDS_CMAKE.iter().any(|s| s == path) {
-        2
     } else {
         0
     }
@@ -47,9 +39,6 @@ fn create_readme(cmake_flag: usize) {
 
     match cmake_flag {
         1 => {
-            readme.write(DEPENDS_CMAKE_MESSAGE.as_bytes()).unwrap();
-        }
-        2 => {
             readme.write(DEVDEPENDS_CMAKE_MESSAGE.as_bytes()).unwrap();
         }
         _ => {}
