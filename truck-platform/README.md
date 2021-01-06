@@ -1,6 +1,5 @@
 # truck-platform
-[![Crates.io](https://img.shields.io/crates/v/truck-platform.svg)](https://crates.io/crates/truck-platform)
-[![Docs.rs](https://docs.rs/truck-platform/badge.svg)](https://docs.rs/truck-platform)
+[![Crates.io](https://img.shields.io/crates/v/truck-platform.svg)](https://crates.io/crates/truck-platform) [![Docs.rs](https://docs.rs/truck-platform/badge.svg)](https://docs.rs/truck-platform)
 
 Graphic utility library based on wgpu.
 ## Dependencies
