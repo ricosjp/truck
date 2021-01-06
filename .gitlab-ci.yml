@@ -9,8 +9,6 @@ test:
         - /root/.cargo/bin/cargo test
     except:
         - master
-    except:changes:
-        - README.md
     tags:
         - gpu
 
@@ -29,5 +27,3 @@ pages:
         - gpu
     only:
         - master
-    except:changes:
-        - README.md
