@@ -1,4 +1,7 @@
 # truck-rendimpl
+[![Crates.io](https://img.shields.io/crates/v/truck-rendimpl.svg)](https://crates.io/crates/truck-rendimpl)
+[![Docs.rs](https://docs.rs/truck-rendimpl/badge.svg)](https://docs.rs/truck-rendimpl)
+
 Visualization of shape and polygon mesh based on platform
 ## Dependencies
 The dev-dependencies of this crate includes [CMake](https://cmake.org).
