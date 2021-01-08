@@ -6,7 +6,6 @@
 //! - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
 
 use std::io::Read;
-use stringreader::StringReader;
 use truck_platform::*;
 use truck_polymesh::*;
 use truck_rendimpl::*;
@@ -99,7 +98,8 @@ impl App for MyApp {
             camera_changed: None,
             light_changed: None,
         };
-        app.load_obj(StringReader::new(include_str!("teapot.obj")));
+        let read_obj: &[u8] = include_str!("teapot.obj").as_ref();
+        app.load_obj(read_obj);
         app
     }
 

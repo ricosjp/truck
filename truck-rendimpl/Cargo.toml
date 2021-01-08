@@ -24,5 +24,4 @@ truck-polymesh = { version = "0.1.0", path = "../truck-polymesh" }
 [dev-dependencies]
 winit = "0.24.0"
 glsl-to-spirv = "0.1.7"
-stringreader = "0.1.1"
 futures = "0.3.8"
