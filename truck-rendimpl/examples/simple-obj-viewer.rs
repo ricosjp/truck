@@ -98,8 +98,7 @@ impl App for MyApp {
             camera_changed: None,
             light_changed: None,
         };
-        let read_obj: &[u8] = include_str!("teapot.obj").as_ref();
-        app.load_obj(read_obj);
+        app.load_obj(include_bytes!("teapot.obj").as_ref());
         app
     }
 
