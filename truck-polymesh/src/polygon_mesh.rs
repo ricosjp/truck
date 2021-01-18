@@ -4,7 +4,8 @@ use std::iter::FromIterator;
 
 impl<V: Copy> Faces<V> {
     #[inline(always)]
-    pub fn push(&mut self, face: &[V]) {
+    pub fn push<T: AsRef<[V]>>(&mut self, face: T) {
+        let face = face.as_ref();
         match face.len() {
             3 => self.tri_faces.push([face[0], face[1], face[2]]),
             4 => self.quad_faces.push([face[0], face[1], face[2], face[3]]),
@@ -130,7 +131,7 @@ impl PolygonMesh {
     /// # Panics
     /// Panic occurs if there is an index is out of range.
     #[inline(always)]
-    pub fn from_positions<'a, I: Iterator<Item = &'a [usize]>>(
+    pub fn from_positions<'a, T: AsRef<[usize]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         face_iter: I,
     ) -> PolygonMesh {
@@ -142,13 +143,13 @@ impl PolygonMesh {
     /// Returns [`Error::OutOfRange`] if there is an index is out of range.
     ///
     /// [`Error::OutOfRange`]: ./errors/enum.Error.html#variant.OutOfRange
-    pub fn try_from_positions<'a, I: Iterator<Item = &'a [usize]>>(
+    pub fn try_from_positions<'a, T: AsRef<[usize]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         face_iter: I,
     ) -> Result<PolygonMesh> {
         let mut faces = Faces::default();
         for face in face_iter {
-            for idx in face.iter() {
+            for idx in face.as_ref() {
                 if *idx >= positions.len() {
                     return Err(Error::OutOfRange);
                 }
@@ -162,7 +163,7 @@ impl PolygonMesh {
     /// # Panics
     /// Panic occurs if there is an index is out of range.
     #[inline(always)]
-    pub fn from_positions_and_uvs<'a, I: Iterator<Item = &'a [[usize; 2]]>>(
+    pub fn from_positions_and_uvs<'a, T: AsRef<[[usize; 2]]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         uv_coords: Vec<Vector2>,
         face_iter: I,
@@ -176,14 +177,14 @@ impl PolygonMesh {
     /// Returns [`Error::OutOfRange`] if there is an index is out of range.
     ///
     /// [`Error::OutOfRange`]: ./errors/enum.Error.html#variant.OutOfRange
-    pub fn try_from_positions_and_uvs<'a, I: Iterator<Item = &'a [[usize; 2]]>>(
+    pub fn try_from_positions_and_uvs<'a, T: AsRef<[[usize; 2]]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         uv_coords: Vec<Vector2>,
         face_iter: I,
     ) -> Result<PolygonMesh> {
         let mut faces = Faces::default();
         for face in face_iter {
-            for v in face.iter() {
+            for v in face.as_ref() {
                 if v[0] >= positions.len() || v[1] >= uv_coords.len() {
                     return Err(Error::OutOfRange);
                 }
@@ -202,7 +203,7 @@ impl PolygonMesh {
     /// # Remarks
     /// This method does not check whether the normal is normalized or not.
     #[inline(always)]
-    pub fn from_positions_and_normals<'a, I: Iterator<Item = &'a [[usize; 2]]>>(
+    pub fn from_positions_and_normals<'a, T: AsRef<[[usize; 2]]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         normals: Vec<Vector3>,
         face_iter: I,
@@ -219,14 +220,14 @@ impl PolygonMesh {
     ///
     /// # Remarks
     /// This method does not check whether the normal is normalized or not.
-    pub fn try_from_positions_and_normals<'a, I: Iterator<Item = &'a [[usize; 2]]>>(
+    pub fn try_from_positions_and_normals<'a, T: AsRef<[[usize; 2]]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         normals: Vec<Vector3>,
         face_iter: I,
     ) -> Result<PolygonMesh> {
         let mut faces = Faces::default();
         for face in face_iter {
-            for v in face.iter() {
+            for v in face.as_ref() {
                 if v[0] >= positions.len() || v[1] >= normals.len() {
                     return Err(Error::OutOfRange);
                 }
@@ -245,7 +246,7 @@ impl PolygonMesh {
     /// Panic occurs if there is an index is out of range.
     /// # Remarks
     /// This method does not check whether the normal is normalized or not.
-    pub fn new<'a, I: Iterator<Item = &'a [[usize; 3]]>>(
+    pub fn new<'a, T: AsRef<[[usize; 3]]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         uv_coords: Vec<Vector2>,
         normals: Vec<Vector3>,
@@ -263,7 +264,7 @@ impl PolygonMesh {
     ///
     /// # Remarks
     /// This method does not check whether the normal is normalized or not.
-    pub fn try_new<'a, I: Iterator<Item = &'a [[usize; 3]]>>(
+    pub fn try_new<'a, T: AsRef<[[usize; 3]]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         uv_coords: Vec<Vector2>,
         normals: Vec<Vector3>,
@@ -271,7 +272,7 @@ impl PolygonMesh {
     ) -> Result<PolygonMesh> {
         let mut faces = Faces::default();
         for face in face_iter {
-            for v in face.iter() {
+            for v in face.as_ref() {
                 if v[0] >= positions.len() || v[1] >= uv_coords.len() || v[2] >= normals.len() {
                     return Err(Error::OutOfRange);
                 }
@@ -342,6 +343,17 @@ impl PolygonMesh {
             PolygonMesh::WithNormals { normals, .. } => normals,
             PolygonMesh::Complete { normals, .. } => normals,
             _ => &mut [],
+        }
+    }
+
+    /// Returns the reference of faces
+    #[inline(always)]
+    pub fn faces(&self) -> FacesRef {
+        match self {
+            PolygonMesh::Positions { faces, .. } => FacesRef::Positions(faces),
+            PolygonMesh::Textured { faces, .. } => FacesRef::Textured(faces),
+            PolygonMesh::WithNormals { faces, .. } => FacesRef::WithNormals(faces),
+            PolygonMesh::Complete { faces, .. } => FacesRef::Complete(faces),
         }
     }
 

@@ -67,6 +67,14 @@ pub struct StructuredMesh {
     normals: Option<Vec<Vec<Vector3>>>,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum FacesRef<'a> {
+    Positions(&'a Faces<usize>),
+    Textured(&'a Faces<[usize; 2]>),
+    WithNormals(&'a Faces<[usize; 2]>),
+    Complete(&'a Faces<[usize; 3]>),
+}
+
 #[doc(hidden)]
 /// the decorator for mesh handling
 #[derive(Clone, Debug)]
@@ -83,7 +91,7 @@ pub mod errors;
 //mod mesh_handler;
 //mod meshing_shape;
 /// I/O of wavefront obj
-//pub mod obj;
+pub mod obj;
 mod polygon_mesh;
 //mod smoothing;
 //mod splitting;

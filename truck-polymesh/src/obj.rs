@@ -24,27 +24,20 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 ///     Vector3::new(0.0, 0.0, -1.0),
 /// ];
 /// let faces = vec![
-///     [[0, 0, 5], [1, 0, 5], [2, 0, 5]],
-///     [[4, 0, 5], [2, 0, 5], [1, 0, 5]],
-///     [[1, 0, 4], [0, 0, 4], [3, 0, 4]],
-///     [[1, 0, 4], [3, 0, 4], [5, 0, 4]],
-///     [[1, 0, 0], [5, 0, 0], [4, 0, 0]],
-///     [[4, 0, 0], [5, 0, 0], [7, 0, 0]],
-///     [[2, 0, 1], [4, 0, 1], [7, 0, 1]],
-///     [[2, 0, 1], [7, 0, 1], [6, 0, 1]],
-///     [[0, 0, 3], [2, 0, 3], [6, 0, 3]],
-///     [[0, 0, 3], [6, 0, 3], [3, 0, 3]],
-///     [[3, 0, 2], [6, 0, 2], [7, 0, 2]],
-///     [[3, 0, 2], [7, 0, 2], [5, 0, 2]],
+///     [[0, 5], [1, 5], [2, 5]],
+///     [[4, 5], [2, 5], [1, 5]],
+///     [[1, 4], [0, 4], [3, 4]],
+///     [[1, 4], [3, 4], [5, 4]],
+///     [[1, 0], [5, 0], [4, 0]],
+///     [[4, 0], [5, 0], [7, 0]],
+///     [[2, 1], [4, 1], [7, 1]],
+///     [[2, 1], [7, 1], [6, 1]],
+///     [[0, 3], [2, 3], [6, 3]],
+///     [[0, 3], [6, 3], [3, 3]],
+///     [[3, 2], [6, 2], [7, 2]],
+///     [[3, 2], [7, 2], [5, 2]],
 /// ];
-/// let mesh = PolygonMesh {
-///     positions: positions,
-///     uv_coords: Vec::new(),
-///     normals: normals,
-///     tri_faces: faces,
-///     quad_faces: Vec::new(),
-///     other_faces: Vec::new(),
-/// };
+/// let mesh = PolygonMesh::from_positions_and_normals(positions, normals, &faces);
 /// obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
 /// ```
 pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<()> {
@@ -61,133 +54,95 @@ pub fn write_vec<W: Write>(mesh: &Vec<PolygonMesh>, writer: W) -> Result<()> {
     Ok(())
 }
 
-fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<()> {
-    for vertex in &mesh.positions {
-        writer.write_fmt(format_args!(
-            "v {:.7e} {:.7e} {:.7e}\n",
-            vertex[0], vertex[1], vertex[2]
-        ))?;
-    }
-    for uv in &mesh.uv_coords {
-        writer.write_fmt(format_args!("vt {:.7e} {:.7e}\n", uv[0], uv[1]))?;
-    }
-    for normal in &mesh.normals {
-        writer.write_fmt(format_args!(
-            "vn {:.7e} {:.7e} {:.7e}\n",
-            normal[0], normal[1], normal[2]
-        ))?;
-    }
-    if mesh.uv_coords.is_empty() {
-        if mesh.normals.is_empty() {
-            for face in &mesh.tri_faces {
-                writer.write_fmt(format_args!(
-                    "f {} {} {}\n",
-                    face[0][0] + 1,
-                    face[1][0] + 1,
-                    face[2][0] + 1
-                ))?;
-            }
-            for face in &mesh.quad_faces {
-                writer.write_fmt(format_args!(
-                    "f {} {} {} {}\n",
-                    face[0][0] + 1,
-                    face[1][0] + 1,
-                    face[2][0] + 1,
-                    face[3][0] + 1,
-                ))?;
-            }
-        } else {
-            for face in &mesh.tri_faces {
-                writer.write_fmt(format_args!(
-                    "f {}//{} {}//{} {}//{}\n",
-                    face[0][0] + 1,
-                    face[0][2] + 1,
-                    face[1][0] + 1,
-                    face[1][2] + 1,
-                    face[2][0] + 1,
-                    face[2][2] + 1
-                ))?;
-            }
-            for face in &mesh.quad_faces {
-                writer.write_fmt(format_args!(
-                    "f {}//{} {}//{} {}//{} {}//{}\n",
-                    face[0][0] + 1,
-                    face[0][2] + 1,
-                    face[1][0] + 1,
-                    face[1][2] + 1,
-                    face[2][0] + 1,
-                    face[2][2] + 1,
-                    face[3][0] + 1,
-                    face[3][2] + 1
-                ))?;
-            }
-        }
-    } else {
-        if mesh.normals.is_empty() {
-            for face in &mesh.tri_faces {
-                writer.write_fmt(format_args!(
-                    "f {}/{} {}/{} {}/{}\n",
-                    face[0][0] + 1,
-                    face[0][1] + 1,
-                    face[1][0] + 1,
-                    face[1][1] + 1,
-                    face[2][0] + 1,
-                    face[2][1] + 1
-                ))?;
-            }
-            for face in &mesh.quad_faces {
-                writer.write_fmt(format_args!(
-                    "f {}/{} {}/{} {}/{} {}/{}\n",
-                    face[0][0] + 1,
-                    face[0][1] + 1,
-                    face[1][0] + 1,
-                    face[1][1] + 1,
-                    face[2][0] + 1,
-                    face[2][1] + 1,
-                    face[3][0] + 1,
-                    face[3][1] + 1
-                ))?;
-            }
-        } else {
-            for face in &mesh.tri_faces {
-                writer.write_fmt(format_args!(
-                    "f {}/{}/{} {}/{}/{} {}/{}/{}\n",
-                    face[0][0] + 1,
-                    face[0][1] + 1,
-                    face[0][2] + 1,
-                    face[1][0] + 1,
-                    face[1][1] + 1,
-                    face[1][2] + 1,
-                    face[2][0] + 1,
-                    face[2][1] + 1,
-                    face[2][2] + 1
-                ))?;
-            }
-            for face in &mesh.quad_faces {
-                writer.write_fmt(format_args!(
-                    "f {}/{}/{} {}/{}/{} {}/{}/{} {}/{}/{}\n",
-                    face[0][0] + 1,
-                    face[0][1] + 1,
-                    face[0][2] + 1,
-                    face[1][0] + 1,
-                    face[1][1] + 1,
-                    face[1][2] + 1,
-                    face[2][0] + 1,
-                    face[2][1] + 1,
-                    face[2][2] + 1,
-                    face[3][0] + 1,
-                    face[3][1] + 1,
-                    face[3][2] + 1
-                ))?;
-            }
-        }
+fn write2vec<V: std::ops::Index<usize, Output = f64>, W: Write>(
+    writer: &mut BufWriter<W>,
+    vecs: &[V],
+    prefix: &str,
+) -> Result<()> {
+    for vec in vecs {
+        writer.write_fmt(format_args!("{} {:.7e} {:.7e}\n", prefix, vec[0], vec[1],))?;
     }
     Ok(())
 }
 
+fn write3vec<V: std::ops::Index<usize, Output = f64>, W: Write>(
+    writer: &mut BufWriter<W>,
+    vecs: &[V],
+    prefix: &str,
+) -> Result<()> {
+    for vec in vecs {
+        writer.write_fmt(format_args!(
+            "{} {:.7e} {:.7e} {:.7e}\n",
+            prefix, vec[0], vec[1], vec[2]
+        ))?;
+    }
+    Ok(())
+}
+
+fn write_p_indices<W: Write>(writer: &mut BufWriter<W>, faces: &Faces<usize>) -> Result<()> {
+    for face in faces.face_iter() {
+        writer.write(b"f")?;
+        for idx in face {
+            writer.write_fmt(format_args!(" {}", idx + 1))?;
+        }
+        writer.write(b"\n")?;
+    }
+    Ok(())
+}
+
+fn write_pt_indices<W: Write>(writer: &mut BufWriter<W>, faces: &Faces<[usize; 2]>) -> Result<()> {
+    for face in faces.face_iter() {
+        writer.write(b"f")?;
+        for idx in face {
+            writer.write_fmt(format_args!(" {}/{}", idx[0] + 1, idx[1] + 1))?;
+        }
+        writer.write(b"\n")?;
+    }
+    Ok(())
+}
+
+fn write_pn_indices<W: Write>(writer: &mut BufWriter<W>, faces: &Faces<[usize; 2]>) -> Result<()> {
+    for face in faces.face_iter() {
+        writer.write(b"f")?;
+        for idx in face {
+            writer.write_fmt(format_args!(" {}//{}", idx[0] + 1, idx[1] + 1))?;
+        }
+        writer.write(b"\n")?;
+    }
+    Ok(())
+}
+
+fn write_ptn_indices<W: Write>(writer: &mut BufWriter<W>, faces: &Faces<[usize; 3]>) -> Result<()> {
+    for face in faces.face_iter() {
+        writer.write(b"f")?;
+        for idx in face {
+            writer.write_fmt(format_args!(" {}/{}/{}", idx[0] + 1, idx[1] + 1, idx[2] + 1))?;
+        }
+        writer.write(b"\n")?;
+    }
+    Ok(())
+}
+
+fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<()> {
+    write3vec(writer, mesh.positions(), "v")?;
+    write2vec(writer, mesh.uv_coords(), "vt")?;
+    write3vec(writer, mesh.normals(), "vn")?;
+    match mesh.faces() {
+        FacesRef::Positions(faces) => write_p_indices(writer, faces),
+        FacesRef::Textured(faces) => write_pt_indices(writer, faces),
+        FacesRef::WithNormals(faces) => write_pn_indices(writer, faces),
+        FacesRef::Complete(faces) => write_ptn_indices(writer, faces),
+    }
+}
+
 /// Reads mesh data from wavefront obj file.
 pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
-    let mut mesh = PolygonMesh::default();
+    let mut positions = Vec::new();
+    let mut uv_coords = Vec::new();
+    let mut normals = Vec::new();
+    let mut faces1 = Vec::new();
+    let mut faces2 = Vec::new();
+    let mut faces3 = Vec::new();
     let reader = BufReader::new(reader);
     for line in reader.lines().map(|s| s.unwrap()) {
         let mut args = line.split_whitespace();
@@ -196,38 +151,48 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
                 let x = args.next().unwrap().parse::<f64>()?;
                 let y = args.next().unwrap().parse::<f64>()?;
                 let z = args.next().unwrap().parse::<f64>()?;
-                mesh.positions.push(Point3::new(x, y, z));
+                positions.push(Point3::new(x, y, z));
             } else if first_str == "vt" {
                 let u = args.next().unwrap().parse::<f64>()?;
                 let v = args.next().unwrap().parse::<f64>()?;
-                mesh.uv_coords.push(Vector2::new(u, v));
+                uv_coords.push(Vector2::new(u, v));
             } else if first_str == "vn" {
                 let x = args.next().unwrap().parse::<f64>()?;
                 let y = args.next().unwrap().parse::<f64>()?;
                 let z = args.next().unwrap().parse::<f64>()?;
-                mesh.normals.push(Vector3::new(x, y, z));
+                normals.push(Vector3::new(x, y, z));
             } else if first_str == "f" {
-                let mut face = Vec::new();
+                let mut face1 = Vec::new();
+                let mut face2 = Vec::new();
+                let mut face3 = Vec::new();
                 for vert_str in args {
                     if &vert_str[0..1] == "#" {
                         break;
                     }
                     let mut vert = Vec::new();
                     for val in vert_str.split("/") {
-                        vert.push(val.parse::<usize>().unwrap_or(1) - 1);
+                        match val.parse::<usize>() {
+                            Ok(got) => vert.push(got - 1),
+                            Err(_) => {}
+                        }
                     }
-                    vert.resize(3, 0);
-                    face.push([vert[0], vert[1], vert[2]]);
+                    match vert.len() {
+                        1 => face1.push(vert[0]),
+                        2 => face2.push([vert[0], vert[1]]),
+                        3 => face3.push([vert[0], vert[1], vert[2]]),
+                        _ => {}
+                    }
                 }
-                if face.len() == 3 {
-                    mesh.tri_faces.push([face[0], face[1], face[2]]);
-                } else if face.len() == 4 {
-                    mesh.quad_faces.push([face[0], face[1], face[2], face[3]]);
-                } else {
-                    mesh.other_faces.push(face);
-                }
+                faces1.push(face1);
+                faces2.push(face2);
+                faces3.push(face3);
             }
         }
     }
-    Ok(mesh)
+    match (uv_coords.len(), normals.len()) {
+        (0, 0) => PolygonMesh::try_from_positions(positions, &faces1),
+        (_, 0) => PolygonMesh::try_from_positions_and_uvs(positions, uv_coords, &faces2),
+        (0, _) => PolygonMesh::try_from_positions_and_normals(positions, normals, &faces2),
+        (_, _) => PolygonMesh::try_new(positions, uv_coords, normals, &faces3),
+    }
 }
