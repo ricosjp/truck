@@ -7,6 +7,7 @@
 //! mesh handling may be done as a trait implemented to `PolygonMesh`.
 //! We will move up one minor version when we make these changes.
 
+/*
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -17,6 +18,7 @@
     unused_import_braces,
     unused_qualifications
 )]
+*/
 
 extern crate truck_topology as topology;
 
@@ -26,22 +28,55 @@ pub mod base {
 }
 pub use base::*;
 
+#[derive(Clone, Debug, Default)]
+pub struct Faces<V> {
+    tri_faces: Vec<[V; 3]>,
+    quad_faces: Vec<[V; 4]>,
+    other_faces: Vec<Vec<V>>,
+}
+
+#[derive(Clone, Debug)]
+pub enum PolygonMesh {
+    Positions {
+        positions: Vec<Point3>,
+        faces: Faces<usize>,
+    },
+    Textured {
+        positions: Vec<Point3>,
+        uv_coords: Vec<Vector2>,
+        faces: Faces<[usize; 2]>,
+    },
+    WithNormals {
+        positions: Vec<Point3>,
+        normals: Vec<Vector3>,
+        faces: Faces<[usize; 2]>
+    },
+    Complete {
+        positions: Vec<Point3>,
+        uv_coords: Vec<Vector2>,
+        normals: Vec<Vector3>,
+        faces: Faces<[usize; 3]>,
+    }
+}
+
+/*
 /// mesh data
 #[derive(Clone, Debug, Default)]
 pub struct PolygonMesh {
     /// List of positions
-    pub positions: Vec<Point3>,
+    positions: Vec<Point3>,
     /// List of texture matrix
-    pub uv_coords: Vec<Vector2>,
+    uv_coords: Vec<Vector2>,
     /// List of normal vectors
-    pub normals: Vec<Vector3>,
+    normals: Vec<Vector3>,
     /// triangle faces
-    pub tri_faces: Vec<[[usize; 3]; 3]>,
+    tri_faces: Vec<[[usize; 3]; 3]>,
     /// quadrangle faces
-    pub quad_faces: Vec<[[usize; 3]; 4]>,
+    quad_faces: Vec<[[usize; 3]; 4]>,
     /// `n`-gon faces where `n` is more than 4.
-    pub other_faces: Vec<Vec<[usize; 3]>>,
+    other_faces: Vec<Vec<[usize; 3]>>,
 }
+*/
 
 /// structured quadrangle mesh
 #[derive(Clone, Debug)]
@@ -61,19 +96,21 @@ pub struct MeshHandler {
     mesh: PolygonMesh,
 }
 
+pub type Result<T> = std::result::Result<T, errors::Error>;
+
 /// Defines errors
 pub mod errors;
-mod extract_topology;
-mod healing;
-mod mesh_handler;
-mod meshing_shape;
+//mod extract_topology;
+//mod healing;
+//mod mesh_handler;
+//mod meshing_shape;
 /// I/O of wavefront obj
-pub mod obj;
+//pub mod obj;
 mod polygon_mesh;
-mod smoothing;
-mod splitting;
-mod structured_mesh;
-mod structuring;
+//mod smoothing;
+//mod splitting;
+//mod structured_mesh;
+//mod structuring;
 
 #[inline(always)]
 fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {

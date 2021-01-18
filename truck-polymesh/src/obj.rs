@@ -1,5 +1,4 @@
 use crate::*;
-use errors::Error;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 
 /// Writes obj data to output stream
@@ -48,12 +47,12 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 /// };
 /// obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
 /// ```
-pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<(), Error> {
+pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<()> {
     sub_write(mesh, &mut BufWriter::new(writer))
 }
 
 /// Writes obj data to output stream
-pub fn write_vec<W: Write>(mesh: &Vec<PolygonMesh>, writer: W) -> Result<(), Error> {
+pub fn write_vec<W: Write>(mesh: &Vec<PolygonMesh>, writer: W) -> Result<()> {
     let mut writer = BufWriter::new(writer);
     for (i, mesh) in mesh.iter().enumerate() {
         writer.write_fmt(format_args!("g {}\n", i))?;
@@ -62,7 +61,7 @@ pub fn write_vec<W: Write>(mesh: &Vec<PolygonMesh>, writer: W) -> Result<(), Err
     Ok(())
 }
 
-fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<(), Error> {
+fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<()> {
     for vertex in &mesh.positions {
         writer.write_fmt(format_args!(
             "v {:.7e} {:.7e} {:.7e}\n",
@@ -187,7 +186,7 @@ fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<
 }
 
 /// Reads mesh data from wavefront obj file.
-pub fn read<R: Read>(reader: R) -> Result<PolygonMesh, Error> {
+pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
     let mut mesh = PolygonMesh::default();
     let reader = BufReader::new(reader);
     for line in reader.lines().map(|s| s.unwrap()) {
