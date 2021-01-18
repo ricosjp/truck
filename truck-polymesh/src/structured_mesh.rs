@@ -1,15 +1,6 @@
 use crate::errors::Error;
 use crate::*;
 
-macro_rules! one2one {
-    ($x: expr; 1) => {
-        $x
-    };
-    ($x: expr; $size: tt) => {
-        [$x; $size]
-    };
-}
-
 macro_rules! create_quad_faces {
     ($m: expr, $n: expr, $size: tt) => {
         Faces {
@@ -17,10 +8,10 @@ macro_rules! create_quad_faces {
                 .flat_map(|i| (1..$n).map(move |j| (i, j)))
                 .map(move |(i, j)| {
                     [
-                        one2one![(i - 1) * $n + j - 1; $size],
-                        one2one![i * $n + j - 1; $size],
-                        one2one![i * $n + j; $size],
-                        one2one![(i - 1) * $n + j; $size],
+                        [(i - 1) * $n + j - 1; $size],
+                        [i * $n + j - 1; $size],
+                        [i * $n + j; $size],
+                        [(i - 1) * $n + j; $size],
                     ]
                 })
                 .collect(),

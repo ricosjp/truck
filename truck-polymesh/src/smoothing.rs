@@ -1,8 +1,23 @@
 use crate::*;
 use std::collections::HashMap;
 
+pub trait AddNormal {
+    fn add_naive_normal(&mut self, healing: bool);
+    /// add the smooth normal vectors to the mesh.
+    /// # Details
+    /// For each vertex, apply the following algorithm:
+    /// 1. prepare vectors that enumerate the normals of the faces containing
+    /// the target vertices in order.
+    /// 1. cluster each normal `n` in turn in the following manner.
+    ///  * If there is an existing cluster `A` in which the angle between the weighted
+    /// average of `A` and `n` is less than or equal to `tol_ang`, add `n` to `A`.
+    ///  * If cluster `A` as described above does not exist,
+    /// create a new cluster that contains only `n`.
+    fn add_smooth_normal(&mut self, tol_ang: f64, healing: bool);
+}
+
 /// mesh smoothing filters
-impl MeshHandler {
+impl PolygonMesh {
     /// add the smooth normal vectors to the mesh.
     /// # Details
     /// For each vertex, apply the following algorithm:
@@ -20,20 +35,20 @@ impl MeshHandler {
     }
 
     fn clustering_noraml_faces(&self, inf: f64) -> HashMap<usize, Vec<Vec<FaceNormal>>> {
-        let positions = &self.mesh.positions;
+        let positions = self.positions();
         let mut vnmap = HashMap::new();
-        for (i, face) in self.mesh.tri_faces.iter().enumerate() {
-            add_face_normal(positions, i, face, 0, 1, 2, &mut vnmap, inf);
-        }
-        for (mut i, face) in self.mesh.quad_faces.iter().enumerate() {
-            i += self.mesh.tri_faces.len();
-            add_face_normal(positions, i, face, 0, 1, 3, &mut vnmap, inf);
-            add_face_normal(positions, i, face, 2, 3, 1, &mut vnmap, inf);
-        }
-        for (mut i, face) in self.mesh.other_faces.iter().enumerate() {
-            i += self.mesh.tri_faces.len() + self.mesh.quad_faces.len();
-            for j in 2..face.len() {
-                add_face_normal(positions, i, face, 0, j - 1, j, &mut vnmap, inf);
+        match self.faces() {
+            FacesRef::Positions(faces) => {
+                sub_cluster_normal_faces(faces.face_iter(), positions, &mut vnmap, inf);
+            }
+            FacesRef::Textured(faces) => {
+                sub_cluster_normal_faces(faces.face_iter(), positions, &mut vnmap, inf);
+            }
+            FacesRef::WithNormals(faces) => {
+                sub_cluster_normal_faces(faces.face_iter(), positions, &mut vnmap, inf);
+            }
+            FacesRef::Complete(faces) => {
+                sub_cluster_normal_faces(faces.face_iter(), positions, &mut vnmap, inf);
             }
         }
         vnmap
@@ -69,6 +84,19 @@ impl MeshHandler {
     }
 }
 
+fn sub_cluster_normal_faces<'a, T: 'a + AsRef<[usize]>, I: Iterator<Item = &'a [T]>>(
+    iter: I,
+    positions: &[Point3],
+    vnmap: &mut HashMap<usize, Vec<Vec<FaceNormal>>>,
+    inf: f64,
+) {
+    for (i, face) in iter.enumerate() {
+        for j in 2..face.len() {
+            add_face_normal(positions, i, face, 0, j - 1, j, &mut vnmap, inf);
+        }
+    }
+}
+
 #[derive(Clone)]
 struct FaceNormal {
     face_id: usize,
@@ -81,24 +109,24 @@ fn get_normal_sum(normals: &Vec<FaceNormal>) -> Vector3 {
         .fold(Vector3::zero(), |sum, x| sum + &x.normal)
 }
 
-fn add_face_normal(
-    positions: &Vec<Point3>,
+fn add_face_normal<I: AsRef<[usize]>>(
+    positions: &[Point3],
     face_id: usize,
-    face: &[[usize; 3]],
+    face: &[I],
     idx0: usize,
     idx1: usize,
     idx2: usize,
     vnmap: &mut HashMap<usize, Vec<Vec<FaceNormal>>>,
     inf: f64,
-)
-{
-    let vec0 = &positions[face[idx1][0]] - &positions[face[idx0][0]];
-    let vec1 = &positions[face[idx2][0]] - &positions[face[idx0][0]];
+) {
+    let face = face.as_ref();
+    let vec0 = &positions[face[idx1].as_ref()[0]] - &positions[face[idx0].as_ref()[0]];
+    let vec1 = &positions[face[idx2].as_ref()[0]] - &positions[face[idx0].as_ref()[0]];
     let normal = vec0.cross(vec1);
     let face_normal = FaceNormal { face_id, normal };
-    add_to_vnmap(face[idx0][0], face_normal.clone(), vnmap, inf);
-    add_to_vnmap(face[idx1][0], face_normal.clone(), vnmap, inf);
-    add_to_vnmap(face[idx2][0], face_normal, vnmap, inf);
+    add_to_vnmap(face[idx0].as_ref()[0], face_normal.clone(), vnmap, inf);
+    add_to_vnmap(face[idx1].as_ref()[0], face_normal.clone(), vnmap, inf);
+    add_to_vnmap(face[idx2].as_ref()[0], face_normal, vnmap, inf);
 }
 
 fn add_to_vnmap(
@@ -106,8 +134,7 @@ fn add_to_vnmap(
     face_normal: FaceNormal,
     vnmap: &mut HashMap<usize, Vec<Vec<FaceNormal>>>,
     inf: f64,
-)
-{
+) {
     match vnmap.get_mut(&pos_id) {
         Some(vecs) => {
             for vec in vecs.iter_mut() {
@@ -131,8 +158,7 @@ fn signup_vertex_normal<T: AsMut<[[usize; 3]]>>(
     face_id: usize,
     normal_id: usize,
     face_list: &mut [T],
-)
-{
+) {
     let j = (0..face_list.len())
         .find(|j| face_list[face_id].as_mut()[*j][0] == pos_id)
         .unwrap();

@@ -16,6 +16,15 @@ impl<V: Copy> Faces<V> {
     }
 
     #[inline(always)]
+    pub fn tri_faces(&self) -> &[[V; 3]] { &self.tri_faces }
+
+    #[inline(always)]
+    pub fn quad_faces(&self) -> &[[V; 4]] { &self.quad_faces }
+
+    #[inline(always)]
+    pub fn other_faces(&self) -> &[Vec<V>] { &self.other_faces }
+
+    #[inline(always)]
     pub fn face_iter<'a>(&'a self) -> impl Iterator<Item = &'a [V]> {
         self.tri_faces
             .iter()
@@ -42,28 +51,28 @@ impl<V: Copy> Faces<V> {
 
 impl<V: AsRef<[usize]>> Faces<V> {
     #[inline(always)]
-    fn sub_into_positions(self) -> Faces<usize> {
+    fn sub_into_positions(self) -> Faces<[usize; 1]> {
         let tri_faces = self
             .tri_faces
             .iter()
-            .map(|v| [v[0].as_ref()[0], v[1].as_ref()[0], v[2].as_ref()[0]])
+            .map(|v| [[v[0].as_ref()[0]], [v[1].as_ref()[0]], [v[2].as_ref()[0]]])
             .collect();
         let quad_faces = self
             .quad_faces
             .iter()
             .map(|v| {
                 [
-                    v[0].as_ref()[0],
-                    v[1].as_ref()[0],
-                    v[2].as_ref()[0],
-                    v[3].as_ref()[0],
+                    [v[0].as_ref()[0]],
+                    [v[1].as_ref()[0]],
+                    [v[2].as_ref()[0]],
+                    [v[3].as_ref()[0]],
                 ]
             })
             .collect();
         let other_faces = self
             .other_faces
             .iter()
-            .map(|v| v.iter().map(|idx| idx.as_ref()[0]).collect())
+            .map(|v| v.iter().map(|idx| [idx.as_ref()[0]]).collect())
             .collect();
         Faces {
             tri_faces,
@@ -131,7 +140,7 @@ impl PolygonMesh {
     /// # Panics
     /// Panic occurs if there is an index is out of range.
     #[inline(always)]
-    pub fn from_positions<'a, T: AsRef<[usize]>, I: IntoIterator<Item = T>>(
+    pub fn from_positions<'a, T: AsRef<[[usize; 1]]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         face_iter: I,
     ) -> PolygonMesh {
@@ -143,14 +152,14 @@ impl PolygonMesh {
     /// Returns [`Error::OutOfRange`] if there is an index is out of range.
     ///
     /// [`Error::OutOfRange`]: ./errors/enum.Error.html#variant.OutOfRange
-    pub fn try_from_positions<'a, T: AsRef<[usize]>, I: IntoIterator<Item = T>>(
+    pub fn try_from_positions<'a, T: AsRef<[[usize; 1]]>, I: IntoIterator<Item = T>>(
         positions: Vec<Point3>,
         face_iter: I,
     ) -> Result<PolygonMesh> {
         let mut faces = Faces::default();
         for face in face_iter {
             for idx in face.as_ref() {
-                if *idx >= positions.len() {
+                if idx[0] >= positions.len() {
                     return Err(Error::OutOfRange);
                 }
             }
@@ -483,10 +492,8 @@ impl PolygonMesh {
                 },
             ) => {
                 positions.extend(another_positions);
-                let n_pos = positions.len();
-                another_faces
-                    .face_iter_mut()
-                    .for_each(move |face| face.iter_mut().for_each(move |idx| *idx += n_pos));
+                let n = [positions.len()];
+                another_faces.add_fair(n);
                 faces.naive_concat(another_faces);
                 PolygonMesh::Positions { positions, faces }
             }

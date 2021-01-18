@@ -60,7 +60,7 @@ fn write2vec<V: std::ops::Index<usize, Output = f64>, W: Write>(
     prefix: &str,
 ) -> Result<()> {
     for vec in vecs {
-        writer.write_fmt(format_args!("{} {:.7e} {:.7e}\n", prefix, vec[0], vec[1],))?;
+        writer.write_fmt(format_args!("{} {:.7e} {:.7e}\n", prefix, vec[0], vec[1]))?;
     }
     Ok(())
 }
@@ -79,7 +79,7 @@ fn write3vec<V: std::ops::Index<usize, Output = f64>, W: Write>(
     Ok(())
 }
 
-fn write_p_indices<W: Write>(writer: &mut BufWriter<W>, faces: &Faces<usize>) -> Result<()> {
+fn write_p_indices<W: Write>(writer: &mut BufWriter<W>, faces: &Faces<[usize; 1]>) -> Result<()> {
     for face in faces.face_iter() {
         writer.write(b"f")?;
         for idx in face {
@@ -177,7 +177,7 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
                         }
                     }
                     match vert.len() {
-                        1 => face1.push(vert[0]),
+                        1 => face1.push([vert[0]]),
                         2 => face2.push([vert[0], vert[1]]),
                         3 => face3.push([vert[0], vert[1], vert[2]]),
                         _ => {}

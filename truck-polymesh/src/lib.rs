@@ -39,7 +39,7 @@ pub struct Faces<V> {
 pub enum PolygonMesh {
     Positions {
         positions: Vec<Point3>,
-        faces: Faces<usize>,
+        faces: Faces<[usize; 1]>,
     },
     Textured {
         positions: Vec<Point3>,
@@ -69,7 +69,7 @@ pub struct StructuredMesh {
 
 #[derive(Clone, Copy, Debug)]
 pub enum FacesRef<'a> {
-    Positions(&'a Faces<usize>),
+    Positions(&'a Faces<[usize; 1]>),
     Textured(&'a Faces<[usize; 2]>),
     WithNormals(&'a Faces<[usize; 2]>),
     Complete(&'a Faces<[usize; 3]>),
@@ -85,7 +85,7 @@ pub mod errors;
 /// I/O of wavefront obj
 pub mod obj;
 mod polygon_mesh;
-//mod smoothing;
+mod smoothing;
 //mod splitting;
 mod structured_mesh;
 //mod structuring;
