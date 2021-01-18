@@ -1,23 +1,14 @@
 use crate::errors::Error;
 use crate::*;
 
-macro_rules! create_quad_faces {
-    ($m: expr, $n: expr, $size: tt) => {
-        Faces {
-            quad_faces: (1..$m)
-                .flat_map(|i| (1..$n).map(move |j| (i, j)))
-                .map(move |(i, j)| {
-                    [
-                        [(i - 1) * $n + j - 1; $size],
-                        [i * $n + j - 1; $size],
-                        [i * $n + j; $size],
-                        [(i - 1) * $n + j; $size],
-                    ]
-                })
-                .collect(),
-            ..Default::default()
-        }
-    };
+impl Vertex {
+    #[inline(always)]
+    fn tuple(x: usize, uv: bool, nor: bool) -> Vertex {
+        let pos = x;
+        let uv = if uv { Some(x) } else { None };
+        let nor = if nor { Some(x) } else { None };
+        Vertex { pos, uv, nor }
+    }
 }
 
 impl StructuredMesh {
@@ -164,33 +155,38 @@ impl StructuredMesh {
         let m = positions.len();
         let n = positions[0].len();
         let positions = positions.into_iter().flatten().collect();
-        let uv_coords = uv_division.map(move |(udiv, vdiv)| {
-            udiv.into_iter()
-                .flat_map(|u| vdiv.iter().map(move |v| Vector2::new(u, *v)))
-                .collect()
-        });
-        let normals = normals.map(|n| n.into_iter().flatten().collect());
-        match (uv_coords, normals) {
-            (None, None) => {
-                let faces = create_quad_faces!(m, n, 1);
-                PolygonMesh::Positions { positions, faces }
-            }
-            (Some(uv_coords), None) => PolygonMesh::Textured {
-                positions,
-                uv_coords,
-                faces: create_quad_faces!(m, n, 2),
-            },
-            (None, Some(normals)) => PolygonMesh::WithNormals {
-                positions,
-                normals,
-                faces: create_quad_faces!(m, n, 2),
-            },
-            (Some(uv_coords), Some(normals)) => PolygonMesh::Complete {
-                positions,
-                uv_coords,
-                normals,
-                faces: create_quad_faces!(m, n, 3),
-            },
+        let uv_coords = uv_division
+            .map(move |(udiv, vdiv)| {
+                udiv.into_iter()
+                    .flat_map(|u| vdiv.iter().map(move |v| Vector2::new(u, *v)))
+                    .collect()
+            })
+            .unwrap_or(Vec::new());
+        let normals = normals
+            .map(|n| n.into_iter().flatten().collect())
+            .unwrap_or(Vec::new());
+        let uv = !uv_coords.is_empty();
+        let nor = !normals.is_empty();
+        let quad_faces: Vec<_> = (1..m)
+            .flat_map(|i| (1..n).map(move |j| (i, j)))
+            .map(move |(i, j)| {
+                [
+                    Vertex::tuple((i - 1) * n + j - 1, uv, nor),
+                    Vertex::tuple(i * n + j - 1, uv, nor),
+                    Vertex::tuple(i * n + j, uv, nor),
+                    Vertex::tuple((i - 1) * n + j, uv, nor),
+                ]
+            })
+            .collect();
+        let faces = Faces {
+            quad_faces,
+            ..Default::default()
+        };
+        PolygonMesh {
+            positions,
+            uv_coords,
+            normals,
+            faces,
         }
     }
 }

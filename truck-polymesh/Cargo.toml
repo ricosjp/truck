@@ -15,9 +15,10 @@ exclude = ["tests/**/*.obj"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cgmath = "0.17.0"
+cgmath = { version = "0.17.0", features = ["serde"] }
 obj = "0.10.2"
 truck-base = { version = "0.1.0", path = "../truck-base" }
 truck-topology = { version = "0.1.0", path = "../truck-topology" }
+serde = { version = "*", features = ["derive"] }
 
 [dev-dependencies]
