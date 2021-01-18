@@ -30,6 +30,13 @@ impl<V: Copy> Faces<V> {
             .chain(self.quad_faces.iter_mut().map(|v| v.as_mut()))
             .chain(self.other_faces.iter_mut().map(|v| v.as_mut()))
     }
+
+    #[inline(always)]
+    fn naive_concat(&mut self, other: Self) {
+        self.tri_faces.extend(other.tri_faces);
+        self.quad_faces.extend(other.quad_faces);
+        self.other_faces.extend(other.other_faces);
+    }
 }
 
 impl<V: AsRef<[usize]>> Faces<V> {
@@ -62,6 +69,20 @@ impl<V: AsRef<[usize]>> Faces<V> {
             quad_faces,
             other_faces,
         }
+    }
+}
+
+impl<V: AsRef<[usize]> + AsMut<[usize]> + Copy> Faces<V> {
+    #[inline(always)]
+    fn add_fair(&mut self, plus: V) {
+        self.face_iter_mut().for_each(move |face| {
+            face.iter_mut().for_each(move |v| {
+                v.as_mut()
+                    .iter_mut()
+                    .zip(plus.as_ref())
+                    .for_each(|(idx, p)| *idx += *p)
+            })
+        });
     }
 }
 
@@ -305,6 +326,7 @@ impl PolygonMesh {
         }
     }
 
+    /// Returns the slice of all normals.
     #[inline(always)]
     pub fn normals(&self) -> &[Vector3] {
         match self {
@@ -313,6 +335,7 @@ impl PolygonMesh {
             _ => &[],
         }
     }
+    /// Returns the mutable slice of all normals.
     #[inline(always)]
     pub fn normals_mut(&mut self) -> &mut [Vector3] {
         match self {
@@ -322,6 +345,7 @@ impl PolygonMesh {
         }
     }
 
+    /// Into `PolygonMesh::Positions`.
     #[inline(always)]
     pub fn into_positions(self) -> PolygonMesh {
         match self {
@@ -347,6 +371,11 @@ impl PolygonMesh {
         }
     }
 
+    /// Into `PolygonMesh::Textured`.
+    /// # Errors
+    /// Returns [`Error::NotEnoughAttrs`] if `self` matches `PolygonMesh::Positions` or `PolygonMesh::WithNormals`.
+    /// 
+    /// [`Error::NotEnoughAttrs`]: ./errors/enum.Error.html#variant.NotEnoughAttrs
     #[inline(always)]
     pub fn try_into_textured(self) -> Result<PolygonMesh> {
         match self {
@@ -369,11 +398,20 @@ impl PolygonMesh {
         }
     }
 
+    /// Into `PolygonMesh::Textured`.
+    /// # Panics
+    /// Panic occurs if `self` matches `PolygonMesh::Positions` or `PolygonMesh::WithNormals`.
     #[inline(always)]
     pub fn into_textured(self) -> PolygonMesh {
         self.try_into_textured()
             .unwrap_or_else(|e| panic!("{:?}", e))
     }
+    
+    /// Into `PolygonMesh::Normals`.
+    /// # Errors
+    /// Returns [`Error::NotEnoughAttrs`] if `self` matches `PolygonMesh::Positions` or `PolygonMesh::Textured`.
+    /// 
+    /// [`Error::NotEnoughAttrs`]: ./errors/enum.Error.html#variant.NotEnoughAttrs
     #[inline(always)]
     pub fn try_into_with_normals(self) -> Result<PolygonMesh> {
         match self {
@@ -396,19 +434,29 @@ impl PolygonMesh {
         }
     }
 
+    /// Into `PolygonMesh::Textured`.
+    /// # Panics
+    /// Panic occurs if `self` matches `PolygonMesh::Positions` or `PolygonMesh::Textured`.
     #[inline(always)]
     pub fn into_with_normals(self) -> PolygonMesh {
         self.try_into_with_normals()
             .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
-    /// Creates the bounding box of the polygon mesh.
-    #[inline(always)]
-    pub fn bounding_box(&self) -> BoundingBox<Point3> {
-        self.positions().iter().collect()
-    }
-
     /// Returns polygonmesh merged `self` and `mesh`.
+    /// 
+    /// # Remarks
+    /// If there is a difference in the amount of information between the two meshes,
+    /// the excess information will be discarded.
+    /// More specifically, the mesh types correspond as follows:
+    /// - `PolygonMesh::Positions` + `_` => `PolygonMesh::Positions`
+    /// - `PolygonMesh::Textured` + `PolygonMesh::Textured` => `PolygonMesh::Textured`
+    /// - `PolygonMesh::Textured` + `PolygonMesh::WithNormals` => `PolygonMesh::Positions`
+    /// - `PolygonMesh::Textured` + `PolygonMesh::Complete` => `PolygonMesh::Textured`
+    /// - `PolygonMesh::WithNormals` + `PolygonMesh::WithNormals` => `PolygonMesh::WithNormals`
+    /// - `PolygonMesh::WithNormals` + `PolygonMesh::Complete` => `PolygonMesh::WithNormals`
+    /// - `PolygonMesh::Complete` + `PolygonMesh::Complete` => `PolygonMesh::WithNormals`
+    /// - _ => interchangeable
     pub fn merge(self, mesh: PolygonMesh) -> PolygonMesh {
         let tuple = (self, mesh);
         match tuple {
@@ -427,9 +475,7 @@ impl PolygonMesh {
                 another_faces
                     .face_iter_mut()
                     .for_each(move |face| face.iter_mut().for_each(move |idx| *idx += n_pos));
-                faces.tri_faces.extend(another_faces.tri_faces);
-                faces.quad_faces.extend(another_faces.quad_faces);
-                faces.other_faces.extend(another_faces.other_faces);
+                faces.naive_concat(another_faces);
                 PolygonMesh::Positions { positions, faces }
             }
             (
@@ -446,17 +492,9 @@ impl PolygonMesh {
             ) => {
                 positions.extend(another_positions);
                 uv_coords.extend(another_uv_coords);
-                let n_pos = positions.len();
-                let n_uv = uv_coords.len();
-                another_faces.face_iter_mut().for_each(move |face| {
-                    face.iter_mut().for_each(move |idx| {
-                        idx[0] += n_pos;
-                        idx[1] += n_uv;
-                    })
-                });
-                faces.tri_faces.extend(another_faces.tri_faces);
-                faces.quad_faces.extend(another_faces.quad_faces);
-                faces.other_faces.extend(another_faces.other_faces);
+                let n = [positions.len(), uv_coords.len()];
+                another_faces.add_fair(n);
+                faces.naive_concat(another_faces);
                 PolygonMesh::Textured {
                     positions,
                     uv_coords,
@@ -477,17 +515,9 @@ impl PolygonMesh {
             ) => {
                 positions.extend(another_positions);
                 normals.extend(another_normals);
-                let n_pos = positions.len();
-                let n_norm = normals.len();
-                another_faces.face_iter_mut().for_each(move |face| {
-                    face.iter_mut().for_each(move |idx| {
-                        idx[0] += n_pos;
-                        idx[1] += n_norm;
-                    })
-                });
-                faces.tri_faces.extend(another_faces.tri_faces);
-                faces.quad_faces.extend(another_faces.quad_faces);
-                faces.other_faces.extend(another_faces.other_faces);
+                let n = [positions.len(), normals.len()];
+                another_faces.add_fair(n);
+                faces.naive_concat(another_faces);
                 PolygonMesh::WithNormals {
                     positions,
                     normals,
@@ -511,19 +541,9 @@ impl PolygonMesh {
                 positions.extend(another_positions);
                 uv_coords.extend(another_uv_coords);
                 normals.extend(another_normals);
-                let n_pos = positions.len();
-                let n_uv = uv_coords.len();
-                let n_norm = normals.len();
-                another_faces.face_iter_mut().for_each(move |face| {
-                    face.iter_mut().for_each(move |idx| {
-                        idx[0] += n_pos;
-                        idx[1] += n_uv;
-                        idx[2] += n_norm;
-                    })
-                });
-                faces.tri_faces.extend(another_faces.tri_faces);
-                faces.quad_faces.extend(another_faces.quad_faces);
-                faces.other_faces.extend(another_faces.other_faces);
+                let n = [positions.len(), uv_coords.len(), normals.len()];
+                another_faces.add_fair(n);
+                faces.naive_concat(another_faces);
                 PolygonMesh::Complete {
                     positions,
                     uv_coords,
@@ -568,5 +588,10 @@ impl PolygonMesh {
                 tuple.0.into_with_normals().merge(tuple.1)
             }
         }
+    }
+    /// Creates the bounding box of the polygon mesh.
+    #[inline(always)]
+    pub fn bounding_box(&self) -> BoundingBox<Point3> {
+        self.positions().iter().collect()
     }
 }
