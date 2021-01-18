@@ -75,20 +75,12 @@ pub enum FacesRef<'a> {
     Complete(&'a Faces<[usize; 3]>),
 }
 
-#[doc(hidden)]
-/// the decorator for mesh handling
-#[derive(Clone, Debug)]
-pub struct MeshHandler {
-    mesh: PolygonMesh,
-}
-
 pub type Result<T> = std::result::Result<T, errors::Error>;
 
 /// Defines errors
 pub mod errors;
 //mod extract_topology;
 //mod healing;
-//mod mesh_handler;
 //mod meshing_shape;
 /// I/O of wavefront obj
 pub mod obj;
