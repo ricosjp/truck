@@ -59,34 +59,12 @@ pub enum PolygonMesh {
     }
 }
 
-/*
-/// mesh data
-#[derive(Clone, Debug, Default)]
-pub struct PolygonMesh {
-    /// List of positions
-    positions: Vec<Point3>,
-    /// List of texture matrix
-    uv_coords: Vec<Vector2>,
-    /// List of normal vectors
-    normals: Vec<Vector3>,
-    /// triangle faces
-    tri_faces: Vec<[[usize; 3]; 3]>,
-    /// quadrangle faces
-    quad_faces: Vec<[[usize; 3]; 4]>,
-    /// `n`-gon faces where `n` is more than 4.
-    other_faces: Vec<Vec<[usize; 3]>>,
-}
-*/
-
 /// structured quadrangle mesh
 #[derive(Clone, Debug)]
 pub struct StructuredMesh {
-    /// positions of each lattice points
-    pub positions: Vec<Vec<Point3>>,
-    /// uv coordinates
-    pub uv_division: (Vec<f64>, Vec<f64>),
-    /// normal vectors of each lattice points
-    pub normals: Vec<Vec<Vector3>>,
+    positions: Vec<Vec<Point3>>,
+    uv_division: Option<(Vec<f64>, Vec<f64>)>,
+    normals: Option<Vec<Vec<Vector3>>>,
 }
 
 #[doc(hidden)]
@@ -109,7 +87,7 @@ pub mod errors;
 mod polygon_mesh;
 //mod smoothing;
 //mod splitting;
-//mod structured_mesh;
+mod structured_mesh;
 //mod structuring;
 
 #[inline(always)]
