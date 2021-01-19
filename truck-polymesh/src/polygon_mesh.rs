@@ -24,6 +24,15 @@ impl From<[usize; 3]> for Vertex {
 
 impl Faces {
     #[inline(always)]
+    pub fn from_iter<V: Copy + Into<Vertex>, T: AsRef<[V]>, I: IntoIterator<Item = T>>(
+        iter: I,
+    ) -> Faces {
+        let mut faces = Faces::default();
+        iter.into_iter().for_each(|face| faces.push(face));
+        faces
+    }
+
+    #[inline(always)]
     pub fn push<V: Copy + Into<Vertex>, T: AsRef<[V]>>(&mut self, face: T) {
         let face = face.as_ref();
         match face.len() {
@@ -83,6 +92,16 @@ impl Faces {
         self.quad_faces.extend(other.quad_faces);
         self.other_faces.extend(other.other_faces);
     }
+
+    #[inline(always)]
+    fn is_compatible(&self, n_pos: usize, n_uv: usize, n_nor: usize) -> bool {
+        self.face_iter().flatten().all(|v| {
+            let pos_out_range = v.pos < n_pos;
+            let uv_out_range = v.uv.map(|uv| uv < n_uv).unwrap_or(true);
+            let nor_out_range = v.nor.map(|nor| nor < n_nor).unwrap_or(true);
+            pos_out_range && uv_out_range && nor_out_range
+        })
+    }
 }
 
 impl PolygonMesh {
@@ -91,13 +110,13 @@ impl PolygonMesh {
     /// Panic occurs if there is an index is out of range.
     /// # Remarks
     /// This method does not check whether the normal is normalized or not.
-    pub fn new<'a, V: Copy + Into<Vertex>, T: AsRef<[V]>, I: IntoIterator<Item = T>>(
+    pub fn new(
         positions: Vec<Point3>,
         uv_coords: Vec<Vector2>,
         normals: Vec<Vector3>,
-        face_iter: I,
+        faces: Faces,
     ) -> PolygonMesh {
-        PolygonMesh::try_new(positions, uv_coords, normals, face_iter)
+        PolygonMesh::try_new(positions, uv_coords, normals, faces)
             .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
@@ -109,31 +128,21 @@ impl PolygonMesh {
     ///
     /// # Remarks
     /// This method does not check whether the normal is normalized or not.
-    pub fn try_new<'a, V: Copy + Into<Vertex>, T: AsRef<[V]>, I: IntoIterator<Item = T>>(
+    pub fn try_new(
         positions: Vec<Point3>,
         uv_coords: Vec<Vector2>,
         normals: Vec<Vector3>,
-        face_iter: I,
+        faces: Faces,
     ) -> Result<PolygonMesh> {
-        let mut faces = Faces::default();
-        for face in face_iter {
-            for v in face.as_ref() {
-                let v = (*v).into();
-                let pos_out_range = v.pos >= positions.len();
-                let uv_out_range = v.uv.map(|uv| uv >= uv_coords.len()).unwrap_or(false);
-                let nor_out_range = v.nor.map(|nor| nor >= normals.len()).unwrap_or(false);
-                if pos_out_range || uv_out_range || nor_out_range {
-                    return Err(Error::OutOfRange);
-                }
-            }
-            faces.push(face);
+        match faces.is_compatible(positions.len(), uv_coords.len(), normals.len()) {
+            true => Ok(PolygonMesh {
+                positions,
+                uv_coords,
+                normals,
+                faces,
+            }),
+            false => Err(Error::OutOfRange),
         }
-        Ok(PolygonMesh {
-            positions,
-            uv_coords,
-            normals,
-            faces,
-        })
     }
 
     /// Returns the slice of all positions.
@@ -221,7 +230,6 @@ impl PolygonMesh {
             bound_check: true,
         }
     }
-    
     #[inline(always)]
     pub fn uncheck_editor(&mut self) -> PolygonMeshEditor {
         PolygonMeshEditor {
@@ -232,7 +240,6 @@ impl PolygonMesh {
             bound_check: false,
         }
     }
-    
     #[inline(always)]
     pub fn debug_editor(&mut self) -> PolygonMeshEditor {
         PolygonMeshEditor {

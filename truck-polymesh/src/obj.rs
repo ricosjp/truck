@@ -23,7 +23,7 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 ///     Vector3::new(0.0, -1.0, 0.0),
 ///     Vector3::new(0.0, 0.0, -1.0),
 /// ];
-/// let faces = vec![
+/// let faces = Faces::from_iter(&[
 ///     [(0, None, Some(5)), (1, None, Some(5)), (2, None, Some(5))],
 ///     [(4, None,Some(5)), (2, None, Some(5)), (1, None, Some(5))],
 ///     [(1, None, Some(4)), (0, None, Some(4)), (3, None, Some(4))],
@@ -36,7 +36,7 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 ///     [(0, None, Some(3)), (6, None, Some(3)), (3, None, Some(3))],
 ///     [(3, None, Some(2)), (6, None, Some(2)), (7, None, Some(2))],
 ///     [(3, None, Some(2)), (7, None, Some(2)), (5, None, Some(2))],
-/// ];
+/// ]);
 /// let mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
 /// obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
 /// ```
@@ -118,7 +118,7 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
     let mut positions = Vec::new();
     let mut uv_coords = Vec::new();
     let mut normals = Vec::new();
-    let mut faces = Vec::new();
+    let mut faces = Faces::default();
     let reader = BufReader::new(reader);
     for line in reader.lines().map(|s| s.unwrap()) {
         let mut args = line.split_whitespace();
