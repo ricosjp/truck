@@ -29,31 +29,16 @@ pub mod base {
 }
 pub use base::*;
 
+#[derive(Clone, Debug, Default)]
+pub struct Attributes {
+    positions: Vec<Point3>,
+}
+
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Vertex {
     pub pos: usize,
     pub uv: Option<usize>,
     pub nor: Option<usize>,
-}
-
-impl From<(usize, Option<usize>, Option<usize>)> for Vertex {
-    fn from(tuple: (usize, Option<usize>, Option<usize>)) -> Vertex {
-        Vertex {
-            pos: tuple.0,
-            uv: tuple.1,
-            nor: tuple.2,
-        }
-    }
-}
-
-impl From<[usize; 3]> for Vertex {
-    fn from(arr: [usize; 3]) -> Vertex {
-        Vertex {
-            pos: arr[0],
-            uv: Some(arr[1]),
-            nor: Some(arr[2]),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -89,7 +74,7 @@ pub mod errors;
 /// I/O of wavefront obj
 pub mod obj;
 mod polygon_mesh;
-//mod smoothing;
+mod smoothing;
 //mod splitting;
 mod structured_mesh;
 //mod structuring;
