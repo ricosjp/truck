@@ -65,7 +65,7 @@ pub type Result<T> = std::result::Result<T, errors::Error>;
 pub mod errors;
 //mod extract_topology;
 //mod healing;
-//mod meshing_shape;
+mod meshing_shape;
 /// I/O of wavefront obj
 pub mod obj;
 mod polygon_mesh;
