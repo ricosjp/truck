@@ -22,43 +22,6 @@ impl From<[usize; 3]> for Vertex {
     }
 }
 
-impl std::ops::Index<usize> for Vertex {
-    type Output = usize;
-    #[inline(always)]
-    fn index(&self, idx: usize) -> &Self::Output {
-        match idx {
-            0 => &self.pos,
-            1 => self
-                .uv
-                .as_ref()
-                .unwrap_or_else(|| panic!("{:?}", Error::OutOfRange)),
-            2 => self
-                .nor
-                .as_ref()
-                .unwrap_or_else(|| panic!("{:?}", Error::OutOfRange)),
-            _ => panic!("{:?}", Error::OutOfRange),
-        }
-    }
-}
-
-impl std::ops::IndexMut<usize> for Vertex {
-    #[inline(always)]
-    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
-        match idx {
-            0 => &mut self.pos,
-            1 => self
-                .uv
-                .as_mut()
-                .unwrap_or_else(|| panic!("{:?}", Error::OutOfRange)),
-            2 => self
-                .nor
-                .as_mut()
-                .unwrap_or_else(|| panic!("{:?}", Error::OutOfRange)),
-            _ => panic!("{:?}", Error::OutOfRange),
-        }
-    }
-}
-
 impl Faces {
     #[inline(always)]
     pub fn push<V: Copy + Into<Vertex>, T: AsRef<[V]>>(&mut self, face: T) {
