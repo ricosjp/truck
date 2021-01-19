@@ -69,7 +69,7 @@ pub mod errors;
 /// I/O of wavefront obj
 pub mod obj;
 mod polygon_mesh;
-mod smoothing;
+mod normal_filters;
 //mod splitting;
 mod structured_mesh;
 //mod structuring;

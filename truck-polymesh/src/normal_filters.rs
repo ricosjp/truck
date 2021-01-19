@@ -39,7 +39,7 @@ impl NormalFilters for PolygonMesh {
         });
         normals
             .iter_mut()
-            .for_each(|normal| *normal = normal.normalize())
+            .for_each(move |normal| *normal = normal.normalize())
     }
     fn add_naive_normals(&mut self, overwrite: bool) {
         let mut mesh = self.debug_editor();
@@ -47,7 +47,7 @@ impl NormalFilters for PolygonMesh {
         if overwrite {
             normals.clear()
         }
-        faces.face_iter_mut().for_each(|face| {
+        faces.face_iter_mut().for_each(move |face| {
             let normal = FaceNormal::new(positions, face, 0).normal;
             let mut added = false;
             face.iter_mut().for_each(|v| {
@@ -63,7 +63,7 @@ impl NormalFilters for PolygonMesh {
     }
     fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool) {
         let vnmap = self.clustering_noraml_faces(tol_ang.cos());
-        self.reflect_normal_clusters(vnmap);
+        self.reflect_normal_clusters(vnmap, overwrite);
     }
 }
 
@@ -71,48 +71,52 @@ impl PolygonMesh {
     fn clustering_noraml_faces(&self, inf: f64) -> HashMap<usize, Vec<Vec<FaceNormal>>> {
         let positions = self.positions();
         let mut vnmap = HashMap::new();
-        for (i, face) in self.face_iter().enumerate() {
-            for j in 2..face.len() {
-                add_face_normal(positions, i, face, 0, j - 1, j, &mut vnmap, inf);
-            }
-        }
+        self.face_iter()
+            .enumerate()
+            .for_each(|(i, face)| add_face_normal(positions, i, face, &mut vnmap, inf));
         vnmap
     }
 
-    fn reflect_normal_clusters(&mut self, vnmap: HashMap<usize, Vec<Vec<FaceNormal>>>) {
-        let mut new_normals = Vec::new();
-        for (pos_id, vecs) in vnmap.iter() {
+    fn reflect_normal_clusters(
+        &mut self,
+        vnmap: HashMap<usize, Vec<Vec<FaceNormal>>>,
+        overwrite: bool,
+    ) {
+        let mut mesh = self.debug_editor();
+        let (normals, faces) = (&mut mesh.normals, &mut mesh.faces);
+        if overwrite {
+            normals.clear();
+        }
+        for (pos_id, vecs) in vnmap.into_iter() {
             for vec in vecs {
-                let mut tmp = get_normal_sum(vec);
-                tmp /= tmp.magnitude();
-                new_normals.push(tmp);
-                let normal_id = new_normals.len() - 1;
+                let normal = vec
+                    .iter()
+                    .fold(Vector3::zero(), |sum, x| sum + x.normal)
+                    .normalize();
                 for FaceNormal { face_id, .. } in vec {
-                    if face_id < &self.tri_faces().len() {
-                        signup_vertex_normal(*pos_id, *face_id, normal_id, self.tri_faces_mut());
-                    } else if face_id < &(self.tri_faces().len() + self.quad_faces().len()) {
-                        let i = face_id - self.tri_faces().len();
-                        signup_vertex_normal(*pos_id, i, normal_id, self.quad_faces_mut());
+                    if face_id < faces.tri_faces().len() {
+                        signup_vertex_normal(pos_id, face_id, normals, normal, faces.tri_faces_mut(), overwrite);
+                    } else if face_id < faces.tri_faces().len() + faces.quad_faces().len() {
+                        let i = face_id - faces.tri_faces().len();
+                        signup_vertex_normal(pos_id, i, normals, normal, faces.quad_faces_mut(), overwrite);
                     } else {
-                        let i = face_id - self.tri_faces().len() - self.quad_faces().len();
-                        signup_vertex_normal(*pos_id, i, normal_id, self.other_faces_mut());
+                        let i = face_id - faces.tri_faces().len() - faces.quad_faces().len();
+                        signup_vertex_normal(pos_id, i, normals, normal, faces.other_faces_mut(), overwrite);
                     }
                 }
             }
         }
-
-        self.normals = new_normals;
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug)]
 struct FaceNormal {
     face_id: usize,
     normal: Vector3,
 }
 
 impl FaceNormal {
-    fn new(positions: &Vec<Point3>, face: &[Vertex], face_id: usize) -> FaceNormal {
+    fn new(positions: &[Point3], face: &[Vertex], face_id: usize) -> FaceNormal {
         let center = face
             .iter()
             .fold(Vector3::zero(), |sum, v| sum + positions[v.pos].to_vec())
@@ -130,30 +134,17 @@ impl FaceNormal {
     }
 }
 
-fn get_normal_sum(normals: &Vec<FaceNormal>) -> Vector3 {
-    normals
-        .iter()
-        .fold(Vector3::zero(), |sum, x| sum + &x.normal)
-}
-
-fn add_face_normal<I: AsRef<[Vertex]>>(
+fn add_face_normal(
     positions: &[Point3],
     face_id: usize,
-    face: I,
-    idx0: usize,
-    idx1: usize,
-    idx2: usize,
+    face: &[Vertex],
     vnmap: &mut HashMap<usize, Vec<Vec<FaceNormal>>>,
     inf: f64,
 ) {
-    let face = face.as_ref();
-    let vec0 = &positions[face[idx1][0]] - &positions[face[idx0][0]];
-    let vec1 = &positions[face[idx2][0]] - &positions[face[idx0][0]];
-    let normal = vec0.cross(vec1);
-    let face_normal = FaceNormal { face_id, normal };
-    add_to_vnmap(face[idx0][0], face_normal.clone(), vnmap, inf);
-    add_to_vnmap(face[idx1][0], face_normal.clone(), vnmap, inf);
-    add_to_vnmap(face[idx2][0], face_normal, vnmap, inf);
+    let face_normal = FaceNormal::new(positions, face, face_id);
+    face.iter().for_each(|v| {
+        add_to_vnmap(v.pos, face_normal, vnmap, inf);
+    })
 }
 
 fn add_to_vnmap(
@@ -165,8 +156,11 @@ fn add_to_vnmap(
     match vnmap.get_mut(&pos_id) {
         Some(vecs) => {
             for vec in vecs.iter_mut() {
-                let tmp = get_normal_sum(&*vec);
-                if face_normal.normal.cos_angle(&tmp) > inf {
+                let normal = vec
+                    .iter()
+                    .fold(Vector3::zero(), |sum, x| sum + x.normal)
+                    .normalize();
+                if face_normal.normal.dot(normal) > inf {
                     vec.push(face_normal);
                     return;
                 }
@@ -183,11 +177,17 @@ fn add_to_vnmap(
 fn signup_vertex_normal<T: AsMut<[Vertex]>>(
     pos_id: usize,
     face_id: usize,
-    normal_id: usize,
+    normals: &mut Vec<Vector3>,
+    normal: Vector3,
     face_list: &mut [T],
+    overwrite: bool,
 ) {
-    let j = (0..face_list.len())
-        .find(|j| face_list[face_id].as_mut()[*j][0] == pos_id)
+    let face = face_list[face_id].as_mut();
+    let j = (0..face.len())
+        .find(|j| face[*j].pos == pos_id)
         .unwrap();
-    face_list[face_id].as_mut()[j][2] = normal_id;
+    if face[j].nor.is_none() || overwrite {
+        normals.push(normal);
+        face[j].nor = Some(normals.len() - 1);
+    }
 }
