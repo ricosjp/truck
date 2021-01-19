@@ -29,11 +29,6 @@ pub mod base {
 }
 pub use base::*;
 
-#[derive(Clone, Debug, Default)]
-pub struct Attributes {
-    positions: Vec<Point3>,
-}
-
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Vertex {
     pub pos: usize,

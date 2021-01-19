@@ -248,6 +248,39 @@ impl PolygonMesh {
         self.faces.face_iter_mut()
     }
 
+    #[inline(always)]
+    pub fn editor(&mut self) -> PolygonMeshEditor {
+        PolygonMeshEditor {
+            positions: &mut self.positions,
+            uv_coords: &mut self.uv_coords,
+            normals: &mut self.normals,
+            faces: &mut self.faces,
+            bound_check: true,
+        }
+    }
+    
+    #[inline(always)]
+    pub fn uncheck_editor(&mut self) -> PolygonMeshEditor {
+        PolygonMeshEditor {
+            positions: &mut self.positions,
+            uv_coords: &mut self.uv_coords,
+            normals: &mut self.normals,
+            faces: &mut self.faces,
+            bound_check: false,
+        }
+    }
+    
+    #[inline(always)]
+    pub fn debug_editor(&mut self) -> PolygonMeshEditor {
+        PolygonMeshEditor {
+            positions: &mut self.positions,
+            uv_coords: &mut self.uv_coords,
+            normals: &mut self.normals,
+            faces: &mut self.faces,
+            bound_check: cfg!(debug_assertions),
+        }
+    }
+
     /// Returns polygonmesh merged `self` and `mesh`.
     pub fn merge(&mut self, mut mesh: PolygonMesh) {
         let n_pos = self.positions.len();
@@ -268,4 +301,28 @@ impl PolygonMesh {
     /// Creates the bounding box of the polygon mesh.
     #[inline(always)]
     pub fn bounding_box(&self) -> BoundingBox<Point3> { self.positions().iter().collect() }
+}
+
+pub struct PolygonMeshEditor<'a> {
+    pub positions: &'a mut Vec<Point3>,
+    pub uv_coords: &'a mut Vec<Vector2>,
+    pub normals: &'a mut Vec<Vector3>,
+    pub faces: &'a mut Faces,
+    bound_check: bool,
+}
+
+impl<'a> Drop for PolygonMeshEditor<'a> {
+    #[inline(always)]
+    fn drop(&mut self) {
+        if self.bound_check {
+            for v in self.faces.face_iter().flatten() {
+                let pos_out_range = v.pos >= self.positions.len();
+                let uv_out_range = v.uv.map(|uv| uv >= self.uv_coords.len()).unwrap_or(false);
+                let nor_out_range = v.nor.map(|nor| nor >= self.normals.len()).unwrap_or(false);
+                if pos_out_range || uv_out_range || nor_out_range {
+                    panic!("{:?}", Error::OutOfRange);
+                }
+            }
+        }
+    }
 }

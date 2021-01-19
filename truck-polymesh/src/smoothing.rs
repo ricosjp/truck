@@ -2,8 +2,14 @@ use crate::*;
 use std::collections::HashMap;
 
 pub trait NormalFilters {
+    /// First, assign `None` to the `nor` index of the vertices that has a normal of zero length,
+    /// and then normalize all normals.
     fn normalize_normals(&mut self);
-    fn add_naive_normal(&mut self, overwrite: bool);
+    /// Adds face normals to each vertices.
+    /// # Arguments
+    /// - If `overwrite == true`, clear all normals and update all normals in vertices.
+    /// - If `overwrite == false`, add normals only for `nor` is `None`.
+    fn add_naive_normals(&mut self, overwrite: bool);
     /// add the smooth normal vectors to the mesh.
     /// # Details
     /// For each vertex, apply the following algorithm:
@@ -14,73 +20,54 @@ pub trait NormalFilters {
     /// average of `A` and `n` is less than or equal to `tol_ang`, add `n` to `A`.
     ///  * If cluster `A` as described above does not exist,
     /// create a new cluster that contains only `n`.
+    /// # Arguments
+    /// - If `overwrite == true`, clear all normals and update all normals in vertices.
+    /// - If `overwrite == false`, add normals only for `nor` is `None`.
     fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool);
 }
 
 impl NormalFilters for PolygonMesh {
     fn normalize_normals(&mut self) {
-        
-    }
-    fn add_naive_normal(&mut self, overwrite: bool) {
-        let normals = self
-            .face_iter()
-            .map(|face| {
-                let center = face.iter().fold(Vector3::zero(), |sum, v| {
-                    sum + self.positions()[v.pos].to_vec()
-                }) / face.len() as f64;
-                face.windows(2)
-                    .fold(Vector3::zero(), |sum, v| {
-                        let vec0 = self.positions()[v[0].pos].to_vec() - center;
-                        let vec1 = self.positions()[v[1].pos].to_vec() - center;
-                        sum + vec0.cross(vec1)
-                    })
-                    .normalize()
-            })
-            .collect::<Vec<_>>();
-        let mut counter = 0;
-        let n_normals = self.normals().len();
-        let added = self
-            .face_iter_mut()
-            .zip(normals)
-            .filter_map(|(face, normal)| {
-                let added = face.iter_mut().fold(false, |flag, v| {
-                    let nor_none = v.nor.is_none();
-                    if nor_none || overwrite {
-                        v.nor = Some(n_normals + counter);
-                    }
-                    flag || nor_none
-                });
-                if added {
-                    counter += 1;
-                    Some(normal)
-                } else {
-                    None
+        let mut mesh = self.debug_editor();
+        let (normals, faces) = (&mut mesh.normals, &mut mesh.faces);
+        faces.face_iter_mut().flatten().for_each(|v| {
+            if let Some(idx) = v.nor {
+                if normals[idx].magnitude2().so_small2() {
+                    v.nor = None;
                 }
-            })
-            .collect::<Vec<_>>();
-        self.extend_normals(added);
+            }
+        });
+        normals
+            .iter_mut()
+            .for_each(|normal| *normal = normal.normalize())
     }
-    fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool) {}
-}
-
-/// mesh smoothing filters
-impl PolygonMesh {
-    /// add the smooth normal vectors to the mesh.
-    /// # Details
-    /// For each vertex, apply the following algorithm:
-    /// 1. prepare vectors that enumerate the normals of the faces containing
-    /// the target vertices in order.
-    /// 1. cluster each normal `n` in turn in the following manner.
-    ///  * If there is an existing cluster `A` in which the angle between the weighted
-    /// average of `A` and `n` is less than or equal to `tol_ang`, add `n` to `A`.
-    ///  * If cluster `A` as described above does not exist,
-    /// create a new cluster that contains only `n`.
-    pub fn add_smooth_normal(&mut self, tol_ang: f64) -> &mut Self {
+    fn add_naive_normals(&mut self, overwrite: bool) {
+        let mut mesh = self.debug_editor();
+        let (positions, normals, faces) = (&mesh.positions, &mut mesh.normals, &mut mesh.faces);
+        if overwrite {
+            normals.clear()
+        }
+        faces.face_iter_mut().for_each(|face| {
+            let normal = FaceNormal::new(positions, face, 0).normal;
+            let mut added = false;
+            face.iter_mut().for_each(|v| {
+                if v.nor.is_none() || overwrite {
+                    if !added {
+                        normals.push(normal);
+                        added = true;
+                    }
+                    v.nor = Some(normals.len() - 1);
+                }
+            });
+        });
+    }
+    fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool) {
         let vnmap = self.clustering_noraml_faces(tol_ang.cos());
         self.reflect_normal_clusters(vnmap);
-        self
     }
+}
 
+impl PolygonMesh {
     fn clustering_noraml_faces(&self, inf: f64) -> HashMap<usize, Vec<Vec<FaceNormal>>> {
         let positions = self.positions();
         let mut vnmap = HashMap::new();
@@ -122,6 +109,25 @@ impl PolygonMesh {
 struct FaceNormal {
     face_id: usize,
     normal: Vector3,
+}
+
+impl FaceNormal {
+    fn new(positions: &Vec<Point3>, face: &[Vertex], face_id: usize) -> FaceNormal {
+        let center = face
+            .iter()
+            .fold(Vector3::zero(), |sum, v| sum + positions[v.pos].to_vec())
+            / face.len() as f64;
+        let normal = face
+            .windows(2)
+            .chain(std::iter::once([face[face.len() - 1], face[0]].as_ref()))
+            .fold(Vector3::zero(), |sum, v| {
+                let vec0 = positions[v[0].pos].to_vec() - center;
+                let vec1 = positions[v[1].pos].to_vec() - center;
+                sum + vec0.cross(vec1)
+            })
+            .normalize();
+        FaceNormal { face_id, normal }
+    }
 }
 
 fn get_normal_sum(normals: &Vec<FaceNormal>) -> Vector3 {
