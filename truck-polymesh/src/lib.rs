@@ -20,7 +20,6 @@
 )]
 */
 
-extern crate truck_topology as topology;
 use serde::{Deserialize, Serialize};
 
 /// re-export `truck_base`.
@@ -64,7 +63,6 @@ pub type Result<T> = std::result::Result<T, errors::Error>;
 pub mod prelude;
 /// Defines errors
 pub mod errors;
-//mod extract_topology;
 mod eliminate_waste;
 mod meshing_shape;
 /// I/O of wavefront obj

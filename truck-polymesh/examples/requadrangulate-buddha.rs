@@ -1,4 +1,4 @@
-use truck_polymesh::*;
+use truck_polymesh::prelude::*;
 
 const INPUT: &str = "tests/data/happy-buddha.obj";
 const OUTPUT: &str = "requadrangulated-buddha.obj";
@@ -6,16 +6,15 @@ const OUTPUT: &str = "requadrangulated-buddha.obj";
 fn main() {
     let instant = std::time::Instant::now();
     let file = std::fs::File::open(INPUT).unwrap();
-    let mesh = obj::read(file).unwrap();
+    let mut mesh = obj::read(file).unwrap();
     let read_time = instant.elapsed();
-    let first_quads = mesh.quad_faces.len();
+    let first_quads = mesh.quad_faces().len();
     let instant = std::time::Instant::now();
-    let mut handler = MeshHandler::new(mesh);
-    handler.triangulate().quadrangulate(0.01, 1.0);
+    mesh.triangulate().quadrangulate(0.01, 1.0);
     let filter_time = instant.elapsed();
-    let mesh: PolygonMesh = handler.into();
-    let tris = mesh.tri_faces.len();
-    let quads = mesh.quad_faces.len();
+    let mesh: PolygonMesh = mesh.into();
+    let tris = mesh.tri_faces().len();
+    let quads = mesh.quad_faces().len();
     let instant = std::time::Instant::now();
     let file = std::fs::File::create(OUTPUT).unwrap();
     obj::write(&mesh, file).unwrap();

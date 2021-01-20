@@ -23,7 +23,7 @@ pub trait NormalFilters {
     /// # Arguments
     /// - If `overwrite == true`, clear all normals and update all normals in vertices.
     /// - If `overwrite == false`, add normals only for `nor` is `None`.
-    fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool) -> &mut Self;
+    fn add_smooth_normals(&mut self, tol_ang: f64, overwrite: bool) -> &mut Self;
 }
 
 impl NormalFilters for PolygonMesh {
@@ -65,7 +65,7 @@ impl NormalFilters for PolygonMesh {
         drop(mesh);
         self
     }
-    fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool) -> &mut Self {
+    fn add_smooth_normals(&mut self, tol_ang: f64, overwrite: bool) -> &mut Self {
         let vnmap = self.clustering_noraml_faces(tol_ang.cos());
         self.reflect_normal_clusters(vnmap, overwrite);
         self
