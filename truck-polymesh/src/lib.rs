@@ -42,7 +42,7 @@ pub struct Faces {
 }
 
 /// Polygon mesh
-/// 
+///
 /// The polygon data is held in a method compliant with wavefront obj.
 /// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
 /// and each face vertex accesses those values by an indices triple.
@@ -65,20 +65,27 @@ pub struct StructuredMesh {
 /// Error handler for [`Error`](./errors/enum.Error.html)
 pub type Result<T> = std::result::Result<T, errors::Error>;
 
-/// Re-exports root structs and all mesh filter traits.
-pub mod prelude;
+mod eliminate_waste;
 /// Defines errors
 pub mod errors;
-mod eliminate_waste;
 mod meshing_shape;
+mod normal_filters;
 /// I/O of wavefront obj
 pub mod obj;
 /// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
 pub mod polygon_mesh;
-mod normal_filters;
 mod splitting;
 mod structured_mesh;
 mod structuring;
+
+/// Re-exports root structs and all mesh filter traits.
+pub mod prelude {
+    pub use crate::*;
+    pub use eliminate_waste::WasteEliminatingFilter;
+    pub use normal_filters::NormalFilters;
+    pub use splitting::Splitting;
+    pub use structuring::StructuringFilter;
+}
 
 #[inline(always)]
 fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {
