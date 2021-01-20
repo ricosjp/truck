@@ -40,7 +40,7 @@ impl<'a> Rendered for BGCheckPolygonInstance<'a> {
     }
 }
 
-fn test_polygons() -> [PolygonMesh; 3] {
+fn test_polygons() -> [PolygonMesh; 2] {
     let positions = vec![
         Point3::new(-1.0, 2.0, -1.0),
         Point3::new(1.0, 2.0, -1.0),
@@ -60,34 +60,28 @@ fn test_polygons() -> [PolygonMesh; 3] {
         Vector3::new(1.0, 0.2, 1.0),
     ];
     let tri_faces = vec![
-        [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
-        [[2, 2, 2], [1, 1, 1], [3, 3, 3]],
+        [[0, 0, 0].into(), [1, 1, 1].into(), [2, 2, 2].into()],
+        [[2, 2, 2].into(), [1, 1, 1].into(), [3, 3, 3].into()],
     ];
-    let quad_faces = vec![[[0, 0, 0], [1, 1, 1], [3, 3, 3], [2, 2, 2]]];
-    let other_faces = vec![vec![[0, 0, 0], [1, 1, 1], [3, 3, 3], [2, 2, 2]]];
-
+    let quad_faces = vec![[
+        [0, 0, 0].into(),
+        [1, 1, 1].into(),
+        [3, 3, 3].into(),
+        [2, 2, 2].into(),
+    ]];
     [
-        PolygonMesh {
-            positions: positions.clone(),
-            uv_coords: uv_coords.clone(),
-            normals: normals.clone(),
-            tri_faces,
-            ..Default::default()
-        },
-        PolygonMesh {
-            positions: positions.clone(),
-            uv_coords: uv_coords.clone(),
-            normals: normals.clone(),
-            quad_faces,
-            ..Default::default()
-        },
-        PolygonMesh {
-            positions,
-            uv_coords,
-            normals,
-            other_faces,
-            ..Default::default()
-        },
+        PolygonMesh::new(
+            positions.clone(),
+            uv_coords.clone(),
+            normals.clone(),
+            Faces::from_tri_and_quad_faces(tri_faces, Vec::new()),
+        ),
+        PolygonMesh::new(
+            positions.clone(),
+            uv_coords.clone(),
+            normals.clone(),
+            Faces::from_tri_and_quad_faces(Vec::new(), quad_faces),
+        ),
     ]
 }
 

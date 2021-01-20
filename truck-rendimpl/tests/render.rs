@@ -18,7 +18,7 @@ fn test_scene() -> Scene {
         handler,
         &SceneDescriptor {
             camera: Camera::perspective_camera(
-                Matrix4::look_at(
+                Matrix4::look_at_rh(
                     Point3::new(-1.0, 2.5, 2.0),
                     Point3::new(0.25, 0.25, 0.25),
                     Vector3::unit_y(),
@@ -65,20 +65,49 @@ fn polygon_cube() -> PolygonMesh {
         Vector3::new(0.0, 0.0, -1.0),
     ];
     let quad_faces = vec![
-        [[0, 0, 4], [1, 1, 4], [5, 2, 4], [3, 3, 4]],
-        [[0, 0, 5], [2, 1, 5], [6, 2, 5], [1, 3, 5]],
-        [[0, 0, 3], [3, 1, 3], [4, 2, 3], [2, 3, 3]],
-        [[7, 0, 2], [4, 1, 2], [3, 2, 2], [5, 3, 2]],
-        [[7, 0, 1], [6, 1, 1], [2, 2, 1], [4, 3, 1]],
-        [[7, 0, 0], [5, 1, 0], [1, 2, 0], [6, 3, 0]],
+        [
+            [0, 0, 4].into(),
+            [1, 1, 4].into(),
+            [5, 2, 4].into(),
+            [3, 3, 4].into(),
+        ],
+        [
+            [0, 0, 5].into(),
+            [2, 1, 5].into(),
+            [6, 2, 5].into(),
+            [1, 3, 5].into(),
+        ],
+        [
+            [0, 0, 3].into(),
+            [3, 1, 3].into(),
+            [4, 2, 3].into(),
+            [2, 3, 3].into(),
+        ],
+        [
+            [7, 0, 2].into(),
+            [4, 1, 2].into(),
+            [3, 2, 2].into(),
+            [5, 3, 2].into(),
+        ],
+        [
+            [7, 0, 1].into(),
+            [6, 1, 1].into(),
+            [2, 2, 1].into(),
+            [4, 3, 1].into(),
+        ],
+        [
+            [7, 0, 0].into(),
+            [5, 1, 0].into(),
+            [1, 2, 0].into(),
+            [6, 3, 0].into(),
+        ],
     ];
-    PolygonMesh {
+    PolygonMesh::new(
         positions,
         uv_coords,
         normals,
-        quad_faces,
-        ..Default::default()
-    }
+        Faces::from_tri_and_quad_faces(Vec::new(), quad_faces),
+    )
 }
 
 fn shape_cube() -> Solid {
