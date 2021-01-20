@@ -146,15 +146,15 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
                     let mut iter = vert_str.split("/");
                     let pos = iter
                         .next()
-                        .map(|val| val.parse::<usize>().ok())
+                        .map(|val| val.parse::<usize>().map(|i| i - 1).ok())
                         .unwrap_or(None);
                     let uv = iter
                         .next()
-                        .map(|val| val.parse::<usize>().ok())
+                        .map(|val| val.parse::<usize>().map(|i| i - 1).ok())
                         .unwrap_or(None);
                     let nor = iter
                         .next()
-                        .map(|val| val.parse::<usize>().ok())
+                        .map(|val| val.parse::<usize>().map(|i| i - 1).ok())
                         .unwrap_or(None);
                     let vert = match (pos, uv, nor) {
                         (None, _, _) => continue,
