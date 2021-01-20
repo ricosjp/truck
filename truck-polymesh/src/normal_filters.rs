@@ -94,15 +94,7 @@ impl PolygonMesh {
                     .fold(Vector3::zero(), |sum, x| sum + x.normal)
                     .normalize();
                 for FaceNormal { face_id, .. } in vec {
-                    if face_id < faces.tri_faces().len() {
-                        signup_vertex_normal(pos_id, face_id, normals, normal, faces.tri_faces_mut(), overwrite);
-                    } else if face_id < faces.tri_faces().len() + faces.quad_faces().len() {
-                        let i = face_id - faces.tri_faces().len();
-                        signup_vertex_normal(pos_id, i, normals, normal, faces.quad_faces_mut(), overwrite);
-                    } else {
-                        let i = face_id - faces.tri_faces().len() - faces.quad_faces().len();
-                        signup_vertex_normal(pos_id, i, normals, normal, faces.other_faces_mut(), overwrite);
-                    }
+                    signup_vertex_normal(pos_id, face_id, normals, normal, faces, overwrite);
                 }
             }
         }
@@ -174,18 +166,16 @@ fn add_to_vnmap(
     }
 }
 
-fn signup_vertex_normal<T: AsMut<[Vertex]>>(
+fn signup_vertex_normal(
     pos_id: usize,
     face_id: usize,
     normals: &mut Vec<Vector3>,
     normal: Vector3,
-    face_list: &mut [T],
+    faces: &mut Faces,
     overwrite: bool,
 ) {
-    let face = face_list[face_id].as_mut();
-    let j = (0..face.len())
-        .find(|j| face[*j].pos == pos_id)
-        .unwrap();
+    let face = faces[face_id].as_mut();
+    let j = (0..face.len()).find(|j| face[*j].pos == pos_id).unwrap();
     if face[j].nor.is_none() || overwrite {
         normals.push(normal);
         face[j].nor = Some(normals.len() - 1);

@@ -104,6 +104,31 @@ impl Faces {
     }
 }
 
+impl std::ops::Index<usize> for Faces {
+    type Output = [Vertex];
+    fn index(&self, idx: usize) -> &Self::Output {
+        if idx < self.tri_faces.len() {
+            &self.tri_faces[idx]
+        } else if idx < self.tri_faces.len() + self.quad_faces.len() {
+            &self.quad_faces[idx - self.tri_faces.len()]
+        } else {
+            &self.other_faces[idx - self.tri_faces.len() - self.quad_faces.len()]
+        }
+    }
+}
+
+impl std::ops::IndexMut<usize> for Faces {
+    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
+        if idx < self.tri_faces.len() {
+            &mut self.tri_faces[idx]
+        } else if idx < self.tri_faces.len() + self.quad_faces.len() {
+            &mut self.quad_faces[idx - self.tri_faces.len()]
+        } else {
+            &mut self.other_faces[idx - self.tri_faces.len() - self.quad_faces.len()]
+        }
+    }
+}
+
 impl PolygonMesh {
     /// complete constructor
     /// # Panics
