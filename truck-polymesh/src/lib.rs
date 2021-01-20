@@ -73,7 +73,7 @@ mod polygon_mesh;
 mod normal_filters;
 mod splitting;
 mod structured_mesh;
-//mod structuring;
+mod structuring;
 
 #[inline(always)]
 fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {

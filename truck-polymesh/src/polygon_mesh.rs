@@ -32,6 +32,18 @@ impl Faces {
         faces
     }
 
+    #[inline(always)]
+    pub fn from_tri_and_quad_faces(
+        tri_faces: Vec<[Vertex; 3]>,
+        quad_faces: Vec<[Vertex; 4]>,
+    ) -> Faces {
+        Faces {
+            tri_faces,
+            quad_faces,
+            other_faces: Vec::new(),
+        }
+    }
+
     /// Push a face to the faces. If `face.len() < 3`, the face is ignored.
     #[inline(always)]
     pub fn push<V: Copy + Into<Vertex>, T: AsRef<[V]>>(&mut self, face: T) {
@@ -55,19 +67,19 @@ impl Faces {
         }
     }
     #[inline(always)]
-    pub fn tri_faces(&self) -> &[[Vertex; 3]] { &self.tri_faces }
+    pub fn tri_faces(&self) -> &Vec<[Vertex; 3]> { &self.tri_faces }
 
     #[inline(always)]
     pub fn tri_faces_mut(&mut self) -> &mut [[Vertex; 3]] { &mut self.tri_faces }
 
     #[inline(always)]
-    pub fn quad_faces(&self) -> &[[Vertex; 4]] { &self.quad_faces }
+    pub fn quad_faces(&self) -> &Vec<[Vertex; 4]> { &self.quad_faces }
 
     #[inline(always)]
     pub fn quad_faces_mut(&mut self) -> &mut [[Vertex; 4]] { &mut self.quad_faces }
 
     #[inline(always)]
-    pub fn other_faces(&self) -> &[Vec<Vertex>] { &self.other_faces }
+    pub fn other_faces(&self) -> &Vec<Vec<Vertex>> { &self.other_faces }
 
     #[inline(always)]
     pub fn other_faces_mut(&mut self) -> &mut [Vec<Vertex>] { &mut self.other_faces }
@@ -181,7 +193,7 @@ impl PolygonMesh {
 
     /// Returns the slice of all positions.
     #[inline(always)]
-    pub fn positions(&self) -> &[Point3] { &self.positions }
+    pub fn positions(&self) -> &Vec<Point3> { &self.positions }
 
     /// Returns the mutable slice of all positions.
     #[inline(always)]
@@ -199,7 +211,7 @@ impl PolygonMesh {
 
     /// Returns the slice of all uv coords.
     #[inline(always)]
-    pub fn uv_coords(&self) -> &[Vector2] { &self.uv_coords }
+    pub fn uv_coords(&self) -> &Vec<Vector2> { &self.uv_coords }
 
     /// Returns the mutable slice of all uv coords.
     #[inline(always)]
@@ -217,7 +229,7 @@ impl PolygonMesh {
 
     /// Returns the slice of all normals.
     #[inline(always)]
-    pub fn normals(&self) -> &[Vector3] { &self.normals }
+    pub fn normals(&self) -> &Vec<Vector3> { &self.normals }
     /// Returns the mutable slice of all normals.
     #[inline(always)]
     pub fn normals_mut(&mut self) -> &mut [Vector3] { &mut self.normals }
