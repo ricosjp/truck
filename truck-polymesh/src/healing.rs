@@ -3,30 +3,19 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 use std::ops::{Div, Mul};
 
-trait CastIntVector: Sized + Mul<f64, Output = Self> + Div<f64, Output = Self> {
-    type IntVector: std::hash::Hash + Eq;
-    fn cast_int(&self) -> Self::IntVector;
-}
-
-mod impl_cast_int {
-    use cgmath::{Point3, Vector2, Vector3};
-    macro_rules! impl_cast_int {
-        ($typename: ident) => {
-            impl super::CastIntVector for $typename<f64> {
-                type IntVector = $typename<i64>;
-                fn cast_int(&self) -> $typename<i64> { self.cast::<i64>().unwrap() }
-            }
-        };
-    }
-    impl_cast_int!(Vector2);
-    impl_cast_int!(Vector3);
-    impl_cast_int!(Point3);
+/// Filters eliminating waste
+pub trait WasteEliminatingFilter {
+    /// remove all unused position, texture coordinates, and normal vectors.
+    fn remove_unused_attrs(&mut self) -> &mut Self;
+    /// remove degenerate polygons.
+    fn remove_degenerate_faces(&mut self) -> &mut Self;
+    /// Gives the same indices to the same positions, texture coordinate, and normal vectors, respectively.
+    fn put_together_same_attrs(&mut self) -> &mut Self;
 }
 
 /// mesh healing algorithms
-impl PolygonMesh {
-    /// remove all unused position, texture coordinates, and normal vectors.
-    pub fn remove_unused_attrs(&mut self) -> &mut Self {
+impl WasteEliminatingFilter for PolygonMesh {
+    fn remove_unused_attrs(&mut self) -> &mut Self {
         let mesh = self.debug_editor();
         let pos_iter = mesh.faces.face_iter().flatten().map(|v| v.pos);
         let idcs = sub_remove_unused_attrs(pos_iter, mesh.positions.len());
@@ -41,8 +30,7 @@ impl PolygonMesh {
         self
     }
 
-    /// remove degenerate triangles and quadrangles.
-    pub fn remove_degenerate_faces(&mut self) -> &mut Self {
+    fn remove_degenerate_faces(&mut self) -> &mut Self {
         let mesh = self.debug_editor();
         let positions = &mesh.positions;
         let mut faces = Faces::default();
@@ -61,8 +49,7 @@ impl PolygonMesh {
         self
     }
 
-    /// give the same indices to the same positions, texture coordinate, and normal vectors, respectively.
-    pub fn put_together_same_attrs(&mut self) -> &mut Self {
+    fn put_together_same_attrs(&mut self) -> &mut Self {
         let mesh = self.debug_editor();
         let bnd_box: BoundingBox<_> = mesh.positions.iter().collect();
         let center = bnd_box.center();
@@ -118,4 +105,24 @@ fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usiz
 
 fn reindex<T: Clone>(vec: &Vec<T>, idcs: &Vec<usize>) -> Vec<T> {
     idcs.iter().map(|i| vec[*i].clone()).collect()
+}
+
+trait CastIntVector: Sized + Mul<f64, Output = Self> + Div<f64, Output = Self> {
+    type IntVector: std::hash::Hash + Eq;
+    fn cast_int(&self) -> Self::IntVector;
+}
+
+mod impl_cast_int {
+    use cgmath::{Point3, Vector2, Vector3};
+    macro_rules! impl_cast_int {
+        ($typename: ident) => {
+            impl super::CastIntVector for $typename<f64> {
+                type IntVector = $typename<i64>;
+                fn cast_int(&self) -> $typename<i64> { self.cast::<i64>().unwrap() }
+            }
+        };
+    }
+    impl_cast_int!(Vector2);
+    impl_cast_int!(Vector3);
+    impl_cast_int!(Point3);
 }

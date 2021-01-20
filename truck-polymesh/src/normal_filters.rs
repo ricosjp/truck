@@ -4,12 +4,12 @@ use std::collections::HashMap;
 pub trait NormalFilters {
     /// First, assign `None` to the `nor` index of the vertices that has a normal of zero length,
     /// and then normalize all normals.
-    fn normalize_normals(&mut self);
+    fn normalize_normals(&mut self) -> &mut Self;
     /// Adds face normals to each vertices.
     /// # Arguments
     /// - If `overwrite == true`, clear all normals and update all normals in vertices.
     /// - If `overwrite == false`, add normals only for `nor` is `None`.
-    fn add_naive_normals(&mut self, overwrite: bool);
+    fn add_naive_normals(&mut self, overwrite: bool) -> &mut Self;
     /// add the smooth normal vectors to the mesh.
     /// # Details
     /// For each vertex, apply the following algorithm:
@@ -23,11 +23,11 @@ pub trait NormalFilters {
     /// # Arguments
     /// - If `overwrite == true`, clear all normals and update all normals in vertices.
     /// - If `overwrite == false`, add normals only for `nor` is `None`.
-    fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool);
+    fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool) -> &mut Self;
 }
 
 impl NormalFilters for PolygonMesh {
-    fn normalize_normals(&mut self) {
+    fn normalize_normals(&mut self) -> &mut Self {
         let mut mesh = self.debug_editor();
         let (normals, faces) = (&mut mesh.normals, &mut mesh.faces);
         faces.face_iter_mut().flatten().for_each(|v| {
@@ -39,9 +39,11 @@ impl NormalFilters for PolygonMesh {
         });
         normals
             .iter_mut()
-            .for_each(move |normal| *normal = normal.normalize())
+            .for_each(move |normal| *normal = normal.normalize());
+        drop(mesh);
+        self
     }
-    fn add_naive_normals(&mut self, overwrite: bool) {
+    fn add_naive_normals(&mut self, overwrite: bool) -> &mut Self {
         let mut mesh = self.debug_editor();
         let (positions, normals, faces) = (&mesh.positions, &mut mesh.normals, &mut mesh.faces);
         if overwrite {
@@ -60,10 +62,13 @@ impl NormalFilters for PolygonMesh {
                 }
             });
         });
+        drop(mesh);
+        self
     }
-    fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool) {
+    fn add_smooth_normal(&mut self, tol_ang: f64, overwrite: bool) -> &mut Self {
         let vnmap = self.clustering_noraml_faces(tol_ang.cos());
         self.reflect_normal_clusters(vnmap, overwrite);
+        self
     }
 }
 
