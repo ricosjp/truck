@@ -32,10 +32,14 @@ impl Faces {
         faces
     }
 
+    /// Push a face to the faces. If `face.len() < 3`, the face is ignored.
     #[inline(always)]
     pub fn push<V: Copy + Into<Vertex>, T: AsRef<[V]>>(&mut self, face: T) {
         let face = face.as_ref();
         match face.len() {
+            0 => {}
+            1 => {}
+            2 => {}
             3 => self
                 .tri_faces
                 .push([face[0].into(), face[1].into(), face[2].into()]),
