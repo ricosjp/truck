@@ -37,6 +37,7 @@ impl PolygonMesh {
         let nor_iter = mesh.faces.face_iter().flatten().filter_map(|v| v.nor);
         let idcs = sub_remove_unused_attrs(nor_iter, mesh.normals.len());
         *mesh.normals = reindex(&mesh.normals, &idcs);
+        drop(mesh);
         self
     }
 
@@ -46,15 +47,17 @@ impl PolygonMesh {
         let positions = &mesh.positions;
         let mut faces = Faces::default();
         for face in mesh.faces.face_iter() {
-            let new_face = Vec::new();
+            let mut new_face = Vec::new();
             new_face.push(face[0]);
             face.windows(2).for_each(|pair| {
-                if pair[0].pos != pair[1].pos {
+                if positions[pair[0].pos].near(&positions[pair[1].pos]) {
                     new_face.push(pair[1]);
                 }
             });
             faces.push(new_face);
         }
+        *mesh.faces = faces;
+        drop(mesh);
         self
     }
 
@@ -64,26 +67,22 @@ impl PolygonMesh {
         let bnd_box: BoundingBox<_> = mesh.positions.iter().collect();
         let center = bnd_box.center();
         let diag = bnd_box.diagonal();
-        //let normalized_positions = mesh.positions.iter().map(move |position| {
-        //}).collect::<Vec<_>>();
-
-
-        let vert_map = sub_put_together_same_attrs(&mesh.positions);
-        reflect_matching(&mut mesh.faces.tri_faces, 0, &vert_map);
-        reflect_matching(&mut mesh.faces.quad_faces, 0, &vert_map);
-        reflect_matching(&mut mesh.faces.other_faces, 0, &vert_map);
-        if !mesh.uv_coords.is_empty() {
-            let uv_map = sub_put_together_same_attrs(&mesh.uv_coords);
-            reflect_matching(&mut mesh.faces.tri_faces, 1, &uv_map);
-            reflect_matching(&mut mesh.faces.quad_faces, 1, &uv_map);
-            reflect_matching(&mut mesh.faces.other_faces, 1, &uv_map);
+        let normalized_positions = mesh.positions.iter().map(move |position| {
+            2.0 * (position - center).zip(diag, |a, b| a / b)
+        }).collect::<Vec<_>>();
+        let pos_map = sub_put_together_same_attrs(&normalized_positions);
+        for idx in mesh.faces.face_iter_mut().flatten().map(|v| &mut v.pos) {
+            *idx = pos_map[*idx];
         }
-        if !mesh.normals.is_empty() {
-            let norm_map = sub_put_together_same_attrs(&mesh.normals);
-            reflect_matching(&mut mesh.faces.tri_faces, 2, &norm_map);
-            reflect_matching(&mut mesh.faces.quad_faces, 2, &norm_map);
-            reflect_matching(&mut mesh.faces.other_faces, 2, &norm_map);
+        let uv_map = sub_put_together_same_attrs(&mesh.uv_coords);
+        for idx in mesh.faces.face_iter_mut().flatten().filter_map(|v| v.uv.as_mut()) {
+            *idx = uv_map[*idx];
         }
+        let nor_map = sub_put_together_same_attrs(&mesh.normals);
+        for idx in mesh.faces.face_iter_mut().flatten().filter_map(|v| v.nor.as_mut()) {
+            *idx = nor_map[*idx];
+        }
+        drop(mesh);
         self
     }
 }
@@ -92,23 +91,13 @@ fn sub_remove_unused_attrs<I: Iterator<Item=usize>>(iter: I, old_len: usize) -> 
     let mut new2old = Vec::new();
     let mut old2new = vec![None; old_len];
     for idx in iter {
-        idx = match old2new[idx] {
-            Some(k) => k,
-            None => {
-                let k = new2old.len();
-                new2old.push(idx);
-                old2new[idx] = Some(k);
-                k
-            }
+        if old2new[idx].is_none() {
+            let k = new2old.len();
+            new2old.push(idx);
+            old2new[idx] = Some(k);
         }
     }
     new2old
-}
-
-fn is_degenerate_tri(positions: &Vec<Point3>, i0: usize, i1: usize, i2: usize) -> bool {
-    positions[i0].near(&positions[i1])
-        || positions[i0].near(&positions[i2])
-        || positions[i1].near(&positions[i2])
 }
 
 fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usize> {
@@ -125,14 +114,6 @@ fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usiz
         }
     }
     res
-}
-
-fn reflect_matching<T: AsMut<[Vertex]>>(faces: &mut [T], i: usize, map: &Vec<usize>) {
-    for face in faces.iter_mut() {
-        for vert in face.as_mut() {
-            vert[i] = map[vert[i]];
-        }
-    }
 }
 
 fn reindex<T: Clone>(vec: &Vec<T>, idcs: &Vec<usize>) -> Vec<T> {
