@@ -1,15 +1,47 @@
-use crate::errors::Error;
 use crate::*;
-use crate::prelude::*;
+use prelude::*;
+use normal_filters::FaceNormal;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
+/// Splitting the faces into several clusters.
+pub trait Splitting {
+    /// Creates a polygon mesh by the face indices.
+    fn create_mesh_by_face_indices(&self, indices: &[usize]) -> PolygonMesh;
+    /// Extract polygons such that there exists its normal is the same as its face normal.
+    fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>);
+    /// Splits into the components.
+    /// # Details
+    /// Two polygons are considered to be in the same component if they share an edge
+    /// whose vertices has the same positions and normals.
+    fn into_components(&self) -> Vec<Vec<usize>>;
+}
+
+impl Splitting for PolygonMesh {
+    fn create_mesh_by_face_indices(&self, indices: &[usize]) -> PolygonMesh {
+        let positions = self.positions.clone();
+        let uv_coords = self.uv_coords.clone();
+        let normals = self.normals.clone();
+        let faces = Faces::from_iter(indices.iter().map(|i| &self.faces()[*i]));
+        let mut mesh = PolygonMesh::new(positions, uv_coords, normals, faces);
+        mesh.remove_unused_attrs();
+        mesh
+    }
+
+    fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        self.faces_into_two_clusters(|face: &[Vertex]| {
+            is_in_the_plane(self.positions(), self.normals(), face, tol * tol)
+        })
+    }
+
+    fn into_components(&self) -> Vec<Vec<usize>> {
+        let face_adjacency = self.faces().face_adjacency();
+        get_components(&face_adjacency)
+    }
+}
+
 impl Faces {
     /// create the adjacency list of the faces  
-    /// # Remarks
-    /// the indices of faces are serial number of all kinds of faces, i.e.
-    /// * the `i`th quad face is identified as the `i + tri_faces.len()`th face, and
-    /// * the `i`th other face is identified as the `i + tri_faces.len() + quad_faces.len()`th face.
     pub(super) fn face_adjacency(&self) -> Vec<Vec<usize>> {
         let len = self.len();
         let mut face_adjacency = vec![Vec::<usize>::new(); len];
@@ -27,29 +59,10 @@ impl Faces {
 
 /// splitting the global faces
 impl PolygonMesh {
-    /// extract the each components of faces.  
-    /// Two vertices are reagarded as the same if and only if they have the same
-    /// position and the normal vector respectively.
-    /// # Remarks
-    /// the indices of faces are serial number of all kinds of faces, i.e.
-    /// * the `i`th quad face is identified as the `i + tri_faces.len()`th face, and
-    /// * the `i`th other face is identified as the `i + tri_faces.len() + quad_faces.len()`th face.
-    pub fn clustering_faces(&self) -> Vec<Vec<usize>> {
-        if self.normals().is_empty() {
-            panic!("{}", Error::NoNormal);
-        }
-        let face_adjacency = self.faces().face_adjacency();
-        get_components(&face_adjacency)
-    }
-
     /// separate all faces into two clusters, one with `func` returning true and the other with false.
     /// # Returns
     /// (the vector of all faces `f` which `func(f) == true`, the one of the other faces)
-    /// # Remarks
-    /// the indices of faces are serial number of all kinds of faces, i.e.
-    /// * the `i`th quad face is identified as the `i + tri_faces.len()`th face, and
-    /// * the `i`th other face is identified as the `i + tri_faces.len() + quad_faces.len()`th face.
-    pub fn faces_into_two_clusters<F: Fn(&[Vertex]) -> bool>(
+    fn faces_into_two_clusters<F: Fn(&[Vertex]) -> bool>(
         &self,
         func: F,
     ) -> (Vec<usize>, Vec<usize>) {
@@ -64,13 +77,8 @@ impl PolygonMesh {
         (true_faces, false_faces)
     }
 
-    #[doc(hidden)]
-    pub fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
-        self.faces_into_two_clusters(|face: &[Vertex]| {
-            is_in_the_plane(self.positions(), self.normals(), face, tol * tol)
-        })
-    }
 
+    /// experimental
     #[doc(hidden)]
     pub fn clustering_faces_by_gcurvature(
         &self,
@@ -83,17 +91,8 @@ impl PolygonMesh {
         })
     }
 
-    #[doc(hidden)]
-    pub fn create_mesh_by_face_indices(&self, indices: &[usize]) -> PolygonMesh {
-        let positions = self.positions.clone();
-        let uv_coords = self.uv_coords.clone();
-        let normals = self.normals.clone();
-        let faces = Faces::from_iter(indices.iter().map(|i| &self.faces()[*i]));
-        let mut mesh = PolygonMesh::new(positions, uv_coords, normals, faces);
-        mesh.remove_unused_attrs();
-        mesh
-    }
 
+    /// experimental
     #[doc(hidden)]
     pub fn get_gcurve(&self) -> Vec<f64> {
         let positions = self.positions();
@@ -189,13 +188,12 @@ fn is_in_the_plane(
     face: &[Vertex],
     tol2: f64,
 ) -> bool {
-    let vec0 = &positions[face[1].pos] - &positions[face[0].pos];
-    let vec1 = &positions[face[2].pos] - &positions[face[0].pos];
-    let mut n = vec0.cross(vec1);
-    n /= n.magnitude();
+    let n = FaceNormal::new(positions, face, 0).normal;
     for v in face {
-        if (&n - &normals[v.nor.unwrap()]).magnitude2() < tol2 {
-            return true;
+        if let Some(nor) = v.nor {
+            if n.distance2(normals[nor]) < tol2 {
+                return true;
+            }
         }
     }
     false

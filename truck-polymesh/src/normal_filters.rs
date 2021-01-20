@@ -107,13 +107,13 @@ impl PolygonMesh {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct FaceNormal {
-    face_id: usize,
-    normal: Vector3,
+pub(super) struct FaceNormal {
+    pub face_id: usize,
+    pub normal: Vector3,
 }
 
 impl FaceNormal {
-    fn new(positions: &[Point3], face: &[Vertex], face_id: usize) -> FaceNormal {
+    pub(super) fn new(positions: &[Point3], face: &[Vertex], face_id: usize) -> FaceNormal {
         let center = face
             .iter()
             .fold(Vector3::zero(), |sum, v| sum + positions[v.pos].to_vec())
