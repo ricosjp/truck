@@ -91,6 +91,11 @@ impl Faces {
     }
 
     #[inline(always)]
+    pub fn len(&self) -> usize {
+        self.tri_faces.len() + self.quad_faces.len() + self.other_faces.len()
+    }
+
+    #[inline(always)]
     pub fn naive_concat(&mut self, other: Self) {
         self.tri_faces.extend(other.tri_faces);
         self.quad_faces.extend(other.quad_faces);
@@ -222,6 +227,9 @@ impl PolygonMesh {
     pub fn extend_normals<I: IntoIterator<Item = Vector3>>(&mut self, iter: I) {
         self.normals.extend(iter)
     }
+
+    #[inline(always)]
+    pub fn faces(&self) -> &Faces { &self.faces }
 
     #[inline(always)]
     pub fn tri_faces(&self) -> &[[Vertex; 3]] { &self.faces.tri_faces }

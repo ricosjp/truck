@@ -61,7 +61,7 @@ pub struct StructuredMesh {
 
 pub type Result<T> = std::result::Result<T, errors::Error>;
 
-pub mod filter_prelude;
+pub mod prelude;
 /// Defines errors
 pub mod errors;
 //mod extract_topology;
@@ -71,7 +71,7 @@ mod meshing_shape;
 pub mod obj;
 mod polygon_mesh;
 mod normal_filters;
-//mod splitting;
+mod splitting;
 mod structured_mesh;
 //mod structuring;
 
