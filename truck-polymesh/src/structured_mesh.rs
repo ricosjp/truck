@@ -145,19 +145,23 @@ impl StructuredMesh {
         }
     }
 
+    /// Returns the matrix of all positions.
     #[inline(always)]
     pub fn positions(&self) -> &Vec<Vec<Point3>> { &self.positions }
 
+    /// Returns the vector of the mutable references to the rows of the positions matrix.
     #[inline(always)]
-    pub fn positions_mut(&mut self) -> impl Iterator<Item = &mut Point3> {
-        self.positions.iter_mut().flatten()
+    pub fn positions_mut(&mut self) -> Vec<&mut [Point3]> {
+        self.positions.iter_mut().map(|arr| arr.as_mut()).collect()
     }
 
+    /// Returns the divisions of uv coordinates.
     #[inline(always)]
     pub fn uv_division(&self) -> Option<(&Vec<f64>, &Vec<f64>)> {
         self.uv_division.as_ref().map(|tuple| (&tuple.0, &tuple.1))
     }
 
+    /// Returns the mutable slice of uv coordinates division.
     #[inline(always)]
     pub fn uv_division_mut(&mut self) -> Option<(&mut [f64], &mut [f64])> {
         self.uv_division
@@ -165,12 +169,16 @@ impl StructuredMesh {
             .map(|tuple| (tuple.0.as_mut(), tuple.1.as_mut()))
     }
 
+    /// Returns the matrix of all normals.
     #[inline(always)]
     pub fn normals(&self) -> Option<&Vec<Vec<Vector3>>> { self.normals.as_ref() }
 
+    /// Returns the vector of the mutable references to the rows of the normals matrix.
     #[inline(always)]
-    pub fn normals_mut(&mut self) -> Option<impl Iterator<Item = &mut Vector3>> {
-        self.normals.as_mut().map(|normals| normals.iter_mut().flatten())
+    pub fn normals_mut(&mut self) -> Option<Vec<&mut [Vector3]>> {
+        self.normals
+            .as_mut()
+            .map(|normals| normals.iter_mut().map(|arr| arr.as_mut()).collect())
     }
 
     /// Creates new polygon by destructing `self`.

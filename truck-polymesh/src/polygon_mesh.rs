@@ -12,6 +12,16 @@ impl From<(usize, Option<usize>, Option<usize>)> for Vertex {
     }
 }
 
+impl From<&(usize, Option<usize>, Option<usize>)> for Vertex {
+    fn from(tuple: &(usize, Option<usize>, Option<usize>)) -> Vertex {
+        Vertex {
+            pos: tuple.0,
+            uv: tuple.1,
+            nor: tuple.2,
+        }
+    }
+}
+
 impl From<[usize; 3]> for Vertex {
     fn from(arr: [usize; 3]) -> Vertex {
         Vertex {
@@ -22,7 +32,50 @@ impl From<[usize; 3]> for Vertex {
     }
 }
 
+impl From<&[usize; 3]> for Vertex {
+    fn from(arr: &[usize; 3]) -> Vertex {
+        Vertex {
+            pos: arr[0],
+            uv: Some(arr[1]),
+            nor: Some(arr[2]),
+        }
+    }
+}
+
+impl From<usize> for Vertex {
+    fn from(idx: usize) -> Vertex {
+        Vertex {
+            pos: idx,
+            uv: None,
+            nor: None,
+        }
+    }
+}
+
+impl From<&usize> for Vertex {
+    fn from(idx: &usize) -> Vertex {
+        Vertex {
+            pos: *idx,
+            uv: None,
+            nor: None,
+        }
+    }
+}
+
 impl Faces {
+    /// Creates faces of a polygon by iterator of slice.
+    ///
+    /// If `face.len() < 3`, the face is ignored.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::*;
+    /// let slice: &[&[[usize; 3]]] = &[
+    ///     &[[0, 0, 0], [1, 1, 1], [2, 2, 2]],
+    ///     &[[0, 0, 0], [2, 2, 2], [3, 3, 3]],
+    ///     &[[0, 0, 0], [4, 4, 4], [5, 5, 5], [1, 1, 1]],
+    /// ];
+    /// let faces = Faces::from_iter(slice);
+    /// ```
     #[inline(always)]
     pub fn from_iter<V: Copy + Into<Vertex>, T: AsRef<[V]>, I: IntoIterator<Item = T>>(
         iter: I,
@@ -32,6 +85,17 @@ impl Faces {
         faces
     }
 
+    /// Creates faces of a polygon mesh by the vectors of triangle and quadrangle.
+    /// # Examples
+    /// ```
+    /// // Creates faces consisis only triangles.
+    /// use truck_polymesh::*;
+    /// let tri_faces: Vec<[Vertex; 3]> = vec![
+    ///     [[0, 0, 0].into(), [1, 1, 1].into(), [2, 2, 2].into()],
+    ///     [[0, 0, 0].into(), [2, 2, 2].into(), [3, 3, 3].into()],
+    /// ];
+    /// let faces = Faces::from_tri_and_quad_faces(tri_faces, Vec::new());
+    /// ```
     #[inline(always)]
     pub fn from_tri_and_quad_faces(
         tri_faces: Vec<[Vertex; 3]>,
@@ -44,14 +108,29 @@ impl Faces {
         }
     }
 
-    /// Push a face to the faces. If `face.len() < 3`, the face is ignored.
+    /// Push a face to the faces.
+    ///
+    /// If `face.len() < 3`, the face is ignored with warning.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::*;
+    /// let mut faces = Faces::default(); // empty faces
+    /// faces.push(&[[0, 0, 0], [1, 1, 1], [2, 2, 2]]);
+    /// faces.push(&[[3, 3, 3], [0, 0, 0], [2, 2, 2]]);
+    /// faces.push(&[[0, 0, 0], [4, 4, 4], [5, 5, 5], [1, 1, 1]]);
+    /// faces.push(&[[100, 1000, 10]]); // Wargning: ignored one vertex "face"
+    /// ```
     #[inline(always)]
     pub fn push<V: Copy + Into<Vertex>, T: AsRef<[V]>>(&mut self, face: T) {
         let face = face.as_ref();
         match face.len() {
-            0 => {}
-            1 => {}
-            2 => {}
+            0 => eprintln!("Warning: ignored empty face"),
+            1 => eprintln!("Warning: ignored one vertex \"face\": {:?}", face[0].into()),
+            2 => eprintln!(
+                "Warning: ignored two vertices \"face\": [{:?}, {:?}]",
+                face[0].into(),
+                face[1].into()
+            ),
             3 => self
                 .tri_faces
                 .push([face[0].into(), face[1].into(), face[2].into()]),
@@ -66,24 +145,74 @@ impl Faces {
                 .push(Vec::from_iter(face.iter().map(|v| (*v).into()))),
         }
     }
+
+    /// Returns the vector of triangles.
     #[inline(always)]
     pub fn tri_faces(&self) -> &Vec<[Vertex; 3]> { &self.tri_faces }
 
+    /// Returns the mutable slice of triangles.
     #[inline(always)]
     pub fn tri_faces_mut(&mut self) -> &mut [[Vertex; 3]] { &mut self.tri_faces }
 
+    /// Returns the vector of quadrangles.
     #[inline(always)]
     pub fn quad_faces(&self) -> &Vec<[Vertex; 4]> { &self.quad_faces }
 
+    /// Returns the mutable slice of quadrangles.
     #[inline(always)]
     pub fn quad_faces_mut(&mut self) -> &mut [[Vertex; 4]] { &mut self.quad_faces }
 
+    /// Returns the vector of n-gons (n > 4).
     #[inline(always)]
     pub fn other_faces(&self) -> &Vec<Vec<Vertex>> { &self.other_faces }
 
+    /// Returns the mutable iterator of n-gons (n > 4).
     #[inline(always)]
-    pub fn other_faces_mut(&mut self) -> &mut [Vec<Vertex>] { &mut self.other_faces }
+    pub fn other_faces_mut(&mut self) -> impl Iterator<Item = &mut [Vertex]> {
+        self.other_faces.iter_mut().map(|face| face.as_mut())
+    }
 
+    /// Returns the iterator of the slice.
+    /// 
+    /// By the internal optimization, this iterator does not runs in the simple order
+    /// in which they are registered, but runs order: triangle, square, and the others.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::*;
+    /// let slice: &[&[usize]] = &[
+    ///     &[0, 1, 2],
+    ///     &[0, 4, 5, 1],
+    ///     &[1, 2, 6, 7, 8, 9],
+    ///     &[0, 2, 3],
+    /// ];
+    /// let faces = Faces::from_iter(slice);
+    /// let mut iter = faces.face_iter();
+    /// assert_eq!(iter.next(), Some([
+    ///     Vertex { pos: 0, uv: None, nor: None },
+    ///     Vertex { pos: 1, uv: None, nor: None },
+    ///     Vertex { pos: 2, uv: None, nor: None },
+    /// ].as_ref()));
+    /// assert_eq!(iter.next(), Some([
+    ///     Vertex { pos: 0, uv: None, nor: None },
+    ///     Vertex { pos: 2, uv: None, nor: None },
+    ///     Vertex { pos: 3, uv: None, nor: None },
+    /// ].as_ref()));
+    /// assert_eq!(iter.next(), Some([
+    ///     Vertex { pos: 0, uv: None, nor: None },
+    ///     Vertex { pos: 4, uv: None, nor: None },
+    ///     Vertex { pos: 5, uv: None, nor: None },
+    ///     Vertex { pos: 1, uv: None, nor: None },
+    /// ].as_ref()));
+    /// assert_eq!(iter.next(), Some([
+    ///     Vertex { pos: 1, uv: None, nor: None },
+    ///     Vertex { pos: 2, uv: None, nor: None },
+    ///     Vertex { pos: 6, uv: None, nor: None },
+    ///     Vertex { pos: 7, uv: None, nor: None },
+    ///     Vertex { pos: 8, uv: None, nor: None },
+    ///     Vertex { pos: 9, uv: None, nor: None },
+    /// ].as_ref()));
+    /// assert_eq!(iter.next(), None);
+    /// ```
     #[inline(always)]
     pub fn face_iter<'a>(&'a self) -> impl Iterator<Item = &'a [Vertex]> {
         self.tri_faces
@@ -93,6 +222,11 @@ impl Faces {
             .chain(self.other_faces.iter().map(|v| v.as_ref()))
     }
 
+    /// Returns the iterator of the slice.
+    /// 
+    /// By the internal optimization, this iterator does not runs in the simple order
+    /// in which they are registered, but runs order: triangle, square, and the others.
+    /// cf: [`Faces:face_iter`](./struct.Faces.html#method.face_iter)
     #[inline(always)]
     pub fn face_iter_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut [Vertex]> {
         self.tri_faces
@@ -102,11 +236,13 @@ impl Faces {
             .chain(self.other_faces.iter_mut().map(|v| v.as_mut()))
     }
 
+    /// Returns the number of faces.
     #[inline(always)]
     pub fn len(&self) -> usize {
         self.tri_faces.len() + self.quad_faces.len() + self.other_faces.len()
     }
 
+    /// Merges `other` into `self`.
     #[inline(always)]
     pub fn naive_concat(&mut self, other: Self) {
         self.tri_faces.extend(other.tri_faces);
@@ -191,7 +327,7 @@ impl PolygonMesh {
         }
     }
 
-    /// Returns the slice of all positions.
+    /// Returns the vector of all positions.
     #[inline(always)]
     pub fn positions(&self) -> &Vec<Point3> { &self.positions }
 
@@ -209,27 +345,28 @@ impl PolygonMesh {
         self.positions.extend(iter)
     }
 
-    /// Returns the slice of all uv coords.
+    /// Returns the vector of all uv (texture) coordinates.
     #[inline(always)]
     pub fn uv_coords(&self) -> &Vec<Vector2> { &self.uv_coords }
 
-    /// Returns the mutable slice of all uv coords.
+    /// Returns the mutable slice of all uv (texture) coordinates.
     #[inline(always)]
     pub fn uv_coords_mut(&mut self) -> &mut [Vector2] { &mut self.uv_coords }
 
-    /// Adds a uv coord.
+    /// Adds a uv (texture) coordinate.
     #[inline(always)]
     pub fn push_uv_coord(&mut self, uv_coord: Vector2) { self.uv_coords.push(uv_coord) }
 
-    /// Extend uv coords by iterator.
+    /// Extend uv (texture) coordinates by iterator.
     #[inline(always)]
     pub fn extend_uv_coords<I: IntoIterator<Item = Vector2>>(&mut self, iter: I) {
         self.uv_coords.extend(iter)
     }
 
-    /// Returns the slice of all normals.
+    /// Returns the vector of all normals.
     #[inline(always)]
     pub fn normals(&self) -> &Vec<Vector3> { &self.normals }
+
     /// Returns the mutable slice of all normals.
     #[inline(always)]
     pub fn normals_mut(&mut self) -> &mut [Vector3] { &mut self.normals }
@@ -240,35 +377,53 @@ impl PolygonMesh {
         self.normals.extend(iter)
     }
 
+    /// Returns the faces of the polygon.
     #[inline(always)]
     pub fn faces(&self) -> &Faces { &self.faces }
 
+    /// Returns the vector of all triangles of the polygon.
     #[inline(always)]
-    pub fn tri_faces(&self) -> &[[Vertex; 3]] { &self.faces.tri_faces }
+    pub fn tri_faces(&self) -> &Vec<[Vertex; 3]> { &self.faces.tri_faces }
 
+    /// Returns the mutable slice of all triangles.
     #[inline(always)]
     pub fn tri_faces_mut(&mut self) -> &mut [[Vertex; 3]] { &mut self.faces.tri_faces }
 
+    /// Returns the vector of all quadrangles.
     #[inline(always)]
-    pub fn quad_faces(&self) -> &[[Vertex; 4]] { &self.faces.quad_faces }
+    pub fn quad_faces(&self) -> &Vec<[Vertex; 4]> { &self.faces.quad_faces }
 
+    /// Returns the mutable slice of all quadrangles.
     #[inline(always)]
     pub fn quad_faces_mut(&mut self) -> &mut [[Vertex; 4]] { &mut self.faces.quad_faces }
 
+    /// Returns the vector of n-gons (n > 4).
     #[inline(always)]
     pub fn other_faces(&self) -> &[Vec<Vertex>] { &self.faces.other_faces }
 
+    /// Returns the mutable iterator of n-gons (n > 4).
     #[inline(always)]
     pub fn other_faces_mut(&mut self) -> &mut [Vec<Vertex>] { &mut self.faces.other_faces }
 
+    /// Returns the iterator of the slice.
+    /// 
+    /// By the internal optimization, this iterator does not runs in the simple order
+    /// in which they are registered, but runs order: triangle, square, and the others.
+    /// cf: [`Faces::face_iter`](./struct.Faces.html#method.face_iter)
     #[inline(always)]
     pub fn face_iter<'a>(&'a self) -> impl Iterator<Item = &'a [Vertex]> { self.faces.face_iter() }
 
+    /// Returns the iterator of the slice.
+    /// 
+    /// By the internal optimization, this iterator does not runs in the simple order
+    /// in which they are registered, but runs order: triangle, square, and the others.
+    /// cf: [`Faces::face_iter`](./struct.Faces.html#method.face_iter)
     #[inline(always)]
     pub fn face_iter_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut [Vertex]> {
         self.faces.face_iter_mut()
     }
 
+    /// Creates an editor that performs boundary checking on dropped.
     #[inline(always)]
     pub fn editor(&mut self) -> PolygonMeshEditor {
         PolygonMeshEditor {
@@ -279,6 +434,8 @@ impl PolygonMesh {
             bound_check: true,
         }
     }
+    
+    /// Creates an editor that does NOT perform boundary checking on dropped.
     #[inline(always)]
     pub fn uncheck_editor(&mut self) -> PolygonMeshEditor {
         PolygonMeshEditor {
@@ -289,6 +446,8 @@ impl PolygonMesh {
             bound_check: false,
         }
     }
+    
+    /// Creates an editor that performs boundary checking on dropped ONLY in debug build.
     #[inline(always)]
     pub fn debug_editor(&mut self) -> PolygonMeshEditor {
         PolygonMeshEditor {
@@ -322,10 +481,60 @@ impl PolygonMesh {
     pub fn bounding_box(&self) -> BoundingBox<Point3> { self.positions().iter().collect() }
 }
 
+/// Editor of polygon mesh
+/// 
+/// It has mutable references to all member variables of the polygon mesh as public variables,
+/// allowing for any destructive changes for optimization.
+/// At drop time, the indices of each vertex are judged to be within the range of
+/// the array of attributes, and a panic occurs if there is one outside the range (boundary check).
+/// 
+/// # Examples
+/// ```
+/// use truck_polymesh::*;
+/// 
+/// let positions = vec![
+///     Point3::new(1.0, 0.0, 0.0),
+///     Point3::new(0.0, 1.0, 0.0),
+///     Point3::new(0.0, 0.0, 1.0),
+/// ];
+/// let faces = Faces::from_iter(&[[0, 1, 2]]);
+/// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+/// 
+/// // create editor
+/// let editor = mesh.editor();
+/// 
+/// // destructive changes
+/// editor.uv_coords.push(Vector2::new(0.0, 0.0));
+/// editor.faces.tri_faces_mut()[0][0].uv = Some(0);
+/// ```
+/// ```should_panic
+/// use truck_polymesh::*;
+/// 
+/// let positions = vec![
+///     Point3::new(1.0, 0.0, 0.0),
+///     Point3::new(0.0, 1.0, 0.0),
+///     Point3::new(0.0, 0.0, 1.0),
+/// ];
+/// let faces = Faces::from_iter(&[[0, 1, 2]]);
+/// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+/// 
+/// // create editor
+/// let editor = mesh.editor();
+/// 
+/// // destructive changes
+/// editor.faces.tri_faces_mut()[0][0].uv = Some(0);
+/// 
+/// // Panic occurs since no uv coord is added.
+/// ```
+#[derive(Debug)]
 pub struct PolygonMeshEditor<'a> {
+    /// mutable reference to the vector of positions
     pub positions: &'a mut Vec<Point3>,
+    /// mutable reference to the vector of uv coordinates
     pub uv_coords: &'a mut Vec<Vector2>,
+    /// mutable reference to the vector of normals
     pub normals: &'a mut Vec<Vector3>,
+    /// mutable reference to the faces of the polygon mesh
     pub faces: &'a mut Faces,
     bound_check: bool,
 }

@@ -1,13 +1,5 @@
 //! Defines polyline-polygon data structure and some algorithms handling mesh.
-//!
-//! # Warning
-//! This crate is WIP, despite the fact that it is used extensively in the sample code.
-//! Specifically, member variables of `PolygonMesh` can be hidden at any time.
-//! `MeshHandler`, which is hidden in the documentation, may be deprecated and
-//! mesh handling may be done as a trait implemented to `PolygonMesh`.
-//! We will move up one minor version when we make these changes.
 
-/*
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -18,7 +10,6 @@
     unused_import_braces,
     unused_qualifications
 )]
-*/
 
 use serde::{Deserialize, Serialize};
 
@@ -28,13 +19,21 @@ pub mod base {
 }
 pub use base::*;
 
+/// Index vertex of a face of the polygon mesh
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Vertex {
+    /// index of vertex's position
     pub pos: usize,
+    /// index of vertex's texture coordinate
     pub uv: Option<usize>,
+    /// index of vertex's normal
     pub nor: Option<usize>,
 }
 
+/// Faces of polygon mesh
+///
+/// To optimize for the case where the polygon mesh consists only triangles and quadrangle,
+/// there are vectors which consist by each triangles and quadrilaterals, internally.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Faces {
     tri_faces: Vec<[Vertex; 3]>,
@@ -42,6 +41,11 @@ pub struct Faces {
     other_faces: Vec<Vec<Vertex>>,
 }
 
+/// Polygon mesh
+/// 
+/// The polygon data is held in a method compliant with wavefront obj.
+/// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
+/// and each face vertex accesses those values by an indices triple.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PolygonMesh {
     positions: Vec<Point3>,
@@ -58,8 +62,10 @@ pub struct StructuredMesh {
     normals: Option<Vec<Vec<Vector3>>>,
 }
 
+/// Error handler for [`Error`](./errors/enum.Error.html)
 pub type Result<T> = std::result::Result<T, errors::Error>;
 
+/// Re-exports root structs and all mesh filter traits.
 pub mod prelude;
 /// Defines errors
 pub mod errors;
@@ -67,7 +73,8 @@ mod eliminate_waste;
 mod meshing_shape;
 /// I/O of wavefront obj
 pub mod obj;
-mod polygon_mesh;
+/// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
+pub mod polygon_mesh;
 mod normal_filters;
 mod splitting;
 mod structured_mesh;

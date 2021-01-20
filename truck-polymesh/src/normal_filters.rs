@@ -1,6 +1,7 @@
 use crate::*;
 use std::collections::HashMap;
 
+/// Filters for adding normals
 pub trait NormalFilters {
     /// First, assign `None` to the `nor` index of the vertices that has a normal of zero length,
     /// and then normalize all normals.
