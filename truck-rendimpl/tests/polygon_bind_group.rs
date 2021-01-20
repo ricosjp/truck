@@ -40,48 +40,18 @@ impl<'a> Rendered for BGCheckPolygonInstance<'a> {
     }
 }
 
+const ATTRS_OBJ: &str = "
+v -1.0 2.0 -1.0\nv 1.0 2.0 -1.0\nv -1.0 2.0 1.0\nv 1.0 2.0 1.0
+vt -1.0 -1.0\nvt 1.0 -1.0\nvt 1.0 1.0\nvt -1.0 1.0
+vn -1.0 0.2 -1.0\nvn 1.0 0.2 -1.0\nvn -1.0 0.2 1.0\nvn 1.0 0.2 1.0
+";
+const TRIS_OBJ: &str = "f 1/1/1 2/2/3 3/4/2\nf 3/4/2 2/2/3 4/3/4\n";
+const QUADS_OBJ: &str = "f 1/1/1 2/2/3 4/3/4 3/4/2\n";
+
 fn test_polygons() -> [PolygonMesh; 2] {
-    let positions = vec![
-        Point3::new(-1.0, 2.0, -1.0),
-        Point3::new(1.0, 2.0, -1.0),
-        Point3::new(-1.0, 2.0, 1.0),
-        Point3::new(1.0, 2.0, 1.0),
-    ];
-    let uv_coords = vec![
-        Vector2::new(-1.0, -1.0),
-        Vector2::new(1.0, -1.0),
-        Vector2::new(-1.0, 1.0),
-        Vector2::new(1.0, 1.0),
-    ];
-    let normals = vec![
-        Vector3::new(-1.0, 0.2, -1.0),
-        Vector3::new(-1.0, 0.2, 1.0),
-        Vector3::new(1.0, 0.2, -1.0),
-        Vector3::new(1.0, 0.2, 1.0),
-    ];
-    let tri_faces = vec![
-        [[0, 0, 0].into(), [1, 1, 1].into(), [2, 2, 2].into()],
-        [[2, 2, 2].into(), [1, 1, 1].into(), [3, 3, 3].into()],
-    ];
-    let quad_faces = vec![[
-        [0, 0, 0].into(),
-        [1, 1, 1].into(),
-        [3, 3, 3].into(),
-        [2, 2, 2].into(),
-    ]];
     [
-        PolygonMesh::new(
-            positions.clone(),
-            uv_coords.clone(),
-            normals.clone(),
-            Faces::from_tri_and_quad_faces(tri_faces, Vec::new()),
-        ),
-        PolygonMesh::new(
-            positions.clone(),
-            uv_coords.clone(),
-            normals.clone(),
-            Faces::from_tri_and_quad_faces(Vec::new(), quad_faces),
-        ),
+        obj::read((ATTRS_OBJ.to_string() + TRIS_OBJ).as_bytes()).unwrap(),
+        obj::read((ATTRS_OBJ.to_string() + QUADS_OBJ).as_bytes()).unwrap(),
     ]
 }
 

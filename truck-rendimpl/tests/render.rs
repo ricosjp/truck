@@ -39,77 +39,6 @@ fn test_scene() -> Scene {
     )
 }
 
-fn polygon_cube() -> PolygonMesh {
-    let positions = vec![
-        Point3::new(0.0, 0.0, 0.0),
-        Point3::new(1.0, 0.0, 0.0),
-        Point3::new(0.0, 1.0, 0.0),
-        Point3::new(0.0, 0.0, 1.0),
-        Point3::new(0.0, 1.0, 1.0),
-        Point3::new(1.0, 0.0, 1.0),
-        Point3::new(1.0, 1.0, 0.0),
-        Point3::new(1.0, 1.0, 1.0),
-    ];
-    let uv_coords = vec![
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 1.0),
-    ];
-    let normals = vec![
-        Vector3::new(1.0, 0.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(-1.0, 0.0, 0.0),
-        Vector3::new(0.0, -1.0, 0.0),
-        Vector3::new(0.0, 0.0, -1.0),
-    ];
-    let quad_faces = vec![
-        [
-            [0, 0, 4].into(),
-            [1, 1, 4].into(),
-            [5, 2, 4].into(),
-            [3, 3, 4].into(),
-        ],
-        [
-            [0, 0, 5].into(),
-            [2, 1, 5].into(),
-            [6, 2, 5].into(),
-            [1, 3, 5].into(),
-        ],
-        [
-            [0, 0, 3].into(),
-            [3, 1, 3].into(),
-            [4, 2, 3].into(),
-            [2, 3, 3].into(),
-        ],
-        [
-            [7, 0, 2].into(),
-            [4, 1, 2].into(),
-            [3, 2, 2].into(),
-            [5, 3, 2].into(),
-        ],
-        [
-            [7, 0, 1].into(),
-            [6, 1, 1].into(),
-            [2, 2, 1].into(),
-            [4, 3, 1].into(),
-        ],
-        [
-            [7, 0, 0].into(),
-            [5, 1, 0].into(),
-            [1, 2, 0].into(),
-            [6, 3, 0].into(),
-        ],
-    ];
-    PolygonMesh::new(
-        positions,
-        uv_coords,
-        normals,
-        Faces::from_tri_and_quad_faces(Vec::new(), quad_faces),
-    )
-}
-
 fn shape_cube() -> Solid {
     let s = builder::vertex(Point3::new(0.0, 0.0, 0.0));
     let s = builder::tsweep(&s, Vector3::unit_x());
@@ -136,7 +65,7 @@ fn nontex_polygon(scene: &mut Scene) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
     let cube = scene.create_instance(
-        &polygon_cube(),
+        &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
         &InstanceDescriptor {
             material: Material {
                 albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
@@ -230,7 +159,7 @@ fn tex_polygon(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
     let cube = scene.create_instance(
-        &polygon_cube(),
+        &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
         &InstanceDescriptor {
             material: Material {
                 albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
