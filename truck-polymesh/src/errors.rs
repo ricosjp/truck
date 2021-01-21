@@ -2,7 +2,7 @@
 #[derive(Debug)]
 pub enum Error {
     /// There is an index in out of range.
-    OutOfRange,
+    OutOfRange(&'static str, usize, usize),
     /// There are not enough attribute to convert.
     NotEnoughAttrs,
     /// There are no normal in polygon mesh.
@@ -20,7 +20,10 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Error::OutOfRange => f.pad("The index is out of range."),
+            Error::OutOfRange(typename, length, index) => f.write_fmt(format_args!(
+                "The index {} is out of range of {} with length {}.",
+                index, typename, length
+            )),
             Error::NotEnoughAttrs => f.pad("The polygon mesh does not have enough attribute."),
             Error::NoNormal => f.pad("This mesh has no normal vectors."),
             Error::DifferentLengthArrays => {

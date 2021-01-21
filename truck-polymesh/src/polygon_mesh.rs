@@ -124,13 +124,9 @@ impl Faces {
     pub fn push<V: Copy + Into<Vertex>, T: AsRef<[V]>>(&mut self, face: T) {
         let face = face.as_ref();
         match face.len() {
-            0 => eprintln!("Warning: ignored empty face"),
-            1 => eprintln!("Warning: ignored one vertex \"face\": {:?}", face[0].into()),
-            2 => eprintln!(
-                "Warning: ignored two vertices \"face\": [{:?}, {:?}]",
-                face[0].into(),
-                face[1].into()
-            ),
+            0 => {}
+            1 => {}
+            2 => {}
             3 => self
                 .tri_faces
                 .push([face[0].into(), face[1].into(), face[2].into()]),
@@ -173,7 +169,7 @@ impl Faces {
     }
 
     /// Returns the iterator of the slice.
-    /// 
+    ///
     /// By the internal optimization, this iterator does not runs in the simple order
     /// in which they are registered, but runs order: triangle, square, and the others.
     /// # Examples
@@ -223,7 +219,7 @@ impl Faces {
     }
 
     /// Returns the iterator of the slice.
-    /// 
+    ///
     /// By the internal optimization, this iterator does not runs in the simple order
     /// in which they are registered, but runs order: triangle, square, and the others.
     /// cf: [`Faces:face_iter`](./struct.Faces.html#method.face_iter)
@@ -251,12 +247,17 @@ impl Faces {
     }
 
     #[inline(always)]
-    fn is_compatible(&self, n_pos: usize, n_uv: usize, n_nor: usize) -> bool {
-        self.face_iter().flatten().all(|v| {
-            let pos_out_range = v.pos < n_pos;
-            let uv_out_range = v.uv.map(|uv| uv < n_uv).unwrap_or(true);
-            let nor_out_range = v.nor.map(|nor| nor < n_nor).unwrap_or(true);
-            pos_out_range && uv_out_range && nor_out_range
+    fn is_compatible(&self, n_pos: usize, n_uv: usize, n_nor: usize) -> Result<()> {
+        self.face_iter().flatten().try_for_each(|v| {
+            if v.pos >= n_pos {
+                Err(Error::OutOfRange("positions", n_pos, v.pos))
+            } else if v.uv.map(|uv| uv >= n_uv).unwrap_or(false) {
+                Err(Error::OutOfRange("uv_coords", n_uv, v.uv.unwrap()))
+            } else if v.nor.map(|nor| nor >= n_nor).unwrap_or(false) {
+                Err(Error::OutOfRange("normals", n_nor, v.nor.unwrap()))
+            } else {
+                Ok(())
+            }
         })
     }
 }
@@ -316,15 +317,14 @@ impl PolygonMesh {
         normals: Vec<Vector3>,
         faces: Faces,
     ) -> Result<PolygonMesh> {
-        match faces.is_compatible(positions.len(), uv_coords.len(), normals.len()) {
-            true => Ok(PolygonMesh {
+        faces
+            .is_compatible(positions.len(), uv_coords.len(), normals.len())
+            .map(|_| PolygonMesh {
                 positions,
                 uv_coords,
                 normals,
                 faces,
-            }),
-            false => Err(Error::OutOfRange),
-        }
+            })
     }
 
     /// Returns the vector of all positions.
@@ -406,7 +406,7 @@ impl PolygonMesh {
     pub fn other_faces_mut(&mut self) -> &mut [Vec<Vertex>] { &mut self.faces.other_faces }
 
     /// Returns the iterator of the slice.
-    /// 
+    ///
     /// By the internal optimization, this iterator does not runs in the simple order
     /// in which they are registered, but runs order: triangle, square, and the others.
     /// cf: [`Faces::face_iter`](./struct.Faces.html#method.face_iter)
@@ -414,7 +414,7 @@ impl PolygonMesh {
     pub fn face_iter<'a>(&'a self) -> impl Iterator<Item = &'a [Vertex]> { self.faces.face_iter() }
 
     /// Returns the iterator of the slice.
-    /// 
+    ///
     /// By the internal optimization, this iterator does not runs in the simple order
     /// in which they are registered, but runs order: triangle, square, and the others.
     /// cf: [`Faces::face_iter`](./struct.Faces.html#method.face_iter)
@@ -434,7 +434,6 @@ impl PolygonMesh {
             bound_check: true,
         }
     }
-    
     /// Creates an editor that does NOT perform boundary checking on dropped.
     #[inline(always)]
     pub fn uncheck_editor(&mut self) -> PolygonMeshEditor {
@@ -446,7 +445,6 @@ impl PolygonMesh {
             bound_check: false,
         }
     }
-    
     /// Creates an editor that performs boundary checking on dropped ONLY in debug build.
     #[inline(always)]
     pub fn debug_editor(&mut self) -> PolygonMeshEditor {
@@ -482,16 +480,16 @@ impl PolygonMesh {
 }
 
 /// Editor of polygon mesh
-/// 
+///
 /// It has mutable references to all member variables of the polygon mesh as public variables,
 /// allowing for any destructive changes for optimization.
 /// At drop time, the indices of each vertex are judged to be within the range of
 /// the array of attributes, and a panic occurs if there is one outside the range (boundary check).
-/// 
+///
 /// # Examples
 /// ```
 /// use truck_polymesh::*;
-/// 
+///
 /// let positions = vec![
 ///     Point3::new(1.0, 0.0, 0.0),
 ///     Point3::new(0.0, 1.0, 0.0),
@@ -499,17 +497,17 @@ impl PolygonMesh {
 /// ];
 /// let faces = Faces::from_iter(&[[0, 1, 2]]);
 /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-/// 
+///
 /// // create editor
 /// let editor = mesh.editor();
-/// 
+///
 /// // destructive changes
 /// editor.uv_coords.push(Vector2::new(0.0, 0.0));
 /// editor.faces.tri_faces_mut()[0][0].uv = Some(0);
 /// ```
 /// ```should_panic
 /// use truck_polymesh::*;
-/// 
+///
 /// let positions = vec![
 ///     Point3::new(1.0, 0.0, 0.0),
 ///     Point3::new(0.0, 1.0, 0.0),
@@ -517,13 +515,13 @@ impl PolygonMesh {
 /// ];
 /// let faces = Faces::from_iter(&[[0, 1, 2]]);
 /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-/// 
+///
 /// // create editor
 /// let editor = mesh.editor();
-/// 
+///
 /// // destructive changes
 /// editor.faces.tri_faces_mut()[0][0].uv = Some(0);
-/// 
+///
 /// // Panic occurs since no uv coord is added.
 /// ```
 #[derive(Debug)]
@@ -543,14 +541,13 @@ impl<'a> Drop for PolygonMeshEditor<'a> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.bound_check {
-            for v in self.faces.face_iter().flatten() {
-                let pos_out_range = v.pos >= self.positions.len();
-                let uv_out_range = v.uv.map(|uv| uv >= self.uv_coords.len()).unwrap_or(false);
-                let nor_out_range = v.nor.map(|nor| nor >= self.normals.len()).unwrap_or(false);
-                if pos_out_range || uv_out_range || nor_out_range {
-                    panic!("{:?}", Error::OutOfRange);
-                }
-            }
+            self.faces
+                .is_compatible(
+                    self.positions.len(),
+                    self.uv_coords.len(),
+                    self.normals.len(),
+                )
+                .unwrap_or_else(|e| panic!("{:?}", e));
         }
     }
 }

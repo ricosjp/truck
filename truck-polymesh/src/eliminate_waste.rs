@@ -6,6 +6,22 @@ use std::ops::{Div, Mul};
 /// Filters eliminating waste
 pub trait WasteEliminatingFilter {
     /// remove all unused position, texture coordinates, and normal vectors.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 0.0, 1.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[&[1, 2, 3]]); // 0 is not used!
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    ///
+    /// assert_eq!(mesh.positions().len(), 4);
+    /// mesh.remove_unused_attrs();
+    /// assert_eq!(mesh.positions().len(), 3);
+    /// ```
     fn remove_unused_attrs(&mut self) -> &mut Self;
     /// remove degenerate polygons.
     fn remove_degenerate_faces(&mut self) -> &mut Self;
@@ -13,19 +29,37 @@ pub trait WasteEliminatingFilter {
     fn put_together_same_attrs(&mut self) -> &mut Self;
 }
 
+impl Faces {
+    fn all_pos_mut(&mut self) -> impl Iterator<Item = &mut usize> {
+        self.face_iter_mut().flatten().map(move |v| &mut v.pos)
+    }
+
+    fn all_uv_mut(&mut self) -> impl Iterator<Item = &mut usize> {
+        self.face_iter_mut()
+            .flatten()
+            .filter_map(move |v| v.uv.as_mut())
+    }
+
+    fn all_nor_mut(&mut self) -> impl Iterator<Item = &mut usize> {
+        self.face_iter_mut()
+            .flatten()
+            .filter_map(move |v| v.nor.as_mut())
+    }
+}
+
 /// mesh healing algorithms
 impl WasteEliminatingFilter for PolygonMesh {
     fn remove_unused_attrs(&mut self) -> &mut Self {
         let mesh = self.debug_editor();
-        let pos_iter = mesh.faces.face_iter().flatten().map(|v| v.pos);
+        let pos_iter = mesh.faces.all_pos_mut();
         let idcs = sub_remove_unused_attrs(pos_iter, mesh.positions.len());
-        *mesh.positions = reindex(&mesh.positions, &idcs);
-        let uv_iter = mesh.faces.face_iter().flatten().filter_map(|v| v.uv);
+        *mesh.positions = idcs.iter().map(|i| mesh.positions[*i]).collect();
+        let uv_iter = mesh.faces.all_uv_mut();
         let idcs = sub_remove_unused_attrs(uv_iter, mesh.uv_coords.len());
-        *mesh.uv_coords = reindex(&mesh.uv_coords, &idcs);
-        let nor_iter = mesh.faces.face_iter().flatten().filter_map(|v| v.nor);
+        *mesh.uv_coords = idcs.iter().map(|i| mesh.uv_coords[*i]).collect();
+        let nor_iter = mesh.faces.all_nor_mut();
         let idcs = sub_remove_unused_attrs(nor_iter, mesh.normals.len());
-        *mesh.normals = reindex(&mesh.normals, &idcs);
+        *mesh.normals = idcs.iter().map(|i| mesh.normals[*i]).collect();
         drop(mesh);
         self
     }
@@ -54,35 +88,42 @@ impl WasteEliminatingFilter for PolygonMesh {
         let bnd_box: BoundingBox<_> = mesh.positions.iter().collect();
         let center = bnd_box.center();
         let diag = bnd_box.diagonal();
-        let normalized_positions = mesh.positions.iter().map(move |position| {
-            2.0 * (position - center).zip(diag, |a, b| a / b)
-        }).collect::<Vec<_>>();
+        let normalized_positions = mesh
+            .positions
+            .iter()
+            .map(move |position| 2.0 * (position - center).zip(diag, |a, b| a / b))
+            .collect::<Vec<_>>();
         let pos_map = sub_put_together_same_attrs(&normalized_positions);
-        for idx in mesh.faces.face_iter_mut().flatten().map(|v| &mut v.pos) {
-            *idx = pos_map[*idx];
-        }
+        mesh.faces
+            .all_pos_mut()
+            .for_each(|idx| *idx = pos_map[*idx]);
         let uv_map = sub_put_together_same_attrs(&mesh.uv_coords);
-        for idx in mesh.faces.face_iter_mut().flatten().filter_map(|v| v.uv.as_mut()) {
-            *idx = uv_map[*idx];
-        }
+        mesh.faces.all_uv_mut().for_each(|idx| *idx = uv_map[*idx]);
         let nor_map = sub_put_together_same_attrs(&mesh.normals);
-        for idx in mesh.faces.face_iter_mut().flatten().filter_map(|v| v.nor.as_mut()) {
-            *idx = nor_map[*idx];
-        }
+        mesh.faces
+            .all_nor_mut()
+            .for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
         self
     }
 }
 
-fn sub_remove_unused_attrs<I: Iterator<Item=usize>>(iter: I, old_len: usize) -> Vec<usize> {
+fn sub_remove_unused_attrs<'a, I: Iterator<Item = &'a mut usize>>(
+    iter: I,
+    old_len: usize,
+) -> Vec<usize> {
     let mut new2old = Vec::new();
     let mut old2new = vec![None; old_len];
     for idx in iter {
-        if old2new[idx].is_none() {
-            let k = new2old.len();
-            new2old.push(idx);
-            old2new[idx] = Some(k);
-        }
+        *idx = match old2new[*idx] {
+            Some(k) => k,
+            None => {
+                let k = new2old.len();
+                new2old.push(*idx);
+                old2new[*idx] = Some(k);
+                k
+            }
+        };
     }
     new2old
 }
@@ -101,10 +142,6 @@ fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usiz
         }
     }
     res
-}
-
-fn reindex<T: Clone>(vec: &Vec<T>, idcs: &Vec<usize>) -> Vec<T> {
-    idcs.iter().map(|i| vec[*i].clone()).collect()
 }
 
 trait CastIntVector: Sized + Mul<f64, Output = Self> + Div<f64, Output = Self> {
