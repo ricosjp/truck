@@ -46,6 +46,12 @@ pub trait WasteEliminatingFilter {
     /// ```
     fn remove_degenerate_faces(&mut self) -> &mut Self;
     /// Gives the same indices to the same positions, texture coordinate, and normal vectors, respectively.
+    /// # Remarks
+    /// No longer needed attributes are NOT autoremoved.
+    /// One can remove such attributes by running [`remove_unused_attrs`] mannually.
+    /// 
+    /// [`remove_unused_attrs`]: ./trait.WasteEliminatingFilter.html#tymethod.remove_unused_attrs
+    /// 
     /// # Examples
     /// ```
     /// use truck_polymesh::prelude::*;
@@ -63,8 +69,13 @@ pub trait WasteEliminatingFilter {
     /// ]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
     /// 
-    /// assert_eq!(mesh.positions().len(), 6);
+    /// assert_eq!(mesh.faces()[1][1], Vertex { pos: 4, uv: None, nor: None });
     /// mesh.put_together_same_attrs();
+    /// assert_eq!(mesh.faces()[1][1], Vertex { pos: 2, uv: None, nor: None });
+    /// 
+    /// // Remarks: No longer needed attributes are NOT autoremoved!
+    /// assert_eq!(mesh.positions().len(), 6);
+    /// mesh.remove_unused_attrs();
     /// assert_eq!(mesh.positions().len(), 4);
     /// ```
     fn put_together_same_attrs(&mut self) -> &mut Self;
@@ -131,12 +142,7 @@ impl WasteEliminatingFilter for PolygonMesh {
         let mesh = self.debug_editor();
         let bnd_box: BoundingBox<_> = mesh.positions.iter().collect();
         let center = bnd_box.center();
-        let diag = bnd_box.diagonal().map(|a| {
-            match a.abs() < 1.0 {
-                true => 1.0,
-                false => a,
-            }
-        });
+        let diag = bnd_box.diagonal().map(|a| f64::max(a.abs(), 1.0));
         let normalized_positions = mesh
             .positions
             .iter()
@@ -153,7 +159,7 @@ impl WasteEliminatingFilter for PolygonMesh {
             .all_nor_mut()
             .for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
-        self.remove_unused_attrs()
+        self
     }
 }
 

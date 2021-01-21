@@ -170,9 +170,25 @@ impl PolygonMesh {
     }
 }
 
+#[inline(always)]
 fn calc_score(edge0: &Vector3, edge1: &Vector3, edge2: &Vector3, edge3: &Vector3) -> f64 {
     edge0.cos_angle(edge1).abs()
         + edge1.cos_angle(edge2).abs()
         + edge2.cos_angle(edge3).abs()
         + edge3.cos_angle(edge0).abs()
+}
+
+#[inline(always)]
+fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {
+    [face[idx0].clone(), face[idx1].clone(), face[idx2].clone()]
+}
+
+trait CosAngle {
+    fn cos_angle(&self, other: &Self) -> f64;
+}
+
+impl CosAngle for Vector3 {
+    fn cos_angle(&self, other: &Self) -> f64 {
+        self.dot(*other) / (self.magnitude() * other.magnitude())
+    }
 }

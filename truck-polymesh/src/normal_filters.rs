@@ -3,13 +3,60 @@ use std::collections::HashMap;
 
 /// Filters for adding normals
 pub trait NormalFilters {
-    /// First, assign `None` to the `nor` index of the vertices that has a normal of zero length,
-    /// and then normalize all normals.
+    /// Normalize all normals and assign `None` to the `nor` index of the vertices
+    /// that has irregular normals.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// 
+    /// // Morbid data only for testing
+    /// let positions = vec![Point3::new(0.0, 0.0, 0.0)];
+    /// let normals = vec![
+    ///     Vector3::new(100.0, 20.0, 56.0),
+    ///     Vector3::new(1.0e-12, 3.536e10, std::f64::NAN),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[(0, None, Some(0)), (0, None, Some(1)), (0, None, Some(2))],
+    /// ]);
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
+    /// 
+    /// mesh.normalize_normals();
+    /// assert!(mesh.normals()[0].magnitude().near(&1.0));
+    /// assert_eq!(mesh.faces()[0][1].nor, None);
+    /// ```
     fn normalize_normals(&mut self) -> &mut Self;
     /// Adds face normals to each vertices.
     /// # Arguments
     /// - If `overwrite == true`, clear all normals and update all normals in vertices.
     /// - If `overwrite == false`, add normals only for `nor` is `None`.
+    /// # Examples
+    /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// let positions = vec![
+    ///     Point3::new(-5.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 2.0, -2.0),
+    ///     Point3::new(0.0, 2.0, 0.0),
+    ///     Point3::new(0.0, 2.0, 2.0),
+    ///     Point3::new(5.0, 0.0, 0.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[0, 2, 1], &[0, 3, 2], &[1, 2, 4], &[2, 3, 4],
+    /// ]);
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// 
+    /// mesh.add_naive_normals(true);
+    /// let v0: Vertex = mesh.faces()[0][1];
+    /// let v1: Vertex = mesh.faces()[3][0];
+    /// 
+    /// // those vertices are at position with the index 2.
+    /// assert_eq!(v0.pos, 2); assert_eq!(v1.pos, 2);
+    /// 
+    /// // Each normal is each face normal.
+    /// assert!(mesh.normals()[v0.nor.unwrap()].near(&Vector3::new(-2.0, 5.0, 0.0).normalize()));
+    /// assert!(mesh.normals()[v1.nor.unwrap()].near(&Vector3::new(2.0, 5.0, 0.0).normalize()));
+    /// ```
     fn add_naive_normals(&mut self, overwrite: bool) -> &mut Self;
     /// add the smooth normal vectors to the mesh.
     /// # Details
@@ -24,6 +71,40 @@ pub trait NormalFilters {
     /// # Arguments
     /// - If `overwrite == true`, clear all normals and update all normals in vertices.
     /// - If `overwrite == false`, add normals only for `nor` is `None`.
+    /// # Examples
+    /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// let positions = vec![
+    ///     Point3::new(-5.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 2.0, -2.0),
+    ///     Point3::new(0.0, 2.0, 0.0),
+    ///     Point3::new(0.0, 2.0, 2.0),
+    ///     Point3::new(5.0, 0.0, 0.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[0, 2, 1], &[0, 3, 2], &[1, 2, 4], &[2, 3, 4],
+    /// ]);
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// 
+    /// mesh.add_smooth_normals(0.8, true);
+    /// let v0: Vertex = mesh.faces()[0][1];
+    /// let v1: Vertex = mesh.faces()[3][0];
+    /// 
+    /// // those vertices are at position with the index 2.
+    /// assert_eq!(v0.pos, 2); assert_eq!(v1.pos, 2);
+    /// 
+    /// // Normals are avaraged!
+    /// assert!(mesh.normals()[v0.nor.unwrap()].near(&Vector3::new(0.0, 1.0, 0.0)));
+    /// assert!(mesh.normals()[v1.nor.unwrap()].near(&Vector3::new(0.0, 1.0, 0.0)));
+    /// 
+    /// // If the tolerance is enough little, the faces are recognized as edges.
+    /// mesh.add_smooth_normals(0.6, true); // Normals are overwritten!
+    /// let v0: Vertex = mesh.faces()[0][1];
+    /// let v1: Vertex = mesh.faces()[3][0];
+    /// assert!(mesh.normals()[v0.nor.unwrap()].near(&Vector3::new(-2.0, 5.0, 0.0).normalize()));
+    /// assert!(mesh.normals()[v1.nor.unwrap()].near(&Vector3::new(2.0, 5.0, 0.0).normalize()));
+    /// ```
     fn add_smooth_normals(&mut self, tol_ang: f64, overwrite: bool) -> &mut Self;
 }
 
@@ -31,16 +112,16 @@ impl NormalFilters for PolygonMesh {
     fn normalize_normals(&mut self) -> &mut Self {
         let mut mesh = self.debug_editor();
         let (normals, faces) = (&mut mesh.normals, &mut mesh.faces);
+        normals
+            .iter_mut()
+            .for_each(move |normal| *normal = normal.normalize());
         faces.face_iter_mut().flatten().for_each(|v| {
             if let Some(idx) = v.nor {
-                if normals[idx].magnitude2().so_small2() {
+                if !normals[idx].magnitude2().near(&1.0) {
                     v.nor = None;
                 }
             }
         });
-        normals
-            .iter_mut()
-            .for_each(move |normal| *normal = normal.normalize());
         drop(mesh);
         self
     }

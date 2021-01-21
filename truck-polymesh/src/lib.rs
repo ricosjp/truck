@@ -86,18 +86,3 @@ pub mod prelude {
     pub use splitting::Splitting;
     pub use structuring::StructuringFilter;
 }
-
-#[inline(always)]
-fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {
-    [face[idx0].clone(), face[idx1].clone(), face[idx2].clone()]
-}
-
-trait CosAngle {
-    fn cos_angle(&self, other: &Self) -> f64;
-}
-
-impl CosAngle for Vector3 {
-    fn cos_angle(&self, other: &Self) -> f64 {
-        self.dot(*other) / (self.magnitude() * other.magnitude())
-    }
-}
