@@ -16,9 +16,7 @@ pub trait NormalFilters {
     ///     Vector3::new(1.0e-12, 3.536e10, std::f64::NAN),
     ///     Vector3::new(0.0, 1.0, 0.0),
     /// ];
-    /// let faces = Faces::from_iter(&[
-    ///     &[(0, None, Some(0)), (0, None, Some(1)), (0, None, Some(2))],
-    /// ]);
+    /// let faces = Faces::from_iter(&[&[(0, None, Some(0)), (0, None, Some(1)), (0, None, Some(2))]]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
     /// 
     /// mesh.normalize_normals();
