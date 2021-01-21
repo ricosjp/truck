@@ -81,8 +81,17 @@ impl Faces {
         iter: I,
     ) -> Faces {
         let mut faces = Faces::default();
-        iter.into_iter().for_each(|face| faces.push(face));
+        faces.extend(iter);
         faces
+    }
+
+    /// Extends faces by an iterator.
+    #[inline(always)]
+    pub fn extend<V: Copy + Into<Vertex>, T: AsRef<[V]>, I: IntoIterator<Item = T>>(
+        &mut self,
+        iter: I,
+    ) {
+        iter.into_iter().for_each(|face| self.push(face))
     }
 
     /// Creates faces of a polygon mesh by the vectors of triangle and quadrangle.

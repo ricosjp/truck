@@ -39,7 +39,7 @@ pub trait OptimizingFilter {
     ///     &[2, 1, 3],
     /// ]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-    /// 
+    ///
     /// assert_eq!(mesh.faces().len(), 3);
     /// mesh.remove_degenerate_faces();
     /// assert_eq!(mesh.faces().len(), 2);
@@ -49,9 +49,9 @@ pub trait OptimizingFilter {
     /// # Remarks
     /// No longer needed attributes are NOT autoremoved.
     /// One can remove such attributes by running [`remove_unused_attrs`] mannually.
-    /// 
+    ///
     /// [`remove_unused_attrs`]: ./trait.WasteEliminatingFilter.html#tymethod.remove_unused_attrs
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use truck_polymesh::prelude::*;
@@ -68,11 +68,11 @@ pub trait OptimizingFilter {
     ///     &[3, 4, 5],
     /// ]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-    /// 
+    ///
     /// assert_eq!(mesh.faces()[1][1], Vertex { pos: 4, uv: None, nor: None });
     /// mesh.put_together_same_attrs();
     /// assert_eq!(mesh.faces()[1][1], Vertex { pos: 2, uv: None, nor: None });
-    /// 
+    ///
     /// // Remarks: No longer needed attributes are NOT autoremoved!
     /// assert_eq!(mesh.positions().len(), 6);
     /// mesh.remove_unused_attrs();
@@ -117,20 +117,21 @@ impl OptimizingFilter for PolygonMesh {
 
     fn remove_degenerate_faces(&mut self) -> &mut Self {
         let mesh = self.debug_editor();
-        let positions = &mesh.positions;
         let mut faces = Faces::default();
-        for face in mesh.faces.face_iter() {
-            let mut new_face = Vec::new();
-            new_face.push(face[0]);
-            face.windows(2).for_each(|pair| {
-                if !positions[pair[0].pos].near(&positions[pair[1].pos]) {
-                    new_face.push(pair[1]);
-                }
-            });
-            if positions[new_face.last().unwrap().pos].near(&positions[new_face[0].pos]) {
-                new_face.pop();
+        for tri in mesh.faces.tri_faces() {
+            if !degenerate_triangle(*tri) {
+                faces.push(tri);
             }
-            faces.push(new_face);
+        }
+        for quad in mesh.faces.quad_faces() {
+            match degenerate_quadrangle(*quad) {
+                QuadrangleType::TotallyDegenerate => {}
+                QuadrangleType::Triangle(tri) => faces.push(tri),
+                QuadrangleType::NonDegenerate => faces.push(quad),
+            }
+        }
+        for face in mesh.faces.other_faces() {
+            faces.extend(split_into_nondegenerate(face.clone()));
         }
         *mesh.faces = faces;
         drop(mesh);
@@ -198,6 +199,49 @@ fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usiz
     res
 }
 
+fn degenerate_triangle(tri: [Vertex; 3]) -> bool {
+    tri[0].pos == tri[1].pos || tri[1].pos == tri[2].pos || tri[2].pos == tri[0].pos
+}
+
+enum QuadrangleType {
+    NonDegenerate,
+    Triangle([Vertex; 3]),
+    TotallyDegenerate,
+}
+
+fn degenerate_quadrangle(quad: [Vertex; 4]) -> QuadrangleType {
+    if quad[0].pos == quad[2].pos || quad[1].pos == quad[3].pos {
+        QuadrangleType::TotallyDegenerate
+    } else if quad[0].pos == quad[1].pos && quad[2].pos == quad[3].pos {
+        QuadrangleType::TotallyDegenerate
+    } else if quad[1].pos == quad[2].pos && quad[3].pos == quad[0].pos {
+        QuadrangleType::TotallyDegenerate
+    } else if quad[0].pos == quad[1].pos || quad[1].pos == quad[2].pos {
+        QuadrangleType::Triangle([quad[0], quad[2], quad[3]])
+    } else if quad[2].pos == quad[3].pos || quad[3].pos == quad[0].pos {
+        QuadrangleType::Triangle([quad[0], quad[1], quad[2]])
+    } else {
+        QuadrangleType::NonDegenerate
+    }
+}
+
+fn split_into_nondegenerate(poly: Vec<Vertex>) -> Vec<Vec<Vertex>> {
+    for i in 0..poly.len() {
+        for j in (i + 1)..poly.len() {
+            if poly[i].pos == poly[j].pos {
+                let polygon0: Vec<_> = (0..(j - i)).map(|k| poly[k + i]).collect();
+                let polygon1: Vec<_> = ((j - i)..poly.len())
+                    .map(|k| poly[(k + i) % poly.len()])
+                    .collect();
+                let mut result = split_into_nondegenerate(polygon0);
+                result.extend(split_into_nondegenerate(polygon1));
+                return result;
+            }
+        }
+    }
+    vec![poly]
+}
+
 trait CastIntVector: Sized + Mul<f64, Output = Self> + Div<f64, Output = Self> {
     type IntVector: std::hash::Hash + Eq;
     fn cast_int(&self) -> Self::IntVector;
@@ -216,4 +260,22 @@ mod impl_cast_int {
     impl_cast_int!(Vector2);
     impl_cast_int!(Vector3);
     impl_cast_int!(Point3);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn into_vertices(iter: &[usize]) -> Vec<Vertex> {
+        iter.iter().map(|i| i.into()).collect()
+    }
+
+    #[test]
+    fn degenerate_polygon_test() {
+        let poly = into_vertices(&[0, 1, 2, 0, 3, 4, 5, 6, 3, 7, 8, 9]);
+        let polys = split_into_nondegenerate(poly);
+        assert_eq!(polys[0], into_vertices(&[0, 1, 2]));
+        assert_eq!(polys[1], into_vertices(&[3, 4, 5, 6]));
+        assert_eq!(polys[2], into_vertices(&[3, 7, 8, 9, 0]));
+    }
 }
