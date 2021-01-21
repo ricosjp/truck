@@ -65,13 +65,13 @@ pub struct StructuredMesh {
 /// Error handler for [`Error`](./errors/enum.Error.html)
 pub type Result<T> = std::result::Result<T, errors::Error>;
 
-mod optimizing;
 /// Defines errors
 pub mod errors;
 mod meshing_shape;
 mod normal_filters;
 /// I/O of wavefront obj
 pub mod obj;
+mod optimizing;
 /// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
 pub mod polygon_mesh;
 mod splitting;
@@ -81,8 +81,8 @@ mod structuring;
 /// Re-exports root structs and all mesh filter traits.
 pub mod prelude {
     pub use crate::*;
-    pub use optimizing::OptimizingFilter;
     pub use normal_filters::NormalFilters;
+    pub use optimizing::OptimizingFilter;
     pub use splitting::Splitting;
     pub use structuring::StructuringFilter;
 }

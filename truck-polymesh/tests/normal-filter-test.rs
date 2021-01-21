@@ -121,11 +121,11 @@ fn add_smooth_normals() {
         .put_together_same_attrs()
         .remove_degenerate_faces()
         .remove_unused_attrs();
-    
+
     let mut naive_sphere = sphere.clone();
     naive_sphere.add_naive_normals(true);
     let naive_normals = naive_sphere.normals().clone();
-    
+
     // variable overwrite
     naive_sphere.add_smooth_normals(1.0, false);
     // strict equals

@@ -81,4 +81,3 @@ fn quadrangulate_test() {
     tri_mesh.quadrangulate(TOLERANCE, TOLERANCE);
     assert_eq!(tri_mesh.faces(), quad_mesh.faces());
 }
-

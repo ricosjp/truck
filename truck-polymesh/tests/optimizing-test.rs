@@ -145,18 +145,26 @@ fn put_together_same_attrs_test() {
         .collect();
 
     mesh.put_together_same_attrs();
-    mesh.faces().face_iter().flatten().zip(&attrs).for_each(|(v, attr)| {
-        assert!(mesh.positions()[v.pos].near(&attr.0));
-        assert!(mesh.uv_coords()[v.uv.unwrap()].near(&attr.1));
-        assert!(mesh.normals()[v.nor.unwrap()].near(&attr.2));
-    });
+    mesh.faces()
+        .face_iter()
+        .flatten()
+        .zip(&attrs)
+        .for_each(|(v, attr)| {
+            assert!(mesh.positions()[v.pos].near(&attr.0));
+            assert!(mesh.uv_coords()[v.uv.unwrap()].near(&attr.1));
+            assert!(mesh.normals()[v.nor.unwrap()].near(&attr.2));
+        });
 
     mesh.remove_unused_attrs();
-    mesh.faces().face_iter().flatten().zip(&attrs).for_each(|(v, attr)| {
-        assert!(mesh.positions()[v.pos].near(&attr.0));
-        assert!(mesh.uv_coords()[v.uv.unwrap()].near(&attr.1));
-        assert!(mesh.normals()[v.nor.unwrap()].near(&attr.2));
-    });
+    mesh.faces()
+        .face_iter()
+        .flatten()
+        .zip(&attrs)
+        .for_each(|(v, attr)| {
+            assert!(mesh.positions()[v.pos].near(&attr.0));
+            assert!(mesh.uv_coords()[v.uv.unwrap()].near(&attr.1));
+            assert!(mesh.normals()[v.nor.unwrap()].near(&attr.2));
+        });
     assert_eq!(mesh.positions().len(), 19);
     assert_eq!(mesh.uv_coords().len(), 18);
     assert_eq!(mesh.normals().len(), 17);
