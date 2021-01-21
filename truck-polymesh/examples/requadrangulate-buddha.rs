@@ -1,6 +1,6 @@
 use truck_polymesh::prelude::*;
 
-const INPUT: &str = "tests/data/happy-buddha.obj";
+const INPUT: &str = "examples/data/happy-buddha.obj";
 const OUTPUT: &str = "requadrangulated-buddha.obj";
 
 fn main() {

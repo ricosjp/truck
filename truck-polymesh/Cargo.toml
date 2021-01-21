@@ -10,7 +10,7 @@ license = "Apache-2.0"
 
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
-exclude = ["tests/**/*.obj"]
+exclude = ["examples/**/*.obj"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
