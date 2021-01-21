@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 use std::ops::{Div, Mul};
 
-/// Filters eliminating waste
-pub trait WasteEliminatingFilter {
+/// Filters for optimizing data
+pub trait OptimizingFilter {
     /// remove all unused position, texture coordinates, and normal vectors.
     /// # Examples
     /// ```
@@ -99,8 +99,7 @@ impl Faces {
     }
 }
 
-/// mesh healing algorithms
-impl WasteEliminatingFilter for PolygonMesh {
+impl OptimizingFilter for PolygonMesh {
     fn remove_unused_attrs(&mut self) -> &mut Self {
         let mesh = self.debug_editor();
         let pos_iter = mesh.faces.all_pos_mut();

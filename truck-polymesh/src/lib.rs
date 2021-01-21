@@ -65,7 +65,7 @@ pub struct StructuredMesh {
 /// Error handler for [`Error`](./errors/enum.Error.html)
 pub type Result<T> = std::result::Result<T, errors::Error>;
 
-mod eliminate_waste;
+mod optimizing;
 /// Defines errors
 pub mod errors;
 mod meshing_shape;
@@ -81,7 +81,7 @@ mod structuring;
 /// Re-exports root structs and all mesh filter traits.
 pub mod prelude {
     pub use crate::*;
-    pub use eliminate_waste::WasteEliminatingFilter;
+    pub use optimizing::OptimizingFilter;
     pub use normal_filters::NormalFilters;
     pub use splitting::Splitting;
     pub use structuring::StructuringFilter;
