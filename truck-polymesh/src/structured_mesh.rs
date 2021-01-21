@@ -181,7 +181,7 @@ impl StructuredMesh {
             .map(|normals| normals.iter_mut().map(|arr| arr.as_mut()).collect())
     }
 
-    /// Creates new polygon by destructing `self`.
+    /// Creates new polygon mesh by destructing `self`.
     #[inline(always)]
     pub fn destruct(self) -> PolygonMesh {
         let StructuredMesh {
