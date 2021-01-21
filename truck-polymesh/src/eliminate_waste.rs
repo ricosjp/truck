@@ -23,9 +23,50 @@ pub trait WasteEliminatingFilter {
     /// assert_eq!(mesh.positions().len(), 3);
     /// ```
     fn remove_unused_attrs(&mut self) -> &mut Self;
-    /// remove degenerate polygons.
+    /// Removes degenerate polygons.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 0.0, 1.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[0, 1, 2],
+    ///     &[2, 1, 2], // degenerate face!
+    ///     &[2, 1, 3],
+    /// ]);
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// 
+    /// assert_eq!(mesh.faces().len(), 3);
+    /// mesh.remove_degenerate_faces();
+    /// assert_eq!(mesh.faces().len(), 2);
+    /// ```
     fn remove_degenerate_faces(&mut self) -> &mut Self;
     /// Gives the same indices to the same positions, texture coordinate, and normal vectors, respectively.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[0, 1, 2],
+    ///     &[3, 4, 5],
+    /// ]);
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// 
+    /// assert_eq!(mesh.positions().len(), 6);
+    /// mesh.put_together_same_attrs();
+    /// assert_eq!(mesh.positions().len(), 4);
+    /// ```
     fn put_together_same_attrs(&mut self) -> &mut Self;
 }
 
@@ -72,10 +113,13 @@ impl WasteEliminatingFilter for PolygonMesh {
             let mut new_face = Vec::new();
             new_face.push(face[0]);
             face.windows(2).for_each(|pair| {
-                if positions[pair[0].pos].near(&positions[pair[1].pos]) {
+                if !positions[pair[0].pos].near(&positions[pair[1].pos]) {
                     new_face.push(pair[1]);
                 }
             });
+            if positions[new_face.last().unwrap().pos].near(&positions[new_face[0].pos]) {
+                new_face.pop();
+            }
             faces.push(new_face);
         }
         *mesh.faces = faces;
@@ -87,7 +131,12 @@ impl WasteEliminatingFilter for PolygonMesh {
         let mesh = self.debug_editor();
         let bnd_box: BoundingBox<_> = mesh.positions.iter().collect();
         let center = bnd_box.center();
-        let diag = bnd_box.diagonal();
+        let diag = bnd_box.diagonal().map(|a| {
+            match a.abs() < 1.0 {
+                true => 1.0,
+                false => a,
+            }
+        });
         let normalized_positions = mesh
             .positions
             .iter()
@@ -104,7 +153,7 @@ impl WasteEliminatingFilter for PolygonMesh {
             .all_nor_mut()
             .for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
-        self
+        self.remove_unused_attrs()
     }
 }
 
