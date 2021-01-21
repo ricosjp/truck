@@ -60,7 +60,7 @@ fn write2vec<V: std::ops::Index<usize, Output = f64>, W: Write>(
     prefix: &str,
 ) -> Result<()> {
     for vec in vecs {
-        writer.write_fmt(format_args!("{} {:.7e} {:.7e}\n", prefix, vec[0], vec[1]))?;
+        writer.write_fmt(format_args!("{} {:.10e} {:.10e}\n", prefix, vec[0], vec[1]))?;
     }
     Ok(())
 }
@@ -72,7 +72,7 @@ fn write3vec<V: std::ops::Index<usize, Output = f64>, W: Write>(
 ) -> Result<()> {
     for vec in vecs {
         writer.write_fmt(format_args!(
-            "{} {:.7e} {:.7e} {:.7e}\n",
+            "{} {:.10e} {:.10e} {:.10e}\n",
             prefix, vec[0], vec[1], vec[2]
         ))?;
     }

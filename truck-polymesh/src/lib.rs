@@ -34,7 +34,7 @@ pub struct Vertex {
 ///
 /// To optimize for the case where the polygon mesh consists only triangles and quadrangle,
 /// there are vectors which consist by each triangles and quadrilaterals, internally.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Faces {
     tri_faces: Vec<[Vertex; 3]>,
     quad_faces: Vec<[Vertex; 4]>,
