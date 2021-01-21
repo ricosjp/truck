@@ -1,11 +1,14 @@
-use truck_polymesh::*;
+//! Adds smooth normals to the stanford bunny.
+//! - Input: bunny.obj
+//! - Output: smooth_bunny.obj
+
+use truck_polymesh::prelude::*;
 
 fn main() {
-    let file = std::fs::File::open("tests/data/bunny.obj").unwrap();
-    let mesh = obj::read(file).unwrap();
-    let mut handler = MeshHandler::new(mesh);
-    handler.add_smooth_normal(std::f64::consts::PI / 3.0);
+    let file = std::fs::File::open("examples/data/bunny.obj").unwrap();
+    let mut mesh = obj::read(file).unwrap();
+    mesh.add_smooth_normals(std::f64::consts::PI / 3.0, true);
 
     let file = std::fs::File::create("smooth_bunny.obj").unwrap();
-    obj::write(&handler.into(), file).unwrap();
+    obj::write(&mesh, file).unwrap();
 }

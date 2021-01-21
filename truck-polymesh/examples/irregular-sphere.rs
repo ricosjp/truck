@@ -1,15 +1,17 @@
-use truck_polymesh::*;
+//! Add the normal to the sphere containing
+//! the irregular normal generated from the NURBS containing the critical point.
+//! - Input: irregular_sphere.obj
+//! - Output: regular_sphere.obj
+
+use truck_polymesh::prelude::*;
 
 fn main() {
-    let file = std::fs::File::open("tests/data/irregular_sphere.obj").unwrap();
+    let file = std::fs::File::open("examples/data/irregular_sphere.obj").unwrap();
     let mut mesh = obj::read(file).unwrap();
-    mesh.normals = Vec::new();
-    let mut handler = MeshHandler::new(mesh);
-    handler
-        .put_together_same_attrs()
+    mesh.put_together_same_attrs()
         .remove_degenerate_faces()
-        .add_smooth_normal(std::f64::consts::PI / 6.0)
+        .add_smooth_normals(std::f64::consts::PI / 6.0, true)
         .remove_unused_attrs();
     let file = std::fs::File::create("regular_sphere.obj").unwrap();
-    obj::write(&handler.into(), file).unwrap();
+    obj::write(&mesh, file).unwrap();
 }

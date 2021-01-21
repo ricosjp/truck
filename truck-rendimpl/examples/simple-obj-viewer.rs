@@ -7,7 +7,7 @@
 
 use std::io::Read;
 use truck_platform::*;
-use truck_polymesh::*;
+use truck_polymesh::prelude::*;
 use truck_rendimpl::*;
 use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
@@ -25,7 +25,7 @@ struct MyApp {
 
 impl MyApp {
     fn create_camera() -> Camera {
-        let matrix = Matrix4::look_at(
+        let matrix = Matrix4::look_at_rh(
             Point3::new(1.0, 1.0, 1.0),
             Point3::origin(),
             Vector3::unit_y(),
@@ -37,24 +37,12 @@ impl MyApp {
             40.0,
         )
     }
-    fn set_normals(mesh: PolygonMesh) -> PolygonMesh {
-        match mesh.normals.is_empty() {
-            false => mesh,
-            true => {
-                let mut mesh_handler = MeshHandler::new(mesh);
-                mesh_handler
-                    .put_together_same_attrs()
-                    .add_smooth_normal(0.5);
-                mesh_handler.into()
-            }
-        }
-    }
 
     fn load_obj<R: Read>(&mut self, reader: R) {
         let scene = &mut self.scene;
         scene.clear_objects();
-        let mesh = truck_polymesh::obj::read(reader).unwrap();
-        let mesh = MyApp::set_normals(mesh);
+        let mut mesh = truck_polymesh::obj::read(reader).unwrap();
+        mesh.put_together_same_attrs().add_smooth_normals(0.5, false);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);

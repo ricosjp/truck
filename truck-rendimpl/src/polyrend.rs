@@ -1,4 +1,5 @@
 use crate::*;
+use polymesh::Vertex;
 use std::collections::HashMap;
 
 impl IntoInstance for PolygonMesh {
@@ -205,30 +206,29 @@ impl ExpandedPolygon {
 
 fn signup_vertex(
     polymesh: &PolygonMesh,
-    vertex: &[usize; 3],
+    vertex: Vertex,
     glpolymesh: &mut ExpandedPolygon,
-    vertex_map: &mut HashMap<[usize; 3], u32>,
+    vertex_map: &mut HashMap<Vertex, u32>,
 ) {
-    let key = [vertex[0], vertex[1], vertex[2]];
-    let idx = match vertex_map.get(&key) {
+    let idx = match vertex_map.get(&vertex) {
         Some(idx) => *idx,
         None => {
             let idx = glpolymesh.vertices.len() as u32;
-            let position = (&polymesh.positions[key[0]]).cast().unwrap().into();
-            let uv_coord = match polymesh.uv_coords.is_empty() {
-                true => [0.0, 0.0],
-                false => (&polymesh.uv_coords[key[1]]).cast().unwrap().into(),
+            let position = polymesh.positions()[vertex.pos].cast().unwrap().into();
+            let uv_coord = match vertex.uv {
+                Some(uv) => polymesh.uv_coords()[uv].cast().unwrap().into(),
+                None => [0.0, 0.0],
             };
-            let normal = match polymesh.normals.is_empty() {
-                true => [0.0, 0.0, 0.0],
-                false => (&polymesh.normals[key[2]]).cast().unwrap().into(),
+            let normal = match vertex.nor {
+                Some(nor) => polymesh.normals()[nor].cast().unwrap().into(),
+                None => [0.0, 0.0, 0.0],
             };
             let wgpuvertex = AttrVertex {
                 position,
                 uv_coord,
                 normal,
             };
-            vertex_map.insert(key, idx);
+            vertex_map.insert(vertex, idx);
             glpolymesh.vertices.push(wgpuvertex);
             idx
         }
@@ -248,25 +248,25 @@ impl Default for ExpandedPolygon {
 impl From<&PolygonMesh> for ExpandedPolygon {
     fn from(polymesh: &PolygonMesh) -> ExpandedPolygon {
         let mut glpolymesh = ExpandedPolygon::default();
-        let mut vertex_map = HashMap::<[usize; 3], u32>::new();
-        for tri in &polymesh.tri_faces {
-            signup_vertex(polymesh, &tri[0], &mut glpolymesh, &mut vertex_map);
-            signup_vertex(polymesh, &tri[1], &mut glpolymesh, &mut vertex_map);
-            signup_vertex(polymesh, &tri[2], &mut glpolymesh, &mut vertex_map);
+        let mut vertex_map = HashMap::<Vertex, u32>::new();
+        for tri in polymesh.faces().tri_faces() {
+            signup_vertex(polymesh, tri[0], &mut glpolymesh, &mut vertex_map);
+            signup_vertex(polymesh, tri[1], &mut glpolymesh, &mut vertex_map);
+            signup_vertex(polymesh, tri[2], &mut glpolymesh, &mut vertex_map);
         }
-        for quad in &polymesh.quad_faces {
-            signup_vertex(polymesh, &quad[0], &mut glpolymesh, &mut vertex_map);
-            signup_vertex(polymesh, &quad[1], &mut glpolymesh, &mut vertex_map);
-            signup_vertex(polymesh, &quad[3], &mut glpolymesh, &mut vertex_map);
-            signup_vertex(polymesh, &quad[1], &mut glpolymesh, &mut vertex_map);
-            signup_vertex(polymesh, &quad[2], &mut glpolymesh, &mut vertex_map);
-            signup_vertex(polymesh, &quad[3], &mut glpolymesh, &mut vertex_map);
+        for quad in polymesh.faces().quad_faces() {
+            signup_vertex(polymesh, quad[0], &mut glpolymesh, &mut vertex_map);
+            signup_vertex(polymesh, quad[1], &mut glpolymesh, &mut vertex_map);
+            signup_vertex(polymesh, quad[3], &mut glpolymesh, &mut vertex_map);
+            signup_vertex(polymesh, quad[1], &mut glpolymesh, &mut vertex_map);
+            signup_vertex(polymesh, quad[2], &mut glpolymesh, &mut vertex_map);
+            signup_vertex(polymesh, quad[3], &mut glpolymesh, &mut vertex_map);
         }
-        for face in &polymesh.other_faces {
+        for face in polymesh.faces().other_faces() {
             for i in 2..face.len() {
-                signup_vertex(polymesh, &face[0], &mut glpolymesh, &mut vertex_map);
-                signup_vertex(polymesh, &face[i - 1], &mut glpolymesh, &mut vertex_map);
-                signup_vertex(polymesh, &face[i], &mut glpolymesh, &mut vertex_map);
+                signup_vertex(polymesh, face[0], &mut glpolymesh, &mut vertex_map);
+                signup_vertex(polymesh, face[i - 1], &mut glpolymesh, &mut vertex_map);
+                signup_vertex(polymesh, face[i], &mut glpolymesh, &mut vertex_map);
             }
         }
         glpolymesh
@@ -276,13 +276,19 @@ impl From<&PolygonMesh> for ExpandedPolygon {
 impl From<&StructuredMesh> for ExpandedPolygon {
     fn from(mesh: &StructuredMesh) -> ExpandedPolygon {
         let mut glpolymesh = ExpandedPolygon::default();
-        let (m, n) = (mesh.uv_division.0.len(), mesh.uv_division.1.len());
+        let (m, n) = (mesh.positions().len(), mesh.positions()[0].len());
         for i in 0..m {
             for j in 0..n {
                 glpolymesh.vertices.push(AttrVertex {
-                    position: mesh.positions[i][j].cast().unwrap().into(),
-                    uv_coord: [mesh.uv_division.0[i] as f32, mesh.uv_division.1[j] as f32],
-                    normal: mesh.normals[i][j].cast().unwrap().into(),
+                    position: mesh.positions()[i][j].cast().unwrap().into(),
+                    uv_coord: match mesh.uv_division() {
+                        Some(uv_division) => [uv_division.0[i] as f32, uv_division.1[j] as f32],
+                        None => [0.0, 0.0],
+                    },
+                    normal: match mesh.normals() {
+                        Some(normals) => normals[i][j].cast().unwrap().into(),
+                        None => [0.0, 0.0, 0.0],
+                    },
                 });
             }
         }

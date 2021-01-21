@@ -206,7 +206,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
 }
 
 fn create_camera() -> Camera {
-    let matrix = Matrix4::look_at(
+    let matrix = Matrix4::look_at_rh(
         Point3::new(1.5, 1.5, 1.5),
         Point3::origin(),
         Vector3::unit_y(),
