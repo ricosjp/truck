@@ -1,19 +1,111 @@
 use crate::*;
-use prelude::*;
 use normal_filters::FaceNormal;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
 /// Splitting the faces into several clusters.
 pub trait Splitting {
-    /// Creates a polygon mesh by the face indices.
+    /// Creates a sub mesh by the face indices.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// 
+    /// // cube
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 0.0, 1.0),
+    ///     Point3::new(1.0, 0.0, 1.0),
+    ///     Point3::new(1.0, 1.0, 1.0),
+    ///     Point3::new(0.0, 1.0, 1.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[3, 2, 1, 0], &[0, 1, 5, 4], &[1, 2, 6, 5],
+    ///     &[2, 3, 7, 6], &[3, 0, 4, 7], &[4, 5, 6, 7],
+    /// ]);
+    /// let mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    ///
+    /// let submesh = mesh.create_mesh_by_face_indices(&[0, 3, 5]);
+    /// 
+    /// // the same attributes vector
+    /// assert_eq!(mesh.positions(), submesh.positions());
+    ///
+    /// let faces0 = Faces::from_iter(&[
+    ///     &[3, 2, 1, 0], &[2, 3, 7, 6], &[4, 5, 6, 7],
+    /// ]);
+    /// assert_eq!(submesh.faces().len(), faces0.len());
+    /// assert_eq!(submesh.faces()[0], faces0[0]);
+    /// assert_eq!(submesh.faces()[1], faces0[1]);
+    /// assert_eq!(submesh.faces()[2], faces0[2]);
+    /// ```
     fn create_mesh_by_face_indices(&self, indices: &[usize]) -> PolygonMesh;
-    /// Extract polygons such that there exists its normal is the same as its face normal.
+    /// Extracts polygons such that there exists its normal is the same as its face normal.
+    /// # Arguments
+    /// - `tol`: tolerance to be regarded as the same normal as the face normal
+    /// # Returns
+    /// - The first polygon consists the faces included in planes.
+    /// - The second polygon is the extracted remainder.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.5, 0.0),
+    ///     Point3::new(0.0, 0.5, 1.0),
+    ///     Point3::new(1.0, 0.5, 1.0),
+    ///     Point3::new(1.0, 0.5, 0.0),
+    ///     Point3::new(0.0, 0.0, 2.0),
+    ///     Point3::new(1.0, 0.0, 2.0),
+    /// ];
+    /// let normals = vec![
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    ///     // displaced normals for smooth rendering
+    ///     Vector3::new(0.0, 1.0, 1.0).normalize(),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[(0, None, Some(0)), (1, None, Some(0)), (2, None, Some(0)), (3, None, Some(0))],
+    ///     &[(2, None, Some(0)), (1, None, Some(0)), (4, None, Some(1)), (5, None, Some(1))],
+    /// ]);
+    /// let mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
+    /// let (plane, remained) = mesh.extract_planes(TOLERANCE); // TOLERANCE == 1.0e-7
+    /// assert_eq!(plane.len(), 1); assert_eq!(plane[0], 0);
+    /// assert_eq!(remained.len(), 1); assert_eq!(remained[0], 1);
+    /// ```
     fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>);
     /// Splits into the components.
     /// # Details
     /// Two polygons are considered to be in the same component if they share an edge
     /// whose vertices has the same positions and normals.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// 
+    /// // cube consisting tri_faces
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 0.0, 1.0),
+    ///     Point3::new(1.0, 0.0, 1.0),
+    ///     Point3::new(1.0, 1.0, 1.0),
+    ///     Point3::new(0.0, 1.0, 1.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[3, 2, 0], &[1, 0, 2], &[0, 1, 4], &[5, 4, 1],
+    ///     &[1, 2, 5], &[6, 5, 2], &[2, 3, 6], &[7, 6, 3],
+    ///     &[3, 0, 7], &[4, 7, 0], &[4, 5, 7], &[6, 7, 5],
+    /// ]);
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// 
+    /// // sign up normals
+    /// mesh.add_naive_normals(true).put_together_same_attrs();
+    /// 
+    /// let components = mesh.into_components();
+    /// // The number of components is six because the mesh is a cube.
+    /// assert_eq!(components.len(), 6);
+    /// ```
     fn into_components(&self) -> Vec<Vec<usize>>;
 }
 
@@ -23,9 +115,7 @@ impl Splitting for PolygonMesh {
         let uv_coords = self.uv_coords.clone();
         let normals = self.normals.clone();
         let faces = Faces::from_iter(indices.iter().map(|i| &self.faces()[*i]));
-        let mut mesh = PolygonMesh::new(positions, uv_coords, normals, faces);
-        mesh.remove_unused_attrs();
-        mesh
+        PolygonMesh::new(positions, uv_coords, normals, faces)
     }
 
     fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
