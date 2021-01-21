@@ -1,10 +1,11 @@
 use std::io::Write;
 use std::process::Command;
 
-const WORKSPACES: [&str; 6] = [
+const WORKSPACES: [&str; 7] = [
     "truck-base",
     "truck-geometry",
     "truck-modeling",
+    "truck-polymesh",
     "truck-platform",
     "truck-rendimpl",
     "truck-topology",

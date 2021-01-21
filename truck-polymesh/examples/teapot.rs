@@ -1,3 +1,7 @@
+//! Adds smooth normals to and quadrangulate the famous teapot.
+//! - Input: teapot.obj
+//! - Output: quaded_pot.obj
+
 use truck_polymesh::prelude::*;
 
 fn main() {

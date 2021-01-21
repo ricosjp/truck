@@ -1,3 +1,7 @@
+//! A benchmark that reads in heavy mesh data, applies triangulation and quadrangulation, and writes it out.
+//! - Input: happy-buddha.obj
+//! - Output: requadrangulated-buddha.obj
+
 use truck_polymesh::prelude::*;
 
 const INPUT: &str = "examples/data/happy-buddha.obj";

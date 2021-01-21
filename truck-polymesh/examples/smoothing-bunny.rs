@@ -1,3 +1,7 @@
+//! Adds smooth normals to the stanford bunny.
+//! - Input: bunny.obj
+//! - Output: smooth_bunny.obj
+
 use truck_polymesh::prelude::*;
 
 fn main() {
