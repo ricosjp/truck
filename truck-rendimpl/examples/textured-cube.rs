@@ -22,7 +22,7 @@ struct MyApp {
 
 impl MyApp {
     fn create_camera() -> Camera {
-        let matrix = Matrix4::look_at(
+        let matrix = Matrix4::look_at_rh(
             Point3::new(1.5, 1.5, 1.5),
             Point3::origin(),
             Vector3::unit_y(),

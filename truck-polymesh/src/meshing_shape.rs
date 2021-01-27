@@ -26,7 +26,7 @@ where S: Surface<Point = Point3, Vector = Vector3> {
         });
     StructuredMesh {
         positions: positions,
-        uv_division: (div0, div1),
-        normals: normals,
+        uv_division: Some((div0, div1)),
+        normals: Some(normals),
     }
 }
