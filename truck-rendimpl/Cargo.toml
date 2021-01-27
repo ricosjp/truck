@@ -18,7 +18,7 @@ exclude = ["*.png"]
 image = "0.23.12"
 bytemuck = { version = "1.4.1", features = ["derive"] }
 truck-platform = { version = "0.1.0", path = "../truck-platform" }
-truck-modeling = { version = "0.1.1", path = "../truck-modeling" }
+truck-modeling = { version = "0.1.2", path = "../truck-modeling" }
 truck-polymesh = { version = "0.1.0", path = "../truck-polymesh" }
 
 [dev-dependencies]
