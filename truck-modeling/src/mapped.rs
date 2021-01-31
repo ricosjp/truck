@@ -1,6 +1,6 @@
-use truck_topology::*;
 use crate::topo_traits::*;
 use std::collections::HashMap;
+use truck_topology::*;
 
 /// A trait for a unified definition of the function `mapped`.
 
@@ -16,7 +16,7 @@ impl<P, C, S> Mapped<P, C, S> for Vertex<P> {
     ///     &<()>::clone,
     ///     &<()>::clone,
     /// );
-    /// assert_eq!(*v1.try_lock_point().unwrap(), 2);
+    /// assert_eq!(*v1.lock_point().unwrap(), 2);
     /// ```
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
         &self,
@@ -54,8 +54,12 @@ impl<P, C, S> Mapped<P, C, S> for Edge<P, C> {
         curve_mapping: &FC,
         surface_mapping: &FS,
     ) -> Self {
-        let v0 = self.absolute_front().mapped(point_mapping, curve_mapping, surface_mapping);
-        let v1 = self.absolute_back().mapped(point_mapping, curve_mapping, surface_mapping);
+        let v0 = self
+            .absolute_front()
+            .mapped(point_mapping, curve_mapping, surface_mapping);
+        let v1 = self
+            .absolute_back()
+            .mapped(point_mapping, curve_mapping, surface_mapping);
         let curve = curve_mapping(&*self.lock_curve().unwrap());
         let mut edge = Edge::debug_new(&v0, &v1, curve);
         if edge.orientation() != self.orientation() {
@@ -92,11 +96,12 @@ impl<P, C, S> Mapped<P, C, S> for Wire<P, C> {
     ///     assert_eq!(i + 10, j);
     /// }
     ///
-    /// // Check the curves
+    /// // Check the curves and orientation
     /// for (edge0, edge1) in wire0.edge_iter().zip(wire1.edge_iter()) {
     ///     let i = *edge0.lock_curve().unwrap();
     ///     let j = *edge1.lock_curve().unwrap();
     ///     assert_eq!(i + 1000, j);
+    ///     assert_eq!(edge0.orientation(), edge1.orientation());
     /// }
     ///
     /// // Check the connection
@@ -173,7 +178,7 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
     /// #    assert!(wire.is_closed());
     /// #    assert!(wire.is_simple());
     /// # }
-    /// 
+    ///
     /// assert_eq!(
     ///     *face0.lock_surface().unwrap() + 100000,
     ///     *face1.lock_surface().unwrap(),
@@ -190,6 +195,7 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
     ///             *edge0.back().lock_point().unwrap() + 10,
     ///             *edge1.back().lock_point().unwrap(),
     ///         );
+    ///         assert_eq!(edge0.orientation(), edge1.orientation());
     ///         assert_eq!(
     ///             *edge0.lock_curve().unwrap() + 1000,
     ///             *edge1.lock_curve().unwrap(),
@@ -202,8 +208,7 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
         point_mapping: &FP,
         curve_mapping: &FC,
         surface_mapping: &FS,
-    ) -> Self
-    {
+    ) -> Self {
         let wires: Vec<_> = self
             .absolute_boundaries()
             .iter()
@@ -211,7 +216,7 @@ impl<P, C, S> Mapped<P, C, S> for Face<P, C, S> {
             .collect();
         let surface = surface_mapping(&*self.lock_surface().unwrap());
         let mut face = Face::debug_new(wires, surface);
-        if face.orientation() != self.orientation() {
+        if !self.orientation() {
             face.invert();
         }
         face
@@ -243,7 +248,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
     ///     &move |j: &usize| *j + 700,
     ///     &move |k: &usize| *k + 10000,
     /// );
-    /// let shell0 = Shell::from(vec![face0, face1]);
+    /// let shell0 = Shell::from(vec![face0, face1.inverse()]);
     /// let shell1 = shell0.mapped(
     ///     &move |i: &usize| *i + 50,
     ///     &move |j: &usize| *j + 5000,
@@ -255,12 +260,13 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
     /// #        assert!(bdry.is_simple());
     /// #    }
     /// # }
-    /// 
+    ///
     /// for (face0, face1) in shell0.face_iter().zip(shell1.face_iter()) {
     ///     assert_eq!(
     ///         *face0.lock_surface().unwrap() + 500000,
     ///         *face1.lock_surface().unwrap(),
     ///     );
+    ///     assert_eq!(face0.orientation(), face1.orientation());
     ///     let biters0 = face0.boundary_iters();
     ///     let biters1 = face1.boundary_iters();
     ///     for (biter0, biter1) in biters0.into_iter().zip(biters1) {
@@ -286,8 +292,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
         point_mapping: &FP,
         curve_mapping: &FC,
         surface_mapping: &FS,
-    ) -> Self
-    {
+    ) -> Self {
         let mut shell = Shell::new();
         let mut vmap: HashMap<VertexID<P>, Vertex<P>> = HashMap::new();
         let vertex_iter = self
@@ -303,7 +308,7 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
         let mut edge_map: HashMap<EdgeID<C>, Edge<P, C>> = HashMap::new();
         for face in self.face_iter() {
             let mut wires = Vec::new();
-            for biter in face.boundary_iters().into_iter() {
+            for biter in face.absolute_boundaries() {
                 let mut wire = Wire::new();
                 for edge in biter {
                     if let Some(new_edge) = edge_map.get(&edge.id()) {
@@ -328,7 +333,10 @@ impl<P, C, S> Mapped<P, C, S> for Shell<P, C, S> {
                 wires.push(wire);
             }
             let surface = surface_mapping(&*face.lock_surface().unwrap());
-            let new_face = Face::debug_new(wires, surface);
+            let mut new_face = Face::debug_new(wires, surface);
+            if !face.orientation() {
+                new_face.invert();
+            }
             shell.push(new_face);
         }
         shell
@@ -344,13 +352,79 @@ impl<P, C, S> Mapped<P, C, S> for Solid<P, C, S> {
         point_mapping: &FP,
         curve_mapping: &FC,
         surface_mapping: &FS,
-    ) -> Self
-    {
+    ) -> Self {
         Solid::debug_new(
             self.boundaries()
                 .iter()
                 .map(|shell| shell.mapped(point_mapping, curve_mapping, surface_mapping))
                 .collect(),
         )
+    }
+}
+
+#[cfg(test)]
+mod invert_variation {
+    use super::*;
+
+    #[test]
+    fn invert_mapped_edge() {
+        let v0 = Vertex::new(0);
+        let v1 = Vertex::new(1);
+        let edge0 = Edge::new(&v0, &v1, 2).inverse();
+        let edge1 = edge0.mapped(
+            &move |i: &usize| *i + 10,
+            &move |j: &usize| *j + 20,
+            &<()>::clone,
+        );
+        assert_eq!(*edge1.absolute_front().lock_point().unwrap(), 10);
+        assert_eq!(*edge1.absolute_back().lock_point().unwrap(), 11);
+        assert_eq!(edge0.orientation(), edge1.orientation());
+        assert_eq!(*edge1.lock_curve().unwrap(), 22);
+    }
+
+    #[test]
+    fn invert_mapped_face() {
+        let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
+        let wire0 = Wire::from(vec![
+            Edge::new(&v[0], &v[1], 100),
+            Edge::new(&v[1], &v[2], 200),
+            Edge::new(&v[2], &v[3], 300),
+            Edge::new(&v[3], &v[0], 400),
+        ]);
+        let wire1 = Wire::from(vec![
+            Edge::new(&v[4], &v[5], 500),
+            Edge::new(&v[6], &v[5], 600).inverse(),
+            Edge::new(&v[6], &v[4], 700),
+        ]);
+        let face0 = Face::new(vec![wire0, wire1], 10000).inverse();
+        let face1 = face0.mapped(
+            &move |i: &usize| *i + 10,
+            &move |j: &usize| *j + 1000,
+            &move |k: &usize| *k + 100000,
+        );
+
+        assert_eq!(
+            *face0.lock_surface().unwrap() + 100000,
+            *face1.lock_surface().unwrap(),
+        );
+        assert_eq!(face0.orientation(), face1.orientation());
+        let biters0 = face0.boundary_iters();
+        let biters1 = face1.boundary_iters();
+        for (biter0, biter1) in biters0.into_iter().zip(biters1) {
+            for (edge0, edge1) in biter0.zip(biter1) {
+                assert_eq!(
+                    *edge0.front().lock_point().unwrap() + 10,
+                    *edge1.front().lock_point().unwrap(),
+                );
+                assert_eq!(
+                    *edge0.back().lock_point().unwrap() + 10,
+                    *edge1.back().lock_point().unwrap(),
+                );
+                assert_eq!(
+                    *edge0.lock_curve().unwrap() + 1000,
+                    *edge1.lock_curve().unwrap(),
+                );
+            }
+        }
     }
 }
