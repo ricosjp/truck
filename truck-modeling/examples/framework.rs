@@ -45,6 +45,7 @@ impl ShapeViewer {
                 roughness: 0.9,
                 ..Default::default()
             },
+            backface_culling: false,
             ..Default::default()
         };
         let instance = scene.create_instance(&shape, &inst_desc);
