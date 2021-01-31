@@ -2,12 +2,35 @@ use crate::*;
 const PI: Rad<f64> = Rad(std::f64::consts::PI);
 
 /// Creates and returns a vertex by a three dimensional point.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+///
+/// // put a vertex
+/// let vertex = builder::vertex(Point3::new(1.0, 2.0, 3.0));
+/// # assert_eq!(*vertex.lock_point().unwrap(), Point3::new(1.0, 2.0, 3.0));
+/// ```
 #[inline(always)]
-pub fn vertex(pt: Point3) -> Vertex {
-    Vertex::new(pt)
-}
+pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
 
 /// Returns a line from `vertex0` to `vertex1`.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+///
+/// // draw a line
+/// let vertex0 = builder::vertex(Point3::new(1.0, 2.0, 3.0));
+/// let vertex1 = builder::vertex(Point3::new(6.0, 5.0, 4.0));
+/// let line = builder::line(&vertex0, &vertex1);
+/// # let curve = line.oriented_curve();
+/// # let pt0 = Point3::new(1.0, 2.0, 3.0);
+/// # let pt1 = Point3::new(6.0, 5.0, 4.0);
+/// # const N: usize = 10;
+/// # for i in 0..=N {
+/// #       let t = i as f64 / N as f64;
+/// #       assert!(curve.subs(t).near2(&(pt0 + t * (pt1 - pt0))));
+/// # }
+/// ```
 #[inline(always)]
 pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
     let curve = geom_impls::line(
@@ -18,6 +41,21 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
 }
 
 /// Returns a circle arc from `vertex0` to `vertex1` via `transit`.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+///
+/// // draw the unit upper semicircle
+/// let vertex0 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let vertex1 = builder::vertex(Point3::new(-1.0, 0.0, 0.0));
+/// let semi_circle = builder::circle_arc(&vertex0, &vertex1, Point3::new(0.0, 1.0, 0.0));
+/// # let curve = semi_circle.oriented_curve();
+/// # const N: usize = 10;
+/// # for i in 0..=N {
+/// #       let t = curve.knot_vec()[0] + curve.knot_vec().range_length() * i as f64 / N as f64;
+/// #       assert!(curve.subs(t).to_vec().magnitude().near(&1.0));
+/// # }
+/// ```
 #[inline(always)]
 pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
     let curve = geom_impls::circle_arc_by_three_points(
@@ -28,7 +66,24 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
     Edge::new(vertex0, vertex1, NURBSCurve::new(curve))
 }
 
-/// Returns a bezier curve from `vertex0` to `vertex1` with inter control points `inter_points`.
+/// Returns a Bezier curve from `vertex0` to `vertex1` with inter control points `inter_points`.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+/// 
+/// // draw a Bezier curve
+/// let vertex0 = builder::vertex(Point3::origin());
+/// let vertex1 = builder::vertex(Point3::new(3.0, 0.0, 0.0));
+/// let inter_points = vec![Point3::new(1.0, 1.0, 0.0), Point3::new(2.0, -1.0, 0.0)];
+/// let bezier = builder::bezier(&vertex0, &vertex1, inter_points);
+/// # let curve = bezier.oriented_curve();
+/// # const N: usize = 10;
+/// # for i in 0..=N {
+/// #       let t = i as f64 / N as f64;
+/// #       let pt = Point3::new(t * 3.0, 6.0 * t * t * t - 9.0 * t * t + 3.0 * t, 0.0);
+/// #       assert!(curve.subs(t).near(&pt));
+/// # }
+/// ```
 #[inline(always)]
 pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>) -> Edge {
     let pt0 = *vertex0.lock_point().unwrap();
@@ -46,13 +101,36 @@ pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>)
 }
 
 /// Returns a homotopic face from `edge0` to `edge1`.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+/// 
+/// // homotopy between skew lines
+/// let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v1 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v2 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
+/// let v3 = builder::vertex(Point3::new(0.0, 1.0, 1.0));
+/// let line0 = builder::line(&v0, &v1);
+/// let line1 = builder::line(&v2, &v3);
+/// let homotopy = builder::homotopy(&line0, &line1);
+/// # let surface = homotopy.oriented_surface();
+/// # const N: usize = 10;
+/// # for i in 0..=N {
+/// #       for j in 0..=N {
+/// #           let s = i as f64 / N as f64;
+/// #           let t = j as f64 / N as f64;
+/// #           let pt = Point3::new(s * (1.0 - t), t, s * t);
+/// #           assert!(surface.subs(s, t).near(&pt));
+/// #       }
+/// # }
+/// ```
 #[inline(always)]
 pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     let wire: Wire = vec![
         edge0.clone(),
-        line(edge0.back(), edge1.front()),
+        line(edge0.back(), edge1.back()),
         edge1.inverse(),
-        line(edge1.front(), edge1.back()),
+        line(edge1.front(), edge0.front()),
     ]
     .into();
     let curve0 = edge0.oriented_curve().into_non_rationalized();
@@ -63,6 +141,47 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 
 /// Try attatiching a plane whose boundary is `wire`.
 /// Todo: Define the crate error and make return value `Result<Face>`!
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+/// 
+/// // make a disk by attaching a plane into circle
+/// let vertex = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let circle = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0));
+/// let disk = builder::try_attach_plane(&vec![circle]).expect("failed to attach plane.");
+/// # let surface = disk.oriented_surface();
+/// # let normal = surface.normal(0.5, 0.5);
+/// # assert!(normal.near(&Vector3::unit_y()));
+/// ```
+/// # Remarks
+/// If wires are not closed or not in one plane, then return `None`.
+/// ```
+/// use truck_modeling::*;
+/// 
+/// let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v1 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v2 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
+/// let v3 = builder::vertex(Point3::new(0.0, 0.0, 1.0));
+/// let wire: Wire = vec![
+///     builder::line(&v0, &v1),
+///     builder::line(&v1, &v2),
+/// ]
+/// .into();
+/// let mut wires = vec![wire];
+/// // failed to attach plane, because wire is not closed.
+/// assert!(builder::try_attach_plane(&wires).is_none());
+/// 
+/// wires[0].push_back(builder::line(&v2, &v3));
+/// wires[0].push_back(builder::line(&v3, &v0));
+/// // failed to attach plane, because wire is not in the plane.
+/// assert!(builder::try_attach_plane(&wires).is_none());
+/// 
+/// wires[0].pop_back();
+/// wires[0].pop_back();
+/// wires[0].push_back(builder::line(&v2, &v0));
+/// // sucess in attaching plane!
+/// assert!(builder::try_attach_plane(&wires).is_some());
+/// ```
 #[inline(always)]
 pub fn try_attach_plane(wires: &Vec<Wire>) -> Option<Face> {
     let pts = wires
@@ -81,8 +200,6 @@ pub fn try_attach_plane(wires: &Vec<Wire>) -> Option<Face> {
 }
 
 /// Returns another topology whose points, curves, and surfaces are cloned.
-///
-/// This method is a redefinition of `Mapped::topological_clone()`.
 #[inline(always)]
 pub fn clone<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(elem: &T) -> T {
     elem.topological_clone()
@@ -369,13 +486,10 @@ fn partial_torus() {
     let face = try_attach_plane(&vec![w]).unwrap();
     let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(2.0));
     assert!(torus.is_geometric_consistent());
-    
     let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(5.0));
     assert!(torus.is_geometric_consistent());
-    
     let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-2.0));
     assert!(torus.is_geometric_consistent());
-    
     let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-5.0));
     assert!(torus.is_geometric_consistent());
 }
