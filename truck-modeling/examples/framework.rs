@@ -28,7 +28,7 @@ impl ShapeViewer {
             _ => 1,
         };
         let scene_desc = SceneDescriptor {
-            background: Color::BLACK,
+            background: Color::WHITE,
             camera: create_camera(),
             lights: vec![Light {
                 position: Point3::new(1.5, 1.5, 1.5),
