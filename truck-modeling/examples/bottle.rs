@@ -20,16 +20,11 @@ fn bottle(width: f64, height: f64, thickness: f64) -> Solid {
     let arc1 = builder::rotated(&arc0, Point3::origin(), Vector3::unit_y(), Rad(PI));
     let bottom = builder::homotopy(&arc0, &arc1.inverse());
     builder::tsweep(&bottom, Vector3::new(0.0, height, 0.0))
-    //bottom.inverse()
 }
 
 fn main() {
-    let bottle = bottle(2.0, 2.0, 2.0);
-    //let bottle = builder::translated(&bottle, Vector3::new(0.0, -1.0, 0.0));
+    let bottle = bottle(1.0, 1.0, 1.0);
+    let bottle = builder::translated(&bottle, Vector3::new(0.0, -0.5, 0.0));
     let bottle = bottle.into_boundaries().pop().unwrap();
-    for face in &bottle {
-        println!("{:?}", face.oriented_surface());
-    }
     ShapeViewer::run(bottle);
-    //ShapeViewer::run(Shell::from(vec![bottle[0].clone()]));
 }

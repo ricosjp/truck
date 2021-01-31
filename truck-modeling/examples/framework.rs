@@ -28,7 +28,7 @@ impl ShapeViewer {
             _ => 1,
         };
         let scene_desc = SceneDescriptor {
-            background: Color::WHITE,
+            background: Color::BLACK,
             camera: create_camera(),
             lights: vec![Light {
                 position: Point3::new(1.5, 1.5, 1.5),
@@ -189,7 +189,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
             compatible_surface: Some(surface),
         })
         .await
-        .unwrap();
+        .expect("Failed to find an appropriate adapter");
 
     let tuple = adapter
         .request_device(
@@ -201,7 +201,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
             None,
         )
         .await
-        .unwrap();
+        .expect("Failed to create device");
     (tuple.0, tuple.1, adapter.get_info())
 }
 
