@@ -10,39 +10,58 @@ use winit::event_loop::ControlFlow;
 /// The framework of applications with `winit`.
 /// The main function of this file is the smallest usecase of this trait.
 pub trait App: Sized + 'static {
+    /// Initialize application
+    /// # Arguments
+    /// - handler: `DeviceHandler` provided by `wgpu`
+    /// - info: informations of device and backend
     fn init(handler: &DeviceHandler, info: AdapterInfo) -> Self;
+    /// By overriding this function, you can change the display of the title bar.
+    /// It is not possible to change the window while it is running.
     fn app_title<'a>() -> Option<&'a str> { None }
+    /// Default is `ControlFlow::WaitUntil(1 / 60 seconds)`.
     fn default_control_flow() -> ControlFlow {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         ControlFlow::WaitUntil(next_frame_time)
     }
+    /// By overriding this function, one can set the update process for each frame.
     fn update(&mut self, _handler: &DeviceHandler) {}
+    /// By overriding this function, one can set the rendering process for each frame.
     fn render(&mut self, _frame: &SwapChainFrame) {}
+    /// By overriding this function, one can change the behavior when the window is resized.
     fn resized(&mut self, _size: PhysicalSize<u32>) -> ControlFlow { Self::default_control_flow() }
+    /// By overriding this function, one can change the behavior when the window is moved.
     fn moved(&mut self, _position: PhysicalPosition<i32>) -> ControlFlow {
         Self::default_control_flow()
     }
+    /// By overriding this function, one can change the behavior when the X button is pushed.
     fn closed_requested(&mut self) -> ControlFlow { ControlFlow::Exit }
+    /// By overriding this function, one can change the behavior when the window is destoroyed.
     fn destroyed(&mut self) -> ControlFlow { Self::default_control_flow() }
+    /// By overriding this function, one can change the behavior when a file is dropped to the window.
     fn dropped_file(&mut self, _path: std::path::PathBuf) -> ControlFlow {
         Self::default_control_flow()
     }
+    /// By overriding this function, one can change the behavior when a file is hovered to the window.
     fn hovered_file(&mut self, _path: std::path::PathBuf) -> ControlFlow {
         Self::default_control_flow()
     }
+    /// By overriding this function, one can change the behavior when a keybourd input occurs.
     fn keyboard_input(&mut self, _input: KeyboardInput, _is_synthetic: bool) -> ControlFlow {
         Self::default_control_flow()
     }
+    /// By overriding this function, one can change the behavior when a mouse input occurs.
     fn mouse_input(&mut self, _state: ElementState, _button: MouseButton) -> ControlFlow {
         Self::default_control_flow()
     }
+    /// By overriding this function, one can change the behavior when a mouse wheel input occurs.
     fn mouse_wheel(&mut self, _delta: MouseScrollDelta, _phase: TouchPhase) -> ControlFlow {
         Self::default_control_flow()
     }
+    /// By overriding this function, one can change the behavior when the cursor is moved.
     fn cursor_moved(&mut self, _position: PhysicalPosition<f64>) -> ControlFlow {
         Self::default_control_flow()
     }
-
+    /// Run the application.
     fn run() {
         let event_loop = winit::event_loop::EventLoop::new();
         let mut wb = winit::window::WindowBuilder::new();

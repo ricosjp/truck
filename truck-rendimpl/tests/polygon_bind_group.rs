@@ -40,54 +40,18 @@ impl<'a> Rendered for BGCheckPolygonInstance<'a> {
     }
 }
 
-fn test_polygons() -> [PolygonMesh; 3] {
-    let positions = vec![
-        Point3::new(-1.0, 2.0, -1.0),
-        Point3::new(1.0, 2.0, -1.0),
-        Point3::new(-1.0, 2.0, 1.0),
-        Point3::new(1.0, 2.0, 1.0),
-    ];
-    let uv_coords = vec![
-        Vector2::new(-1.0, -1.0),
-        Vector2::new(1.0, -1.0),
-        Vector2::new(-1.0, 1.0),
-        Vector2::new(1.0, 1.0),
-    ];
-    let normals = vec![
-        Vector3::new(-1.0, 0.2, -1.0),
-        Vector3::new(-1.0, 0.2, 1.0),
-        Vector3::new(1.0, 0.2, -1.0),
-        Vector3::new(1.0, 0.2, 1.0),
-    ];
-    let tri_faces = vec![
-        [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
-        [[2, 2, 2], [1, 1, 1], [3, 3, 3]],
-    ];
-    let quad_faces = vec![[[0, 0, 0], [1, 1, 1], [3, 3, 3], [2, 2, 2]]];
-    let other_faces = vec![vec![[0, 0, 0], [1, 1, 1], [3, 3, 3], [2, 2, 2]]];
+const ATTRS_OBJ: &str = "
+v -1.0 2.0 -1.0\nv 1.0 2.0 -1.0\nv -1.0 2.0 1.0\nv 1.0 2.0 1.0
+vt -1.0 -1.0\nvt 1.0 -1.0\nvt 1.0 1.0\nvt -1.0 1.0
+vn -1.0 0.2 -1.0\nvn 1.0 0.2 -1.0\nvn -1.0 0.2 1.0\nvn 1.0 0.2 1.0
+";
+const TRIS_OBJ: &str = "f 1/1/1 2/2/3 3/4/2\nf 3/4/2 2/2/3 4/3/4\n";
+const QUADS_OBJ: &str = "f 1/1/1 2/2/3 4/3/4 3/4/2\n";
 
+fn test_polygons() -> [PolygonMesh; 2] {
     [
-        PolygonMesh {
-            positions: positions.clone(),
-            uv_coords: uv_coords.clone(),
-            normals: normals.clone(),
-            tri_faces,
-            ..Default::default()
-        },
-        PolygonMesh {
-            positions: positions.clone(),
-            uv_coords: uv_coords.clone(),
-            normals: normals.clone(),
-            quad_faces,
-            ..Default::default()
-        },
-        PolygonMesh {
-            positions,
-            uv_coords,
-            normals,
-            other_faces,
-            ..Default::default()
-        },
+        obj::read((ATTRS_OBJ.to_string() + TRIS_OBJ).as_bytes()).unwrap(),
+        obj::read((ATTRS_OBJ.to_string() + QUADS_OBJ).as_bytes()).unwrap(),
     ]
 }
 
