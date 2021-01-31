@@ -45,6 +45,7 @@ impl ShapeViewer {
                 roughness: 0.9,
                 ..Default::default()
             },
+            backface_culling: false,
             ..Default::default()
         };
         let instance = scene.create_instance(&shape, &inst_desc);
@@ -189,7 +190,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
             compatible_surface: Some(surface),
         })
         .await
-        .unwrap();
+        .expect("Failed to find an appropriate adapter");
 
     let tuple = adapter
         .request_device(
@@ -201,7 +202,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
             None,
         )
         .await
-        .unwrap();
+        .expect("Failed to create device");
     (tuple.0, tuple.1, adapter.get_info())
 }
 
