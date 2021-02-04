@@ -186,9 +186,85 @@ impl<P, C, S> Face<P, C, S> {
             .collect()
     }
 
-    /// Adds a boundary to the face.
     #[inline(always)]
-    pub fn try_add_boundary(&mut self, wire: Wire<P, C>) -> Result<()> {
+    fn renew_pointer(&mut self) where S: Clone {
+        let surface = self.lock_surface().unwrap().clone();
+        self.surface = Arc::new(Mutex::new(surface));
+    }
+
+    /// Adds a boundary to the face.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), (), (), ()]);
+    /// let wire0 = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///      Edge::new(&v[3], &v[4], ()),
+    ///      Edge::new(&v[4], &v[5], ()),
+    ///      Edge::new(&v[5], &v[3], ()),
+    /// ]);
+    /// let mut face0 = Face::new(vec![wire0.clone()], ());
+    /// face0.try_add_boundary(wire1.clone()).unwrap();
+    /// let face1 = Face::new(vec![wire0, wire1], ());
+    /// assert_eq!(face0.boundaries(), face1.boundaries());
+    /// ```
+    /// # Remarks
+    /// 1. If the face is inverted, then the added wire is inverted as absolute bounday.
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), (), (), ()]);
+    /// let wire0 = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///      Edge::new(&v[3], &v[4], ()),
+    ///      Edge::new(&v[5], &v[4], ()).inverse(),
+    ///      Edge::new(&v[5], &v[3], ()),
+    /// ]);
+    /// let mut face = Face::new(vec![wire0], ());
+    /// face.invert();
+    /// face.try_add_boundary(wire1.clone()).unwrap();
+    /// 
+    /// // The boundary is added in compatible with the face orientation.
+    /// assert_eq!(face.boundaries()[1], wire1);
+    /// 
+    /// // The absolute bounday is inverted!
+    /// let iter0 = face.absolute_boundaries()[1].edge_iter();
+    /// let iter1 = wire1.edge_iter().rev();
+    /// for (edge0, edge1) in iter0.zip(iter1) {
+    ///     assert_eq!(edge0.id(), edge1.id());
+    ///     assert_eq!(edge0.orientation(), !edge1.orientation());
+    /// }
+    /// ```
+    /// 2. This method renew the face id.
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), (), (), ()]);
+    /// let wire0 = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///      Edge::new(&v[3], &v[4], ()),
+    ///      Edge::new(&v[5], &v[4], ()).inverse(),
+    ///      Edge::new(&v[5], &v[3], ()),
+    /// ]);
+    /// let mut face0 = Face::new(vec![wire0], ());
+    /// let face1 = face0.clone();
+    /// assert_eq!(face0.id(), face1.id());
+    /// face0.try_add_boundary(wire1).unwrap();
+    /// assert_ne!(face0.id(), face1.id());
+    /// ```
+    #[inline(always)]
+    pub fn try_add_boundary(&mut self, mut wire: Wire<P, C>) -> Result<()>
+    where S: Clone {
         if wire.is_empty() {
             return Err(Error::EmptyWire);
         } else if !wire.is_closed() {
@@ -196,7 +272,11 @@ impl<P, C, S> Face<P, C, S> {
         } else if !wire.is_simple() {
             return Err(Error::NotSimpleWire);
         }
+        if !self.orientation {
+            wire.invert();
+        }
         self.boundaries.push(wire);
+        self.renew_pointer();
         if !Wire::disjoint_wires(&self.boundaries) {
             self.boundaries.pop();
             return Err(Error::NotDisjointWires);
@@ -205,8 +285,80 @@ impl<P, C, S> Face<P, C, S> {
     }
 
     /// Adds a boundary to the face.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), (), (), ()]);
+    /// let wire0 = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///      Edge::new(&v[3], &v[4], ()),
+    ///      Edge::new(&v[4], &v[5], ()),
+    ///      Edge::new(&v[5], &v[3], ()),
+    /// ]);
+    /// let mut face0 = Face::new(vec![wire0.clone()], ());
+    /// face0.add_boundary(wire1.clone());
+    /// let face1 = Face::new(vec![wire0, wire1], ());
+    /// assert_eq!(face0.boundaries(), face1.boundaries());
+    /// ```
+    /// # Remarks
+    /// 1. If the face is inverted, then the added wire is inverted as absolute bounday.
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), (), (), ()]);
+    /// let wire0 = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///      Edge::new(&v[3], &v[4], ()),
+    ///      Edge::new(&v[5], &v[4], ()).inverse(),
+    ///      Edge::new(&v[5], &v[3], ()),
+    /// ]);
+    /// let mut face = Face::new(vec![wire0], ());
+    /// face.invert();
+    /// face.add_boundary(wire1.clone());
+    /// 
+    /// // The boundary is added in compatible with the face orientation.
+    /// assert_eq!(face.boundaries()[1], wire1);
+    /// 
+    /// // The absolute bounday is inverted!
+    /// let iter0 = face.absolute_boundaries()[1].edge_iter();
+    /// let iter1 = wire1.edge_iter().rev();
+    /// for (edge0, edge1) in iter0.zip(iter1) {
+    ///     assert_eq!(edge0.id(), edge1.id());
+    ///     assert_eq!(edge0.orientation(), !edge1.orientation());
+    /// }
+    /// ```
+    /// 2. This method renew the face id.
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), (), (), ()]);
+    /// let wire0 = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///      Edge::new(&v[3], &v[4], ()),
+    ///      Edge::new(&v[5], &v[4], ()).inverse(),
+    ///      Edge::new(&v[5], &v[3], ()),
+    /// ]);
+    /// let mut face0 = Face::new(vec![wire0], ());
+    /// let face1 = face0.clone();
+    /// assert_eq!(face0.id(), face1.id());
+    /// face0.add_boundary(wire1);
+    /// assert_ne!(face0.id(), face1.id());
+    /// ```
     #[inline(always)]
-    pub fn add_boundary(&mut self, wire: Wire<P, C>) { self.try_add_boundary(wire).remove_try() }
+    pub fn add_boundary(&mut self, wire: Wire<P, C>)
+    where S: Clone {
+        self.try_add_boundary(wire).remove_try()
+    }
 
     /// Returns the orientation of face.
     ///
@@ -421,7 +573,9 @@ impl<P, C, S> Face<P, C, S> {
     }
 }
 
-impl<P, C: Curve<Point=P>, S: Surface<Point=C::Point, Vector=C::Vector, Curve=C>> Face<P, C, S> {
+impl<P, C: Curve<Point = P>, S: Surface<Point = C::Point, Vector = C::Vector, Curve = C>>
+    Face<P, C, S>
+{
     /// Returns the cloned surface in face.
     /// If face is inverted, then the returned surface is also inverted.
     #[inline(always)]
@@ -434,7 +588,8 @@ impl<P, C: Curve<Point=P>, S: Surface<Point=C::Point, Vector=C::Vector, Curve=C>
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
-    pub fn is_geometric_consistent(&self) -> bool where P: Tolerance {
+    pub fn is_geometric_consistent(&self) -> bool
+    where P: Tolerance {
         let surface = &*self.lock_surface().unwrap();
         self.boundary_iters().into_iter().flatten().all(|edge| {
             let edge_consist = edge.is_geometric_consistent();
