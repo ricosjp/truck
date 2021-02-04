@@ -58,7 +58,7 @@ impl MyRender {
         mat = mat.invert().unwrap();
         mat = Matrix4::from_translation(Vector3::new(0.0, 0.5, 5.0)) * mat;
         for _ in 0..NUM_OF_OBJECTS {
-            let mut instance = original_mesh.clone();
+            let mut instance = original_mesh.clone_instance();
             instance.descriptor_mut().matrix = mat;
             scene.add_object(&mut instance);
             self.instances.push(instance);

@@ -55,7 +55,7 @@ fn nontex_raymarching(scene: &mut Scene) -> Vec<u8> {
     let plane = Plane {
         vertex_shader: include_str!("shaders/plane.vert"),
         fragment_shader: &fragment_shader,
-        id: Default::default(),
+        id: RenderID::gen(),
     };
     common::render_one(scene, &texture, &plane);
     common::read_texture(scene.device_handler(), &texture)
@@ -149,7 +149,7 @@ fn tex_raymarching(scene: &mut Scene) -> Vec<u8> {
     let plane = Plane {
         vertex_shader: include_str!("shaders/plane.vert"),
         fragment_shader: &fragment_shader,
-        id: Default::default(),
+        id: RenderID::gen(),
     };
     common::render_one(scene, &texture, &plane);
     common::read_texture(scene.device_handler(), &texture)

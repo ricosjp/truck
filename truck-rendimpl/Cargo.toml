@@ -1,6 +1,6 @@
 [package]
 name = "truck-rendimpl"
-version = "0.2.1"
+version = "0.2.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "visualization of shape and polygon mesh based on platform"
@@ -17,8 +17,8 @@ exclude = ["*.png"]
 [dependencies]
 image = "0.23.12"
 bytemuck = { version = "1.4.1", features = ["derive"] }
-truck-platform = { version = "0.1.0", path = "../truck-platform" }
-truck-modeling = { version = "0.1.1", path = "../truck-modeling" }
+truck-platform = { version = "0.2.0", path = "../truck-platform" }
+truck-modeling = { version = "0.1.3", path = "../truck-modeling" }
 truck-polymesh = { version = "0.2.0", path = "../truck-polymesh" }
 
 [dev-dependencies]

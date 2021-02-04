@@ -10,7 +10,7 @@ impl IntoInstance for PolygonMesh {
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             desc,
-            id: Default::default(),
+            id: RenderID::gen(),
         }
     }
     #[inline(always)]
@@ -27,7 +27,7 @@ impl IntoInstance for StructuredMesh {
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             desc,
-            id: Default::default(),
+            id: RenderID::gen(),
         }
     }
     #[inline(always)]
@@ -37,18 +37,16 @@ impl IntoInstance for StructuredMesh {
     }
 }
 
-impl Clone for PolygonInstance {
+impl PolygonInstance {
+    /// Clone the instance as another drawn element.
     #[inline(always)]
-    fn clone(&self) -> PolygonInstance {
+    pub fn clone_instance(&self) -> PolygonInstance {
         PolygonInstance {
             polygon: self.polygon.clone(),
             desc: self.desc.clone(),
-            id: Default::default(),
+            id: RenderID::gen(),
         }
     }
-}
-
-impl PolygonInstance {
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
     pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
