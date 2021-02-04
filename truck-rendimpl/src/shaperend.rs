@@ -10,6 +10,17 @@ impl Clone for FaceInstance {
     }
 }
 
+impl FaceInstance {
+    /// Clone the instance as another drawn element.
+    #[inline(always)]
+    fn clone_instance(&self) -> Self {
+        FaceInstance {
+            buffer: self.buffer.clone(),
+            id: Default::default(),
+        }
+    }
+}
+
 fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
     const N: usize = 50;
     let mut res = (0.0, 0.0);
@@ -218,7 +229,7 @@ mod ficonfig {
 
 impl<'a> RenderFace<'a> {
     /// Returns the default vertex shader module source.
-    /// 
+    ///
     /// The GLSL original code is `src/shaders/polygon.vert`.
     #[inline(always)]
     pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
@@ -226,7 +237,7 @@ impl<'a> RenderFace<'a> {
     }
 
     /// Returns the default fragment shader module source for non-textured polygons.
-    /// 
+    ///
     /// The GLSL original code is `src/shaders/face.frag`.
     #[inline(always)]
     pub fn default_fragment_shader() -> ShaderModuleSource<'static> {
@@ -234,7 +245,7 @@ impl<'a> RenderFace<'a> {
     }
 
     /// Returns the default fragment shader module source for textured polygons.
-    /// 
+    ///
     /// The GLSL original code is `src/shaders/textured-face.frag`.
     #[inline(always)]
     pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
@@ -306,13 +317,24 @@ impl<'a> Rendered for RenderFace<'a> {
 }
 
 impl ShapeInstance {
+    /// Clone the instance as another drawn element.
+    #[inline(always)]
+    pub fn clone_instance(&self) -> Self {
+        ShapeInstance {
+            faces: self
+                .faces
+                .iter()
+                .map(|face| face.clone_instance())
+                .collect(),
+            desc: self.desc.clone(),
+        }
+    }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
     pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
     /// Returns the mutable reference to the instance descriptor.
     #[inline(always)]
     pub fn descriptor_mut(&mut self) -> &mut InstanceDescriptor { &mut self.desc }
-    
     /// Creates the vector of `RenderFace` for rendering the shape.
     #[inline(always)]
     pub fn render_faces(&self) -> Vec<RenderFace> {
