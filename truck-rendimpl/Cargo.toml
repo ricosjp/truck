@@ -1,6 +1,6 @@
 [package]
 name = "truck-rendimpl"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "visualization of shape and polygon mesh based on platform"
