@@ -22,5 +22,5 @@ truck-topology = { version = "0.1.0", path = "../truck-topology" }
 rand = "0.8.0"
 winit = "0.24.0"
 futures = "0.3.8"
-# truck-platform = { version = "0.1.0", path = "../truck-platform" }
-# truck-rendimpl = { version = "0.1.2", path = "../truck-rendimpl" }
+truck-platform = { version = "0.1.0", path = "../truck-platform" }
+truck-rendimpl = { version = "0.2.1", path = "../truck-rendimpl" }
