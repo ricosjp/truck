@@ -221,7 +221,7 @@ mod plane {
                 vertex_module,
                 fragment_module,
                 mouse: [0.0; 4],
-                id: Default::default(),
+                id: RenderID::gen(),
             }
         }
 

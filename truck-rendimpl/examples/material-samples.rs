@@ -82,7 +82,7 @@ impl App for MyApp {
         let instances: Vec<_> = (0..N)
             .flat_map(move |i| (0..N).map(move |j| (i, j)))
             .map(|(i, j)| {
-                let mut instance = instance.clone();
+                let mut instance = instance.clone_instance();
                 let (s, t) = (i as f64 / (N - 1) as f64, j as f64 / (N - 1) as f64);
                 let matrix = Matrix4::from_translation(Vector3::new(
                     1.5 * (i + 1) as f64 - side_length / 2.0,

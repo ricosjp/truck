@@ -8,7 +8,7 @@
 use std::f64::consts::PI;
 use std::io::Read;
 use truck_platform::*;
-use truck_polymesh::{MeshHandler, PolygonMesh};
+use truck_polymesh::prelude::*;
 use truck_rendimpl::*;
 use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
@@ -30,7 +30,7 @@ struct MyRender {
 
 impl MyRender {
     fn create_camera() -> Camera {
-        let mat = Matrix4::look_at(
+        let mat = Matrix4::look_at_rh(
             Point3::new(15.0, 15.0, 15.0),
             Point3::origin(),
             Vector3::unit_y(),
@@ -43,25 +43,12 @@ impl MyRender {
         )
     }
 
-    fn set_normals(mesh: PolygonMesh) -> PolygonMesh {
-        match mesh.normals.is_empty() {
-            false => mesh,
-            true => {
-                let mut mesh_handler = MeshHandler::new(mesh);
-                mesh_handler
-                    .put_together_same_attrs()
-                    .add_smooth_normal(0.5);
-                mesh_handler.into()
-            }
-        }
-    }
-
     fn load_obj<R: Read>(&mut self, reader: R) {
         let scene = &mut self.scene;
         scene.clear_objects();
         self.instances.clear();
-        let mesh = truck_polymesh::obj::read(reader).unwrap();
-        let mesh = MyRender::set_normals(mesh);
+        let mut mesh = truck_polymesh::obj::read(reader).unwrap();
+        mesh.put_together_same_attrs().add_smooth_normals(0.5, false);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let original_mesh = scene.create_instance(&mesh, &Default::default());
@@ -71,7 +58,7 @@ impl MyRender {
         mat = mat.invert().unwrap();
         mat = Matrix4::from_translation(Vector3::new(0.0, 0.5, 5.0)) * mat;
         for _ in 0..NUM_OF_OBJECTS {
-            let mut instance = original_mesh.clone();
+            let mut instance = original_mesh.clone_instance();
             instance.descriptor_mut().matrix = mat;
             scene.add_object(&mut instance);
             self.instances.push(instance);

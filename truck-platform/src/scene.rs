@@ -5,9 +5,10 @@ lazy_static::lazy_static! {
     static ref MAXID: Mutex<usize> = Mutex::new(0);
 }
 
-impl Default for RenderID {
+impl RenderID {
+    /// Generate the unique `RenderID`.
     #[inline(always)]
-    fn default() -> Self {
+    pub fn gen() -> Self {
         let mut id = MAXID.lock().unwrap();
         *id += 1;
         RenderID(*id - 1)

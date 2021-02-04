@@ -1,26 +1,35 @@
 use crate::*;
 
 /// triangulation, quadrangulation, give a structure
-impl MeshHandler {
+pub trait StructuringFilter {
     /// triangulate all n-gons
-    pub fn triangulate(&mut self) -> &mut Self {
-        let mesh = &mut self.mesh;
-        let tri_faces = &mut mesh.tri_faces;
-        for quad in &mesh.quad_faces {
-            tri_faces.push(get_tri(quad, 0, 1, 3));
-            tri_faces.push(get_tri(quad, 2, 3, 1));
-        }
-        for poly in &mesh.other_faces {
-            for i in 2..poly.len() {
-                tri_faces.push(get_tri(poly, 0, i - 1, i));
-            }
-        }
-        mesh.quad_faces = Vec::new();
-        mesh.other_faces = Vec::new();
-
-        self
-    }
-
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// 
+    /// // cube consisting quad faces
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 0.0, 1.0),
+    ///     Point3::new(1.0, 0.0, 1.0),
+    ///     Point3::new(1.0, 1.0, 1.0),
+    ///     Point3::new(0.0, 1.0, 1.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[3, 2, 1, 0], &[0, 1, 5, 4], &[1, 2, 6, 5],
+    ///     &[2, 3, 7, 6], &[3, 0, 4, 7], &[4, 5, 6, 7],
+    /// ]);
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// 
+    /// // the number of face becomes twice since each quadrangle decompose into two triangles.
+    /// assert_eq!(mesh.faces().len(), 6);
+    /// mesh.triangulate();
+    /// assert_eq!(mesh.faces().len(), 12);
+    /// ```
+    fn triangulate(&mut self) -> &mut Self;
     /// join two triangles into one quadrangle.
     /// # Arguments
     /// * `plane_tol` - the tolerance for determining that four points are in the same plane
@@ -35,22 +44,67 @@ impl MeshHandler {
     /// 1. sort the list of the pairs of triangles by the score
     /// 1. take a pair of triangles in order from the top of the list and register a new one
     /// if it doesn't conflict with the one has been already registered.
-    pub fn quadrangulate(&mut self, plane_tol: f64, score_tol: f64) -> &mut Self {
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::prelude::*;
+    /// 
+    /// // cube consisting tri_faces
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 0.0, 1.0),
+    ///     Point3::new(1.0, 0.0, 1.0),
+    ///     Point3::new(1.0, 1.0, 1.0),
+    ///     Point3::new(0.0, 1.0, 1.0),
+    /// ];
+    /// let faces = Faces::from_iter(&[
+    ///     &[3, 2, 0], &[1, 0, 2], &[0, 1, 4], &[5, 4, 1],
+    ///     &[1, 2, 5], &[6, 5, 2], &[2, 3, 6], &[7, 6, 3],
+    ///     &[3, 0, 7], &[4, 7, 0], &[4, 5, 7], &[6, 7, 5],
+    /// ]);
+    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// 
+    /// // The number of faces becomes a half since each pair of triangles is combined.
+    /// assert_eq!(mesh.faces().len(), 12);
+    /// mesh.quadrangulate(0.01, 0.1);
+    /// assert_eq!(mesh.faces().len(), 6);
+    /// ```
+    fn quadrangulate(&mut self, plane_tol: f64, score_tol: f64) -> &mut Self;
+}
+
+impl StructuringFilter for PolygonMesh {
+    fn triangulate(&mut self) -> &mut Self {
+        let mut tri_faces = self.faces().tri_faces().clone();
+        for quad in self.faces().quad_faces() {
+            tri_faces.push(get_tri(quad, 0, 1, 3));
+            tri_faces.push(get_tri(quad, 2, 3, 1));
+        }
+        for poly in self.faces().other_faces() {
+            for i in 2..poly.len() {
+                tri_faces.push(get_tri(poly, 0, i - 1, i));
+            }
+        }
+        *self.debug_editor().faces = Faces::from_tri_and_quad_faces(tri_faces, Vec::new());
+        self
+    }
+    fn quadrangulate(&mut self, plane_tol: f64, score_tol: f64) -> &mut Self {
         let list = self.create_face_edge_list(plane_tol, score_tol);
         self.reflect_face_edge_list(list);
         self
     }
+}
 
+impl PolygonMesh {
     fn create_face_edge_list(&self, plane_tol: f64, score_tol: f64) -> Vec<FaceEdge> {
-        let face_adjacency = self.face_adjacency();
-        let mesh = &self.mesh;
-
+        let face_adjacency = self.faces().face_adjacency();
         let mut passed = Vec::new();
-        for i in 0..mesh.tri_faces.len() {
+        for i in 0..self.faces().tri_faces().len() {
             for j in &face_adjacency[i] {
                 if i > *j {
                     continue;
-                } else if let Some(face_edge) = mesh.get_face_edge(i, *j, plane_tol, score_tol) {
+                } else if let Some(face_edge) = self.get_face_edge(i, *j, plane_tol, score_tol) {
                     passed.push(face_edge);
                 }
             }
@@ -60,32 +114,34 @@ impl MeshHandler {
     }
 
     fn reflect_face_edge_list(&mut self, list: Vec<FaceEdge>) {
-        let mesh = &mut self.mesh;
-
-        let mut used = vec![false; mesh.tri_faces.len()];
-        for face_edge in list.into_iter() {
+        let mut used = vec![false; self.faces().tri_faces().len()];
+        let mut quad_faces = self.faces().quad_faces().clone();
+        quad_faces.extend(list.into_iter().filter_map(|face_edge| {
             let (i, j) = face_edge.faces;
             if used[i] || used[j] {
-                continue;
+                None
+            } else {
+                used[i] = true;
+                used[j] = true;
+                Some(face_edge.positions)
             }
-            used[i] = true;
-            used[j] = true;
-            mesh.quad_faces.push(face_edge.positions);
-        }
-
-        let mut new_tri = Vec::new();
-        for (i, flag) in used.into_iter().enumerate() {
-            if !flag {
-                new_tri.push(mesh.tri_faces[i].clone());
-            }
-        }
-        mesh.tri_faces = new_tri;
+        }));
+        let tri_faces = self.faces().tri_faces();
+        let tri_faces = used
+            .into_iter()
+            .enumerate()
+            .filter_map(move |(i, flag)| match flag {
+                true => None,
+                false => Some(tri_faces[i]),
+            })
+            .collect::<Vec<_>>();
+        *self.debug_editor().faces = Faces::from_tri_and_quad_faces(tri_faces, quad_faces);
     }
 }
 
 struct FaceEdge {
     faces: (usize, usize),
-    positions: [[usize; 3]; 4],
+    positions: [Vertex; 4],
     score: f64,
 }
 
@@ -96,19 +152,18 @@ impl PolygonMesh {
         face1_id: usize,
         plane_tol: f64,
         score_tol: f64,
-    ) -> Option<FaceEdge>
-    {
-        let face0 = &self.tri_faces[face0_id];
-        let face1 = &self.tri_faces[face1_id];
+    ) -> Option<FaceEdge> {
+        let face0 = self.faces().tri_faces()[face0_id];
+        let face1 = self.faces().tri_faces()[face1_id];
 
         let k = (0..3)
-            .find(|k| face0.iter().find(|x| x[0] == face1[*k][0]).is_none())
+            .find(|k| face0.iter().find(|x| x.pos == face1[*k].pos).is_none())
             .unwrap();
-        let vec0 = &self.positions[face0[1][0]] - &self.positions[face0[0][0]];
-        let vec1 = &self.positions[face0[2][0]] - &self.positions[face0[0][0]];
+        let vec0 = self.positions()[face0[1].pos] - self.positions()[face0[0].pos];
+        let vec1 = self.positions()[face0[2].pos] - self.positions()[face0[0].pos];
         let mut n = vec0.cross(vec1);
         n /= n.magnitude();
-        let vec2 = &self.positions[face1[k][0]] - &self.positions[face0[0][0]];
+        let vec2 = self.positions()[face1[k].pos] - self.positions()[face0[0].pos];
         let mat = Matrix3::from_cols(vec0.clone(), vec1.clone(), n.clone());
         let coef = mat.invert().unwrap() * vec2;
 
@@ -168,9 +223,25 @@ impl PolygonMesh {
     }
 }
 
+#[inline(always)]
 fn calc_score(edge0: &Vector3, edge1: &Vector3, edge2: &Vector3, edge3: &Vector3) -> f64 {
     edge0.cos_angle(edge1).abs()
         + edge1.cos_angle(edge2).abs()
         + edge2.cos_angle(edge3).abs()
         + edge3.cos_angle(edge0).abs()
+}
+
+#[inline(always)]
+fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {
+    [face[idx0].clone(), face[idx1].clone(), face[idx2].clone()]
+}
+
+trait CosAngle {
+    fn cos_angle(&self, other: &Self) -> f64;
+}
+
+impl CosAngle for Vector3 {
+    fn cos_angle(&self, other: &Self) -> f64 {
+        self.dot(*other) / (self.magnitude() * other.magnitude())
+    }
 }

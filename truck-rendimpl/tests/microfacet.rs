@@ -38,7 +38,7 @@ fn microfacet_module_test() {
     let mut plane = Plane {
         vertex_shader: include_str!("shaders/plane.vert"),
         fragment_shader: &fragment_shader,
-        id: Default::default(),
+        id: RenderID::gen(),
     };
     common::render_one(&mut scene, &texture, &mut plane);
     let buffer0 = common::read_texture(scene.device_handler(), &texture);
@@ -51,7 +51,7 @@ fn microfacet_module_test() {
     let plane = Plane {
         vertex_shader: include_str!("shaders/plane.vert"),
         fragment_shader: &fragment_shader,
-        id: Default::default(),
+        id: RenderID::gen(),
     };
     common::render_one(&mut scene, &texture, &plane);
     let buffer1 = common::read_texture(scene.device_handler(), &texture);

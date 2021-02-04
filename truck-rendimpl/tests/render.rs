@@ -18,7 +18,7 @@ fn test_scene() -> Scene {
         handler,
         &SceneDescriptor {
             camera: Camera::perspective_camera(
-                Matrix4::look_at(
+                Matrix4::look_at_rh(
                     Point3::new(-1.0, 2.5, 2.0),
                     Point3::new(0.25, 0.25, 0.25),
                     Vector3::unit_y(),
@@ -39,48 +39,6 @@ fn test_scene() -> Scene {
     )
 }
 
-fn polygon_cube() -> PolygonMesh {
-    let positions = vec![
-        Point3::new(0.0, 0.0, 0.0),
-        Point3::new(1.0, 0.0, 0.0),
-        Point3::new(0.0, 1.0, 0.0),
-        Point3::new(0.0, 0.0, 1.0),
-        Point3::new(0.0, 1.0, 1.0),
-        Point3::new(1.0, 0.0, 1.0),
-        Point3::new(1.0, 1.0, 0.0),
-        Point3::new(1.0, 1.0, 1.0),
-    ];
-    let uv_coords = vec![
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 1.0),
-    ];
-    let normals = vec![
-        Vector3::new(1.0, 0.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(-1.0, 0.0, 0.0),
-        Vector3::new(0.0, -1.0, 0.0),
-        Vector3::new(0.0, 0.0, -1.0),
-    ];
-    let quad_faces = vec![
-        [[0, 0, 4], [1, 1, 4], [5, 2, 4], [3, 3, 4]],
-        [[0, 0, 5], [2, 1, 5], [6, 2, 5], [1, 3, 5]],
-        [[0, 0, 3], [3, 1, 3], [4, 2, 3], [2, 3, 3]],
-        [[7, 0, 2], [4, 1, 2], [3, 2, 2], [5, 3, 2]],
-        [[7, 0, 1], [6, 1, 1], [2, 2, 1], [4, 3, 1]],
-        [[7, 0, 0], [5, 1, 0], [1, 2, 0], [6, 3, 0]],
-    ];
-    PolygonMesh {
-        positions,
-        uv_coords,
-        normals,
-        quad_faces,
-        ..Default::default()
-    }
-}
-
 fn shape_cube() -> Solid {
     let s = builder::vertex(Point3::new(0.0, 0.0, 0.0));
     let s = builder::tsweep(&s, Vector3::unit_x());
@@ -97,7 +55,7 @@ fn nontex_raymarching(scene: &mut Scene) -> Vec<u8> {
     let plane = Plane {
         vertex_shader: include_str!("shaders/plane.vert"),
         fragment_shader: &fragment_shader,
-        id: Default::default(),
+        id: RenderID::gen(),
     };
     common::render_one(scene, &texture, &plane);
     common::read_texture(scene.device_handler(), &texture)
@@ -107,7 +65,7 @@ fn nontex_polygon(scene: &mut Scene) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
     let cube = scene.create_instance(
-        &polygon_cube(),
+        &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
         &InstanceDescriptor {
             material: Material {
                 albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
@@ -191,7 +149,7 @@ fn tex_raymarching(scene: &mut Scene) -> Vec<u8> {
     let plane = Plane {
         vertex_shader: include_str!("shaders/plane.vert"),
         fragment_shader: &fragment_shader,
-        id: Default::default(),
+        id: RenderID::gen(),
     };
     common::render_one(scene, &texture, &plane);
     common::read_texture(scene.device_handler(), &texture)
@@ -201,7 +159,7 @@ fn tex_polygon(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
     let cube = scene.create_instance(
-        &polygon_cube(),
+        &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
         &InstanceDescriptor {
             material: Material {
                 albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),

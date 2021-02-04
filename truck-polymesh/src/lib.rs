@@ -1,11 +1,4 @@
 //! Defines polyline-polygon data structure and some algorithms handling mesh.
-//!
-//! # Warning
-//! This crate is WIP, despite the fact that it is used extensively in the sample code.
-//! Specifically, member variables of `PolygonMesh` can be hidden at any time.
-//! `MeshHandler`, which is hidden in the documentation, may be deprecated and
-//! mesh handling may be done as a trait implemented to `PolygonMesh`.
-//! We will move up one minor version when we make these changes.
 
 #![warn(
     missing_docs,
@@ -18,7 +11,7 @@
     unused_qualifications
 )]
 
-extern crate truck_topology as topology;
+use serde::{Deserialize, Serialize};
 
 /// re-export `truck_base`.
 pub mod base {
@@ -26,66 +19,70 @@ pub mod base {
 }
 pub use base::*;
 
-/// mesh data
-#[derive(Clone, Debug, Default)]
+/// Index vertex of a face of the polygon mesh
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct Vertex {
+    /// index of vertex's position
+    pub pos: usize,
+    /// index of vertex's texture coordinate
+    pub uv: Option<usize>,
+    /// index of vertex's normal
+    pub nor: Option<usize>,
+}
+
+/// Faces of polygon mesh
+///
+/// To optimize for the case where the polygon mesh consists only triangles and quadrangle,
+/// there are vectors which consist by each triangles and quadrilaterals, internally.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Faces {
+    tri_faces: Vec<[Vertex; 3]>,
+    quad_faces: Vec<[Vertex; 4]>,
+    other_faces: Vec<Vec<Vertex>>,
+}
+
+/// Polygon mesh
+///
+/// The polygon data is held in a method compliant with wavefront obj.
+/// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
+/// and each face vertex accesses those values by an indices triple.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PolygonMesh {
-    /// List of positions
-    pub positions: Vec<Point3>,
-    /// List of texture matrix
-    pub uv_coords: Vec<Vector2>,
-    /// List of normal vectors
-    pub normals: Vec<Vector3>,
-    /// triangle faces
-    pub tri_faces: Vec<[[usize; 3]; 3]>,
-    /// quadrangle faces
-    pub quad_faces: Vec<[[usize; 3]; 4]>,
-    /// `n`-gon faces where `n` is more than 4.
-    pub other_faces: Vec<Vec<[usize; 3]>>,
+    positions: Vec<Point3>,
+    uv_coords: Vec<Vector2>,
+    normals: Vec<Vector3>,
+    faces: Faces,
 }
 
 /// structured quadrangle mesh
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StructuredMesh {
-    /// positions of each lattice points
-    pub positions: Vec<Vec<Point3>>,
-    /// uv coordinates
-    pub uv_division: (Vec<f64>, Vec<f64>),
-    /// normal vectors of each lattice points
-    pub normals: Vec<Vec<Vector3>>,
+    positions: Vec<Vec<Point3>>,
+    uv_division: Option<(Vec<f64>, Vec<f64>)>,
+    normals: Option<Vec<Vec<Vector3>>>,
 }
 
-#[doc(hidden)]
-/// the decorator for mesh handling
-#[derive(Clone, Debug)]
-pub struct MeshHandler {
-    mesh: PolygonMesh,
-}
+/// Error handler for [`Error`](./errors/enum.Error.html)
+pub type Result<T> = std::result::Result<T, errors::Error>;
 
 /// Defines errors
 pub mod errors;
-mod extract_topology;
-mod healing;
-mod mesh_handler;
 mod meshing_shape;
+mod normal_filters;
 /// I/O of wavefront obj
 pub mod obj;
-mod polygon_mesh;
-mod smoothing;
+mod optimizing;
+/// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
+pub mod polygon_mesh;
 mod splitting;
 mod structured_mesh;
 mod structuring;
 
-#[inline(always)]
-fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {
-    [face[idx0].clone(), face[idx1].clone(), face[idx2].clone()]
-}
-
-trait CosAngle {
-    fn cos_angle(&self, other: &Self) -> f64;
-}
-
-impl CosAngle for Vector3 {
-    fn cos_angle(&self, other: &Self) -> f64 {
-        self.dot(*other) / (self.magnitude() * other.magnitude())
-    }
+/// Re-exports root structs and all mesh filter traits.
+pub mod prelude {
+    pub use crate::*;
+    pub use normal_filters::NormalFilters;
+    pub use optimizing::OptimizingFilter;
+    pub use splitting::Splitting;
+    pub use structuring::StructuringFilter;
 }

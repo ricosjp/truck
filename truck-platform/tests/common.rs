@@ -6,7 +6,7 @@ use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct Plane<'a> {
     pub vertex_shader: &'a str,
     pub fragment_shader: &'a str,
@@ -19,7 +19,7 @@ macro_rules! new_plane {
         Plane {
             vertex_shader: include_str!($vertex_shader),
             fragment_shader: include_str!($fragment_shader),
-            id: Default::default(),
+            id: RenderID::gen(),
         }
     };
 }
