@@ -80,7 +80,7 @@ fn exec_shape_bgtest(
     let tex_desc = common::texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
     let mut bgc_instance = BGCheckShapeInstance {
-        shape: instance.clone(),
+        shape: instance.clone_instance(),
         fragment_shader: shader,
     };
     common::render_ones(scene, &texture, &bgc_instance.render_faces());

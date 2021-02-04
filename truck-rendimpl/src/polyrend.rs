@@ -10,7 +10,7 @@ impl IntoInstance for PolygonMesh {
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             desc,
-            id: Default::default(),
+            id: RenderID::gen(),
         }
     }
     #[inline(always)]
@@ -27,24 +27,13 @@ impl IntoInstance for StructuredMesh {
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             desc,
-            id: Default::default(),
+            id: RenderID::gen(),
         }
     }
     #[inline(always)]
     fn update_instance(&self, device: &Device, instance: &mut Self::Instance) {
         let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
         *instance.polygon.lock().unwrap() = (Arc::new(vb), Arc::new(ib));
-    }
-}
-
-impl Clone for PolygonInstance {
-    #[inline(always)]
-    fn clone(&self) -> PolygonInstance {
-        PolygonInstance {
-            polygon: self.polygon.clone(),
-            desc: self.desc.clone(),
-            id: Default::default(),
-        }
     }
 }
 
@@ -55,7 +44,7 @@ impl PolygonInstance {
         PolygonInstance {
             polygon: self.polygon.clone(),
             desc: self.desc.clone(),
-            id: Default::default(),
+            id: RenderID::gen(),
         }
     }
     /// Returns a reference to the instance descriptor.

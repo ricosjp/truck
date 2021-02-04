@@ -85,7 +85,7 @@ fn exec_polygon_bgtest(
     let tex_desc = common::texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
     let mut bgc_instance = BGCheckPolygonInstance {
-        polygon: instance.clone(),
+        polygon: instance.clone_instance(),
         fragment_shader: shader,
     };
     common::render_one(scene, &texture, &mut bgc_instance);

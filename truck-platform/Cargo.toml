@@ -1,6 +1,6 @@
 [package]
 name = "truck-platform"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "graphic utility library based on wgpu"

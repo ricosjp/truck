@@ -100,7 +100,7 @@ struct FaceInstance {
 ///
 /// The duplicated shape by `Clone::clone` has the same mesh data and descriptor
 /// with original, however, its render id is different from the one of original.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ShapeInstance {
     faces: Vec<FaceInstance>,
     desc: InstanceDescriptor,

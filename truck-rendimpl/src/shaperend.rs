@@ -1,22 +1,12 @@
 use crate::*;
 
-impl Clone for FaceInstance {
-    #[inline(always)]
-    fn clone(&self) -> FaceInstance {
-        FaceInstance {
-            buffer: self.buffer.clone(),
-            id: Default::default(),
-        }
-    }
-}
-
 impl FaceInstance {
     /// Clone the instance as another drawn element.
     #[inline(always)]
     fn clone_instance(&self) -> Self {
         FaceInstance {
             buffer: self.buffer.clone(),
-            id: Default::default(),
+            id: RenderID::gen(),
         }
     }
 }
@@ -86,7 +76,7 @@ impl IntoInstance for Shell {
             .face_iter()
             .map(|face| FaceInstance {
                 buffer: Arc::new(Mutex::new(face_buffer(device, face).unwrap())),
-                id: Default::default(),
+                id: RenderID::gen(),
             })
             .collect();
         ShapeInstance { faces, desc }
@@ -111,7 +101,7 @@ impl IntoInstance for Solid {
             .flat_map(Shell::face_iter)
             .map(|face| FaceInstance {
                 buffer: Arc::new(Mutex::new(face_buffer(device, face).unwrap())),
-                id: Default::default(),
+                id: RenderID::gen(),
             })
             .collect();
         ShapeInstance { faces, desc }
