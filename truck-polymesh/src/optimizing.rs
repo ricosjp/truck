@@ -247,28 +247,23 @@ trait CastIntVector: Sized + Mul<f64, Output = Self> + Div<f64, Output = Self> {
     fn cast_int(&self) -> Self::IntVector;
 }
 
-mod impl_cast_int {
-    use cgmath::{Point3, Vector2, Vector3};
-    macro_rules! impl_cast_int {
-        ($typename: ident) => {
-            impl super::CastIntVector for $typename<f64> {
-                type IntVector = $typename<i64>;
-                fn cast_int(&self) -> $typename<i64> { self.cast::<i64>().unwrap() }
-            }
-        };
-    }
-    impl_cast_int!(Vector2);
-    impl_cast_int!(Vector3);
-    impl_cast_int!(Point3);
+macro_rules! impl_cast_int {
+    ($typename: ident, $n: expr) => {
+        impl CastIntVector for $typename {
+            type IntVector = [i64; $n];
+            fn cast_int(&self) -> [i64; $n] { self.cast::<i64>().unwrap().into() }
+        }
+    };
 }
+impl_cast_int!(Vector2, 2);
+impl_cast_int!(Vector3, 3);
+impl_cast_int!(Point3, 3);
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn into_vertices(iter: &[usize]) -> Vec<Vertex> {
-        iter.iter().map(|i| i.into()).collect()
-    }
+    fn into_vertices(iter: &[usize]) -> Vec<Vertex> { iter.iter().map(|i| i.into()).collect() }
 
     #[test]
     fn degenerate_polygon_test() {
