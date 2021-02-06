@@ -15,7 +15,6 @@ exclude = ["examples/**/*.obj"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cgmath = { version = "0.18.0", features = ["serde"] }
 obj = "0.10.2"
 truck-base = { version = "0.1.0", path = "../truck-base" }
 serde = { version = "1.0.120", features = ["derive"] }
