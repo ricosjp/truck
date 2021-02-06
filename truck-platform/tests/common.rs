@@ -3,6 +3,7 @@
 use glsl_to_spirv::ShaderType;
 use std::io::Read;
 use std::sync::Arc;
+use rayon::prelude::*;
 use truck_platform::*;
 use wgpu::*;
 
@@ -203,7 +204,7 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
 }
 
 pub fn same_buffer(vec0: &Vec<u8>, vec1: &Vec<u8>) -> bool {
-    vec0.into_iter()
+    vec0.par_iter()
         .zip(vec1)
         .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)
 }
