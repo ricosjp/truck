@@ -124,10 +124,12 @@ mod ficonfig {
     pub fn boundary_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::StorageBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage {
+                    read_only: true,
+                },
+                has_dynamic_offset: false,
                 min_binding_size: None,
-                readonly: true,
             },
             count: None,
         }
@@ -136,8 +138,9 @@ mod ficonfig {
     pub fn boundary_length_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -222,7 +225,7 @@ impl<'a> RenderFace<'a> {
     ///
     /// The GLSL original code is `src/shaders/polygon.vert`.
     #[inline(always)]
-    pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
+    pub fn default_vertex_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/polygon.vert.spv")
     }
 
@@ -230,7 +233,7 @@ impl<'a> RenderFace<'a> {
     ///
     /// The GLSL original code is `src/shaders/face.frag`.
     #[inline(always)]
-    pub fn default_fragment_shader() -> ShaderModuleSource<'static> {
+    pub fn default_fragment_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/face.frag.spv")
     }
 
@@ -238,7 +241,7 @@ impl<'a> RenderFace<'a> {
     ///
     /// The GLSL original code is `src/shaders/textured-face.frag`.
     #[inline(always)]
-    pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
+    pub fn default_textured_fragment_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/textured-face.frag.spv")
     }
 
@@ -246,8 +249,8 @@ impl<'a> RenderFace<'a> {
     #[inline(always)]
     pub fn pipeline_with_shader(
         &self,
-        vertex_shader: ShaderModuleSource,
-        fragment_shader: ShaderModuleSource,
+        vertex_shader: ShaderModuleDescriptor,
+        fragment_shader: ShaderModuleDescriptor,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
         sample_count: u32,

@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use glsl_to_spirv::ShaderType;
+use rayon::prelude::*;
 use std::io::Read;
 use std::sync::Arc;
-use rayon::prelude::*;
 use truck_platform::*;
 use wgpu::*;
 
@@ -31,12 +31,17 @@ impl<'a> Rendered for Plane<'a> {
         &self,
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let buffer = BufferHandler::from_slice(
-            &[0 as u32, 1, 2, 2, 1, 3],
+        let vertex_buffer = BufferHandler::from_slice(
+            &[0 as u32, 1, 2, 3],
             handler.device(),
             BufferUsage::VERTEX,
         );
-        (Arc::new(buffer), None)
+        let index_buffer = BufferHandler::from_slice(
+            &[0 as u32, 1, 2, 2, 1, 3],
+            handler.device(),
+            BufferUsage::INDEX,
+        );
+        (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
         Arc::new(bind_group_util::create_bind_group_layout(
@@ -65,55 +70,49 @@ impl<'a> Rendered for Plane<'a> {
                 .device()
                 .create_render_pipeline(&RenderPipelineDescriptor {
                     layout: Some(layout),
-                    vertex_stage: ProgrammableStageDescriptor {
+                    vertex: VertexState {
                         module: &vertex_module,
                         entry_point: "main",
-                    },
-                    fragment_stage: Some(ProgrammableStageDescriptor {
-                        module: &fragment_module,
-                        entry_point: "main",
-                    }),
-                    rasterization_state: Some(RasterizationStateDescriptor {
-                        front_face: FrontFace::Ccw,
-                        cull_mode: CullMode::None,
-                        depth_bias: 0,
-                        depth_bias_slope_scale: 0.0,
-                        depth_bias_clamp: 0.0,
-                        clamp_depth: false,
-                    }),
-                    primitive_topology: PrimitiveTopology::TriangleList,
-                    color_states: &[ColorStateDescriptor {
-                        format: sc_desc.format,
-                        color_blend: BlendDescriptor::REPLACE,
-                        alpha_blend: BlendDescriptor::REPLACE,
-                        write_mask: ColorWrite::ALL,
-                    }],
-                    depth_stencil_state: Some(DepthStencilStateDescriptor {
-                        format: TextureFormat::Depth32Float,
-                        depth_write_enabled: true,
-                        depth_compare: wgpu::CompareFunction::Less,
-                        stencil: StencilStateDescriptor {
-                            front: StencilStateFaceDescriptor::IGNORE,
-                            back: StencilStateFaceDescriptor::IGNORE,
-                            read_mask: 0,
-                            write_mask: 0,
-                        },
-                    }),
-                    vertex_state: VertexStateDescriptor {
-                        index_format: IndexFormat::Uint32,
-                        vertex_buffers: &[VertexBufferDescriptor {
-                            stride: std::mem::size_of::<u32>() as BufferAddress,
+                        buffers: &[VertexBufferLayout {
+                            array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: InputStepMode::Vertex,
-                            attributes: &[VertexAttributeDescriptor {
+                            attributes: &[VertexAttribute {
                                 format: VertexFormat::Uint,
                                 offset: 0,
                                 shader_location: 0,
                             }],
                         }],
                     },
-                    sample_count,
-                    sample_mask: !0,
-                    alpha_to_coverage_enabled: false,
+                    primitive: PrimitiveState {
+                        topology: PrimitiveTopology::TriangleList,
+                        front_face: FrontFace::Ccw,
+                        cull_mode: CullMode::None,
+                        polygon_mode: PolygonMode::Fill,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(DepthStencilState {
+                        format: TextureFormat::Depth32Float,
+                        depth_write_enabled: true,
+                        depth_compare: wgpu::CompareFunction::Less,
+                        stencil: Default::default(),
+                        bias: Default::default(),
+                        clamp_depth: false,
+                    }),
+                    multisample: MultisampleState {
+                        count: sample_count,
+                        mask: !0,
+                        alpha_to_coverage_enabled: false,
+                    },
+                    fragment: Some(FragmentState {
+                        module: &fragment_module,
+                        entry_point: "main",
+                        targets: &[ColorTargetState {
+                            format: sc_desc.format,
+                            color_blend: BlendState::REPLACE,
+                            alpha_blend: BlendState::REPLACE,
+                            write_mask: ColorWrite::ALL,
+                        }],
+                    }),
                     label: None,
                 }),
         )
@@ -130,7 +129,11 @@ pub fn read_shader(device: &Device, code: &str, shadertype: ShaderType) -> Shade
     let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();
     let mut compiled = Vec::new();
     spirv.read_to_end(&mut compiled).unwrap();
-    device.create_shader_module(wgpu::util::make_spirv(&compiled))
+    device.create_shader_module(&ShaderModuleDescriptor {
+        source: wgpu::util::make_spirv(&compiled),
+        flags: ShaderFlags::VALIDATION,
+        label: None,
+    })
 }
 
 pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'static> {
@@ -145,7 +148,7 @@ pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'s
         sample_count: 1,
         dimension: TextureDimension::D2,
         format: sc_desc.format,
-        usage: TextureUsage::OUTPUT_ATTACHMENT | TextureUsage::COPY_SRC,
+        usage: TextureUsage::RENDER_ATTACHMENT | TextureUsage::COPY_SRC,
     }
 }
 

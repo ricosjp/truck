@@ -47,9 +47,17 @@ impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
     ) -> Arc<RenderPipeline> {
         let vertex_shader = include_str!("shaders/shape-bindgroup.vert");
         let vertex_spirv = common::compile_shader(vertex_shader, ShaderType::Vertex);
-        let vertex_module = wgpu::util::make_spirv(&vertex_spirv);
+        let vertex_module = ShaderModuleDescriptor{
+            source: wgpu::util::make_spirv(&vertex_spirv),
+            flags: ShaderFlags::VALIDATION,
+            label: None,
+        };
         let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
-        let fragment_module = wgpu::util::make_spirv(&fragment_spirv);
+        let fragment_module = ShaderModuleDescriptor{
+            source: wgpu::util::make_spirv(&fragment_spirv),
+            flags: ShaderFlags::VALIDATION,
+            label: None,
+        };
         self.face.pipeline_with_shader(
             vertex_module,
             fragment_module,

@@ -76,7 +76,7 @@ pub trait App: Sized + 'static {
         let (device, queue, info) = futures::executor::block_on(init_device(&instance, &surface));
 
         let sc_desc = SwapChainDescriptor {
-            usage: TextureUsage::OUTPUT_ATTACHMENT,
+            usage: TextureUsage::RENDER_ATTACHMENT,
             format: TextureFormat::Bgra8Unorm,
             width: size.width,
             height: size.height,
@@ -138,7 +138,7 @@ pub trait App: Sized + 'static {
 async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, AdapterInfo) {
     let adapter = instance
         .request_adapter(&RequestAdapterOptions {
-            power_preference: PowerPreference::Default,
+            power_preference: PowerPreference::HighPerformance,
             compatible_surface: Some(surface),
         })
         .await
@@ -149,7 +149,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
             &DeviceDescriptor {
                 features: Default::default(),
                 limits: Limits::default(),
-                shader_validation: true,
+                label: None,
             },
             None,
         )

@@ -11,7 +11,7 @@ fn init_device_with_adptinfo(instance: &Instance) -> (Arc<Device>, Arc<Queue>, A
     futures::executor::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
+                power_preference: PowerPreference::HighPerformance,
                 compatible_surface: None,
             })
             .await
@@ -21,7 +21,7 @@ fn init_device_with_adptinfo(instance: &Instance) -> (Arc<Device>, Arc<Queue>, A
                 &DeviceDescriptor {
                     features: Default::default(),
                     limits: Limits::default(),
-                    shader_validation: true,
+                    label: None,
                 },
                 None,
             )
@@ -59,7 +59,7 @@ fn msaa_test() {
         }
     }
     let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
+        usage: TextureUsage::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,

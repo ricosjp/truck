@@ -2,11 +2,6 @@
 
 const float EPS = 1.0e-5;
 
-layout(set = 0, binding = 0) uniform Camera {
-    mat4 camera_matrix;
-    mat4 camera_projection;
-};
-
 const mat4 acm = mat4(
     1.0, 2.1, 3.2, 4.3, 5.4, 6.5, 7.6, 8.7, 9.8, 10.9, 11.0, 12.0, 13.0, 14.0, 15.0, 16.23
 );
@@ -22,6 +17,11 @@ struct Light {
     vec4 position;
     vec4 color;
     uvec4 light_type;
+};
+
+layout(set = 0, binding = 0) uniform Camera {
+    mat4 camera_matrix;
+    mat4 camera_projection;
 };
 
 layout(set = 0, binding = 1) buffer Lights {

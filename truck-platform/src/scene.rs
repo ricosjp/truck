@@ -104,8 +104,9 @@ impl Scene {
     fn camera_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -116,10 +117,10 @@ impl Scene {
     fn lights_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-            ty: BindingType::StorageBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
                 min_binding_size: None,
-                readonly: true,
             },
             count: None,
         }
@@ -129,8 +130,9 @@ impl Scene {
     fn scene_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -165,7 +167,7 @@ impl Scene {
             sample_count,
             dimension: TextureDimension::D2,
             format: sc_desc.format,
-            usage: TextureUsage::OUTPUT_ATTACHMENT,
+            usage: TextureUsage::RENDER_ATTACHMENT,
             label: None,
         })
     }
@@ -182,7 +184,7 @@ impl Scene {
             sample_count,
             dimension: TextureDimension::D2,
             format: TextureFormat::Depth32Float,
-            usage: TextureUsage::OUTPUT_ATTACHMENT,
+            usage: TextureUsage::RENDER_ATTACHMENT,
             label: None,
         })
     }
@@ -537,6 +539,7 @@ impl Scene {
                 depth_stencil_attachment: Some(Self::depth_stencil_attachment_descriptor(
                     &depth_view,
                 )),
+                ..Default::default()
             });
             rpass.set_bind_group(0, &bind_group, &[]);
             for (_, object) in self.objects.iter() {
@@ -545,7 +548,7 @@ impl Scene {
                 rpass.set_vertex_buffer(0, object.vertex_buffer.buffer.slice(..));
                 match object.index_buffer {
                     Some(ref index_buffer) => {
-                        rpass.set_index_buffer(index_buffer.buffer.slice(..));
+                        rpass.set_index_buffer(index_buffer.buffer.slice(..), IndexFormat::Uint32);
                         let index_size =
                             index_buffer.size as u32 / std::mem::size_of::<u32>() as u32;
                         rpass.draw_indexed(0..index_size, 0, 0..1);

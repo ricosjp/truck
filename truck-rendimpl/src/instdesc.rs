@@ -44,8 +44,9 @@ impl Material {
     pub fn bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -99,8 +100,9 @@ impl InstanceDescriptor {
     pub fn matrix_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -190,9 +192,7 @@ impl InstanceDescriptor {
             mipmap_filter: FilterMode::Nearest,
             lod_min_clamp: -100.0,
             lod_max_clamp: 100.0,
-            compare: None,
-            anisotropy_clamp: None,
-            label: None,
+            ..Default::default()
         });
         (view, sampler)
     }
@@ -202,9 +202,9 @@ impl InstanceDescriptor {
     pub fn textureview_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::SampledTexture {
-                dimension: TextureViewDimension::D2,
-                component_type: TextureComponentType::Uint,
+            ty: BindingType::Texture {
+                sample_type: TextureSampleType::Float { filterable: true },
+                view_dimension: TextureViewDimension::D2,
                 multisampled: false,
             },
             count: None,
@@ -216,15 +216,18 @@ impl InstanceDescriptor {
     pub fn sampler_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::Sampler { comparison: false },
+            ty: BindingType::Sampler {
+                filtering: true,
+                comparison: false,
+            },
             count: None,
         }
     }
     #[inline(always)]
     pub(super) fn pipeline_with_shader(
         &self,
-        vertex_shader: ShaderModuleSource,
-        fragment_shader: ShaderModuleSource,
+        vertex_shader: ShaderModuleDescriptor,
+        fragment_shader: ShaderModuleDescriptor,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
         sample_count: u32,
@@ -235,61 +238,28 @@ impl InstanceDescriptor {
             true => CullMode::Back,
             false => CullMode::None,
         };
-        let vertex_module = device.create_shader_module(vertex_shader);
-        let fragment_module = device.create_shader_module(fragment_shader);
+        let vertex_module = device.create_shader_module(&vertex_shader);
+        let fragment_module = device.create_shader_module(&fragment_shader);
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
-            vertex_stage: ProgrammableStageDescriptor {
+            vertex: VertexState {
                 module: &vertex_module,
                 entry_point: "main",
-            },
-            fragment_stage: Some(ProgrammableStageDescriptor {
-                module: &fragment_module,
-                entry_point: "main",
-            }),
-            rasterization_state: Some(RasterizationStateDescriptor {
-                front_face: FrontFace::Ccw,
-                cull_mode,
-                depth_bias: 0,
-                depth_bias_slope_scale: 0.0,
-                depth_bias_clamp: 0.0,
-                clamp_depth: false,
-            }),
-            primitive_topology: PrimitiveTopology::TriangleList,
-            color_states: &[ColorStateDescriptor {
-                format: sc_desc.format,
-                color_blend: BlendDescriptor::REPLACE,
-                alpha_blend: BlendDescriptor::REPLACE,
-                write_mask: ColorWrite::ALL,
-            }],
-            depth_stencil_state: Some(DepthStencilStateDescriptor {
-                format: TextureFormat::Depth32Float,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::Less,
-                stencil: StencilStateDescriptor {
-                    front: StencilStateFaceDescriptor::IGNORE,
-                    back: StencilStateFaceDescriptor::IGNORE,
-                    read_mask: 0,
-                    write_mask: 0,
-                },
-            }),
-            vertex_state: VertexStateDescriptor {
-                index_format: IndexFormat::Uint32,
-                vertex_buffers: &[VertexBufferDescriptor {
-                    stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                buffers: &[VertexBufferLayout {
+                    array_stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
                     attributes: &[
-                        VertexAttributeDescriptor {
+                        VertexAttribute {
                             format: VertexFormat::Float3,
                             offset: 0,
                             shader_location: 0,
                         },
-                        VertexAttributeDescriptor {
+                        VertexAttribute {
                             format: VertexFormat::Float2,
                             offset: 3 * 4,
                             shader_location: 1,
                         },
-                        VertexAttributeDescriptor {
+                        VertexAttribute {
                             format: VertexFormat::Float3,
                             offset: 2 * 4 + 3 * 4,
                             shader_location: 2,
@@ -297,9 +267,36 @@ impl InstanceDescriptor {
                     ],
                 }],
             },
-            sample_count,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
+            primitive: PrimitiveState {
+                topology: PrimitiveTopology::TriangleList,
+                front_face: FrontFace::Ccw,
+                cull_mode,
+                polygon_mode: PolygonMode::Fill,
+                ..Default::default()
+            },
+            depth_stencil: Some(DepthStencilState {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: Default::default(),
+                bias: Default::default(),
+                clamp_depth: false,
+            }),
+            multisample: MultisampleState {
+                count: sample_count,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            fragment: Some(FragmentState {
+                module: &fragment_module,
+                entry_point: "main",
+                targets: &[ColorTargetState {
+                    format: sc_desc.format,
+                    color_blend: BlendState::REPLACE,
+                    alpha_blend: BlendState::REPLACE,
+                    write_mask: ColorWrite::ALL,
+                }],
+            }),
             label: None,
         });
         Arc::new(pipeline)

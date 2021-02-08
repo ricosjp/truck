@@ -29,7 +29,11 @@ impl BufferHandler {
     /// Creates a binding resource from buffer slice.
     #[inline(always)]
     pub fn binding_resource<'a>(&'a self) -> BindingResource<'a> {
-        BindingResource::Buffer(self.buffer.slice(..))
+        BindingResource::Buffer {
+            buffer: &self.buffer,
+            offset: 0,
+            size: None,
+        }
     }
 
     /// Copy the values of buffer to `dest`.

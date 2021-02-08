@@ -34,7 +34,7 @@ fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
     futures::executor::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
+                power_preference: PowerPreference::HighPerformance,
                 compatible_surface: None,
             })
             .await
@@ -44,7 +44,7 @@ fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
                 &DeviceDescriptor {
                     features: Default::default(),
                     limits: Default::default(),
-                    shader_validation: true,
+                    label: None,
                 },
                 None,
             )
@@ -71,7 +71,7 @@ fn bind_group_test() {
     let instance = Instance::new(BackendBit::PRIMARY);
     let (device, queue) = init_device(&instance);
     let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
+        usage: TextureUsage::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,
@@ -96,10 +96,13 @@ fn bind_group_test() {
     };
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler.clone(), &desc);
+    println!("create first plane");
     let plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
     render_one(&mut scene, &texture0, &plane);
+    println!("create second plane");
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
     render_one(&mut scene, &texture1, &plane);
+    println!("create third plane");
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
     render_one(&mut scene, &texture2, &plane);
     let buffer0 = read_texture(&handler, &texture0);
