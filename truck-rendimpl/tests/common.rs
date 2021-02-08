@@ -31,12 +31,17 @@ impl<'a> Rendered for Plane<'a> {
         &self,
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let buffer = BufferHandler::from_slice(
-            &[0 as u32, 1, 2, 2, 1, 3],
+        let vertex_buffer = BufferHandler::from_slice(
+            &[0 as u32, 1, 2, 3],
             handler.device(),
             BufferUsage::VERTEX,
         );
-        (Arc::new(buffer), None)
+        let index_buffer = BufferHandler::from_slice(
+            &[0 as u32, 1, 2, 2, 1, 3],
+            handler.device(),
+            BufferUsage::INDEX,
+        );
+        (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
         Arc::new(bind_group_util::create_bind_group_layout(
