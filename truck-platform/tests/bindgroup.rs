@@ -96,13 +96,10 @@ fn bind_group_test() {
     };
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler.clone(), &desc);
-    println!("create first plane");
     let plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
     render_one(&mut scene, &texture0, &plane);
-    println!("create second plane");
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
     render_one(&mut scene, &texture1, &plane);
-    println!("create third plane");
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
     render_one(&mut scene, &texture2, &plane);
     let buffer0 = read_texture(&handler, &texture0);
