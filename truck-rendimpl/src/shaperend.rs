@@ -34,7 +34,8 @@ fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
 fn face_buffer(device: &Device, face: &Face) -> Option<FaceBuffer> {
     let surface = face.oriented_surface();
     let mesh = StructuredMesh::from_surface(&surface, 0.005);
-    let (vb, ib) = ExpandedPolygon::from(&mesh).buffers(device);
+    let (vb, ib) =
+        ExpandedPolygon::from(&mesh).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
     let mut boundary = Vec::new();
     for edge in face.boundary_iters().into_iter().flatten() {
         let curve = edge.oriented_curve();
