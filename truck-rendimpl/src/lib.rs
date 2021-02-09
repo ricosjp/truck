@@ -53,7 +53,7 @@ pub struct Material {
 
 /// Configures of instances.
 #[derive(Clone)]
-pub struct InstanceDescriptor {
+pub struct InstanceState {
     /// instance matrix
     pub matrix: Matrix4,
     /// material of instance
@@ -75,7 +75,7 @@ pub struct InstanceDescriptor {
 #[derive(Debug)]
 pub struct PolygonInstance {
     polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
-    desc: InstanceDescriptor,
+    desc: InstanceState,
     id: RenderID,
 }
 
@@ -103,14 +103,14 @@ struct FaceInstance {
 #[derive(Debug)]
 pub struct ShapeInstance {
     faces: Vec<FaceInstance>,
-    desc: InstanceDescriptor,
+    desc: InstanceState,
 }
 
 /// Iterated face for rendering `ShapeInstance`.
 #[derive(Clone, Copy, Debug)]
 pub struct RenderFace<'a> {
     instance: &'a FaceInstance,
-    desc: &'a InstanceDescriptor,
+    desc: &'a InstanceState,
 }
 
 /// Instance creator
@@ -130,7 +130,7 @@ pub trait IntoInstance {
     /// the type of instance
     type Instance;
     #[doc(hidden)]
-    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance;
+    fn into_instance(&self, device: &Device, desc: InstanceState) -> Self::Instance;
     #[doc(hidden)]
     fn update_instance(&self, device: &Device, instance: &mut Self::Instance);
 }
@@ -142,7 +142,7 @@ pub trait CreateInstance {
     fn create_instance<T: IntoInstance>(
         &self,
         object: &T,
-        desc: &InstanceDescriptor,
+        desc: &InstanceState,
     ) -> T::Instance;
     /// Update the mesh data by original polygon (shape) structures.
     fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T);
@@ -153,7 +153,7 @@ impl CreateInstance for Scene {
     fn create_instance<T: IntoInstance>(
         &self,
         object: &T,
-        desc: &InstanceDescriptor,
+        desc: &InstanceState,
     ) -> T::Instance {
         object.into_instance(self.device(), desc.clone())
     }

@@ -46,7 +46,7 @@ impl MyApp {
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
-        let inst_desc = InstanceDescriptor {
+        let inst_desc = InstanceState {
             matrix: mat.invert().unwrap(),
             material: Material {
                 albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),

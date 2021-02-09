@@ -53,10 +53,10 @@ impl Material {
     }
 }
 
-impl Default for InstanceDescriptor {
+impl Default for InstanceState {
     #[inline(always)]
-    fn default() -> InstanceDescriptor {
-        InstanceDescriptor {
+    fn default() -> InstanceState {
+        InstanceState {
             matrix: Matrix4::identity(),
             material: Default::default(),
             texture: None,
@@ -65,7 +65,7 @@ impl Default for InstanceDescriptor {
     }
 }
 
-impl std::fmt::Debug for InstanceDescriptor {
+impl std::fmt::Debug for InstanceState {
     #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
         f.pad("PolygonInstance {\n")?;
@@ -78,7 +78,7 @@ impl std::fmt::Debug for InstanceDescriptor {
     }
 }
 
-impl InstanceDescriptor {
+impl InstanceState {
     /// Creates a `UNIFORM` buffer of instance matrix.
     ///
     /// The bind group provided by the instances holds this uniform buffer.

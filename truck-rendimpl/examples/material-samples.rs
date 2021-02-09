@@ -90,7 +90,7 @@ impl App for MyApp {
                     0.0,
                 ));
                 matrices.push(matrix);
-                *instance.descriptor_mut() = InstanceDescriptor {
+                *instance.descriptor_mut() = InstanceState {
                     matrix,
                     material: Material {
                         albedo: Vector4::from(BOXCOLOR),

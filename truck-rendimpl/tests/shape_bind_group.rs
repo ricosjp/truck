@@ -89,8 +89,8 @@ fn exec_shape_bgtest(
     common::same_buffer(&answer, &buffer)
 }
 
-fn nontex_inst_desc() -> InstanceDescriptor {
-    InstanceDescriptor {
+fn nontex_inst_desc() -> InstanceState {
+    InstanceState {
         matrix: Matrix4::from_cols(
             [1.0, 2.0, 3.0, 4.0].into(),
             [5.0, 6.0, 7.0, 8.0].into(),

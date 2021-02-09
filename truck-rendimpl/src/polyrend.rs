@@ -5,7 +5,7 @@ use std::collections::HashMap;
 impl IntoInstance for PolygonMesh {
     type Instance = PolygonInstance;
     #[inline(always)]
-    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance {
+    fn into_instance(&self, device: &Device, desc: InstanceState) -> Self::Instance {
         let (vb, ib) =
             ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         PolygonInstance {
@@ -24,7 +24,7 @@ impl IntoInstance for PolygonMesh {
 
 impl IntoInstance for StructuredMesh {
     type Instance = PolygonInstance;
-    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance {
+    fn into_instance(&self, device: &Device, desc: InstanceState) -> Self::Instance {
         let (vb, ib) =
             ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         PolygonInstance {
@@ -53,17 +53,17 @@ impl PolygonInstance {
     }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
-    pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
+    pub fn descriptor(&self) -> &InstanceState { &self.desc }
     /// Returns the mutable reference to instance descriptor.
     #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> &mut InstanceDescriptor { &mut self.desc }
+    pub fn descriptor_mut(&mut self) -> &mut InstanceState { &mut self.desc }
 
     #[inline(always)]
     fn non_textured_bdl(&self, device: &Device) -> BindGroupLayout {
         bind_group_util::create_bind_group_layout(device, {
             &[
-                InstanceDescriptor::matrix_bgl_entry(),
-                InstanceDescriptor::material_bgl_entry(),
+                InstanceState::matrix_bgl_entry(),
+                InstanceState::material_bgl_entry(),
             ]
         })
     }
@@ -73,10 +73,10 @@ impl PolygonInstance {
         bind_group_util::create_bind_group_layout(
             device,
             &[
-                InstanceDescriptor::matrix_bgl_entry(),
-                InstanceDescriptor::material_bgl_entry(),
-                InstanceDescriptor::textureview_bgl_entry(),
-                InstanceDescriptor::sampler_bgl_entry(),
+                InstanceState::matrix_bgl_entry(),
+                InstanceState::material_bgl_entry(),
+                InstanceState::textureview_bgl_entry(),
+                InstanceState::sampler_bgl_entry(),
             ],
         )
     }

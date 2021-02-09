@@ -67,7 +67,7 @@ impl App for MyApp {
         let texture = image::load_from_memory(&bytes).unwrap();
         println!("{:?}", texture.color());
         let texture = image2texture::image2texture(&handler, &texture);
-        let desc = InstanceDescriptor {
+        let desc = InstanceState {
             matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
             material: Material {
                 albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),

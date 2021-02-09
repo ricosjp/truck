@@ -38,7 +38,7 @@ impl ShapeViewer {
             sample_count,
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
-        let inst_desc = InstanceDescriptor {
+        let inst_desc = InstanceState {
             material: Material {
                 albedo: Vector4::new(0.75, 0.75, 0.75, 1.0),
                 reflectance: 0.04,
