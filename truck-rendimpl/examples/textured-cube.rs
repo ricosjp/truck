@@ -65,7 +65,6 @@ impl App for MyApp {
         let mut bytes = Vec::new();
         tex_file.read_to_end(&mut bytes).unwrap();
         let texture = image::load_from_memory(&bytes).unwrap();
-        println!("{:?}", texture.color());
         let texture = image2texture::image2texture(&handler, &texture);
         let desc = ShapeInstanceDescriptor {
             instance_state: InstanceState {

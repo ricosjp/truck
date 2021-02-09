@@ -4,41 +4,8 @@ use image::*;
 /// Create `Texture` from `DynamicImage`
 #[inline(always)]
 pub fn image2texture(device_handler: &DeviceHandler, image: &DynamicImage) -> Texture {
-    match image {
-        DynamicImage::ImageLuma8(buffer) => {
-            imagebuffer2texture(device_handler, buffer, TextureFormat::R8Unorm)
-        }
-        DynamicImage::ImageLumaA8(buffer) => {
-            imagebuffer2texture(device_handler, buffer, TextureFormat::Rg8Unorm)
-        }
-        DynamicImage::ImageRgb8(_) => {
-            let rgba = image.to_rgba8();
-            imagebuffer2texture(device_handler, &rgba, TextureFormat::Rgba8Unorm)
-        }
-        DynamicImage::ImageRgba8(buffer) => {
-            imagebuffer2texture(device_handler, buffer, TextureFormat::Rgba8Unorm)
-        }
-        DynamicImage::ImageBgr8(_) => {
-            let brga = image.to_bgra8();
-            imagebuffer2texture(device_handler, &brga, TextureFormat::Bgra8Unorm)
-        }
-        DynamicImage::ImageBgra8(buffer) => {
-            imagebuffer2texture(device_handler, buffer, TextureFormat::Bgra8Unorm)
-        }
-        DynamicImage::ImageLuma16(buffer) => {
-            imagebuffer2texture(device_handler, buffer, TextureFormat::R16Float)
-        }
-        DynamicImage::ImageLumaA16(buffer) => {
-            imagebuffer2texture(device_handler, buffer, TextureFormat::Rg16Float)
-        }
-        DynamicImage::ImageRgb16(_) => {
-            let rgba = image.to_rgba16();
-            imagebuffer2texture(device_handler, &rgba, TextureFormat::Rgba16Float)
-        }
-        DynamicImage::ImageRgba16(buffer) => {
-            imagebuffer2texture(device_handler, buffer, TextureFormat::Rgba16Float)
-        }
-    }
+    let buffer = image.to_rgba8();
+    imagebuffer2texture(device_handler, &buffer, TextureFormat::Rgba8Unorm)
 }
 
 fn imagebuffer2texture<P, Container>(
