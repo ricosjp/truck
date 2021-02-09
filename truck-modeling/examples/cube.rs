@@ -9,5 +9,5 @@ fn main() {
     let e = builder::tsweep(&v, Vector3::unit_x());
     let f = builder::tsweep(&e, Vector3::unit_y());
     let cube = builder::tsweep(&f, Vector3::unit_z());
-    ShapeViewer::run(cube);
+    ShapeViewer::run(cube, 0.1);
 }

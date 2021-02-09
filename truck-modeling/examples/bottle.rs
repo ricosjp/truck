@@ -64,5 +64,5 @@ fn bottle(height: f64, width: f64, thickness: f64) -> Solid {
 fn main() {
     let bottle = bottle(1.4, 1.0, 0.6);
     let bottle = builder::translated(&bottle, Vector3::new(0.0, -0.7, 0.0));
-    ShapeViewer::run(bottle);
+    ShapeViewer::run(bottle, 0.005);
 }

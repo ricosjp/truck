@@ -1,5 +1,15 @@
 use crate::*;
 
+impl Default for ShapeInstanceDescriptor {
+    #[inline(always)]
+    fn default() -> Self {
+        ShapeInstanceDescriptor {
+            instance_state: Default::default(),
+            mesh_precision: 0.005,
+        }
+    }
+}
+
 impl FaceInstance {
     /// Clone the instance as another drawn element.
     #[inline(always)]
@@ -31,15 +41,15 @@ fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
     res
 }
 
-fn face_buffer(device: &Device, face: &Face) -> Option<FaceBuffer> {
+fn face_buffer(device: &Device, face: &Face, mesh_precision: f64) -> Option<FaceBuffer> {
     let surface = face.oriented_surface();
-    let mesh = StructuredMesh::from_surface(&surface, 0.005);
+    let mesh = StructuredMesh::from_surface(&surface, mesh_precision);
     let (vb, ib) =
         ExpandedPolygon::from(&mesh).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
     let mut boundary = Vec::new();
     for edge in face.boundary_iters().into_iter().flatten() {
         let curve = edge.oriented_curve();
-        let division = curve.parameter_division(0.005);
+        let division = curve.parameter_division(mesh_precision);
         let mut hint = presearch(&surface, curve.subs(division[0]));
         let mut this_boundary = Vec::new();
         for t in division {
@@ -71,51 +81,45 @@ fn face_buffer(device: &Device, face: &Face) -> Option<FaceBuffer> {
 
 impl IntoInstance for Shell {
     type Instance = ShapeInstance;
+    type Descriptor = ShapeInstanceDescriptor;
     #[inline(always)]
-    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> ShapeInstance {
+    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> ShapeInstance {
         let faces = self
             .face_iter()
             .map(|face| FaceInstance {
-                buffer: Arc::new(Mutex::new(face_buffer(device, face).unwrap())),
+                buffer: Arc::new(Mutex::new(
+                    face_buffer(device, face, desc.mesh_precision).unwrap(),
+                )),
                 id: RenderID::gen(),
             })
             .collect();
-        ShapeInstance { faces, desc }
-    }
-    #[inline(always)]
-    fn update_instance(&self, device: &Device, instance: &mut ShapeInstance) {
-        self.face_iter()
-            .zip(&mut instance.faces)
-            .for_each(|(face, instance)| {
-                *instance.buffer.lock().unwrap() = face_buffer(device, face).unwrap()
-            })
+        ShapeInstance {
+            faces,
+            state: desc.instance_state.clone(),
+        }
     }
 }
 
 impl IntoInstance for Solid {
     type Instance = ShapeInstance;
+    type Descriptor = ShapeInstanceDescriptor;
     #[inline(always)]
-    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> ShapeInstance {
+    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> ShapeInstance {
         let faces = self
             .boundaries()
             .iter()
             .flat_map(Shell::face_iter)
             .map(|face| FaceInstance {
-                buffer: Arc::new(Mutex::new(face_buffer(device, face).unwrap())),
+                buffer: Arc::new(Mutex::new(
+                    face_buffer(device, face, desc.mesh_precision).unwrap(),
+                )),
                 id: RenderID::gen(),
             })
             .collect();
-        ShapeInstance { faces, desc }
-    }
-    #[inline(always)]
-    fn update_instance(&self, device: &Device, instance: &mut ShapeInstance) {
-        self.boundaries()
-            .iter()
-            .flat_map(Shell::face_iter)
-            .zip(&mut instance.faces)
-            .for_each(|(face, instance)| {
-                *instance.buffer.lock().unwrap() = face_buffer(device, face).unwrap()
-            })
+        ShapeInstance {
+            faces,
+            state: desc.instance_state.clone(),
+        }
     }
 }
 
@@ -149,8 +153,8 @@ mod ficonfig {
         bind_group_util::create_bind_group_layout(
             device,
             &[
-                InstanceDescriptor::matrix_bgl_entry(),
-                InstanceDescriptor::material_bgl_entry(),
+                InstanceState::matrix_bgl_entry(),
+                InstanceState::material_bgl_entry(),
                 boundary_bgl_entry(),
                 boundary_length_bgl_entry(),
             ],
@@ -161,10 +165,10 @@ mod ficonfig {
         bind_group_util::create_bind_group_layout(
             device,
             &[
-                InstanceDescriptor::matrix_bgl_entry(),
-                InstanceDescriptor::material_bgl_entry(),
-                InstanceDescriptor::textureview_bgl_entry(),
-                InstanceDescriptor::sampler_bgl_entry(),
+                InstanceState::matrix_bgl_entry(),
+                InstanceState::material_bgl_entry(),
+                InstanceState::textureview_bgl_entry(),
+                InstanceState::sampler_bgl_entry(),
                 boundary_bgl_entry(),
                 boundary_length_bgl_entry(),
             ],
@@ -183,13 +187,13 @@ mod ficonfig {
         layout: &BindGroupLayout,
         face: &RenderFace,
     ) -> BindGroup {
-        let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
+        let (buffer, state) = (&face.instance.buffer.lock().unwrap(), &face.state);
         bind_group_util::create_bind_group(
             handler.device(),
             layout,
             vec![
-                desc.matrix_buffer(handler.device()).binding_resource(),
-                desc.material_buffer(handler.device()).binding_resource(),
+                state.matrix_buffer(handler.device()).binding_resource(),
+                state.material_buffer(handler.device()).binding_resource(),
                 buffer.boundary.binding_resource(),
                 buffer.boundary_length.binding_resource(),
             ],
@@ -201,14 +205,14 @@ mod ficonfig {
         layout: &BindGroupLayout,
         face: &RenderFace,
     ) -> BindGroup {
-        let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
-        let (view, sampler) = desc.textureview_and_sampler(handler.device(), handler.queue());
+        let (buffer, state) = (&face.instance.buffer.lock().unwrap(), &face.state);
+        let (view, sampler) = state.textureview_and_sampler(handler.device());
         bind_group_util::create_bind_group(
             handler.device(),
             layout,
             vec![
-                desc.matrix_buffer(handler.device()).binding_resource(),
-                desc.material_buffer(handler.device()).binding_resource(),
+                state.matrix_buffer(handler.device()).binding_resource(),
+                state.material_buffer(handler.device()).binding_resource(),
                 BindingResource::TextureView(&view),
                 BindingResource::Sampler(&sampler),
                 buffer.boundary.binding_resource(),
@@ -253,7 +257,7 @@ impl<'a> RenderFace<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        self.desc.pipeline_with_shader(
+        self.state.pipeline_with_shader(
             vertex_shader,
             fragment_shader,
             device_handler,
@@ -275,12 +279,12 @@ impl<'a> Rendered for RenderFace<'a> {
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
         Arc::new(ficonfig::bind_group_layout(
             handler.device(),
-            self.desc.texture.is_some(),
+            self.state.texture.is_some(),
         ))
     }
     #[inline(always)]
     fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
-        let bind_group = match self.desc.texture.is_some() {
+        let bind_group = match self.state.texture.is_some() {
             true => ficonfig::textured_bind_group(handler, layout, self),
             false => ficonfig::non_textured_bind_group(handler, layout, self),
         };
@@ -293,7 +297,7 @@ impl<'a> Rendered for RenderFace<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        let fragment_shader = match self.desc.texture.is_some() {
+        let fragment_shader = match self.state.texture.is_some() {
             true => Self::default_textured_fragment_shader(),
             false => Self::default_fragment_shader(),
         };
@@ -317,22 +321,43 @@ impl ShapeInstance {
                 .iter()
                 .map(|face| face.clone_instance())
                 .collect(),
-            desc: self.desc.clone(),
+            state: self.state.clone(),
         }
     }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
-    pub fn descriptor(&self) -> &InstanceDescriptor { &self.desc }
+    pub fn instance_state(&self) -> &InstanceState { &self.state }
     /// Returns the mutable reference to the instance descriptor.
     #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> &mut InstanceDescriptor { &mut self.desc }
+    pub fn instance_state_mut(&mut self) -> &mut InstanceState { &mut self.state }
+    /// swap render faces
+    #[inline(always)]
+    pub fn swap_faces(&mut self, other: &mut Self) {
+        let faces = self
+            .faces
+            .iter()
+            .map(|face| FaceInstance {
+                buffer: face.buffer.clone(),
+                id: face.id,
+            })
+            .collect();
+        self.faces = other
+            .faces
+            .iter()
+            .map(|face| FaceInstance {
+                buffer: face.buffer.clone(),
+                id: face.id,
+            })
+            .collect();
+        other.faces = faces;
+    }
     /// Creates the vector of `RenderFace` for rendering the shape.
     #[inline(always)]
     pub fn render_faces(&self) -> Vec<RenderFace> {
-        let desc = &self.desc;
+        let state = &self.state;
         self.faces
             .iter()
-            .map(move |instance| RenderFace { instance, desc })
+            .map(move |instance| RenderFace { instance, state })
             .collect()
     }
 }

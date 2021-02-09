@@ -55,22 +55,24 @@ fn test_polygons() -> [PolygonMesh; 2] {
     ]
 }
 
-fn nontex_inst_desc() -> InstanceDescriptor {
-    InstanceDescriptor {
-        matrix: Matrix4::from_cols(
-            [1.0, 2.0, 3.0, 4.0].into(),
-            [5.0, 6.0, 7.0, 8.0].into(),
-            [9.0, 10.0, 11.0, 12.0].into(),
-            [13.0, 14.0, 15.0, 16.0].into(),
-        ),
-        material: Material {
-            albedo: Vector4::new(0.2, 0.4, 0.6, 1.0),
-            roughness: 0.31415,
-            reflectance: 0.29613,
-            ambient_ratio: 0.92,
+fn nontex_inst_desc() -> PolygonInstanceDescriptor {
+    PolygonInstanceDescriptor {
+        instance_state: InstanceState {
+            matrix: Matrix4::from_cols(
+                [1.0, 2.0, 3.0, 4.0].into(),
+                [5.0, 6.0, 7.0, 8.0].into(),
+                [9.0, 10.0, 11.0, 12.0].into(),
+                [13.0, 14.0, 15.0, 16.0].into(),
+            ),
+            material: Material {
+                albedo: Vector4::new(0.2, 0.4, 0.6, 1.0),
+                roughness: 0.31415,
+                reflectance: 0.29613,
+                ambient_ratio: 0.92,
+            },
+            texture: None,
+            backface_culling: true,
         },
-        texture: None,
-        backface_culling: true,
     }
 }
 
@@ -144,16 +146,20 @@ fn polymesh_tex_bind_group_test() {
     let answer = common::random_texture(&mut scene);
     let buffer = common::read_texture(scene.device_handler(), &answer);
     save_buffer("output/random-texture.png", &buffer);
-    let mut inst_desc = nontex_inst_desc();
+    let mut desc = nontex_inst_desc();
     let image_buffer =
         ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer.clone())
             .unwrap();
-    inst_desc.texture = Some(Arc::new(DynamicImage::ImageRgba8(image_buffer)));
+    let attach = image2texture::image2texture(
+        scene.device_handler(),
+        &DynamicImage::ImageRgba8(image_buffer),
+    );
+    desc.instance_state.texture = Some(Arc::new(attach));
     test_polygons()
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance = scene.create_instance(polygon, &inst_desc);
+            let instance = scene.create_instance(polygon, &desc);
             let shader = include_str!("shaders/mesh-tex-bindgroup.frag");
             assert!(exec_polygon_bgtest(
                 &mut scene,

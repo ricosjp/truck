@@ -59,7 +59,7 @@ impl MyRender {
         mat = Matrix4::from_translation(Vector3::new(0.0, 0.5, 5.0)) * mat;
         for _ in 0..NUM_OF_OBJECTS {
             let mut instance = original_mesh.clone_instance();
-            instance.descriptor_mut().matrix = mat;
+            instance.instance_state_mut().matrix = mat;
             scene.add_object(&mut instance);
             self.instances.push(instance);
             mat = Matrix4::from_axis_angle(Vector3::unit_y(), rad) * mat;
@@ -72,8 +72,8 @@ impl MyRender {
         self.prev_time = time;
         let mat0 = Matrix4::from_axis_angle(Vector3::unit_y(), Rad(delta_time));
         for (idx, instance) in self.instances.iter_mut().enumerate() {
-            let desc = &mut instance.descriptor_mut();
-            let (matrix, material) = (&mut desc.matrix, &mut desc.material);
+            let state = &mut instance.instance_state_mut();
+            let (matrix, material) = (&mut state.matrix, &mut state.material);
             let k = (-1_f64).powi(idx as i32) * 5.0;
             let mat1 = Matrix4::from_axis_angle(Vector3::unit_y(), Rad(k * delta_time));
             let x = matrix[3][2];

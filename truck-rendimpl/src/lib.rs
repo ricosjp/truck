@@ -15,7 +15,7 @@ extern crate truck_modeling;
 extern crate truck_platform;
 extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
-use image::{DynamicImage, GenericImageView};
+use image::DynamicImage;
 use std::sync::{Arc, Mutex};
 use truck_platform::{
     wgpu::util::{BufferInitDescriptor, DeviceExt},
@@ -52,16 +52,32 @@ pub struct Material {
 }
 
 /// Configures of instances.
-#[derive(Clone)]
-pub struct InstanceDescriptor {
+#[derive(Clone, Debug)]
+pub struct InstanceState {
     /// instance matrix
     pub matrix: Matrix4,
     /// material of instance
     pub material: Material,
     /// texture of instance
-    pub texture: Option<Arc<DynamicImage>>,
+    pub texture: Option<Arc<Texture>>,
     /// If this parameter is true, the backface culling will be activated.
     pub backface_culling: bool,
+}
+
+/// Configures of polygon instance
+#[derive(Clone, Debug, Default)]
+pub struct PolygonInstanceDescriptor {
+    /// configure of instance
+    pub instance_state: InstanceState,    
+}
+
+/// Configures of shape instance
+#[derive(Clone, Debug)]
+pub struct ShapeInstanceDescriptor {
+    /// configure of instance
+    pub instance_state: InstanceState,
+    /// precision for meshing
+    pub mesh_precision: f64,
 }
 
 /// Instance of polygon
@@ -75,7 +91,7 @@ pub struct InstanceDescriptor {
 #[derive(Debug)]
 pub struct PolygonInstance {
     polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
-    desc: InstanceDescriptor,
+    state: InstanceState,
     id: RenderID,
 }
 
@@ -103,14 +119,14 @@ struct FaceInstance {
 #[derive(Debug)]
 pub struct ShapeInstance {
     faces: Vec<FaceInstance>,
-    desc: InstanceDescriptor,
+    state: InstanceState,
 }
 
 /// Iterated face for rendering `ShapeInstance`.
 #[derive(Clone, Copy, Debug)]
 pub struct RenderFace<'a> {
     instance: &'a FaceInstance,
-    desc: &'a InstanceDescriptor,
+    state: &'a InstanceState,
 }
 
 /// The trait for generate `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
@@ -118,10 +134,10 @@ pub struct RenderFace<'a> {
 pub trait IntoInstance {
     /// the type of instance
     type Instance;
+    /// instance descriptor
+    type Descriptor;
     #[doc(hidden)]
-    fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance;
-    #[doc(hidden)]
-    fn update_instance(&self, device: &Device, instance: &mut Self::Instance);
+    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance;
 }
 
 /// Extend trait for `Scene` to create instance.
@@ -131,10 +147,8 @@ pub trait CreateInstance {
     fn create_instance<T: IntoInstance>(
         &self,
         object: &T,
-        desc: &InstanceDescriptor,
+        desc: &T::Descriptor,
     ) -> T::Instance;
-    /// Update the mesh data by original polygon (shape) structures.
-    fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T);
 }
 
 impl CreateInstance for Scene {
@@ -142,13 +156,9 @@ impl CreateInstance for Scene {
     fn create_instance<T: IntoInstance>(
         &self,
         object: &T,
-        desc: &InstanceDescriptor,
+        desc: &T::Descriptor,
     ) -> T::Instance {
         object.into_instance(self.device(), desc.clone())
-    }
-    #[inline(always)]
-    fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T) {
-        object.update_instance(self.device(), instance)
     }
 }
 
@@ -169,3 +179,5 @@ struct ExpandedPolygon {
 mod instdesc;
 mod polyrend;
 mod shaperend;
+/// utility for creating `Texture`
+pub mod image2texture;

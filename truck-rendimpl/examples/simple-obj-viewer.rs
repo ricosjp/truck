@@ -42,19 +42,22 @@ impl MyApp {
         let scene = &mut self.scene;
         scene.clear_objects();
         let mut mesh = truck_polymesh::obj::read(reader).unwrap();
-        mesh.put_together_same_attrs().add_smooth_normals(0.5, false);
+        mesh.put_together_same_attrs()
+            .add_smooth_normals(0.5, false);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
-        let inst_desc = InstanceDescriptor {
-            matrix: mat.invert().unwrap(),
-            material: Material {
-                albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
-                reflectance: 0.5,
-                roughness: 0.1,
-                ambient_ratio: 0.02,
+        let inst_desc = PolygonInstanceDescriptor {
+            instance_state: InstanceState {
+                matrix: mat.invert().unwrap(),
+                material: Material {
+                    albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                    reflectance: 0.5,
+                    roughness: 0.1,
+                    ambient_ratio: 0.02,
+                },
+                ..Default::default()
             },
-            ..Default::default()
         };
         let mut mesh = scene.create_instance(&mesh, &inst_desc);
         scene.add_object(&mut mesh);
