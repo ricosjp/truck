@@ -137,49 +137,8 @@ impl InstanceDescriptor {
     pub fn textureview_and_sampler(
         &self,
         device: &Device,
-        queue: &Queue,
     ) -> (TextureView, Sampler) {
-        let texture_image = self.texture.as_ref().unwrap();
-        let rgba = texture_image.to_rgba8();
-        let dim = texture_image.dimensions();
-        let size = Extent3d {
-            width: dim.0,
-            height: dim.1,
-            depth: 1,
-        };
-        let texture = device.create_texture(&TextureDescriptor {
-            size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8Unorm,
-            usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
-            label: None,
-        });
-        let buffer = device.create_buffer_init(&BufferInitDescriptor {
-            contents: &rgba,
-            usage: BufferUsage::COPY_SRC,
-            label: None,
-        });
-        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
-        encoder.copy_buffer_to_texture(
-            BufferCopyView {
-                buffer: &buffer,
-                layout: TextureDataLayout {
-                    offset: 0,
-                    bytes_per_row: 4 * dim.0,
-                    rows_per_image: dim.1,
-                },
-            },
-            TextureCopyView {
-                texture: &texture,
-                mip_level: 0,
-                origin: Origin3d::ZERO,
-            },
-            size,
-        );
-        queue.submit(vec![encoder.finish()]);
-
+        let texture = self.texture.as_ref().unwrap();
         let view = texture.create_view(&Default::default());
         let sampler = device.create_sampler(&SamplerDescriptor {
             address_mode_u: AddressMode::ClampToEdge,

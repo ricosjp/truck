@@ -93,8 +93,8 @@ impl PolygonInstance {
         )
     }
     #[inline(always)]
-    fn textured_bg(&self, device: &Device, queue: &Queue, layout: &BindGroupLayout) -> BindGroup {
-        let (view, sampler) = self.desc.textureview_and_sampler(device, queue);
+    fn textured_bg(&self, device: &Device, layout: &BindGroupLayout) -> BindGroup {
+        let (view, sampler) = self.desc.textureview_and_sampler(device);
         bind_group_util::create_bind_group(
             device,
             layout,
@@ -173,7 +173,7 @@ impl Rendered for PolygonInstance {
         layout: &BindGroupLayout,
     ) -> Arc<BindGroup> {
         Arc::new(match self.desc.texture.is_some() {
-            true => self.textured_bg(&device_handler.device(), &device_handler.queue(), layout),
+            true => self.textured_bg(device_handler.device(), layout),
             false => self.non_textured_bg(&device_handler.device(), layout),
         })
     }

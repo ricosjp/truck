@@ -64,7 +64,7 @@ where
         sample_count: 1,
         dimension: TextureDimension::D2,
         format,
-        usage: TextureUsage::SAMPLED,
+        usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
     });
     let buffer = device.create_buffer_init(&BufferInitDescriptor {
         contents: bytemuck::cast_slice(&image_buffer),
@@ -77,7 +77,7 @@ where
             buffer: &buffer,
             layout: TextureDataLayout {
                 offset: 0,
-                bytes_per_row: 4 * size.width,
+                bytes_per_row: size.width * std::mem::size_of::<P>() as u32,
                 rows_per_image: size.height,
             },
         },

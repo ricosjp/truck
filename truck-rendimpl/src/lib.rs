@@ -15,7 +15,7 @@ extern crate truck_modeling;
 extern crate truck_platform;
 extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
-use image::{DynamicImage, GenericImageView};
+use image::DynamicImage;
 use std::sync::{Arc, Mutex};
 use truck_platform::{
     wgpu::util::{BufferInitDescriptor, DeviceExt},
@@ -59,7 +59,7 @@ pub struct InstanceDescriptor {
     /// material of instance
     pub material: Material,
     /// texture of instance
-    pub texture: Option<Arc<DynamicImage>>,
+    pub texture: Option<Arc<Texture>>,
     /// If this parameter is true, the backface culling will be activated.
     pub backface_culling: bool,
 }

@@ -202,7 +202,7 @@ mod ficonfig {
         face: &RenderFace,
     ) -> BindGroup {
         let (buffer, desc) = (&face.instance.buffer.lock().unwrap(), &face.desc);
-        let (view, sampler) = desc.textureview_and_sampler(handler.device(), handler.queue());
+        let (view, sampler) = desc.textureview_and_sampler(handler.device());
         bind_group_util::create_bind_group(
             handler.device(),
             layout,

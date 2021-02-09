@@ -158,7 +158,8 @@ fn shape_tex_bind_group_test() {
     let image_buffer =
         ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer.clone())
             .unwrap();
-    inst_desc.texture = Some(Arc::new(DynamicImage::ImageRgba8(image_buffer)));
+    let attach = image2texture::image2texture(scene.device_handler(), &DynamicImage::ImageRgba8(image_buffer));
+    inst_desc.texture = Some(Arc::new(attach));
     let shell = test_shape();
     let instance = scene.create_instance(&shell, &inst_desc);
     let shader = include_str!("shaders/shape-tex-bindgroup.frag");

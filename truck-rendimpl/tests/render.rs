@@ -158,6 +158,7 @@ fn tex_raymarching(scene: &mut Scene) -> Vec<u8> {
 fn tex_polygon(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let attach = image2texture::image2texture(scene.device_handler(), gradtex);
     let cube = scene.create_instance(
         &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
         &InstanceDescriptor {
@@ -167,7 +168,7 @@ fn tex_polygon(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
                 reflectance: 0.25,
                 ambient_ratio: 0.02,
             },
-            texture: Some(Arc::clone(gradtex)),
+            texture: Some(Arc::new(attach)),
             ..Default::default()
         },
     );
@@ -178,6 +179,7 @@ fn tex_polygon(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
 fn tex_shape(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let attach = image2texture::image2texture(scene.device_handler(), gradtex);
     let cube = scene.create_instance(
         &shape_cube(),
         &InstanceDescriptor {
@@ -187,7 +189,7 @@ fn tex_shape(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
                 reflectance: 0.25,
                 ambient_ratio: 0.02,
             },
-            texture: Some(Arc::clone(gradtex)),
+            texture: Some(Arc::new(attach)),
             ..Default::default()
         },
     );
