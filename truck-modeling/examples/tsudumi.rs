@@ -21,5 +21,5 @@ fn main() {
             .inverse(),
     );
     let solid = Solid::new(vec![shell]);
-    ShapeViewer::run(solid);
+    ShapeViewer::run(solid, 0.005);
 }

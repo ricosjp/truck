@@ -67,16 +67,19 @@ impl App for MyApp {
         let texture = image::load_from_memory(&bytes).unwrap();
         println!("{:?}", texture.color());
         let texture = image2texture::image2texture(&handler, &texture);
-        let desc = InstanceState {
-            matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
-            material: Material {
-                albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
-                roughness: 0.9,
-                reflectance: 0.04,
-                ambient_ratio: 0.05,
+        let desc = ShapeInstanceDescriptor {
+            instance_state: InstanceState {
+                matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
+                material: Material {
+                    albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
+                    roughness: 0.9,
+                    reflectance: 0.04,
+                    ambient_ratio: 0.05,
+                },
+                texture: Some(std::sync::Arc::new(texture)),
+                backface_culling: true,
             },
-            texture: Some(std::sync::Arc::new(texture)),
-            backface_culling: true,
+            mesh_precision: 0.1,
         };
         let shape = scene.create_instance(&Self::create_cube(), &desc);
         scene.add_objects(&shape.render_faces());

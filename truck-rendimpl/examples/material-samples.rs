@@ -90,7 +90,7 @@ impl App for MyApp {
                     0.0,
                 ));
                 matrices.push(matrix);
-                *instance.descriptor_mut() = InstanceState {
+                *instance.instance_state_mut() = InstanceState {
                     matrix,
                     material: Material {
                         albedo: Vector4::from(BOXCOLOR),
@@ -120,7 +120,7 @@ impl App for MyApp {
             } else {
                 -(-1.0_f64).powi(i as i32 / 2) * Vector3::unit_x()
             };
-            shape.descriptor_mut().matrix =
+            shape.instance_state_mut().matrix =
                 self.matrices[i] * Matrix4::from_axis_angle(axis, Rad(time * PI / 2.0));
             self.scene.update_bind_groups(&shape.render_faces());
         }

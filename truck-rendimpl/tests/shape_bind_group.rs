@@ -89,22 +89,25 @@ fn exec_shape_bgtest(
     common::same_buffer(&answer, &buffer)
 }
 
-fn nontex_inst_desc() -> InstanceState {
-    InstanceState {
-        matrix: Matrix4::from_cols(
-            [1.0, 2.0, 3.0, 4.0].into(),
-            [5.0, 6.0, 7.0, 8.0].into(),
-            [9.0, 10.0, 11.0, 12.0].into(),
-            [13.0, 14.0, 15.0, 16.0].into(),
-        ),
-        material: Material {
-            albedo: Vector4::new(0.2, 0.4, 0.6, 1.0),
-            roughness: 0.31415,
-            reflectance: 0.29613,
-            ambient_ratio: 0.92,
+fn nontex_inst_desc() -> ShapeInstanceDescriptor {
+    ShapeInstanceDescriptor {
+        instance_state: InstanceState {
+            matrix: Matrix4::from_cols(
+                [1.0, 2.0, 3.0, 4.0].into(),
+                [5.0, 6.0, 7.0, 8.0].into(),
+                [9.0, 10.0, 11.0, 12.0].into(),
+                [13.0, 14.0, 15.0, 16.0].into(),
+            ),
+            material: Material {
+                albedo: Vector4::new(0.2, 0.4, 0.6, 1.0),
+                roughness: 0.31415,
+                reflectance: 0.29613,
+                ambient_ratio: 0.92,
+            },
+            texture: None,
+            backface_culling: true,
         },
-        texture: None,
-        backface_culling: true,
+        mesh_precision: 0.01,
     }
 }
 
@@ -158,8 +161,11 @@ fn shape_tex_bind_group_test() {
     let image_buffer =
         ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer.clone())
             .unwrap();
-    let attach = image2texture::image2texture(scene.device_handler(), &DynamicImage::ImageRgba8(image_buffer));
-    inst_desc.texture = Some(Arc::new(attach));
+    let attach = image2texture::image2texture(
+        scene.device_handler(),
+        &DynamicImage::ImageRgba8(image_buffer),
+    );
+    inst_desc.instance_state.texture = Some(Arc::new(attach));
     let shell = test_shape();
     let instance = scene.create_instance(&shell, &inst_desc);
     let shader = include_str!("shaders/shape-tex-bindgroup.frag");

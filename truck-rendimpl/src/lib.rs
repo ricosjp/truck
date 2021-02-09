@@ -52,7 +52,7 @@ pub struct Material {
 }
 
 /// Configures of instances.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InstanceState {
     /// instance matrix
     pub matrix: Matrix4,
@@ -62,6 +62,22 @@ pub struct InstanceState {
     pub texture: Option<Arc<Texture>>,
     /// If this parameter is true, the backface culling will be activated.
     pub backface_culling: bool,
+}
+
+/// Configures of polygon instance
+#[derive(Clone, Debug, Default)]
+pub struct PolygonInstanceDescriptor {
+    /// configure of instance
+    pub instance_state: InstanceState,    
+}
+
+/// Configures of shape instance
+#[derive(Clone, Debug)]
+pub struct ShapeInstanceDescriptor {
+    /// configure of instance
+    pub instance_state: InstanceState,
+    /// precision for meshing
+    pub mesh_precision: f64,
 }
 
 /// Instance of polygon
@@ -75,7 +91,7 @@ pub struct InstanceState {
 #[derive(Debug)]
 pub struct PolygonInstance {
     polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
-    desc: InstanceState,
+    state: InstanceState,
     id: RenderID,
 }
 
@@ -103,14 +119,14 @@ struct FaceInstance {
 #[derive(Debug)]
 pub struct ShapeInstance {
     faces: Vec<FaceInstance>,
-    desc: InstanceState,
+    state: InstanceState,
 }
 
 /// Iterated face for rendering `ShapeInstance`.
 #[derive(Clone, Copy, Debug)]
 pub struct RenderFace<'a> {
     instance: &'a FaceInstance,
-    desc: &'a InstanceState,
+    state: &'a InstanceState,
 }
 
 /// Instance creator
@@ -129,10 +145,10 @@ pub struct InstanceCreator {
 pub trait IntoInstance {
     /// the type of instance
     type Instance;
+    /// instance descriptor
+    type Descriptor;
     #[doc(hidden)]
-    fn into_instance(&self, device: &Device, desc: InstanceState) -> Self::Instance;
-    #[doc(hidden)]
-    fn update_instance(&self, device: &Device, instance: &mut Self::Instance);
+    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance;
 }
 
 /// Extend trait for `Scene` to create instance.
@@ -142,10 +158,8 @@ pub trait CreateInstance {
     fn create_instance<T: IntoInstance>(
         &self,
         object: &T,
-        desc: &InstanceState,
+        desc: &T::Descriptor,
     ) -> T::Instance;
-    /// Update the mesh data by original polygon (shape) structures.
-    fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T);
 }
 
 impl CreateInstance for Scene {
@@ -153,13 +167,9 @@ impl CreateInstance for Scene {
     fn create_instance<T: IntoInstance>(
         &self,
         object: &T,
-        desc: &InstanceState,
+        desc: &T::Descriptor,
     ) -> T::Instance {
         object.into_instance(self.device(), desc.clone())
-    }
-    #[inline(always)]
-    fn update_instance<T: IntoInstance>(&self, instance: &mut T::Instance, object: &T) {
-        object.update_instance(self.device(), instance)
     }
 }
 

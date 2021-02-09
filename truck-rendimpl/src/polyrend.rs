@@ -4,40 +4,30 @@ use std::collections::HashMap;
 
 impl IntoInstance for PolygonMesh {
     type Instance = PolygonInstance;
+    type Descriptor = PolygonInstanceDescriptor;
     #[inline(always)]
-    fn into_instance(&self, device: &Device, desc: InstanceState) -> Self::Instance {
+    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance {
         let (vb, ib) =
             ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
-            desc,
+            state: desc.instance_state.clone(),
             id: RenderID::gen(),
         }
-    }
-    #[inline(always)]
-    fn update_instance(&self, device: &Device, instance: &mut Self::Instance) {
-        let (vb, ib) =
-            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
-        *instance.polygon.lock().unwrap() = (Arc::new(vb), Arc::new(ib));
     }
 }
 
 impl IntoInstance for StructuredMesh {
     type Instance = PolygonInstance;
-    fn into_instance(&self, device: &Device, desc: InstanceState) -> Self::Instance {
+    type Descriptor = PolygonInstanceDescriptor;
+    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance {
         let (vb, ib) =
             ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
-            desc,
+            state: desc.instance_state.clone(),
             id: RenderID::gen(),
         }
-    }
-    #[inline(always)]
-    fn update_instance(&self, device: &Device, instance: &mut Self::Instance) {
-        let (vb, ib) =
-            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
-        *instance.polygon.lock().unwrap() = (Arc::new(vb), Arc::new(ib));
     }
 }
 
@@ -47,16 +37,24 @@ impl PolygonInstance {
     pub fn clone_instance(&self) -> PolygonInstance {
         PolygonInstance {
             polygon: self.polygon.clone(),
-            desc: self.desc.clone(),
+            state: self.state.clone(),
             id: RenderID::gen(),
         }
     }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
-    pub fn descriptor(&self) -> &InstanceState { &self.desc }
+    pub fn instance_state(&self) -> &InstanceState { &self.state }
     /// Returns the mutable reference to instance descriptor.
     #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> &mut InstanceState { &mut self.desc }
+    pub fn instance_state_mut(&mut self) -> &mut InstanceState { &mut self.state }
+
+    /// swap vertex buffers
+    #[inline(always)]
+    pub fn swap_vertex(&mut self, other: &mut PolygonInstance) {
+        let polygon = self.polygon.clone();
+        self.polygon = other.polygon.clone();
+        other.polygon = polygon;
+    }
 
     #[inline(always)]
     fn non_textured_bdl(&self, device: &Device) -> BindGroupLayout {
@@ -87,20 +85,20 @@ impl PolygonInstance {
             device,
             layout,
             vec![
-                self.desc.matrix_buffer(device).binding_resource(),
-                self.desc.material.buffer(device).binding_resource(),
+                self.state.matrix_buffer(device).binding_resource(),
+                self.state.material.buffer(device).binding_resource(),
             ],
         )
     }
     #[inline(always)]
     fn textured_bg(&self, device: &Device, layout: &BindGroupLayout) -> BindGroup {
-        let (view, sampler) = self.desc.textureview_and_sampler(device);
+        let (view, sampler) = self.state.textureview_and_sampler(device);
         bind_group_util::create_bind_group(
             device,
             layout,
             vec![
-                self.desc.matrix_buffer(device).binding_resource(),
-                self.desc.material.buffer(device).binding_resource(),
+                self.state.matrix_buffer(device).binding_resource(),
+                self.state.material.buffer(device).binding_resource(),
                 BindingResource::TextureView(&view),
                 BindingResource::Sampler(&sampler),
             ],
@@ -141,7 +139,7 @@ impl PolygonInstance {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        self.desc.pipeline_with_shader(
+        self.state.pipeline_with_shader(
             vertex_shader,
             fragment_shader,
             device_handler,
@@ -161,7 +159,7 @@ impl Rendered for PolygonInstance {
     }
     #[inline(always)]
     fn bind_group_layout(&self, device_handler: &DeviceHandler) -> Arc<BindGroupLayout> {
-        Arc::new(match self.desc.texture.is_some() {
+        Arc::new(match self.state.texture.is_some() {
             true => self.textured_bdl(device_handler.device()),
             false => self.non_textured_bdl(device_handler.device()),
         })
@@ -172,7 +170,7 @@ impl Rendered for PolygonInstance {
         device_handler: &DeviceHandler,
         layout: &BindGroupLayout,
     ) -> Arc<BindGroup> {
-        Arc::new(match self.desc.texture.is_some() {
+        Arc::new(match self.state.texture.is_some() {
             true => self.textured_bg(device_handler.device(), layout),
             false => self.non_textured_bg(&device_handler.device(), layout),
         })
@@ -184,7 +182,7 @@ impl Rendered for PolygonInstance {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        let fragment_shader = match self.desc.texture.is_some() {
+        let fragment_shader = match self.state.texture.is_some() {
             true => Self::default_textured_fragment_shader(),
             false => Self::default_fragment_shader(),
         };

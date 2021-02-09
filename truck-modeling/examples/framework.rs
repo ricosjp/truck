@@ -17,10 +17,11 @@ pub struct ShapeViewer {
 
 impl ShapeViewer {
     /// Initializes the application
-    fn init<T: IntoInstance<Instance = ShapeInstance>>(
+    fn init<T: IntoInstance<Instance = ShapeInstance, Descriptor = ShapeInstanceDescriptor>>(
         handler: &DeviceHandler,
         info: AdapterInfo,
         shape: T,
+        mesh_precision: f64,
     ) -> Self {
         let sample_count = match info.backend {
             Backend::Vulkan => 2,
@@ -38,15 +39,18 @@ impl ShapeViewer {
             sample_count,
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
-        let inst_desc = InstanceState {
-            material: Material {
-                albedo: Vector4::new(0.75, 0.75, 0.75, 1.0),
-                reflectance: 0.04,
-                roughness: 0.9,
+        let inst_desc = ShapeInstanceDescriptor {
+            instance_state: InstanceState {
+                material: Material {
+                    albedo: Vector4::new(0.75, 0.75, 0.75, 1.0),
+                    reflectance: 0.04,
+                    roughness: 0.9,
+                    ..Default::default()
+                },
+                backface_culling: false,
                 ..Default::default()
             },
-            backface_culling: false,
-            ..Default::default()
+            mesh_precision,
         };
         let instance = scene.create_instance(&shape, &inst_desc);
         scene.add_objects(&instance.render_faces());
@@ -122,7 +126,10 @@ impl ShapeViewer {
     }
 
     /// Running the shape viewer viewing `shape`.
-    pub fn run<I: IntoInstance<Instance = ShapeInstance>>(shape: I) {
+    pub fn run<I: IntoInstance<Instance = ShapeInstance, Descriptor = ShapeInstanceDescriptor>>(
+        shape: I,
+        precision: f64,
+    ) {
         let event_loop = winit::event_loop::EventLoop::new();
         let mut wb = winit::window::WindowBuilder::new();
         wb = wb.with_title("Shape Viewer");
@@ -148,7 +155,7 @@ impl ShapeViewer {
             Arc::new(Mutex::new(sc_desc)),
         );
 
-        let mut app = Self::init(&handler, info, shape);
+        let mut app = Self::init(&handler, info, shape, precision);
 
         event_loop.run(move |ev, _, control_flow| {
             *control_flow = match ev {

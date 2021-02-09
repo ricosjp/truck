@@ -88,8 +88,12 @@ impl MyApp {
                     count = 0;
                 }
                 shell[0].lock_surface().unwrap().control_point_mut(3, 3)[1] = time.sin();
+                let mut another_object = shell.into_instance(handler.device(), &ShapeInstanceDescriptor{
+                    instance_state: Default::default(),
+                    mesh_precision: 0.01,
+                });
                 let mut object = object.lock().unwrap();
-                shell.update_instance(handler.device(), &mut object);
+                object.swap_faces(&mut another_object);
             }
         })
     }
@@ -114,7 +118,10 @@ impl App for MyApp {
         };
         let mut scene = Scene::new(handler.clone(), &desc);
         let shell = Self::init_shell();
-        let object = scene.create_instance(&shell, &Default::default());
+        let object = scene.create_instance(&shell, &ShapeInstanceDescriptor {
+            instance_state: Default::default(),
+            mesh_precision: 0.01,
+        });
         scene.add_objects(&object.render_faces());
         let object = Arc::new(Mutex::new(object));
         let closed = Arc::new(Mutex::new(false));
