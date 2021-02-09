@@ -113,6 +113,17 @@ pub struct RenderFace<'a> {
     desc: &'a InstanceDescriptor,
 }
 
+/// Instance creator
+#[derive(Debug)]
+pub struct InstanceCreator {
+    device: Arc<Device>,
+    polygon_vertex: Arc<ShaderModule>,
+    polygon_frag: Arc<ShaderModule>,
+    polygon_tex_frag: Arc<ShaderModule>,
+    face_frag: Arc<ShaderModule>,
+    face_tex_frag: Arc<ShaderModule>,
+}
+
 /// The trait for generate `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
 /// `ShapeInstance` from `Shell` and `Solid`.
 pub trait IntoInstance {
@@ -169,3 +180,5 @@ struct ExpandedPolygon {
 mod instdesc;
 mod polyrend;
 mod shaperend;
+/// utility for creating `Texture`
+pub mod image2texture;
