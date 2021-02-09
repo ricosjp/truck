@@ -6,7 +6,8 @@ impl IntoInstance for PolygonMesh {
     type Instance = PolygonInstance;
     #[inline(always)]
     fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance {
-        let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
+        let (vb, ib) =
+            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             desc,
@@ -15,7 +16,8 @@ impl IntoInstance for PolygonMesh {
     }
     #[inline(always)]
     fn update_instance(&self, device: &Device, instance: &mut Self::Instance) {
-        let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
+        let (vb, ib) =
+            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         *instance.polygon.lock().unwrap() = (Arc::new(vb), Arc::new(ib));
     }
 }
@@ -23,7 +25,8 @@ impl IntoInstance for PolygonMesh {
 impl IntoInstance for StructuredMesh {
     type Instance = PolygonInstance;
     fn into_instance(&self, device: &Device, desc: InstanceDescriptor) -> Self::Instance {
-        let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
+        let (vb, ib) =
+            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             desc,
@@ -32,7 +35,8 @@ impl IntoInstance for StructuredMesh {
     }
     #[inline(always)]
     fn update_instance(&self, device: &Device, instance: &mut Self::Instance) {
-        let (vb, ib) = ExpandedPolygon::from(self).buffers(device);
+        let (vb, ib) =
+            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         *instance.polygon.lock().unwrap() = (Arc::new(vb), Arc::new(ib));
     }
 }
@@ -104,7 +108,7 @@ impl PolygonInstance {
     }
 
     /// Returns the default vertex shader module source.
-    /// 
+    ///
     /// The GLSL original code is `src/shaders/polygon.vert`.
     #[inline(always)]
     pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
@@ -112,7 +116,7 @@ impl PolygonInstance {
     }
 
     /// Returns the default fragment shader module source for non-textured polygons.
-    /// 
+    ///
     /// The GLSL original code is `src/shaders/polygon.frag`.
     #[inline(always)]
     pub fn default_fragment_shader() -> ShaderModuleSource<'static> {
@@ -120,7 +124,7 @@ impl PolygonInstance {
     }
 
     /// Returns the default fragment shader module source for textured polygons.
-    /// 
+    ///
     /// The GLSL original code is `src/shaders/textured-polygon.frag`.
     #[inline(always)]
     pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
@@ -195,9 +199,14 @@ impl Rendered for PolygonInstance {
 }
 
 impl ExpandedPolygon {
-    pub fn buffers(&self, device: &Device) -> (BufferHandler, BufferHandler) {
-        let vertex_buffer = BufferHandler::from_slice(&self.vertices, device, BufferUsage::VERTEX);
-        let index_buffer = BufferHandler::from_slice(&self.indices, device, BufferUsage::INDEX);
+    pub fn buffers(
+        &self,
+        vertex_usage: BufferUsage,
+        index_usage: BufferUsage,
+        device: &Device,
+    ) -> (BufferHandler, BufferHandler) {
+        let vertex_buffer = BufferHandler::from_slice(&self.vertices, device, vertex_usage);
+        let index_buffer = BufferHandler::from_slice(&self.indices, device, index_usage);
         (vertex_buffer, index_buffer)
     }
 }
