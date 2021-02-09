@@ -57,3 +57,12 @@ graphic utility library based on wgpu
 visualization of shape and polygon mesh based on platform
 
 <img src = "dependencies.svg">
+
+## Tutorials
+
+There are some learning resources for using truck v0.1.x series.
+
+- [truck-tutorial](https://ricos.gitlab.io/truck-tutorial/v0.1/)
+- [truck-tutorial-ja](https://ricos.gitlab.io/truck-tutorial-ja/v0.1/) (Japanese version)
+- [truck-tutorial-code](https://github.com/ricosjp/truck-tutorial-code/tree/v0.1) (pre-created sample code)
+
