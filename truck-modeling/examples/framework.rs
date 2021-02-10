@@ -51,6 +51,7 @@ impl ShapeViewer {
                 ..Default::default()
             },
             mesh_precision,
+            ..Default::default()
         };
         let instance = scene.create_instance(&shape, &inst_desc);
         scene.add_objects(&instance.render_faces());

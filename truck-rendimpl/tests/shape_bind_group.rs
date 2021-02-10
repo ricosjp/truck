@@ -107,7 +107,7 @@ fn nontex_inst_desc() -> ShapeInstanceDescriptor {
             texture: None,
             backface_culling: true,
         },
-        mesh_precision: 0.01,
+        ..Default::default()
     }
 }
 

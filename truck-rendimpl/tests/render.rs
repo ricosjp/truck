@@ -97,7 +97,7 @@ fn nontex_shape(scene: &mut Scene) -> Vec<u8> {
                 },
                 ..Default::default()
             },
-            mesh_precision: 0.01,
+            ..Default::default()
         },
     );
     common::render_ones(scene, &texture, &cube.render_faces());
@@ -200,7 +200,7 @@ fn tex_shape(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
                 texture: Some(Arc::new(attach)),
                 ..Default::default()
             },
-            mesh_precision: 0.01,
+            ..Default::default()
         },
     );
     common::render_ones(scene, &texture, &cube.render_faces());

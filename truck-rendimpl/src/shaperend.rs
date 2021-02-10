@@ -1,4 +1,6 @@
 use crate::*;
+use std::f64::consts::PI;
+use truck_polymesh::prelude::*;
 
 impl Default for ShapeInstanceDescriptor {
     #[inline(always)]
@@ -6,6 +8,7 @@ impl Default for ShapeInstanceDescriptor {
         ShapeInstanceDescriptor {
             instance_state: Default::default(),
             mesh_precision: 0.005,
+            normal_completion_tolerance: PI / 6.0,
         }
     }
 }
@@ -41,11 +44,25 @@ fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
     res
 }
 
-fn face_buffer(device: &Device, face: &Face, mesh_precision: f64) -> Option<FaceBuffer> {
+fn face_buffer(
+    device: &Device,
+    face: &Face,
+    mesh_precision: f64,
+    normal_completion_tolerance: f64,
+) -> Option<FaceBuffer> {
     let surface = face.oriented_surface();
     let mesh = StructuredMesh::from_surface(&surface, mesh_precision);
-    let (vb, ib) =
-        ExpandedPolygon::from(&mesh).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
+    let mut normals = mesh.normals().unwrap().iter().flatten();
+    let reg_norm = normals.all(|normal| normal.magnitude2().near(&1.0));
+    let (vb, ib) = if reg_norm {
+        ExpandedPolygon::from(&mesh).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device)
+    } else {
+        let mut mesh = mesh.destruct();
+        mesh.remove_degenerate_faces()
+            .normalize_normals()
+            .add_smooth_normals(normal_completion_tolerance, false);
+        ExpandedPolygon::from(&mesh).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device)
+    };
     let mut boundary = Vec::new();
     for edge in face.boundary_iters().into_iter().flatten() {
         let curve = edge.oriented_curve();
@@ -88,7 +105,13 @@ impl IntoInstance for Shell {
             .face_iter()
             .map(|face| FaceInstance {
                 buffer: Arc::new(Mutex::new(
-                    face_buffer(device, face, desc.mesh_precision).unwrap(),
+                    face_buffer(
+                        device,
+                        face,
+                        desc.mesh_precision,
+                        desc.normal_completion_tolerance,
+                    )
+                    .unwrap(),
                 )),
                 id: RenderID::gen(),
             })
@@ -111,7 +134,13 @@ impl IntoInstance for Solid {
             .flat_map(Shell::face_iter)
             .map(|face| FaceInstance {
                 buffer: Arc::new(Mutex::new(
-                    face_buffer(device, face, desc.mesh_precision).unwrap(),
+                    face_buffer(
+                        device,
+                        face,
+                        desc.mesh_precision,
+                        desc.normal_completion_tolerance,
+                    )
+                    .unwrap(),
                 )),
                 id: RenderID::gen(),
             })

@@ -40,5 +40,5 @@ fn main() {
     ]);
     face.add_boundary(wire);
     let shape = builder::tsweep(&face, Vector3::unit_z());
-    ShapeViewer::run(shape, 0.005);
+    ShapeViewer::run(shape, 0.001);
 }
