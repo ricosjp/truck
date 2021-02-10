@@ -361,24 +361,21 @@ impl ShapeInstance {
     pub fn instance_state_mut(&mut self) -> &mut InstanceState { &mut self.state }
     /// swap render faces
     #[inline(always)]
-    pub fn swap_faces(&mut self, other: &mut Self) {
-        let faces = self
+    pub fn swap_vertex(&mut self, other: &mut Self) {
+        let faces: Vec<_> = self.faces.iter().map(|face| face.buffer.clone()).collect();
+        self.faces
+            .iter_mut()
+            .zip(&other.faces)
+            .for_each(|(face0, face1)| {
+                face0.buffer = face1.buffer.clone();
+            });
+        other
             .faces
-            .iter()
-            .map(|face| FaceInstance {
-                buffer: face.buffer.clone(),
-                id: face.id,
-            })
-            .collect();
-        self.faces = other
-            .faces
-            .iter()
-            .map(|face| FaceInstance {
-                buffer: face.buffer.clone(),
-                id: face.id,
-            })
-            .collect();
-        other.faces = faces;
+            .iter_mut()
+            .zip(faces)
+            .for_each(|(face0, buffer)| {
+                face0.buffer = buffer;
+            });
     }
     /// Creates the vector of `RenderFace` for rendering the shape.
     #[inline(always)]

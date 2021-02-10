@@ -33,10 +33,9 @@ pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
 /// ```
 #[inline(always)]
 pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
-    let curve = geom_impls::line(
-        (*vertex0.lock_point().unwrap()).to_homogeneous(),
-        (*vertex1.lock_point().unwrap()).to_homogeneous(),
-    );
+    let pt0 = vertex0.lock_point().unwrap().to_homogeneous();
+    let pt1 = vertex1.lock_point().unwrap().to_homogeneous();
+    let curve = geom_impls::line(pt0, pt1);
     Edge::new(vertex0, vertex1, NURBSCurve::new(curve))
 }
 
@@ -58,11 +57,9 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
 /// ```
 #[inline(always)]
 pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
-    let curve = geom_impls::circle_arc_by_three_points(
-        (*vertex0.lock_point().unwrap()).to_homogeneous(),
-        (*vertex1.lock_point().unwrap()).to_homogeneous(),
-        transit,
-    );
+    let pt0 = vertex0.lock_point().unwrap().to_homogeneous();
+    let pt1 = vertex1.lock_point().unwrap().to_homogeneous();
+    let curve = geom_impls::circle_arc_by_three_points(pt0, pt1, transit);
     Edge::new(vertex0, vertex1, NURBSCurve::new(curve))
 }
 
@@ -70,7 +67,7 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
 /// # Examples
 /// ```
 /// use truck_modeling::*;
-/// 
+///
 /// // draw a Bezier curve
 /// let vertex0 = builder::vertex(Point3::origin());
 /// let vertex1 = builder::vertex(Point3::new(3.0, 0.0, 0.0));
@@ -104,7 +101,7 @@ pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>)
 /// # Examples
 /// ```
 /// use truck_modeling::*;
-/// 
+///
 /// // homotopy between skew lines
 /// let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
 /// let v1 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
@@ -144,7 +141,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// # Examples
 /// ```
 /// use truck_modeling::*;
-/// 
+///
 /// // make a disk by attaching a plane into circle
 /// let vertex = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let circle = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0));
@@ -157,7 +154,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// If wires are not closed or not in one plane, then return `None`.
 /// ```
 /// use truck_modeling::*;
-/// 
+///
 /// let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
 /// let v1 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let v2 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
@@ -170,12 +167,12 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// let mut wires = vec![wire];
 /// // failed to attach plane, because wire is not closed.
 /// assert!(builder::try_attach_plane(&wires).is_none());
-/// 
+///
 /// wires[0].push_back(builder::line(&v2, &v3));
 /// wires[0].push_back(builder::line(&v3, &v0));
 /// // failed to attach plane, because wire is not in the plane.
 /// assert!(builder::try_attach_plane(&wires).is_none());
-/// 
+///
 /// wires[0].pop_back();
 /// wires[0].pop_back();
 /// wires[0].push_back(builder::line(&v2, &v0));

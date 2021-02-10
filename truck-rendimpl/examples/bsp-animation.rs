@@ -89,7 +89,7 @@ impl MyApp {
                 }
                 shell[0].lock_surface().unwrap().control_point_mut(3, 3)[1] = time.sin();
                 let mut another_object = shell.into_instance(handler.device(), &Default::default());
-                object.lock().unwrap().swap_faces(&mut another_object);
+                object.lock().unwrap().swap_vertex(&mut another_object);
             }
         })
     }
