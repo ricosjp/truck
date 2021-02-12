@@ -18,7 +18,6 @@ use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::{Arc, Mutex};
 use truck_platform::{
-    wgpu::util::{BufferInitDescriptor, DeviceExt},
     wgpu::*,
     *,
 };
