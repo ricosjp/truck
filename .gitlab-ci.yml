@@ -7,10 +7,16 @@ test:
     stage: test
     script:
         - /root/.cargo/bin/cargo test
+        - mkdir images
+        - mv truck-platform/output images/platform
+        - mv truck-rendimpl/output images/rendimpl
     except:
         - master
     tags:
         - gpu
+    artifacts:
+        paths:
+            - images
 
 pages:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
