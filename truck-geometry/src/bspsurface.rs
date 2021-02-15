@@ -673,10 +673,6 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         div1: &mut Vec<f64>,
     )
     {
-        let (mut degree0, mut degree1) = self.degrees();
-        degree0 *= 2;
-        degree1 *= 2;
-
         let mut divide_flag0 = vec![false; div0.len() - 1];
         let mut divide_flag1 = vec![false; div1.len() - 1];
 
@@ -691,10 +687,8 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         let mut new_div0 = vec![div0[0]];
         for i in 1..div0.len() {
             if divide_flag0[i - 1] {
-                for j in 1..=degree0 {
-                    let p = (j as f64) / (degree0 as f64);
-                    new_div0.push(div0[i - 1] * (1.0 - p) + div0[i] * p);
-                }
+                new_div0.push((div0[i - 1] + div0[i]) / 2.0);
+                new_div0.push(div0[i]);
             } else {
                 new_div0.push(div0[i]);
             }
@@ -703,10 +697,8 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         let mut new_div1 = vec![div1[0]];
         for i in 1..div1.len() {
             if divide_flag1[i - 1] {
-                for j in 1..=degree1 {
-                    let p = (j as f64) / (degree1 as f64);
-                    new_div1.push(div1[i - 1] * (1.0 - p) + div1[i] * p);
-                }
+                new_div1.push((div1[i - 1] + div1[i]) / 2.0);
+                new_div1.push(div1[i]);
             } else {
                 new_div1.push(div1[i]);
             }
