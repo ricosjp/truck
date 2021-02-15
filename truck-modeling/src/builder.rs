@@ -136,6 +136,101 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     Face::new(vec![wire], NURBSSurface::new(surface))
 }
 
+/// Creates a cone by R-sweeping.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+/// use std::f64::consts::PI;
+/// let v0 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
+/// let v1 = builder::vertex(Point3::new(0.0, 0.0, 1.0));
+/// let v2 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let wire: Wire = vec![
+///     builder::line(&v0, &v1),
+///     builder::line(&v1, &v2),
+/// ].into();
+/// let cone = builder::cone(&wire, Vector3::unit_y(), Rad(2.0 * PI));
+/// let irregular = builder::rsweep(&wire, Point3::origin(), Vector3::unit_y(), Rad(2.0 * PI));
+/// 
+/// // the degenerate edge of cone is removed!
+/// assert_eq!(cone[0].boundaries()[0].len(), 3);
+/// assert_eq!(irregular[0].boundaries()[0].len(), 4);
+/// # assert_eq!(cone[1].boundaries()[0].len(), 3);
+/// # assert_eq!(irregular[1].boundaries()[0].len(), 4);
+/// # assert_eq!(cone[2].boundaries()[0].len(), 3);
+/// # assert_eq!(irregular[2].boundaries()[0].len(), 4);
+/// # assert_eq!(cone[3].boundaries()[0].len(), 3);
+/// # assert_eq!(irregular[3].boundaries()[0].len(), 4);
+/// 
+/// // this cone is closed
+/// Solid::new(vec![cone]);
+/// ```
+#[inline(always)]
+pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
+    let angle = angle.into();
+    let closed = angle.0.abs() >= 2.0 * PI.0;
+    let mut wire = wire.clone();
+    if wire.is_empty() {
+        return Shell::new();
+    }
+    let pt0 = *wire.front_vertex().unwrap().lock_point().unwrap();
+    let pt1 = *wire.back_vertex().unwrap().lock_point().unwrap();
+    let pt1_on_axis = (pt1 - pt0).cross(axis).so_small();
+    if wire.len() == 1 && pt1_on_axis {
+        let edge = wire.pop_back().unwrap();
+        let v0 = edge.front().clone();
+        let v2 = edge.back().clone();
+        let mut curve = edge.lock_curve().unwrap().clone();
+        let t = curve.knot_vec()[0] + curve.knot_vec().range_length() * 0.5;
+        let v1 = Vertex::new(curve.subs(t));
+        let curve1 = curve.cut(t);
+        wire.push_back(Edge::debug_new(&v0, &v1, curve));
+        wire.push_back(Edge::debug_new(&v1, &v2, curve1));
+    }
+    let mut shell = rsweep(&wire, pt0, axis, angle);
+    let mut edge = shell[0].boundaries()[0][0].clone();
+    for i in 0..shell.len() / wire.len() {
+        let idx = i * wire.len();
+        let face = shell[idx].clone();
+        let surface = face.oriented_surface();
+        let old_wire = face.into_boundaries().pop().unwrap();
+        let mut new_wire = Wire::new();
+        new_wire.push_back(edge.clone());
+        new_wire.push_back(old_wire[1].clone());
+        let new_edge = if closed && i + 1 == shell.len() / new_wire.len() {
+            println!("hoge");
+            shell[0].boundaries()[0][0].inverse()
+        } else {
+            let curve = old_wire[2].oriented_curve();
+            Edge::debug_new(old_wire[2].front(), new_wire[0].front(), curve)
+        };
+        new_wire.push_back(new_edge.clone());
+        shell[idx] = Face::debug_new(vec![new_wire], surface);
+        edge = new_edge.inverse();
+    }
+    if pt1_on_axis {
+        let mut edge = shell[wire.len() - 1].boundaries()[0][0].clone();
+        for i in 0..shell.len() / wire.len() {
+            let idx = (i + 1) * wire.len() - 1;
+            let face = shell[idx].clone();
+            let surface = face.oriented_surface();
+            let old_wire = face.into_boundaries().pop().unwrap();
+            let mut new_wire = Wire::new();
+            new_wire.push_back(edge.clone());
+            let new_edge = if closed && i + 1 == shell.len() / wire.len() {
+                shell[wire.len() - 1].boundaries()[0][0].inverse()
+            } else {
+                let curve = old_wire[2].oriented_curve();
+                Edge::debug_new(new_wire[0].back(), old_wire[2].back(), curve)
+            };
+            new_wire.push_back(new_edge.clone());
+            new_wire.push_back(old_wire[3].clone());
+            shell[idx] = Face::debug_new(vec![new_wire], surface);
+            edge = new_edge.inverse();
+        }
+    }
+    shell
+}
+
 /// Try attatiching a plane whose boundary is `wire`.
 /// Todo: Define the crate error and make return value `Result<Face>`!
 /// # Examples
@@ -393,12 +488,13 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 /// # }
 /// ```
 #[inline(always)]
-pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
+pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>, R: Into<Rad<f64>>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
-    angle: Rad<f64>,
+    angle: R,
 ) -> T::Swept {
+    let angle = angle.into();
     if angle.0.abs() < 2.0 * PI.0 {
         partial_rsweep(elem, origin, axis, angle)
     } else if angle.0 > 0.0 {
