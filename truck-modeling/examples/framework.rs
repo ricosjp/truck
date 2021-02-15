@@ -54,7 +54,7 @@ impl ShapeViewer {
         };
         let instant = std::time::Instant::now();
         let instance = scene.create_instance(&shape, &inst_desc);
-        println!("Instance Creating: {:?} s", instant.elapsed());
+        println!("Instance Creating: {:?}", instant.elapsed());
         scene.add_objects(&instance.render_faces());
         ShapeViewer {
             scene,
