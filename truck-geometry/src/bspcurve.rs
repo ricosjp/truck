@@ -302,14 +302,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
                 }
             }
             if div_flag {
-                for j in 1..=degree {
-                    let p = j as f64 / degree as f64;
-                    let t = (1.0 - p) * div[i - 1] + p * div[i];
-                    new_div.push(t)
-                }
-            } else {
-                new_div.push(div[i]);
+                new_div.push((div[i - 1] + div[i]) / 2.0);
             }
+            new_div.push(div[i]);
         }
         if new_div.len() != div.len() {
             *div = new_div;
