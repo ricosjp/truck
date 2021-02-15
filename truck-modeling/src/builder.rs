@@ -197,7 +197,6 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
         new_wire.push_back(edge.clone());
         new_wire.push_back(old_wire[1].clone());
         let new_edge = if closed && i + 1 == shell.len() / new_wire.len() {
-            println!("hoge");
             shell[0].boundaries()[0][0].inverse()
         } else {
             let curve = old_wire[2].oriented_curve();
