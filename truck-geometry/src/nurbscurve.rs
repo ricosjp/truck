@@ -501,7 +501,7 @@ fn test_parameter_division() {
     ];
     let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     let tol = 0.01;
-    let div = curve.parameter_division(tol);
+    let div = curve.parameter_division(tol * 0.5);
     let knot_vec = curve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
