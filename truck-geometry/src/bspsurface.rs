@@ -688,20 +688,16 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         for i in 1..div0.len() {
             if divide_flag0[i - 1] {
                 new_div0.push((div0[i - 1] + div0[i]) / 2.0);
-                new_div0.push(div0[i]);
-            } else {
-                new_div0.push(div0[i]);
             }
+            new_div0.push(div0[i]);
         }
 
         let mut new_div1 = vec![div1[0]];
         for i in 1..div1.len() {
             if divide_flag1[i - 1] {
                 new_div1.push((div1[i - 1] + div1[i]) / 2.0);
-                new_div1.push(div1[i]);
-            } else {
-                new_div1.push(div1[i]);
             }
+            new_div1.push(div1[i]);
         }
 
         if div0.len() != new_div0.len() || div1.len() != new_div1.len() {
