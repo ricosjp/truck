@@ -54,6 +54,35 @@ fn face_buffer(
     let mesh = StructuredMesh::from_surface(&surface, mesh_precision);
     let mut normals = mesh.normals().unwrap().iter().flatten();
     let reg_norm = normals.all(|normal| normal.magnitude2().near(&1.0));
+    let mut boundary = Vec::new();
+    for edge in face.boundary_iters().into_iter().flatten() {
+        let curve = edge.oriented_curve();
+        let division = curve.parameter_division(mesh_precision);
+        let mut hint = presearch(&surface, curve.subs(division[0]));
+        let mut this_boundary = Vec::new();
+        for t in division {
+            let pt = curve.subs(t);
+            println!("{:?}", hint);
+            hint = match surface.search_parameter(pt, hint) {
+                Some(got) => got,
+                None => {
+                    if surface.subs(hint.0, hint.1).near(&pt) {
+                        hint
+                    } else {
+                        let hint0 = presearch(&surface, pt);
+                        match surface.search_parameter(pt, hint0) {
+                            Some(got) => got,
+                            None => return None,
+                        }
+                    }
+                },
+            };
+            this_boundary.push([hint.0 as f32, hint.1 as f32]);
+        }
+        for window in this_boundary.as_slice().windows(2) {
+            boundary.push([window[0][0], window[0][1], window[1][0], window[1][1]]);
+        }
+    }
     let (vb, ib) = if reg_norm {
         ExpandedPolygon::from(&mesh).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device)
     } else {
@@ -63,24 +92,6 @@ fn face_buffer(
             .add_smooth_normals(normal_completion_tolerance, false);
         ExpandedPolygon::from(&mesh).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device)
     };
-    let mut boundary = Vec::new();
-    for edge in face.boundary_iters().into_iter().flatten() {
-        let curve = edge.oriented_curve();
-        let division = curve.parameter_division(mesh_precision);
-        let mut hint = presearch(&surface, curve.subs(division[0]));
-        let mut this_boundary = Vec::new();
-        for t in division {
-            let pt = curve.subs(t);
-            hint = match surface.search_parameter(pt, hint) {
-                Some(got) => got,
-                None => return None,
-            };
-            this_boundary.push([hint.0 as f32, hint.1 as f32]);
-        }
-        for window in this_boundary.as_slice().windows(2) {
-            boundary.push([window[0][0], window[0][1], window[1][0], window[1][1]]);
-        }
-    }
     Some(FaceBuffer {
         surface: (Arc::new(vb), Arc::new(ib)),
         boundary: Arc::new(BufferHandler::from_slice(
