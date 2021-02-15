@@ -62,7 +62,6 @@ fn face_buffer(
         let mut this_boundary = Vec::new();
         for t in division {
             let pt = curve.subs(t);
-            println!("{:?}", hint);
             hint = match surface.search_parameter(pt, hint) {
                 Some(got) => got,
                 None => {
