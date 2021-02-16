@@ -78,6 +78,7 @@ struct SceneInfo {
 pub struct BufferHandler {
     buffer: Buffer,
     size: u64,
+    stride: u64,
 }
 
 /// Utility for [`BindGroupLayoutEntry`]
