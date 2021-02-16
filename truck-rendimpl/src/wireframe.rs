@@ -18,12 +18,13 @@ impl WireFrameInstance {
             })
             .collect();
         let mut strips = Vec::<u32>::new();
+        let mut counter = 0_u32;
         for len in lengths {
-            let counter = strips.len() as u32;
-            for i in 0..=len {
+            for i in 1..len {
+                strips.push(counter + i as u32 - 1);
                 strips.push(counter + i as u32);
-                strips.push(counter + (i % len) as u32);
             }
+            counter += len as u32;
         }
         let vertices = BufferHandler::from_slice(&points, handler.device(), BufferUsage::VERTEX);
         let strips = BufferHandler::from_slice(&strips, handler.device(), BufferUsage::INDEX);
