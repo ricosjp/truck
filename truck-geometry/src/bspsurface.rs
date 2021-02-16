@@ -31,8 +31,7 @@ impl<V> BSplineSurface<V> {
     pub fn try_new(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<V>>,
-    ) -> Result<BSplineSurface<V>>
-    {
+    ) -> Result<BSplineSurface<V>> {
         if control_points.is_empty() {
             Err(Error::EmptyControlPoints)
         } else if control_points[0].is_empty() {
@@ -74,8 +73,7 @@ impl<V> BSplineSurface<V> {
     pub const fn new_unchecked(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<V>>,
-    ) -> BSplineSurface<V>
-    {
+    ) -> BSplineSurface<V> {
         BSplineSurface {
             knot_vecs,
             control_points,
@@ -93,8 +91,7 @@ impl<V> BSplineSurface<V> {
     pub fn debug_new(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<V>>,
-    ) -> BSplineSurface<V>
-    {
+    ) -> BSplineSurface<V> {
         match cfg!(debug_assertions) {
             true => Self::new(knot_vecs, control_points),
             false => Self::new_unchecked(knot_vecs, control_points),
@@ -616,8 +613,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         v1: f64,
         tol: f64,
         dist2: &F,
-    ) -> bool
-    {
+    ) -> bool {
         let (mut degree0, mut degree1) = self.degrees();
         let bspsurface = self.get_closure();
         degree0 *= 2;
@@ -651,8 +647,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         &self,
         tol: f64,
         dist2: F,
-    ) -> (Vec<f64>, Vec<f64>)
-    {
+    ) -> (Vec<f64>, Vec<f64>) {
         let (knot_vec0, knot_vec1) = self.knot_vecs();
         let u0 = knot_vec0[0];
         let u1 = knot_vec0[knot_vec0.len() - 1];
@@ -671,8 +666,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         dist2: F,
         div0: &mut Vec<f64>,
         div1: &mut Vec<f64>,
-    )
-    {
+    ) {
         let mut divide_flag0 = vec![false; div0.len() - 1];
         let mut divide_flag1 = vec![false; div1.len() - 1];
 
@@ -711,8 +705,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         other: &BSplineSurface<V>,
         div_coef: usize,
         ord: F,
-    ) -> bool
-    {
+    ) -> bool {
         if !self.knot_vecs.0.same_range(&other.knot_vecs.0) {
             return false;
         }
@@ -1485,8 +1478,7 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     pub fn homotopy(
         mut bspcurve0: BSplineCurve<V>,
         mut bspcurve1: BSplineCurve<V>,
-    ) -> BSplineSurface<V>
-    {
+    ) -> BSplineSurface<V> {
         bspcurve0.syncro_degree(&mut bspcurve1);
 
         bspcurve0.optimize();
@@ -1570,8 +1562,7 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
         mut curve1: BSplineCurve<V>,
         mut curve2: BSplineCurve<V>,
         mut curve3: BSplineCurve<V>,
-    ) -> BSplineSurface<V>
-    {
+    ) -> BSplineSurface<V> {
         curve2.invert();
         curve3.invert();
         curve0.syncro_degree(&mut curve2);
@@ -1792,8 +1783,7 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
         vvder: &Self,
         pt: V,
         (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)>
-    {
+    ) -> Option<(f64, f64)> {
         self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u0, v0), 0)
     }
 
@@ -1807,8 +1797,7 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
         pt: V,
         (u0, v0): (f64, f64),
         count: usize,
-    ) -> Option<(f64, f64)>
-    {
+    ) -> Option<(f64, f64)> {
         let s = self.subs(u0, v0);
         let ud = uder.subs(u0, v0);
         let vd = vder.subs(u0, v0);
@@ -1861,10 +1850,7 @@ where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> +
     /// Returns the bounding box including all control points.
     #[inline(always)]
     pub fn roughly_bounding_box(&self) -> BoundingBox<V> {
-        self.control_points
-            .iter()
-            .flat_map(move |vec| vec)
-            .collect()
+        self.control_points.iter().flatten().collect()
     }
 }
 
@@ -2121,8 +2107,7 @@ pub(super) fn sub_search_parameter2d<S: Surface<Point = Point2, Vector = Vector2
     pt0: Point2,
     hint: Vector2,
     count: usize,
-) -> Option<Vector2>
-{
+) -> Option<Vector2> {
     if count == 100 {
         return None;
     }
