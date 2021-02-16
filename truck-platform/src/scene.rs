@@ -550,7 +550,10 @@ impl Scene {
                             index_buffer.size as u32 / std::mem::size_of::<u32>() as u32;
                         rpass.draw_indexed(0..index_size, 0, 0..1);
                     }
-                    None => rpass.draw(0..object.vertex_buffer.size as u32, 0..1),
+                    None => {
+                        let len = object.vertex_buffer.size / object.vertex_buffer.stride;
+                        rpass.draw(0..len as u32, 0..1);
+                    }
                 }
             }
         }
