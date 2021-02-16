@@ -35,4 +35,6 @@ fn main() {
     save_spirv("textured-polygon.frag", ShaderType::Fragment);
     save_spirv("face.frag", ShaderType::Fragment);
     save_spirv("textured-face.frag", ShaderType::Fragment);
+    save_spirv("line.vert", ShaderType::Vertex);
+    save_spirv("line.frag", ShaderType::Fragment);
 }

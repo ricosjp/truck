@@ -94,6 +94,18 @@ pub struct PolygonInstance {
     id: RenderID,
 }
 
+/// Wire frame rendering
+#[derive(Debug, Clone)]
+pub struct WireFrameInstance {
+    vertices: Arc<BufferHandler>,
+    strips: Arc<BufferHandler>,
+    id: RenderID,
+    /// instance matrix
+    pub matrix: Matrix4,
+    /// color of line
+    pub color: Vector4,
+}
+
 #[derive(Clone, Debug)]
 struct FaceBuffer {
     surface: (Arc<BufferHandler>, Arc<BufferHandler>),
@@ -178,5 +190,6 @@ struct ExpandedPolygon {
 mod instdesc;
 mod polyrend;
 mod shaperend;
+mod wireframe;
 /// utility for creating `Texture`
 pub mod image2texture;
