@@ -9,7 +9,6 @@ impl<V> NURBSSurface<V> {
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
     pub fn non_rationalized(&self) -> &BSplineSurface<V> { &self.0 }
-    
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
     pub fn non_rationalized_mut(&mut self) -> &mut BSplineSurface<V> { &mut self.0 }
@@ -367,6 +366,99 @@ impl<V: Homogeneous<f64> + Tolerance> NURBSSurface<V> {
         self
     }
 
+    /// Cuts the surface into two surfaces at the parameter `u`
+    #[inline(always)]
+    pub fn ucut(&mut self, u: f64) -> Self { Self::new(self.0.ucut(u)) }
+
+    /// Cuts the surface into two surfaces at the parameter `v`
+    #[inline(always)]
+    pub fn vcut(&mut self, v: f64) -> Self { Self::new(self.0.vcut(v)) }
+
+    /// Normalizes the knot vectors
+    #[inline(always)]
+    pub fn knot_normalize(&mut self) -> &mut Self {
+        self.0.knot_normalize();
+        self
+    }
+    /// Translates the knot vectors.
+    #[inline(always)]
+    pub fn knot_translate(&mut self, x: f64, y: f64) -> &mut Self {
+        self.0.knot_translate(x, y);
+        self
+    }
+
+    /// Removes knots in order from the back
+    #[inline(always)]
+    pub fn optimize(&mut self) -> &mut Self {
+        self.0.optimize();
+        self
+    }
+
+    /// Get the boundary by four splitted curves.
+    /// # Example
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
+    ///     vec![Vector3::new(0.0, 1.0, 2.0), Vector3::new(0.5, 1.0, 3.0), Vector3::new(1.0, 1.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 2.0, 2.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 2.0)],
+    ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
+    /// ];
+    /// let bspsurface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let curves = bspsurface.splitted_boundary();
+    /// assert_eq!(
+    ///     curves[0].control_points(),
+    ///     &vec![
+    ///         Vector3::new(0.0, 0.0, 1.0),
+    ///         Vector3::new(0.0, 1.0, 2.0),
+    ///         Vector3::new(0.0, 2.0, 2.0),
+    ///         Vector3::new(0.0, 3.0, 1.0),
+    ///     ],
+    /// );
+    /// assert_eq!(
+    ///     curves[1].control_points(),
+    ///     &vec![
+    ///         Vector3::new(0.0, 3.0, 1.0),
+    ///         Vector3::new(0.5, 3.5, 2.0),
+    ///         Vector3::new(1.0, 3.0, 1.0),
+    ///     ],
+    /// );
+    /// assert_eq!(
+    ///     curves[2].control_points(),
+    ///     &vec![
+    ///         Vector3::new(1.0, 3.0, 1.0),
+    ///         Vector3::new(1.0, 2.0, 2.0),
+    ///         Vector3::new(1.0, 1.0, 2.0),
+    ///         Vector3::new(1.0, 0.0, 1.0),
+    ///     ],
+    /// );
+    /// assert_eq!(
+    ///     curves[3].control_points(),
+    ///     &vec![
+    ///         Vector3::new(1.0, 0.0, 1.0),
+    ///         Vector3::new(0.5, -1.0, 2.0),
+    ///         Vector3::new(0.0, 0.0, 1.0),
+    ///     ],
+    /// );
+    /// ```
+    #[inline(always)]
+    pub fn splitted_boundary(&self) -> [NURBSCurve<V>; 4] {
+        std::convert::TryFrom::try_from(
+            self.0
+                .splitted_boundary()
+                .to_vec()
+                .into_iter()
+                .map(|curve| NURBSCurve::new(curve))
+                .collect::<Vec<_>>(),
+        )
+        .unwrap()
+    }
+
+    /// Extracts the boundary of surface
+    #[inline(always)]
+    pub fn boundary(&self) -> NURBSCurve<V> { NURBSCurve::new(self.0.boundary()) }
+
     //--------------------------------------------------------------//
     //------------------------- WIP --------------------------------//
     //--------------------------------------------------------------//
@@ -399,9 +491,26 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
         &self,
         pt: V::Point,
         (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)>
-    {
+    ) -> Option<(f64, f64)> {
         self.0.search_rational_nearest_parameter(pt, (u0, v0))
+    }
+}
+
+impl<V> NURBSSurface<V>
+where
+    V: Homogeneous<f64>,
+    V::Point:
+        MetricSpace<Metric = f64> + std::ops::Index<usize, Output = f64> + Bounded<f64> + Copy,
+{
+    /// Returns the bounding box including all control points.
+    #[inline(always)]
+    pub fn roughly_bounding_box(&self) -> BoundingBox<V::Point> {
+        self.0
+            .control_points
+            .iter()
+            .flatten()
+            .map(|pt| pt.to_point())
+            .collect()
     }
 }
 
@@ -570,8 +679,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
         &self,
         pt: V::Point,
         (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)>
-    {
+    ) -> Option<(f64, f64)> {
         let uder = self.uderivation();
         let vder = self.vderivation();
         let uuder = uder.uderivation();
@@ -589,8 +697,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
         vvder: &Self,
         pt: V::Point,
         (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)>
-    {
+    ) -> Option<(f64, f64)> {
         self.sub_srnp(uder, vder, uuder, uvder, vvder, pt, (u0, v0), 0)
     }
 
@@ -604,8 +711,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
         pt: V::Point,
         (u0, v0): (f64, f64),
         count: usize,
-    ) -> Option<(f64, f64)>
-    {
+    ) -> Option<(f64, f64)> {
         let s = self.subs(u0, v0);
         let rs = s.to_point();
         let ud = uder.subs(u0, v0);
@@ -708,18 +814,36 @@ fn test_include2d() {
     use std::iter::FromIterator;
     let knot_vec = KnotVec::uniform_knot(2, 3);
     let ctrl_pts = vec![
-        vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.05, 0.0, 0.5), Vector3::new(0.15, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
-        vec![Vector3::new(0.0, 0.01, 0.1), Vector3::new(0.02, 0.02, 0.1), Vector3::new(0.16, 0.12, 0.4), Vector3::new(0.7, 0.21, 0.7)],
-        vec![Vector3::new(0.0, 0.02, 0.4), Vector3::new(0.15, 0.3, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(0.4, 0.2, 0.4)],
-        vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.25, 0.5, 0.5), Vector3::new(0.3, 0.3, 0.3)],
+        vec![
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(0.05, 0.0, 0.5),
+            Vector3::new(0.15, 0.0, 0.3),
+            Vector3::new(1.0, 0.0, 1.0),
+        ],
+        vec![
+            Vector3::new(0.0, 0.01, 0.1),
+            Vector3::new(0.02, 0.02, 0.1),
+            Vector3::new(0.16, 0.12, 0.4),
+            Vector3::new(0.7, 0.21, 0.7),
+        ],
+        vec![
+            Vector3::new(0.0, 0.02, 0.4),
+            Vector3::new(0.15, 0.3, 0.5),
+            Vector3::new(0.6, 0.4, 1.0),
+            Vector3::new(0.4, 0.2, 0.4),
+        ],
+        vec![
+            Vector3::new(0.0, 1.0, 1.0),
+            Vector3::new(0.1, 1.0, 1.0),
+            Vector3::new(0.25, 0.5, 0.5),
+            Vector3::new(0.3, 0.3, 0.3),
+        ],
     ];
     let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    
     let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
     let mut curve = surface.sectional_curve(bnd_box);
     curve.control_points_mut().for_each(|pt| *pt *= 3.0);
     assert!(!surface.include(&curve));
-    
     let surface = NURBSSurface::new(surface);
     let curve = NURBSCurve::new(curve);
     assert!(surface.include(&curve));
@@ -729,16 +853,29 @@ fn test_include2d() {
 fn test_include3d() {
     let knot_vec = KnotVec::bezier_knot(2);
     let ctrl_pts = vec![
-        vec![Vector4::new(-1.0, -1.0, 2.0, 1.0), Vector4::new(-1.0, 0.0, 0.0, 1.0), Vector4::new(-1.0, 1.0, 2.0, 1.0)],
-        vec![Vector4::new(0.0, -1.0, 0.0, 1.0), Vector4::new(0.0, 0.0, -2.0, 1.0), Vector4::new(0.0, 1.0, 0.0, 1.0)],
-        vec![Vector4::new(1.0, -1.0, 2.0, 1.0), Vector4::new(1.0, 0.0, 0.0, 1.0), Vector4::new(1.0, 1.0, 2.0, 1.0)],
+        vec![
+            Vector4::new(-1.0, -1.0, 2.0, 1.0),
+            Vector4::new(-1.0, 0.0, 0.0, 1.0),
+            Vector4::new(-1.0, 1.0, 2.0, 1.0),
+        ],
+        vec![
+            Vector4::new(0.0, -1.0, 0.0, 1.0),
+            Vector4::new(0.0, 0.0, -2.0, 1.0),
+            Vector4::new(0.0, 1.0, 0.0, 1.0),
+        ],
+        vec![
+            Vector4::new(1.0, -1.0, 2.0, 1.0),
+            Vector4::new(1.0, 0.0, 0.0, 1.0),
+            Vector4::new(1.0, 1.0, 2.0, 1.0),
+        ],
     ];
     let surface = NURBSSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts));
-    
-    let knot_vec = KnotVec::from(
-        vec![0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0]
-    );
-    let ctrl_pts = vec![ // the vector of the indices of control points
+
+    let knot_vec = KnotVec::from(vec![
+        0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0,
+    ]);
+    let ctrl_pts = vec![
+        // the vector of the indices of control points
         Vector4::new(0.0, -2.0, 2.0, 2.0),
         Vector4::new(1.0, -1.0, 1.0, 1.0),
         Vector4::new(1.0, 0.0, 1.0, 1.0),
@@ -751,7 +888,6 @@ fn test_include3d() {
     ];
     let mut curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     assert!(surface.include(&curve));
-    
     *curve.control_point_mut(1) += Vector4::new(0.0, 0.0, 0.00001, 0.0);
     assert!(!surface.include(&curve));
 }
