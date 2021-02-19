@@ -90,10 +90,10 @@ fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
 
 #[test]
 fn bind_group_test() {
-    if cfg!(windows) {
+    if cfg!(target_os = "windows") {
         exec_bind_group_test(BackendBit::VULKAN, "output/vulkan/");
         exec_bind_group_test(BackendBit::DX12, "output/dx12/");
-    } else if cfg!(macos) {
+    } else if cfg!(target_os = "macos") {
         exec_bind_group_test(BackendBit::METAL, "output/");
     } else {
         exec_bind_group_test(BackendBit::VULKAN, "output/");
