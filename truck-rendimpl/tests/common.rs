@@ -2,7 +2,7 @@
 
 use glsl_to_spirv::ShaderType;
 use rayon::prelude::*;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
@@ -181,6 +181,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
             })
             .await
             .unwrap();
+        writeln!(&mut std::io::stderr(), "{:?}", adapter.get_info()).unwrap();
         let (device, queue) = adapter
             .request_device(
                 &DeviceDescriptor {
@@ -276,6 +277,17 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
     read_buffer(device, &buffer)
 }
 
+pub fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>, size: (u32, u32)) {
+    image::save_buffer(
+        path,
+        &vec,
+        size.0,
+        size.1,
+        image::ColorType::Rgba8,
+    )
+    .unwrap();
+}
+
 pub fn same_buffer(vec0: &Vec<u8>, vec1: &Vec<u8>) -> bool {
     vec0.par_iter()
         .zip(vec1)
@@ -287,4 +299,15 @@ pub fn count_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> usize {
         .zip(vec1)
         .filter(move |(i, j)| *std::cmp::max(i, j) - *std::cmp::min(i, j) > 2)
         .count()
+}
+
+pub fn os_alt_exec_test<F: Fn(BackendBit, &str)>(test: F) {
+    if cfg!(windows) {
+        test(BackendBit::VULKAN, "output/vulkan/");
+        test(BackendBit::DX12, "output/dx12/");
+    } else if cfg!(macos) {
+        test(BackendBit::METAL, "output/");
+    } else {
+        test(BackendBit::VULKAN, "output/");
+    }
 }

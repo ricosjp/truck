@@ -82,6 +82,7 @@ fn exec_polygon_bgtest(
     shader: &str,
     answer: &Vec<u8>,
     id: usize,
+    out_dir: String,
 ) -> bool {
     let sc_desc = scene.sc_desc();
     let tex_desc = common::texture_descriptor(&sc_desc);
@@ -92,26 +93,15 @@ fn exec_polygon_bgtest(
     };
     common::render_one(scene, &texture, &mut bgc_instance);
     let buffer = common::read_texture(scene.device_handler(), &texture);
-    let path = format!("output/polygon-bgtest-{}.png", id);
-    save_buffer(path, &buffer);
+    let path = format!("{}polygon-bgtest-{}.png", out_dir, id);
+    common::save_buffer(path, &buffer, PICTURE_SIZE);
     common::same_buffer(&answer, &buffer)
 }
 
-fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
-    image::save_buffer(
-        path,
-        &vec,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        image::ColorType::Rgba8,
-    )
-    .unwrap();
-}
-
-#[test]
-fn polymesh_nontex_bind_group_test() {
-    std::fs::create_dir_all("output").unwrap();
-    let instance = Instance::new(BackendBit::PRIMARY);
+fn exec_polymesh_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
+    let out_dir = out_dir.to_string();
+    std::fs::create_dir_all(&out_dir).unwrap();
+    let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
@@ -126,26 +116,42 @@ fn polymesh_nontex_bind_group_test() {
             let instance = scene.create_instance(polygon, &inst_desc);
             let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
             assert!(exec_polygon_bgtest(
-                &mut scene, &instance, shader, &answer, i
+                &mut scene,
+                &instance,
+                shader,
+                &answer,
+                i,
+                out_dir.clone()
             ));
             let shader = include_str!("shaders/anti-mesh-nontex-bindgroup.frag");
             assert!(!exec_polygon_bgtest(
-                &mut scene, &instance, shader, &answer, i
+                &mut scene,
+                &instance,
+                shader,
+                &answer,
+                i,
+                out_dir.clone()
             ));
         })
 }
 
 #[test]
-fn polymesh_tex_bind_group_test() {
-    std::fs::create_dir_all("output").unwrap();
-    let instance = Instance::new(BackendBit::PRIMARY);
+fn polymesh_nontex_bind_group_test() {
+    common::os_alt_exec_test(exec_polymesh_nontex_bind_group_test)
+}
+
+fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
+    let out_dir = out_dir.to_string();
+    std::fs::create_dir_all(&out_dir).unwrap();
+    let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler, &Default::default());
     let answer = common::random_texture(&mut scene);
     let buffer = common::read_texture(scene.device_handler(), &answer);
-    save_buffer("output/random-texture.png", &buffer);
+    let pngpath = out_dir.clone() + "random-texture.png";
+    common::save_buffer(pngpath, &buffer, PICTURE_SIZE);
     let mut desc = nontex_inst_desc();
     let image_buffer =
         ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer.clone())
@@ -166,7 +172,8 @@ fn polymesh_tex_bind_group_test() {
                 &instance,
                 shader,
                 &buffer,
-                i + 3
+                i + 3,
+                out_dir.clone(),
             ));
             let shader = include_str!("shaders/anti-mesh-tex-bindgroup.frag");
             assert!(!exec_polygon_bgtest(
@@ -174,7 +181,11 @@ fn polymesh_tex_bind_group_test() {
                 &instance,
                 shader,
                 &buffer,
-                i + 3
+                i + 3,
+                out_dir.clone(),
             ));
         })
 }
+
+#[test]
+fn polymesh_tex_bind_group_test() { common::os_alt_exec_test(exec_polymesh_tex_bind_group_test) }
