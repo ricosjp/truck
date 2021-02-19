@@ -1,5 +1,6 @@
 mod common;
 use common::Plane;
+use std::io::Write;
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use wgpu::*;
