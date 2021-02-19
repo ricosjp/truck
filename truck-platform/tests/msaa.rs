@@ -1,35 +1,12 @@
 mod common;
-use common::*;
+use common::Plane;
+use std::io::Write;
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use wgpu::*;
 
 pub const PICTURE_WIDTH: u32 = 512;
 pub const PICTURE_HEIGHT: u32 = 512;
-
-fn init_device_with_adptinfo(instance: &Instance) -> (Arc<Device>, Arc<Queue>, AdapterInfo) {
-    futures::executor::block_on(async {
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
-                compatible_surface: None,
-            })
-            .await
-            .unwrap();
-        let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Limits::default(),
-                    shader_validation: true,
-                },
-                None,
-            )
-            .await
-            .unwrap();
-        (Arc::new(device), Arc::new(queue), adapter.get_info())
-    })
-}
 
 fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
     image::save_buffer(
@@ -42,22 +19,11 @@ fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
     .unwrap();
 }
 
-#[test]
-fn msaa_test() {
-    std::fs::create_dir_all("output").unwrap();
-    let instance = Instance::new(BackendBit::PRIMARY);
-    let (device, queue, info) = init_device_with_adptinfo(&instance);
-    match info.backend {
-        Backend::Vulkan => {}
-        Backend::Dx12 => {}
-        _ => {
-            eprintln!(
-                "Backend: {:?} is not compatible with wgpu MSAA.",
-                info.backend
-            );
-            return;
-        }
-    }
+fn exec_msaa_test(backend: BackendBit, out_dir: &str) {
+    let out_dir = String::from(out_dir);
+    std::fs::create_dir_all(&out_dir).unwrap();
+    let instance = Instance::new(backend);
+    let (device, queue) = common::init_device(&instance);
     let sc_desc = SwapChainDescriptor {
         usage: TextureUsage::OUTPUT_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
@@ -77,13 +43,25 @@ fn msaa_test() {
         },
     );
     let plane = new_plane!("shaders/trapezoid.vert", "shaders/trapezoid.frag");
-    render_one(&mut scene, &texture0, &plane);
+    common::render_one(&mut scene, &texture0, &plane);
     let buffer0 = common::read_texture(&handler, &texture0);
-    save_buffer("output/sample_count_one.png", &buffer0);
+    save_buffer(out_dir.clone() + "sample_count_one.png", &buffer0);
     scene.descriptor_mut().sample_count = 2;
     let plane = new_plane!("shaders/trapezoid.vert", "shaders/trapezoid.frag");
-    render_one(&mut scene, &texture1, &plane);
+    common::render_one(&mut scene, &texture1, &plane);
     let buffer1 = common::read_texture(&handler, &texture1);
-    save_buffer("output/sample_count_two.png", &buffer1);
+    save_buffer(out_dir.clone() + "sample_count_two.png", &buffer1);
     assert!(!common::same_buffer(&buffer0, &buffer1));
+}
+
+#[test]
+fn msaa_test() {
+    if cfg!(target_os = "windows") {
+        exec_msaa_test(BackendBit::VULKAN, "output/vulkan/");
+        exec_msaa_test(BackendBit::DX12, "output/dx12/");
+    } else if cfg!(target_os = "macos") {
+        writeln!(&mut std::io::stderr(), "Metal is not compatible with wgpu MSAA.").unwrap();
+    } else {
+        exec_msaa_test(BackendBit::VULKAN, "output/");
+    }
 }

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use glsl_to_spirv::ShaderType;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::sync::Arc;
 use rayon::prelude::*;
 use truck_platform::*;
@@ -23,6 +23,31 @@ macro_rules! new_plane {
             id: RenderID::gen(),
         }
     };
+}
+
+pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
+    futures::executor::block_on(async {
+        let adapter = instance
+            .request_adapter(&RequestAdapterOptions {
+                power_preference: PowerPreference::Default,
+                compatible_surface: None,
+            })
+            .await
+            .unwrap();
+        writeln!(&mut std::io::stderr(), "{:?}", adapter.get_info()).unwrap();
+        let (device, queue) = adapter
+            .request_device(
+                &DeviceDescriptor {
+                    features: Default::default(),
+                    limits: Default::default(),
+                    shader_validation: true,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+        (Arc::new(device), Arc::new(queue))
+    })
 }
 
 impl<'a> Rendered for Plane<'a> {
