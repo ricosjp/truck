@@ -257,13 +257,76 @@ impl<'a> RenderFace<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        self.state.pipeline_with_shader(
-            vertex_shader,
-            fragment_shader,
-            device_handler,
-            layout,
+        let device = device_handler.device();
+        let sc_desc = device_handler.sc_desc();
+        let cull_mode = match self.state.backface_culling {
+            true => CullMode::Back,
+            false => CullMode::None,
+        };
+        let vertex_module = device.create_shader_module(vertex_shader);
+        let fragment_module = device.create_shader_module(fragment_shader);
+        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            layout: Some(layout),
+            vertex_stage: ProgrammableStageDescriptor {
+                module: &vertex_module,
+                entry_point: "main",
+            },
+            fragment_stage: Some(ProgrammableStageDescriptor {
+                module: &fragment_module,
+                entry_point: "main",
+            }),
+            rasterization_state: Some(RasterizationStateDescriptor {
+                front_face: FrontFace::Ccw,
+                cull_mode,
+                depth_bias: 0,
+                depth_bias_slope_scale: 0.0,
+                depth_bias_clamp: 0.0,
+                clamp_depth: false,
+            }),
+            primitive_topology: PrimitiveTopology::TriangleList,
+            color_states: &[ColorStateDescriptor {
+                format: sc_desc.format,
+                color_blend: BlendDescriptor::REPLACE,
+                alpha_blend: BlendDescriptor::REPLACE,
+                write_mask: ColorWrite::ALL,
+            }],
+            depth_stencil_state: Some(DepthStencilStateDescriptor {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: StencilStateDescriptor::default(),
+            }),
+            vertex_state: VertexStateDescriptor {
+                index_format: IndexFormat::Uint32,
+                vertex_buffers: &[VertexBufferDescriptor {
+                    stride: (3 + 2 + 3) * 4,
+                    step_mode: InputStepMode::Vertex,
+                    attributes: &[
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float3,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float2,
+                            offset: 3 * 4,
+                            shader_location: 1,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float3,
+                            offset: 2 * 4 + 3 * 4,
+                            shader_location: 2,
+                        },
+                    ],
+                }],
+            },
             sample_count,
-        )
+            sample_mask: !0,
+            alpha_to_coverage_enabled: false,
+            label: None,
+        });
+        Arc::new(pipeline)
+ 
     }
 }
 
