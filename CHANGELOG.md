@@ -35,7 +35,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## v0.2
 
-### v0.2.0 (next release, in editing)
+### v0.2.0 (next release, developed items)
 - removed WIP of `truck-polymesh`
   - The member variables of `PolygonMesh` becomes private.  
     - Destructive changes to the mesh are made `PolygonMeshEditor`, which checks the regularity of the mesh at dropped time.
