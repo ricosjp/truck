@@ -43,6 +43,14 @@ vec3 current_normal() {
     }
 }
 
+uvec2 answer_range() {
+    if (position.x < 0.0) {
+        return uvec2(0, 4);
+    } else {
+        return uvec2(4, 8);
+    }
+}
+
 void main() {
     if (fract_distance(fract(position.x), uv.x) > EPS) {
         color = vec4(1.0, 0.0, 0.0, 1.0);
@@ -68,7 +76,7 @@ void main() {
         color = vec4(0.0, 1.0, 1.0, 1.0);
     } else if (abs(ambient_ratio - 0.92) > EPS) {
         color = vec4(0.25, 0.25, 0.25, 1.0);
-    } else if (boundary_range != uvec2(0, 4)) {
+    } else if (boundary_range != answer_range()) {
         color = vec4(0.5, 0.5, 0.5, 1.0);
     } else if (distance(boundary[0], vec4(0.0, 0.0, 1.0, 0.0)) > EPS) {
         color = vec4(0.75, 0.75, 0.75, 1.0);
