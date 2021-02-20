@@ -173,17 +173,9 @@ impl CreateInstance for Scene {
     }
 }
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy, Zeroable, Pod)]
-struct AttrVertex {
-    pub position: [f32; 3],
-    pub uv_coord: [f32; 2],
-    pub normal: [f32; 3],
-}
-
 #[derive(Debug, Clone)]
-struct ExpandedPolygon {
-    vertices: Vec<AttrVertex>,
+struct ExpandedPolygon<V> {
+    vertices: Vec<V>,
     indices: Vec<u32>,
 }
 
@@ -191,5 +183,6 @@ mod instdesc;
 mod polyrend;
 mod shaperend;
 mod wireframe;
+mod expanded;
 /// utility for creating `Texture`
 pub mod image2texture;

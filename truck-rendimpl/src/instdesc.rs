@@ -222,7 +222,7 @@ impl InstanceState {
             vertex_state: VertexStateDescriptor {
                 index_format: IndexFormat::Uint32,
                 vertex_buffers: &[VertexBufferDescriptor {
-                    stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                    stride: (3 + 2 + 3) * 4,
                     step_mode: InputStepMode::Vertex,
                     attributes: &[
                         VertexAttributeDescriptor {

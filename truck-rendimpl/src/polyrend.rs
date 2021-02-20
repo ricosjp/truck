@@ -2,6 +2,14 @@ use crate::*;
 use polymesh::Vertex;
 use std::collections::HashMap;
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+pub(super) struct AttrVertex {
+    pub position: [f32; 3],
+    pub uv_coord: [f32; 2],
+    pub normal: [f32; 3],
+}
+
 impl IntoInstance for PolygonMesh {
     type Instance = PolygonInstance;
     type Descriptor = PolygonInstanceDescriptor;
@@ -196,23 +204,10 @@ impl Rendered for PolygonInstance {
     }
 }
 
-impl ExpandedPolygon {
-    pub fn buffers(
-        &self,
-        vertex_usage: BufferUsage,
-        index_usage: BufferUsage,
-        device: &Device,
-    ) -> (BufferHandler, BufferHandler) {
-        let vertex_buffer = BufferHandler::from_slice(&self.vertices, device, vertex_usage);
-        let index_buffer = BufferHandler::from_slice(&self.indices, device, index_usage);
-        (vertex_buffer, index_buffer)
-    }
-}
-
 fn signup_vertex(
     polymesh: &PolygonMesh,
     vertex: Vertex,
-    glpolymesh: &mut ExpandedPolygon,
+    glpolymesh: &mut ExpandedPolygon<AttrVertex>,
     vertex_map: &mut HashMap<Vertex, u32>,
 ) {
     let idx = match vertex_map.get(&vertex) {
@@ -241,17 +236,8 @@ fn signup_vertex(
     glpolymesh.indices.push(idx);
 }
 
-impl Default for ExpandedPolygon {
-    fn default() -> ExpandedPolygon {
-        ExpandedPolygon {
-            vertices: Vec::new(),
-            indices: Vec::new(),
-        }
-    }
-}
-
-impl From<&PolygonMesh> for ExpandedPolygon {
-    fn from(polymesh: &PolygonMesh) -> ExpandedPolygon {
+impl From<&PolygonMesh> for ExpandedPolygon<AttrVertex> {
+    fn from(polymesh: &PolygonMesh) -> ExpandedPolygon<AttrVertex> {
         let mut glpolymesh = ExpandedPolygon::default();
         let mut vertex_map = HashMap::<Vertex, u32>::new();
         for tri in polymesh.faces().tri_faces() {
@@ -278,8 +264,8 @@ impl From<&PolygonMesh> for ExpandedPolygon {
     }
 }
 
-impl From<&StructuredMesh> for ExpandedPolygon {
-    fn from(mesh: &StructuredMesh) -> ExpandedPolygon {
+impl From<&StructuredMesh> for ExpandedPolygon<AttrVertex> {
+    fn from(mesh: &StructuredMesh) -> ExpandedPolygon<AttrVertex> {
         let mut glpolymesh = ExpandedPolygon::default();
         let (m, n) = (mesh.positions().len(), mesh.positions()[0].len());
         for i in 0..m {
