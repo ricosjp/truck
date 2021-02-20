@@ -33,6 +33,7 @@ fn main() {
     save_spirv("polygon.vert", ShaderType::Vertex);
     save_spirv("polygon.frag", ShaderType::Fragment);
     save_spirv("textured-polygon.frag", ShaderType::Fragment);
+    save_spirv("face.vert", ShaderType::Vertex);
     save_spirv("face.frag", ShaderType::Fragment);
     save_spirv("textured-face.frag", ShaderType::Fragment);
     save_spirv("line.vert", ShaderType::Vertex);

@@ -106,19 +106,6 @@ pub struct WireFrameInstance {
     pub color: Vector4,
 }
 
-#[derive(Clone, Debug)]
-struct FaceBuffer {
-    surface: (Arc<BufferHandler>, Arc<BufferHandler>),
-    boundary: Arc<BufferHandler>,
-    boundary_length: Arc<BufferHandler>,
-}
-
-#[derive(Debug)]
-struct FaceInstance {
-    buffer: Arc<Mutex<FaceBuffer>>,
-    id: RenderID,
-}
-
 /// Instance of shape: `Shell` and `Solid` with geometric data.
 ///
 /// One can duplicate shapes with different postures and materials
@@ -129,15 +116,10 @@ struct FaceInstance {
 /// with original, however, its render id is different from the one of original.
 #[derive(Debug)]
 pub struct ShapeInstance {
-    faces: Vec<FaceInstance>,
+    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
+    boundary: Arc<BufferHandler>,
     state: InstanceState,
-}
-
-/// Iterated face for rendering `ShapeInstance`.
-#[derive(Clone, Copy, Debug)]
-pub struct RenderFace<'a> {
-    instance: &'a FaceInstance,
-    state: &'a InstanceState,
+    id: RenderID,
 }
 
 /// The trait for generate `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
