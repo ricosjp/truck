@@ -36,10 +36,17 @@ The version is of the bottom crate `truck-rendimpl`.
 ## v0.2
 
 ### v0.2.0 (next release, developed items)
+
+#### Released
 - removed WIP of `truck-polymesh`
   - The member variables of `PolygonMesh` becomes private.  
     - Destructive changes to the mesh are made `PolygonMeshEditor`, which checks the regularity of the mesh at dropped time.
   - Mesh handling algorithms are now a public API.
     - `MeshHandler` was abolished and algorithms are managed as traits.
 - added inherit methods of `truck_geometry::NURBSSurface` from `BSplineSurface`.
+- added a feature `serde` to `cgmath` at `truck-base`.
+  - remove the explicit dependency to `cgmath` from `truck-polymesh`.
+  - plans to add `nalgebra` as an alternative backend (unreleased this version).
 
+#### Unreleased
+- Do not support to `wgpu v0.7.0`. WGSL is very attractive, but `wgpu v0.7.0` is still unstable.
