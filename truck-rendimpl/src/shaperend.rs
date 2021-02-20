@@ -1,22 +1,20 @@
 use crate::*;
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+pub(super) struct AttrVertex {
+    pub position: [f32; 3],
+    pub uv_coord: [f32; 2],
+    pub normal: [f32; 3],
+    pub boundary_range: [u32; 2],
+}
+
 impl Default for ShapeInstanceDescriptor {
     #[inline(always)]
     fn default() -> Self {
         ShapeInstanceDescriptor {
             instance_state: Default::default(),
             mesh_precision: 0.005,
-        }
-    }
-}
-
-impl FaceInstance {
-    /// Clone the instance as another drawn element.
-    #[inline(always)]
-    fn clone_instance(&self) -> Self {
-        FaceInstance {
-            buffer: self.buffer.clone(),
-            id: RenderID::gen(),
         }
     }
 }
@@ -41,12 +39,19 @@ fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
     res
 }
 
-fn face_buffer(device: &Device, face: &Face, mesh_precision: f64) -> Option<FaceBuffer> {
+fn add_face(
+    face: &Face,
+    mesh_precision: f64,
+    expolygon: &mut ExpandedPolygon<AttrVertex>,
+    boundaries: &mut Vec<[f32; 4]>,
+) -> Option<()> {
+    let ExpandedPolygon {
+        ref mut vertices,
+        ref mut indices,
+    } = expolygon;
+    let inf = boundaries.len() as u32;
+    let index_offset = vertices.len() as u32;
     let surface = face.oriented_surface();
-    let mesh = StructuredMesh::from_surface(&surface, mesh_precision);
-    let (vb, ib) =
-        ExpandedPolygon::from(&mesh).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
-    let mut boundary = Vec::new();
     for edge in face.boundary_iters().into_iter().flatten() {
         let curve = edge.oriented_curve();
         let division = curve.parameter_division(mesh_precision);
@@ -61,22 +66,39 @@ fn face_buffer(device: &Device, face: &Face, mesh_precision: f64) -> Option<Face
             this_boundary.push([hint.0 as f32, hint.1 as f32]);
         }
         for window in this_boundary.as_slice().windows(2) {
-            boundary.push([window[0][0], window[0][1], window[1][0], window[1][1]]);
+            boundaries.push([window[0][0], window[0][1], window[1][0], window[1][1]]);
         }
     }
-    Some(FaceBuffer {
-        surface: (Arc::new(vb), Arc::new(ib)),
-        boundary: Arc::new(BufferHandler::from_slice(
-            &boundary,
-            device,
-            BufferUsage::STORAGE,
-        )),
-        boundary_length: Arc::new(BufferHandler::from_slice(
-            &[boundary.len() as u32],
-            device,
-            BufferUsage::UNIFORM,
-        )),
-    })
+    let sup = boundaries.len() as u32;
+    let mesh = &StructuredMesh::from_surface(&surface, mesh_precision);
+    vertices.extend(
+        (0..mesh.positions().len())
+            .flat_map(move |i| (0..mesh.positions()[0].len()).map(move |j| (i, j)))
+            .map(move |(i, j)| AttrVertex {
+                position: mesh.positions()[i][j].cast().unwrap().into(),
+                uv_coord: match mesh.uv_division() {
+                    Some((u, v)) => [u[i] as f32, v[j] as f32],
+                    None => [0.0, 0.0],
+                },
+                normal: match mesh.normals() {
+                    Some(normals) => normals[i][j].cast().unwrap().into(),
+                    None => [0.0, 0.0, 0.0],
+                },
+                boundary_range: [inf, sup],
+            }),
+    );
+    let len = mesh.positions()[0].len() as u32;
+    (1..mesh.positions().len() as u32)
+        .flat_map(move |i| (1..len).map(move |j| (i, j)))
+        .for_each(move |(i, j)| {
+            indices.push(index_offset + (i - 1) * len + (j - 1));
+            indices.push(index_offset + i * len + (j - 1));
+            indices.push(index_offset + (i - 1) * len + j);
+            indices.push(index_offset + (i - 1) * len + j);
+            indices.push(index_offset + i * len + (j - 1));
+            indices.push(index_offset + i * len + j);
+        });
+    Some(())
 }
 
 impl IntoInstance for Shell {
@@ -84,18 +106,21 @@ impl IntoInstance for Shell {
     type Descriptor = ShapeInstanceDescriptor;
     #[inline(always)]
     fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> ShapeInstance {
-        let faces = self
-            .face_iter()
-            .map(|face| FaceInstance {
-                buffer: Arc::new(Mutex::new(
-                    face_buffer(device, face, desc.mesh_precision).expect("failed to create face buffer"),
-                )),
-                id: RenderID::gen(),
-            })
-            .collect();
+        let mut expolygon = ExpandedPolygon::default();
+        let mut boundaries = Vec::new();
+        self.face_iter().for_each(|face| {
+            add_face(face, desc.mesh_precision, &mut expolygon, &mut boundaries);
+        });
+        let (vb, ib) = expolygon.buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         ShapeInstance {
-            faces,
+            polygon: (Arc::new(vb), Arc::new(ib)),
+            boundary: Arc::new(BufferHandler::from_slice(
+                &boundaries,
+                device,
+                BufferUsage::STORAGE,
+            )),
             state: desc.instance_state.clone(),
+            id: RenderID::gen(),
         }
     }
 }
@@ -105,28 +130,31 @@ impl IntoInstance for Solid {
     type Descriptor = ShapeInstanceDescriptor;
     #[inline(always)]
     fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> ShapeInstance {
-        let faces = self
-            .boundaries()
+        let mut expolygon = ExpandedPolygon::default();
+        let mut boundaries = Vec::new();
+        self.boundaries()
             .iter()
             .flat_map(Shell::face_iter)
-            .map(|face| FaceInstance {
-                buffer: Arc::new(Mutex::new(
-                    face_buffer(device, face, desc.mesh_precision).expect("failed to create face buffer"),
-                )),
-                id: RenderID::gen(),
-            })
-            .collect();
+            .for_each(|face| {
+                add_face(face, desc.mesh_precision, &mut expolygon, &mut boundaries);
+            });
+        let (vb, ib) = expolygon.buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
         ShapeInstance {
-            faces,
+            polygon: (Arc::new(vb), Arc::new(ib)),
+            boundary: Arc::new(BufferHandler::from_slice(
+                &boundaries,
+                device,
+                BufferUsage::STORAGE,
+            )),
             state: desc.instance_state.clone(),
+            id: RenderID::gen(),
         }
     }
 }
 
-mod ficonfig {
-    use super::*;
+impl ShapeInstance {
     #[inline(always)]
-    pub fn boundary_bgl_entry() -> PreBindGroupLayoutEntry {
+    fn boundary_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
             ty: BindingType::StorageBuffer {
@@ -137,31 +165,21 @@ mod ficonfig {
             count: None,
         }
     }
+
     #[inline(always)]
-    pub fn boundary_length_bgl_entry() -> PreBindGroupLayoutEntry {
-        PreBindGroupLayoutEntry {
-            visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }
-    }
-    #[inline(always)]
-    pub fn non_textured_bdl(device: &Device) -> BindGroupLayout {
+    fn non_textured_bgl(device: &Device) -> BindGroupLayout {
         bind_group_util::create_bind_group_layout(
             device,
             &[
                 InstanceState::matrix_bgl_entry(),
                 InstanceState::material_bgl_entry(),
-                boundary_bgl_entry(),
-                boundary_length_bgl_entry(),
+                Self::boundary_bgl_entry(),
             ],
         )
     }
+
     #[inline(always)]
-    pub fn textured_bdl(device: &Device) -> BindGroupLayout {
+    fn textured_bgl(device: &Device) -> BindGroupLayout {
         bind_group_util::create_bind_group_layout(
             device,
             &[
@@ -169,66 +187,59 @@ mod ficonfig {
                 InstanceState::material_bgl_entry(),
                 InstanceState::textureview_bgl_entry(),
                 InstanceState::sampler_bgl_entry(),
-                boundary_bgl_entry(),
-                boundary_length_bgl_entry(),
+                Self::boundary_bgl_entry(),
             ],
         )
     }
+
     #[inline(always)]
-    pub fn bind_group_layout(device: &Device, textured: bool) -> BindGroupLayout {
-        match textured {
-            true => textured_bdl(device),
-            false => non_textured_bdl(device),
-        }
-    }
-    #[inline(always)]
-    pub(super) fn non_textured_bind_group(
+    fn non_textured_bind_group(
+        &self,
         handler: &DeviceHandler,
         layout: &BindGroupLayout,
-        face: &RenderFace,
     ) -> BindGroup {
-        let (buffer, state) = (&face.instance.buffer.lock().unwrap(), &face.state);
         bind_group_util::create_bind_group(
             handler.device(),
             layout,
             vec![
-                state.matrix_buffer(handler.device()).binding_resource(),
-                state.material_buffer(handler.device()).binding_resource(),
-                buffer.boundary.binding_resource(),
-                buffer.boundary_length.binding_resource(),
+                self.state
+                    .matrix_buffer(handler.device())
+                    .binding_resource(),
+                self.state
+                    .material_buffer(handler.device())
+                    .binding_resource(),
+                self.boundary.binding_resource(),
             ],
         )
     }
     #[inline(always)]
-    pub(super) fn textured_bind_group(
-        handler: &DeviceHandler,
-        layout: &BindGroupLayout,
-        face: &RenderFace,
-    ) -> BindGroup {
-        let (buffer, state) = (&face.instance.buffer.lock().unwrap(), &face.state);
-        let (view, sampler) = state.textureview_and_sampler(handler.device());
+    fn textured_bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> BindGroup {
+        let (view, sampler) = self.state.textureview_and_sampler(handler.device());
         bind_group_util::create_bind_group(
             handler.device(),
             layout,
             vec![
-                state.matrix_buffer(handler.device()).binding_resource(),
-                state.material_buffer(handler.device()).binding_resource(),
+                self.state
+                    .matrix_buffer(handler.device())
+                    .binding_resource(),
+                self.state
+                    .material_buffer(handler.device())
+                    .binding_resource(),
                 BindingResource::TextureView(&view),
                 BindingResource::Sampler(&sampler),
-                buffer.boundary.binding_resource(),
-                buffer.boundary_length.binding_resource(),
+                self.boundary.binding_resource(),
             ],
         )
     }
 }
 
-impl<'a> RenderFace<'a> {
+impl ShapeInstance {
     /// Returns the default vertex shader module source.
     ///
     /// The GLSL original code is `src/shaders/polygon.vert`.
     #[inline(always)]
     pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
-        include_spirv!("shaders/polygon.vert.spv")
+        include_spirv!("shaders/face.vert.spv")
     }
 
     /// Returns the default fragment shader module source for non-textured polygons.
@@ -257,36 +268,103 @@ impl<'a> RenderFace<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        self.state.pipeline_with_shader(
-            vertex_shader,
-            fragment_shader,
-            device_handler,
-            layout,
+        let device = device_handler.device();
+        let sc_desc = device_handler.sc_desc();
+        let cull_mode = match self.state.backface_culling {
+            true => CullMode::Back,
+            false => CullMode::None,
+        };
+        let vertex_module = device.create_shader_module(vertex_shader);
+        let fragment_module = device.create_shader_module(fragment_shader);
+        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            layout: Some(layout),
+            vertex_stage: ProgrammableStageDescriptor {
+                module: &vertex_module,
+                entry_point: "main",
+            },
+            fragment_stage: Some(ProgrammableStageDescriptor {
+                module: &fragment_module,
+                entry_point: "main",
+            }),
+            rasterization_state: Some(RasterizationStateDescriptor {
+                front_face: FrontFace::Ccw,
+                cull_mode,
+                depth_bias: 0,
+                depth_bias_slope_scale: 0.0,
+                depth_bias_clamp: 0.0,
+                clamp_depth: false,
+            }),
+            primitive_topology: PrimitiveTopology::TriangleList,
+            color_states: &[ColorStateDescriptor {
+                format: sc_desc.format,
+                color_blend: BlendDescriptor::REPLACE,
+                alpha_blend: BlendDescriptor::REPLACE,
+                write_mask: ColorWrite::ALL,
+            }],
+            depth_stencil_state: Some(DepthStencilStateDescriptor {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: StencilStateDescriptor::default(),
+            }),
+            vertex_state: VertexStateDescriptor {
+                index_format: IndexFormat::Uint32,
+                vertex_buffers: &[VertexBufferDescriptor {
+                    stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                    step_mode: InputStepMode::Vertex,
+                    attributes: &[
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float3,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float2,
+                            offset: 3 * 4,
+                            shader_location: 1,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float3,
+                            offset: 2 * 4 + 3 * 4,
+                            shader_location: 2,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Uint2,
+                            offset: 3 * 4 + 2 * 4 + 3 * 4,
+                            shader_location: 3,
+                        },
+                    ],
+                }],
+            },
             sample_count,
-        )
+            sample_mask: !0,
+            alpha_to_coverage_enabled: false,
+            label: None,
+        });
+        Arc::new(pipeline)
     }
 }
 
-impl<'a> Rendered for RenderFace<'a> {
-    impl_render_id!(instance.id);
+impl Rendered for ShapeInstance {
+    impl_render_id!(id);
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let buffers = &self.instance.buffer.lock().unwrap().surface;
-        (Arc::clone(&buffers.0), Some(Arc::clone(&buffers.1)))
+        let (vb, ib) = self.polygon.clone();
+        (vb, Some(ib))
     }
     #[inline(always)]
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
-        Arc::new(ficonfig::bind_group_layout(
-            handler.device(),
-            self.state.texture.is_some(),
-        ))
+        Arc::new(match self.state.texture.is_some() {
+            true => Self::textured_bgl(handler.device()),
+            false => Self::non_textured_bgl(handler.device()),
+        })
     }
     #[inline(always)]
     fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
         let bind_group = match self.state.texture.is_some() {
-            true => ficonfig::textured_bind_group(handler, layout, self),
-            false => ficonfig::non_textured_bind_group(handler, layout, self),
+            true => self.textured_bind_group(handler, layout),
+            false => self.non_textured_bind_group(handler, layout),
         };
         Arc::new(bind_group)
     }
@@ -316,12 +394,10 @@ impl ShapeInstance {
     #[inline(always)]
     pub fn clone_instance(&self) -> Self {
         ShapeInstance {
-            faces: self
-                .faces
-                .iter()
-                .map(|face| face.clone_instance())
-                .collect(),
+            polygon: self.polygon.clone(),
+            boundary: self.boundary.clone(),
             state: self.state.clone(),
+            id: RenderID::gen(),
         }
     }
     /// Returns a reference to the instance descriptor.
@@ -333,31 +409,11 @@ impl ShapeInstance {
     /// swap render faces
     #[inline(always)]
     pub fn swap_faces(&mut self, other: &mut Self) {
-        let faces = self
-            .faces
-            .iter()
-            .map(|face| FaceInstance {
-                buffer: face.buffer.clone(),
-                id: face.id,
-            })
-            .collect();
-        self.faces = other
-            .faces
-            .iter()
-            .map(|face| FaceInstance {
-                buffer: face.buffer.clone(),
-                id: face.id,
-            })
-            .collect();
-        other.faces = faces;
-    }
-    /// Creates the vector of `RenderFace` for rendering the shape.
-    #[inline(always)]
-    pub fn render_faces(&self) -> Vec<RenderFace> {
-        let state = &self.state;
-        self.faces
-            .iter()
-            .map(move |instance| RenderFace { instance, state })
-            .collect()
+        let tmp = self.polygon.clone();
+        self.polygon = other.polygon.clone();
+        other.polygon = tmp;
+        let tmp = self.boundary.clone();
+        self.boundary = other.boundary.clone();
+        other.boundary = tmp;
     }
 }

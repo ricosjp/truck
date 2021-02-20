@@ -122,7 +122,7 @@ impl App for MyApp {
             instance_state: Default::default(),
             mesh_precision: 0.01,
         });
-        scene.add_objects(&object.render_faces());
+        scene.add_object(&object);
         let object = Arc::new(Mutex::new(object));
         let closed = Arc::new(Mutex::new(false));
         let updated = Arc::new(Mutex::new(false));
@@ -148,7 +148,7 @@ impl App for MyApp {
         let mut updated = self.updated.lock().unwrap();
         if *updated {
             let object = self.object.lock().unwrap();
-            self.scene.update_vertex_buffers(&object.render_faces());
+            self.scene.update_vertex_buffer(&*object);
             *updated = false;
         }
     }

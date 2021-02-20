@@ -106,19 +106,6 @@ pub struct WireFrameInstance {
     pub color: Vector4,
 }
 
-#[derive(Clone, Debug)]
-struct FaceBuffer {
-    surface: (Arc<BufferHandler>, Arc<BufferHandler>),
-    boundary: Arc<BufferHandler>,
-    boundary_length: Arc<BufferHandler>,
-}
-
-#[derive(Debug)]
-struct FaceInstance {
-    buffer: Arc<Mutex<FaceBuffer>>,
-    id: RenderID,
-}
-
 /// Instance of shape: `Shell` and `Solid` with geometric data.
 ///
 /// One can duplicate shapes with different postures and materials
@@ -129,15 +116,10 @@ struct FaceInstance {
 /// with original, however, its render id is different from the one of original.
 #[derive(Debug)]
 pub struct ShapeInstance {
-    faces: Vec<FaceInstance>,
+    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
+    boundary: Arc<BufferHandler>,
     state: InstanceState,
-}
-
-/// Iterated face for rendering `ShapeInstance`.
-#[derive(Clone, Copy, Debug)]
-pub struct RenderFace<'a> {
-    instance: &'a FaceInstance,
-    state: &'a InstanceState,
+    id: RenderID,
 }
 
 /// The trait for generate `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
@@ -173,17 +155,9 @@ impl CreateInstance for Scene {
     }
 }
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy, Zeroable, Pod)]
-struct AttrVertex {
-    pub position: [f32; 3],
-    pub uv_coord: [f32; 2],
-    pub normal: [f32; 3],
-}
-
 #[derive(Debug, Clone)]
-struct ExpandedPolygon {
-    vertices: Vec<AttrVertex>,
+struct ExpandedPolygon<V> {
+    vertices: Vec<V>,
     indices: Vec<u32>,
 }
 
@@ -191,5 +165,6 @@ mod instdesc;
 mod polyrend;
 mod shaperend;
 mod wireframe;
+mod expanded;
 /// utility for creating `Texture`
 pub mod image2texture;

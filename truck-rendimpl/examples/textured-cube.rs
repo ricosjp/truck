@@ -81,7 +81,7 @@ impl App for MyApp {
             mesh_precision: 0.1,
         };
         let shape = scene.create_instance(&Self::create_cube(), &desc);
-        scene.add_objects(&shape.render_faces());
+        scene.add_object(&shape);
         MyApp {
             scene,
             rotate_flag: false,

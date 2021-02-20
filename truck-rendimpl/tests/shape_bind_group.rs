@@ -13,31 +13,11 @@ struct BGCheckShapeInstance<'a> {
     fragment_shader: &'a str,
 }
 
-struct BGCheckRenderFace<'a, 'b> {
-    face: RenderFace<'a>,
-    fragment_shader: &'b str,
-}
-
-impl<'a> BGCheckShapeInstance<'a> {
-    #[inline(always)]
-    pub fn render_faces(&mut self) -> Vec<BGCheckRenderFace> {
-        let fragment_shader = self.fragment_shader;
-        self.shape
-            .render_faces()
-            .into_iter()
-            .map(|face| BGCheckRenderFace {
-                face,
-                fragment_shader,
-            })
-            .collect()
-    }
-}
-
-impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
-    derive_render_id!(face);
-    derive_vertex_buffer!(face);
-    derive_bind_group_layout!(face);
-    derive_bind_group!(face);
+impl<'a> Rendered for BGCheckShapeInstance<'a> {
+    derive_render_id!(shape);
+    derive_vertex_buffer!(shape);
+    derive_bind_group_layout!(shape);
+    derive_bind_group!(shape);
     #[inline(always)]
     fn pipeline(
         &self,
@@ -50,7 +30,7 @@ impl<'a, 'b> Rendered for BGCheckRenderFace<'a, 'b> {
         let vertex_module = wgpu::util::make_spirv(&vertex_spirv);
         let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
         let fragment_module = wgpu::util::make_spirv(&fragment_spirv);
-        self.face.pipeline_with_shader(
+        self.shape.pipeline_with_shader(
             vertex_module,
             fragment_module,
             device_handler,
@@ -79,11 +59,11 @@ fn exec_shape_bgtest(
     let sc_desc = scene.sc_desc();
     let tex_desc = common::texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut bgc_instance = BGCheckShapeInstance {
+    let bgc_instance = BGCheckShapeInstance {
         shape: instance.clone_instance(),
         fragment_shader: shader,
     };
-    common::render_ones(scene, &texture, &bgc_instance.render_faces());
+    common::render_one(scene, &texture, &bgc_instance);
     let buffer = common::read_texture(scene.device_handler(), &texture);
     common::save_buffer(pngpath, &buffer, PICTURE_SIZE);
     common::same_buffer(&answer, &buffer)

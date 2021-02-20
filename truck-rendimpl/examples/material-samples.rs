@@ -104,7 +104,7 @@ impl App for MyApp {
             })
             .collect();
         instances.iter().for_each(|shape| {
-            scene.add_objects(&shape.render_faces());
+            scene.add_object(shape);
         });
         MyApp {
             scene,
@@ -122,7 +122,7 @@ impl App for MyApp {
             };
             shape.instance_state_mut().matrix =
                 self.matrices[i] * Matrix4::from_axis_angle(axis, Rad(time * PI / 2.0));
-            self.scene.update_bind_groups(&shape.render_faces());
+            self.scene.update_bind_group(shape);
         }
     }
     fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
