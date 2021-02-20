@@ -88,7 +88,7 @@ impl IntoInstance for Shell {
             .face_iter()
             .map(|face| FaceInstance {
                 buffer: Arc::new(Mutex::new(
-                    face_buffer(device, face, desc.mesh_precision).unwrap(),
+                    face_buffer(device, face, desc.mesh_precision).expect("failed to create face buffer"),
                 )),
                 id: RenderID::gen(),
             })
@@ -111,7 +111,7 @@ impl IntoInstance for Solid {
             .flat_map(Shell::face_iter)
             .map(|face| FaceInstance {
                 buffer: Arc::new(Mutex::new(
-                    face_buffer(device, face, desc.mesh_precision).unwrap(),
+                    face_buffer(device, face, desc.mesh_precision).expect("failed to create face buffer"),
                 )),
                 id: RenderID::gen(),
             })

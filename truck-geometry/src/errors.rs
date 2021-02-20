@@ -173,11 +173,13 @@ fn print_messages() {
     writeln!(&mut std::io::stderr(), "****** test of the expressions of error messages ******\n").unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::ZeroRange).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::DifferentBackFront(0.0, 1.0)).unwrap();
+    writeln!(&mut std::io::stderr(), "{}\n", Error::NotClampedKnotVector).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotSortedVector).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::TooLargeDegree(2, 1)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::CannotRemoveKnot(7)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::EmptyControlPoints).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::TooShortKnotVector(1, 2)).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::IrregularControlPoints).unwrap();
+    writeln!(&mut std::io::stderr(), "{}\n", Error::EmptyCurveCollector).unwrap();
     writeln!(&mut std::io::stderr(), "*******************************************************").unwrap();
 }
