@@ -57,7 +57,7 @@ pub mod topology {
     /// The id that does not depend on the direction of the face.
     pub type FaceID = truck_topology::FaceID<NURBSSurface>;
 
-    pub use truck_topology::{errors::Error, shell::ShellCondition, Result};
+    pub use truck_topology::shell::ShellCondition;
 }
 pub use topology::*;
 
@@ -154,8 +154,13 @@ pub mod topo_traits {
 }
 pub use topo_traits::*;
 
+/// `Result` with crate's errors.
+pub type Result<T> = std::result::Result<T, errors::Error>;
+
 /// the building model utility API
 pub mod builder;
+/// declare errors
+pub mod errors;
 mod closed_sweep;
 mod geom_impls;
 mod mapped;

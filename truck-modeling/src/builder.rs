@@ -1,4 +1,5 @@
 use crate::*;
+use errors::Error;
 const PI: Rad<f64> = Rad(std::f64::consts::PI);
 
 /// Creates and returns a vertex by a three dimensional point.
@@ -140,7 +141,6 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 }
 
 /// Try attatiching a plane whose boundary is `wire`.
-/// Todo: Define the crate error and make return value `Result<Face>`!
 /// # Examples
 /// ```
 /// use truck_modeling::*;
@@ -148,7 +148,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// // make a disk by attaching a plane into circle
 /// let vertex = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let circle = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0));
-/// let disk = builder::try_attach_plane(&vec![circle]).expect("failed to attach plane.");
+/// let disk = builder::try_attach_plane(&vec![circle]).unwrap();
 /// # let surface = disk.oriented_surface();
 /// # let normal = surface.normal(0.5, 0.5);
 /// # assert!(normal.near(&Vector3::unit_y()));
@@ -156,7 +156,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// # Remarks
 /// If wires are not closed or not in one plane, then return `None`.
 /// ```
-/// use truck_modeling::*;
+/// use truck_modeling::{*, errors::Error};
 /// 
 /// let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
 /// let v1 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
@@ -169,21 +169,27 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// .into();
 /// let mut wires = vec![wire];
 /// // failed to attach plane, because wire is not closed.
-/// assert!(builder::try_attach_plane(&wires).is_none());
+/// assert_eq!(
+///     builder::try_attach_plane(&wires).unwrap_err(),
+///     Error::FromTopology(truck_topology::errors::Error::NotClosedWire),
+/// );
 /// 
 /// wires[0].push_back(builder::line(&v2, &v3));
 /// wires[0].push_back(builder::line(&v3, &v0));
 /// // failed to attach plane, because wire is not in the plane.
-/// assert!(builder::try_attach_plane(&wires).is_none());
+/// assert_eq!(
+///     builder::try_attach_plane(&wires).unwrap_err(),
+///     Error::WireNotInOnePlane,
+/// );
 /// 
 /// wires[0].pop_back();
 /// wires[0].pop_back();
 /// wires[0].push_back(builder::line(&v2, &v0));
 /// // sucess in attaching plane!
-/// assert!(builder::try_attach_plane(&wires).is_some());
+/// assert!(builder::try_attach_plane(&wires).is_ok());
 /// ```
 #[inline(always)]
-pub fn try_attach_plane(wires: &Vec<Wire>) -> Option<Face> {
+pub fn try_attach_plane(wires: &Vec<Wire>) -> Result<Face> {
     let pts = wires
         .iter()
         .flatten()
@@ -195,8 +201,12 @@ pub fn try_attach_plane(wires: &Vec<Wire>) -> Option<Face> {
                 .map(|pt| pt.to_point())
         })
         .collect::<Vec<_>>();
-    let surface = NURBSSurface::new(geom_impls::attach_plane(pts)?);
-    Face::try_new(wires.clone(), surface).ok()
+    let plane = match geom_impls::attach_plane(pts) {
+        Some(got) => got,
+        None => return Err(Error::WireNotInOnePlane),
+    };
+    let surface = NURBSSurface::new(plane);
+    Ok(Face::try_new(wires.clone(), surface)?)
 }
 
 /// Returns another topology whose points, curves, and surfaces are cloned.
