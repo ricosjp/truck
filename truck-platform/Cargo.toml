@@ -15,13 +15,13 @@ categories = ["graphics"]
 
 [dependencies]
 wgpu = "0.6.2"
-bytemuck = { version = "1.4.1", features = ["derive"] }
+bytemuck = { version = "1.5.1", features = ["derive"] }
 lazy_static = "1.4.0"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 
 [dev-dependencies]
 winit = "0.24.0"
-image = "0.23.12"
-futures = "0.3.8"
+image = "0.23.13"
+futures = "0.3.12"
 glsl-to-spirv = "0.1.7"
 rayon = "1.5.0"
