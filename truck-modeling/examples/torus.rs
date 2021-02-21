@@ -1,4 +1,6 @@
 //! Modeling a torus by two sweeps.
+//! 
+//! Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
 use truck_modeling::*;
 

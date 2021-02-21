@@ -4,6 +4,8 @@
 //! We want to reproduce the bottle made in the [OCCT tutorial].
 //! Now, one cannot make a fillet or run boolean operations by truck.
 //! So, the bottle made by this script is not completed.
+//! 
+//! Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 //!
 //! [OCCT tutorial]: https://dev.opencascade.org/doc/overview/html/occt__tutorial.html
 
