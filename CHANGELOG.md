@@ -4,7 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## v0.2
 
-### v0.2.0 (next release, developed items)
+### v0.2.0
 
 #### Released
 
