@@ -7,8 +7,6 @@
 //!
 //! [OCCT tutorial]: https://dev.opencascade.org/doc/overview/html/occt__tutorial.html
 
-mod framework;
-use framework::ShapeViewer;
 use std::f64::consts::PI;
 use truck_modeling::*;
 
@@ -57,12 +55,11 @@ fn bottle(height: f64, width: f64, thickness: f64) -> Solid {
     let wire = inner_hat.into_boundaries()[0].inverse();
     body.last_mut().unwrap().add_boundary(wire);
     body.extend(inner_body.into_iter().map(|face| face.inverse()));
-    
     Solid::new(vec![body])
 }
 
 fn main() {
     let bottle = bottle(1.4, 1.0, 0.6);
-    let bottle = builder::translated(&bottle, Vector3::new(0.0, -0.7, 0.0));
-    ShapeViewer::run(bottle, 0.005);
+    let json = serde_json::to_vec_pretty(&bottle.compress()).unwrap();
+    std::fs::write("bottle.json", &json).unwrap();
 }

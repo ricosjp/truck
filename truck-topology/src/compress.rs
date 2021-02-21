@@ -53,6 +53,12 @@ pub struct CompressedShell<P, C, S> {
     faces: Vec<CompressedFace<S>>,
 }
 
+/// Serialized compressed solid
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CompressedSolid<P, C, S> {
+    boundaries: Vec<CompressedShell<P, C, S>>,
+}
+
 struct CompressDirector<P, C> {
     vmap: HashMap<VertexID<P>, (usize, P)>,
     emap: HashMap<EdgeID<C>, (usize, CompressedEdge<C>)>,
@@ -130,6 +136,7 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
 }
 
 impl<P: Clone, C: Clone, S: Clone> Shell<P, C, S> {
+    /// Compresses the shell into the serialized compressed shell.
     pub fn compress(&self) -> CompressedShell<P, C, S> {
         let mut director = CompressDirector::new();
         let mut face_closure = |face: &Face<P, C, S>| director.create_cface(face);
@@ -142,6 +149,7 @@ impl<P: Clone, C: Clone, S: Clone> Shell<P, C, S> {
         }
     }
 
+    /// Extracts the serialized compressed shell into the shell.
     pub fn extract(cshell: CompressedShell<P, C, S>) -> Result<Self> {
         let CompressedShell {
             vertices,
@@ -160,6 +168,29 @@ impl<P: Clone, C: Clone, S: Clone> Shell<P, C, S> {
     }
 }
 
+impl<P: Clone, C: Clone, S: Clone> Solid<P, C, S> {
+    /// Compresses the solid into the serialized compressed solid.
+    pub fn compress(&self) -> CompressedSolid<P, C, S> {
+        CompressedSolid {
+            boundaries: self
+                .boundaries()
+                .iter()
+                .map(|shell| shell.compress())
+                .collect(),
+        }
+    }
+
+    /// Extracts the serialized compressed shell into the shell.
+    pub fn extract(csolid: CompressedSolid<P, C, S>) -> Result<Self> {
+        let shells: Result<Vec<Shell<P, C, S>>> = csolid
+            .boundaries
+            .into_iter()
+            .map(|cshell| Shell::extract(cshell))
+            .collect();
+        Solid::try_new(shells?)
+    }
+}
+
 // -------------------------- test -------------------------- //
 
 #[test]
@@ -175,7 +206,7 @@ fn vmap_subroutin<P, Q>(
     v0: &Vertex<P>,
     v1: &Vertex<Q>,
     vmap: &mut HashMap<VertexID<P>, VertexID<Q>>,
-)-> bool {
+) -> bool {
     match vmap.get(&v0.id()) {
         Some(got) => *got == v1.id(),
         None => {
@@ -197,7 +228,7 @@ fn emap_subroutin<P, Q, C, D>(
         None => {
             emap.insert(edge0.id(), edge1.id());
             vmap_subroutin(edge0.front(), edge1.front(), vmap)
-            && vmap_subroutin(edge0.back(), edge1.back(), vmap)
+                && vmap_subroutin(edge0.back(), edge1.back(), vmap)
         }
     }
 }

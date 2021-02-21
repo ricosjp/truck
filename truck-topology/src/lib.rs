@@ -252,5 +252,5 @@ pub mod solid;
 pub mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
-#[doc(hidden)]
-pub mod wrappup;
+mod compress;
+pub use compress::{CompressedShell, CompressedSolid};
