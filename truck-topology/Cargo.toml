@@ -1,6 +1,6 @@
 [package]
 name = "truck-topology"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "topological structs: vertex, edge, wire, face, shell, and solid"
