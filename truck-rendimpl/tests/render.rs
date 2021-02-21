@@ -155,7 +155,11 @@ fn tex_raymarching(scene: &mut Scene) -> Vec<u8> {
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn tex_polygon(scene: &mut Scene, creator: &InstanceCreator, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
+fn tex_polygon(
+    scene: &mut Scene,
+    creator: &InstanceCreator,
+    gradtex: &Arc<DynamicImage>,
+) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
     let attach = creator.create_texture(gradtex);

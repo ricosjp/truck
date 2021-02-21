@@ -278,14 +278,7 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
 }
 
 pub fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>, size: (u32, u32)) {
-    image::save_buffer(
-        path,
-        &vec,
-        size.0,
-        size.1,
-        image::ColorType::Rgba8,
-    )
-    .unwrap();
+    image::save_buffer(path, &vec, size.0, size.1, image::ColorType::Rgba8).unwrap();
 }
 
 pub fn same_buffer(vec0: &Vec<u8>, vec1: &Vec<u8>) -> bool {

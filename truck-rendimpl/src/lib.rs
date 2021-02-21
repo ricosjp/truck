@@ -131,7 +131,7 @@ pub struct PolygonInstance {
 }
 
 /// Wire frame rendering
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WireFrameInstance {
     vertices: Arc<BufferHandler>,
     strips: Arc<BufferHandler>,
@@ -189,7 +189,7 @@ pub trait Polygon {
     ) -> PolygonInstance;
 }
 
-/// The trait for generating ShapeInstance` from `Shell` and `Solid`.
+/// The trait for generating `ShapeInstance` from `Shell` and `Solid`.
 pub trait Shape {
     #[doc(hidden)]
     fn try_into_instance(

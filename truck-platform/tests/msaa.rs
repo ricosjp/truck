@@ -60,7 +60,11 @@ fn msaa_test() {
         exec_msaa_test(BackendBit::VULKAN, "output/vulkan/");
         exec_msaa_test(BackendBit::DX12, "output/dx12/");
     } else if cfg!(target_os = "macos") {
-        writeln!(&mut std::io::stderr(), "Metal is not compatible with wgpu MSAA.").unwrap();
+        writeln!(
+            &mut std::io::stderr(),
+            "Metal is not compatible with wgpu MSAA."
+        )
+        .unwrap();
     } else {
         exec_msaa_test(BackendBit::VULKAN, "output/");
     }

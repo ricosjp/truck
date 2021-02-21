@@ -20,6 +20,20 @@ impl Default for WireFrameInstanceDescriptor {
     }
 }
 
+impl WireFrameInstance {
+    /// Clone the instance as another drawn element.
+    #[inline(always)]
+    pub fn clone_instance(&self) -> Self {
+        Self {
+            vertices: Arc::clone(&self.vertices),
+            strips: Arc::clone(&self.strips),
+            state: self.state.clone(),
+            shaders: Arc::clone(&self.shaders),
+            id: RenderID::gen(),
+        }
+    }
+}
+
 impl Rendered for WireFrameInstance {
     impl_render_id!(id);
     fn vertex_buffer(
