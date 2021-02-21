@@ -33,5 +33,14 @@ Simple OBJ viewer
 - Right-click to move the light to the camera's position.
 - Enter "P" on the keyboard to switch between parallel projection and perspective projection of the camera.
 - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
+## simple-shape-viewer
+Simple shape viewer
+- Drag the mouse to rotate the model.
+- Drag and drop json files into the window to switch models.
+- Right-click to move the light to the camera's position.
+- Enter "P" on the keyboard to switch between parallel projection and perspective projection of the camera.
+- Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
 ## textured-cube
+An example of using texture.
+## wireframe
 An example of using texture.

@@ -17,8 +17,6 @@ So, the bottle made by this script is not completed.
 [OCCT tutorial]: https://dev.opencascade.org/doc/overview/html/occt__tutorial.html
 ## cube
 Modeling a unit cube by three sweeps.
-## framework
-Module for visualizing models.
 ## punched-cube
 Modeling a unit cube with a hole through it.
 ## torus
