@@ -58,6 +58,13 @@ impl InstanceCreator {
         object.into_instance(self, desc)
     }
     /// Tries to create `ShapeInstance` from `Shell` and `Solid`.
+    /// # Failure
+    /// Failure occurs when the polylined boundary cannot be
+    /// converted to the polyline in the surface parameter space.
+    /// This may be due to the following reasons.
+    /// - A boundary curve is not contained within the surface.
+    /// - The surface is not injective, or is too complecated.
+    /// - The surface is not regular: non-degenerate and differentiable.
     #[inline(always)]
     pub fn try_create_shape_instance<S: Shape>(
         &self,
@@ -67,6 +74,13 @@ impl InstanceCreator {
         object.try_into_instance(self, desc)
     }
     /// Creates `ShapeInstance` from `Shell` and `Solid`.
+    /// # Panics
+    /// Panic occurs when the polylined boundary cannot be
+    /// converted to the polyline in the surface parameter space.
+    /// This may be due to the following reasons.
+    /// - A boundary curve is not contained within the surface.
+    /// - The surface is not injective, or is too complecated.
+    /// - The surface is not regular: non-degenerate and differentiable.
     #[inline(always)]
     pub fn create_shape_instance<S: Shape>(
         &self,

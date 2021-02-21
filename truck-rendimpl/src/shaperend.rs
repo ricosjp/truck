@@ -102,7 +102,7 @@ fn add_face(
 }
 
 impl Shape for Shell {
-    #[inline(always)]
+    #[doc(hidden)]
     fn try_into_instance(
         &self,
         creator: &InstanceCreator,
@@ -127,6 +127,8 @@ impl Shape for Shell {
             id: RenderID::gen(),
         })
     }
+    #[doc(hidden)]
+    #[inline(always)]
     fn into_instance(
         &self,
         creator: &InstanceCreator,
@@ -135,6 +137,7 @@ impl Shape for Shell {
         self.try_into_instance(creator, desc)
             .expect("failed to create instance")
     }
+    #[doc(hidden)]
     fn into_wire_frame(
         &self,
         creator: &InstanceCreator,
@@ -177,7 +180,7 @@ impl Shape for Shell {
 }
 
 impl Shape for Solid {
-    #[inline(always)]
+    #[doc(hidden)]
     fn try_into_instance(
         &self,
         creator: &InstanceCreator,
@@ -205,6 +208,8 @@ impl Shape for Solid {
             id: RenderID::gen(),
         })
     }
+    #[doc(hidden)]
+    #[inline(always)]
     fn into_instance(
         &self,
         creator: &InstanceCreator,
@@ -213,6 +218,7 @@ impl Shape for Solid {
         self.try_into_instance(creator, desc)
             .expect("failed to create instance")
     }
+    #[doc(hidden)]
     fn into_wire_frame(
         &self,
         creator: &InstanceCreator,
