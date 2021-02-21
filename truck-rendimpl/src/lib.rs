@@ -17,10 +17,7 @@ extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::{Arc, Mutex};
-use truck_platform::{
-    wgpu::*,
-    *,
-};
+use truck_platform::{wgpu::*, *};
 
 /// Re-exports `truck_modeling`.
 pub mod modeling {
@@ -63,11 +60,20 @@ pub struct InstanceState {
     pub backface_culling: bool,
 }
 
+/// Configures of `WireFrameInstance`.
+#[derive(Clone, Debug)]
+pub struct WireFrameState {
+    /// instance matrix
+    pub matrix: Matrix4,
+    /// color of instance
+    pub color: Vector4,
+}
+
 /// Configures of polygon instance
 #[derive(Clone, Debug, Default)]
 pub struct PolygonInstanceDescriptor {
     /// configure of instance
-    pub instance_state: InstanceState,    
+    pub instance_state: InstanceState,
 }
 
 /// Configures of shape instance
@@ -77,6 +83,35 @@ pub struct ShapeInstanceDescriptor {
     pub instance_state: InstanceState,
     /// precision for meshing
     pub mesh_precision: f64,
+}
+
+/// Configures of wire frame instance
+#[derive(Clone, Debug)]
+pub struct WireFrameInstanceDescriptor {
+    /// configure of wire frame
+    pub wireframe_state: WireFrameState,
+    /// precision for polyline
+    pub polyline_precision: f64,
+}
+
+#[derive(Debug)]
+struct PolygonShaders {
+    vertex: ShaderModule,
+    fragment: ShaderModule,
+    tex_fragment: ShaderModule,
+}
+
+#[derive(Debug)]
+struct ShapeShaders {
+    vertex: ShaderModule,
+    fragment: ShaderModule,
+    tex_fragment: ShaderModule,
+}
+
+#[derive(Debug)]
+struct WireShaders {
+    vertex: ShaderModule,
+    fragment: ShaderModule,
 }
 
 /// Instance of polygon
@@ -91,6 +126,7 @@ pub struct ShapeInstanceDescriptor {
 pub struct PolygonInstance {
     polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
     state: InstanceState,
+    shaders: Arc<PolygonShaders>,
     id: RenderID,
 }
 
@@ -99,11 +135,9 @@ pub struct PolygonInstance {
 pub struct WireFrameInstance {
     vertices: Arc<BufferHandler>,
     strips: Arc<BufferHandler>,
+    state: WireFrameState,
+    shaders: Arc<WireShaders>,
     id: RenderID,
-    /// instance matrix
-    pub matrix: Matrix4,
-    /// color of line
-    pub color: Vector4,
 }
 
 /// Instance of shape: `Shell` and `Solid` with geometric data.
@@ -119,40 +153,62 @@ pub struct ShapeInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
     state: InstanceState,
+    shaders: Arc<ShapeShaders>,
     id: RenderID,
 }
 
-/// The trait for generate `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
-/// `ShapeInstance` from `Shell` and `Solid`.
-pub trait IntoInstance {
-    /// the type of instance
-    type Instance;
-    /// instance descriptor
-    type Descriptor;
+/// Constroctor for instances
+#[derive(Debug, Clone)]
+pub struct InstanceCreator {
+    handler: DeviceHandler,
+    polygon_shaders: Arc<PolygonShaders>,
+    shape_shaders: Arc<ShapeShaders>,
+    wire_shaders: Arc<WireShaders>,
+}
+
+/// for creating `InstanceCreator`
+pub trait CreatorCreator {
+    /// create `InstanceCreator`
+    fn instance_creator(&self) -> InstanceCreator;
+}
+
+/// The trait for generating `PolygonInstance` from `PolygonMesh` and `StructuredMesh`.
+pub trait Polygon {
+    /// Creates buffer handlers of attributes and indices.
+    fn buffers(
+        &self,
+        vertex_usage: BufferUsage,
+        index_usage: BufferUsage,
+        device: &Device,
+    ) -> (BufferHandler, BufferHandler);
     #[doc(hidden)]
-    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance;
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &PolygonInstanceDescriptor,
+    ) -> PolygonInstance;
 }
 
-/// Extend trait for `Scene` to create instance.
-pub trait CreateInstance {
-    /// Creates `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
-    /// `ShapeInstance` from `Shell` and `Solid`.
-    fn create_instance<T: IntoInstance>(
+/// The trait for generating ShapeInstance` from `Shell` and `Solid`.
+pub trait Shape {
+    #[doc(hidden)]
+    fn try_into_instance(
         &self,
-        object: &T,
-        desc: &T::Descriptor,
-    ) -> T::Instance;
-}
-
-impl CreateInstance for Scene {
-    #[inline(always)]
-    fn create_instance<T: IntoInstance>(
+        creator: &InstanceCreator,
+        desc: &ShapeInstanceDescriptor,
+    ) -> Option<ShapeInstance>;
+    #[doc(hidden)]
+    fn into_instance(
         &self,
-        object: &T,
-        desc: &T::Descriptor,
-    ) -> T::Instance {
-        object.into_instance(self.device(), desc.clone())
-    }
+        creator: &InstanceCreator,
+        desc: &ShapeInstanceDescriptor,
+    ) -> ShapeInstance;
+    #[doc(hidden)]
+    fn into_wire_frame(
+        &self,
+        creator: &InstanceCreator,
+        state: &WireFrameInstanceDescriptor,
+    ) -> WireFrameInstance;
 }
 
 #[derive(Debug, Clone)]
@@ -161,10 +217,11 @@ struct ExpandedPolygon<V> {
     indices: Vec<u32>,
 }
 
-mod instdesc;
-mod polyrend;
-mod shaperend;
-mod wireframe;
 mod expanded;
 /// utility for creating `Texture`
 pub mod image2texture;
+mod instance_creator;
+mod instance_descriptor;
+mod polyrend;
+mod shaperend;
+mod wireframe;
