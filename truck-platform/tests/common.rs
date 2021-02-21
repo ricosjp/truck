@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use glsl_to_spirv::ShaderType;
+use rayon::prelude::*;
 use std::io::{Read, Write};
 use std::sync::Arc;
-use rayon::prelude::*;
 use truck_platform::*;
 use wgpu::*;
 

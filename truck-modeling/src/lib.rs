@@ -159,9 +159,9 @@ pub type Result<T> = std::result::Result<T, errors::Error>;
 
 /// the building model utility API
 pub mod builder;
+mod closed_sweep;
 /// declare errors
 pub mod errors;
-mod closed_sweep;
 mod geom_impls;
 mod mapped;
 mod multi_sweep;

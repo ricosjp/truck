@@ -1,4 +1,4 @@
-//! A GUI framework module providing MFC-like API. 
+//! A GUI framework module providing MFC-like API.
 
 // Copyright © 2021 RICOS
 // Apache license 2.0
