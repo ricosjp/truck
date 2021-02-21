@@ -17,10 +17,10 @@ pub struct ShapeViewer {
 
 impl ShapeViewer {
     /// Initializes the application
-    fn init<T: IntoInstance<Instance = ShapeInstance, Descriptor = ShapeInstanceDescriptor>>(
+    fn init<S: Shape>(
         handler: &DeviceHandler,
         info: AdapterInfo,
-        shape: T,
+        shape: S,
         mesh_precision: f64,
     ) -> Self {
         let sample_count = match info.backend {
@@ -53,7 +53,9 @@ impl ShapeViewer {
             mesh_precision,
         };
         let instant = std::time::Instant::now();
-        let instance = scene.create_instance(&shape, &inst_desc);
+        let instance = scene
+            .instance_creator()
+            .create_shape_instance(&shape, &inst_desc);
         println!("Instance Creating: {:?}", instant.elapsed());
         scene.add_object(&instance);
         ShapeViewer {
@@ -128,10 +130,7 @@ impl ShapeViewer {
     }
 
     /// Running the shape viewer viewing `shape`.
-    pub fn run<I: IntoInstance<Instance = ShapeInstance, Descriptor = ShapeInstanceDescriptor>>(
-        shape: I,
-        precision: f64,
-    ) {
+    pub fn run<S: Shape>(shape: S, precision: f64) {
         let event_loop = winit::event_loop::EventLoop::new();
         let mut wb = winit::window::WindowBuilder::new();
         wb = wb.with_title("Shape Viewer");

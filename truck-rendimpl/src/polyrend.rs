@@ -4,36 +4,67 @@ use std::collections::HashMap;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
-pub(super) struct AttrVertex {
+struct AttrVertex {
     pub position: [f32; 3],
     pub uv_coord: [f32; 2],
     pub normal: [f32; 3],
 }
 
-impl IntoInstance for PolygonMesh {
-    type Instance = PolygonInstance;
-    type Descriptor = PolygonInstanceDescriptor;
+impl Polygon for PolygonMesh {
     #[inline(always)]
-    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance {
-        let (vb, ib) =
-            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
+    fn buffers(
+        &self,
+        vertex_usage: BufferUsage,
+        index_usage: BufferUsage,
+        device: &Device,
+    ) -> (BufferHandler, BufferHandler) {
+        ExpandedPolygon::from(self).buffers(vertex_usage, index_usage, device)
+    }
+    #[inline(always)]
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &PolygonInstanceDescriptor,
+    ) -> PolygonInstance {
+        let (vb, ib) = self.buffers(
+            BufferUsage::VERTEX,
+            BufferUsage::INDEX,
+            creator.handler.device(),
+        );
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             state: desc.instance_state.clone(),
+            shaders: Arc::clone(&creator.polygon_shaders),
             id: RenderID::gen(),
         }
     }
 }
 
-impl IntoInstance for StructuredMesh {
-    type Instance = PolygonInstance;
-    type Descriptor = PolygonInstanceDescriptor;
-    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance {
-        let (vb, ib) =
-            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
+impl Polygon for StructuredMesh {
+    #[inline(always)]
+    fn buffers(
+        &self,
+        vertex_usage: BufferUsage,
+        index_usage: BufferUsage,
+        device: &Device,
+    ) -> (BufferHandler, BufferHandler) {
+        ExpandedPolygon::from(self).buffers(vertex_usage, index_usage, device)
+    }
+    #[inline(always)]
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &PolygonInstanceDescriptor,
+    ) -> PolygonInstance {
+        let (vb, ib) = self.buffers(
+            BufferUsage::VERTEX,
+            BufferUsage::INDEX,
+            creator.handler.device(),
+        );
         PolygonInstance {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             state: desc.instance_state.clone(),
+            shaders: Arc::clone(&creator.polygon_shaders),
             id: RenderID::gen(),
         }
     }
@@ -46,6 +77,7 @@ impl PolygonInstance {
         PolygonInstance {
             polygon: self.polygon.clone(),
             state: self.state.clone(),
+            shaders: Arc::clone(&self.shaders),
             id: RenderID::gen(),
         }
     }
@@ -136,7 +168,6 @@ impl PolygonInstance {
     pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
         include_spirv!("shaders/textured-polygon.frag.spv")
     }
-
     /// Returns the pipeline with developer's custom shader.
     #[inline(always)]
     pub fn pipeline_with_shader(
@@ -147,22 +178,41 @@ impl PolygonInstance {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
+        self.pipeline_with_shader_module(
+            &device_handler.device().create_shader_module(vertex_shader),
+            &device_handler
+                .device()
+                .create_shader_module(fragment_shader),
+            device_handler,
+            layout,
+            sample_count,
+        )
+    }
+
+    /// Returns the pipeline with developer's custom shader.
+    #[inline(always)]
+    pub fn pipeline_with_shader_module(
+        &self,
+        vertex_module: &ShaderModule,
+        fragment_module: &ShaderModule,
+        device_handler: &DeviceHandler,
+        layout: &PipelineLayout,
+        sample_count: u32,
+    ) -> Arc<RenderPipeline> {
         let device = device_handler.device();
         let sc_desc = device_handler.sc_desc();
         let cull_mode = match self.state.backface_culling {
             true => CullMode::Back,
             false => CullMode::None,
         };
-        let vertex_module = device.create_shader_module(vertex_shader);
-        let fragment_module = device.create_shader_module(fragment_shader);
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
             vertex_stage: ProgrammableStageDescriptor {
-                module: &vertex_module,
+                module: vertex_module,
                 entry_point: "main",
             },
             fragment_stage: Some(ProgrammableStageDescriptor {
-                module: &fragment_module,
+                module: fragment_module,
                 entry_point: "main",
             }),
             rasterization_state: Some(RasterizationStateDescriptor {
@@ -216,7 +266,6 @@ impl PolygonInstance {
             label: None,
         });
         Arc::new(pipeline)
- 
     }
 }
 
@@ -254,11 +303,11 @@ impl Rendered for PolygonInstance {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let fragment_shader = match self.state.texture.is_some() {
-            true => Self::default_textured_fragment_shader(),
-            false => Self::default_fragment_shader(),
+            true => &self.shaders.tex_fragment,
+            false => &self.shaders.fragment,
         };
-        self.pipeline_with_shader(
-            Self::default_vertex_shader(),
+        self.pipeline_with_shader_module(
+            &self.shaders.vertex,
             fragment_shader,
             device_handler,
             layout,

@@ -59,7 +59,9 @@ impl MyApp {
                 ..Default::default()
             },
         };
-        let mut mesh = scene.create_instance(&mesh, &inst_desc);
+        let mut mesh = scene
+            .instance_creator()
+            .create_polygon_instance(&mesh, &inst_desc);
         scene.add_object(&mut mesh);
     }
 }

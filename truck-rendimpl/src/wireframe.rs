@@ -1,39 +1,21 @@
 use crate::*;
 
-impl WireFrameInstance {
-    #[doc(hidden)]
-    pub fn new(shell: &Shell, handler: &DeviceHandler) -> Self {
-        let mut lengths = Vec::new();
-        let points: Vec<[f32; 3]> = shell
-            .face_iter()
-            .flat_map(|face| face.boundary_iters())
-            .flatten()
-            .flat_map(|edge| {
-                let curve = edge.oriented_curve();
-                let division = curve.parameter_division(0.001);
-                lengths.push(division.len());
-                division
-                    .into_iter()
-                    .map(move |t| curve.subs(t).cast().unwrap().into())
-            })
-            .collect();
-        let mut strips = Vec::<u32>::new();
-        let mut counter = 0_u32;
-        for len in lengths {
-            for i in 1..len {
-                strips.push(counter + i as u32 - 1);
-                strips.push(counter + i as u32);
-            }
-            counter += len as u32;
-        }
-        let vertices = BufferHandler::from_slice(&points, handler.device(), BufferUsage::VERTEX);
-        let strips = BufferHandler::from_slice(&strips, handler.device(), BufferUsage::INDEX);
-        Self {
-            vertices: Arc::new(vertices),
-            strips: Arc::new(strips),
-            id: RenderID::gen(),
+impl Default for WireFrameState {
+    #[inline(always)]
+    fn default() -> WireFrameState {
+        WireFrameState {
             matrix: Matrix4::identity(),
             color: Vector4::new(1.0, 1.0, 1.0, 1.0),
+        }
+    }
+}
+
+impl Default for WireFrameInstanceDescriptor {
+    #[inline(always)]
+    fn default() -> WireFrameInstanceDescriptor {
+        WireFrameInstanceDescriptor {
+            wireframe_state: WireFrameState::default(),
+            polyline_precision: 0.005,
         }
     }
 }
@@ -73,9 +55,9 @@ impl Rendered for WireFrameInstance {
     }
     fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
         let device = handler.device();
-        let matrix_data: [[f32; 4]; 4] = self.matrix.cast::<f32>().unwrap().into();
+        let matrix_data: [[f32; 4]; 4] = self.state.matrix.cast::<f32>().unwrap().into();
         let matrix_buffer = BufferHandler::from_slice(&matrix_data, device, BufferUsage::UNIFORM);
-        let color_data: [f32; 4] = self.color.cast::<f32>().unwrap().into();
+        let color_data: [f32; 4] = self.state.color.cast::<f32>().unwrap().into();
         let color_buffer = BufferHandler::from_slice(&color_data, device, BufferUsage::UNIFORM);
         Arc::new(bind_group_util::create_bind_group(
             device,

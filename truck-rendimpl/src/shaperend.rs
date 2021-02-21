@@ -2,7 +2,7 @@ use crate::*;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
-pub(super) struct AttrVertex {
+struct AttrVertex {
     pub position: [f32; 3],
     pub uv_coord: [f32; 2],
     pub normal: [f32; 3],
@@ -101,18 +101,21 @@ fn add_face(
     Some(())
 }
 
-impl IntoInstance for Shell {
-    type Instance = ShapeInstance;
-    type Descriptor = ShapeInstanceDescriptor;
+impl Shape for Shell {
     #[inline(always)]
-    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> ShapeInstance {
+    fn try_into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &ShapeInstanceDescriptor,
+    ) -> Option<ShapeInstance> {
+        let device = creator.handler.device();
         let mut expolygon = ExpandedPolygon::default();
         let mut boundaries = Vec::new();
-        self.face_iter().for_each(|face| {
-            add_face(face, desc.mesh_precision, &mut expolygon, &mut boundaries);
-        });
+        self.face_iter().try_for_each(|face| {
+            add_face(face, desc.mesh_precision, &mut expolygon, &mut boundaries)
+        })?;
         let (vb, ib) = expolygon.buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
-        ShapeInstance {
+        Some(ShapeInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             boundary: Arc::new(BufferHandler::from_slice(
                 &boundaries,
@@ -120,26 +123,77 @@ impl IntoInstance for Shell {
                 BufferUsage::STORAGE,
             )),
             state: desc.instance_state.clone(),
+            shaders: Arc::clone(&creator.shape_shaders),
+            id: RenderID::gen(),
+        })
+    }
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &ShapeInstanceDescriptor,
+    ) -> ShapeInstance {
+        self.try_into_instance(creator, desc)
+            .expect("failed to create instance")
+    }
+    fn into_wire_frame(
+        &self,
+        creator: &InstanceCreator,
+        desc: &WireFrameInstanceDescriptor,
+    ) -> WireFrameInstance {
+        let handler = &creator.handler;
+        let mut lengths = Vec::new();
+        let points: Vec<[f32; 3]> = self
+            .face_iter()
+            .flat_map(|face| face.boundary_iters())
+            .flatten()
+            .flat_map(|edge| {
+                let curve = edge.oriented_curve();
+                let division = curve.parameter_division(desc.polyline_precision);
+                lengths.push(division.len() as u32);
+                division
+                    .into_iter()
+                    .map(move |t| curve.subs(t).cast().unwrap().into())
+            })
+            .collect();
+        let mut strips = Vec::<u32>::new();
+        let mut counter = 0_u32;
+        for len in lengths {
+            for i in 1..len {
+                strips.push(counter + i - 1);
+                strips.push(counter + i);
+            }
+            counter += len;
+        }
+        let vertices = BufferHandler::from_slice(&points, handler.device(), BufferUsage::VERTEX);
+        let strips = BufferHandler::from_slice(&strips, handler.device(), BufferUsage::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vertices),
+            strips: Arc::new(strips),
+            state: desc.wireframe_state.clone(),
+            shaders: Arc::clone(&creator.wire_shaders),
             id: RenderID::gen(),
         }
     }
 }
 
-impl IntoInstance for Solid {
-    type Instance = ShapeInstance;
-    type Descriptor = ShapeInstanceDescriptor;
+impl Shape for Solid {
     #[inline(always)]
-    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> ShapeInstance {
+    fn try_into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &ShapeInstanceDescriptor,
+    ) -> Option<ShapeInstance> {
+        let device = creator.handler.device();
         let mut expolygon = ExpandedPolygon::default();
         let mut boundaries = Vec::new();
         self.boundaries()
             .iter()
             .flat_map(Shell::face_iter)
-            .for_each(|face| {
-                add_face(face, desc.mesh_precision, &mut expolygon, &mut boundaries);
-            });
+            .try_for_each(|face| {
+                add_face(face, desc.mesh_precision, &mut expolygon, &mut boundaries)
+            })?;
         let (vb, ib) = expolygon.buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
-        ShapeInstance {
+        Some(ShapeInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             boundary: Arc::new(BufferHandler::from_slice(
                 &boundaries,
@@ -147,6 +201,56 @@ impl IntoInstance for Solid {
                 BufferUsage::STORAGE,
             )),
             state: desc.instance_state.clone(),
+            shaders: Arc::clone(&creator.shape_shaders),
+            id: RenderID::gen(),
+        })
+    }
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &ShapeInstanceDescriptor,
+    ) -> ShapeInstance {
+        self.try_into_instance(creator, desc)
+            .expect("failed to create instance")
+    }
+    fn into_wire_frame(
+        &self,
+        creator: &InstanceCreator,
+        desc: &WireFrameInstanceDescriptor,
+    ) -> WireFrameInstance {
+        let handler = &creator.handler;
+        let mut lengths = Vec::new();
+        let points: Vec<[f32; 3]> = self
+            .boundaries()
+            .iter()
+            .flatten()
+            .flat_map(|face| face.boundary_iters())
+            .flatten()
+            .flat_map(|edge| {
+                let curve = edge.oriented_curve();
+                let division = curve.parameter_division(desc.polyline_precision);
+                lengths.push(division.len() as u32);
+                division
+                    .into_iter()
+                    .map(move |t| curve.subs(t).cast().unwrap().into())
+            })
+            .collect();
+        let mut strips = Vec::<u32>::new();
+        let mut counter = 0_u32;
+        for len in lengths {
+            for i in 1..len {
+                strips.push(counter + i - 1);
+                strips.push(counter + i);
+            }
+            counter += len;
+        }
+        let vertices = BufferHandler::from_slice(&points, handler.device(), BufferUsage::VERTEX);
+        let strips = BufferHandler::from_slice(&strips, handler.device(), BufferUsage::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vertices),
+            strips: Arc::new(strips),
+            state: desc.wireframe_state.clone(),
+            shaders: Arc::clone(&creator.wire_shaders),
             id: RenderID::gen(),
         }
     }
@@ -257,7 +361,6 @@ impl ShapeInstance {
     pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
         include_spirv!("shaders/textured-face.frag.spv")
     }
-
     /// Returns the pipeline with developer's custom shader.
     #[inline(always)]
     pub fn pipeline_with_shader(
@@ -268,14 +371,33 @@ impl ShapeInstance {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
+        self.pipeline_with_shader_module(
+            &device_handler.device().create_shader_module(vertex_shader),
+            &device_handler
+                .device()
+                .create_shader_module(fragment_shader),
+            device_handler,
+            layout,
+            sample_count,
+        )
+    }
+
+    /// Returns the pipeline with developer's custom shader module.
+    #[inline(always)]
+    pub fn pipeline_with_shader_module(
+        &self,
+        vertex_module: &ShaderModule,
+        fragment_module: &ShaderModule,
+        device_handler: &DeviceHandler,
+        layout: &PipelineLayout,
+        sample_count: u32,
+    ) -> Arc<RenderPipeline> {
         let device = device_handler.device();
         let sc_desc = device_handler.sc_desc();
         let cull_mode = match self.state.backface_culling {
             true => CullMode::Back,
             false => CullMode::None,
         };
-        let vertex_module = device.create_shader_module(vertex_shader);
-        let fragment_module = device.create_shader_module(fragment_shader);
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
             vertex_stage: ProgrammableStageDescriptor {
@@ -376,11 +498,11 @@ impl Rendered for ShapeInstance {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let fragment_shader = match self.state.texture.is_some() {
-            true => Self::default_textured_fragment_shader(),
-            false => Self::default_fragment_shader(),
+            true => &self.shaders.tex_fragment,
+            false => &self.shaders.fragment,
         };
-        self.pipeline_with_shader(
-            Self::default_vertex_shader(),
+        self.pipeline_with_shader_module(
+            &self.shaders.vertex,
             fragment_shader,
             handler,
             layout,
@@ -397,6 +519,7 @@ impl ShapeInstance {
             polygon: self.polygon.clone(),
             boundary: self.boundary.clone(),
             state: self.state.clone(),
+            shaders: Arc::clone(&self.shaders),
             id: RenderID::gen(),
         }
     }

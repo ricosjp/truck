@@ -1,7 +1,7 @@
 use super::*;
 use image::*;
 
-/// Create `Texture` from `DynamicImage`
+/// Utility for creating `Texture` from `DynamicImage`
 #[inline(always)]
 pub fn image2texture(device_handler: &DeviceHandler, image: &DynamicImage) -> Texture {
     let buffer = image.to_rgba8();

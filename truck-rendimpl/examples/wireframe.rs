@@ -91,8 +91,9 @@ impl App for MyApp {
             ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &desc);
-        let cube = Self::create_cube().into_boundaries().pop().unwrap();
-        let wire = WireFrameInstance::new(&cube, &handler);
+        let wire = scene
+            .instance_creator()
+            .create_wire_frame_instance(&Self::create_cube(), &Default::default());
         scene.add_object(&wire);
         MyApp {
             scene,
