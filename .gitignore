@@ -1,5 +1,6 @@
 /target
 /Cargo.lock
 *.obj
+*.json
 /.vscode
 *.png
