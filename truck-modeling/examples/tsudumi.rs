@@ -1,7 +1,5 @@
 //! Modeling a one-leaf hyperboloid.
 
-mod framework;
-use framework::ShapeViewer;
 use truck_modeling::*;
 
 fn main() {
@@ -21,5 +19,6 @@ fn main() {
             .inverse(),
     );
     let solid = Solid::new(vec![shell]);
-    ShapeViewer::run(solid, 0.005);
+    let json = serde_json::to_vec_pretty(&solid.compress()).unwrap();
+    std::fs::write("tsudumi.json", &json).unwrap();
 }
