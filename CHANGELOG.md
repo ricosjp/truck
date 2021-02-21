@@ -30,6 +30,8 @@ The version is of the bottom crate `truck-rendimpl`.
     - Now, `ShapeInstance` is one `Rendered` struct.
     - [`RenderFace`](https://docs.rs/truck-rendimpl/0.1.5/truck_rendimpl/struct.RenderFace.html) was abolished.
   - abolished implementations `Clone` for `*Instance`. Use `*Instance::clone_instance`.
+  - The texture of `InstanceState` was changed `wgpu::Texture` from `image::DynamicImage`.  
+  One can generate `Texture` from `DynamicImage` by [`InstanceCreator::create_texture`](https://docs.rs/truck-rendimpl/0.2.0/truck_rendimpl/struct.InstanceCreator.html#method.create_texture).
 - added inherit methods of `truck_geometry::NURBSSurface` from `BSplineSurface`.
 - added a feature `serde` to `cgmath` at `truck-base`.
   - remove the explicit dependency to `cgmath` from `truck-polymesh`.
