@@ -29,14 +29,18 @@ The version is of the bottom crate `truck-rendimpl`.
   - Face-wise rendering of shape is abolished.
     - Now, `ShapeInstance` is one `Rendered` struct.
     - [`RenderFace`](https://docs.rs/truck-rendimpl/0.1.5/truck_rendimpl/struct.RenderFace.html) was abolished.
+  - abolished implementations `Clone` for `*Instance`. Use `*Instance::clone_instance`.
 - added inherit methods of `truck_geometry::NURBSSurface` from `BSplineSurface`.
 - added a feature `serde` to `cgmath` at `truck-base`.
   - remove the explicit dependency to `cgmath` from `truck-polymesh`.
   - plans to add `nalgebra` as an alternative backend (unreleased in this version).
+- abolished [`truck_platform::RenderID::default`](https://docs.rs/truck-platform/0.1.0/truck_platform/struct.RenderID.html#impl-Default) and added [`RenderID::gen`](https://docs.rs/truck-platform/0.2.0/truck_platform/struct.RenderID.html#method.gen).
+- added [`Error`](https://docs.rs/truck-modeling/0.2.1/truck_modeling/errors/enum.Error.html) to `truck_modeling`.
 
 #### Unreleased
 
-- Do not support to `wgpu v0.7.0`. WGSL is very attractive, but `wgpu v0.7.0` is still unstable.
+- did not support to `wgpu v0.7.0`. WGSL is very attractive, but `wgpu v0.7.0` is still unstable.
+- did not add `Error` to `truck-rendimpl`. The failure of meshing is still informed by `Option`.
 
 ## v0.1
 

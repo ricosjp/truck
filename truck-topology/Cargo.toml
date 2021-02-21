@@ -1,6 +1,6 @@
 [package]
 name = "truck-topology"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "topological structs: vertex, edge, wire, face, shell, and solid"
@@ -15,6 +15,6 @@ categories = ["graphics"]
 
 [dependencies]
 serde = { version = "1.0.118", features = ["derive"] }
-truck-base = { version = "0.1.0", path = "../truck-base" }
+truck-base = { version = "0.1.1", path = "../truck-base" }
 
 [dev-dependencies]

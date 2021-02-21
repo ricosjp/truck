@@ -1,6 +1,6 @@
 [package]
 name = "truck-modeling"
-version = "0.1.4"
+version = "0.2.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "integrated modeling algorithms by geometry and topology"
@@ -14,9 +14,9 @@ categories = ["graphics"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-truck-base = { version = "0.1.0", path = "../truck-base" }
-truck-geometry = { version = "0.1.0", path = "../truck-geometry" }
-truck-topology = { version = "0.1.1", path = "../truck-topology" }
+truck-base = { version = "0.1.1", path = "../truck-base" }
+truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
+truck-topology = { version = "0.1.2", path = "../truck-topology" }
 
 [dev-dependencies]
 rand = "0.8.0"
