@@ -29,8 +29,6 @@ pub trait Surface: Clone {
     type Point;
     /// The derivation vector of the curve.
     type Vector;
-    /// The boundary curve
-    type Curve: Curve<Point = Self::Point, Vector = Self::Vector>;
     /// Substitutes the parameter `(u, v)`.
     fn subs(&self, u: f64, v: f64) -> Self::Point;
     /// Returns the derivation by `u`.
@@ -43,8 +41,12 @@ pub trait Surface: Clone {
     fn parameter_range(&self) -> ((f64, f64), (f64, f64));
     /// Returns the inverse of the surface.
     fn inverse(&self) -> Self;
+}
+
+/// Whether the surface includes the boundary curve.
+pub trait IncludeCurve<C: Curve>: Surface {
     /// Returns whether the curve `curve` is included in the surface `self`.
-    fn include(&self, curve: &Self::Curve) -> bool;
+    fn include(&self, curve: &C) -> bool;
 }
 
 /// Dividable curve
@@ -73,7 +75,6 @@ impl Curve for () {
 impl Surface for () {
     type Point = ();
     type Vector = ();
-    type Curve = ();
     fn subs(&self, _: f64, _: f64) -> Self::Point {}
     fn uder(&self, _: f64, _: f64) -> Self::Vector {}
     fn vder(&self, _: f64, _: f64) -> Self::Vector {}
@@ -82,7 +83,6 @@ impl Surface for () {
         ((0.0, 1.0), (0.0, 1.0))
     }
     fn inverse(&self) -> Self {}
-    fn include(&self, _: &()) -> bool { true }
 }
 
 /// Implementation for the test of topological methods.

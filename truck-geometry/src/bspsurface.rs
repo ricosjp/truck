@@ -1861,19 +1861,18 @@ impl<V: InnerSpace<Scalar = f64>> ParameterDivision2D for BSplineSurface<V> {
     }
 }
 
-impl Surface for BSplineSurface<Vector2> {
-    type Point = Point2;
-    type Vector = Vector2;
-    type Curve = BSplineCurve<Vector2>;
+impl<V: TangentSpace<f64>> Surface for BSplineSurface<V> {
+    type Point = V::Space;
+    type Vector = V;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { Point2::from_vec(self.subs(u, v)) }
+    fn subs(&self, u: f64, v: f64) -> Self::Point { V::Space::from_vec(self.subs(u, v)) }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
     /// zero identity
     #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
+    fn normal(&self, _: f64, _: f64) -> Self::Vector { V::zero() }
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
     #[inline(always)]
@@ -1882,34 +1881,6 @@ impl Surface for BSplineSurface<Vector2> {
         surface.swap_axes();
         surface
     }
-    #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector2>) -> bool { self.include(&curve) }
-}
-
-impl Surface for BSplineSurface<Vector3> {
-    type Point = Point3;
-    type Vector = Vector3;
-    type Curve = BSplineCurve<Vector3>;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { Point3::from_vec(self.subs(u, v)) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Self::Vector {
-        self.uder(u, v).cross(self.vder(u, v)).normalize()
-    }
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-    #[inline(always)]
-    fn inverse(&self) -> Self {
-        let mut surface = self.clone();
-        surface.swap_axes();
-        surface
-    }
-    #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool { self.include(&curve) }
 }
 
 impl BSplineSurface<Vector2> {

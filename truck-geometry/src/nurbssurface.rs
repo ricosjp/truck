@@ -553,7 +553,6 @@ where V::Point: MetricSpace<Metric = f64>
 impl Surface for NURBSSurface<Vector3> {
     type Point = Point2;
     type Vector = Vector2;
-    type Curve = NURBSCurve<Vector3>;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point { self.subs(u, v) }
     #[inline(always)]
@@ -571,8 +570,11 @@ impl Surface for NURBSSurface<Vector3> {
         surface.swap_axes();
         surface
     }
+}
+
+impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     #[inline(always)]
-    fn include(&self, curve: &Self::Curve) -> bool {
+    fn include(&self, curve: &NURBSCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
         let mut hint = self.presearch(pt);
         hint = match self.search_parameter(pt, hint) {
@@ -612,7 +614,6 @@ impl Surface for NURBSSurface<Vector3> {
 impl Surface for NURBSSurface<Vector4> {
     type Point = Point3;
     type Vector = Vector3;
-    type Curve = NURBSCurve<Vector4>;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point { self.subs(u, v) }
     #[inline(always)]
@@ -634,8 +635,11 @@ impl Surface for NURBSSurface<Vector4> {
         surface.swap_axes();
         surface
     }
+}
+
+impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     #[inline(always)]
-    fn include(&self, curve: &Self::Curve) -> bool {
+    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.front();
         let mut hint = self.presearch(pt);
         hint = match self.search_parameter(pt, hint) {
