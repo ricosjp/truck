@@ -55,6 +55,37 @@ impl Plane {
             ),
         }
     }
+    
+    /// Creates a new plane whose origin is `origin` and `one_point` is on the u-axis.
+    #[inline(always)]
+    pub fn with_parameter_range(
+        origin: Point3,
+        one_point: Point3,
+        another_point: Point3,
+        urange: (f64, f64),
+        vrange: (f64, f64),
+    ) -> Plane {
+        if urange.0 > urange.1 {
+            panic!("urange is incorrect.")
+        } else if vrange.0 > vrange.1 {
+            panic!("vrange is incorrect.")
+        }
+        let v0 = (one_point - origin).normalize();
+        let v1 = another_point - origin;
+        let v2 = v0.cross(v1).normalize();
+        let v1 = v2.cross(v0).normalize();
+        Plane {
+            #[cfg_attr(rustfmt, rustfmt_skip)]
+            matrix: Matrix4::new(
+                v0[0], v0[1], v0[2], 0.0,
+                v1[0], v1[1], v1[2], 0.0,
+                v2[0], v2[1], v2[2], 0.0,
+                origin[0], origin[1], origin[2], 1.0,
+            ),
+            parameter_range: (urange, vrange),
+        }
+    }
+
 
     /// Returns the u-axis
     #[inline(always)]
