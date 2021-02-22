@@ -129,6 +129,54 @@ impl Plane {
             control_points,
         }
     }
+    
+    /// into NURBS surface
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let plane: Plane = Plane::new(
+    ///     Point3::new(0.0, 1.0, 2.0),
+    ///     Point3::new(1.0, 1.0, 3.0),
+    ///     Point3::new(0.0, 2.0, 3.0),
+    /// );
+    /// let surface: NURBSSurface<Vector4> = plane.into_nurbs();
+    /// assert_eq!(plane.parameter_range(), surface.parameter_range());
+    ///
+    /// let ((u0, u1), (v0, v1)) = plane.parameter_range();
+    /// const N: usize = 100;
+    /// for i in 0..=N {
+    ///     for j in 0..=N {
+    ///         let mut u = i as f64 / N as f64;
+    ///         u = u0 * (1.0 - u) + u1 * u;
+    ///         let mut v = j as f64 / N as f64;
+    ///         v = v0 * (1.0 - v) + v1 * v;
+    ///         Point3::assert_near(&plane.subs(u, v), &surface.subs(u, v));
+    ///     }
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn into_nurbs(&self) -> NURBSSurface<Vector4> {
+        let ((u0, u1), (v0, v1)) = self.parameter_range;
+        let uknot_vec = KnotVec(vec![u0, u0, u1, u1]);
+        let vknot_vec = KnotVec(vec![v0, v0, v1, v1]);
+        let origin = self.matrix[3];
+        let u_axis = self.matrix[0];
+        let v_axis = self.matrix[1];
+        let control_points = vec![
+            vec![
+                origin + u0 * u_axis + v0 * v_axis,
+                origin + u0 * u_axis + v1 * v_axis,
+            ],
+            vec![
+                origin + u1 * u_axis + v0 * v_axis,
+                origin + u1 * u_axis + v1 * v_axis,
+            ],
+        ];
+        NURBSSurface(BSplineSurface {
+            knot_vecs: (uknot_vec, vknot_vec),
+            control_points,
+        })
+    }
 }
 
 impl Surface for Plane {
