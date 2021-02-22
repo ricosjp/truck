@@ -175,18 +175,14 @@ pub struct BSplineSurface<V> {
 /// Error handler for [`Error`](./errors/enum.Error.html)
 pub type Result<T> = std::result::Result<T, crate::errors::Error>;
 
-#[doc(hidden)]
-pub mod bspcurve;
+mod bspcurve;
 /// Defines some iterators on control points of B-spline surface.
 pub mod bspsurface;
 /// Enumerats `Error`.
 pub mod errors;
-#[doc(hidden)]
-pub mod knot_vec;
-#[doc(hidden)]
-pub mod nurbscurve;
-#[doc(hidden)]
-pub mod nurbssurface;
+mod knot_vec;
+mod nurbscurve;
+mod nurbssurface;
 
 #[doc(hidden)]
 #[inline(always)]
