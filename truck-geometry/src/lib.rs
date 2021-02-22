@@ -184,6 +184,7 @@ mod knot_vec;
 mod nurbscurve;
 mod nurbssurface;
 mod specsurface;
+pub use specsurface::*;
 
 #[doc(hidden)]
 #[inline(always)]
