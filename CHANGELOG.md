@@ -40,11 +40,6 @@ The version is of the bottom crate `truck-rendimpl`.
 - added [`Error`](https://docs.rs/truck-modeling/0.2.1/truck_modeling/errors/enum.Error.html) to `truck_modeling`.
 - made [`truck_topology::CompressedShell`](https://docs.rs/truck-topology/0.2.0/truck_topology/struct.CompressedShell.html) public API and added [`truck_topology::CompressedSolid`](https://docs.rs/truck-topology/0.2.0/truck_topology/struct.CompressedSolid.html).
 
-#### Unreleased
-
-- did not support to `wgpu v0.7.0`. WGSL is very attractive, but `wgpu v0.7.0` is still unstable.
-- did not add `Error` to `truck-rendimpl`. The failure of meshing is still informed by `Option`.
-
 ## v0.1
 
 ### v0.1.5
