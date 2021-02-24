@@ -16,7 +16,6 @@ categories = ["graphics"]
 [dependencies]
 wgpu = "0.6.2"
 bytemuck = { version = "1.5.1", features = ["derive"] }
-lazy_static = "1.4.0"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 
 [dev-dependencies]
