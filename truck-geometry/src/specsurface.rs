@@ -1,7 +1,6 @@
 use crate::*;
 use errors::Error;
 use std::f64::consts::PI;
-use std::ops::Mul;
 
 /// bounded plane
 /// # Example
@@ -30,7 +29,7 @@ use std::ops::Mul;
 /// // The minimum of the v-range is OB.dot(v-axis).
 /// f64::assert_near(&urange.1, &f64::sqrt(2.0));
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Plane {
     matrix: Matrix4,
     parameter_range: ((f64, f64), (f64, f64)),
@@ -108,10 +107,10 @@ impl Plane {
     /// Set the paraameter range
     #[inline(always)]
     pub fn set_parameter_range(&mut self, urange: (f64, f64), vrange: (f64, f64)) {
-        if urange.0 > urange.1 {
-            panic!("urange is incorrect.")
-        } else if vrange.0 > vrange.1 {
-            panic!("vrange is incorrect.")
+        if urange.0 >= urange.1 {
+            panic!("{}", Error::IncorrectRange(urange.0, urange.1));
+        } else if vrange.0 >= vrange.1 {
+            panic!("{}", Error::IncorrectRange(vrange.0, vrange.1));
         } else {
             self.parameter_range = (urange, vrange);
         }
@@ -274,7 +273,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for Plane {
 }
 
 /// the sphere
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Sphere {
     matrix: Matrix4,
     radius: f64,
