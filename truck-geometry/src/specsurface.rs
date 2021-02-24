@@ -1,6 +1,7 @@
 use crate::*;
 use errors::Error;
 use std::f64::consts::PI;
+use std::ops::Mul;
 
 /// bounded plane
 /// # Example
