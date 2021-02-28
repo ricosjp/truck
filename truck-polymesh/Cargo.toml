@@ -1,6 +1,6 @@
 [package]
 name = "truck-polymesh"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "defines polygon data structure and some algorithms handling mesh, including meshing the shapes"
