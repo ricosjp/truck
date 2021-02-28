@@ -4,9 +4,13 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## v0.2
 
-### v0.2.0
+### v0.2.1
 
-#### Released
+- a small behavior change: [`NormalFilters::add_smooth_normals`](https://docs.rs/truck-polymesh/0.2.1/truck_polymesh/prelude/trait.NormalFilters.html#tymethod.add_smooth_normals).
+- fix a bug: [`Splitting::into_components`](https://docs.rs/truck-polymesh/0.2.1/truck_polymesh/prelude/trait.Splitting.html#tymethod.into_components).
+- an internal change: [`RenderID::gen`](https://docs.rs/truck-platform/0.2.1/truck_platform/struct.RenderID.html#method.gen).
+
+### v0.2.0
 
 - made `truck-polymesh` stable (well-tested and safety)
   - The member variables of [`PolygonMesh`](https://docs.rs/truck-polymesh/0.2.0/truck_polymesh/struct.PolygonMesh.html) becomes private.  
