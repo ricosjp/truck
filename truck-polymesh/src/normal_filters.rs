@@ -95,6 +95,7 @@ pub trait NormalFilters {
     /// // Normals are avaraged!
     /// assert!(mesh.normals()[v0.nor.unwrap()].near(&Vector3::new(0.0, 1.0, 0.0)));
     /// assert!(mesh.normals()[v1.nor.unwrap()].near(&Vector3::new(0.0, 1.0, 0.0)));
+    /// assert_eq!(v0.nor, v1.nor);
     /// 
     /// // If the tolerance is enough little, the faces are recognized as edges.
     /// mesh.add_smooth_normals(0.6, true); // Normals are overwritten!
@@ -262,7 +263,13 @@ fn signup_vertex_normal(
     let face = faces[face_id].as_mut();
     let j = (0..face.len()).find(|j| face[*j].pos == pos_id).unwrap();
     if face[j].nor.is_none() || overwrite {
-        normals.push(normal);
+        if let Some(n) = normals.last() {
+            if n != &normal {
+                normals.push(normal);
+            }
+        } else {
+            normals.push(normal);
+        }
         face[j].nor = Some(normals.len() - 1);
     }
 }

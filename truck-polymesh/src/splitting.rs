@@ -9,7 +9,7 @@ pub trait Splitting {
     /// # Examples
     /// ```
     /// use truck_polymesh::prelude::*;
-    /// 
+    ///
     /// // cube
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
@@ -28,7 +28,7 @@ pub trait Splitting {
     /// let mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
     ///
     /// let submesh = mesh.create_mesh_by_face_indices(&[0, 3, 5]);
-    /// 
+    ///
     /// // the same attributes vector
     /// assert_eq!(mesh.positions(), submesh.positions());
     ///
@@ -80,7 +80,7 @@ pub trait Splitting {
     /// # Examples
     /// ```
     /// use truck_polymesh::prelude::*;
-    /// 
+    ///
     /// // cube consisting tri_faces
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
@@ -98,10 +98,10 @@ pub trait Splitting {
     ///     &[3, 0, 7], &[4, 7, 0], &[4, 5, 7], &[6, 7, 5],
     /// ]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-    /// 
+    ///
     /// // sign up normals
     /// mesh.add_naive_normals(true).put_together_same_attrs();
-    /// 
+    ///
     /// let components = mesh.into_components();
     /// // The number of components is six because the mesh is a cube.
     /// assert_eq!(components.len(), 6);
@@ -167,7 +167,6 @@ impl PolygonMesh {
         (true_faces, false_faces)
     }
 
-
     /// experimental
     #[doc(hidden)]
     pub fn clustering_faces_by_gcurvature(
@@ -180,7 +179,6 @@ impl PolygonMesh {
             is_signed_up_upper(face, &gcurve, preferred_upper, threshold)
         })
     }
-
 
     /// experimental
     #[doc(hidden)]
@@ -229,7 +227,7 @@ fn signup_adjacency(
     let edge = if v0.pos < v1.pos {
         [(v0.pos, v0.nor), (v1.pos, v1.nor)]
     } else {
-        [(v1.pos, v1.nor), (v0.pos, v1.nor)]
+        [(v1.pos, v1.nor), (v0.pos, v0.nor)]
     };
     match edge_face_map.get(&edge) {
         Some(j) => {
@@ -272,12 +270,7 @@ fn get_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
     }
 }
 
-fn is_in_the_plane(
-    positions: &[Point3],
-    normals: &[Vector3],
-    face: &[Vertex],
-    tol2: f64,
-) -> bool {
+fn is_in_the_plane(positions: &[Point3], normals: &[Vector3], face: &[Vertex], tol2: f64) -> bool {
     let n = FaceNormal::new(positions, face, 0).normal;
     for v in face {
         if let Some(nor) = v.nor {
@@ -308,13 +301,7 @@ fn is_signed_up_upper(
     }
 }
 
-fn get_angle(
-    positions: &[Point3],
-    face: &[Vertex],
-    idx0: usize,
-    idx1: usize,
-    idx2: usize,
-) -> f64 {
+fn get_angle(positions: &[Point3], face: &[Vertex], idx0: usize, idx1: usize, idx2: usize) -> f64 {
     let vec0 = &positions[face[idx1].pos] - &positions[face[idx0].pos];
     let vec1 = &positions[face[idx2].pos] - &positions[face[idx0].pos];
     vec0.angle(vec1).0
@@ -329,4 +316,27 @@ fn add_weights(weights: &mut Vec<f64>, positions: &[Point3], face: &[Vertex]) {
     for v in face {
         weights[v.pos] += area;
     }
+}
+
+#[test]
+fn into_components_test() {
+    let faces = vec![
+        [(0, None, Some(0)), (1, None, Some(1)), (2, None, Some(2))].as_ref(),
+        &[(0, None, Some(0)), (5, None, Some(5)), (1, None, Some(1))],
+        &[(0, None, Some(7)), (5, None, Some(5)), (6, None, Some(6))],
+        &[(5, None, Some(5)), (6, None, Some(6)), (7, None, Some(7))],
+        &[
+            (1, None, Some(1)),
+            (4, None, Some(4)),
+            (3, None, Some(3)),
+            (2, None, Some(2)),
+        ],
+    ];
+    let positions = vec![Point3::origin(); 8];
+    let normals = vec![Vector3::unit_x(); 8];
+    let mesh = PolygonMesh::new(positions, Vec::new(), normals, Faces::from_iter(&faces));
+    let comp = mesh.into_components();
+    assert_eq!(comp.len(), 2);
+    assert_eq!(comp[0], vec![0, 1, 4]);
+    assert_eq!(comp[1], vec![2, 3]);
 }
