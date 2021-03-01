@@ -444,6 +444,9 @@ impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
             self.0.knot_vec[self.0.knot_vec.len() - 1],
         )
     }
+}
+
+impl<V: Clone> Invertible for NURBSCurve<V> {
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.0.clone();

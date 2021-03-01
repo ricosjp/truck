@@ -550,7 +550,16 @@ where V::Point: MetricSpace<Metric = f64>
     }
 }
 
-impl Surface for NURBSSurface<Vector3> {
+impl<V: Clone> Invertible for NURBSSurface<V> {
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        let mut surface = self.clone();
+        surface.swap_axes();
+        surface
+    }
+}
+
+impl ParametricSurface for NURBSSurface<Vector3> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline(always)]
@@ -562,14 +571,11 @@ impl Surface for NURBSSurface<Vector3> {
     /// zero identity
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
+}
+
+impl BoundedSurface for NURBSSurface<Vector3> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-    #[inline(always)]
-    fn inverse(&self) -> Self {
-        let mut surface = self.clone();
-        surface.swap_axes();
-        surface
-    }
 }
 
 impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
@@ -611,7 +617,7 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     }
 }
 
-impl Surface for NURBSSurface<Vector4> {
+impl ParametricSurface for NURBSSurface<Vector4> {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
@@ -627,14 +633,11 @@ impl Surface for NURBSSurface<Vector4> {
         let vd = self.0.vder(u, v);
         pt.rat_der(ud).cross(pt.rat_der(vd)).normalize()
     }
+}
+
+impl BoundedSurface for NURBSSurface<Vector4> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-    #[inline(always)]
-    fn inverse(&self) -> Self {
-        let mut surface = self.clone();
-        surface.swap_axes();
-        surface
-    }
 }
 
 impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {

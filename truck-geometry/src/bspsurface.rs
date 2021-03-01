@@ -1861,7 +1861,7 @@ impl<V: InnerSpace<Scalar = f64>> ParameterDivision2D for BSplineSurface<V> {
     }
 }
 
-impl<V: TangentSpace<f64>> Surface for BSplineSurface<V> {
+impl<V: TangentSpace<f64>> ParametricSurface for BSplineSurface<V> {
     type Point = V::Space;
     type Vector = V;
     #[inline(always)]
@@ -1873,8 +1873,14 @@ impl<V: TangentSpace<f64>> Surface for BSplineSurface<V> {
     /// zero identity
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Self::Vector { V::zero() }
+}
+
+impl<V: TangentSpace<f64>> BoundedSurface for BSplineSurface<V> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
+}
+
+impl<V: Clone> Invertible for BSplineSurface<V> {
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut surface = self.clone();
@@ -2073,7 +2079,7 @@ impl BSplineSurface<Vector3> {
     }
 }
 
-pub(super) fn sub_search_parameter2d<S: Surface<Point = Point2, Vector = Vector2>>(
+pub(super) fn sub_search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
     surface: &S,
     pt0: Point2,
     hint: Vector2,

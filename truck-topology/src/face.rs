@@ -574,7 +574,7 @@ impl<P, C, S> Face<P, C, S> {
     }
 }
 
-impl<P, C, S: Surface> Face<P, C, S> {
+impl<P, C, S: Clone + Invertible> Face<P, C, S> {
     /// Returns the cloned surface in face.
     /// If face is inverted, then the returned surface is also inverted.
     #[inline(always)]
@@ -590,7 +590,7 @@ impl<P, C, S> Face<P, C, S>
 where
     P: Tolerance,
     C: Curve<Point = P>,
-    S: Surface<Point = C::Point, Vector = C::Vector> + IncludeCurve<C>,
+    S: IncludeCurve<C>,
 {
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.

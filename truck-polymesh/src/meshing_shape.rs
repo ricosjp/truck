@@ -6,14 +6,14 @@ impl StructuredMesh {
     /// * `bspsurface` - bspline surface to meshed
     /// * `tol` - standard tolerance for meshing
     pub fn from_surface<S>(bspsurface: &S, tol: f64) -> StructuredMesh
-    where S: Surface<Point = Point3, Vector = Vector3> + ParameterDivision2D {
+    where S: BoundedSurface<Point = Point3, Vector = Vector3> + ParameterDivision2D {
         let (div0, div1) = bspsurface.parameter_division(tol);
         create_mesh(bspsurface, div0, div1)
     }
 }
 
 fn create_mesh<S>(bspsurface: &S, div0: Vec<f64>, div1: Vec<f64>) -> StructuredMesh
-where S: Surface<Point = Point3, Vector = Vector3> {
+where S: BoundedSurface<Point = Point3, Vector = Vector3> {
     let mut positions = vec![Vec::with_capacity(div1.len()); div0.len()];
     let mut normals = vec![Vec::with_capacity(div1.len()); div0.len()];
     div0.iter()

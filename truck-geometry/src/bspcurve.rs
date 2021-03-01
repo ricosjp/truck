@@ -1219,6 +1219,9 @@ where V::Space: EuclideanSpace<Scalar = f64, Diff = V>
     fn parameter_range(&self) -> (f64, f64) {
         (self.knot_vec[0], self.knot_vec[self.knot_vec.len() - 1])
     }
+}
+
+impl<V: Clone> Invertible for BSplineCurve<V> {
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.clone();

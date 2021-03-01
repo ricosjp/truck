@@ -66,7 +66,7 @@ impl<P, C, S> Solid<P, C, S>
 where
     P: Tolerance,
     C: Curve<Point = P>,
-    S: Surface<Point = C::Point, Vector = C::Vector> + IncludeCurve<C>,
+    S: IncludeCurve<C>,
 {
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
