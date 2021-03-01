@@ -13,160 +13,124 @@ use std::ops::Mul;
 /// );
 /// // The origin of the plane is O.
 /// Point3::assert_near(&plane.origin(), &Point3::new(0.0, 1.0, 2.0));
-/// // A is on the u-axis.
-/// Vector3::assert_near(&plane.u_axis(), &Vector3::new(1.0, 0.0, 1.0).normalize());
 /// // The normal is (A - O).cross(B - O)
 /// Vector3::assert_near(&plane.normal(), &Vector3::new(-1.0, -1.0, 1.0).normalize());
-/// // The v-axis is calculated by the u-axis and the normal.
-/// Vector3::assert_near(&plane.v_axis(), &Vector3::new(-1.0, 2.0, 1.0).normalize());
-///
-/// // the parameter range of the bounded plane
-/// let (urange, vrange) = plane.parameter_range();
-/// // The minimum of the range is 0.0.
-/// f64::assert_near(&urange.0, &0.0); f64::assert_near(&vrange.0, &0.0);
-/// // The maximum of the u-range is |OA|
-/// f64::assert_near(&urange.1, &f64::sqrt(2.0));
-/// // The minimum of the v-range is OB.dot(v-axis).
-/// f64::assert_near(&urange.1, &f64::sqrt(2.0));
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Plane {
-    origin: Point3,
-    normal: Vector3,
+    o: Point3,
+    p: Point3,
+    q: Point3,
 }
 
 impl Plane {
-    /// Creates a new plane from origin and normal.
-    #[inline(always)]
-    pub fn new(origin: Point3, normal: Vector3) -> Plane {
-        Plane {
-            origin,
-            normal: normal.normalize(),
-        }
-    }
     /// Creates a new plane from three points.
     #[inline(always)]
-    pub fn from_triangle(origin: Point3, one: Point3, another: Point3) -> Plane {
-        let normal = (one - origin).cross(another - origin).normalize();
-        Plane { origin, normal }
+    pub fn new(origin: Point3, one: Point3, another: Point3) -> Plane {
+        Plane {
+            o: origin,
+            p: one,
+            q: another,
+        }
     }
     /// Returns the origin
     #[inline(always)]
-    pub fn origin(&self) -> Point3 { self.origin }
+    pub fn origin(&self) -> Point3 { self.o }
     /// Returns the normal
     #[inline(always)]
-    pub fn normal(&self) -> Vector3 { self.normal }
+    pub fn normal(&self) -> Vector3 { (self.p - self.o).cross(self.q - self.o).normalize() }
     /// into B-spline surface
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let plane: Plane = Plane::new(
-    ///     Point3::new(0.0, 1.0, 2.0),
-    ///     Point3::new(1.0, 1.0, 3.0),
-    ///     Point3::new(0.0, 2.0, 3.0),
-    /// );
+    /// let pt0 = Point3::new(0.0, 1.0, 2.0);
+    /// let pt1 = Point3::new(1.0, 1.0, 3.0);
+    /// let pt2 = Point3::new(0.0, 2.0, 3.0);
+    /// let plane: Plane = Plane::new(pt0, pt1, pt2);
     /// let surface: BSplineSurface<Vector3> = plane.into_bspline();
-    /// assert_eq!(plane.parameter_range(), surface.parameter_range());
+    /// assert_eq!(surface.parameter_range(), ((0.0, 1.0), (0.0, 1.0)));
     ///
-    /// let ((u0, u1), (v0, v1)) = plane.parameter_range();
     /// const N: usize = 100;
     /// for i in 0..=N {
     ///     for j in 0..=N {
-    ///         let mut u = i as f64 / N as f64;
-    ///         u = u0 * (1.0 - u) + u1 * u;
-    ///         let mut v = j as f64 / N as f64;
-    ///         v = v0 * (1.0 - v) + v1 * v;
-    ///         Point3::assert_near(&plane.subs(u, v), &Surface::subs(&surface, u, v));
+    ///         let u = i as f64 / N as f64;
+    ///         let v = j as f64 / N as f64;
+    ///         let res = ParametricSurface::subs(&surface, u, v);
+    ///         let ans = plane.subs(u, v);
+    ///         Point3::assert_near(&ans, &res);
     ///     }
     /// }
     /// ```
     #[inline(always)]
-    pub fn into_bspline(
-        &self,
-        u_axis: Vector3,
-        parameter_range: ((f64, f64), (f64, f64)),
-    ) -> BSplineSurface<Vector3> {
-        let ((u0, u1), (v0, v1)) = parameter_range;
-        let uknot_vec = KnotVec(vec![u0, u0, u1, u1]);
-        let vknot_vec = KnotVec(vec![v0, v0, v1, v1]);
-        let u_axis = (u_axis - self.normal.dot(u_axis) * self.normal).normalize();
-        let v_axis = self.normal.cross(u_axis);
-        let origin = self.origin.to_vec();
-        let control_points = vec![
-            vec![
-                origin + u0 * u_axis + v0 * v_axis,
-                origin + u0 * u_axis + v1 * v_axis,
-            ],
-            vec![
-                origin + u1 * u_axis + v0 * v_axis,
-                origin + u1 * u_axis + v1 * v_axis,
-            ],
-        ];
+    pub fn into_bspline(&self) -> BSplineSurface<Vector3> {
+        let o = self.o.to_vec();
+        let p = self.p.to_vec();
+        let q = self.q.to_vec();
         BSplineSurface {
-            knot_vecs: (uknot_vec, vknot_vec),
-            control_points,
+            knot_vecs: (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
+            control_points: vec![vec![o, q], vec![p, p + q - o]],
         }
     }
     /// into NURBS surface
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let plane: Plane = Plane::new(
-    ///     Point3::new(0.0, 1.0, 2.0),
-    ///     Point3::new(1.0, 1.0, 3.0),
-    ///     Point3::new(0.0, 2.0, 3.0),
-    /// );
+    /// let pt0 = Point3::new(0.0, 1.0, 2.0);
+    /// let pt1 = Point3::new(1.0, 1.0, 3.0);
+    /// let pt2 = Point3::new(0.0, 2.0, 3.0);
+    /// let plane: Plane = Plane::new(pt0, pt1, pt2);
     /// let surface: NURBSSurface<Vector4> = plane.into_nurbs();
-    /// assert_eq!(plane.parameter_range(), surface.parameter_range());
+    /// assert_eq!(surface.parameter_range(), ((0.0, 1.0), (0.0, 1.0)));
     ///
-    /// let ((u0, u1), (v0, v1)) = plane.parameter_range();
     /// const N: usize = 100;
     /// for i in 0..=N {
     ///     for j in 0..=N {
-    ///         let mut u = i as f64 / N as f64;
-    ///         u = u0 * (1.0 - u) + u1 * u;
-    ///         let mut v = j as f64 / N as f64;
-    ///         v = v0 * (1.0 - v) + v1 * v;
-    ///         Point3::assert_near(&plane.subs(u, v), &surface.subs(u, v));
+    ///         let u = i as f64 / N as f64;
+    ///         let v = j as f64 / N as f64;
+    ///         let res = surface.subs(u, v);
+    ///         let ans = plane.subs(u, v);
+    ///         Point3::assert_near(&ans, &res);
     ///     }
     /// }
     /// ```
     #[inline(always)]
-    pub fn into_nurbs(
-        &self,
-        u_axis: Vector3,
-        parameter_range: ((f64, f64), (f64, f64)),
-    ) -> NURBSSurface<Vector4> {
-        let ((u0, u1), (v0, v1)) = parameter_range;
-        let uknot_vec = KnotVec(vec![u0, u0, u1, u1]);
-        let vknot_vec = KnotVec(vec![v0, v0, v1, v1]);
-        let origin = self.origin.to_homogeneous();
-        let u_axis = (u_axis - self.normal.dot(u_axis) * self.normal).normalize();
-        let v_axis = self.normal.cross(u_axis);
-        let u_axis = u_axis.extend(1.0);
-        let v_axis = v_axis.extend(1.0);
-        let control_points = vec![
-            vec![
-                origin + u0 * u_axis + v0 * v_axis,
-                origin + u0 * u_axis + v1 * v_axis,
-            ],
-            vec![
-                origin + u1 * u_axis + v0 * v_axis,
-                origin + u1 * u_axis + v1 * v_axis,
-            ],
-        ];
+    pub fn into_nurbs(&self) -> NURBSSurface<Vector4> {
+        let o = self.o.to_homogeneous();
+        let p = self.p.to_homogeneous();
+        let q = self.q.to_homogeneous();
         NURBSSurface(BSplineSurface {
-            knot_vecs: (uknot_vec, vknot_vec),
-            control_points,
+            knot_vecs: (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
+            control_points: vec![vec![o, q], vec![p, p + q - o]],
         })
     }
+}
+
+impl ParametricSurface for Plane {
+    type Point = Point3;
+    type Vector = Vector3;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Point3 {
+        self.o + u * (self.p - self.o) + v * (self.q - self.o)
+    }
+    #[inline(always)]
+    fn uder(&self, _: f64, _: f64) -> Vector3 { self.p - self.o }
+    #[inline(always)]
+    fn vder(&self, _: f64, _: f64) -> Vector3 { self.q - self.o }
+    #[inline(always)]
+    fn normal(&self, _: f64, _: f64) -> Vector3 { self.normal() }
+}
+
+impl BoundedSurface for Plane {
+    #[inline(always)]
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, 1.0), (0.0, 1.0)) }
 }
 
 impl Invertible for Plane {
     fn inverse(&self) -> Self {
         Plane {
-            origin: self.origin,
-            normal: -self.normal,
+            o: self.o,
+            p: self.q,
+            q: self.p,
         }
     }
 }
@@ -206,8 +170,9 @@ impl Mul<Plane> for Matrix4 {
     type Output = Plane;
     fn mul(self, plane: Plane) -> Plane {
         Plane {
-            origin: self.transform_point(plane.origin),
-            normal: self.transform_vector(plane.normal).normalize(),
+            o: self.transform_point(plane.o),
+            p: self.transform_point(plane.p),
+            q: self.transform_point(plane.q),
         }
     }
 }

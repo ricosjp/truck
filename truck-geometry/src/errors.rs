@@ -140,19 +140,6 @@ pub enum Error {
     /// assert_eq!(error, Err(Error::EmptyCurveCollector));
     /// ```
     EmptyCurveCollector,
-    /// The range of plane is incrrect.
-    /// # Example
-    /// ```should_panic
-    /// use truck_geometry::*;
-    /// let plane = Plane::with_parameter_range(
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     (0.0, 1.0),
-    ///     (0.0, -1.0), // <- incorrect!
-    /// );
-    /// ```
-    IncorrectRange(f64, f64),
 }
 
 impl std::fmt::Display for Error {
@@ -174,7 +161,6 @@ impl std::fmt::Display for Error {
                 ),
             Error::IrregularControlPoints => f.pad("The number of control points is irregular"),
             Error::EmptyCurveCollector => f.pad("The curve collector is empty."),
-            Error::IncorrectRange(u0, u1) => f.write_fmt(format_args!("the range ({}, {}) is incrrect.", u0, u1)),
         }
     }
 }
@@ -197,6 +183,5 @@ fn print_messages() {
     writeln!(stderr, "{}\n", Error::TooShortKnotVector(1, 2)).unwrap();
     writeln!(stderr, "{}\n", Error::IrregularControlPoints).unwrap();
     writeln!(stderr, "{}\n", Error::EmptyCurveCollector).unwrap();
-    writeln!(stderr, "{}\n", Error::IncorrectRange(1.0, 0.0)).unwrap();
     writeln!(stderr, "*******************************************************").unwrap();
 }
