@@ -1,6 +1,6 @@
 use crate::*;
-use errors::Error;
 use std::f64::consts::PI;
+use std::ops::Mul;
 
 /// bounded plane
 /// # Example
@@ -31,90 +31,31 @@ use std::f64::consts::PI;
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Plane {
-    matrix: Matrix4,
-    parameter_range: ((f64, f64), (f64, f64)),
+    origin: Point3,
+    normal: Vector3,
 }
 
 impl Plane {
-    /// Creates a new plane whose origin is `origin` and `one_point` is on the u-axis.
+    /// Creates a new plane from origin and normal.
     #[inline(always)]
-    pub fn new(origin: Point3, one_point: Point3, another_point: Point3) -> Plane {
-        let v0 = (one_point - origin).normalize();
-        let v1 = another_point - origin;
-        let v2 = v0.cross(v1).normalize();
-        let v1 = v2.cross(v0).normalize();
+    pub fn new(origin: Point3, normal: Vector3) -> Plane {
         Plane {
-            #[cfg_attr(rustfmt, rustfmt_skip)]
-            matrix: Matrix4::new(
-                v0[0], v0[1], v0[2], 0.0,
-                v1[0], v1[1], v1[2], 0.0,
-                v2[0], v2[1], v2[2], 0.0,
-                origin[0], origin[1], origin[2], 1.0,
-            ),
-            parameter_range: (
-                (0.0, v0.dot(one_point - origin)),
-                (0.0, v1.dot(another_point - origin)),
-            ),
+            origin,
+            normal: normal.normalize(),
         }
     }
-    /// Creates a new plane whose origin is `origin` and `one_point` is on the u-axis.
-    /// # Panics
-    /// Panic occurs if `urange.0 >= urange.1` or `vrange.0 >= vrange.1`.
+    /// Creates a new plane from three points.
     #[inline(always)]
-    pub fn with_parameter_range(
-        origin: Point3,
-        one_point: Point3,
-        another_point: Point3,
-        urange: (f64, f64),
-        vrange: (f64, f64),
-    ) -> Plane {
-        if urange.0 >= urange.1 {
-            panic!("{}", Error::IncorrectRange(urange.0, urange.1));
-        } else if vrange.0 >= vrange.1 {
-            panic!("{}", Error::IncorrectRange(vrange.0, vrange.1));
-        }
-        let v0 = (one_point - origin).normalize();
-        let v1 = another_point - origin;
-        let v2 = v0.cross(v1).normalize();
-        let v1 = v2.cross(v0).normalize();
-        Plane {
-            #[cfg_attr(rustfmt, rustfmt_skip)]
-            matrix: Matrix4::new(
-                v0[0], v0[1], v0[2], 0.0,
-                v1[0], v1[1], v1[2], 0.0,
-                v2[0], v2[1], v2[2], 0.0,
-                origin[0], origin[1], origin[2], 1.0,
-            ),
-            parameter_range: (urange, vrange),
-        }
+    pub fn from_triangle(origin: Point3, one: Point3, another: Point3) -> Plane {
+        let normal = (one - origin).cross(another - origin).normalize();
+        Plane { origin, normal }
     }
-
-    /// Returns the u-axis
-    #[inline(always)]
-    pub fn u_axis(&self) -> Vector3 { self.matrix[0].truncate() }
-    /// Returns the v-axis
-    #[inline(always)]
-    pub fn v_axis(&self) -> Vector3 { self.matrix[1].truncate() }
-    /// Returns the normal
-    #[inline(always)]
-    pub fn normal(&self) -> Vector3 { self.matrix[2].truncate() }
     /// Returns the origin
     #[inline(always)]
-    pub fn origin(&self) -> Point3 { Point3::from_vec(self.matrix[3].truncate()) }
-    /// Returns the matrix of the plane
+    pub fn origin(&self) -> Point3 { self.origin }
+    /// Returns the normal
     #[inline(always)]
-    pub fn matrix(&self) -> Matrix4 { self.matrix }
-    /// Set the paraameter range
-    #[inline(always)]
-    pub fn set_parameter_range(&mut self, urange: (f64, f64), vrange: (f64, f64)) {
-        if urange.0 >= urange.1 {
-            panic!("{}", Error::IncorrectRange(urange.0, urange.1));
-        } else if vrange.0 >= vrange.1 {
-            panic!("{}", Error::IncorrectRange(vrange.0, vrange.1));
-        } else {
-            self.parameter_range = (urange, vrange);
-        }
-    }
+    pub fn normal(&self) -> Vector3 { self.normal }
     /// into B-spline surface
     /// # Examples
     /// ```
@@ -140,13 +81,17 @@ impl Plane {
     /// }
     /// ```
     #[inline(always)]
-    pub fn into_bspline(&self) -> BSplineSurface<Vector3> {
-        let ((u0, u1), (v0, v1)) = self.parameter_range;
+    pub fn into_bspline(
+        &self,
+        u_axis: Vector3,
+        parameter_range: ((f64, f64), (f64, f64)),
+    ) -> BSplineSurface<Vector3> {
+        let ((u0, u1), (v0, v1)) = parameter_range;
         let uknot_vec = KnotVec(vec![u0, u0, u1, u1]);
         let vknot_vec = KnotVec(vec![v0, v0, v1, v1]);
-        let origin = self.matrix[3].truncate();
-        let u_axis = self.matrix[0].truncate();
-        let v_axis = self.matrix[1].truncate();
+        let u_axis = (u_axis - self.normal.dot(u_axis) * self.normal).normalize();
+        let v_axis = self.normal.cross(u_axis);
+        let origin = self.origin.to_vec();
         let control_points = vec![
             vec![
                 origin + u0 * u_axis + v0 * v_axis,
@@ -187,13 +132,19 @@ impl Plane {
     /// }
     /// ```
     #[inline(always)]
-    pub fn into_nurbs(&self) -> NURBSSurface<Vector4> {
-        let ((u0, u1), (v0, v1)) = self.parameter_range;
+    pub fn into_nurbs(
+        &self,
+        u_axis: Vector3,
+        parameter_range: ((f64, f64), (f64, f64)),
+    ) -> NURBSSurface<Vector4> {
+        let ((u0, u1), (v0, v1)) = parameter_range;
         let uknot_vec = KnotVec(vec![u0, u0, u1, u1]);
         let vknot_vec = KnotVec(vec![v0, v0, v1, v1]);
-        let origin = self.matrix[3];
-        let u_axis = self.matrix[0];
-        let v_axis = self.matrix[1];
+        let origin = self.origin.to_homogeneous();
+        let u_axis = (u_axis - self.normal.dot(u_axis) * self.normal).normalize();
+        let v_axis = self.normal.cross(u_axis);
+        let u_axis = u_axis.extend(1.0);
+        let v_axis = v_axis.extend(1.0);
         let control_points = vec![
             vec![
                 origin + u0 * u_axis + v0 * v_axis,
@@ -211,32 +162,11 @@ impl Plane {
     }
 }
 
-impl Surface for Plane {
-    type Point = Point3;
-    type Vector = Vector3;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 {
-        self.origin() + u * self.u_axis() + v * self.v_axis()
-    }
-    #[inline(always)]
-    fn uder(&self, _: f64, _: f64) -> Vector3 { self.u_axis() }
-    #[inline(always)]
-    fn vder(&self, _: f64, _: f64) -> Vector3 { self.v_axis() }
-    #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Vector3 { self.normal() }
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range }
-    #[inline(always)]
-    fn inverse(&self) -> Plane {
-        let (urange, vrange) = self.parameter_range;
+impl Invertible for Plane {
+    fn inverse(&self) -> Self {
         Plane {
-            matrix: Matrix4::from_cols(
-                self.matrix[1],
-                self.matrix[0],
-                -self.matrix[2],
-                self.matrix[3],
-            ),
-            parameter_range: (vrange, urange),
+            origin: self.origin,
+            normal: -self.normal,
         }
     }
 }
@@ -272,10 +202,20 @@ impl IncludeCurve<NURBSCurve<Vector4>> for Plane {
     }
 }
 
-/// the sphere
+impl Mul<Plane> for Matrix4 {
+    type Output = Plane;
+    fn mul(self, plane: Plane) -> Plane {
+        Plane {
+            origin: self.transform_point(plane.origin),
+            normal: self.transform_vector(plane.normal).normalize(),
+        }
+    }
+}
+
+/// sphere
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Sphere {
-    matrix: Matrix4,
+    center: Point3,
     radius: f64,
     ori: f64,
 }
@@ -285,20 +225,29 @@ impl Sphere {
     #[inline(always)]
     pub fn new(center: Point3, radius: f64) -> Sphere {
         Sphere {
-            matrix: Matrix4::from_translation(center.to_vec()),
+            center,
             radius,
             ori: 1.0,
         }
     }
     /// Returns the center
     #[inline(always)]
-    pub fn center(&self) -> Point3 { Point3::from_vec(self.matrix[3].truncate()) }
+    pub fn center(&self) -> Point3 { self.center }
     /// Returns the radius
     #[inline(always)]
     pub fn radius(&self) -> f64 { self.radius }
+    /// Inverts the sphere
+    #[inline(always)]
+    pub fn invert(&mut self) { self.ori = -self.ori }
+    /// Returns orientation
+    #[inline(always)]
+    pub fn orientation(&self) -> bool { self.ori > 0.0 }
+    /// Returns whether the point `pt` is on sphere
+    #[inline(always)]
+    pub fn include(&self, pt: Point3) -> bool { self.center.distance(pt).near(&self.radius) }
 }
 
-impl Surface for Sphere {
+impl ParametricSurface for Sphere {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
@@ -322,16 +271,44 @@ impl Surface for Sphere {
     }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Vector3 {
-        self.radius * f64::sin(u) * Vector3::new(-self.ori * f64::sin(v), f64::cos(v), 0.0)
+        self.radius * f64::sin(u) * Vector3::new(f64::sin(v), f64::cos(v), 0.0)
     }
+}
+
+impl BoundedSurface for Sphere {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, PI), (0.0, 2.0 * PI)) }
+}
+
+impl Invertible for Sphere {
     #[inline(always)]
     fn inverse(&self) -> Self {
         Sphere {
-            matrix: self.matrix,
+            center: self.center,
             radius: self.radius,
             ori: -self.ori,
         }
+    }
+}
+
+impl IncludeCurve<BSplineCurve<Vector3>> for Sphere {
+    #[inline(always)]
+    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+        curve.is_const() && self.include(curve.front())
+    }
+}
+
+impl IncludeCurve<NURBSCurve<Vector4>> for Sphere {
+    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+        let (knots, _) = curve.knot_vec().to_single_multi();
+        let degree = curve.degree() * 2;
+        knots
+            .windows(2)
+            .flat_map(move |window| (1..degree).map(move |i| (window, i)))
+            .all(move |(window, i)| {
+                let t = i as f64 / degree as f64;
+                let t = window[0] * (1.0 - t) + window[1] * t;
+                self.include(curve.subs(t))
+            })
     }
 }
