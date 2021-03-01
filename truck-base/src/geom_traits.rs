@@ -20,11 +20,10 @@ pub trait Curve: Clone {
         let (_, t) = self.parameter_range();
         self.subs(t)
     }
-    /// Returns the inverse of the curve.
-    fn inverse(&self) -> Self;
 }
+
 /// Parametric surface
-pub trait Surface: Clone {
+pub trait ParametricSurface: Clone {
     /// The surface is in the space of `Self::Point`.
     type Point;
     /// The derivation vector of the curve.
@@ -37,16 +36,24 @@ pub trait Surface: Clone {
     fn vder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the normal vector at `(u, v)`.
     fn normal(&self, u: f64, v: f64) -> Self::Vector;
+}
+
+/// Bounded surface with parametric range
+pub trait BoundedSurface: ParametricSurface {
     /// The range of the parameter of the surface.
     fn parameter_range(&self) -> ((f64, f64), (f64, f64));
-    /// Returns the inverse of the surface.
-    fn inverse(&self) -> Self;
 }
 
 /// Whether the surface includes the boundary curve.
-pub trait IncludeCurve<C: Curve>: Surface {
+pub trait IncludeCurve<C: Curve> {
     /// Returns whether the curve `curve` is included in the surface `self`.
     fn include(&self, curve: &C) -> bool;
+}
+
+/// Oriented and reversible
+pub trait Invertible {
+    /// Returns the inverse.
+    fn inverse(&self) -> Self;
 }
 
 /// Dividable curve
@@ -68,24 +75,30 @@ impl Curve for () {
     fn subs(&self, _: f64) -> Self::Point {}
     fn der(&self, _: f64) -> Self::Vector {}
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
-    fn inverse(&self) -> Self {}
 }
 
 /// Implementation for the test of topological methods.
-impl Surface for () {
+impl ParametricSurface for () {
     type Point = ();
     type Vector = ();
     fn subs(&self, _: f64, _: f64) -> Self::Point {}
     fn uder(&self, _: f64, _: f64) -> Self::Vector {}
     fn vder(&self, _: f64, _: f64) -> Self::Vector {}
     fn normal(&self, _: f64, _: f64) -> Self::Vector {}
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
-        ((0.0, 1.0), (0.0, 1.0))
-    }
-    fn inverse(&self) -> Self {}
 }
 
 /// Implementation for the test of topological methods.
+impl BoundedSurface for () {
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
+        ((0.0, 1.0), (0.0, 1.0))
+    }
+}
+
+/// Implementation for the test of topological methods.
+impl IncludeCurve<()> for () {
+    fn include(&self, _: &()) -> bool { true }
+}
+
 impl Curve for (usize, usize) {
     type Point = usize;
     type Vector = usize;
@@ -97,5 +110,8 @@ impl Curve for (usize, usize) {
     }
     fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
+}
+
+impl Invertible for (usize, usize) {
     fn inverse(&self) -> Self { (self.1, self.0) }
 }
