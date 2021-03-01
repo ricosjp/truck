@@ -185,6 +185,8 @@ mod nurbscurve;
 mod nurbssurface;
 mod specsurface;
 pub use specsurface::*;
+mod decorators;
+pub use decorators::*;
 
 #[doc(hidden)]
 #[inline(always)]
