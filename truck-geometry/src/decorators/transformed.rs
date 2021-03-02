@@ -72,6 +72,8 @@ where
     T: Clone,
 {
     #[inline(always)]
+    fn invert(&mut self) { self.entity.invert() }
+    #[inline(always)]
     fn inverse(&self) -> Self {
         Transformed {
             entity: self.entity.inverse(),

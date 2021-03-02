@@ -8,7 +8,6 @@ impl Sphere {
         Sphere {
             center,
             radius,
-            ori: 1.0,
         }
     }
     /// Returns the center
@@ -17,12 +16,6 @@ impl Sphere {
     /// Returns the radius
     #[inline(always)]
     pub fn radius(&self) -> f64 { self.radius }
-    /// Inverts the sphere
-    #[inline(always)]
-    pub fn invert(&mut self) { self.ori = -self.ori }
-    /// Returns orientation
-    #[inline(always)]
-    pub fn orientation(&self) -> bool { self.ori > 0.0 }
     /// Returns whether the point `pt` is on sphere
     #[inline(always)]
     pub fn include(&self, pt: Point3) -> bool { self.center.distance(pt).near(&self.radius) }
@@ -35,7 +28,7 @@ impl ParametricSurface for Sphere {
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         Vector3::new(
             f64::sin(u) * f64::cos(v),
-            self.ori * f64::sin(u) * f64::sin(v),
+            f64::sin(u) * f64::sin(v),
             f64::cos(u),
         )
     }
@@ -46,7 +39,7 @@ impl ParametricSurface for Sphere {
         self.radius
             * Vector3::new(
                 f64::cos(u) * f64::cos(v),
-                self.ori * f64::cos(u) * f64::sin(v),
+                f64::cos(u) * f64::sin(v),
                 -f64::sin(u),
             )
     }
@@ -59,17 +52,6 @@ impl ParametricSurface for Sphere {
 impl BoundedSurface for Sphere {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, PI), (0.0, 2.0 * PI)) }
-}
-
-impl Invertible for Sphere {
-    #[inline(always)]
-    fn inverse(&self) -> Self {
-        Sphere {
-            center: self.center,
-            radius: self.radius,
-            ori: -self.ori,
-        }
-    }
 }
 
 impl IncludeCurve<BSplineCurve<Vector3>> for Sphere {

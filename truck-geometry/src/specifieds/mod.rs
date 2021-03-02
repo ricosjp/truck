@@ -26,7 +26,6 @@ pub struct Plane {
 pub struct Sphere {
     center: Point3,
     radius: f64,
-    ori: f64,
 }
 
 mod plane;

@@ -88,6 +88,8 @@ where
 
 impl<E: Clone> truck_base::geom_traits::Invertible for Invertible<E> {
     #[inline(always)]
+    fn invert(&mut self) { self.orientation = !self.orientation; }
+    #[inline(always)]
     fn inverse(&self) -> Self {
         Self {
             entity: self.entity.clone(),

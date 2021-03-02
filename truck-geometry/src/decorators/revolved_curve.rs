@@ -26,19 +26,23 @@ impl<C> RevolutedCurve<C> {
 impl<C: Curve<Point = Point3, Vector = Vector3>> ParametricSurface for RevolutedCurve<C> {
     type Point = Point3;
     type Vector = Vector3;
+    #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Point3 {
         self.point_rotation_matrix(v)
             .transform_point(self.curve.subs(u))
     }
+    #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Vector3 {
         self.vector_rotation_matrix(v)
             .transform_vector(self.curve.der(u))
     }
+    #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Vector3 {
         let pt = self.curve.subs(u);
         let radius = self.axis.cross(pt - self.origin);
         self.vector_rotation_matrix(v).transform_vector(radius)
     }
+    #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         let uder = self.uder(u, v);
         let vder = self.axis.cross(uder);
@@ -47,12 +51,16 @@ impl<C: Curve<Point = Point3, Vector = Vector3>> ParametricSurface for Revoluted
 }
 
 impl<C: Curve<Point = Point3, Vector = Vector3>> BoundedSurface for RevolutedCurve<C> {
+    #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
         (self.curve.parameter_range(), (0.0, 2.0 * PI))
     }
 }
 
 impl<C: Clone> Invertible for RevolutedCurve<C> {
+    #[inline(always)]
+    fn invert(&mut self) { self.axis = -self.axis; }
+    #[inline(always)]
     fn inverse(&self) -> Self {
         RevolutedCurve {
             curve: self.curve.clone(),

@@ -1223,6 +1223,8 @@ where V::Space: EuclideanSpace<Scalar = f64, Diff = V>
 
 impl<V: Clone> Invertible for BSplineCurve<V> {
     #[inline(always)]
+    fn invert(&mut self) { self.invert(); }
+    #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.clone();
         curve.invert();

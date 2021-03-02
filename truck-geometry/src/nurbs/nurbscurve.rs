@@ -448,6 +448,8 @@ impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
 
 impl<V: Clone> Invertible for NURBSCurve<V> {
     #[inline(always)]
+    fn invert(&mut self) { self.invert(); }
+    #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.0.clone();
         curve.invert();

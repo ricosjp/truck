@@ -1882,6 +1882,8 @@ impl<V: TangentSpace<f64>> BoundedSurface for BSplineSurface<V> {
 
 impl<V: Clone> Invertible for BSplineSurface<V> {
     #[inline(always)]
+    fn invert(&mut self) { self.swap_axes(); }
+    #[inline(always)]
     fn inverse(&self) -> Self {
         let mut surface = self.clone();
         surface.swap_axes();

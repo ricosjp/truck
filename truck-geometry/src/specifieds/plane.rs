@@ -104,6 +104,7 @@ impl BoundedSurface for Plane {
 }
 
 impl Invertible for Plane {
+    #[inline(always)]
     fn inverse(&self) -> Self {
         Plane {
             o: self.o,
@@ -111,6 +112,8 @@ impl Invertible for Plane {
             q: self.p,
         }
     }
+    #[inline(always)]
+    fn invert(&mut self) { *self = self.inverse(); }
 }
 
 impl IncludeCurve<BSplineCurve<Vector3>> for Plane {

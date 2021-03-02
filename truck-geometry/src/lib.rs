@@ -37,6 +37,7 @@ pub use errors::*;
 pub mod specifieds;
 pub use specifieds::*;
 
+/// Declares some decorators
 pub mod decorators;
 pub use decorators::*;
 

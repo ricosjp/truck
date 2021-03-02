@@ -52,6 +52,8 @@ pub trait IncludeCurve<C: Curve> {
 
 /// Oriented and reversible
 pub trait Invertible {
+    /// Inverts `self`
+    fn invert(&mut self);
     /// Returns the inverse.
     fn inverse(&self) -> Self;
 }
@@ -89,9 +91,7 @@ impl ParametricSurface for () {
 
 /// Implementation for the test of topological methods.
 impl BoundedSurface for () {
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
-        ((0.0, 1.0), (0.0, 1.0))
-    }
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, 1.0), (0.0, 1.0)) }
 }
 
 /// Implementation for the test of topological methods.
@@ -113,5 +113,6 @@ impl Curve for (usize, usize) {
 }
 
 impl Invertible for (usize, usize) {
+    fn invert(&mut self) { *self = (self.1, self.0); }
     fn inverse(&self) -> Self { (self.1, self.0) }
 }

@@ -552,6 +552,8 @@ where V::Point: MetricSpace<Metric = f64>
 
 impl<V: Clone> Invertible for NURBSSurface<V> {
     #[inline(always)]
+    fn invert(&mut self) { self.swap_axes(); }
+    #[inline(always)]
     fn inverse(&self) -> Self {
         let mut surface = self.clone();
         surface.swap_axes();
