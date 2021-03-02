@@ -12,7 +12,7 @@ impl<E, T: One> Processor<E, T> {
     }
     /// Transforms the geometry entity by `transform`
     #[inline(always)]
-    pub fn transformed_by(&mut self, transform: T)
+    pub fn transform_by(&mut self, transform: T)
     where T: Mul<T, Output = T> + Copy {
         self.transform = transform * self.transform;
     }
@@ -87,8 +87,8 @@ where
     S: ParametricSurface<Point = Point3, Vector = Vector3>,
     T: Transform<S::Point> + Clone,
 {
-    type Point = S::Point;
-    type Vector = S::Vector;
+    type Point = Point3;
+    type Vector = Vector3;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point {
         let (u, v) = self.get_surface_parameter(u, v);
@@ -115,7 +115,11 @@ where
         let (a, b) = get_axis(n);
         let a = self.transform.transform_vector(a);
         let b = self.transform.transform_vector(b);
-        a.cross(b).normalize()
+        let normal = a.cross(b).normalize();
+        match self.orientation {
+            true => normal,
+            false => -normal,
+        }
     }
 }
 
@@ -140,17 +144,19 @@ fn get_axis(n: Vector3) -> (Vector3, Vector3) {
     (a, n.cross(a))
 }
 
-#[test]
-fn get_axis_test() {
-    const N: usize = 100;
-    for _ in 0..N {
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn exec_get_axis_test() {
         let n = Vector3::new(
             2.0 * rand::random::<f64>() - 1.0,
             2.0 * rand::random::<f64>() - 1.0,
             2.0 * rand::random::<f64>() - 1.0,
         );
         if n.so_small() {
-            continue;
+            println!("ommited: {:?}", n);
+            return;
         }
         let n = n.normalize();
         let (a, b) = get_axis(n);
@@ -158,4 +164,116 @@ fn get_axis_test() {
         f64::assert_near2(&b.magnitude2(), &1.0);
         Vector3::assert_near(&a.cross(b), &n)
     }
+
+    #[test]
+    fn get_axis_test() { (0..100).for_each(|_| exec_get_axis_test()) }
+
+    fn exec_compatible_with_bspcurve() {
+        const DEGREE: usize = 3;
+        const DIVISION: usize = 4;
+        let knot_vec = KnotVec::uniform_knot(DEGREE, DIVISION);
+        let control_points: Vec<Vector3> = (0..DEGREE + DIVISION)
+            .map(|i| Vector3::new(i as f64, 20.0 * rand::random::<f64>() - 10.0, 0.0))
+            .collect();
+        let mut curve = BSplineCurve::new(knot_vec, control_points);
+        let mut processor = Processor::new(curve.clone());
+        let mat = Matrix3::new(
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+        );
+        if mat.determinant().so_small() {
+            println!("ommited: {:?}", mat);
+            return;
+        }
+        curve = mat * curve;
+        processor.transform_by(mat);
+
+        const N: usize = 100;
+        for i in 0..=N {
+            let t = i as f64 / N as f64;
+            Point3::assert_near(&Curve::subs(&curve, t), &processor.subs(t));
+        }
+
+        curve.invert();
+        processor.invert();
+        for i in 0..=N {
+            let t = i as f64 / N as f64;
+            Point3::assert_near(&Curve::subs(&curve, t), &processor.subs(t));
+        }
+    }
+
+    #[test]
+    fn compatible_with_bspcurve() { (0..100).for_each(|_| exec_compatible_with_bspcurve()) }
+
+    fn exec_compatible_with_bspsurface() {
+        const DEGREE: usize = 3;
+        const DIVISION: usize = 4;
+        let knot_vec = KnotVec::uniform_knot(DEGREE, DIVISION);
+        let knot_vecs = (knot_vec.clone(), knot_vec);
+        let control_points: Vec<Vec<Vector3>> = (0..DEGREE + DIVISION)
+            .map(|i| {
+                (0..DEGREE + DIVISION)
+                    .map(|j| Vector3::new(i as f64, j as f64, 20.0 * rand::random::<f64>() - 10.0))
+                    .collect()
+            })
+            .collect();
+        let mut surface = BSplineSurface::new(knot_vecs, control_points);
+        let mut processor = Processor::new(surface.clone());
+        let mat = Matrix3::new(
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+            4.0 * rand::random::<f64>() - 2.0,
+        );
+        if mat.determinant().so_small() {
+            println!("ommited: {:?}", mat);
+            return;
+        }
+        surface = mat * surface;
+        processor.transform_by(mat);
+
+        const N: usize = 30;
+        for i in 0..=N {
+            for j in 0..=N {
+                let u = i as f64 / N as f64;
+                let v = j as f64 / N as f64;
+                let pt0 = ParametricSurface::subs(&surface, u, v);
+                let pt1 = processor.subs(u, v);
+                Point3::assert_near(&pt0, &pt1);
+                let n0 = surface.normal(u, v);
+                let n1 = processor.normal(u, v);
+                Vector3::assert_near(&n0, &n1);
+            }
+        }
+
+        surface.swap_axes();
+        processor.invert();
+        for i in 0..=N {
+            for j in 0..=N {
+                let u = i as f64 / N as f64;
+                let v = j as f64 / N as f64;
+                let pt0 = ParametricSurface::subs(&surface, u, v);
+                let pt1 = processor.subs(u, v);
+                Point3::assert_near(&pt0, &pt1);
+                let n0 = surface.normal(u, v);
+                let n1 = processor.normal(u, v);
+                Vector3::assert_near(&n0, &n1);
+            }
+        }
+    }
+
+    #[test]
+    fn compatible_with_bspsurface() { (0..10).for_each(|_| exec_compatible_with_bspsurface()) }
 }
