@@ -187,7 +187,8 @@ impl<P, C, S> Face<P, C, S> {
     }
 
     #[inline(always)]
-    fn renew_pointer(&mut self) where S: Clone {
+    fn renew_pointer(&mut self)
+    where S: Clone {
         let surface = self.lock_surface().unwrap().clone();
         self.surface = Arc::new(Mutex::new(surface));
     }
@@ -230,10 +231,10 @@ impl<P, C, S> Face<P, C, S> {
     /// let mut face = Face::new(vec![wire0], ());
     /// face.invert();
     /// face.try_add_boundary(wire1.clone()).unwrap();
-    /// 
+    ///
     /// // The boundary is added in compatible with the face orientation.
     /// assert_eq!(face.boundaries()[1], wire1);
-    /// 
+    ///
     /// // The absolute bounday is inverted!
     /// let iter0 = face.absolute_boundaries()[1].edge_iter();
     /// let iter1 = wire1.edge_iter().rev();
@@ -322,10 +323,10 @@ impl<P, C, S> Face<P, C, S> {
     /// let mut face = Face::new(vec![wire0], ());
     /// face.invert();
     /// face.add_boundary(wire1.clone());
-    /// 
+    ///
     /// // The boundary is added in compatible with the face orientation.
     /// assert_eq!(face.boundaries()[1], wire1);
-    /// 
+    ///
     /// // The absolute bounday is inverted!
     /// let iter0 = face.absolute_boundaries()[1].edge_iter();
     /// let iter1 = wire1.edge_iter().rev();
@@ -573,9 +574,7 @@ impl<P, C, S> Face<P, C, S> {
     }
 }
 
-impl<P, C: Curve<Point = P>, S: Surface<Point = C::Point, Vector = C::Vector, Curve = C>>
-    Face<P, C, S>
-{
+impl<P, C, S: Clone + Invertible> Face<P, C, S> {
     /// Returns the cloned surface in face.
     /// If face is inverted, then the returned surface is also inverted.
     #[inline(always)]
@@ -585,11 +584,18 @@ impl<P, C: Curve<Point = P>, S: Surface<Point = C::Point, Vector = C::Vector, Cu
             false => self.lock_surface().unwrap().inverse(),
         }
     }
+}
+
+impl<P, C, S> Face<P, C, S>
+where
+    P: Tolerance,
+    C: Curve<Point = P>,
+    S: IncludeCurve<C>,
+{
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
-    pub fn is_geometric_consistent(&self) -> bool
-    where P: Tolerance {
+    pub fn is_geometric_consistent(&self) -> bool {
         let surface = &*self.lock_surface().unwrap();
         self.boundary_iters().into_iter().flatten().all(|edge| {
             let edge_consist = edge.is_geometric_consistent();

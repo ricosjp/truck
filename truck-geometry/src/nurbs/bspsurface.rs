@@ -1861,55 +1861,51 @@ impl<V: InnerSpace<Scalar = f64>> ParameterDivision2D for BSplineSurface<V> {
     }
 }
 
-impl Surface for BSplineSurface<Vector2> {
+impl ParametricSurface for BSplineSurface<Vector2> {
     type Point = Point2;
     type Vector = Vector2;
-    type Curve = BSplineCurve<Vector2>;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { Point2::from_vec(self.subs(u, v)) }
+    fn subs(&self, u: f64, v: f64) -> Point2 { Point2::from_vec(self.subs(u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
+    fn uder(&self, u: f64, v: f64) -> Vector2 { self.uder(u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    fn vder(&self, u: f64, v: f64) -> Vector2 { self.vder(u, v) }
     /// zero identity
     #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-    #[inline(always)]
-    fn inverse(&self) -> Self {
-        let mut surface = self.clone();
-        surface.swap_axes();
-        surface
-    }
-    #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector2>) -> bool { self.include(&curve) }
+    fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
 }
 
-impl Surface for BSplineSurface<Vector3> {
+impl ParametricSurface for BSplineSurface<Vector3> {
     type Point = Point3;
     type Vector = Vector3;
-    type Curve = BSplineCurve<Vector3>;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { Point3::from_vec(self.subs(u, v)) }
+    fn subs(&self, u: f64, v: f64) -> Point3 { Point3::from_vec(self.subs(u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
+    fn uder(&self, u: f64, v: f64) -> Vector3 { self.uder(u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    fn vder(&self, u: f64, v: f64) -> Vector3 { self.vder(u, v) }
     #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Self::Vector {
+    fn normal(&self, u: f64, v: f64) -> Vector3 {
         self.uder(u, v).cross(self.vder(u, v)).normalize()
     }
+}
+
+impl<V> BoundedSurface for BSplineSurface<V>
+where BSplineSurface<V>: ParametricSurface
+{
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
+}
+
+impl<V: Clone> Invertible for BSplineSurface<V> {
+    #[inline(always)]
+    fn invert(&mut self) { self.swap_axes(); }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut surface = self.clone();
         surface.swap_axes();
         surface
     }
-    #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool { self.include(&curve) }
 }
 
 impl BSplineSurface<Vector2> {
@@ -2102,7 +2098,7 @@ impl BSplineSurface<Vector3> {
     }
 }
 
-pub(super) fn sub_search_parameter2d<S: Surface<Point = Point2, Vector = Vector2>>(
+pub(super) fn sub_search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
     surface: &S,
     pt0: Point2,
     hint: Vector2,

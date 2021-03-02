@@ -1,5 +1,5 @@
 use crate::bspsurface::{CPColumnIter, CPRowIter};
-use crate::*;
+use super::*;
 
 impl<V> NURBSSurface<V> {
     /// constructor
@@ -458,10 +458,6 @@ impl<V: Homogeneous<f64> + Tolerance> NURBSSurface<V> {
     /// Extracts the boundary of surface
     #[inline(always)]
     pub fn boundary(&self) -> NURBSCurve<V> { NURBSCurve::new(self.0.boundary()) }
-
-    //--------------------------------------------------------------//
-    //------------------------- WIP --------------------------------//
-    //--------------------------------------------------------------//
 }
 
 impl<V: Homogeneous<f64>> NURBSSurface<V>
@@ -550,10 +546,20 @@ where V::Point: MetricSpace<Metric = f64>
     }
 }
 
-impl Surface for NURBSSurface<Vector3> {
+impl<V: Clone> Invertible for NURBSSurface<V> {
+    #[inline(always)]
+    fn invert(&mut self) { self.swap_axes(); }
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        let mut surface = self.clone();
+        surface.swap_axes();
+        surface
+    }
+}
+
+impl ParametricSurface for NURBSSurface<Vector3> {
     type Point = Point2;
     type Vector = Vector2;
-    type Curve = NURBSCurve<Vector3>;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point { self.subs(u, v) }
     #[inline(always)]
@@ -563,16 +569,16 @@ impl Surface for NURBSSurface<Vector3> {
     /// zero identity
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
+}
+
+impl BoundedSurface for NURBSSurface<Vector3> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
+}
+
+impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     #[inline(always)]
-    fn inverse(&self) -> Self {
-        let mut surface = self.clone();
-        surface.swap_axes();
-        surface
-    }
-    #[inline(always)]
-    fn include(&self, curve: &Self::Curve) -> bool {
+    fn include(&self, curve: &NURBSCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
         let mut hint = self.presearch(pt);
         hint = match self.search_parameter(pt, hint) {
@@ -609,10 +615,9 @@ impl Surface for NURBSSurface<Vector3> {
     }
 }
 
-impl Surface for NURBSSurface<Vector4> {
+impl ParametricSurface for NURBSSurface<Vector4> {
     type Point = Point3;
     type Vector = Vector3;
-    type Curve = NURBSCurve<Vector4>;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point { self.subs(u, v) }
     #[inline(always)]
@@ -626,16 +631,16 @@ impl Surface for NURBSSurface<Vector4> {
         let vd = self.0.vder(u, v);
         pt.rat_der(ud).cross(pt.rat_der(vd)).normalize()
     }
+}
+
+impl BoundedSurface for NURBSSurface<Vector4> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
+}
+
+impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     #[inline(always)]
-    fn inverse(&self) -> Self {
-        let mut surface = self.clone();
-        surface.swap_axes();
-        surface
-    }
-    #[inline(always)]
-    fn include(&self, curve: &Self::Curve) -> bool {
+    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.front();
         let mut hint = self.presearch(pt);
         hint = match self.search_parameter(pt, hint) {

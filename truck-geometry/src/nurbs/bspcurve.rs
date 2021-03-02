@@ -216,6 +216,47 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
         };
         control_points.iter().enumerate().fold(V::zero(), closure) * k as f64
     }
+    /// Substitutes to the 2nd-ord derived B-spline curve.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::bezier_knot(3);
+    /// let ctrl_pts = vec![
+    ///     Vector2::new(0.0, 0.0),
+    ///     Vector2::new(1.0, 1.0),
+    ///     Vector2::new(0.0, 1.0),
+    ///     Vector2::new(1.0, 0.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    ///
+    /// // bpscurve = (4t^3 - 6t^2 + 3t, -3t^2 + 3t), derived2 = (24t - 12, -6)
+    /// const N : usize = 100; // sample size
+    /// for i in 0..=N {
+    ///     let t = 1.0 / (N as f64) * (i as f64);
+    ///     Vector2::assert_near2(&bspcurve.der2(t), &Vector2::new(24.0 * t - 12.0, -6.0));
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn der2(&self, t: f64) -> V {
+        let k = self.degree();
+        if k < 2 {
+            return V::zero();
+        }
+        let BSplineCurve {
+            ref knot_vec,
+            ref control_points,
+        } = self;
+        let basis = knot_vec.try_bspline_basis_functions(k - 2, t).unwrap();
+        let closure = move |sum: V, (i, pt): (usize, &V)| {
+            let a = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
+            let b = inv_or_zero(knot_vec[i + k + 1] - knot_vec[i + 1]);
+            let c = inv_or_zero(knot_vec[i + k - 1] - knot_vec[i]);
+            let d = inv_or_zero(knot_vec[i + k] - knot_vec[i + 1]);
+            let e = inv_or_zero(knot_vec[i + k + 1] - knot_vec[i + 2]);
+            sum + *pt * (basis[i] * a * c - basis[i + 1] * (a + b) * d + basis[i + 2] * b * e)
+        };
+        control_points.iter().enumerate().fold(V::zero(), closure) * k as f64 * (k - 1) as f64
+    }
     /// Returns the closure of substitution.
     /// # Examples
     /// The following test code is the same test with the one of `BSplineCurve::subs()`.
@@ -311,14 +352,12 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
             self.sub_create_division(tol, dist2, div);
         }
     }
-    
     pub(super) fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
         &self,
         other: &BSplineCurve<V>,
         div_coef: usize,
         ord: F,
-    ) -> bool
-    {
+    ) -> bool {
         if !self.knot_vec.same_range(&other.knot_vec) {
             return false;
         }
@@ -1108,8 +1147,7 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
         derived2: &BSplineCurve<V>,
         point: V,
         hint: f64,
-    ) -> Option<f64>
-    {
+    ) -> Option<f64> {
         self.sub_snp(derived, derived2, point, hint, 0)
     }
 
@@ -1120,8 +1158,7 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
         point: V,
         hint: f64,
         counter: usize,
-    ) -> Option<f64>
-    {
+    ) -> Option<f64> {
         let pt = self.subs(hint) - point;
         let der = derived.subs(hint);
         let der2 = derived2.subs(hint);
@@ -1216,9 +1253,16 @@ where V::Space: EuclideanSpace<Scalar = f64, Diff = V>
     #[inline(always)]
     fn der(&self, t: f64) -> Self::Vector { self.der(t) }
     #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector { self.der2(t) }
+    #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) {
         (self.knot_vec[0], self.knot_vec[self.knot_vec.len() - 1])
     }
+}
+
+impl<V: Clone> Invertible for BSplineCurve<V> {
+    #[inline(always)]
+    fn invert(&mut self) { self.invert(); }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.clone();

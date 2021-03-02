@@ -18,6 +18,7 @@ build:
 	docker build -t $(REGISTORY)/rust-vulkan:$(CI_COMMIT_REF_SLUG) \
 		-f build.Dockerfile \
 		--target=rust-vulkan \
+		--no-cache \
 		.
 
 push: login build

@@ -282,7 +282,7 @@ impl<P, C> Edge<P, C> {
     pub fn id(&self) -> EdgeID<C> { ID::new(Arc::as_ptr(&self.curve)) }
 }
 
-impl<P, C: Curve<Point=P>> Edge<P, C> {
+impl<P, C: Clone + Invertible> Edge<P, C> {
     /// Returns the cloned curve in edge.
     /// If edge is inverted, then the returned curve is also inverted.
     #[inline(always)]
@@ -292,7 +292,9 @@ impl<P, C: Curve<Point=P>> Edge<P, C> {
             false => self.lock_curve().unwrap().inverse(),
         }
     }
+}
 
+impl<P, C: Curve<Point = P>> Edge <P, C> {
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
