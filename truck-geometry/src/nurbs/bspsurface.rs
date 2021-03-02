@@ -1861,13 +1861,11 @@ impl<V: InnerSpace<Scalar = f64>> ParameterDivision2D for BSplineSurface<V> {
     }
 }
 
-impl<V: TangentSpace<f64>> ParametricSurface for BSplineSurface<V> {
+impl<V: TangentSpace<f64> + VectorSpace<Scalar = f64>> ParametricSurface for BSplineSurface<V> {
     type Point = V::Space;
     type Vector = V;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point {
-        <V::Space as EuclideanSpace>::from_vec(self.subs(u, v))
-    }
+    fn subs(&self, u: f64, v: f64) -> Self::Point { V::Space::from_vec(self.subs(u, v)) }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
     #[inline(always)]
