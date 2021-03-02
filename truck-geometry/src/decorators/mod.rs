@@ -2,6 +2,35 @@ use crate::*;
 use std::ops::{Deref, DerefMut, Mul};
 
 /// surface constructed by revoluting a curve
+/// # Examples
+/// Revoluted sphere
+/// ```
+/// use truck_geometry::*;
+/// use std::f64::consts::PI;
+/// let knot_vec = KnotVec::bezier_knot(2);
+/// let control_points = vec![
+///     Vector4::new(1.0, 0.0, 0.0, 1.0),
+///     Vector4::new(0.0, 1.0, 0.0, 0.0),
+///     Vector4::new(-1.0, 0.0, 0.0, 1.0),
+/// ];
+/// // upper half circle on xy-plane
+/// let curve = BSplineCurve::new(knot_vec.clone(), control_points.clone());
+/// let uhcircle = NURBSCurve::new(BSplineCurve::new(knot_vec, control_points));
+/// // sphere constructed by revolute circle
+/// let sphere = RevolutedCurve::by_revolution(
+///     uhcircle, Point3::origin(), Vector3::unit_x(), 
+/// );
+/// const N: usize = 30;
+/// for i in 0..=N {
+///     for j in 0..=N {
+///         let u = i as f64 / N as f64;
+///         let v = 2.0 * PI * j as f64 / N as f64;
+///         let pt: Vector3 = sphere.subs(u, v).to_vec();
+///         f64::assert_near2(&pt.magnitude2(), &1.0);
+///         Vector3::assert_near(&pt, &sphere.normal(u, v));
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct RevolutedCurve<C> {
     curve: C,

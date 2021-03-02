@@ -44,8 +44,28 @@ impl<C: Curve<Point = Point3, Vector = Vector3>> ParametricSurface for Revoluted
     }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
-        let uder = self.uder(u, v);
-        let vder = self.axis.cross(uder);
+        let (u0, u1) = self.curve.parameter_range();
+        let (uder, vder) = if u.near(&u0) {
+            let pt = self.curve.subs(u);
+            let radius = self.axis.cross(pt - self.origin);
+            if radius.so_small() {
+                let uder = self.curve.der(u);
+                (uder, self.axis.cross(uder))
+            } else {
+                (self.uder(u, v), self.vder(u, v))
+            }
+        } else if u.near(&u1) {
+            let pt = self.curve.subs(u);
+            let radius = self.axis.cross(pt - self.origin);
+            if radius.so_small() {
+                let uder = self.curve.der(u);
+                (uder, uder.cross(self.axis))
+            } else {
+                (self.uder(u, v), self.vder(u, v))
+            }
+        } else {
+            (self.uder(u, v), self.vder(u, v))
+        };
         uder.cross(vder).normalize()
     }
 }

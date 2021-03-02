@@ -437,6 +437,12 @@ impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
         let der = self.0.der(t);
         pt.rat_der(der)
     }
+    fn der2(&self, t: f64) -> Self::Vector {
+        let pt = self.0.subs(t);
+        let der = self.0.der(t);
+        let der2 = self.0.der(t);
+        pt.rat_der2(der, der2)
+    }
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) {
         (

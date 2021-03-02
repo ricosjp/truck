@@ -79,6 +79,11 @@ where
         self.transform.transform_vector(self.entity.der(t)) * self.sign()
     }
     #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector {
+        let t = self.get_curve_parameter(t);
+        self.transform.transform_vector(self.entity.der(t))
+    }
+    #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.entity.parameter_range() }
 }
 

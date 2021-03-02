@@ -8,6 +8,8 @@ pub trait Curve: Clone {
     fn subs(&self, t: f64) -> Self::Point;
     /// Returns the derivation.
     fn der(&self, t: f64) -> Self::Vector;
+    /// Returns the 2nd-order derivation.
+    fn der2(&self, t: f64) -> Self::Vector;
     /// The range of the parameter of the curve.
     fn parameter_range(&self) -> (f64, f64);
     /// The front end point of the curve.
@@ -76,6 +78,7 @@ impl Curve for () {
     type Vector = ();
     fn subs(&self, _: f64) -> Self::Point {}
     fn der(&self, _: f64) -> Self::Vector {}
+    fn der2(&self, _: f64) -> Self::Vector {}
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
 }
 
@@ -109,6 +112,7 @@ impl Curve for (usize, usize) {
         }
     }
     fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
+    fn der2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
 }
 
