@@ -37,7 +37,7 @@ pub use errors::*;
 pub mod specifieds;
 pub use specifieds::*;
 
-mod decorators;
+pub mod decorators;
 pub use decorators::*;
 
 #[doc(hidden)]

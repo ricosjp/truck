@@ -15,9 +15,12 @@ pub struct Transformed<E, T> {
     transform: T,
 }
 
-/// Invertible entity
+/// Invertible geometric element
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct Invertible<E>(E);
+pub struct Invertible<E> {
+    entity: E,
+    orientation: bool,
+}
 
 mod revolved_curve;
 mod transformed;
