@@ -1,5 +1,4 @@
 use super::*;
-use std::ops::{Deref, DerefMut, Mul};
 
 impl<E, T> Transformed<E, T> {
     /// Creates new transformed geometric entity

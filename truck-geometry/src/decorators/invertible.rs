@@ -26,7 +26,7 @@ impl<C: Curve> Invertible<C> {
 
 impl<S: BoundedSurface> Invertible<S> {
     #[inline(always)]
-    fn get_parameter(&self, v: f64) -> f64 {
+    fn get_surface_parameter(&self, v: f64) -> f64 {
         let (_, (v0, v1)) = self.entity.parameter_range();
         if self.orientation {
             v
@@ -66,24 +66,32 @@ where
     type Vector = S::Vector;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point {
-        let v = self.get_parameter(v);
+        let v = self.get_surface_parameter(v);
         self.entity.subs(u, v)
     }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Self::Vector {
-        let v = self.get_parameter(v);
+        let v = self.get_surface_parameter(v);
         self.entity.uder(u, v)
     }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Self::Vector {
-        let v = self.get_parameter(v);
+        let v = self.get_surface_parameter(v);
         self.vder(u, v) * if self.orientation { 1.0 } else { -1.0 }
     }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
-        let v = self.get_parameter(v);
+        let v = self.get_surface_parameter(v);
         self.normal(u, v) * if self.orientation { 1.0 } else { -1.0 }
     }
+}
+
+impl<S> BoundedSurface for Invertible<S>
+where
+    S: BoundedSurface,
+    S::Vector: VectorSpace<Scalar = f64>,
+{
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
 }
 
 impl<E: Clone> truck_base::geom_traits::Invertible for Invertible<E> {
@@ -96,4 +104,13 @@ impl<E: Clone> truck_base::geom_traits::Invertible for Invertible<E> {
             orientation: !self.orientation,
         }
     }
+}
+
+impl<E> Deref for Invertible<E> {
+    type Target = E;
+    fn deref(&self) -> &E { &self.entity }
+}
+
+impl<E> DerefMut for Invertible<E> {
+    fn deref_mut(&mut self) -> &mut E { &mut self.entity }
 }
