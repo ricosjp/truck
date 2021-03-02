@@ -1,4 +1,4 @@
-use crate::*;
+use super::*;
 
 impl<V> NURBSCurve<V> {
     /// Constructs the rationalized B-spline curve.

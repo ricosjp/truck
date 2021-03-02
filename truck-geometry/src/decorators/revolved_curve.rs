@@ -1,13 +1,5 @@
-use crate::*;
+use super::*;
 use std::f64::consts::PI;
-
-/// surface constructed by revoluting a curve
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct RevolutedCurve<C> {
-    curve: C,
-    origin: Point3,
-    axis: Vector3,
-}
 
 impl<C> RevolutedCurve<C> {
     /// Creates a surface by revoluting a curve.

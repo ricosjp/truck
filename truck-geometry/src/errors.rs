@@ -1,5 +1,8 @@
 use crate::*;
 
+/// Error handler for [`Error`](./errors/enum.Error.html)
+pub type Result<T> = std::result::Result<T, Error>;
+
 /// Geometrical Errors
 #[derive(Debug, PartialEq)]
 pub enum Error {

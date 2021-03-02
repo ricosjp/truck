@@ -1,5 +1,5 @@
 use crate::bspsurface::{CPColumnIter, CPRowIter};
-use crate::*;
+use super::*;
 
 impl<V> NURBSSurface<V> {
     /// constructor

@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::*;
+use super::*;
 use std::slice::SliceIndex;
 use std::vec::Vec;
 
