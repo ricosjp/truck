@@ -81,7 +81,7 @@ where
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
         let t = self.get_curve_parameter(t);
-        self.transform.transform_vector(self.entity.der(t))
+        self.transform.transform_vector(self.entity.der2(t))
     }
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.entity.parameter_range() }
@@ -199,18 +199,24 @@ mod tests {
         }
         curve = mat * curve;
         processor.transform_by(mat);
+        assert_eq!(curve.parameter_range(), processor.parameter_range());
 
         const N: usize = 100;
         for i in 0..=N {
             let t = i as f64 / N as f64;
             Point3::assert_near(&Curve::subs(&curve, t), &processor.subs(t));
+            Vector3::assert_near(&Curve::der(&curve, t), &processor.der(t));
+            Vector3::assert_near(&Curve::der2(&curve, t), &processor.der2(t));
         }
 
         curve.invert();
         processor.invert();
+        assert_eq!(curve.parameter_range(), processor.parameter_range());
         for i in 0..=N {
             let t = i as f64 / N as f64;
             Point3::assert_near(&Curve::subs(&curve, t), &processor.subs(t));
+            Vector3::assert_near(&Curve::der(&curve, t), &processor.der(t));
+            Vector3::assert_near(&Curve::der2(&curve, t), &processor.der2(t));
         }
     }
 
@@ -248,6 +254,7 @@ mod tests {
         }
         surface = mat * surface;
         processor.transform_by(mat);
+        assert_eq!(surface.parameter_range(), processor.parameter_range());
 
         const N: usize = 30;
         for i in 0..=N {
@@ -257,6 +264,12 @@ mod tests {
                 let pt0 = ParametricSurface::subs(&surface, u, v);
                 let pt1 = processor.subs(u, v);
                 Point3::assert_near(&pt0, &pt1);
+                let uder0 = surface.uder(u, v);
+                let uder1 = processor.uder(u, v);
+                Vector3::assert_near(&uder0, &uder1);
+                let vder0 = surface.vder(u, v);
+                let vder1 = processor.vder(u, v);
+                Vector3::assert_near(&vder0, &vder1);
                 let n0 = surface.normal(u, v);
                 let n1 = processor.normal(u, v);
                 Vector3::assert_near(&n0, &n1);
@@ -265,6 +278,7 @@ mod tests {
 
         surface.swap_axes();
         processor.invert();
+        assert_eq!(surface.parameter_range(), processor.parameter_range());
         for i in 0..=N {
             for j in 0..=N {
                 let u = i as f64 / N as f64;
@@ -272,6 +286,12 @@ mod tests {
                 let pt0 = ParametricSurface::subs(&surface, u, v);
                 let pt1 = processor.subs(u, v);
                 Point3::assert_near(&pt0, &pt1);
+                let uder0 = surface.uder(u, v);
+                let uder1 = processor.uder(u, v);
+                Vector3::assert_near(&uder0, &uder1);
+                let vder0 = surface.vder(u, v);
+                let vder1 = processor.vder(u, v);
+                Vector3::assert_near(&vder0, &vder1);
                 let n0 = surface.normal(u, v);
                 let n1 = processor.normal(u, v);
                 Vector3::assert_near(&n0, &n1);

@@ -89,3 +89,28 @@ impl<C: Clone> Invertible for RevolutedCurve<C> {
         }
     }
 }
+
+#[test]
+fn revolve_test() {
+    let pt0 = Vector3::new(0.0, 2.0, 1.0);
+    let pt1 = Vector3::new(1.0, 0.0, 0.0);
+    let vec = pt1 - pt0;
+    let curve = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pt0, pt1]);
+    let surface = RevolutedCurve::by_revolution(curve, Point3::origin(), Vector3::unit_y());
+    const N: usize = 100;
+    for i in 0..=N {
+        for j in 0..=N {
+            let u = i as f64 / N as f64;
+            let v = 2.0 * PI * j as f64 / N as f64;
+            let uder = Matrix3::from_axis_angle(Vector3::unit_y(), Rad(v)) * vec;
+            Vector3::assert_near(&surface.uder(u, v), &uder);
+            let pt = pt0 * (1.0 - u) + pt1 * u;
+            let vec = Vector3::new(pt[2], 0.0, -pt[0]);
+            let vder = Matrix3::from_axis_angle(Vector3::unit_y(), Rad(v)) * vec;
+            Vector3::assert_near(&surface.vder(u, v), &vder);
+            let n = surface.normal(u, v);
+            assert!(n.dot(uder).so_small2());
+            assert!(n.dot(vder).so_small2());
+        }
+    }
+}
