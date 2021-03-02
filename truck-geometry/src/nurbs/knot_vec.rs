@@ -108,7 +108,7 @@ impl KnotVec {
     /// the right-open intervals [s, t). So, the value corresponding to the end point t = t_n is always 0.0.
     /// # Examples
     /// ```
-    /// use truck_geometry::{Tolerance, KnotVec};
+    /// use truck_geometry::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // B-spline basis functions is a partition of unity in (t_k, t_{n - k}).
@@ -119,11 +119,11 @@ impl KnotVec {
     ///     let t = 2.0 + 4.0 / (N as f64) * (i as f64);
     ///     let res = knot_vec.bspline_basis_functions(degree, t);
     ///     let sum = res.iter().fold(0.0, |sum, a| sum + a);
-    ///     f64::assert_near2(&sum, &1.0);
+    ///     assert_near2!(sum, 1.0);
     /// }
     /// ```
     /// ```
-    /// use truck_geometry::{Tolerance, KnotVec};
+    /// use truck_geometry::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // In some case, B-spline basis functions coincide with Bernstein polynomials.
@@ -139,7 +139,7 @@ impl KnotVec {
     ///         3.0 * t * t * (1.0 - t),
     ///         1.0 * t * t * t,
     ///     ];
-    ///     for i in 0..4 { f64::assert_near2(&res[i], &ans[i]); }
+    ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     /// }
     /// ```
     pub fn bspline_basis_functions(&self, degree: usize, t: f64) -> Vec<f64> {
@@ -161,7 +161,7 @@ impl KnotVec {
     /// the right-open intervals [s, t). So, the value corresponding to the end point t = t_n is always 0.0.
     /// # Examples
     /// ```
-    /// use truck_geometry::{Tolerance, KnotVec};
+    /// use truck_geometry::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // B-spline basis functions is a partition of unity in (t_k, t_{n - k}).
@@ -172,11 +172,11 @@ impl KnotVec {
     ///     let t = 2.0 + 4.0 / (N as f64) * (i as f64);
     ///     let res = knot_vec.try_bspline_basis_functions(degree, t).unwrap();
     ///     let sum = res.iter().fold(0.0, |sum, a| sum + a);
-    ///     f64::assert_near2(&sum, &1.0);
+    ///     assert_near2!(sum, 1.0);
     /// }
     /// ```
     /// ```
-    /// use truck_geometry::{Tolerance, KnotVec};
+    /// use truck_geometry::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // In some case, B-spline basis functions coincide with Bernstein polynomials.
@@ -193,7 +193,7 @@ impl KnotVec {
     ///         1.0 * t * t * t,
     ///     ];
     ///     println!("{:?}", res);
-    ///     for i in 0..4 { f64::assert_near2(&res[i], &ans[i]); }
+    ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     /// }
     /// ```
     pub fn try_bspline_basis_functions(&self, degree: usize, t: f64) -> Result<Vec<f64>> {

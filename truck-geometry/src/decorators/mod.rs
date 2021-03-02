@@ -14,7 +14,6 @@ use std::ops::{Deref, DerefMut, Mul};
 ///     Vector4::new(-1.0, 0.0, 0.0, 1.0),
 /// ];
 /// // upper half circle on xy-plane
-/// let curve = BSplineCurve::new(knot_vec.clone(), control_points.clone());
 /// let uhcircle = NURBSCurve::new(BSplineCurve::new(knot_vec, control_points));
 /// // sphere constructed by revolute circle
 /// let sphere = RevolutedCurve::by_revolution(
@@ -26,8 +25,8 @@ use std::ops::{Deref, DerefMut, Mul};
 ///         let u = i as f64 / N as f64;
 ///         let v = 2.0 * PI * j as f64 / N as f64;
 ///         let pt: Vector3 = sphere.subs(u, v).to_vec();
-///         f64::assert_near2(&pt.magnitude2(), &1.0);
-///         Vector3::assert_near(&pt, &sphere.normal(u, v));
+///         assert_near2!(pt.magnitude2(), 1.0);
+///         assert_near!(pt, sphere.normal(u, v));
 ///     }
 /// }
 /// ```

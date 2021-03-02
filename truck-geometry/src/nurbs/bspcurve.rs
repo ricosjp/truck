@@ -130,7 +130,7 @@ impl<V> BSplineCurve<V> {
     /// const N: usize = 100; // sample size
     /// for i in 0..=N {
     ///     let t = (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve0.subs(t), &bspcurve1.subs(1.0 - t));
+    ///     assert_near2!(bspcurve0.subs(t), bspcurve1.subs(1.0 - t));
     /// }
     /// ```
     #[inline(always)]
@@ -172,7 +172,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
     /// const N: usize = 100; // sample size
     /// for i in 0..=N {
     ///     let t = -1.0 + 2.0 * (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve.subs(t), &Vector2::new(t, t * t));
+    ///     assert_near2!(bspcurve.subs(t), Vector2::new(t, t * t));
     /// }
     /// ```
     #[inline(always)]
@@ -198,7 +198,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
     /// const N : usize = 100; // sample size
     /// for i in 0..=N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     Vector2::assert_near2(&bspcurve.der(t), &Vector2::new(1.0, 2.0 * t));
+    ///     assert_near2!(bspcurve.der(t), Vector2::new(1.0, 2.0 * t));
     /// }
     /// ```
     #[inline(always)]
@@ -233,7 +233,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
     /// const N : usize = 100; // sample size
     /// for i in 0..=N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     Vector2::assert_near2(&bspcurve.der2(t), &Vector2::new(24.0 * t - 12.0, -6.0));
+    ///     assert_near2!(bspcurve.der2(t), Vector2::new(24.0 * t - 12.0, -6.0));
     /// }
     /// ```
     #[inline(always)]
@@ -270,7 +270,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
     /// let get_t = |i: usize| -1.0 + 2.0 * (i as f64) / (N as f64);
     /// let res: Vec<_> = (0..=N).map(get_t).map(bspcurve.get_closure()).collect();
     /// let ans: Vec<_> = (0..=N).map(get_t).map(|t| Vector2::new(t, t * t)).collect();
-    /// res.iter().zip(&ans).for_each(|(v0, v1)| Vector2::assert_near2(v0, v1));
+    /// res.iter().zip(&ans).for_each(|(v0, v1)| assert_near2!(v0, v1));
     /// ```
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V + '_ { move |t| self.subs(t) }
@@ -297,7 +297,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
     /// const N : usize = 100; // sample size
     /// for i in 0..=N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     Vector2::assert_near2(&derived.subs(t), &Vector2::new(1.0, 2.0 * t));
+    ///     assert_near2!(derived.subs(t), Vector2::new(1.0, 2.0 * t));
     /// }
     /// ```
     pub fn derivation(&self) -> BSplineCurve<V> {
@@ -754,11 +754,11 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     /// const N: usize = 100;
     /// for i in 0..=N {
     ///     let t = 0.56 * (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve.subs(t), &part0.subs(t));
+    ///     assert_near2!(bspcurve.subs(t), part0.subs(t));
     /// }
     /// for i in 0..=N {
     ///     let t = 0.56 + 0.44 * (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve.subs(t), &part1.subs(t));
+    ///     assert_near2!(bspcurve.subs(t), part1.subs(t));
     /// }
     /// ```
     pub fn cut(&mut self, mut t: f64) -> BSplineCurve<V> {
@@ -809,11 +809,11 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     /// const N: usize = 100;
     /// for i in 0..=N {
     ///     let t = 0.5 * (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve.subs(t), &beziers[0].subs(t));
+    ///     assert_near2!(bspcurve.subs(t), beziers[0].subs(t));
     /// }
     /// for i in 0..=N {
     ///     let t = 0.5 + 0.5 * (i as f64) / (N as f64);
-    ///     Vector2::assert_near2(&bspcurve.subs(t), &beziers[1].subs(t));
+    ///     assert_near2!(bspcurve.subs(t), beziers[1].subs(t));
     /// }
     /// ```
     pub fn bezier_decomposition(&self) -> Vec<BSplineCurve<V>> {
@@ -1200,7 +1200,7 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     /// let mut part = bspcurve.clone().cut(0.6);
     /// part.cut(2.8);
     /// let t = part.is_arc_of(&bspcurve, 0.6).unwrap();
-    /// f64::assert_near2(&t, &2.8);
+    /// assert_near2!(t, 2.8);
     ///
     /// // hint is required the init value.
     /// assert!(part.is_arc_of(&bspcurve, 0.7).is_none());

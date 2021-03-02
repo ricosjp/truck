@@ -36,7 +36,7 @@ pub struct KnotVec(Vec<f64>);
 ///     let t = 1.0 / (N as f64) * (i as f64);
 ///     let v = bspline.subs(t); // We can use the instances as a function.
 ///     let c = (v[0] / v[3]).powi(2) + (v[1] / v[3]).powi(2);
-///     f64::assert_near2(&c, &1.0);
+///     assert_near2!(c, 1.0);
 /// }
 /// ```
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -136,7 +136,7 @@ pub enum CurveCollector<V> {
 ///         let v = 1.0 / (N as f64) * (j as f64);
 ///         let v = bspline.subs(u, v); // We can use the instances as a function.
 ///         let c = (v[0] / v[3]).powi(2) + (v[1] / v[3]).powi(2) + (v[2] / v[3]).powi(2);
-///         f64::assert_near2(&c, &1.0);
+///         assert_near2!(c, 1.0);
 ///     }
 /// }
 /// ```

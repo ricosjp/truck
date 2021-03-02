@@ -210,7 +210,7 @@ mod geom_impl_test {
             let t = i as f64 / N as f64;
             let pt = Point3::from_homogeneous(curve.subs(t));
             let vec = pt - origin;
-            Tolerance::assert_near2(&vec.dot(axis), &vec0.dot(axis));
+            assert_near2!(vec.dot(axis), vec0.dot(axis));
             assert!(pt[1] >= 0.0, "angle: {:?}", angle);
         }
     }
