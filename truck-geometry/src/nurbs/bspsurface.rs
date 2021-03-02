@@ -1861,7 +1861,7 @@ impl<V: InnerSpace<Scalar = f64>> ParameterDivision2D for BSplineSurface<V> {
     }
 }
 
-impl<V: TangentSpace<f64> + VectorSpace<Scalar = f64>> ParametricSurface for BSplineSurface<V> {
+impl<V: TangentSpace<f64>> ParametricSurface for BSplineSurface<V> {
     type Point = V::Space;
     type Vector = V;
     #[inline(always)]
