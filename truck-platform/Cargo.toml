@@ -1,6 +1,6 @@
 [package]
 name = "truck-platform"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "graphic utility library based on wgpu"
@@ -16,7 +16,6 @@ categories = ["graphics"]
 [dependencies]
 wgpu = "0.6.2"
 bytemuck = { version = "1.5.1", features = ["derive"] }
-lazy_static = "1.4.0"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 
 [dev-dependencies]
