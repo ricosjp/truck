@@ -14,9 +14,51 @@ impl Plane {
     /// Returns the origin
     #[inline(always)]
     pub fn origin(&self) -> Point3 { self.o }
+    /// Returns the u-axis
+    #[inline(always)]
+    pub fn u_axis(&self) -> Vector3 { self.p - self.o }
+    /// Returns the v-axis
+    #[inline(always)]
+    pub fn v_axis(&self) -> Vector3 { self.q - self.o }
     /// Returns the normal
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let plane = Plane::new(
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    /// );
+    /// Vector3::assert_near(&plane.normal(), &Vector3::unit_z());
+    /// ```
     #[inline(always)]
     pub fn normal(&self) -> Vector3 { (self.p - self.o).cross(self.q - self.o).normalize() }
+    /// Gets the parameter of `pt` in plane's matrix.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let plane = Plane::new(
+    ///     Point3::new(1.0, 2.0, 3.0),
+    ///     Point3::new(2.0, 1.0, 3.0),
+    ///     Point3::new(3.0, 4.0, -1.0),
+    /// );
+    ///
+    /// let pt = Point3::new(2.1, -6.5, 4.7);
+    /// let prm = plane.get_parameter(pt);
+    /// let rev = plane.origin()
+    ///     + prm[0] * plane.u_axis()
+    ///     + prm[1] * plane.v_axis()
+    ///     + prm[2] * plane.normal();
+    /// Point3::assert_near(&pt, &rev);
+    /// ```
+    #[inline(always)]
+    pub fn get_parameter(&self, pt: Point3) -> Vector3 {
+        let a = self.u_axis();
+        let b = self.v_axis();
+        let c = self.normal();
+        let mat = Matrix3::from_cols(a, b, c).invert().unwrap();
+        mat * (pt - self.o)
+    }
     /// into B-spline surface
     /// # Examples
     /// ```
@@ -144,6 +186,13 @@ impl IncludeCurve<NURBSCurve<Vector4>> for Plane {
                 (pt - origin).dot(normal).so_small()
             }
         })
+    }
+}
+
+impl ParameterDivision2D for Plane {
+    #[inline(always)]
+    fn parameter_division(&self, _: f64) -> (Vec<f64>, Vec<f64>) {
+        (vec![0.0, 1.0], vec![0.0, 1.0])
     }
 }
 

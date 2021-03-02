@@ -4,12 +4,7 @@ use std::f64::consts::PI;
 impl Sphere {
     /// Creates a sphere
     #[inline(always)]
-    pub fn new(center: Point3, radius: f64) -> Sphere {
-        Sphere {
-            center,
-            radius,
-        }
-    }
+    pub fn new(center: Point3, radius: f64) -> Sphere { Sphere { center, radius } }
     /// Returns the center
     #[inline(always)]
     pub fn center(&self) -> Point3 { self.center }
@@ -73,5 +68,18 @@ impl IncludeCurve<NURBSCurve<Vector4>> for Sphere {
                 let t = window[0] * (1.0 - t) + window[1] * t;
                 self.include(curve.subs(t))
             })
+    }
+}
+
+impl ParameterDivision2D for Sphere {
+    #[inline(always)]
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        let acos = f64::acos(1.0 - tol / self.radius);
+        let u_div: usize = 1 + (PI / acos).floor() as usize;
+        let v_div: usize = 1 + (2.0 * PI / acos).floor() as usize;
+        (
+            (0..=u_div).map(|i| PI * i as f64 / u_div as f64).collect(),
+            (0..=v_div).map(|j| PI * j as f64 / v_div as f64).collect(),
+        )
     }
 }
