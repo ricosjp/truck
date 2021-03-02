@@ -5,9 +5,6 @@ stages:
 test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
-    before_script:
-        - /root/.cargo/bin/rustup self update
-        - /root/.cargo/bin/rustup update
     script:
         - /root/.cargo/bin/cargo test
         - mkdir images
@@ -24,9 +21,6 @@ test:
 pages:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: pages
-    before_script:
-        - /root/.cargo/bin/rustup self update
-        - /root/.cargo/bin/rustup update
     script:
         - /root/.cargo/bin/cargo clean
         - /root/.cargo/bin/cargo test
