@@ -458,10 +458,6 @@ impl<V: Homogeneous<f64> + Tolerance> NURBSSurface<V> {
     /// Extracts the boundary of surface
     #[inline(always)]
     pub fn boundary(&self) -> NURBSCurve<V> { NURBSCurve::new(self.0.boundary()) }
-
-    //--------------------------------------------------------------//
-    //------------------------- WIP --------------------------------//
-    //--------------------------------------------------------------//
 }
 
 impl<V: Homogeneous<f64>> NURBSSurface<V>
