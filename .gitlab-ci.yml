@@ -6,7 +6,7 @@ test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
-        - /root/.cargo/bin/rustup default nightly
+        - sudo /root/.cargo/bin/rustup update
         - /root/.cargo/bin/cargo test
         - mkdir images
         - mv truck-platform/output images/platform
