@@ -23,6 +23,7 @@ pub mod base {
     pub use truck_base::cgmath64::*;
     pub use truck_base::geom_traits::*;
     pub use truck_base::tolerance::*;
+    pub use truck_base::{assert_near, assert_near2};
 }
 pub use base::*;
 /// Declares the nurbs

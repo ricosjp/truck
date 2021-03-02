@@ -528,7 +528,7 @@ impl NURBSSurface<Vector3> {
     ///
     /// let pt = surface.subs(0.3, 0.7);
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Point2::assert_near(&surface.subs(u, v), &pt);
+    /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
     pub fn search_parameter(&self, pt: Point2, hint: (f64, f64)) -> Option<(f64, f64)> {
@@ -792,7 +792,7 @@ impl NURBSSurface<Vector4> {
     ///
     /// let pt = surface.subs(0.3, 0.7);
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Point3::assert_near(&surface.subs(u, v), &pt);
+    /// assert_near!(surface.subs(u, v), pt);
     /// ```
     pub fn search_parameter(&self, pt: Point3, hint: (f64, f64)) -> Option<(f64, f64)> {
         let normal = self.normal(hint.0, hint.1);

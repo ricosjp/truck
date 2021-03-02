@@ -13,13 +13,13 @@ use crate::*;
 /// // Creates a plane
 /// let plane: Plane = Plane::new(pt0, pt1, pt2);
 /// // The origin of the plane is pt0.
-/// Point3::assert_near(&plane.origin(), &pt0);
+/// assert_near!(plane.origin(), pt0);
 /// // The u-axis of the plane is the vector from pt0 to pt1.
-/// Vector3::assert_near(&plane.u_axis(), &(pt1 - pt0));
+/// assert_near!(plane.u_axis(), pt1 - pt0);
 /// // The v-axis of the plane is the vector from pt0 to pt2.
-/// Vector3::assert_near(&plane.v_axis(), &(pt2 - pt0));
+/// assert_near!(plane.v_axis(), pt2 - pt0);
 /// // The normal is the normalized u-axis × v-axis
-/// Vector3::assert_near(&plane.normal(), &(pt1 - pt0).cross(pt2 - pt0).normalize());
+/// assert_near!(plane.normal(), (pt1 - pt0).cross(pt2 - pt0).normalize());
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Plane {
@@ -49,7 +49,7 @@ pub struct Plane {
 ///         // simple relation between a point and its normal.
 ///         let pt = sphere.subs(u, v);
 ///         let n = sphere.normal(u, v);
-///         Vector3::assert_near(&(pt - center), &(n * radius));
+///         assert_near!(pt - center, n * radius);
 /// 
 ///         // the proof of u is latitude and v is longitude
 ///         assert!((PI / 2.0 - u) * (pt.z - center.z) >= 0.0);

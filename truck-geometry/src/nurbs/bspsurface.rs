@@ -373,9 +373,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &bspsurface.subs(u, v),
-    ///             &Vector2::new(v, 2.0 * v * (1.0 - v) * (2.0 * u - 1.0) + u),
+    ///         assert_near2!(
+    ///             bspsurface.subs(u, v),
+    ///             Vector2::new(v, 2.0 * v * (1.0 - v) * (2.0 * u - 1.0) + u),
     ///         );
     ///     }
     /// }
@@ -412,9 +412,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &bspsurface.uder(u, v),
-    ///             &Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
+    ///         assert_near2!(
+    ///             bspsurface.uder(u, v),
+    ///             Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
     ///         );
     ///     }
     /// }
@@ -455,9 +455,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &bspsurface.vder(u, v),
-    ///             &Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
+    ///         assert_near2!(
+    ///             bspsurface.vder(u, v),
+    ///             Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
     ///         );
     ///     }
     /// }
@@ -526,9 +526,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &uderivation.subs(u, v),
-    ///             &Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
+    ///         assert_near2!(
+    ///             uderivation.subs(u, v),
+    ///             Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
     ///         );
     ///     }
     /// }
@@ -574,9 +574,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &vderivation.subs(u, v),
-    ///             &Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
+    ///         assert_near2!(
+    ///             vderivation.subs(u, v),
+    ///             Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
     ///         );
     ///     }
     /// }
@@ -1271,14 +1271,14 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     ///     for j in 0..=N {
     ///         let u = 0.68 * (i as f64) / (N as f64);
     ///         let v = 1.0 * (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part0.subs(u, v));
+    ///         assert_near2!(bspsurface.subs(u, v), part0.subs(u, v));
     ///     }
     /// }
     /// for i in 0..=N {
     ///     for j in 0..=N {
     ///         let u = 0.68 + 0.32 * (i as f64) / (N as f64);
     ///         let v = 1.0 * (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part1.subs(u, v));
+    ///         assert_near2!(bspsurface.subs(u, v), part1.subs(u, v));
     ///     }
     /// }
     /// ```
@@ -1347,14 +1347,14 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     ///     for j in 0..=N {
     ///         let u = 1.0 * (i as f64) / (N as f64);
     ///         let v = 0.68 * (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part0.subs(u, v));
+    ///         assert_near2!(bspsurface.subs(u, v), part0.subs(u, v));
     ///     }
     /// }
     /// for i in 0..=N {
     ///     for j in 0..=N {
     ///         let u = 1.0 * (i as f64) / (N as f64);
     ///         let v = 0.68 + 0.32 * (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part1.subs(u, v));
+    ///         assert_near2!(bspsurface.subs(u, v), part1.subs(u, v));
     ///     }
     /// }
     /// ```
@@ -1390,14 +1390,14 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
     /// let curve = bspsurface.sectional_curve(bnd_box);
     /// const N: usize = 100;
-    /// Vector3::assert_near2(&curve.subs(0.0), &bspsurface.subs(0.2, 0.3));
-    /// Vector3::assert_near2(&curve.subs(1.0), &bspsurface.subs(0.8, 0.6));
+    /// assert_near2!(curve.subs(0.0), bspsurface.subs(0.2, 0.3));
+    /// assert_near2!(curve.subs(1.0), bspsurface.subs(0.8, 0.6));
     /// for i in 0..=N {
     ///     println!("{}", i);
     ///     let t = i as f64 / N as f64;
     ///     let pt = curve.subs(t);
-    ///     f64::assert_near2(&pt[1], &(pt[0] * 0.5 - 0.1));
-    ///     f64::assert_near2(&pt[2], &(pt[0] * pt[0] + pt[1] * pt[1]));
+    ///     assert_near2!(pt[1], pt[0] * 0.5 - 0.1);
+    ///     assert_near2!(pt[2], pt[0] * pt[0] + pt[1] * pt[1]);
     /// }
     /// ```
     pub fn sectional_curve(&self, bnd_box: BoundingBox<Vector2>) -> BSplineCurve<V> {
@@ -1926,7 +1926,7 @@ impl BSplineSurface<Vector2> {
     ///
     /// let pt = Vector2::new(0.3, 0.7);
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector2::assert_near(&surface.subs(u, v), &pt);
+    /// assert_near!(&surface.subs(u, v), &pt);
     /// ```
     pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
         sub_search_parameter2d(self, Point2::from_vec(pt), hint.into(), 0).map(|v| v.into())
@@ -2010,7 +2010,7 @@ impl BSplineSurface<Vector3> {
     ///
     /// let pt = surface.subs(0.32, 0.76);
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector3::assert_near(&surface.subs(u, v), &pt);
+    /// assert_near!(&surface.subs(u, v), &pt);
     ///
     /// let pt = surface.subs(0.32, 0.76) + Vector3::new(0.0, 0.0, 0.001);
     /// assert!(surface.search_parameter(pt, (0.5, 0.5)).is_none());

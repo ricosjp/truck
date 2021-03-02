@@ -29,7 +29,7 @@ impl Plane {
     ///     Point3::new(1.0, 0.0, 0.0),
     ///     Point3::new(0.0, 1.0, 0.0),
     /// );
-    /// Vector3::assert_near(&plane.normal(), &Vector3::unit_z());
+    /// assert_near!(plane.normal(), Vector3::unit_z());
     /// ```
     #[inline(always)]
     pub fn normal(&self) -> Vector3 { (self.p - self.o).cross(self.q - self.o).normalize() }
@@ -49,7 +49,7 @@ impl Plane {
     ///     + prm[0] * plane.u_axis()
     ///     + prm[1] * plane.v_axis()
     ///     + prm[2] * plane.normal();
-    /// Point3::assert_near(&pt, &rev);
+    /// assert_near!(pt, rev);
     /// ```
     #[inline(always)]
     pub fn get_parameter(&self, pt: Point3) -> Vector3 {
@@ -77,7 +77,7 @@ impl Plane {
     ///         let v = j as f64 / N as f64;
     ///         let res = ParametricSurface::subs(&surface, u, v);
     ///         let ans = plane.subs(u, v);
-    ///         Point3::assert_near(&ans, &res);
+    ///         assert_near!(ans, res);
     ///     }
     /// }
     /// ```
@@ -109,7 +109,7 @@ impl Plane {
     ///         let v = j as f64 / N as f64;
     ///         let res = surface.subs(u, v);
     ///         let ans = plane.subs(u, v);
-    ///         Point3::assert_near(&ans, &res);
+    ///         assert_near!(ans, res);
     ///     }
     /// }
     /// ```
