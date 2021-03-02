@@ -26,12 +26,11 @@ impl<C: Curve> Invertible<C> {
 
 impl<S: BoundedSurface> Invertible<S> {
     #[inline(always)]
-    fn get_surface_parameter(&self, v: f64) -> f64 {
-        let (_, (v0, v1)) = self.entity.parameter_range();
+    fn get_surface_parameter(&self, u: f64, v: f64) -> (f64, f64) {
         if self.orientation {
-            v
+            (u, v)
         } else {
-            v0 + v1 - v
+            (v, u)
         }
     }
 }
@@ -66,22 +65,22 @@ where
     type Vector = S::Vector;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point {
-        let v = self.get_surface_parameter(v);
+        let (u, v) = self.get_surface_parameter(u, v);
         self.entity.subs(u, v)
     }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Self::Vector {
-        let v = self.get_surface_parameter(v);
+        let (u, v) = self.get_surface_parameter(u, v);
         self.entity.uder(u, v)
     }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Self::Vector {
-        let v = self.get_surface_parameter(v);
+        let (u, v) = self.get_surface_parameter(u, v);
         self.vder(u, v) * if self.orientation { 1.0 } else { -1.0 }
     }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
-        let v = self.get_surface_parameter(v);
+        let (u, v) = self.get_surface_parameter(u, v);
         self.normal(u, v) * if self.orientation { 1.0 } else { -1.0 }
     }
 }
@@ -91,7 +90,14 @@ where
     S: BoundedSurface,
     S::Vector: VectorSpace<Scalar = f64>,
 {
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
+        let (urange, vrange) = self.entity.parameter_range();
+        if self.orientation {
+            (urange, vrange)
+        } else {
+            (vrange, urange)
+        }
+    }
 }
 
 impl<E: Clone> truck_base::geom_traits::Invertible for Invertible<E> {
