@@ -21,6 +21,12 @@ impl<C> RevolutedCurve<C> {
     fn vector_rotation_matrix(&self, v: f64) -> Matrix4 {
         Matrix4::from_axis_angle(self.axis, Rad(v))
     }
+    /// Returns the entity curve
+    #[inline(always)]
+    pub fn entity_curve(&self) -> &C { &self.curve }
+    /// Returns the entity curve
+    #[inline(always)]
+    pub fn entity_curve_mut(&mut self) -> &mut C { &mut self.curve }
 }
 
 impl<C: Curve<Point = Point3, Vector = Vector3>> ParametricSurface for RevolutedCurve<C> {
