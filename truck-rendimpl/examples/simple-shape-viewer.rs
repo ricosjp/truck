@@ -140,7 +140,8 @@ impl App for MyApp {
         };
         let scene = Scene::new(handler.clone(), &scene_desc);
         let creator = scene.instance_creator();
-        let (instance, wireframe) = Self::load_shape(&creator, include_bytes!("cube.json").as_ref());
+        let (instance, wireframe) =
+            Self::load_shape(&creator, include_bytes!("punched-cube.json").as_ref());
         let mut app = MyApp {
             scene,
             creator,
@@ -267,7 +268,7 @@ impl App for MyApp {
                         }
                     }
                 };
-            },
+            }
             VirtualKeyCode::Space => {
                 self.render_mode = match self.render_mode {
                     RenderMode::NaiveSurface => RenderMode::SurfaceAndWireFrame,
