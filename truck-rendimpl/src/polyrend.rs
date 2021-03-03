@@ -38,6 +38,34 @@ impl Polygon for PolygonMesh {
             id: RenderID::gen(),
         }
     }
+    fn into_wire_frame(
+        &self,
+        creator: &InstanceCreator,
+        desc: &WireFrameInstanceDescriptor,
+    ) -> WireFrameInstance {
+        let device = creator.handler.device();
+        let positions: Vec<[f32; 3]> = self
+            .positions()
+            .iter()
+            .map(|p| p.cast().unwrap().into())
+            .collect();
+        let mut strips = Vec::<u32>::new();
+        self.faces().face_iter().for_each(|face| {
+            for i in 0..face.len() {
+                strips.push(face[i].pos as u32);
+                strips.push(face[(i + 1) % face.len()].pos as u32);
+            }
+        });
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsage::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsage::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: desc.wireframe_state.clone(),
+            shaders: Arc::clone(&creator.wire_shaders),
+            id: RenderID::gen(),
+        }
+    }
 }
 
 impl Polygon for StructuredMesh {
@@ -65,6 +93,46 @@ impl Polygon for StructuredMesh {
             polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
             state: desc.instance_state.clone(),
             shaders: Arc::clone(&creator.polygon_shaders),
+            id: RenderID::gen(),
+        }
+    }
+    fn into_wire_frame(
+        &self,
+        creator: &InstanceCreator,
+        desc: &WireFrameInstanceDescriptor,
+    ) -> WireFrameInstance {
+        let device = creator.handler.device();
+        let positions: Vec<[f32; 3]> = self
+            .positions()
+            .iter()
+            .flat_map(|vec| vec)
+            .map(|p| p.cast().unwrap().into())
+            .collect();
+        let mut strips = Vec::<u32>::new();
+        let len = positions[0].len() as u32;
+        for i in 1..positions.len() as u32 {
+            strips.push((i - 1) * len);
+            strips.push(i * len);
+        }
+        for j in 1..len {
+            strips.push(j - 1);
+            strips.push(j);
+        }
+        for i in 1..positions.len() as u32 {
+            for j in 1..len {
+                strips.push((i - 1) * len + j);
+                strips.push(i * len + j);
+                strips.push(i * len + (j - 1));
+                strips.push(i * len + j);
+            }
+        }
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsage::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsage::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: desc.wireframe_state.clone(),
+            shaders: Arc::clone(&creator.wire_shaders),
             id: RenderID::gen(),
         }
     }

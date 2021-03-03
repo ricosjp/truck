@@ -187,6 +187,12 @@ pub trait Polygon {
         creator: &InstanceCreator,
         desc: &PolygonInstanceDescriptor,
     ) -> PolygonInstance;
+    #[doc(hidden)]
+    fn into_wire_frame(
+        &self,
+        creator: &InstanceCreator,
+        state: &WireFrameInstanceDescriptor,
+    ) -> WireFrameInstance;
 }
 
 /// The trait for generating `ShapeInstance` from `Shell` and `Solid`.
