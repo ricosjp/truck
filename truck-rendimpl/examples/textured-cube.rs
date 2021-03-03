@@ -80,9 +80,9 @@ impl App for MyApp {
             },
             mesh_precision: 0.1,
         };
-        let shape = scene
+        let shape: ShapeInstance = scene
             .instance_creator()
-            .create_shape_instance(&Self::create_cube(), &desc);
+            .create_instance(&Self::create_cube(), &desc);
         scene.add_object(&shape);
         MyApp {
             scene,

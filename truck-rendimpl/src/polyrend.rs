@@ -10,7 +10,7 @@ struct AttrVertex {
     pub normal: [f32; 3],
 }
 
-impl Polygon for PolygonMesh {
+impl CreateBuffers for PolygonMesh {
     #[inline(always)]
     fn buffers(
         &self,
@@ -20,6 +20,10 @@ impl Polygon for PolygonMesh {
     ) -> (BufferHandler, BufferHandler) {
         ExpandedPolygon::from(self).buffers(vertex_usage, index_usage, device)
     }
+}
+
+impl IntoInstance<PolygonInstance> for PolygonMesh {
+    type Descriptor = PolygonInstanceDescriptor;
     #[inline(always)]
     fn into_instance(
         &self,
@@ -32,7 +36,7 @@ impl Polygon for PolygonMesh {
             creator.handler.device(),
         );
         PolygonInstance {
-            polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
+            polygon: (Arc::new(vb), Arc::new(ib)),
             state: desc.instance_state.clone(),
             shaders: Arc::clone(&creator.polygon_shaders),
             id: RenderID::gen(),
@@ -40,9 +44,10 @@ impl Polygon for PolygonMesh {
     }
 }
 
-impl IntoWireFrame for PolygonMesh {
+impl IntoInstance<WireFrameInstance> for PolygonMesh {
+    type Descriptor = WireFrameInstanceDescriptor;
     #[doc(hidden)]
-    fn into_wire_frame(
+    fn into_instance(
         &self,
         creator: &InstanceCreator,
         desc: &WireFrameInstanceDescriptor,
@@ -70,9 +75,10 @@ impl IntoWireFrame for PolygonMesh {
             id: RenderID::gen(),
         }
     }
+
 }
 
-impl Polygon for StructuredMesh {
+impl CreateBuffers for StructuredMesh {
     #[inline(always)]
     fn buffers(
         &self,
@@ -82,6 +88,10 @@ impl Polygon for StructuredMesh {
     ) -> (BufferHandler, BufferHandler) {
         ExpandedPolygon::from(self).buffers(vertex_usage, index_usage, device)
     }
+}
+
+impl IntoInstance<PolygonInstance> for StructuredMesh {
+    type Descriptor = PolygonInstanceDescriptor;
     #[inline(always)]
     fn into_instance(
         &self,
@@ -94,7 +104,7 @@ impl Polygon for StructuredMesh {
             creator.handler.device(),
         );
         PolygonInstance {
-            polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
+            polygon: (Arc::new(vb), Arc::new(ib)),
             state: desc.instance_state.clone(),
             shaders: Arc::clone(&creator.polygon_shaders),
             id: RenderID::gen(),
@@ -102,9 +112,10 @@ impl Polygon for StructuredMesh {
     }
 }
 
-impl IntoWireFrame for StructuredMesh {
+impl IntoInstance<WireFrameInstance> for StructuredMesh {
+    type Descriptor = WireFrameInstanceDescriptor;
     #[doc(hidden)]
-    fn into_wire_frame(
+    fn into_instance(
         &self,
         creator: &InstanceCreator,
         desc: &WireFrameInstanceDescriptor,
@@ -350,7 +361,7 @@ impl Rendered for PolygonInstance {
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let polygon = self.polygon.lock().unwrap().clone();
+        let polygon = self.polygon.clone();
         (polygon.0, Some(polygon.1))
     }
     #[inline(always)]

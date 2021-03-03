@@ -85,7 +85,7 @@ impl MyApp {
                     count = 0;
                 }
                 shell[0].lock_surface().unwrap().control_point_mut(3, 3)[1] = time.sin();
-                let mut another_object = creator.create_shape_instance(
+                let mut another_object = creator.create_instance(
                     &shell,
                     &ShapeInstanceDescriptor {
                         instance_state: Default::default(),
@@ -119,7 +119,7 @@ impl App for MyApp {
         let mut scene = Scene::new(handler.clone(), &desc);
         let creator = scene.instance_creator();
         let shell = Self::init_shell();
-        let object = creator.create_shape_instance(
+        let object = creator.create_instance(
             &shell,
             &ShapeInstanceDescriptor {
                 instance_state: Default::default(),

@@ -52,9 +52,9 @@ impl MyRender {
             .add_smooth_normals(0.5, false);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
-        let original_mesh = scene
+        let original_mesh: PolygonInstance = scene
             .instance_creator()
-            .create_polygon_instance(&mesh, &Default::default());
+            .create_instance(&mesh, &Default::default());
         let rad = Rad(2.0 * PI / NUM_OF_OBJECTS as f64);
         let mut mat = Matrix4::from_scale(size / 2.0);
         mat = Matrix4::from_translation(center.to_vec()) * mat;

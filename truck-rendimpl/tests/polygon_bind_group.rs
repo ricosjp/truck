@@ -114,7 +114,7 @@ fn exec_polymesh_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance = creator.create_polygon_instance(polygon, &inst_desc);
+            let instance: PolygonInstance = creator.create_instance(polygon, &inst_desc);
             let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
             assert!(exec_polygon_bgtest(
                 &mut scene,
@@ -167,7 +167,7 @@ fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance = creator.create_polygon_instance(polygon, &desc);
+            let instance: PolygonInstance = creator.create_instance(polygon, &desc);
             let shader = include_str!("shaders/mesh-tex-bindgroup.frag");
             assert!(exec_polygon_bgtest(
                 &mut scene,

@@ -64,10 +64,10 @@ impl MyApp {
             },
             mesh_precision: 0.005,
         };
-        let mut mesh = scene
+        let mesh: ShapeInstance = scene
             .instance_creator()
-            .create_shape_instance(&solid, &inst_desc);
-        scene.add_object(&mut mesh);
+            .create_instance(&solid, &inst_desc);
+        scene.add_object(&mesh);
     }
 }
 

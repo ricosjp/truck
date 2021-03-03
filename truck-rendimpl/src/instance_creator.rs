@@ -48,55 +48,23 @@ impl CreatorCreator for Scene {
 }
 
 impl InstanceCreator {
-    /// Creates `PolygonInstance` from `PolygonMesh` and `StructuredMesh`.
+    /// Creates Instance from object.
     #[inline(always)]
-    pub fn create_polygon_instance<P: Polygon>(
+    pub fn try_create_instance<Instance, T: TryIntoInstance<Instance>>(
         &self,
-        object: &P,
-        desc: &PolygonInstanceDescriptor,
-    ) -> PolygonInstance {
-        object.into_instance(self, desc)
-    }
-    /// Tries to create `ShapeInstance` from `Shell` and `Solid`.
-    /// # Failure
-    /// Failure occurs when the polylined boundary cannot be
-    /// converted to the polyline in the surface parameter space.
-    /// This may be due to the following reasons.
-    /// - A boundary curve is not contained within the surface.
-    /// - The surface is not injective, or is too complecated.
-    /// - The surface is not regular: non-degenerate and differentiable.
-    #[inline(always)]
-    pub fn try_create_shape_instance<S: Shape>(
-        &self,
-        object: &S,
-        desc: &ShapeInstanceDescriptor,
-    ) -> Option<ShapeInstance> {
+        object: &T,
+        desc: &T::Descriptor,
+    ) -> Option<Instance> {
         object.try_into_instance(self, desc)
     }
-    /// Creates `ShapeInstance` from `Shell` and `Solid`.
-    /// # Panics
-    /// Panic occurs when the polylined boundary cannot be
-    /// converted to the polyline in the surface parameter space.
-    /// This may be due to the following reasons.
-    /// - A boundary curve is not contained within the surface.
-    /// - The surface is not injective, or is too complecated.
-    /// - The surface is not regular: non-degenerate and differentiable.
+    /// Creates Instance from object.
     #[inline(always)]
-    pub fn create_shape_instance<S: Shape>(
+    pub fn create_instance<Instance, T: IntoInstance<Instance>>(
         &self,
-        object: &S,
-        desc: &ShapeInstanceDescriptor,
-    ) -> ShapeInstance {
+        object: &T,
+        desc: &T::Descriptor,
+    ) -> Instance {
         object.into_instance(self, desc)
-    }
-    /// Creates `WireFrameInstance` from `Shell` and `Solid`.
-    #[inline(always)]
-    pub fn create_wire_frame_instance<W: IntoWireFrame>(
-        &self,
-        object: &W,
-        desc: &WireFrameInstanceDescriptor,
-    ) -> WireFrameInstance {
-        object.into_wire_frame(self, desc)
     }
     /// Creates `Texture` for attaching faces.
     #[inline(always)]

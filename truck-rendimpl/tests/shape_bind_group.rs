@@ -103,9 +103,9 @@ fn exec_shape_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
     let answer = common::read_texture(scene.device_handler(), &answer);
     let inst_desc = nontex_inst_desc();
     let shell = test_shape();
-    let instance = scene
+    let instance: ShapeInstance = scene
         .instance_creator()
-        .create_shape_instance(&shell, &inst_desc);
+        .create_instance(&shell, &inst_desc);
     let shader = include_str!("shaders/shape-nontex-bindgroup.frag");
     let pngpath = out_dir.clone() + "shape-nontex-bindgroup.png";
     assert!(exec_shape_bgtest(
@@ -141,9 +141,9 @@ fn exec_shape_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
     );
     inst_desc.instance_state.texture = Some(Arc::new(attach));
     let shell = test_shape();
-    let instance = scene
+    let instance: ShapeInstance = scene
         .instance_creator()
-        .create_shape_instance(&shell, &inst_desc);
+        .create_instance(&shell, &inst_desc);
     let shader = include_str!("shaders/shape-tex-bindgroup.frag");
     let pngpath = out_dir.clone() + "shape-tex-bindgroup.png";
     assert!(exec_shape_bgtest(
