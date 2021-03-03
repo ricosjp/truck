@@ -16,13 +16,21 @@ use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
 
+enum RenderMode {
+    NaiveSurface,
+    NaiveWireFrame,
+    HiddenLineEliminate,
+    SurfaceAndWireFrame,
+}
+
 struct MyApp {
     scene: Scene,
+    creator: InstanceCreator,
     rotate_flag: bool,
     prev_cursor: Vector2,
-    path: Option<std::path::PathBuf>,
-    light_changed: Option<std::time::Instant>,
-    camera_changed: Option<std::time::Instant>,
+    instance: ShapeInstance,
+    wireframe: WireFrameInstance,
+    render_mode: RenderMode,
 }
 
 impl MyApp {
@@ -39,10 +47,51 @@ impl MyApp {
             40.0,
         )
     }
+    fn update_render_mode(&mut self) {
+        self.scene.clear_objects();
+        match self.render_mode {
+            RenderMode::NaiveSurface => {
+                self.instance.instance_state_mut().material = Material {
+                    albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                    reflectance: 0.5,
+                    roughness: 0.1,
+                    ambient_ratio: 0.02,
+                };
+                self.scene.add_object(&self.instance);
+            }
+            RenderMode::NaiveWireFrame => {
+                self.wireframe.instance_state_mut().color = Vector4::new(1.0, 1.0, 1.0, 1.0);
+                self.scene.add_object(&self.wireframe);
+            }
+            RenderMode::HiddenLineEliminate => {
+                self.instance.instance_state_mut().material = Material {
+                    albedo: Vector4::new(0.0, 0.0, 0.0, 1.0),
+                    reflectance: 0.0,
+                    roughness: 0.0,
+                    ambient_ratio: 1.0,
+                };
+                self.wireframe.instance_state_mut().color = Vector4::new(1.0, 1.0, 1.0, 1.0);
+                self.scene.add_object(&self.instance);
+                self.scene.add_object(&self.wireframe);
+            }
+            RenderMode::SurfaceAndWireFrame => {
+                self.instance.instance_state_mut().material = Material {
+                    albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                    reflectance: 0.5,
+                    roughness: 0.1,
+                    ambient_ratio: 0.02,
+                };
+                self.wireframe.instance_state_mut().color = Vector4::new(0.0, 0.0, 0.0, 1.0);
+                self.scene.add_object(&self.instance);
+                self.scene.add_object(&self.wireframe);
+            }
+        }
+    }
 
-    fn load_shape<R: Read>(&mut self, reader: R) {
-        let scene = &mut self.scene;
-        scene.clear_objects();
+    fn load_shape<R: Read>(
+        creator: &InstanceCreator,
+        reader: R,
+    ) -> (ShapeInstance, WireFrameInstance) {
         let solid = Solid::extract(serde_json::from_reader(reader).unwrap()).unwrap();
         let mut bdd_box = BoundingBox::new();
         solid.boundaries().iter().flatten().for_each(|face| {
@@ -54,20 +103,21 @@ impl MyApp {
         let inst_desc = ShapeInstanceDescriptor {
             instance_state: InstanceState {
                 matrix: mat.invert().unwrap(),
-                material: Material {
-                    albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
-                    reflectance: 0.5,
-                    roughness: 0.1,
-                    ambient_ratio: 0.02,
-                },
                 ..Default::default()
             },
             mesh_precision: 0.005,
         };
-        let mut mesh = scene
-            .instance_creator()
-            .create_shape_instance(&solid, &inst_desc);
-        scene.add_object(&mut mesh);
+        let wire_desc = ShapeWireFrameInstanceDescriptor {
+            wireframe_state: WireFrameState {
+                matrix: mat.invert().unwrap(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        (
+            creator.create_instance(&solid, &inst_desc),
+            creator.create_instance(&solid, &wire_desc),
+        )
     }
 }
 
@@ -88,22 +138,31 @@ impl App for MyApp {
             }],
             sample_count,
         };
+        let scene = Scene::new(handler.clone(), &scene_desc);
+        let creator = scene.instance_creator();
+        let (instance, wireframe) =
+            Self::load_shape(&creator, include_bytes!("punched-cube.json").as_ref());
         let mut app = MyApp {
-            scene: Scene::new(handler.clone(), &scene_desc),
+            scene,
+            creator,
+            instance,
+            wireframe,
             rotate_flag: false,
             prev_cursor: Vector2::zero(),
-            path: None,
-            camera_changed: None,
-            light_changed: None,
+            render_mode: RenderMode::NaiveSurface,
         };
-        app.load_shape(include_bytes!("cube.json").as_ref());
+        app.update_render_mode();
         app
     }
 
     fn app_title<'a>() -> Option<&'a str> { Some("simple shape viewer") }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
-        self.path = Some(path);
+        let file = std::fs::File::open(path).unwrap();
+        let (instance, wireframe) = Self::load_shape(&self.creator, file);
+        self.instance = instance;
+        self.wireframe = wireframe;
+        self.update_render_mode();
         Self::default_control_flow()
     }
 
@@ -163,20 +222,16 @@ impl App for MyApp {
         Self::default_control_flow()
     }
     fn keyboard_input(&mut self, input: KeyboardInput, _: bool) -> ControlFlow {
+        if input.state != ElementState::Pressed {
+            return Self::default_control_flow();
+        }
         let keycode = match input.virtual_keycode {
             Some(keycode) => keycode,
             None => return Self::default_control_flow(),
         };
         match keycode {
             VirtualKeyCode::P => {
-                if let Some(ref instant) = self.camera_changed {
-                    let time = instant.elapsed().as_secs_f64();
-                    if time < 0.2 {
-                        return Self::default_control_flow();
-                    }
-                }
                 let camera = &mut self.scene.descriptor_mut().camera;
-                self.camera_changed = Some(std::time::Instant::now());
                 *camera = match camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
                         camera.matrix,
@@ -190,17 +245,10 @@ impl App for MyApp {
                 };
             }
             VirtualKeyCode::L => {
-                if let Some(ref instant) = self.light_changed {
-                    let time = instant.elapsed().as_secs_f64();
-                    if time < 0.2 {
-                        return Self::default_control_flow();
-                    }
-                }
                 let (light, camera) = {
                     let desc = self.scene.descriptor_mut();
                     (&mut desc.lights[0], &desc.camera)
                 };
-                self.light_changed = Some(std::time::Instant::now());
                 *light = match light.light_type {
                     LightType::Point => {
                         let mut vec = camera.position();
@@ -221,16 +269,18 @@ impl App for MyApp {
                     }
                 };
             }
+            VirtualKeyCode::Space => {
+                self.render_mode = match self.render_mode {
+                    RenderMode::NaiveSurface => RenderMode::SurfaceAndWireFrame,
+                    RenderMode::SurfaceAndWireFrame => RenderMode::NaiveWireFrame,
+                    RenderMode::NaiveWireFrame => RenderMode::HiddenLineEliminate,
+                    RenderMode::HiddenLineEliminate => RenderMode::NaiveSurface,
+                };
+                self.update_render_mode();
+            }
             _ => {}
         }
         Self::default_control_flow()
-    }
-
-    fn update(&mut self, _: &DeviceHandler) {
-        if let Some(path) = self.path.take() {
-            let file = std::fs::File::open(path).unwrap();
-            self.load_shape(file);
-        }
     }
 
     fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }

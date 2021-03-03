@@ -77,9 +77,9 @@ impl App for MyApp {
         let e = builder::tsweep(&v, Vector3::unit_x());
         let f = builder::tsweep(&e, Vector3::unit_y());
         let cube = builder::tsweep(&f, Vector3::unit_z());
-        let instance = scene
+        let instance: ShapeInstance = scene
             .instance_creator()
-            .create_shape_instance(&cube, &Default::default());
+            .create_instance(&cube, &Default::default());
         let mut matrices = Vec::new();
         let instances: Vec<_> = (0..N)
             .flat_map(move |i| (0..N).map(move |j| (i, j)))

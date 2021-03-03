@@ -16,7 +16,7 @@ extern crate truck_platform;
 extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use truck_platform::{wgpu::*, *};
 
 /// Re-exports `truck_modeling`.
@@ -85,9 +85,16 @@ pub struct ShapeInstanceDescriptor {
     pub mesh_precision: f64,
 }
 
-/// Configures of wire frame instance
+/// Configures of wire frame instance of polygon
+#[derive(Clone, Debug, Default)]
+pub struct PolygonWireFrameInstanceDescriptor {
+    /// configure of wire frame
+    pub wireframe_state: WireFrameState,
+}
+
+/// Configures of wire frame instance of shape
 #[derive(Clone, Debug)]
-pub struct WireFrameInstanceDescriptor {
+pub struct ShapeWireFrameInstanceDescriptor {
     /// configure of wire frame
     pub wireframe_state: WireFrameState,
     /// precision for polyline
@@ -124,7 +131,7 @@ struct WireShaders {
 /// with original, however, its render id is different from the one of original.
 #[derive(Debug)]
 pub struct PolygonInstance {
-    polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
+    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     state: InstanceState,
     shaders: Arc<PolygonShaders>,
     id: RenderID,
@@ -172,8 +179,8 @@ pub trait CreatorCreator {
     fn instance_creator(&self) -> InstanceCreator;
 }
 
-/// The trait for generating `PolygonInstance` from `PolygonMesh` and `StructuredMesh`.
-pub trait Polygon {
+/// The trait for Buffer Objects.
+pub trait CreateBuffers {
     /// Creates buffer handlers of attributes and indices.
     fn buffers(
         &self,
@@ -181,34 +188,30 @@ pub trait Polygon {
         index_usage: BufferUsage,
         device: &Device,
     ) -> (BufferHandler, BufferHandler);
-    #[doc(hidden)]
-    fn into_instance(
-        &self,
-        creator: &InstanceCreator,
-        desc: &PolygonInstanceDescriptor,
-    ) -> PolygonInstance;
 }
 
-/// The trait for generating `ShapeInstance` from `Shell` and `Solid`.
-pub trait Shape {
+/// The trait for generating `Instance` from `Self`.
+pub trait TryIntoInstance<Instance> {
+    /// Configuation deacriptor for instance.
+    type Descriptor;
     #[doc(hidden)]
     fn try_into_instance(
         &self,
         creator: &InstanceCreator,
-        desc: &ShapeInstanceDescriptor,
-    ) -> Option<ShapeInstance>;
-    #[doc(hidden)]
+        desc: &Self::Descriptor,
+    ) -> Option<Instance>;
+}
+
+/// The trait for generating `Instance` from `Self`.
+pub trait IntoInstance<Instance> {
+    /// Configuation deacriptor for instance.
+    type Descriptor;
+    /// Creates `Instance` from `self`.
     fn into_instance(
         &self,
         creator: &InstanceCreator,
-        desc: &ShapeInstanceDescriptor,
-    ) -> ShapeInstance;
-    #[doc(hidden)]
-    fn into_wire_frame(
-        &self,
-        creator: &InstanceCreator,
-        state: &WireFrameInstanceDescriptor,
-    ) -> WireFrameInstance;
+        desc: &Self::Descriptor,
+    ) -> Instance;
 }
 
 #[derive(Debug, Clone)]

@@ -101,8 +101,16 @@ fn add_face(
     Some(())
 }
 
-impl Shape for Shell {
-    #[doc(hidden)]
+impl TryIntoInstance<ShapeInstance> for Shell {
+    type Descriptor = ShapeInstanceDescriptor;
+    /// Tries to create `ShapeInstance` from `Shell`.
+    /// # Failures
+    /// Failure occurs when the polylined boundary cannot be
+    /// converted to the polyline in the surface parameter space.
+    /// This may be due to the following reasons.
+    /// - A boundary curve is not contained within the surface.
+    /// - The surface is not injective, or is too complecated.
+    /// - The surface is not regular: non-degenerate and differentiable.
     fn try_into_instance(
         &self,
         creator: &InstanceCreator,
@@ -127,7 +135,18 @@ impl Shape for Shell {
             id: RenderID::gen(),
         })
     }
-    #[doc(hidden)]
+}
+
+impl IntoInstance<ShapeInstance> for Shell {
+    type Descriptor = ShapeInstanceDescriptor;
+    /// Creates `ShapeInstance` from `Shell`.
+    /// # Panics
+    /// Panic occurs when the polylined boundary cannot be
+    /// converted to the polyline in the surface parameter space.
+    /// This may be due to the following reasons.
+    /// - A boundary curve is not contained within the surface.
+    /// - The surface is not injective, or is too complecated.
+    /// - The surface is not regular: non-degenerate and differentiable.
     #[inline(always)]
     fn into_instance(
         &self,
@@ -137,11 +156,14 @@ impl Shape for Shell {
         self.try_into_instance(creator, desc)
             .expect("failed to create instance")
     }
-    #[doc(hidden)]
-    fn into_wire_frame(
+}
+
+impl IntoInstance<WireFrameInstance> for Shell {
+    type Descriptor = ShapeWireFrameInstanceDescriptor;
+    fn into_instance(
         &self,
         creator: &InstanceCreator,
-        desc: &WireFrameInstanceDescriptor,
+        desc: &ShapeWireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
         let handler = &creator.handler;
         let mut lengths = Vec::new();
@@ -179,8 +201,16 @@ impl Shape for Shell {
     }
 }
 
-impl Shape for Solid {
-    #[doc(hidden)]
+impl TryIntoInstance<ShapeInstance> for Solid {
+    type Descriptor = ShapeInstanceDescriptor;
+    /// Tries to create `ShapeInstance` from `Solid`.
+    /// # Failures
+    /// Failure occurs when the polylined boundary cannot be
+    /// converted to the polyline in the surface parameter space.
+    /// This may be due to the following reasons.
+    /// - A boundary curve is not contained within the surface.
+    /// - The surface is not injective, or is too complecated.
+    /// - The surface is not regular: non-degenerate and differentiable.
     fn try_into_instance(
         &self,
         creator: &InstanceCreator,
@@ -208,7 +238,18 @@ impl Shape for Solid {
             id: RenderID::gen(),
         })
     }
-    #[doc(hidden)]
+}
+
+impl IntoInstance<ShapeInstance> for Solid {
+    type Descriptor = ShapeInstanceDescriptor;
+    /// Tries to create `ShapeInstance` from `Solid`.
+    /// # Panics
+    /// Panic occurs when the polylined boundary cannot be
+    /// converted to the polyline in the surface parameter space.
+    /// This may be due to the following reasons.
+    /// - A boundary curve is not contained within the surface.
+    /// - The surface is not injective, or is too complecated.
+    /// - The surface is not regular: non-degenerate and differentiable.
     #[inline(always)]
     fn into_instance(
         &self,
@@ -218,11 +259,14 @@ impl Shape for Solid {
         self.try_into_instance(creator, desc)
             .expect("failed to create instance")
     }
-    #[doc(hidden)]
-    fn into_wire_frame(
+}
+
+impl IntoInstance<WireFrameInstance> for Solid {
+    type Descriptor = ShapeWireFrameInstanceDescriptor;
+    fn into_instance(
         &self,
         creator: &InstanceCreator,
-        desc: &WireFrameInstanceDescriptor,
+        desc: &ShapeWireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
         let handler = &creator.handler;
         let mut lengths = Vec::new();

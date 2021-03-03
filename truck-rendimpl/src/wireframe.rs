@@ -10,10 +10,10 @@ impl Default for WireFrameState {
     }
 }
 
-impl Default for WireFrameInstanceDescriptor {
+impl Default for ShapeWireFrameInstanceDescriptor {
     #[inline(always)]
-    fn default() -> WireFrameInstanceDescriptor {
-        WireFrameInstanceDescriptor {
+    fn default() -> Self {
+        Self {
             wireframe_state: WireFrameState::default(),
             polyline_precision: 0.005,
         }
@@ -32,14 +32,17 @@ impl WireFrameInstance {
             id: RenderID::gen(),
         }
     }
+    /// Returns the wireframe state
+    #[inline(always)]
+    pub fn instance_state(&self) -> &WireFrameState { &self.state }
+    /// Returns the mutable reference to wireframe state
+    #[inline(always)]
+    pub fn instance_state_mut(&mut self) -> &mut WireFrameState { &mut self.state }
 }
 
 impl Rendered for WireFrameInstance {
     impl_render_id!(id);
-    fn vertex_buffer(
-        &self,
-        _: &DeviceHandler,
-    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
+    fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         (self.vertices.clone(), Some(self.strips.clone()))
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
@@ -132,13 +135,11 @@ impl Rendered for WireFrameInstance {
                 vertex_buffers: &[VertexBufferDescriptor {
                     stride: std::mem::size_of::<[f32; 3]>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
-                    attributes: &[
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float3,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                    ],
+                    attributes: &[VertexAttributeDescriptor {
+                        format: VertexFormat::Float3,
+                        offset: 0,
+                        shader_location: 0,
+                    }],
                 }],
             },
             sample_count,

@@ -14,5 +14,5 @@ layout(set = 1, binding = 0) uniform ModelMatrix {
 void main() {
     vec4 world_position = matrix * vec4(position, 1.0);
     gl_Position = camera_projection * world_position;
-    gl_Position.z -= 1.0e-6;
+    gl_Position.z -= 1.0e-4;
 }
