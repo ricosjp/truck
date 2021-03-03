@@ -159,11 +159,11 @@ impl IntoInstance<ShapeInstance> for Shell {
 }
 
 impl IntoInstance<WireFrameInstance> for Shell {
-    type Descriptor = WireFrameInstanceDescriptor;
+    type Descriptor = ShapeWireFrameInstanceDescriptor;
     fn into_instance(
         &self,
         creator: &InstanceCreator,
-        desc: &WireFrameInstanceDescriptor,
+        desc: &ShapeWireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
         let handler = &creator.handler;
         let mut lengths = Vec::new();
@@ -262,11 +262,11 @@ impl IntoInstance<ShapeInstance> for Solid {
 }
 
 impl IntoInstance<WireFrameInstance> for Solid {
-    type Descriptor = WireFrameInstanceDescriptor;
+    type Descriptor = ShapeWireFrameInstanceDescriptor;
     fn into_instance(
         &self,
         creator: &InstanceCreator,
-        desc: &WireFrameInstanceDescriptor,
+        desc: &ShapeWireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
         let handler = &creator.handler;
         let mut lengths = Vec::new();

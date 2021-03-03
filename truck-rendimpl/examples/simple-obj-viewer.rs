@@ -105,7 +105,7 @@ impl MyApp {
             },
             ..Default::default()
         };
-        let wire_inst_desc = WireFrameInstanceDescriptor {
+        let wire_inst_desc = PolygonWireFrameInstanceDescriptor {
             wireframe_state: WireFrameState {
                 matrix: mat.invert().unwrap(),
                 ..Default::default()

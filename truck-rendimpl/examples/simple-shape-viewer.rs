@@ -107,7 +107,7 @@ impl MyApp {
             },
             mesh_precision: 0.005,
         };
-        let wire_desc = WireFrameInstanceDescriptor {
+        let wire_desc = ShapeWireFrameInstanceDescriptor {
             wireframe_state: WireFrameState {
                 matrix: mat.invert().unwrap(),
                 ..Default::default()

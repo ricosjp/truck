@@ -45,12 +45,12 @@ impl IntoInstance<PolygonInstance> for PolygonMesh {
 }
 
 impl IntoInstance<WireFrameInstance> for PolygonMesh {
-    type Descriptor = WireFrameInstanceDescriptor;
+    type Descriptor = PolygonWireFrameInstanceDescriptor;
     #[doc(hidden)]
     fn into_instance(
         &self,
         creator: &InstanceCreator,
-        desc: &WireFrameInstanceDescriptor,
+        desc: &PolygonWireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
         let device = creator.handler.device();
         let positions: Vec<[f32; 3]> = self
@@ -113,12 +113,12 @@ impl IntoInstance<PolygonInstance> for StructuredMesh {
 }
 
 impl IntoInstance<WireFrameInstance> for StructuredMesh {
-    type Descriptor = WireFrameInstanceDescriptor;
+    type Descriptor = PolygonWireFrameInstanceDescriptor;
     #[doc(hidden)]
     fn into_instance(
         &self,
         creator: &InstanceCreator,
-        desc: &WireFrameInstanceDescriptor,
+        desc: &PolygonWireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
         let device = creator.handler.device();
         let positions: Vec<[f32; 3]> = self
