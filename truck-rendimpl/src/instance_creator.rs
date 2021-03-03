@@ -91,9 +91,9 @@ impl InstanceCreator {
     }
     /// Creates `WireFrameInstance` from `Shell` and `Solid`.
     #[inline(always)]
-    pub fn create_wire_frame_instance<S: Shape>(
+    pub fn create_wire_frame_instance<W: IntoWireFrame>(
         &self,
-        object: &S,
+        object: &W,
         desc: &WireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
         object.into_wire_frame(self, desc)

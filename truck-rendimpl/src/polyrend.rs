@@ -38,6 +38,10 @@ impl Polygon for PolygonMesh {
             id: RenderID::gen(),
         }
     }
+}
+
+impl IntoWireFrame for PolygonMesh {
+    #[doc(hidden)]
     fn into_wire_frame(
         &self,
         creator: &InstanceCreator,
@@ -96,6 +100,10 @@ impl Polygon for StructuredMesh {
             id: RenderID::gen(),
         }
     }
+}
+
+impl IntoWireFrame for StructuredMesh {
+    #[doc(hidden)]
     fn into_wire_frame(
         &self,
         creator: &InstanceCreator,

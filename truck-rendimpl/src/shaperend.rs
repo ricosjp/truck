@@ -137,6 +137,9 @@ impl Shape for Shell {
         self.try_into_instance(creator, desc)
             .expect("failed to create instance")
     }
+}
+
+impl IntoWireFrame for Shell {
     #[doc(hidden)]
     fn into_wire_frame(
         &self,
@@ -218,6 +221,9 @@ impl Shape for Solid {
         self.try_into_instance(creator, desc)
             .expect("failed to create instance")
     }
+}
+
+impl IntoWireFrame for Solid {
     #[doc(hidden)]
     fn into_wire_frame(
         &self,
