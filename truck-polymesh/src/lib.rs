@@ -46,7 +46,7 @@ pub struct Faces {
 /// The polygon data is held in a method compliant with wavefront obj.
 /// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
 /// and each face vertex accesses those values by an indices triple.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct PolygonMesh {
     positions: Vec<Point3>,
     uv_coords: Vec<Vector2>,
@@ -72,6 +72,8 @@ mod normal_filters;
 /// I/O of wavefront obj
 pub mod obj;
 mod optimizing;
+/// I/O of STL
+pub mod stl;
 /// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
 pub mod polygon_mesh;
 mod splitting;
