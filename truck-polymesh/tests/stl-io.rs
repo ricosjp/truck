@@ -32,3 +32,19 @@ fn stl_oi_test() {
     assert_eq!(mesh, amesh);
     assert_eq!(mesh, bmesh);
 }
+
+#[test]
+fn stl_io_test() {
+    let amesh = STLReader::<&[u8]>::new(include_bytes!("data/bunny_ascii.stl"), STLType::Automatic)
+        .unwrap()
+        .collect::<Result<Vec<_>>>()
+        .unwrap();
+    let bmesh = STLReader::<&[u8]>::new(include_bytes!("data/bunny_binary.stl"), STLType::Automatic)
+        .unwrap()
+        .collect::<Result<Vec<_>>>()
+        .unwrap();
+    assert_eq!(amesh, bmesh);
+    let mut bytes = Vec::<u8>::new();
+    stl::write_binary(bmesh.iter().map(|face| face.clone()), &mut bytes).unwrap();
+    assert_eq!(&bytes[80..], &include_bytes!("data/bunny_binary.stl")[80..]);
+}
