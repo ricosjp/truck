@@ -2,6 +2,12 @@
 
 The version is of the bottom crate `truck-rendimpl`.
 
+## Unreleased
+
+- Specified surface for STEP I/O and modeling revolved sphere and cone.
+  - In `truck-base`, the trait `Surface` is decomposed into `ParametricSurface`, `BoundedSurface`, `IncludeCurve` and `Invertible`.
+  - In `truck-geometry`, specified surface, `Plane` and `Sphere`, and some decorators are prepared.
+
 ## v0.2
 
 ### v0.2.1
