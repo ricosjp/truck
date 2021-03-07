@@ -19,7 +19,7 @@ pub struct STLFace {
 
 impl STLFace {
     #[inline(always)]
-    fn is_empty(&self) -> bool { self.normal == [0.0, 0.0, 0.0] && self.vertices.is_empty() }
+    fn is_empty(&self) -> bool { self == &STLFace::default() }
 }
 
 /// STL reading iterator
@@ -130,7 +130,7 @@ fn ascii_one_read<R: BufRead>(lines: &mut Lines<R>) -> Result<Option<STLFace>> {
             ];
             num_ver += 1;
         } else if &line[0..8] == "endfacet" {
-            if num_ver != 2 {
+            if num_ver != 3 {
                 return Err(syntax_error().into());
             }
             return Ok(Some(face));
@@ -202,11 +202,6 @@ where
     writer.write(&[0u8; 80])?;
     writer.write(&(iter.len() as u32).to_le_bytes())?;
     iter.try_for_each(|face| {
-        if face.vertices.len() != 3 {
-            return Err(
-                std::io::Error::new(std::io::ErrorKind::InvalidData, "syntax error").into(),
-            );
-        }
         writer.write(bytemuck::cast_slice(&[face.normal]))?;
         writer.write(bytemuck::cast_slice(&face.vertices))?;
         writer.write(&[0u8, 0u8])?;
