@@ -278,9 +278,9 @@ impl<'a> IntoIterator for &'a PolygonMesh {
 
 fn signup_vector(vector: [f32; 3], map: &mut HashMap<[i64; 3], usize>) -> usize {
     let vector = [
-        ((vector[0] as f64 + TOLERANCE * 0.5) / TOLERANCE) as i64,
-        ((vector[1] as f64 + TOLERANCE * 0.5) / TOLERANCE) as i64,
-        ((vector[2] as f64 + TOLERANCE * 0.5) / TOLERANCE) as i64,
+        ((vector[0] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
+        ((vector[1] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
+        ((vector[2] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
     ];
     match map.get(&vector) {
         Some(res) => *res,
@@ -317,18 +317,18 @@ impl std::iter::FromIterator<STLFace> for PolygonMesh {
         positions.sort_by(|a, b| a.1.cmp(&b.1));
         let positions: Vec<Point3> = positions.into_iter().map(|(p, _)| {
             Point3::new(
-                p[0] as f64 * TOLERANCE,
-                p[1] as f64 * TOLERANCE,
-                p[2] as f64 * TOLERANCE,
+                p[0] as f64 * TOLERANCE * 0.5,
+                p[1] as f64 * TOLERANCE * 0.5,
+                p[2] as f64 * TOLERANCE * 0.5,
             )
         }).collect();
         let mut normals: Vec<([i64; 3], usize)> = normals.into_iter().collect();
         normals.sort_by(|a, b| a.1.cmp(&b.1));
         let normals: Vec<Vector3> = normals.into_iter().map(|(p, _)| {
             Vector3::new(
-                p[0] as f64 * TOLERANCE,
-                p[1] as f64 * TOLERANCE,
-                p[2] as f64 * TOLERANCE,
+                p[0] as f64 * TOLERANCE * 0.5,
+                p[1] as f64 * TOLERANCE * 0.5,
+                p[2] as f64 * TOLERANCE * 0.5,
             )
         }).collect();
         PolygonMesh::debug_new(positions, Vec::new(), normals, faces)
