@@ -6,15 +6,15 @@ fn stl_oi_test() {
     let mesh = vec![
         STLFace {
             normal: [0.0, 0.0, 1.0],
-            vertices: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            vertices: [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
         },
         STLFace {
             normal: [0.0, 1.0, 1.0],
-            vertices: vec![[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]],
+            vertices: [[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]],
         },
         STLFace {
             normal: [1.0, 0.0, 1.0],
-            vertices: vec![[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            vertices: [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
         },
     ];
     let mut ascii = Vec::new();
@@ -46,5 +46,13 @@ fn stl_io_test() {
     assert_eq!(amesh, bmesh);
     let mut bytes = Vec::<u8>::new();
     stl::write_binary(bmesh.iter().map(|face| face.clone()), &mut bytes).unwrap();
+    // Binary data is free from notational distortions except for the headers.
     assert_eq!(&bytes[80..], &include_bytes!("data/bunny_binary.stl")[80..]);
+}
+
+#[test]
+fn teapot_output() {
+    let polymesh = obj::read::<&[u8]>(include_bytes!("data/teapot-position.obj")).unwrap();
+    let mut file = std::fs::File::create("teapot-binary.stl").unwrap();
+    stl::write_ascii(&polymesh, &mut file).unwrap();
 }
