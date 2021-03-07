@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use crate::*;
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Lines, Read, Write};
 
 fn syntax_error() -> std::io::Error {
@@ -192,15 +193,11 @@ pub fn write_ascii<I: IntoIterator<Item = STLFace>, W: Write>(
 }
 
 /// Writes binary STL data
-pub fn write_binary<I, W>(
-    iter: I,
-    writer: &mut W,
-) -> Result<()>
+pub fn write_binary<I, W>(iter: I, writer: &mut W) -> Result<()>
 where
     I: IntoIterator<Item = STLFace>,
     I::IntoIter: ExactSizeIterator,
-    W: Write,
-{
+    W: Write, {
     let mut iter = iter.into_iter();
     writer.write(&[0u8; 80])?;
     writer.write(&(iter.len() as u32).to_le_bytes())?;
@@ -281,6 +278,65 @@ impl<'a> IntoIterator for &'a PolygonMesh {
             current_face: None,
             current_vertex: 0,
         }
+    }
+}
+
+fn signup_vector(vector: [f32; 3], map: &mut HashMap<[i64; 3], usize>) -> usize {
+    let vector = [
+        ((vector[0] as f64 + TOLERANCE * 0.5) / TOLERANCE) as i64,
+        ((vector[1] as f64 + TOLERANCE * 0.5) / TOLERANCE) as i64,
+        ((vector[2] as f64 + TOLERANCE * 0.5) / TOLERANCE) as i64,
+    ];
+    match map.get(&vector) {
+        Some(res) => *res,
+        None => {
+            let res = map.len();
+            map.insert(vector, res);
+            res
+        }
+    }
+}
+
+impl std::iter::FromIterator<STLFace> for PolygonMesh {
+    fn from_iter<I: IntoIterator<Item = STLFace>>(iter: I) -> PolygonMesh {
+        let mut positions = HashMap::<[i64; 3], usize>::new();
+        let mut normals = HashMap::<[i64; 3], usize>::new();
+        let faces: Vec<[Vertex; 3]> = iter
+            .into_iter()
+            .map(|face| {
+                let n = signup_vector(face.normal, &mut normals);
+                let p = [
+                    signup_vector(face.vertices[0], &mut positions),
+                    signup_vector(face.vertices[1], &mut positions),
+                    signup_vector(face.vertices[2], &mut positions),
+                ];
+                [
+                    (p[0], None, Some(n)).into(),
+                    (p[1], None, Some(n)).into(),
+                    (p[2], None, Some(n)).into(),
+                ]
+            })
+            .collect();
+        let faces = Faces::from_tri_and_quad_faces(faces, Vec::new());
+        let mut positions: Vec<([i64; 3], usize)> = positions.into_iter().collect();
+        positions.sort_by(|a, b| a.1.cmp(&b.1));
+        let positions: Vec<Point3> = positions.into_iter().map(|(p, _)| {
+            Point3::new(
+                p[0] as f64 * TOLERANCE,
+                p[1] as f64 * TOLERANCE,
+                p[2] as f64 * TOLERANCE,
+            )
+        }).collect();
+        let mut normals: Vec<([i64; 3], usize)> = normals.into_iter().collect();
+        normals.sort_by(|a, b| a.1.cmp(&b.1));
+        let normals: Vec<Vector3> = normals.into_iter().map(|(p, _)| {
+            Vector3::new(
+                p[0] as f64 * TOLERANCE,
+                p[1] as f64 * TOLERANCE,
+                p[2] as f64 * TOLERANCE,
+            )
+        }).collect();
+        PolygonMesh::debug_new(positions, Vec::new(), normals, faces)
     }
 }
 

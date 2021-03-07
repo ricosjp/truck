@@ -51,8 +51,15 @@ fn stl_io_test() {
 }
 
 #[test]
-fn teapot_output() {
-    let polymesh = obj::read::<&[u8]>(include_bytes!("data/teapot-position.obj")).unwrap();
-    let mut file = std::fs::File::create("teapot-binary.stl").unwrap();
-    stl::write_ascii(&polymesh, &mut file).unwrap();
+fn through_polymesh() {
+    let iter = STLReader::<&[u8]>::new(include_bytes!("data/bunny_binary.stl"), STLType::Automatic).unwrap();
+    let polymesh: PolygonMesh = iter.map(|face| face.unwrap()).collect();
+    let mesh: Vec<STLFace> = polymesh.into_iter().collect();
+    let iter = STLReader::<&[u8]>::new(include_bytes!("data/bunny_binary.stl"), STLType::Automatic).unwrap();
+    for (face0, face1) in mesh.iter().zip(iter) {
+        let face1 = face1.unwrap();
+        assert!(f32::abs(face0.normal[0] - face1.normal[0]) < 1.0e-3);
+        assert!(f32::abs(face0.normal[1] - face1.normal[1]) < 1.0e-3);
+        assert!(f32::abs(face0.normal[2] - face1.normal[2]) < 1.0e-3);
+    } 
 }
