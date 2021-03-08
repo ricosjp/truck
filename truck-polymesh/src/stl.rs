@@ -390,6 +390,6 @@ impl std::iter::FromIterator<STLFace> for PolygonMesh {
 
 /// Read STL file and parse to `PolygonMesh`.
 #[inline(always)]
-pub fn read<P: AsRef<std::path::Path>>(path: P, stl_type: STLType) -> Result<PolygonMesh> {
-    STLReader::new(std::fs::File::open(path)?, stl_type)?.collect()
+pub fn read<R: Read>(reader: R, stl_type: STLType) -> Result<PolygonMesh> {
+    STLReader::new(reader, stl_type)?.collect()
 }
