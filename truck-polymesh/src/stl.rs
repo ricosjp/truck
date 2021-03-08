@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::*;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Lines, Read, Write};
@@ -25,18 +23,24 @@ impl STLFace {
 /// STL reading iterator
 #[derive(Debug)]
 pub enum STLReader<R: Read> {
-    /// ASCII binary iterator
+    #[doc(hidden)]
     ASCII(Lines<BufReader<R>>),
-    /// Binary iterator
+    #[doc(hidden)]
     Binary(R, usize),
 }
 
 /// STL type
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum STLType {
-    /// Read the first word and determine stl type automatically.
+    /// Determine stl type automatically.
+    /// 
+    /// **Reading**: if the first 5 bytes are..
+    /// - "solid" => ascii format
+    /// - otherwise => binary format
+    /// 
+    /// **Writing**: always binary format.
     Automatic,
-    /// text format
+    /// ascii format
     ASCII,
     /// binary format
     Binary,
@@ -63,13 +67,21 @@ impl<R: Read> STLReader<R> {
         let length = u32::from_le_bytes(length_bytes) as usize;
         Ok(STLReader::Binary(reader, length))
     }
-    /// Cretes new STL reader
+    /// Creates new STL reader
     #[inline(always)]
     pub fn new(reader: R, stl_type: STLType) -> Result<Self> {
         match stl_type {
             STLType::Automatic => Self::binary_reader(reader, true),
             STLType::Binary => Self::binary_reader(reader, false),
             STLType::ASCII => Ok(Self::text_reader(reader)),
+        }
+    }
+    /// Returns the STL type
+    #[inline(always)]
+    pub fn stl_type(&self) -> STLType {
+        match self {
+            STLReader::ASCII(_) => STLType::ASCII,
+            STLReader::Binary(_, _) => STLType::Binary,
         }
     }
 }
@@ -145,7 +157,7 @@ fn read_vector<R: Read>(reader: &mut R) -> Result<[f32; 3]> {
     let size1 = reader.read(&mut bytes[1])?;
     let size2 = reader.read(&mut bytes[2])?;
     if size0 != 4 || size1 != 4 || size2 != 4 {
-        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "syntax error").into());
+        return Err(syntax_error().into());
     }
     Ok([
         f32::from_le_bytes(bytes[0]),
@@ -166,11 +178,23 @@ fn binary_one_read<R: Read>(reader: &mut R) -> Result<Option<STLFace>> {
     Ok(Some(STLFace { normal, vertices }))
 }
 
-/// Writes ASCII STL data
-pub fn write_ascii<I: IntoIterator<Item = STLFace>, W: Write>(
+/// write STL file in `stl_type` format.
+/// 
+/// If `stl_type == STLType::Automatic`, write the binary format.
+#[inline(always)]
+pub fn write<I: IntoSTLIterator, W: Write>(
     iter: I,
     writer: &mut W,
+    stl_type: STLType,
 ) -> Result<()> {
+    match stl_type {
+        STLType::ASCII => write_ascii(iter, writer),
+        _ => write_binary(iter, writer),
+    }
+}
+
+/// Writes ASCII STL data
+fn write_ascii<I: IntoSTLIterator, W: Write>(iter: I, writer: &mut W) -> Result<()> {
     let mut iter = iter.into_iter();
     writer.write(b"solid\n")?;
     iter.try_for_each::<_, Result<()>>(|face| {
@@ -193,20 +217,27 @@ pub fn write_ascii<I: IntoIterator<Item = STLFace>, W: Write>(
 }
 
 /// Writes binary STL data
-pub fn write_binary<I, W>(iter: I, writer: &mut W) -> Result<()>
-where
-    I: IntoIterator<Item = STLFace>,
-    I::IntoIter: ExactSizeIterator,
-    W: Write, {
+#[inline(always)]
+fn write_binary<I: IntoSTLIterator, W: Write>(iter: I, writer: &mut W) -> Result<()> {
     let mut iter = iter.into_iter();
+    let len = iter.len() as u32;
     writer.write(&[0u8; 80])?;
-    writer.write(&(iter.len() as u32).to_le_bytes())?;
+    writer.write(&len.to_le_bytes())?;
     iter.try_for_each(|face| {
         writer.write(bytemuck::cast_slice(&[face.normal]))?;
         writer.write(bytemuck::cast_slice(&face.vertices))?;
         writer.write(&[0u8, 0u8])?;
         Ok(())
     })
+}
+
+/// By implementing `IntoSTLIterator` for a type, you define how it will be converted to an iterator.
+/// This is common for types which describe a collection of some kind.
+pub trait IntoSTLIterator {
+    /// Which kind of iterator are we turning this into?
+    type IntoIter: ExactSizeIterator<Item = STLFace>;
+    /// Creates an iterator from a value.
+    fn into_iter(self) -> Self::IntoIter;
 }
 
 /// STL face generate from `PolygonMesh`
@@ -218,6 +249,7 @@ pub struct PolygonMeshSTLFaceIterator<'a> {
     other_faces: std::slice::Iter<'a, Vec<Vertex>>,
     current_face: Option<&'a [Vertex]>,
     current_vertex: usize,
+    len: usize,
 }
 
 #[inline(always)]
@@ -257,14 +289,19 @@ impl<'a> Iterator for PolygonMeshSTLFaceIterator<'a> {
         } else {
             self.current_vertex += 1;
         }
+        self.len -= 1;
         Some(res)
     }
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) { (self.len, Some(self.len)) }
 }
 
-impl<'a> IntoIterator for &'a PolygonMesh {
-    type Item = STLFace;
+impl<'a> ExactSizeIterator for PolygonMeshSTLFaceIterator<'a> {}
+
+impl<'a> IntoSTLIterator for &'a PolygonMesh {
     type IntoIter = PolygonMeshSTLFaceIterator<'a>;
     fn into_iter(self) -> Self::IntoIter {
+        let len = self.face_iter().fold(0, |len, face| len + face.len());
         Self::IntoIter {
             positions: self.positions(),
             tri_faces: self.tri_faces().iter(),
@@ -272,8 +309,18 @@ impl<'a> IntoIterator for &'a PolygonMesh {
             other_faces: self.other_faces().iter(),
             current_face: None,
             current_vertex: 0,
+            len,
         }
     }
+}
+
+impl<I> IntoSTLIterator for I
+where
+    I: IntoIterator<Item = STLFace>,
+    I::IntoIter: ExactSizeIterator,
+{
+    type IntoIter = I::IntoIter;
+    fn into_iter(self) -> I::IntoIter { self.into_iter() }
 }
 
 fn signup_vector(vector: [f32; 3], map: &mut HashMap<[i64; 3], usize>) -> usize {
@@ -315,47 +362,34 @@ impl std::iter::FromIterator<STLFace> for PolygonMesh {
         let faces = Faces::from_tri_and_quad_faces(faces, Vec::new());
         let mut positions: Vec<([i64; 3], usize)> = positions.into_iter().collect();
         positions.sort_by(|a, b| a.1.cmp(&b.1));
-        let positions: Vec<Point3> = positions.into_iter().map(|(p, _)| {
-            Point3::new(
-                p[0] as f64 * TOLERANCE * 0.5,
-                p[1] as f64 * TOLERANCE * 0.5,
-                p[2] as f64 * TOLERANCE * 0.5,
-            )
-        }).collect();
+        let positions: Vec<Point3> = positions
+            .into_iter()
+            .map(|(p, _)| {
+                Point3::new(
+                    p[0] as f64 * TOLERANCE * 0.5,
+                    p[1] as f64 * TOLERANCE * 0.5,
+                    p[2] as f64 * TOLERANCE * 0.5,
+                )
+            })
+            .collect();
         let mut normals: Vec<([i64; 3], usize)> = normals.into_iter().collect();
         normals.sort_by(|a, b| a.1.cmp(&b.1));
-        let normals: Vec<Vector3> = normals.into_iter().map(|(p, _)| {
-            Vector3::new(
-                p[0] as f64 * TOLERANCE * 0.5,
-                p[1] as f64 * TOLERANCE * 0.5,
-                p[2] as f64 * TOLERANCE * 0.5,
-            )
-        }).collect();
+        let normals: Vec<Vector3> = normals
+            .into_iter()
+            .map(|(p, _)| {
+                Vector3::new(
+                    p[0] as f64 * TOLERANCE * 0.5,
+                    p[1] as f64 * TOLERANCE * 0.5,
+                    p[2] as f64 * TOLERANCE * 0.5,
+                )
+            })
+            .collect();
         PolygonMesh::debug_new(positions, Vec::new(), normals, faces)
     }
 }
 
-/// Position merge mode
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-pub enum MergeMode {
-    /// Do not merge, fast but with lots of wasted memory.
-    Naive,
-    /// merge near positions.
-    ///
-    /// [`TOLERANCE`](https://docs.rs/truck-base/0.1.1/truck_base/tolerance/constant.TOLERANCE.html)
-    Merge {
-        /// tolerance for merge
-        tolerance: f64,
-        /// tolerance is absolute or not.
-        relative: bool,
-    },
-}
-
-/// STL reading descriptor
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-pub struct STLReadDescriptor {
-    /// stl format type: text or binary
-    pub stl_type: STLType,
-    /// parsing
-    pub merge: MergeMode,
+/// Read STL file and parse to `PolygonMesh`.
+#[inline(always)]
+pub fn read<P: AsRef<std::path::Path>>(path: P, stl_type: STLType) -> Result<PolygonMesh> {
+    STLReader::new(std::fs::File::open(path)?, stl_type)?.collect()
 }

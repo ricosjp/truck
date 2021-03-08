@@ -1,4 +1,4 @@
-use stl::{STLFace, STLReader, STLType};
+use stl::{STLFace, STLReader, STLType, IntoSTLIterator};
 use truck_polymesh::*;
 
 #[test]
@@ -18,9 +18,9 @@ fn stl_oi_test() {
         },
     ];
     let mut ascii = Vec::new();
-    stl::write_ascii(mesh.iter().map(|face| face.clone()), &mut ascii).unwrap();
+    stl::write(mesh.iter().map(|face| face.clone()), &mut ascii, STLType::ASCII).unwrap();
     let mut binary = Vec::new();
-    stl::write_binary(mesh.iter().map(|face| face.clone()), &mut binary).unwrap();
+    stl::write(mesh.iter().map(|face| face.clone()), &mut binary, STLType::Binary).unwrap();
     let amesh = STLReader::<&[u8]>::new(&ascii, STLType::Automatic)
         .unwrap()
         .collect::<Result<Vec<_>>>()
@@ -45,7 +45,7 @@ fn stl_io_test() {
         .unwrap();
     assert_eq!(amesh, bmesh);
     let mut bytes = Vec::<u8>::new();
-    stl::write_binary(bmesh.iter().map(|face| face.clone()), &mut bytes).unwrap();
+    stl::write(bmesh.iter().map(|face| face.clone()), &mut bytes, STLType::Binary).unwrap();
     // Binary data is free from notational distortions except for the headers.
     assert_eq!(&bytes[80..], &include_bytes!("data/bunny_binary.stl")[80..]);
 }
