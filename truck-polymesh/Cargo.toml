@@ -15,8 +15,8 @@ exclude = ["examples/**/*.obj"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-obj = "0.10.2"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 serde = { version = "1.0.123", features = ["derive"] }
+bytemuck = "1.5.1"
 
 [dev-dependencies]

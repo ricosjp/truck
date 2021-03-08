@@ -328,12 +328,37 @@ impl PolygonMesh {
     ) -> Result<PolygonMesh> {
         faces
             .is_compatible(positions.len(), uv_coords.len(), normals.len())
-            .map(|_| PolygonMesh {
-                positions,
-                uv_coords,
-                normals,
-                faces,
-            })
+            .map(|_| PolygonMesh::new_unchecked(positions, uv_coords, normals, faces))
+    }
+
+    /// constructor without boundary check
+    #[inline(always)]
+    pub fn new_unchecked(
+        positions: Vec<Point3>,
+        uv_coords: Vec<Vector2>,
+        normals: Vec<Vector3>,
+        faces: Faces,
+    ) -> PolygonMesh {
+        PolygonMesh {
+            positions,
+            uv_coords,
+            normals,
+            faces,
+        }
+    }
+
+    /// constructor, boundary check is acrivated only in debug mode.
+    #[inline(always)]
+    pub fn debug_new(
+        positions: Vec<Point3>,
+        uv_coords: Vec<Vector2>,
+        normals: Vec<Vector3>,
+        faces: Faces,
+    ) -> PolygonMesh {
+        match cfg!(debug_assertions) {
+            true => Self::new(positions, uv_coords, normals, faces),
+            false => Self::new_unchecked(positions, uv_coords, normals, faces),
+        }
     }
 
     /// Returns the vector of all positions.
