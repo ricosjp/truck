@@ -1,4 +1,5 @@
 use stl::{STLFace, STLReader, STLType, IntoSTLIterator};
+use truck_base::assert_near;
 use truck_polymesh::*;
 
 #[test]
@@ -52,7 +53,6 @@ fn stl_io_test() {
 
 #[test]
 fn through_polymesh() {
-    use truck_base::assert_near;
     let iter = STLReader::<&[u8]>::new(include_bytes!("data/bunny_binary.stl"), STLType::Automatic).unwrap();
     let polymesh: PolygonMesh = iter.map(|face| face.unwrap()).collect();
     let mesh: Vec<STLFace> = polymesh.into_iter().collect();
