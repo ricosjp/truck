@@ -7,6 +7,9 @@ The version is of the bottom crate `truck-rendimpl`.
 - Specified surface for STEP I/O and modeling revolved sphere and cone.
   - In `truck-base`, the trait `Surface` is decomposed into `ParametricSurface`, `BoundedSurface`, `IncludeCurve` and `Invertible`.
   - In `truck-geometry`, specified surface, `Plane` and `Sphere`, and some decorators are prepared.
+- STL handling module `stl` in `truck-polymesh`.
+- In `truck-rendimpl`, wireframe for polygon.
+  - Abort traits `Shape` and `Polygon`, and add new traits `IntoInstance` and `TryIntoInstance`.
 
 ## v0.2
 
