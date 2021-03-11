@@ -1,4 +1,4 @@
-use crate::*;
+use super::*;
 
 impl<V> NURBSCurve<V> {
     /// Constructs the rationalized B-spline curve.
@@ -403,7 +403,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
     /// // check the answer
     /// let res = curve.subs(t);
     /// let ans = Point2::from_vec(pt.to_vec().normalize());
-    /// Point2::assert_near2(&res, &ans);
+    /// assert_near2!(res, ans);
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
@@ -437,6 +437,12 @@ impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
         let der = self.0.der(t);
         pt.rat_der(der)
     }
+    fn der2(&self, t: f64) -> Self::Vector {
+        let pt = self.0.subs(t);
+        let der = self.0.der(t);
+        let der2 = self.0.der(t);
+        pt.rat_der2(der, der2)
+    }
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) {
         (
@@ -444,6 +450,11 @@ impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
             self.0.knot_vec[self.0.knot_vec.len() - 1],
         )
     }
+}
+
+impl<V: Clone> Invertible for NURBSCurve<V> {
+    #[inline(always)]
+    fn invert(&mut self) { self.invert(); }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.0.clone();
@@ -501,7 +512,7 @@ fn test_parameter_division() {
     ];
     let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     let tol = 0.01;
-    let div = curve.parameter_division(tol);
+    let div = curve.parameter_division(tol * 0.5);
     let knot_vec = curve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);

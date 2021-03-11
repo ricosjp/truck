@@ -1,18 +1,13 @@
 use crate::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{LockResult, MutexGuard};
 
-lazy_static::lazy_static! {
-    static ref MAXID: Mutex<usize> = Mutex::new(0);
-}
+static MAXID: AtomicUsize = AtomicUsize::new(0);
 
 impl RenderID {
     /// Generate the unique `RenderID`.
     #[inline(always)]
-    pub fn gen() -> Self {
-        let mut id = MAXID.lock().unwrap();
-        *id += 1;
-        RenderID(*id - 1)
-    }
+    pub fn gen() -> Self { RenderID(MAXID.fetch_add(1, Ordering::SeqCst)) }
 }
 
 impl DeviceHandler {
@@ -550,10 +545,26 @@ impl Scene {
                             index_buffer.size as u32 / std::mem::size_of::<u32>() as u32;
                         rpass.draw_indexed(0..index_size, 0, 0..1);
                     }
-                    None => rpass.draw(0..object.vertex_buffer.size as u32, 0..1),
+                    None => {
+                        let len = object.vertex_buffer.size / object.vertex_buffer.stride;
+                        rpass.draw(0..len as u32, 0..1);
+                    }
                 }
             }
         }
         self.queue().submit(vec![encoder.finish()]);
     }
+}
+
+#[test]
+fn render_id_test() {
+    use std::collections::HashSet;
+    use rayon::prelude::*;
+    const N: usize = 100;
+    let v: Vec<RenderID> = (0..N)
+        .into_par_iter()
+        .map(|_| RenderID::gen())
+        .collect();
+    let set: HashSet<RenderID> = v.into_iter().collect();
+    assert_eq!(set.len(), N);
 }

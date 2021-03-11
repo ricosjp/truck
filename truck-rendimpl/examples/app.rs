@@ -1,5 +1,8 @@
 //! A GUI framework module providing MFC-like API.
 
+// Copyright © 2021 RICOS
+// Apache license 2.0
+
 use std::sync::{Arc, Mutex};
 use std::time::*;
 use truck_platform::{wgpu::*, DeviceHandler};
@@ -68,7 +71,7 @@ pub trait App: Sized + 'static {
         if let Some(title) = Self::app_title() {
             wb = wb.with_title(title);
         }
-        let window = wb.build(&event_loop).unwrap();
+        let window = wb.build(&event_loop).expect("failed to build window");
         let size = window.inner_size();
         let instance = Instance::new(BackendBit::PRIMARY);
         let surface = unsafe { instance.create_surface(&window) };

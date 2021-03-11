@@ -14,8 +14,9 @@ impl BufferHandler {
             usage,
             label: None,
         });
-        let size = (vec.as_ref().len() * std::mem::size_of::<T>()) as u64;
-        BufferHandler { buffer, size }
+        let stride = std::mem::size_of::<T>() as u64;
+        let size = vec.as_ref().len() as u64 * stride;
+        BufferHandler { buffer, size, stride }
     }
     
     /// Returns the reference of the buffer.

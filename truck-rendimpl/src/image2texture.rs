@@ -1,7 +1,7 @@
 use super::*;
 use image::*;
 
-/// Create `Texture` from `DynamicImage`
+/// Utility for creating `Texture` from `DynamicImage`
 #[inline(always)]
 pub fn image2texture(device_handler: &DeviceHandler, image: &DynamicImage) -> Texture {
     let buffer = image.to_rgba8();
@@ -33,28 +33,19 @@ where
         format,
         usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
     });
-    let buffer = device.create_buffer_init(&BufferInitDescriptor {
-        contents: bytemuck::cast_slice(&image_buffer),
-        usage: BufferUsage::COPY_SRC,
-        label: None,
-    });
-    let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
-    encoder.copy_buffer_to_texture(
-        BufferCopyView {
-            buffer: &buffer,
-            layout: TextureDataLayout {
-                offset: 0,
-                bytes_per_row: size.width * std::mem::size_of::<P>() as u32,
-                rows_per_image: size.height,
-            },
-        },
+    queue.write_texture(
         TextureCopyView {
             texture: &texture,
             mip_level: 0,
             origin: Origin3d::ZERO,
         },
+        bytemuck::cast_slice(&image_buffer),
+        TextureDataLayout {
+            offset: 0,
+            bytes_per_row: size.width * std::mem::size_of::<P>() as u32,
+            rows_per_image: size.height,
+        },
         size,
     );
-    queue.submit(vec![encoder.finish()]);
     texture
 }

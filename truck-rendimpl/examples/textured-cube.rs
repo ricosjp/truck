@@ -80,8 +80,10 @@ impl App for MyApp {
             },
             ..Default::default()
         };
-        let shape = scene.create_instance(&Self::create_cube(), &desc);
-        scene.add_objects(&shape.render_faces());
+        let shape: ShapeInstance = scene
+            .instance_creator()
+            .create_instance(&Self::create_cube(), &desc);
+        scene.add_object(&shape);
         MyApp {
             scene,
             rotate_flag: false,

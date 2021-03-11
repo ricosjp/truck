@@ -31,8 +31,7 @@ impl<V> BSplineSurface<V> {
     pub fn try_new(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<V>>,
-    ) -> Result<BSplineSurface<V>>
-    {
+    ) -> Result<BSplineSurface<V>> {
         if control_points.is_empty() {
             Err(Error::EmptyControlPoints)
         } else if control_points[0].is_empty() {
@@ -74,8 +73,7 @@ impl<V> BSplineSurface<V> {
     pub const fn new_unchecked(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<V>>,
-    ) -> BSplineSurface<V>
-    {
+    ) -> BSplineSurface<V> {
         BSplineSurface {
             knot_vecs,
             control_points,
@@ -93,8 +91,7 @@ impl<V> BSplineSurface<V> {
     pub fn debug_new(
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<V>>,
-    ) -> BSplineSurface<V>
-    {
+    ) -> BSplineSurface<V> {
         match cfg!(debug_assertions) {
             true => Self::new(knot_vecs, control_points),
             false => Self::new_unchecked(knot_vecs, control_points),
@@ -376,9 +373,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &bspsurface.subs(u, v),
-    ///             &Vector2::new(v, 2.0 * v * (1.0 - v) * (2.0 * u - 1.0) + u),
+    ///         assert_near2!(
+    ///             bspsurface.subs(u, v),
+    ///             Vector2::new(v, 2.0 * v * (1.0 - v) * (2.0 * u - 1.0) + u),
     ///         );
     ///     }
     /// }
@@ -415,9 +412,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &bspsurface.uder(u, v),
-    ///             &Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
+    ///         assert_near2!(
+    ///             bspsurface.uder(u, v),
+    ///             Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
     ///         );
     ///     }
     /// }
@@ -458,9 +455,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &bspsurface.vder(u, v),
-    ///             &Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
+    ///         assert_near2!(
+    ///             bspsurface.vder(u, v),
+    ///             Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
     ///         );
     ///     }
     /// }
@@ -529,9 +526,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &uderivation.subs(u, v),
-    ///             &Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
+    ///         assert_near2!(
+    ///             uderivation.subs(u, v),
+    ///             Vector2::new(0.0, 4.0 * v * (1.0 - v) + 1.0),
     ///         );
     ///     }
     /// }
@@ -577,9 +574,9 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
     ///     let u = (i as f64) / (N as f64);
     ///     for j in 0..=N {
     ///         let v = (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(
-    ///             &vderivation.subs(u, v),
-    ///             &Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
+    ///         assert_near2!(
+    ///             vderivation.subs(u, v),
+    ///             Vector2::new(1.0, -2.0 * (2.0 * u - 1.0) * (2.0 * v - 1.0)),
     ///         );
     ///     }
     /// }
@@ -616,8 +613,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         v1: f64,
         tol: f64,
         dist2: &F,
-    ) -> bool
-    {
+    ) -> bool {
         let (mut degree0, mut degree1) = self.degrees();
         let bspsurface = self.get_closure();
         degree0 *= 2;
@@ -651,8 +647,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         &self,
         tol: f64,
         dist2: F,
-    ) -> (Vec<f64>, Vec<f64>)
-    {
+    ) -> (Vec<f64>, Vec<f64>) {
         let (knot_vec0, knot_vec1) = self.knot_vecs();
         let u0 = knot_vec0[0];
         let u1 = knot_vec0[knot_vec0.len() - 1];
@@ -671,12 +666,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         dist2: F,
         div0: &mut Vec<f64>,
         div1: &mut Vec<f64>,
-    )
-    {
-        let (mut degree0, mut degree1) = self.degrees();
-        degree0 *= 2;
-        degree1 *= 2;
-
+    ) {
         let mut divide_flag0 = vec![false; div0.len() - 1];
         let mut divide_flag1 = vec![false; div1.len() - 1];
 
@@ -691,25 +681,17 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         let mut new_div0 = vec![div0[0]];
         for i in 1..div0.len() {
             if divide_flag0[i - 1] {
-                for j in 1..=degree0 {
-                    let p = (j as f64) / (degree0 as f64);
-                    new_div0.push(div0[i - 1] * (1.0 - p) + div0[i] * p);
-                }
-            } else {
-                new_div0.push(div0[i]);
+                new_div0.push((div0[i - 1] + div0[i]) / 2.0);
             }
+            new_div0.push(div0[i]);
         }
 
         let mut new_div1 = vec![div1[0]];
         for i in 1..div1.len() {
             if divide_flag1[i - 1] {
-                for j in 1..=degree1 {
-                    let p = (j as f64) / (degree1 as f64);
-                    new_div1.push(div1[i - 1] * (1.0 - p) + div1[i] * p);
-                }
-            } else {
-                new_div1.push(div1[i]);
+                new_div1.push((div1[i - 1] + div1[i]) / 2.0);
             }
+            new_div1.push(div1[i]);
         }
 
         if div0.len() != new_div0.len() || div1.len() != new_div1.len() {
@@ -723,8 +705,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         other: &BSplineSurface<V>,
         div_coef: usize,
         ord: F,
-    ) -> bool
-    {
+    ) -> bool {
         if !self.knot_vecs.0.same_range(&other.knot_vecs.0) {
             return false;
         }
@@ -1290,14 +1271,14 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     ///     for j in 0..=N {
     ///         let u = 0.68 * (i as f64) / (N as f64);
     ///         let v = 1.0 * (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part0.subs(u, v));
+    ///         assert_near2!(bspsurface.subs(u, v), part0.subs(u, v));
     ///     }
     /// }
     /// for i in 0..=N {
     ///     for j in 0..=N {
     ///         let u = 0.68 + 0.32 * (i as f64) / (N as f64);
     ///         let v = 1.0 * (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part1.subs(u, v));
+    ///         assert_near2!(bspsurface.subs(u, v), part1.subs(u, v));
     ///     }
     /// }
     /// ```
@@ -1366,14 +1347,14 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     ///     for j in 0..=N {
     ///         let u = 1.0 * (i as f64) / (N as f64);
     ///         let v = 0.68 * (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part0.subs(u, v));
+    ///         assert_near2!(bspsurface.subs(u, v), part0.subs(u, v));
     ///     }
     /// }
     /// for i in 0..=N {
     ///     for j in 0..=N {
     ///         let u = 1.0 * (i as f64) / (N as f64);
     ///         let v = 0.68 + 0.32 * (j as f64) / (N as f64);
-    ///         Vector2::assert_near2(&bspsurface.subs(u, v), &part1.subs(u, v));
+    ///         assert_near2!(bspsurface.subs(u, v), part1.subs(u, v));
     ///     }
     /// }
     /// ```
@@ -1409,14 +1390,14 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
     /// let curve = bspsurface.sectional_curve(bnd_box);
     /// const N: usize = 100;
-    /// Vector3::assert_near2(&curve.subs(0.0), &bspsurface.subs(0.2, 0.3));
-    /// Vector3::assert_near2(&curve.subs(1.0), &bspsurface.subs(0.8, 0.6));
+    /// assert_near2!(curve.subs(0.0), bspsurface.subs(0.2, 0.3));
+    /// assert_near2!(curve.subs(1.0), bspsurface.subs(0.8, 0.6));
     /// for i in 0..=N {
     ///     println!("{}", i);
     ///     let t = i as f64 / N as f64;
     ///     let pt = curve.subs(t);
-    ///     f64::assert_near2(&pt[1], &(pt[0] * 0.5 - 0.1));
-    ///     f64::assert_near2(&pt[2], &(pt[0] * pt[0] + pt[1] * pt[1]));
+    ///     assert_near2!(pt[1], pt[0] * 0.5 - 0.1);
+    ///     assert_near2!(pt[2], pt[0] * pt[0] + pt[1] * pt[1]);
     /// }
     /// ```
     pub fn sectional_curve(&self, bnd_box: BoundingBox<Vector2>) -> BSplineCurve<V> {
@@ -1497,8 +1478,7 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     pub fn homotopy(
         mut bspcurve0: BSplineCurve<V>,
         mut bspcurve1: BSplineCurve<V>,
-    ) -> BSplineSurface<V>
-    {
+    ) -> BSplineSurface<V> {
         bspcurve0.syncro_degree(&mut bspcurve1);
 
         bspcurve0.optimize();
@@ -1582,8 +1562,7 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
         mut curve1: BSplineCurve<V>,
         mut curve2: BSplineCurve<V>,
         mut curve3: BSplineCurve<V>,
-    ) -> BSplineSurface<V>
-    {
+    ) -> BSplineSurface<V> {
         curve2.invert();
         curve3.invert();
         curve0.syncro_degree(&mut curve2);
@@ -1804,8 +1783,7 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
         vvder: &Self,
         pt: V,
         (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)>
-    {
+    ) -> Option<(f64, f64)> {
         self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u0, v0), 0)
     }
 
@@ -1819,8 +1797,7 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
         pt: V,
         (u0, v0): (f64, f64),
         count: usize,
-    ) -> Option<(f64, f64)>
-    {
+    ) -> Option<(f64, f64)> {
         let s = self.subs(u0, v0);
         let ud = uder.subs(u0, v0);
         let vd = vder.subs(u0, v0);
@@ -1873,10 +1850,7 @@ where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> +
     /// Returns the bounding box including all control points.
     #[inline(always)]
     pub fn roughly_bounding_box(&self) -> BoundingBox<V> {
-        self.control_points
-            .iter()
-            .flat_map(move |vec| vec)
-            .collect()
+        self.control_points.iter().flatten().collect()
     }
 }
 
@@ -1887,55 +1861,51 @@ impl<V: InnerSpace<Scalar = f64>> ParameterDivision2D for BSplineSurface<V> {
     }
 }
 
-impl Surface for BSplineSurface<Vector2> {
+impl ParametricSurface for BSplineSurface<Vector2> {
     type Point = Point2;
     type Vector = Vector2;
-    type Curve = BSplineCurve<Vector2>;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { Point2::from_vec(self.subs(u, v)) }
+    fn subs(&self, u: f64, v: f64) -> Point2 { Point2::from_vec(self.subs(u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
+    fn uder(&self, u: f64, v: f64) -> Vector2 { self.uder(u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    fn vder(&self, u: f64, v: f64) -> Vector2 { self.vder(u, v) }
     /// zero identity
     #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-    #[inline(always)]
-    fn inverse(&self) -> Self {
-        let mut surface = self.clone();
-        surface.swap_axes();
-        surface
-    }
-    #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector2>) -> bool { self.include(&curve) }
+    fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
 }
 
-impl Surface for BSplineSurface<Vector3> {
+impl ParametricSurface for BSplineSurface<Vector3> {
     type Point = Point3;
     type Vector = Vector3;
-    type Curve = BSplineCurve<Vector3>;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { Point3::from_vec(self.subs(u, v)) }
+    fn subs(&self, u: f64, v: f64) -> Point3 { Point3::from_vec(self.subs(u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
+    fn uder(&self, u: f64, v: f64) -> Vector3 { self.uder(u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    fn vder(&self, u: f64, v: f64) -> Vector3 { self.vder(u, v) }
     #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Self::Vector {
+    fn normal(&self, u: f64, v: f64) -> Vector3 {
         self.uder(u, v).cross(self.vder(u, v)).normalize()
     }
+}
+
+impl<V> BoundedSurface for BSplineSurface<V>
+where BSplineSurface<V>: ParametricSurface
+{
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
+}
+
+impl<V: Clone> Invertible for BSplineSurface<V> {
+    #[inline(always)]
+    fn invert(&mut self) { self.swap_axes(); }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut surface = self.clone();
         surface.swap_axes();
         surface
     }
-    #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool { self.include(&curve) }
 }
 
 impl BSplineSurface<Vector2> {
@@ -1956,7 +1926,7 @@ impl BSplineSurface<Vector2> {
     ///
     /// let pt = Vector2::new(0.3, 0.7);
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector2::assert_near(&surface.subs(u, v), &pt);
+    /// assert_near!(&surface.subs(u, v), &pt);
     /// ```
     pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
         sub_search_parameter2d(self, Point2::from_vec(pt), hint.into(), 0).map(|v| v.into())
@@ -2040,7 +2010,7 @@ impl BSplineSurface<Vector3> {
     ///
     /// let pt = surface.subs(0.32, 0.76);
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
-    /// Vector3::assert_near(&surface.subs(u, v), &pt);
+    /// assert_near!(&surface.subs(u, v), &pt);
     ///
     /// let pt = surface.subs(0.32, 0.76) + Vector3::new(0.0, 0.0, 0.001);
     /// assert!(surface.search_parameter(pt, (0.5, 0.5)).is_none());
@@ -2128,13 +2098,12 @@ impl BSplineSurface<Vector3> {
     }
 }
 
-pub(super) fn sub_search_parameter2d<S: Surface<Point = Point2, Vector = Vector2>>(
+pub(super) fn sub_search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
     surface: &S,
     pt0: Point2,
     hint: Vector2,
     count: usize,
-) -> Option<Vector2>
-{
+) -> Option<Vector2> {
     if count == 100 {
         return None;
     }

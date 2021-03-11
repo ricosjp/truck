@@ -1,6 +1,6 @@
 [package]
 name = "truck-polymesh"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "defines polygon data structure and some algorithms handling mesh, including meshing the shapes"
@@ -15,8 +15,8 @@ exclude = ["examples/**/*.obj"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-obj = "0.10.2"
-truck-base = { version = "0.1.0", path = "../truck-base" }
-serde = { version = "1.0.120", features = ["derive"] }
+truck-base = { version = "0.1.1", path = "../truck-base" }
+serde = { version = "1.0.123", features = ["derive"] }
+bytemuck = "1.5.1"
 
 [dev-dependencies]

@@ -2,30 +2,156 @@ use crate::*;
 use polymesh::Vertex;
 use std::collections::HashMap;
 
-impl IntoInstance for PolygonMesh {
-    type Instance = PolygonInstance;
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+struct AttrVertex {
+    pub position: [f32; 3],
+    pub uv_coord: [f32; 2],
+    pub normal: [f32; 3],
+}
+
+impl CreateBuffers for PolygonMesh {
+    #[inline(always)]
+    fn buffers(
+        &self,
+        vertex_usage: BufferUsage,
+        index_usage: BufferUsage,
+        device: &Device,
+    ) -> (BufferHandler, BufferHandler) {
+        ExpandedPolygon::from(self).buffers(vertex_usage, index_usage, device)
+    }
+}
+
+impl IntoInstance<PolygonInstance> for PolygonMesh {
     type Descriptor = PolygonInstanceDescriptor;
     #[inline(always)]
-    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance {
-        let (vb, ib) =
-            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &PolygonInstanceDescriptor,
+    ) -> PolygonInstance {
+        let (vb, ib) = self.buffers(
+            BufferUsage::VERTEX,
+            BufferUsage::INDEX,
+            creator.handler.device(),
+        );
         PolygonInstance {
-            polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
+            polygon: (Arc::new(vb), Arc::new(ib)),
             state: desc.instance_state.clone(),
+            shaders: Arc::clone(&creator.polygon_shaders),
             id: RenderID::gen(),
         }
     }
 }
 
-impl IntoInstance for StructuredMesh {
-    type Instance = PolygonInstance;
+impl IntoInstance<WireFrameInstance> for PolygonMesh {
+    type Descriptor = PolygonWireFrameInstanceDescriptor;
+    #[doc(hidden)]
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &PolygonWireFrameInstanceDescriptor,
+    ) -> WireFrameInstance {
+        let device = creator.handler.device();
+        let positions: Vec<[f32; 3]> = self
+            .positions()
+            .iter()
+            .map(|p| p.cast().unwrap().into())
+            .collect();
+        let mut strips = Vec::<u32>::new();
+        self.faces().face_iter().for_each(|face| {
+            for i in 0..face.len() {
+                strips.push(face[i].pos as u32);
+                strips.push(face[(i + 1) % face.len()].pos as u32);
+            }
+        });
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsage::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsage::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: desc.wireframe_state.clone(),
+            shaders: Arc::clone(&creator.wire_shaders),
+            id: RenderID::gen(),
+        }
+    }
+
+}
+
+impl CreateBuffers for StructuredMesh {
+    #[inline(always)]
+    fn buffers(
+        &self,
+        vertex_usage: BufferUsage,
+        index_usage: BufferUsage,
+        device: &Device,
+    ) -> (BufferHandler, BufferHandler) {
+        ExpandedPolygon::from(self).buffers(vertex_usage, index_usage, device)
+    }
+}
+
+impl IntoInstance<PolygonInstance> for StructuredMesh {
     type Descriptor = PolygonInstanceDescriptor;
-    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance {
-        let (vb, ib) =
-            ExpandedPolygon::from(self).buffers(BufferUsage::VERTEX, BufferUsage::INDEX, device);
+    #[inline(always)]
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &PolygonInstanceDescriptor,
+    ) -> PolygonInstance {
+        let (vb, ib) = self.buffers(
+            BufferUsage::VERTEX,
+            BufferUsage::INDEX,
+            creator.handler.device(),
+        );
         PolygonInstance {
-            polygon: Arc::new(Mutex::new((Arc::new(vb), Arc::new(ib)))),
+            polygon: (Arc::new(vb), Arc::new(ib)),
             state: desc.instance_state.clone(),
+            shaders: Arc::clone(&creator.polygon_shaders),
+            id: RenderID::gen(),
+        }
+    }
+}
+
+impl IntoInstance<WireFrameInstance> for StructuredMesh {
+    type Descriptor = PolygonWireFrameInstanceDescriptor;
+    #[doc(hidden)]
+    fn into_instance(
+        &self,
+        creator: &InstanceCreator,
+        desc: &PolygonWireFrameInstanceDescriptor,
+    ) -> WireFrameInstance {
+        let device = creator.handler.device();
+        let positions: Vec<[f32; 3]> = self
+            .positions()
+            .iter()
+            .flat_map(|vec| vec)
+            .map(|p| p.cast().unwrap().into())
+            .collect();
+        let mut strips = Vec::<u32>::new();
+        let len = positions[0].len() as u32;
+        for i in 1..positions.len() as u32 {
+            strips.push((i - 1) * len);
+            strips.push(i * len);
+        }
+        for j in 1..len {
+            strips.push(j - 1);
+            strips.push(j);
+        }
+        for i in 1..positions.len() as u32 {
+            for j in 1..len {
+                strips.push((i - 1) * len + j);
+                strips.push(i * len + j);
+                strips.push(i * len + (j - 1));
+                strips.push(i * len + j);
+            }
+        }
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsage::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsage::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: desc.wireframe_state.clone(),
+            shaders: Arc::clone(&creator.wire_shaders),
             id: RenderID::gen(),
         }
     }
@@ -38,6 +164,7 @@ impl PolygonInstance {
         PolygonInstance {
             polygon: self.polygon.clone(),
             state: self.state.clone(),
+            shaders: Arc::clone(&self.shaders),
             id: RenderID::gen(),
         }
     }
@@ -128,7 +255,6 @@ impl PolygonInstance {
     pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
         include_spirv!("shaders/textured-polygon.frag.spv")
     }
-
     /// Returns the pipeline with developer's custom shader.
     #[inline(always)]
     pub fn pipeline_with_shader(
@@ -139,13 +265,94 @@ impl PolygonInstance {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        self.state.pipeline_with_shader(
-            vertex_shader,
-            fragment_shader,
+        self.pipeline_with_shader_module(
+            &device_handler.device().create_shader_module(vertex_shader),
+            &device_handler
+                .device()
+                .create_shader_module(fragment_shader),
             device_handler,
             layout,
             sample_count,
         )
+    }
+
+    /// Returns the pipeline with developer's custom shader.
+    #[inline(always)]
+    pub fn pipeline_with_shader_module(
+        &self,
+        vertex_module: &ShaderModule,
+        fragment_module: &ShaderModule,
+        device_handler: &DeviceHandler,
+        layout: &PipelineLayout,
+        sample_count: u32,
+    ) -> Arc<RenderPipeline> {
+        let device = device_handler.device();
+        let sc_desc = device_handler.sc_desc();
+        let cull_mode = match self.state.backface_culling {
+            true => CullMode::Back,
+            false => CullMode::None,
+        };
+        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            layout: Some(layout),
+            vertex_stage: ProgrammableStageDescriptor {
+                module: vertex_module,
+                entry_point: "main",
+            },
+            fragment_stage: Some(ProgrammableStageDescriptor {
+                module: fragment_module,
+                entry_point: "main",
+            }),
+            rasterization_state: Some(RasterizationStateDescriptor {
+                front_face: FrontFace::Ccw,
+                cull_mode,
+                depth_bias: 0,
+                depth_bias_slope_scale: 0.0,
+                depth_bias_clamp: 0.0,
+                clamp_depth: false,
+            }),
+            primitive_topology: PrimitiveTopology::TriangleList,
+            color_states: &[ColorStateDescriptor {
+                format: sc_desc.format,
+                color_blend: BlendDescriptor::REPLACE,
+                alpha_blend: BlendDescriptor::REPLACE,
+                write_mask: ColorWrite::ALL,
+            }],
+            depth_stencil_state: Some(DepthStencilStateDescriptor {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: StencilStateDescriptor::default(),
+            }),
+            vertex_state: VertexStateDescriptor {
+                index_format: IndexFormat::Uint32,
+                vertex_buffers: &[VertexBufferDescriptor {
+                    stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                    step_mode: InputStepMode::Vertex,
+                    attributes: &[
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float3,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float2,
+                            offset: 3 * 4,
+                            shader_location: 1,
+                        },
+                        VertexAttributeDescriptor {
+                            format: VertexFormat::Float3,
+                            offset: 2 * 4 + 3 * 4,
+                            shader_location: 2,
+                        },
+                    ],
+                }],
+            },
+            sample_count,
+            sample_mask: !0,
+            alpha_to_coverage_enabled: false,
+            label: None,
+        });
+        Arc::new(pipeline)
     }
 }
 
@@ -154,7 +361,7 @@ impl Rendered for PolygonInstance {
 
     #[inline(always)]
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let polygon = self.polygon.lock().unwrap().clone();
+        let polygon = self.polygon.clone();
         (polygon.0, Some(polygon.1))
     }
     #[inline(always)]
@@ -183,11 +390,11 @@ impl Rendered for PolygonInstance {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let fragment_shader = match self.state.texture.is_some() {
-            true => Self::default_textured_fragment_shader(),
-            false => Self::default_fragment_shader(),
+            true => &self.shaders.tex_fragment,
+            false => &self.shaders.fragment,
         };
-        self.pipeline_with_shader(
-            Self::default_vertex_shader(),
+        self.pipeline_with_shader_module(
+            &self.shaders.vertex,
             fragment_shader,
             device_handler,
             layout,
@@ -196,23 +403,10 @@ impl Rendered for PolygonInstance {
     }
 }
 
-impl ExpandedPolygon {
-    pub fn buffers(
-        &self,
-        vertex_usage: BufferUsage,
-        index_usage: BufferUsage,
-        device: &Device,
-    ) -> (BufferHandler, BufferHandler) {
-        let vertex_buffer = BufferHandler::from_slice(&self.vertices, device, vertex_usage);
-        let index_buffer = BufferHandler::from_slice(&self.indices, device, index_usage);
-        (vertex_buffer, index_buffer)
-    }
-}
-
 fn signup_vertex(
     polymesh: &PolygonMesh,
     vertex: Vertex,
-    glpolymesh: &mut ExpandedPolygon,
+    glpolymesh: &mut ExpandedPolygon<AttrVertex>,
     vertex_map: &mut HashMap<Vertex, u32>,
 ) {
     let idx = match vertex_map.get(&vertex) {
@@ -241,17 +435,8 @@ fn signup_vertex(
     glpolymesh.indices.push(idx);
 }
 
-impl Default for ExpandedPolygon {
-    fn default() -> ExpandedPolygon {
-        ExpandedPolygon {
-            vertices: Vec::new(),
-            indices: Vec::new(),
-        }
-    }
-}
-
-impl From<&PolygonMesh> for ExpandedPolygon {
-    fn from(polymesh: &PolygonMesh) -> ExpandedPolygon {
+impl From<&PolygonMesh> for ExpandedPolygon<AttrVertex> {
+    fn from(polymesh: &PolygonMesh) -> ExpandedPolygon<AttrVertex> {
         let mut glpolymesh = ExpandedPolygon::default();
         let mut vertex_map = HashMap::<Vertex, u32>::new();
         for tri in polymesh.faces().tri_faces() {
@@ -278,8 +463,8 @@ impl From<&PolygonMesh> for ExpandedPolygon {
     }
 }
 
-impl From<&StructuredMesh> for ExpandedPolygon {
-    fn from(mesh: &StructuredMesh) -> ExpandedPolygon {
+impl From<&StructuredMesh> for ExpandedPolygon<AttrVertex> {
+    fn from(mesh: &StructuredMesh) -> ExpandedPolygon<AttrVertex> {
         let mut glpolymesh = ExpandedPolygon::default();
         let (m, n) = (mesh.positions().len(), mesh.positions()[0].len());
         for i in 0..m {

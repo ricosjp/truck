@@ -1,5 +1,5 @@
 mod common;
-use common::*;
+use common::Plane;
 use std::sync::{Arc, Mutex};
 use truck_base::cgmath64::*;
 use truck_platform::*;
@@ -30,30 +30,6 @@ const UNIFORM_LIGHT: Light = Light {
     light_type: LightType::Uniform,
 };
 
-fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
-    futures::executor::block_on(async {
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
-                compatible_surface: None,
-            })
-            .await
-            .unwrap();
-        let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Default::default(),
-                    shader_validation: true,
-                },
-                None,
-            )
-            .await
-            .unwrap();
-        (Arc::new(device), Arc::new(queue))
-    })
-}
-
 fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
     image::save_buffer(
         path,
@@ -65,11 +41,11 @@ fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
     .unwrap();
 }
 
-#[test]
-fn bind_group_test() {
-    std::fs::create_dir_all("output").unwrap();
-    let instance = Instance::new(BackendBit::PRIMARY);
-    let (device, queue) = init_device(&instance);
+fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
+    let out_dir = String::from(out_dir);
+    std::fs::create_dir_all(&out_dir).unwrap();
+    let instance = Instance::new(backend);
+    let (device, queue) = common::init_device(&instance);
     let sc_desc = SwapChainDescriptor {
         usage: TextureUsage::OUTPUT_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
@@ -97,17 +73,29 @@ fn bind_group_test() {
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler.clone(), &desc);
     let plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
-    render_one(&mut scene, &texture0, &plane);
+    common::render_one(&mut scene, &texture0, &plane);
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
-    render_one(&mut scene, &texture1, &plane);
+    common::render_one(&mut scene, &texture1, &plane);
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
-    render_one(&mut scene, &texture2, &plane);
-    let buffer0 = read_texture(&handler, &texture0);
-    let buffer1 = read_texture(&handler, &texture1);
-    let buffer2 = read_texture(&handler, &texture2);
-    save_buffer("output/unicolor.png", &buffer0);
-    save_buffer("output/bindgroup.png", &buffer1);
-    save_buffer("output/anti-bindgroup.png", &buffer2);
+    common::render_one(&mut scene, &texture2, &plane);
+    let buffer0 = common::read_texture(&handler, &texture0);
+    let buffer1 = common::read_texture(&handler, &texture1);
+    let buffer2 = common::read_texture(&handler, &texture2);
+    save_buffer(out_dir.clone() + "unicolor.png", &buffer0);
+    save_buffer(out_dir.clone() + "bindgroup.png", &buffer1);
+    save_buffer(out_dir.clone() + "anti-bindgroup.png", &buffer2);
     assert!(common::same_buffer(&buffer0, &buffer1));
     assert!(!common::same_buffer(&buffer0, &buffer2));
+}
+
+#[test]
+fn bind_group_test() {
+    if cfg!(target_os = "windows") {
+        exec_bind_group_test(BackendBit::VULKAN, "output/vulkan/");
+        exec_bind_group_test(BackendBit::DX12, "output/dx12/");
+    } else if cfg!(target_os = "macos") {
+        exec_bind_group_test(BackendBit::METAL, "output/");
+    } else {
+        exec_bind_group_test(BackendBit::VULKAN, "output/");
+    }
 }

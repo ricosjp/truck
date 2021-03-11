@@ -55,15 +55,12 @@ impl MyApp {
         camera
     }
     fn init_thread(
-        handler: DeviceHandler,
-        object: &Arc<Mutex<ShapeInstance>>,
-        closed: &Arc<Mutex<bool>>,
-        updated: &Arc<Mutex<bool>>,
+        creator: InstanceCreator,
+        object: Arc<Mutex<ShapeInstance>>,
+        closed: Arc<Mutex<bool>>,
+        updated: Arc<Mutex<bool>>,
         shell: Shell,
     ) -> JoinHandle<()> {
-        let object = Arc::clone(object);
-        let closed = Arc::clone(closed);
-        let updated = Arc::clone(updated);
         std::thread::spawn(move || {
             let mut time: f64 = 0.0;
             let mut count = 0;
@@ -88,8 +85,15 @@ impl MyApp {
                     count = 0;
                 }
                 shell[0].lock_surface().unwrap().control_point_mut(3, 3)[1] = time.sin();
-                let mut another_object = shell.into_instance(handler.device(), &Default::default());
-                object.lock().unwrap().swap_vertex(&mut another_object);
+                let mut another_object = creator.create_instance(
+                    &shell,
+                    &ShapeInstanceDescriptor {
+                        instance_state: Default::default(),
+                        mesh_precision: 0.01,
+                    },
+                );
+                let mut object = object.lock().unwrap();
+                object.swap_faces(&mut another_object);
             }
         })
     }
@@ -113,17 +117,24 @@ impl App for MyApp {
             ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &desc);
+        let creator = scene.instance_creator();
         let shell = Self::init_shell();
-        let object = scene.create_instance(&shell, &Default::default());
-        scene.add_objects(&object.render_faces());
+        let object = creator.create_instance(
+            &shell,
+            &ShapeInstanceDescriptor {
+                instance_state: Default::default(),
+                mesh_precision: 0.01,
+            },
+        );
+        scene.add_object(&object);
         let object = Arc::new(Mutex::new(object));
         let closed = Arc::new(Mutex::new(false));
         let updated = Arc::new(Mutex::new(false));
         let thread = Some(MyApp::init_thread(
-            handler.clone(),
-            &object,
-            &closed,
-            &updated,
+            creator,
+            Arc::clone(&object),
+            Arc::clone(&closed),
+            Arc::clone(&updated),
             shell,
         ));
         MyApp {
@@ -141,7 +152,7 @@ impl App for MyApp {
         let mut updated = self.updated.lock().unwrap();
         if *updated {
             let object = self.object.lock().unwrap();
-            self.scene.update_vertex_buffers(&object.render_faces());
+            self.scene.update_vertex_buffer(&*object);
             *updated = false;
         }
     }

@@ -15,7 +15,7 @@
 
 /// re-export `truck_base`.
 pub mod base {
-    pub use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*};
+    pub use truck_base::{bounding_box::*, cgmath64::*, geom_traits::*, tolerance::*, assert_near, assert_near2};
 }
 pub use base::*;
 
@@ -57,7 +57,7 @@ pub mod topology {
     /// The id that does not depend on the direction of the face.
     pub type FaceID = truck_topology::FaceID<NURBSSurface>;
 
-    pub use truck_topology::{errors::Error, shell::ShellCondition, Result};
+    pub use truck_topology::shell::ShellCondition;
 }
 pub use topology::*;
 
@@ -154,9 +154,14 @@ pub mod topo_traits {
 }
 pub use topo_traits::*;
 
+/// `Result` with crate's errors.
+pub type Result<T> = std::result::Result<T, errors::Error>;
+
 /// the building model utility API
 pub mod builder;
 mod closed_sweep;
+/// declare errors
+pub mod errors;
 mod geom_impls;
 mod mapped;
 mod multi_sweep;

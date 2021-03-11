@@ -8,8 +8,8 @@ use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (1024, 768);
 
-fn test_scene() -> Scene {
-    let instance = Instance::new(BackendBit::PRIMARY);
+fn test_scene(backend: BackendBit) -> Scene {
+    let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = common::swap_chain_descriptor(PICTURE_SIZE);
     let sc_desc = Arc::new(Mutex::new(sc_desc));
@@ -61,10 +61,10 @@ fn nontex_raymarching(scene: &mut Scene) -> Vec<u8> {
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn nontex_polygon(scene: &mut Scene) -> Vec<u8> {
+fn nontex_polygon(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let cube = scene.create_instance(
+    let cube: PolygonInstance = creator.create_instance(
         &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
         &PolygonInstanceDescriptor {
             instance_state: InstanceState {
@@ -82,10 +82,10 @@ fn nontex_polygon(scene: &mut Scene) -> Vec<u8> {
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn nontex_shape(scene: &mut Scene) -> Vec<u8> {
+fn nontex_shape(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let cube = scene.create_instance(
+    let cube: ShapeInstance = creator.create_instance(
         &shape_cube(),
         &ShapeInstanceDescriptor {
             instance_state: InstanceState {
@@ -100,31 +100,23 @@ fn nontex_shape(scene: &mut Scene) -> Vec<u8> {
             ..Default::default()
         },
     );
-    common::render_ones(scene, &texture, &cube.render_faces());
+    common::render_one(scene, &texture, &cube);
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
-    image::save_buffer(
-        path,
-        &vec,
-        PICTURE_SIZE.0,
-        PICTURE_SIZE.1,
-        image::ColorType::Rgba8,
-    )
-    .unwrap();
-}
-
-#[test]
-fn nontex_render_test() {
-    std::fs::create_dir_all("output").unwrap();
-    let mut scene = test_scene();
+fn exec_nontex_render_test(backend: BackendBit, out_dir: &str) {
+    let out_dir = out_dir.to_string();
+    std::fs::create_dir_all(&out_dir).unwrap();
+    let mut scene = test_scene(backend);
+    let creator = scene.instance_creator();
     let buffer0 = nontex_raymarching(&mut scene);
-    let buffer1 = nontex_polygon(&mut scene);
-    let buffer2 = nontex_shape(&mut scene);
-    save_buffer("output/nontex-raymarching.png", &buffer0);
-    save_buffer("output/nontex-polygon.png", &buffer1);
-    save_buffer("output/nontex-shape.png", &buffer2);
+    let buffer1 = nontex_polygon(&mut scene, &creator);
+    let buffer2 = nontex_shape(&mut scene, &creator);
+    let filename = out_dir.clone() + "nontex-raymarching.png";
+    common::save_buffer(filename, &buffer0, PICTURE_SIZE);
+    let filename = out_dir.clone() + "nontex-polygon.png";
+    common::save_buffer(filename, &buffer1, PICTURE_SIZE);
+    common::save_buffer(out_dir.clone() + "nontex-shape.png", &buffer2, PICTURE_SIZE);
     let diff0 = common::count_difference(&buffer0, &buffer1);
     let diff1 = common::count_difference(&buffer1, &buffer2);
     let diff2 = common::count_difference(&buffer2, &buffer0);
@@ -136,10 +128,13 @@ fn nontex_render_test() {
     assert!(diff2 < 10);
 }
 
-fn generate_texture(scene: &mut Scene) -> DynamicImage {
+#[test]
+fn nontex_render_test() { common::os_alt_exec_test(exec_nontex_render_test); }
+
+fn generate_texture(scene: &mut Scene, out_dir: String) -> DynamicImage {
     let texture = common::gradation_texture(scene);
     let buffer = common::read_texture(scene.device_handler(), &texture);
-    save_buffer("output/gradation-texture.png", &buffer);
+    common::save_buffer(out_dir + "gradation-texture.png", &buffer, PICTURE_SIZE);
     let image_buffer =
         ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer).unwrap();
     DynamicImage::ImageRgba8(image_buffer)
@@ -160,11 +155,15 @@ fn tex_raymarching(scene: &mut Scene) -> Vec<u8> {
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn tex_polygon(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
+fn tex_polygon(
+    scene: &mut Scene,
+    creator: &InstanceCreator,
+    gradtex: &Arc<DynamicImage>,
+) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let attach = image2texture::image2texture(scene.device_handler(), gradtex);
-    let cube = scene.create_instance(
+    let attach = creator.create_texture(gradtex);
+    let cube: PolygonInstance = creator.create_instance(
         &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
         &PolygonInstanceDescriptor {
             instance_state: InstanceState {
@@ -174,7 +173,7 @@ fn tex_polygon(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
                     reflectance: 0.25,
                     ambient_ratio: 0.02,
                 },
-                texture: Some(Arc::new(attach)),
+                texture: Some(attach),
                 ..Default::default()
             },
         },
@@ -183,11 +182,11 @@ fn tex_polygon(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn tex_shape(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
+fn tex_shape(scene: &mut Scene, creator: &InstanceCreator, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let attach = image2texture::image2texture(scene.device_handler(), gradtex);
-    let cube = scene.create_instance(
+    let attach = creator.create_texture(gradtex);
+    let cube: ShapeInstance = creator.create_instance(
         &shape_cube(),
         &ShapeInstanceDescriptor {
             instance_state: InstanceState {
@@ -197,28 +196,31 @@ fn tex_shape(scene: &mut Scene, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
                     reflectance: 0.25,
                     ambient_ratio: 0.02,
                 },
-                texture: Some(Arc::new(attach)),
+                texture: Some(attach),
                 ..Default::default()
             },
             ..Default::default()
         },
     );
-    common::render_ones(scene, &texture, &cube.render_faces());
+    common::render_one(scene, &texture, &cube);
     common::read_texture(scene.device_handler(), &texture)
 }
 
-#[test]
-fn tex_render_test() {
-    std::fs::create_dir_all("output").unwrap();
-    let mut scene = test_scene();
-    let image = Arc::new(generate_texture(&mut scene));
+fn exec_tex_render_test(backend: BackendBit, out_dir: &str) {
+    let out_dir = out_dir.to_string();
+    std::fs::create_dir_all(&out_dir).unwrap();
+    let mut scene = test_scene(backend);
+    let creator = scene.instance_creator();
+    let image = Arc::new(generate_texture(&mut scene, out_dir.clone()));
     let anti_buffer = nontex_raymarching(&mut scene);
     let buffer0 = tex_raymarching(&mut scene);
-    let buffer1 = tex_polygon(&mut scene, &image);
-    let buffer2 = tex_shape(&mut scene, &image);
-    save_buffer("output/tex-raymarching.png", &buffer0);
-    save_buffer("output/tex-polygon.png", &buffer1);
-    save_buffer("output/tex-shape.png", &buffer2);
+    let buffer1 = tex_polygon(&mut scene, &creator, &image);
+    let buffer2 = tex_shape(&mut scene, &creator, &image);
+    let filename = out_dir.clone() + "tex-raymarching.png";
+    common::save_buffer(filename, &buffer0, PICTURE_SIZE);
+    let filename = out_dir.clone() + "tex-polygon.png";
+    common::save_buffer(filename, &buffer1, PICTURE_SIZE);
+    common::save_buffer(out_dir.clone() + "tex-shape.png", &buffer2, PICTURE_SIZE);
     let diff0 = common::count_difference(&buffer0, &buffer1);
     let diff1 = common::count_difference(&buffer1, &buffer2);
     let diff2 = common::count_difference(&buffer2, &buffer0);
@@ -231,3 +233,6 @@ fn tex_render_test() {
     assert!(diff2 < 10);
     assert!(anti_diff > 1000);
 }
+
+#[test]
+fn tex_render_test() { common::os_alt_exec_test(exec_tex_render_test) }

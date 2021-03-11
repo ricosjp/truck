@@ -1,7 +1,7 @@
 //! Modeling a unit cube with a hole through it.
+//!
+//! Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
-mod framework;
-use framework::ShapeViewer;
 use truck_modeling::*;
 
 fn main() {
@@ -40,5 +40,6 @@ fn main() {
     ]);
     face.add_boundary(wire);
     let shape = builder::tsweep(&face, Vector3::unit_z());
-    ShapeViewer::run(shape, 0.001);
+    let json = serde_json::to_vec_pretty(&shape.compress()).unwrap();
+    std::fs::write("punched-cube.json", &json).unwrap();
 }

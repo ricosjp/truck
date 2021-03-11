@@ -238,19 +238,16 @@ pub type EdgeID<C> = ID<Mutex<C>>;
 /// ```
 pub type FaceID<S> = ID<Mutex<S>>;
 
-#[doc(hidden)]
-pub mod edge;
+mod compress;
+mod edge;
 /// classifies the errors that can occur in this crate.
 pub mod errors;
 /// Defines the boundary iterator.
 pub mod face;
 /// classifies shell conditions and defines the face iterators.
 pub mod shell;
-#[doc(hidden)]
-pub mod solid;
-#[doc(hidden)]
-pub mod vertex;
+mod solid;
+mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
-#[doc(hidden)]
-pub mod wrappup;
+pub use compress::{CompressedShell, CompressedSolid};

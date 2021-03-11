@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use glsl_to_spirv::ShaderType;
-use std::io::Read;
-use std::sync::Arc;
 use rayon::prelude::*;
+use std::io::{Read, Write};
+use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
 
@@ -25,6 +25,31 @@ macro_rules! new_plane {
     };
 }
 
+pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
+    futures::executor::block_on(async {
+        let adapter = instance
+            .request_adapter(&RequestAdapterOptions {
+                power_preference: PowerPreference::Default,
+                compatible_surface: None,
+            })
+            .await
+            .unwrap();
+        writeln!(&mut std::io::stderr(), "{:?}", adapter.get_info()).unwrap();
+        let (device, queue) = adapter
+            .request_device(
+                &DeviceDescriptor {
+                    features: Default::default(),
+                    limits: Default::default(),
+                    shader_validation: true,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+        (Arc::new(device), Arc::new(queue))
+    })
+}
+
 impl<'a> Rendered for Plane<'a> {
     impl_render_id!(id);
     fn vertex_buffer(
@@ -32,16 +57,11 @@ impl<'a> Rendered for Plane<'a> {
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         let vertex_buffer = BufferHandler::from_slice(
-            &[0 as u32, 1, 2, 3],
+            &[0 as u32, 1, 2, 2, 1, 3],
             handler.device(),
             BufferUsage::VERTEX,
         );
-        let index_buffer = BufferHandler::from_slice(
-            &[0 as u32, 1, 2, 2, 1, 3],
-            handler.device(),
-            BufferUsage::INDEX,
-        );
-        (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
+        (Arc::new(vertex_buffer), None)
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
         Arc::new(bind_group_util::create_bind_group_layout(

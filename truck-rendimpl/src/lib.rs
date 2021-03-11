@@ -16,12 +16,8 @@ extern crate truck_platform;
 extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
-use std::sync::{Arc, Mutex};
-use truck_platform::{
-    wgpu::util::{BufferInitDescriptor, DeviceExt},
-    wgpu::*,
-    *,
-};
+use std::sync::Arc;
+use truck_platform::{wgpu::*, *};
 
 /// Re-exports `truck_modeling`.
 pub mod modeling {
@@ -64,11 +60,20 @@ pub struct InstanceState {
     pub backface_culling: bool,
 }
 
+/// Configures of `WireFrameInstance`.
+#[derive(Clone, Debug)]
+pub struct WireFrameState {
+    /// instance matrix
+    pub matrix: Matrix4,
+    /// color of instance
+    pub color: Vector4,
+}
+
 /// Configures of polygon instance
 #[derive(Clone, Debug, Default)]
 pub struct PolygonInstanceDescriptor {
     /// configure of instance
-    pub instance_state: InstanceState,    
+    pub instance_state: InstanceState,
 }
 
 /// Configures of shape instance
@@ -82,6 +87,42 @@ pub struct ShapeInstanceDescriptor {
     pub normal_completion_tolerance: f64,
 }
 
+/// Configures of wire frame instance of polygon
+#[derive(Clone, Debug, Default)]
+pub struct PolygonWireFrameInstanceDescriptor {
+    /// configure of wire frame
+    pub wireframe_state: WireFrameState,
+}
+
+/// Configures of wire frame instance of shape
+#[derive(Clone, Debug)]
+pub struct ShapeWireFrameInstanceDescriptor {
+    /// configure of wire frame
+    pub wireframe_state: WireFrameState,
+    /// precision for polyline
+    pub polyline_precision: f64,
+}
+
+#[derive(Debug)]
+struct PolygonShaders {
+    vertex: ShaderModule,
+    fragment: ShaderModule,
+    tex_fragment: ShaderModule,
+}
+
+#[derive(Debug)]
+struct ShapeShaders {
+    vertex: ShaderModule,
+    fragment: ShaderModule,
+    tex_fragment: ShaderModule,
+}
+
+#[derive(Debug)]
+struct WireShaders {
+    vertex: ShaderModule,
+    fragment: ShaderModule,
+}
+
 /// Instance of polygon
 ///
 /// One can duplicate polygons with different postures and materials
@@ -92,21 +133,19 @@ pub struct ShapeInstanceDescriptor {
 /// with original, however, its render id is different from the one of original.
 #[derive(Debug)]
 pub struct PolygonInstance {
-    polygon: Arc<Mutex<(Arc<BufferHandler>, Arc<BufferHandler>)>>,
+    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     state: InstanceState,
+    shaders: Arc<PolygonShaders>,
     id: RenderID,
 }
 
-#[derive(Clone, Debug)]
-struct FaceBuffer {
-    surface: (Arc<BufferHandler>, Arc<BufferHandler>),
-    boundary: Arc<BufferHandler>,
-    boundary_length: Arc<BufferHandler>,
-}
-
+/// Wire frame rendering
 #[derive(Debug)]
-struct FaceInstance {
-    buffer: Arc<Mutex<FaceBuffer>>,
+pub struct WireFrameInstance {
+    vertices: Arc<BufferHandler>,
+    strips: Arc<BufferHandler>,
+    state: WireFrameState,
+    shaders: Arc<WireShaders>,
     id: RenderID,
 }
 
@@ -120,66 +159,74 @@ struct FaceInstance {
 /// with original, however, its render id is different from the one of original.
 #[derive(Debug)]
 pub struct ShapeInstance {
-    faces: Vec<FaceInstance>,
+    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
+    boundary: Arc<BufferHandler>,
     state: InstanceState,
+    shaders: Arc<ShapeShaders>,
+    id: RenderID,
 }
 
-/// Iterated face for rendering `ShapeInstance`.
-#[derive(Clone, Copy, Debug)]
-pub struct RenderFace<'a> {
-    instance: &'a FaceInstance,
-    state: &'a InstanceState,
+/// Constroctor for instances
+#[derive(Debug, Clone)]
+pub struct InstanceCreator {
+    handler: DeviceHandler,
+    polygon_shaders: Arc<PolygonShaders>,
+    shape_shaders: Arc<ShapeShaders>,
+    wire_shaders: Arc<WireShaders>,
 }
 
-/// The trait for generate `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
-/// `ShapeInstance` from `Shell` and `Solid`.
-pub trait IntoInstance {
-    /// the type of instance
-    type Instance;
-    /// instance descriptor
+/// for creating `InstanceCreator`
+pub trait CreatorCreator {
+    /// create `InstanceCreator`
+    fn instance_creator(&self) -> InstanceCreator;
+}
+
+/// The trait for Buffer Objects.
+pub trait CreateBuffers {
+    /// Creates buffer handlers of attributes and indices.
+    fn buffers(
+        &self,
+        vertex_usage: BufferUsage,
+        index_usage: BufferUsage,
+        device: &Device,
+    ) -> (BufferHandler, BufferHandler);
+}
+
+/// The trait for generating `Instance` from `Self`.
+pub trait TryIntoInstance<Instance> {
+    /// Configuation deacriptor for instance.
     type Descriptor;
     #[doc(hidden)]
-    fn into_instance(&self, device: &Device, desc: &Self::Descriptor) -> Self::Instance;
-}
-
-/// Extend trait for `Scene` to create instance.
-pub trait CreateInstance {
-    /// Creates `PolygonInstance` from `PolygonMesh` and `StructuredMesh`, and
-    /// `ShapeInstance` from `Shell` and `Solid`.
-    fn create_instance<T: IntoInstance>(
+    fn try_into_instance(
         &self,
-        object: &T,
-        desc: &T::Descriptor,
-    ) -> T::Instance;
+        creator: &InstanceCreator,
+        desc: &Self::Descriptor,
+    ) -> Option<Instance>;
 }
 
-impl CreateInstance for Scene {
-    #[inline(always)]
-    fn create_instance<T: IntoInstance>(
+/// The trait for generating `Instance` from `Self`.
+pub trait IntoInstance<Instance> {
+    /// Configuation deacriptor for instance.
+    type Descriptor;
+    /// Creates `Instance` from `self`.
+    fn into_instance(
         &self,
-        object: &T,
-        desc: &T::Descriptor,
-    ) -> T::Instance {
-        object.into_instance(self.device(), desc.clone())
-    }
-}
-
-#[repr(C)]
-#[derive(Debug, Clone, Copy, Zeroable, Pod)]
-struct AttrVertex {
-    pub position: [f32; 3],
-    pub uv_coord: [f32; 2],
-    pub normal: [f32; 3],
+        creator: &InstanceCreator,
+        desc: &Self::Descriptor,
+    ) -> Instance;
 }
 
 #[derive(Debug, Clone)]
-struct ExpandedPolygon {
-    vertices: Vec<AttrVertex>,
+struct ExpandedPolygon<V> {
+    vertices: Vec<V>,
     indices: Vec<u32>,
 }
 
-mod instdesc;
-mod polyrend;
-mod shaperend;
+mod expanded;
 /// utility for creating `Texture`
 pub mod image2texture;
+mod instance_creator;
+mod instance_descriptor;
+mod polyrend;
+mod shaperend;
+mod wireframe;

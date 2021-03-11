@@ -1,6 +1,6 @@
-use std::fmt::Debug;
 use crate::cgmath64::*;
 use cgmath::AbsDiffEq;
+use std::fmt::Debug;
 
 /// general tolerance
 pub const TOLERANCE: f64 = 1.0e-7;
@@ -15,16 +15,60 @@ pub trait Tolerance: AbsDiffEq<Epsilon = f64> + Debug {
 
     /// The "distance" is less than `TOLERANCR2`.
     fn near2(&self, other: &Self) -> bool { self.abs_diff_eq(other, TOLERANCE2) }
+}
 
-    /// assert if `one` is not near `other`.
-    fn assert_near(one: &Self, other: &Self) {
-        cgmath::assert_abs_diff_eq!(one, other, epsilon = TOLERANCE)
-    }
+/// assert near
+#[macro_export]
+macro_rules! assert_near {
+    ($left: expr, $right: expr $(,)?) => {
+        assert!($left.near(&$right), "assertion failed: `left` is near `right`
+left: {:?},
+right: {:?}", $left, $right)
+    };
+    ($left: expr, $right: expr, $($arg: tt)+) => {
+        assert!($left.near(&$right), "assertion failed: `left` is near `right`
+left: {:?},
+right: {:?}: {}", $left, $right, format_args!($($arg)+))
+    };
+}
 
-    /// assertion if `one` is not near `other` in square order.
-    fn assert_near2(one: &Self, other: &Self) {
-        cgmath::assert_abs_diff_eq!(one, other, epsilon = TOLERANCE2)
-    }
+#[test]
+#[should_panic]
+fn assert_near_without_msg() {
+    assert_near!(1.0, 2.0);
+}
+
+#[test]
+#[should_panic]
+fn assert_near_with_msg() {
+    assert_near!(1.0, 2.0, "{}", "test OK");
+}
+
+/// assert_near2
+#[macro_export]
+macro_rules! assert_near2 {
+    ($left: expr, $right: expr $(,)?) => {
+        assert!($left.near2(&$right), "assertion failed: `left` is near `right`
+left: {:?},
+right: {:?}", $left, $right)
+    };
+    ($left: expr, $right: expr, $($arg: tt)+) => {
+        assert!($left.near2(&$right), "assertion failed: `left` is near `right`
+left: {:?},
+right: {:?}: {}", $left, $right, format_args!($($arg)+))
+    };
+}
+
+#[test]
+#[should_panic]
+fn assert_near2_without_msg() {
+    assert_near2!(1.0, 2.0);
+}
+
+#[test]
+#[should_panic]
+fn assert_near2_with_msg() {
+    assert_near2!(1.0, 2.0, "{}", "test OK");
 }
 
 /// The structs defined the origin. `f64`, `Vector`, and so on.

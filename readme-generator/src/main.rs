@@ -26,10 +26,13 @@ fn cmake_flag(path: &&str) -> usize {
 }
 
 fn badge_url(path: &str) -> String {
-    format!("[![Crates.io](https://img.shields.io/crates/v/{0}.svg)]\
+    format!(
+        "[![Crates.io](https://img.shields.io/crates/v/{0}.svg)]\
 (https://crates.io/crates/{0}) \
 [![Docs.rs](https://docs.rs/{0}/badge.svg)]\
-(https://docs.rs/{0})", path)
+(https://docs.rs/{0})",
+        path
+    )
 }
 
 fn create_readme(path: &str) {
@@ -38,7 +41,12 @@ fn create_readme(path: &str) {
     let output = String::from_utf8(output.stdout).unwrap();
     let lines: Vec<_> = output.split("\n").collect();
     readme
-        .write_fmt(format_args!("{}\n{}\n\n{}\n", lines[0], badge_url(path), lines[2]))
+        .write_fmt(format_args!(
+            "{}\n{}\n\n{}\n",
+            lines[0],
+            badge_url(path),
+            lines[2]
+        ))
         .unwrap();
     let dir = match std::fs::read_dir("examples") {
         Ok(got) => got,
@@ -58,7 +66,10 @@ fn create_readme(path: &str) {
     for file in dir {
         let path = file.unwrap().path();
         let extension = path.extension();
-        if extension.map(|e| e.to_str().unwrap() != "rs").unwrap_or(true) {
+        if extension
+            .map(|e| e.to_str().unwrap() != "rs")
+            .unwrap_or(true)
+        {
             continue;
         }
         let filestem = path.file_stem().unwrap().to_str().unwrap();

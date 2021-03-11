@@ -5,6 +5,7 @@
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 vertex_normal;
+layout(location = 3) in flat uvec2 boundary_range;
 
 layout(set = 0, binding = 0) uniform Camera {
     mat4 camera_matrix;
@@ -31,10 +32,6 @@ layout(set = 1, binding = 4) buffer Boundary {
     vec4 boundary[];
 };
 
-layout(set = 1, binding = 5) uniform BoundaryLength {
-    uint boundary_length;
-};
-
 layout(location = 0) out vec4 color;
 
 vec4 textured_material() {
@@ -44,7 +41,7 @@ vec4 textured_material() {
 
 bool in_domain() {
     int score = 0;
-    for (int i = 0; i < boundary_length; i++) {
+    for (uint i = boundary_range[0]; i < boundary_range[1]; i++) {
         vec2 start = boundary[i].xy - uv;
         vec2 end = boundary[i].zw - uv;
         if (start[1] * end[1] >= 0) continue;

@@ -1,6 +1,6 @@
 [package]
 name = "truck-base"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2018"
 description = "Basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc..."
@@ -15,4 +15,4 @@ categories = ["graphics"]
 
 [dependencies]
 cgmath = { version = "0.18.0", features = ["serde"] }
-serde = { version = "1.0.120", features = ["derive"] }
+serde = { version = "1.0.123", features = ["derive"] }

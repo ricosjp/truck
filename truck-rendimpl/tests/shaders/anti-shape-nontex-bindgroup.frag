@@ -17,14 +17,11 @@ layout(set = 1, binding = 2) buffer Boundary {
     vec4 boundary[];
 };
 
-layout(set = 1, binding = 3) uniform BoundaryLength {
-    uint boundary_length;
-};
-
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 normal;
-layout(location = 3) in mat4 input_matrix;
+layout(location = 3) in flat uvec2 boundary_range;
+layout(location = 4) in mat4 input_matrix;
 
 layout(location = 0) out vec4 color;
 
@@ -68,7 +65,7 @@ void main() {
         color = vec4(0.0, 1.0, 1.0, 1.0);
     } else if (abs(ambient_ratio - 0.92) > EPS) {
         color = vec4(0.25, 0.25, 0.25, 1.0);
-    } else if (boundary_length != 4) {
+    } else if (boundary_range != uvec2(0, 4)) {
         color = vec4(0.5, 0.5, 0.5, 1.0);
     } else if (distance(boundary[0], vec4(0.0, 0.0, 1.0, 0.0)) > EPS) {
         color = vec4(0.75, 0.75, 0.75, 1.0);

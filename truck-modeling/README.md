@@ -14,14 +14,22 @@ We want to reproduce the bottle made in the [OCCT tutorial].
 Now, one cannot make a fillet or run boolean operations by truck.
 So, the bottle made by this script is not completed.
 
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
+
 [OCCT tutorial]: https://dev.opencascade.org/doc/overview/html/occt__tutorial.html
 ## cube
 Modeling a unit cube by three sweeps.
-## framework
-Module for visualizing models.
+
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 ## punched-cube
 Modeling a unit cube with a hole through it.
+
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 ## torus
 Modeling a torus by two sweeps.
+
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 ## tsudumi
 Modeling a one-leaf hyperboloid.
+
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
