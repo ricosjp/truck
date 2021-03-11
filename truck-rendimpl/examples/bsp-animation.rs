@@ -90,6 +90,7 @@ impl MyApp {
                     &ShapeInstanceDescriptor {
                         instance_state: Default::default(),
                         mesh_precision: 0.01,
+                        ..Default::default()
                     },
                 );
                 let mut object = object.lock().unwrap();
@@ -124,6 +125,7 @@ impl App for MyApp {
             &ShapeInstanceDescriptor {
                 instance_state: Default::default(),
                 mesh_precision: 0.01,
+                ..Default::default()
             },
         );
         scene.add_object(&object);

@@ -106,6 +106,7 @@ impl MyApp {
                 ..Default::default()
             },
             mesh_precision: 0.005,
+            ..Default::default()
         };
         let wire_desc = ShapeWireFrameInstanceDescriptor {
             wireframe_state: WireFrameState {
