@@ -83,8 +83,6 @@ pub struct ShapeInstanceDescriptor {
     pub instance_state: InstanceState,
     /// precision for meshing
     pub mesh_precision: f64,
-    /// tolerance at normal completion
-    pub normal_completion_tolerance: f64,
 }
 
 /// Configures of wire frame instance of polygon

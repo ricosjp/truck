@@ -1,6 +1,4 @@
 use crate::*;
-use std::f64::consts::PI;
-use truck_polymesh::prelude::*;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
@@ -17,7 +15,6 @@ impl Default for ShapeInstanceDescriptor {
         ShapeInstanceDescriptor {
             instance_state: Default::default(),
             mesh_precision: 0.005,
-            normal_completion_tolerance: PI / 6.0,
         }
     }
 }
