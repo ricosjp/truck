@@ -131,10 +131,13 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
         line(edge1.front(), edge0.front()),
     ]
     .into();
-    let curve0 = edge0.oriented_curve().into_non_rationalized();
-    let curve1 = edge1.oriented_curve().into_non_rationalized();
+    let curve0 = edge0.oriented_curve().lift_up();
+    let curve1 = edge1.oriented_curve().lift_up();
     let surface = BSplineSurface::homotopy(curve0, curve1);
-    Face::new(vec![wire], Surface::NURBSSurface(NURBSSurface::new(surface)))
+    Face::new(
+        vec![wire],
+        Surface::NURBSSurface(NURBSSurface::new(surface)),
+    )
 }
 
 /// Creates a cone by R-sweeping.
@@ -151,7 +154,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// ].into();
 /// let cone = builder::cone(&wire, Vector3::unit_y(), Rad(2.0 * PI));
 /// let irregular = builder::rsweep(&wire, Point3::origin(), Vector3::unit_y(), Rad(2.0 * PI));
-/// 
+///
 /// // the degenerate edge of cone is removed!
 /// assert_eq!(cone[0].boundaries()[0].len(), 3);
 /// assert_eq!(irregular[0].boundaries()[0].len(), 4);
@@ -161,7 +164,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// # assert_eq!(irregular[2].boundaries()[0].len(), 4);
 /// # assert_eq!(cone[3].boundaries()[0].len(), 3);
 /// # assert_eq!(irregular[3].boundaries()[0].len(), 4);
-/// 
+///
 /// // this cone is closed
 /// Solid::new(vec![cone]);
 /// ```
@@ -263,7 +266,7 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 ///     builder::try_attach_plane(&wires).unwrap_err(),
 ///     Error::FromTopology(truck_topology::errors::Error::NotClosedWire),
 /// );
-/// 
+///
 /// wires[0].push_back(builder::line(&v2, &v3));
 /// wires[0].push_back(builder::line(&v3, &v0));
 /// // failed to attach plane, because wire is not in the plane.
@@ -271,7 +274,7 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 ///     builder::try_attach_plane(&wires).unwrap_err(),
 ///     Error::WireNotInOnePlane,
 /// );
-/// 
+///
 /// wires[0].pop_back();
 /// wires[0].pop_back();
 /// wires[0].push_back(builder::line(&v2, &v0));
@@ -285,6 +288,7 @@ pub fn try_attach_plane(wires: &Vec<Wire>) -> Result<Face> {
         .flatten()
         .flat_map(|edge| {
             edge.oriented_curve()
+                .lift_up()
                 .control_points()
                 .clone()
                 .into_iter()
@@ -295,35 +299,33 @@ pub fn try_attach_plane(wires: &Vec<Wire>) -> Result<Face> {
         Some(got) => got,
         None => return Err(Error::WireNotInOnePlane),
     };
-    let surface = NURBSSurface::new(plane);
+    let surface = Surface::NURBSSurface(NURBSSurface::new(plane));
     Ok(Face::try_new(wires.clone(), surface)?)
 }
 
 /// Returns another topology whose points, curves, and surfaces are cloned.
 #[inline(always)]
-pub fn clone<T: Mapped<Point3, Curve, Surface>>(elem: &T) -> T {
-    elem.topological_clone()
-}
+pub fn clone<T: Mapped<Point3, Curve, Surface>>(elem: &T) -> T { elem.topological_clone() }
 
 /// Returns a transformed vertex, edge, wire, face, shell or solid.
 #[inline(always)]
 pub fn transformed<T: Mapped<Point3, Curve, Surface>>(elem: &T, mat: Matrix4) -> T {
     elem.mapped(
         &move |pt: &Point3| mat.transform_point(*pt),
-        &move |curve: &NURBSCurve| NURBSCurve::new(mat * curve.non_rationalized()),
-        &move |surface: &NURBSSurface| NURBSSurface::new(mat * surface.non_rationalized()),
+        &move |curve: &Curve| curve.clone().transformed(mat),
+        &move |surface: &Surface| surface.clone().transformed(mat),
     )
 }
 
 /// Returns a translated vertex, edge, wire, face, shell or solid.
 #[inline(always)]
-pub fn translated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T {
+pub fn translated<T: Mapped<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T {
     transformed(elem, Matrix4::from_translation(vector))
 }
 
 /// Returns a rotated vertex, edge, wire, face, shell or solid.
 #[inline(always)]
-pub fn rotated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
+pub fn rotated<T: Mapped<Point3, Curve, Surface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
@@ -337,11 +339,7 @@ pub fn rotated<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 
 /// Returns a scaled vertex, edge, wire, face, shell or solid.
 #[inline(always)]
-pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
-    elem: &T,
-    origin: Point3,
-    scalars: Vector3,
-) -> T {
+pub fn scaled<T: Mapped<Point3, Curve, Surface>>(elem: &T, origin: Point3, scalars: Vector3) -> T {
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_nonuniform_scale(scalars[0], scalars[1], scalars[2]);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -389,16 +387,14 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
     let trsl = Matrix4::from_translation(vector);
     elem.sweep(
         &move |pt| trsl.transform_point(*pt),
-        &move |curve| NURBSCurve::new(trsl * curve.non_rationalized()),
-        &move |surface| NURBSSurface::new(trsl * surface.non_rationalized()),
-        &move |pt0, pt1| {
-            NURBSCurve::new(geom_impls::line(pt0.to_homogeneous(), pt1.to_homogeneous()))
-        },
+        &move |curve| curve.clone().transformed(trsl),
+        &move |surface| surface.clone().transformed(trsl),
+        &move |pt0, pt1| Curve::BSplineCurve(geom_impls::line(pt0.to_vec(), pt1.to_vec())),
         &move |curve0, curve1| {
-            NURBSSurface::new(BSplineSurface::homotopy(
-                curve0.clone().into_non_rationalized(),
-                curve1.clone().into_non_rationalized(),
-            ))
+            Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::homotopy(
+                curve0.clone().lift_up(),
+                curve1.clone().lift_up(),
+            )))
         },
     )
 }
@@ -512,7 +508,7 @@ pub fn rsweep<T: ClosedSweep<Point3, Curve, Surface>, R: Into<Rad<f64>>>(
     }
 }
 
-fn partial_rsweep<T: MultiSweep<Point3, NURBSCurve, NURBSSurface>>(
+fn partial_rsweep<T: MultiSweep<Point3, Curve, Surface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
@@ -525,29 +521,29 @@ fn partial_rsweep<T: MultiSweep<Point3, NURBSCurve, NURBSSurface>>(
     let trsl = mat2 * mat1 * mat0;
     elem.multi_sweep(
         &move |pt| trsl.transform_point(*pt),
-        &move |curve| NURBSCurve::new(trsl * curve.non_rationalized()),
-        &move |surface| NURBSSurface::new(trsl * surface.non_rationalized()),
+        &move |curve| curve.clone().transformed(trsl),
+        &move |surface| surface.clone().transformed(trsl),
         &move |pt, _| {
-            NURBSCurve::new(geom_impls::circle_arc(
+            Curve::NURBSCurve(NURBSCurve::new(geom_impls::circle_arc(
                 pt.to_homogeneous(),
                 origin,
                 axis,
                 angle / division as f64,
-            ))
+            )))
         },
         &move |curve, _| {
-            NURBSSurface::new(geom_impls::rsweep_surface(
-                curve.non_rationalized(),
+            Surface::NURBSSurface(NURBSSurface::new(geom_impls::rsweep_surface(
+                &curve.clone().lift_up(),
                 origin,
                 axis,
                 angle / division as f64,
-            ))
+            )))
         },
         division,
     )
 }
 
-fn whole_rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
+fn whole_rsweep<T: ClosedSweep<Point3, Curve, Surface>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
@@ -558,23 +554,23 @@ fn whole_rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>>(
     let trsl = mat2 * mat1 * mat0;
     elem.closed_sweep(
         &move |pt| trsl.transform_point(*pt),
-        &move |curve| NURBSCurve::new(trsl * curve.non_rationalized()),
-        &move |surface| NURBSSurface::new(trsl * surface.non_rationalized()),
+        &move |curve| curve.clone().transformed(trsl),
+        &move |surface| surface.clone().transformed(trsl),
         &move |pt, _| {
-            NURBSCurve::new(geom_impls::circle_arc(
+            Curve::NURBSCurve(NURBSCurve::new(geom_impls::circle_arc(
                 pt.to_homogeneous(),
                 origin,
                 axis,
                 PI,
-            ))
+            )))
         },
         &move |curve, _| {
-            NURBSSurface::new(geom_impls::rsweep_surface(
-                curve.non_rationalized(),
+            Surface::NURBSSurface(NURBSSurface::new(geom_impls::rsweep_surface(
+                &curve.clone().lift_up(),
                 origin,
                 axis,
                 PI,
-            ))
+            )))
         },
         2,
     )

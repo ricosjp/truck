@@ -1,19 +1,16 @@
 use crate::*;
-use geometry::KnotVec;
 use std::f64::consts::PI;
-type BSplineCurve = truck_geometry::BSplineCurve<Vector4>;
-type BSplineSurface = truck_geometry::BSplineSurface<Vector4>;
 
-pub(super) fn line(pt0: Vector4, pt1: Vector4) -> BSplineCurve {
+pub(super) fn line<T>(pt0: T, pt1: T) -> BSplineCurve<T> {
     let knot_vec = KnotVec::bezier_knot(1);
-    BSplineCurve::new_unchecked(knot_vec, vec![pt0, pt1])
+    BSplineCurve::debug_new(knot_vec, vec![pt0, pt1])
 }
 
 pub(super) fn circle_arc_by_three_points(
     point0: Vector4,
     point1: Vector4,
     transit: Point3,
-) -> BSplineCurve {
+) -> BSplineCurve<Vector4> {
     let pt0 = Point3::from_homogeneous(point0);
     let pt1 = Point3::from_homogeneous(point1);
     let origin = circum_center(pt0, pt1, transit);
@@ -42,7 +39,7 @@ pub(super) fn circle_arc(
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> BSplineCurve {
+) -> BSplineCurve<Vector4> {
     let tmp = Point3::from_homogeneous(point);
     let origin = origin + (axis.dot(tmp - origin)) * axis;
     let axis_trsf = if !Tolerance::near(&(axis[2] * axis[2]), &1.0) {
@@ -75,11 +72,11 @@ pub(super) fn circle_arc(
 }
 
 pub(super) fn rsweep_surface(
-    curve: &BSplineCurve,
+    curve: &BSplineCurve<Vector4>,
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> BSplineSurface {
+) -> BSplineSurface<Vector4> {
     let knot_vec0 = curve.knot_vec().clone();
     let knot_vec1 = KnotVec::try_from(vec![0.0, 0.0, 0.0, 0.25, 0.5, 0.75, 1.0, 1.0, 1.0]).unwrap();
     let mut control_points = Vec::new();
@@ -96,7 +93,7 @@ fn closed_polyline_orientation(pts: &Vec<Point3>) -> bool {
     }) >= 0.0
 }
 
-pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<BSplineSurface> {
+pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<BSplineSurface<Vector4>> {
     let center = pts.iter().fold(Point3::origin(), |sum, pt| sum + pt.to_vec()) / pts.len() as f64;
     let normal = pts.windows(2).fold(Vector3::zero(), |sum, pt| {
         sum + (pt[0] - center).cross(pt[1] - center)
