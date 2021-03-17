@@ -1243,7 +1243,7 @@ where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> +
     pub fn roughly_bounding_box(&self) -> BoundingBox<V> { self.control_points.iter().collect() }
 }
 
-impl<V: TangentSpace<f64>> Curve for BSplineCurve<V>
+impl<V: TangentSpace<f64>> ParametricCurve for BSplineCurve<V>
 where V::Space: EuclideanSpace<Scalar = f64, Diff = V>
 {
     type Point = V::Space;
@@ -1310,6 +1310,62 @@ impl_mat_multi!(Vector3, Matrix3);
 impl_scalar_multi!(Vector3, f64);
 impl_mat_multi!(Vector4, Matrix4);
 impl_scalar_multi!(Vector4, f64);
+
+impl Transformed<Matrix2> for BSplineCurve<Vector2> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix2) {
+        self.control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans * *pt)
+    }
+    #[inline(always)]
+    fn transformed(mut self, trans: Matrix2) -> Self {
+        self.transform_by(trans);
+        self
+    }
+}
+
+impl Transformed<Matrix3> for BSplineCurve<Vector2> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) {
+        self.control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans.transform_point(Point2::from_vec(*pt)).to_vec())
+    }
+    #[inline(always)]
+    fn transformed(mut self, trans: Matrix3) -> Self {
+        self.transform_by(trans);
+        self
+    }
+}
+
+impl Transformed<Matrix3> for BSplineCurve<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) {
+        self.control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans * *pt)
+    }
+    #[inline(always)]
+    fn transformed(mut self, trans: Matrix3) -> Self {
+        self.transform_by(trans);
+        self
+    }
+}
+
+impl Transformed<Matrix4> for BSplineCurve<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans.transform_point(Point3::from_vec(*pt)).to_vec())
+    }
+    #[inline(always)]
+    fn transformed(mut self, trans: Matrix4) -> Self {
+        self.transform_by(trans);
+        self
+    }
+}
 
 impl<V: VectorSpace<Scalar = f64> + Tolerance> CurveCollector<V> {
     /// Concats two B-spline curves.

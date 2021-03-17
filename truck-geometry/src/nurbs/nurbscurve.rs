@@ -37,7 +37,6 @@ impl<V> NURBSCurve<V> {
     /// cf.[`BSplineCurve::control_point_mut`](./struct.BSplineCurve.html#method.control_point_mut)
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx: usize) -> &mut V { &mut self.0.control_points[idx] }
-    
     /// Returns the iterator on all control points  
     /// cf.[`BSplineCurve::control_points_mut`](./struct.BSplineCurve.html#method.control_points_mut)
     #[inline(always)]
@@ -89,7 +88,7 @@ impl<V> NURBSCurve<V> {
 
 impl<V: Homogeneous<f64>> NURBSCurve<V> {
     /// Returns the closure of substitution.
-    /// 
+    ///
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
@@ -139,7 +138,6 @@ where V::Point: Tolerance
             .iter()
             .all(move |vec| vec.to_point().near(&pt))
     }
-    
     /// Determine whether `self` and `other` is near as the B-spline curves or not.  
     ///
     /// Divides each knot interval into the number of degree equal parts,
@@ -277,7 +275,6 @@ impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V> {
         self.0.try_concat(&mut other.0)?;
         Ok(self)
     }
-    
     /// Concats two NURBS curves.  
     /// cf.[`BSplineCurve::concat`](./struct.BSplineCurve.html#method.concat)
     #[inline(always)]
@@ -288,7 +285,8 @@ impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V> {
 }
 
 impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V>
-where V::Point: Tolerance {
+where V::Point: Tolerance
+{
     /// Makes the rational curve locally injective.
     /// # Example
     /// ```
@@ -428,7 +426,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
     }
 }
 
-impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
+impl<V: Homogeneous<f64>> ParametricCurve for NURBSCurve<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t).to_point() }
@@ -463,6 +461,45 @@ impl<V: Clone> Invertible for NURBSCurve<V> {
     }
 }
 
+impl Transformed<Matrix2> for NURBSCurve<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix2) { self.transform_by(Matrix3::from(trans)) }
+    #[inline(always)]
+    fn transformed(self, trans: Matrix2) -> Self { self.transformed(Matrix3::from(trans)) }
+}
+
+impl Transformed<Matrix3> for NURBSCurve<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) { self.0.transform_by(trans) }
+    #[inline(always)]
+    fn transformed(mut self, trans: Matrix3) -> Self {
+        self.transform_by(trans);
+        self
+    }
+}
+
+impl Transformed<Matrix3> for NURBSCurve<Vector4> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) { self.transform_by(Matrix3::from(trans)) }
+    #[inline(always)]
+    fn transformed(self, trans: Matrix3) -> Self { self.transformed(Matrix3::from(trans)) }
+}
+
+impl Transformed<Matrix4> for NURBSCurve<Vector4> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.0
+            .control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans * *pt)
+    }
+    #[inline(always)]
+    fn transformed(mut self, trans: Matrix4) -> Self {
+        self.transform_by(trans);
+        self
+    }
+}
+
 impl<V: Homogeneous<f64>> BSplineCurve<V>
 where <V::Point as EuclideanSpace>::Diff: InnerSpace
 {
@@ -479,8 +516,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
         point: V::Point,
         hint: f64,
         counter: usize,
-    ) -> Option<f64>
-    {
+    ) -> Option<f64> {
         let pt = self.subs(hint);
         let der = derived.subs(hint);
         let der2 = derived2.subs(hint);

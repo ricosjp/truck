@@ -29,7 +29,7 @@ impl<C> RevolutedCurve<C> {
     pub fn entity_curve_mut(&mut self) -> &mut C { &mut self.curve }
 }
 
-impl<C: Curve<Point = Point3, Vector = Vector3>> ParametricSurface for RevolutedCurve<C> {
+impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> ParametricSurface for RevolutedCurve<C> {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
@@ -76,7 +76,7 @@ impl<C: Curve<Point = Point3, Vector = Vector3>> ParametricSurface for Revoluted
     }
 }
 
-impl<C: Curve<Point = Point3, Vector = Vector3>> BoundedSurface for RevolutedCurve<C> {
+impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> BoundedSurface for RevolutedCurve<C> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
         (self.curve.parameter_range(), (0.0, 2.0 * PI))

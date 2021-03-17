@@ -1,5 +1,4 @@
 use super::*;
-use std::ops::Mul;
 
 impl Plane {
     /// Creates a new plane from three points.
@@ -196,13 +195,20 @@ impl ParameterDivision2D for Plane {
     }
 }
 
-impl Mul<Plane> for Matrix4 {
-    type Output = Plane;
-    fn mul(self, plane: Plane) -> Plane {
+
+impl<T: Transform3<Scalar = f64>> Transformed<T> for Plane {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: T) {
+        self.o = trans.transform_point(self.o);
+        self.p = trans.transform_point(self.p);
+        self.q = trans.transform_point(self.q);
+    }
+    #[inline(always)]
+    fn transformed(self, trans: T) -> Self {
         Plane {
-            o: self.transform_point(plane.o),
-            p: self.transform_point(plane.p),
-            q: self.transform_point(plane.q),
+            o: trans.transform_point(self.o),
+            p: trans.transform_point(self.p),
+            q: trans.transform_point(self.q),
         }
     }
 }

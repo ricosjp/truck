@@ -589,7 +589,7 @@ impl<P, C, S: Clone + Invertible> Face<P, C, S> {
 impl<P, C, S> Face<P, C, S>
 where
     P: Tolerance,
-    C: Curve<Point = P>,
+    C: ParametricCurve<Point = P>,
     S: IncludeCurve<C>,
 {
     /// Returns the consistence of the geometry of end vertices

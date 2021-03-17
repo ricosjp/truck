@@ -1,5 +1,5 @@
 /// Parametric curves
-pub trait Curve: Clone {
+pub trait ParametricCurve: Clone {
     /// The curve is in the space of `Self::Point`.
     type Point;
     /// The derivation vector of the curve.
@@ -47,7 +47,7 @@ pub trait BoundedSurface: ParametricSurface {
 }
 
 /// Whether the surface includes the boundary curve.
-pub trait IncludeCurve<C: Curve> {
+pub trait IncludeCurve<C: ParametricCurve> {
     /// Returns whether the curve `curve` is included in the surface `self`.
     fn include(&self, curve: &C) -> bool;
 }
@@ -58,6 +58,14 @@ pub trait Invertible {
     fn invert(&mut self);
     /// Returns the inverse.
     fn inverse(&self) -> Self;
+}
+
+/// Transform geometry
+pub trait Transformed<T> {
+    /// transform by `trans`.
+    fn transform_by(&mut self, trans: T);
+    /// transformed geometry by `trans`.
+    fn transformed(self, trans: T) -> Self;
 }
 
 /// Dividable curve
@@ -73,7 +81,7 @@ pub trait ParameterDivision2D {
 }
 
 /// Implementation for the test of topological methods.
-impl Curve for () {
+impl ParametricCurve for () {
     type Point = ();
     type Vector = ();
     fn subs(&self, _: f64) -> Self::Point {}
@@ -102,7 +110,7 @@ impl IncludeCurve<()> for () {
     fn include(&self, _: &()) -> bool { true }
 }
 
-impl Curve for (usize, usize) {
+impl ParametricCurve for (usize, usize) {
     type Point = usize;
     type Vector = usize;
     fn subs(&self, t: f64) -> Self::Point {

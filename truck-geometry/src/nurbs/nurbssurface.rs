@@ -677,6 +677,46 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     }
 }
 
+impl Transformed<Matrix2> for NURBSSurface<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix2) { self.transform_by(Matrix3::from(trans)) }
+    #[inline(always)]
+    fn transformed(self, trans: Matrix2) -> Self { self.transformed(Matrix3::from(trans)) }
+}
+
+impl Transformed<Matrix3> for NURBSSurface<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) { self.0.transform_by(trans) }
+    #[inline(always)]
+    fn transformed(mut self, trans: Matrix3) -> Self {
+        self.transform_by(trans);
+        self
+    }
+}
+
+impl Transformed<Matrix3> for NURBSSurface<Vector4> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) { self.transform_by(Matrix3::from(trans)) }
+    #[inline(always)]
+    fn transformed(self, trans: Matrix3) -> Self { self.transformed(Matrix3::from(trans)) }
+}
+
+impl Transformed<Matrix4> for NURBSSurface<Vector4> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.0
+            .control_points
+            .iter_mut()
+            .flatten()
+            .for_each(|pt| *pt = trans * *pt)
+    }
+    #[inline(always)]
+    fn transformed(mut self, trans: Matrix4) -> Self {
+        self.transform_by(trans);
+        self
+    }
+}
+
 impl<V: Homogeneous<f64>> BSplineSurface<V>
 where <V::Point as EuclideanSpace>::Diff: InnerSpace
 {

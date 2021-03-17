@@ -37,7 +37,7 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
     let pt0 = vertex0.lock_point().unwrap().to_homogeneous();
     let pt1 = vertex1.lock_point().unwrap().to_homogeneous();
     let curve = geom_impls::line(pt0, pt1);
-    Edge::new(vertex0, vertex1, NURBSCurve::new(curve))
+    Edge::new(vertex0, vertex1, Curve::NURBSCurve(NURBSCurve::new(curve)))
 }
 
 /// Returns a circle arc from `vertex0` to `vertex1` via `transit`.
@@ -61,7 +61,7 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
     let pt0 = vertex0.lock_point().unwrap().to_homogeneous();
     let pt1 = vertex1.lock_point().unwrap().to_homogeneous();
     let curve = geom_impls::circle_arc_by_three_points(pt0, pt1, transit);
-    Edge::new(vertex0, vertex1, NURBSCurve::new(curve))
+    Edge::new(vertex0, vertex1, Curve::NURBSCurve(NURBSCurve::new(curve)))
 }
 
 /// Returns a Bezier curve from `vertex0` to `vertex1` with inter control points `inter_points`.
@@ -95,7 +95,7 @@ pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>)
         .collect();
     let knot_vec = KnotVec::bezier_knot(ctrl_pts.len() - 1);
     let curve = BSplineCurve::new(knot_vec, ctrl_pts);
-    Edge::new(vertex0, vertex1, NURBSCurve::new(curve))
+    Edge::new(vertex0, vertex1, Curve::NURBSCurve(NURBSCurve::new(curve)))
 }
 
 /// Returns a homotopic face from `edge0` to `edge1`.
@@ -134,7 +134,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     let curve0 = edge0.oriented_curve().into_non_rationalized();
     let curve1 = edge1.oriented_curve().into_non_rationalized();
     let surface = BSplineSurface::homotopy(curve0, curve1);
-    Face::new(vec![wire], NURBSSurface::new(surface))
+    Face::new(vec![wire], Surface::NURBSSurface(NURBSSurface::new(surface)))
 }
 
 /// Creates a cone by R-sweeping.
@@ -301,13 +301,13 @@ pub fn try_attach_plane(wires: &Vec<Wire>) -> Result<Face> {
 
 /// Returns another topology whose points, curves, and surfaces are cloned.
 #[inline(always)]
-pub fn clone<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(elem: &T) -> T {
+pub fn clone<T: Mapped<Point3, Curve, Surface>>(elem: &T) -> T {
     elem.topological_clone()
 }
 
 /// Returns a transformed vertex, edge, wire, face, shell or solid.
 #[inline(always)]
-pub fn transformed<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(elem: &T, mat: Matrix4) -> T {
+pub fn transformed<T: Mapped<Point3, Curve, Surface>>(elem: &T, mat: Matrix4) -> T {
     elem.mapped(
         &move |pt: &Point3| mat.transform_point(*pt),
         &move |curve: &NURBSCurve| NURBSCurve::new(mat * curve.non_rationalized()),
@@ -385,7 +385,7 @@ pub fn scaled<T: Mapped<Point3, NURBSCurve, NURBSSurface>>(
 /// # assert_eq!(*loop_iter.next().unwrap().lock_point().unwrap(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// ```
-pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vector3) -> T::Swept {
+pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T::Swept {
     let trsl = Matrix4::from_translation(vector);
     elem.sweep(
         &move |pt| trsl.transform_point(*pt),
@@ -496,7 +496,7 @@ pub fn tsweep<T: Sweep<Point3, NURBSCurve, NURBSSurface>>(elem: &T, vector: Vect
 /// # }
 /// ```
 #[inline(always)]
-pub fn rsweep<T: ClosedSweep<Point3, NURBSCurve, NURBSSurface>, R: Into<Rad<f64>>>(
+pub fn rsweep<T: ClosedSweep<Point3, Curve, Surface>, R: Into<Rad<f64>>>(
     elem: &T,
     origin: Point3,
     axis: Vector3,

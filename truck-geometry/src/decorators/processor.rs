@@ -10,12 +10,6 @@ impl<E, T: One> Processor<E, T> {
             orientation: true,
         }
     }
-    /// Transforms the geometry entity by `transform`
-    #[inline(always)]
-    pub fn transform_by(&mut self, transform: T)
-    where T: Mul<T, Output = T> + Copy {
-        self.transform = transform * self.transform;
-    }
     /// Returns the reference of entity
     #[inline(always)]
     pub fn entity(&self) -> &E { &self.entity }
@@ -48,7 +42,7 @@ impl<E: Clone, T: Clone> Invertible for Processor<E, T> {
     }
 }
 
-impl<C: Curve, T> Processor<C, T> {
+impl<C: ParametricCurve, T> Processor<C, T> {
     #[inline(always)]
     fn get_curve_parameter(&self, t: f64) -> f64 {
         let (t0, t1) = self.parameter_range();
@@ -59,9 +53,9 @@ impl<C: Curve, T> Processor<C, T> {
     }
 }
 
-impl<C, T> Curve for Processor<C, T>
+impl<C, T> ParametricCurve for Processor<C, T>
 where
-    C: Curve,
+    C: ParametricCurve,
     C::Point: EuclideanSpace<Diff = C::Vector>,
     C::Vector: VectorSpace<Scalar = f64>,
     T: Transform<C::Point> + Clone,
@@ -139,6 +133,24 @@ impl<E, T> DerefMut for Processor<E, T> {
     fn deref_mut(&mut self) -> &mut E { &mut self.entity }
 }
 
+impl<E, T> Transformed<T> for Processor<E, T>
+where
+    T: Mul<T, Output = T> + Copy
+{
+    #[inline(always)]
+    fn transform_by(&mut self, trans: T) {
+        self.transform = trans * self.transform;
+    }
+    #[inline(always)]
+    fn transformed(self, trans: T) -> Self {
+        Self {
+            entity: self.entity,
+            transform: trans * self.transform,
+            orientation: self.orientation,
+        }
+    }
+}
+
 fn get_axis(n: Vector3) -> (Vector3, Vector3) {
     let min = if n[0].abs() < n[1].abs() { 0 } else { 1 };
     let min = if n[min].abs() < n[2].abs() { min } else { 2 };
@@ -204,9 +216,9 @@ mod tests {
         const N: usize = 100;
         for i in 0..=N {
             let t = i as f64 / N as f64;
-            assert_near!(Curve::subs(&curve, t), processor.subs(t));
-            assert_near!(Curve::der(&curve, t), processor.der(t));
-            assert_near!(Curve::der2(&curve, t), processor.der2(t));
+            assert_near!(ParametricCurve::subs(&curve, t), processor.subs(t));
+            assert_near!(ParametricCurve::der(&curve, t), processor.der(t));
+            assert_near!(ParametricCurve::der2(&curve, t), processor.der2(t));
         }
 
         curve.invert();
@@ -214,9 +226,9 @@ mod tests {
         assert_eq!(curve.parameter_range(), processor.parameter_range());
         for i in 0..=N {
             let t = i as f64 / N as f64;
-            assert_near!(Curve::subs(&curve, t), processor.subs(t));
-            assert_near!(Curve::der(&curve, t), processor.der(t));
-            assert_near!(Curve::der2(&curve, t), processor.der2(t));
+            assert_near!(ParametricCurve::subs(&curve, t), processor.subs(t));
+            assert_near!(ParametricCurve::der(&curve, t), processor.der(t));
+            assert_near!(ParametricCurve::der2(&curve, t), processor.der2(t));
         }
     }
 
