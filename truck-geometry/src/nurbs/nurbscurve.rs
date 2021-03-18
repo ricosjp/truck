@@ -465,16 +465,17 @@ impl Transformed<Matrix2> for NURBSCurve<Vector3> {
     #[inline(always)]
     fn transform_by(&mut self, trans: Matrix2) { self.transform_by(Matrix3::from(trans)) }
     #[inline(always)]
-    fn transformed(self, trans: Matrix2) -> Self { self.transformed(Matrix3::from(trans)) }
+    fn transformed(&self, trans: Matrix2) -> Self { self.transformed(Matrix3::from(trans)) }
 }
 
 impl Transformed<Matrix3> for NURBSCurve<Vector3> {
     #[inline(always)]
     fn transform_by(&mut self, trans: Matrix3) { self.0.transform_by(trans) }
     #[inline(always)]
-    fn transformed(mut self, trans: Matrix3) -> Self {
-        self.transform_by(trans);
-        self
+    fn transformed(&self, trans: Matrix3) -> Self {
+        let mut curve = self.clone();
+        curve.transform_by(trans);
+        curve
     }
 }
 
@@ -482,7 +483,7 @@ impl Transformed<Matrix3> for NURBSCurve<Vector4> {
     #[inline(always)]
     fn transform_by(&mut self, trans: Matrix3) { self.transform_by(Matrix3::from(trans)) }
     #[inline(always)]
-    fn transformed(self, trans: Matrix3) -> Self { self.transformed(Matrix3::from(trans)) }
+    fn transformed(&self, trans: Matrix3) -> Self { self.transformed(Matrix3::from(trans)) }
 }
 
 impl Transformed<Matrix4> for NURBSCurve<Vector4> {
@@ -494,9 +495,10 @@ impl Transformed<Matrix4> for NURBSCurve<Vector4> {
             .for_each(|pt| *pt = trans * *pt)
     }
     #[inline(always)]
-    fn transformed(mut self, trans: Matrix4) -> Self {
-        self.transform_by(trans);
-        self
+    fn transformed(&self, trans: Matrix4) -> Self {
+        let mut curve = self.clone();
+        curve.transform_by(trans);
+        curve
     }
 }
 

@@ -50,7 +50,7 @@ impl Transformed<Matrix4> for Curve {
     fn transform_by(&mut self, trans: Matrix4) {
         derive_curve_method!(self, Transformed::transform_by, trans);
     }
-    fn transformed(self, trans: Matrix4) -> Self {
+    fn transformed(&self, trans: Matrix4) -> Self {
         derive_curve_self_method!(self, Transformed::transformed, trans)
     }
 }
@@ -155,7 +155,7 @@ impl Transformed<Matrix4> for Surface {
     fn transform_by(&mut self, trans: Matrix4) {
         derive_surface_method!(self, Transformed::transform_by, trans);
     }
-    fn transformed(self, trans: Matrix4) -> Self {
+    fn transformed(&self, trans: Matrix4) -> Self {
         derive_surface_self_method!(self, Transformed::transformed, trans)
     }
 }

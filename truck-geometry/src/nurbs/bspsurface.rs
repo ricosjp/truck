@@ -2168,9 +2168,10 @@ impl Transformed<Matrix2> for BSplineSurface<Vector2> {
             .flatten()
             .for_each(|pt| *pt = trans * *pt)
     }
-    fn transformed(mut self, trans: Matrix2) -> Self {
-        self.transform_by(trans);
-        self
+    fn transformed(&self, trans: Matrix2) -> Self {
+        let mut surface = self.clone();
+        surface.transform_by(trans);
+        surface
     }
 }
 
@@ -2183,9 +2184,10 @@ impl Transformed<Matrix3> for BSplineSurface<Vector2> {
             .for_each(|pt| *pt = trans.transform_point(Point2::from_vec(*pt)).to_vec())
     }
     #[inline(always)]
-    fn transformed(mut self, trans: Matrix3) -> Self {
-        self.transform_by(trans);
-        self
+    fn transformed(&self, trans: Matrix3) -> Self {
+        let mut surface = self.clone();
+        surface.transform_by(trans);
+        surface
     }
 }
 
@@ -2198,9 +2200,10 @@ impl Transformed<Matrix3> for BSplineSurface<Vector3> {
             .for_each(|pt| *pt = trans * *pt)
     }
     #[inline(always)]
-    fn transformed(mut self, trans: Matrix3) -> Self {
-        self.transform_by(trans);
-        self
+    fn transformed(&self, trans: Matrix3) -> Self {
+        let mut surface = self.clone();
+        surface.transform_by(trans);
+        surface
     }
 }
 
@@ -2213,9 +2216,10 @@ impl Transformed<Matrix4> for BSplineSurface<Vector3> {
             .for_each(|pt| *pt = trans.transform_point(Point3::from_vec(*pt)).to_vec())
     }
     #[inline(always)]
-    fn transformed(mut self, trans: Matrix4) -> Self {
-        self.transform_by(trans);
-        self
+    fn transformed(&self, trans: Matrix4) -> Self {
+        let mut surface = self.clone();
+        surface.transform_by(trans);
+        surface
     }
 }
 

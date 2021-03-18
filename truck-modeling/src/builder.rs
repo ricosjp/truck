@@ -312,8 +312,8 @@ pub fn clone<T: Mapped<Point3, Curve, Surface>>(elem: &T) -> T { elem.topologica
 pub fn transformed<T: Mapped<Point3, Curve, Surface>>(elem: &T, mat: Matrix4) -> T {
     elem.mapped(
         &move |pt: &Point3| mat.transform_point(*pt),
-        &move |curve: &Curve| curve.clone().transformed(mat),
-        &move |surface: &Surface| surface.clone().transformed(mat),
+        &move |curve: &Curve| curve.transformed(mat),
+        &move |surface: &Surface| surface.transformed(mat),
     )
 }
 
@@ -387,8 +387,8 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
     let trsl = Matrix4::from_translation(vector);
     elem.sweep(
         &move |pt| trsl.transform_point(*pt),
-        &move |curve| curve.clone().transformed(trsl),
-        &move |surface| surface.clone().transformed(trsl),
+        &move |curve| curve.transformed(trsl),
+        &move |surface| surface.transformed(trsl),
         &move |pt0, pt1| Curve::BSplineCurve(geom_impls::line(pt0.to_vec(), pt1.to_vec())),
         &move |curve0, curve1| {
             Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::homotopy(
@@ -521,8 +521,8 @@ fn partial_rsweep<T: MultiSweep<Point3, Curve, Surface>>(
     let trsl = mat2 * mat1 * mat0;
     elem.multi_sweep(
         &move |pt| trsl.transform_point(*pt),
-        &move |curve| curve.clone().transformed(trsl),
-        &move |surface| surface.clone().transformed(trsl),
+        &move |curve| curve.transformed(trsl),
+        &move |surface| surface.transformed(trsl),
         &move |pt, _| {
             Curve::NURBSCurve(NURBSCurve::new(geom_impls::circle_arc(
                 pt.to_homogeneous(),
@@ -553,8 +553,8 @@ fn whole_rsweep<T: ClosedSweep<Point3, Curve, Surface>>(
     let trsl = mat2 * mat1 * mat0;
     elem.closed_sweep(
         &move |pt| trsl.transform_point(*pt),
-        &move |curve| curve.clone().transformed(trsl),
-        &move |surface| surface.clone().transformed(trsl),
+        &move |curve| curve.transformed(trsl),
+        &move |surface| surface.transformed(trsl),
         &move |pt, _| {
             Curve::NURBSCurve(NURBSCurve::new(geom_impls::circle_arc(
                 pt.to_homogeneous(),

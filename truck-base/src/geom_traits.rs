@@ -65,7 +65,7 @@ pub trait Transformed<T> {
     /// transform by `trans`.
     fn transform_by(&mut self, trans: T);
     /// transformed geometry by `trans`.
-    fn transformed(self, trans: T) -> Self;
+    fn transformed(&self, trans: T) -> Self;
 }
 
 /// Dividable curve

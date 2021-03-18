@@ -204,7 +204,7 @@ impl<T: Transform3<Scalar = f64>> Transformed<T> for Plane {
         self.q = trans.transform_point(self.q);
     }
     #[inline(always)]
-    fn transformed(self, trans: T) -> Self {
+    fn transformed(&self, trans: T) -> Self {
         Plane {
             o: trans.transform_point(self.o),
             p: trans.transform_point(self.p),

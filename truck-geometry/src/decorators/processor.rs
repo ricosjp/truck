@@ -134,14 +134,14 @@ impl<E, T> DerefMut for Processor<E, T> {
 }
 
 impl<E, T> Transformed<T> for Processor<E, T>
-where T: Mul<T, Output = T> + Copy
+where T: Mul<T, Output = T> + Copy, E: Clone,
 {
     #[inline(always)]
     fn transform_by(&mut self, trans: T) { self.transform = trans * self.transform; }
     #[inline(always)]
-    fn transformed(self, trans: T) -> Self {
+    fn transformed(&self, trans: T) -> Self {
         Self {
-            entity: self.entity,
+            entity: self.entity.clone(),
             transform: trans * self.transform,
             orientation: self.orientation,
         }
