@@ -134,13 +134,10 @@ impl<E, T> DerefMut for Processor<E, T> {
 }
 
 impl<E, T> Transformed<T> for Processor<E, T>
-where
-    T: Mul<T, Output = T> + Copy
+where T: Mul<T, Output = T> + Copy
 {
     #[inline(always)]
-    fn transform_by(&mut self, trans: T) {
-        self.transform = trans * self.transform;
-    }
+    fn transform_by(&mut self, trans: T) { self.transform = trans * self.transform; }
     #[inline(always)]
     fn transformed(self, trans: T) -> Self {
         Self {
@@ -148,6 +145,23 @@ where
             transform: trans * self.transform,
             orientation: self.orientation,
         }
+    }
+}
+
+impl<E, T, C> IncludeCurve<C> for Processor<E, T>
+where
+    C: ParametricCurve + Transformed<T> + Clone,
+    C::Point: EuclideanSpace,
+    E: IncludeCurve<C>,
+    T: Transform<C::Point>,
+{
+    fn include(&self, curve: &C) -> bool {
+        let inv = self
+            .transform
+            .inverse_transform()
+            .expect("irregular transform");
+        let curve = curve.clone().transformed(inv);
+        self.entity.include(&curve)
     }
 }
 

@@ -1,9 +1,10 @@
 use super::*;
+use serde::{Serialize, Deserialize};
 use truck_base::geom_traits::{Invertible, ParametricSurface};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
 
 /// 3-dimensional curve
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Curve {
     /// 3-dimensional B-spline curve
     BSplineCurve(BSplineCurve<Vector3>),
@@ -86,7 +87,7 @@ impl Curve {
 }
 
 /// 3-dimensional surfaces
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Surface {
     /// Plane
     Plane(Plane),

@@ -17,6 +17,7 @@ categories = ["graphics"]
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
+serde = { version = "1.0.123", features = ["derive"] }
 
 [dev-dependencies]
 rand = "0.8.3"
