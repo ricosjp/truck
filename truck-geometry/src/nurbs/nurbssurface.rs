@@ -638,6 +638,45 @@ impl BoundedSurface for NURBSSurface<Vector4> {
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
 }
 
+impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
+    #[inline(always)]
+    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+        let pt = curve.front();
+        let mut hint = self.presearch(pt);
+        hint = match self.search_parameter(pt, hint) {
+            Some(got) => got,
+            None => return false,
+        };
+        let uknot_vec = self.uknot_vec();
+        let vknot_vec = self.vknot_vec();
+        let degree = curve.degree() * 6;
+        let (knots, _) = curve.knot_vec().to_single_multi();
+        for i in 1..knots.len() {
+            for j in 1..=degree {
+                let p = j as f64 / degree as f64;
+                let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
+                let pt = Point3::from_vec(curve.subs(t));
+                hint = match self.search_parameter(pt, hint) {
+                    Some(got) => got,
+                    None => return false,
+                };
+                if !self.subs(hint.0, hint.1).near(&pt) {
+                    return false;
+                } else if hint.0 < uknot_vec[0] - TOLERANCE
+                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
+                {
+                    return false;
+                } else if hint.1 < vknot_vec[0] - TOLERANCE
+                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
+                {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+}
+
 impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
