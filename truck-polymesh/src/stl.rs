@@ -1,4 +1,5 @@
 use crate::*;
+use bytemuck::{Pod, Zeroable};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Lines, Read, Write};
 
@@ -7,7 +8,8 @@ fn syntax_error() -> std::io::Error {
 }
 
 /// STL naive mesh
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize, Pod, Zeroable)]
 pub struct STLFace {
     /// normal vector
     pub normal: [f32; 3],
@@ -150,32 +152,17 @@ fn ascii_one_read<R: BufRead>(lines: &mut Lines<R>) -> Result<Option<STLFace>> {
     }
 }
 
-#[inline(always)]
-fn read_vector<R: Read>(reader: &mut R) -> Result<[f32; 3]> {
-    let mut bytes = [[0; 4]; 3];
-    let size0 = reader.read(&mut bytes[0])?;
-    let size1 = reader.read(&mut bytes[1])?;
-    let size2 = reader.read(&mut bytes[2])?;
-    if size0 != 4 || size1 != 4 || size2 != 4 {
-        return Err(syntax_error().into());
-    }
-    Ok([
-        f32::from_le_bytes(bytes[0]),
-        f32::from_le_bytes(bytes[1]),
-        f32::from_le_bytes(bytes[2]),
-    ])
-}
-
 fn binary_one_read<R: Read>(reader: &mut R) -> Result<Option<STLFace>> {
-    let normal = read_vector(reader)?;
-    let vertices = [
-        read_vector(reader)?,
-        read_vector(reader)?,
-        read_vector(reader)?,
-    ];
-    let mut unuse = [0; 2];
-    reader.read(&mut unuse)?;
-    Ok(Some(STLFace { normal, vertices }))
+    const SIZE: usize = std::mem::size_of::<STLFace>() + 2;
+    let mut buf = [0; SIZE];
+    let size = reader.read(&mut buf)?;
+    if size == SIZE {
+        let mut face = [STLFace::default()];
+        buf.as_ref().read(bytemuck::cast_slice_mut(&mut face))?;
+        Ok(Some(face[0]))
+    } else {
+        Err(syntax_error().into())
+    }
 }
 
 /// write STL file in `stl_type` format.
