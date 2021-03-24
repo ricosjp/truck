@@ -49,7 +49,10 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
 /// let vertex0 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let vertex1 = builder::vertex(Point3::new(-1.0, 0.0, 0.0));
 /// let semi_circle = builder::circle_arc(&vertex0, &vertex1, Point3::new(0.0, 1.0, 0.0));
-/// # let curve = semi_circle.oriented_curve();
+/// # let curve = match semi_circle.oriented_curve() {
+/// #       Curve::NURBSCurve(curve) => curve,
+/// #       Curve::BSplineCurve(_) => panic!("this is bspcurve"),
+/// # };
 /// # const N: usize = 10;
 /// # for i in 0..=N {
 /// #       let t = curve.knot_vec()[0] + curve.knot_vec().range_length() * i as f64 / N as f64;
@@ -573,7 +576,7 @@ fn whole_rsweep<T: ClosedSweep<Point3, Curve, Surface>>(
         2,
     )
 }
-/*
+
 #[test]
 fn partial_torus() {
     let v = vertex(Point3::new(0.5, 0.0, 0.0));
@@ -588,4 +591,4 @@ fn partial_torus() {
     let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-5.0));
     assert!(torus.is_geometric_consistent());
 }
-*/
+

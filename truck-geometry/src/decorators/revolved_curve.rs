@@ -27,6 +27,12 @@ impl<C> RevolutedCurve<C> {
     /// Returns the entity curve
     #[inline(always)]
     pub fn entity_curve_mut(&mut self) -> &mut C { &mut self.curve }
+    /// Returns origin of revolution
+    #[inline(always)]
+    pub fn origin(&self) -> Point3 { self.origin }
+    /// Returns axis of revolution
+    #[inline(always)]
+    pub fn axis(&self) -> Vector3 { self.axis }
 
     fn proj_point(&self, pt: Point3) -> (f64, f64) {
         let r = pt - self.origin;
@@ -165,7 +171,93 @@ impl IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<BSplineCurve<Vector3
     }
 }
 
+impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
+    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+        let pts = self
+            .curve
+            .control_points()
+            .iter()
+            .map(|pt| Vector1::new(self.proj_point(Point3::from_vec(*pt)).0))
+            .collect();
+        let projed = &BSplineCurve::new(self.curve.knot_vec().clone(), pts);
+        let knots = curve.knot_vec().to_single_multi().0;
+        let first = curve.subs(knots[0]);
+        let first = self.proj_point(Point3::from_vec(first)).0;
+        let mut hint = presearch(projed, Point1::new(first));
+        hint = match projed.search_nearest_parameter(Vector1::new(first), hint) {
+            Some(got) => got,
+            None => return false,
+        };
+        knots
+            .windows(2)
+            .flat_map(move |knot| {
+                (1..=curve.degree()).map(move |i| {
+                    let s = i as f64 / projed.degree() as f64;
+                    knot[0] * (1.0 - s) + knot[1] * s
+                })
+            })
+            .all(move |t| {
+                let pt = curve.subs(t);
+                let (z, r0) = self.proj_point(Point3::from_vec(pt));
+                match projed.search_nearest_parameter(Vector1::new(z), hint) {
+                    Some(got) => {
+                        hint = got;
+                        let pt = self.curve.subs(hint);
+                        let (w, r1) = self.proj_point(Point3::from_vec(pt));
+                        z.near(&w) && r0.near(&r1)
+                    }
+                    None => false,
+                }
+            })
+    }
+}
+
 impl IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<NURBSCurve<Vector4>> {
+    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+        let pts = self
+            .curve
+            .control_points()
+            .iter()
+            .map(|pt| {
+                let (pt, w) = (pt.to_point(), pt.weight());
+                let z = self.proj_point(pt).0;
+                Vector2::new(z * w, w)
+            })
+            .collect();
+        let projed = &NURBSCurve::new(BSplineCurve::new(self.curve.knot_vec().clone(), pts));
+        let knots = curve.knot_vec().to_single_multi().0;
+        let first = curve.subs(knots[0]);
+        let first = Point1::new(self.proj_point(Point3::from_vec(first)).0);
+        let mut hint = presearch(projed, first);
+        hint = match projed.search_nearest_parameter(first, hint) {
+            Some(got) => got,
+            None => return false,
+        };
+        knots
+            .windows(2)
+            .flat_map(move |knot| {
+                (1..=curve.degree()).map(move |i| {
+                    let s = i as f64 / projed.degree() as f64;
+                    knot[0] * (1.0 - s) + knot[1] * s
+                })
+            })
+            .all(move |t| {
+                let pt = curve.subs(t);
+                let (z, r0) = self.proj_point(Point3::from_vec(pt));
+                match projed.search_nearest_parameter(Point1::new(z), hint) {
+                    Some(got) => {
+                        hint = got;
+                        let pt = self.curve.subs(hint);
+                        let (w, r1) = self.proj_point(pt);
+                        z.near(&w) && r0.near(&r1)
+                    }
+                    None => false,
+                }
+            })
+    }
+}
+
+impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pts = self
             .curve
@@ -251,6 +343,47 @@ impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<BSplineCurve<Vector3>>
     }
 }
 
+impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
+    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+        let pts = self
+            .curve
+            .control_points()
+            .iter()
+            .map(|pt| Vector1::new(self.proj_point(Point3::from_vec(*pt)).0))
+            .collect();
+        let projed = &BSplineCurve::new(self.curve.knot_vec().clone(), pts);
+        let knots = curve.knot_vec().to_single_multi().0;
+        let first = curve.subs(knots[0]);
+        let first = self.proj_point(first).0;
+        let mut hint = presearch(projed, Point1::new(first));
+        hint = match projed.search_nearest_parameter(Vector1::new(first), hint) {
+            Some(got) => got,
+            None => return false,
+        };
+        knots
+            .windows(2)
+            .flat_map(move |knot| {
+                (1..=curve.degree() * 2).map(move |i| {
+                    let s = i as f64 / projed.degree() as f64;
+                    knot[0] * (1.0 - s) + knot[1] * s
+                })
+            })
+            .all(move |t| {
+                let pt = curve.subs(t);
+                let (z, r0) = self.proj_point(pt);
+                match projed.search_nearest_parameter(Vector1::new(z), hint) {
+                    Some(got) => {
+                        hint = got;
+                        let pt = self.curve.subs(hint);
+                        let (w, r1) = self.proj_point(Point3::from_vec(pt));
+                        z.near(&w) && r0.near(&r1)
+                    }
+                    None => false,
+                }
+            })
+    }
+}
+
 impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pts = self
@@ -296,8 +429,50 @@ impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
     }
 }
 
-
-
+impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
+    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+        let pts = self
+            .curve
+            .control_points()
+            .iter()
+            .map(|pt| {
+                let (pt, w) = (pt.to_point(), pt.weight());
+                let z = self.proj_point(pt).0;
+                Vector2::new(z * w, w)
+            })
+            .collect();
+        let projed = &NURBSCurve::new(BSplineCurve::new(self.curve.knot_vec().clone(), pts));
+        let knots = curve.knot_vec().to_single_multi().0;
+        let first = curve.subs(knots[0]);
+        let first = Point1::new(self.proj_point(first).0);
+        let mut hint = presearch(projed, first);
+        hint = match projed.search_nearest_parameter(first, hint) {
+            Some(got) => got,
+            None => return false,
+        };
+        knots
+            .windows(2)
+            .flat_map(move |knot| {
+                (1..=curve.degree() * 2).map(move |i| {
+                    let s = i as f64 / projed.degree() as f64;
+                    knot[0] * (1.0 - s) + knot[1] * s
+                })
+            })
+            .all(move |t| {
+                let pt = curve.subs(t);
+                let (z, r0) = self.proj_point(pt);
+                match projed.search_nearest_parameter(Point1::new(z), hint) {
+                    Some(got) => {
+                        hint = got;
+                        let pt = self.curve.subs(hint);
+                        let (w, r1) = self.proj_point(pt);
+                        z.near(&w) && r0.near(&r1)
+                    }
+                    None => false,
+                }
+            })
+    }
+}
 
 #[test]
 fn revolve_test() {

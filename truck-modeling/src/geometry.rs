@@ -159,3 +159,53 @@ impl Transformed<Matrix4> for Surface {
         derive_surface_self_method!(self, Transformed::transformed, trans)
     }
 }
+
+impl IncludeCurve<Curve> for Surface {
+    #[inline(always)]
+    fn include(&self, curve: &Curve) -> bool {
+        match self {
+            Surface::BSplineSurface(surface) => {
+                match curve {
+                    Curve::BSplineCurve(curve) => surface.include(curve),
+                    Curve::NURBSCurve(curve) => surface.include(curve),
+                }
+            },
+            Surface::NURBSSurface(surface) => {
+                match curve {
+                    Curve::BSplineCurve(curve) => surface.include(curve),
+                    Curve::NURBSCurve(curve) => surface.include(curve),
+                }
+            },
+            Surface::Plane(surface) => {
+                match curve {
+                    Curve::BSplineCurve(curve) => surface.include(curve),
+                    Curve::NURBSCurve(curve) => surface.include(curve),
+                }
+            },
+            Surface::Sphere(surface) => {
+                match curve {
+                    Curve::BSplineCurve(curve) => surface.include(curve),
+                    Curve::NURBSCurve(curve) => surface.include(curve),
+                }
+            },
+            Surface::RevolutedCurve(surface) => {
+                match surface.entity_curve() {
+                    Curve::BSplineCurve(entity_curve) => {
+                        let surface = RevolutedCurve::by_revolution(entity_curve, surface.origin(), surface.axis());
+                        match curve {
+                            Curve::BSplineCurve(curve) => surface.include(curve),
+                            Curve::NURBSCurve(curve) => surface.include(curve),
+                        }
+                    },
+                    Curve::NURBSCurve(entity_curve) => {
+                        let surface = RevolutedCurve::by_revolution(entity_curve, surface.origin(), surface.axis());
+                        match curve {
+                            Curve::BSplineCurve(curve) => surface.include(curve),
+                            Curve::NURBSCurve(curve) => surface.include(curve),
+                        }
+                    }
+                }
+            },
+        }
+    }
+}

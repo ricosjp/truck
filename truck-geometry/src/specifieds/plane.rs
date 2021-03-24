@@ -178,7 +178,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for Plane {
             return false;
         }
         curve.non_rationalized().control_points().iter().all(|pt| {
-            if pt[4].so_small() {
+            if pt[3].so_small() {
                 true
             } else {
                 let pt = Point3::from_homogeneous(*pt);

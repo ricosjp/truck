@@ -1823,25 +1823,30 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
             self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u, v), count + 1)
         }
     }
-    fn presearch(&self, point: V) -> (f64, f64) {
-        const N: usize = 50;
-        let mut res = (0.0, 0.0);
-        let mut min = std::f64::INFINITY;
-        for i in 0..=N {
-            for j in 0..=N {
-                let p = i as f64 / N as f64;
-                let q = j as f64 / N as f64;
-                let u = self.uknot_vec()[0] + p * self.uknot_vec().range_length();
-                let v = self.vknot_vec()[0] + q * self.vknot_vec().range_length();
-                let dist = self.subs(u, v).distance2(point);
-                if dist < min {
-                    min = dist;
-                    res = (u, v);
-                }
+}
+
+pub(super) fn presearch<S>(surface: &S, point: S::Point) -> (f64, f64)
+where
+    S: BoundedSurface,
+    S::Point: MetricSpace<Metric = f64> + Copy, {
+    const N: usize = 50;
+    let mut res = (0.0, 0.0);
+    let mut min = std::f64::INFINITY;
+    for i in 0..=N {
+        for j in 0..=N {
+            let p = i as f64 / N as f64;
+            let q = j as f64 / N as f64;
+            let ((u0, u1), (v0, v1)) = surface.parameter_range();
+            let u = u0 * (1.0 - p) + u1 * p;
+            let v = v0 * (1.0 - q) + v1 * q;
+            let dist = surface.subs(u, v).distance2(point);
+            if dist < min {
+                min = dist;
+                res = (u, v);
             }
         }
-        res
     }
+    res
 }
 
 impl<V> BSplineSurface<V>
@@ -1931,34 +1936,12 @@ impl BSplineSurface<Vector2> {
     pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
         sub_search_parameter2d(self, Point2::from_vec(pt), hint.into(), 0).map(|v| v.into())
     }
+}
 
-    /// Returns whether the curve `curve` is included in the surface `surface`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.1, 0.0), Vector2::new(0.5, 0.0), Vector2::new(0.7, 0.0), Vector2::new(1.0, 0.0)],
-    ///     vec![Vector2::new(0.0, 0.1), Vector2::new(0.2, 0.2), Vector2::new(0.4, 0.3), Vector2::new(0.6, 0.2), Vector2::new(1.0, 0.3)],
-    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.3, 0.6), Vector2::new(0.6, 0.4), Vector2::new(0.9, 0.6), Vector2::new(1.0, 0.5)],
-    ///     vec![Vector2::new(0.0, 0.7), Vector2::new(0.2, 0.8), Vector2::new(0.3, 0.6), Vector2::new(0.5, 0.9), Vector2::new(1.0, 0.7)],
-    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.1, 1.0), Vector2::new(0.5, 1.0), Vector2::new(0.7, 1.0), Vector2::new(1.0, 1.0)],
-    /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(0.0, 1.0)];
-    /// let curve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// assert!(surface.include(&curve0));
-    ///
-    /// let knot_vec1 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts1 = vec![Vector2::new(0.0, 0.0), Vector2::new(2.5, 1.0), Vector2::new(0.0, 1.0)];
-    /// let curve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// assert!(!surface.include(&curve1));
-    /// ```
-    pub fn include(&self, curve: &BSplineCurve<Vector2>) -> bool {
+impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
+    fn include(&self, curve: &BSplineCurve<Vector2>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = self.presearch(pt);
+        let mut hint = presearch(self, Point2::from_vec(pt));
         hint = match self.search_parameter(pt, hint) {
             Some(got) => got,
             None => return false,
@@ -2039,31 +2022,12 @@ impl BSplineSurface<Vector3> {
             .search_parameter(newpt, hint)
             .filter(|(u, v)| self.subs(*u, *v).near(&pt))
     }
+}
 
-    /// Returns whether the curve `curve` is included in the surface `surface`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// use std::iter::FromIterator;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.1, 0.0, 0.5), Vector3::new(0.5, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 0.1, 0.1), Vector3::new(0.2, 0.2, 0.1), Vector3::new(0.4, 0.3, 0.4), Vector3::new(1.0, 0.3, 0.7)],
-    ///     vec![Vector3::new(0.0, 0.5, 0.4), Vector3::new(0.3, 0.6, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(1.0, 0.5, 0.0)],
-    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
-    /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
-    /// let mut curve = surface.sectional_curve(bnd_box);
-    /// assert!(surface.include(&curve));
-    ///
-    /// *curve.control_point_mut(2) += Vector3::new(0.0, 0.0, 0.001);
-    /// assert!(!surface.include(&curve));
-    /// ```
-    pub fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
+    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = self.presearch(pt);
+        let mut hint = presearch(self, Point3::from_vec(pt));
         hint = match self.search_parameter(pt, hint) {
             Some(got) => got,
             None => return false,
@@ -2097,6 +2061,46 @@ impl BSplineSurface<Vector3> {
         true
     }
 }
+
+impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
+    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+        let pt = curve.subs(curve.knot_vec()[0]).to_vec();
+        let mut hint = presearch(self, Point3::from_vec(pt));
+        hint = match self.search_parameter(pt, hint) {
+            Some(got) => got,
+            None => return false,
+        };
+        let uknot_vec = self.uknot_vec();
+        let vknot_vec = self.vknot_vec();
+        let degree = curve.degree() * 6;
+        let (knots, _) = curve.knot_vec().to_single_multi();
+        for i in 1..knots.len() {
+            for j in 1..=degree {
+                let p = j as f64 / degree as f64;
+                let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
+                let pt = curve.subs(t).to_vec();
+                hint = match self.search_parameter(pt, hint) {
+                    Some(got) => got,
+                    None => return false,
+                };
+                if !self.subs(hint.0, hint.1).near(&pt) {
+                    return false;
+                } else if hint.0 < uknot_vec[0] - TOLERANCE
+                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
+                {
+                    return false;
+                } else if hint.1 < vknot_vec[0] - TOLERANCE
+                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
+                {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+}
+
+
 
 pub(super) fn sub_search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
     surface: &S,
@@ -2307,4 +2311,103 @@ fn test_parameter_division() {
             assert!(value_middle.distance(parameter_middle) < tol);
         }
     }
+}
+
+#[test]
+fn test_include_bspcurve2() {
+    let knot_vec = KnotVec::uniform_knot(2, 3);
+    let ctrl_pts = vec![
+        vec![
+            Vector2::new(0.0, 0.0),
+            Vector2::new(0.1, 0.0),
+            Vector2::new(0.5, 0.0),
+            Vector2::new(0.7, 0.0),
+            Vector2::new(1.0, 0.0),
+        ],
+        vec![
+            Vector2::new(0.0, 0.1),
+            Vector2::new(0.2, 0.2),
+            Vector2::new(0.4, 0.3),
+            Vector2::new(0.6, 0.2),
+            Vector2::new(1.0, 0.3),
+        ],
+        vec![
+            Vector2::new(0.0, 0.5),
+            Vector2::new(0.3, 0.6),
+            Vector2::new(0.6, 0.4),
+            Vector2::new(0.9, 0.6),
+            Vector2::new(1.0, 0.5),
+        ],
+        vec![
+            Vector2::new(0.0, 0.7),
+            Vector2::new(0.2, 0.8),
+            Vector2::new(0.3, 0.6),
+            Vector2::new(0.5, 0.9),
+            Vector2::new(1.0, 0.7),
+        ],
+        vec![
+            Vector2::new(0.0, 1.0),
+            Vector2::new(0.1, 1.0),
+            Vector2::new(0.5, 1.0),
+            Vector2::new(0.7, 1.0),
+            Vector2::new(1.0, 1.0),
+        ],
+    ];
+    let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+
+    let knot_vec0 = KnotVec::bezier_knot(2);
+    let ctrl_pts0 = vec![
+        Vector2::new(0.0, 0.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(0.0, 1.0),
+    ];
+    let curve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
+    assert!(surface.include(&curve0));
+
+    let knot_vec1 = KnotVec::bezier_knot(2);
+    let ctrl_pts1 = vec![
+        Vector2::new(0.0, 0.0),
+        Vector2::new(2.5, 1.0),
+        Vector2::new(0.0, 1.0),
+    ];
+    let curve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
+    assert!(!surface.include(&curve1));
+}
+
+#[test]
+fn test_include_bspcurve3() {
+    use std::iter::FromIterator;
+    let knot_vec = KnotVec::uniform_knot(2, 3);
+    let ctrl_pts = vec![
+        vec![
+            Vector3::new(0.0, 0.0, 0.0),
+            Vector3::new(0.1, 0.0, 0.5),
+            Vector3::new(0.5, 0.0, 0.3),
+            Vector3::new(1.0, 0.0, 1.0),
+        ],
+        vec![
+            Vector3::new(0.0, 0.1, 0.1),
+            Vector3::new(0.2, 0.2, 0.1),
+            Vector3::new(0.4, 0.3, 0.4),
+            Vector3::new(1.0, 0.3, 0.7),
+        ],
+        vec![
+            Vector3::new(0.0, 0.5, 0.4),
+            Vector3::new(0.3, 0.6, 0.5),
+            Vector3::new(0.6, 0.4, 1.0),
+            Vector3::new(1.0, 0.5, 0.0),
+        ],
+        vec![
+            Vector3::new(0.0, 1.0, 1.0),
+            Vector3::new(0.1, 1.0, 1.0),
+            Vector3::new(0.5, 1.0, 0.5),
+            Vector3::new(1.0, 1.0, 0.3),
+        ],
+    ];
+    let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
+    let mut curve = surface.sectional_curve(bnd_box);
+    assert!(surface.include(&curve));
+    *curve.control_point_mut(2) += Vector3::new(0.0, 0.0, 0.001);
+    assert!(!surface.include(&curve));
 }
