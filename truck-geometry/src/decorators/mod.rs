@@ -56,14 +56,14 @@ pub struct RevolutedCurve<C> {
 /// const N: usize = 100;
 /// for i in 0..=N {
 ///     let t = i as f64 / N as f64;
-///     assert_eq!(Curve::subs(&curve, t), processed.subs(t));
+///     assert_eq!(ParametricCurve::subs(&curve, t), processed.subs(t));
 /// }
 /// 
 /// // Processed curve can inverted!
 /// processed.invert();
 /// for i in 0..=N {
 ///     let t = i as f64 / N as f64;
-///     assert_eq!(Curve::subs(&curve, 1.0 - t), processed.subs(t));
+///     assert_eq!(ParametricCurve::subs(&curve, 1.0 - t), processed.subs(t));
 /// }
 /// ```
 /// Surface processing example

@@ -201,6 +201,31 @@ impl<V: Homogeneous<f64>> NURBSSurface<V> {
         let vd = self.0.vder(u, v);
         pt.rat_der(vd)
     }
+    /// Substitutes 2nd-ord derived NURBS surface by the first parameter `u`.
+    #[inline(always)]
+    pub fn uuder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        let pt = self.0.subs(u, v);
+        let ud = self.0.uder(u, v);
+        let uud = self.0.uuder(u, v);
+        pt.rat_der2(ud, uud)
+    }
+    /// Substitutes 2nd-ord derived NURBS surface by the first parameter `v`.
+    #[inline(always)]
+    pub fn vvder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        let pt = self.0.subs(u, v);
+        let vd = self.0.vder(u, v);
+        let vvd = self.0.vvder(u, v);
+        pt.rat_der2(vd, vvd)
+    }
+    /// Substitutes 2nd-ord derived NURBS surface by both parameter `u, v`.
+    #[inline(always)]
+    pub fn uvder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        let pt = self.0.subs(u, v);
+        let ud = self.0.uder(u, v);
+        let vd = self.0.vder(u, v);
+        let uvd = self.0.uvder(u, v);
+        pt.rat_cross_der(ud, vd, uvd)
+    }
     /// Returns the closure of substitution.
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> V::Point + '_ { move |u, v| self.subs(u, v) }
@@ -566,6 +591,12 @@ impl ParametricSurface for NURBSSurface<Vector3> {
     fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
     /// zero identity
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
@@ -624,6 +655,12 @@ impl ParametricSurface for NURBSSurface<Vector4> {
     fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
         let pt = self.0.subs(u, v);

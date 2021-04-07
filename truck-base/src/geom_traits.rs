@@ -38,6 +38,12 @@ pub trait ParametricSurface: Clone {
     fn vder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the normal vector at `(u, v)`.
     fn normal(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns the 2nd-order derivation by `u`.
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns the 2nd-order derivation by both `u` and `v`.
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns the 2nd-order derivation by `v`.
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector;
 }
 
 /// Bounded surface with parametric range
@@ -97,6 +103,9 @@ impl ParametricSurface for () {
     fn subs(&self, _: f64, _: f64) -> Self::Point {}
     fn uder(&self, _: f64, _: f64) -> Self::Vector {}
     fn vder(&self, _: f64, _: f64) -> Self::Vector {}
+    fn uuder(&self, _: f64, _: f64) -> Self::Vector {}
+    fn uvder(&self, _: f64, _: f64) -> Self::Vector {}
+    fn vvder(&self, _: f64, _: f64) -> Self::Vector {}
     fn normal(&self, _: f64, _: f64) -> Self::Vector {}
 }
 

@@ -40,7 +40,36 @@ impl ParametricSurface for Sphere {
     }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Vector3 {
-        self.radius * f64::sin(u) * Vector3::new(f64::sin(v), f64::cos(v), 0.0)
+        self.radius * f64::sin(u) * Vector3::new(-f64::sin(v), f64::cos(v), 0.0)
+    }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector3 {
+        -self.radius * self.normal(u, v)
+    }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector3 {
+        self.radius * f64::cos(u) * Vector3::new(-f64::sin(v), f64::cos(v), 0.0)
+    }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector3 {
+        -self.radius * f64::sin(u) * Vector3::new(f64::cos(v), f64::sin(v), 0.0)
+    }
+}
+
+#[test]
+fn sphere_derivation_test() {
+    let center = Point3::new(1.0, 2.0, 3.0);
+    let radius = 4.56;
+    let sphere = Sphere::new(center, radius);
+    const N: usize = 100;
+    for i in 0..N {
+        for j in 0..N {
+            let u = PI * i as f64 / N as f64;
+            let v = 2.0 * PI * j as f64 / N as f64;
+            let normal = sphere.normal(u, v);
+            assert!(normal.dot(sphere.uder(u, v)).so_small());
+            assert!(normal.dot(sphere.vder(u, v)).so_small());
+        }
     }
 }
 

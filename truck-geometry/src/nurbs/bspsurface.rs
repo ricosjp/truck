@@ -2032,6 +2032,12 @@ impl ParametricSurface for BSplineSurface<Vector2> {
     fn uder(&self, u: f64, v: f64) -> Vector2 { self.uder(u, v) }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Vector2 { self.vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector2 { self.uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector2 { self.uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector2 { self.vvder(u, v) }
     /// zero identity
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
@@ -2046,6 +2052,12 @@ impl ParametricSurface for BSplineSurface<Vector3> {
     fn uder(&self, u: f64, v: f64) -> Vector3 { self.uder(u, v) }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Vector3 { self.vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector3 { self.uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector3 { self.uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector3 { self.vvder(u, v) }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         self.uder(u, v).cross(self.vder(u, v)).normalize()

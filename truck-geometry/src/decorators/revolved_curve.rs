@@ -21,6 +21,21 @@ impl<C> RevolutedCurve<C> {
     fn vector_rotation_matrix(&self, v: f64) -> Matrix4 {
         Matrix4::from_axis_angle(self.axis, Rad(v))
     }
+    #[inline(always)]
+    fn derivation_rotation_matrix(&self, v: f64) -> Matrix4 {
+        let n = self.axis;
+        Matrix3::new(
+            n[0] * n[0] * f64::sin(v) - f64::sin(v),
+            n[0] * n[1] * f64::sin(v) + n[2] * f64::cos(v),
+            n[0] * n[2] * f64::sin(v) - n[1] * f64::cos(v),
+            n[0] * n[1] * f64::sin(v) - n[2] * f64::cos(v),
+            n[1] * n[1] * f64::sin(v) - f64::sin(v),
+            n[1] * n[2] * f64::sin(v) + n[0] * f64::cos(v),
+            n[0] * n[2] * f64::sin(v) + n[1] * f64::cos(v),
+            n[1] * n[2] * f64::sin(v) - n[0] * f64::cos(v),
+            n[2] * n[2] * f64::sin(v) - f64::sin(v),
+        ).into()
+    }
     /// Returns the entity curve
     #[inline(always)]
     pub fn entity_curve(&self) -> &C { &self.curve }
@@ -61,6 +76,23 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> ParametricSurface for
         let pt = self.curve.subs(u);
         let radius = self.axis.cross(pt - self.origin);
         self.vector_rotation_matrix(v).transform_vector(radius)
+    }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector3 {
+        self.vector_rotation_matrix(v)
+            .transform_vector(self.curve.der2(u))
+    }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector3 {
+        let pt = self.curve.subs(u);
+        let z = self.proj_point(pt).0;
+        let radius = pt - self.origin - z * self.axis;
+        -self.vector_rotation_matrix(v).transform_vector(radius)
+    }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector3 {
+        self.derivation_rotation_matrix(v)
+            .transform_vector(self.curve.der(u))
     }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
@@ -479,7 +511,6 @@ impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vec
 fn revolve_test() {
     let pt0 = Vector3::new(0.0, 2.0, 1.0);
     let pt1 = Vector3::new(1.0, 0.0, 0.0);
-    let vec = pt1 - pt0;
     let curve = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pt0, pt1]);
     let surface = RevolutedCurve::by_revolution(curve, Point3::origin(), Vector3::unit_y());
     const N: usize = 100;
@@ -487,15 +518,47 @@ fn revolve_test() {
         for j in 0..=N {
             let u = i as f64 / N as f64;
             let v = 2.0 * PI * j as f64 / N as f64;
-            let uder = Matrix3::from_axis_angle(Vector3::unit_y(), Rad(v)) * vec;
-            assert_near!(surface.uder(u, v), uder);
-            let pt = pt0 * (1.0 - u) + pt1 * u;
-            let vec = Vector3::new(pt[2], 0.0, -pt[0]);
-            let vder = Matrix3::from_axis_angle(Vector3::unit_y(), Rad(v)) * vec;
-            assert_near!(surface.vder(u, v), vder);
-            let n = surface.normal(u, v);
-            assert!(n.dot(uder).so_small2());
-            assert!(n.dot(vder).so_small2());
+            let res = surface.subs(u, v);
+            let ans = Point3::new(
+                u * f64::cos(v) + (1.0 - u) * f64::sin(v),
+                2.0 * (1.0 - u),
+                -u * f64::sin(v) + (1.0 - u) * f64::cos(v),
+            );
+            assert_near!(res, ans);
+            let res_uder = surface.uder(u, v);
+            let ans_uder = Vector3::new(
+                f64::cos(v) - f64::sin(v),
+                -2.0,
+                -f64::sin(v) - f64::cos(v),
+            );
+            assert_near!(res_uder, ans_uder);
+            let res_vder = surface.vder(u, v);
+            let ans_vder = Vector3::new(
+                -u * f64::sin(v) + (1.0 - u) * f64::cos(v),
+                0.0,
+                -u * f64::cos(v) - (1.0 - u) * f64::sin(v),
+            );
+            assert_near!(res_vder, ans_vder);
+            let res_uuder = surface.uuder(u, v);
+            let ans_uuder = Vector3::zero();
+            assert_near!(res_uuder, ans_uuder);
+            let res_uvder = surface.uvder(u, v);
+            let ans_uvder = Vector3::new(
+                -f64::sin(v) - f64::cos(v),
+                0.0,
+                -f64::cos(v) + f64::sin(v),
+            );
+            assert_near!(res_uvder, ans_uvder);
+            let res_vvder = surface.vvder(u, v);
+            let ans_vvder = Vector3::new(
+                -u * f64::cos(v) - (1.0 - u) * f64::sin(v),
+                0.0,
+                u * f64::sin(v) - (1.0 - u) * f64::cos(v),
+            );
+            assert_near!(res_vvder, ans_vvder);
+            let normal = surface.normal(u, v);
+            assert!(normal.dot(res_uder).so_small());
+            assert!(normal.dot(res_vder).so_small());
         }
     }
 }

@@ -108,6 +108,27 @@ where
         }
     }
     #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector {
+        match self.orientation {
+            true => self.transform.transform_vector(self.entity.uuder(u, v)),
+            false => self.transform.transform_vector(self.entity.vvder(v, u)),
+        }
+    }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector {
+        match self.orientation {
+            true => self.transform.transform_vector(self.entity.uvder(u, v)),
+            false => self.transform.transform_vector(self.entity.uvder(v, u)),
+        }
+    }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector {
+        match self.orientation {
+            true => self.transform.transform_vector(self.entity.vvder(u, v)),
+            false => self.transform.transform_vector(self.entity.uuder(v, u)),
+        }
+    }
+    #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
         let (u, v) = self.get_surface_parameter(u, v);
         let n = self.entity.normal(u, v);
@@ -247,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn compatible_with_bspcurve() { (0..100).for_each(|_| exec_compatible_with_bspcurve()) }
+    fn compatible_with_bspcurve() { (0..10).for_each(|_| exec_compatible_with_bspcurve()) }
 
     fn exec_compatible_with_bspsurface() {
         const DEGREE: usize = 3;
@@ -296,6 +317,15 @@ mod tests {
                 let vder0 = surface.vder(u, v);
                 let vder1 = processor.vder(u, v);
                 assert_near!(vder0, vder1);
+                let uuder0 = surface.uuder(u, v);
+                let uuder1 = processor.uuder(u, v);
+                assert_near!(uuder0, uuder1);
+                let uvder0 = surface.uvder(u, v);
+                let uvder1 = processor.uvder(u, v);
+                assert_near!(uvder0, uvder1);
+                let vvder0 = surface.vvder(u, v);
+                let vvder1 = processor.vvder(u, v);
+                assert_near!(vvder0, vvder1);
                 let n0 = surface.normal(u, v);
                 let n1 = processor.normal(u, v);
                 assert_near!(n0, n1);
@@ -318,6 +348,15 @@ mod tests {
                 let vder0 = surface.vder(u, v);
                 let vder1 = processor.vder(u, v);
                 assert_near!(vder0, vder1);
+                let uuder0 = surface.uuder(u, v);
+                let uuder1 = processor.uuder(u, v);
+                assert_near!(uuder0, uuder1);
+                let uvder0 = surface.uvder(u, v);
+                let uvder1 = processor.uvder(u, v);
+                assert_near!(uvder0, uvder1);
+                let vvder0 = surface.vvder(u, v);
+                let vvder1 = processor.vvder(u, v);
+                assert_near!(vvder0, vvder1);
                 let n0 = surface.normal(u, v);
                 let n1 = processor.normal(u, v);
                 assert_near!(n0, n1);
@@ -326,5 +365,5 @@ mod tests {
     }
 
     #[test]
-    fn compatible_with_bspsurface() { (0..10).for_each(|_| exec_compatible_with_bspsurface()) }
+    fn compatible_with_bspsurface() { (0..3).for_each(|_| exec_compatible_with_bspsurface()) }
 }
