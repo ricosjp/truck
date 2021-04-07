@@ -34,6 +34,7 @@ impl<C> RevolutedCurve<C> {
     #[inline(always)]
     pub fn axis(&self) -> Vector3 { self.axis }
 
+    #[inline(always)]
     fn proj_point(&self, pt: Point3) -> (f64, f64) {
         let r = pt - self.origin;
         let z = r.dot(self.axis);

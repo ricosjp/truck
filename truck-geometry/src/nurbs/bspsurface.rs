@@ -482,6 +482,163 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         control_points.iter().zip(basis0).fold(V::zero(), closure) * degree1 as f64
     }
 
+    /// Substitutes 2nd-ord derived B-spline surface by the first parameter `u`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.5, 1.0), Vector2::new(1.0, 0.5)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    ///
+    /// // bspsurface: (v, 2 u^2 v^2 - 2 u^2 v - 6 u v^2 + 6uv + 2v^2 + u - 2v)
+    /// // uuder: (0, 4v(v - 1))
+    /// const N: usize = 100; // sample size
+    /// for i in 0..=N {
+    ///     let u = (i as f64) / (N as f64);
+    ///     for j in 0..=N {
+    ///         let v = (j as f64) / (N as f64);
+    ///         assert_near2!(
+    ///             bspsurface.uuder(u, v),
+    ///             Vector2::new(0.0, 4.0 * v * (v - 1.0)),
+    ///         );
+    ///     }
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn uuder(&self, u: f64, v: f64) -> V {
+        let (degree0, degree1) = self.degrees();
+        if degree0 < 2 {
+            return V::zero();
+        }
+        let BSplineSurface {
+            knot_vecs: (ref uknot_vec, ref vknot_vec),
+            ref control_points,
+        } = self;
+        let basis0 = uknot_vec.bspline_basis_functions(degree0 - 2, u);
+        let basis1 = vknot_vec.bspline_basis_functions(degree1, v);
+        let closure = move |sum: V, (i, vec): (usize, &Vec<V>)| {
+            let a = inv_or_zero(uknot_vec[i + degree0] - uknot_vec[i]);
+            let b = inv_or_zero(uknot_vec[i + degree0 + 1] - uknot_vec[i + 1]);
+            let c = inv_or_zero(uknot_vec[i + degree0 - 1] - uknot_vec[i]);
+            let d = inv_or_zero(uknot_vec[i + degree0] - uknot_vec[i + 1]);
+            let e = inv_or_zero(uknot_vec[i + degree0 + 1] - uknot_vec[i + 2]);
+            let closure = |sum: V, (pt, b1): (&V, &f64)| {
+                sum + *pt
+                    * (basis0[i] * a * c - basis0[i + 1] * (a + b) * d + basis0[i + 2] * b * e)
+                    * *b1
+            };
+            vec.iter().zip(&basis1).fold(sum, closure)
+        };
+        control_points.iter().enumerate().fold(V::zero(), closure) * degree0 as f64
+    }
+
+    /// Substitutes 2nd-ord derived B-spline surface by the second parameter `v`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.5, 1.0), Vector2::new(1.0, 0.5)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    ///
+    /// // bspsurface: (v, 2 u^2 v^2 - 2 u^2 v - 6 u v^2 + 6uv + 2v^2 + u - 2v)
+    /// // vvder: (0, 4(u^2 - 3u + 1))
+    /// const N: usize = 100; // sample size
+    /// for i in 0..=N {
+    ///     let u = (i as f64) / (N as f64);
+    ///     for j in 0..=N {
+    ///         let v = (j as f64) / (N as f64);
+    ///         assert_near2!(
+    ///             bspsurface.vvder(u, v),
+    ///             Vector2::new(0.0, 4.0 * (u * u - 3.0 * u + 1.0)),
+    ///         );
+    ///     }
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn vvder(&self, u: f64, v: f64) -> V {
+        let (degree0, degree1) = self.degrees();
+        if degree1 < 2 {
+            return V::zero();
+        }
+        let BSplineSurface {
+            knot_vecs: (ref uknot_vec, ref vknot_vec),
+            ref control_points,
+        } = self;
+        let basis0 = uknot_vec.bspline_basis_functions(degree0, u);
+        let basis1 = vknot_vec.bspline_basis_functions(degree1 - 2, v);
+        let closure = |sum: V, (vec, b0): (&Vec<V>, f64)| {
+            let closure = |sum: V, (i, pt): (usize, &V)| {
+                let a = inv_or_zero(vknot_vec[i + degree0] - vknot_vec[i]);
+                let b = inv_or_zero(vknot_vec[i + degree0 + 1] - vknot_vec[i + 1]);
+                let c = inv_or_zero(vknot_vec[i + degree0 - 1] - vknot_vec[i]);
+                let d = inv_or_zero(vknot_vec[i + degree0] - vknot_vec[i + 1]);
+                let e = inv_or_zero(vknot_vec[i + degree0 + 1] - vknot_vec[i + 2]);
+                sum + *pt
+                    * (basis1[i] * a * c - basis1[i + 1] * (a + b) * d + basis1[i + 2] * b * e)
+                    * b0
+            };
+            vec.iter().enumerate().fold(sum, closure)
+        };
+        control_points.iter().zip(basis0).fold(V::zero(), closure) * degree1 as f64
+    }
+
+    /// Substitutes 2nd-ord derived B-spline surface by the both parameters `u, v`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
+    /// let ctrl_pts = vec![
+    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
+    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.5, 1.0), Vector2::new(1.0, 0.5)],
+    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.5, 2.0), Vector2::new(1.0, 1.0)],
+    /// ];
+    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    ///
+    /// // bspsurface: (v, 2 u^2 v^2 - 2 u^2 v - 6 u v^2 + 6uv + 2v^2 + u - 2v)
+    /// // uvder: (0, 8uv - 4u - 12v + 6)
+    /// const N: usize = 100; // sample size
+    /// for i in 0..=N {
+    ///     let u = (i as f64) / (N as f64);
+    ///     for j in 0..=N {
+    ///         let v = (j as f64) / (N as f64);
+    ///         assert_near2!(
+    ///             bspsurface.uvder(u, v),
+    ///             Vector2::new(0.0, 8.0 * u * v - 4.0 * u - 12.0 * v + 6.0),
+    ///         );
+    ///     }
+    /// }
+    /// ```
+    #[inline(always)]
+    pub fn uvder(&self, u: f64, v: f64) -> V {
+        let (degree0, degree1) = self.degrees();
+        let BSplineSurface {
+            knot_vecs: (ref uknot_vec, ref vknot_vec),
+            ref control_points,
+        } = self;
+        let basis0 = uknot_vec.bspline_basis_functions(degree0 - 1, u);
+        let basis1 = vknot_vec.bspline_basis_functions(degree1 - 1, v);
+        let closure = |sum: V, (i, vec): (usize, &Vec<V>)| {
+            let coef0 = inv_or_zero(uknot_vec[i + degree0] - uknot_vec[i]);
+            let coef1 = inv_or_zero(uknot_vec[i + degree0 + 1] - uknot_vec[i + 1]);
+            let b0 = basis0[i] * coef0 - basis0[i + 1] * coef1;
+            let closure = |sum: V, (j, pt): (usize, &V)| {
+                let coef0 = inv_or_zero(vknot_vec[j + degree1] - vknot_vec[j]);
+                let coef1 = inv_or_zero(vknot_vec[j + degree1 + 1] - vknot_vec[j + 1]);
+                sum + *pt * (basis1[j] * coef0 - basis1[j + 1] * coef1) * b0
+            };
+            vec.iter().enumerate().fold(sum, closure)
+        };
+        control_points.iter().enumerate().fold(V::zero(), closure) * degree0 as f64 * degree1 as f64
+    }
+
     /// Returns the closure of substitution.
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> V + '_ { move |u, v| self.subs(u, v) }
@@ -2099,8 +2256,6 @@ impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
         true
     }
 }
-
-
 
 pub(super) fn sub_search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
     surface: &S,
