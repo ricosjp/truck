@@ -576,11 +576,11 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         let basis1 = vknot_vec.bspline_basis_functions(degree1 - 2, v);
         let closure = |sum: V, (vec, b0): (&Vec<V>, f64)| {
             let closure = |sum: V, (i, pt): (usize, &V)| {
-                let a = inv_or_zero(vknot_vec[i + degree0] - vknot_vec[i]);
-                let b = inv_or_zero(vknot_vec[i + degree0 + 1] - vknot_vec[i + 1]);
-                let c = inv_or_zero(vknot_vec[i + degree0 - 1] - vknot_vec[i]);
-                let d = inv_or_zero(vknot_vec[i + degree0] - vknot_vec[i + 1]);
-                let e = inv_or_zero(vknot_vec[i + degree0 + 1] - vknot_vec[i + 2]);
+                let a = inv_or_zero(vknot_vec[i + degree1] - vknot_vec[i]);
+                let b = inv_or_zero(vknot_vec[i + degree1 + 1] - vknot_vec[i + 1]);
+                let c = inv_or_zero(vknot_vec[i + degree1 - 1] - vknot_vec[i]);
+                let d = inv_or_zero(vknot_vec[i + degree1] - vknot_vec[i + 1]);
+                let e = inv_or_zero(vknot_vec[i + degree1 + 1] - vknot_vec[i + 2]);
                 sum + *pt
                     * (basis1[i] * a * c - basis1[i + 1] * (a + b) * d + basis1[i + 2] * b * e)
                     * b0
@@ -1901,7 +1901,12 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     }
 }
 
-impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
+impl<V> BSplineSurface<V>
+where
+    Self: ParametricSurface<Vector = V>,
+    <Self as ParametricSurface>::Point: EuclideanSpace<Scalar = f64, Diff = V>,
+    V: InnerSpace<Scalar = f64> + Tolerance,
+{
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
     /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
     /// # Examples
@@ -1915,95 +1920,16 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     ///     vec![Vector2::new(0.0, 3.0), Vector2::new(0.5, 3.5), Vector2::new(1.0, 3.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// let pt = bspsurface.subs(0.3, 0.7);
-    /// let (u, v) = bspsurface.search_nearest_parameter(pt, (0.5, 0.5)).unwrap();
+    /// let pt = ParametricSurface::subs(&bspsurface, 0.3, 0.7);
+    /// let (u, v) = bspsurface.search_nearest_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert!(u.near2(&0.3) && v.near2(&0.7));
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// cf. [`BSplineCurve::search_nearest_parameter`](struct.BSplineCurve.html#method.search_nearest_parameter)
-    pub fn search_nearest_parameter(&self, pt: V, (u0, v0): (f64, f64)) -> Option<(f64, f64)> {
-        let uder = self.uderivation();
-        let vder = self.vderivation();
-        let uuder = uder.uderivation();
-        let uvder = uder.vderivation();
-        let vvder = vder.vderivation();
-        self.optimized_snp(&uder, &vder, &uuder, &uvder, &vvder, pt, (u0, v0))
+    pub fn search_nearest_parameter(&self, pt: <Self as ParametricSurface>::Point, (u0, v0): (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        surface_search_nearest_parameter(self, pt, (u0, v0), trials)
     }
-
-    fn optimized_snp(
-        &self,
-        uder: &Self,
-        vder: &Self,
-        uuder: &Self,
-        uvder: &Self,
-        vvder: &Self,
-        pt: V,
-        (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)> {
-        self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u0, v0), 0)
-    }
-
-    fn sub_snp(
-        &self,
-        uder: &Self,
-        vder: &Self,
-        uuder: &Self,
-        uvder: &Self,
-        vvder: &Self,
-        pt: V,
-        (u0, v0): (f64, f64),
-        count: usize,
-    ) -> Option<(f64, f64)> {
-        let s = self.subs(u0, v0);
-        let ud = uder.subs(u0, v0);
-        let vd = vder.subs(u0, v0);
-        let uud = uuder.subs(u0, v0);
-        let uvd = uvder.subs(u0, v0);
-        let vvd = vvder.subs(u0, v0);
-        let f_u = ud.dot(s - pt);
-        let f_v = vd.dot(s - pt);
-        let a = uud.dot(s - pt) + ud.dot(ud);
-        let c = uvd.dot(s - pt) + ud.dot(vd);
-        let b = vvd.dot(s - pt) + vd.dot(vd);
-        let det = a * b - c * c;
-        if det.so_small() {
-            return Some((u0, v0));
-        }
-        let u = u0 - (b * f_u - c * f_v) / det;
-        let v = v0 - (-c * f_u + a * f_v) / det;
-        if u.near2(&u0) && v.near2(&v0) {
-            Some((u, v))
-        } else if count == 100 {
-            None
-        } else {
-            self.sub_snp(uder, vder, uuder, uvder, vvder, pt, (u, v), count + 1)
-        }
-    }
-}
-
-pub(super) fn presearch<S>(surface: &S, point: S::Point) -> (f64, f64)
-where
-    S: BoundedSurface,
-    S::Point: MetricSpace<Metric = f64> + Copy, {
-    const N: usize = 50;
-    let mut res = (0.0, 0.0);
-    let mut min = std::f64::INFINITY;
-    for i in 0..=N {
-        for j in 0..=N {
-            let p = i as f64 / N as f64;
-            let q = j as f64 / N as f64;
-            let ((u0, u1), (v0, v1)) = surface.parameter_range();
-            let u = u0 * (1.0 - p) + u1 * p;
-            let v = v0 * (1.0 - q) + v1 * q;
-            let dist = surface.subs(u, v).distance2(point);
-            if dist < min {
-                min = dist;
-                res = (u, v);
-            }
-        }
-    }
-    res
 }
 
 impl<V> BSplineSurface<V>
@@ -2043,6 +1969,26 @@ impl ParametricSurface for BSplineSurface<Vector2> {
     fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
 }
 
+impl<'a> ParametricSurface for &'a BSplineSurface<Vector2> {
+    type Point = Point2;
+    type Vector = Vector2;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Point2 { Point2::from_vec((*self).subs(u, v)) }
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Vector2 { (*self).uder(u, v) }
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Vector2 { (*self).vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector2 { (*self).uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector2 { (*self).uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector2 { (*self).vvder(u, v) }
+    /// zero identity
+    #[inline(always)]
+    fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
+}
+
 impl ParametricSurface for BSplineSurface<Vector3> {
     type Point = Point3;
     type Vector = Vector3;
@@ -2058,6 +2004,27 @@ impl ParametricSurface for BSplineSurface<Vector3> {
     fn uvder(&self, u: f64, v: f64) -> Vector3 { self.uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Vector3 { self.vvder(u, v) }
+    #[inline(always)]
+    fn normal(&self, u: f64, v: f64) -> Vector3 {
+        self.uder(u, v).cross(self.vder(u, v)).normalize()
+    }
+}
+
+impl<'a> ParametricSurface for &'a BSplineSurface<Vector3> {
+    type Point = Point3;
+    type Vector = Vector3;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Point3 { Point3::from_vec((*self).subs(u, v)) }
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Vector3 { (*self).uder(u, v) }
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Vector3 { (*self).vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector3 { (*self).uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector3 { (*self).uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector3 { (*self).vvder(u, v) }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         self.uder(u, v).cross(self.vder(u, v)).normalize()

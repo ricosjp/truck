@@ -34,7 +34,8 @@ impl<C> RevolutedCurve<C> {
             n[0] * n[2] * f64::sin(v) + n[1] * f64::cos(v),
             n[1] * n[2] * f64::sin(v) - n[0] * f64::cos(v),
             n[2] * n[2] * f64::sin(v) - f64::sin(v),
-        ).into()
+        )
+        .into()
     }
     /// Returns the entity curve
     #[inline(always)]
@@ -55,6 +56,87 @@ impl<C> RevolutedCurve<C> {
         let z = r.dot(self.axis);
         let h = r - z * self.axis;
         (z, h.magnitude2())
+    }
+}
+
+impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
+    /// Returns true if the front point of the curve is on the axis of rotation.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let line = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(1),
+    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 1.0)],
+    /// );
+    /// let surface0 = RevolutedCurve::by_revolution(line.clone(), Point3::origin(), Vector3::unit_y());
+    /// assert!(surface0.is_front_fixed());
+    /// let surface1 = RevolutedCurve::by_revolution(line, Point3::new(1.0, 0.0, 0.0), Vector3::unit_y());
+    /// assert!(!surface1.is_front_fixed());
+    /// ```
+    #[inline(always)]
+    pub fn is_front_fixed(&self) -> bool {
+        (self.curve.front() - self.origin)
+            .cross(self.axis)
+            .so_small()
+    }
+    /// Returns true if the back point of the curve is on the axis of rotation.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let line = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(1),
+    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 0.0, 0.0)],
+    /// );
+    /// let surface0 = RevolutedCurve::by_revolution(line.clone(), Point3::origin(), Vector3::unit_y());
+    /// assert!(surface0.is_back_fixed());
+    /// let surface1 = RevolutedCurve::by_revolution(line, Point3::new(1.0, 0.0, 0.0), Vector3::unit_y());
+    /// assert!(!surface1.is_back_fixed());
+    /// ```
+    #[inline(always)]
+    pub fn is_back_fixed(&self) -> bool {
+        (self.curve.back() - self.origin)
+            .cross(self.axis)
+            .so_small()
+    }
+    /// Searches the parameter `(u, v)` such that `self.subs(u, v).near(&point)` by Newton's method.
+    /// Returns `None` if:
+    /// - the converged parameter `(u, v)` is not satisfied `self.subs(u, v).near(&point)`.
+    /// - the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let line = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(1),
+    ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(1.0, 0.0, 0.0)],
+    /// );
+    /// let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
+    /// let pt = Point3::new(-0.5, 1.0, 0.5);
+    /// let (u, v) = surface.search_parameter(pt, 100).unwrap();
+    /// assert_near!(surface.subs(u, v), pt);
+    /// ```
+    #[inline(always)]
+    pub fn search_parameter(&self, point: Point3, trials: usize) -> Option<(f64, f64)> {
+        let (t0, t1) = self.curve.parameter_range();
+        if self.curve.front().near(&point) {
+            Some((t0, 0.0))
+        } else if self.curve.back().near(&point) {
+            Some((t1, 0.0))
+        } else {
+            let disp = (2.0 * rand::random::<f64>() - 1.0) * 0.1;
+            surface_search_nearest_parameter(self, point, ((t0 + t1) / 2.0, PI + disp), trials)
+                .and_then(|(u, v)| {
+                    if self.subs(u, v).near(&point) {
+                        Some((u, v))
+                    } else {
+                        let v = if v > PI { v + PI } else { v - PI };
+                        if self.subs(u, v).near(&point) {
+                            Some((u, v))
+                        } else {
+                            None
+                        }
+                    }
+                })
+        }
     }
 }
 
@@ -142,368 +224,123 @@ impl<C: Clone> Invertible for RevolutedCurve<C> {
     }
 }
 
-fn presearch<C>(curve: &C, pt0: C::Point) -> f64
-where
-    C: ParametricCurve,
-    C::Point: MetricSpace<Metric = f64> + Copy, {
-    const N: usize = 50;
-    let range = curve.parameter_range();
-    let mut min_dist2 = std::f64::INFINITY;
-    let mut res = range.0;
-    for i in 0..=N {
-        let t = i as f64 / N as f64;
-        let t = range.0 * (1.0 - t) + range.1 * t;
-        let pt = curve.subs(t);
-        let dist2 = pt.distance2(pt0);
-        if dist2 < min_dist2 {
-            res = t;
-            min_dist2 = dist2;
+impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
+    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+        let knots = curve.knot_vec().to_single_multi().0;
+        let degree = curve.degree();
+        let first = ParametricCurve::subs(curve, knots[0]);
+        if self.search_parameter(first, INCLUDE_CURVE_TRIALS).is_none() {
+            return false;
         }
+        knots
+            .windows(2)
+            .flat_map(move |knot| {
+                (1..=degree).map(move |i| {
+                    let s = i as f64 / degree as f64;
+                    knot[0] * (1.0 - s) + knot[1] * s
+                })
+            })
+            .all(move |t| {
+                self.search_parameter(ParametricCurve::subs(curve, t), INCLUDE_CURVE_TRIALS)
+                    .is_some()
+            })
     }
-    res
 }
 
 impl IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<BSplineCurve<Vector3>> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let pts = self
-            .curve
-            .control_points()
-            .iter()
-            .map(|pt| Vector1::new(self.proj_point(Point3::from_vec(*pt)).0))
-            .collect();
-        let projed = &BSplineCurve::new(self.curve.knot_vec().clone(), pts);
-        let knots = curve.knot_vec().to_single_multi().0;
-        let first = curve.subs(knots[0]);
-        let first = self.proj_point(Point3::from_vec(first)).0;
-        let mut hint = presearch(projed, Point1::new(first));
-        hint = match projed.search_nearest_parameter(Vector1::new(first), hint) {
-            Some(got) => got,
-            None => return false,
-        };
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=curve.degree()).map(move |i| {
-                    let s = i as f64 / projed.degree() as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = curve.subs(t);
-                let (z, r0) = self.proj_point(Point3::from_vec(pt));
-                match projed.search_nearest_parameter(Vector1::new(z), hint) {
-                    Some(got) => {
-                        hint = got;
-                        let pt = self.curve.subs(hint);
-                        let (w, r1) = self.proj_point(Point3::from_vec(pt));
-                        z.near(&w) && r0.near(&r1)
-                    }
-                    None => false,
-                }
-            })
+        let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
+        surface.include(curve)
     }
 }
 
-impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
+impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let pts = self
-            .curve
-            .control_points()
-            .iter()
-            .map(|pt| Vector1::new(self.proj_point(Point3::from_vec(*pt)).0))
-            .collect();
-        let projed = &BSplineCurve::new(self.curve.knot_vec().clone(), pts);
         let knots = curve.knot_vec().to_single_multi().0;
-        let first = curve.subs(knots[0]);
-        let first = self.proj_point(Point3::from_vec(first)).0;
-        let mut hint = presearch(projed, Point1::new(first));
-        hint = match projed.search_nearest_parameter(Vector1::new(first), hint) {
-            Some(got) => got,
-            None => return false,
-        };
+        let degree = curve.degree();
+        let first = ParametricCurve::subs(curve, knots[0]);
+        if self.search_parameter(first, INCLUDE_CURVE_TRIALS).is_none() {
+            return false;
+        }
         knots
             .windows(2)
             .flat_map(move |knot| {
-                (1..=curve.degree()).map(move |i| {
-                    let s = i as f64 / projed.degree() as f64;
+                (1..=degree).map(move |i| {
+                    let s = i as f64 / degree as f64;
                     knot[0] * (1.0 - s) + knot[1] * s
                 })
             })
             .all(move |t| {
-                let pt = curve.subs(t);
-                let (z, r0) = self.proj_point(Point3::from_vec(pt));
-                match projed.search_nearest_parameter(Vector1::new(z), hint) {
-                    Some(got) => {
-                        hint = got;
-                        let pt = self.curve.subs(hint);
-                        let (w, r1) = self.proj_point(Point3::from_vec(pt));
-                        z.near(&w) && r0.near(&r1)
-                    }
-                    None => false,
-                }
+                self.search_parameter(ParametricCurve::subs(curve, t), INCLUDE_CURVE_TRIALS)
+                    .is_some()
             })
     }
 }
 
 impl IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<NURBSCurve<Vector4>> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let pts = self
-            .curve
-            .control_points()
-            .iter()
-            .map(|pt| {
-                let (pt, w) = (pt.to_point(), pt.weight());
-                let z = self.proj_point(pt).0;
-                Vector2::new(z * w, w)
-            })
-            .collect();
-        let projed = &NURBSCurve::new(BSplineCurve::new(self.curve.knot_vec().clone(), pts));
-        let knots = curve.knot_vec().to_single_multi().0;
-        let first = curve.subs(knots[0]);
-        let first = Point1::new(self.proj_point(Point3::from_vec(first)).0);
-        let mut hint = presearch(projed, first);
-        hint = match projed.search_nearest_parameter(first, hint) {
-            Some(got) => got,
-            None => return false,
-        };
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=curve.degree()).map(move |i| {
-                    let s = i as f64 / projed.degree() as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = curve.subs(t);
-                let (z, r0) = self.proj_point(Point3::from_vec(pt));
-                match projed.search_nearest_parameter(Point1::new(z), hint) {
-                    Some(got) => {
-                        hint = got;
-                        let pt = self.curve.subs(hint);
-                        let (w, r1) = self.proj_point(pt);
-                        z.near(&w) && r0.near(&r1)
-                    }
-                    None => false,
-                }
-            })
+        let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
+        surface.include(curve)
     }
 }
 
-impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let pts = self
-            .curve
-            .control_points()
-            .iter()
-            .map(|pt| {
-                let (pt, w) = (pt.to_point(), pt.weight());
-                let z = self.proj_point(pt).0;
-                Vector2::new(z * w, w)
-            })
-            .collect();
-        let projed = &NURBSCurve::new(BSplineCurve::new(self.curve.knot_vec().clone(), pts));
+impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
+    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
-        let first = curve.subs(knots[0]);
-        let first = Point1::new(self.proj_point(Point3::from_vec(first)).0);
-        let mut hint = presearch(projed, first);
-        hint = match projed.search_nearest_parameter(first, hint) {
-            Some(got) => got,
-            None => return false,
-        };
+        let degree = curve.degree() * 2;
+        let first = ParametricCurve::subs(curve, knots[0]);
+        if self.search_parameter(first, INCLUDE_CURVE_TRIALS).is_none() {
+            return false;
+        }
         knots
             .windows(2)
             .flat_map(move |knot| {
-                (1..=curve.degree()).map(move |i| {
-                    let s = i as f64 / projed.degree() as f64;
+                (1..=degree).map(move |i| {
+                    let s = i as f64 / degree as f64;
                     knot[0] * (1.0 - s) + knot[1] * s
                 })
             })
             .all(move |t| {
-                let pt = curve.subs(t);
-                let (z, r0) = self.proj_point(Point3::from_vec(pt));
-                match projed.search_nearest_parameter(Point1::new(z), hint) {
-                    Some(got) => {
-                        hint = got;
-                        let pt = self.curve.subs(hint);
-                        let (w, r1) = self.proj_point(pt);
-                        z.near(&w) && r0.near(&r1)
-                    }
-                    None => false,
-                }
+                self.search_parameter(ParametricCurve::subs(curve, t), INCLUDE_CURVE_TRIALS)
+                    .is_some()
             })
     }
 }
 
 impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<BSplineCurve<Vector3>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
-        let pts = self
-            .curve
-            .control_points()
-            .iter()
-            .map(|pt| Vector1::new(self.proj_point(Point3::from_vec(*pt)).0))
-            .collect();
-        let projed = &BSplineCurve::new(self.curve.knot_vec().clone(), pts);
-        let knots = curve.knot_vec().to_single_multi().0;
-        let first = curve.subs(knots[0]);
-        let first = self.proj_point(first).0;
-        let mut hint = presearch(projed, Point1::new(first));
-        hint = match projed.search_nearest_parameter(Vector1::new(first), hint) {
-            Some(got) => got,
-            None => return false,
-        };
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=curve.degree() * 2).map(move |i| {
-                    let s = i as f64 / projed.degree() as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = curve.subs(t);
-                let (z, r0) = self.proj_point(pt);
-                match projed.search_nearest_parameter(Vector1::new(z), hint) {
-                    Some(got) => {
-                        hint = got;
-                        let pt = self.curve.subs(hint);
-                        let (w, r1) = self.proj_point(Point3::from_vec(pt));
-                        z.near(&w) && r0.near(&r1)
-                    }
-                    None => false,
-                }
-            })
+        let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
+        surface.include(curve)
     }
 }
 
-impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
+impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
-        let pts = self
-            .curve
-            .control_points()
-            .iter()
-            .map(|pt| Vector1::new(self.proj_point(Point3::from_vec(*pt)).0))
-            .collect();
-        let projed = &BSplineCurve::new(self.curve.knot_vec().clone(), pts);
         let knots = curve.knot_vec().to_single_multi().0;
-        let first = curve.subs(knots[0]);
-        let first = self.proj_point(first).0;
-        let mut hint = presearch(projed, Point1::new(first));
-        hint = match projed.search_nearest_parameter(Vector1::new(first), hint) {
-            Some(got) => got,
-            None => return false,
-        };
+        let degree = curve.degree() * 2;
+        let first = ParametricCurve::subs(curve, knots[0]);
+        if self.search_parameter(first, INCLUDE_CURVE_TRIALS).is_none() {
+            return false;
+        }
         knots
             .windows(2)
             .flat_map(move |knot| {
-                (1..=curve.degree() * 2).map(move |i| {
-                    let s = i as f64 / projed.degree() as f64;
+                (1..=degree).map(move |i| {
+                    let s = i as f64 / degree as f64;
                     knot[0] * (1.0 - s) + knot[1] * s
                 })
             })
             .all(move |t| {
-                let pt = curve.subs(t);
-                let (z, r0) = self.proj_point(pt);
-                match projed.search_nearest_parameter(Vector1::new(z), hint) {
-                    Some(got) => {
-                        hint = got;
-                        let pt = self.curve.subs(hint);
-                        let (w, r1) = self.proj_point(Point3::from_vec(pt));
-                        z.near(&w) && r0.near(&r1)
-                    }
-                    None => false,
-                }
+                self.search_parameter(ParametricCurve::subs(curve, t), INCLUDE_CURVE_TRIALS)
+                    .is_some()
             })
     }
 }
 
 impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
-        let pts = self
-            .curve
-            .control_points()
-            .iter()
-            .map(|pt| {
-                let (pt, w) = (pt.to_point(), pt.weight());
-                let z = self.proj_point(pt).0;
-                Vector2::new(z * w, w)
-            })
-            .collect();
-        let projed = &NURBSCurve::new(BSplineCurve::new(self.curve.knot_vec().clone(), pts));
-        let knots = curve.knot_vec().to_single_multi().0;
-        let first = curve.subs(knots[0]);
-        let first = Point1::new(self.proj_point(first).0);
-        let mut hint = presearch(projed, first);
-        hint = match projed.search_nearest_parameter(first, hint) {
-            Some(got) => got,
-            None => return false,
-        };
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=curve.degree() * 2).map(move |i| {
-                    let s = i as f64 / projed.degree() as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = curve.subs(t);
-                let (z, r0) = self.proj_point(pt);
-                match projed.search_nearest_parameter(Point1::new(z), hint) {
-                    Some(got) => {
-                        hint = got;
-                        let pt = self.curve.subs(hint);
-                        let (w, r1) = self.proj_point(pt);
-                        z.near(&w) && r0.near(&r1)
-                    }
-                    None => false,
-                }
-            })
-    }
-}
-
-impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
-        let pts = self
-            .curve
-            .control_points()
-            .iter()
-            .map(|pt| {
-                let (pt, w) = (pt.to_point(), pt.weight());
-                let z = self.proj_point(pt).0;
-                Vector2::new(z * w, w)
-            })
-            .collect();
-        let projed = &NURBSCurve::new(BSplineCurve::new(self.curve.knot_vec().clone(), pts));
-        let knots = curve.knot_vec().to_single_multi().0;
-        let first = curve.subs(knots[0]);
-        let first = Point1::new(self.proj_point(first).0);
-        let mut hint = presearch(projed, first);
-        hint = match projed.search_nearest_parameter(first, hint) {
-            Some(got) => got,
-            None => return false,
-        };
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=curve.degree() * 2).map(move |i| {
-                    let s = i as f64 / projed.degree() as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = curve.subs(t);
-                let (z, r0) = self.proj_point(pt);
-                match projed.search_nearest_parameter(Point1::new(z), hint) {
-                    Some(got) => {
-                        hint = got;
-                        let pt = self.curve.subs(hint);
-                        let (w, r1) = self.proj_point(pt);
-                        z.near(&w) && r0.near(&r1)
-                    }
-                    None => false,
-                }
-            })
+        let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
+        surface.include(curve)
     }
 }
 
@@ -526,11 +363,8 @@ fn revolve_test() {
             );
             assert_near!(res, ans);
             let res_uder = surface.uder(u, v);
-            let ans_uder = Vector3::new(
-                f64::cos(v) - f64::sin(v),
-                -2.0,
-                -f64::sin(v) - f64::cos(v),
-            );
+            let ans_uder =
+                Vector3::new(f64::cos(v) - f64::sin(v), -2.0, -f64::sin(v) - f64::cos(v));
             assert_near!(res_uder, ans_uder);
             let res_vder = surface.vder(u, v);
             let ans_vder = Vector3::new(
@@ -543,11 +377,8 @@ fn revolve_test() {
             let ans_uuder = Vector3::zero();
             assert_near!(res_uuder, ans_uuder);
             let res_uvder = surface.uvder(u, v);
-            let ans_uvder = Vector3::new(
-                -f64::sin(v) - f64::cos(v),
-                0.0,
-                -f64::cos(v) + f64::sin(v),
-            );
+            let ans_uvder =
+                Vector3::new(-f64::sin(v) - f64::cos(v), 0.0, -f64::cos(v) + f64::sin(v));
             assert_near!(res_uvder, ans_uvder);
             let res_vvder = surface.vvder(u, v);
             let ans_vvder = Vector3::new(
