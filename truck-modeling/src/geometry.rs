@@ -141,6 +141,18 @@ impl ParametricSurface for Surface {
         derive_surface_method!(self, ParametricSurface::vder, u, v)
     }
     #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector3 {
+        derive_surface_method!(self, ParametricSurface::uuder, u, v)
+    }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector3 {
+        derive_surface_method!(self, ParametricSurface::uvder, u, v)
+    }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector3 {
+        derive_surface_method!(self, ParametricSurface::vvder, u, v)
+    }
+    #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         derive_surface_method!(self, ParametricSurface::normal, u, v)
     }
