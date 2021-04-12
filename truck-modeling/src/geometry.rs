@@ -227,7 +227,7 @@ impl Surface {
         match self {
             Surface::Plane(plane) => {
                 let v = plane.get_parameter(pt);
-                match v.so_small() {
+                match v[2].so_small() {
                     true => Some((v[0], v[1])),
                     false => None,
                 }
