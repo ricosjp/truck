@@ -19,6 +19,8 @@ use image::DynamicImage;
 use std::sync::Arc;
 use truck_platform::{wgpu::*, *};
 
+const SURFACE_MESHING_TRIALS: usize = 100;
+
 /// Re-exports `truck_modeling`.
 pub mod modeling {
     pub use truck_modeling::*;

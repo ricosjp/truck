@@ -2,6 +2,8 @@ use super::*;
 use serde::{Serialize, Deserialize};
 use truck_base::geom_traits::{Invertible, ParametricSurface};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
+#[doc(hidden)]
+pub use truck_geometry::{inv_or_zero, presearch};
 
 /// 3-dimensional curve
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -55,6 +57,12 @@ impl Transformed<Matrix4> for Curve {
     }
 }
 
+impl ParameterDivision1D for Curve {
+    fn parameter_division(&self, tol: f64) -> Vec<f64> {
+        derive_curve_method!(self, ParameterDivision1D::parameter_division, tol)
+    }
+}
+
 impl Curve {
     #[inline(always)]
     pub(super) fn knot_vec(&self) -> &KnotVec {
@@ -91,8 +99,6 @@ impl Curve {
 pub enum Surface {
     /// Plane
     Plane(Plane),
-    /// sphere
-    Sphere(Processor<Sphere, Matrix4>),
     /// 3-dimensional B-spline surface
     BSplineSurface(BSplineSurface<Vector3>),
     /// 3-dimensional NURBS Surface
@@ -105,7 +111,6 @@ macro_rules! derive_surface_method {
     ($surface: expr, $method: expr, $($ver: ident),*) => {
         match $surface {
             Self::Plane(got) => $method(got, $($ver), *),
-            Self::Sphere(got) => $method(got, $($ver), *),
             Self::BSplineSurface(got) => $method(got, $($ver), *),
             Self::NURBSSurface(got) => $method(got, $($ver), *),
             Self::RevolutedCurve(got) => $method(got, $($ver), *),
@@ -117,7 +122,6 @@ macro_rules! derive_surface_self_method {
     ($surface: expr, $method: expr, $($ver: ident),*) => {
         match $surface {
             Self::Plane(got) => Self::Plane($method(got, $($ver), *)),
-            Self::Sphere(got) => Self::Sphere($method(got, $($ver), *)),
             Self::BSplineSurface(got) => Self::BSplineSurface($method(got, $($ver), *)),
             Self::NURBSSurface(got) => Self::NURBSSurface($method(got, $($ver), *)),
             Self::RevolutedCurve(got) => Self::RevolutedCurve($method(got, $($ver), *)),
@@ -194,12 +198,6 @@ impl IncludeCurve<Curve> for Surface {
                     Curve::NURBSCurve(curve) => surface.include(curve),
                 }
             },
-            Surface::Sphere(surface) => {
-                match curve {
-                    Curve::BSplineCurve(curve) => surface.include(curve),
-                    Curve::NURBSCurve(curve) => surface.include(curve),
-                }
-            },
             Surface::RevolutedCurve(surface) => {
                 match surface.entity_curve() {
                     Curve::BSplineCurve(entity_curve) => {
@@ -218,6 +216,25 @@ impl IncludeCurve<Curve> for Surface {
                     }
                 }
             },
+        }
+    }
+}
+
+impl Surface {
+    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
+    /// If cannot find, then return `None`.
+    pub fn search_parameter(&self, pt: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        match self {
+            Surface::Plane(plane) => {
+                let v = plane.get_parameter(pt);
+                match v.so_small() {
+                    true => Some((v[0], v[1])),
+                    false => None,
+                }
+            },
+            Surface::BSplineSurface(surface) => surface.search_parameter(pt.to_vec(), hint, trials),
+            Surface::NURBSSurface(surface) => surface.search_parameter(pt, hint, trials),
+            Surface::RevolutedCurve(surface) => surface.search_parameter(pt, hint, trials),
         }
     }
 }

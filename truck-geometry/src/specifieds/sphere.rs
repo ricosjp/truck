@@ -103,12 +103,15 @@ impl IncludeCurve<NURBSCurve<Vector4>> for Sphere {
 impl ParameterDivision2D for Sphere {
     #[inline(always)]
     fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        if tol > self.radius {
+            panic!("Tolerance is larger than the radius of sphere.");
+        }
         let acos = f64::acos(1.0 - tol / self.radius);
         let u_div: usize = 1 + (PI / acos).floor() as usize;
         let v_div: usize = 1 + (2.0 * PI / acos).floor() as usize;
         (
             (0..=u_div).map(|i| PI * i as f64 / u_div as f64).collect(),
-            (0..=v_div).map(|j| PI * j as f64 / v_div as f64).collect(),
+            (0..=v_div).map(|j| 2.0 * PI * j as f64 / v_div as f64).collect(),
         )
     }
 }

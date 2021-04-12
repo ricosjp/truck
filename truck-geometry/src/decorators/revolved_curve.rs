@@ -115,28 +115,30 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
-    pub fn search_parameter(&self, point: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+    pub fn search_parameter(
+        &self,
+        point: Point3,
+        hint: (f64, f64),
+        trials: usize,
+    ) -> Option<(f64, f64)> {
         let (t0, t1) = self.curve.parameter_range();
         if self.curve.front().near(&point) {
             Some((t0, 0.0))
         } else if self.curve.back().near(&point) {
             Some((t1, 0.0))
         } else {
-            surface_search_nearest_parameter(self, point, hint, trials)
-                .and_then(|(u, v)| {
-                    println!("{} {} {:?} {:?}", u, v, self.subs(u, v), point);
+            surface_search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
+                if self.subs(u, v).near(&point) {
+                    Some((u, v))
+                } else {
+                    let v = if v > PI { v + PI } else { v - PI };
                     if self.subs(u, v).near(&point) {
                         Some((u, v))
                     } else {
-                        let v = if v > PI { v + PI } else { v - PI };
-                        println!("{} {} {:?} {:?}", u, v, self.subs(u, v), point);
-                        if self.subs(u, v).near(&point) {
-                            Some((u, v))
-                        } else {
-                            None
-                        }
+                        None
                     }
-                })
+                }
+            })
         }
     }
 }
@@ -231,7 +233,10 @@ impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a BSplineCurve
         let first = ParametricCurve::subs(curve, knots[0]);
         let degree = usize::max(2, usize::max(curve.degree(), self.curve.degree()));
         let mut hint = presearch(self, first);
-        if self.search_parameter(first, hint, INCLUDE_CURVE_TRIALS).is_none() {
+        if self
+            .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
+            .is_none()
+        {
             return false;
         }
         knots
@@ -243,12 +248,16 @@ impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a BSplineCurve
                 })
             })
             .all(move |t| {
-                match self.search_parameter(ParametricCurve::subs(curve, t), hint, INCLUDE_CURVE_TRIALS) {
+                match self.search_parameter(
+                    ParametricCurve::subs(curve, t),
+                    hint,
+                    INCLUDE_CURVE_TRIALS,
+                ) {
                     Some(got) => {
                         hint = got;
                         true
-                    },
-                    None => false
+                    }
+                    None => false,
                 }
             })
     }
@@ -267,7 +276,10 @@ impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a NURBSCurve<V
         let first = ParametricCurve::subs(curve, knots[0]);
         let degree = usize::max(2, curve.degree() + self.curve.degree());
         let mut hint = presearch(self, first);
-        if self.search_parameter(first, hint, INCLUDE_CURVE_TRIALS).is_none() {
+        if self
+            .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
+            .is_none()
+        {
             return false;
         }
         knots
@@ -279,12 +291,16 @@ impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a NURBSCurve<V
                 })
             })
             .all(move |t| {
-                match self.search_parameter(ParametricCurve::subs(curve, t), hint, INCLUDE_CURVE_TRIALS) {
+                match self.search_parameter(
+                    ParametricCurve::subs(curve, t),
+                    hint,
+                    INCLUDE_CURVE_TRIALS,
+                ) {
                     Some(got) => {
                         hint = got;
                         true
-                    },
-                    None => false
+                    }
+                    None => false,
                 }
             })
     }
@@ -303,7 +319,10 @@ impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<V
         let first = ParametricCurve::subs(curve, knots[0]);
         let degree = usize::max(2, curve.degree() + self.curve.degree());
         let mut hint = presearch(self, first);
-        if self.search_parameter(first, hint, INCLUDE_CURVE_TRIALS).is_none() {
+        if self
+            .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
+            .is_none()
+        {
             return false;
         }
         knots
@@ -315,12 +334,16 @@ impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<V
                 })
             })
             .all(move |t| {
-                match self.search_parameter(ParametricCurve::subs(curve, t), hint, INCLUDE_CURVE_TRIALS) {
+                match self.search_parameter(
+                    ParametricCurve::subs(curve, t),
+                    hint,
+                    INCLUDE_CURVE_TRIALS,
+                ) {
                     Some(got) => {
                         hint = got;
                         true
-                    },
-                    None => false
+                    }
+                    None => false,
                 }
             })
     }
@@ -339,7 +362,10 @@ impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vec
         let first = ParametricCurve::subs(curve, knots[0]);
         let degree = usize::max(2, curve.degree() + self.curve.degree());
         let mut hint = presearch(self, first);
-        if self.search_parameter(first, hint, INCLUDE_CURVE_TRIALS).is_none() {
+        if self
+            .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
+            .is_none()
+        {
             return false;
         }
         knots
@@ -351,12 +377,16 @@ impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vec
                 })
             })
             .all(move |t| {
-                match self.search_parameter(ParametricCurve::subs(curve, t), hint, INCLUDE_CURVE_TRIALS) {
+                match self.search_parameter(
+                    ParametricCurve::subs(curve, t),
+                    hint,
+                    INCLUDE_CURVE_TRIALS,
+                ) {
                     Some(got) => {
                         hint = got;
                         true
-                    },
-                    None => false
+                    }
+                    None => false,
                 }
             })
     }
@@ -366,6 +396,28 @@ impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
         surface.include(curve)
+    }
+}
+
+impl<C> ParameterDivision2D for RevolutedCurve<C>
+where C: ParametricCurve<Point = Point3, Vector = Vector3> + ParameterDivision1D
+{
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        let curve_division = self.curve.parameter_division(tol);
+        let max = curve_division
+            .iter()
+            .fold(0.0, |max2, t| {
+                let pt = self.curve.subs(*t);
+                let h = self.proj_point(pt).1;
+                f64::max(max2, h)
+            })
+            .sqrt();
+        let acos = f64::acos(1.0 - tol / max);
+        let div: usize = 1 + (2.0 * PI / acos).floor() as usize;
+        let circle_division = (0..=div)
+            .map(|j| 2.0 * PI * j as f64 / div as f64)
+            .collect();
+        (curve_division, circle_division)
     }
 }
 

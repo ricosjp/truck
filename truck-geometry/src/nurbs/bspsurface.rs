@@ -1927,7 +1927,12 @@ where
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// cf. [`BSplineCurve::search_nearest_parameter`](struct.BSplineCurve.html#method.search_nearest_parameter)
-    pub fn search_nearest_parameter(&self, pt: <Self as ParametricSurface>::Point, (u0, v0): (f64, f64), trials: usize) -> Option<(f64, f64)> {
+    pub fn search_nearest_parameter(
+        &self,
+        pt: <Self as ParametricSurface>::Point,
+        (u0, v0): (f64, f64),
+        trials: usize,
+    ) -> Option<(f64, f64)> {
         surface_search_nearest_parameter(self, pt, (u0, v0), trials)
     }
 }
@@ -2066,11 +2071,11 @@ impl BSplineSurface<Vector2> {
     /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
     ///
     /// let pt = Vector2::new(0.3, 0.7);
-    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
+    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert_near!(&surface.subs(u, v), &pt);
     /// ```
-    pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64)) -> Option<(f64, f64)> {
-        sub_search_parameter2d(self, Point2::from_vec(pt), hint.into(), 0).map(|v| v.into())
+    pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        sub_search_parameter2d(self, Point2::from_vec(pt), hint.into(), trials).map(|v| v.into())
     }
 }
 
@@ -2078,7 +2083,7 @@ impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
     fn include(&self, curve: &BSplineCurve<Vector2>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
         let mut hint = presearch(self, Point2::from_vec(pt));
-        hint = match self.search_parameter(pt, hint) {
+        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -2091,7 +2096,7 @@ impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint) {
+                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
@@ -2128,13 +2133,13 @@ impl BSplineSurface<Vector3> {
     /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
     ///
     /// let pt = surface.subs(0.32, 0.76);
-    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
+    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert_near!(&surface.subs(u, v), &pt);
     ///
     /// let pt = surface.subs(0.32, 0.76) + Vector3::new(0.0, 0.0, 0.001);
-    /// assert!(surface.search_parameter(pt, (0.5, 0.5)).is_none());
+    /// assert!(surface.search_parameter(pt, (0.5, 0.5), 100).is_none());
     /// ```
-    pub fn search_parameter(&self, pt: Vector3, hint: (f64, f64)) -> Option<(f64, f64)> {
+    pub fn search_parameter(&self, pt: Vector3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
         let normal = self.normal(hint.0, hint.1);
         let tmp = normal[0].abs() > normal[1].abs();
         let tmp_idx = if tmp { 0 } else { 1 };
@@ -2155,7 +2160,7 @@ impl BSplineSurface<Vector3> {
         let newsurface = BSplineSurface::new(knot_vecs, control_points);
         let newpt = Vector2::new(pt[idx0], pt[idx1]);
         newsurface
-            .search_parameter(newpt, hint)
+            .search_parameter(newpt, hint, trials)
             .filter(|(u, v)| self.subs(*u, *v).near(&pt))
     }
 }
@@ -2164,7 +2169,7 @@ impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
         let mut hint = presearch(self, Point3::from_vec(pt));
-        hint = match self.search_parameter(pt, hint) {
+        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -2177,7 +2182,7 @@ impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint) {
+                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
@@ -2202,7 +2207,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]).to_vec();
         let mut hint = presearch(self, Point3::from_vec(pt));
-        hint = match self.search_parameter(pt, hint) {
+        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -2215,7 +2220,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = curve.subs(t).to_vec();
-                hint = match self.search_parameter(pt, hint) {
+                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
@@ -2240,11 +2245,8 @@ pub(super) fn sub_search_parameter2d<S: ParametricSurface<Point = Point2, Vector
     surface: &S,
     pt0: Point2,
     hint: Vector2,
-    count: usize,
+    trials: usize,
 ) -> Option<Vector2> {
-    if count == 100 {
-        return None;
-    }
     let (u0, v0) = (hint[0], hint[1]);
     let pt = surface.subs(u0, v0);
     let jacobi = Matrix2::from_cols(surface.uder(u0, v0), surface.vder(u0, v0));
@@ -2252,7 +2254,10 @@ pub(super) fn sub_search_parameter2d<S: ParametricSurface<Point = Point2, Vector
     match res {
         Some(entity) => match surface.subs(entity[0], entity[1]).near(&pt0) {
             true => res,
-            false => sub_search_parameter2d(surface, pt0, entity, count + 1),
+            false => match trials == 0 {
+                true => None,
+                false => sub_search_parameter2d(surface, pt0, entity, trials - 1),
+            },
         },
         None => res,
     }

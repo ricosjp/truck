@@ -426,6 +426,14 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
     }
 }
 
+impl<V: Homogeneous<f64>> NURBSCurve<V>
+where V::Point: MetricSpace<Metric = f64> + std::ops::Index<usize, Output = f64> + Bounded<f64> + Copy
+{
+    /// Returns the bounding box including all control points.
+    #[inline(always)]
+    pub fn roughly_bounding_box(&self) -> BoundingBox<V::Point> { self.0.control_points.iter().map(|p| p.to_point()).collect() }
+}
+
 impl<V: Homogeneous<f64>> ParametricCurve for NURBSCurve<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;

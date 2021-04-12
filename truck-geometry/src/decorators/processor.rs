@@ -143,6 +143,14 @@ where
     }
 }
 
+impl<S, T> BoundedSurface for Processor<S, T>
+where
+    S: BoundedSurface<Point = Point3, Vector = Vector3>,
+    T: Transform<S::Point> + Clone,
+{
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
+}
+
 impl<E, T> Deref for Processor<E, T> {
     type Target = E;
     #[inline(always)]
@@ -155,7 +163,9 @@ impl<E, T> DerefMut for Processor<E, T> {
 }
 
 impl<E, T> Transformed<T> for Processor<E, T>
-where T: Mul<T, Output = T> + Copy, E: Clone,
+where
+    T: Mul<T, Output = T> + Copy,
+    E: Clone,
 {
     #[inline(always)]
     fn transform_by(&mut self, trans: T) { self.transform = trans * self.transform; }
@@ -183,6 +193,48 @@ where
             .expect("irregular transform");
         let curve = curve.clone().transformed(inv);
         self.entity.include(&curve)
+    }
+}
+
+impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
+    fn parameter_division(&self, tol: f64) -> Vec<f64> {
+        let a = self.transform;
+        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2]
+            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2]
+            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2];
+        self.entity.parameter_division(tol / n.sqrt())
+    }
+}
+
+impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
+    fn parameter_division(&self, tol: f64) -> Vec<f64> {
+        let a = self.transform;
+        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2] + a[0][3] * a[0][3]
+            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2] + a[1][3] * a[1][3]
+            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2] + a[2][3] * a[2][3]
+            + a[3][0] * a[3][0] + a[3][1] * a[3][1] + a[3][2] * a[3][2] + a[3][3] * a[3][3];
+        self.entity.parameter_division(tol / n.sqrt())
+    }
+}
+
+impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        let a = self.transform;
+        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2]
+            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2]
+            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2];
+        self.entity.parameter_division(tol / n.sqrt())
+    }
+}
+
+impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        let a = self.transform;
+        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2] + a[0][3] * a[0][3]
+            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2] + a[1][3] * a[1][3]
+            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2] + a[2][3] * a[2][3]
+            + a[3][0] * a[3][0] + a[3][1] * a[3][1] + a[3][2] * a[3][2] + a[3][3] * a[3][3];
+        self.entity.parameter_division(tol / n.sqrt())
     }
 }
 
