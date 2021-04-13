@@ -56,7 +56,6 @@ where
         return Some(hint);
     }
     let t = hint - f / fprime;
-    println!("{} {} {}", f, fprime, t);
     if t.near(&hint) {
         Some(t)
     } else if trials == 0 {

@@ -1550,7 +1550,6 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineSurface<V> {
     /// assert_near2!(curve.subs(0.0), bspsurface.subs(0.2, 0.3));
     /// assert_near2!(curve.subs(1.0), bspsurface.subs(0.8, 0.6));
     /// for i in 0..=N {
-    ///     println!("{}", i);
     ///     let t = i as f64 / N as f64;
     ///     let pt = curve.subs(t);
     ///     assert_near2!(pt[1], pt[0] * 0.5 - 0.1);
