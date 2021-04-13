@@ -122,10 +122,10 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
         trials: usize,
     ) -> Option<(f64, f64)> {
         let (t0, t1) = self.curve.parameter_range();
-        if self.curve.front().near(&point) {
-            Some((t0, 0.0))
-        } else if self.curve.back().near(&point) {
-            Some((t1, 0.0))
+        if self.is_front_fixed() && self.curve.front().near(&point) {
+            Some((t0, hint.1))
+        } else if self.is_back_fixed() && self.curve.back().near(&point) {
+            Some((t1, hint.1))
         } else {
             surface_search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
                 if self.subs(u, v).near(&point) {

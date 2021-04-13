@@ -7,7 +7,8 @@ fn main() {
     let v1 = builder::vertex(Point3::new(0.0, -0.5, 0.5));
     let v2 = builder::vertex(Point3::new(0.0, -0.5, 0.0));
     let wire: Wire = vec![builder::line(&v0, &v1), builder::line(&v1, &v2)].into();
-    let cone = builder::cone(&wire, Vector3::unit_y(), Rad(7.0));
+    let shell = builder::cone(&wire, Vector3::unit_y(), Rad(7.0));
+    let cone = Solid::new(vec![shell]);
     let json = serde_json::to_vec_pretty(&cone.compress()).unwrap();
-    std::fs::write("torus.json", &json).unwrap();
+    std::fs::write("cone.json", &json).unwrap();
 }
