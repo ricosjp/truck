@@ -99,26 +99,6 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
             .so_small()
     }
 
-    fn sub_search_parameter(
-        &self,
-        point: Point3,
-        hint: (f64, f64),
-        trials: usize,
-    ) -> Option<(f64, f64)> {
-        surface_search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
-            if self.subs(u, v).near(&point) {
-                Some((u, v))
-            } else {
-                let v = if v > PI { v - PI } else { v + PI };
-                if self.subs(u, v).near(&point) {
-                    Some((u, v))
-                } else {
-                    None
-                }
-            }
-        })
-    }
-
     /// Searches the parameter `(u, v)` such that `self.subs(u, v).near(&point)` by Newton's method.
     /// Returns `None` if:
     /// - the converged parameter `(u, v)` is not satisfied `self.subs(u, v).near(&point)`.
@@ -148,10 +128,18 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
         } else if self.is_back_fixed() && self.curve.back().near(&point) {
             Some((t1, hint.1))
         } else {
-            match self.sub_search_parameter(point, hint, trials) {
-                Some(got) => Some(got),
-                None => self.sub_search_parameter(point, presearch(self, point), trials),
-            }
+            surface_search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
+                if self.subs(u, v).near(&point) {
+                    Some((u, v))
+                } else {
+                    let v = if v > PI { v - PI } else { v + PI };
+                    if self.subs(u, v).near(&point) {
+                        Some((u, v))
+                    } else {
+                        None
+                    }
+                }
+            })
         }
     }
 }
@@ -261,16 +249,21 @@ impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a BSplineCurve
                 })
             })
             .all(move |t| {
-                match self.search_parameter(
-                    ParametricCurve::subs(curve, t),
-                    hint,
-                    INCLUDE_CURVE_TRIALS,
-                ) {
+                let pt = ParametricCurve::subs(curve, t);
+                match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => {
                         hint = got;
                         true
                     }
-                    None => false,
+                    None => {
+                        match self.search_parameter(pt, presearch(self, pt), INCLUDE_CURVE_TRIALS) {
+                            Some(got) => {
+                                hint = got;
+                                true
+                            }
+                            None => false,
+                        }
+                    }
                 }
             })
     }
@@ -304,16 +297,21 @@ impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a NURBSCurve<V
                 })
             })
             .all(move |t| {
-                match self.search_parameter(
-                    ParametricCurve::subs(curve, t),
-                    hint,
-                    INCLUDE_CURVE_TRIALS,
-                ) {
+                let pt = ParametricCurve::subs(curve, t);
+                match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => {
                         hint = got;
                         true
                     }
-                    None => false,
+                    None => {
+                        match self.search_parameter(pt, presearch(self, pt), INCLUDE_CURVE_TRIALS) {
+                            Some(got) => {
+                                hint = got;
+                                true
+                            }
+                            None => false,
+                        }
+                    }
                 }
             })
     }
@@ -347,16 +345,21 @@ impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<V
                 })
             })
             .all(move |t| {
-                match self.search_parameter(
-                    ParametricCurve::subs(curve, t),
-                    hint,
-                    INCLUDE_CURVE_TRIALS,
-                ) {
+                let pt = ParametricCurve::subs(curve, t);
+                match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => {
                         hint = got;
                         true
                     }
-                    None => false,
+                    None => {
+                        match self.search_parameter(pt, presearch(self, pt), INCLUDE_CURVE_TRIALS) {
+                            Some(got) => {
+                                hint = got;
+                                true
+                            }
+                            None => false,
+                        }
+                    }
                 }
             })
     }
@@ -390,16 +393,21 @@ impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vec
                 })
             })
             .all(move |t| {
-                match self.search_parameter(
-                    ParametricCurve::subs(curve, t),
-                    hint,
-                    INCLUDE_CURVE_TRIALS,
-                ) {
+                let pt = ParametricCurve::subs(curve, t);
+                match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => {
                         hint = got;
                         true
                     }
-                    None => false,
+                    None => {
+                        match self.search_parameter(pt, presearch(self, pt), INCLUDE_CURVE_TRIALS) {
+                            Some(got) => {
+                                hint = got;
+                                true
+                            }
+                            None => false,
+                        }
+                    }
                 }
             })
     }
