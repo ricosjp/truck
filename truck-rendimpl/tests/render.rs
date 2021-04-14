@@ -97,7 +97,7 @@ fn nontex_shape(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
                 },
                 ..Default::default()
             },
-            mesh_precision: 0.01,
+            ..Default::default()
         },
     );
     common::render_one(scene, &texture, &cube);
@@ -199,7 +199,7 @@ fn tex_shape(scene: &mut Scene, creator: &InstanceCreator, gradtex: &Arc<Dynamic
                 texture: Some(attach),
                 ..Default::default()
             },
-            mesh_precision: 0.01,
+            ..Default::default()
         },
     );
     common::render_one(scene, &texture, &cube);

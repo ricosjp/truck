@@ -44,7 +44,7 @@ pub struct Plane {
 ///         // the parameter u is latitude
 ///         let u = PI * i as f64 / N as f64;
 ///         // the parameter v is longitude
-///         let v = 2.0 * PI * i as f64 / N as f64;
+///         let v = 2.0 * PI * j as f64 / N as f64;
 /// 
 ///         // simple relation between a point and its normal.
 ///         let pt = sphere.subs(u, v);

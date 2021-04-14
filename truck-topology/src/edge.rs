@@ -294,7 +294,7 @@ impl<P, C: Clone + Invertible> Edge<P, C> {
     }
 }
 
-impl<P, C: Curve<Point = P>> Edge <P, C> {
+impl<P, C: ParametricCurve<Point = P>> Edge <P, C> {
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]

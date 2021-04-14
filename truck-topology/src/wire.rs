@@ -275,7 +275,7 @@ impl<P, C> Wire<P, C> {
     }
 }
 
-impl<P: Tolerance, C: Curve<Point=P>> Wire<P, C> {
+impl<P: Tolerance, C: ParametricCurve<Point=P>> Wire<P, C> {
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]

@@ -1,4 +1,3 @@
-use crate::bspsurface::{CPColumnIter, CPRowIter};
 use super::*;
 
 impl<V> NURBSSurface<V> {
@@ -69,7 +68,7 @@ impl<V> NURBSSurface<V> {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn ctrl_pts_row_iter(&self, column_idx: usize) -> CPRowIter<'_, V> {
+    pub fn ctrl_pts_row_iter(&self, column_idx: usize) -> impl ExactSizeIterator<Item = &V> + std::iter::FusedIterator<Item = &V> {
         self.0.ctrl_pts_row_iter(column_idx)
     }
 
@@ -92,7 +91,7 @@ impl<V> NURBSSurface<V> {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn ctrl_pts_column_iter(&self, row_idx: usize) -> CPColumnIter<'_, V> {
+    pub fn ctrl_pts_column_iter(&self, row_idx: usize) -> std::slice::Iter<'_, V> {
         self.0.control_points[row_idx].iter()
     }
 
@@ -200,6 +199,31 @@ impl<V: Homogeneous<f64>> NURBSSurface<V> {
         let pt = self.0.subs(u, v);
         let vd = self.0.vder(u, v);
         pt.rat_der(vd)
+    }
+    /// Substitutes 2nd-ord derived NURBS surface by the first parameter `u`.
+    #[inline(always)]
+    pub fn uuder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        let pt = self.0.subs(u, v);
+        let ud = self.0.uder(u, v);
+        let uud = self.0.uuder(u, v);
+        pt.rat_der2(ud, uud)
+    }
+    /// Substitutes 2nd-ord derived NURBS surface by the first parameter `v`.
+    #[inline(always)]
+    pub fn vvder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        let pt = self.0.subs(u, v);
+        let vd = self.0.vder(u, v);
+        let vvd = self.0.vvder(u, v);
+        pt.rat_der2(vd, vvd)
+    }
+    /// Substitutes 2nd-ord derived NURBS surface by both parameter `u, v`.
+    #[inline(always)]
+    pub fn uvder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        let pt = self.0.subs(u, v);
+        let ud = self.0.uder(u, v);
+        let vd = self.0.vder(u, v);
+        let uvd = self.0.uvder(u, v);
+        pt.rat_cross_der(ud, vd, uvd)
     }
     /// Returns the closure of substitution.
     #[inline(always)]
@@ -461,7 +485,10 @@ impl<V: Homogeneous<f64> + Tolerance> NURBSSurface<V> {
 }
 
 impl<V: Homogeneous<f64>> NURBSSurface<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace
+where
+    Self: ParametricSurface<Point = V::Point, Vector = V::Vector>,
+    V::Point: EuclideanSpace<Scalar = f64>,
+    V::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
     /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
@@ -477,7 +504,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
     /// ];
     /// let surface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
     /// let pt = surface.subs(0.3, 0.7);
-    /// let (u, v) = surface.search_nearest_parameter(pt, (0.5, 0.5)).unwrap();
+    /// let (u, v) = surface.search_nearest_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert!(u.near2(&0.3) && v.near2(&0.7));
     /// ```
     /// # Remarks
@@ -487,8 +514,9 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
         &self,
         pt: V::Point,
         (u0, v0): (f64, f64),
+        trials: usize,
     ) -> Option<(f64, f64)> {
-        self.0.search_rational_nearest_parameter(pt, (u0, v0))
+        surface_search_nearest_parameter(self, pt, (u0, v0), trials)
     }
 }
 
@@ -527,12 +555,12 @@ impl NURBSSurface<Vector3> {
     /// let surface = NURBSSurface::new(bspsurface);
     ///
     /// let pt = surface.subs(0.3, 0.7);
-    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
+    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
-    pub fn search_parameter(&self, pt: Point2, hint: (f64, f64)) -> Option<(f64, f64)> {
-        bspsurface::sub_search_parameter2d(self, pt, hint.into(), 0).map(|v| v.into())
+    pub fn search_parameter(&self, pt: Point2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        bspsurface::sub_search_parameter2d(self, pt, hint.into(), trials).map(|v| v.into())
     }
 }
 
@@ -566,6 +594,32 @@ impl ParametricSurface for NURBSSurface<Vector3> {
     fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
+    /// zero identity
+    #[inline(always)]
+    fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
+}
+
+impl<'a> ParametricSurface for &'a NURBSSurface<Vector3> {
+    type Point = Point2;
+    type Vector = Vector2;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
     /// zero identity
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
@@ -581,7 +635,7 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     fn include(&self, curve: &NURBSCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
         let mut hint = self.presearch(pt);
-        hint = match self.search_parameter(pt, hint) {
+        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -594,7 +648,7 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint) {
+                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
@@ -625,6 +679,12 @@ impl ParametricSurface for NURBSSurface<Vector4> {
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
     #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
+    #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
         let pt = self.0.subs(u, v);
         let ud = self.0.uder(u, v);
@@ -633,17 +693,36 @@ impl ParametricSurface for NURBSSurface<Vector4> {
     }
 }
 
+impl<'a> ParametricSurface for &'a NURBSSurface<Vector4> {
+    type Point = Point3;
+    type Vector = Vector3;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
+    #[inline(always)]
+    fn normal(&self, u: f64, v: f64) -> Self::Vector { (*self).normal(u, v) }
+}
+
 impl BoundedSurface for NURBSSurface<Vector4> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
 }
 
-impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
+impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
     #[inline(always)]
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.front();
         let mut hint = self.presearch(pt);
-        hint = match self.search_parameter(pt, hint) {
+        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -655,8 +734,8 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
             for j in 1..=degree {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
-                let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint) {
+                let pt = Point3::from_vec(curve.subs(t));
+                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
@@ -677,76 +756,84 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     }
 }
 
-impl<V: Homogeneous<f64>> BSplineSurface<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace
-{
-    fn search_rational_nearest_parameter(
-        &self,
-        pt: V::Point,
-        (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)> {
-        let uder = self.uderivation();
-        let vder = self.vderivation();
-        let uuder = uder.uderivation();
-        let uvder = uder.vderivation();
-        let vvder = vder.vderivation();
-        self.optimized_srnp(&uder, &vder, &uuder, &uvder, &vvder, pt, (u0, v0))
-    }
-
-    fn optimized_srnp(
-        &self,
-        uder: &Self,
-        vder: &Self,
-        uuder: &Self,
-        uvder: &Self,
-        vvder: &Self,
-        pt: V::Point,
-        (u0, v0): (f64, f64),
-    ) -> Option<(f64, f64)> {
-        self.sub_srnp(uder, vder, uuder, uvder, vvder, pt, (u0, v0), 0)
-    }
-
-    fn sub_srnp(
-        &self,
-        uder: &Self,
-        vder: &Self,
-        uuder: &Self,
-        uvder: &Self,
-        vvder: &Self,
-        pt: V::Point,
-        (u0, v0): (f64, f64),
-        count: usize,
-    ) -> Option<(f64, f64)> {
-        let s = self.subs(u0, v0);
-        let rs = s.to_point();
-        let ud = uder.subs(u0, v0);
-        let rud = s.rat_der(ud);
-        let vd = vder.subs(u0, v0);
-        let rvd = s.rat_der(vd);
-        let uud = uuder.subs(u0, v0);
-        let ruud = s.rat_der2(ud, uud);
-        let uvd = uvder.subs(u0, v0);
-        let ruvd = s.rat_cross_der(ud, vd, uvd);
-        let vvd = vvder.subs(u0, v0);
-        let rvvd = s.rat_der2(vd, vvd);
-        let f_u = rud.dot(rs - pt);
-        let f_v = rvd.dot(rs - pt);
-        let a = ruud.dot(rs - pt) + rud.dot(rud);
-        let c = ruvd.dot(rs - pt) + rud.dot(rvd);
-        let b = rvvd.dot(rs - pt) + rvd.dot(rvd);
-        let det = a * b - c * c;
-        if det.so_small() {
-            return Some((u0, v0));
+impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
+    #[inline(always)]
+    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+        let pt = curve.front();
+        let mut hint = self.presearch(pt);
+        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+            Some(got) => got,
+            None => return false,
+        };
+        let uknot_vec = self.uknot_vec();
+        let vknot_vec = self.vknot_vec();
+        let degree = curve.degree() * 6;
+        let (knots, _) = curve.knot_vec().to_single_multi();
+        for i in 1..knots.len() {
+            for j in 1..=degree {
+                let p = j as f64 / degree as f64;
+                let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
+                let pt = curve.subs(t);
+                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+                    Some(got) => got,
+                    None => return false,
+                };
+                if !self.subs(hint.0, hint.1).near(&pt) {
+                    return false;
+                } else if hint.0 < uknot_vec[0] - TOLERANCE
+                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
+                {
+                    return false;
+                } else if hint.1 < vknot_vec[0] - TOLERANCE
+                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
+                {
+                    return false;
+                }
+            }
         }
-        let u = u0 - (b * f_u - c * f_v) / det;
-        let v = v0 - (-c * f_u + a * f_v) / det;
-        if u.near(&u0) && v.near(&v0) {
-            Some((u, v))
-        } else if count == 100 {
-            None
-        } else {
-            self.sub_srnp(uder, vder, uuder, uvder, vvder, pt, (u, v), count + 1)
-        }
+        true
+    }
+}
+
+impl Transformed<Matrix2> for NURBSSurface<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix2) { self.transform_by(Matrix3::from(trans)) }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix2) -> Self { self.transformed(Matrix3::from(trans)) }
+}
+
+impl Transformed<Matrix3> for NURBSSurface<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) { self.0.transform_by(trans) }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix3) -> Self {
+        let mut surface = self.clone();
+        surface.transform_by(trans);
+        surface
+    }
+}
+
+impl Transformed<Matrix3> for NURBSSurface<Vector4> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) { self.transform_by(Matrix3::from(trans)) }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix3) -> Self { self.transformed(Matrix3::from(trans)) }
+}
+
+impl Transformed<Matrix4> for NURBSSurface<Vector4> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.0
+            .control_points
+            .iter_mut()
+            .flatten()
+            .for_each(|pt| *pt = trans * *pt)
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix4) -> Self {
+        let mut surface = self.clone();
+        surface.transform_by(trans);
+        surface
     }
 }
 
@@ -791,10 +878,10 @@ impl NURBSSurface<Vector4> {
     /// let surface = NURBSSurface::new(bspsurface);
     ///
     /// let pt = surface.subs(0.3, 0.7);
-    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5)).unwrap();
+    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
-    pub fn search_parameter(&self, pt: Point3, hint: (f64, f64)) -> Option<(f64, f64)> {
+    pub fn search_parameter(&self, pt: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
         let normal = self.normal(hint.0, hint.1);
         let flag = normal[0].abs() > normal[1].abs();
         let tmp = if flag { 0 } else { 1 };
@@ -809,7 +896,7 @@ impl NURBSSurface<Vector4> {
         let newsurface = NURBSSurface::new(BSplineSurface::new(knot_vecs, control_points));
         let newpt = Point2::new(pt[idx0], pt[idx1]);
         newsurface
-            .search_parameter(newpt, hint)
+            .search_parameter(newpt, hint, trials)
             .filter(|(u, v)| self.subs(*u, *v).near(&pt))
     }
 }

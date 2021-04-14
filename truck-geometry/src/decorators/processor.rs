@@ -10,12 +10,6 @@ impl<E, T: One> Processor<E, T> {
             orientation: true,
         }
     }
-    /// Transforms the geometry entity by `transform`
-    #[inline(always)]
-    pub fn transform_by(&mut self, transform: T)
-    where T: Mul<T, Output = T> + Copy {
-        self.transform = transform * self.transform;
-    }
     /// Returns the reference of entity
     #[inline(always)]
     pub fn entity(&self) -> &E { &self.entity }
@@ -48,7 +42,7 @@ impl<E: Clone, T: Clone> Invertible for Processor<E, T> {
     }
 }
 
-impl<C: Curve, T> Processor<C, T> {
+impl<C: ParametricCurve, T> Processor<C, T> {
     #[inline(always)]
     fn get_curve_parameter(&self, t: f64) -> f64 {
         let (t0, t1) = self.parameter_range();
@@ -59,9 +53,9 @@ impl<C: Curve, T> Processor<C, T> {
     }
 }
 
-impl<C, T> Curve for Processor<C, T>
+impl<C, T> ParametricCurve for Processor<C, T>
 where
-    C: Curve,
+    C: ParametricCurve,
     C::Point: EuclideanSpace<Diff = C::Vector>,
     C::Vector: VectorSpace<Scalar = f64>,
     T: Transform<C::Point> + Clone,
@@ -114,6 +108,27 @@ where
         }
     }
     #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector {
+        match self.orientation {
+            true => self.transform.transform_vector(self.entity.uuder(u, v)),
+            false => self.transform.transform_vector(self.entity.vvder(v, u)),
+        }
+    }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector {
+        match self.orientation {
+            true => self.transform.transform_vector(self.entity.uvder(u, v)),
+            false => self.transform.transform_vector(self.entity.uvder(v, u)),
+        }
+    }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector {
+        match self.orientation {
+            true => self.transform.transform_vector(self.entity.vvder(u, v)),
+            false => self.transform.transform_vector(self.entity.uuder(v, u)),
+        }
+    }
+    #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
         let (u, v) = self.get_surface_parameter(u, v);
         let n = self.entity.normal(u, v);
@@ -128,6 +143,14 @@ where
     }
 }
 
+impl<S, T> BoundedSurface for Processor<S, T>
+where
+    S: BoundedSurface<Point = Point3, Vector = Vector3>,
+    T: Transform<S::Point> + Clone,
+{
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
+}
+
 impl<E, T> Deref for Processor<E, T> {
     type Target = E;
     #[inline(always)]
@@ -137,6 +160,82 @@ impl<E, T> Deref for Processor<E, T> {
 impl<E, T> DerefMut for Processor<E, T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut E { &mut self.entity }
+}
+
+impl<E, T> Transformed<T> for Processor<E, T>
+where
+    T: Mul<T, Output = T> + Copy,
+    E: Clone,
+{
+    #[inline(always)]
+    fn transform_by(&mut self, trans: T) { self.transform = trans * self.transform; }
+    #[inline(always)]
+    fn transformed(&self, trans: T) -> Self {
+        Self {
+            entity: self.entity.clone(),
+            transform: trans * self.transform,
+            orientation: self.orientation,
+        }
+    }
+}
+
+impl<E, T, C> IncludeCurve<C> for Processor<E, T>
+where
+    C: ParametricCurve + Transformed<T> + Clone,
+    C::Point: EuclideanSpace,
+    E: IncludeCurve<C>,
+    T: Transform<C::Point>,
+{
+    fn include(&self, curve: &C) -> bool {
+        let inv = self
+            .transform
+            .inverse_transform()
+            .expect("irregular transform");
+        let curve = curve.clone().transformed(inv);
+        self.entity.include(&curve)
+    }
+}
+
+impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
+    fn parameter_division(&self, tol: f64) -> Vec<f64> {
+        let a = self.transform;
+        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2]
+            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2]
+            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2];
+        self.entity.parameter_division(tol / n.sqrt())
+    }
+}
+
+impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
+    fn parameter_division(&self, tol: f64) -> Vec<f64> {
+        let a = self.transform;
+        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2] + a[0][3] * a[0][3]
+            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2] + a[1][3] * a[1][3]
+            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2] + a[2][3] * a[2][3]
+            + a[3][0] * a[3][0] + a[3][1] * a[3][1] + a[3][2] * a[3][2] + a[3][3] * a[3][3];
+        self.entity.parameter_division(tol / n.sqrt())
+    }
+}
+
+impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        let a = self.transform;
+        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2]
+            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2]
+            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2];
+        self.entity.parameter_division(tol / n.sqrt())
+    }
+}
+
+impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        let a = self.transform;
+        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2] + a[0][3] * a[0][3]
+            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2] + a[1][3] * a[1][3]
+            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2] + a[2][3] * a[2][3]
+            + a[3][0] * a[3][0] + a[3][1] * a[3][1] + a[3][2] * a[3][2] + a[3][3] * a[3][3];
+        self.entity.parameter_division(tol / n.sqrt())
+    }
 }
 
 fn get_axis(n: Vector3) -> (Vector3, Vector3) {
@@ -204,9 +303,9 @@ mod tests {
         const N: usize = 100;
         for i in 0..=N {
             let t = i as f64 / N as f64;
-            assert_near!(Curve::subs(&curve, t), processor.subs(t));
-            assert_near!(Curve::der(&curve, t), processor.der(t));
-            assert_near!(Curve::der2(&curve, t), processor.der2(t));
+            assert_near!(ParametricCurve::subs(&curve, t), processor.subs(t));
+            assert_near!(ParametricCurve::der(&curve, t), processor.der(t));
+            assert_near!(ParametricCurve::der2(&curve, t), processor.der2(t));
         }
 
         curve.invert();
@@ -214,14 +313,14 @@ mod tests {
         assert_eq!(curve.parameter_range(), processor.parameter_range());
         for i in 0..=N {
             let t = i as f64 / N as f64;
-            assert_near!(Curve::subs(&curve, t), processor.subs(t));
-            assert_near!(Curve::der(&curve, t), processor.der(t));
-            assert_near!(Curve::der2(&curve, t), processor.der2(t));
+            assert_near!(ParametricCurve::subs(&curve, t), processor.subs(t));
+            assert_near!(ParametricCurve::der(&curve, t), processor.der(t));
+            assert_near!(ParametricCurve::der2(&curve, t), processor.der2(t));
         }
     }
 
     #[test]
-    fn compatible_with_bspcurve() { (0..100).for_each(|_| exec_compatible_with_bspcurve()) }
+    fn compatible_with_bspcurve() { (0..10).for_each(|_| exec_compatible_with_bspcurve()) }
 
     fn exec_compatible_with_bspsurface() {
         const DEGREE: usize = 3;
@@ -270,6 +369,15 @@ mod tests {
                 let vder0 = surface.vder(u, v);
                 let vder1 = processor.vder(u, v);
                 assert_near!(vder0, vder1);
+                let uuder0 = surface.uuder(u, v);
+                let uuder1 = processor.uuder(u, v);
+                assert_near!(uuder0, uuder1);
+                let uvder0 = surface.uvder(u, v);
+                let uvder1 = processor.uvder(u, v);
+                assert_near!(uvder0, uvder1);
+                let vvder0 = surface.vvder(u, v);
+                let vvder1 = processor.vvder(u, v);
+                assert_near!(vvder0, vvder1);
                 let n0 = surface.normal(u, v);
                 let n1 = processor.normal(u, v);
                 assert_near!(n0, n1);
@@ -292,6 +400,15 @@ mod tests {
                 let vder0 = surface.vder(u, v);
                 let vder1 = processor.vder(u, v);
                 assert_near!(vder0, vder1);
+                let uuder0 = surface.uuder(u, v);
+                let uuder1 = processor.uuder(u, v);
+                assert_near!(uuder0, uuder1);
+                let uvder0 = surface.uvder(u, v);
+                let uvder1 = processor.uvder(u, v);
+                assert_near!(uvder0, uvder1);
+                let vvder0 = surface.vvder(u, v);
+                let vvder1 = processor.vvder(u, v);
+                assert_near!(vvder0, vvder1);
                 let n0 = surface.normal(u, v);
                 let n1 = processor.normal(u, v);
                 assert_near!(n0, n1);
@@ -300,5 +417,5 @@ mod tests {
     }
 
     #[test]
-    fn compatible_with_bspsurface() { (0..10).for_each(|_| exec_compatible_with_bspsurface()) }
+    fn compatible_with_bspsurface() { (0..3).for_each(|_| exec_compatible_with_bspsurface()) }
 }

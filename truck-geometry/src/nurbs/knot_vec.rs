@@ -192,7 +192,6 @@ impl KnotVec {
     ///         3.0 * t * t * (1.0 - t),
     ///         1.0 * t * t * t,
     ///     ];
-    ///     println!("{:?}", res);
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     /// }
     /// ```

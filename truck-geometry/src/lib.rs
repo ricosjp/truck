@@ -17,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use truck_base::bounding_box::Bounded;
 
+const INCLUDE_CURVE_TRIALS: usize = 100;
+
 /// re-export `truck_base`
 pub mod base {
     pub use truck_base::bounding_box::*;
@@ -42,12 +44,7 @@ pub use specifieds::*;
 pub mod decorators;
 pub use decorators::*;
 
-#[doc(hidden)]
-#[inline(always)]
-pub fn inv_or_zero(delta: f64) -> f64 {
-    if delta.so_small() {
-        0.0
-    } else {
-        1.0 / delta
-    }
-}
+/// utility functions for another crates
+mod util_functions;
+pub use util_functions::*;
+

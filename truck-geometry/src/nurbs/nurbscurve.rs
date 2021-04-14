@@ -37,7 +37,6 @@ impl<V> NURBSCurve<V> {
     /// cf.[`BSplineCurve::control_point_mut`](./struct.BSplineCurve.html#method.control_point_mut)
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx: usize) -> &mut V { &mut self.0.control_points[idx] }
-    
     /// Returns the iterator on all control points  
     /// cf.[`BSplineCurve::control_points_mut`](./struct.BSplineCurve.html#method.control_points_mut)
     #[inline(always)]
@@ -89,7 +88,7 @@ impl<V> NURBSCurve<V> {
 
 impl<V: Homogeneous<f64>> NURBSCurve<V> {
     /// Returns the closure of substitution.
-    /// 
+    ///
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
@@ -139,7 +138,6 @@ where V::Point: Tolerance
             .iter()
             .all(move |vec| vec.to_point().near(&pt))
     }
-    
     /// Determine whether `self` and `other` is near as the B-spline curves or not.  
     ///
     /// Divides each knot interval into the number of degree equal parts,
@@ -277,7 +275,6 @@ impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V> {
         self.0.try_concat(&mut other.0)?;
         Ok(self)
     }
-    
     /// Concats two NURBS curves.  
     /// cf.[`BSplineCurve::concat`](./struct.BSplineCurve.html#method.concat)
     #[inline(always)]
@@ -288,7 +285,8 @@ impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V> {
 }
 
 impl<V: Homogeneous<f64> + Tolerance> NURBSCurve<V>
-where V::Point: Tolerance {
+where V::Point: Tolerance
+{
     /// Makes the rational curve locally injective.
     /// # Example
     /// ```
@@ -382,10 +380,10 @@ where V::Point: MetricSpace<Metric = f64>
 }
 
 impl<V: Homogeneous<f64>> NURBSCurve<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace
+where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
 {
-    /// Searches the parameter `t` which minimize |self(t) - point|
-    /// by Newton's method with initial guess `hint`.
+    /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
+    /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -397,8 +395,8 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
     ///
     /// // search rational nearest parameter
     /// let pt = Point2::new(1.0, 2.0);
-    /// let hint = 0.6;
-    /// let t = curve.search_nearest_parameter(pt, hint).unwrap();
+    /// let hint = 0.8;
+    /// let t = curve.search_nearest_parameter(pt, hint, 100).unwrap();
     ///
     /// // check the answer
     /// let res = curve.subs(t);
@@ -420,27 +418,38 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace
     /// let hint = 0.5;
     ///
     /// // Newton's method is vibration divergent.
-    /// assert!(curve.search_nearest_parameter(pt, hint).is_none());
+    /// assert!(curve.search_nearest_parameter(pt, hint, 100).is_none());
     /// ```
     #[inline(always)]
-    pub fn search_nearest_parameter(&self, point: V::Point, hint: f64) -> Option<f64> {
-        self.0.search_rational_nearest_parameter(point, hint)
+    pub fn search_nearest_parameter(&self, point: V::Point, hint: f64, trial: usize) -> Option<f64> {
+        curve_search_nearest_parameter(self, point, hint, trial)
     }
 }
 
-impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
+impl<V: Homogeneous<f64>> NURBSCurve<V>
+where V::Point: MetricSpace<Metric = f64> + std::ops::Index<usize, Output = f64> + Bounded<f64> + Copy
+{
+    /// Returns the bounding box including all control points.
+    #[inline(always)]
+    pub fn roughly_bounding_box(&self) -> BoundingBox<V::Point> { self.0.control_points.iter().map(|p| p.to_point()).collect() }
+}
+
+impl<V: Homogeneous<f64>> ParametricCurve for NURBSCurve<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
+    #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t).to_point() }
+    #[inline(always)]
     fn der(&self, t: f64) -> Self::Vector {
         let pt = self.0.subs(t);
         let der = self.0.der(t);
         pt.rat_der(der)
     }
+    #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
         let pt = self.0.subs(t);
         let der = self.0.der(t);
-        let der2 = self.0.der(t);
+        let der2 = self.0.der2(t);
         pt.rat_der2(der, der2)
     }
     #[inline(always)]
@@ -450,6 +459,19 @@ impl<V: Homogeneous<f64>> Curve for NURBSCurve<V> {
             self.0.knot_vec[self.0.knot_vec.len() - 1],
         )
     }
+}
+
+impl<'a, V: Homogeneous<f64>> ParametricCurve for &'a NURBSCurve<V> {
+    type Point = V::Point;
+    type Vector = <V::Point as EuclideanSpace>::Diff;
+    #[inline(always)]
+    fn subs(&self, t: f64) -> Self::Point { (*self).subs(t) }
+    #[inline(always)]
+    fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
+    #[inline(always)]
+    fn parameter_range(&self) -> (f64, f64) { (*self).parameter_range() }
 }
 
 impl<V: Clone> Invertible for NURBSCurve<V> {
@@ -463,40 +485,44 @@ impl<V: Clone> Invertible for NURBSCurve<V> {
     }
 }
 
-impl<V: Homogeneous<f64>> BSplineCurve<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace
-{
-    fn search_rational_nearest_parameter(&self, point: V::Point, hint: f64) -> Option<f64> {
-        let derived = self.derivation();
-        let derived2 = derived.derivation();
-        self.sub_srnp(&derived, &derived2, point, hint, 0)
-    }
+impl Transformed<Matrix2> for NURBSCurve<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix2) { self.transform_by(Matrix3::from(trans)) }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix2) -> Self { self.transformed(Matrix3::from(trans)) }
+}
 
-    fn sub_srnp(
-        &self,
-        derived: &BSplineCurve<V>,
-        derived2: &BSplineCurve<V>,
-        point: V::Point,
-        hint: f64,
-        counter: usize,
-    ) -> Option<f64>
-    {
-        let pt = self.subs(hint);
-        let der = derived.subs(hint);
-        let der2 = derived2.subs(hint);
-        let der2 = pt.rat_der2(der, der2);
-        let der = pt.rat_der(der);
-        let pt = pt.to_point() - point;
-        let f = der.dot(pt);
-        let fprime = der2.dot(pt) + der.magnitude2();
-        let t = hint - f / fprime;
-        if t.near2(&hint) {
-            Some(t)
-        } else if counter == 100 {
-            None
-        } else {
-            self.sub_srnp(derived, derived2, point, t, counter + 1)
-        }
+impl Transformed<Matrix3> for NURBSCurve<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) { self.0.transform_by(trans) }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix3) -> Self {
+        let mut curve = self.clone();
+        curve.transform_by(trans);
+        curve
+    }
+}
+
+impl Transformed<Matrix3> for NURBSCurve<Vector4> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) { self.transform_by(Matrix3::from(trans)) }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix3) -> Self { self.transformed(Matrix3::from(trans)) }
+}
+
+impl Transformed<Matrix4> for NURBSCurve<Vector4> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.0
+            .control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans * *pt)
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix4) -> Self {
+        let mut curve = self.clone();
+        curve.transform_by(trans);
+        curve
     }
 }
 

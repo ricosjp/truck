@@ -94,9 +94,15 @@ impl MyApp {
     ) -> (ShapeInstance, WireFrameInstance) {
         let solid = Solid::extract(serde_json::from_reader(reader).unwrap()).unwrap();
         let mut bdd_box = BoundingBox::new();
-        solid.boundaries().iter().flatten().for_each(|face| {
-            let surface = face.oriented_surface();
-            bdd_box += surface.roughly_bounding_box();
+        solid.boundaries().iter().flatten().flat_map(Face::boundaries).flatten().for_each(|edge| {
+            let curve = edge.oriented_curve();
+            bdd_box += match curve {
+                Curve::BSplineCurve(curve) => {
+                    let bdb = curve.roughly_bounding_box();
+                    vec![Point3::from_vec(*bdb.max()), Point3::from_vec(*bdb.min())].into_iter().collect()
+                },
+                Curve::NURBSCurve(curve) => curve.roughly_bounding_box(),
+            };
         });
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
@@ -106,6 +112,7 @@ impl MyApp {
                 ..Default::default()
             },
             mesh_precision: 0.005,
+            ..Default::default()
         };
         let wire_desc = ShapeWireFrameInstanceDescriptor {
             wireframe_state: WireFrameState {

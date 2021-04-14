@@ -1,4 +1,5 @@
 use crate::*;
+use modeling::geometry::Surface;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
@@ -19,24 +20,45 @@ impl Default for ShapeInstanceDescriptor {
     }
 }
 
-fn presearch(surface: &NURBSSurface, point: Point3) -> (f64, f64) {
-    const N: usize = 50;
-    let mut res = (0.0, 0.0);
-    let mut min = std::f64::INFINITY;
-    for i in 0..=N {
-        for j in 0..=N {
-            let p = i as f64 / N as f64;
-            let q = j as f64 / N as f64;
-            let u = surface.uknot_vec()[0] + p * surface.uknot_vec().range_length();
-            let v = surface.vknot_vec()[0] + q * surface.vknot_vec().range_length();
-            let dist = surface.subs(u, v).distance2(point);
-            if dist < min {
-                min = dist;
-                res = (u, v);
-            }
+fn presearch(surface: &Surface, pt: Point3) -> (f64, f64) {
+    match surface {
+        Surface::Plane(surface) => {
+            let v = surface.get_parameter(pt);
+            (v[0], v[1])
+        }
+        Surface::BSplineSurface(surface) => modeling::presearch(surface, pt),
+        Surface::NURBSSurface(surface) => modeling::presearch(surface, pt),
+        Surface::RevolutedCurve(surface) => modeling::presearch(surface, pt),
+    }
+}
+
+fn meshing_surface(surface: &Surface, precision: f64, boundary: &Vec<[f32; 4]>) -> StructuredMesh {
+    match surface {
+        Surface::BSplineSurface(surface) => StructuredMesh::from_surface(surface, precision),
+        Surface::NURBSSurface(surface) => StructuredMesh::from_surface(surface, precision),
+        Surface::RevolutedCurve(surface) => StructuredMesh::from_surface(surface, precision),
+        Surface::Plane(plane) => {
+            let bdd: BoundingBox<Vector2> = boundary
+                .iter()
+                .flat_map(|v| {
+                    vec![
+                        Vector2::new(v[0] as f64, v[1] as f64),
+                        Vector2::new(v[2] as f64, v[3] as f64),
+                    ]
+                })
+                .collect();
+            let min = bdd.min();
+            let max = bdd.max();
+            let positions = vec![
+                vec![plane.subs(min[0], min[1]), plane.subs(min[0], max[1])],
+                vec![plane.subs(max[0], min[1]), plane.subs(max[0], max[1])],
+            ];
+            let uv_division = (vec![min[0], max[0]], vec![min[1], max[1]]);
+            let normal = plane.normal();
+            let normals = vec![vec![normal, normal], vec![normal, normal]];
+            StructuredMesh::new(positions, uv_division, normals)
         }
     }
-    res
 }
 
 fn add_face(
@@ -59,9 +81,19 @@ fn add_face(
         let mut this_boundary = Vec::new();
         for t in division {
             let pt = curve.subs(t);
-            hint = match surface.search_parameter(pt, hint) {
+            hint = match surface.search_parameter(pt, hint, SURFACE_MESHING_TRIALS) {
                 Some(got) => got,
-                None => return None,
+                None => {
+                    if surface.subs(hint.0, hint.1).near(&pt) {
+                        hint
+                    } else {
+                        let hint0 = presearch(&surface, pt);
+                        match surface.search_parameter(pt, hint0, SURFACE_MESHING_TRIALS) {
+                            Some(got) => got,
+                            None => return None,
+                        }
+                    }
+                }
             };
             this_boundary.push([hint.0 as f32, hint.1 as f32]);
         }
@@ -70,7 +102,7 @@ fn add_face(
         }
     }
     let sup = boundaries.len() as u32;
-    let mesh = &StructuredMesh::from_surface(&surface, mesh_precision);
+    let mesh = &meshing_surface(&surface, mesh_precision, &boundaries);
     vertices.extend(
         (0..mesh.positions().len())
             .flat_map(move |i| (0..mesh.positions()[0].len()).map(move |j| (i, j)))

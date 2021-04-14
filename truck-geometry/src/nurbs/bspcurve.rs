@@ -1091,9 +1091,13 @@ impl<V: InnerSpace<Scalar = f64>> ParameterDivision1D for BSplineCurve<V> {
     }
 }
 
-impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
-    /// Searches the parameter `t` which minimize `|self(t) - point|` by Newton's method
-    /// with initial guess `hint`. If the repeated trial does not converge, then returns `None`.
+impl<V> BSplineCurve<V>
+where
+    V: TangentSpace<f64> + InnerSpace<Scalar = f64> + Tolerance,
+    V::Space: EuclideanSpace<Scalar = f64, Diff = V>,
+{
+    /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
+    /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -1108,8 +1112,8 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     ///     Vector3::new(0.0, 1.0, 1.0),
     /// ];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = bspcurve.subs(1.2);
-    /// let t = bspcurve.search_nearest_parameter(pt, 0.8).unwrap();
+    /// let pt = ParametricCurve::subs(&bspcurve, 1.2);
+    /// let t = bspcurve.search_nearest_parameter(pt, 0.8, 100).unwrap();
     /// assert_eq!(t, 1.2);
     /// ```
     /// # Remarks
@@ -1127,54 +1131,17 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     ///     Vector3::new(0.0, 1.0, 1.0),
     /// ];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = Vector3::new(0.0, 0.5, 1.0);
-    /// let t = bspcurve.search_nearest_parameter(pt, 0.8).unwrap();
-    /// let pt0 = bspcurve.subs(t);
-    /// let pt1 = bspcurve.subs(3.0);
+    /// let pt = Point3::new(0.0, 0.5, 1.0);
+    /// let t = bspcurve.search_nearest_parameter(pt, 0.8, 100).unwrap();
+    /// let pt0 = ParametricCurve::subs(&bspcurve, t);
+    /// let pt1 = ParametricCurve::subs(&bspcurve, 3.0);
     /// // the point corresponding the obtained parameter is not
     /// // the globally nearest point in the curve.
     /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
     /// ```
-    pub fn search_nearest_parameter(&self, point: V, hint: f64) -> Option<f64> {
-        let derived = self.derivation();
-        let derived2 = derived.derivation();
-        self.sub_snp(&derived, &derived2, point, hint, 0)
-    }
-
-    fn optimized_snp(
-        &self,
-        derived: &BSplineCurve<V>,
-        derived2: &BSplineCurve<V>,
-        point: V,
-        hint: f64,
-    ) -> Option<f64> {
-        self.sub_snp(derived, derived2, point, hint, 0)
-    }
-
-    fn sub_snp(
-        &self,
-        derived: &BSplineCurve<V>,
-        derived2: &BSplineCurve<V>,
-        point: V,
-        hint: f64,
-        counter: usize,
-    ) -> Option<f64> {
-        let pt = self.subs(hint) - point;
-        let der = derived.subs(hint);
-        let der2 = derived2.subs(hint);
-        let f = der.dot(pt);
-        let fprime = der2.dot(pt) + der.magnitude2();
-        if fprime.so_small() {
-            return Some(hint);
-        }
-        let t = hint - f / fprime;
-        if t.near(&hint) {
-            Some(t)
-        } else if counter == 100 {
-            None
-        } else {
-            self.sub_snp(derived, derived2, point, t, counter + 1)
-        }
+    #[inline(always)]
+    pub fn search_nearest_parameter(&self, point: V::Space, hint: f64, trial: usize) -> Option<f64> {
+        curve_search_nearest_parameter(self, point, hint, trial)
     }
     /// Determines whether `self` is an arc of `curve` by repeating applying Newton method.
     ///
@@ -1216,15 +1183,13 @@ impl<V: InnerSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
             return None;
         }
 
-        let derived = curve.derivation();
-        let derived2 = derived.derivation();
         for i in 1..knots.len() {
             let range = knots[i] - knots[i - 1];
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
-                let pt = self.subs(t);
-                let res = curve.optimized_snp(&derived, &derived2, pt, hint);
-                let flag = res.map(|res| hint <= res && curve.subs(res).near(&pt));
+                let pt = ParametricCurve::subs(self, t);
+                let res = curve.search_nearest_parameter(pt, hint, 100);
+                let flag = res.map(|res| hint <= res && curve.subs(res).near(&pt.to_vec()));
                 hint = match flag {
                     Some(true) => res.unwrap(),
                     _ => return None,
@@ -1243,7 +1208,7 @@ where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> +
     pub fn roughly_bounding_box(&self) -> BoundingBox<V> { self.control_points.iter().collect() }
 }
 
-impl<V: TangentSpace<f64>> Curve for BSplineCurve<V>
+impl<V: TangentSpace<f64>> ParametricCurve for BSplineCurve<V>
 where V::Space: EuclideanSpace<Scalar = f64, Diff = V>
 {
     type Point = V::Space;
@@ -1254,6 +1219,23 @@ where V::Space: EuclideanSpace<Scalar = f64, Diff = V>
     fn der(&self, t: f64) -> Self::Vector { self.der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { self.der2(t) }
+    #[inline(always)]
+    fn parameter_range(&self) -> (f64, f64) {
+        (self.knot_vec[0], self.knot_vec[self.knot_vec.len() - 1])
+    }
+}
+
+impl<'a, V: TangentSpace<f64>> ParametricCurve for &'a BSplineCurve<V>
+where V::Space: EuclideanSpace<Scalar = f64, Diff = V>
+{
+    type Point = V::Space;
+    type Vector = V;
+    #[inline(always)]
+    fn subs(&self, t: f64) -> Self::Point { Self::Point::from_vec((*self).subs(t)) }
+    #[inline(always)]
+    fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) {
         (self.knot_vec[0], self.knot_vec[self.knot_vec.len() - 1])
@@ -1310,6 +1292,66 @@ impl_mat_multi!(Vector3, Matrix3);
 impl_scalar_multi!(Vector3, f64);
 impl_mat_multi!(Vector4, Matrix4);
 impl_scalar_multi!(Vector4, f64);
+
+impl Transformed<Matrix2> for BSplineCurve<Vector2> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix2) {
+        self.control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans * *pt)
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix2) -> Self {
+        let mut curve = self.clone();
+        curve.transform_by(trans);
+        curve
+    }
+}
+
+impl Transformed<Matrix3> for BSplineCurve<Vector2> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) {
+        self.control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans.transform_point(Point2::from_vec(*pt)).to_vec())
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix3) -> Self {
+        let mut curve = self.clone();
+        curve.transform_by(trans);
+        curve
+    }
+}
+
+impl Transformed<Matrix3> for BSplineCurve<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix3) {
+        self.control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans * *pt)
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix3) -> Self {
+        let mut curve = self.clone();
+        curve.transform_by(trans);
+        curve
+    }
+}
+
+impl Transformed<Matrix4> for BSplineCurve<Vector3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.control_points
+            .iter_mut()
+            .for_each(|pt| *pt = trans.transform_point(Point3::from_vec(*pt)).to_vec())
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix4) -> Self {
+        let mut curve = self.clone();
+        curve.transform_by(trans);
+        curve
+    }
+}
 
 impl<V: VectorSpace<Scalar = f64> + Tolerance> CurveCollector<V> {
     /// Concats two B-spline curves.

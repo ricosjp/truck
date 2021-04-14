@@ -78,7 +78,7 @@ impl App for MyApp {
                 texture: Some(std::sync::Arc::new(texture)),
                 backface_culling: true,
             },
-            mesh_precision: 0.1,
+            ..Default::default()
         };
         let shape: ShapeInstance = scene
             .instance_creator()

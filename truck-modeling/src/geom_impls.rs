@@ -1,19 +1,16 @@
 use crate::*;
-use geometry::KnotVec;
 use std::f64::consts::PI;
-type BSplineCurve = truck_geometry::BSplineCurve<Vector4>;
-type BSplineSurface = truck_geometry::BSplineSurface<Vector4>;
 
-pub(super) fn line(pt0: Vector4, pt1: Vector4) -> BSplineCurve {
+pub(super) fn line<T>(pt0: T, pt1: T) -> BSplineCurve<T> {
     let knot_vec = KnotVec::bezier_knot(1);
-    BSplineCurve::new_unchecked(knot_vec, vec![pt0, pt1])
+    BSplineCurve::debug_new(knot_vec, vec![pt0, pt1])
 }
 
 pub(super) fn circle_arc_by_three_points(
     point0: Vector4,
     point1: Vector4,
     transit: Point3,
-) -> BSplineCurve {
+) -> BSplineCurve<Vector4> {
     let pt0 = Point3::from_homogeneous(point0);
     let pt1 = Point3::from_homogeneous(point1);
     let origin = circum_center(pt0, pt1, transit);
@@ -42,7 +39,7 @@ pub(super) fn circle_arc(
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> BSplineCurve {
+) -> BSplineCurve<Vector4> {
     let tmp = Point3::from_homogeneous(point);
     let origin = origin + (axis.dot(tmp - origin)) * axis;
     let axis_trsf = if !Tolerance::near(&(axis[2] * axis[2]), &1.0) {
@@ -74,29 +71,13 @@ pub(super) fn circle_arc(
     curve
 }
 
-pub(super) fn rsweep_surface(
-    curve: &BSplineCurve,
-    origin: Point3,
-    axis: Vector3,
-    angle: Rad<f64>,
-) -> BSplineSurface {
-    let knot_vec0 = curve.knot_vec().clone();
-    let knot_vec1 = KnotVec::try_from(vec![0.0, 0.0, 0.0, 0.25, 0.5, 0.75, 1.0, 1.0, 1.0]).unwrap();
-    let mut control_points = Vec::new();
-    for point in curve.control_points() {
-        let curve = circle_arc(*point, origin, axis, angle);
-        control_points.push(curve.control_points().clone());
-    }
-    BSplineSurface::new((knot_vec0, knot_vec1), control_points)
-}
-
 fn closed_polyline_orientation(pts: &Vec<Point3>) -> bool {
     pts.windows(2).fold(0.0, |sum, pt| {
         sum + (pt[1][0] + pt[0][0]) * (pt[1][1] - pt[0][1])
     }) >= 0.0
 }
 
-pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<BSplineSurface> {
+pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<Plane> {
     let center = pts.iter().fold(Point3::origin(), |sum, pt| sum + pt.to_vec()) / pts.len() as f64;
     let normal = pts.windows(2).fold(Vector3::zero(), |sum, pt| {
         sum + (pt[0] - center).cross(pt[1] - center)
@@ -121,18 +102,12 @@ pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<BSplineSurface> {
         true => (bnd_box.max(), bnd_box.min()),
         false => (bnd_box.min(), bnd_box.max()),
     };
-    let ctrl_pts = vec![
-        vec![
-            mat * Vector4::new(min[0], min[1], min[2], 1.0),
-            mat * Vector4::new(min[0], max[1], min[2], 1.0),
-        ],
-        vec![
-            mat * Vector4::new(max[0], min[1], min[2], 1.0),
-            mat * Vector4::new(max[0], max[1], min[2], 1.0),
-        ],
-    ];
-    let knot_vecs = (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1));
-    Some(BSplineSurface::new(knot_vecs, ctrl_pts))
+    let plane = Plane::new(
+        Point3::new(min[0], min[1], min[2]),
+        Point3::new(max[0], min[1], min[2]),
+        Point3::new(min[0], max[1], min[2]),
+    ).transformed(mat);
+    Some(plane)
 }
 
 #[cfg(test)]
@@ -216,57 +191,6 @@ mod geom_impl_test {
     }
 
     #[test]
-    fn rsweep_surface_test0() {
-        let knot_vec = KnotVec::bezier_knot(3);
-        let ctrl_pts = vec![
-            Vector4::from(random_array::<[f64; 4]>(0.1, 100.0)),
-            Vector4::from(random_array::<[f64; 4]>(0.1, 100.0)),
-            Vector4::from(random_array::<[f64; 4]>(0.1, 100.0)),
-            Vector4::from(random_array::<[f64; 4]>(0.1, 100.0)),
-        ];
-        let curve = BSplineCurve::new(knot_vec, ctrl_pts);
-        let origin = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
-        let axis = Vector3::from(random_array::<[f64; 3]>(-1.0, 1.0)).normalize();
-        let angle = Rad(random::<f64>() * 1.5 * PI);
-        let surface = rsweep_surface(&curve, origin, axis, angle);
-        let curve = NURBSCurve::new(curve);
-        let surface = NURBSSurface::new(surface);
-        const N: usize = 100;
-        for i in 0..=N {
-            let s = i as f64 / N as f64;
-            for j in 0..=N {
-                let t = j as f64 / N as f64;
-                let vec0 = curve.subs(s) - origin;
-                let vec1 = surface.subs(s, t) - origin;
-                let h0 = vec0 - vec0.dot(axis) * axis;
-                let h1 = vec1 - vec1.dot(axis) * axis;
-                assert!(
-                    f64::near(&h0.magnitude2(), &h1.magnitude2()),
-                    "origin\n{:?}\naxis: {:?}\nangle: {:?}\ncurve: {:?}",
-                    origin,
-                    axis,
-                    angle,
-                    curve.non_rationalized(),
-                );
-            }
-            let vec0 = curve.subs(s) - origin;
-            let vec1 = surface.subs(s, 1.0) - origin;
-            let h0 = (vec0 - vec0.dot(axis) * axis).normalize();
-            let h1 = (vec1 - vec1.dot(axis) * axis).normalize();
-            let axis0 = h0.cross(h1);
-            let cos0 = h0.dot(h1);
-            assert!(
-                f64::near(&cos0, &angle.cos()) && axis0.cross(axis).so_small(),
-                "origin\n{:?}\naxis: {:?}\nangle: {:?}\ncurve: {:?}",
-                origin,
-                axis,
-                angle,
-                curve.non_rationalized(),
-            );
-        }
-    }
-
-    #[test]
     fn attach_plane_test0() {
         const N: usize = 10;
         let pt = Point3::new(1.0, 0.0, 0.0);
@@ -285,16 +209,12 @@ mod geom_impl_test {
             let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
             mid + rot * (mid - c)
         }));
-        let surface = NURBSSurface::new(attach_plane(pts.clone()).unwrap());
-        let u = surface.uknot_vec()[0] + surface.uknot_vec().range_length() * 0.5;
-        let v = surface.vknot_vec()[0] + surface.vknot_vec().range_length() * 0.5;
-        let n = surface.normal(u, v);
+        let surface = attach_plane(pts.clone()).unwrap();
+        let n = surface.normal();
         assert!(n.near(&axis), "rotation axis: {:?}\nsurface normal: {:?}", axis, n);
         pts.reverse();
-        let surface = NURBSSurface::new(attach_plane(pts).unwrap());
-        let u = surface.uknot_vec()[0] + surface.uknot_vec().range_length() * 0.5;
-        let v = surface.vknot_vec()[0] + surface.vknot_vec().range_length() * 0.5;
-        let n = surface.normal(u, v);
+        let surface = attach_plane(pts).unwrap();
+        let n = surface.normal();
         assert!((-n).near(&axis), "inversed failed: rotation axis: {:?}\nsurface normal: {:?}", axis, n);
     }
     
@@ -317,16 +237,12 @@ mod geom_impl_test {
             let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
             mid + rot * (mid - c)
         }));
-        let surface = NURBSSurface::new(attach_plane(pts.clone()).unwrap());
-        let u = surface.uknot_vec()[0] + surface.uknot_vec().range_length() * 0.5;
-        let v = surface.vknot_vec()[0] + surface.vknot_vec().range_length() * 0.5;
-        let n = surface.normal(u, v);
+        let surface = attach_plane(pts.clone()).unwrap();
+        let n = surface.normal();
         assert!(n.near(&axis), "rotation axis: {:?}\nsurface normal: {:?}", axis, n);
         pts.reverse();
-        let surface = NURBSSurface::new(attach_plane(pts).unwrap());
-        let u = surface.uknot_vec()[0] + surface.uknot_vec().range_length() * 0.5;
-        let v = surface.vknot_vec()[0] + surface.vknot_vec().range_length() * 0.5;
-        let n = surface.normal(u, v);
+        let surface = attach_plane(pts).unwrap();
+        let n = surface.normal();
         assert!((-n).near(&axis), "inversed failed: rotation axis: {:?}\nsurface normal: {:?}", axis, n);
     }
     
@@ -349,16 +265,12 @@ mod geom_impl_test {
             let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
             mid + rot * (mid - c)
         }));
-        let surface = NURBSSurface::new(attach_plane(pts.clone()).unwrap());
-        let u = surface.uknot_vec()[0] + surface.uknot_vec().range_length() * 0.5;
-        let v = surface.vknot_vec()[0] + surface.vknot_vec().range_length() * 0.5;
-        let n = surface.normal(u, v);
+        let surface = attach_plane(pts.clone()).unwrap();
+        let n = surface.normal();
         assert!(n.near(&axis), "rotation axis: {:?}\nsurface normal: {:?}", axis, n);
         pts.reverse();
-        let surface = NURBSSurface::new(attach_plane(pts).unwrap());
-        let u = surface.uknot_vec()[0] + surface.uknot_vec().range_length() * 0.5;
-        let v = surface.vknot_vec()[0] + surface.vknot_vec().range_length() * 0.5;
-        let n = surface.normal(u, v);
+        let surface = attach_plane(pts).unwrap();
+        let n = surface.normal();
         assert!((-n).near(&axis), "inversed failed: rotation axis: {:?}\nsurface normal: {:?}", axis, n);
     }
 }

@@ -1,5 +1,5 @@
 /// Parametric curves
-pub trait Curve: Clone {
+pub trait ParametricCurve: Clone {
     /// The curve is in the space of `Self::Point`.
     type Point;
     /// The derivation vector of the curve.
@@ -38,6 +38,12 @@ pub trait ParametricSurface: Clone {
     fn vder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the normal vector at `(u, v)`.
     fn normal(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns the 2nd-order derivation by `u`.
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns the 2nd-order derivation by both `u` and `v`.
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns the 2nd-order derivation by `v`.
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector;
 }
 
 /// Bounded surface with parametric range
@@ -47,7 +53,7 @@ pub trait BoundedSurface: ParametricSurface {
 }
 
 /// Whether the surface includes the boundary curve.
-pub trait IncludeCurve<C: Curve> {
+pub trait IncludeCurve<C: ParametricCurve> {
     /// Returns whether the curve `curve` is included in the surface `self`.
     fn include(&self, curve: &C) -> bool;
 }
@@ -58,6 +64,14 @@ pub trait Invertible {
     fn invert(&mut self);
     /// Returns the inverse.
     fn inverse(&self) -> Self;
+}
+
+/// Transform geometry
+pub trait Transformed<T> {
+    /// transform by `trans`.
+    fn transform_by(&mut self, trans: T);
+    /// transformed geometry by `trans`.
+    fn transformed(&self, trans: T) -> Self;
 }
 
 /// Dividable curve
@@ -73,7 +87,7 @@ pub trait ParameterDivision2D {
 }
 
 /// Implementation for the test of topological methods.
-impl Curve for () {
+impl ParametricCurve for () {
     type Point = ();
     type Vector = ();
     fn subs(&self, _: f64) -> Self::Point {}
@@ -89,6 +103,9 @@ impl ParametricSurface for () {
     fn subs(&self, _: f64, _: f64) -> Self::Point {}
     fn uder(&self, _: f64, _: f64) -> Self::Vector {}
     fn vder(&self, _: f64, _: f64) -> Self::Vector {}
+    fn uuder(&self, _: f64, _: f64) -> Self::Vector {}
+    fn uvder(&self, _: f64, _: f64) -> Self::Vector {}
+    fn vvder(&self, _: f64, _: f64) -> Self::Vector {}
     fn normal(&self, _: f64, _: f64) -> Self::Vector {}
 }
 
@@ -102,7 +119,7 @@ impl IncludeCurve<()> for () {
     fn include(&self, _: &()) -> bool { true }
 }
 
-impl Curve for (usize, usize) {
+impl ParametricCurve for (usize, usize) {
     type Point = usize;
     type Vector = usize;
     fn subs(&self, t: f64) -> Self::Point {

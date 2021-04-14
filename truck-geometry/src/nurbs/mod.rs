@@ -147,8 +147,7 @@ pub struct BSplineSurface<V> {
 }
 
 mod bspcurve;
-/// Defines some iterators on control points of B-spline surface.
-pub mod bspsurface;
+mod bspsurface;
 mod knot_vec;
 mod nurbscurve;
 mod nurbssurface;

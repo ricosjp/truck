@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::*;
 use truck_platform::*;
 use truck_rendimpl::*;
+use modeling::Surface;
 use wgpu::*;
 mod app;
 use app::*;
@@ -19,7 +20,7 @@ struct MyApp {
 }
 
 impl MyApp {
-    fn init_surface(degree: usize, division: usize) -> NURBSSurface {
+    fn init_surface(degree: usize, division: usize) -> Surface {
         let range = degree + division - 1;
         let knot_vec = KnotVec::uniform_knot(degree, division);
         let mut ctrl_pts = Vec::new();
@@ -32,7 +33,7 @@ impl MyApp {
             }
             ctrl_pts.push(vec);
         }
-        NURBSSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts))
+        Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts)))
     }
     fn init_shell() -> Shell {
         let v = builder::vertex(Point3::origin());
@@ -84,12 +85,16 @@ impl MyApp {
                     instant = std::time::Instant::now();
                     count = 0;
                 }
-                shell[0].lock_surface().unwrap().control_point_mut(3, 3)[1] = time.sin();
+                match *shell[0].lock_surface().unwrap() {
+                    Surface::NURBSSurface(ref mut surface) => surface.control_point_mut(3, 3)[1] = time.sin(),
+                    _ => {}
+                }
                 let mut another_object = creator.create_instance(
                     &shell,
                     &ShapeInstanceDescriptor {
                         instance_state: Default::default(),
                         mesh_precision: 0.01,
+                        ..Default::default()
                     },
                 );
                 let mut object = object.lock().unwrap();
@@ -124,6 +129,7 @@ impl App for MyApp {
             &ShapeInstanceDescriptor {
                 instance_state: Default::default(),
                 mesh_precision: 0.01,
+                ..Default::default()
             },
         );
         scene.add_object(&object);
