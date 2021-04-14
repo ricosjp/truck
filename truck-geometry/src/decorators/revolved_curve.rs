@@ -228,195 +228,114 @@ impl<C: Clone> Invertible for RevolutedCurve<C> {
     }
 }
 
+fn sub_include<C0, C1>(
+    surface: &RevolutedCurve<C0>,
+    curve: &C1,
+    knots: &Vec<f64>,
+    degree: usize,
+) -> bool
+where
+    C0: ParametricCurve<Point = Point3, Vector = Vector3>,
+    C1: ParametricCurve<Point = Point3, Vector = Vector3>,
+{
+    let first = ParametricCurve::subs(curve, knots[0]);
+    let mut hint = presearch(surface, first);
+    if surface
+        .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
+        .is_none()
+    {
+        return false;
+    }
+    knots
+        .windows(2)
+        .flat_map(move |knot| {
+            (1..=degree).map(move |i| {
+                let s = i as f64 / degree as f64;
+                knot[0] * (1.0 - s) + knot[1] * s
+            })
+        })
+        .all(move |t| {
+            let pt = ParametricCurve::subs(curve, t);
+            match surface.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+                Some(got) => {
+                    hint = got;
+                    true
+                }
+                None => {
+                    match surface.search_parameter(pt, presearch(surface, pt), INCLUDE_CURVE_TRIALS)
+                    {
+                        Some(got) => {
+                            hint = got;
+                            true
+                        }
+                        None => false,
+                    }
+                }
+            }
+        })
+}
+
 impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
-        let first = ParametricCurve::subs(curve, knots[0]);
         let degree = usize::max(2, usize::max(curve.degree(), self.curve.degree()));
-        let mut hint = presearch(self, first);
-        if self
-            .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
-            .is_none()
-        {
-            return false;
-        }
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=degree).map(move |i| {
-                    let s = i as f64 / degree as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = ParametricCurve::subs(curve, t);
-                match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
-                    Some(got) => {
-                        hint = got;
-                        true
-                    }
-                    None => {
-                        match self.search_parameter(pt, presearch(self, pt), INCLUDE_CURVE_TRIALS) {
-                            Some(got) => {
-                                hint = got;
-                                true
-                            }
-                            None => false,
-                        }
-                    }
-                }
-            })
+        sub_include(self, curve, &knots, degree)
     }
 }
 
 impl IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<BSplineCurve<Vector3>> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
-        surface.include(curve)
+        let knots = curve.knot_vec().to_single_multi().0;
+        let degree = usize::max(2, usize::max(curve.degree(), self.curve.degree()));
+        sub_include(self, curve, &knots, degree)
     }
 }
 
 impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
-        let first = ParametricCurve::subs(curve, knots[0]);
-        let degree = usize::max(2, curve.degree() + self.curve.degree());
-        let mut hint = presearch(self, first);
-        if self
-            .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
-            .is_none()
-        {
-            return false;
-        }
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=degree).map(move |i| {
-                    let s = i as f64 / degree as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = ParametricCurve::subs(curve, t);
-                match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
-                    Some(got) => {
-                        hint = got;
-                        true
-                    }
-                    None => {
-                        match self.search_parameter(pt, presearch(self, pt), INCLUDE_CURVE_TRIALS) {
-                            Some(got) => {
-                                hint = got;
-                                true
-                            }
-                            None => false,
-                        }
-                    }
-                }
-            })
+        let degree = curve.degree() + usize::max(2, self.curve.degree());
+        sub_include(self, curve, &knots, degree)
     }
 }
 
 impl IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<NURBSCurve<Vector4>> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
-        surface.include(curve)
+        let knots = curve.knot_vec().to_single_multi().0;
+        let degree = curve.degree() + usize::max(2, self.curve.degree());
+        sub_include(self, curve, &knots, degree)
     }
 }
 
 impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
-        let first = ParametricCurve::subs(curve, knots[0]);
-        let degree = usize::max(2, curve.degree() + self.curve.degree());
-        let mut hint = presearch(self, first);
-        if self
-            .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
-            .is_none()
-        {
-            return false;
-        }
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=degree).map(move |i| {
-                    let s = i as f64 / degree as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = ParametricCurve::subs(curve, t);
-                match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
-                    Some(got) => {
-                        hint = got;
-                        true
-                    }
-                    None => {
-                        match self.search_parameter(pt, presearch(self, pt), INCLUDE_CURVE_TRIALS) {
-                            Some(got) => {
-                                hint = got;
-                                true
-                            }
-                            None => false,
-                        }
-                    }
-                }
-            })
+        let degree = curve.degree() + usize::max(2, self.curve.degree());
+        sub_include(self, curve, &knots, degree)
     }
 }
 
 impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<BSplineCurve<Vector3>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
-        let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
-        surface.include(curve)
+        let knots = curve.knot_vec().to_single_multi().0;
+        let degree = curve.degree() + usize::max(2, self.curve.degree());
+        sub_include(self, curve, &knots, degree)
     }
 }
 
 impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
-        let first = ParametricCurve::subs(curve, knots[0]);
-        let degree = usize::max(2, curve.degree() + self.curve.degree());
-        let mut hint = presearch(self, first);
-        if self
-            .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
-            .is_none()
-        {
-            return false;
-        }
-        knots
-            .windows(2)
-            .flat_map(move |knot| {
-                (1..=degree).map(move |i| {
-                    let s = i as f64 / degree as f64;
-                    knot[0] * (1.0 - s) + knot[1] * s
-                })
-            })
-            .all(move |t| {
-                let pt = ParametricCurve::subs(curve, t);
-                match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
-                    Some(got) => {
-                        hint = got;
-                        true
-                    }
-                    None => {
-                        match self.search_parameter(pt, presearch(self, pt), INCLUDE_CURVE_TRIALS) {
-                            Some(got) => {
-                                hint = got;
-                                true
-                            }
-                            None => false,
-                        }
-                    }
-                }
-            })
+        let degree = curve.degree() + usize::max(2, self.curve.degree());
+        sub_include(self, curve, &knots, degree)
     }
 }
 
 impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
-        let surface = RevolutedCurve::by_revolution(&self.curve, self.origin, self.axis);
-        surface.include(curve)
+        let knots = curve.knot_vec().to_single_multi().0;
+        let degree = curve.degree() + usize::max(2, self.curve.degree());
+        sub_include(self, curve, &knots, degree)
     }
 }
 
@@ -515,4 +434,58 @@ fn search_parameter_with_fixed_points() {
         .unwrap();
     assert_near!(para.0, 1.0);
     assert_near!(para.1, 0.3);
+}
+
+#[test]
+fn include_curve_normal() {
+    let line = BSplineCurve::new(
+        KnotVec::bezier_knot(1),
+        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 2.0, 2.0)],
+    );
+    let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
+    let parabola = BSplineCurve::new(
+        KnotVec::bezier_knot(2),
+        vec![
+            Vector3::new(1.0, 1.0, 0.0),
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(-1.0, 1.0, 0.0),
+        ],
+    );
+    assert!(surface.include(&parabola));
+}
+
+#[test]
+fn include_curve_abnormal0() {
+    let line = BSplineCurve::new(
+        KnotVec::bezier_knot(1),
+        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 2.0, 2.0)],
+    );
+    let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
+    let parabola = BSplineCurve::new(
+        KnotVec::bezier_knot(2),
+        vec![
+            Vector3::new(1.0, 1.0, 0.0),
+            Vector3::new(0.0, 0.0, 2.0),
+            Vector3::new(-1.0, 1.0, 0.0),
+        ],
+    );
+    assert!(!surface.include(&parabola));
+}
+
+#[test]
+fn include_curve_abnormal1() {
+    let curve = NURBSCurve::new(BSplineCurve::new(
+        KnotVec::bezier_knot(3),
+        vec![
+            Vector4::new(0.0, 3.0, 0.0, 1.0),
+            Vector4::new(0.0, 3.0, 3.0, 0.5),
+            Vector4::new(0.0, 0.0, 0.0, 1.0),
+            Vector4::new(0.0, 0.0, 3.0, 1.0),
+        ],
+    ));
+    let pt0 = curve.subs(0.2).to_vec();
+    let pt1 = curve.subs(0.6).to_vec();
+    let surface = RevolutedCurve::by_revolution(curve, Point3::origin(), Vector3::unit_y());
+    let line = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pt0, pt1]);
+    assert!(!surface.include(&line));
 }
