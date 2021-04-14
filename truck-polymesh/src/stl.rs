@@ -1,13 +1,18 @@
 use crate::*;
+use bytemuck::{Pod, Zeroable};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Lines, Read, Write};
+
+const FACESIZE: usize = std::mem::size_of::<STLFace>();
+const CHUNKSIZE: usize = FACESIZE + 2;
 
 fn syntax_error() -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::InvalidData, "syntax error")
 }
 
 /// STL naive mesh
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize, Pod, Zeroable)]
 pub struct STLFace {
     /// normal vector
     pub normal: [f32; 3],
@@ -33,11 +38,11 @@ pub enum STLReader<R: Read> {
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum STLType {
     /// Determine stl type automatically.
-    /// 
+    ///
     /// **Reading**: if the first 5 bytes are..
     /// - "solid" => ascii format
     /// - otherwise => binary format
-    /// 
+    ///
     /// **Writing**: always binary format.
     Automatic,
     /// ascii format
@@ -90,20 +95,19 @@ impl<R: Read> Iterator for STLReader<R> {
     type Item = Result<STLFace>;
     fn next(&mut self) -> Option<Self::Item> {
         let res = match self {
-            STLReader::Binary(reader, length) => match *length == 0 {
-                true => return None,
-                false => {
+            STLReader::Binary(reader, length) => {
+                if *length == 0 {
+                    Ok(None)
+                } else {
                     *length -= 1;
                     binary_one_read(reader)
                 }
-            },
+            }
             STLReader::ASCII(lines) => ascii_one_read(lines),
         };
         match res {
-            Ok(got) => match got {
-                Some(got) => Some(Ok(got)),
-                None => None,
-            },
+            Ok(Some(got)) => Some(Ok(got)),
+            Ok(None) => None,
             Err(error) => Some(Err(error)),
         }
     }
@@ -150,36 +154,20 @@ fn ascii_one_read<R: BufRead>(lines: &mut Lines<R>) -> Result<Option<STLFace>> {
     }
 }
 
-#[inline(always)]
-fn read_vector<R: Read>(reader: &mut R) -> Result<[f32; 3]> {
-    let mut bytes = [[0; 4]; 3];
-    let size0 = reader.read(&mut bytes[0])?;
-    let size1 = reader.read(&mut bytes[1])?;
-    let size2 = reader.read(&mut bytes[2])?;
-    if size0 != 4 || size1 != 4 || size2 != 4 {
-        return Err(syntax_error().into());
-    }
-    Ok([
-        f32::from_le_bytes(bytes[0]),
-        f32::from_le_bytes(bytes[1]),
-        f32::from_le_bytes(bytes[2]),
-    ])
-}
-
 fn binary_one_read<R: Read>(reader: &mut R) -> Result<Option<STLFace>> {
-    let normal = read_vector(reader)?;
-    let vertices = [
-        read_vector(reader)?,
-        read_vector(reader)?,
-        read_vector(reader)?,
-    ];
-    let mut unuse = [0; 2];
-    reader.read(&mut unuse)?;
-    Ok(Some(STLFace { normal, vertices }))
+    let mut chunk = [0; CHUNKSIZE];
+    let size = reader.read(&mut chunk)?;
+    if size == CHUNKSIZE {
+        let mut buf = [0; FACESIZE];
+        buf.copy_from_slice(&chunk[..FACESIZE]);
+        Ok(Some(bytemuck::cast(buf)))
+    } else {
+        Err(syntax_error().into())
+    }
 }
 
 /// write STL file in `stl_type` format.
-/// 
+///
 /// If `stl_type == STLType::Automatic`, write the binary format.
 #[inline(always)]
 pub fn write<I: IntoSTLIterator, W: Write>(
@@ -224,8 +212,7 @@ fn write_binary<I: IntoSTLIterator, W: Write>(iter: I, writer: &mut W) -> Result
     writer.write(&[0u8; 80])?;
     writer.write(&len.to_le_bytes())?;
     iter.try_for_each(|face| {
-        writer.write(bytemuck::cast_slice(&[face.normal]))?;
-        writer.write(bytemuck::cast_slice(&face.vertices))?;
+        writer.write(bytemuck::cast_slice(&[face]))?;
         writer.write(&[0u8, 0u8])?;
         Ok(())
     })
