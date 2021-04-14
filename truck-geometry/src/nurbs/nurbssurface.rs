@@ -1,5 +1,4 @@
 use super::*;
-use crate::bspsurface::{CPColumnIter, CPRowIter};
 
 impl<V> NURBSSurface<V> {
     /// constructor
@@ -69,7 +68,7 @@ impl<V> NURBSSurface<V> {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn ctrl_pts_row_iter(&self, column_idx: usize) -> CPRowIter<'_, V> {
+    pub fn ctrl_pts_row_iter(&self, column_idx: usize) -> impl ExactSizeIterator<Item = &V> + std::iter::FusedIterator<Item = &V> {
         self.0.ctrl_pts_row_iter(column_idx)
     }
 
@@ -92,7 +91,7 @@ impl<V> NURBSSurface<V> {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn ctrl_pts_column_iter(&self, row_idx: usize) -> CPColumnIter<'_, V> {
+    pub fn ctrl_pts_column_iter(&self, row_idx: usize) -> std::slice::Iter<'_, V> {
         self.0.control_points[row_idx].iter()
     }
 

@@ -16,4 +16,6 @@ categories = ["graphics"]
 [dependencies]
 truck-base = { version = "0.1.1", path = "../truck-base" }
 serde = { version = "1.0.123", features = ["derive"] }
+
+[dev-dependencies]
 rand = "0.8.3"
