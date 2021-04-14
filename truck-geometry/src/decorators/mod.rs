@@ -74,7 +74,7 @@ pub struct RevolutedCurve<C> {
 /// let sphere = Sphere::new(Point3::new(1.0, 2.0, 3.0), 2.45);
 /// let mut processed = Processor::<_, Matrix4>::new(sphere);
 /// 
-/// // both surfaces are the same curve
+/// // both surfaces are the same surface
 /// const N: usize = 100;
 /// for i in 0..=N {
 ///     for j in 0..=N {
