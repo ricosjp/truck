@@ -1,6 +1,7 @@
 [workspace]
 members = [
 	"truck-base",
+	"truck-geotrait",
 	"truck-geometry",
 	"truck-modeling",
 	"truck-platform",
