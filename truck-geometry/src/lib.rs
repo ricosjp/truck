@@ -19,6 +19,7 @@ use std::fmt::Debug;
 use truck_base::bounding_box::Bounded;
 
 const INCLUDE_CURVE_TRIALS: usize = 100;
+const PRESEARCH_DIVISION: usize = 50;
 
 /// re-export `truck_base`
 pub mod base {
@@ -44,8 +45,3 @@ pub use specifieds::*;
 /// Declares some decorators
 pub mod decorators;
 pub use decorators::*;
-
-/// utility functions for another crates
-mod util_functions;
-pub use util_functions::*;
-

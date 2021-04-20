@@ -1141,7 +1141,7 @@ where
     /// ```
     #[inline(always)]
     pub fn search_nearest_parameter(&self, point: V::Space, hint: f64, trial: usize) -> Option<f64> {
-        curve_search_nearest_parameter(self, point, hint, trial)
+        algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
     /// Determines whether `self` is an arc of `curve` by repeating applying Newton method.
     ///

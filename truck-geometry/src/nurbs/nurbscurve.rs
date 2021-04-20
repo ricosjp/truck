@@ -422,7 +422,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
     /// ```
     #[inline(always)]
     pub fn search_nearest_parameter(&self, point: V::Point, hint: f64, trial: usize) -> Option<f64> {
-        curve_search_nearest_parameter(self, point, hint, trial)
+        algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }
 

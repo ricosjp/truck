@@ -516,7 +516,7 @@ where
         (u0, v0): (f64, f64),
         trials: usize,
     ) -> Option<(f64, f64)> {
-        surface_search_nearest_parameter(self, pt, (u0, v0), trials)
+        algo::surface::search_nearest_parameter(self, pt, (u0, v0), trials)
     }
 }
 
@@ -564,16 +564,6 @@ impl NURBSSurface<Vector3> {
     }
 }
 
-impl<V: Homogeneous<f64>> ParameterDivision2D for NURBSSurface<V>
-where V::Point: MetricSpace<Metric = f64>
-{
-    #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        self.0
-            .create_space_division(tol, |v0, v1| v0.to_point().distance2(v1.to_point()))
-    }
-}
-
 impl<V: Clone> Invertible for NURBSSurface<V> {
     #[inline(always)]
     fn invert(&mut self) { self.swap_axes(); }
@@ -605,6 +595,14 @@ impl ParametricSurface for NURBSSurface<Vector3> {
     fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
 }
 
+impl ParameterDivision2D for NURBSSurface<Vector3>
+{
+    #[inline(always)]
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, self.parameter_range(), tol)
+    }
+}
+
 impl<'a> ParametricSurface for &'a NURBSSurface<Vector3> {
     type Point = Point2;
     type Vector = Vector2;
@@ -634,7 +632,7 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = self.presearch(pt);
+        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -712,6 +710,14 @@ impl<'a> ParametricSurface for &'a NURBSSurface<Vector4> {
     fn normal(&self, u: f64, v: f64) -> Self::Vector { (*self).normal(u, v) }
 }
 
+impl ParameterDivision2D for NURBSSurface<Vector4>
+{
+    #[inline(always)]
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, self.parameter_range(), tol)
+    }
+}
+
 impl BoundedSurface for NURBSSurface<Vector4> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
@@ -721,7 +727,7 @@ impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.front();
-        let mut hint = self.presearch(pt);
+        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -760,7 +766,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.front();
-        let mut hint = self.presearch(pt);
+        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -834,30 +840,6 @@ impl Transformed<Matrix4> for NURBSSurface<Vector4> {
         let mut surface = self.clone();
         surface.transform_by(trans);
         surface
-    }
-}
-
-impl<V: Homogeneous<f64>> NURBSSurface<V>
-where V::Point: MetricSpace<Metric = f64>
-{
-    fn presearch(&self, point: V::Point) -> (f64, f64) {
-        const N: usize = 50;
-        let mut res = (0.0, 0.0);
-        let mut min = std::f64::INFINITY;
-        for i in 0..=N {
-            for j in 0..=N {
-                let p = i as f64 / N as f64;
-                let q = j as f64 / N as f64;
-                let u = self.uknot_vec()[0] + p * self.uknot_vec().range_length();
-                let v = self.vknot_vec()[0] + q * self.vknot_vec().range_length();
-                let dist = self.subs(u, v).distance2(point);
-                if dist < min {
-                    min = dist;
-                    res = (u, v);
-                }
-            }
-        }
-        res
     }
 }
 

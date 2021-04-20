@@ -26,9 +26,9 @@ fn presearch(surface: &Surface, pt: Point3) -> (f64, f64) {
             let v = surface.get_parameter(pt);
             (v[0], v[1])
         }
-        Surface::BSplineSurface(surface) => modeling::presearch(surface, pt),
-        Surface::NURBSSurface(surface) => modeling::presearch(surface, pt),
-        Surface::RevolutedCurve(surface) => modeling::presearch(surface, pt),
+        Surface::BSplineSurface(surface) => modeling::algo::surface::presearch(surface, pt, 50),
+        Surface::NURBSSurface(surface) => modeling::algo::surface::presearch(surface, pt, 50),
+        Surface::RevolutedCurve(surface) => modeling::algo::surface::presearch(surface, pt, 50),
     }
 }
 

@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 use truck_geotrait::{Invertible, ParametricSurface};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
 #[doc(hidden)]
-pub use truck_geometry::{inv_or_zero, presearch};
+pub use truck_geometry::{inv_or_zero, algo};
 
 /// 3-dimensional curve
 #[derive(Clone, Debug, Serialize, Deserialize)]
