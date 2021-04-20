@@ -26,13 +26,14 @@ where
 }
 
 /// Searches the nearest parameter by Newton's method.
-pub fn search_nearest_parameter<S: ParametricSurface>(
+pub fn search_nearest_parameter<S>(
     surface: &S,
     point: S::Point,
     (u0, v0): (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)>
 where
+    S: ParametricSurface,
     S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>,
     S::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
@@ -60,6 +61,112 @@ where
     } else {
         search_nearest_parameter(surface, point, (u, v), trials - 1)
     }
+}
+
+#[inline(always)]
+pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
+    surface: &S,
+    point: Point2,
+    (u0, v0): (f64, f64),
+    trials: usize,
+) -> Option<(f64, f64)> {
+    let pt = surface.subs(u0, v0);
+    if pt.near(&point) {
+        return Some((u0, v0));
+    } else if trials == 0 {
+        return None;
+    }
+    let hint = Vector2::new(u0, v0);
+    let jacobi = Matrix2::from_cols(surface.uder(u0, v0), surface.vder(u0, v0));
+    let res = jacobi.invert().map(move |inv| hint - inv * (pt - point));
+    match res {
+        Some(vec) => search_parameter2d(surface, point, (vec[0], vec[1]), trials - 1),
+        None => None,
+    }
+}
+
+#[derive(Clone, Debug)]
+struct ProjectedSurface<'a, S> {
+    surface: &'a S,
+    origin: Point3,
+    u_axis: Vector3,
+    v_axis: Vector3,
+    normal: Vector3,
+}
+
+impl<'a, S: ParametricSurface<Point = Point3, Vector = Vector3>> ProjectedSurface<'a, S> {
+    fn new(surface: &'a S, (u, v): (f64, f64)) -> Self {
+        let origin = surface.subs(u, v);
+        let normal = surface.normal(u, v);
+        let tmp = if normal[0].abs() > normal[1].abs() {
+            0
+        } else {
+            1
+        };
+        let max = if normal[tmp].abs() > normal[2].abs() {
+            tmp
+        } else {
+            2
+        };
+        let mut u_axis = Vector3::zero();
+        u_axis[max] = -normal[(max + 1) % 3];
+        u_axis[(max + 1) % 3] = normal[max];
+        let mut v_axis = Vector3::zero();
+        v_axis[max] = -normal[(max + 2) % 3];
+        v_axis[(max + 2) % 3] = normal[max];
+        ProjectedSurface {
+            surface,
+            origin,
+            u_axis,
+            v_axis,
+            normal,
+        }
+    }
+    #[inline(always)]
+    fn vector_proj(&self, vector: Vector3) -> Vector2 {
+        Vector2::new(self.u_axis.dot(vector), self.v_axis.dot(vector))
+    }
+    #[inline(always)]
+    fn point_proj(&self, point: Point3) -> Point2 {
+        Point2::from_vec(self.vector_proj(point - self.origin))
+    }
+}
+
+impl<'a, S: ParametricSurface<Point = Point3, Vector = Vector3>> ParametricSurface
+    for ProjectedSurface<'a, S>
+{
+    type Point = Point2;
+    type Vector = Vector2;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Point2 { self.point_proj(self.surface.subs(u, v)) }
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uder(u, v)) }
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vder(u, v)) }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uuder(u, v)) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uvder(u, v)) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vvder(u, v)) }
+    #[inline(always)]
+    fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
+}
+
+#[inline(always)]
+pub fn search_parameter3d<S: ParametricSurface<Point = Point3, Vector = Vector3>>(
+    surface: &S,
+    point: Point3,
+    (u0, v0): (f64, f64),
+    trials: usize,
+) -> Option<(f64, f64)> {
+    let proj = ProjectedSurface::new(surface, (u0, v0));
+    search_parameter2d(&proj, proj.point_proj(point), (u0, v0), trials).and_then(|(u, v)| {
+        match surface.subs(u, v).near(&point) {
+            true => Some((u, v)),
+            false => None,
+        }
+    })
 }
 
 #[inline(always)]

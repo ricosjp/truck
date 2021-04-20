@@ -1963,36 +1963,11 @@ impl<V: Clone> Invertible for BSplineSurface<V> {
     }
 }
 
-impl BSplineSurface<Vector2> {
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v)` is near `pt`.
-    /// If cannot find, then return `None`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.1, 0.0), Vector2::new(0.5, 0.0), Vector2::new(0.7, 0.0), Vector2::new(1.0, 0.0)],
-    ///     vec![Vector2::new(0.0, 0.1), Vector2::new(0.2, 0.2), Vector2::new(0.4, 0.3), Vector2::new(0.6, 0.2), Vector2::new(1.0, 0.3)],
-    ///     vec![Vector2::new(0.0, 0.5), Vector2::new(0.3, 0.6), Vector2::new(0.6, 0.4), Vector2::new(0.9, 0.6), Vector2::new(1.0, 0.5)],
-    ///     vec![Vector2::new(0.0, 0.7), Vector2::new(0.2, 0.8), Vector2::new(0.3, 0.6), Vector2::new(0.5, 0.9), Vector2::new(1.0, 0.7)],
-    ///     vec![Vector2::new(0.0, 1.0), Vector2::new(0.1, 1.0), Vector2::new(0.5, 1.0), Vector2::new(0.7, 1.0), Vector2::new(1.0, 1.0)],
-    /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let pt = Vector2::new(0.3, 0.7);
-    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
-    /// assert_near!(&surface.subs(u, v), &pt);
-    /// ```
-    pub fn search_parameter(&self, pt: Vector2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
-        sub_search_parameter2d(self, Point2::from_vec(pt), hint.into(), trials).map(|v| v.into())
-    }
-}
-
 impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
     fn include(&self, curve: &BSplineCurve<Vector2>) -> bool {
-        let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = algo::surface::presearch(self, Point2::from_vec(pt), PRESEARCH_DIVISION);
-        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+        let pt = curve.front();
+        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        hint = match algo::surface::search_parameter2d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -2004,12 +1979,12 @@ impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
             for j in 1..=degree {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
-                let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+                let pt = ParametricCurve::subs(curve, t);
+                hint = match algo::surface::search_parameter2d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
-                if !self.subs(hint.0, hint.1).near(&pt) {
+                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt) {
                     return false;
                 } else if hint.0 < uknot_vec[0] - TOLERANCE
                     || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
@@ -2026,59 +2001,11 @@ impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
     }
 }
 
-impl BSplineSurface<Vector3> {
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v)` is near `pt`.
-    /// If cannot find, then return `None`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.1, 0.0, 0.5), Vector3::new(0.5, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 0.1, 0.1), Vector3::new(0.2, 0.2, 0.1), Vector3::new(0.4, 0.3, 0.4), Vector3::new(1.0, 0.3, 0.7)],
-    ///     vec![Vector3::new(0.0, 0.5, 0.4), Vector3::new(0.3, 0.6, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(1.0, 0.5, 0.0)],
-    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
-    /// ];
-    /// let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    ///
-    /// let pt = surface.subs(0.32, 0.76);
-    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
-    /// assert_near!(&surface.subs(u, v), &pt);
-    ///
-    /// let pt = surface.subs(0.32, 0.76) + Vector3::new(0.0, 0.0, 0.001);
-    /// assert!(surface.search_parameter(pt, (0.5, 0.5), 100).is_none());
-    /// ```
-    pub fn search_parameter(&self, pt: Vector3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
-        let normal = self.normal(hint.0, hint.1);
-        let tmp = normal[0].abs() > normal[1].abs();
-        let tmp_idx = if tmp { 0 } else { 1 };
-        let tmp = normal[tmp_idx].abs() > normal[2].abs();
-        let max = if tmp { tmp_idx } else { 2 };
-        let idx0 = (max + 1) % 3;
-        let idx1 = (max + 2) % 3;
-        let knot_vecs = self.knot_vecs().clone();
-        let control_points: Vec<Vec<_>> = self
-            .control_points()
-            .iter()
-            .map(move |vec| {
-                vec.iter()
-                    .map(move |pt| Vector2::new(pt[idx0], pt[idx1]))
-                    .collect()
-            })
-            .collect();
-        let newsurface = BSplineSurface::new(knot_vecs, control_points);
-        let newpt = Vector2::new(pt[idx0], pt[idx1]);
-        newsurface
-            .search_parameter(newpt, hint, trials)
-            .filter(|(u, v)| self.subs(*u, *v).near(&pt))
-    }
-}
-
 impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = algo::surface::presearch(self, Point3::from_vec(pt), PRESEARCH_DIVISION);
-        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+        let pt = curve.front();
+        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -2090,12 +2017,12 @@ impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
             for j in 1..=degree {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
-                let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+                let pt = ParametricCurve::subs(curve, t);
+                hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
-                if !self.subs(hint.0, hint.1).near(&pt) {
+                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt) {
                     return false;
                 } else if hint.0 < uknot_vec[0] - TOLERANCE
                     || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
@@ -2114,9 +2041,9 @@ impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
 
 impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
-        let pt = curve.subs(curve.knot_vec()[0]).to_vec();
-        let mut hint = algo::surface::presearch(self, Point3::from_vec(pt), PRESEARCH_DIVISION);
-        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+        let pt = curve.subs(curve.knot_vec()[0]);
+        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -2128,12 +2055,12 @@ impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
             for j in 1..=degree {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
-                let pt = curve.subs(t).to_vec();
-                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+                let pt = curve.subs(t);
+                hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
-                if !self.subs(hint.0, hint.1).near(&pt) {
+                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt) {
                     return false;
                 } else if hint.0 < uknot_vec[0] - TOLERANCE
                     || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE

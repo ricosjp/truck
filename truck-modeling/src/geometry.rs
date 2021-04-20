@@ -232,8 +232,8 @@ impl Surface {
                     false => None,
                 }
             },
-            Surface::BSplineSurface(surface) => surface.search_parameter(pt.to_vec(), hint, trials),
-            Surface::NURBSSurface(surface) => surface.search_parameter(pt, hint, trials),
+            Surface::BSplineSurface(surface) => algo::surface::search_parameter3d(surface, pt, hint, trials),
+            Surface::NURBSSurface(surface) => algo::surface::search_parameter3d(surface, pt, hint, trials),
             Surface::RevolutedCurve(surface) => surface.search_parameter(pt, hint, trials),
         }
     }
