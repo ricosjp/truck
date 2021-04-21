@@ -1114,7 +1114,7 @@ where
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     /// let pt = ParametricCurve::subs(&bspcurve, 1.2);
     /// let t = bspcurve.search_nearest_parameter(pt, 0.8, 100).unwrap();
-    /// assert_eq!(t, 1.2);
+    /// assert_near!(t, 1.2);
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
@@ -1167,7 +1167,7 @@ where
     /// let mut part = bspcurve.clone().cut(0.6);
     /// part.cut(2.8);
     /// let t = part.is_arc_of(&bspcurve, 0.6).unwrap();
-    /// assert_near2!(t, 2.8);
+    /// assert_near!(t, 2.8);
     ///
     /// // hint is required the init value.
     /// assert!(part.is_arc_of(&bspcurve, 0.7).is_none());

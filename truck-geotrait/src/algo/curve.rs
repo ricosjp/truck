@@ -38,16 +38,12 @@ where
     let der2 = curve.der2(hint);
     let f = der.dot(pt - point);
     let fprime = der2.dot(pt - point) + der.magnitude2();
-    if fprime.so_small() {
+    if f.so_small() || fprime.so_small() {
         return Some(hint);
-    }
-    let t = hint - f / fprime;
-    if t.near(&hint) {
-        Some(t)
     } else if trials == 0 {
         None
     } else {
-        search_nearest_parameter(curve, point, t, trials - 1)
+        search_nearest_parameter(curve, point, hint - f / fprime, trials - 1)
     }
 }
 
