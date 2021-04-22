@@ -1,9 +1,9 @@
 use super::*;
 use serde::{Serialize, Deserialize};
-use truck_base::geom_traits::{Invertible, ParametricSurface};
+use truck_geotrait::{Invertible, ParametricSurface};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
 #[doc(hidden)]
-pub use truck_geometry::{inv_or_zero, presearch};
+pub use truck_geometry::{inv_or_zero, algo};
 
 /// 3-dimensional curve
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -232,8 +232,8 @@ impl Surface {
                     false => None,
                 }
             },
-            Surface::BSplineSurface(surface) => surface.search_parameter(pt.to_vec(), hint, trials),
-            Surface::NURBSSurface(surface) => surface.search_parameter(pt, hint, trials),
+            Surface::BSplineSurface(surface) => algo::surface::search_parameter3d(surface, pt, hint, trials),
+            Surface::NURBSSurface(surface) => algo::surface::search_parameter3d(surface, pt, hint, trials),
             Surface::RevolutedCurve(surface) => surface.search_parameter(pt, hint, trials),
         }
     }

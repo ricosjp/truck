@@ -15,6 +15,7 @@ categories = ["graphics"]
 
 [dependencies]
 truck-base = { version = "0.1.1", path = "../truck-base" }
+truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 serde = { version = "1.0.123", features = ["derive"] }
 
 [dev-dependencies]

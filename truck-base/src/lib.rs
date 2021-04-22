@@ -17,8 +17,6 @@ pub mod bounding_box;
 pub mod cgmath64;
 /// Additional traits for cgmath
 pub mod cgmath_extend_traits;
-/// Abstract traits: `Curve` and `Surface`.
-pub mod geom_traits;
 /// ID structure with `Copy`, `Hash` and `Eq` using raw pointers
 pub mod id;
 /// Setting Tolerance

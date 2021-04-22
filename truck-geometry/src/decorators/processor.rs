@@ -20,13 +20,6 @@ impl<E, T: One> Processor<E, T> {
             false => -1.0,
         }
     }
-    #[inline(always)]
-    fn get_surface_parameter(&self, u: f64, v: f64) -> (f64, f64) {
-        match self.orientation {
-            true => (u, v),
-            false => (v, u),
-        }
-    }
 }
 
 impl<E: Clone, T: Clone> Invertible for Processor<E, T> {
@@ -90,8 +83,10 @@ where
     type Vector = Vector3;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point {
-        let (u, v) = self.get_surface_parameter(u, v);
-        self.transform.transform_point(self.entity.subs(u, v))
+        match self.orientation {
+            true => self.transform.transform_point(self.entity.subs(u, v)),
+            false => self.transform.transform_point(self.entity.subs(v, u)),
+        }
     }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Self::Vector {
@@ -130,8 +125,10 @@ where
     }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
-        let (u, v) = self.get_surface_parameter(u, v);
-        let n = self.entity.normal(u, v);
+        let n = match self.orientation {
+            true => self.entity.normal(u, v),
+            false => self.entity.normal(v, u),
+        };
         let (a, b) = get_axis(n);
         let a = self.transform.transform_vector(a);
         let b = self.transform.transform_vector(b);
