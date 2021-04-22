@@ -128,7 +128,7 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
         } else if self.is_back_fixed() && self.curve.back().near(&point) {
             Some((t1, hint.1))
         } else {
-            surface_search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
+            algo::surface::search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
                 if self.subs(u, v).near(&point) {
                     Some((u, v))
                 } else {
@@ -239,7 +239,7 @@ where
     C1: ParametricCurve<Point = Point3, Vector = Vector3>,
 {
     let first = ParametricCurve::subs(curve, knots[0]);
-    let mut hint = presearch(surface, first);
+    let mut hint = algo::surface::presearch(surface, first, surface.parameter_range(), PRESEARCH_DIVISION);
     if surface
         .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
         .is_none()
@@ -262,7 +262,8 @@ where
                     true
                 }
                 None => {
-                    match surface.search_parameter(pt, presearch(surface, pt), INCLUDE_CURVE_TRIALS)
+                    hint = algo::surface::presearch(surface, pt, surface.parameter_range(), PRESEARCH_DIVISION);
+                    match surface.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS)
                     {
                         Some(got) => {
                             hint = got;

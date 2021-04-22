@@ -401,7 +401,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
     /// // check the answer
     /// let res = curve.subs(t);
     /// let ans = Point2::from_vec(pt.to_vec().normalize());
-    /// assert_near2!(res, ans);
+    /// assert_near!(res, ans);
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
@@ -422,7 +422,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
     /// ```
     #[inline(always)]
     pub fn search_nearest_parameter(&self, point: V::Point, hint: f64, trial: usize) -> Option<f64> {
-        curve_search_nearest_parameter(self, point, hint, trial)
+        algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }
 
