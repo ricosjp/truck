@@ -25,9 +25,9 @@ const PRESEARCH_DIVISION: usize = 50;
 pub mod base {
     pub use truck_base::bounding_box::*;
     pub use truck_base::cgmath64::*;
-    pub use truck_geotrait::*;
     pub use truck_base::tolerance::*;
     pub use truck_base::{assert_near, assert_near2};
+    pub use truck_geotrait::*;
 }
 pub use base::*;
 /// Declares the nurbs

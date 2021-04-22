@@ -317,42 +317,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
         }
         BSplineCurve::new_unchecked(knot_vec, new_points)
     }
-    pub(super) fn create_division<F: Fn(V, V) -> f64>(&self, tol: f64, dist2: F) -> Vec<f64> {
-        let knot_vec = self.knot_vec();
-        let mut div = vec![knot_vec[0], knot_vec[knot_vec.len() - 1]];
-        self.sub_create_division(tol * 0.9, dist2, &mut div);
-        div
-    }
-
-    fn sub_create_division<F: Fn(V, V) -> f64>(&self, tol: f64, dist2: F, div: &mut Vec<f64>) {
-        let degree = self.degree() * 2;
-        let mut new_div = vec![div[0]];
-        for i in 1..div.len() {
-            let pt0 = self.subs(div[i - 1]);
-            let pt1 = self.subs(div[i]);
-            let mut div_flag = false;
-            for j in 0..=degree {
-                let p = j as f64 / degree as f64;
-                let t = (1.0 - p) * div[i - 1] + p * div[i];
-                let par_mid = self.subs(t);
-                let val_mid = pt0 * (1.0 - p) + pt1 * p;
-                let res = dist2(val_mid, par_mid);
-                if res > tol * tol {
-                    div_flag = true;
-                    break;
-                }
-            }
-            if div_flag {
-                new_div.push((div[i - 1] + div[i]) / 2.0);
-            }
-            new_div.push(div[i]);
-        }
-        if new_div.len() != div.len() {
-            *div = new_div;
-            self.sub_create_division(tol, dist2, div);
-        }
-    }
-    pub(super) fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
+   pub(super) fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
         &self,
         other: &BSplineCurve<V>,
         div_coef: usize,
@@ -1085,9 +1050,10 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
     }
 }
 
-impl<V: InnerSpace<Scalar = f64>> ParameterDivision1D for BSplineCurve<V> {
+impl<V: TangentSpace<f64>> ParameterDivision1D for BSplineCurve<V>
+where V::Space: EuclideanSpace<Scalar = f64, Diff = V> + MetricSpace<Metric = f64> {
     fn parameter_division(&self, tol: f64) -> Vec<f64> {
-        self.create_division(tol, |v0, v1| v0.distance2(v1))
+        algo::curve::parameter_division(self, self.parameter_range(), tol)
     }
 }
 
