@@ -1,42 +1,7 @@
 use truck_base::{cgmath64::*, tolerance::*};
 use truck_geotrait::*;
-
-// same degree polynomial
-#[derive(Clone, Debug)]
-struct PolyCurve<P: EuclideanSpace<Scalar = f64>>(Vec<P::Diff>);
-
-impl<P: EuclideanSpace<Scalar = f64>> ParametricCurve for PolyCurve<P> {
-    type Point = P;
-    type Vector = P::Diff;
-    #[inline(always)]
-    fn subs(&self, t: f64) -> P {
-        self.0
-            .iter()
-            .fold((1.0, P::origin()), |(s, res), a| (s * t, res + *a * s))
-            .1
-    }
-    fn der(&self, t: f64) -> P::Diff {
-        self.0
-            .iter()
-            .enumerate()
-            .skip(1)
-            .fold((1.0, P::Diff::zero()), |(s, res), (deg, a)| {
-                (s * t, res + *a * s * deg as f64)
-            })
-            .1
-    }
-    fn der2(&self, t: f64) -> P::Diff {
-        self.0
-            .iter()
-            .enumerate()
-            .skip(2)
-            .fold((1.0, P::Diff::zero()), |(s, res), (deg, a)| {
-                (s * t, res + *a * s * (deg * (deg - 1)) as f64)
-            })
-            .1
-    }
-    fn parameter_range(&self) -> (f64, f64) { (-100.0, 100.0) }
-}
+mod polynomial;
+use polynomial::PolyCurve;
 
 #[test]
 fn polycurve_test() {
@@ -69,7 +34,7 @@ fn polycurve_presearch() {
         Vector2::new(0.0, 1.0),
     ];
     let poly = PolyCurve::<Point2>(coef);
-    let t = algo::curve::presearch(&poly, Point2::new(0.0, -1.0), 100);
+    let t = algo::curve::presearch(&poly, Point2::new(0.0, -1.0), poly.parameter_range(), 100);
     assert_eq!(t, 0.0);
 }
 
@@ -92,7 +57,7 @@ fn exec_polycurve_snp_on_curve() -> bool {
             true => true,
             false => {
                 eprintln!(
-                    "wrong answer\npolynomial: {:?}\nt: {:?}\nhint: {:?}\nanswer: {:?}",
+                    "wrong answer\npolynomial: {:?}\nt: {:?}\nhint: {:?}\nresult: {:?}",
                     poly, t, hint, res,
                 );
                 false

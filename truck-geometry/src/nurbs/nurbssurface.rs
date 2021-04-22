@@ -505,7 +505,7 @@ where
     /// let surface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
     /// let pt = surface.subs(0.3, 0.7);
     /// let (u, v) = surface.search_nearest_parameter(pt, (0.5, 0.5), 100).unwrap();
-    /// assert!(u.near2(&0.3) && v.near2(&0.7));
+    /// assert!(u.near(&0.3) && v.near(&0.7));
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
@@ -632,7 +632,7 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(),PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -727,7 +727,7 @@ impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.front();
-        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -766,7 +766,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.front();
-        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,

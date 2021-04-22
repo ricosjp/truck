@@ -1824,7 +1824,7 @@ where
     /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     /// let pt = ParametricSurface::subs(&bspsurface, 0.3, 0.7);
     /// let (u, v) = bspsurface.search_nearest_parameter(pt, (0.5, 0.5), 100).unwrap();
-    /// assert!(u.near2(&0.3) && v.near2(&0.7));
+    /// assert!(u.near(&0.3) && v.near(&0.7));
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
@@ -1966,7 +1966,7 @@ impl<V: Clone> Invertible for BSplineSurface<V> {
 impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
     fn include(&self, curve: &BSplineCurve<Vector2>) -> bool {
         let pt = curve.front();
-        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter2d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -2004,7 +2004,7 @@ impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
 impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.front();
-        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -2042,7 +2042,7 @@ impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
 impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = algo::surface::presearch(self, pt, PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(),PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,

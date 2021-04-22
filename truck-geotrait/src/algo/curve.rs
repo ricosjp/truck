@@ -2,11 +2,11 @@ use super::*;
 
 /// Divides the domain into equal parts, examines all the values, and returns `t` such that `curve.subs(t)` is closest to `point`.
 /// This method is useful to get an efficient hint of `search_nearest_parameter`.
-pub fn presearch<C>(curve: &C, point: C::Point, division: usize) -> f64
+pub fn presearch<C>(curve: &C, point: C::Point, range: (f64, f64), division: usize) -> f64
 where
     C: ParametricCurve,
     C::Point: MetricSpace<Metric = f64> + Copy, {
-    let (t0, t1) = curve.parameter_range();
+    let (t0, t1) = range;
     let mut res = t0;
     let mut min = std::f64::INFINITY;
     for i in 0..=division {
@@ -38,7 +38,7 @@ where
     let der2 = curve.der2(hint);
     let f = der.dot(pt - point);
     let fprime = der2.dot(pt - point) + der.magnitude2();
-    if f.so_small() || fprime.so_small() {
+    if f.so_small2() || fprime.so_small() {
         return Some(hint);
     } else if trials == 0 {
         None

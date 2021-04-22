@@ -239,7 +239,7 @@ where
     C1: ParametricCurve<Point = Point3, Vector = Vector3>,
 {
     let first = ParametricCurve::subs(curve, knots[0]);
-    let mut hint = algo::surface::presearch(surface, first, PRESEARCH_DIVISION);
+    let mut hint = algo::surface::presearch(surface, first, surface.parameter_range(), PRESEARCH_DIVISION);
     if surface
         .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
         .is_none()
@@ -262,7 +262,7 @@ where
                     true
                 }
                 None => {
-                    hint = algo::surface::presearch(surface, pt, PRESEARCH_DIVISION);
+                    hint = algo::surface::presearch(surface, pt, surface.parameter_range(), PRESEARCH_DIVISION);
                     match surface.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS)
                     {
                         Some(got) => {

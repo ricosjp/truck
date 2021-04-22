@@ -2,17 +2,17 @@ use super::*;
 
 /// Divides the domain into equal parts, examines all the values, and returns `(u, v)` such that `surface.subs(u, v)` is closest to `point`.
 /// This method is useful to get an efficient hint of `search_nearest_parameter`.
-pub fn presearch<S>(surface: &S, point: S::Point, division: usize) -> (f64, f64)
+pub fn presearch<S>(surface: &S, point: S::Point, (urange, vrange): ((f64, f64), (f64, f64)), division: usize) -> (f64, f64)
 where
-    S: BoundedSurface,
+    S: ParametricSurface,
     S::Point: MetricSpace<Metric = f64> + Copy, {
     let mut res = (0.0, 0.0);
     let mut min = std::f64::INFINITY;
+    let ((u0, u1), (v0, v1)) = (urange, vrange);
     for i in 0..=division {
         for j in 0..=division {
             let p = i as f64 / division as f64;
             let q = j as f64 / division as f64;
-            let ((u0, u1), (v0, v1)) = surface.parameter_range();
             let u = u0 * (1.0 - p) + u1 * p;
             let v = v0 * (1.0 - q) + v1 * q;
             let dist = surface.subs(u, v).distance2(point);
@@ -43,23 +43,18 @@ where
     let uud = surface.uuder(u0, v0);
     let uvd = surface.uvder(u0, v0);
     let vvd = surface.vvder(u0, v0);
-    let f_u = ud.dot(s - point);
-    let f_v = vd.dot(s - point);
+    let f = Vector2::new(ud.dot(s - point), vd.dot(s - point));
     let a = uud.dot(s - point) + ud.dot(ud);
     let c = uvd.dot(s - point) + ud.dot(vd);
     let b = vvd.dot(s - point) + vd.dot(vd);
-    let det = a * b - c * c;
-    if det.so_small() {
-        return Some((u0, v0));
-    }
-    let u = u0 - (b * f_u - c * f_v) / det;
-    let v = v0 - (-c * f_u + a * f_v) / det;
-    if u.near2(&u0) && v.near2(&v0) {
-        Some((u, v))
+    let fprime = Matrix2::new(a, c, c, b);
+    if f.so_small2() || fprime.determinant().so_small() {
+        Some((u0, v0))
     } else if trials == 0 {
         None
     } else {
-        search_nearest_parameter(surface, point, (u, v), trials - 1)
+        let vec = Vector2::new(u0, v0) - fprime.invert().unwrap() * f;
+        search_nearest_parameter(surface, point, (vec[0], vec[1]), trials - 1)
     }
 }
 
