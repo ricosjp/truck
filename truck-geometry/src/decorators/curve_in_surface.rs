@@ -47,3 +47,15 @@ where
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.curve.parameter_range() }
 }
+
+impl<C, S> ParameterDivision1D for CurveInSurface<C, S>
+where
+    C: ParametricCurve<Point = Point2, Vector = Vector2>,
+    S: ParametricSurface,
+    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+    S::Vector: VectorSpace<Scalar = f64>,
+{
+    fn parameter_division(&self, tol: f64) -> Vec<f64> {
+        algo::curve::parameter_division(self, self.parameter_range(), tol)
+    }
+}
