@@ -37,6 +37,13 @@ pub struct RevolutedCurve<C> {
     axis: Vector3,
 }
 
+/// Linearly extruded curve
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct ExtrudedCurve<C, V> {
+    curve: C,
+    vector: V,
+}
+
 /// invertible and transformable geometric element
 /// # Examples
 /// Curve processing example
@@ -110,5 +117,6 @@ pub struct CurveOnSurface<C, S> {
 }
 
 mod curve_on_surface;
+mod extruded_curve;
 mod processor;
 mod revolved_curve;

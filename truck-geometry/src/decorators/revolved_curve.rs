@@ -37,12 +37,12 @@ impl<C> RevolutedCurve<C> {
         )
         .into()
     }
-    /// Returns the entity curve
+    /// Returns the curve before revoluted.
     #[inline(always)]
     pub fn entity_curve(&self) -> &C { &self.curve }
-    /// Returns the entity curve
+    /// Into the curve before revoluted.
     #[inline(always)]
-    pub fn entity_curve_mut(&mut self) -> &mut C { &mut self.curve }
+    pub fn into_entity_curve(self) -> C { self.curve }
     /// Returns origin of revolution
     #[inline(always)]
     pub fn origin(&self) -> Point3 { self.origin }
