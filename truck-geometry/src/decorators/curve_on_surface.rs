@@ -1,9 +1,9 @@
 use crate::*;
 
-impl<C, S> CurveInSurface<C, S> {
+impl<C, S> CurveOnSurface<C, S> {
     /// Creates composited
     #[inline(always)]
-    pub fn new(curve: C, surface: S) -> CurveInSurface<C, S> { CurveInSurface { curve, surface } }
+    pub fn new(curve: C, surface: S) -> CurveOnSurface<C, S> { CurveOnSurface { curve, surface } }
 
     /// Returns the reference to the previous map
     #[inline(always)]
@@ -14,7 +14,7 @@ impl<C, S> CurveInSurface<C, S> {
     pub fn surface(&self) -> &S { &self.surface }
 }
 
-impl<C, S> ParametricCurve for CurveInSurface<C, S>
+impl<C, S> ParametricCurve for CurveOnSurface<C, S>
 where
     C: ParametricCurve<Point = Point2, Vector = Vector2>,
     S: ParametricSurface,
@@ -48,7 +48,7 @@ where
     fn parameter_range(&self) -> (f64, f64) { self.curve.parameter_range() }
 }
 
-impl<C, S> ParameterDivision1D for CurveInSurface<C, S>
+impl<C, S> ParameterDivision1D for CurveOnSurface<C, S>
 where
     C: ParametricCurve<Point = Point2, Vector = Vector2>,
     S: ParametricSurface,

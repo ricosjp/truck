@@ -104,11 +104,11 @@ pub struct Processor<E, T> {
 
 /// The composited maps
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct CurveInSurface<C, S> {
+pub struct CurveOnSurface<C, S> {
     curve: C,
     surface: S,
 }
 
-mod curve_in_surface;
+mod curve_on_surface;
 mod processor;
 mod revolved_curve;
