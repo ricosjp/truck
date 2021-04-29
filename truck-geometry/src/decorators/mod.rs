@@ -111,7 +111,7 @@ pub struct Processor<E, T> {
 
 /// The composited maps
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct CurveOnSurface<C, S> {
+pub struct PCurve<C, S> {
     curve: C,
     surface: S,
 }

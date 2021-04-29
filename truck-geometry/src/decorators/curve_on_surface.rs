@@ -1,9 +1,9 @@
 use crate::*;
 
-impl<C, S> CurveOnSurface<C, S> {
+impl<C, S> PCurve<C, S> {
     /// Creates composited
     #[inline(always)]
-    pub fn new(curve: C, surface: S) -> CurveOnSurface<C, S> { CurveOnSurface { curve, surface } }
+    pub fn new(curve: C, surface: S) -> PCurve<C, S> { PCurve { curve, surface } }
 
     /// Returns the reference to the previous map
     #[inline(always)]
@@ -14,7 +14,7 @@ impl<C, S> CurveOnSurface<C, S> {
     pub fn surface(&self) -> &S { &self.surface }
 }
 
-impl<C, S> ParametricCurve for CurveOnSurface<C, S>
+impl<C, S> ParametricCurve for PCurve<C, S>
 where
     C: ParametricCurve<Point = Point2, Vector = Vector2>,
     S: ParametricSurface,
@@ -48,7 +48,7 @@ where
     fn parameter_range(&self) -> (f64, f64) { self.curve.parameter_range() }
 }
 
-impl<C, S> ParameterDivision1D for CurveOnSurface<C, S>
+impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
     C: ParametricCurve<Point = Point2, Vector = Vector2>,
     S: ParametricSurface,
@@ -57,5 +57,56 @@ where
 {
     fn parameter_division(&self, tol: f64) -> Vec<f64> {
         algo::curve::parameter_division(self, self.parameter_range(), tol)
+    }
+}
+
+#[test]
+fn pcurve_test() {
+    let curve = BSplineCurve::new(
+        KnotVec::bezier_knot(2),
+        vec![
+            Vector2::new(1.0, 1.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(0.0, 0.0),
+        ],
+    );
+    let surface = BSplineSurface::new(
+        (KnotVec::bezier_knot(2), KnotVec::bezier_knot(1)),
+        vec![
+            vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 0.0)],
+            vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 1.0, 1.0)],
+            vec![Vector3::new(1.0, 0.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
+        ]
+    );
+    let pcurve = PCurve::new(curve, surface);
+    assert_eq!(pcurve.parameter_range(), (0.0, 1.0));
+
+    const N: usize = 100;
+    for i in 0..=N {
+        let t = i as f64 / N as f64;
+        assert_near!(
+            pcurve.subs(t),
+            Point3::new(
+                (1.0 - t * t) * (1.0 - t * t),
+                (1.0 - t) * (1.0 - t),
+                1.0 - t * t * t * t,
+            ),
+        );
+        assert_near!(
+            pcurve.der(t),
+            Vector3::new(
+                4.0 * t * (t * t - 1.0),
+                2.0 * (t - 1.0),
+                -4.0 * t * t * t,
+            ),
+        );
+        assert_near!(
+            pcurve.der2(t),
+            Vector3::new(
+                4.0 * (3.0 * t * t - 1.0),
+                2.0,
+                -12.0 * t * t,
+            ),
+        );
     }
 }
