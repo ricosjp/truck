@@ -50,6 +50,7 @@ impl StructuredMesh {
         (u_div, v_div): (Vec<f64>, Vec<f64>),
     ) -> Result<StructuredMesh> {
         check_matrix_vectors_compatibility(&positions, &u_div, &v_div)?;
+        check_vectors_regularity(&u_div, &v_div)?;
         Ok(StructuredMesh::from_positions_and_uvs_unchecked(
             positions,
             (u_div, v_div),
@@ -255,12 +256,12 @@ fn check_matrices_compatibility<S, T>(matrix0: &Vec<Vec<S>>, matrix1: &Vec<Vec<T
 fn check_vectors_regularity(vec0: &Vec<f64>, vec1: &Vec<f64>) -> Result<()> {
     for i in 1..vec0.len() {
         if vec0[i - 1] > vec0[i] {
-            panic!("{}", Error::UnsortedDivision);
+            return Err(Error::UnsortedDivision);
         }
     }
     for i in 1..vec1.len() {
         if vec1[i - 1] > vec1[i] {
-            panic!("{}", Error::UnsortedDivision);
+            return Err(Error::UnsortedDivision);
         }
     }
     Ok(())
