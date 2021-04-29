@@ -374,8 +374,7 @@ where V::Point: MetricSpace<Metric = f64>
 {
     #[inline(always)]
     fn parameter_division(&self, tol: f64) -> Vec<f64> {
-        self.0
-            .create_division(tol, move |v0, v1| v0.to_point().distance2(v1.to_point()))
+        algo::curve::parameter_division(self, self.parameter_range(), tol)
     }
 }
 

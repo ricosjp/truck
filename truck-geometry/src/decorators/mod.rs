@@ -17,7 +17,7 @@ use std::ops::{Deref, DerefMut, Mul};
 /// let uhcircle = NURBSCurve::new(BSplineCurve::new(knot_vec, control_points));
 /// // sphere constructed by revolute circle
 /// let sphere = RevolutedCurve::by_revolution(
-///     uhcircle, Point3::origin(), Vector3::unit_x(), 
+///     uhcircle, Point3::origin(), Vector3::unit_x(),
 /// );
 /// const N: usize = 30;
 /// for i in 0..=N {
@@ -37,6 +37,13 @@ pub struct RevolutedCurve<C> {
     axis: Vector3,
 }
 
+/// Linearly extruded curve
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct ExtrudedCurve<C, V> {
+    curve: C,
+    vector: V,
+}
+
 /// invertible and transformable geometric element
 /// # Examples
 /// Curve processing example
@@ -51,14 +58,14 @@ pub struct RevolutedCurve<C> {
 ///     ],
 /// );
 /// let mut processed = Processor::<_, Matrix4>::new(curve.clone());
-/// 
+///
 /// // both curves are the same curve
 /// const N: usize = 100;
 /// for i in 0..=N {
 ///     let t = i as f64 / N as f64;
 ///     assert_eq!(ParametricCurve::subs(&curve, t), processed.subs(t));
 /// }
-/// 
+///
 /// // Processed curve can inverted!
 /// processed.invert();
 /// for i in 0..=N {
@@ -70,10 +77,10 @@ pub struct RevolutedCurve<C> {
 /// ```
 /// use truck_geometry::*;
 /// use std::f64::consts::PI;
-/// 
+///
 /// let sphere = Sphere::new(Point3::new(1.0, 2.0, 3.0), 2.45);
 /// let mut processed = Processor::<_, Matrix4>::new(sphere);
-/// 
+///
 /// // both surfaces are the same surface
 /// const N: usize = 100;
 /// for i in 0..=N {
@@ -102,5 +109,14 @@ pub struct Processor<E, T> {
     orientation: bool,
 }
 
-mod revolved_curve;
+/// The composited maps
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct PCurve<C, S> {
+    curve: C,
+    surface: S,
+}
+
+mod curve_on_surface;
+mod extruded_curve;
 mod processor;
+mod revolved_curve;
