@@ -1,5 +1,7 @@
+use thiserror::Error;
+
 /// Topological Errors
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub enum Error {
     /// Two same vertices cannot construct an edge.
     /// # Examples
@@ -9,6 +11,7 @@ pub enum Error {
     /// let v = Vertex::new(());
     /// assert_eq!(Edge::try_new(&v, &v, ()), Err(Error::SameVertex));
     /// ```
+    #[error("Two same vertices cannot construct an edge.")]
     SameVertex,
     /// The empty wire cannot contruct a face.
     /// # Examples
@@ -17,6 +20,7 @@ pub enum Error {
     /// use truck_topology::errors::Error;
     /// assert_eq!(Face::try_new(vec![Wire::<(), ()>::new()], ()), Err(Error::EmptyWire));
     /// ```
+    #[error("This wire is empty.")]
     EmptyWire,
     /// The boundary of a face must be closed.
     /// # Examples
@@ -27,6 +31,7 @@ pub enum Error {
     /// let wire: Wire<(), ()> = vec![Edge::new(&v[0], &v[1], ())].into();
     /// assert_eq!(Face::try_new(vec![wire], ()), Err(Error::NotClosedWire));
     /// ```
+    #[error("This wire is not closed.")]
     NotClosedWire,
     /// The boundary of a face must be simple.
     /// # Examples
@@ -43,8 +48,10 @@ pub enum Error {
     /// ].into();
     /// assert_eq!(Face::try_new(vec![wire], ()), Err(Error::NotSimpleWire));
     /// ```
+    #[error("This wire is not simple.")]
     NotSimpleWire,
     /// Some boundaries has a shared vertex.
+    #[error("Some wires has a shared vertex.")]
     NotDisjointWires,
     /// The empty shell cannot construct a solid.
     /// # Examples
@@ -53,6 +60,7 @@ pub enum Error {
     /// use truck_topology::errors::Error;
     /// assert_eq!(Solid::try_new(vec![Shell::<(), (), ()>::new()]), Err(Error::EmptyShell));
     /// ```
+    #[error("This shell is empty.")]
     EmptyShell,
     /// The vector of boundaries of the solid must consist connected shells.
     /// # Examples
@@ -67,6 +75,7 @@ pub enum Error {
     /// let shell: Shell<(), (), ()> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     /// assert_eq!(Solid::try_new(vec![shell]), Err(Error::NotConnected));
     /// ```
+    #[error("This shell is not connected.")]
     NotConnected,
     /// The boundary of the solid must be closed.
     /// # Examples
@@ -78,6 +87,7 @@ pub enum Error {
     /// let shell: Shell<(), (), ()> = vec![Face::new(vec![wire], ())].into();
     /// assert_eq!(Solid::try_new(vec![shell]), Err(Error::NotClosedShell));
     /// ```
+    #[error("This shell is not oriented and closed.")]
     NotClosedShell,
     /// The boundary of the solid must be a manifold.
     /// # Examples
@@ -102,26 +112,9 @@ pub enum Error {
     /// let shell: Shell<(), (), ()> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     /// assert_eq!(Solid::try_new(vec![shell]), Err(Error::NotManifold));
     /// ```
+    #[error("This shell is not a manifold.")]
     NotManifold,
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            Error::SameVertex => f.pad("Two same vertices cannot construct an edge."),
-            Error::EmptyWire => f.pad("This wire is empty."),
-            Error::NotClosedWire => f.pad("This wire is not closed."),
-            Error::NotSimpleWire => f.pad("This wire is not simple."),
-            Error::NotDisjointWires => f.pad("Some wires has a shared vertex."),
-            Error::EmptyShell => f.pad("This shell is empty."),
-            Error::NotConnected => f.pad("This shell is not connected."),
-            Error::NotClosedShell => f.pad("This shell is not oriented and closed."),
-            Error::NotManifold => f.pad("This shell is not a manifold."),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
 
 #[test]
 fn print_messages() {
@@ -135,6 +128,7 @@ fn print_messages() {
     writeln!(&mut std::io::stderr(), "{}\n", Error::EmptyWire).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotClosedWire).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotSimpleWire).unwrap();
+    writeln!(&mut std::io::stderr(), "{}\n", Error::NotDisjointWires).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::EmptyShell).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotConnected).unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::NotClosedShell).unwrap();

@@ -19,6 +19,7 @@ truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
 serde = { version = "1.0.123", features = ["derive"] }
+thiserror = "1.0.24"
 
 [dev-dependencies]
 rand = "0.8.3"
