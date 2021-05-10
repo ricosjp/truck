@@ -80,7 +80,11 @@ mod plane {
         spirv
             .read_to_end(&mut compiled)
             .map_err(|error| format!("{:?}", error))?;
-        Ok(device.create_shader_module(wgpu::util::make_spirv(&compiled)))
+        Ok(device.create_shader_module(&ShaderModuleDescriptor{
+            source: wgpu::util::make_spirv(&compiled),
+            flags: ShaderFlags::empty(),
+            label: None,
+        }))
     }
 
     // Implementation of Rendered for Plane.
@@ -95,11 +99,16 @@ mod plane {
             handler: &DeviceHandler,
         ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
             let vertex_buffer = BufferHandler::from_slice(
-                &[0 as u32, 1, 2, 2, 1, 3],
+                &[0 as u32, 1, 2, 3],
                 handler.device(),
                 BufferUsage::VERTEX,
             );
-            (Arc::new(vertex_buffer), None)
+            let index_buffer = BufferHandler::from_slice(
+                &[0 as u32, 1, 2, 2, 1, 3],
+                handler.device(),
+                BufferUsage::INDEX,
+            );
+            (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
         }
 
         // bind group is only one uniform buffer: resolution
@@ -113,8 +122,9 @@ mod plane {
                             BindGroupLayoutEntry {
                                 binding: 0,
                                 visibility: ShaderStage::FRAGMENT,
-                                ty: BindingType::UniformBuffer {
-                                    dynamic: false,
+                                ty: BindingType::Buffer {
+                                    ty: BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
                                     min_binding_size: None,
                                 },
                                 count: None,
@@ -122,8 +132,9 @@ mod plane {
                             BindGroupLayoutEntry {
                                 binding: 1,
                                 visibility: ShaderStage::FRAGMENT,
-                                ty: BindingType::UniformBuffer {
-                                    dynamic: false,
+                                ty: BindingType::Buffer {
+                                    ty: BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
                                     min_binding_size: None,
                                 },
                                 count: None,
@@ -160,48 +171,52 @@ mod plane {
                 handler
                     .device()
                     .create_render_pipeline(&RenderPipelineDescriptor {
-                        layout: Some(layout),
-                        vertex_stage: ProgrammableStageDescriptor {
-                            module: &self.vertex_module,
-                            entry_point: "main",
-                        },
-                        fragment_stage: Some(ProgrammableStageDescriptor {
-                            module: &self.fragment_module,
-                            entry_point: "main",
-                        }),
-                        rasterization_state: None,
-                        primitive_topology: PrimitiveTopology::TriangleList,
-                        color_states: &[ColorStateDescriptor {
+                    layout: Some(layout),
+                    vertex: VertexState {
+                        module: &self.vertex_module,
+                        entry_point: "main",
+                        buffers: &[VertexBufferLayout {
+                            array_stride: std::mem::size_of::<u32>() as BufferAddress,
+                            step_mode: InputStepMode::Vertex,
+                            attributes: &[VertexAttribute {
+                                format: VertexFormat::Uint32,
+                                offset: 0,
+                                shader_location: 0,
+                            }],
+                        }],
+                    },
+                    primitive: PrimitiveState {
+                        topology: PrimitiveTopology::TriangleList,
+                        front_face: FrontFace::Ccw,
+                        cull_mode: Some(Face::Back),
+                        polygon_mode: PolygonMode::Fill,
+                        clamp_depth: false,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(DepthStencilState {
+                        format: TextureFormat::Depth32Float,
+                        depth_write_enabled: true,
+                        depth_compare: wgpu::CompareFunction::Less,
+                        stencil: Default::default(),
+                        bias: Default::default(),
+                    }),
+                    multisample: MultisampleState {
+                        count: sample_count,
+                        mask: !0,
+                        alpha_to_coverage_enabled: false,
+                    },
+                    fragment: Some(FragmentState {
+                        module: &self.fragment_module,
+                        entry_point: "main",
+                        targets: &[ColorTargetState {
                             format: sc_desc.format,
-                            color_blend: BlendDescriptor::REPLACE,
-                            alpha_blend: BlendDescriptor::REPLACE,
+                            blend: Some(BlendState::REPLACE),
                             write_mask: ColorWrite::ALL,
                         }],
-                        // Depth test cannot be disabled.
-                        depth_stencil_state: Some(DepthStencilStateDescriptor {
-                            format: TextureFormat::Depth32Float,
-                            depth_write_enabled: true,
-                            depth_compare: wgpu::CompareFunction::Less,
-                            stencil: Default::default(),
-                        }),
-                        // the vertex attribute is only `u32`.
-                        vertex_state: VertexStateDescriptor {
-                            index_format: IndexFormat::Uint32,
-                            vertex_buffers: &[VertexBufferDescriptor {
-                                stride: std::mem::size_of::<u32>() as BufferAddress,
-                                step_mode: InputStepMode::Vertex,
-                                attributes: &[VertexAttributeDescriptor {
-                                    format: VertexFormat::Uint,
-                                    offset: 0,
-                                    shader_location: 0,
-                                }],
-                            }],
-                        },
-                        sample_count,
-                        sample_mask: !0,
-                        alpha_to_coverage_enabled: false,
-                        label: None,
                     }),
+                    label: None,
+ 
+                   }),
             )
         }
     }
@@ -255,7 +270,7 @@ fn main() {
     let (device, queue) = futures::executor::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
+                power_preference: PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
             })
             .await
@@ -266,7 +281,7 @@ fn main() {
                 &DeviceDescriptor {
                     features: Default::default(),
                     limits: Limits::default(),
-                    shader_validation: true,
+                    label: None,
                 },
                 None,
             )
@@ -275,7 +290,7 @@ fn main() {
     });
 
     let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
+        usage: TextureUsage::RENDER_ATTACHMENT,
         format: TextureFormat::Bgra8Unorm,
         width: size.width,
         height: size.height,

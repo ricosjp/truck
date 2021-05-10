@@ -25,7 +25,7 @@ fn exec_msaa_test(backend: BackendBit, out_dir: &str) {
     let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
+        usage: TextureUsage::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,

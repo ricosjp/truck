@@ -70,7 +70,7 @@ impl Camera {
     /// use std::f64::consts::PI;
     /// use truck_base::{cgmath64::*, tolerance::Tolerance};
     /// use truck_platform::*;
-    /// let matrix = Matrix4::look_at(
+    /// let matrix = Matrix4::look_at_rh(
     ///     Point3::new(1.0, 1.0, 1.0),
     ///     Point3::origin(),
     ///     Vector3::new(0.0, 1.0, 0.0),
@@ -111,7 +111,7 @@ impl Camera {
     /// ```
     /// use truck_base::{cgmath64::*, tolerance::Tolerance};
     /// use truck_platform::*;
-    /// let matrix = Matrix4::look_at(
+    /// let matrix = Matrix4::look_at_rh(
     ///     Point3::new(1.0, 1.0, 1.0),
     ///     Point3::origin(),
     ///     Vector3::new(0.0, 1.0, 0.0),
@@ -160,7 +160,7 @@ impl Camera {
     /// 
     /// let fov = PI / 4.0;
     /// let as_rat = 1.2;
-    /// let matrix = Matrix4::look_at(
+    /// let matrix = Matrix4::look_at_rh(
     ///     Point3::new(1.0, 1.0, 1.0),
     ///     Point3::origin(),
     ///     Vector3::new(0.0, 1.0, 0.0),
@@ -196,7 +196,7 @@ impl Camera {
     /// 
     /// let size = 3.0;
     /// let as_rat = 1.2;
-    /// let matrix = Matrix4::look_at(
+    /// let matrix = Matrix4::look_at_rh(
     ///     Point3::new(1.0, 1.0, 1.0),
     ///     Point3::origin(),
     ///     Vector3::new(0.0, 1.0, 0.0),

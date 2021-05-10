@@ -236,7 +236,7 @@ impl PolygonInstance {
     ///
     /// The GLSL original code is `src/shaders/polygon.vert`.
     #[inline(always)]
-    pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
+    pub fn default_vertex_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/polygon.vert.spv")
     }
 
@@ -244,7 +244,7 @@ impl PolygonInstance {
     ///
     /// The GLSL original code is `src/shaders/polygon.frag`.
     #[inline(always)]
-    pub fn default_fragment_shader() -> ShaderModuleSource<'static> {
+    pub fn default_fragment_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/polygon.frag.spv")
     }
 
@@ -252,15 +252,15 @@ impl PolygonInstance {
     ///
     /// The GLSL original code is `src/shaders/textured-polygon.frag`.
     #[inline(always)]
-    pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
+    pub fn default_textured_fragment_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/textured-polygon.frag.spv")
     }
     /// Returns the pipeline with developer's custom shader.
     #[inline(always)]
     pub fn pipeline_with_shader(
         &self,
-        vertex_shader: ShaderModuleSource,
-        fragment_shader: ShaderModuleSource,
+        vertex_shader: ShaderModuleDescriptor,
+        fragment_shader: ShaderModuleDescriptor,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
         sample_count: u32,

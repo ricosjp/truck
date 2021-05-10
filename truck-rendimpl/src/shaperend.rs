@@ -343,10 +343,12 @@ impl ShapeInstance {
     fn boundary_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::StorageBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage {
+                    read_only: true,
+                },
+                has_dynamic_offset: false,
                 min_binding_size: None,
-                readonly: true,
             },
             count: None,
         }
@@ -432,7 +434,7 @@ impl ShapeInstance {
     ///
     /// The GLSL original code is `src/shaders/face.frag`.
     #[inline(always)]
-    pub fn default_fragment_shader() -> ShaderModuleSource<'static> {
+    pub fn default_fragment_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/face.frag.spv")
     }
 
@@ -440,15 +442,15 @@ impl ShapeInstance {
     ///
     /// The GLSL original code is `src/shaders/textured-face.frag`.
     #[inline(always)]
-    pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
+    pub fn default_textured_fragment_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/textured-face.frag.spv")
     }
     /// Returns the pipeline with developer's custom shader.
     #[inline(always)]
     pub fn pipeline_with_shader(
         &self,
-        vertex_shader: ShaderModuleSource,
-        fragment_shader: ShaderModuleSource,
+        vertex_shader: ShaderModuleDescriptor,
+        fragment_shader: ShaderModuleDescriptor,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
         sample_count: u32,

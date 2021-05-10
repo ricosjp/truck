@@ -4,6 +4,7 @@ use glsl_to_spirv::ShaderType;
 use rayon::prelude::*;
 use std::io::{Read, Write};
 use std::sync::Arc;
+use std::convert::TryInto;
 use truck_platform::*;
 use wgpu::*;
 
@@ -29,7 +30,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
     futures::executor::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
+                power_preference: PowerPreference::HighPerformance,
                 compatible_surface: None,
             })
             .await
@@ -40,7 +41,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
                 &DeviceDescriptor {
                     features: Default::default(),
                     limits: Default::default(),
-                    shader_validation: true,
+                    label: None,
                 },
                 None,
             )
@@ -57,11 +58,16 @@ impl<'a> Rendered for Plane<'a> {
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         let vertex_buffer = BufferHandler::from_slice(
-            &[0 as u32, 1, 2, 2, 1, 3],
+            &[0 as u32, 1, 2, 3],
             handler.device(),
             BufferUsage::VERTEX,
         );
-        (Arc::new(vertex_buffer), None)
+        let index_buffer = BufferHandler::from_slice(
+            &[0 as u32, 1, 2, 2, 1, 3],
+            handler.device(),
+            BufferUsage::INDEX,
+        );
+        (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
         Arc::new(bind_group_util::create_bind_group_layout(
@@ -90,55 +96,48 @@ impl<'a> Rendered for Plane<'a> {
                 .device()
                 .create_render_pipeline(&RenderPipelineDescriptor {
                     layout: Some(layout),
-                    vertex_stage: ProgrammableStageDescriptor {
+                    vertex: VertexState {
                         module: &vertex_module,
                         entry_point: "main",
-                    },
-                    fragment_stage: Some(ProgrammableStageDescriptor {
-                        module: &fragment_module,
-                        entry_point: "main",
-                    }),
-                    rasterization_state: Some(RasterizationStateDescriptor {
-                        front_face: FrontFace::Ccw,
-                        cull_mode: CullMode::None,
-                        depth_bias: 0,
-                        depth_bias_slope_scale: 0.0,
-                        depth_bias_clamp: 0.0,
-                        clamp_depth: false,
-                    }),
-                    primitive_topology: PrimitiveTopology::TriangleList,
-                    color_states: &[ColorStateDescriptor {
-                        format: sc_desc.format,
-                        color_blend: BlendDescriptor::REPLACE,
-                        alpha_blend: BlendDescriptor::REPLACE,
-                        write_mask: ColorWrite::ALL,
-                    }],
-                    depth_stencil_state: Some(DepthStencilStateDescriptor {
-                        format: TextureFormat::Depth32Float,
-                        depth_write_enabled: true,
-                        depth_compare: wgpu::CompareFunction::Less,
-                        stencil: StencilStateDescriptor {
-                            front: StencilStateFaceDescriptor::IGNORE,
-                            back: StencilStateFaceDescriptor::IGNORE,
-                            read_mask: 0,
-                            write_mask: 0,
-                        },
-                    }),
-                    vertex_state: VertexStateDescriptor {
-                        index_format: IndexFormat::Uint32,
-                        vertex_buffers: &[VertexBufferDescriptor {
-                            stride: std::mem::size_of::<u32>() as BufferAddress,
+                        buffers: &[VertexBufferLayout {
+                            array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: InputStepMode::Vertex,
-                            attributes: &[VertexAttributeDescriptor {
-                                format: VertexFormat::Uint,
+                            attributes: &[VertexAttribute {
+                                format: VertexFormat::Uint32,
                                 offset: 0,
                                 shader_location: 0,
                             }],
                         }],
                     },
-                    sample_count,
-                    sample_mask: !0,
-                    alpha_to_coverage_enabled: false,
+                    primitive: PrimitiveState {
+                        topology: PrimitiveTopology::TriangleList,
+                        front_face: FrontFace::Ccw,
+                        cull_mode: Some(Face::Back),
+                        polygon_mode: PolygonMode::Fill,
+                        clamp_depth: false,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(DepthStencilState {
+                        format: TextureFormat::Depth32Float,
+                        depth_write_enabled: true,
+                        depth_compare: wgpu::CompareFunction::Less,
+                        stencil: Default::default(),
+                        bias: Default::default(),
+                    }),
+                    multisample: MultisampleState {
+                        count: sample_count,
+                        mask: !0,
+                        alpha_to_coverage_enabled: false,
+                    },
+                    fragment: Some(FragmentState {
+                        module: &fragment_module,
+                        entry_point: "main",
+                        targets: &[ColorTargetState {
+                            format: sc_desc.format,
+                            blend: Some(BlendState::REPLACE),
+                            write_mask: ColorWrite::ALL,
+                        }],
+                    }),
                     label: None,
                 }),
         )
@@ -155,7 +154,11 @@ pub fn read_shader(device: &Device, code: &str, shadertype: ShaderType) -> Shade
     let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();
     let mut compiled = Vec::new();
     spirv.read_to_end(&mut compiled).unwrap();
-    device.create_shader_module(wgpu::util::make_spirv(&compiled))
+    device.create_shader_module(&ShaderModuleDescriptor {
+        source: wgpu::util::make_spirv(&compiled),
+        flags: ShaderFlags::empty(),
+        label: None,
+    })
 }
 
 pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'static> {
@@ -164,31 +167,31 @@ pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'s
         size: Extent3d {
             width: sc_desc.width,
             height: sc_desc.height,
-            depth: 1,
+            depth_or_array_layers: 1,
         },
         mip_level_count: 1,
         sample_count: 1,
         dimension: TextureDimension::D2,
         format: sc_desc.format,
-        usage: TextureUsage::OUTPUT_ATTACHMENT | TextureUsage::COPY_SRC,
+        usage: TextureUsage::RENDER_ATTACHMENT | TextureUsage::COPY_SRC,
     }
 }
 
-pub fn texture_copy_view<'a>(texture: &'a Texture) -> TextureCopyView<'a> {
-    TextureCopyView {
+pub fn texture_copy_view<'a>(texture: &'a Texture) -> ImageCopyTexture<'a> {
+    ImageCopyTexture {
         texture: &texture,
         mip_level: 0,
         origin: Origin3d::ZERO,
     }
 }
 
-pub fn buffer_copy_view<'a>(buffer: &'a Buffer, size: (u32, u32)) -> BufferCopyView<'a> {
-    BufferCopyView {
+pub fn buffer_copy_view<'a>(buffer: &'a Buffer, size: (u32, u32)) -> ImageCopyBuffer<'a> {
+    ImageCopyBuffer {
         buffer: &buffer,
-        layout: TextureDataLayout {
+        layout: ImageDataLayout {
             offset: 0,
-            bytes_per_row: size.0 * 4,
-            rows_per_image: size.1,
+            bytes_per_row: (size.0 * 4).try_into().ok(),
+            rows_per_image: size.1.try_into().ok(),
         },
     }
 }
@@ -221,7 +224,7 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
         Extent3d {
             width: sc_desc.width,
             height: sc_desc.height,
-            depth: 1,
+            depth_or_array_layers: 1,
         },
     );
     queue.submit(Some(encoder.finish()));
