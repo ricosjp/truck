@@ -156,7 +156,7 @@ pub fn read_shader(device: &Device, code: &str, shadertype: ShaderType) -> Shade
     spirv.read_to_end(&mut compiled).unwrap();
     device.create_shader_module(&ShaderModuleDescriptor {
         source: wgpu::util::make_spirv(&compiled),
-        flags: ShaderFlags::empty(),
+        flags: ShaderFlags::VALIDATION,
         label: None,
     })
 }

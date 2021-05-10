@@ -259,8 +259,8 @@ impl PolygonInstance {
     #[inline(always)]
     pub fn pipeline_with_shader(
         &self,
-        vertex_shader: ShaderModuleDescriptor,
-        fragment_shader: ShaderModuleDescriptor,
+        vertex_shader: &ShaderModuleDescriptor,
+        fragment_shader: &ShaderModuleDescriptor,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
         sample_count: u32,
@@ -289,16 +289,38 @@ impl PolygonInstance {
         let device = device_handler.device();
         let sc_desc = device_handler.sc_desc();
         let cull_mode = match self.state.backface_culling {
-            true => CullMode::Back,
-            false => CullMode::None,
+            true => Some(wgpu::Face::Back),
+            false => None,
         };
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
-            vertex_stage: ProgrammableStageDescriptor {
+            vertex: VertexState {
                 module: vertex_module,
                 entry_point: "main",
+                buffers: &[VertexBufferLayout {
+                    array_stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                    step_mode: InputStepMode::Vertex,
+                    attributes: &[
+                        VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Float32x2,
+                            offset: 3 * 4,
+                            shader_location: 1,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: 2 * 4 + 3 * 4,
+                            shader_location: 2,
+                        },
+                    ],
+                }],
+
             },
-            fragment_stage: Some(ProgrammableStageDescriptor {
+            fragment: Some(FragmentState {
                 module: fragment_module,
                 entry_point: "main",
             }),
@@ -325,28 +347,7 @@ impl PolygonInstance {
             }),
             vertex_state: VertexStateDescriptor {
                 index_format: IndexFormat::Uint32,
-                vertex_buffers: &[VertexBufferDescriptor {
-                    stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
-                    step_mode: InputStepMode::Vertex,
-                    attributes: &[
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float3,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float2,
-                            offset: 3 * 4,
-                            shader_location: 1,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float3,
-                            offset: 2 * 4 + 3 * 4,
-                            shader_location: 2,
-                        },
-                    ],
-                }],
-            },
+                            },
             sample_count,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,

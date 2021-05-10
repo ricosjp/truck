@@ -4,10 +4,10 @@ impl PolygonShaders {
     #[inline(always)]
     fn new(device: &Device) -> Self {
         Self {
-            vertex: device.create_shader_module(PolygonInstance::default_vertex_shader()),
-            fragment: device.create_shader_module(PolygonInstance::default_fragment_shader()),
+            vertex: device.create_shader_module(&PolygonInstance::default_vertex_shader()),
+            fragment: device.create_shader_module(&PolygonInstance::default_fragment_shader()),
             tex_fragment: device
-                .create_shader_module(PolygonInstance::default_textured_fragment_shader()),
+                .create_shader_module(&PolygonInstance::default_textured_fragment_shader()),
         }
     }
 }
@@ -16,10 +16,10 @@ impl ShapeShaders {
     #[inline(always)]
     fn new(device: &Device) -> Self {
         Self {
-            vertex: device.create_shader_module(ShapeInstance::default_vertex_shader()),
-            fragment: device.create_shader_module(ShapeInstance::default_fragment_shader()),
+            vertex: device.create_shader_module(&ShapeInstance::default_vertex_shader()),
+            fragment: device.create_shader_module(&ShapeInstance::default_fragment_shader()),
             tex_fragment: device
-                .create_shader_module(ShapeInstance::default_textured_fragment_shader()),
+                .create_shader_module(&ShapeInstance::default_textured_fragment_shader()),
         }
     }
 }

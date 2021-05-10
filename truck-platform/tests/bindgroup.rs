@@ -30,30 +30,6 @@ const UNIFORM_LIGHT: Light = Light {
     light_type: LightType::Uniform,
 };
 
-fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
-    futures::executor::block_on(async {
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
-                compatible_surface: None,
-            })
-            .await
-            .unwrap();
-        let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Default::default(),
-                    label: None,
-                },
-                None,
-            )
-            .await
-            .unwrap();
-        (Arc::new(device), Arc::new(queue))
-    })
-}
-
 fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
     image::save_buffer(
         path,

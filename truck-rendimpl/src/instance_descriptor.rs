@@ -44,8 +44,9 @@ impl Material {
     pub fn bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -86,8 +87,9 @@ impl InstanceState {
     pub fn matrix_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -121,24 +123,16 @@ impl InstanceState {
     /// layout(set = 1, binding = 2) uniform texture2D texture_view;
     /// layout(set = 1, binding = 3) uniform sampler texture_sampler;
     /// ```
-    pub fn textureview_and_sampler(
-        &self,
-        device: &Device,
-    ) -> (TextureView, Sampler) {
+    pub fn textureview_and_sampler(&self, device: &Device) -> (TextureView, Sampler) {
         let texture = self.texture.as_ref().unwrap();
         let view = texture.create_view(&Default::default());
         let sampler = device.create_sampler(&SamplerDescriptor {
-            address_mode_u: AddressMode::ClampToEdge,
-            address_mode_v: AddressMode::ClampToEdge,
-            address_mode_w: AddressMode::ClampToEdge,
             mag_filter: FilterMode::Linear,
             min_filter: FilterMode::Nearest,
             mipmap_filter: FilterMode::Nearest,
             lod_min_clamp: -100.0,
             lod_max_clamp: 100.0,
-            compare: None,
-            anisotropy_clamp: None,
-            label: None,
+            ..Default::default()
         });
         (view, sampler)
     }
@@ -148,9 +142,9 @@ impl InstanceState {
     pub fn textureview_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::SampledTexture {
-                dimension: TextureViewDimension::D2,
-                component_type: TextureComponentType::Uint,
+            ty: BindingType::Texture {
+                view_dimension: TextureViewDimension::D2,
+                sample_type: TextureSampleType::Uint,
                 multisampled: false,
             },
             count: None,
@@ -162,7 +156,10 @@ impl InstanceState {
     pub fn sampler_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::Sampler { comparison: false },
+            ty: BindingType::Sampler {
+                filtering: false,
+                comparison: false,
+            },
             count: None,
         }
     }

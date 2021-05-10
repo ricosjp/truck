@@ -82,7 +82,7 @@ mod plane {
             .map_err(|error| format!("{:?}", error))?;
         Ok(device.create_shader_module(&ShaderModuleDescriptor{
             source: wgpu::util::make_spirv(&compiled),
-            flags: ShaderFlags::empty(),
+            flags: ShaderFlags::VALIDATION,
             label: None,
         }))
     }

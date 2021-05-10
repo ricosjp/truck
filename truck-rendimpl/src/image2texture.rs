@@ -1,5 +1,6 @@
 use super::*;
 use image::*;
+use std::convert::TryInto;
 
 /// Utility for creating `Texture` from `DynamicImage`
 #[inline(always)]
@@ -22,7 +23,7 @@ where
     let size = Extent3d {
         width: image_buffer.width(),
         height: image_buffer.height(),
-        depth: 1,
+        depth_or_array_layers: 1,
     };
     let texture = device.create_texture(&TextureDescriptor {
         label: None,
@@ -34,16 +35,16 @@ where
         usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
     });
     queue.write_texture(
-        TextureCopyView {
+        ImageCopyTexture {
             texture: &texture,
             mip_level: 0,
             origin: Origin3d::ZERO,
         },
         bytemuck::cast_slice(&image_buffer),
-        TextureDataLayout {
+        ImageDataLayout {
             offset: 0,
-            bytes_per_row: size.width * std::mem::size_of::<P>() as u32,
-            rows_per_image: size.height,
+            bytes_per_row: (size.width * std::mem::size_of::<P>() as u32).try_into().ok(),
+            rows_per_image: size.height.try_into().ok(),
         },
         size,
     );
