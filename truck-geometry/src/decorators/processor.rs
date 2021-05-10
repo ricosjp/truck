@@ -77,7 +77,7 @@ where
 impl<S, T> ParametricSurface for Processor<S, T>
 where
     S: ParametricSurface<Point = Point3, Vector = Vector3>,
-    T: Transform<S::Point> + Clone,
+    T: Transform<S::Point> + SquareMatrix<Scalar = f64> + Clone,
 {
     type Point = Point3;
     type Vector = Vector3;
@@ -125,25 +125,20 @@ where
     }
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
+        let transtrans = self.transform.transpose();
         let n = match self.orientation {
             true => self.entity.normal(u, v),
-            false => self.entity.normal(v, u),
+            false => -self.entity.normal(v, u)
         };
-        let (a, b) = get_axis(n);
-        let a = self.transform.transform_vector(a);
-        let b = self.transform.transform_vector(b);
-        let normal = a.cross(b).normalize();
-        match self.orientation {
-            true => normal,
-            false => -normal,
-        }
+        let n = transtrans.inverse_transform_vector(n).expect("invalid transform");
+        (n / self.transform.determinant()).normalize()
     }
 }
 
 impl<S, T> BoundedSurface for Processor<S, T>
 where
     S: BoundedSurface<Point = Point3, Vector = Vector3>,
-    T: Transform<S::Point> + Clone,
+    T: Transform<S::Point> + SquareMatrix<Scalar = f64> + Clone,
 {
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
 }
@@ -235,41 +230,11 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
     }
 }
 
-fn get_axis(n: Vector3) -> (Vector3, Vector3) {
-    let min = if n[0].abs() < n[1].abs() { 0 } else { 1 };
-    let min = if n[min].abs() < n[2].abs() { min } else { 2 };
-    let mut a = Vector3::zero();
-    a[(min + 1) % 3] = -n[(min + 2) % 3];
-    a[(min + 2) % 3] = n[(min + 1) % 3];
-    let a = a.normalize();
-    (a, n.cross(a))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn exec_get_axis_test() {
-        let n = Vector3::new(
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-        );
-        if n.so_small() {
-            println!("ommited: {:?}", n);
-            return;
-        }
-        let n = n.normalize();
-        let (a, b) = get_axis(n);
-        assert_near2!(a.magnitude2(), 1.0);
-        assert_near2!(b.magnitude2(), 1.0);
-        assert_near!(a.cross(b), n)
-    }
-
-    #[test]
-    fn get_axis_test() { (0..100).for_each(|_| exec_get_axis_test()) }
-
-    fn exec_compatible_with_bspcurve() {
+   fn exec_compatible_with_bspcurve() {
         const DEGREE: usize = 3;
         const DIVISION: usize = 4;
         let knot_vec = KnotVec::uniform_knot(DEGREE, DIVISION);

@@ -54,18 +54,18 @@ fn polysurface_presearch() {
 
 fn exec_polysurface_snp_on_surface() -> bool {
     let coef0 = vec![
-        Vector3::new(0.0, 1.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(1.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(0.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
+        Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(1.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
     ];
     let coef1 = vec![
-        Vector3::new(1.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(0.0, 1.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(0.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
+        Vector3::new(1.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
     ];
     let poly = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
-    let u = 20.0 * rand::random::<f64>() - 10.0;
-    let v = 20.0 * rand::random::<f64>() - 10.0;
+    let u = 10.0 * rand::random::<f64>() - 5.0;
+    let v = 10.0 * rand::random::<f64>() - 5.0;
     let pt = poly.subs(u, v);
     let u0 = u + 0.2 * rand::random::<f64>() - 0.1;
     let v0 = v + 0.2 * rand::random::<f64>() - 0.1;
@@ -105,20 +105,20 @@ fn polysurface_snp_on_surface() {
 
 fn exec_polysurface_sp_on_surface() -> bool {
     let coef0 = vec![
-        Vector3::new(0.0, 1.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(1.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(0.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(0.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
+        Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(1.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
     ];
     let coef1 = vec![
-        Vector3::new(1.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(0.0, 1.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(0.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
-        Vector3::new(0.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
+        Vector3::new(1.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
     ];
     let poly = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
-    let u = 20.0 * rand::random::<f64>() - 10.0;
-    let v = 20.0 * rand::random::<f64>() - 10.0;
+    let u = 10.0 * rand::random::<f64>() - 5.0;
+    let v = 10.0 * rand::random::<f64>() - 5.0;
     let pt = poly.subs(u, v);
     let u0 = u + 2.0 * rand::random::<f64>() - 1.0;
     let v0 = v + 2.0 * rand::random::<f64>() - 1.0;
