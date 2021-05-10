@@ -518,6 +518,7 @@ impl Scene {
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
+            println!("rpass start");
             let (attachment, resolve_target) = match self.scene_desc.sample_count != 1 {
                 true => (&sampled_view, Some(view)),
                 false => (view, None),
@@ -537,7 +538,6 @@ impl Scene {
                 ..Default::default()
             });
             rpass.set_bind_group(0, &bind_group, &[]);
-            println!("Let's draw");
             for (_, object) in self.objects.iter() {
                 rpass.set_pipeline(&object.pipeline);
                 rpass.set_bind_group(1, &object.bind_group, &[]);
@@ -552,8 +552,10 @@ impl Scene {
                     None => rpass.draw(0..(object.vertex_buffer.size / object.vertex_buffer.stride) as u32, 0..1),
                 }
             }
-            println!("drawn");
+            println!("rpass end");
         }
+        println!("rpass deleted");
         self.queue().submit(vec![encoder.finish()]);
+        println!("encoder finished");
     }
 }
