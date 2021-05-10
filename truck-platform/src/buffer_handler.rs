@@ -7,8 +7,7 @@ impl BufferHandler {
         vec: &A,
         device: &Device,
         usage: BufferUsage,
-    ) -> Self
-    {
+    ) -> Self {
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             contents: bytemuck::cast_slice(vec.as_ref()),
             usage,
@@ -16,9 +15,12 @@ impl BufferHandler {
         });
         let stride = std::mem::size_of::<T>() as u64;
         let size = vec.as_ref().len() as u64 * stride;
-        BufferHandler { buffer, size, stride }
+        BufferHandler {
+            buffer,
+            size,
+            stride,
+        }
     }
-    
     /// Returns the reference of the buffer.
     #[inline(always)]
     pub fn buffer(&self) -> &Buffer { &self.buffer }
@@ -30,7 +32,11 @@ impl BufferHandler {
     /// Creates a binding resource from buffer slice.
     #[inline(always)]
     pub fn binding_resource<'a>(&'a self) -> BindingResource<'a> {
-        BindingResource::Buffer(self.buffer.slice(..))
+        BindingResource::Buffer(BufferBinding {
+            buffer: &self.buffer,
+            offset: 0,
+            size: None,
+        })
     }
 
     /// Copy the values of buffer to `dest`.
