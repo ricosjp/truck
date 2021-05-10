@@ -72,10 +72,13 @@ fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
     };
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler.clone(), &desc);
+    println!("first plane");
     let plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
     common::render_one(&mut scene, &texture0, &plane);
+    println!("second plane");
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
     common::render_one(&mut scene, &texture1, &plane);
+    println!("third plane");
     let plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
     common::render_one(&mut scene, &texture2, &plane);
     let buffer0 = common::read_texture(&handler, &texture0);

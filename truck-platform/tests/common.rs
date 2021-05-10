@@ -86,7 +86,7 @@ impl<'a> Rendered for Plane<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        writeln!(&mut std::io::stderr(), "create bind pipeline").unwrap();
+        writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
         let vertex_module = read_shader(device, self.vertex_shader, ShaderType::Vertex);
         let fragment_module = read_shader(device, self.fragment_shader, ShaderType::Fragment);
@@ -144,8 +144,11 @@ impl<'a> Rendered for Plane<'a> {
 }
 
 pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &R) {
+    println!("add plane");
     scene.add_object(object);
+    println!("render plane");
     scene.render_scene(&texture.create_view(&Default::default()));
+    println!("remove plane");
     scene.remove_object(object);
 }
 
