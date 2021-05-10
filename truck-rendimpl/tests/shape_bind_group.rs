@@ -119,6 +119,7 @@ fn exec_shape_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
     assert!(exec_shape_bgtest(
         &mut scene, &instance, shader, &answer, &pngpath,
     ));
+    println!("seijou ok");
     let shader = include_str!("shaders/anti-shape-nontex-bindgroup.frag");
     let pngpath = out_dir + "anti-shape-nontex-bindgroup.png";
     assert!(!exec_shape_bgtest(

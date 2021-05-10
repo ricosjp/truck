@@ -32,20 +32,19 @@ float fract_distance(float x, float y) {
     return min(a, min(b, c));
 }
 
-vec3 current_normal() {
-    if (distance(uv, vec2(position.x, (1.0 + position.y) / 2.0)) > 0.5) {
-        return vec3(0.0, 0.0, 1.0);
-    } else {
-        return vec3(-1.0, 0.0, 1.0) / sqrt(2.0);
-    }
-}
-
 void main() {
+    vec3 current_normal;
+    if (distance(uv, vec2(position.x, (1.0 + position.y) / 2.0)) > 0.5) {
+        current_normal = vec3(0.0, 0.0, 1.0);
+    } else {
+        current_normal = vec3(-1.0, 0.0, 1.0) / sqrt(2.0);
+    }
+
     if (fract_distance(fract(position.x), uv.x) > EPS) {
         color = vec4(1.0, 0.0, 0.0, 1.0);
     } else if (abs((1.0 + position.y) / 2.0 - uv.y) > EPS) {
         color = vec4(1.0, 0.0, 0.0, 1.0);
-    } else if (distance(normal, current_normal()) > EPS) {
+    } else if (distance(normal, current_normal) > EPS) {
         color = vec4(0.0, 1.0, 0.0, 1.0);
     } else if (input_matrix != uniform_matrix) {
         color = vec4(0.0, 0.0, 1.0, 1.0);
