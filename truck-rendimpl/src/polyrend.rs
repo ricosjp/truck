@@ -236,7 +236,12 @@ impl PolygonInstance {
     /// The GLSL original code is `src/shaders/polygon.vert`.
     #[inline(always)]
     pub fn default_vertex_shader() -> ShaderModuleDescriptor<'static> {
-        include_spirv!("shaders/polygon.vert.spv")
+        //include_spirv!("shaders/polygon.vert.spv")
+        ShaderModuleDescriptor {
+            label: Some("shaders/polygon.vert.spv"),
+            source: wgpu::util::make_spirv(include_bytes!("shaders/polygon.vert.spv")),
+            flags: ShaderFlags::VALIDATION,
+        }
     }
 
     /// Returns the default fragment shader module source for non-textured polygons.
@@ -244,7 +249,12 @@ impl PolygonInstance {
     /// The GLSL original code is `src/shaders/polygon.frag`.
     #[inline(always)]
     pub fn default_fragment_shader() -> ShaderModuleDescriptor<'static> {
-        include_spirv!("shaders/polygon.frag.spv")
+        //include_spirv!("shaders/polygon.frag.spv")
+        ShaderModuleDescriptor {
+            label: Some("shaders/polygon.frag.spv"),
+            source: wgpu::util::make_spirv(include_bytes!("shaders/polygon.frag.spv")),
+            flags: ShaderFlags::empty(),
+        }
     }
 
     /// Returns the default fragment shader module source for textured polygons.
@@ -252,7 +262,12 @@ impl PolygonInstance {
     /// The GLSL original code is `src/shaders/textured-polygon.frag`.
     #[inline(always)]
     pub fn default_textured_fragment_shader() -> ShaderModuleDescriptor<'static> {
-        include_spirv!("shaders/textured-polygon.frag.spv")
+        //include_spirv!("shaders/textured-polygon.frag.spv")
+        ShaderModuleDescriptor {
+            label: Some("shaders/textured-polygon.frag.spv"),
+            source: wgpu::util::make_spirv(include_bytes!("shaders/textured-polygon.frag.spv")),
+            flags: ShaderFlags::empty(),
+        }
     }
     /// Returns the pipeline with developer's custom shader.
     #[inline(always)]

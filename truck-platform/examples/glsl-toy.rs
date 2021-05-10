@@ -99,16 +99,11 @@ mod plane {
             handler: &DeviceHandler,
         ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
             let vertex_buffer = BufferHandler::from_slice(
-                &[0 as u32, 1, 2, 3],
+                &[0 as u32, 1, 2, 2, 1, 3],
                 handler.device(),
                 BufferUsage::VERTEX,
             );
-            let index_buffer = BufferHandler::from_slice(
-                &[0 as u32, 1, 2, 2, 1, 3],
-                handler.device(),
-                BufferUsage::INDEX,
-            );
-            (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
+            (Arc::new(vertex_buffer), None)
         }
 
         // bind group is only one uniform buffer: resolution

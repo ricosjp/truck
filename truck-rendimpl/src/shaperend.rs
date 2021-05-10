@@ -435,7 +435,12 @@ impl ShapeInstance {
     /// The GLSL original code is `src/shaders/face.frag`.
     #[inline(always)]
     pub fn default_fragment_shader() -> ShaderModuleDescriptor<'static> {
-        include_spirv!("shaders/face.frag.spv")
+        //include_spirv!("shaders/face.frag.spv")
+        ShaderModuleDescriptor {
+            label: Some("shaders/face.frag.spv"),
+            source: wgpu::util::make_spirv(include_bytes!("shaders/face.frag.spv")),
+            flags: ShaderFlags::empty(),
+        }
     }
 
     /// Returns the default fragment shader module source for textured polygons.
@@ -443,7 +448,12 @@ impl ShapeInstance {
     /// The GLSL original code is `src/shaders/textured-face.frag`.
     #[inline(always)]
     pub fn default_textured_fragment_shader() -> ShaderModuleDescriptor<'static> {
-        include_spirv!("shaders/textured-face.frag.spv")
+        //include_spirv!("shaders/textured-face.frag.spv")
+        ShaderModuleDescriptor {
+            label: Some("shaders/textured-face.frag.spv"),
+            source: wgpu::util::make_spirv(include_bytes!("shaders/textured-face.frag.spv")),
+            flags: ShaderFlags::empty(),
+        }
     }
     /// Returns the pipeline with developer's custom shader.
     #[inline(always)]

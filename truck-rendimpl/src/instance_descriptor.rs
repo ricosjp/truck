@@ -144,7 +144,7 @@ impl InstanceState {
             visibility: ShaderStage::FRAGMENT,
             ty: BindingType::Texture {
                 view_dimension: TextureViewDimension::D2,
-                sample_type: TextureSampleType::Uint,
+                sample_type: TextureSampleType::Float { filterable: true },
                 multisampled: false,
             },
             count: None,
@@ -157,7 +157,7 @@ impl InstanceState {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
             ty: BindingType::Sampler {
-                filtering: false,
+                filtering: true,
                 comparison: false,
             },
             count: None,
