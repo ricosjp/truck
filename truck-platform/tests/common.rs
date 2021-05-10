@@ -57,6 +57,7 @@ impl<'a> Rendered for Plane<'a> {
         &self,
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
+        writeln!(&mut std::io::stderr(), "create vertex buffer").unwrap();
         let vertex_buffer = BufferHandler::from_slice(
             &[0 as u32, 1, 2, 2, 1, 3],
             handler.device(),
@@ -65,12 +66,14 @@ impl<'a> Rendered for Plane<'a> {
         (Arc::new(vertex_buffer), None)
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
+        writeln!(&mut std::io::stderr(), "create bind group layout").unwrap();
         Arc::new(bind_group_util::create_bind_group_layout(
             handler.device(),
             &[],
         ))
     }
     fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
+        writeln!(&mut std::io::stderr(), "create bind group").unwrap();
         Arc::new(handler.device().create_bind_group(&BindGroupDescriptor {
             label: None,
             layout,
@@ -83,6 +86,7 @@ impl<'a> Rendered for Plane<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
+        writeln!(&mut std::io::stderr(), "create bind pipeline").unwrap();
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
         let vertex_module = read_shader(device, self.vertex_shader, ShaderType::Vertex);
         let fragment_module = read_shader(device, self.fragment_shader, ShaderType::Fragment);
