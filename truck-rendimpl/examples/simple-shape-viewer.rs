@@ -94,7 +94,7 @@ impl MyApp {
     ) -> (ShapeInstance, WireFrameInstance) {
         let solid = Solid::extract(serde_json::from_reader(reader).unwrap()).unwrap();
         let mut bdd_box = BoundingBox::new();
-        solid.boundaries().iter().flatten().flat_map(Face::boundaries).flatten().for_each(|edge| {
+        solid.boundaries().iter().flatten().flat_map(modeling::Face::boundaries).flatten().for_each(|edge| {
             let curve = edge.oriented_curve();
             bdd_box += match curve {
                 Curve::BSplineCurve(curve) => {

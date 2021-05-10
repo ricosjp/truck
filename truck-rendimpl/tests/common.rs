@@ -2,6 +2,7 @@
 
 use glsl_to_spirv::ShaderType;
 use rayon::prelude::*;
+use std::convert::TryInto;
 use std::io::{Read, Write};
 use std::sync::Arc;
 use truck_platform::*;
@@ -87,7 +88,7 @@ impl<'a> Rendered for Plane<'a> {
                             array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: InputStepMode::Vertex,
                             attributes: &[VertexAttribute {
-                                format: VertexFormat::Uint,
+                                format: VertexFormat::Uint32,
                                 offset: 0,
                                 shader_location: 0,
                             }],
@@ -96,7 +97,7 @@ impl<'a> Rendered for Plane<'a> {
                     primitive: PrimitiveState {
                         topology: PrimitiveTopology::TriangleList,
                         front_face: FrontFace::Ccw,
-                        cull_mode: CullMode::None,
+                        cull_mode: None,
                         polygon_mode: PolygonMode::Fill,
                         ..Default::default()
                     },
@@ -106,7 +107,6 @@ impl<'a> Rendered for Plane<'a> {
                         depth_compare: wgpu::CompareFunction::Less,
                         stencil: Default::default(),
                         bias: Default::default(),
-                        clamp_depth: false,
                     }),
                     multisample: MultisampleState {
                         count: sample_count,
@@ -118,8 +118,7 @@ impl<'a> Rendered for Plane<'a> {
                         entry_point: "main",
                         targets: &[ColorTargetState {
                             format: sc_desc.format,
-                            color_blend: BlendState::REPLACE,
-                            alpha_blend: BlendState::REPLACE,
+                            blend: Some(BlendState::REPLACE),
                             write_mask: ColorWrite::ALL,
                         }],
                     }),
@@ -220,7 +219,7 @@ pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'s
         size: Extent3d {
             width: sc_desc.width,
             height: sc_desc.height,
-            depth: 1,
+            depth_or_array_layers: 1,
         },
         mip_level_count: 1,
         sample_count: 1,
@@ -230,21 +229,21 @@ pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'s
     }
 }
 
-pub fn texture_copy_view<'a>(texture: &'a Texture) -> TextureCopyView<'a> {
-    TextureCopyView {
+pub fn texture_copy_view<'a>(texture: &'a Texture) -> ImageCopyTexture<'a> {
+    ImageCopyTexture {
         texture: &texture,
         mip_level: 0,
         origin: Origin3d::ZERO,
     }
 }
 
-pub fn buffer_copy_view<'a>(buffer: &'a Buffer, size: (u32, u32)) -> BufferCopyView<'a> {
-    BufferCopyView {
+pub fn buffer_copy_view<'a>(buffer: &'a Buffer, size: (u32, u32)) -> ImageCopyBuffer<'a> {
+    ImageCopyBuffer {
         buffer: &buffer,
-        layout: TextureDataLayout {
+        layout: ImageDataLayout {
             offset: 0,
-            bytes_per_row: size.0 * 4,
-            rows_per_image: size.1,
+            bytes_per_row: (size.0 * 4).try_into().ok(),
+            rows_per_image: size.1.try_into().ok(),
         },
     }
 }
@@ -277,7 +276,7 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
         Extent3d {
             width: sc_desc.width,
             height: sc_desc.height,
-            depth: 1,
+            depth_or_array_layers: 1,
         },
     );
     queue.submit(Some(encoder.finish()));

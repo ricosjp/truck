@@ -38,9 +38,9 @@ impl<'a> Rendered for BGCheckShapeInstance<'a> {
             flags: ShaderFlags::VALIDATION,
             label: None,
         };
-        self.face.pipeline_with_shader(
-            vertex_module,
-            fragment_module,
+        self.shape.pipeline_with_shader(
+            &vertex_module,
+            &fragment_module,
             device_handler,
             layout,
             sample_count,

@@ -28,8 +28,8 @@ impl WireShaders {
     #[inline(always)]
     fn new(device: &Device) -> Self {
         Self {
-            vertex: device.create_shader_module(include_spirv!("shaders/line.vert.spv")),
-            fragment: device.create_shader_module(include_spirv!("shaders/line.frag.spv")),
+            vertex: device.create_shader_module(&include_spirv!("shaders/line.vert.spv")),
+            fragment: device.create_shader_module(&include_spirv!("shaders/line.frag.spv")),
         }
     }
 }

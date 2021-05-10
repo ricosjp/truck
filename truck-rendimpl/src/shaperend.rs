@@ -62,7 +62,7 @@ fn meshing_surface(surface: &Surface, precision: f64, boundary: &Vec<[f32; 4]>) 
 }
 
 fn add_face(
-    face: &Face,
+    face: &modeling::Face,
     mesh_precision: f64,
     expolygon: &mut ExpandedPolygon<AttrVertex>,
     boundaries: &mut Vec<[f32; 4]>,
@@ -426,7 +426,7 @@ impl ShapeInstance {
     ///
     /// The GLSL original code is `src/shaders/polygon.vert`.
     #[inline(always)]
-    pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
+    pub fn default_vertex_shader() -> ShaderModuleDescriptor<'static> {
         include_spirv!("shaders/face.vert.spv")
     }
 
@@ -449,8 +449,8 @@ impl ShapeInstance {
     #[inline(always)]
     pub fn pipeline_with_shader(
         &self,
-        vertex_shader: ShaderModuleDescriptor,
-        fragment_shader: ShaderModuleDescriptor,
+        vertex_shader: &ShaderModuleDescriptor,
+        fragment_shader: &ShaderModuleDescriptor,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
         sample_count: u32,
@@ -479,72 +479,70 @@ impl ShapeInstance {
         let device = device_handler.device();
         let sc_desc = device_handler.sc_desc();
         let cull_mode = match self.state.backface_culling {
-            true => CullMode::Back,
-            false => CullMode::None,
+            true => Some(wgpu::Face::Back),
+            false => None,
         };
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
-            vertex_stage: ProgrammableStageDescriptor {
+            vertex: VertexState {
                 module: &vertex_module,
                 entry_point: "main",
-            },
-            fragment_stage: Some(ProgrammableStageDescriptor {
-                module: &fragment_module,
-                entry_point: "main",
-            }),
-            rasterization_state: Some(RasterizationStateDescriptor {
-                front_face: FrontFace::Ccw,
-                cull_mode,
-                depth_bias: 0,
-                depth_bias_slope_scale: 0.0,
-                depth_bias_clamp: 0.0,
-                clamp_depth: false,
-            }),
-            primitive_topology: PrimitiveTopology::TriangleList,
-            color_states: &[ColorStateDescriptor {
-                format: sc_desc.format,
-                color_blend: BlendDescriptor::REPLACE,
-                alpha_blend: BlendDescriptor::REPLACE,
-                write_mask: ColorWrite::ALL,
-            }],
-            depth_stencil_state: Some(DepthStencilStateDescriptor {
-                format: TextureFormat::Depth32Float,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::Less,
-                stencil: StencilStateDescriptor::default(),
-            }),
-            vertex_state: VertexStateDescriptor {
-                index_format: IndexFormat::Uint32,
-                vertex_buffers: &[VertexBufferDescriptor {
-                    stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                buffers: &[VertexBufferLayout {
+                    array_stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
                     attributes: &[
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float3,
+                        VertexAttribute {
+                            format: VertexFormat::Float32x3,
                             offset: 0,
                             shader_location: 0,
                         },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float2,
+                        VertexAttribute {
+                            format: VertexFormat::Float32x2,
                             offset: 3 * 4,
                             shader_location: 1,
                         },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float3,
+                        VertexAttribute {
+                            format: VertexFormat::Float32x3,
                             offset: 2 * 4 + 3 * 4,
                             shader_location: 2,
                         },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Uint2,
+                        VertexAttribute {
+                            format: VertexFormat::Uint32x2,
                             offset: 3 * 4 + 2 * 4 + 3 * 4,
                             shader_location: 3,
                         },
                     ],
                 }],
             },
-            sample_count,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
+            fragment: Some(FragmentState {
+                module: fragment_module,
+                entry_point: "main",
+                targets: &[ColorTargetState {
+                    format: sc_desc.format,
+                    blend: Some(BlendState::REPLACE),
+                    write_mask: ColorWrite::ALL,
+                }],
+            }),
+            primitive: PrimitiveState {
+                topology: PrimitiveTopology::TriangleList,
+                front_face: FrontFace::Ccw,
+                cull_mode,
+                polygon_mode: PolygonMode::Fill,
+                clamp_depth: false,
+                ..Default::default()
+            },
+            depth_stencil: Some(DepthStencilState {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: Default::default(),
+                bias: Default::default(),
+            }),
+            multisample: MultisampleState {
+                count: sample_count,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            }, 
             label: None,
         });
         Arc::new(pipeline)

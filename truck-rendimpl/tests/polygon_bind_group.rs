@@ -39,8 +39,8 @@ impl<'a> Rendered for BGCheckPolygonInstance<'a> {
             label: None,
         };
         self.polygon.pipeline_with_shader(
-            vertex_module,
-            fragment_module,
+            &vertex_module,
+            &fragment_module,
             device_handler,
             layout,
             sample_count,

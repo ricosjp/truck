@@ -75,7 +75,6 @@ impl IntoInstance<WireFrameInstance> for PolygonMesh {
             id: RenderID::gen(),
         }
     }
-
 }
 
 impl CreateBuffers for StructuredMesh {
@@ -318,39 +317,36 @@ impl PolygonInstance {
                         },
                     ],
                 }],
-
             },
             fragment: Some(FragmentState {
                 module: fragment_module,
                 entry_point: "main",
+                targets: &[ColorTargetState {
+                    format: sc_desc.format,
+                    blend: Some(BlendState::REPLACE),
+                    write_mask: ColorWrite::ALL,
+                }],
             }),
-            rasterization_state: Some(RasterizationStateDescriptor {
+            primitive: PrimitiveState {
+                topology: PrimitiveTopology::TriangleList,
                 front_face: FrontFace::Ccw,
                 cull_mode,
-                depth_bias: 0,
-                depth_bias_slope_scale: 0.0,
-                depth_bias_clamp: 0.0,
+                polygon_mode: PolygonMode::Fill,
                 clamp_depth: false,
-            }),
-            primitive_topology: PrimitiveTopology::TriangleList,
-            color_states: &[ColorStateDescriptor {
-                format: sc_desc.format,
-                color_blend: BlendDescriptor::REPLACE,
-                alpha_blend: BlendDescriptor::REPLACE,
-                write_mask: ColorWrite::ALL,
-            }],
-            depth_stencil_state: Some(DepthStencilStateDescriptor {
+                ..Default::default()
+            },
+            depth_stencil: Some(DepthStencilState {
                 format: TextureFormat::Depth32Float,
                 depth_write_enabled: true,
                 depth_compare: wgpu::CompareFunction::Less,
-                stencil: StencilStateDescriptor::default(),
+                stencil: Default::default(),
+                bias: Default::default(),
             }),
-            vertex_state: VertexStateDescriptor {
-                index_format: IndexFormat::Uint32,
-                            },
-            sample_count,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
+            multisample: MultisampleState {
+                count: sample_count,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
             label: None,
         });
         Arc::new(pipeline)
