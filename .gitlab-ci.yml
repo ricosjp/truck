@@ -1,6 +1,19 @@
 stages:
+    - wgputest
     - test
     - pages
+
+wgputest:
+    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
+    stage: test
+    script:
+        - git clone git@github.com:gfx-rs/wgpu-rs.git
+        - git checkout v0.8
+        - /root/.cargo/bin/cargo run --example capture
+    except:
+        - master
+    tags:
+        - gpu
 
 test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
