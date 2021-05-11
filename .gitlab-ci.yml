@@ -7,7 +7,7 @@ wgputest:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
-        - git clone git@github.com:gfx-rs/wgpu-rs.git
+        - git clone https://github.com/gfx-rs/wgpu-rs.git
         - cd wgpu-rs
         - git checkout v0.8
         - /root/.cargo/bin/cargo test -- --nocapture
