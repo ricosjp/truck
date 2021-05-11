@@ -10,6 +10,7 @@ wgputest:
         - git clone git@github.com:gfx-rs/wgpu-rs.git
         - cd wgpu-rs
         - git checkout v0.8
+        - /root/.cargo/bin/cargo test -- --nocapture
         - /root/.cargo/bin/cargo run --example capture
     except:
         - master
