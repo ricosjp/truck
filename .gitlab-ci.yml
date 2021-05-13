@@ -6,7 +6,7 @@ test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
-        - /root/.cargo/bin/cargo test -- --nocapture
+        - /root/.cargo/bin/cargo test -- --nocapture --test-threads=1
         - mkdir images
         - mv truck-platform/output images/platform
         - mv truck-rendimpl/output images/rendimpl
