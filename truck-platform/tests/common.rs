@@ -10,45 +10,22 @@ use wgpu::*;
 
 #[derive(Clone, Debug)]
 pub struct Plane<'a> {
-    pub vertex_shader: &'a str,
-    pub fragment_shader: &'a str,
+    pub shader: &'a str,
+    pub vs_endpt: &'a str,
+    pub fs_endpt: &'a str,
     pub id: RenderID,
 }
 
 #[macro_export]
 macro_rules! new_plane {
-    ($vertex_shader: expr, $fragment_shader: expr) => {
+    ($shader: expr, $vs_endpt: expr, $fs_endpt: expr) => {
         Plane {
-            vertex_shader: include_str!($vertex_shader),
-            fragment_shader: include_str!($fragment_shader),
+            shader: include_str!($shader),
+            vs_endpt: $vs_endpt,
+            fs_endpt: $fs_endpt,
             id: RenderID::gen(),
         }
     };
-}
-
-pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
-    futures::executor::block_on(async {
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
-                compatible_surface: None,
-            })
-            .await
-            .unwrap();
-        writeln!(&mut std::io::stderr(), "{:?}", adapter.get_info()).unwrap();
-        let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Default::default(),
-                    label: None,
-                },
-                None,
-            )
-            .await
-            .unwrap();
-        (Arc::new(device), Arc::new(queue))
-    })
 }
 
 impl<'a> Rendered for Plane<'a> {
@@ -88,119 +65,7 @@ impl<'a> Rendered for Plane<'a> {
     ) -> Arc<RenderPipeline> {
         writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
-        let vertex_module = read_shader(device, self.vertex_shader, ShaderType::Vertex);
-        let fragment_module = read_shader(device, self.fragment_shader, ShaderType::Fragment);
-        Arc::new(
-            handler
-                .device()
-                .create_render_pipeline(&RenderPipelineDescriptor {
-                    layout: Some(layout),
-                    vertex: VertexState {
-                        module: &vertex_module,
-                        entry_point: "main",
-                        buffers: &[VertexBufferLayout {
-                            array_stride: std::mem::size_of::<u32>() as BufferAddress,
-                            step_mode: InputStepMode::Vertex,
-                            attributes: &[VertexAttribute {
-                                format: VertexFormat::Uint32,
-                                offset: 0,
-                                shader_location: 0,
-                            }],
-                        }],
-                    },
-                    primitive: PrimitiveState {
-                        topology: PrimitiveTopology::TriangleList,
-                        front_face: FrontFace::Ccw,
-                        cull_mode: Some(Face::Back),
-                        polygon_mode: PolygonMode::Fill,
-                        clamp_depth: false,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(DepthStencilState {
-                        format: TextureFormat::Depth32Float,
-                        depth_write_enabled: true,
-                        depth_compare: wgpu::CompareFunction::Less,
-                        stencil: Default::default(),
-                        bias: Default::default(),
-                    }),
-                    multisample: MultisampleState {
-                        count: sample_count,
-                        mask: !0,
-                        alpha_to_coverage_enabled: false,
-                    },
-                    fragment: Some(FragmentState {
-                        module: &fragment_module,
-                        entry_point: "main",
-                        targets: &[ColorTargetState {
-                            format: sc_desc.format,
-                            blend: Some(BlendState::REPLACE),
-                            write_mask: ColorWrite::ALL,
-                        }],
-                    }),
-                    label: None,
-                }),
-        )
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct WGSLPlane<'a> {
-    pub vertex_shader: &'a str,
-    pub fragment_shader: &'a str,
-    pub id: RenderID,
-}
-
-#[macro_export]
-macro_rules! new_wgsl_plane {
-    ($vertex_shader: expr, $fragment_shader: expr) => {
-        WGSLPlane {
-            vertex_shader: include_str!($vertex_shader),
-            fragment_shader: include_str!($fragment_shader),
-            id: RenderID::gen(),
-        }
-    };
-}
-
-impl<'a> Rendered for WGSLPlane<'a> {
-    impl_render_id!(id);
-    fn vertex_buffer(
-        &self,
-        handler: &DeviceHandler,
-    ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        writeln!(&mut std::io::stderr(), "create vertex buffer").unwrap();
-        let vertex_buffer = BufferHandler::from_slice(
-            &[0 as u32, 1, 2, 2, 1, 3],
-            handler.device(),
-            BufferUsage::VERTEX,
-        );
-        (Arc::new(vertex_buffer), None)
-    }
-    fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
-        writeln!(&mut std::io::stderr(), "create bind group layout").unwrap();
-        Arc::new(bind_group_util::create_bind_group_layout(
-            handler.device(),
-            &[],
-        ))
-    }
-    fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
-        writeln!(&mut std::io::stderr(), "create bind group").unwrap();
-        Arc::new(handler.device().create_bind_group(&BindGroupDescriptor {
-            label: None,
-            layout,
-            entries: &[],
-        }))
-    }
-    fn pipeline(
-        &self,
-        handler: &DeviceHandler,
-        layout: &PipelineLayout,
-        sample_count: u32,
-    ) -> Arc<RenderPipeline> {
-        writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
-        let (device, sc_desc) = (handler.device(), handler.sc_desc());
-        let shader = String::from(self.vertex_shader) + self.fragment_shader;
-        println!("{}", shader);
-        let source = ShaderSource::Wgsl(shader.into());
+        let source = ShaderSource::Wgsl(self.shader.into());
         let module = device.create_shader_module(&ShaderModuleDescriptor {
             label: None,
             source,
@@ -214,7 +79,7 @@ impl<'a> Rendered for WGSLPlane<'a> {
                     layout: Some(layout),
                     vertex: VertexState {
                         module: &module,
-                        entry_point: "vs_main",
+                        entry_point: self.vs_endpt,
                         buffers: &[VertexBufferLayout {
                             array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: InputStepMode::Vertex,
@@ -225,6 +90,15 @@ impl<'a> Rendered for WGSLPlane<'a> {
                             }],
                         }],
                     },
+                    fragment: Some(FragmentState {
+                        module: &module,
+                        entry_point: self.fs_endpt,
+                        targets: &[ColorTargetState {
+                            format: sc_desc.format,
+                            blend: Some(BlendState::REPLACE),
+                            write_mask: ColorWrite::ALL,
+                        }],
+                    }), 
                     primitive: PrimitiveState {
                         topology: PrimitiveTopology::TriangleList,
                         front_face: FrontFace::Ccw,
@@ -245,21 +119,36 @@ impl<'a> Rendered for WGSLPlane<'a> {
                         mask: !0,
                         alpha_to_coverage_enabled: false,
                     },
-                    fragment: Some(FragmentState {
-                        module: &module,
-                        entry_point: "fs_main",
-                        targets: &[ColorTargetState {
-                            format: sc_desc.format,
-                            blend: Some(BlendState::REPLACE),
-                            write_mask: ColorWrite::ALL,
-                        }],
-                    }),
                     label: None,
                 }),
         )
     }
 }
 
+pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
+    futures::executor::block_on(async {
+        let adapter = instance
+            .request_adapter(&RequestAdapterOptions {
+                power_preference: PowerPreference::HighPerformance,
+                compatible_surface: None,
+            })
+            .await
+            .unwrap();
+        writeln!(&mut std::io::stderr(), "{:?}", adapter.get_info()).unwrap();
+        let (device, queue) = adapter
+            .request_device(
+                &DeviceDescriptor {
+                    features: Default::default(),
+                    limits: Default::default(),
+                    label: None,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+        (Arc::new(device), Arc::new(queue))
+    })
+}
 
 pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &R) {
     println!("add plane");
