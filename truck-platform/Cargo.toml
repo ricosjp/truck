@@ -22,5 +22,4 @@ truck-base = { version = "0.1.1", path = "../truck-base" }
 winit = "0.24.0"
 image = "0.23.13"
 futures = "0.3.12"
-glsl-to-spirv = "0.1.7"
 rayon = "1.5.0"

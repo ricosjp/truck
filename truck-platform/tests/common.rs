@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
-use glsl_to_spirv::ShaderType;
 use rayon::prelude::*;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::sync::Arc;
 use std::convert::TryInto;
 use truck_platform::*;
@@ -157,17 +156,6 @@ pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &R)
     scene.render_scene(&texture.create_view(&Default::default()));
     println!("remove plane");
     scene.remove_object(object);
-}
-
-pub fn read_shader(device: &Device, code: &str, shadertype: ShaderType) -> ShaderModule {
-    let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();
-    let mut compiled = Vec::new();
-    spirv.read_to_end(&mut compiled).unwrap();
-    device.create_shader_module(&ShaderModuleDescriptor {
-        source: wgpu::util::make_spirv(&compiled),
-        flags: ShaderFlags::VALIDATION,
-        label: None,
-    })
 }
 
 pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'static> {
