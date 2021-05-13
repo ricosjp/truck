@@ -1,5 +1,5 @@
 mod common;
-use common::{Plane, WGSLPlane};
+use common::WGSLPlane;
 use std::sync::{Arc, Mutex};
 use truck_base::cgmath64::*;
 use truck_platform::*;
@@ -76,10 +76,10 @@ fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
     let plane = new_wgsl_plane!("shaders/plane-vert.wgsl", "shaders/plane-unicolor.wgsl");
     common::render_one(&mut scene, &texture0, &plane);
     println!("second plane");
-    let plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
+    let plane = new_wgsl_plane!("shaders/bindgroup-vert.wgsl", "shaders/bindgroup-frag.wgsl");
     common::render_one(&mut scene, &texture1, &plane);
     println!("third plane");
-    let plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
+    let plane = new_wgsl_plane!("shaders/bindgroup-vert.wgsl", "shaders/bindgroup-frag-anti.wgsl");
     common::render_one(&mut scene, &texture2, &plane);
     let buffer0 = common::read_texture(&handler, &texture0);
     let buffer1 = common::read_texture(&handler, &texture1);
