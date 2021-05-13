@@ -29,8 +29,8 @@ fn exec_microfacet_module_test(backend: BackendBit, out_dir: &str) {
     shader += include_str!("shaders/microfacet-module-test.wgsl");
     let mut plane = Plane {
         shader: &shader,
-        vs_endpt: "vs_main",
-        fs_endpt: "fs_main",
+        vs_entpt: "vs_main",
+        fs_entpt: "fs_main",
         id: RenderID::gen(),
     };
     common::render_one(&mut scene, &texture, &plane);
@@ -42,7 +42,7 @@ fn exec_microfacet_module_test(backend: BackendBit, out_dir: &str) {
     );
     assert!(common::same_buffer(&answer, &buffer0));
 
-    plane.fs_endpt = "fs_main_anti";
+    plane.fs_entpt = "fs_main_anti";
     common::render_one(&mut scene, &texture, &plane);
     let buffer1 = common::read_texture(scene.device_handler(), &texture);
     common::save_buffer(

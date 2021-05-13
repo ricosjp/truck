@@ -11,8 +11,8 @@ use wgpu::*;
 #[derive(Clone, Debug)]
 pub struct Plane<'a> {
     pub shader: &'a str,
-    pub vs_endpt: &'a str,
-    pub fs_endpt: &'a str,
+    pub vs_entpt: &'a str,
+    pub fs_entpt: &'a str,
     pub id: RenderID,
 }
 
@@ -21,8 +21,8 @@ macro_rules! new_plane {
     ($shader: expr, $vs_endpt: expr, $fs_endpt: expr) => {
         Plane {
             shader: include_str!($shader),
-            vs_endpt: $vs_endpt,
-            fs_endpt: $fs_endpt,
+            vs_entpt: $vs_endpt,
+            fs_entpt: $fs_endpt,
             id: RenderID::gen(),
         }
     };
@@ -76,7 +76,7 @@ impl<'a> Rendered for Plane<'a> {
                     layout: Some(layout),
                     vertex: VertexState {
                         module: &module,
-                        entry_point: self.vs_endpt,
+                        entry_point: self.vs_entpt,
                         buffers: &[VertexBufferLayout {
                             array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: InputStepMode::Vertex,
@@ -89,7 +89,7 @@ impl<'a> Rendered for Plane<'a> {
                     },
                     fragment: Some(FragmentState {
                         module: &module,
-                        entry_point: self.fs_endpt,
+                        entry_point: self.fs_entpt,
                         targets: &[ColorTargetState {
                             format: sc_desc.format,
                             blend: Some(BlendState::REPLACE),

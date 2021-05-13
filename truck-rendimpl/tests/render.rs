@@ -53,8 +53,8 @@ fn nontex_raytracing(scene: &mut Scene) -> Vec<u8> {
     shader += include_str!("shaders/raytraces.wgsl");
     let plane = Plane {
         shader: &shader,
-        vs_endpt: "vs_main",
-        fs_endpt: "nontex_raytracing",
+        vs_entpt: "vs_main",
+        fs_entpt: "nontex_raytracing",
         id: RenderID::gen(),
     };
     common::render_one(scene, &texture, &plane);
@@ -147,8 +147,8 @@ fn tex_raytracing(scene: &mut Scene) -> Vec<u8> {
     shader += include_str!("shaders/raytraces.wgsl");
     let plane = Plane {
         shader: &shader,
-        vs_endpt: "vs_main",
-        fs_endpt: "tex_raytracing",
+        vs_entpt: "vs_main",
+        fs_entpt: "tex_raytracing",
         id: RenderID::gen(),
     };
     common::render_one(scene, &texture, &plane);
