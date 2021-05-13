@@ -25,15 +25,15 @@ fn exec_microfacet_module_test(backend: BackendBit, out_dir: &str) {
     let tex_desc = common::texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
 
-    let mut fragment_shader = "#version 450\n\n".to_string();
-    fragment_shader += include_str!("../src/shaders/microfacet-module.frag");
-    fragment_shader += include_str!("shaders/check-mf-module.frag");
+    let mut shader = include_str!("../src/shaders/microfacet-module.wgsl").to_string();
+    shader += include_str!("shaders/microfacet-module-test.wgsl");
     let mut plane = Plane {
-        vertex_shader: include_str!("shaders/plane.vert"),
-        fragment_shader: &fragment_shader,
+        shader: &shader,
+        vs_endpt: "vs_main",
+        fs_endpt: "fs_main",
         id: RenderID::gen(),
     };
-    common::render_one(&mut scene, &texture, &mut plane);
+    common::render_one(&mut scene, &texture, &plane);
     let buffer0 = common::read_texture(scene.device_handler(), &texture);
     common::save_buffer(
         out_dir.clone() + "check-mf-module.png",
@@ -42,14 +42,7 @@ fn exec_microfacet_module_test(backend: BackendBit, out_dir: &str) {
     );
     assert!(common::same_buffer(&answer, &buffer0));
 
-    let mut fragment_shader = "#version 450\n\n".to_string();
-    fragment_shader += include_str!("../src/shaders/microfacet-module.frag");
-    fragment_shader += include_str!("shaders/anti-check-mf-module.frag");
-    let plane = Plane {
-        vertex_shader: include_str!("shaders/plane.vert"),
-        fragment_shader: &fragment_shader,
-        id: RenderID::gen(),
-    };
+    plane.fs_endpt = "fs_main_anti";
     common::render_one(&mut scene, &texture, &plane);
     let buffer1 = common::read_texture(scene.device_handler(), &texture);
     common::save_buffer(

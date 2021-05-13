@@ -46,15 +46,15 @@ fn shape_cube() -> Solid {
     builder::tsweep(&s, Vector3::unit_z())
 }
 
-fn nontex_raymarching(scene: &mut Scene) -> Vec<u8> {
+fn nontex_raytracing(scene: &mut Scene) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let mut fragment_shader = "#version 450\n\n".to_string();
-    fragment_shader += include_str!("../src/shaders/microfacet-module.frag");
-    fragment_shader += include_str!("shaders/nontex-ray-marching.frag");
+    let mut shader = include_str!("../src/shaders/microfacet-module.wgsl").to_string();
+    shader += include_str!("shaders/raytraces.wgsl");
     let plane = Plane {
-        vertex_shader: include_str!("shaders/plane.vert"),
-        fragment_shader: &fragment_shader,
+        shader: &shader,
+        vs_endpt: "vs_main",
+        fs_endpt: "nontex_raytracing",
         id: RenderID::gen(),
     };
     common::render_one(scene, &texture, &plane);
@@ -109,7 +109,7 @@ fn exec_nontex_render_test(backend: BackendBit, out_dir: &str) {
     std::fs::create_dir_all(&out_dir).unwrap();
     let mut scene = test_scene(backend);
     let creator = scene.instance_creator();
-    let buffer0 = nontex_raymarching(&mut scene);
+    let buffer0 = nontex_raytracing(&mut scene);
     let buffer1 = nontex_polygon(&mut scene, &creator);
     let buffer2 = nontex_shape(&mut scene, &creator);
     let filename = out_dir.clone() + "nontex-raymarching.png";
@@ -140,15 +140,15 @@ fn generate_texture(scene: &mut Scene, out_dir: String) -> DynamicImage {
     DynamicImage::ImageRgba8(image_buffer)
 }
 
-fn tex_raymarching(scene: &mut Scene) -> Vec<u8> {
+fn tex_raytracing(scene: &mut Scene) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let mut fragment_shader = "#version 450\n\n".to_string();
-    fragment_shader += include_str!("../src/shaders/microfacet-module.frag");
-    fragment_shader += include_str!("shaders/tex-ray-marching.frag");
+    let mut shader = include_str!("../src/shaders/microfacet-module.wgsl").to_string();
+    shader += include_str!("shaders/raytraces.wgsl");
     let plane = Plane {
-        vertex_shader: include_str!("shaders/plane.vert"),
-        fragment_shader: &fragment_shader,
+        shader: &shader,
+        vs_endpt: "vs_main",
+        fs_endpt: "tex_raytracing",
         id: RenderID::gen(),
     };
     common::render_one(scene, &texture, &plane);
@@ -212,8 +212,8 @@ fn exec_tex_render_test(backend: BackendBit, out_dir: &str) {
     let mut scene = test_scene(backend);
     let creator = scene.instance_creator();
     let image = Arc::new(generate_texture(&mut scene, out_dir.clone()));
-    let anti_buffer = nontex_raymarching(&mut scene);
-    let buffer0 = tex_raymarching(&mut scene);
+    let anti_buffer = nontex_raytracing(&mut scene);
+    let buffer0 = tex_raytracing(&mut scene);
     let buffer1 = tex_polygon(&mut scene, &creator, &image);
     let buffer2 = tex_shape(&mut scene, &creator, &image);
     let filename = out_dir.clone() + "tex-raymarching.png";

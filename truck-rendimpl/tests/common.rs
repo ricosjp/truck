@@ -10,17 +10,19 @@ use wgpu::*;
 
 #[derive(Clone, Debug)]
 pub struct Plane<'a> {
-    pub vertex_shader: &'a str,
-    pub fragment_shader: &'a str,
+    pub shader: &'a str,
+    pub vs_endpt: &'a str,
+    pub fs_endpt: &'a str,
     pub id: RenderID,
 }
 
 #[macro_export]
 macro_rules! new_plane {
-    ($vertex_shader: expr, $fragment_shader: expr) => {
+    ($shader: expr, $vs_endpt: expr, $fs_endpt: expr) => {
         Plane {
-            vertex_shader: include_str!($vertex_shader),
-            fragment_shader: include_str!($fragment_shader),
+            shader: include_str!($shader),
+            vs_endpt: $vs_endpt,
+            fs_endpt: $fs_endpt,
             id: RenderID::gen(),
         }
     };
@@ -32,11 +34,8 @@ impl<'a> Rendered for Plane<'a> {
         &self,
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let vertex_buffer = BufferHandler::from_slice(
-            &[0 as u32, 1, 2, 3],
-            handler.device(),
-            BufferUsage::VERTEX,
-        );
+        let vertex_buffer =
+            BufferHandler::from_slice(&[0 as u32, 1, 2, 3], handler.device(), BufferUsage::VERTEX);
         let index_buffer = BufferHandler::from_slice(
             &[0 as u32, 1, 2, 2, 1, 3],
             handler.device(),
@@ -64,17 +63,11 @@ impl<'a> Rendered for Plane<'a> {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
-        let vertex_spirv = compile_shader(self.vertex_shader, ShaderType::Vertex);
-        let vertex_module = device.create_shader_module(&ShaderModuleDescriptor {
-            source: wgpu::util::make_spirv(&vertex_spirv),
-            flags: ShaderFlags::empty(),
+        let source = ShaderSource::Wgsl(self.shader.into());
+        let module = device.create_shader_module(&ShaderModuleDescriptor {
+            source,
             label: None,
-        });
-        let fragment_spirv = compile_shader(self.fragment_shader, ShaderType::Fragment);
-        let fragment_module = device.create_shader_module(&ShaderModuleDescriptor {
-            source: wgpu::util::make_spirv(&fragment_spirv),
-            flags: ShaderFlags::empty(),
-            label: None,
+            flags: ShaderFlags::VALIDATION,
         });
         Arc::new(
             handler
@@ -82,8 +75,8 @@ impl<'a> Rendered for Plane<'a> {
                 .create_render_pipeline(&RenderPipelineDescriptor {
                     layout: Some(layout),
                     vertex: VertexState {
-                        module: &vertex_module,
-                        entry_point: "main",
+                        module: &module,
+                        entry_point: self.vs_endpt,
                         buffers: &[VertexBufferLayout {
                             array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: InputStepMode::Vertex,
@@ -94,6 +87,15 @@ impl<'a> Rendered for Plane<'a> {
                             }],
                         }],
                     },
+                    fragment: Some(FragmentState {
+                        module: &module,
+                        entry_point: self.fs_endpt,
+                        targets: &[ColorTargetState {
+                            format: sc_desc.format,
+                            blend: Some(BlendState::REPLACE),
+                            write_mask: ColorWrite::ALL,
+                        }],
+                    }),
                     primitive: PrimitiveState {
                         topology: PrimitiveTopology::TriangleList,
                         front_face: FrontFace::Ccw,
@@ -113,15 +115,6 @@ impl<'a> Rendered for Plane<'a> {
                         mask: !0,
                         alpha_to_coverage_enabled: false,
                     },
-                    fragment: Some(FragmentState {
-                        module: &fragment_module,
-                        entry_point: "main",
-                        targets: &[ColorTargetState {
-                            format: sc_desc.format,
-                            blend: Some(BlendState::REPLACE),
-                            write_mask: ColorWrite::ALL,
-                        }],
-                    }),
                     label: None,
                 }),
         )
@@ -155,8 +148,8 @@ pub fn nontex_answer_texture(scene: &mut Scene) -> Texture {
     let sc_desc = scene.sc_desc();
     let tex_desc = texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
-    render_one(scene, &texture, &mut plane);
+    let plane = new_plane!("shaders/plane.wgsl", "vs_main", "unicolor");
+    render_one(scene, &texture, &plane);
     texture
 }
 
@@ -164,8 +157,8 @@ pub fn random_texture(scene: &mut Scene) -> Texture {
     let sc_desc = scene.sc_desc();
     let tex_desc = texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/random.frag");
-    render_one(scene, &texture, &mut plane);
+    let plane = new_plane!("shaders/plane.wgsl", "vs_main", "random_texture");
+    render_one(scene, &texture, &plane);
     texture
 }
 
@@ -173,7 +166,7 @@ pub fn gradation_texture(scene: &mut Scene) -> Texture {
     let sc_desc = scene.sc_desc();
     let tex_desc = texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/gradation.frag");
+    let mut plane = new_plane!("shaders/plane.wgsl", "vs_main", "gradation_texture");
     render_one(scene, &texture, &mut plane);
     texture
 }

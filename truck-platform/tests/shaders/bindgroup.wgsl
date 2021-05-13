@@ -67,10 +67,11 @@ fn vs_main([[location(0)]] idx: u32) -> VertexOutput {
     return output;
 }
 
+let EPS: f32 = 1.0e-5;
+let e: vec2<f32> = vec2<f32>(1.0, 0.0);
+
 [[stage(fragment)]]
 fn fs_main(input: VertexOutput) -> [[location(0)]] vec4<f32> {
-    let EPS = 1.0e-5;
-
     let acm0 = vec4<f32>(1.0, 2.1, 3.2, 4.3);
     let acm1 = vec4<f32>(5.4, 6.5, 7.6, 8.7);
     let acm2 = vec4<f32>(9.8, 10.9, 11.0, 12.0);
@@ -89,8 +90,6 @@ fn fs_main(input: VertexOutput) -> [[location(0)]] vec4<f32> {
     let alt1 = vec4<u32>(1u, 0u, 0u, 0u);
     let asnl = 2u;
     
-    let e = vec2<f32>(1.0, 0.0);
-
     if (any(input.cm * e.xyyy != camera.matrix * e.xyyy)) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } elseif (any(input.cm * e.yxyy != camera.matrix * e.yxyy)) {
@@ -160,8 +159,6 @@ fn fs_main(input: VertexOutput) -> [[location(0)]] vec4<f32> {
 
 [[stage(fragment)]]
 fn fs_main_anti(input: VertexOutput) -> [[location(0)]] vec4<f32> {
-    let EPS = 1.0e-5;
-
     let acm0 = vec4<f32>(1.0, 2.1, 3.2, 4.3);
     let acm1 = vec4<f32>(5.4, 6.5, 7.6, 8.7);
     let acm2 = vec4<f32>(9.8, 10.9, 11.0, 12.0);
@@ -180,8 +177,6 @@ fn fs_main_anti(input: VertexOutput) -> [[location(0)]] vec4<f32> {
     let alt1 = vec4<u32>(1u, 0u, 0u, 0u);
     let asnl = 2u;
     
-    let e = vec2<f32>(1.0, 0.0);
-
     if (any(input.cm * e.xyyy != camera.matrix * e.xyyy)) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } elseif (any(input.cm * e.yxyy != camera.matrix * e.yxyy)) {
