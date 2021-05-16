@@ -103,24 +103,32 @@ pub struct ShapeWireFrameInstanceDescriptor {
     pub polyline_precision: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct PolygonShaders {
-    vertex: ShaderModule,
-    fragment: ShaderModule,
-    tex_fragment: ShaderModule,
+    vertex_module: Arc<ShaderModule>,
+    vertex_entry: &'static str,
+    fragment_module: Arc<ShaderModule>,
+    fragment_entry: &'static str,
+    tex_fragment_module: Arc<ShaderModule>,
+    tex_fragment_entry: &'static str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ShapeShaders {
-    vertex: ShaderModule,
-    fragment: ShaderModule,
-    tex_fragment: ShaderModule,
+    vertex_module: Arc<ShaderModule>,
+    vertex_entry: &'static str,
+    fragment_module: Arc<ShaderModule>,
+    fragment_entry: &'static str,
+    tex_fragment_module: Arc<ShaderModule>,
+    tex_fragment_entry: &'static str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct WireShaders {
-    vertex: ShaderModule,
-    fragment: ShaderModule,
+    vertex_module: Arc<ShaderModule>,
+    vertex_entry: &'static str,
+    fragment_module: Arc<ShaderModule>,
+    fragment_entry: &'static str,
 }
 
 /// Instance of polygon
@@ -135,7 +143,7 @@ struct WireShaders {
 pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     state: InstanceState,
-    shaders: Arc<PolygonShaders>,
+    shaders: PolygonShaders,
     id: RenderID,
 }
 
@@ -145,7 +153,7 @@ pub struct WireFrameInstance {
     vertices: Arc<BufferHandler>,
     strips: Arc<BufferHandler>,
     state: WireFrameState,
-    shaders: Arc<WireShaders>,
+    shaders: WireShaders,
     id: RenderID,
 }
 
@@ -162,7 +170,7 @@ pub struct ShapeInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
     state: InstanceState,
-    shaders: Arc<ShapeShaders>,
+    shaders: ShapeShaders,
     id: RenderID,
 }
 
@@ -170,9 +178,9 @@ pub struct ShapeInstance {
 #[derive(Debug, Clone)]
 pub struct InstanceCreator {
     handler: DeviceHandler,
-    polygon_shaders: Arc<PolygonShaders>,
-    shape_shaders: Arc<ShapeShaders>,
-    wire_shaders: Arc<WireShaders>,
+    polygon_shaders: PolygonShaders,
+    shape_shaders: ShapeShaders,
+    wire_shaders: WireShaders,
 }
 
 /// for creating `InstanceCreator`

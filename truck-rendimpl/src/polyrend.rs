@@ -38,7 +38,7 @@ impl IntoInstance<PolygonInstance> for PolygonMesh {
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             state: desc.instance_state.clone(),
-            shaders: Arc::clone(&creator.polygon_shaders),
+            shaders: creator.polygon_shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -71,7 +71,7 @@ impl IntoInstance<WireFrameInstance> for PolygonMesh {
             vertices: Arc::new(vb),
             strips: Arc::new(ib),
             state: desc.wireframe_state.clone(),
-            shaders: Arc::clone(&creator.wire_shaders),
+            shaders: creator.wire_shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -105,7 +105,7 @@ impl IntoInstance<PolygonInstance> for StructuredMesh {
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             state: desc.instance_state.clone(),
-            shaders: Arc::clone(&creator.polygon_shaders),
+            shaders: creator.polygon_shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -150,7 +150,7 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
             vertices: Arc::new(vb),
             strips: Arc::new(ib),
             state: desc.wireframe_state.clone(),
-            shaders: Arc::clone(&creator.wire_shaders),
+            shaders: creator.wire_shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -163,7 +163,7 @@ impl PolygonInstance {
         PolygonInstance {
             polygon: self.polygon.clone(),
             state: self.state.clone(),
-            shaders: Arc::clone(&self.shaders),
+            shaders: self.shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -402,11 +402,11 @@ impl Rendered for PolygonInstance {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let fragment_shader = match self.state.texture.is_some() {
-            true => &self.shaders.tex_fragment,
-            false => &self.shaders.fragment,
+            true => &self.shaders.tex_fragment_module,
+            false => &self.shaders.fragment_module,
         };
         self.pipeline_with_shader_module(
-            &self.shaders.vertex,
+            &self.shaders.vertex_module,
             fragment_shader,
             device_handler,
             layout,

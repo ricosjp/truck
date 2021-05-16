@@ -28,7 +28,7 @@ impl WireFrameInstance {
             vertices: Arc::clone(&self.vertices),
             strips: Arc::clone(&self.strips),
             state: self.state.clone(),
-            shaders: Arc::clone(&self.shaders),
+            shaders: self.shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -97,8 +97,8 @@ impl Rendered for WireFrameInstance {
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
             vertex: VertexState {
-                module: &self.shaders.vertex,
-                entry_point: "main",
+                module: &self.shaders.vertex_module,
+                entry_point: self.shaders.vertex_entry,
                 buffers: &[VertexBufferLayout {
                     array_stride: std::mem::size_of::<[f32; 3]>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
@@ -110,8 +110,8 @@ impl Rendered for WireFrameInstance {
                 }],
             },
             fragment: Some(FragmentState {
-                module: &self.shaders.fragment,
-                entry_point: "main",
+                module: &self.shaders.fragment_module,
+                entry_point: self.shaders.fragment_entry,
                 targets: &[ColorTargetState {
                     format: sc_desc.format,
                     blend: Some(BlendState::REPLACE),

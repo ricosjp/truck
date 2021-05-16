@@ -163,7 +163,7 @@ impl TryIntoInstance<ShapeInstance> for Shell {
                 BufferUsage::STORAGE,
             )),
             state: desc.instance_state.clone(),
-            shaders: Arc::clone(&creator.shape_shaders),
+            shaders: creator.shape_shaders.clone(),
             id: RenderID::gen(),
         })
     }
@@ -227,7 +227,7 @@ impl IntoInstance<WireFrameInstance> for Shell {
             vertices: Arc::new(vertices),
             strips: Arc::new(strips),
             state: desc.wireframe_state.clone(),
-            shaders: Arc::clone(&creator.wire_shaders),
+            shaders: creator.wire_shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -266,7 +266,7 @@ impl TryIntoInstance<ShapeInstance> for Solid {
                 BufferUsage::STORAGE,
             )),
             state: desc.instance_state.clone(),
-            shaders: Arc::clone(&creator.shape_shaders),
+            shaders: creator.shape_shaders.clone(),
             id: RenderID::gen(),
         })
     }
@@ -332,7 +332,7 @@ impl IntoInstance<WireFrameInstance> for Solid {
             vertices: Arc::new(vertices),
             strips: Arc::new(strips),
             state: desc.wireframe_state.clone(),
-            shaders: Arc::clone(&creator.wire_shaders),
+            shaders: creator.wire_shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -590,11 +590,11 @@ impl Rendered for ShapeInstance {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let fragment_shader = match self.state.texture.is_some() {
-            true => &self.shaders.tex_fragment,
-            false => &self.shaders.fragment,
+            true => &self.shaders.tex_fragment_module,
+            false => &self.shaders.fragment_module,
         };
         self.pipeline_with_shader_module(
-            &self.shaders.vertex,
+            &self.shaders.vertex_module,
             fragment_shader,
             handler,
             layout,
@@ -611,7 +611,7 @@ impl ShapeInstance {
             polygon: self.polygon.clone(),
             boundary: self.boundary.clone(),
             state: self.state.clone(),
-            shaders: Arc::clone(&self.shaders),
+            shaders: self.shaders.clone(),
             id: RenderID::gen(),
         }
     }
