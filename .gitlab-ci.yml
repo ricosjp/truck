@@ -7,12 +7,12 @@ cpu-test:
     stage: test
     script:
         - cargo clean
-        - cargo test -p truck-base\
-            -p truck-geotrait\
-            -p truck-geometry\
-            -p truck-topology\
-            -p truck-polymesh\
-            -p truck-modeling\
+        - cargo test -p truck-base
+            -p truck-geotrait
+            -p truck-geometry
+            -p truck-topology
+            -p truck-polymesh
+            -p truck-modeling
             -- --nocapture
 
 gpu-test:
@@ -20,9 +20,9 @@ gpu-test:
     stage: test
     script:
         - /root/.cargo/bin/cargo clean
-        - /root/.cargo/bin/cargo test\
-            -p truck-platform\
-            -p truck-rendimpl\
+        - /root/.cargo/bin/cargo test
+            -p truck-platform
+            -p truck-rendimpl
             -- --nocapture --test-threads=1
         - mkdir images
         - mv truck-platform/output images/platform
