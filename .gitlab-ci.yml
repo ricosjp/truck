@@ -2,16 +2,31 @@ stages:
     - test
     - pages
 
-test:
+cpu-test:
+    image: rust:latest
+    stage: test
+    script:
+        - cargo clean
+        - cargo test -p truck-base\
+            -p truck-geotrait\
+            -p truck-geometry\
+            -p truck-topology\
+            -p truck-polymesh\
+            -p truck-modeling\
+            -- --nocapture
+
+gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
-        - /root/.cargo/bin/cargo test
+        - /root/.cargo/bin/cargo clean
+        - /root/.cargo/bin/cargo test\
+            -p truck-platform\
+            -p truck-rendimpl\
+            -- --nocapture --test-threads=1
         - mkdir images
         - mv truck-platform/output images/platform
         - mv truck-rendimpl/output images/rendimpl
-    except:
-        - master
     tags:
         - gpu
     artifacts:
@@ -19,17 +34,13 @@ test:
             - images
 
 pages:
-    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
+    image: rust:latest
     stage: pages
     script:
-        - /root/.cargo/bin/cargo clean
-        - /root/.cargo/bin/cargo test
         - /root/.cargo/bin/cargo doc --no-deps
-        - cp -r target/doc public
+        - mv target/doc public
     artifacts:
         paths:
             - public
-    tags:
-        - gpu
     only:
         - master
