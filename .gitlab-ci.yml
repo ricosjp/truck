@@ -37,7 +37,7 @@ pages:
     image: rust:latest
     stage: pages
     script:
-        - /root/.cargo/bin/cargo doc --no-deps
+        - cargo doc --no-deps
         - mv target/doc public
     artifacts:
         paths:
