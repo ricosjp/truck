@@ -85,9 +85,9 @@ impl WireShaders {
     #[inline(always)]
     fn default(device: &Device) -> Self {
         Self::new(
-            device.create_shader_module(include_spirv!("shaders/line.vert.spv")),
+            device.create_shader_module(&include_spirv!("shaders/line.vert.spv")),
             "main",
-            device.create_shader_module(include_spirv!("shaders/line.frag.spv")),
+            device.create_shader_module(&include_spirv!("shaders/line.frag.spv")),
             "main",
         ) 
     }
