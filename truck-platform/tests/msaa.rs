@@ -55,6 +55,7 @@ fn exec_msaa_test(backend: BackendBit, out_dir: &str) {
 
 #[test]
 fn msaa_test() {
+    let _ = env_logger::try_init();
     if cfg!(target_os = "windows") {
         exec_msaa_test(BackendBit::VULKAN, "output/vulkan/");
         exec_msaa_test(BackendBit::DX12, "output/dx12/");

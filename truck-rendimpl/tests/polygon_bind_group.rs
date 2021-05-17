@@ -8,44 +8,34 @@ use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (256, 256);
 
-struct BGCheckPolygonInstance<'a> {
-    polygon: PolygonInstance,
-    fragment_shader: &'a str,
-}
-
-impl<'a> Rendered for BGCheckPolygonInstance<'a> {
-    derive_render_id!(polygon);
-    derive_vertex_buffer!(polygon);
-    derive_bind_group_layout!(polygon);
-    derive_bind_group!(polygon);
-    #[inline(always)]
-    fn pipeline(
-        &self,
-        device_handler: &DeviceHandler,
-        layout: &PipelineLayout,
-        sample_count: u32,
-    ) -> Arc<RenderPipeline> {
-        let vertex_shader = include_str!("shaders/mesh-bindgroup.vert");
-        let vertex_spirv = common::compile_shader(vertex_shader, ShaderType::Vertex);
-        let vertex_module = ShaderModuleDescriptor{
-            source: wgpu::util::make_spirv(&vertex_spirv),
-            flags: ShaderFlags::VALIDATION,
-            label: None,
-        };
-        let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
-        let fragment_module = ShaderModuleDescriptor{
+fn bgcheck_shaders(handler: &DeviceHandler, fragment_shader: &str) -> PolygonShaders {
+    let vertex_shader = include_str!("shaders/mesh-bindgroup.vert");
+    let vertex_spirv = common::compile_shader(vertex_shader, ShaderType::Vertex);
+    let vertex_module = Arc::new(
+        handler
+            .device()
+            .create_shader_module(&ShaderModuleDescriptor {
+                source: wgpu::util::make_spirv(&vertex_spirv),
+                flags: ShaderFlags::VALIDATION,
+                label: None,
+            }),
+    );
+    let fragment_spirv = common::compile_shader(fragment_shader, ShaderType::Fragment);
+    let fragment_module = Arc::new(handler.device().create_shader_module(
+        &ShaderModuleDescriptor {
             source: wgpu::util::make_spirv(&fragment_spirv),
             flags: ShaderFlags::VALIDATION,
             label: None,
-        };
-        self.polygon.pipeline_with_shader(
-            &vertex_module,
-            &fragment_module,
-            device_handler,
-            layout,
-            sample_count,
-        )
-    }
+        },
+    ));
+    PolygonShaders::new(
+        vertex_module,
+        "main",
+        fragment_module.clone(),
+        "main",
+        fragment_module,
+        "main",
+    )
 }
 
 const ATTRS_OBJ: &str = "
@@ -87,7 +77,6 @@ fn nontex_inst_desc() -> PolygonInstanceDescriptor {
 fn exec_polygon_bgtest(
     scene: &mut Scene,
     instance: &PolygonInstance,
-    shader: &str,
     answer: &Vec<u8>,
     id: usize,
     out_dir: String,
@@ -95,11 +84,7 @@ fn exec_polygon_bgtest(
     let sc_desc = scene.sc_desc();
     let tex_desc = common::texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut bgc_instance = BGCheckPolygonInstance {
-        polygon: instance.clone_instance(),
-        fragment_shader: shader,
-    };
-    common::render_one(scene, &texture, &mut bgc_instance);
+    common::render_one(scene, &texture, instance);
     let buffer = common::read_texture(scene.device_handler(), &texture);
     let path = format!("{}polygon-bgtest-{}.png", out_dir, id);
     common::save_buffer(path, &buffer, PICTURE_SIZE);
@@ -109,12 +94,11 @@ fn exec_polygon_bgtest(
 fn exec_polymesh_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = Instance::new(backend);
+    let instance = wgpu::Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler, &Default::default());
-    let creator = scene.instance_creator();
     let answer = common::nontex_answer_texture(&mut scene);
     let answer = common::read_texture(scene.device_handler(), &answer);
     let inst_desc = nontex_inst_desc();
@@ -122,21 +106,28 @@ fn exec_polymesh_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance: PolygonInstance = creator.create_instance(polygon, &inst_desc);
             let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
+            let instance: PolygonInstance = polygon.into_instance(
+                scene.device_handler(),
+                &bgcheck_shaders(scene.device_handler(), shader),
+                &inst_desc,
+            );
             assert!(exec_polygon_bgtest(
                 &mut scene,
                 &instance,
-                shader,
                 &answer,
                 i,
                 out_dir.clone()
             ));
             let shader = include_str!("shaders/anti-mesh-nontex-bindgroup.frag");
+            let instance: PolygonInstance = polygon.into_instance(
+                scene.device_handler(),
+                &bgcheck_shaders(scene.device_handler(), shader),
+                &inst_desc,
+            );
             assert!(!exec_polygon_bgtest(
                 &mut scene,
                 &instance,
-                shader,
                 &answer,
                 i,
                 out_dir.clone()
@@ -152,12 +143,11 @@ fn polymesh_nontex_bind_group_test() {
 fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = Instance::new(backend);
+    let instance = wgpu::Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler, &Default::default());
-    let creator = scene.instance_creator();
     let answer = common::random_texture(&mut scene);
     let buffer = common::read_texture(scene.device_handler(), &answer);
     let pngpath = out_dir.clone() + "random-texture.png";
@@ -175,21 +165,28 @@ fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance: PolygonInstance = creator.create_instance(polygon, &desc);
             let shader = include_str!("shaders/mesh-tex-bindgroup.frag");
+            let instance: PolygonInstance = polygon.into_instance(
+                scene.device_handler(),
+                &bgcheck_shaders(scene.device_handler(), shader),
+                &desc,
+            );
             assert!(exec_polygon_bgtest(
                 &mut scene,
                 &instance,
-                shader,
                 &buffer,
                 i + 3,
                 out_dir.clone(),
             ));
             let shader = include_str!("shaders/anti-mesh-tex-bindgroup.frag");
+            let instance: PolygonInstance = polygon.into_instance(
+                scene.device_handler(),
+                &bgcheck_shaders(scene.device_handler(), shader),
+                &desc,
+            ); 
             assert!(!exec_polygon_bgtest(
                 &mut scene,
                 &instance,
-                shader,
                 &buffer,
                 i + 3,
                 out_dir.clone(),

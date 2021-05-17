@@ -1,95 +1,120 @@
 use crate::*;
 
 impl PolygonShaders {
+    /// Constructor
+    /// # Parameters
+    /// - `vertex_module`: vertex shader module
+    /// - `vertex_entry`: entry point of vertex shader module
+    /// - `fragment_module`: fragment shader module without texture
+    /// - `fragment_entry`: entry point of fragment shader module without texture
+    /// - `tex_fragment_module`: fragment shader module with texture
+    /// - `tex_fragment_entry`: entry point of fragment shader module with texture
     #[inline(always)]
     pub fn new(
-        vertex_module: ShaderModule,
+        vertex_module: Arc<ShaderModule>,
         vertex_entry: &'static str,
-        fragment_module: ShaderModule,
+        fragment_module: Arc<ShaderModule>,
         fragment_entry: &'static str,
-        tex_fragment_module: ShaderModule,
+        tex_fragment_module: Arc<ShaderModule>,
         tex_fragment_entry: &'static str,
     ) -> Self {
         Self {
-            vertex_module: Arc::new(vertex_module),
-            fragment_module: Arc::new(fragment_module),
-            tex_fragment_module: Arc::new(tex_fragment_module),
+            vertex_module,
             vertex_entry,
+            fragment_module,
             fragment_entry,
+            tex_fragment_module,
             tex_fragment_entry,
         }
     }
 
+    /// Creates default polygon shaders.
     #[inline(always)]
     pub fn default(device: &Device) -> Self {
         Self::new(
-            device.create_shader_module(&PolygonInstance::default_vertex_shader()),
+            Arc::new(device.create_shader_module(&PolygonInstance::default_vertex_shader())),
             "main",
-            device.create_shader_module(&PolygonInstance::default_fragment_shader()),
+            Arc::new(device.create_shader_module(&PolygonInstance::default_fragment_shader())),
             "main",
-            device.create_shader_module(&PolygonInstance::default_textured_fragment_shader()),
+            Arc::new(device.create_shader_module(&PolygonInstance::default_textured_fragment_shader())),
             "main",
         )
     }
 }
 
 impl ShapeShaders {
+    /// Constructor
+    /// # Parameters
+    /// - `vertex_module`: vertex shader module
+    /// - `vertex_entry`: entry point of vertex shader module
+    /// - `fragment_module`: fragment shader module without texture
+    /// - `fragment_entry`: entry point of fragment shader module without texture
+    /// - `tex_fragment_module`: fragment shader module with texture
+    /// - `tex_fragment_entry`: entry point of fragment shader module with texture
     #[inline(always)]
     pub fn new(
-        vertex_module: ShaderModule,
+        vertex_module: Arc<ShaderModule>,
         vertex_entry: &'static str,
-        fragment_module: ShaderModule,
+        fragment_module: Arc<ShaderModule>,
         fragment_entry: &'static str,
-        tex_fragment_module: ShaderModule,
+        tex_fragment_module: Arc<ShaderModule>,
         tex_fragment_entry: &'static str,
     ) -> Self {
         Self {
-            vertex_module: Arc::new(vertex_module),
-            fragment_module: Arc::new(fragment_module),
-            tex_fragment_module: Arc::new(tex_fragment_module),
+            vertex_module,
             vertex_entry,
+            fragment_module,
             fragment_entry,
+            tex_fragment_module,
             tex_fragment_entry,
         }
     }
 
+    /// Creates default shape shaders
     #[inline(always)]
     fn default(device: &Device) -> Self {
         Self::new(
-            device.create_shader_module(&ShapeInstance::default_vertex_shader()),
+            Arc::new(device.create_shader_module(&ShapeInstance::default_vertex_shader())),
             "main",
-            device.create_shader_module(&ShapeInstance::default_fragment_shader()),
+            Arc::new(device.create_shader_module(&ShapeInstance::default_fragment_shader())),
             "main",
-            device.create_shader_module(&ShapeInstance::default_textured_fragment_shader()),
+            Arc::new(device.create_shader_module(&ShapeInstance::default_textured_fragment_shader())),
             "main",
-        ) 
+        )
     }
 }
 
 impl WireShaders {
+    /// Constructor
+    /// # Parameters
+    /// - `vertex_module`: vertex shader module
+    /// - `vertex_entry`: entry point of vertex shader module
+    /// - `fragment_module`: fragment shader module without texture
+    /// - `fragment_entry`: entry point of fragment shader module without texture
     #[inline(always)]
     pub fn new(
-        vertex_module: ShaderModule,
+        vertex_module: Arc<ShaderModule>,
         vertex_entry: &'static str,
-        fragment_module: ShaderModule,
+        fragment_module: Arc<ShaderModule>,
         fragment_entry: &'static str,
     ) -> Self {
         Self {
-            vertex_module: Arc::new(vertex_module),
-            fragment_module: Arc::new(fragment_module),
+            vertex_module,
             vertex_entry,
+            fragment_module,
             fragment_entry,
         }
     }
 
+    /// Creates default wireframe shaders
     #[inline(always)]
     fn default(device: &Device) -> Self {
         Self::new(
-            device.create_shader_module(&include_spirv!("shaders/line.vert.spv")),
+            Arc::new(device.create_shader_module(&include_spirv!("shaders/line.vert.spv"))),
             "main",
-            device.create_shader_module(&include_spirv!("shaders/line.frag.spv")),
+            Arc::new(device.create_shader_module(&include_spirv!("shaders/line.frag.spv"))),
             "main",
-        ) 
+        )
     }
 }
 
@@ -109,21 +134,19 @@ impl CreatorCreator for Scene {
 impl InstanceCreator {
     /// Creates Instance from object.
     #[inline(always)]
-    pub fn try_create_instance<Instance, T: TryIntoInstance<Instance>>(
-        &self,
-        object: &T,
-        desc: &T::Descriptor,
-    ) -> Option<Instance> {
-        object.try_into_instance(self, desc)
+    pub fn try_create_instance<I, T>(&self, object: &T, desc: &T::Descriptor) -> Option<I>
+    where
+        T: TryIntoInstance<I>,
+        I: Instance, {
+        object.try_into_instance(&self.handler, &I::standard_shaders(self), desc)
     }
     /// Creates Instance from object.
     #[inline(always)]
-    pub fn create_instance<Instance, T: IntoInstance<Instance>>(
-        &self,
-        object: &T,
-        desc: &T::Descriptor,
-    ) -> Instance {
-        object.into_instance(self, desc)
+    pub fn create_instance<I, T>(&self, object: &T, desc: &T::Descriptor) -> I
+    where
+        T: IntoInstance<I>,
+        I: Instance, {
+        object.into_instance(&self.handler, &I::standard_shaders(self), desc)
     }
     /// Creates `Texture` for attaching faces.
     #[inline(always)]

@@ -40,6 +40,13 @@ impl WireFrameInstance {
     pub fn instance_state_mut(&mut self) -> &mut WireFrameState { &mut self.state }
 }
 
+impl Instance for WireFrameInstance {
+    type Shaders = WireShaders;
+    fn standard_shaders(creator: &InstanceCreator) -> WireShaders {
+        creator.wire_shaders.clone()
+    }
+}
+
 impl Rendered for WireFrameInstance {
     impl_render_id!(id);
     fn vertex_buffer(&self, _: &DeviceHandler) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {

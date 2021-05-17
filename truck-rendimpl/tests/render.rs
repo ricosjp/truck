@@ -9,7 +9,7 @@ use wgpu::*;
 const PICTURE_SIZE: (u32, u32) = (1024, 768);
 
 fn test_scene(backend: BackendBit) -> Scene {
-    let instance = Instance::new(backend);
+    let instance = wgpu::Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = common::swap_chain_descriptor(PICTURE_SIZE);
     let sc_desc = Arc::new(Mutex::new(sc_desc));

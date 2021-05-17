@@ -103,8 +103,9 @@ pub struct ShapeWireFrameInstanceDescriptor {
     pub polyline_precision: f64,
 }
 
+/// shaders for rendering polygons
 #[derive(Debug, Clone)]
-struct PolygonShaders {
+pub struct PolygonShaders {
     vertex_module: Arc<ShaderModule>,
     vertex_entry: &'static str,
     fragment_module: Arc<ShaderModule>,
@@ -113,8 +114,9 @@ struct PolygonShaders {
     tex_fragment_entry: &'static str,
 }
 
+/// shaders for rendering shapes
 #[derive(Debug, Clone)]
-struct ShapeShaders {
+pub struct ShapeShaders {
     vertex_module: Arc<ShaderModule>,
     vertex_entry: &'static str,
     fragment_module: Arc<ShaderModule>,
@@ -123,8 +125,9 @@ struct ShapeShaders {
     tex_fragment_entry: &'static str,
 }
 
+/// shaders for rendering wireframes
 #[derive(Debug, Clone)]
-struct WireShaders {
+pub struct WireShaders {
     vertex_module: Arc<ShaderModule>,
     vertex_entry: &'static str,
     fragment_module: Arc<ShaderModule>,
@@ -201,27 +204,38 @@ pub trait CreateBuffers {
 }
 
 /// The trait for generating `Instance` from `Self`.
-pub trait TryIntoInstance<Instance> {
+pub trait TryIntoInstance<I: Instance> {
     /// Configuation deacriptor for instance.
     type Descriptor;
     #[doc(hidden)]
     fn try_into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &I::Shaders,
         desc: &Self::Descriptor,
-    ) -> Option<Instance>;
+    ) -> Option<I>;
 }
 
 /// The trait for generating `Instance` from `Self`.
-pub trait IntoInstance<Instance> {
+pub trait IntoInstance<I: Instance> {
     /// Configuation deacriptor for instance.
     type Descriptor;
     /// Creates `Instance` from `self`.
     fn into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &I::Shaders,
         desc: &Self::Descriptor,
-    ) -> Instance;
+    ) -> I;
+}
+
+/// Instance for rendering
+pub trait Instance {
+    #[doc(hidden)]
+    type Shaders;
+    /// Get standard shaders from instance creator.
+    #[doc(hidden)]
+    fn standard_shaders(creator: &InstanceCreator) -> Self::Shaders;
 }
 
 #[derive(Debug, Clone)]
