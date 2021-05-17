@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
-use glsl_to_spirv::ShaderType;
 use rayon::prelude::*;
 use std::convert::TryInto;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
@@ -135,13 +134,6 @@ pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(
     scene.add_objects(object);
     scene.render_scene(&texture.create_view(&Default::default()));
     scene.clear_objects();
-}
-
-pub fn compile_shader(code: &str, shadertype: ShaderType) -> Vec<u8> {
-    let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();
-    let mut compiled = Vec::new();
-    spirv.read_to_end(&mut compiled).unwrap();
-    compiled
 }
 
 pub fn nontex_answer_texture(scene: &mut Scene) -> Texture {
