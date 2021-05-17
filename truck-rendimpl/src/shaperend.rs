@@ -425,42 +425,6 @@ impl ShapeInstance {
     }
 }
 
-impl ShapeInstance {
-    /// Returns the default vertex shader module source.
-    ///
-    /// The GLSL original code is `src/shaders/polygon.vert`.
-    #[inline(always)]
-    pub fn default_vertex_shader() -> ShaderModuleDescriptor<'static> {
-        include_spirv!("shaders/face.vert.spv")
-    }
-
-    /// Returns the default fragment shader module source for non-textured polygons.
-    ///
-    /// The GLSL original code is `src/shaders/face.frag`.
-    #[inline(always)]
-    pub fn default_fragment_shader() -> ShaderModuleDescriptor<'static> {
-        //include_spirv!("shaders/face.frag.spv")
-        ShaderModuleDescriptor {
-            label: Some("shaders/face.frag.spv"),
-            source: wgpu::util::make_spirv(include_bytes!("shaders/face.frag.spv")),
-            flags: ShaderFlags::empty(),
-        }
-    }
-
-    /// Returns the default fragment shader module source for textured polygons.
-    ///
-    /// The GLSL original code is `src/shaders/textured-face.frag`.
-    #[inline(always)]
-    pub fn default_textured_fragment_shader() -> ShaderModuleDescriptor<'static> {
-        //include_spirv!("shaders/textured-face.frag.spv")
-        ShaderModuleDescriptor {
-            label: Some("shaders/textured-face.frag.spv"),
-            source: wgpu::util::make_spirv(include_bytes!("shaders/textured-face.frag.spv")),
-            flags: ShaderFlags::empty(),
-        }
-    }
-}
-
 impl Instance for ShapeInstance {
     type Shaders = ShapeShaders;
     fn standard_shaders(creator: &InstanceCreator) -> ShapeShaders {

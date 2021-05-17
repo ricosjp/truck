@@ -122,11 +122,16 @@ impl WireShaders {
     /// Creates default wireframe shaders
     #[inline(always)]
     fn default(device: &Device) -> Self {
+        let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
+            source: ShaderSource::Wgsl(include_str!("shaders/line.wgsl").into()),
+            flags: ShaderFlags::VALIDATION,
+            label: None,
+        }));
         Self::new(
-            Arc::new(device.create_shader_module(&include_spirv!("shaders/line.vert.spv"))),
-            "main",
-            Arc::new(device.create_shader_module(&include_spirv!("shaders/line.frag.spv"))),
-            "main",
+            Arc::clone(&shader_module),
+            "vs_main",
+            shader_module,
+            "fs_main",
         )
     }
 }
