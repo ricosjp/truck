@@ -2,7 +2,7 @@ struct VertexInput {
     [[location(0)]] position: vec3<f32>;
     [[location(1)]] uv: vec2<f32>;
     [[location(2)]] normal: vec3<f32>; 
-    [[location(3), interpolate(flat)]] boundary_range: vec2<u32>;
+    [[location(3)]] boundary_range: vec2<f32>;
 };
 
 [[block]]
@@ -66,7 +66,7 @@ struct VertexOutput {
     [[location(0)]] position: vec3<f32>;
     [[location(1)]] uv: vec2<f32>;
     [[location(2)]] normal: vec3<f32>; 
-    [[location(3), interpolate(flat)]] boundary_range: vec2<u32>;
+    [[location(3)]] boundary_range: vec2<f32>;
 };
 
 [[stage(vertex)]]
@@ -78,13 +78,14 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.position = world_position.xyz;
     out.uv = in.uv;
     out.normal = normalize(world_normal.xyz);
+    out.boundary_range = in.boundary_range;
     return out;
 }
 
 let e: vec2<f32> = vec2<f32>(1.0, 0.0);
 fn in_domain(in: VertexInput) -> bool {
     var score: i32 = 0;
-    for (var i: u32 = in.boundary_range[0]; i < in.boundary_range[1]; i = i + 1u) {
+    for (var i: u32 = u32(in.boundary_range[0]); i < u32(in.boundary_range[1]); i = i + 1u) {
         let start = boundary.boundary[i].xy - in.uv;
         let end = boundary.boundary[i].zw - in.uv;
         if (start[1] * end[1] >= 0.0) {

@@ -73,7 +73,7 @@ pub trait App: Sized + 'static {
         }
         let window = wb.build(&event_loop).expect("failed to build window");
         let size = window.inner_size();
-        let instance = Instance::new(BackendBit::PRIMARY);
+        let instance = Instance::new(BackendBit::DX12);
         let surface = unsafe { instance.create_surface(&window) };
 
         let (device, queue, info) = futures::executor::block_on(init_device(&instance, &surface));

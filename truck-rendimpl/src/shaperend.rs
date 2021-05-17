@@ -7,7 +7,7 @@ struct AttrVertex {
     pub position: [f32; 3],
     pub uv_coord: [f32; 2],
     pub normal: [f32; 3],
-    pub boundary_range: [u32; 2],
+    pub boundary_range: [f32; 2],
 }
 
 impl Default for ShapeInstanceDescriptor {
@@ -116,7 +116,7 @@ fn add_face(
                     Some(normals) => normals[i][j].cast().unwrap().into(),
                     None => [0.0, 0.0, 0.0],
                 },
-                boundary_range: [inf, sup],
+                boundary_range: [inf as f32, sup as f32],
             }),
     );
     let len = mesh.positions()[0].len() as u32;
@@ -495,7 +495,7 @@ impl Rendered for ShapeInstance {
                             shader_location: 2,
                         },
                         VertexAttribute {
-                            format: VertexFormat::Uint32x2,
+                            format: VertexFormat::Float32x2,
                             offset: 3 * 4 + 2 * 4 + 3 * 4,
                             shader_location: 3,
                         },

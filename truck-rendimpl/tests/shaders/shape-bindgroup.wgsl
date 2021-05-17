@@ -34,14 +34,14 @@ struct VertexInput {
     [[location(0)]] position: vec3<f32>;
     [[location(1)]] uv: vec2<f32>;
     [[location(2)]] normal: vec3<f32>;
-    [[location(3)]] boundary_range: vec2<u32>;
+    [[location(3)]] boundary_range: vec2<f32>;
 };
 
 struct VertexOutput {
     [[builtin(position)]] position: vec4<f32>;
     [[location(0)]] inp: vec3<f32>;
     [[location(1)]] uv: vec2<f32>;
-    [[location(2), interpolate(flat)]] boundary_range: vec2<u32>;
+    [[location(2)]] boundary_range: vec2<f32>;
 };
 
 let EPS: f32 = 1.0e-6;
@@ -63,7 +63,6 @@ fn current_normal(in: VertexInput) -> vec3<f32> {
 }
 
 fn answer_range(inp: vec3<f32>) -> vec2<u32> {
-    //return vec2<u32>(0u, 0u);
     if (inp.x < 0.0) {
         return vec2<u32>(0u, 4u);
     } else {
@@ -76,7 +75,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.inp = vec3<f32>(0.0);
     out.uv = vec2<f32>(0.1);
-    out.boundary_range = vec2<u32>(0u);
+    out.boundary_range = vec2<f32>(0.0);
     if (fract_distance(fract(in.position.x), in.uv.x) > EPS) {
         out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } elseif (abs((1.0 + in.position.y) / 2.0 - in.uv.y) > EPS) {
@@ -118,7 +117,7 @@ fn nontex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (any(in.boundary_range != answer_range(in.inp))) {
+    } elseif (any(vec2<u32>(in.boundary_range) != answer_range(in.inp))) {
         return vec4<f32>(1.0, 0.0, 0.0, 1.0);
     } elseif (distance(boundary.boundary[0], vec4<f32>(0.0, 0.0, 1.0, 0.0)) > EPS) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
@@ -151,7 +150,7 @@ fn nontex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (any(in.boundary_range == answer_range(in.inp))) {
+    } elseif (any(vec2<u32>(in.boundary_range) == answer_range(in.inp))) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(boundary.boundary[0], vec4<f32>(0.0, 0.0, 1.0, 0.0)) > EPS) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
@@ -168,7 +167,7 @@ fn nontex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
 
 [[stage(fragment)]]
 fn tex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    let uv = vec2<f32>(1.0 + in.uv.x, 1.0 - in.uv.y) / 2.0;
+    let uv = vec2<f32>(1.0 + in.inp.x, 1.0 - in.inp.y) / 2.0;
     let col = textureSample(r_color, r_sampler, uv);
     if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
@@ -186,7 +185,7 @@ fn tex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (any(in.boundary_range != answer_range(in.inp))) {
+    } elseif (any(vec2<u32>(in.boundary_range) != answer_range(in.inp))) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(boundary.boundary[0], vec4<f32>(0.0, 0.0, 1.0, 0.0)) > EPS) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
@@ -203,7 +202,7 @@ fn tex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
 
 [[stage(fragment)]]
 fn tex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    let uv = vec2<f32>(1.0 + in.uv.x, 1.0 - in.uv.y) / 2.0;
+    let uv = vec2<f32>(1.0 + in.inp.x, 1.0 - in.inp.y) / 2.0;
     let col = textureSample(r_color, r_sampler, uv);
     if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
@@ -221,7 +220,7 @@ fn tex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (any(in.boundary_range == answer_range(in.inp))) {
+    } elseif (any(vec2<u32>(in.boundary_range) == answer_range(in.inp))) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(boundary.boundary[0], vec4<f32>(0.0, 0.0, 1.0, 0.0)) > EPS) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
