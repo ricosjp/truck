@@ -1,5 +1,4 @@
 mod common;
-use glsl_to_spirv::ShaderType;
 use image::{DynamicImage, ImageBuffer, Rgba};
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
@@ -8,33 +7,37 @@ use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (256, 256);
 
-fn bgcheck_shaders(handler: &DeviceHandler, fragment_shader: &str) -> PolygonShaders {
-    let vertex_shader = include_str!("shaders/mesh-bindgroup.vert");
-    let vertex_spirv = common::compile_shader(vertex_shader, ShaderType::Vertex);
-    let vertex_module = Arc::new(
-        handler
-            .device()
-            .create_shader_module(&ShaderModuleDescriptor {
-                source: wgpu::util::make_spirv(&vertex_spirv),
-                flags: ShaderFlags::VALIDATION,
-                label: None,
-            }),
-    );
-    let fragment_spirv = common::compile_shader(fragment_shader, ShaderType::Fragment);
-    let fragment_module = Arc::new(handler.device().create_shader_module(
-        &ShaderModuleDescriptor {
-            source: wgpu::util::make_spirv(&fragment_spirv),
-            flags: ShaderFlags::VALIDATION,
-            label: None,
-        },
-    ));
+fn bgcheck_shaders(handler: &DeviceHandler) -> PolygonShaders {
+    let source = include_str!("shaders/mesh-bindgroup.wgsl");
+    let module = Arc::new(handler.device().create_shader_module(&ShaderModuleDescriptor {
+        source: ShaderSource::Wgsl(source.into()),
+        flags: ShaderFlags::VALIDATION,
+        label: None,
+    }));
     PolygonShaders::new(
-        vertex_module,
-        "main",
-        fragment_module.clone(),
-        "main",
-        fragment_module,
-        "main",
+        Arc::clone(&module),
+        "vs_main",
+        Arc::clone(&module),
+        "nontex_main",
+        Arc::clone(&module),
+        "tex_main",
+    )
+}
+
+fn bgcheck_anti_shaders(handler: &DeviceHandler) -> PolygonShaders {
+    let source = include_str!("shaders/mesh-bindgroup.wgsl");
+    let module = Arc::new(handler.device().create_shader_module(&ShaderModuleDescriptor {
+        source: ShaderSource::Wgsl(source.into()),
+        flags: ShaderFlags::VALIDATION,
+        label: None,
+    }));
+    PolygonShaders::new(
+        Arc::clone(&module),
+        "vs_main",
+        Arc::clone(&module),
+        "nontex_main_anti",
+        Arc::clone(&module),
+        "tex_main_anti",
     )
 }
 
@@ -106,10 +109,9 @@ fn exec_polymesh_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let shader = include_str!("shaders/mesh-nontex-bindgroup.frag");
             let instance: PolygonInstance = polygon.into_instance(
                 scene.device_handler(),
-                &bgcheck_shaders(scene.device_handler(), shader),
+                &bgcheck_shaders(scene.device_handler()),
                 &inst_desc,
             );
             assert!(exec_polygon_bgtest(
@@ -119,10 +121,9 @@ fn exec_polymesh_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
                 i,
                 out_dir.clone()
             ));
-            let shader = include_str!("shaders/anti-mesh-nontex-bindgroup.frag");
             let instance: PolygonInstance = polygon.into_instance(
                 scene.device_handler(),
-                &bgcheck_shaders(scene.device_handler(), shader),
+                &bgcheck_anti_shaders(scene.device_handler()),
                 &inst_desc,
             );
             assert!(!exec_polygon_bgtest(
@@ -165,10 +166,9 @@ fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let shader = include_str!("shaders/mesh-tex-bindgroup.frag");
             let instance: PolygonInstance = polygon.into_instance(
                 scene.device_handler(),
-                &bgcheck_shaders(scene.device_handler(), shader),
+                &bgcheck_shaders(scene.device_handler()),
                 &desc,
             );
             assert!(exec_polygon_bgtest(
@@ -178,10 +178,9 @@ fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
                 i + 3,
                 out_dir.clone(),
             ));
-            let shader = include_str!("shaders/anti-mesh-tex-bindgroup.frag");
             let instance: PolygonInstance = polygon.into_instance(
                 scene.device_handler(),
-                &bgcheck_shaders(scene.device_handler(), shader),
+                &bgcheck_anti_shaders(scene.device_handler()),
                 &desc,
             ); 
             assert!(!exec_polygon_bgtest(

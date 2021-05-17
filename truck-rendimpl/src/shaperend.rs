@@ -363,9 +363,9 @@ impl ShapeInstance {
         bind_group_util::create_bind_group_layout(
             device,
             &[
+                Self::boundary_bgl_entry(),
                 InstanceState::matrix_bgl_entry(),
                 InstanceState::material_bgl_entry(),
-                Self::boundary_bgl_entry(),
             ],
         )
     }
@@ -375,11 +375,11 @@ impl ShapeInstance {
         bind_group_util::create_bind_group_layout(
             device,
             &[
+                Self::boundary_bgl_entry(),
                 InstanceState::matrix_bgl_entry(),
                 InstanceState::material_bgl_entry(),
                 InstanceState::textureview_bgl_entry(),
                 InstanceState::sampler_bgl_entry(),
-                Self::boundary_bgl_entry(),
             ],
         )
     }
@@ -394,13 +394,13 @@ impl ShapeInstance {
             handler.device(),
             layout,
             vec![
+                self.boundary.binding_resource(),
                 self.state
                     .matrix_buffer(handler.device())
                     .binding_resource(),
                 self.state
                     .material_buffer(handler.device())
                     .binding_resource(),
-                self.boundary.binding_resource(),
             ],
         )
     }
@@ -411,6 +411,7 @@ impl ShapeInstance {
             handler.device(),
             layout,
             vec![
+                self.boundary.binding_resource(),
                 self.state
                     .matrix_buffer(handler.device())
                     .binding_resource(),
@@ -419,7 +420,6 @@ impl ShapeInstance {
                     .binding_resource(),
                 BindingResource::TextureView(&view),
                 BindingResource::Sampler(&sampler),
-                self.boundary.binding_resource(),
             ],
         )
     }

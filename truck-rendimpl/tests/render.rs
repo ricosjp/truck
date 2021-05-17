@@ -143,8 +143,8 @@ fn generate_texture(scene: &mut Scene, out_dir: String) -> DynamicImage {
 fn tex_raytracing(scene: &mut Scene) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let mut shader = include_str!("../src/shaders/microfacet-module.wgsl").to_string();
-    shader += include_str!("shaders/raytraces.wgsl");
+    let shader = include_str!("../src/shaders/microfacet-module.wgsl").to_string()
+        + include_str!("shaders/raytraces.wgsl");
     let plane = Plane {
         shader: &shader,
         vs_entpt: "vs_main",
@@ -225,9 +225,9 @@ fn exec_tex_render_test(backend: BackendBit, out_dir: &str) {
     let diff1 = common::count_difference(&buffer1, &buffer2);
     let diff2 = common::count_difference(&buffer2, &buffer0);
     let anti_diff = common::count_difference(&anti_buffer, &buffer0);
-    println!("{} pixel difference: ray-marching and polymesh", diff0);
+    println!("{} pixel difference: ray-tracing and polymesh", diff0);
     println!("{} pixel difference: polymesh and shape", diff1);
-    println!("{} pixel difference: ray-marching and shape", diff2);
+    println!("{} pixel difference: ray-tracing and shape", diff2);
     assert!(diff0 < 10);
     assert!(diff1 == 0);
     assert!(diff2 < 10);
