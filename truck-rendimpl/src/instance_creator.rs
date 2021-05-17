@@ -31,13 +31,19 @@ impl PolygonShaders {
     /// Creates default polygon shaders.
     #[inline(always)]
     pub fn default(device: &Device) -> Self {
+        let source = include_str!("shaders/microfacet-module.wgsl").to_string() + include_str!("shaders/polygon.wgsl");
+        let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
+            source: ShaderSource::Wgsl(source.into()),
+            flags: ShaderFlags::VALIDATION,
+            label: None,
+        }));
         Self::new(
-            Arc::new(device.create_shader_module(&PolygonInstance::default_vertex_shader())),
-            "main",
-            Arc::new(device.create_shader_module(&PolygonInstance::default_fragment_shader())),
-            "main",
-            Arc::new(device.create_shader_module(&PolygonInstance::default_textured_fragment_shader())),
-            "main",
+            Arc::clone(&shader_module),
+            "vs_main",
+            Arc::clone(&shader_module),
+            "nontex_main",
+            Arc::clone(&shader_module),
+            "tex_main",
         )
     }
 }
