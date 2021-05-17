@@ -244,6 +244,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
 use plane::Plane;
 
 fn main() {
+    env_logger::init();
     let event_loop = winit::event_loop::EventLoop::new();
     let mut wb = winit::window::WindowBuilder::new();
     wb = wb.with_title("wGSL Sandbox");

@@ -518,7 +518,6 @@ impl Scene {
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
-            println!("rpass start");
             let (attachment, resolve_target) = match self.scene_desc.sample_count != 1 {
                 true => (&sampled_view, Some(view)),
                 false => (view, None),
@@ -552,10 +551,7 @@ impl Scene {
                     None => rpass.draw(0..(object.vertex_buffer.size / object.vertex_buffer.stride) as u32, 0..1),
                 }
             }
-            println!("rpass end");
         }
-        println!("rpass deleted");
         self.queue().submit(vec![encoder.finish()]);
-        println!("encoder finished");
     }
 }
