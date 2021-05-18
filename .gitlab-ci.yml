@@ -20,12 +20,11 @@ gpu-test:
     stage: test
     script:
         - /root/.cargo/bin/cargo clean
-        - /root/.cargo/bin/cargo test
+        # test by release build for the bug of Vulkan-ValidationLayers
+        # cf: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2502
+        - /root/.cargo/bin/cargo test --release
             -p truck-platform
             -p truck-rendimpl
-            # test by release build for the bug of Vulkan-ValidationLayers
-            # cf: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2502
-            --release
             -- --nocapture --test-threads=1
         - mkdir images
         - mv truck-platform/output images/platform
