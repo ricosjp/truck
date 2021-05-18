@@ -96,7 +96,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
     );
     return main_image(coord, env);
 }
-    ";
+";
 
     // Implementation of Rendered for Plane.
     impl Rendered for Plane {
@@ -232,14 +232,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
         /// - device: Device, provided by wgpu.
         /// - shader: the inputed fragment shader
         pub fn new(device: &Device, shader: &str) -> Plane {
-            let mut source = BASE_PREFIX.to_string();
-            source += shader;
-            source += BASE_SHADER;
-            let module = device.create_shader_module(&ShaderModuleDescriptor {
-                source: ShaderSource::Wgsl(source.into()),
-                label: None,
-                flags: ShaderFlags::VALIDATION,
-            });
+            let module = create_module(device, shader).expect("Default shader is invalid");
             Plane {
                 module,
                 mouse: [0.0; 4],
@@ -247,20 +240,39 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
             }
         }
 
-        pub fn set_shader(&mut self, device: &Device, mut shader: String) {
-            shader += BASE_SHADER;
-            self.module = device.create_shader_module(&ShaderModuleDescriptor {
-                source: ShaderSource::Wgsl(shader.into()),
-                label: None,
-                flags: ShaderFlags::VALIDATION,
-            });
+        pub fn set_shader(&mut self, device: &Device, shader: &str) {
+            if let Some(module) = create_module(device, shader) {
+                self.module = module;
+            }
         }
+    }
+
+    fn create_module(device: &Device, shader: &str) -> Option<ShaderModule> {
+        use naga::{front::wgsl::Parser, valid::*};
+        let mut source = BASE_PREFIX.to_string();
+        source += shader;
+        source += BASE_SHADER;
+
+        Validator::new(ValidationFlags::all())
+            .validate(
+                &Parser::new()
+                    .parse(&source)
+                    .map_err(|error| println!("WGSL Parse Error: {}", error))
+                    .ok()?,
+            )
+            .map_err(|error| println!("WGSL Validation Error: {}", error))
+            .ok()?;
+
+        Some(device.create_shader_module(&ShaderModuleDescriptor {
+            source: ShaderSource::Wgsl(source.into()),
+            label: None,
+            flags: ShaderFlags::VALIDATION,
+        }))
     }
 }
 use plane::Plane;
 
 fn main() {
-    env_logger::init();
     let event_loop = winit::event_loop::EventLoop::new();
     let mut wb = winit::window::WindowBuilder::new();
     wb = wb.with_title("wGSL Sandbox");
@@ -355,7 +367,7 @@ fn main() {
                 WindowEvent::DroppedFile(path) => {
                     match std::fs::read_to_string(path) {
                         Ok(code) => {
-                            plane.set_shader(handler.device(), code);
+                            plane.set_shader(handler.device(), &code);
                             scene.update_pipeline(&plane);
                         }
                         Err(error) => println!("{:?}", error),
