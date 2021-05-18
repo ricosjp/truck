@@ -288,8 +288,8 @@ pub fn count_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> usize {
 pub fn os_alt_exec_test<F: Fn(BackendBit, &str)>(test: F) {
     let _ = env_logger::try_init();
     if cfg!(target_os = "windows") {
-        test(BackendBit::DX12, "output/dx12/");
         test(BackendBit::VULKAN, "output/vulkan/");
+        test(BackendBit::DX12, "output/dx12/");
     } else if cfg!(target_os = "macos") {
         test(BackendBit::METAL, "output/");
     } else {

@@ -34,14 +34,15 @@ struct VertexInput {
     [[location(0)]] position: vec3<f32>;
     [[location(1)]] uv: vec2<f32>;
     [[location(2)]] normal: vec3<f32>;
-    [[location(3)]] boundary_range: vec2<u32>;
+    [[location(3), interpolate(flat)]] boundary_range: vec2<u32>;
 };
 
 struct VertexOutput {
-    [[builtin(position)]] position: vec4<f32>;
-    [[location(0)]] inp: vec3<f32>;
+    [[builtin(position)]] gl_position: vec4<f32>;
+    [[location(0)]] position: vec3<f32>;
     [[location(1)]] uv: vec2<f32>;
-    [[location(2), interpolate(flat)]] boundary_range: vec2<u32>;
+    [[location(2)]] normal: vec3<f32>;
+    [[location(3)]] boundary_range: vec2<u32>;
 };
 
 let EPS: f32 = 1.0e-6;
@@ -73,26 +74,27 @@ fn answer_range(inp: vec3<f32>) -> vec2<u32> {
 [[stage(vertex)]]
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    out.inp = vec3<f32>(0.0);
+    out.position = vec3<f32>(0.0);
     out.uv = vec2<f32>(0.1);
-    out.boundary_range = vec2<u32>(0u);
+    out.normal = vec3<f32>(0.0);
+    out.boundary_range = vec2<u32>(1u);
     if (fract_distance(fract(in.position.x), in.uv.x) > EPS) {
-        out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        out.gl_position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (abs((1.0 + in.position.y) / 2.0 - in.uv.y) > EPS) {
-        out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        out.gl_position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(in.normal, current_normal(in)) > EPS) {
-        out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        out.gl_position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
-        out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        out.gl_position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(model_matrix.matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
-        out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        out.gl_position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(model_matrix.matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
-        out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        out.gl_position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(model_matrix.matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
-        out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);  
+        out.gl_position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } else {
-        out.position = vec4<f32>(in.position.xy, 0.0, 1.0);
-        out.inp = in.position;
+        out.gl_position = vec4<f32>(in.position.xy, 0.0, 1.0);
+        out.position = in.position;
         out.uv = in.uv;
         out.boundary_range = in.boundary_range;
     }
@@ -100,7 +102,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 }
 
 [[stage(fragment)]]
-fn nontex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+fn nontex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
     if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
     } elseif (distance(model_matrix.matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
@@ -117,7 +119,7 @@ fn nontex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (any(in.boundary_range != answer_range(in.inp))) {
+    } elseif (any(in.boundary_range != answer_range(in.position))) {
         return vec4<f32>(1.0, 0.0, 0.0, 1.0);
     } elseif (distance(boundary.boundary[0], vec4<f32>(0.0, 0.0, 1.0, 0.0)) > EPS) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
@@ -133,7 +135,7 @@ fn nontex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
 }
 
 [[stage(fragment)]]
-fn nontex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+fn nontex_main_anti(in: VertexInput) -> [[location(0)]] vec4<f32> {
     if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
     } elseif (distance(model_matrix.matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
@@ -150,7 +152,7 @@ fn nontex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (any(in.boundary_range == answer_range(in.inp))) {
+    } elseif (any(in.boundary_range == answer_range(in.position))) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(boundary.boundary[0], vec4<f32>(0.0, 0.0, 1.0, 0.0)) > EPS) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
@@ -166,8 +168,8 @@ fn nontex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
 }
 
 [[stage(fragment)]]
-fn tex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    let uv = vec2<f32>(1.0 + in.inp.x, 1.0 - in.inp.y) / 2.0;
+fn tex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
+    let uv = vec2<f32>(1.0 + in.position.x, 1.0 - in.position.y) / 2.0;
     let col = textureSample(r_color, r_sampler, uv);
     if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
@@ -185,7 +187,7 @@ fn tex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (any(in.boundary_range != answer_range(in.inp))) {
+    } elseif (any(in.boundary_range != answer_range(in.position))) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(boundary.boundary[0], vec4<f32>(0.0, 0.0, 1.0, 0.0)) > EPS) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
@@ -201,8 +203,8 @@ fn tex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
 }
 
 [[stage(fragment)]]
-fn tex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    let uv = vec2<f32>(1.0 + in.inp.x, 1.0 - in.inp.y) / 2.0;
+fn tex_main_anti(in: VertexInput) -> [[location(0)]] vec4<f32> {
+    let uv = vec2<f32>(1.0 + in.position.x, 1.0 - in.position.y) / 2.0;
     let col = textureSample(r_color, r_sampler, uv);
     if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
@@ -220,7 +222,7 @@ fn tex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (any(in.boundary_range == answer_range(in.inp))) {
+    } elseif (any(in.boundary_range == answer_range(in.position))) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
     } elseif (distance(boundary.boundary[0], vec4<f32>(0.0, 0.0, 1.0, 0.0)) > EPS) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
