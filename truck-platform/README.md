@@ -23,7 +23,7 @@ The rule of shaders:
 vec4<f32> main_image(coord: vec2<f32>, env: Environment);
 ```
 
-- The parameter `coord` is the fragment coordinate. The origin is the lower right.
+- The parameter `coord` is the fragment coordinate. The origin is the lower left.
 - The parameter `env` has the environment information. The declaration of struct is the following:
 
 ```wgsl
@@ -33,3 +33,5 @@ struct Environment {
     time: f32;              // the number of seconds since the application started.
 };
 ```
+
+Also, see the sample `newton-cuberoot.wgsl`, default shader, in `examples`.
