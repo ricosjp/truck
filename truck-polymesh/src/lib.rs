@@ -73,11 +73,11 @@ mod normal_filters;
 /// I/O of wavefront obj
 pub mod obj;
 mod optimizing;
-/// I/O of STL
-pub mod stl;
 /// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
 pub mod polygon_mesh;
 mod splitting;
+/// I/O of STL
+pub mod stl;
 mod structured_mesh;
 mod structuring;
 

@@ -1,4 +1,5 @@
 //! Adds smooth normals to the stanford bunny.
+//!
 //! - Input: bunny.obj
 //! - Output: smooth_bunny.obj
 

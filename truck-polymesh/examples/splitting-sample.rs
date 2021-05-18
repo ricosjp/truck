@@ -1,4 +1,5 @@
 //! An experiment to decompose a mesh into elements for future NURBS-shape approximation of the mesh.
+//!
 //! - Input: sample.obj
 //! - Output: planes_parts_#.obj, others_parts_#.obj
 

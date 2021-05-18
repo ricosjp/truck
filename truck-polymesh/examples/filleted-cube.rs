@@ -1,5 +1,6 @@
 //! An experiment to decompose a mesh into elements for future NURBS-shape approximation of the mesh.
 //! Contains `doc(hidden)` methods.
+//!
 //! - Input: filleted_cube.obj
 //! - Output: planes.obj, lower.obj, upper.obj
 
