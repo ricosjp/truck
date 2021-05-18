@@ -41,7 +41,7 @@ struct VertexOutput {
     [[builtin(position)]] position: vec4<f32>;
     [[location(0)]] inp: vec3<f32>;
     [[location(1)]] uv: vec2<f32>;
-    [[location(2)]] boundary_range: vec2<u32>;
+    [[location(2), interpolate(flat)]] boundary_range: vec2<u32>;
 };
 
 let EPS: f32 = 1.0e-6;
