@@ -23,6 +23,8 @@ gpu-test:
         - /root/.cargo/bin/cargo test
             -p truck-platform
             -p truck-rendimpl
+            # test by release build for the bug of Vulkan-ValidationLayers
+            # cf: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2502
             --release
             -- --nocapture --test-threads=1
         - mkdir images
@@ -35,7 +37,7 @@ gpu-test:
             - images
 
 pages:
-    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
+    image: rust:latest
     stage: pages
     script:
         - cargo doc --no-deps
