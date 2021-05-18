@@ -52,7 +52,9 @@ fn create_readme(path: &str) {
             continue;
         }
         let filestem = path.file_stem().unwrap().to_str().unwrap();
-        readme.write_fmt(format_args!("\n### {}\n\n", filestem)).unwrap();
+        readme
+            .write_fmt(format_args!("\n### {}\n\n", filestem))
+            .unwrap();
         let output = Command::new("cargo")
             .args(&["readme", "--no-license", "--no-title"])
             .arg("-i")

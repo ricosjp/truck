@@ -1,5 +1,5 @@
 //! Simple shape viewer
-//! 
+//!
 //! - Drag the mouse to rotate the model.
 //! - Drag and drop json files into the window to switch models.
 //! - Right-click to move the light to the camera's position.

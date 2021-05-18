@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use rayon::prelude::*;
+use std::convert::TryInto;
 use std::io::Write;
 use std::sync::Arc;
-use std::convert::TryInto;
 use truck_platform::*;
 use wgpu::*;
 
@@ -96,7 +96,7 @@ impl<'a> Rendered for Plane<'a> {
                             blend: Some(BlendState::REPLACE),
                             write_mask: ColorWrite::ALL,
                         }],
-                    }), 
+                    }),
                     primitive: PrimitiveState {
                         topology: PrimitiveTopology::TriangleList,
                         front_face: FrontFace::Ccw,
