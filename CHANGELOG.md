@@ -10,6 +10,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - STL handling module `stl` in `truck-polymesh`.
 - In `truck-rendimpl`, wireframe for polygon.
   - Abort traits `Shape` and `Polygon`, and add new traits `IntoInstance` and `TryIntoInstance`.
+- Applied wgpu v0.8 and made all shaders WGSL, including shaders for test. Now, all dependence on cmake has been removed!
 
 ## v0.2
 
