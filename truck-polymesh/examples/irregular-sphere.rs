@@ -1,5 +1,6 @@
 //! Add the normal to the sphere containing
 //! the irregular normal generated from the NURBS containing the critical point.
+//!
 //! - Input: irregular_sphere.obj
 //! - Output: regular_sphere.obj
 

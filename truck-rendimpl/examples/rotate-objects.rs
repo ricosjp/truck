@@ -1,4 +1,5 @@
 //! Rotate Objects
+//! 
 //! - Drag the mouse to rotate the camera.
 //! - Drag and drop obj files into the window to switch models.
 //! - Right-click to move the light to the camera's position.

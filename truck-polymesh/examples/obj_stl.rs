@@ -1,3 +1,11 @@
+//! Converts OBJ and STL to each other.
+//! 
+//! usage:
+//! 
+//! ```bash
+//! cargo run --example obj_stl <input-file>
+//! ```
+
 use stl::*;
 use truck_polymesh::*;
 

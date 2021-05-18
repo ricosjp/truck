@@ -11,20 +11,6 @@ const WORKSPACES: [&str; 7] = [
     "truck-topology",
 ];
 
-const DEVDEPENDS_CMAKE: [&str; 3] = ["truck-rendimpl", "truck-modeling", "truck-platform"];
-
-const DEVDEPENDS_CMAKE_MESSAGE: &str = "## Dependencies
-The dev-dependencies of this crate includes [CMake](https://cmake.org).
-";
-
-fn cmake_flag(path: &&str) -> usize {
-    if DEVDEPENDS_CMAKE.iter().any(|s| s == path) {
-        1
-    } else {
-        0
-    }
-}
-
 fn badge_url(path: &str) -> String {
     format!(
         "[![Crates.io](https://img.shields.io/crates/v/{0}.svg)]\
@@ -42,7 +28,7 @@ fn create_readme(path: &str) {
     let lines: Vec<_> = output.split("\n").collect();
     readme
         .write_fmt(format_args!(
-            "{}\n{}\n\n{}\n",
+            "{}\n\n{}\n\n{}\n",
             lines[0],
             badge_url(path),
             lines[2]
@@ -53,15 +39,8 @@ fn create_readme(path: &str) {
         Err(_) => return,
     };
 
-    match cmake_flag(&path) {
-        1 => {
-            readme.write(DEVDEPENDS_CMAKE_MESSAGE.as_bytes()).unwrap();
-        }
-        _ => {}
-    }
-
     readme
-        .write_fmt(format_args!("\n# Sample Codes\n"))
+        .write_fmt(format_args!("\n## Sample Codes\n"))
         .unwrap();
     for file in dir {
         let path = file.unwrap().path();
@@ -73,7 +52,7 @@ fn create_readme(path: &str) {
             continue;
         }
         let filestem = path.file_stem().unwrap().to_str().unwrap();
-        readme.write_fmt(format_args!("## {}\n", filestem)).unwrap();
+        readme.write_fmt(format_args!("\n### {}\n\n", filestem)).unwrap();
         let output = Command::new("cargo")
             .args(&["readme", "--no-license", "--no-title"])
             .arg("-i")

@@ -1,6 +1,7 @@
 //! A sample of creating a render object by implementing "Rendered" in a new structure.
 //!
 //! One can use xyr fragment shader in the following way:
+//!
 //! - Enter the shader path as an argument when executing the program.
 //! - Drag and drop the shader into the window.
 //!
