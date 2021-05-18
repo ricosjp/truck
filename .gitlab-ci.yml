@@ -35,7 +35,7 @@ gpu-test:
             - images
 
 pages:
-    image: rust:latest
+    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: pages
     script:
         - cargo doc --no-deps
