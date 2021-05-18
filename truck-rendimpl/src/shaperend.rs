@@ -62,7 +62,7 @@ fn meshing_surface(surface: &Surface, precision: f64, boundary: &Vec<[f32; 4]>) 
 }
 
 fn add_face(
-    face: &Face,
+    face: &modeling::Face,
     mesh_precision: f64,
     expolygon: &mut ExpandedPolygon<AttrVertex>,
     boundaries: &mut Vec<[f32; 4]>,
@@ -145,10 +145,11 @@ impl TryIntoInstance<ShapeInstance> for Shell {
     /// - The surface is not regular: non-degenerate and differentiable.
     fn try_into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &ShapeShaders,
         desc: &ShapeInstanceDescriptor,
     ) -> Option<ShapeInstance> {
-        let device = creator.handler.device();
+        let device = handler.device();
         let mut expolygon = ExpandedPolygon::default();
         let mut boundaries = Vec::new();
         self.face_iter().try_for_each(|face| {
@@ -163,7 +164,7 @@ impl TryIntoInstance<ShapeInstance> for Shell {
                 BufferUsage::STORAGE,
             )),
             state: desc.instance_state.clone(),
-            shaders: Arc::clone(&creator.shape_shaders),
+            shaders: shaders.clone(),
             id: RenderID::gen(),
         })
     }
@@ -182,10 +183,11 @@ impl IntoInstance<ShapeInstance> for Shell {
     #[inline(always)]
     fn into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &ShapeShaders,
         desc: &ShapeInstanceDescriptor,
     ) -> ShapeInstance {
-        self.try_into_instance(creator, desc)
+        self.try_into_instance(handler, shaders, desc)
             .expect("failed to create instance")
     }
 }
@@ -194,10 +196,10 @@ impl IntoInstance<WireFrameInstance> for Shell {
     type Descriptor = ShapeWireFrameInstanceDescriptor;
     fn into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &WireShaders,
         desc: &ShapeWireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
-        let handler = &creator.handler;
         let mut lengths = Vec::new();
         let points: Vec<[f32; 3]> = self
             .face_iter()
@@ -227,7 +229,7 @@ impl IntoInstance<WireFrameInstance> for Shell {
             vertices: Arc::new(vertices),
             strips: Arc::new(strips),
             state: desc.wireframe_state.clone(),
-            shaders: Arc::clone(&creator.wire_shaders),
+            shaders: shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -245,10 +247,11 @@ impl TryIntoInstance<ShapeInstance> for Solid {
     /// - The surface is not regular: non-degenerate and differentiable.
     fn try_into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &ShapeShaders,
         desc: &ShapeInstanceDescriptor,
     ) -> Option<ShapeInstance> {
-        let device = creator.handler.device();
+        let device = handler.device();
         let mut expolygon = ExpandedPolygon::default();
         let mut boundaries = Vec::new();
         self.boundaries()
@@ -266,7 +269,7 @@ impl TryIntoInstance<ShapeInstance> for Solid {
                 BufferUsage::STORAGE,
             )),
             state: desc.instance_state.clone(),
-            shaders: Arc::clone(&creator.shape_shaders),
+            shaders: shaders.clone(),
             id: RenderID::gen(),
         })
     }
@@ -285,10 +288,11 @@ impl IntoInstance<ShapeInstance> for Solid {
     #[inline(always)]
     fn into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &ShapeShaders,
         desc: &ShapeInstanceDescriptor,
     ) -> ShapeInstance {
-        self.try_into_instance(creator, desc)
+        self.try_into_instance(handler, shaders, desc)
             .expect("failed to create instance")
     }
 }
@@ -297,10 +301,10 @@ impl IntoInstance<WireFrameInstance> for Solid {
     type Descriptor = ShapeWireFrameInstanceDescriptor;
     fn into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &WireShaders,
         desc: &ShapeWireFrameInstanceDescriptor,
     ) -> WireFrameInstance {
-        let handler = &creator.handler;
         let mut lengths = Vec::new();
         let points: Vec<[f32; 3]> = self
             .boundaries()
@@ -332,7 +336,7 @@ impl IntoInstance<WireFrameInstance> for Solid {
             vertices: Arc::new(vertices),
             strips: Arc::new(strips),
             state: desc.wireframe_state.clone(),
-            shaders: Arc::clone(&creator.wire_shaders),
+            shaders: shaders.clone(),
             id: RenderID::gen(),
         }
     }
@@ -343,10 +347,12 @@ impl ShapeInstance {
     fn boundary_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
-            ty: BindingType::StorageBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage {
+                    read_only: true,
+                },
+                has_dynamic_offset: false,
                 min_binding_size: None,
-                readonly: true,
             },
             count: None,
         }
@@ -357,9 +363,9 @@ impl ShapeInstance {
         bind_group_util::create_bind_group_layout(
             device,
             &[
+                Self::boundary_bgl_entry(),
                 InstanceState::matrix_bgl_entry(),
                 InstanceState::material_bgl_entry(),
-                Self::boundary_bgl_entry(),
             ],
         )
     }
@@ -369,11 +375,11 @@ impl ShapeInstance {
         bind_group_util::create_bind_group_layout(
             device,
             &[
+                Self::boundary_bgl_entry(),
                 InstanceState::matrix_bgl_entry(),
                 InstanceState::material_bgl_entry(),
                 InstanceState::textureview_bgl_entry(),
                 InstanceState::sampler_bgl_entry(),
-                Self::boundary_bgl_entry(),
             ],
         )
     }
@@ -388,13 +394,13 @@ impl ShapeInstance {
             handler.device(),
             layout,
             vec![
+                self.boundary.binding_resource(),
                 self.state
                     .matrix_buffer(handler.device())
                     .binding_resource(),
                 self.state
                     .material_buffer(handler.device())
                     .binding_resource(),
-                self.boundary.binding_resource(),
             ],
         )
     }
@@ -405,6 +411,7 @@ impl ShapeInstance {
             handler.device(),
             layout,
             vec![
+                self.boundary.binding_resource(),
                 self.state
                     .matrix_buffer(handler.device())
                     .binding_resource(),
@@ -413,139 +420,15 @@ impl ShapeInstance {
                     .binding_resource(),
                 BindingResource::TextureView(&view),
                 BindingResource::Sampler(&sampler),
-                self.boundary.binding_resource(),
             ],
         )
     }
 }
 
-impl ShapeInstance {
-    /// Returns the default vertex shader module source.
-    ///
-    /// The GLSL original code is `src/shaders/polygon.vert`.
-    #[inline(always)]
-    pub fn default_vertex_shader() -> ShaderModuleSource<'static> {
-        include_spirv!("shaders/face.vert.spv")
-    }
-
-    /// Returns the default fragment shader module source for non-textured polygons.
-    ///
-    /// The GLSL original code is `src/shaders/face.frag`.
-    #[inline(always)]
-    pub fn default_fragment_shader() -> ShaderModuleSource<'static> {
-        include_spirv!("shaders/face.frag.spv")
-    }
-
-    /// Returns the default fragment shader module source for textured polygons.
-    ///
-    /// The GLSL original code is `src/shaders/textured-face.frag`.
-    #[inline(always)]
-    pub fn default_textured_fragment_shader() -> ShaderModuleSource<'static> {
-        include_spirv!("shaders/textured-face.frag.spv")
-    }
-    /// Returns the pipeline with developer's custom shader.
-    #[inline(always)]
-    pub fn pipeline_with_shader(
-        &self,
-        vertex_shader: ShaderModuleSource,
-        fragment_shader: ShaderModuleSource,
-        device_handler: &DeviceHandler,
-        layout: &PipelineLayout,
-        sample_count: u32,
-    ) -> Arc<RenderPipeline> {
-        self.pipeline_with_shader_module(
-            &device_handler.device().create_shader_module(vertex_shader),
-            &device_handler
-                .device()
-                .create_shader_module(fragment_shader),
-            device_handler,
-            layout,
-            sample_count,
-        )
-    }
-
-    /// Returns the pipeline with developer's custom shader module.
-    #[inline(always)]
-    pub fn pipeline_with_shader_module(
-        &self,
-        vertex_module: &ShaderModule,
-        fragment_module: &ShaderModule,
-        device_handler: &DeviceHandler,
-        layout: &PipelineLayout,
-        sample_count: u32,
-    ) -> Arc<RenderPipeline> {
-        let device = device_handler.device();
-        let sc_desc = device_handler.sc_desc();
-        let cull_mode = match self.state.backface_culling {
-            true => CullMode::Back,
-            false => CullMode::None,
-        };
-        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            layout: Some(layout),
-            vertex_stage: ProgrammableStageDescriptor {
-                module: &vertex_module,
-                entry_point: "main",
-            },
-            fragment_stage: Some(ProgrammableStageDescriptor {
-                module: &fragment_module,
-                entry_point: "main",
-            }),
-            rasterization_state: Some(RasterizationStateDescriptor {
-                front_face: FrontFace::Ccw,
-                cull_mode,
-                depth_bias: 0,
-                depth_bias_slope_scale: 0.0,
-                depth_bias_clamp: 0.0,
-                clamp_depth: false,
-            }),
-            primitive_topology: PrimitiveTopology::TriangleList,
-            color_states: &[ColorStateDescriptor {
-                format: sc_desc.format,
-                color_blend: BlendDescriptor::REPLACE,
-                alpha_blend: BlendDescriptor::REPLACE,
-                write_mask: ColorWrite::ALL,
-            }],
-            depth_stencil_state: Some(DepthStencilStateDescriptor {
-                format: TextureFormat::Depth32Float,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::Less,
-                stencil: StencilStateDescriptor::default(),
-            }),
-            vertex_state: VertexStateDescriptor {
-                index_format: IndexFormat::Uint32,
-                vertex_buffers: &[VertexBufferDescriptor {
-                    stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
-                    step_mode: InputStepMode::Vertex,
-                    attributes: &[
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float3,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float2,
-                            offset: 3 * 4,
-                            shader_location: 1,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float3,
-                            offset: 2 * 4 + 3 * 4,
-                            shader_location: 2,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Uint2,
-                            offset: 3 * 4 + 2 * 4 + 3 * 4,
-                            shader_location: 3,
-                        },
-                    ],
-                }],
-            },
-            sample_count,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
-            label: None,
-        });
-        Arc::new(pipeline)
+impl Instance for ShapeInstance {
+    type Shaders = ShapeShaders;
+    fn standard_shaders(creator: &InstanceCreator) -> ShapeShaders {
+        creator.shape_shaders.clone()
     }
 }
 
@@ -579,17 +462,77 @@ impl Rendered for ShapeInstance {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        let fragment_shader = match self.state.texture.is_some() {
-            true => &self.shaders.tex_fragment,
-            false => &self.shaders.fragment,
+        let (fragment_shader, fragment_entry) = match self.state.texture.is_some() {
+            true => (&self.shaders.tex_fragment_module, self.shaders.tex_fragment_entry),
+            false => (&self.shaders.fragment_module, self.shaders.fragment_entry),
         };
-        self.pipeline_with_shader_module(
-            &self.shaders.vertex,
-            fragment_shader,
-            handler,
-            layout,
-            sample_count,
-        )
+        let cull_mode = match self.state.backface_culling {
+            true => Some(wgpu::Face::Back),
+            false => None,
+        };
+        Arc::new(handler.device().create_render_pipeline(&RenderPipelineDescriptor {
+            layout: Some(layout),
+            vertex: VertexState {
+                module: &self.shaders.vertex_module,
+                entry_point: self.shaders.vertex_entry,
+                buffers: &[VertexBufferLayout {
+                    array_stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                    step_mode: InputStepMode::Vertex,
+                    attributes: &[
+                        VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Float32x2,
+                            offset: 3 * 4,
+                            shader_location: 1,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: 2 * 4 + 3 * 4,
+                            shader_location: 2,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Uint32x2,
+                            offset: 3 * 4 + 2 * 4 + 3 * 4,
+                            shader_location: 3,
+                        },
+                    ],
+                }],
+            },
+            fragment: Some(FragmentState {
+                module: fragment_shader,
+                entry_point: fragment_entry,
+                targets: &[ColorTargetState {
+                    format: handler.sc_desc().format,
+                    blend: Some(BlendState::REPLACE),
+                    write_mask: ColorWrite::ALL,
+                }],
+            }),
+            primitive: PrimitiveState {
+                topology: PrimitiveTopology::TriangleList,
+                front_face: FrontFace::Ccw,
+                cull_mode,
+                polygon_mode: PolygonMode::Fill,
+                clamp_depth: false,
+                ..Default::default()
+            },
+            depth_stencil: Some(DepthStencilState {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: Default::default(),
+                bias: Default::default(),
+            }),
+            multisample: MultisampleState {
+                count: sample_count,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            }, 
+            label: None,
+        }))
     }
 }
 
@@ -601,7 +544,7 @@ impl ShapeInstance {
             polygon: self.polygon.clone(),
             boundary: self.boundary.clone(),
             state: self.state.clone(),
-            shaders: Arc::clone(&self.shaders),
+            shaders: self.shaders.clone(),
             id: RenderID::gen(),
         }
     }

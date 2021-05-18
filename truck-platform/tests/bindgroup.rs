@@ -47,7 +47,7 @@ fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
     let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
+        usage: TextureUsage::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,
@@ -72,11 +72,11 @@ fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
     };
     let handler = DeviceHandler::new(device, queue, sc_desc);
     let mut scene = Scene::new(handler.clone(), &desc);
-    let plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
+    let plane = new_plane!("shaders/unicolor.wgsl", "vs_main", "fs_main");
     common::render_one(&mut scene, &texture0, &plane);
-    let plane = new_plane!("shaders/bindgroup.vert", "shaders/bindgroup.frag");
+    let plane = new_plane!("shaders/bindgroup.wgsl", "vs_main", "fs_main");
     common::render_one(&mut scene, &texture1, &plane);
-    let plane = new_plane!("shaders/bindgroup.vert", "shaders/anti-bindgroup.frag");
+    let plane = new_plane!("shaders/bindgroup.wgsl", "vs_main", "fs_main_anti");
     common::render_one(&mut scene, &texture2, &plane);
     let buffer0 = common::read_texture(&handler, &texture0);
     let buffer1 = common::read_texture(&handler, &texture1);
@@ -90,6 +90,7 @@ fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
 
 #[test]
 fn bind_group_test() {
+    let _ = env_logger::try_init();
     if cfg!(target_os = "windows") {
         exec_bind_group_test(BackendBit::VULKAN, "output/vulkan/");
         exec_bind_group_test(BackendBit::DX12, "output/dx12/");

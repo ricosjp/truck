@@ -8,7 +8,6 @@
 //! Since this is a simple sample, not supports `iChannel`s, i.e. buffering textures, sounds, and so on.
 //! The default shader sample is "newton-cuberoot.frag" in the same directory.
 
-use std::io::Read;
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use wgpu::*;
@@ -18,70 +17,70 @@ use winit::event_loop::ControlFlow;
 /// minimum example for implementing `Rendered`.
 mod plane {
     use super::*;
-    use glsl_to_spirv::ShaderType;
 
     /// Canvas to draw by fragment shader.
     pub struct Plane {
-        vertex_module: ShaderModule,
-        fragment_module: ShaderModule,
+        module: ShaderModule,
         pub mouse: [f32; 4],
         id: RenderID,
     }
 
-    /// GLSL vertex shader of Plane
-    const VERTEX_SHADER: &str = "
-        #version 450
-        layout(location = 0) in uint idx;
-        const vec2 VERTICES[4] = vec2[](
-            vec2(-1.0, -1.0),
-            vec2(1.0, -1.0),
-            vec2(-1.0, 1.0),
-            vec2(1.0, 1.0)
-        );
+    const BASE_PREFIX: &str = "[[block]]
+struct SceneInfo {
+    time: f32;
+    nlights: u32;
+};
 
-        void main() {
-            gl_Position = vec4(VERTICES[idx], 0.0, 1.0);
-        }
+[[block]]
+struct Resolution {
+    resolution: vec2<f32>;
+};
+
+[[block]]
+struct Mouse {
+    mouse: vec4<f32>;
+};
+
+[[group(0), binding(2)]]
+var<uniform> __info: SceneInfo;
+
+[[group(1), binding(0)]]
+var<uniform> __resolution: Resolution;
+
+[[group(1), binding(1)]]
+var<uniform> __mouse: Mouse;
+
+struct Environment {
+    resolution: vec2<f32>;
+    mouse: vec4<f32>;
+    time: f32;
+};
+
+";
+
+    const BASE_SHADER: &str = "[[stage(vertex)]]
+fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
+    var vertex: array<vec2<f32>, 4>;
+    vertex[0] = vec2<f32>(-1.0, -1.0);
+    vertex[1] = vec2<f32>(1.0, -1.0);
+    vertex[2] = vec2<f32>(-1.0, 1.0);
+    vertex[3] = vec2<f32>(1.0, 1.0);
+    return vec4<f32>(vertex[idx], 0.0, 1.0);
+}
+
+[[stage(fragment)]]
+fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f32> {
+    var env: Environment;
+    env.resolution = __resolution.resolution;
+    env.mouse = __mouse.mouse;
+    env.time = __info.time;
+    let coord = vec2<f32>(
+        position.x,
+        __resolution.resolution.y - position.y,
+    );
+    return main_image(coord, env);
+}
     ";
-
-    /// prefix of GLSL fragment shader
-    const FRAGMENT_SHADER_PREFIX: &str = "
-        #version 450
-        layout(location = 0) out vec4 color;
-        layout(set = 0, binding = 2) uniform SceneStatus {
-            float iTime;
-            uint _nlights;
-        };
-        layout(set = 1, binding = 0) uniform Resolution {
-            vec3 iResolution;
-        };
-        layout(set = 1, binding = 1) uniform Mouse {
-            vec4 iMouse;
-        };
-    ";
-
-    /// suffix of GLSL fragment shader
-    const FRAGMENT_SHADER_SUFFIX: &str = "
-        void main() {
-            vec2 fragCoord = vec2(gl_FragCoord.x, iResolution.y - gl_FragCoord.y);
-            mainImage(color, fragCoord);
-        }    
-    ";
-
-    /// Reads the GLSL fragment shader with `void mainImage(out vec4 fragColor, in vec2 fragCoord)`.
-    fn read_shader(
-        device: &Device,
-        code: &str,
-        shadertype: ShaderType,
-    ) -> Result<ShaderModule, String> {
-        let mut spirv =
-            glsl_to_spirv::compile(&code, shadertype).map_err(|error| format!("{:?}", error))?;
-        let mut compiled = Vec::new();
-        spirv
-            .read_to_end(&mut compiled)
-            .map_err(|error| format!("{:?}", error))?;
-        Ok(device.create_shader_module(wgpu::util::make_spirv(&compiled)))
-    }
 
     // Implementation of Rendered for Plane.
     impl Rendered for Plane {
@@ -113,8 +112,9 @@ mod plane {
                             BindGroupLayoutEntry {
                                 binding: 0,
                                 visibility: ShaderStage::FRAGMENT,
-                                ty: BindingType::UniformBuffer {
-                                    dynamic: false,
+                                ty: BindingType::Buffer {
+                                    ty: BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
                                     min_binding_size: None,
                                 },
                                 count: None,
@@ -122,8 +122,9 @@ mod plane {
                             BindGroupLayoutEntry {
                                 binding: 1,
                                 visibility: ShaderStage::FRAGMENT,
-                                ty: BindingType::UniformBuffer {
-                                    dynamic: false,
+                                ty: BindingType::Buffer {
+                                    ty: BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
                                     min_binding_size: None,
                                 },
                                 count: None,
@@ -135,7 +136,7 @@ mod plane {
         // bind group is only one uniform buffer: resolution
         fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
             let sc_desc = handler.sc_desc();
-            let resolution = [sc_desc.width as f32, sc_desc.height as f32, 1.0];
+            let resolution = [sc_desc.width as f32, sc_desc.height as f32];
             Arc::new(bind_group_util::create_bind_group(
                 handler.device(),
                 layout,
@@ -161,45 +162,48 @@ mod plane {
                     .device()
                     .create_render_pipeline(&RenderPipelineDescriptor {
                         layout: Some(layout),
-                        vertex_stage: ProgrammableStageDescriptor {
-                            module: &self.vertex_module,
-                            entry_point: "main",
-                        },
-                        fragment_stage: Some(ProgrammableStageDescriptor {
-                            module: &self.fragment_module,
-                            entry_point: "main",
-                        }),
-                        rasterization_state: None,
-                        primitive_topology: PrimitiveTopology::TriangleList,
-                        color_states: &[ColorStateDescriptor {
-                            format: sc_desc.format,
-                            color_blend: BlendDescriptor::REPLACE,
-                            alpha_blend: BlendDescriptor::REPLACE,
-                            write_mask: ColorWrite::ALL,
-                        }],
-                        // Depth test cannot be disabled.
-                        depth_stencil_state: Some(DepthStencilStateDescriptor {
-                            format: TextureFormat::Depth32Float,
-                            depth_write_enabled: true,
-                            depth_compare: wgpu::CompareFunction::Less,
-                            stencil: Default::default(),
-                        }),
-                        // the vertex attribute is only `u32`.
-                        vertex_state: VertexStateDescriptor {
-                            index_format: IndexFormat::Uint32,
-                            vertex_buffers: &[VertexBufferDescriptor {
-                                stride: std::mem::size_of::<u32>() as BufferAddress,
+                        vertex: VertexState {
+                            module: &self.module,
+                            entry_point: "vs_main",
+                            buffers: &[VertexBufferLayout {
+                                array_stride: std::mem::size_of::<u32>() as BufferAddress,
                                 step_mode: InputStepMode::Vertex,
-                                attributes: &[VertexAttributeDescriptor {
-                                    format: VertexFormat::Uint,
+                                attributes: &[VertexAttribute {
+                                    format: VertexFormat::Uint32,
                                     offset: 0,
                                     shader_location: 0,
                                 }],
                             }],
                         },
-                        sample_count,
-                        sample_mask: !0,
-                        alpha_to_coverage_enabled: false,
+                        fragment: Some(FragmentState {
+                            module: &self.module,
+                            entry_point: "fs_main",
+                            targets: &[ColorTargetState {
+                                format: sc_desc.format,
+                                blend: Some(BlendState::REPLACE),
+                                write_mask: ColorWrite::ALL,
+                            }],
+                        }),
+                        primitive: PrimitiveState {
+                            topology: PrimitiveTopology::TriangleList,
+                            front_face: FrontFace::Ccw,
+                            cull_mode: Some(Face::Back),
+                            polygon_mode: PolygonMode::Fill,
+                            clamp_depth: false,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(DepthStencilState {
+                            format: TextureFormat::Depth32Float,
+                            depth_write_enabled: true,
+                            depth_compare: wgpu::CompareFunction::Less,
+                            stencil: Default::default(),
+                            bias: Default::default(),
+                        }),
+                        multisample: MultisampleState {
+                            count: sample_count,
+                            mask: !0,
+                            alpha_to_coverage_enabled: false,
+                        },
                         label: None,
                     }),
             )
@@ -211,42 +215,39 @@ mod plane {
         /// # Arguments
         /// - device: Device, provided by wgpu.
         /// - shader: the inputed fragment shader
-        pub fn new(device: &Device, shader: String) -> Plane {
-            let vertex_module = read_shader(device, VERTEX_SHADER, ShaderType::Vertex).unwrap();
-            let fragment_shader =
-                FRAGMENT_SHADER_PREFIX.to_string() + &shader + FRAGMENT_SHADER_SUFFIX;
-            let fragment_module =
-                read_shader(device, &fragment_shader, ShaderType::Fragment).unwrap();
+        pub fn new(device: &Device, shader: &str) -> Plane {
+            let mut source = BASE_PREFIX.to_string();
+            source += shader;
+            source += BASE_SHADER;
+            let module = device.create_shader_module(&ShaderModuleDescriptor {
+                source: ShaderSource::Wgsl(source.into()),
+                label: None,
+                flags: ShaderFlags::VALIDATION,
+            });
             Plane {
-                vertex_module,
-                fragment_module,
+                module,
                 mouse: [0.0; 4],
                 id: RenderID::gen(),
             }
         }
 
-        /// Change the shader of fragment.
-        pub fn set_shader(&mut self, device: &Device, shader: String) {
-            let fragment_shader =
-                FRAGMENT_SHADER_PREFIX.to_string() + &shader + FRAGMENT_SHADER_SUFFIX;
-            let fragment_module = match read_shader(device, &fragment_shader, ShaderType::Fragment)
-            {
-                Ok(got) => got,
-                Err(error) => {
-                    println!("Failed to compile:\n{:?}", error);
-                    return;
-                }
-            };
-            self.fragment_module = fragment_module;
+        pub fn set_shader(&mut self, device: &Device, mut shader: String) {
+            shader += BASE_SHADER;
+            self.module = device.create_shader_module(&ShaderModuleDescriptor {
+                source: ShaderSource::Wgsl(shader.into()),
+                label: None,
+                flags: ShaderFlags::VALIDATION,
+            });
         }
     }
 }
 use plane::Plane;
 
 fn main() {
+    env_logger::init();
     let event_loop = winit::event_loop::EventLoop::new();
     let mut wb = winit::window::WindowBuilder::new();
-    wb = wb.with_title("GLSL Toy");
+    wb = wb.with_title("wGSL Sandbox");
     let window = wb.build(&event_loop).unwrap();
     let size = window.inner_size();
     let instance = Instance::new(BackendBit::PRIMARY);
@@ -255,7 +256,7 @@ fn main() {
     let (device, queue) = futures::executor::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
+                power_preference: PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
             })
             .await
@@ -266,7 +267,7 @@ fn main() {
                 &DeviceDescriptor {
                     features: Default::default(),
                     limits: Limits::default(),
-                    shader_validation: true,
+                    label: None,
                 },
                 None,
             )
@@ -275,7 +276,7 @@ fn main() {
     });
 
     let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
+        usage: TextureUsage::RENDER_ATTACHMENT,
         format: TextureFormat::Bgra8Unorm,
         width: size.width,
         height: size.height,
@@ -289,20 +290,19 @@ fn main() {
         Arc::new(Mutex::new(sc_desc)),
     );
     let mut scene = Scene::new(handler.clone(), &Default::default());
-    let mut plane = Plane::new(
-        handler.device(),
-        include_str!("newton-cuberoot.frag").to_string(),
-    );
     let args: Vec<_> = std::env::args().collect();
-    if args.len() > 1 {
+    let source = if args.len() > 1 {
         match std::fs::read_to_string(&args[1]) {
-            Ok(code) => {
-                plane.set_shader(handler.device(), code);
-                scene.update_pipeline(&plane);
+            Ok(code) => code,
+            Err(error) => {
+                println!("{:?}", error);
+                include_str!("newton-cuberoot.wgsl").to_string()
             }
-            Err(error) => println!("{:?}", error),
         }
-    }
+    } else {
+        include_str!("newton-cuberoot.wgsl").to_string()
+    };
+    let mut plane = Plane::new(handler.device(), &source);
     // Adds a plane to the scene!
     scene.add_object(&mut plane);
 

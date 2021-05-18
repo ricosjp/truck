@@ -9,5 +9,4 @@ members = [
 	"truck-rendimpl",
 	"truck-topology",
 	"readme-generator",
-	"glsl_utility",
 ]

@@ -99,8 +99,9 @@ impl Scene {
     fn camera_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -111,10 +112,10 @@ impl Scene {
     fn lights_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-            ty: BindingType::StorageBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
                 min_binding_size: None,
-                readonly: true,
             },
             count: None,
         }
@@ -124,8 +125,9 @@ impl Scene {
     fn scene_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-            ty: BindingType::UniformBuffer {
-                dynamic: false,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
@@ -154,13 +156,13 @@ impl Scene {
             size: Extent3d {
                 width: sc_desc.width,
                 height: sc_desc.height,
-                depth: 1,
+                depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count,
             dimension: TextureDimension::D2,
             format: sc_desc.format,
-            usage: TextureUsage::OUTPUT_ATTACHMENT,
+            usage: TextureUsage::RENDER_ATTACHMENT,
             label: None,
         })
     }
@@ -171,13 +173,13 @@ impl Scene {
             size: Extent3d {
                 width: sc_desc.width,
                 height: sc_desc.height,
-                depth: 1,
+                depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count,
             dimension: TextureDimension::D2,
             format: TextureFormat::Depth32Float,
-            usage: TextureUsage::OUTPUT_ATTACHMENT,
+            usage: TextureUsage::RENDER_ATTACHMENT,
             label: None,
         })
     }
@@ -492,9 +494,9 @@ impl Scene {
     #[inline(always)]
     fn depth_stencil_attachment_descriptor(
         depth_view: &TextureView,
-    ) -> RenderPassDepthStencilAttachmentDescriptor {
-        RenderPassDepthStencilAttachmentDescriptor {
-            attachment: depth_view,
+    ) -> RenderPassDepthStencilAttachment {
+        RenderPassDepthStencilAttachment {
+            view: depth_view,
             depth_ops: Some(Operations {
                 load: LoadOp::Clear(1.0),
                 store: true,
@@ -521,8 +523,8 @@ impl Scene {
                 false => (view, None),
             };
             let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
-                color_attachments: &[RenderPassColorAttachmentDescriptor {
-                    attachment,
+                color_attachments: &[RenderPassColorAttachment {
+                    view: attachment,
                     resolve_target,
                     ops: Operations {
                         load: LoadOp::Clear(self.scene_desc.background),
@@ -532,6 +534,7 @@ impl Scene {
                 depth_stencil_attachment: Some(Self::depth_stencil_attachment_descriptor(
                     &depth_view,
                 )),
+                ..Default::default()
             });
             rpass.set_bind_group(0, &bind_group, &[]);
             for (_, object) in self.objects.iter() {
@@ -540,31 +543,15 @@ impl Scene {
                 rpass.set_vertex_buffer(0, object.vertex_buffer.buffer.slice(..));
                 match object.index_buffer {
                     Some(ref index_buffer) => {
-                        rpass.set_index_buffer(index_buffer.buffer.slice(..));
+                        rpass.set_index_buffer(index_buffer.buffer.slice(..), IndexFormat::Uint32);
                         let index_size =
                             index_buffer.size as u32 / std::mem::size_of::<u32>() as u32;
                         rpass.draw_indexed(0..index_size, 0, 0..1);
                     }
-                    None => {
-                        let len = object.vertex_buffer.size / object.vertex_buffer.stride;
-                        rpass.draw(0..len as u32, 0..1);
-                    }
+                    None => rpass.draw(0..(object.vertex_buffer.size / object.vertex_buffer.stride) as u32, 0..1),
                 }
             }
         }
         self.queue().submit(vec![encoder.finish()]);
     }
-}
-
-#[test]
-fn render_id_test() {
-    use std::collections::HashSet;
-    use rayon::prelude::*;
-    const N: usize = 100;
-    let v: Vec<RenderID> = (0..N)
-        .into_par_iter()
-        .map(|_| RenderID::gen())
-        .collect();
-    let set: HashSet<RenderID> = v.into_iter().collect();
-    assert_eq!(set.len(), N);
 }

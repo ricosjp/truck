@@ -20,7 +20,9 @@ gpu-test:
     stage: test
     script:
         - /root/.cargo/bin/cargo clean
-        - /root/.cargo/bin/cargo test
+        # test by release build for the bug of Vulkan-ValidationLayers
+        # cf: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2502
+        - /root/.cargo/bin/cargo test --release
             -p truck-platform
             -p truck-rendimpl
             -- --nocapture --test-threads=1
@@ -34,10 +36,10 @@ gpu-test:
             - images
 
 pages:
-    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
+    image: rust:latest
     stage: pages
     script:
-        - /root/.cargo/bin/cargo doc --no-deps
+        - cargo doc --no-deps
         - mv target/doc public
     artifacts:
         paths:

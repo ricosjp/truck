@@ -25,7 +25,7 @@ fn exec_msaa_test(backend: BackendBit, out_dir: &str) {
     let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
+        usage: TextureUsage::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,
@@ -42,12 +42,11 @@ fn exec_msaa_test(backend: BackendBit, out_dir: &str) {
             ..Default::default()
         },
     );
-    let plane = new_plane!("shaders/trapezoid.vert", "shaders/trapezoid.frag");
+    let plane = new_plane!("shaders/trapezoid.wgsl", "vs_main", "fs_main");
     common::render_one(&mut scene, &texture0, &plane);
     let buffer0 = common::read_texture(&handler, &texture0);
     save_buffer(out_dir.clone() + "sample_count_one.png", &buffer0);
     scene.descriptor_mut().sample_count = 2;
-    let plane = new_plane!("shaders/trapezoid.vert", "shaders/trapezoid.frag");
     common::render_one(&mut scene, &texture1, &plane);
     let buffer1 = common::read_texture(&handler, &texture1);
     save_buffer(out_dir.clone() + "sample_count_two.png", &buffer1);
@@ -56,6 +55,7 @@ fn exec_msaa_test(backend: BackendBit, out_dir: &str) {
 
 #[test]
 fn msaa_test() {
+    let _ = env_logger::try_init();
     if cfg!(target_os = "windows") {
         exec_msaa_test(BackendBit::VULKAN, "output/vulkan/");
         exec_msaa_test(BackendBit::DX12, "output/dx12/");

@@ -1,5 +1,4 @@
 mod common;
-use glsl_to_spirv::ShaderType;
 use image::{DynamicImage, ImageBuffer, Rgba};
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
@@ -8,36 +7,46 @@ use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (256, 256);
 
-struct BGCheckShapeInstance<'a> {
-    shape: ShapeInstance,
-    fragment_shader: &'a str,
+fn bgcheck_shaders(handler: &DeviceHandler) -> ShapeShaders {
+    let source = include_str!("shaders/shape-bindgroup.wgsl");
+    let module = Arc::new(
+        handler
+            .device()
+            .create_shader_module(&ShaderModuleDescriptor {
+                source: ShaderSource::Wgsl(source.into()),
+                flags: ShaderFlags::VALIDATION,
+                label: None,
+            }),
+    );
+    ShapeShaders::new(
+        Arc::clone(&module),
+        "vs_main",
+        Arc::clone(&module),
+        "nontex_main",
+        Arc::clone(&module),
+        "tex_main",
+    )
 }
 
-impl<'a> Rendered for BGCheckShapeInstance<'a> {
-    derive_render_id!(shape);
-    derive_vertex_buffer!(shape);
-    derive_bind_group_layout!(shape);
-    derive_bind_group!(shape);
-    #[inline(always)]
-    fn pipeline(
-        &self,
-        device_handler: &DeviceHandler,
-        layout: &PipelineLayout,
-        sample_count: u32,
-    ) -> Arc<RenderPipeline> {
-        let vertex_shader = include_str!("shaders/shape-bindgroup.vert");
-        let vertex_spirv = common::compile_shader(vertex_shader, ShaderType::Vertex);
-        let vertex_module = wgpu::util::make_spirv(&vertex_spirv);
-        let fragment_spirv = common::compile_shader(self.fragment_shader, ShaderType::Fragment);
-        let fragment_module = wgpu::util::make_spirv(&fragment_spirv);
-        self.shape.pipeline_with_shader(
-            vertex_module,
-            fragment_module,
-            device_handler,
-            layout,
-            sample_count,
-        )
-    }
+fn bgcheck_anti_shaders(handler: &DeviceHandler) -> ShapeShaders {
+    let source = include_str!("shaders/shape-bindgroup.wgsl");
+    let module = Arc::new(
+        handler
+            .device()
+            .create_shader_module(&ShaderModuleDescriptor {
+                source: ShaderSource::Wgsl(source.into()),
+                flags: ShaderFlags::VALIDATION,
+                label: None,
+            }),
+    );
+    ShapeShaders::new(
+        Arc::clone(&module),
+        "vs_main",
+        Arc::clone(&module),
+        "nontex_main_anti",
+        Arc::clone(&module),
+        "tex_main_anti",
+    )
 }
 
 fn test_shape() -> Shell {
@@ -52,18 +61,13 @@ fn test_shape() -> Shell {
 fn exec_shape_bgtest(
     scene: &mut Scene,
     instance: &ShapeInstance,
-    shader: &str,
     answer: &Vec<u8>,
     pngpath: &str,
 ) -> bool {
     let sc_desc = scene.sc_desc();
     let tex_desc = common::texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let bgc_instance = BGCheckShapeInstance {
-        shape: instance.clone_instance(),
-        fragment_shader: shader,
-    };
-    common::render_one(scene, &texture, &bgc_instance);
+    common::render_one(scene, &texture, instance);
     let buffer = common::read_texture(scene.device_handler(), &texture);
     common::save_buffer(pngpath, &buffer, PICTURE_SIZE);
     common::same_buffer(&answer, &buffer)
@@ -94,7 +98,7 @@ fn nontex_inst_desc() -> ShapeInstanceDescriptor {
 fn exec_shape_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = Instance::new(backend);
+    let instance = wgpu::Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
@@ -103,19 +107,20 @@ fn exec_shape_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
     let answer = common::read_texture(scene.device_handler(), &answer);
     let inst_desc = nontex_inst_desc();
     let shell = test_shape();
-    let instance: ShapeInstance = scene
-        .instance_creator()
-        .create_instance(&shell, &inst_desc);
-    let shader = include_str!("shaders/shape-nontex-bindgroup.frag");
+    let instance: ShapeInstance = shell.into_instance(
+        scene.device_handler(),
+        &bgcheck_shaders(scene.device_handler()),
+        &inst_desc,
+    );
     let pngpath = out_dir.clone() + "shape-nontex-bindgroup.png";
-    assert!(exec_shape_bgtest(
-        &mut scene, &instance, shader, &answer, &pngpath,
-    ));
-    let shader = include_str!("shaders/anti-shape-nontex-bindgroup.frag");
+    assert!(exec_shape_bgtest(&mut scene, &instance, &answer, &pngpath,));
+    let instance: ShapeInstance = shell.into_instance(
+        scene.device_handler(),
+        &bgcheck_anti_shaders(scene.device_handler()),
+        &inst_desc,
+    );
     let pngpath = out_dir + "anti-shape-nontex-bindgroup.png";
-    assert!(!exec_shape_bgtest(
-        &mut scene, &instance, shader, &answer, &pngpath
-    ));
+    assert!(!exec_shape_bgtest(&mut scene, &instance, &answer, &pngpath));
 }
 
 #[test]
@@ -124,7 +129,7 @@ fn shape_nontex_bind_group_test() { common::os_alt_exec_test(exec_shape_nontex_b
 fn exec_shape_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = Instance::new(backend);
+    let instance = wgpu::Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
     let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
     let handler = DeviceHandler::new(device, queue, sc_desc);
@@ -141,19 +146,20 @@ fn exec_shape_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
     );
     inst_desc.instance_state.texture = Some(Arc::new(attach));
     let shell = test_shape();
-    let instance: ShapeInstance = scene
-        .instance_creator()
-        .create_instance(&shell, &inst_desc);
-    let shader = include_str!("shaders/shape-tex-bindgroup.frag");
+    let instance: ShapeInstance = shell.into_instance(
+        scene.device_handler(),
+        &bgcheck_shaders(scene.device_handler()),
+        &inst_desc,
+    );
     let pngpath = out_dir.clone() + "shape-tex-bindgroup.png";
-    assert!(exec_shape_bgtest(
-        &mut scene, &instance, shader, &buffer, &pngpath
-    ));
-    let shader = include_str!("shaders/anti-shape-tex-bindgroup.frag");
+    assert!(exec_shape_bgtest(&mut scene, &instance, &buffer, &pngpath));
+    let instance: ShapeInstance = shell.into_instance(
+        scene.device_handler(),
+        &bgcheck_anti_shaders(scene.device_handler()),
+        &inst_desc,
+    );
     let pngpath = out_dir + "anti-shape-tex-bindgroup.png";
-    assert!(!exec_shape_bgtest(
-        &mut scene, &instance, shader, &buffer, &pngpath
-    ));
+    assert!(!exec_shape_bgtest(&mut scene, &instance, &buffer, &pngpath));
 }
 
 #[test]

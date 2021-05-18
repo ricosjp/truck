@@ -96,7 +96,7 @@ pub struct BufferHandler {
 /// # let (device, queue) = futures::executor::block_on(async {
 /// #    let adapter = instance
 /// #        .request_adapter(&RequestAdapterOptions {
-/// #            power_preference: PowerPreference::Default,
+/// #            power_preference: PowerPreference::HighPerformance,
 /// #            compatible_surface: None,
 /// #        })
 /// #        .await
@@ -106,7 +106,7 @@ pub struct BufferHandler {
 /// #            &DeviceDescriptor {
 /// #                features: Default::default(),
 /// #                limits: Limits::default(),
-/// #                shader_validation: true,
+/// #                label: None,
 /// #            },
 /// #            None,
 /// #        )
@@ -116,16 +116,18 @@ pub struct BufferHandler {
 /// let entries = [
 ///     PreBindGroupLayoutEntry {
 ///         visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-///         ty: BindingType::UniformBuffer {
-///             dynamic: false,
+///         ty: BindingType::Buffer {
+///             ty: BufferBindingType::Uniform,
+///             has_dynamic_offset: false,
 ///             min_binding_size: None,
 ///         },
 ///         count: None,
 ///     },
 ///     PreBindGroupLayoutEntry {
 ///         visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
-///         ty: BindingType::UniformBuffer {
-///             dynamic: false,
+///         ty: BindingType::Buffer {
+///             ty: BufferBindingType::Uniform,
+///             has_dynamic_offset: false,
 ///             min_binding_size: None,
 ///         },
 ///         count: None,
@@ -214,7 +216,7 @@ pub struct Light {
 /// let (device, queue) = futures::executor::block_on(async {
 ///     let adapter = instance
 ///         .request_adapter(&RequestAdapterOptions {
-///             power_preference: PowerPreference::Default,
+///             power_preference: PowerPreference::HighPerformance,
 ///             compatible_surface: None,
 ///         })
 ///         .await
@@ -224,7 +226,7 @@ pub struct Light {
 ///             &DeviceDescriptor {
 ///                 features: Default::default(),
 ///                 limits: Limits::default(),
-///                 shader_validation: true,
+///                 label: None,
 ///             },
 ///             None,
 ///         )
@@ -232,7 +234,7 @@ pub struct Light {
 ///         .unwrap()
 /// });
 /// let sc_desc = SwapChainDescriptor {
-///     usage: TextureUsage::OUTPUT_ATTACHMENT,
+///     usage: TextureUsage::RENDER_ATTACHMENT,
 ///     format: TextureFormat::Bgra8UnormSrgb,
 ///     width: 512,
 ///     height: 512,

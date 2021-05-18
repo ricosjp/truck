@@ -1,25 +1,27 @@
 #![allow(dead_code)]
 
-use glsl_to_spirv::ShaderType;
 use rayon::prelude::*;
-use std::io::{Read, Write};
+use std::convert::TryInto;
+use std::io::Write;
 use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
 
 #[derive(Clone, Debug)]
 pub struct Plane<'a> {
-    pub vertex_shader: &'a str,
-    pub fragment_shader: &'a str,
+    pub shader: &'a str,
+    pub vs_entpt: &'a str,
+    pub fs_entpt: &'a str,
     pub id: RenderID,
 }
 
 #[macro_export]
 macro_rules! new_plane {
-    ($vertex_shader: expr, $fragment_shader: expr) => {
+    ($shader: expr, $vs_endpt: expr, $fs_endpt: expr) => {
         Plane {
-            vertex_shader: include_str!($vertex_shader),
-            fragment_shader: include_str!($fragment_shader),
+            shader: include_str!($shader),
+            vs_entpt: $vs_endpt,
+            fs_entpt: $fs_endpt,
             id: RenderID::gen(),
         }
     };
@@ -31,20 +33,25 @@ impl<'a> Rendered for Plane<'a> {
         &self,
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
-        let vertex_buffer = BufferHandler::from_slice(
+        writeln!(&mut std::io::stderr(), "create vertex buffer").unwrap();
+        let vertex_buffer =
+            BufferHandler::from_slice(&[0 as u32, 1, 2, 3], handler.device(), BufferUsage::VERTEX);
+        let index_buffer = BufferHandler::from_slice(
             &[0 as u32, 1, 2, 2, 1, 3],
             handler.device(),
-            BufferUsage::VERTEX,
+            BufferUsage::INDEX,
         );
-        (Arc::new(vertex_buffer), None)
+        (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
+        writeln!(&mut std::io::stderr(), "create bind group layout").unwrap();
         Arc::new(bind_group_util::create_bind_group_layout(
             handler.device(),
             &[],
         ))
     }
     fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
+        writeln!(&mut std::io::stderr(), "create bind group").unwrap();
         Arc::new(handler.device().create_bind_group(&BindGroupDescriptor {
             label: None,
             layout,
@@ -57,65 +64,60 @@ impl<'a> Rendered for Plane<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
+        writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
-        let vertex_spirv = compile_shader(self.vertex_shader, ShaderType::Vertex);
-        let vertex_module = device.create_shader_module(wgpu::util::make_spirv(&vertex_spirv));
-        let fragment_spirv = compile_shader(self.fragment_shader, ShaderType::Fragment);
-        let fragment_module = device.create_shader_module(wgpu::util::make_spirv(&fragment_spirv));
+        let source = ShaderSource::Wgsl(self.shader.into());
+        let module = device.create_shader_module(&ShaderModuleDescriptor {
+            source,
+            label: None,
+            flags: ShaderFlags::VALIDATION,
+        });
         Arc::new(
             handler
                 .device()
                 .create_render_pipeline(&RenderPipelineDescriptor {
                     layout: Some(layout),
-                    vertex_stage: ProgrammableStageDescriptor {
-                        module: &vertex_module,
-                        entry_point: "main",
-                    },
-                    fragment_stage: Some(ProgrammableStageDescriptor {
-                        module: &fragment_module,
-                        entry_point: "main",
-                    }),
-                    rasterization_state: Some(RasterizationStateDescriptor {
-                        front_face: FrontFace::Ccw,
-                        cull_mode: CullMode::None,
-                        depth_bias: 0,
-                        depth_bias_slope_scale: 0.0,
-                        depth_bias_clamp: 0.0,
-                        clamp_depth: false,
-                    }),
-                    primitive_topology: PrimitiveTopology::TriangleList,
-                    color_states: &[ColorStateDescriptor {
-                        format: sc_desc.format,
-                        color_blend: BlendDescriptor::REPLACE,
-                        alpha_blend: BlendDescriptor::REPLACE,
-                        write_mask: ColorWrite::ALL,
-                    }],
-                    depth_stencil_state: Some(DepthStencilStateDescriptor {
-                        format: TextureFormat::Depth32Float,
-                        depth_write_enabled: true,
-                        depth_compare: wgpu::CompareFunction::Less,
-                        stencil: StencilStateDescriptor {
-                            front: StencilStateFaceDescriptor::IGNORE,
-                            back: StencilStateFaceDescriptor::IGNORE,
-                            read_mask: 0,
-                            write_mask: 0,
-                        },
-                    }),
-                    vertex_state: VertexStateDescriptor {
-                        index_format: IndexFormat::Uint32,
-                        vertex_buffers: &[VertexBufferDescriptor {
-                            stride: std::mem::size_of::<u32>() as BufferAddress,
+                    vertex: VertexState {
+                        module: &module,
+                        entry_point: self.vs_entpt,
+                        buffers: &[VertexBufferLayout {
+                            array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: InputStepMode::Vertex,
-                            attributes: &[VertexAttributeDescriptor {
-                                format: VertexFormat::Uint,
+                            attributes: &[VertexAttribute {
+                                format: VertexFormat::Uint32,
                                 offset: 0,
                                 shader_location: 0,
                             }],
                         }],
                     },
-                    sample_count,
-                    sample_mask: !0,
-                    alpha_to_coverage_enabled: false,
+                    fragment: Some(FragmentState {
+                        module: &module,
+                        entry_point: self.fs_entpt,
+                        targets: &[ColorTargetState {
+                            format: sc_desc.format,
+                            blend: Some(BlendState::REPLACE),
+                            write_mask: ColorWrite::ALL,
+                        }],
+                    }),
+                    primitive: PrimitiveState {
+                        topology: PrimitiveTopology::TriangleList,
+                        front_face: FrontFace::Ccw,
+                        cull_mode: None,
+                        polygon_mode: PolygonMode::Fill,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(DepthStencilState {
+                        format: TextureFormat::Depth32Float,
+                        depth_write_enabled: true,
+                        depth_compare: wgpu::CompareFunction::Less,
+                        stencil: Default::default(),
+                        bias: Default::default(),
+                    }),
+                    multisample: MultisampleState {
+                        count: sample_count,
+                        mask: !0,
+                        alpha_to_coverage_enabled: false,
+                    },
                     label: None,
                 }),
         )
@@ -138,19 +140,12 @@ pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(
     scene.clear_objects();
 }
 
-pub fn compile_shader(code: &str, shadertype: ShaderType) -> Vec<u8> {
-    let mut spirv = glsl_to_spirv::compile(&code, shadertype).unwrap();
-    let mut compiled = Vec::new();
-    spirv.read_to_end(&mut compiled).unwrap();
-    compiled
-}
-
 pub fn nontex_answer_texture(scene: &mut Scene) -> Texture {
     let sc_desc = scene.sc_desc();
     let tex_desc = texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/unicolor.frag");
-    render_one(scene, &texture, &mut plane);
+    let plane = new_plane!("shaders/plane.wgsl", "vs_main", "unicolor");
+    render_one(scene, &texture, &plane);
     texture
 }
 
@@ -158,8 +153,8 @@ pub fn random_texture(scene: &mut Scene) -> Texture {
     let sc_desc = scene.sc_desc();
     let tex_desc = texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/random.frag");
-    render_one(scene, &texture, &mut plane);
+    let plane = new_plane!("shaders/plane.wgsl", "vs_main", "random_texture");
+    render_one(scene, &texture, &plane);
     texture
 }
 
@@ -167,7 +162,7 @@ pub fn gradation_texture(scene: &mut Scene) -> Texture {
     let sc_desc = scene.sc_desc();
     let tex_desc = texture_descriptor(&sc_desc);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.vert", "shaders/gradation.frag");
+    let mut plane = new_plane!("shaders/plane.wgsl", "vs_main", "gradation_texture");
     render_one(scene, &texture, &mut plane);
     texture
 }
@@ -176,7 +171,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
     futures::executor::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::Default,
+                power_preference: PowerPreference::HighPerformance,
                 compatible_surface: None,
             })
             .await
@@ -187,7 +182,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
                 &DeviceDescriptor {
                     features: Default::default(),
                     limits: Limits::default(),
-                    shader_validation: true,
+                    label: None,
                 },
                 None,
             )
@@ -199,7 +194,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
 
 pub fn swap_chain_descriptor(size: (u32, u32)) -> SwapChainDescriptor {
     SwapChainDescriptor {
-        usage: TextureUsage::OUTPUT_ATTACHMENT,
+        usage: TextureUsage::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8Unorm,
         width: size.0,
         height: size.1,
@@ -213,31 +208,31 @@ pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'s
         size: Extent3d {
             width: sc_desc.width,
             height: sc_desc.height,
-            depth: 1,
+            depth_or_array_layers: 1,
         },
         mip_level_count: 1,
         sample_count: 1,
         dimension: TextureDimension::D2,
         format: sc_desc.format,
-        usage: TextureUsage::OUTPUT_ATTACHMENT | TextureUsage::COPY_SRC,
+        usage: TextureUsage::RENDER_ATTACHMENT | TextureUsage::COPY_SRC,
     }
 }
 
-pub fn texture_copy_view<'a>(texture: &'a Texture) -> TextureCopyView<'a> {
-    TextureCopyView {
+pub fn texture_copy_view<'a>(texture: &'a Texture) -> ImageCopyTexture<'a> {
+    ImageCopyTexture {
         texture: &texture,
         mip_level: 0,
         origin: Origin3d::ZERO,
     }
 }
 
-pub fn buffer_copy_view<'a>(buffer: &'a Buffer, size: (u32, u32)) -> BufferCopyView<'a> {
-    BufferCopyView {
+pub fn buffer_copy_view<'a>(buffer: &'a Buffer, size: (u32, u32)) -> ImageCopyBuffer<'a> {
+    ImageCopyBuffer {
         buffer: &buffer,
-        layout: TextureDataLayout {
+        layout: ImageDataLayout {
             offset: 0,
-            bytes_per_row: size.0 * 4,
-            rows_per_image: size.1,
+            bytes_per_row: (size.0 * 4).try_into().ok(),
+            rows_per_image: size.1.try_into().ok(),
         },
     }
 }
@@ -270,7 +265,7 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
         Extent3d {
             width: sc_desc.width,
             height: sc_desc.height,
-            depth: 1,
+            depth_or_array_layers: 1,
         },
     );
     queue.submit(Some(encoder.finish()));
@@ -290,11 +285,12 @@ pub fn same_buffer(vec0: &Vec<u8>, vec1: &Vec<u8>) -> bool {
 pub fn count_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> usize {
     vec0.par_iter()
         .zip(vec1)
-        .filter(move |(i, j)| *std::cmp::max(i, j) - *std::cmp::min(i, j) > 2)
+        .filter(move |(i, j)| *std::cmp::max(i, j) - *std::cmp::min(i, j) > 4)
         .count()
 }
 
 pub fn os_alt_exec_test<F: Fn(BackendBit, &str)>(test: F) {
+    let _ = env_logger::try_init();
     if cfg!(target_os = "windows") {
         test(BackendBit::VULKAN, "output/vulkan/");
         test(BackendBit::DX12, "output/dx12/");

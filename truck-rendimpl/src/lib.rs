@@ -103,24 +103,35 @@ pub struct ShapeWireFrameInstanceDescriptor {
     pub polyline_precision: f64,
 }
 
-#[derive(Debug)]
-struct PolygonShaders {
-    vertex: ShaderModule,
-    fragment: ShaderModule,
-    tex_fragment: ShaderModule,
+/// shaders for rendering polygons
+#[derive(Debug, Clone)]
+pub struct PolygonShaders {
+    vertex_module: Arc<ShaderModule>,
+    vertex_entry: &'static str,
+    fragment_module: Arc<ShaderModule>,
+    fragment_entry: &'static str,
+    tex_fragment_module: Arc<ShaderModule>,
+    tex_fragment_entry: &'static str,
 }
 
-#[derive(Debug)]
-struct ShapeShaders {
-    vertex: ShaderModule,
-    fragment: ShaderModule,
-    tex_fragment: ShaderModule,
+/// shaders for rendering shapes
+#[derive(Debug, Clone)]
+pub struct ShapeShaders {
+    vertex_module: Arc<ShaderModule>,
+    vertex_entry: &'static str,
+    fragment_module: Arc<ShaderModule>,
+    fragment_entry: &'static str,
+    tex_fragment_module: Arc<ShaderModule>,
+    tex_fragment_entry: &'static str,
 }
 
-#[derive(Debug)]
-struct WireShaders {
-    vertex: ShaderModule,
-    fragment: ShaderModule,
+/// shaders for rendering wireframes
+#[derive(Debug, Clone)]
+pub struct WireShaders {
+    vertex_module: Arc<ShaderModule>,
+    vertex_entry: &'static str,
+    fragment_module: Arc<ShaderModule>,
+    fragment_entry: &'static str,
 }
 
 /// Instance of polygon
@@ -135,7 +146,7 @@ struct WireShaders {
 pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     state: InstanceState,
-    shaders: Arc<PolygonShaders>,
+    shaders: PolygonShaders,
     id: RenderID,
 }
 
@@ -145,7 +156,7 @@ pub struct WireFrameInstance {
     vertices: Arc<BufferHandler>,
     strips: Arc<BufferHandler>,
     state: WireFrameState,
-    shaders: Arc<WireShaders>,
+    shaders: WireShaders,
     id: RenderID,
 }
 
@@ -162,7 +173,7 @@ pub struct ShapeInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     boundary: Arc<BufferHandler>,
     state: InstanceState,
-    shaders: Arc<ShapeShaders>,
+    shaders: ShapeShaders,
     id: RenderID,
 }
 
@@ -170,9 +181,9 @@ pub struct ShapeInstance {
 #[derive(Debug, Clone)]
 pub struct InstanceCreator {
     handler: DeviceHandler,
-    polygon_shaders: Arc<PolygonShaders>,
-    shape_shaders: Arc<ShapeShaders>,
-    wire_shaders: Arc<WireShaders>,
+    polygon_shaders: PolygonShaders,
+    shape_shaders: ShapeShaders,
+    wire_shaders: WireShaders,
 }
 
 /// for creating `InstanceCreator`
@@ -193,27 +204,38 @@ pub trait CreateBuffers {
 }
 
 /// The trait for generating `Instance` from `Self`.
-pub trait TryIntoInstance<Instance> {
+pub trait TryIntoInstance<I: Instance> {
     /// Configuation deacriptor for instance.
     type Descriptor;
     #[doc(hidden)]
     fn try_into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &I::Shaders,
         desc: &Self::Descriptor,
-    ) -> Option<Instance>;
+    ) -> Option<I>;
 }
 
 /// The trait for generating `Instance` from `Self`.
-pub trait IntoInstance<Instance> {
+pub trait IntoInstance<I: Instance> {
     /// Configuation deacriptor for instance.
     type Descriptor;
     /// Creates `Instance` from `self`.
     fn into_instance(
         &self,
-        creator: &InstanceCreator,
+        handler: &DeviceHandler,
+        shaders: &I::Shaders,
         desc: &Self::Descriptor,
-    ) -> Instance;
+    ) -> I;
+}
+
+/// Instance for rendering
+pub trait Instance {
+    #[doc(hidden)]
+    type Shaders;
+    /// Get standard shaders from instance creator.
+    #[doc(hidden)]
+    fn standard_shaders(creator: &InstanceCreator) -> Self::Shaders;
 }
 
 #[derive(Debug, Clone)]
