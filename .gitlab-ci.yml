@@ -23,6 +23,7 @@ gpu-test:
         - /root/.cargo/bin/cargo test
             -p truck-platform
             -p truck-rendimpl
+            --release
             -- --nocapture --test-threads=1
         - mkdir images
         - mv truck-platform/output images/platform

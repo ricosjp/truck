@@ -68,7 +68,7 @@ impl<'a> Rendered for Plane<'a> {
         let module = device.create_shader_module(&ShaderModuleDescriptor {
             label: None,
             source,
-            flags: ShaderFlags::empty(),
+            flags: ShaderFlags::VALIDATION,
         });
         println!("compile done!");
         Arc::new(
