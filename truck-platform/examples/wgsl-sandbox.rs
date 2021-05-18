@@ -1,13 +1,28 @@
 //! A sample of creating a render object by implementing "Rendered" in a new structure.
 //!
-//! One can use xyr fragment shader in the following way:
+//! One can use xyr WGSL shader in the following way:
 //!
 //! - Enter the shader path as an argument when executing the program.
 //! - Drag and drop the shader into the window.
 //!
-//! The shader syntax follows that of shadertoy. One can use `iResolution`, `iTime` and `iMouse`.
-//! Since this is a simple sample, not supports `iChannel`s, i.e. buffering textures, sounds, and so on.
-//! The default shader sample is "newton-cuberoot.frag" in the same directory.
+//! The rule of shaders:
+//!
+//! - One can draw a image by implementing the function:
+//!
+//! ```wgsl
+//! vec4<f32> main_image(coord: vec2<f32>, env: Environment);
+//! ```
+//!
+//! - The parameter `coord` is the fragment coordinate. The origin is the lower right.
+//! - The parameter `env` has the environment information. The declaration of struct is the following:
+//!
+//! ```wgsl
+//! struct Environment {
+//!     resolution: vec2<f32>;  // the resolution of the image
+//!     mouse: vec4<f32>;       // the mouse information behaving the same as `iMouse` in Shadertoy.
+//!     time: f32;              // the number of seconds since the application started.
+//! };
+//! ```
 
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
