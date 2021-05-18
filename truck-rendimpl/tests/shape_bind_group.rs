@@ -9,11 +9,15 @@ const PICTURE_SIZE: (u32, u32) = (256, 256);
 
 fn bgcheck_shaders(handler: &DeviceHandler) -> ShapeShaders {
     let source = include_str!("shaders/shape-bindgroup.wgsl");
-    let module = Arc::new(handler.device().create_shader_module(&ShaderModuleDescriptor {
-        source: ShaderSource::Wgsl(source.into()),
-        flags: ShaderFlags::VALIDATION,
-        label: None,
-    }));
+    let module = Arc::new(
+        handler
+            .device()
+            .create_shader_module(&ShaderModuleDescriptor {
+                source: ShaderSource::Wgsl(source.into()),
+                flags: ShaderFlags::VALIDATION,
+                label: None,
+            }),
+    );
     ShapeShaders::new(
         Arc::clone(&module),
         "vs_main",
@@ -26,11 +30,15 @@ fn bgcheck_shaders(handler: &DeviceHandler) -> ShapeShaders {
 
 fn bgcheck_anti_shaders(handler: &DeviceHandler) -> ShapeShaders {
     let source = include_str!("shaders/shape-bindgroup.wgsl");
-    let module = Arc::new(handler.device().create_shader_module(&ShaderModuleDescriptor {
-        source: ShaderSource::Wgsl(source.into()),
-        flags: ShaderFlags::VALIDATION,
-        label: None,
-    }));
+    let module = Arc::new(
+        handler
+            .device()
+            .create_shader_module(&ShaderModuleDescriptor {
+                source: ShaderSource::Wgsl(source.into()),
+                flags: ShaderFlags::VALIDATION,
+                label: None,
+            }),
+    );
     ShapeShaders::new(
         Arc::clone(&module),
         "vs_main",
@@ -40,8 +48,6 @@ fn bgcheck_anti_shaders(handler: &DeviceHandler) -> ShapeShaders {
         "tex_main_anti",
     )
 }
-
-
 
 fn test_shape() -> Shell {
     let v = builder::vertex(Point3::new(-1.0, -1.0, 0.0));
@@ -105,20 +111,16 @@ fn exec_shape_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
         scene.device_handler(),
         &bgcheck_shaders(scene.device_handler()),
         &inst_desc,
-    ); 
+    );
     let pngpath = out_dir.clone() + "shape-nontex-bindgroup.png";
-    assert!(exec_shape_bgtest(
-        &mut scene, &instance, &answer, &pngpath,
-    ));
+    assert!(exec_shape_bgtest(&mut scene, &instance, &answer, &pngpath,));
     let instance: ShapeInstance = shell.into_instance(
         scene.device_handler(),
         &bgcheck_anti_shaders(scene.device_handler()),
         &inst_desc,
-    ); 
+    );
     let pngpath = out_dir + "anti-shape-nontex-bindgroup.png";
-    assert!(!exec_shape_bgtest(
-        &mut scene, &instance, &answer, &pngpath
-    ));
+    assert!(!exec_shape_bgtest(&mut scene, &instance, &answer, &pngpath));
 }
 
 #[test]
@@ -148,20 +150,16 @@ fn exec_shape_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
         scene.device_handler(),
         &bgcheck_shaders(scene.device_handler()),
         &inst_desc,
-    ); 
+    );
     let pngpath = out_dir.clone() + "shape-tex-bindgroup.png";
-    assert!(exec_shape_bgtest(
-        &mut scene, &instance, &buffer, &pngpath
-    ));
+    assert!(exec_shape_bgtest(&mut scene, &instance, &buffer, &pngpath));
     let instance: ShapeInstance = shell.into_instance(
         scene.device_handler(),
         &bgcheck_anti_shaders(scene.device_handler()),
         &inst_desc,
-    ); 
+    );
     let pngpath = out_dir + "anti-shape-tex-bindgroup.png";
-    assert!(!exec_shape_bgtest(
-        &mut scene, &instance, &buffer, &pngpath
-    ));
+    assert!(!exec_shape_bgtest(&mut scene, &instance, &buffer, &pngpath));
 }
 
 #[test]

@@ -70,7 +70,6 @@ impl<'a> Rendered for Plane<'a> {
             source,
             flags: ShaderFlags::VALIDATION,
         });
-        println!("compile done!");
         Arc::new(
             handler
                 .device()
@@ -150,11 +149,8 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
 }
 
 pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &R) {
-    println!("add plane");
     scene.add_object(object);
-    println!("render plane");
     scene.render_scene(&texture.create_view(&Default::default()));
-    println!("remove plane");
     scene.remove_object(object);
 }
 

@@ -112,7 +112,7 @@ fn exec_nontex_render_test(backend: BackendBit, out_dir: &str) {
     let buffer0 = nontex_raytracing(&mut scene);
     let buffer1 = nontex_polygon(&mut scene, &creator);
     let buffer2 = nontex_shape(&mut scene, &creator);
-    let filename = out_dir.clone() + "nontex-raymarching.png";
+    let filename = out_dir.clone() + "nontex-raytracing.png";
     common::save_buffer(filename, &buffer0, PICTURE_SIZE);
     let filename = out_dir.clone() + "nontex-polygon.png";
     common::save_buffer(filename, &buffer1, PICTURE_SIZE);
@@ -120,9 +120,9 @@ fn exec_nontex_render_test(backend: BackendBit, out_dir: &str) {
     let diff0 = common::count_difference(&buffer0, &buffer1);
     let diff1 = common::count_difference(&buffer1, &buffer2);
     let diff2 = common::count_difference(&buffer2, &buffer0);
-    println!("{} pixel difference: ray-marching and polymesh", diff0);
+    println!("{} pixel difference: ray-tracing and polymesh", diff0);
     println!("{} pixel difference: polymesh and shape", diff1);
-    println!("{} pixel difference: ray-marching and shape", diff2);
+    println!("{} pixel difference: ray-tracing and shape", diff2);
     assert!(diff0 < 10);
     assert!(diff1 == 0);
     assert!(diff2 < 10);
@@ -216,7 +216,7 @@ fn exec_tex_render_test(backend: BackendBit, out_dir: &str) {
     let buffer0 = tex_raytracing(&mut scene);
     let buffer1 = tex_polygon(&mut scene, &creator, &image);
     let buffer2 = tex_shape(&mut scene, &creator, &image);
-    let filename = out_dir.clone() + "tex-raymarching.png";
+    let filename = out_dir.clone() + "tex-raytracing.png";
     common::save_buffer(filename, &buffer0, PICTURE_SIZE);
     let filename = out_dir.clone() + "tex-polygon.png";
     common::save_buffer(filename, &buffer1, PICTURE_SIZE);

@@ -33,6 +33,7 @@ impl<'a> Rendered for Plane<'a> {
         &self,
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
+        writeln!(&mut std::io::stderr(), "create vertex buffer").unwrap();
         let vertex_buffer =
             BufferHandler::from_slice(&[0 as u32, 1, 2, 3], handler.device(), BufferUsage::VERTEX);
         let index_buffer = BufferHandler::from_slice(
@@ -43,12 +44,14 @@ impl<'a> Rendered for Plane<'a> {
         (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {
+        writeln!(&mut std::io::stderr(), "create bind group layout").unwrap();
         Arc::new(bind_group_util::create_bind_group_layout(
             handler.device(),
             &[],
         ))
     }
     fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
+        writeln!(&mut std::io::stderr(), "create bind group").unwrap();
         Arc::new(handler.device().create_bind_group(&BindGroupDescriptor {
             label: None,
             layout,
@@ -61,6 +64,7 @@ impl<'a> Rendered for Plane<'a> {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
+        writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
         let (device, sc_desc) = (handler.device(), handler.sc_desc());
         let source = ShaderSource::Wgsl(self.shader.into());
         let module = device.create_shader_module(&ShaderModuleDescriptor {

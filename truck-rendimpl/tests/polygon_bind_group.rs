@@ -9,11 +9,15 @@ const PICTURE_SIZE: (u32, u32) = (256, 256);
 
 fn bgcheck_shaders(handler: &DeviceHandler) -> PolygonShaders {
     let source = include_str!("shaders/mesh-bindgroup.wgsl");
-    let module = Arc::new(handler.device().create_shader_module(&ShaderModuleDescriptor {
-        source: ShaderSource::Wgsl(source.into()),
-        flags: ShaderFlags::VALIDATION,
-        label: None,
-    }));
+    let module = Arc::new(
+        handler
+            .device()
+            .create_shader_module(&ShaderModuleDescriptor {
+                source: ShaderSource::Wgsl(source.into()),
+                flags: ShaderFlags::VALIDATION,
+                label: None,
+            }),
+    );
     PolygonShaders::new(
         Arc::clone(&module),
         "vs_main",
@@ -26,11 +30,15 @@ fn bgcheck_shaders(handler: &DeviceHandler) -> PolygonShaders {
 
 fn bgcheck_anti_shaders(handler: &DeviceHandler) -> PolygonShaders {
     let source = include_str!("shaders/mesh-bindgroup.wgsl");
-    let module = Arc::new(handler.device().create_shader_module(&ShaderModuleDescriptor {
-        source: ShaderSource::Wgsl(source.into()),
-        flags: ShaderFlags::VALIDATION,
-        label: None,
-    }));
+    let module = Arc::new(
+        handler
+            .device()
+            .create_shader_module(&ShaderModuleDescriptor {
+                source: ShaderSource::Wgsl(source.into()),
+                flags: ShaderFlags::VALIDATION,
+                label: None,
+            }),
+    );
     PolygonShaders::new(
         Arc::clone(&module),
         "vs_main",
@@ -182,7 +190,7 @@ fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
                 scene.device_handler(),
                 &bgcheck_anti_shaders(scene.device_handler()),
                 &desc,
-            ); 
+            );
             assert!(!exec_polygon_bgtest(
                 &mut scene,
                 &instance,

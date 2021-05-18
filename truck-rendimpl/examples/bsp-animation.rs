@@ -2,11 +2,11 @@
 //!
 //! In each frame, the NURBS surface is devided into mesh.
 
+use modeling::Surface;
 use std::sync::{Arc, Mutex};
 use std::thread::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use modeling::Surface;
 use wgpu::*;
 mod app;
 use app::*;
@@ -33,7 +33,10 @@ impl MyApp {
             }
             ctrl_pts.push(vec);
         }
-        Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts)))
+        Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::new(
+            (knot_vec.clone(), knot_vec),
+            ctrl_pts,
+        )))
     }
     fn init_shell() -> Shell {
         let v = builder::vertex(Point3::origin());
@@ -86,7 +89,9 @@ impl MyApp {
                     count = 0;
                 }
                 match *shell[0].lock_surface().unwrap() {
-                    Surface::NURBSSurface(ref mut surface) => surface.control_point_mut(3, 3)[1] = time.sin(),
+                    Surface::NURBSSurface(ref mut surface) => {
+                        surface.control_point_mut(3, 3)[1] = time.sin()
+                    }
                     _ => {}
                 }
                 let mut another_object = creator.create_instance(
