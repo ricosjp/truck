@@ -12,6 +12,7 @@ cpu-test:
             -p truck-geometry
             -p truck-topology
             -p truck-polymesh
+            -p truck-meshalgo
             -p truck-modeling
             -- --nocapture
 
