@@ -4,6 +4,7 @@ members = [
 	"truck-geotrait",
 	"truck-geometry",
 	"truck-modeling",
+	"truck-meshalgo",
 	"truck-platform",
 	"truck-polymesh",
 	"truck-rendimpl",

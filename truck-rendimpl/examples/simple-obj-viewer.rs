@@ -9,7 +9,7 @@
 
 use std::io::Read;
 use truck_platform::*;
-use truck_polymesh::prelude::*;
+use truck_meshalgo::filters::*;
 use truck_rendimpl::*;
 use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
