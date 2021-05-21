@@ -98,7 +98,11 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
             .cross(self.axis)
             .so_small()
     }
+}
 
+impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> SearchParameter for RevolutedCurve<C> {
+    type Point = Point3;
+    type Parameter = (f64, f64);
     /// Searches the parameter `(u, v)` such that `self.subs(u, v).near(&point)` by Newton's method.
     /// Returns `None` if:
     /// - the converged parameter `(u, v)` is not satisfied `self.subs(u, v).near(&point)`.
@@ -116,7 +120,7 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
-    pub fn search_parameter(
+    fn search_parameter(
         &self,
         point: Point3,
         hint: (f64, f64),

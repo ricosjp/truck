@@ -47,15 +47,23 @@ where
     }
 }
 
-pub fn parameter_division<C>(
-    curve: &C,
-    range: (f64, f64),
-    tol: f64,
-) -> Vec<f64>
+pub fn search_parameter<C>(curve: &C, point: C::Point, hint: f64, trials: usize) -> Option<f64>
 where
     C: ParametricCurve,
-    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-{
+    C::Point: EuclideanSpace<Scalar = f64, Diff = C::Vector>,
+    C::Vector: InnerSpace<Scalar = f64> + Tolerance, {
+    search_nearest_parameter(curve, point, hint, trials).and_then(|t| {
+        match point.to_vec().near(&curve.subs(t).to_vec()) {
+            true => Some(t),
+            false => None,
+        }
+    })
+}
+
+pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> Vec<f64>
+where
+    C: ParametricCurve,
+    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>, {
     let p = 0.5 + (0.2 * rand::random::<f64>() - 0.1);
     let t = range.0 * (1.0 - p) + range.1 * p;
     let pt0 = curve.subs(range.0);

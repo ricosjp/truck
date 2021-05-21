@@ -276,6 +276,20 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
     }
 }
 
+impl<C, T> SearchParameter for Processor<C, T>
+where
+    C: SearchParameter,
+    C::Point: EuclideanSpace,
+    T: Transform<C::Point>,
+{
+    type Point = C::Point;
+    type Parameter = C::Parameter;
+    fn search_parameter(&self, point: C::Point, hint: C::Parameter, trials: usize) -> Option<C::Parameter> {
+        let inv = self.transform.inverse_transform().unwrap();
+        self.entity.search_parameter(inv.transform_point(point), hint, trials)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

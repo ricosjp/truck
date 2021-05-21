@@ -1181,11 +1181,7 @@ where
     type Parameter = f64;
     #[inline(always)]
     fn search_parameter(&self, point: V::Space, hint: f64, trial: usize) -> Option<f64> {
-        self.search_nearest_parameter(point, hint, trial)
-            .and_then(|t| match point.to_vec().near(&self.subs(t)) {
-                true => Some(t),
-                false => None,
-            })
+        algo::curve::search_parameter(self, point, hint, trial)
     }
 }
 impl<V> BSplineCurve<V>

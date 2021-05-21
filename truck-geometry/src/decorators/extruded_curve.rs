@@ -53,8 +53,36 @@ where
     C: ParametricCurve,
     Self: ParametricSurface,
 {
+    #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
         (self.curve.parameter_range(), (0.0, 1.0))
+    }
+}
+
+impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
+    #[inline(always)]
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        (self.curve.parameter_division(tol), vec![0.0, 1.0])
+    }
+}
+
+impl<C> SearchParameter for ExtrudedCurve<C, Vector2>
+where C: ParametricCurve<Point = Point2, Vector = Vector2> {
+    type Point = Point2;
+    type Parameter = (f64, f64);
+    #[inline(always)]
+    fn search_parameter(&self, point: Point2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        algo::surface::search_parameter2d(self, point, hint, trials)
+    }
+}
+
+impl<C> SearchParameter for ExtrudedCurve<C, Vector3>
+where C: ParametricCurve<Point = Point3, Vector = Vector3> {
+    type Point = Point3;
+    type Parameter = (f64, f64);
+    #[inline(always)]
+    fn search_parameter(&self, point: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        algo::surface::search_parameter3d(self, point, hint, trials)
     }
 }
 
