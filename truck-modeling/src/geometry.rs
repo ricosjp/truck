@@ -223,21 +223,12 @@ impl IncludeCurve<Curve> for Surface {
     }
 }
 
-impl Surface {
+impl SearchParameter for Surface {
+    type Point = Point3;
+    type Parameter = (f64, f64);
     /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
-    pub fn search_parameter(&self, pt: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
-        match self {
-            Surface::Plane(plane) => {
-                let v = plane.get_parameter(pt);
-                match v[2].so_small() {
-                    true => Some((v[0], v[1])),
-                    false => None,
-                }
-            },
-            Surface::BSplineSurface(surface) => algo::surface::search_parameter3d(surface, pt, hint, trials),
-            Surface::NURBSSurface(surface) => algo::surface::search_parameter3d(surface, pt, hint, trials),
-            Surface::RevolutedCurve(surface) => surface.search_parameter(pt, hint, trials),
-        }
+    fn search_parameter(&self, point: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        derive_surface_method!(self, SearchParameter::search_parameter, point, hint, trials)
     }
 }
