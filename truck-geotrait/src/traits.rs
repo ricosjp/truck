@@ -1,3 +1,5 @@
+use truck_base::cgmath64::*;
+
 /// Parametric curves
 pub trait ParametricCurve: Clone {
     /// The curve is in the space of `Self::Point`.
@@ -36,8 +38,6 @@ pub trait ParametricSurface: Clone {
     fn uder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the derivation by `v`.
     fn vder(&self, u: f64, v: f64) -> Self::Vector;
-    /// Returns the normal vector at `(u, v)`.
-    fn normal(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation by `u`.
     fn uuder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation by both `u` and `v`.
@@ -46,10 +46,32 @@ pub trait ParametricSurface: Clone {
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
 }
 
+/// 3D parametric surface
+pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector3> {
+    /// Returns the normal vector at `(u, v)`.
+    fn normal(&self, u: f64, v: f64) -> Vector3;
+}
+
 /// Bounded surface with parametric range
 pub trait BoundedSurface: ParametricSurface {
     /// The range of the parameter of the surface.
     fn parameter_range(&self) -> ((f64, f64), (f64, f64));
+}
+
+/// Search parameter `t` such that `self.subs(t)` is near point.
+pub trait SearchParameter {
+    /// point
+    type Point;
+    /// curve => `f64`, surface => `(f64, f64)`
+    type Parameter;
+    /// Search parameter `t` such that `self.subs(t)` is near point.  
+    /// Returns `None` if could not find such parameter.
+    fn search_parameter(
+        &self,
+        point: Self::Point,
+        hint: Self::Parameter,
+        trial: usize,
+    ) -> Option<Self::Parameter>;
 }
 
 /// Whether the surface includes the boundary curve.
@@ -106,7 +128,6 @@ impl ParametricSurface for () {
     fn uuder(&self, _: f64, _: f64) -> Self::Vector {}
     fn uvder(&self, _: f64, _: f64) -> Self::Vector {}
     fn vvder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn normal(&self, _: f64, _: f64) -> Self::Vector {}
 }
 
 /// Implementation for the test of topological methods.

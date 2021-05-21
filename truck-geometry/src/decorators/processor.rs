@@ -76,11 +76,12 @@ where
 
 impl<S, T> ParametricSurface for Processor<S, T>
 where
-    S: ParametricSurface<Point = Point3, Vector = Vector3>,
+    S: ParametricSurface,
+    S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>,
     T: Transform<S::Point> + SquareMatrix<Scalar = f64> + Clone,
 {
-    type Point = Point3;
-    type Vector = Vector3;
+    type Point = S::Point;
+    type Vector = S::Vector;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point {
         match self.orientation {
@@ -123,14 +124,23 @@ where
             false => self.transform.transform_vector(self.entity.uuder(v, u)),
         }
     }
+}
+
+impl<S, T> ParametricSurface3D for Processor<S, T>
+where
+    S: ParametricSurface3D,
+    T: Transform<Point3> + SquareMatrix<Scalar = f64> + Clone,
+{
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Self::Vector {
         let transtrans = self.transform.transpose();
         let n = match self.orientation {
             true => self.entity.normal(u, v),
-            false => -self.entity.normal(v, u)
+            false => -self.entity.normal(v, u),
         };
-        let n = transtrans.inverse_transform_vector(n).expect("invalid transform");
+        let n = transtrans
+            .inverse_transform_vector(n)
+            .expect("invalid transform");
         (n / self.transform.determinant()).normalize()
     }
 }
@@ -191,9 +201,15 @@ where
 impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
     fn parameter_division(&self, tol: f64) -> Vec<f64> {
         let a = self.transform;
-        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2]
-            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2]
-            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2];
+        let n = a[0][0] * a[0][0]
+            + a[0][1] * a[0][1]
+            + a[0][2] * a[0][2]
+            + a[1][0] * a[1][0]
+            + a[1][1] * a[1][1]
+            + a[1][2] * a[1][2]
+            + a[2][0] * a[2][0]
+            + a[2][1] * a[2][1]
+            + a[2][2] * a[2][2];
         self.entity.parameter_division(tol / n.sqrt())
     }
 }
@@ -201,10 +217,22 @@ impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
 impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
     fn parameter_division(&self, tol: f64) -> Vec<f64> {
         let a = self.transform;
-        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2] + a[0][3] * a[0][3]
-            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2] + a[1][3] * a[1][3]
-            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2] + a[2][3] * a[2][3]
-            + a[3][0] * a[3][0] + a[3][1] * a[3][1] + a[3][2] * a[3][2] + a[3][3] * a[3][3];
+        let n = a[0][0] * a[0][0]
+            + a[0][1] * a[0][1]
+            + a[0][2] * a[0][2]
+            + a[0][3] * a[0][3]
+            + a[1][0] * a[1][0]
+            + a[1][1] * a[1][1]
+            + a[1][2] * a[1][2]
+            + a[1][3] * a[1][3]
+            + a[2][0] * a[2][0]
+            + a[2][1] * a[2][1]
+            + a[2][2] * a[2][2]
+            + a[2][3] * a[2][3]
+            + a[3][0] * a[3][0]
+            + a[3][1] * a[3][1]
+            + a[3][2] * a[3][2]
+            + a[3][3] * a[3][3];
         self.entity.parameter_division(tol / n.sqrt())
     }
 }
@@ -212,9 +240,15 @@ impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
 impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
     fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
-        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2]
-            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2]
-            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2];
+        let n = a[0][0] * a[0][0]
+            + a[0][1] * a[0][1]
+            + a[0][2] * a[0][2]
+            + a[1][0] * a[1][0]
+            + a[1][1] * a[1][1]
+            + a[1][2] * a[1][2]
+            + a[2][0] * a[2][0]
+            + a[2][1] * a[2][1]
+            + a[2][2] * a[2][2];
         self.entity.parameter_division(tol / n.sqrt())
     }
 }
@@ -222,11 +256,37 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
 impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
     fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
-        let n = a[0][0] * a[0][0] + a[0][1] * a[0][1] + a[0][2] * a[0][2] + a[0][3] * a[0][3]
-            + a[1][0] * a[1][0] + a[1][1] * a[1][1] + a[1][2] * a[1][2] + a[1][3] * a[1][3]
-            + a[2][0] * a[2][0] + a[2][1] * a[2][1] + a[2][2] * a[2][2] + a[2][3] * a[2][3]
-            + a[3][0] * a[3][0] + a[3][1] * a[3][1] + a[3][2] * a[3][2] + a[3][3] * a[3][3];
+        let n = a[0][0] * a[0][0]
+            + a[0][1] * a[0][1]
+            + a[0][2] * a[0][2]
+            + a[0][3] * a[0][3]
+            + a[1][0] * a[1][0]
+            + a[1][1] * a[1][1]
+            + a[1][2] * a[1][2]
+            + a[1][3] * a[1][3]
+            + a[2][0] * a[2][0]
+            + a[2][1] * a[2][1]
+            + a[2][2] * a[2][2]
+            + a[2][3] * a[2][3]
+            + a[3][0] * a[3][0]
+            + a[3][1] * a[3][1]
+            + a[3][2] * a[3][2]
+            + a[3][3] * a[3][3];
         self.entity.parameter_division(tol / n.sqrt())
+    }
+}
+
+impl<C, T> SearchParameter for Processor<C, T>
+where
+    C: SearchParameter,
+    C::Point: EuclideanSpace,
+    T: Transform<C::Point>,
+{
+    type Point = C::Point;
+    type Parameter = C::Parameter;
+    fn search_parameter(&self, point: C::Point, hint: C::Parameter, trials: usize) -> Option<C::Parameter> {
+        let inv = self.transform.inverse_transform().unwrap();
+        self.entity.search_parameter(inv.transform_point(point), hint, trials)
     }
 }
 
@@ -234,7 +294,7 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
 mod tests {
     use super::*;
 
-   fn exec_compatible_with_bspcurve() {
+    fn exec_compatible_with_bspcurve() {
         const DEGREE: usize = 3;
         const DIVISION: usize = 4;
         let knot_vec = KnotVec::uniform_knot(DEGREE, DIVISION);

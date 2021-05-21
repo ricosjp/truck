@@ -48,6 +48,20 @@ where
     fn parameter_range(&self) -> (f64, f64) { self.curve.parameter_range() }
 }
 
+impl<C, S> SearchParameter for PCurve<C, S>
+where
+    Self: ParametricCurve,
+    <Self as ParametricCurve>::Point:
+        EuclideanSpace<Scalar = f64, Diff = <Self as ParametricCurve>::Vector>,
+    <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,
+{
+    type Point = <Self as ParametricCurve>::Point;
+    type Parameter = f64;
+    fn search_parameter(&self, point: Self::Point, hint: f64, trials: usize) -> Option<f64> {
+        algo::curve::search_parameter(self, point, hint, trials)
+    }
+}
+
 impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
     C: ParametricCurve<Point = Point2, Vector = Vector2>,
@@ -76,7 +90,7 @@ fn pcurve_test() {
             vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 0.0)],
             vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 1.0, 1.0)],
             vec![Vector3::new(1.0, 0.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
-        ]
+        ],
     );
     let pcurve = PCurve::new(curve, surface);
     assert_eq!(pcurve.parameter_range(), (0.0, 1.0));
@@ -94,19 +108,11 @@ fn pcurve_test() {
         );
         assert_near!(
             pcurve.der(t),
-            Vector3::new(
-                4.0 * t * (t * t - 1.0),
-                2.0 * (t - 1.0),
-                -4.0 * t * t * t,
-            ),
+            Vector3::new(4.0 * t * (t * t - 1.0), 2.0 * (t - 1.0), -4.0 * t * t * t,),
         );
         assert_near!(
             pcurve.der2(t),
-            Vector3::new(
-                4.0 * (3.0 * t * t - 1.0),
-                2.0,
-                -12.0 * t * t,
-            ),
+            Vector3::new(4.0 * (3.0 * t * t - 1.0), 2.0, -12.0 * t * t,),
         );
     }
 }
