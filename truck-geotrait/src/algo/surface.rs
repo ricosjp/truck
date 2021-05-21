@@ -58,6 +58,7 @@ where
     }
 }
 
+/// Searches the parameter by Newton's method.
 #[inline(always)]
 pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
     surface: &S,
@@ -146,6 +147,7 @@ impl<'a, S: ParametricSurface3D> ParametricSurface
     fn vvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vvder(u, v)) }
 }
 
+/// Searches the parameter by Newton's method.
 #[inline(always)]
 pub fn search_parameter3d<S: ParametricSurface3D>(
     surface: &S,
@@ -162,6 +164,7 @@ pub fn search_parameter3d<S: ParametricSurface3D>(
     })
 }
 
+/// Creates the surface division
 #[inline(always)]
 pub fn parameter_division<S>(
     surface: &S,

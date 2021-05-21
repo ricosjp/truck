@@ -47,6 +47,7 @@ where
     }
 }
 
+/// Searches the parameter by Newton's method.
 pub fn search_parameter<C>(curve: &C, point: C::Point, hint: f64, trials: usize) -> Option<f64>
 where
     C: ParametricCurve,
@@ -60,6 +61,7 @@ where
     })
 }
 
+/// Creates the curve division
 pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> Vec<f64>
 where
     C: ParametricCurve,
