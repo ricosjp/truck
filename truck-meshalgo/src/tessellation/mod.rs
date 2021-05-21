@@ -2,7 +2,8 @@
 
 use spade::delaunay::*;
 use spade::kernels::*;
-use truck_modeling::*;
+use truck_geotrait::*;
+use truck_topology::*;
 use truck_polymesh::{*, Vertex};
 
 pub mod triangulation;

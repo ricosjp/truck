@@ -182,28 +182,19 @@ pub fn tessellation(
     )
 }
 
-fn presearch(surface: &Surface, pt: Point3) -> (f64, f64) {
-    match surface {
-        Surface::Plane(surface) => {
-            let v = surface.get_parameter(pt);
-            (v[0], v[1])
-        }
-        Surface::BSplineSurface(surface) => {
-            algo::surface::presearch(surface, pt, surface.parameter_range(), 50)
-        }
-        Surface::NURBSSurface(surface) => {
-            algo::surface::presearch(surface, pt, surface.parameter_range(), 50)
-        }
-        Surface::RevolutedCurve(surface) => {
-            algo::surface::presearch(surface, pt, surface.parameter_range(), 50)
-        }
-    }
-}
-
-pub fn tessellate_faces<'a>(
-    faces: impl Iterator<Item = &'a Face>,
+pub fn tessellate_faces<'a, C, S>(
+    faces: impl Iterator<Item = &'a Face<Point3, C, S>>,
     tol: f64,
-) -> Option<PolygonMesh> {
+) -> Option<PolygonMesh>
+where
+    C: ParametricCurve<Point = Point3, Vector = Vector3> + Invertible + ParameterDivision1D + 'a,
+    S: BoundedSurface
+        + ParametricSurface3D
+        + Invertible
+        + ParameterDivision2D
+        + SearchParameter<Point = Point3, Parameter = (f64, f64)>
+        + 'a,
+{
     let mut poly = PolygonMesh::default();
     for face in faces {
         let surface = face.oriented_surface();
@@ -216,7 +207,12 @@ pub fn tessellate_faces<'a>(
                 let curve = edge.oriented_curve();
                 let mut division = curve.parameter_division(tol);
                 let _ = division.pop();
-                let mut hint = presearch(&surface, curve.subs(division[0]));
+                let mut hint = truck_geotrait::algo::surface::presearch(
+                    &surface,
+                    curve.subs(division[0]),
+                    surface.parameter_range(),
+                    50,
+                );
                 for t in division {
                     let pt = curve.subs(t);
                     hint = match surface.search_parameter(pt, hint, 100) {
@@ -225,7 +221,12 @@ pub fn tessellate_faces<'a>(
                             if surface.subs(hint.0, hint.1).near(&pt) {
                                 hint
                             } else {
-                                let hint0 = presearch(&surface, pt);
+                                let hint0 = truck_geotrait::algo::surface::presearch(
+                                    &surface,
+                                    pt,
+                                    surface.parameter_range(),
+                                    50,
+                                );
                                 match surface.search_parameter(pt, hint0, 100) {
                                     Some(got) => got,
                                     None => return None,
@@ -244,23 +245,21 @@ pub fn tessellate_faces<'a>(
     Some(poly)
 }
 
-fn meshing_surface(surface: &Surface, tol: f64) -> (Vec<f64>, Vec<f64>) {
-    match surface {
-        Surface::BSplineSurface(surface) => surface.parameter_division(tol),
-        Surface::NURBSSurface(surface) => surface.parameter_division(tol),
-        Surface::RevolutedCurve(surface) => surface.parameter_division(tol),
-        Surface::Plane(_) => (Vec::new(), Vec::new()),
-    }
-}
-
-pub fn square_tessellation(
-    surface: &Surface,
+pub fn square_tessellation<S>(
+    surface: &S,
     uv: &Vec<Point2>,
     polyline: &Vec<[usize; 2]>,
     tol: f64,
-) -> PolygonMesh {
+) -> PolygonMesh
+where
+    S: BoundedSurface
+        + ParametricSurface3D
+        + Invertible
+        + ParameterDivision2D
+        + SearchParameter<Point = Point3, Parameter = (f64, f64)>
+{
     let mut triangulation = ConstrainedDelaunayTriangulation::<[f64; 2], FloatKernel>::new();
-    let (udiv, vdiv) = meshing_surface(surface, tol);
+    let (udiv, vdiv) = surface.parameter_division(tol);
     udiv.into_iter()
         .flat_map(|u| vdiv.iter().map(move |v| (u, *v)))
         .filter(|(u, v)| {
