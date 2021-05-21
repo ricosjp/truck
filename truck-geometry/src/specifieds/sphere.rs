@@ -20,14 +20,6 @@ impl ParametricSurface for Sphere {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Vector3 {
-        Vector3::new(
-            f64::sin(u) * f64::cos(v),
-            f64::sin(u) * f64::sin(v),
-            f64::cos(u),
-        )
-    }
-    #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Point3 { self.center() + self.radius * self.normal(u, v) }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Vector3 {
@@ -54,6 +46,17 @@ impl ParametricSurface for Sphere {
     fn vvder(&self, u: f64, v: f64) -> Vector3 {
         -self.radius * f64::sin(u) * Vector3::new(f64::cos(v), f64::sin(v), 0.0)
     }
+}
+
+impl ParametricSurface3D for Sphere {
+    #[inline(always)]
+    fn normal(&self, u: f64, v: f64) -> Vector3 {
+        Vector3::new(
+            f64::sin(u) * f64::cos(v),
+            f64::sin(u) * f64::sin(v),
+            f64::cos(u),
+        )
+    } 
 }
 
 #[test]

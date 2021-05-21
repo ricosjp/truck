@@ -65,6 +65,9 @@ impl ParametricSurface for PolySurface {
     fn vvder(&self, u: f64, v: f64) -> Vector3 {
         self.0.subs(u).to_vec().mul_element_wise(self.1.der2(v))
     }
+}
+
+impl ParametricSurface3D for PolySurface {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         self.uder(u, v).cross(self.vder(u, v)).normalize()

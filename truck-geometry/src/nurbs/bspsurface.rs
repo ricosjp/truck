@@ -150,7 +150,10 @@ impl<V> BSplineSurface<V> {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn ctrl_pts_row_iter(&self, column_idx: usize) -> impl ExactSizeIterator<Item = &V> + FusedIterator<Item = &V> {
+    pub fn ctrl_pts_row_iter(
+        &self,
+        column_idx: usize,
+    ) -> impl ExactSizeIterator<Item = &V> + FusedIterator<Item = &V> {
         self.control_points.iter().map(move |vec| &vec[column_idx])
     }
 
@@ -760,7 +763,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineSurface<V> {
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), new_points)
     }
 
-   pub(super) fn sub_near_as_surface<F: Fn(&V, &V) -> bool>(
+    pub(super) fn sub_near_as_surface<F: Fn(&V, &V) -> bool>(
         &self,
         other: &BSplineSurface<V>,
         div_coef: usize,
@@ -1849,96 +1852,57 @@ where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> +
     }
 }
 
-impl ParametricSurface for BSplineSurface<Vector2> {
-    type Point = Point2;
-    type Vector = Vector2;
+impl<V: TangentSpace<f64>> ParametricSurface for BSplineSurface<V> {
+    type Point = V::Space;
+    type Vector = V;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point2 { Point2::from_vec(self.subs(u, v)) }
+    fn subs(&self, u: f64, v: f64) -> Self::Point { V::Space::from_vec(self.subs(u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector2 { self.uder(u, v) }
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector2 { self.vder(u, v) }
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector2 { self.uuder(u, v) }
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.uuder(u, v) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector2 { self.uvder(u, v) }
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.uvder(u, v) }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector2 { self.vvder(u, v) }
-    /// zero identity
-    #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
 }
 
-impl ParameterDivision2D for BSplineSurface<Vector2> {
+impl<V: TangentSpace<f64>> ParameterDivision2D for BSplineSurface<V>
+where V::Space: MetricSpace<Metric = f64>
+{
     #[inline(always)]
     fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
         algo::surface::parameter_division(self, self.parameter_range(), tol)
     }
 }
 
-impl<'a> ParametricSurface for &'a BSplineSurface<Vector2> {
-    type Point = Point2;
-    type Vector = Vector2;
+impl<'a, V: TangentSpace<f64>> ParametricSurface for &'a BSplineSurface<V> {
+    type Point = V::Space;
+    type Vector = V;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point2 { Point2::from_vec((*self).subs(u, v)) }
+    fn subs(&self, u: f64, v: f64) -> Self::Point { V::Space::from_vec((*self).subs(u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector2 { (*self).uder(u, v) }
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector2 { (*self).vder(u, v) }
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector2 { (*self).uuder(u, v) }
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector2 { (*self).uvder(u, v) }
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector2 { (*self).vvder(u, v) }
-    /// zero identity
-    #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
 }
 
-impl ParametricSurface for BSplineSurface<Vector3> {
-    type Point = Point3;
-    type Vector = Vector3;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 { Point3::from_vec(self.subs(u, v)) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector3 { self.uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector3 { self.vder(u, v) }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 { self.uuder(u, v) }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 { self.uvder(u, v) }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 { self.vvder(u, v) }
+impl ParametricSurface3D for BSplineSurface<Vector3> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         self.uder(u, v).cross(self.vder(u, v)).normalize()
     }
 }
 
-impl ParameterDivision2D for BSplineSurface<Vector3> {
-    #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, self.parameter_range(), tol)
-    }
-}
-
-impl<'a> ParametricSurface for &'a BSplineSurface<Vector3> {
-    type Point = Point3;
-    type Vector = Vector3;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 { Point3::from_vec((*self).subs(u, v)) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector3 { (*self).uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector3 { (*self).vder(u, v) }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 { (*self).uuder(u, v) }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 { (*self).uvder(u, v) }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 { (*self).vvder(u, v) }
+impl<'a> ParametricSurface3D for &'a BSplineSurface<Vector3> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         self.uder(u, v).cross(self.vder(u, v)).normalize()
@@ -1966,7 +1930,8 @@ impl<V: Clone> Invertible for BSplineSurface<V> {
 impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
     fn include(&self, curve: &BSplineCurve<Vector2>) -> bool {
         let pt = curve.front();
-        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
+        let mut hint =
+            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter2d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -1980,7 +1945,8 @@ impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = ParametricCurve::subs(curve, t);
-                hint = match algo::surface::search_parameter2d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
+                hint = match algo::surface::search_parameter2d(self, pt, hint, INCLUDE_CURVE_TRIALS)
+                {
                     Some(got) => got,
                     None => return false,
                 };
@@ -2004,7 +1970,8 @@ impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
 impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.front();
-        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
+        let mut hint =
+            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -2018,7 +1985,8 @@ impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = ParametricCurve::subs(curve, t);
-                hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
+                hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS)
+                {
                     Some(got) => got,
                     None => return false,
                 };
@@ -2042,7 +2010,8 @@ impl IncludeCurve<BSplineCurve<Vector3>> for BSplineSurface<Vector3> {
 impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(),PRESEARCH_DIVISION);
+        let mut hint =
+            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -2056,7 +2025,8 @@ impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = curve.subs(t);
-                hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
+                hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS)
+                {
                     Some(got) => got,
                     None => return false,
                 };

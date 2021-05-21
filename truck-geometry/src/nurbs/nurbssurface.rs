@@ -68,7 +68,10 @@ impl<V> NURBSSurface<V> {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn ctrl_pts_row_iter(&self, column_idx: usize) -> impl ExactSizeIterator<Item = &V> + std::iter::FusedIterator<Item = &V> {
+    pub fn ctrl_pts_row_iter(
+        &self,
+        column_idx: usize,
+    ) -> impl ExactSizeIterator<Item = &V> + std::iter::FusedIterator<Item = &V> {
         self.0.ctrl_pts_row_iter(column_idx)
     }
 
@@ -559,7 +562,12 @@ impl NURBSSurface<Vector3> {
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
-    pub fn search_parameter(&self, pt: Point2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+    pub fn search_parameter(
+        &self,
+        pt: Point2,
+        hint: (f64, f64),
+        trials: usize,
+    ) -> Option<(f64, f64)> {
         bspsurface::sub_search_parameter2d(self, pt, hint.into(), trials).map(|v| v.into())
     }
 }
@@ -575,9 +583,9 @@ impl<V: Clone> Invertible for NURBSSurface<V> {
     }
 }
 
-impl ParametricSurface for NURBSSurface<Vector3> {
-    type Point = Point2;
-    type Vector = Vector2;
+impl<V: Homogeneous<f64>> ParametricSurface for NURBSSurface<V> {
+    type Point = V::Point;
+    type Vector = V::Vector;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point { self.subs(u, v) }
     #[inline(always)]
@@ -590,22 +598,11 @@ impl ParametricSurface for NURBSSurface<Vector3> {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
-    /// zero identity
-    #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
 }
 
-impl ParameterDivision2D for NURBSSurface<Vector3>
-{
-    #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, self.parameter_range(), tol)
-    }
-}
-
-impl<'a> ParametricSurface for &'a NURBSSurface<Vector3> {
-    type Point = Point2;
-    type Vector = Vector2;
+impl<'a, V: Homogeneous<f64>> ParametricSurface for &'a NURBSSurface<V> {
+    type Point = V::Point;
+    type Vector = V::Vector;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
     #[inline(always)]
@@ -618,12 +615,35 @@ impl<'a> ParametricSurface for &'a NURBSSurface<Vector3> {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
-    /// zero identity
-    #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Self::Vector { Vector2::zero() }
 }
 
-impl BoundedSurface for NURBSSurface<Vector3> {
+impl ParametricSurface3D for NURBSSurface<Vector4> {
+    #[inline(always)]
+    fn normal(&self, u: f64, v: f64) -> Vector3 {
+        let pt = self.0.subs(u, v);
+        let ud = self.0.uder(u, v);
+        let vd = self.0.vder(u, v);
+        pt.rat_der(ud).cross(pt.rat_der(vd)).normalize()
+    }
+}
+
+impl<'a> ParametricSurface3D for &'a NURBSSurface<Vector4> {
+    #[inline(always)]
+    fn normal(&self, u: f64, v: f64) -> Vector3 { (*self).normal(u, v) }
+}
+
+impl<V: Homogeneous<f64>> ParameterDivision2D for NURBSSurface<V>
+where V::Point: MetricSpace<Metric = f64>
+{
+    #[inline(always)]
+    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, self.parameter_range(), tol)
+    }
+}
+
+impl<V> BoundedSurface for NURBSSurface<V>
+where Self: ParametricSurface
+{
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
 }
@@ -632,7 +652,8 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(),PRESEARCH_DIVISION);
+        let mut hint =
+            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -667,67 +688,12 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     }
 }
 
-impl ParametricSurface for NURBSSurface<Vector4> {
-    type Point = Point3;
-    type Vector = Vector3;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { self.subs(u, v) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.vder(u, v) }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.uuder(u, v) }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.uvder(u, v) }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Self::Vector {
-        let pt = self.0.subs(u, v);
-        let ud = self.0.uder(u, v);
-        let vd = self.0.vder(u, v);
-        pt.rat_der(ud).cross(pt.rat_der(vd)).normalize()
-    }
-}
-
-impl<'a> ParametricSurface for &'a NURBSSurface<Vector4> {
-    type Point = Point3;
-    type Vector = Vector3;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Self::Vector { (*self).normal(u, v) }
-}
-
-impl ParameterDivision2D for NURBSSurface<Vector4>
-{
-    #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, self.parameter_range(), tol)
-    }
-}
-
-impl BoundedSurface for NURBSSurface<Vector4> {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-}
-
 impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.front();
-        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
+        let mut hint =
+            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -766,7 +732,8 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.front();
-        let mut hint = algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
+        let mut hint =
+            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
         hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -863,7 +830,12 @@ impl NURBSSurface<Vector4> {
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
-    pub fn search_parameter(&self, pt: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+    pub fn search_parameter(
+        &self,
+        pt: Point3,
+        hint: (f64, f64),
+        trials: usize,
+    ) -> Option<(f64, f64)> {
         let normal = self.normal(hint.0, hint.1);
         let flag = normal[0].abs() > normal[1].abs();
         let tmp = if flag { 0 } else { 1 };

@@ -180,6 +180,11 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> ParametricSurface for
         self.derivation_rotation_matrix(v)
             .transform_vector(self.curve.der(u))
     }
+}
+
+impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> ParametricSurface3D
+    for RevolutedCurve<C>
+{
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         let (u0, u1) = self.curve.parameter_range();
@@ -239,7 +244,12 @@ where
     C1: ParametricCurve<Point = Point3, Vector = Vector3>,
 {
     let first = ParametricCurve::subs(curve, knots[0]);
-    let mut hint = algo::surface::presearch(surface, first, surface.parameter_range(), PRESEARCH_DIVISION);
+    let mut hint = algo::surface::presearch(
+        surface,
+        first,
+        surface.parameter_range(),
+        PRESEARCH_DIVISION,
+    );
     if surface
         .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
         .is_none()
@@ -262,9 +272,13 @@ where
                     true
                 }
                 None => {
-                    hint = algo::surface::presearch(surface, pt, surface.parameter_range(), PRESEARCH_DIVISION);
-                    match surface.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS)
-                    {
+                    hint = algo::surface::presearch(
+                        surface,
+                        pt,
+                        surface.parameter_range(),
+                        PRESEARCH_DIVISION,
+                    );
+                    match surface.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
                         Some(got) => {
                             hint = got;
                             true

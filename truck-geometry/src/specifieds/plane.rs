@@ -141,6 +141,9 @@ impl ParametricSurface for Plane {
     fn uvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
     #[inline(always)]
     fn vvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
+}
+
+impl ParametricSurface3D for Plane {
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Vector3 { self.normal() }
 }
