@@ -66,6 +66,7 @@ where
     } else {
         let mid = (range.0 + range.1) / 2.0;
         let mut res = parameter_division(curve, (range.0, mid), tol);
+        let _ = res.pop();
         res.extend(parameter_division(curve, (mid, range.1), tol));
         res
     }

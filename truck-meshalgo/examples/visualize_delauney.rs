@@ -126,6 +126,10 @@ fn main() {
     polyline.push([N + 1, N + 2]);
     polyline.push([N + 2, N + 3]);
     polyline.push([N + 3, N]);
+    for i in 0..(N / 2) {
+        let theta = 2.0 * PI * i as f64 / (N / 2) as f64;
+        positions.push(0.75 * Vector2::new(f64::cos(theta), f64::sin(theta)));
+    } 
     let indices = triangulation::delaunay_2d(&positions, &polyline);
     let polygon = triangulation::create_polymesh(&plane, &positions, &indices);
     println!("{:?}", polygon);

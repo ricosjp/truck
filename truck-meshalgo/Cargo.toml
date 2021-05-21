@@ -6,9 +6,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
+truck-modeling = { version = "0.2.1", path = "../truck-modeling" }
 truck-polymesh = { version = "0.2.1", path = "../truck-polymesh" }
 spade = "1.8.2"
+rand = "0.8.3"
 
 [dev-dependencies]
 truck-platform = { version = "0.2.1", path = "../truck-platform" }
@@ -16,3 +17,4 @@ truck-rendimpl = { version = "0.2.1", path = "../truck-rendimpl" }
 truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
 image = "0.23.13"
 futures = "0.3.12"
+serde_json = "1.0.62"
