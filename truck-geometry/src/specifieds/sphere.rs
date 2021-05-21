@@ -118,3 +118,54 @@ impl ParameterDivision2D for Sphere {
         )
     }
 }
+
+impl SearchParameter for Sphere {
+    type Point = Point3;
+    type Parameter = (f64, f64);
+    #[inline(always)]
+    fn search_parameter(&self, point: Point3, _: (f64, f64), _: usize) -> Option<(f64, f64)> {
+        let radius = point - self.center;
+        if (self.radius * self.radius).near(&radius.magnitude2()) {
+            let radius = radius.normalize();
+            let u = f64::acos(radius[2]);
+            let sinu = f64::sqrt(1.0 - radius[2] * radius[2]);
+            let cosv = radius[0] / sinu;
+            let v = if radius[1] > 0.0 {
+                f64::acos(cosv)
+            } else {
+                2.0 * PI - f64::acos(cosv)
+            };
+            Some((u, v))
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+fn exec_search_parameter_test() {
+    let center = Point3::new(
+        100.0 * rand::random::<f64>() - 50.0,
+        100.0 * rand::random::<f64>() - 50.0,
+        100.0 * rand::random::<f64>() - 50.0,
+    );
+    let radius = 100.0 * rand::random::<f64>();
+    let sphere = Sphere::new(center, radius);
+    let u = PI * rand::random::<f64>();
+    let v = 2.0 * PI * rand::random::<f64>();
+    let pt = sphere.subs(u, v);
+    let (u0, v0) = sphere.search_parameter(pt, (0.0, 0.0), 100).unwrap();
+    assert_near!(u, u0);
+    assert_near!(v, v0);
+    let pt = pt + Vector3::new(
+        (0.1 * rand::random::<f64>() + 0.01) * f64::signum(rand::random::<f64>() - 0.5),
+        (0.1 * rand::random::<f64>() + 0.01) * f64::signum(rand::random::<f64>() - 0.5),
+        (0.1 * rand::random::<f64>() + 0.01) * f64::signum(rand::random::<f64>() - 0.5),
+    );
+    assert!(sphere.search_parameter(pt, (0.0, 0.0), 100).is_none());
+}
+
+#[test]
+fn search_parameter_test() {
+    (0..10).for_each(|_| exec_search_parameter_test())
+}
