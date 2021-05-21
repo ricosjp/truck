@@ -49,7 +49,7 @@ pub fn delaunay_2d(positions: &Vec<Vector2>, polyline: &Vec<[usize; 2]>) -> Vec<
 }
 
 pub fn create_polymesh(
-    surface: &impl ParametricSurface<Point = Point3, Vector = Vector3>,
+    surface: &impl ParametricSurface3D,
     uv_coords: &Vec<Vector2>,
     indices: &Vec<[usize; 3]>,
 ) -> PolygonMesh {
@@ -74,7 +74,7 @@ pub fn create_polymesh(
 }
 
 pub fn tessellation(
-    surface: &impl ParametricSurface<Point = Point3, Vector = Vector3>,
+    surface: &impl ParametricSurface3D,
     uv: &Vec<Point2>,
     polyline: &Vec<[usize; 2]>,
     tol: f64,
