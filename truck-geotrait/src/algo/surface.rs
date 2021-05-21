@@ -58,6 +58,7 @@ where
     }
 }
 
+/// Searches the parameter by Newton's method.
 #[inline(always)]
 pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
     surface: &S,
@@ -89,7 +90,7 @@ struct ProjectedSurface<'a, S> {
     normal: Vector3,
 }
 
-impl<'a, S: ParametricSurface<Point = Point3, Vector = Vector3>> ProjectedSurface<'a, S> {
+impl<'a, S: ParametricSurface3D> ProjectedSurface<'a, S> {
     fn new(surface: &'a S, (u, v): (f64, f64)) -> Self {
         let origin = surface.subs(u, v);
         let normal = surface.normal(u, v);
@@ -127,7 +128,7 @@ impl<'a, S: ParametricSurface<Point = Point3, Vector = Vector3>> ProjectedSurfac
     }
 }
 
-impl<'a, S: ParametricSurface<Point = Point3, Vector = Vector3>> ParametricSurface
+impl<'a, S: ParametricSurface3D> ParametricSurface
     for ProjectedSurface<'a, S>
 {
     type Point = Point2;
@@ -144,12 +145,11 @@ impl<'a, S: ParametricSurface<Point = Point3, Vector = Vector3>> ParametricSurfa
     fn uvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uvder(u, v)) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vvder(u, v)) }
-    #[inline(always)]
-    fn normal(&self, _: f64, _: f64) -> Vector2 { Vector2::zero() }
 }
 
+/// Searches the parameter by Newton's method.
 #[inline(always)]
-pub fn search_parameter3d<S: ParametricSurface<Point = Point3, Vector = Vector3>>(
+pub fn search_parameter3d<S: ParametricSurface3D>(
     surface: &S,
     point: Point3,
     (u0, v0): (f64, f64),
@@ -164,6 +164,7 @@ pub fn search_parameter3d<S: ParametricSurface<Point = Point3, Vector = Vector3>
     })
 }
 
+/// Creates the surface division
 #[inline(always)]
 pub fn parameter_division<S>(
     surface: &S,

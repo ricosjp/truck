@@ -141,6 +141,9 @@ impl ParametricSurface for Plane {
     fn uvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
     #[inline(always)]
     fn vvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
+}
+
+impl ParametricSurface3D for Plane {
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Vector3 { self.normal() }
 }
@@ -201,7 +204,6 @@ impl ParameterDivision2D for Plane {
     }
 }
 
-
 impl<T: Transform3<Scalar = f64>> Transformed<T> for Plane {
     #[inline(always)]
     fn transform_by(&mut self, trans: T) {
@@ -215,6 +217,19 @@ impl<T: Transform3<Scalar = f64>> Transformed<T> for Plane {
             o: trans.transform_point(self.o),
             p: trans.transform_point(self.p),
             q: trans.transform_point(self.q),
+        }
+    }
+}
+
+impl SearchParameter for Plane {
+    type Point = Point3;
+    type Parameter = (f64, f64);
+    #[inline(always)]
+    fn search_parameter(&self, point: Point3, _: (f64, f64), _: usize) -> Option<(f64, f64)> {
+        let v = self.get_parameter(point);
+        match v[2].so_small() {
+            true => Some((v[0], v[1])),
+            false => None,
         }
     }
 }
