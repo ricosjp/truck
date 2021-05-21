@@ -425,6 +425,21 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
     }
 }
 
+impl<V: Homogeneous<f64>> SearchParameter for NURBSCurve<V>
+where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
+{
+    type Point = V::Point;
+    type Parameter = f64;
+    #[inline(always)]
+    fn search_parameter(&self, point: V::Point, hint: f64, trial: usize) -> Option<f64> {
+        self.search_nearest_parameter(point, hint, trial)
+            .and_then(|t| match point.to_vec().near(&self.subs(t).to_vec()) {
+                true => Some(t),
+                false => None,
+            })
+    }
+}
+
 impl<V: Homogeneous<f64>> NURBSCurve<V>
 where V::Point: MetricSpace<Metric = f64> + std::ops::Index<usize, Output = f64> + Bounded<f64> + Copy
 {

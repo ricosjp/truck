@@ -317,7 +317,7 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
         }
         BSplineCurve::new_unchecked(knot_vec, new_points)
     }
-   pub(super) fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
+    pub(super) fn sub_near_as_curve<F: Fn(&V, &V) -> bool>(
         &self,
         other: &BSplineCurve<V>,
         div_coef: usize,
@@ -1051,7 +1051,8 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
 }
 
 impl<V: TangentSpace<f64>> ParameterDivision1D for BSplineCurve<V>
-where V::Space: EuclideanSpace<Scalar = f64, Diff = V> + MetricSpace<Metric = f64> {
+where V::Space: EuclideanSpace<Scalar = f64, Diff = V> + MetricSpace<Metric = f64>
+{
     fn parameter_division(&self, tol: f64) -> Vec<f64> {
         algo::curve::parameter_division(self, self.parameter_range(), tol)
     }
@@ -1106,7 +1107,12 @@ where
     /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
     /// ```
     #[inline(always)]
-    pub fn search_nearest_parameter(&self, point: V::Space, hint: f64, trial: usize) -> Option<f64> {
+    pub fn search_nearest_parameter(
+        &self,
+        point: V::Space,
+        hint: f64,
+        trial: usize,
+    ) -> Option<f64> {
         algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
     /// Determines whether `self` is an arc of `curve` by repeating applying Newton method.
@@ -1166,6 +1172,22 @@ where
     }
 }
 
+impl<V> SearchParameter for BSplineCurve<V>
+where
+    V: TangentSpace<f64> + InnerSpace<Scalar = f64> + Tolerance,
+    V::Space: EuclideanSpace<Scalar = f64, Diff = V>,
+{
+    type Point = V::Space;
+    type Parameter = f64;
+    #[inline(always)]
+    fn search_parameter(&self, point: V::Space, hint: f64, trial: usize) -> Option<f64> {
+        self.search_nearest_parameter(point, hint, trial)
+            .and_then(|t| match point.to_vec().near(&self.subs(t)) {
+                true => Some(t),
+                false => None,
+            })
+    }
+}
 impl<V> BSplineCurve<V>
 where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy
 {

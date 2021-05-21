@@ -58,6 +58,22 @@ pub trait BoundedSurface: ParametricSurface {
     fn parameter_range(&self) -> ((f64, f64), (f64, f64));
 }
 
+/// Search parameter `t` such that `self.subs(t)` is near point.
+pub trait SearchParameter {
+    /// point
+    type Point;
+    /// curve => `f64`, surface => `(f64, f64)`
+    type Parameter;
+    /// Search parameter `t` such that `self.subs(t)` is near point.  
+    /// Returns `None` if could not find such parameter.
+    fn search_parameter(
+        &self,
+        point: Self::Point,
+        hint: Self::Parameter,
+        trial: usize,
+    ) -> Option<Self::Parameter>;
+}
+
 /// Whether the surface includes the boundary curve.
 pub trait IncludeCurve<C: ParametricCurve> {
     /// Returns whether the curve `curve` is included in the surface `self`.

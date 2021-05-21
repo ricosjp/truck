@@ -1927,6 +1927,22 @@ impl<V: Clone> Invertible for BSplineSurface<V> {
     }
 }
 
+impl SearchParameter for BSplineSurface<Vector2> {
+    type Point = Point2;
+    type Parameter = (f64, f64);
+    fn search_parameter(&self, point: Point2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        algo::surface::search_parameter2d(self, point, hint, trials)
+    }
+}
+
+impl SearchParameter for BSplineSurface<Vector3> {
+    type Point = Point3;
+    type Parameter = (f64, f64);
+    fn search_parameter(&self, point: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        algo::surface::search_parameter3d(self, point, hint, trials)
+    }
+}
+
 impl IncludeCurve<BSplineCurve<Vector2>> for BSplineSurface<Vector2> {
     fn include(&self, curve: &BSplineCurve<Vector2>) -> bool {
         let pt = curve.front();

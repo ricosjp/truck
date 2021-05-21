@@ -541,7 +541,9 @@ where
     }
 }
 
-impl NURBSSurface<Vector3> {
+impl SearchParameter for NURBSSurface<Vector3> {
+    type Point = Point2;
+    type Parameter = (f64, f64);
     /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
     /// # Examples
@@ -562,7 +564,7 @@ impl NURBSSurface<Vector3> {
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
-    pub fn search_parameter(
+    fn search_parameter(
         &self,
         pt: Point2,
         hint: (f64, f64),
@@ -810,7 +812,9 @@ impl Transformed<Matrix4> for NURBSSurface<Vector4> {
     }
 }
 
-impl NURBSSurface<Vector4> {
+impl SearchParameter for NURBSSurface<Vector4> {
+    type Point = Point3;
+    type Parameter = (f64, f64);
     /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
     /// # Examples
@@ -830,7 +834,7 @@ impl NURBSSurface<Vector4> {
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
-    pub fn search_parameter(
+    fn search_parameter(
         &self,
         pt: Point3,
         hint: (f64, f64),
