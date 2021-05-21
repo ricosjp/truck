@@ -564,12 +564,7 @@ impl SearchParameter for NURBSSurface<Vector3> {
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
-    fn search_parameter(
-        &self,
-        pt: Point2,
-        hint: (f64, f64),
-        trials: usize,
-    ) -> Option<(f64, f64)> {
+    fn search_parameter(&self, pt: Point2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
         bspsurface::sub_search_parameter2d(self, pt, hint.into(), trials).map(|v| v.into())
     }
 }
@@ -834,28 +829,8 @@ impl SearchParameter for NURBSSurface<Vector4> {
     /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
-    fn search_parameter(
-        &self,
-        pt: Point3,
-        hint: (f64, f64),
-        trials: usize,
-    ) -> Option<(f64, f64)> {
-        let normal = self.normal(hint.0, hint.1);
-        let flag = normal[0].abs() > normal[1].abs();
-        let tmp = if flag { 0 } else { 1 };
-        let flag = normal[tmp].abs() > normal[2].abs();
-        let max = if flag { tmp } else { 2 };
-        let idx0 = (max + 1) % 3;
-        let idx1 = (max + 2) % 3;
-        let knot_vecs = self.knot_vecs().clone();
-        let closure = move |pt: &Vector4| Vector3::new(pt[idx0], pt[idx1], pt[3]);
-        let closure = move |vec: &Vec<Vector4>| vec.iter().map(closure).collect::<Vec<_>>();
-        let control_points: Vec<Vec<_>> = self.control_points().iter().map(closure).collect();
-        let newsurface = NURBSSurface::new(BSplineSurface::new(knot_vecs, control_points));
-        let newpt = Point2::new(pt[idx0], pt[idx1]);
-        newsurface
-            .search_parameter(newpt, hint, trials)
-            .filter(|(u, v)| self.subs(*u, *v).near(&pt))
+    fn search_parameter(&self, pt: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+        algo::surface::search_parameter3d(self, pt, hint, trials)
     }
 }
 
