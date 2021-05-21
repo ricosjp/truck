@@ -285,7 +285,7 @@ pub fn same_buffer(vec0: &Vec<u8>, vec1: &Vec<u8>) -> bool {
 pub fn count_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> usize {
     vec0.par_iter()
         .zip(vec1)
-        .filter(move |(i, j)| *std::cmp::max(i, j) - *std::cmp::min(i, j) > 4)
+        .filter(move |(i, j)| *std::cmp::max(i, j) - *std::cmp::min(i, j) > 2)
         .count()
 }
 
