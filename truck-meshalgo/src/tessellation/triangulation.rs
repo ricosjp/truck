@@ -188,14 +188,14 @@ pub fn tessellate_faces<'a, C, S>(
 ) -> Option<PolygonMesh>
 where
     C: ParametricCurve<Point = Point3, Vector = Vector3> + Invertible + ParameterDivision1D + 'a,
-    S: BoundedSurface
-        + ParametricSurface3D
+    S: ParametricSurface3D
         + Invertible
         + ParameterDivision2D
         + SearchParameter<Point = Point3, Parameter = (f64, f64)>
         + 'a,
 {
     let mut poly = PolygonMesh::default();
+    let mut poly_edges = HashMap::<EdgeID<C>, Vec<Point3>>::new();
     for face in faces {
         let surface = face.oriented_surface();
         let mut uv = Vec::<Point2>::new();
@@ -204,37 +204,31 @@ where
             let mut counter = 0;
             let len = uv.len();
             for edge in wire {
-                let curve = edge.oriented_curve();
-                let mut division = curve.parameter_division(curve.parameter_range(), tol);
-                let _ = division.pop();
-                let mut hint = truck_geotrait::algo::surface::presearch(
-                    &surface,
-                    curve.subs(division[0]),
-                    surface.parameter_range(),
-                    50,
-                );
-                for t in division {
-                    let pt = curve.subs(t);
-                    hint = match surface.search_parameter(pt, hint, 100) {
-                        Some(got) => got,
-                        None => {
-                            if surface.subs(hint.0, hint.1).near(&pt) {
-                                hint
-                            } else {
-                                let hint0 = truck_geotrait::algo::surface::presearch(
-                                    &surface,
-                                    pt,
-                                    surface.parameter_range(),
-                                    50,
-                                );
-                                match surface.search_parameter(pt, hint0, 100) {
-                                    Some(got) => got,
-                                    None => return None,
-                                }
-                            }
-                        }
-                    };
-                    uv.push(Point2::new(hint.0, hint.1));
+                let mut poly_edge = match poly_edges.get(&edge.id()) {
+                    Some(got) => got.clone(),
+                    None => {
+                        let curve = edge.lock_curve().unwrap().clone();
+                        let poly = curve.parameter_division(curve.parameter_range(), tol)
+                            .into_iter()
+                            .map(|t| curve.subs(t))
+                            .collect::<Vec<Point3>>();
+                        poly_edges.insert(edge.id(), poly.clone());
+                        poly
+                    }
+                };
+                if !edge.orientation() {
+                    poly_edge.reverse();
+                }
+                poly_edge.pop();
+                let mut hint = None;
+                for pt in poly_edge {
+                    hint = surface
+                        .search_parameter(pt, hint, 100)
+                        .or_else(|| surface.search_parameter(pt, None, 100));
+                    match hint {
+                        Some(hint) => uv.push(hint.into()),
+                        None => return None,
+                    }
                     counter += 1;
                 }
             }
@@ -252,14 +246,25 @@ pub fn square_tessellation<S>(
     tol: f64,
 ) -> PolygonMesh
 where
-    S: BoundedSurface
-        + ParametricSurface3D
+    S: ParametricSurface3D
         + Invertible
         + ParameterDivision2D
-        + SearchParameter<Point = Point3, Parameter = (f64, f64)>
+        + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
     let mut triangulation = ConstrainedDelaunayTriangulation::<[f64; 2], FloatKernel>::new();
-    let (udiv, vdiv) = surface.parameter_division(tol);
+    let mut bdb = BoundingBox::new();
+    let poly2tri: Vec<usize> = uv
+        .iter()
+        .map(|pt| {
+            bdb.push(pt);
+            triangulation.insert((*pt).into())
+        })
+        .collect();
+    polyline.iter().for_each(|a| {
+        triangulation.add_constraint(poly2tri[a[0]], poly2tri[a[1]]);
+    });
+    let range = ((bdb.min()[0], bdb.max()[0]), (bdb.min()[1], bdb.max()[1]));
+    let (udiv, vdiv) = surface.parameter_division(range, tol);
     udiv.into_iter()
         .flat_map(|u| vdiv.iter().map(move |v| (u, *v)))
         .filter(|(u, v)| {
@@ -282,13 +287,6 @@ where
         .for_each(|(u, v)| {
             triangulation.insert([u, v]);
         });
-    let poly2tri: Vec<usize> = uv
-        .iter()
-        .map(|pt| triangulation.insert((*pt).into()))
-        .collect();
-    polyline.iter().for_each(|a| {
-        triangulation.add_constraint(poly2tri[a[0]], poly2tri[a[1]]);
-    });
     let mut positions = Vec::<Point3>::new();
     let mut uv_coords = Vec::<Vector2>::new();
     let mut normals = Vec::<Vector3>::new();
