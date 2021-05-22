@@ -34,9 +34,9 @@ fn presearch(surface: &Surface, pt: Point3) -> (f64, f64) {
 
 fn meshing_surface(surface: &Surface, precision: f64, boundary: &Vec<[f32; 4]>) -> StructuredMesh {
     match surface {
-        Surface::BSplineSurface(surface) => StructuredMesh::from_surface(surface, precision),
-        Surface::NURBSSurface(surface) => StructuredMesh::from_surface(surface, precision),
-        Surface::RevolutedCurve(surface) => StructuredMesh::from_surface(surface, precision),
+        Surface::BSplineSurface(surface) => StructuredMesh::from_surface(surface, surface.parameter_range(), precision),
+        Surface::NURBSSurface(surface) => StructuredMesh::from_surface(surface, surface.parameter_range(), precision),
+        Surface::RevolutedCurve(surface) => StructuredMesh::from_surface(surface, surface.parameter_range(), precision),
         Surface::Plane(plane) => {
             let bdd: BoundingBox<Vector2> = boundary
                 .iter()
@@ -76,7 +76,7 @@ fn add_face(
     let surface = face.oriented_surface();
     for edge in face.boundary_iters().into_iter().flatten() {
         let curve = edge.oriented_curve();
-        let division = curve.parameter_division(mesh_precision);
+        let division = curve.parameter_division(curve.parameter_range(), mesh_precision);
         let mut hint = presearch(&surface, curve.subs(division[0]));
         let mut this_boundary = Vec::new();
         for t in division {
@@ -207,7 +207,7 @@ impl IntoInstance<WireFrameInstance> for Shell {
             .flatten()
             .flat_map(|edge| {
                 let curve = edge.oriented_curve();
-                let division = curve.parameter_division(desc.polyline_precision);
+                let division = curve.parameter_division(curve.parameter_range(), desc.polyline_precision);
                 lengths.push(division.len() as u32);
                 division
                     .into_iter()
@@ -314,7 +314,7 @@ impl IntoInstance<WireFrameInstance> for Solid {
             .flatten()
             .flat_map(|edge| {
                 let curve = edge.oriented_curve();
-                let division = curve.parameter_division(desc.polyline_precision);
+                let division = curve.parameter_division(curve.parameter_range(), desc.polyline_precision);
                 lengths.push(division.len() as u32);
                 division
                     .into_iter()

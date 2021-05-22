@@ -361,8 +361,8 @@ impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
 impl<C> ParameterDivision2D for RevolutedCurve<C>
 where C: ParametricCurve<Point = Point3, Vector = Vector3> + ParameterDivision1D
 {
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        let curve_division = self.curve.parameter_division(tol);
+    fn parameter_division(&self, (urange, vrange): ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+        let curve_division = self.curve.parameter_division(urange, tol);
         let max = curve_division
             .iter()
             .fold(0.0, |max2, t| {
@@ -372,9 +372,9 @@ where C: ParametricCurve<Point = Point3, Vector = Vector3> + ParameterDivision1D
             })
             .sqrt();
         let acos = f64::acos(1.0 - tol / max);
-        let div: usize = 1 + (2.0 * PI / acos).floor() as usize;
+        let div: usize = 1 + ((vrange.1 - vrange.0) / acos).floor() as usize;
         let circle_division = (0..=div)
-            .map(|j| 2.0 * PI * j as f64 / div as f64)
+            .map(|j| vrange.0 + (vrange.1 - vrange.0) * j as f64 / div as f64)
             .collect();
         (curve_division, circle_division)
     }

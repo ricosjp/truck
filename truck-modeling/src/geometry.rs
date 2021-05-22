@@ -58,8 +58,8 @@ impl Transformed<Matrix4> for Curve {
 }
 
 impl ParameterDivision1D for Curve {
-    fn parameter_division(&self, tol: f64) -> Vec<f64> {
-        derive_curve_method!(self, ParameterDivision1D::parameter_division, tol)
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+        derive_curve_method!(self, ParameterDivision1D::parameter_division, range, tol)
     }
 }
 
@@ -226,9 +226,14 @@ impl IncludeCurve<Curve> for Surface {
 impl SearchParameter for Surface {
     type Point = Point3;
     type Parameter = (f64, f64);
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
-    /// If cannot find, then return `None`.
     fn search_parameter(&self, point: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
         derive_surface_method!(self, SearchParameter::search_parameter, point, hint, trials)
+    }
+}
+
+impl ParameterDivision2D for Surface {
+    #[inline(always)]
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+        derive_surface_method!(self, ParameterDivision2D::parameter_division, range, tol)
     }
 }

@@ -205,7 +205,7 @@ where
             let len = uv.len();
             for edge in wire {
                 let curve = edge.oriented_curve();
-                let mut division = curve.parameter_division(tol);
+                let mut division = curve.parameter_division(curve.parameter_range(), tol);
                 let _ = division.pop();
                 let mut hint = truck_geotrait::algo::surface::presearch(
                     &surface,

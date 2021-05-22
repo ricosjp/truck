@@ -69,8 +69,8 @@ where
     S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
     S::Vector: VectorSpace<Scalar = f64>,
 {
-    fn parameter_division(&self, tol: f64) -> Vec<f64> {
-        algo::curve::parameter_division(self, self.parameter_range(), tol)
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+        algo::curve::parameter_division(self, range, tol)
     }
 }
 

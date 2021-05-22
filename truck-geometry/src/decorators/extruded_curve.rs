@@ -61,8 +61,8 @@ where
 
 impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
     #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        (self.curve.parameter_division(tol), vec![0.0, 1.0])
+    fn parameter_division(&self, (urange, vrange): ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+        (self.curve.parameter_division(urange, tol), vec![vrange.0, vrange.1])
     }
 }
 

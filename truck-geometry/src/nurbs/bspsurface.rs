@@ -1873,8 +1873,8 @@ impl<V: TangentSpace<f64>> ParameterDivision2D for BSplineSurface<V>
 where V::Space: MetricSpace<Metric = f64>
 {
     #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, self.parameter_range(), tol)
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, range, tol)
     }
 }
 
@@ -2224,7 +2224,7 @@ fn test_parameter_division() {
     ];
     let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     let tol = 0.01;
-    let (div0, div1) = bspsurface.parameter_division(tol);
+    let (div0, div1) = bspsurface.parameter_division(bspsurface.parameter_range(), tol);
     for i in 1..div0.len() {
         for j in 1..div1.len() {
             let pt0 = bspsurface.subs(div0[i - 1], div1[j - 1]);

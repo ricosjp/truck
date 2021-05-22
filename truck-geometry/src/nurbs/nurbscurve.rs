@@ -373,8 +373,8 @@ impl<V: Homogeneous<f64>> ParameterDivision1D for NURBSCurve<V>
 where V::Point: MetricSpace<Metric = f64>
 {
     #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> Vec<f64> {
-        algo::curve::parameter_division(self, self.parameter_range(), tol)
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+        algo::curve::parameter_division(self, range, tol)
     }
 }
 
@@ -548,7 +548,7 @@ fn test_parameter_division() {
     ];
     let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     let tol = 0.01;
-    let div = curve.parameter_division(tol * 0.5);
+    let div = curve.parameter_division(curve.parameter_range(), tol * 0.5);
     let knot_vec = curve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);

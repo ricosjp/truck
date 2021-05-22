@@ -633,8 +633,8 @@ impl<V: Homogeneous<f64>> ParameterDivision2D for NURBSSurface<V>
 where V::Point: MetricSpace<Metric = f64>
 {
     #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, self.parameter_range(), tol)
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, range, tol)
     }
 }
 

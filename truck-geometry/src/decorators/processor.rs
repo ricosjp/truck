@@ -199,7 +199,7 @@ where
 }
 
 impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
-    fn parameter_division(&self, tol: f64) -> Vec<f64> {
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
         let a = self.transform;
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
@@ -210,12 +210,12 @@ impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
             + a[2][0] * a[2][0]
             + a[2][1] * a[2][1]
             + a[2][2] * a[2][2];
-        self.entity.parameter_division(tol / n.sqrt())
+        self.entity.parameter_division(range, tol / n.sqrt())
     }
 }
 
 impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
-    fn parameter_division(&self, tol: f64) -> Vec<f64> {
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
         let a = self.transform;
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
@@ -233,12 +233,12 @@ impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
             + a[3][1] * a[3][1]
             + a[3][2] * a[3][2]
             + a[3][3] * a[3][3];
-        self.entity.parameter_division(tol / n.sqrt())
+        self.entity.parameter_division(range, tol / n.sqrt())
     }
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
@@ -249,30 +249,23 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
             + a[2][0] * a[2][0]
             + a[2][1] * a[2][1]
             + a[2][2] * a[2][2];
-        self.entity.parameter_division(tol / n.sqrt())
+        self.entity.parameter_division(range, tol / n.sqrt())
     }
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
             + a[0][2] * a[0][2]
-            + a[0][3] * a[0][3]
             + a[1][0] * a[1][0]
             + a[1][1] * a[1][1]
             + a[1][2] * a[1][2]
-            + a[1][3] * a[1][3]
             + a[2][0] * a[2][0]
             + a[2][1] * a[2][1]
-            + a[2][2] * a[2][2]
-            + a[2][3] * a[2][3]
-            + a[3][0] * a[3][0]
-            + a[3][1] * a[3][1]
-            + a[3][2] * a[3][2]
-            + a[3][3] * a[3][3];
-        self.entity.parameter_division(tol / n.sqrt())
+            + a[2][2] * a[2][2];
+        self.entity.parameter_division(range, tol / n.sqrt())
     }
 }
 
