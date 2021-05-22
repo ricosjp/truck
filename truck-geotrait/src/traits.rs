@@ -69,7 +69,7 @@ pub trait SearchParameter {
     fn search_parameter(
         &self,
         point: Self::Point,
-        hint: Self::Parameter,
+        hint: Option<Self::Parameter>,
         trial: usize,
     ) -> Option<Self::Parameter>;
 }

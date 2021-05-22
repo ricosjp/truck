@@ -81,14 +81,13 @@ fn add_face(
         let mut this_boundary = Vec::new();
         for t in division {
             let pt = curve.subs(t);
-            hint = match surface.search_parameter(pt, hint, SURFACE_MESHING_TRIALS) {
+            hint = match surface.search_parameter(pt, Some(hint), SURFACE_MESHING_TRIALS) {
                 Some(got) => got,
                 None => {
                     if surface.subs(hint.0, hint.1).near(&pt) {
                         hint
                     } else {
-                        let hint0 = presearch(&surface, pt);
-                        match surface.search_parameter(pt, hint0, SURFACE_MESHING_TRIALS) {
+                        match surface.search_parameter(pt, None, SURFACE_MESHING_TRIALS) {
                             Some(got) => got,
                             None => return None,
                         }

@@ -560,12 +560,16 @@ impl SearchParameter for NURBSSurface<Vector3> {
     /// let surface = NURBSSurface::new(bspsurface);
     ///
     /// let pt = surface.subs(0.3, 0.7);
-    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
+    /// let (u, v) = surface.search_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
-    fn search_parameter(&self, pt: Point2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
-        bspsurface::sub_search_parameter2d(self, pt, hint.into(), trials).map(|v| v.into())
+    fn search_parameter(&self, point: Point2, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
+        algo::surface::search_parameter2d(self, point, hint, trials)
     }
 }
 
@@ -649,9 +653,7 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint =
-            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
-        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+        let mut hint = match self.search_parameter(pt, None, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -664,7 +666,7 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+                hint = match self.search_parameter(pt, Some(hint), INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
@@ -689,9 +691,7 @@ impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
         let pt = curve.front();
-        let mut hint =
-            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
-        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+        let mut hint = match self.search_parameter(pt, None, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -704,7 +704,7 @@ impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = Point3::from_vec(curve.subs(t));
-                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+                hint = match self.search_parameter(pt, Some(hint), INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
@@ -729,9 +729,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let pt = curve.front();
-        let mut hint =
-            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
-        hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+        let mut hint = match self.search_parameter(pt, None, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
@@ -744,7 +742,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
                 let pt = curve.subs(t);
-                hint = match self.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
+                hint = match self.search_parameter(pt, Some(hint), INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
                 };
@@ -826,11 +824,15 @@ impl SearchParameter for NURBSSurface<Vector4> {
     /// let surface = NURBSSurface::new(bspsurface);
     ///
     /// let pt = surface.subs(0.3, 0.7);
-    /// let (u, v) = surface.search_parameter(pt, (0.5, 0.5), 100).unwrap();
+    /// let (u, v) = surface.search_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
-    fn search_parameter(&self, pt: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
-        algo::surface::search_parameter3d(self, pt, hint, trials)
+    fn search_parameter(&self, point: Point3, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
+        algo::surface::search_parameter3d(self, point, hint, trials)
     }
 }
 

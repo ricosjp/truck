@@ -123,7 +123,7 @@ impl SearchParameter for Sphere {
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(&self, point: Point3, _: (f64, f64), _: usize) -> Option<(f64, f64)> {
+    fn search_parameter(&self, point: Point3, _: Option<(f64, f64)>, _: usize) -> Option<(f64, f64)> {
         let radius = point - self.center;
         if (self.radius * self.radius).near(&radius.magnitude2()) {
             let radius = radius.normalize();
@@ -154,7 +154,7 @@ fn exec_search_parameter_test() {
     let u = PI * rand::random::<f64>();
     let v = 2.0 * PI * rand::random::<f64>();
     let pt = sphere.subs(u, v);
-    let (u0, v0) = sphere.search_parameter(pt, (0.0, 0.0), 100).unwrap();
+    let (u0, v0) = sphere.search_parameter(pt, None, 100).unwrap();
     assert_near!(u, u0);
     assert_near!(v, v0);
     let pt = pt + Vector3::new(
@@ -162,7 +162,7 @@ fn exec_search_parameter_test() {
         (0.1 * rand::random::<f64>() + 0.01) * f64::signum(rand::random::<f64>() - 0.5),
         (0.1 * rand::random::<f64>() + 0.01) * f64::signum(rand::random::<f64>() - 0.5),
     );
-    assert!(sphere.search_parameter(pt, (0.0, 0.0), 100).is_none());
+    assert!(sphere.search_parameter(pt, None, 100).is_none());
 }
 
 #[test]

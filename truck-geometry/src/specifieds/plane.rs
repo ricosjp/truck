@@ -225,7 +225,7 @@ impl SearchParameter for Plane {
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(&self, point: Point3, _: (f64, f64), _: usize) -> Option<(f64, f64)> {
+    fn search_parameter(&self, point: Point3, _: Option<(f64, f64)>, _: usize) -> Option<(f64, f64)> {
         let v = self.get_parameter(point);
         match v[2].so_small() {
             true => Some((v[0], v[1])),

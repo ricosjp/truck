@@ -116,16 +116,22 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> SearchParameter for R
     /// );
     /// let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
     /// let pt = Point3::new(-0.5, 1.0, 0.5);
-    /// let (u, v) = surface.search_parameter(pt, (0.4, 1.2) ,100).unwrap();
+    /// let (u, v) = surface.search_parameter(pt, Some((0.4, 1.2)) ,100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
     fn search_parameter(
         &self,
         point: Point3,
-        hint: (f64, f64),
+        hint: Option<(f64, f64)>,
         trials: usize,
     ) -> Option<(f64, f64)> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => {
+                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
+        };
         let (t0, t1) = self.curve.parameter_range();
         if self.is_front_fixed() && self.curve.front().near(&point) {
             Some((t0, hint.1))
@@ -248,18 +254,10 @@ where
     C1: ParametricCurve<Point = Point3, Vector = Vector3>,
 {
     let first = ParametricCurve::subs(curve, knots[0]);
-    let mut hint = algo::surface::presearch(
-        surface,
-        first,
-        surface.parameter_range(),
-        PRESEARCH_DIVISION,
-    );
-    if surface
-        .search_parameter(first, hint, INCLUDE_CURVE_TRIALS)
-        .is_none()
-    {
-        return false;
-    }
+    let mut hint = match surface.search_parameter(first, None, INCLUDE_CURVE_TRIALS) {
+        Some(hint) => hint,
+        None => return false,
+    };
     knots
         .windows(2)
         .flat_map(move |knot| {
@@ -270,27 +268,11 @@ where
         })
         .all(move |t| {
             let pt = ParametricCurve::subs(curve, t);
-            match surface.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
-                Some(got) => {
-                    hint = got;
-                    true
-                }
-                None => {
-                    hint = algo::surface::presearch(
-                        surface,
-                        pt,
-                        surface.parameter_range(),
-                        PRESEARCH_DIVISION,
-                    );
-                    match surface.search_parameter(pt, hint, INCLUDE_CURVE_TRIALS) {
-                        Some(got) => {
-                            hint = got;
-                            true
-                        }
-                        None => false,
-                    }
-                }
-            }
+            surface
+                .search_parameter(pt, Some(hint), INCLUDE_CURVE_TRIALS)
+                .or_else(|| surface.search_parameter(pt, None, INCLUDE_CURVE_TRIALS))
+                .map(|res| hint = res)
+                .is_some()
         })
 }
 
@@ -361,7 +343,11 @@ impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
 impl<C> ParameterDivision2D for RevolutedCurve<C>
 where C: ParametricCurve<Point = Point3, Vector = Vector3> + ParameterDivision1D
 {
-    fn parameter_division(&self, (urange, vrange): ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(
+        &self,
+        (urange, vrange): ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
         let curve_division = self.curve.parameter_division(urange, tol);
         let max = curve_division
             .iter()
@@ -443,13 +429,13 @@ fn search_parameter_with_fixed_points() {
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
 
     let para = surface
-        .search_parameter(Point3::new(0.0, 1.0, 0.0), (0.5, 0.3), 10)
+        .search_parameter(Point3::new(0.0, 1.0, 0.0), Some((0.5, 0.3)), 10)
         .unwrap();
     assert_near!(para.0, 0.0);
     assert_near!(para.1, 0.3);
 
     let para = surface
-        .search_parameter(Point3::new(0.0, -1.0, 0.0), (0.5, 0.3), 10)
+        .search_parameter(Point3::new(0.0, -1.0, 0.0), Some((0.5, 0.3)), 10)
         .unwrap();
     assert_near!(para.0, 1.0);
     assert_near!(para.1, 0.3);

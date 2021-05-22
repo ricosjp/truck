@@ -226,7 +226,7 @@ impl IncludeCurve<Curve> for Surface {
 impl SearchParameter for Surface {
     type Point = Point3;
     type Parameter = (f64, f64);
-    fn search_parameter(&self, point: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+    fn search_parameter(&self, point: Point3, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
         derive_surface_method!(self, SearchParameter::search_parameter, point, hint, trials)
     }
 }

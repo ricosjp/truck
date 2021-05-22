@@ -1175,12 +1175,16 @@ where
 impl<V> SearchParameter for BSplineCurve<V>
 where
     V: TangentSpace<f64> + InnerSpace<Scalar = f64> + Tolerance,
-    V::Space: EuclideanSpace<Scalar = f64, Diff = V>,
+    V::Space: EuclideanSpace<Scalar = f64, Diff = V> + MetricSpace<Metric = f64>,
 {
     type Point = V::Space;
     type Parameter = f64;
     #[inline(always)]
-    fn search_parameter(&self, point: V::Space, hint: f64, trial: usize) -> Option<f64> {
+    fn search_parameter(&self, point: V::Space, hint: Option<f64>, trial: usize) -> Option<f64> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
         algo::curve::search_parameter(self, point, hint, trial)
     }
 }
