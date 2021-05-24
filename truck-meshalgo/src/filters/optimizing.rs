@@ -1,4 +1,4 @@
-use crate::*;
+use super::*;
 use std::collections::HashMap;
 use std::iter::Iterator;
 use std::ops::{Div, Mul};
@@ -8,7 +8,8 @@ pub trait OptimizingFilter {
     /// remove all unused position, texture coordinates, and normal vectors.
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
     ///     Point3::new(1.0, 0.0, 0.0),
@@ -26,7 +27,8 @@ pub trait OptimizingFilter {
     /// Removes degenerate polygons.
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
     ///     Point3::new(1.0, 0.0, 0.0),
@@ -54,7 +56,8 @@ pub trait OptimizingFilter {
     ///
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
     ///     Point3::new(1.0, 0.0, 0.0),
@@ -81,34 +84,34 @@ pub trait OptimizingFilter {
     fn put_together_same_attrs(&mut self) -> &mut Self;
 }
 
-impl Faces {
-    fn all_pos_mut(&mut self) -> impl Iterator<Item = &mut usize> {
-        self.face_iter_mut().flatten().map(move |v| &mut v.pos)
-    }
+fn all_pos_mut(faces: &mut Faces) -> impl Iterator<Item = &mut usize> {
+    faces.face_iter_mut().flatten().map(move |v| &mut v.pos)
+}
 
-    fn all_uv_mut(&mut self) -> impl Iterator<Item = &mut usize> {
-        self.face_iter_mut()
-            .flatten()
-            .filter_map(move |v| v.uv.as_mut())
-    }
+fn all_uv_mut(faces: &mut Faces) -> impl Iterator<Item = &mut usize> {
+    faces
+        .face_iter_mut()
+        .flatten()
+        .filter_map(move |v| v.uv.as_mut())
+}
 
-    fn all_nor_mut(&mut self) -> impl Iterator<Item = &mut usize> {
-        self.face_iter_mut()
-            .flatten()
-            .filter_map(move |v| v.nor.as_mut())
-    }
+fn all_nor_mut(faces: &mut Faces) -> impl Iterator<Item = &mut usize> {
+    faces
+        .face_iter_mut()
+        .flatten()
+        .filter_map(move |v| v.nor.as_mut())
 }
 
 impl OptimizingFilter for PolygonMesh {
     fn remove_unused_attrs(&mut self) -> &mut Self {
         let mesh = self.debug_editor();
-        let pos_iter = mesh.faces.all_pos_mut();
+        let pos_iter = all_pos_mut(mesh.faces);
         let idcs = sub_remove_unused_attrs(pos_iter, mesh.positions.len());
         *mesh.positions = idcs.iter().map(|i| mesh.positions[*i]).collect();
-        let uv_iter = mesh.faces.all_uv_mut();
+        let uv_iter = all_uv_mut(mesh.faces);
         let idcs = sub_remove_unused_attrs(uv_iter, mesh.uv_coords.len());
         *mesh.uv_coords = idcs.iter().map(|i| mesh.uv_coords[*i]).collect();
-        let nor_iter = mesh.faces.all_nor_mut();
+        let nor_iter = all_nor_mut(mesh.faces);
         let idcs = sub_remove_unused_attrs(nor_iter, mesh.normals.len());
         *mesh.normals = idcs.iter().map(|i| mesh.normals[*i]).collect();
         drop(mesh);
@@ -149,15 +152,11 @@ impl OptimizingFilter for PolygonMesh {
             .map(move |position| 2.0 * (position - center).zip(diag, |a, b| a / b))
             .collect::<Vec<_>>();
         let pos_map = sub_put_together_same_attrs(&normalized_positions);
-        mesh.faces
-            .all_pos_mut()
-            .for_each(|idx| *idx = pos_map[*idx]);
+        all_pos_mut(mesh.faces).for_each(|idx| *idx = pos_map[*idx]);
         let uv_map = sub_put_together_same_attrs(&mesh.uv_coords);
-        mesh.faces.all_uv_mut().for_each(|idx| *idx = uv_map[*idx]);
+        all_uv_mut(mesh.faces).for_each(|idx| *idx = uv_map[*idx]);
         let nor_map = sub_put_together_same_attrs(&mesh.normals);
-        mesh.faces
-            .all_nor_mut()
-            .for_each(|idx| *idx = nor_map[*idx]);
+        all_nor_mut(mesh.faces).for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
         self
     }

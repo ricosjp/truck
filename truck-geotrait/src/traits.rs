@@ -69,7 +69,7 @@ pub trait SearchParameter {
     fn search_parameter(
         &self,
         point: Self::Point,
-        hint: Self::Parameter,
+        hint: Option<Self::Parameter>,
         trial: usize,
     ) -> Option<Self::Parameter>;
 }
@@ -99,13 +99,13 @@ pub trait Transformed<T> {
 /// Dividable curve
 pub trait ParameterDivision1D {
     /// Creates the curve division
-    fn parameter_division(&self, tol: f64) -> Vec<f64>;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64>;
 }
 
 /// Dividable surface
 pub trait ParameterDivision2D {
     /// Creates the surface division
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>);
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>);
 }
 
 /// Implementation for the test of topological methods.

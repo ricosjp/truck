@@ -373,13 +373,13 @@ impl<V: Homogeneous<f64>> ParameterDivision1D for NURBSCurve<V>
 where V::Point: MetricSpace<Metric = f64>
 {
     #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> Vec<f64> {
-        algo::curve::parameter_division(self, self.parameter_range(), tol)
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+        algo::curve::parameter_division(self, range, tol)
     }
 }
 
 impl<V: Homogeneous<f64>> NURBSCurve<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
+where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
 {
     /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
@@ -420,28 +420,42 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
     /// assert!(curve.search_nearest_parameter(pt, hint, 100).is_none());
     /// ```
     #[inline(always)]
-    pub fn search_nearest_parameter(&self, point: V::Point, hint: f64, trial: usize) -> Option<f64> {
+    pub fn search_nearest_parameter(
+        &self,
+        point: V::Point,
+        hint: f64,
+        trial: usize,
+    ) -> Option<f64> {
         algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }
 
 impl<V: Homogeneous<f64>> SearchParameter for NURBSCurve<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
+where
+    V::Point: MetricSpace<Metric = f64>,
+    <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
 {
     type Point = V::Point;
     type Parameter = f64;
     #[inline(always)]
-    fn search_parameter(&self, point: V::Point, hint: f64, trial: usize) -> Option<f64> {
+    fn search_parameter(&self, point: V::Point, hint: Option<f64>, trial: usize) -> Option<f64> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
         algo::curve::search_parameter(self, point, hint, trial)
     }
 }
 
 impl<V: Homogeneous<f64>> NURBSCurve<V>
-where V::Point: MetricSpace<Metric = f64> + std::ops::Index<usize, Output = f64> + Bounded<f64> + Copy
+where V::Point:
+        MetricSpace<Metric = f64> + std::ops::Index<usize, Output = f64> + Bounded<f64> + Copy
 {
     /// Returns the bounding box including all control points.
     #[inline(always)]
-    pub fn roughly_bounding_box(&self) -> BoundingBox<V::Point> { self.0.control_points.iter().map(|p| p.to_point()).collect() }
+    pub fn roughly_bounding_box(&self) -> BoundingBox<V::Point> {
+        self.0.control_points.iter().map(|p| p.to_point()).collect()
+    }
 }
 
 impl<V: Homogeneous<f64>> ParametricCurve for NURBSCurve<V> {
@@ -548,7 +562,7 @@ fn test_parameter_division() {
     ];
     let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     let tol = 0.01;
-    let div = curve.parameter_division(tol * 0.5);
+    let div = curve.parameter_division(curve.parameter_range(), tol * 0.5);
     let knot_vec = curve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);

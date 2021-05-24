@@ -1,4 +1,5 @@
-use truck_polymesh::prelude::*;
+use truck_polymesh::*;
+use truck_meshalgo::filters::*;
 
 #[test]
 fn remove_unused_attrs_test() {

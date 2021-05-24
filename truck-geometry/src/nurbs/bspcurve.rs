@@ -1053,8 +1053,8 @@ impl<V: VectorSpace<Scalar = f64> + Tolerance> BSplineCurve<V> {
 impl<V: TangentSpace<f64>> ParameterDivision1D for BSplineCurve<V>
 where V::Space: EuclideanSpace<Scalar = f64, Diff = V> + MetricSpace<Metric = f64>
 {
-    fn parameter_division(&self, tol: f64) -> Vec<f64> {
-        algo::curve::parameter_division(self, self.parameter_range(), tol)
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+        algo::curve::parameter_division(self, range, tol)
     }
 }
 
@@ -1175,12 +1175,16 @@ where
 impl<V> SearchParameter for BSplineCurve<V>
 where
     V: TangentSpace<f64> + InnerSpace<Scalar = f64> + Tolerance,
-    V::Space: EuclideanSpace<Scalar = f64, Diff = V>,
+    V::Space: EuclideanSpace<Scalar = f64, Diff = V> + MetricSpace<Metric = f64>,
 {
     type Point = V::Space;
     type Parameter = f64;
     #[inline(always)]
-    fn search_parameter(&self, point: V::Space, hint: f64, trial: usize) -> Option<f64> {
+    fn search_parameter(&self, point: V::Space, hint: Option<f64>, trial: usize) -> Option<f64> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
         algo::curve::search_parameter(self, point, hint, trial)
     }
 }
@@ -1442,7 +1446,7 @@ fn test_parameter_division() {
     ];
     let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     let tol = 0.01;
-    let div = bspcurve.parameter_division(tol);
+    let div = bspcurve.parameter_division(bspcurve.parameter_range(), tol);
     let knot_vec = bspcurve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);

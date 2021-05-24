@@ -1,4 +1,4 @@
-use crate::*;
+use super::*;
 use std::collections::HashMap;
 
 /// Filters for adding normals
@@ -7,8 +7,9 @@ pub trait NormalFilters {
     /// that has irregular normals.
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
-    /// 
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
+    ///
     /// // Morbid data only for testing
     /// let positions = vec![Point3::new(0.0, 0.0, 0.0)];
     /// let normals = vec![
@@ -18,7 +19,7 @@ pub trait NormalFilters {
     /// ];
     /// let faces = Faces::from_iter(&[&[(0, None, Some(0)), (0, None, Some(1)), (0, None, Some(2))]]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
-    /// 
+    ///
     /// mesh.normalize_normals();
     /// assert!(mesh.normals()[0].magnitude().near(&1.0));
     /// assert_eq!(mesh.faces()[0][1].nor, None);
@@ -31,7 +32,8 @@ pub trait NormalFilters {
     /// # Examples
     /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     /// let positions = vec![
     ///     Point3::new(-5.0, 0.0, 0.0),
     ///     Point3::new(0.0, 2.0, -2.0),
@@ -43,14 +45,14 @@ pub trait NormalFilters {
     ///     &[0, 2, 1], &[0, 3, 2], &[1, 2, 4], &[2, 3, 4],
     /// ]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-    /// 
+    ///
     /// mesh.add_naive_normals(true);
     /// let v0: Vertex = mesh.faces()[0][1];
     /// let v1: Vertex = mesh.faces()[3][0];
-    /// 
+    ///
     /// // those vertices are at position with the index 2.
     /// assert_eq!(v0.pos, 2); assert_eq!(v1.pos, 2);
-    /// 
+    ///
     /// // Each normal is each face normal.
     /// assert!(mesh.normals()[v0.nor.unwrap()].near(&Vector3::new(-2.0, 5.0, 0.0).normalize()));
     /// assert!(mesh.normals()[v1.nor.unwrap()].near(&Vector3::new(2.0, 5.0, 0.0).normalize()));
@@ -72,7 +74,8 @@ pub trait NormalFilters {
     /// # Examples
     /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     /// let positions = vec![
     ///     Point3::new(-5.0, 0.0, 0.0),
     ///     Point3::new(0.0, 2.0, -2.0),
@@ -84,19 +87,19 @@ pub trait NormalFilters {
     ///     &[0, 2, 1], &[0, 3, 2], &[1, 2, 4], &[2, 3, 4],
     /// ]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-    /// 
+    ///
     /// mesh.add_smooth_normals(0.8, true);
     /// let v0: Vertex = mesh.faces()[0][1];
     /// let v1: Vertex = mesh.faces()[3][0];
-    /// 
+    ///
     /// // those vertices are at position with the index 2.
     /// assert_eq!(v0.pos, 2); assert_eq!(v1.pos, 2);
-    /// 
+    ///
     /// // Normals are avaraged!
     /// assert!(mesh.normals()[v0.nor.unwrap()].near(&Vector3::new(0.0, 1.0, 0.0)));
     /// assert!(mesh.normals()[v1.nor.unwrap()].near(&Vector3::new(0.0, 1.0, 0.0)));
     /// assert_eq!(v0.nor, v1.nor);
-    /// 
+    ///
     /// // If the tolerance is enough little, the faces are recognized as edges.
     /// mesh.add_smooth_normals(0.6, true); // Normals are overwritten!
     /// let v0: Vertex = mesh.faces()[0][1];
@@ -153,8 +156,20 @@ impl NormalFilters for PolygonMesh {
     }
 }
 
-impl PolygonMesh {
-    fn clustering_noraml_faces(&self, inf: f64) -> HashMap<usize, Vec<Vec<FaceNormal>>> {
+trait SubNormalFilter {
+    fn clustering_noraml_faces(&self, inf: f64) -> HashMap<usize, Vec<Vec<FaceNormal>>>;
+    fn reflect_normal_clusters(
+        &mut self,
+        vnmap: HashMap<usize, Vec<Vec<FaceNormal>>>,
+        overwrite: bool,
+    );
+}
+
+impl SubNormalFilter for PolygonMesh {
+    fn clustering_noraml_faces(
+        &self,
+        inf: f64,
+    ) -> HashMap<usize, Vec<Vec<FaceNormal>>> {
         let positions = self.positions();
         let mut vnmap = HashMap::new();
         self.face_iter()

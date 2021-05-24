@@ -1873,8 +1873,8 @@ impl<V: TangentSpace<f64>> ParameterDivision2D for BSplineSurface<V>
 where V::Space: MetricSpace<Metric = f64>
 {
     #[inline(always)]
-    fn parameter_division(&self, tol: f64) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, self.parameter_range(), tol)
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, range, tol)
     }
 }
 
@@ -1930,7 +1930,11 @@ impl<V: Clone> Invertible for BSplineSurface<V> {
 impl SearchParameter for BSplineSurface<Vector2> {
     type Point = Point2;
     type Parameter = (f64, f64);
-    fn search_parameter(&self, point: Point2, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+    fn search_parameter(&self, point: Point2, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
         algo::surface::search_parameter2d(self, point, hint, trials)
     }
 }
@@ -1938,7 +1942,11 @@ impl SearchParameter for BSplineSurface<Vector2> {
 impl SearchParameter for BSplineSurface<Vector3> {
     type Point = Point3;
     type Parameter = (f64, f64);
-    fn search_parameter(&self, point: Point3, hint: (f64, f64), trials: usize) -> Option<(f64, f64)> {
+    fn search_parameter(&self, point: Point3, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
         algo::surface::search_parameter3d(self, point, hint, trials)
     }
 }
@@ -2060,28 +2068,6 @@ impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Vector3> {
             }
         }
         true
-    }
-}
-
-pub(super) fn sub_search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
-    surface: &S,
-    pt0: Point2,
-    hint: Vector2,
-    trials: usize,
-) -> Option<Vector2> {
-    let (u0, v0) = (hint[0], hint[1]);
-    let pt = surface.subs(u0, v0);
-    let jacobi = Matrix2::from_cols(surface.uder(u0, v0), surface.vder(u0, v0));
-    let res = jacobi.invert().map(move |inv| hint - inv * (pt - pt0));
-    match res {
-        Some(entity) => match surface.subs(entity[0], entity[1]).near(&pt0) {
-            true => res,
-            false => match trials == 0 {
-                true => None,
-                false => sub_search_parameter2d(surface, pt0, entity, trials - 1),
-            },
-        },
-        None => res,
     }
 }
 
@@ -2224,7 +2210,7 @@ fn test_parameter_division() {
     ];
     let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
     let tol = 0.01;
-    let (div0, div1) = bspsurface.parameter_division(tol);
+    let (div0, div1) = bspsurface.parameter_division(bspsurface.parameter_range(), tol);
     for i in 1..div0.len() {
         for j in 1..div1.len() {
             let pt0 = bspsurface.subs(div0[i - 1], div1[j - 1]);

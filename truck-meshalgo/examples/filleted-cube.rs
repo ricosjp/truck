@@ -4,7 +4,8 @@
 //! - Input: filleted_cube.obj
 //! - Output: planes.obj, lower.obj, upper.obj
 
-use truck_polymesh::prelude::*;
+use truck_polymesh::*;
+use truck_meshalgo::filters::*;
 
 fn main() {
     let file = std::fs::File::open("examples/data/filleted_cube.obj").unwrap();

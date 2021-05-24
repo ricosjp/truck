@@ -3,7 +3,8 @@
 //! - Input: bunny.obj
 //! - Output: smooth_bunny.obj
 
-use truck_polymesh::prelude::*;
+use truck_polymesh::*;
+use truck_meshalgo::filters::*;
 
 fn main() {
     let file = std::fs::File::open("examples/data/bunny.obj").unwrap();

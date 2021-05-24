@@ -1,4 +1,4 @@
-use crate::*;
+use super::*;
 use normal_filters::FaceNormal;
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -8,7 +8,8 @@ pub trait Splitting {
     /// Creates a sub mesh by the face indices.
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     ///
     /// // cube
     /// let positions = vec![
@@ -49,7 +50,8 @@ pub trait Splitting {
     /// - The second polygon is the extracted remainder.
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     /// let positions = vec![
     ///     Point3::new(0.0, 0.5, 0.0),
     ///     Point3::new(0.0, 0.5, 1.0),
@@ -79,7 +81,8 @@ pub trait Splitting {
     /// whose vertices has the same positions and normals.
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     ///
     /// // cube consisting tri_faces
     /// let positions = vec![
@@ -111,9 +114,9 @@ pub trait Splitting {
 
 impl Splitting for PolygonMesh {
     fn create_mesh_by_face_indices(&self, indices: &[usize]) -> PolygonMesh {
-        let positions = self.positions.clone();
-        let uv_coords = self.uv_coords.clone();
-        let normals = self.normals.clone();
+        let positions = self.positions().clone();
+        let uv_coords = self.uv_coords().clone();
+        let normals = self.normals().clone();
         let faces = Faces::from_iter(indices.iter().map(|i| &self.faces()[*i]));
         PolygonMesh::new(positions, uv_coords, normals, faces)
     }
@@ -130,9 +133,13 @@ impl Splitting for PolygonMesh {
     }
 }
 
-impl Faces {
-    /// create the adjacency list of the faces  
-    pub(super) fn face_adjacency(&self) -> Vec<Vec<usize>> {
+pub(super) trait FaceAdjacency {
+    /// create the adjacency list of the faces
+    fn face_adjacency(&self) -> Vec<Vec<usize>>;
+}
+
+impl FaceAdjacency for Faces {
+    fn face_adjacency(&self) -> Vec<Vec<usize>> {
         let len = self.len();
         let mut face_adjacency = vec![Vec::<usize>::new(); len];
         let mut edge_face_map: HashMap<[(usize, Option<usize>); 2], usize> = HashMap::new();
@@ -147,8 +154,22 @@ impl Faces {
     }
 }
 
+#[doc(hidden)]
+pub trait ExperimentalSplitters {
+    fn faces_into_two_clusters<F: Fn(&[Vertex]) -> bool>(
+        &self,
+        func: F,
+    ) -> (Vec<usize>, Vec<usize>);
+    fn clustering_faces_by_gcurvature(
+        &self,
+        threshold: f64,
+        preferred_upper: bool,
+    ) -> (Vec<usize>, Vec<usize>);
+    fn get_gcurve(&self) -> Vec<f64>;
+}
+
 /// splitting the global faces
-impl PolygonMesh {
+impl ExperimentalSplitters for PolygonMesh {
     /// separate all faces into two clusters, one with `func` returning true and the other with false.
     /// # Returns
     /// (the vector of all faces `f` which `func(f) == true`, the one of the other faces)
@@ -167,9 +188,7 @@ impl PolygonMesh {
         (true_faces, false_faces)
     }
 
-    /// experimental
-    #[doc(hidden)]
-    pub fn clustering_faces_by_gcurvature(
+    fn clustering_faces_by_gcurvature(
         &self,
         threshold: f64,
         preferred_upper: bool,
@@ -180,9 +199,7 @@ impl PolygonMesh {
         })
     }
 
-    /// experimental
-    #[doc(hidden)]
-    pub fn get_gcurve(&self) -> Vec<f64> {
+    fn get_gcurve(&self) -> Vec<f64> {
         let positions = self.positions();
         let mut angles = vec![0.0; positions.len()];
         let mut weights = vec![0.0; positions.len()];

@@ -199,8 +199,8 @@ impl IncludeCurve<NURBSCurve<Vector4>> for Plane {
 
 impl ParameterDivision2D for Plane {
     #[inline(always)]
-    fn parameter_division(&self, _: f64) -> (Vec<f64>, Vec<f64>) {
-        (vec![0.0, 1.0], vec![0.0, 1.0])
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), _: f64) -> (Vec<f64>, Vec<f64>) {
+        (vec![range.0.0, range.0.1], vec![range.1.0, range.1.1])
     }
 }
 
@@ -225,7 +225,7 @@ impl SearchParameter for Plane {
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(&self, point: Point3, _: (f64, f64), _: usize) -> Option<(f64, f64)> {
+    fn search_parameter(&self, point: Point3, _: Option<(f64, f64)>, _: usize) -> Option<(f64, f64)> {
         let v = self.get_parameter(point);
         match v[2].so_small() {
             true => Some((v[0], v[1])),

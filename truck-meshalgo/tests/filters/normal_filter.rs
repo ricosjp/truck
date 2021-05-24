@@ -1,4 +1,5 @@
-use truck_polymesh::prelude::*;
+use truck_polymesh::*;
+use truck_meshalgo::filters::*;
 
 #[test]
 fn normalize_normals_test() {

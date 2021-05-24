@@ -1,11 +1,13 @@
-use crate::*;
+use super::*;
+use super::splitting::FaceAdjacency;
 
 /// triangulation, quadrangulation, give a structure
 pub trait StructuringFilter {
     /// triangulate all n-gons
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     /// 
     /// // cube consisting quad faces
     /// let positions = vec![
@@ -46,7 +48,8 @@ pub trait StructuringFilter {
     /// if it doesn't conflict with the one has been already registered.
     /// # Examples
     /// ```
-    /// use truck_polymesh::prelude::*;
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
     /// 
     /// // cube consisting tri_faces
     /// let positions = vec![
@@ -96,7 +99,19 @@ impl StructuringFilter for PolygonMesh {
     }
 }
 
-impl PolygonMesh {
+trait SubStructureFilter {
+    fn create_face_edge_list(&self, plane_tol: f64, score_tol: f64) -> Vec<FaceEdge>;
+    fn reflect_face_edge_list(&mut self, list: Vec<FaceEdge>);
+    fn get_face_edge(
+        &self,
+        face0_id: usize,
+        face1_id: usize,
+        plane_tol: f64,
+        score_tol: f64,
+    ) -> Option<FaceEdge>;
+}
+
+impl SubStructureFilter for PolygonMesh {
     fn create_face_edge_list(&self, plane_tol: f64, score_tol: f64) -> Vec<FaceEdge> {
         let face_adjacency = self.faces().face_adjacency();
         let mut passed = Vec::new();
@@ -137,15 +152,6 @@ impl PolygonMesh {
             .collect::<Vec<_>>();
         *self.debug_editor().faces = Faces::from_tri_and_quad_faces(tri_faces, quad_faces);
     }
-}
-
-struct FaceEdge {
-    faces: (usize, usize),
-    positions: [Vertex; 4],
-    score: f64,
-}
-
-impl PolygonMesh {
     fn get_face_edge(
         &self,
         face0_id: usize,
@@ -221,6 +227,12 @@ impl PolygonMesh {
             None
         }
     }
+}
+
+struct FaceEdge {
+    faces: (usize, usize),
+    positions: [Vertex; 4],
+    score: f64,
 }
 
 #[inline(always)]

@@ -69,23 +69,10 @@ pub type Result<T> = std::result::Result<T, errors::Error>;
 /// Defines errors
 pub mod errors;
 mod meshing_shape;
-mod normal_filters;
 /// I/O of wavefront obj
 pub mod obj;
-mod optimizing;
 /// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
 pub mod polygon_mesh;
-mod splitting;
 /// I/O of STL
 pub mod stl;
 mod structured_mesh;
-mod structuring;
-
-/// Re-exports root structs and all mesh filter traits.
-pub mod prelude {
-    pub use crate::*;
-    pub use normal_filters::NormalFilters;
-    pub use optimizing::OptimizingFilter;
-    pub use splitting::Splitting;
-    pub use structuring::StructuringFilter;
-}
