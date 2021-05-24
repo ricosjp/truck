@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use truck_topology::shell::ShellCondition;
 
 pub trait AsShell {
-    //    fn extract_boundaries(&self) -> Vec<Vec<Vertex>>;
+    fn extract_boundaries(&self) -> Vec<Vec<usize>>;
     fn shell_condition(&self) -> ShellCondition;
 }
 
@@ -64,6 +64,38 @@ impl std::iter::FromIterator<[Vertex; 2]> for Boundaries {
 }
 
 impl AsShell for Faces {
+    fn extract_boundaries(&self) -> Vec<Vec<usize>> {
+        let mut vemap: HashMap<usize, usize> = self
+            .face_iter()
+            .flat_map(move |face| {
+                let len = face.len();
+                (0..len).map(move |i| [face[i], face[(i + 1) % len]])
+            })
+            .collect::<Boundaries>()
+            .boundary
+            .into_iter()
+            .map(|(edge, ori)| match ori {
+                true => (edge[0], edge[1]),
+                false => (edge[1], edge[0]),
+            })
+            .collect();
+
+        let mut res = Vec::new();
+        while !vemap.is_empty() {
+            let mut wire = Vec::new();
+            let front = vemap.iter().next().unwrap();
+            let front = (*front.0, *front.1);
+            vemap.remove(&front.0);
+            wire.push(front.0);
+            let mut cursor = front.1;
+            while cursor != front.0 {
+                wire.push(cursor);
+                cursor = vemap.remove(&cursor).unwrap();
+            }
+            res.push(wire);
+        }
+        res
+    }
     fn shell_condition(&self) -> ShellCondition {
         let boundaries: Boundaries = self
             .face_iter()
@@ -77,5 +109,6 @@ impl AsShell for Faces {
 }
 
 impl AsShell for PolygonMesh {
+    fn extract_boundaries(&self) -> Vec<Vec<usize>> { self.faces().extract_boundaries() }
     fn shell_condition(&self) -> ShellCondition { self.faces().shell_condition() }
 }
