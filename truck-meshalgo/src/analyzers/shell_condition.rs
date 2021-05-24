@@ -30,15 +30,19 @@ impl Boundaries {
             true => [edge[0].pos, edge[1].pos],
             false => [edge[1].pos, edge[0].pos],
         };
-        self.condition = self.condition & match (self.checked.insert(edge), self.boundary.insert(edge, ori)) {
-            (true, None) => ShellCondition::Oriented,
-            (false, None) => ShellCondition::Irregular,
-            (true, Some(_)) => panic!("unexpected case!"),
-            (false, Some(ori0)) => match ori == ori0 {
-                true => ShellCondition::Regular,
-                false => ShellCondition::Oriented,
-            },
-        };
+        self.condition = self.condition
+            & match (self.checked.insert(edge), self.boundary.insert(edge, ori)) {
+                (true, None) => ShellCondition::Oriented,
+                (false, None) => ShellCondition::Irregular,
+                (true, Some(_)) => panic!("unexpected case!"),
+                (false, Some(ori0)) => {
+                    self.boundary.remove(&edge);
+                    match ori == ori0 {
+                        true => ShellCondition::Regular,
+                        false => ShellCondition::Oriented,
+                    }
+                }
+            };
     }
 
     #[inline(always)]
@@ -59,12 +63,19 @@ impl std::iter::FromIterator<[Vertex; 2]> for Boundaries {
     }
 }
 
-impl AsShell for PolygonMesh {
+impl AsShell for Faces {
     fn shell_condition(&self) -> ShellCondition {
-        let boundaries: Boundaries = self.faces().face_iter().flat_map(move |face| {
-            let len = face.len();
-            (0..len).map(move |i| [face[i], face[(i + 1) % len]])
-        }).collect();
+        let boundaries: Boundaries = self
+            .face_iter()
+            .flat_map(move |face| {
+                let len = face.len();
+                (0..len).map(move |i| [face[i], face[(i + 1) % len]])
+            })
+            .collect();
         boundaries.condition()
     }
+}
+
+impl AsShell for PolygonMesh {
+    fn shell_condition(&self) -> ShellCondition { self.faces().shell_condition() }
 }
