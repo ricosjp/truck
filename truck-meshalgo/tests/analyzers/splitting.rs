@@ -1,5 +1,4 @@
-use truck_polymesh::*;
-use truck_meshalgo::{analyzers::*, filters::*};
+use super::*;
 
 #[test]
 fn extract_planes_test() {

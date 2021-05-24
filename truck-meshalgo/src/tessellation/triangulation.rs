@@ -1,4 +1,5 @@
 use super::*;
+use crate::filters::NormalFilters;
 use std::collections::HashMap;
 
 type CDT<V, K> = ConstrainedDelaunayTriangulation<V, K>;
@@ -152,12 +153,14 @@ where S: MeshableSurface {
     let mut triangulation = CDT::<[f64; 2], FloatKernel>::new();
     polyline.insert_to(&mut triangulation);
     insert_surface(&mut triangulation, surface, polyline, tol);
-    triangulation_into_polymesh(
+    let mut mesh = triangulation_into_polymesh(
         triangulation.vertices(),
         triangulation.triangles(),
         surface,
         polyline,
-    )
+    );
+    mesh.make_face_compatible_to_normal();
+    mesh
 }
 
 /// Inserts parameter divisions into triangulation.

@@ -3,7 +3,13 @@ use std::collections::{HashMap, HashSet};
 use truck_topology::shell::ShellCondition;
 
 pub trait AsShell {
+    /// Returns a vector of all boundaries as line strip.
     fn extract_boundaries(&self) -> Vec<Vec<usize>>;
+    /// Determines the shell conditions: non-regular, regular, oriented, or closed.  
+    /// The complexity increases in proportion to the number of edges.
+    /// 
+    /// Examples for each condition can be found on the page of
+    /// [`ShellCondition`](https://docs.rs/truck-topology/0.2.0/truck_topology/shell/enum.ShellCondition.html). 
     fn shell_condition(&self) -> ShellCondition;
 }
 
@@ -90,7 +96,7 @@ impl AsShell for Faces {
             let mut cursor = front.1;
             while cursor != front.0 {
                 wire.push(cursor);
-                cursor = vemap.remove(&cursor).unwrap();
+                cursor = vemap.remove(&cursor).unwrap_or(front.0);
             }
             res.push(wire);
         }
