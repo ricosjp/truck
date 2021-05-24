@@ -1,17 +1,13 @@
 use super::*;
 use std::collections::HashMap;
 
-pub fn tessellation<'a, C, S>(
+pub(super) fn tessellation<'a, C, S>(
     faces: impl Iterator<Item = &'a Face<Point3, C, S>>,
     tol: f64,
 ) -> Option<PolygonMesh>
 where
-    C: ParametricCurve<Point = Point3, Vector = Vector3> + Invertible + ParameterDivision1D + 'a,
-    S: ParametricSurface3D
-        + Invertible
-        + ParameterDivision2D
-        + SearchParameter<Point = Point3, Parameter = (f64, f64)>
-        + 'a,
+    C: PolylineableCurve + 'a,
+    S: MeshableSurface + 'a,
 {
     let mut poly = PolygonMesh::default();
     let mut poly_edges = HashMap::<EdgeID<C>, Vec<Point3>>::new();
@@ -27,7 +23,8 @@ where
                     Some(got) => got.clone(),
                     None => {
                         let curve = edge.lock_curve().unwrap().clone();
-                        let poly = curve.parameter_division(curve.parameter_range(), tol)
+                        let poly = curve
+                            .parameter_division(curve.parameter_range(), tol)
                             .into_iter()
                             .map(|t| curve.subs(t))
                             .collect::<Vec<Point3>>();
@@ -58,17 +55,14 @@ where
     Some(poly)
 }
 
-pub fn square_tessellation<S>(
+fn square_tessellation<S>(
     surface: &S,
     uv: &Vec<Point2>,
     polyline: &Vec<[usize; 2]>,
     tol: f64,
 ) -> PolygonMesh
 where
-    S: ParametricSurface3D
-        + Invertible
-        + ParameterDivision2D
-        + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
+    S: MeshableSurface,
 {
     let mut triangulation = ConstrainedDelaunayTriangulation::<[f64; 2], FloatKernel>::new();
     let mut bdb = BoundingBox::new();
