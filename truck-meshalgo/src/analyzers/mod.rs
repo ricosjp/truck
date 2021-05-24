@@ -1,8 +1,8 @@
 use crate::*;
 
-mod shell_condition;
+mod as_shell;
 mod splitting;
 
-pub use shell_condition::AsShell;
+pub use as_shell::AsShell;
 pub use splitting::Splitting;
 pub use splitting::ExperimentalSplitters;
