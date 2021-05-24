@@ -5,7 +5,7 @@
 //! - Output: planes.obj, lower.obj, upper.obj
 
 use truck_polymesh::*;
-use truck_meshalgo::filters::*;
+use truck_meshalgo::{analyzers::*, filters::*};
 
 fn main() {
     let file = std::fs::File::open("examples/data/filleted_cube.obj").unwrap();

@@ -1,5 +1,5 @@
 use truck_polymesh::*;
-use truck_meshalgo::filters::*;
+use truck_meshalgo::{analyzers::*, filters::*};
 
 #[test]
 fn extract_planes_test() {

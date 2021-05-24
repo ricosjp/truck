@@ -1,11 +1,9 @@
-#![allow(dead_code)]
-
+use crate::*;
 use spade::delaunay::*;
 use spade::kernels::*;
-use truck_geotrait::*;
-use truck_polymesh::{Vertex, *};
-use truck_topology::*;
+use truck_topology::{Edge, EdgeID, Face, Shell, Solid};
 
+/// Polylined
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub trait PolylineableCurve: ParametricCurve<Point = Point3, Vector = Vector3> + Invertible + ParameterDivision1D {}
 #[cfg_attr(rustfmt, rustfmt_skip)]

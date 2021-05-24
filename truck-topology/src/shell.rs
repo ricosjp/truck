@@ -517,7 +517,7 @@ pub type FaceIterMut<'a, P, C, S> = std::slice::IterMut<'a, Face<P, C, S>>;
 pub type FaceIntoIter<P, C, S> = std::vec::IntoIter<Face<P, C, S>>;
 
 /// The shell conditions being determined by the half-edge model.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum ShellCondition {
     /// This shell is not regular.
     /// # Examples
@@ -639,6 +639,21 @@ pub enum ShellCondition {
     /// assert_eq!(shell.shell_condition(), ShellCondition::Closed);
     /// ```
     Closed,
+}
+
+impl std::ops::BitAnd for ShellCondition {
+    type Output = Self;
+    fn bitand(self, other: Self) -> Self {
+        match (self, other) {
+            (Self::Irregular, _) => Self::Irregular,
+            (_, Self::Irregular) => Self::Irregular,
+            (Self::Regular, _) => Self::Regular,
+            (_, Self::Regular) => Self::Regular,
+            (Self::Oriented, _) => Self::Oriented,
+            (_, Self::Oriented) => Self::Oriented,
+            (Self::Closed, Self::Closed) => Self::Closed,
+        }
+    }
 }
 
 fn check_connectivity<T>(adjacency: &mut HashMap<T, Vec<T>>) -> bool

@@ -1,5 +1,4 @@
 use super::*;
-use super::splitting::FaceAdjacency;
 
 /// triangulation, quadrangulation, give a structure
 pub trait StructuringFilter {
