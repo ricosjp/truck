@@ -70,7 +70,7 @@ fn into_component_test() {
     // sign up normals
     mesh.add_naive_normals(true).put_together_same_attrs();
 
-    let components = mesh.into_components();
+    let components = mesh.into_components(true);
     // The number of components is six because the mesh is a cube.
     assert_eq!(components.len(), 6);
     assert_eq!(components[0], vec![0, 1]);
@@ -79,4 +79,7 @@ fn into_component_test() {
     assert_eq!(components[3], vec![6, 7]);
     assert_eq!(components[4], vec![8]);
     assert_eq!(components[5], vec![9]);
+
+    let components = mesh.into_components(false);
+    assert_eq!(components.len(), 1);
 }

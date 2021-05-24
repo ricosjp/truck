@@ -112,7 +112,7 @@ trait SubStructureFilter {
 
 impl SubStructureFilter for PolygonMesh {
     fn create_face_edge_list(&self, plane_tol: f64, score_tol: f64) -> Vec<FaceEdge> {
-        let face_adjacency = self.faces().face_adjacency();
+        let face_adjacency = self.faces().face_adjacency(true);
         let mut passed = Vec::new();
         for i in 0..self.faces().tri_faces().len() {
             for j in &face_adjacency[i] {
