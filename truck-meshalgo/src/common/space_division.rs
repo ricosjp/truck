@@ -59,6 +59,8 @@ impl HashedPointCloud {
     }
     #[inline(always)]
     pub fn distance(&self, t: impl DistanceWithPointCloud) -> Option<f64> { t.distance(self) }
+    #[inline(always)]
+    pub fn distance2(&self, t: impl DistanceWithPointCloud) -> Option<f64> { t.distance2(self) }
 }
 
 impl std::ops::Index<[usize; 3]> for HashedPointCloud {
@@ -104,14 +106,17 @@ impl SpaceHash for usize {
     }
 }
 
-pub trait DistanceWithPointCloud {
-    fn distance(self, space: &HashedPointCloud) -> Option<f64>;
+pub trait DistanceWithPointCloud: Sized {
+    fn distance2(self, space: &HashedPointCloud) -> Option<f64>;
+    fn distance(self, space: &HashedPointCloud) -> Option<f64> {
+        self.distance2(space).map(|dist2| f64::sqrt(dist2))
+    }
 }
 
 impl DistanceWithPointCloud for Point3 {
-    fn distance(self, space: &HashedPointCloud) -> Option<f64> {
+    fn distance2(self, space: &HashedPointCloud) -> Option<f64> {
         let idcs = self.hash(space);
-        let closure = |dist2: f64, pt: &Point3| f64::min(dist2, self.distance2(*pt));
+        let closure = |dist2: f64, pt: &Point3| f64::min(dist2, MetricSpace::distance2(self, *pt));
         let mut dist2 = space[idcs].iter().fold(std::f64::INFINITY, closure);
         if idcs[0] > 0 {
             dist2 = space[[idcs[0] - 1, idcs[1], idcs[2]]]
@@ -146,13 +151,13 @@ impl DistanceWithPointCloud for Point3 {
         if dist2 == std::f64::INFINITY {
             None
         } else {
-            Some(f64::sqrt(dist2))
+            Some(dist2)
         }
     }
 }
 
 impl DistanceWithPointCloud for [Point3; 3] {
-    fn distance(self, space: &HashedPointCloud) -> Option<f64> {
+    fn distance2(self, space: &HashedPointCloud) -> Option<f64> {
         let bdd: BoundingBox<Point3> = self.iter().collect();
         let mut range: [[usize; 3]; 2] = [bdd.min().hash(space), bdd.max().hash(space)];
         range[0][0] = usize::max(range[0][0], 1) - 1;
@@ -174,7 +179,7 @@ impl DistanceWithPointCloud for [Point3; 3] {
         if dist2 == std::f64::INFINITY {
             None
         } else {
-            Some(f64::sqrt(dist2))
+            Some(dist2)
         }
     }
 }

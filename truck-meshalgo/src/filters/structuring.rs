@@ -1,4 +1,5 @@
 use super::*;
+use crate::common::Triangulate;
 
 /// triangulation, quadrangulation, give a structure
 pub trait StructuringFilter {
@@ -7,7 +8,7 @@ pub trait StructuringFilter {
     /// ```
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
-    /// 
+    ///
     /// // cube consisting quad faces
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
@@ -24,7 +25,7 @@ pub trait StructuringFilter {
     ///     &[2, 3, 7, 6], &[3, 0, 4, 7], &[4, 5, 6, 7],
     /// ]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-    /// 
+    ///
     /// // the number of face becomes twice since each quadrangle decompose into two triangles.
     /// assert_eq!(mesh.faces().len(), 6);
     /// mesh.triangulate();
@@ -49,7 +50,7 @@ pub trait StructuringFilter {
     /// ```
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
-    /// 
+    ///
     /// // cube consisting tri_faces
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
@@ -67,7 +68,7 @@ pub trait StructuringFilter {
     ///     &[3, 0, 7], &[4, 7, 0], &[4, 5, 7], &[6, 7, 5],
     /// ]);
     /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
-    /// 
+    ///
     /// // The number of faces becomes a half since each pair of triangles is combined.
     /// assert_eq!(mesh.faces().len(), 12);
     /// mesh.quadrangulate(0.01, 0.1);
@@ -78,16 +79,7 @@ pub trait StructuringFilter {
 
 impl StructuringFilter for PolygonMesh {
     fn triangulate(&mut self) -> &mut Self {
-        let mut tri_faces = self.faces().tri_faces().clone();
-        for quad in self.faces().quad_faces() {
-            tri_faces.push(get_tri(quad, 0, 1, 3));
-            tri_faces.push(get_tri(quad, 2, 3, 1));
-        }
-        for poly in self.faces().other_faces() {
-            for i in 2..poly.len() {
-                tri_faces.push(get_tri(poly, 0, i - 1, i));
-            }
-        }
+        let tri_faces = Triangulate(&*self).into_iter().collect::<Vec<_>>();
         *self.debug_editor().faces = Faces::from_tri_and_quad_faces(tri_faces, Vec::new());
         self
     }
@@ -240,11 +232,6 @@ fn calc_score(edge0: &Vector3, edge1: &Vector3, edge2: &Vector3, edge3: &Vector3
         + edge1.cos_angle(edge2).abs()
         + edge2.cos_angle(edge3).abs()
         + edge3.cos_angle(edge0).abs()
-}
-
-#[inline(always)]
-fn get_tri<T: Clone>(face: &[T], idx0: usize, idx1: usize, idx2: usize) -> [T; 3] {
-    [face[idx0].clone(), face[idx1].clone(), face[idx2].clone()]
 }
 
 trait CosAngle {
