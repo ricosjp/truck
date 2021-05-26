@@ -163,9 +163,9 @@ impl DistanceWithPointCloud for [Point3; 3] {
         range[0][0] = usize::max(range[0][0], 1) - 1;
         range[0][1] = usize::max(range[0][1], 1) - 1;
         range[0][2] = usize::max(range[0][2], 1) - 1;
-        range[1][0] = usize::min(range[1][0], space.size[0] - 2) + 1;
-        range[1][1] = usize::min(range[1][1], space.size[1] - 2) + 1;
-        range[1][2] = usize::min(range[1][2], space.size[2] - 2) + 1;
+        range[1][0] = usize::min(range[1][0] + 1, space.size[0] - 1);
+        range[1][1] = usize::min(range[1][1] + 1, space.size[1] - 1);
+        range[1][2] = usize::min(range[1][2] + 1, space.size[2] - 1);
         let mut dist2 = std::f64::INFINITY;
         (range[0][0]..=range[1][0]).for_each(|ix| {
             (range[0][1]..=range[1][1]).for_each(|iy| {
@@ -197,7 +197,7 @@ fn distance2_point_triangle(point: Point3, triangle: [Point3; 3]) -> f64 {
     let coef = f64::signum(ab.cross(nor).dot(ap))
         + f64::signum(bc.cross(nor).dot(bp))
         + f64::signum(ca.cross(nor).dot(cp));
-    if coef < 2.0 {
+    if coef < 2.0 || nor.magnitude().so_small() {
         let a = (ap - ab * f64::clamp(ab.dot(ap) / ab.dot(ab), 0.0, 1.0)).magnitude2();
         let b = (bp - bc * f64::clamp(bc.dot(bp) / bc.dot(bc), 0.0, 1.0)).magnitude2();
         let c = (cp - ca * f64::clamp(ca.dot(cp) / ca.dot(ca), 0.0, 1.0)).magnitude2();
