@@ -1,9 +1,10 @@
 use super::*;
 use truck_topology::shell::ShellCondition;
 
-const SHAPE_JSONS: [&'static [u8]; 2] = [
+const SHAPE_JSONS: [&'static [u8]; 3] = [
     include_bytes!("bottle.json"),
     include_bytes!("punched-cube.json"),
+    include_bytes!("torus-punched-cube.json"),
 ];
 
 #[test]
@@ -20,7 +21,7 @@ fn solid_is_closed() {
 
 #[test]
 fn compare_occt_mesh() {
-    let solid = Solid::extract(serde_json::from_slice(include_bytes!("torus-punched-cube.json")).unwrap()).unwrap();
+    let solid = Solid::extract(serde_json::from_slice(SHAPE_JSONS[2]).unwrap()).unwrap();
     let res = solid.triangulation(0.01).unwrap();
     let ans = obj::read(include_bytes!("by_occt.obj").as_ref()).unwrap();
     assert!(res.is_near_shape(&ans, 0.05));
