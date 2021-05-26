@@ -17,3 +17,11 @@ fn solid_is_closed() {
         assert_eq!(poly.shell_condition(), ShellCondition::Closed);
     }
 }
+
+#[test]
+fn compare_occt_mesh() {
+    let solid = Solid::extract(serde_json::from_slice(include_bytes!("torus-punched-cube.json")).unwrap()).unwrap();
+    let res = solid.triangulation(0.01).unwrap();
+    let ans = obj::read(include_bytes!("by_occt.obj").as_ref()).unwrap();
+    assert!(res.is_near_shape(&ans, 0.05));
+}
