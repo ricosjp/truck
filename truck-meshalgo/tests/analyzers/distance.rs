@@ -6,8 +6,10 @@ mod common;
 fn sphere() {
     let sphere0 = common::shapes::sphere(Point3::origin(), 10.0, 50, 50);
     let sphere1 = common::shapes::sphere(Point3::origin(), 11.0, 50, 50);
-    assert!(sphere0.is_near_shape(&sphere1, 1.01));
-    assert!(!sphere0.is_near_shape(&sphere1, 0.99));
+    assert!(sphere0.is_clung_to_by(&sphere1.positions(), 1.01));
+    assert!(sphere1.is_clung_to_by(&sphere0.positions(), 1.01));
+    assert!(!sphere0.is_clung_to_by(&sphere1.positions(), 0.99));
+    assert!(!sphere1.is_clung_to_by(&sphere0.positions(), 0.99));
 }
 
 #[test]
@@ -38,5 +40,6 @@ fn tetrahedron() {
         Vec::new(),
         Faces::from_iter(tri_faces),
     );
-    assert_eq!(mesh0.distance2(&mesh1, 10.0), Some(1.0));
+    assert!(mesh0.is_clung_to_by(mesh1.positions(), 1.0 + TOLERANCE));
+    assert!(!mesh0.is_clung_to_by(mesh1.positions(), 1.0 - TOLERANCE));
 }

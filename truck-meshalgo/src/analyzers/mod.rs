@@ -7,4 +7,4 @@ mod distance;
 pub use as_shell::AsShell;
 pub use splitting::Splitting;
 pub use splitting::ExperimentalSplitters;
-pub use distance::Distance;
+pub use distance::PositionalRelation;

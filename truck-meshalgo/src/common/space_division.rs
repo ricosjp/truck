@@ -184,6 +184,23 @@ impl DistanceWithPointCloud for [Point3; 3] {
     }
 }
 
+impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
+    fn distance2(self, space: &HashedPointCloud) -> Option<f64> {
+        Triangulate(self).into_iter().fold(None, |dist2, tri| {
+            let tri = [
+                self.positions()[tri[0].pos],
+                self.positions()[tri[1].pos],
+                self.positions()[tri[2].pos],
+            ];
+            match (dist2, tri.distance2(space)) {
+                (Some(a), Some(b)) => Some(f64::max(a, b)),
+                (None, Some(b)) => Some(b),
+                _ => dist2,
+            }
+        })
+    }
+}
+
 // https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
 fn distance2_point_triangle(point: Point3, triangle: [Point3; 3]) -> f64 {
     let ab = triangle[1] - triangle[0];
