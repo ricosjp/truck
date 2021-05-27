@@ -148,24 +148,12 @@ fn collide_seg_triangle(seg: [Point3; 2], tri: [Point3; 3]) -> bool {
 }
 
 fn collide_triangles(tri0: [Point3; 3], tri1: [Point3; 3]) -> bool {
-    let n0 = (tri0[1] - tri0[0]).cross(tri0[2] - tri0[0]);
-    let n1 = (tri1[1] - tri1[0]).cross(tri1[2] - tri1[0]);
-    let r = n0.cross(n1);
-    if n0.so_small() || n1.so_small() || r.so_small() {
-        return false;
-    }
-    let p = tri0[0] + (tri1[0] - tri0[0]).dot(n1) / (n0.cross(r)).dot(n1) * n0.cross(r);
-
-    let a0 = (tri0[0] - p).dot(r);
-    let a1 = (tri0[1] - p).dot(r);
-    let a2 = (tri0[2] - p).dot(r);
-    let b0 = (tri1[0] - p).dot(r);
-    let b1 = (tri1[1] - p).dot(r);
-    let b2 = (tri1[2] - p).dot(r);
-    (a0 <= 0.0 || a1 <= 0.0 || a2 <= 0.0)
-        && (a0 >= 0.0 || a1 >= 0.0 || a2 >= 0.0)
-        && (b0 <= 0.0 || b1 <= 0.0 || b2 <= 0.0)
-        && (b0 >= 0.0 || b1 >= 0.0 || b2 >= 0.0)
+    collide_seg_triangle([tri0[0], tri0[1]], tri1)
+    || collide_seg_triangle([tri0[1], tri0[2]], tri1)
+    || collide_seg_triangle([tri0[2], tri0[0]], tri1)
+    || collide_seg_triangle([tri1[0], tri1[1]], tri0)
+    || collide_seg_triangle([tri1[1], tri1[2]], tri0)
+    || collide_seg_triangle([tri1[2], tri1[0]], tri0)
 }
 
 #[test]
