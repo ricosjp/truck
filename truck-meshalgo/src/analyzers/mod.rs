@@ -2,9 +2,9 @@ use crate::*;
 
 mod as_shell;
 mod splitting;
-mod distance;
+mod positional_relation;
 
 pub use as_shell::AsShell;
 pub use splitting::Splitting;
 pub use splitting::ExperimentalSplitters;
-pub use distance::PositionalRelation;
+pub use positional_relation::PositionalRelation;

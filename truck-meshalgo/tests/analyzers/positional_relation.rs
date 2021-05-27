@@ -55,10 +55,17 @@ fn sphere_collision() {
     let segs = sphere0.collision(&sphere1);
     println!("collision: {}s", instant.elapsed().as_secs_f64());
     assert!(!segs.is_empty());
+    let mut counter = Point3::origin();
     for (pt0, pt1) in segs {
         assert!(pt0[2].so_small());
         assert!(pt1[2].so_small());
         assert!(f64::abs(pt0.to_vec().magnitude2() - 0.51) < 0.05);
         assert!(f64::abs(pt1.to_vec().magnitude2() - 0.51) < 0.05);
+        counter += if pt0.to_vec().cross(pt1.to_vec())[2] > 0.0 {
+            pt1 - pt0
+        } else {
+            pt0 - pt1
+        };
     }
+    assert!(counter.near(&Point3::origin()));
 }
