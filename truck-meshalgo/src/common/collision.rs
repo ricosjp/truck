@@ -153,7 +153,7 @@ fn collide_seg_triangle(seg: [Point3; 2], tri: [Point3; 3]) -> Option<Point3> {
     if f64::signum(ab.cross(nor).dot(h - tri[0]))
         + f64::signum(bc.cross(nor).dot(h - tri[1]))
         + f64::signum(ca.cross(nor).dot(h - tri[2]))
-        > 2.0
+        >= 2.0
     {
         Some(h)
     } else {
@@ -162,29 +162,34 @@ fn collide_seg_triangle(seg: [Point3; 2], tri: [Point3; 3]) -> Option<Point3> {
 }
 
 fn collide_triangles(tri0: [Point3; 3], tri1: [Point3; 3]) -> Option<(Point3, Point3)> {
-    match (
+    let mut tuple = (None, None);
+    [    
         collide_seg_triangle([tri0[0], tri0[1]], tri1),
         collide_seg_triangle([tri0[1], tri0[2]], tri1),
         collide_seg_triangle([tri0[2], tri0[0]], tri1),
         collide_seg_triangle([tri1[0], tri1[1]], tri0),
         collide_seg_triangle([tri1[1], tri1[2]], tri0),
         collide_seg_triangle([tri1[2], tri1[0]], tri0),
-    ) {
-        (Some(a), _, _, Some(b), _, _) => Some((a, b)),
-        (_, Some(a), _, Some(b), _, _) => Some((a, b)),
-        (_, _, Some(a), Some(b), _, _) => Some((a, b)),
-        (Some(a), _, _, _, Some(b), _) => Some((a, b)),
-        (_, Some(a), _, _, Some(b), _) => Some((a, b)),
-        (_, _, Some(a), _, Some(b), _) => Some((a, b)),
-        (Some(a), _, _, _, _, Some(b)) => Some((a, b)),
-        (_, Some(a), _, _, _, Some(b)) => Some((a, b)),
-        (_, _, Some(a), _, _, Some(b)) => Some((a, b)),
-        (Some(a), Some(b), _, _, _, _) => Some((a, b)),
-        (Some(a), _, Some(b), _, _, _) => Some((a, b)),
-        (_, Some(a), Some(b), _, _, _) => Some((a, b)),
-        (_, _, _, Some(a), Some(b), _) => Some((a, b)),
-        (_, _, _, Some(a), _, Some(b)) => Some((a, b)),
-        (_, _, _, _, Some(a), Some(b)) => Some((a, b)),
+    ].iter().for_each(|pt| {
+        match tuple {
+            (None, _) => tuple.0 = *pt,
+            (Some(_), None) => tuple.1 = *pt,
+            (Some(ref mut p), Some(ref mut q)) => {
+                if let Some(pt) = pt {
+                    let dist0 = pt.distance2(*p);
+                    let dist1 = pt.distance2(*q);
+                    let dist2 = p.distance2(*q);
+                    if dist2 < dist0 {
+                        *q = *pt;
+                    } else if dist2 < dist1 {
+                        *p = *pt;
+                    }
+                }
+            }
+        }
+    });
+    match tuple {
+        (Some(a), Some(b)) => Some((a, b)),
         _ => None,
     }
 }
