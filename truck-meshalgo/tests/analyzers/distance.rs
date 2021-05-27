@@ -46,15 +46,11 @@ fn tetrahedron_distance() {
 
 #[test]
 fn sphere_collision() {
-    let mut sphere0 = common::shapes::sphere(Point3::new(0.0, 0.0, -2.0), 1.0, 50, 50);
-    sphere0.put_together_same_attrs().remove_degenerate_faces();
-    let mut sphere1 = common::shapes::sphere(Point3::new(0.0, 0.0, 2.0), 1.0, 50, 50);
-    sphere1.put_together_same_attrs().remove_degenerate_faces();
+    let sphere0 = common::shapes::sphere(Point3::new(0.0, 0.0, -2.0), 1.0, 50, 50);
+    let sphere1 = common::shapes::sphere(Point3::new(0.0, 0.0, 2.0), 1.0, 50, 50);
     assert!(sphere0.collision(&sphere1).is_empty());
-    let mut sphere0 = common::shapes::sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
-    sphere0.put_together_same_attrs().remove_degenerate_faces();
-    let mut sphere1 = common::shapes::sphere(Point3::new(0.0, 0.0, 0.7), 1.0, 50, 50);
-    sphere1.put_together_same_attrs().remove_degenerate_faces();
+    let sphere0 = common::shapes::sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
+    let sphere1 = common::shapes::sphere(Point3::new(0.0, 0.0, 0.7), 1.0, 50, 50);
     let instant = std::time::Instant::now();
     let segs = sphere0.collision(&sphere1);
     println!("collision: {}s", instant.elapsed().as_secs_f64());

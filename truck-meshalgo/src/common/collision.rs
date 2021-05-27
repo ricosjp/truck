@@ -43,6 +43,7 @@ where
     let mut res: Vec<EndPoint> = iter0
         .into_iter()
         .enumerate()
+        .filter(|(_, tri)| !(tri[1] - tri[0]).cross(tri[2] - tri[0]).so_small())
         .flat_map(|(i, tri)| {
             let seg = tri_to_seg(tri, unit);
             vec![
@@ -60,23 +61,29 @@ where
                 },
             ]
         })
-        .chain(iter1.into_iter().enumerate().flat_map(|(i, tri)| {
-            let seg = tri_to_seg(tri, unit);
-            vec![
-                EndPoint {
-                    entity: seg.0,
-                    r#type: EndPointType::Front,
-                    segnum: 1,
-                    index: i,
-                },
-                EndPoint {
-                    entity: seg.1,
-                    r#type: EndPointType::Back,
-                    segnum: 1,
-                    index: i,
-                },
-            ]
-        }))
+        .chain(
+            iter1
+                .into_iter()
+                .enumerate()
+                .filter(|(_, tri)| !(tri[1] - tri[0]).cross(tri[2] - tri[0]).so_small())
+                .flat_map(|(i, tri)| {
+                    let seg = tri_to_seg(tri, unit);
+                    vec![
+                        EndPoint {
+                            entity: seg.0,
+                            r#type: EndPointType::Front,
+                            segnum: 1,
+                            index: i,
+                        },
+                        EndPoint {
+                            entity: seg.1,
+                            r#type: EndPointType::Back,
+                            segnum: 1,
+                            index: i,
+                        },
+                    ]
+                }),
+        )
         .collect();
     res.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Greater));
     res
