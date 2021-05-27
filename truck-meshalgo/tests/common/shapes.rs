@@ -12,7 +12,7 @@ pub fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonM
         })
         .collect::<Vec<_>>();
     let faces = Faces::from_iter((0..udiv).flat_map(move |i| {
-        (0..vdiv).map(move |j| {
+        (0..vdiv - 1).map(move |j| {
             [
                 i * vdiv + j,
                 i * vdiv + (j + 1) % vdiv,

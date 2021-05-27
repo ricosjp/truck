@@ -150,9 +150,9 @@ fn collide_seg_triangle(seg: [Point3; 2], tri: [Point3; 3]) -> Option<Point3> {
         return None;
     }
     let h = seg[0] + dotapnor / (dotapnor - dotaqnor) * (seg[1] - seg[0]);
-    if f64::signum(ab.cross(nor).dot(h - tri[0]) + TOLERANCE)
-        + f64::signum(bc.cross(nor).dot(h - tri[1]) + TOLERANCE)
-        + f64::signum(ca.cross(nor).dot(h - tri[2]) + TOLERANCE)
+    if f64::signum(ab.cross(nor).dot(h - tri[0]) + TOLERANCE2)
+        + f64::signum(bc.cross(nor).dot(h - tri[1]) + TOLERANCE2)
+        + f64::signum(ca.cross(nor).dot(h - tri[2]) + TOLERANCE2)
         >= 2.0
     {
         Some(h)

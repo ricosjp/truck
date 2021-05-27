@@ -173,7 +173,6 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
                 let u = 2.0 * PI * i as f64 / udiv as f64;
                 let v = PI * j as f64 / (vdiv - 1) as f64;
                 center + radius * Vector3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
-                //center + radius * Matrix3::from_axis_angle(center.to_vec().normalize(), Rad(center.z.abs())) * Vector3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
             })
         })
         .collect::<Vec<_>>();
@@ -183,12 +182,11 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
                 let u = 2.0 * PI * i as f64 / udiv as f64;
                 let v = PI * j as f64 / (vdiv - 1) as f64;
                 Vector3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
-                //Matrix3::from_axis_angle(center.to_vec().normalize(), Rad(center.z.abs())) * Vector3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
             })
         })
         .collect::<Vec<_>>();
     let faces = Faces::from_iter((0..udiv).flat_map(move |i| {
-        (0..vdiv).map(move |j| {
+        (0..vdiv - 1).map(move |j| {
             let a = [
                 i * vdiv + j,
                 i * vdiv + (j + 1) % vdiv,
