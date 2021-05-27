@@ -186,7 +186,7 @@ impl DistanceWithPointCloud for [Point3; 3] {
 
 impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
     fn distance2(self, space: &HashedPointCloud) -> Option<f64> {
-        Triangulate(self).into_iter().fold(None, |dist2, tri| {
+        Triangulate::new(self).into_iter().fold(None, |dist2, tri| {
             let tri = [
                 self.positions()[tri[0].pos],
                 self.positions()[tri[1].pos],

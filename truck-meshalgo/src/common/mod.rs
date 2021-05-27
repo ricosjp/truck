@@ -1,6 +1,6 @@
 use crate::*;
 
-mod collision;
+pub(super) mod collision;
 mod face_adjacency;
 mod face_normal;
 mod space_division;

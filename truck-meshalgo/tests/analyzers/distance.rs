@@ -3,7 +3,7 @@ use super::*;
 mod common;
 
 #[test]
-fn sphere() {
+fn sphere_distance() {
     let sphere0 = common::shapes::sphere(Point3::origin(), 10.0, 50, 50);
     let sphere1 = common::shapes::sphere(Point3::origin(), 11.0, 50, 50);
     assert!(sphere0.is_clung_to_by(&sphere1.positions(), 1.01));
@@ -13,7 +13,7 @@ fn sphere() {
 }
 
 #[test]
-fn tetrahedron() {
+fn tetrahedron_distance() {
     let positions = vec![
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(0.0, -1.0, 1.0),
@@ -42,4 +42,27 @@ fn tetrahedron() {
     );
     assert!(mesh0.is_clung_to_by(mesh1.positions(), 1.0 + TOLERANCE));
     assert!(!mesh0.is_clung_to_by(mesh1.positions(), 1.0 - TOLERANCE));
+}
+
+#[test]
+fn sphere_collision() {
+    let mut sphere0 = common::shapes::sphere(Point3::new(0.0, 0.0, -2.0), 1.0, 50, 50);
+    sphere0.put_together_same_attrs().remove_degenerate_faces();
+    let mut sphere1 = common::shapes::sphere(Point3::new(0.0, 0.0, 2.0), 1.0, 50, 50);
+    sphere1.put_together_same_attrs().remove_degenerate_faces();
+    assert!(sphere0.collision(&sphere1).is_empty());
+    let mut sphere0 = common::shapes::sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
+    sphere0.put_together_same_attrs().remove_degenerate_faces();
+    let mut sphere1 = common::shapes::sphere(Point3::new(0.0, 0.0, 0.7), 1.0, 50, 50);
+    sphere1.put_together_same_attrs().remove_degenerate_faces();
+    let instant = std::time::Instant::now();
+    let segs = sphere0.collision(&sphere1);
+    println!("collision: {}s", instant.elapsed().as_secs_f64());
+    assert!(!segs.is_empty());
+    for (pt0, pt1) in segs {
+        assert!(pt0[2].so_small());
+        assert!(pt1[2].so_small());
+        assert!(f64::abs(pt0.to_vec().magnitude2() - 0.51) < 0.05);
+        assert!(f64::abs(pt1.to_vec().magnitude2() - 0.51) < 0.05);
+    }
 }
