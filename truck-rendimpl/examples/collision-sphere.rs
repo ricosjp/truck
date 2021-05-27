@@ -13,7 +13,6 @@ struct MyApp {
     instance1: PolygonInstance,
     instance2: WireFrameInstance,
     instance3: WireFrameInstance,
-    wireinstance: WireFrameInstance,
     rotate_flag: bool,
     prev_cursor: Vector2,
     rendering_shape: bool,
@@ -77,7 +76,6 @@ impl App for MyApp {
             instance1,
             instance2,
             instance3,
-            wireinstance,
             rendering_shape: true,
         }
     }
@@ -153,13 +151,11 @@ impl App for MyApp {
                     self.scene.remove_object(&self.instance1);
                     self.scene.remove_object(&self.instance2);
                     self.scene.remove_object(&self.instance3);
-                    //self.scene.add_object(&self.wireinstance);
                 } else {
                     self.scene.add_object(&self.instance0);
                     self.scene.add_object(&self.instance1);
                     self.scene.add_object(&self.instance2);
                     self.scene.add_object(&self.instance3);
-                    //self.scene.remove_object(&self.wireinstance);
                 }
                 self.rendering_shape = !self.rendering_shape;
             }
@@ -177,6 +173,7 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
                 let u = 2.0 * PI * i as f64 / udiv as f64;
                 let v = PI * j as f64 / (vdiv - 1) as f64;
                 center + radius * Vector3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
+                //center + radius * Matrix3::from_axis_angle(center.to_vec().normalize(), Rad(center.z.abs())) * Vector3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
             })
         })
         .collect::<Vec<_>>();
@@ -186,6 +183,7 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
                 let u = 2.0 * PI * i as f64 / udiv as f64;
                 let v = PI * j as f64 / (vdiv - 1) as f64;
                 Vector3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
+                //Matrix3::from_axis_angle(center.to_vec().normalize(), Rad(center.z.abs())) * Vector3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
             })
         })
         .collect::<Vec<_>>();
