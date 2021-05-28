@@ -57,9 +57,9 @@ impl HashedPointCloud {
         self[idx].push(point);
     }
     #[inline(always)]
-    pub fn distance(&self, t: impl DistanceWithPointCloud) -> Option<f64> { t.distance(self) }
+    pub fn distance(&self, t: impl DistanceWithPointCloud) -> f64 { t.distance(self) }
     #[inline(always)]
-    pub fn distance2(&self, t: impl DistanceWithPointCloud) -> Option<f64> { t.distance2(self) }
+    pub fn distance2(&self, t: impl DistanceWithPointCloud) -> f64 { t.distance2(self) }
     #[inline(always)]
     pub fn is_colliding(&self, t: impl DistanceWithPointCloud, tol: f64) -> bool { t.is_colliding(self, tol) }
 }
@@ -108,17 +108,17 @@ impl SpaceHash for usize {
 }
 
 pub trait DistanceWithPointCloud: Sized {
-    fn distance2(self, space: &HashedPointCloud) -> Option<f64>;
-    fn distance(self, space: &HashedPointCloud) -> Option<f64> {
-        self.distance2(space).map(|dist2| f64::sqrt(dist2))
+    fn distance2(self, space: &HashedPointCloud) -> f64;
+    fn distance(self, space: &HashedPointCloud) -> f64 {
+        f64::sqrt(self.distance2(space))
     }
     fn is_colliding(self, space: &HashedPointCloud, tol: f64) -> bool {
-        self.distance2(space).map(|dist2| dist2 < tol * tol) == Some(true)
+        self.distance2(space) < tol * tol
     }
 }
 
 impl DistanceWithPointCloud for Point3 {
-    fn distance2(self, space: &HashedPointCloud) -> Option<f64> {
+    fn distance2(self, space: &HashedPointCloud) -> f64 {
         let idcs = self.hash(space);
         let closure = |dist2: f64, pt: &Point3| f64::min(dist2, MetricSpace::distance2(self, *pt));
         let mut dist2 = space[idcs].iter().fold(std::f64::INFINITY, closure);
@@ -152,16 +152,12 @@ impl DistanceWithPointCloud for Point3 {
                 .iter()
                 .fold(dist2, closure);
         }
-        if dist2 == std::f64::INFINITY {
-            None
-        } else {
-            Some(dist2)
-        }
+        dist2
     }
 }
 
 impl DistanceWithPointCloud for [Point3; 3] {
-    fn distance2(self, space: &HashedPointCloud) -> Option<f64> {
+    fn distance2(self, space: &HashedPointCloud) -> f64 {
         let bdd: BoundingBox<Point3> = self.iter().collect();
         let mut range: [[usize; 3]; 2] = [bdd.min().hash(space), bdd.max().hash(space)];
         range[0][0] = usize::max(range[0][0], 1) - 1;
@@ -180,28 +176,25 @@ impl DistanceWithPointCloud for [Point3; 3] {
                 })
             })
         });
-        if dist2 == std::f64::INFINITY {
-            None
-        } else {
-            Some(dist2)
-        }
+        dist2
     }
 }
 
 impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
-    fn distance2(self, space: &HashedPointCloud) -> Option<f64> {
-        Triangulate::new(self).into_iter().fold(None, |dist2, tri| {
+    fn distance2(self, space: &HashedPointCloud) -> f64 {
+        let dist2 = Triangulate::new(self).into_iter().fold(-1.0, |dist2, tri| {
             let tri = [
                 self.positions()[tri[0].pos],
                 self.positions()[tri[1].pos],
                 self.positions()[tri[2].pos],
             ];
-            match (dist2, tri.distance2(space)) {
-                (Some(a), Some(b)) => Some(f64::max(a, b)),
-                (None, Some(b)) => Some(b),
-                _ => dist2,
-            }
-        })
+            f64::max(dist2, tri.distance2(space))
+        });
+        if dist2 < 0.0 {
+            std::f64::INFINITY
+        } else {
+            dist2
+        }
     }
     fn is_colliding(self, space: &HashedPointCloud, tol: f64) -> bool {
         Triangulate::new(self)
@@ -212,7 +205,7 @@ impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
                     self.positions()[tri[1].pos],
                     self.positions()[tri[2].pos],
                 ];
-                tri.distance2(space).map(|dist2| dist2 < tol * tol) == Some(true)
+                tri.distance2(space) < tol * tol
             })
             .is_some()
     }
@@ -290,24 +283,15 @@ fn exec_space_division_distance() {
         })
         .collect::<Vec<_>>();
     let hashed = HashedPointCloud::from_points(&points, 1.0);
-    let dist_0 = triangles.iter().fold(None, |dist, triangle| {
-        match (dist, hashed.distance(*triangle)) {
-            (Some(a), Some(b)) => Some(f64::min(a, b)),
-            (Some(a), None) => Some(a),
-            (None, Some(b)) => Some(b),
-            (None, None) => None,
-        }
+    let dist_0 = triangles.iter().fold(std::f64::INFINITY, |dist, triangle| {
+        f64::min(dist, hashed.distance2(*triangle))
     });
-    let dist_12 = points.iter().fold(std::f64::INFINITY, |dist2, pt| {
+    let dist_1 = points.iter().fold(std::f64::INFINITY, |dist2, pt| {
         triangles.iter().fold(dist2, |dist2, triangle| {
             f64::min(dist2, distance2_point_triangle(*pt, *triangle))
         })
     });
-    let dist_1 = f64::sqrt(dist_12);
-    match dist_0 {
-        Some(dist_0) => assert_eq!(dist_0, dist_1),
-        None => assert!(dist_1 > 10.0),
-    }
+    assert_eq!(dist_0, dist_1);
 }
 
 #[test]

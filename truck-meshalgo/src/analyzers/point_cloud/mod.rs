@@ -3,19 +3,43 @@ mod hashed_point_cloud;
 use hashed_point_cloud::HashedPointCloud;
 mod sort_end_points;
 
+/// Investigates positional relation between polygon mesh and point cloud.
 pub trait WithPointCloud {
-    fn is_in_neighborhood_of(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
-    fn collide_with_neiborhood_of(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
+    /// Whether all faces of the polygon mesh `self` has intersection with the neighborhood of `point_cloud`.
+    /// # Arguments
+    /// - `tol`: the radius of the neighborhoods of points in point cloud.
+    /// # Examples
+    /// ```
+    /// use truck_meshalgo::prelude::*;
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 0.0, 2.0),
+    ///     Point3::new(1.0, 0.0, 2.0),
+    ///     Point3::new(0.0, 1.0, 2.0),
+    /// ];
+    /// let faces = Faces::from_iter(vec![[0, 1, 2], [3, 4, 5]]);
+    /// let mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    ///
+    /// let mut point_cloud = vec![Point3::new(0.25, 0.25, 0.0)];
+    /// assert!(!mesh.is_clung_to_by(&point_cloud, 0.001));
+    /// point_cloud.push(Point3::new(0.25, 0.25, 2.0));
+    /// assert!(mesh.is_clung_to_by(&point_cloud, 0.001));
+    /// ```
+    fn is_clung_to_by(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
+    /// Whether the neighborhood of the polygon mesh `self` includes `point_cloud`.
     fn neighborhood_include(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
+    /// Whether the polygon mesh `self` and `point_cloud` collides.
+    fn collide_with_neiborhood_of(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
 }
 
 impl WithPointCloud for PolygonMesh {
     #[inline(always)]
-    fn is_in_neighborhood_of(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool {
+    fn is_clung_to_by(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool {
         HashedPointCloud::from_points(point_cloud, tol * 2.0)
             .distance2(self)
-            .map(|dist2| dist2 < tol * tol)
-            == Some(true)
+            < tol * tol
     }
     #[inline(always)]
     fn collide_with_neiborhood_of(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool {
@@ -49,4 +73,3 @@ fn distance2_point_triangle(point: Point3, triangle: [Point3; 3]) -> f64 {
         nor.dot(ap) * nor.dot(ap) / nor.magnitude2()
     }
 }
-

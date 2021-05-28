@@ -46,6 +46,7 @@ impl<'a> Iterator for TriangleIter<'a> {
 
 impl<'a> ExactSizeIterator for TriangleIter<'a> {}
 
+#[derive(Clone, Debug)]
 pub struct Triangulate<'a> {
     entity: &'a PolygonMesh,
     other_faces: Vec<[Vertex; 3]>,
