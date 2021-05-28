@@ -2,11 +2,11 @@ use crate::*;
 
 mod topology;
 mod splitting;
-mod positional_relation;
+mod collision;
 mod point_cloud;
 
 pub use topology::Topology;
 pub use splitting::Splitting;
 pub use splitting::ExperimentalSplitters;
-pub use positional_relation::PositionalRelation;
+pub use collision::Collision;
 pub use point_cloud::WithPointCloud;

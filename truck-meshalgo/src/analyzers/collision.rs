@@ -1,5 +1,39 @@
 use super::*;
 
+/// Find collisions between two polygon meshes and extract interference lines.
+/// 
+/// # Details
+/// 
+/// The algorithm for mesh extraction is as follows.
+/// All the triangles are projected toward the axis to form intervals.
+/// By looking at the overlap of these intervals, we can narrow down the interfering triangles.
+/// The overlap of the intervals is obtained by sorting the endpoints.
+/// 
+/// # Remarks
+/// 
+/// We see that the surfaces that are in contact are not interfering with each other.
+/// Therefore, polygon meshes included in one plane are not interfering.
+pub trait Collision {
+    /// If `self` and `other` collide, then returns only one interference line.
+    /// Otherewise, returns `None`.
+    fn collide_with(&self, other: &PolygonMesh) -> Option<(Point3, Point3)>;
+    /// Extract all interference lines between `self` and `other`.
+    /// # Remarks
+    /// The results is not arranged so that included lines make continuous maximal polyline curve.
+    fn extract_interference(&self, other: &PolygonMesh) -> Vec<(Point3, Point3)>;
+}
+
+impl Collision for PolygonMesh {
+    #[inline(always)]
+    fn collide_with(&self, other: &PolygonMesh) -> Option<(Point3, Point3)> {
+        are_colliding(self, other)
+    }
+    #[inline(always)]
+    fn extract_interference(&self, other: &PolygonMesh) -> Vec<(Point3, Point3)> {
+        collision(self, other)
+    }
+}
+
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum EndPointType {
@@ -78,36 +112,38 @@ where
 
 fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> impl Iterator<Item = (usize, usize)> {
     let mut current = [Vec::<usize>::new(), Vec::<usize>::new()];
-    sort_endpoints.into_iter().filter_map(
-        move |EndPoint {
-             r#type,
-             segnum,
-             index,
-             ..
-         }| match r#type {
-            EndPointType::Front => {
-                current[segnum].push(index);
-                Some(current[1 - segnum].clone().into_iter().map(move |i| {
-                    if segnum == 0 {
-                        (index, i)
-                    } else {
-                        (i, index)
-                    }
-                }))
-            }
-            EndPointType::Back => {
-                let i = current[segnum]
-                    .iter()
-                    .enumerate()
-                    .find(|(_, idx)| **idx == index)
-                    .unwrap()
-                    .0;
-                current[segnum].swap_remove(i);
-                None
-            }
-        },
-    )
-    .flat_map(|x| x)
+    sort_endpoints
+        .into_iter()
+        .filter_map(
+            move |EndPoint {
+                      r#type,
+                      segnum,
+                      index,
+                      ..
+                  }| match r#type {
+                EndPointType::Front => {
+                    current[segnum].push(index);
+                    Some(current[1 - segnum].clone().into_iter().map(move |i| {
+                        if segnum == 0 {
+                            (index, i)
+                        } else {
+                            (i, index)
+                        }
+                    }))
+                }
+                EndPointType::Back => {
+                    let i = current[segnum]
+                        .iter()
+                        .enumerate()
+                        .find(|(_, idx)| **idx == index)
+                        .unwrap()
+                        .0;
+                    current[segnum].swap_remove(i);
+                    None
+                }
+            },
+        )
+        .flat_map(|x| x)
 }
 
 fn disjoint_bdbs(tri0: [Point3; 3], tri1: [Point3; 3]) -> bool {
@@ -181,7 +217,7 @@ fn collide_triangles(tri0: [Point3; 3], tri1: [Point3; 3]) -> Option<(Point3, Po
     }
 }
 
-pub fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point3)> {
+fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point3)> {
     let tris0 = Triangulate::new(poly0);
     let tris1 = Triangulate::new(poly1);
     let iter0 = tris0.into_iter().map(|face| {
@@ -219,6 +255,44 @@ pub fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point
             }
         })
         .collect()
+}
+
+fn are_colliding(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Option<(Point3, Point3)> {
+    let tris0 = Triangulate::new(poly0);
+    let tris1 = Triangulate::new(poly1);
+    let iter0 = tris0.into_iter().map(|face| {
+        [
+            poly0.positions()[face[0].pos],
+            poly0.positions()[face[1].pos],
+            poly0.positions()[face[2].pos],
+        ]
+    });
+    let iter1 = tris1.into_iter().map(|face| {
+        [
+            poly1.positions()[face[0].pos],
+            poly1.positions()[face[1].pos],
+            poly1.positions()[face[2].pos],
+        ]
+    });
+    colliding_segment_pairs(sorted_endpoints(iter0, iter1)).find_map(|(idx0, idx1)| {
+        let face0 = tris0.get(idx0);
+        let tri0 = [
+            poly0.positions()[face0[0].pos],
+            poly0.positions()[face0[1].pos],
+            poly0.positions()[face0[2].pos],
+        ];
+        let face1 = tris1.get(idx1);
+        let tri1 = [
+            poly1.positions()[face1[0].pos],
+            poly1.positions()[face1[1].pos],
+            poly1.positions()[face1[2].pos],
+        ];
+        if disjoint_bdbs(tri0, tri1) {
+            None
+        } else {
+            collide_triangles(tri0, tri1)
+        }
+    })
 }
 
 #[test]

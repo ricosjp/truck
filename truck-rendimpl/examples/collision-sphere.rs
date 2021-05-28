@@ -49,7 +49,7 @@ impl App for MyApp {
         let mut scene = Scene::new(handler.clone(), &scene_desc);
         let sphere0 = sphere(Point3::new(0.0, 0.0, 0.7), 1.0, 50, 50);
         let sphere1 = sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
-        let intersect = sphere0.collision(&sphere1);
+        let intersect = sphere0.extract_interference(&sphere1);
         let creator = scene.instance_creator();
         let instance0 = creator
             .create_instance(&sphere0, &Default::default());
