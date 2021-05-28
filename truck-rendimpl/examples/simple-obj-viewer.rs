@@ -8,8 +8,8 @@
 //! - Enter "Space" on the keyboard to switch the rendering mode for the wireframe and surface.
 
 use std::io::Read;
-use truck_platform::*;
 use truck_meshalgo::filters::*;
+use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};

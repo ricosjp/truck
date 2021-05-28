@@ -1,6 +1,4 @@
 use super::*;
-use normal_filters::FaceNormal;
-use std::collections::HashMap;
 use std::f64::consts::PI;
 
 /// Splitting the faces into several clusters.
@@ -9,7 +7,7 @@ pub trait Splitting {
     /// # Examples
     /// ```
     /// use truck_polymesh::*;
-    /// use truck_meshalgo::filters::*;
+    /// use truck_meshalgo::analyzers::*;
     ///
     /// // cube
     /// let positions = vec![
@@ -51,7 +49,7 @@ pub trait Splitting {
     /// # Examples
     /// ```
     /// use truck_polymesh::*;
-    /// use truck_meshalgo::filters::*;
+    /// use truck_meshalgo::analyzers::*;
     /// let positions = vec![
     ///     Point3::new(0.0, 0.5, 0.0),
     ///     Point3::new(0.0, 0.5, 1.0),
@@ -78,11 +76,11 @@ pub trait Splitting {
     /// Splits into the components.
     /// # Details
     /// Two polygons are considered to be in the same component if they share an edge
-    /// whose vertices has the same positions and normals.
+    /// whose vertices has the same positions (and normals if `use_normal == true`).
     /// # Examples
     /// ```
     /// use truck_polymesh::*;
-    /// use truck_meshalgo::filters::*;
+    /// use truck_meshalgo::{analyzers::*, filters::*};
     ///
     /// // cube consisting tri_faces
     /// let positions = vec![
@@ -105,11 +103,17 @@ pub trait Splitting {
     /// // sign up normals
     /// mesh.add_naive_normals(true).put_together_same_attrs();
     ///
-    /// let components = mesh.into_components();
+    /// // into components with normals
+    /// let components = mesh.into_components(true);
     /// // The number of components is six because the mesh is a cube.
     /// assert_eq!(components.len(), 6);
+    /// 
+    /// // into components without normals
+    /// let components = mesh.into_components(false);
+    /// // The number of components is one because the mesh is a connected cube.
+    /// assert_eq!(components.len(), 1);
     /// ```
-    fn into_components(&self) -> Vec<Vec<usize>>;
+    fn into_components(&self, use_normal: bool) -> Vec<Vec<usize>>;
 }
 
 impl Splitting for PolygonMesh {
@@ -127,30 +131,9 @@ impl Splitting for PolygonMesh {
         })
     }
 
-    fn into_components(&self) -> Vec<Vec<usize>> {
-        let face_adjacency = self.faces().face_adjacency();
+    fn into_components(&self, use_normal: bool) -> Vec<Vec<usize>> {
+        let face_adjacency = self.faces().face_adjacency(use_normal);
         get_components(&face_adjacency)
-    }
-}
-
-pub(super) trait FaceAdjacency {
-    /// create the adjacency list of the faces
-    fn face_adjacency(&self) -> Vec<Vec<usize>>;
-}
-
-impl FaceAdjacency for Faces {
-    fn face_adjacency(&self) -> Vec<Vec<usize>> {
-        let len = self.len();
-        let mut face_adjacency = vec![Vec::<usize>::new(); len];
-        let mut edge_face_map: HashMap<[(usize, Option<usize>); 2], usize> = HashMap::new();
-        for (i, face) in self.face_iter().enumerate() {
-            face.windows(2)
-                .chain(std::iter::once([face[face.len() - 1], face[0]].as_ref()))
-                .for_each(|v| {
-                    signup_adjacency(i, v[0], v[1], &mut face_adjacency, &mut edge_face_map)
-                })
-        }
-        face_adjacency
     }
 }
 
@@ -231,29 +214,6 @@ impl ExperimentalSplitters for PolygonMesh {
             .zip(weights)
             .map(|(ang, weight)| (PI * 2.0 - ang) / weight)
             .collect()
-    }
-}
-
-fn signup_adjacency(
-    i: usize,
-    v0: Vertex,
-    v1: Vertex,
-    face_adjacency: &mut Vec<Vec<usize>>,
-    edge_face_map: &mut HashMap<[(usize, Option<usize>); 2], usize>,
-) {
-    let edge = if v0.pos < v1.pos {
-        [(v0.pos, v0.nor), (v1.pos, v1.nor)]
-    } else {
-        [(v1.pos, v1.nor), (v0.pos, v0.nor)]
-    };
-    match edge_face_map.get(&edge) {
-        Some(j) => {
-            face_adjacency[i].push(*j);
-            face_adjacency[*j].push(i);
-        }
-        None => {
-            edge_face_map.insert(edge, i);
-        }
     }
 }
 
@@ -352,7 +312,7 @@ fn into_components_test() {
     let positions = vec![Point3::origin(); 8];
     let normals = vec![Vector3::unit_x(); 8];
     let mesh = PolygonMesh::new(positions, Vec::new(), normals, Faces::from_iter(&faces));
-    let comp = mesh.into_components();
+    let comp = mesh.into_components(true);
     assert_eq!(comp.len(), 2);
     assert_eq!(comp[0], vec![0, 1, 4]);
     assert_eq!(comp[1], vec![2, 3]);

@@ -37,41 +37,17 @@ impl<P, C, S> Shell<P, C, S> {
         self.face_list.append(&mut other.face_list);
     }
 
-    /// Returns a tuple.
-    /// * The 0th component is whether the shell is regular or not.
-    /// * The 1st component is whether the shell is oriented or not.
-    /// * The 2nd component is whether the shell is closed or not.
-    /// * The 3rd component is the set of all ids of the inner edge of the shell.
-    fn inner_edge_extraction(&self) -> (bool, bool, bool, HashSet<EdgeID<C>>) {
-        let mut all_edges: HashMap<EdgeID<C>, bool> = HashMap::with_capacity(self.face_list.len());
-        let mut inner_edges: HashSet<EdgeID<C>> = HashSet::with_capacity(self.face_list.len());
-
-        let mut regular = true;
-        let mut oriented = true;
-        for edge in self.face_iter().flat_map(Face::boundary_iters).flatten() {
-            let new_ori = edge.absolute_front() == edge.front();
-            if let Some(ori) = all_edges.insert(edge.id(), new_ori) {
-                regular = regular && inner_edges.insert(edge.id());
-                oriented = oriented && (new_ori != ori)
-            }
-        }
-
-        let closed = all_edges.len() == inner_edges.len();
-        (regular, oriented, closed, inner_edges)
-    }
     /// Determines the shell conditions: non-regular, regular, oriented, or closed.  
     /// The complexity increases in proportion to the number of edges.
     ///
     /// Examples for each condition can be found on the page of
     /// [`ShellCondition`](./shell/enum.ShellCondition.html).
     pub fn shell_condition(&self) -> ShellCondition {
-        let (regular, oriented, closed, _) = self.inner_edge_extraction();
-        match (regular, oriented, closed) {
-            (false, _, _) => ShellCondition::Irregular,
-            (true, false, _) => ShellCondition::Regular,
-            (true, true, false) => ShellCondition::Oriented,
-            (true, true, true) => ShellCondition::Closed,
-        }
+        self.face_iter()
+            .flat_map(Face::boundary_iters)
+            .flatten()
+            .collect::<Boundaries<C>>()
+            .condition()
     }
 
     /// Returns a vector of all boundaries as wires.
@@ -110,12 +86,16 @@ impl<P, C, S> Shell<P, C, S> {
     /// Even if the shell is not oriented, all the edges of the boundary are extracted.
     /// However, the connected components of the boundary are split into several wires.
     pub fn extract_boundaries(&self) -> Vec<Wire<P, C>> {
-        let (_, _, _, inner_edges) = self.inner_edge_extraction();
+        let boundaries: Boundaries<C> = self
+            .face_iter()
+            .flat_map(Face::boundary_iters)
+            .flatten()
+            .collect();
         let mut boundary_edges = Vec::new();
         let mut vemap: HashMap<Vertex<P>, Edge<P, C>> = HashMap::new();
         let edge_iter = self.face_iter().flat_map(Face::boundary_iters).flatten();
         for edge in edge_iter {
-            if inner_edges.get(&edge.id()).is_none() {
+            if boundaries.boundaries.get(&edge.id()).is_some() {
                 boundary_edges.push(edge.clone());
                 vemap.insert(edge.front().clone(), edge.clone());
             }
@@ -462,7 +442,11 @@ where
 
 impl<P, C, S> Clone for Shell<P, C, S> {
     #[inline(always)]
-    fn clone(&self) -> Shell<P, C, S> { Shell{ face_list: self.face_list.clone() } }
+    fn clone(&self) -> Shell<P, C, S> {
+        Shell {
+            face_list: self.face_list.clone(),
+        }
+    }
 }
 
 impl<P, C, S> From<Shell<P, C, S>> for Vec<Face<P, C, S>> {
@@ -517,7 +501,7 @@ pub type FaceIterMut<'a, P, C, S> = std::slice::IterMut<'a, Face<P, C, S>>;
 pub type FaceIntoIter<P, C, S> = std::vec::IntoIter<Face<P, C, S>>;
 
 /// The shell conditions being determined by the half-edge model.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum ShellCondition {
     /// This shell is not regular.
     /// # Examples
@@ -639,6 +623,77 @@ pub enum ShellCondition {
     /// assert_eq!(shell.shell_condition(), ShellCondition::Closed);
     /// ```
     Closed,
+}
+
+impl std::ops::BitAnd for ShellCondition {
+    type Output = Self;
+    fn bitand(self, other: Self) -> Self {
+        match (self, other) {
+            (Self::Irregular, _) => Self::Irregular,
+            (_, Self::Irregular) => Self::Irregular,
+            (Self::Regular, _) => Self::Regular,
+            (_, Self::Regular) => Self::Regular,
+            (Self::Oriented, _) => Self::Oriented,
+            (_, Self::Oriented) => Self::Oriented,
+            (Self::Closed, Self::Closed) => Self::Closed,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Boundaries<C> {
+    checked: HashSet<EdgeID<C>>,
+    boundaries: HashMap<EdgeID<C>, bool>,
+    condition: ShellCondition,
+}
+
+impl<C> Boundaries<C> {
+    #[inline(always)]
+    fn new() -> Self {
+        Self {
+            checked: Default::default(),
+            boundaries: Default::default(),
+            condition: ShellCondition::Oriented,
+        }
+    }
+
+    #[inline(always)]
+    fn insert<P>(&mut self, edge: &Edge<P, C>) {
+        self.condition = self.condition
+            & match (
+                self.checked.insert(edge.id()),
+                self.boundaries.insert(edge.id(), edge.orientation()),
+            ) {
+                (true, None) => ShellCondition::Oriented,
+                (false, None) => ShellCondition::Irregular,
+                (true, Some(_)) => panic!("unexpected case!"),
+                (false, Some(ori)) => {
+                    self.boundaries.remove(&edge.id());
+                    match edge.orientation() == ori {
+                        true => ShellCondition::Regular,
+                        false => ShellCondition::Oriented,
+                    }
+                }
+            }
+    }
+
+    #[inline(always)]
+    fn condition(&self) -> ShellCondition {
+        if self.condition == ShellCondition::Oriented && self.boundaries.is_empty() {
+            ShellCondition::Closed
+        } else {
+            self.condition
+        }
+    }
+}
+
+impl<P, C> std::iter::FromIterator<Edge<P, C>> for Boundaries<C> {
+    #[inline(always)]
+    fn from_iter<I: IntoIterator<Item = Edge<P, C>>>(iter: I) -> Self {
+        let mut boundaries = Boundaries::new();
+        iter.into_iter().for_each(|edge| boundaries.insert(&edge));
+        boundaries
+    }
 }
 
 fn check_connectivity<T>(adjacency: &mut HashMap<T, Vec<T>>) -> bool

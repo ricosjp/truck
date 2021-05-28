@@ -1,5 +1,7 @@
 use truck_polymesh::*;
 use truck_meshalgo::filters::*;
+#[path = "../common/mod.rs"]
+mod common;
 
 #[test]
 fn normalize_normals_test() {
@@ -95,29 +97,7 @@ fn add_naive_normals_test() {
 
 #[test]
 fn add_smooth_normals() {
-    use std::f64::consts::PI;
-    const M: usize = 20;
-    const N: usize = 10;
-    let positions = (0..M)
-        .flat_map(move |i| {
-            (0..N).map(move |j| {
-                let u = 2.0 * PI * i as f64 / M as f64;
-                let v = PI * j as f64 / (N - 1) as f64;
-                Point3::new(u.cos() * v.sin(), u.sin() * v.sin(), v.cos())
-            })
-        })
-        .collect::<Vec<_>>();
-    let faces = Faces::from_iter((0..M).flat_map(move |i| {
-        (0..N).map(move |j| {
-            [
-                i * N + j,
-                i * N + (j + 1) % N,
-                (i + 1) % M * N + (j + 1) % N,
-                (i + 1) % M * N + j,
-            ]
-        })
-    }));
-    let mut sphere = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    let mut sphere = common::shapes::sphere(Point3::origin(), 1.0, 20, 10);
     sphere
         .put_together_same_attrs()
         .remove_degenerate_faces()

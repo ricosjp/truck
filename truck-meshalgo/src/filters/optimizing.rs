@@ -186,7 +186,7 @@ fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usiz
     let mut res = Vec::new();
     let mut map = HashMap::new();
     for (i, attr) in attrs.iter().enumerate() {
-        let v = (*attr / TOLERANCE).cast_int();
+        let v = ((*attr).add_element_wise(TOLERANCE) / (TOLERANCE * 2.0)).cast_int();
         match map.get(&v) {
             Some(j) => res.push(*j),
             None => {
@@ -241,7 +241,7 @@ fn split_into_nondegenerate(poly: Vec<Vertex>) -> Vec<Vec<Vertex>> {
     vec![poly]
 }
 
-trait CastIntVector: Sized + Mul<f64, Output = Self> + Div<f64, Output = Self> {
+trait CastIntVector: Sized + ElementWise<f64> + Mul<f64, Output = Self> + Div<f64, Output = Self> {
     type IntVector: std::hash::Hash + Eq;
     fn cast_int(&self) -> Self::IntVector;
 }

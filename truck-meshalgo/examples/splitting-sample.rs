@@ -3,8 +3,8 @@
 //! - Input: sample.obj
 //! - Output: planes_parts_#.obj, others_parts_#.obj
 
+use truck_meshalgo::{analyzers::*, filters::*};
 use truck_polymesh::*;
-use truck_meshalgo::filters::*;
 
 fn main() {
     let file = std::fs::File::open("examples/data/sample.obj").unwrap();
@@ -14,8 +14,8 @@ fn main() {
     let (planes, others) = mesh.extract_planes(0.01);
     let planes = mesh.create_mesh_by_face_indices(&planes);
     let others = mesh.create_mesh_by_face_indices(&others);
-    let planes_parts = planes.into_components();
-    let others_parts = others.into_components();
+    let planes_parts = planes.into_components(true);
+    let others_parts = others.into_components(true);
 
     std::fs::DirBuilder::new()
         .recursive(true)

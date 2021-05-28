@@ -108,12 +108,65 @@ pub trait NormalFilters {
     /// assert!(mesh.normals()[v1.nor.unwrap()].near(&Vector3::new(2.0, 5.0, 0.0).normalize()));
     /// ```
     fn add_smooth_normals(&mut self, tol_ang: f64, overwrite: bool) -> &mut Self;
+    /// Makes the orientation of faces compatible to the normal vectors.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
+    /// 
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    /// ];
+    /// let normals = vec![Vector3::new(0.0, 0.0, -1.0)];
+    /// let faces = Faces::from_tri_and_quad_faces(
+    ///     vec![[
+    ///         (0, None, Some(0)).into(),
+    ///         (1, None, Some(0)).into(),
+    ///         (2, None, Some(0)).into(),
+    ///     ]],
+    ///     Vec::new(),
+    /// );
+    /// let mut polymesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
+    /// polymesh.make_face_compatible_to_normal();
+    /// assert_eq!(polymesh.faces()[0][0].pos, 2);
+    /// assert_eq!(polymesh.faces()[0][1].pos, 1);
+    /// assert_eq!(polymesh.faces()[0][2].pos, 0);
+    /// ```
+    fn make_face_compatible_to_normal(&mut self) -> &mut Self;
+    /// Makes the orientation of faces compatible to the normal vectors.
+    /// # Examples
+    /// ```
+    /// use truck_polymesh::*;
+    /// use truck_meshalgo::filters::*;
+    /// 
+    /// let positions = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    /// ];
+    /// let normals = vec![Vector3::new(0.0, 0.0, -1.0)];
+    /// let faces = Faces::from_tri_and_quad_faces(
+    ///     vec![[
+    ///         (0, None, Some(0)).into(),
+    ///         (1, None, Some(0)).into(),
+    ///         (2, None, Some(0)).into(),
+    ///     ]],
+    ///     Vec::new(),
+    /// );
+    /// let mut polymesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
+    /// polymesh.make_normal_compatible_to_face();
+    /// let nor = polymesh.faces()[0][0].nor.unwrap();
+    /// assert_eq!(polymesh.normals()[nor], Vector3::new(0.0, 0.0, 1.0));
+    /// ```
+    fn make_normal_compatible_to_face(&mut self) -> &mut Self;
 }
 
 impl NormalFilters for PolygonMesh {
     fn normalize_normals(&mut self) -> &mut Self {
-        let mut mesh = self.debug_editor();
-        let (normals, faces) = (&mut mesh.normals, &mut mesh.faces);
+        let mesh = self.debug_editor();
+        let (normals, faces) = (&mut *mesh.normals, &mut *mesh.faces);
         normals
             .iter_mut()
             .for_each(move |normal| *normal = normal.normalize());
@@ -127,9 +180,41 @@ impl NormalFilters for PolygonMesh {
         drop(mesh);
         self
     }
+    fn make_face_compatible_to_normal(&mut self) -> &mut Self {
+        let mesh = self.debug_editor();
+        let (positions, normals, faces) = (&*mesh.positions, &*mesh.normals, &mut *mesh.faces);
+        for face in faces.face_iter_mut() {
+            let normal = face.iter().fold(Vector3::zero(), |normal, v| {
+                normal + v.nor.map(|i| normals[i]).unwrap_or(Vector3::zero())
+            });
+            let face_normal = FaceNormal::new(positions, face, 0).normal;
+            if normal.dot(face_normal) < 0.0 {
+                face.reverse();
+            }
+        }
+        drop(mesh);
+        self
+    }
+    fn make_normal_compatible_to_face(&mut self) -> &mut Self {
+        let mesh = self.debug_editor();
+        let (positions, normals, faces) = (&*mesh.positions, &mut *mesh.normals, &mut *mesh.faces);
+        for face in faces.face_iter_mut() {
+            let face_normal = FaceNormal::new(positions, face, 0).normal;
+            face.iter_mut().for_each(|v| {
+                v.nor.as_mut().map(|idx| {
+                    if normals[*idx].dot(face_normal) < 0.0 {
+                        normals.push(-normals[*idx]);
+                        *idx = normals.len() - 1;
+                    }
+                });
+            })
+        }
+        drop(mesh);
+        self
+    }
     fn add_naive_normals(&mut self, overwrite: bool) -> &mut Self {
-        let mut mesh = self.debug_editor();
-        let (positions, normals, faces) = (&mesh.positions, &mut mesh.normals, &mut mesh.faces);
+        let mesh = self.debug_editor();
+        let (positions, normals, faces) = (&*mesh.positions, &mut *mesh.normals, &mut *mesh.faces);
         if overwrite {
             normals.clear()
         }
@@ -166,10 +251,7 @@ trait SubNormalFilter {
 }
 
 impl SubNormalFilter for PolygonMesh {
-    fn clustering_noraml_faces(
-        &self,
-        inf: f64,
-    ) -> HashMap<usize, Vec<Vec<FaceNormal>>> {
+    fn clustering_noraml_faces(&self, inf: f64) -> HashMap<usize, Vec<Vec<FaceNormal>>> {
         let positions = self.positions();
         let mut vnmap = HashMap::new();
         self.face_iter()
@@ -199,31 +281,6 @@ impl SubNormalFilter for PolygonMesh {
                 }
             }
         }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub(super) struct FaceNormal {
-    pub face_id: usize,
-    pub normal: Vector3,
-}
-
-impl FaceNormal {
-    pub(super) fn new(positions: &[Point3], face: &[Vertex], face_id: usize) -> FaceNormal {
-        let center = face
-            .iter()
-            .fold(Vector3::zero(), |sum, v| sum + positions[v.pos].to_vec())
-            / face.len() as f64;
-        let normal = face
-            .windows(2)
-            .chain(std::iter::once([face[face.len() - 1], face[0]].as_ref()))
-            .fold(Vector3::zero(), |sum, v| {
-                let vec0 = positions[v[0].pos].to_vec() - center;
-                let vec1 = positions[v[1].pos].to_vec() - center;
-                sum + vec0.cross(vec1)
-            })
-            .normalize();
-        FaceNormal { face_id, normal }
     }
 }
 

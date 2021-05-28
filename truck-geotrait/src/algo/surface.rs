@@ -67,7 +67,7 @@ pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>
     trials: usize,
 ) -> Option<(f64, f64)> {
     let pt = surface.subs(u0, v0);
-    if pt.near(&point) {
+    if pt.near2(&point) {
         return Some((u0, v0));
     } else if trials == 0 {
         return None;

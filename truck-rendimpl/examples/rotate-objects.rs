@@ -8,8 +8,8 @@
 
 use std::f64::consts::PI;
 use std::io::Read;
-use truck_platform::*;
 use truck_meshalgo::filters::*;
+use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};

@@ -42,9 +42,7 @@ impl WireFrameInstance {
 
 impl Instance for WireFrameInstance {
     type Shaders = WireShaders;
-    fn standard_shaders(creator: &InstanceCreator) -> WireShaders {
-        creator.wire_shaders.clone()
-    }
+    fn standard_shaders(creator: &InstanceCreator) -> WireShaders { creator.wire_shaders.clone() }
 }
 
 impl Rendered for WireFrameInstance {
@@ -140,9 +138,36 @@ impl Rendered for WireFrameInstance {
                 count: sample_count,
                 mask: !0,
                 alpha_to_coverage_enabled: false,
-            }, 
+            },
             label: None,
         });
         Arc::new(pipeline)
+    }
+}
+
+impl IntoInstance<WireFrameInstance> for Vec<(Point3, Point3)> {
+    type Descriptor = WireFrameState;
+    fn into_instance(
+        &self,
+        handler: &DeviceHandler,
+        shaders: &WireShaders,
+        desc: &WireFrameState,
+    ) -> WireFrameInstance {
+        let device = handler.device();
+        let positions: Vec<[f32; 3]> = self
+            .iter()
+            .flat_map(|p| vec![p.0, p.1])
+            .map(|p| p.cast().unwrap().into())
+            .collect();
+        let strips: Vec<u32> = (0..2 * self.len()).map(|i| i as u32).collect();
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsage::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsage::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: desc.clone(),
+            shaders: shaders.clone(),
+            id: RenderID::gen(),
+        }
     }
 }
