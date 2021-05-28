@@ -2,6 +2,7 @@ use super::*;
 use std::collections::{HashMap, HashSet};
 use truck_topology::shell::ShellCondition;
 
+/// Extracts boundaries, and check shell condition: closed or orientation.
 pub trait Topology {
     /// Returns a vector of all boundaries as line strip.
     fn extract_boundaries(&self) -> Vec<Vec<usize>>;

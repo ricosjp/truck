@@ -21,9 +21,12 @@ use common::*;
 /// - investigates positional relations between mesh and point clouds.
 pub mod analyzers;
 mod common;
+/// Edits meshes. Add normals, optimizing data, and so on.
 pub mod filters;
+/// Tessellates shapes.
 pub mod tessellation;
 
+/// This module contains all traits and re-exports `truck_polymesh`.
 pub mod prelude {
     pub use truck_polymesh::*;
     pub use crate::analyzers::*;
