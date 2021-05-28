@@ -15,6 +15,25 @@ struct EndPoint {
     index: usize,
 }
 
+impl EndPoint {
+    #[inline(always)]
+    fn new(entity: f64, r#type: EndPointType, segnum: usize, index: usize) -> EndPoint {
+        EndPoint {
+            entity,
+            r#type,
+            segnum,
+            index,
+        }
+    }
+    #[inline(always)]
+    fn from_seg(seg: (f64, f64), segnum: usize, index: usize) -> Vec<EndPoint> {
+        vec![
+            EndPoint::new(seg.0, EndPointType::Front, segnum, index),
+            EndPoint::new(seg.1, EndPointType::Back, segnum, index),
+        ]
+    }
+}
+
 fn take_one_unit() -> Vector3 {
     loop {
         let normal = Vector3::new(
@@ -44,52 +63,20 @@ where
         .into_iter()
         .enumerate()
         .filter(|(_, tri)| !(tri[1] - tri[0]).cross(tri[2] - tri[0]).so_small())
-        .flat_map(|(i, tri)| {
-            let seg = tri_to_seg(tri, unit);
-            vec![
-                EndPoint {
-                    entity: seg.0,
-                    r#type: EndPointType::Front,
-                    segnum: 0,
-                    index: i,
-                },
-                EndPoint {
-                    entity: seg.1,
-                    r#type: EndPointType::Back,
-                    segnum: 0,
-                    index: i,
-                },
-            ]
-        })
+        .flat_map(|(i, tri)| EndPoint::from_seg(tri_to_seg(tri, unit), 0, i))
         .chain(
             iter1
                 .into_iter()
                 .enumerate()
                 .filter(|(_, tri)| !(tri[1] - tri[0]).cross(tri[2] - tri[0]).so_small())
-                .flat_map(|(i, tri)| {
-                    let seg = tri_to_seg(tri, unit);
-                    vec![
-                        EndPoint {
-                            entity: seg.0,
-                            r#type: EndPointType::Front,
-                            segnum: 1,
-                            index: i,
-                        },
-                        EndPoint {
-                            entity: seg.1,
-                            r#type: EndPointType::Back,
-                            segnum: 1,
-                            index: i,
-                        },
-                    ]
-                }),
+                .flat_map(|(i, tri)| EndPoint::from_seg(tri_to_seg(tri, unit), 1, i)),
         )
         .collect();
     res.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Greater));
     res
 }
 
-fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> Vec<(usize, usize)> {
+fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> impl Iterator<Item = (usize, usize)> {
     let mut current = [Vec::<usize>::new(), Vec::<usize>::new()];
     let mut res = Vec::new();
     sort_endpoints.into_iter().for_each(
@@ -120,7 +107,151 @@ fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> Vec<(usize, usize)>
             }
         },
     );
-    res
+    res.into_iter()
+}
+
+#[allow(dead_code)]
+fn colliding_segment_pairs2<I, J>(iter0: I, iter1: J) -> impl Iterator<Item = (usize, usize)>
+where
+    I: IntoIterator<Item = [Point3; 3]>,
+    J: IntoIterator<Item = [Point3; 3]>, {
+    let instant = std::time::Instant::now();
+    let mut x_segs = Vec::new();
+    let mut y_segs = Vec::new();
+    let mut z_segs = Vec::new();
+    let mut count = 0;
+    iter0
+        .into_iter()
+        .enumerate()
+        .filter(|(_, tri)| {
+            count += 1;
+            !(tri[1] - tri[0]).cross(tri[2] - tri[0]).so_small()
+        })
+        .for_each(|(i, tri)| {
+            let bdb: BoundingBox<Point3> = tri.iter().collect();
+            x_segs.extend(EndPoint::from_seg((bdb.min()[0], bdb.max()[0]), 0, i));
+            y_segs.extend(EndPoint::from_seg((bdb.min()[1], bdb.max()[1]), 0, i));
+            z_segs.extend(EndPoint::from_seg((bdb.min()[2], bdb.max()[2]), 0, i));
+        });
+    iter1
+        .into_iter()
+        .enumerate()
+        .filter(|(_, tri)| !(tri[1] - tri[0]).cross(tri[2] - tri[0]).so_small())
+        .for_each(|(i, tri)| {
+            let bdb: BoundingBox<Point3> = tri.iter().collect();
+            x_segs.extend(EndPoint::from_seg((bdb.min()[0], bdb.max()[0]), 1, i));
+            y_segs.extend(EndPoint::from_seg((bdb.min()[1], bdb.max()[1]), 1, i));
+            z_segs.extend(EndPoint::from_seg((bdb.min()[2], bdb.max()[2]), 1, i));
+        });
+    println!("segs creation:    {}s", instant.elapsed().as_secs_f64());
+    let instant = std::time::Instant::now();
+    x_segs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Greater));
+    y_segs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Greater));
+    z_segs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Greater));
+    println!("segs sort:        {}s", instant.elapsed().as_secs_f64());
+    let instant = std::time::Instant::now();
+    let mut tank0 = vec![std::collections::HashSet::new(); count];
+    let mut tank1 = vec![std::collections::HashSet::new(); count];
+    let mut res = vec![Vec::new(); count];
+    let mut current = [Vec::<usize>::new(), Vec::<usize>::new()];
+    x_segs.into_iter().for_each(
+        |EndPoint {
+             r#type,
+             segnum,
+             index,
+             ..
+         }| match r#type {
+            EndPointType::Front => {
+                current[segnum].push(index);
+                current[1 - segnum].iter().for_each(|i| {
+                    if segnum == 0 {
+                        tank0[index].insert(*i);
+                    } else {
+                        tank1[*i].insert(index);
+                    }
+                })
+            }
+            EndPointType::Back => {
+                let i = current[segnum]
+                    .iter()
+                    .enumerate()
+                    .find(|(_, idx)| **idx == index)
+                    .unwrap()
+                    .0;
+                current[segnum].swap_remove(i);
+            }
+        },
+    );
+    current[0].clear();
+    current[1].clear();
+    y_segs.into_iter().for_each(
+        |EndPoint {
+             r#type,
+             segnum,
+             index,
+             ..
+         }| match r#type {
+            EndPointType::Front => {
+                current[segnum].push(index);
+                current[1 - segnum].iter().for_each(|i| {
+                    let (i, j) = if segnum == 0 {
+                        (index, *i)
+                    } else {
+                        (*i, index)
+                    };
+                    if tank0[i].remove(&j) {
+                        tank1[i].insert(j);
+                    }
+                })
+            }
+            EndPointType::Back => {
+                let i = current[segnum]
+                    .iter()
+                    .enumerate()
+                    .find(|(_, idx)| **idx == index)
+                    .unwrap()
+                    .0;
+                current[segnum].swap_remove(i);
+            }
+        },
+    );
+    current[0].clear();
+    current[1].clear();
+    z_segs.into_iter().for_each(
+        |EndPoint {
+             r#type,
+             segnum,
+             index,
+             ..
+         }| match r#type {
+            EndPointType::Front => {
+                current[segnum].push(index);
+                current[1 - segnum].iter().for_each(|i| {
+                    let (i, j) = if segnum == 0 {
+                        (index, *i)
+                    } else {
+                        (*i, index)
+                    };
+                    if tank1[i].remove(&j) {
+                        res[i].push(j);
+                    }
+                })
+            }
+            EndPointType::Back => {
+                let i = current[segnum]
+                    .iter()
+                    .enumerate()
+                    .find(|(_, idx)| **idx == index)
+                    .unwrap()
+                    .0;
+                current[segnum].swap_remove(i);
+            }
+        },
+    );
+    println!("segs merge:       {}s", instant.elapsed().as_secs_f64());
+    res.into_iter()
+        .enumerate()
+        .flat_map(move |(i, v)| v.into_iter().map(move |j| (i, j)))
 }
 
 fn disjoint_bdbs(tri0: [Point3; 3], tri1: [Point3; 3]) -> bool {
@@ -163,27 +294,27 @@ fn collide_seg_triangle(seg: [Point3; 2], tri: [Point3; 3]) -> Option<Point3> {
 
 fn collide_triangles(tri0: [Point3; 3], tri1: [Point3; 3]) -> Option<(Point3, Point3)> {
     let mut tuple = (None, None);
-    [    
+    [
         collide_seg_triangle([tri0[0], tri0[1]], tri1),
         collide_seg_triangle([tri0[1], tri0[2]], tri1),
         collide_seg_triangle([tri0[2], tri0[0]], tri1),
         collide_seg_triangle([tri1[0], tri1[1]], tri0),
         collide_seg_triangle([tri1[1], tri1[2]], tri0),
         collide_seg_triangle([tri1[2], tri1[0]], tri0),
-    ].iter().for_each(|pt| {
-        match tuple {
-            (None, _) => tuple.0 = *pt,
-            (Some(_), None) => tuple.1 = *pt,
-            (Some(ref mut p), Some(ref mut q)) => {
-                if let Some(pt) = pt {
-                    let dist0 = pt.distance2(*p);
-                    let dist1 = pt.distance2(*q);
-                    let dist2 = p.distance2(*q);
-                    if dist2 < dist0 {
-                        *q = *pt;
-                    } else if dist2 < dist1 {
-                        *p = *pt;
-                    }
+    ]
+    .iter()
+    .for_each(|pt| match tuple {
+        (None, _) => tuple.0 = *pt,
+        (Some(_), None) => tuple.1 = *pt,
+        (Some(ref mut p), Some(ref mut q)) => {
+            if let Some(pt) = pt {
+                let dist0 = pt.distance2(*p);
+                let dist1 = pt.distance2(*q);
+                let dist2 = p.distance2(*q);
+                if dist2 < dist0 {
+                    *q = *pt;
+                } else if dist2 < dist1 {
+                    *p = *pt;
                 }
             }
         }
@@ -212,7 +343,7 @@ pub fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point
         ]
     });
     colliding_segment_pairs(sort_endpoints(iter0, iter1))
-        .into_iter()
+//    colliding_segment_pairs2(iter0, iter1)
         .filter_map(|(idx0, idx1)| {
             let face0 = tris0.get(idx0);
             let tri0 = [
