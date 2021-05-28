@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use super::*;
 
 #[derive(Clone, Debug)]
@@ -10,6 +8,7 @@ pub struct HashedPointCloud {
     num_points: usize,
 }
 
+#[allow(dead_code)]
 impl HashedPointCloud {
     #[inline(always)]
     pub fn new(size: [usize; 3], range: [[f64; 2]; 3]) -> Self {
@@ -61,6 +60,8 @@ impl HashedPointCloud {
     pub fn distance(&self, t: impl DistanceWithPointCloud) -> Option<f64> { t.distance(self) }
     #[inline(always)]
     pub fn distance2(&self, t: impl DistanceWithPointCloud) -> Option<f64> { t.distance2(self) }
+    #[inline(always)]
+    pub fn is_colliding(&self, t: impl DistanceWithPointCloud, tol: f64) -> bool { t.is_colliding(self, tol) }
 }
 
 impl std::ops::Index<[usize; 3]> for HashedPointCloud {
@@ -110,6 +111,9 @@ pub trait DistanceWithPointCloud: Sized {
     fn distance2(self, space: &HashedPointCloud) -> Option<f64>;
     fn distance(self, space: &HashedPointCloud) -> Option<f64> {
         self.distance2(space).map(|dist2| f64::sqrt(dist2))
+    }
+    fn is_colliding(self, space: &HashedPointCloud, tol: f64) -> bool {
+        self.distance2(space).map(|dist2| dist2 < tol * tol) == Some(true)
     }
 }
 
@@ -199,28 +203,18 @@ impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
             }
         })
     }
-}
-
-// https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-fn distance2_point_triangle(point: Point3, triangle: [Point3; 3]) -> f64 {
-    let ab = triangle[1] - triangle[0];
-    let ap = point - triangle[0];
-    let bc = triangle[2] - triangle[1];
-    let bp = point - triangle[1];
-    let ca = triangle[0] - triangle[2];
-    let cp = point - triangle[2];
-    let nor = ab.cross(ca);
-
-    let coef = f64::signum(ab.cross(nor).dot(ap))
-        + f64::signum(bc.cross(nor).dot(bp))
-        + f64::signum(ca.cross(nor).dot(cp));
-    if coef < 2.0 || nor.magnitude().so_small() {
-        let a = (ap - ab * f64::clamp(ab.dot(ap) / ab.dot(ab), 0.0, 1.0)).magnitude2();
-        let b = (bp - bc * f64::clamp(bc.dot(bp) / bc.dot(bc), 0.0, 1.0)).magnitude2();
-        let c = (cp - ca * f64::clamp(ca.dot(cp) / ca.dot(ca), 0.0, 1.0)).magnitude2();
-        f64::min(f64::min(a, b), c)
-    } else {
-        nor.dot(ap) * nor.dot(ap) / nor.magnitude2()
+    fn is_colliding(self, space: &HashedPointCloud, tol: f64) -> bool {
+        Triangulate::new(self)
+            .into_iter()
+            .find(|tri| {
+                let tri = [
+                    self.positions()[tri[0].pos],
+                    self.positions()[tri[1].pos],
+                    self.positions()[tri[2].pos],
+                ];
+                tri.distance2(space).map(|dist2| dist2 < tol * tol) == Some(true)
+            })
+            .is_some()
     }
 }
 

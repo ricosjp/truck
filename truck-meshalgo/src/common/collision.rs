@@ -54,7 +54,7 @@ fn tri_to_seg(tri: [Point3; 3], unit: Vector3) -> (f64, f64) {
     (f64::min(f64::min(a, b), c), f64::max(f64::max(a, b), c))
 }
 
-fn sort_endpoints<I, J>(iter0: I, iter1: J) -> Vec<EndPoint>
+fn sorted_endpoints<I, J>(iter0: I, iter1: J) -> Vec<EndPoint>
 where
     I: IntoIterator<Item = [Point3; 3]>,
     J: IntoIterator<Item = [Point3; 3]>, {
@@ -78,9 +78,8 @@ where
 
 fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> impl Iterator<Item = (usize, usize)> {
     let mut current = [Vec::<usize>::new(), Vec::<usize>::new()];
-    let mut res = Vec::new();
-    sort_endpoints.into_iter().for_each(
-        |EndPoint {
+    sort_endpoints.into_iter().filter_map(
+        move |EndPoint {
              r#type,
              segnum,
              index,
@@ -88,13 +87,13 @@ fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> impl Iterator<Item 
          }| match r#type {
             EndPointType::Front => {
                 current[segnum].push(index);
-                current[1 - segnum].iter().for_each(|i| {
+                Some(current[1 - segnum].clone().into_iter().map(move |i| {
                     if segnum == 0 {
-                        res.push((index, *i));
+                        (index, i)
                     } else {
-                        res.push((*i, index));
+                        (i, index)
                     }
-                })
+                }))
             }
             EndPointType::Back => {
                 let i = current[segnum]
@@ -104,10 +103,11 @@ fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> impl Iterator<Item 
                     .unwrap()
                     .0;
                 current[segnum].swap_remove(i);
+                None
             }
         },
-    );
-    res.into_iter()
+    )
+    .flat_map(|x| x)
 }
 
 fn disjoint_bdbs(tri0: [Point3; 3], tri1: [Point3; 3]) -> bool {
@@ -198,8 +198,7 @@ pub fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point
             poly1.positions()[face[2].pos],
         ]
     });
-    colliding_segment_pairs(sort_endpoints(iter0, iter1))
-//    colliding_segment_pairs2(iter0, iter1)
+    colliding_segment_pairs(sorted_endpoints(iter0, iter1))
         .filter_map(|(idx0, idx1)| {
             let face0 = tris0.get(idx0);
             let tri0 = [

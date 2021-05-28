@@ -6,10 +6,10 @@ mod common;
 fn sphere_distance() {
     let sphere0 = common::shapes::sphere(Point3::origin(), 10.0, 50, 50);
     let sphere1 = common::shapes::sphere(Point3::origin(), 11.0, 50, 50);
-    assert!(sphere0.is_clung_to_by(&sphere1.positions(), 1.01));
-    assert!(sphere1.is_clung_to_by(&sphere0.positions(), 1.01));
-    assert!(!sphere0.is_clung_to_by(&sphere1.positions(), 0.99));
-    assert!(!sphere1.is_clung_to_by(&sphere0.positions(), 0.99));
+    assert!(sphere0.is_in_neighborhood_of(&sphere1.positions(), 1.01));
+    assert!(sphere1.is_in_neighborhood_of(&sphere0.positions(), 1.01));
+    assert!(!sphere0.is_in_neighborhood_of(&sphere1.positions(), 0.99));
+    assert!(!sphere1.is_in_neighborhood_of(&sphere0.positions(), 0.99));
 }
 
 #[test]
@@ -40,8 +40,8 @@ fn tetrahedron_distance() {
         Vec::new(),
         Faces::from_iter(tri_faces),
     );
-    assert!(mesh0.is_clung_to_by(mesh1.positions(), 1.0 + TOLERANCE));
-    assert!(!mesh0.is_clung_to_by(mesh1.positions(), 1.0 - TOLERANCE));
+    assert!(mesh0.is_in_neighborhood_of(mesh1.positions(), 1.0 + TOLERANCE));
+    assert!(!mesh0.is_in_neighborhood_of(mesh1.positions(), 1.0 - TOLERANCE));
 }
 
 #[test]

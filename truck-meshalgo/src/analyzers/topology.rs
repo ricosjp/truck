@@ -2,7 +2,7 @@ use super::*;
 use std::collections::{HashMap, HashSet};
 use truck_topology::shell::ShellCondition;
 
-pub trait AsShell {
+pub trait Topology {
     /// Returns a vector of all boundaries as line strip.
     fn extract_boundaries(&self) -> Vec<Vec<usize>>;
     /// Determines the shell conditions: non-regular, regular, oriented, or closed.  
@@ -69,7 +69,7 @@ impl std::iter::FromIterator<[Vertex; 2]> for Boundaries {
     }
 }
 
-impl AsShell for Faces {
+impl Topology for Faces {
     fn extract_boundaries(&self) -> Vec<Vec<usize>> {
         let mut vemap: HashMap<usize, usize> = self
             .face_iter()
@@ -114,7 +114,7 @@ impl AsShell for Faces {
     }
 }
 
-impl AsShell for PolygonMesh {
+impl Topology for PolygonMesh {
     fn extract_boundaries(&self) -> Vec<Vec<usize>> { self.faces().extract_boundaries() }
     fn shell_condition(&self) -> ShellCondition { self.faces().shell_condition() }
 }

@@ -24,6 +24,6 @@ fn compare_occt_mesh() {
     let solid = Solid::extract(serde_json::from_slice(SHAPE_JSONS[2]).unwrap()).unwrap();
     let res = solid.triangulation(0.01).unwrap();
     let ans = obj::read(include_bytes!("by_occt.obj").as_ref()).unwrap();
-    assert!(res.is_clung_to_by(ans.positions(), 0.05));
-    assert!(ans.is_clung_to_by(res.positions(), 0.05));
+    assert!(res.is_in_neighborhood_of(ans.positions(), 0.05));
+    assert!(ans.is_in_neighborhood_of(res.positions(), 0.05));
 }

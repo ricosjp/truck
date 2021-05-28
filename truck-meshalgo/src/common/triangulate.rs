@@ -81,6 +81,8 @@ impl<'a> Triangulate<'a> {
                 [idx - self.entity.tri_faces().len() - 2 * self.entity.quad_faces().len()]
         }
     }
+    #[inline(always)]
+    pub fn entity(&self) -> &PolygonMesh { &self.entity }
 }
 
 impl<'a> IntoIterator for &'a Triangulate<'a> {
