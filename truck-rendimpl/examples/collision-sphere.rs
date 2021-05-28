@@ -51,18 +51,17 @@ impl App for MyApp {
         let sphere1 = sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
         let intersect = sphere0.extract_interference(&sphere1);
         let creator = scene.instance_creator();
-        let instance0 = creator
-            .create_instance(&sphere0, &Default::default());
-        let instance1 = creator
-            .create_instance(&sphere1, &Default::default());
-        let instance2 = creator
-            .create_instance(&sphere0, &Default::default());
-        let instance3 = creator
-            .create_instance(&sphere1, &Default::default());
-        let wireinstance = creator.create_instance(&intersect, &WireFrameState {
-            color: Vector4::new(1.0, 0.0, 0.0, 1.0),
-            ..Default::default()
-        });
+        let instance0 = creator.create_instance(&sphere0, &Default::default());
+        let instance1 = creator.create_instance(&sphere1, &Default::default());
+        let instance2 = creator.create_instance(&sphere0, &Default::default());
+        let instance3 = creator.create_instance(&sphere1, &Default::default());
+        let wireinstance = creator.create_instance(
+            &intersect,
+            &WireFrameState {
+                color: Vector4::new(1.0, 0.0, 0.0, 1.0),
+                ..Default::default()
+            },
+        );
         scene.add_object(&instance0);
         scene.add_object(&instance1);
         scene.add_object(&instance2);
@@ -135,7 +134,7 @@ impl App for MyApp {
         self.prev_cursor = position;
         Self::default_control_flow()
     }
- 
+
     fn keyboard_input(&mut self, input: KeyboardInput, _: bool) -> ControlFlow {
         if input.state == ElementState::Released {
             return Self::default_control_flow();

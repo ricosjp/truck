@@ -3,8 +3,8 @@
 //! - Input: sample.obj
 //! - Output: planes_parts_#.obj, others_parts_#.obj
 
-use truck_polymesh::*;
 use truck_meshalgo::{analyzers::*, filters::*};
+use truck_polymesh::*;
 
 fn main() {
     let file = std::fs::File::open("examples/data/sample.obj").unwrap();

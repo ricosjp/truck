@@ -4,8 +4,8 @@
 //! - Input: irregular_sphere.obj
 //! - Output: regular_sphere.obj
 
-use truck_polymesh::*;
 use truck_meshalgo::filters::*;
+use truck_polymesh::*;
 
 fn main() {
     let file = std::fs::File::open("examples/data/irregular_sphere.obj").unwrap();

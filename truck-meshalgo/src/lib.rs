@@ -11,11 +11,11 @@
     unused_qualifications
 )]
 
-use truck_polymesh::*;
 use common::*;
+use truck_polymesh::*;
 
 /// polygon mesh analizers, including
-/// 
+///
 /// - determines topological properties: connectivity, boundary extraction, or shell conditions (colsed or oriented)
 /// - detects collisions between two meshes and extracts interference lines
 /// - investigates positional relations between mesh and point clouds.
@@ -28,8 +28,8 @@ pub mod tessellation;
 
 /// This module contains all traits and re-exports `truck_polymesh`.
 pub mod prelude {
-    pub use truck_polymesh::*;
     pub use crate::analyzers::*;
     pub use crate::filters::*;
     pub use crate::tessellation::*;
+    pub use truck_polymesh::*;
 }

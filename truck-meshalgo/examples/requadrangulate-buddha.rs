@@ -3,8 +3,8 @@
 //! - Input: happy-buddha.obj
 //! - Output: requadrangulated-buddha.obj
 
-use truck_polymesh::*;
 use truck_meshalgo::filters::*;
+use truck_polymesh::*;
 
 const INPUT: &str = "examples/data/happy-buddha.obj";
 const OUTPUT: &str = "requadrangulated-buddha.obj";
