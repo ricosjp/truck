@@ -571,17 +571,29 @@ pub struct PolygonMeshEditor<'a> {
     bound_check: bool,
 }
 
+impl<'a> PolygonMeshEditor<'a> {
+    #[inline(always)]
+    fn is_compatible(&self) -> Result<()> {
+        self.faces.is_compatible(
+            self.positions.len(),
+            self.uv_coords.len(),
+            self.normals.len(),
+        )
+    }
+
+    /// Drops with boundary check and returns `Result`.
+    #[inline(always)]
+    pub fn try_drop(mut self) -> Result<()> {
+        self.bound_check = false;
+        self.is_compatible()
+    }
+}
+
 impl<'a> Drop for PolygonMeshEditor<'a> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.bound_check {
-            self.faces
-                .is_compatible(
-                    self.positions.len(),
-                    self.uv_coords.len(),
-                    self.normals.len(),
-                )
-                .unwrap_or_else(|e| panic!("{:?}", e));
+            self.is_compatible().unwrap_or_else(|e| panic!("{:?}", e));
         }
     }
 }
