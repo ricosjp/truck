@@ -145,7 +145,7 @@ fn add_face(
     Some(())
 }
 
-impl TryIntoInstance<PolygonInstance> for Shell {
+impl<Shape: MeshableShape> TryIntoInstance<PolygonInstance> for Shape {
     type Descriptor = ShapeInstanceDescriptor;
     fn try_into_instance(
         &self,
@@ -165,6 +165,28 @@ impl TryIntoInstance<PolygonInstance> for Shell {
 }
 
 impl IntoInstance<PolygonInstance> for Shell {
+    type Descriptor = ShapeInstanceDescriptor;
+    /// Creates `ShapeInstance` from `Shell`.
+    /// # Panics
+    /// Panic occurs when the polylined boundary cannot be
+    /// converted to the polyline in the surface parameter space.
+    /// This may be due to the following reasons.
+    /// - A boundary curve is not contained within the surface.
+    /// - The surface is not injective, or is too complecated.
+    /// - The surface is not regular: non-degenerate and differentiable.
+    #[inline(always)]
+    fn into_instance(
+        &self,
+        handler: &DeviceHandler,
+        shaders: &PolygonShaders,
+        desc: &ShapeInstanceDescriptor,
+    ) -> PolygonInstance {
+        self.try_into_instance(handler, shaders, desc)
+            .expect("failed to create instance")
+    }
+}
+
+impl IntoInstance<PolygonInstance> for Solid {
     type Descriptor = ShapeInstanceDescriptor;
     /// Creates `ShapeInstance` from `Shell`.
     /// # Panics
