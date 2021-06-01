@@ -19,7 +19,7 @@ image = "0.23.13"
 bytemuck = { version = "1.5.1", features = ["derive"] }
 truck-platform = { version = "0.2.1", path = "../truck-platform" }
 truck-modeling = { version = "0.2.1", path = "../truck-modeling" }
-truck-polymesh = { version = "0.2.1", path = "../truck-polymesh" }
+truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }
 
 [dev-dependencies]
 env_logger = "0.8.3"
@@ -27,4 +27,3 @@ futures = "0.3.12"
 rayon = "1.5.0"
 serde_json = "1.0.62"
 winit = "0.24.0"
-truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }

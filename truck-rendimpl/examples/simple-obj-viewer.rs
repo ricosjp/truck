@@ -8,7 +8,7 @@
 //! - Enter "Space" on the keyboard to switch the rendering mode for the wireframe and surface.
 
 use std::io::Read;
-use truck_meshalgo::filters::*;
+use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
@@ -93,7 +93,7 @@ impl MyApp {
         creator: &InstanceCreator,
         reader: R,
     ) -> (PolygonInstance, WireFrameInstance) {
-        let mut mesh = truck_polymesh::obj::read(reader).unwrap();
+        let mut mesh = obj::read(reader).unwrap();
         mesh.put_together_same_attrs()
             .add_smooth_normals(0.5, false);
         let bdd_box = mesh.bounding_box();

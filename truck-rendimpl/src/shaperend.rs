@@ -1,5 +1,6 @@
 use crate::*;
 use modeling::geometry::Surface;
+use truck_meshalgo::tessellation::*;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
@@ -26,17 +27,29 @@ fn presearch(surface: &Surface, pt: Point3) -> (f64, f64) {
             let v = surface.get_parameter(pt);
             (v[0], v[1])
         }
-        Surface::BSplineSurface(surface) => modeling::algo::surface::presearch(surface, pt, surface.parameter_range(), 50),
-        Surface::NURBSSurface(surface) => modeling::algo::surface::presearch(surface, pt, surface.parameter_range(), 50),
-        Surface::RevolutedCurve(surface) => modeling::algo::surface::presearch(surface, pt, surface.parameter_range(), 50),
+        Surface::BSplineSurface(surface) => {
+            modeling::algo::surface::presearch(surface, pt, surface.parameter_range(), 50)
+        }
+        Surface::NURBSSurface(surface) => {
+            modeling::algo::surface::presearch(surface, pt, surface.parameter_range(), 50)
+        }
+        Surface::RevolutedCurve(surface) => {
+            modeling::algo::surface::presearch(surface, pt, surface.parameter_range(), 50)
+        }
     }
 }
 
 fn meshing_surface(surface: &Surface, precision: f64, boundary: &Vec<[f32; 4]>) -> StructuredMesh {
     match surface {
-        Surface::BSplineSurface(surface) => StructuredMesh::from_surface(surface, surface.parameter_range(), precision),
-        Surface::NURBSSurface(surface) => StructuredMesh::from_surface(surface, surface.parameter_range(), precision),
-        Surface::RevolutedCurve(surface) => StructuredMesh::from_surface(surface, surface.parameter_range(), precision),
+        Surface::BSplineSurface(surface) => {
+            StructuredMesh::from_surface(surface, surface.parameter_range(), precision)
+        }
+        Surface::NURBSSurface(surface) => {
+            StructuredMesh::from_surface(surface, surface.parameter_range(), precision)
+        }
+        Surface::RevolutedCurve(surface) => {
+            StructuredMesh::from_surface(surface, surface.parameter_range(), precision)
+        }
         Surface::Plane(plane) => {
             let bdd: BoundingBox<Vector2> = boundary
                 .iter()
@@ -132,6 +145,47 @@ fn add_face(
     Some(())
 }
 
+impl TryIntoInstance<PolygonInstance> for Shell {
+    type Descriptor = ShapeInstanceDescriptor;
+    fn try_into_instance(
+        &self,
+        handler: &DeviceHandler,
+        shaders: &PolygonShaders,
+        desc: &ShapeInstanceDescriptor,
+    ) -> Option<PolygonInstance> {
+        let polygon = self.triangulation(desc.mesh_precision)?;
+        Some(polygon.into_instance(
+            handler,
+            shaders,
+            &PolygonInstanceDescriptor {
+                instance_state: desc.instance_state.clone(),
+            },
+        ))
+    }
+}
+
+impl IntoInstance<PolygonInstance> for Shell {
+    type Descriptor = ShapeInstanceDescriptor;
+    /// Creates `ShapeInstance` from `Shell`.
+    /// # Panics
+    /// Panic occurs when the polylined boundary cannot be
+    /// converted to the polyline in the surface parameter space.
+    /// This may be due to the following reasons.
+    /// - A boundary curve is not contained within the surface.
+    /// - The surface is not injective, or is too complecated.
+    /// - The surface is not regular: non-degenerate and differentiable.
+    #[inline(always)]
+    fn into_instance(
+        &self,
+        handler: &DeviceHandler,
+        shaders: &PolygonShaders,
+        desc: &ShapeInstanceDescriptor,
+    ) -> PolygonInstance {
+        self.try_into_instance(handler, shaders, desc)
+            .expect("failed to create instance")
+    }
+}
+
 impl TryIntoInstance<ShapeInstance> for Shell {
     type Descriptor = ShapeInstanceDescriptor;
     /// Tries to create `ShapeInstance` from `Shell`.
@@ -206,7 +260,8 @@ impl IntoInstance<WireFrameInstance> for Shell {
             .flatten()
             .flat_map(|edge| {
                 let curve = edge.oriented_curve();
-                let division = curve.parameter_division(curve.parameter_range(), desc.polyline_precision);
+                let division =
+                    curve.parameter_division(curve.parameter_range(), desc.polyline_precision);
                 lengths.push(division.len() as u32);
                 division
                     .into_iter()
@@ -313,7 +368,8 @@ impl IntoInstance<WireFrameInstance> for Solid {
             .flatten()
             .flat_map(|edge| {
                 let curve = edge.oriented_curve();
-                let division = curve.parameter_division(curve.parameter_range(), desc.polyline_precision);
+                let division =
+                    curve.parameter_division(curve.parameter_range(), desc.polyline_precision);
                 lengths.push(division.len() as u32);
                 division
                     .into_iter()
@@ -347,9 +403,7 @@ impl ShapeInstance {
         PreBindGroupLayoutEntry {
             visibility: ShaderStage::FRAGMENT,
             ty: BindingType::Buffer {
-                ty: BufferBindingType::Storage {
-                    read_only: true,
-                },
+                ty: BufferBindingType::Storage { read_only: true },
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },
@@ -426,9 +480,7 @@ impl ShapeInstance {
 
 impl Instance for ShapeInstance {
     type Shaders = ShapeShaders;
-    fn standard_shaders(creator: &InstanceCreator) -> ShapeShaders {
-        creator.shape_shaders.clone()
-    }
+    fn standard_shaders(creator: &InstanceCreator) -> ShapeShaders { creator.shape_shaders.clone() }
 }
 
 impl Rendered for ShapeInstance {
@@ -462,76 +514,83 @@ impl Rendered for ShapeInstance {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let (fragment_shader, fragment_entry) = match self.state.texture.is_some() {
-            true => (&self.shaders.tex_fragment_module, self.shaders.tex_fragment_entry),
+            true => (
+                &self.shaders.tex_fragment_module,
+                self.shaders.tex_fragment_entry,
+            ),
             false => (&self.shaders.fragment_module, self.shaders.fragment_entry),
         };
         let cull_mode = match self.state.backface_culling {
             true => Some(wgpu::Face::Back),
             false => None,
         };
-        Arc::new(handler.device().create_render_pipeline(&RenderPipelineDescriptor {
-            layout: Some(layout),
-            vertex: VertexState {
-                module: &self.shaders.vertex_module,
-                entry_point: self.shaders.vertex_entry,
-                buffers: &[VertexBufferLayout {
-                    array_stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
-                    step_mode: InputStepMode::Vertex,
-                    attributes: &[
-                        VertexAttribute {
-                            format: VertexFormat::Float32x3,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        VertexAttribute {
-                            format: VertexFormat::Float32x2,
-                            offset: 3 * 4,
-                            shader_location: 1,
-                        },
-                        VertexAttribute {
-                            format: VertexFormat::Float32x3,
-                            offset: 2 * 4 + 3 * 4,
-                            shader_location: 2,
-                        },
-                        VertexAttribute {
-                            format: VertexFormat::Uint32x2,
-                            offset: 3 * 4 + 2 * 4 + 3 * 4,
-                            shader_location: 3,
-                        },
-                    ],
-                }],
-            },
-            fragment: Some(FragmentState {
-                module: fragment_shader,
-                entry_point: fragment_entry,
-                targets: &[ColorTargetState {
-                    format: handler.sc_desc().format,
-                    blend: Some(BlendState::REPLACE),
-                    write_mask: ColorWrite::ALL,
-                }],
-            }),
-            primitive: PrimitiveState {
-                topology: PrimitiveTopology::TriangleList,
-                front_face: FrontFace::Ccw,
-                cull_mode,
-                polygon_mode: PolygonMode::Fill,
-                clamp_depth: false,
-                ..Default::default()
-            },
-            depth_stencil: Some(DepthStencilState {
-                format: TextureFormat::Depth32Float,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::Less,
-                stencil: Default::default(),
-                bias: Default::default(),
-            }),
-            multisample: MultisampleState {
-                count: sample_count,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            }, 
-            label: None,
-        }))
+        Arc::new(
+            handler
+                .device()
+                .create_render_pipeline(&RenderPipelineDescriptor {
+                    layout: Some(layout),
+                    vertex: VertexState {
+                        module: &self.shaders.vertex_module,
+                        entry_point: self.shaders.vertex_entry,
+                        buffers: &[VertexBufferLayout {
+                            array_stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                            step_mode: InputStepMode::Vertex,
+                            attributes: &[
+                                VertexAttribute {
+                                    format: VertexFormat::Float32x3,
+                                    offset: 0,
+                                    shader_location: 0,
+                                },
+                                VertexAttribute {
+                                    format: VertexFormat::Float32x2,
+                                    offset: 3 * 4,
+                                    shader_location: 1,
+                                },
+                                VertexAttribute {
+                                    format: VertexFormat::Float32x3,
+                                    offset: 2 * 4 + 3 * 4,
+                                    shader_location: 2,
+                                },
+                                VertexAttribute {
+                                    format: VertexFormat::Uint32x2,
+                                    offset: 3 * 4 + 2 * 4 + 3 * 4,
+                                    shader_location: 3,
+                                },
+                            ],
+                        }],
+                    },
+                    fragment: Some(FragmentState {
+                        module: fragment_shader,
+                        entry_point: fragment_entry,
+                        targets: &[ColorTargetState {
+                            format: handler.sc_desc().format,
+                            blend: Some(BlendState::REPLACE),
+                            write_mask: ColorWrite::ALL,
+                        }],
+                    }),
+                    primitive: PrimitiveState {
+                        topology: PrimitiveTopology::TriangleList,
+                        front_face: FrontFace::Ccw,
+                        cull_mode,
+                        polygon_mode: PolygonMode::Fill,
+                        clamp_depth: false,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(DepthStencilState {
+                        format: TextureFormat::Depth32Float,
+                        depth_write_enabled: true,
+                        depth_compare: wgpu::CompareFunction::Less,
+                        stencil: Default::default(),
+                        bias: Default::default(),
+                    }),
+                    multisample: MultisampleState {
+                        count: sample_count,
+                        mask: !0,
+                        alpha_to_coverage_enabled: false,
+                    },
+                    label: None,
+                }),
+        )
     }
 }
 
