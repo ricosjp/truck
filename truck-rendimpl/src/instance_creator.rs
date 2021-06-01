@@ -31,7 +31,8 @@ impl PolygonShaders {
     /// Creates default polygon shaders.
     #[inline(always)]
     pub fn default(device: &Device) -> Self {
-        let source = include_str!("shaders/microfacet-module.wgsl").to_string() + include_str!("shaders/polygon.wgsl");
+        let source = include_str!("shaders/microfacet-module.wgsl").to_string()
+            + include_str!("shaders/polygon.wgsl");
         let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(source.into()),
             flags: ShaderFlags::VALIDATION,
@@ -45,55 +46,6 @@ impl PolygonShaders {
             Arc::clone(&shader_module),
             "tex_main",
         )
-    }
-}
-
-impl ShapeShaders {
-    /// Constructor
-    /// # Parameters
-    /// - `vertex_module`: vertex shader module
-    /// - `vertex_entry`: entry point of vertex shader module
-    /// - `fragment_module`: fragment shader module without texture
-    /// - `fragment_entry`: entry point of fragment shader module without texture
-    /// - `tex_fragment_module`: fragment shader module with texture
-    /// - `tex_fragment_entry`: entry point of fragment shader module with texture
-    #[inline(always)]
-    pub fn new(
-        vertex_module: Arc<ShaderModule>,
-        vertex_entry: &'static str,
-        fragment_module: Arc<ShaderModule>,
-        fragment_entry: &'static str,
-        tex_fragment_module: Arc<ShaderModule>,
-        tex_fragment_entry: &'static str,
-    ) -> Self {
-        Self {
-            vertex_module,
-            vertex_entry,
-            fragment_module,
-            fragment_entry,
-            tex_fragment_module,
-            tex_fragment_entry,
-        }
-    }
-
-    /// Creates default shape shaders
-    #[inline(always)]
-    fn default(device: &Device) -> Self {
-        let source = include_str!("shaders/microfacet-module.wgsl").to_string() + include_str!("shaders/face.wgsl");
-        let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
-            source: ShaderSource::Wgsl(source.into()),
-            flags: ShaderFlags::VALIDATION,
-            label: None,
-        }));
-        Self::new(
-            Arc::clone(&shader_module),
-            "vs_main",
-            Arc::clone(&shader_module),
-            "nontex_main",
-            Arc::clone(&shader_module),
-            "tex_main",
-        )
- 
     }
 }
 
@@ -136,17 +88,20 @@ impl WireShaders {
     }
 }
 
-impl CreatorCreator for Scene {
+impl CreatorCreator for DeviceHandler {
     #[inline(always)]
     fn instance_creator(&self) -> InstanceCreator {
-        let device = self.device();
         InstanceCreator {
-            handler: self.device_handler().clone(),
-            polygon_shaders: PolygonShaders::default(device),
-            shape_shaders: ShapeShaders::default(device),
-            wire_shaders: WireShaders::default(device),
+            handler: self.clone(),
+            polygon_shaders: PolygonShaders::default(self.device()),
+            wire_shaders: WireShaders::default(self.device()),
         }
     }
+}
+
+impl CreatorCreator for Scene {
+    #[inline(always)]
+    fn instance_creator(&self) -> InstanceCreator { self.device_handler().instance_creator() }
 }
 
 impl InstanceCreator {

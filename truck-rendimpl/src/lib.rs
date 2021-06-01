@@ -11,15 +11,13 @@
     unused_qualifications
 )]
 
+extern crate truck_meshalgo;
 extern crate truck_modeling;
 extern crate truck_platform;
-extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::Arc;
 use truck_platform::{wgpu::*, *};
-
-const SURFACE_MESHING_TRIALS: usize = 100;
 
 /// Re-exports `truck_modeling`.
 pub mod modeling {
@@ -29,7 +27,7 @@ pub use modeling::*;
 
 /// Re-exports `truck_polymesh`.
 pub mod polymesh {
-    pub use truck_polymesh::*;
+    pub use truck_meshalgo::prelude::{PolygonMesh, StructuredMesh, Vertex};
 }
 pub use polymesh::*;
 
@@ -89,14 +87,14 @@ pub struct ShapeInstanceDescriptor {
 
 /// Configures of wire frame instance of polygon
 #[derive(Clone, Debug, Default)]
-pub struct PolygonWireFrameInstanceDescriptor {
+pub struct PolygonWireFrameDescriptor {
     /// configure of wire frame
     pub wireframe_state: WireFrameState,
 }
 
 /// Configures of wire frame instance of shape
 #[derive(Clone, Debug)]
-pub struct ShapeWireFrameInstanceDescriptor {
+pub struct ShapeWireFrameDescriptor {
     /// configure of wire frame
     pub wireframe_state: WireFrameState,
     /// precision for polyline
@@ -106,17 +104,6 @@ pub struct ShapeWireFrameInstanceDescriptor {
 /// shaders for rendering polygons
 #[derive(Debug, Clone)]
 pub struct PolygonShaders {
-    vertex_module: Arc<ShaderModule>,
-    vertex_entry: &'static str,
-    fragment_module: Arc<ShaderModule>,
-    fragment_entry: &'static str,
-    tex_fragment_module: Arc<ShaderModule>,
-    tex_fragment_entry: &'static str,
-}
-
-/// shaders for rendering shapes
-#[derive(Debug, Clone)]
-pub struct ShapeShaders {
     vertex_module: Arc<ShaderModule>,
     vertex_entry: &'static str,
     fragment_module: Arc<ShaderModule>,
@@ -160,29 +147,11 @@ pub struct WireFrameInstance {
     id: RenderID,
 }
 
-/// Instance of shape: `Shell` and `Solid` with geometric data.
-///
-/// One can duplicate shapes with different postures and materials
-/// that have the same mesh data.
-/// To save memory, mesh data on the GPU can be used again.
-///
-/// The duplicated shape by `Clone::clone` has the same mesh data and descriptor
-/// with original, however, its render id is different from the one of original.
-#[derive(Debug)]
-pub struct ShapeInstance {
-    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
-    boundary: Arc<BufferHandler>,
-    state: InstanceState,
-    shaders: ShapeShaders,
-    id: RenderID,
-}
-
 /// Constroctor for instances
 #[derive(Debug, Clone)]
 pub struct InstanceCreator {
     handler: DeviceHandler,
     polygon_shaders: PolygonShaders,
-    shape_shaders: ShapeShaders,
     wire_shaders: WireShaders,
 }
 

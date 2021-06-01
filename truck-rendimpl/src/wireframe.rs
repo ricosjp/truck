@@ -10,10 +10,10 @@ impl Default for WireFrameState {
     }
 }
 
-impl Default for ShapeWireFrameInstanceDescriptor {
+impl Default for ShapeWireFrameDescriptor {
     #[inline(always)]
     fn default() -> Self {
-        Self {
+        ShapeWireFrameDescriptor {
             wireframe_state: WireFrameState::default(),
             polyline_precision: 0.005,
         }

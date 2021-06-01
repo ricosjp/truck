@@ -20,7 +20,7 @@ const BOXCOLOR: [f64; 4] = [208.0 / 255.0, 176.0 / 255.0, 107.0 / 255.0, 1.0];
 
 struct MyApp {
     scene: Scene,
-    instances: Vec<ShapeInstance>,
+    instances: Vec<PolygonInstance>,
     matrices: Vec<Matrix4>,
 }
 
@@ -78,7 +78,7 @@ impl App for MyApp {
         let e = builder::tsweep(&v, Vector3::unit_x());
         let f = builder::tsweep(&e, Vector3::unit_y());
         let cube = builder::tsweep(&f, Vector3::unit_z());
-        let instance: ShapeInstance = scene
+        let instance: PolygonInstance = scene
             .instance_creator()
             .create_instance(&cube, &Default::default());
         let mut matrices = Vec::new();

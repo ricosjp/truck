@@ -1,6 +1,7 @@
 mod common;
 use image::{DynamicImage, ImageBuffer, Rgba};
 use std::sync::{Arc, Mutex};
+use truck_meshalgo::prelude::obj;
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
