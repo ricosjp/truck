@@ -87,14 +87,14 @@ pub struct ShapeInstanceDescriptor {
 
 /// Configures of wire frame instance of polygon
 #[derive(Clone, Debug, Default)]
-pub struct PolygonWireFrameInstanceDescriptor {
+pub struct PolygonWireFrameDescriptor {
     /// configure of wire frame
     pub wireframe_state: WireFrameState,
 }
 
 /// Configures of wire frame instance of shape
 #[derive(Clone, Debug)]
-pub struct ShapeWireFrameInstanceDescriptor {
+pub struct ShapeWireFrameDescriptor {
     /// configure of wire frame
     pub wireframe_state: WireFrameState,
     /// precision for polyline

@@ -83,12 +83,12 @@ impl IntoInstance<PolygonInstance> for Solid {
 }
 
 impl IntoInstance<WireFrameInstance> for Shell {
-    type Descriptor = ShapeWireFrameInstanceDescriptor;
+    type Descriptor = ShapeWireFrameDescriptor;
     fn into_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,
-        desc: &ShapeWireFrameInstanceDescriptor,
+        desc: &ShapeWireFrameDescriptor,
     ) -> WireFrameInstance {
         let mut lengths = Vec::new();
         let points: Vec<[f32; 3]> = self
@@ -127,12 +127,12 @@ impl IntoInstance<WireFrameInstance> for Shell {
 }
 
 impl IntoInstance<WireFrameInstance> for Solid {
-    type Descriptor = ShapeWireFrameInstanceDescriptor;
+    type Descriptor = ShapeWireFrameDescriptor;
     fn into_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,
-        desc: &ShapeWireFrameInstanceDescriptor,
+        desc: &ShapeWireFrameDescriptor,
     ) -> WireFrameInstance {
         let mut lengths = Vec::new();
         let points: Vec<[f32; 3]> = self
