@@ -74,6 +74,7 @@ fn nontex_polygon(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
                     roughness: 0.5,
                     reflectance: 0.25,
                     ambient_ratio: 0.02,
+                    alpha_blend: false,
                 },
                 ..Default::default()
             },
@@ -95,6 +96,7 @@ fn nontex_shape(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
                     roughness: 0.5,
                     reflectance: 0.25,
                     ambient_ratio: 0.02,
+                    alpha_blend: false,
                 },
                 ..Default::default()
             },
@@ -173,6 +175,7 @@ fn tex_polygon(
                     roughness: 0.5,
                     reflectance: 0.25,
                     ambient_ratio: 0.02,
+                    alpha_blend: false,
                 },
                 texture: Some(attach),
                 ..Default::default()
@@ -196,6 +199,7 @@ fn tex_shape(scene: &mut Scene, creator: &InstanceCreator, gradtex: &Arc<Dynamic
                     roughness: 0.5,
                     reflectance: 0.25,
                     ambient_ratio: 0.02,
+                    alpha_blend: false,
                 },
                 texture: Some(attach),
                 ..Default::default()

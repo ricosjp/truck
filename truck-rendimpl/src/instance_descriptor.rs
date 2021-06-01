@@ -8,6 +8,7 @@ impl Default for Material {
             roughness: 0.5,
             reflectance: 0.25,
             ambient_ratio: 0.02,
+            alpha_blend: false,
         }
     }
 }

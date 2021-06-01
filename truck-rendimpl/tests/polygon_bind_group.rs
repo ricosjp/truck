@@ -79,6 +79,7 @@ fn nontex_inst_desc() -> PolygonInstanceDescriptor {
                 roughness: 0.31415,
                 reflectance: 0.29613,
                 ambient_ratio: 0.92,
+                alpha_blend: false,
             },
             texture: None,
             backface_culling: true,

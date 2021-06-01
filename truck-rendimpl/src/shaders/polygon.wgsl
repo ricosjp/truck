@@ -90,7 +90,7 @@ fn nontex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
     pre_color = ambient_correction(pre_color, material.material);
 
-    return vec4<f32>(pre_color, 1.0);
+    return vec4<f32>(pre_color, material.material.albedo.a);
 }
 
 [[stage(fragment)]]
@@ -112,5 +112,5 @@ fn tex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
     pre_color = ambient_correction(pre_color, mat);
 
-    return vec4<f32>(pre_color, 1.0);
+    return vec4<f32>(pre_color, mat.albedo.a);
 }
