@@ -31,7 +31,8 @@ impl PolygonShaders {
     /// Creates default polygon shaders.
     #[inline(always)]
     pub fn default(device: &Device) -> Self {
-        let source = include_str!("shaders/microfacet-module.wgsl").to_string() + include_str!("shaders/polygon.wgsl");
+        let source = include_str!("shaders/microfacet-module.wgsl").to_string()
+            + include_str!("shaders/polygon.wgsl");
         let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(source.into()),
             flags: ShaderFlags::VALIDATION,
@@ -87,16 +88,20 @@ impl WireShaders {
     }
 }
 
-impl CreatorCreator for Scene {
+impl CreatorCreator for DeviceHandler {
     #[inline(always)]
     fn instance_creator(&self) -> InstanceCreator {
-        let device = self.device();
         InstanceCreator {
-            handler: self.device_handler().clone(),
-            polygon_shaders: PolygonShaders::default(device),
-            wire_shaders: WireShaders::default(device),
+            handler: self.clone(),
+            polygon_shaders: PolygonShaders::default(self.device()),
+            wire_shaders: WireShaders::default(self.device()),
         }
     }
+}
+
+impl CreatorCreator for Scene {
+    #[inline(always)]
+    fn instance_creator(&self) -> InstanceCreator { self.device_handler().instance_creator() }
 }
 
 impl InstanceCreator {
