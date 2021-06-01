@@ -112,17 +112,6 @@ pub struct PolygonShaders {
     tex_fragment_entry: &'static str,
 }
 
-/// shaders for rendering shapes
-#[derive(Debug, Clone)]
-pub struct ShapeShaders {
-    vertex_module: Arc<ShaderModule>,
-    vertex_entry: &'static str,
-    fragment_module: Arc<ShaderModule>,
-    fragment_entry: &'static str,
-    tex_fragment_module: Arc<ShaderModule>,
-    tex_fragment_entry: &'static str,
-}
-
 /// shaders for rendering wireframes
 #[derive(Debug, Clone)]
 pub struct WireShaders {
@@ -158,29 +147,11 @@ pub struct WireFrameInstance {
     id: RenderID,
 }
 
-/// Instance of shape: `Shell` and `Solid` with geometric data.
-///
-/// One can duplicate shapes with different postures and materials
-/// that have the same mesh data.
-/// To save memory, mesh data on the GPU can be used again.
-///
-/// The duplicated shape by `Clone::clone` has the same mesh data and descriptor
-/// with original, however, its render id is different from the one of original.
-#[derive(Debug)]
-pub struct ShapeInstance {
-    polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
-    boundary: Arc<BufferHandler>,
-    state: InstanceState,
-    shaders: ShapeShaders,
-    id: RenderID,
-}
-
 /// Constroctor for instances
 #[derive(Debug, Clone)]
 pub struct InstanceCreator {
     handler: DeviceHandler,
     polygon_shaders: PolygonShaders,
-    shape_shaders: ShapeShaders,
     wire_shaders: WireShaders,
 }
 
