@@ -28,7 +28,7 @@ struct MyApp {
     creator: InstanceCreator,
     rotate_flag: bool,
     prev_cursor: Vector2,
-    instance: ShapeInstance,
+    instance: PolygonInstance,
     wireframe: WireFrameInstance,
     render_mode: RenderMode,
 }
@@ -91,7 +91,7 @@ impl MyApp {
     fn load_shape<R: Read>(
         creator: &InstanceCreator,
         reader: R,
-    ) -> (ShapeInstance, WireFrameInstance) {
+    ) -> (PolygonInstance, WireFrameInstance) {
         let solid = Solid::extract(serde_json::from_reader(reader).unwrap()).unwrap();
         let mut bdd_box = BoundingBox::new();
         solid

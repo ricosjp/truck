@@ -86,7 +86,7 @@ fn nontex_polygon(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
 fn nontex_shape(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let cube: ShapeInstance = creator.create_instance(
+    let cube: PolygonInstance = creator.create_instance(
         &shape_cube(),
         &ShapeInstanceDescriptor {
             instance_state: InstanceState {
@@ -187,7 +187,7 @@ fn tex_shape(scene: &mut Scene, creator: &InstanceCreator, gradtex: &Arc<Dynamic
     let (device, sc_desc) = (scene.device(), scene.sc_desc());
     let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
     let attach = creator.create_texture(gradtex);
-    let cube: ShapeInstance = creator.create_instance(
+    let cube: PolygonInstance = creator.create_instance(
         &shape_cube(),
         &ShapeInstanceDescriptor {
             instance_state: InstanceState {

@@ -13,7 +13,7 @@ use app::*;
 
 struct MyApp {
     scene: Scene,
-    object: Arc<Mutex<ShapeInstance>>,
+    object: Arc<Mutex<PolygonInstance>>,
     closed: Arc<Mutex<bool>>,
     updated: Arc<Mutex<bool>>,
     thread: Option<JoinHandle<()>>,
@@ -60,7 +60,7 @@ impl MyApp {
     }
     fn init_thread(
         creator: InstanceCreator,
-        object: Arc<Mutex<ShapeInstance>>,
+        object: Arc<Mutex<PolygonInstance>>,
         closed: Arc<Mutex<bool>>,
         updated: Arc<Mutex<bool>>,
         shell: Shell,
@@ -103,7 +103,7 @@ impl MyApp {
                     },
                 );
                 let mut object = object.lock().unwrap();
-                object.swap_faces(&mut another_object);
+                object.swap_vertex(&mut another_object);
             }
         })
     }

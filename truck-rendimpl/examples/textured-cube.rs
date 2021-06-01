@@ -80,7 +80,7 @@ impl App for MyApp {
             },
             ..Default::default()
         };
-        let shape: ShapeInstance = scene
+        let shape: PolygonInstance = scene
             .instance_creator()
             .create_instance(&Self::create_cube(), &desc);
         scene.add_object(&shape);
