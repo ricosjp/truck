@@ -12,22 +12,16 @@
 )]
 
 extern crate truck_meshalgo;
-extern crate truck_modeling;
+extern crate truck_topology;
 extern crate truck_platform;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::Arc;
 use truck_platform::{wgpu::*, *};
 
-/// Re-exports `truck_modeling`.
-pub mod modeling {
-    pub use truck_modeling::*;
-}
-pub use modeling::*;
-
 /// Re-exports `truck_polymesh`.
 pub mod polymesh {
-    pub use truck_meshalgo::prelude::{PolygonMesh, StructuredMesh, Vertex};
+    pub use truck_meshalgo::prelude::{base::*, PolygonMesh, StructuredMesh, Vertex};
 }
 pub use polymesh::*;
 
@@ -209,17 +203,25 @@ pub trait Instance {
     fn standard_shaders(creator: &InstanceCreator) -> Self::Shaders;
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+struct AttrVertex {
+    pub position: [f32; 3],
+    pub uv_coord: [f32; 2],
+    pub normal: [f32; 3],
+}
+
 #[derive(Debug, Clone)]
 struct ExpandedPolygon<V> {
     vertices: Vec<V>,
     indices: Vec<u32>,
 }
 
-mod expanded;
 /// utility for creating `Texture`
 pub mod image2texture;
 mod instance_creator;
 mod instance_descriptor;
+mod polygon_instance;
 mod polyrend;
 mod shaperend;
-mod wireframe;
+mod wireframe_instance;

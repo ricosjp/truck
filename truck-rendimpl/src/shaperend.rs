@@ -1,5 +1,6 @@
 use crate::*;
 use truck_meshalgo::tessellation::*;
+use truck_topology::*;
 
 impl Default for ShapeInstanceDescriptor {
     #[inline(always)]
@@ -38,7 +39,9 @@ impl<Shape: MeshableShape> TryIntoInstance<PolygonInstance> for Shape {
     }
 }
 
-impl IntoInstance<PolygonInstance> for Shell {
+impl<P, C, S> IntoInstance<PolygonInstance> for Shell<P, C, S>
+where Shell<P, C, S>: MeshableShape
+{
     type Descriptor = ShapeInstanceDescriptor;
     /// Creates `PolygonInstance` from `Shell`.
     /// # Panics
@@ -60,7 +63,9 @@ impl IntoInstance<PolygonInstance> for Shell {
     }
 }
 
-impl IntoInstance<PolygonInstance> for Solid {
+impl<P, C, S> IntoInstance<PolygonInstance> for Solid<P, C, S>
+where Solid<P, C, S>: MeshableShape
+{
     type Descriptor = ShapeInstanceDescriptor;
     /// Creates `PolygonInstance` from `Solid`.
     /// # Panics
@@ -82,7 +87,9 @@ impl IntoInstance<PolygonInstance> for Solid {
     }
 }
 
-impl IntoInstance<WireFrameInstance> for Shell {
+impl<C, S> IntoInstance<WireFrameInstance> for Shell<Point3, C, S>
+where C: PolylineableCurve
+{
     type Descriptor = ShapeWireFrameDescriptor;
     fn into_instance(
         &self,
@@ -126,7 +133,9 @@ impl IntoInstance<WireFrameInstance> for Shell {
     }
 }
 
-impl IntoInstance<WireFrameInstance> for Solid {
+impl<C, S> IntoInstance<WireFrameInstance> for Solid<Point3, C, S>
+where C: PolylineableCurve
+{
     type Descriptor = ShapeWireFrameDescriptor;
     fn into_instance(
         &self,
