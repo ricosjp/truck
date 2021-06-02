@@ -2,11 +2,11 @@
 //!
 //! In each frame, the NURBS surface is devided into mesh.
 
-use modeling::Surface;
 use std::sync::{Arc, Mutex};
 use std::thread::*;
 use truck_platform::*;
 use truck_rendimpl::*;
+use truck_modeling::{*, Surface};
 use wgpu::*;
 mod app;
 use app::*;

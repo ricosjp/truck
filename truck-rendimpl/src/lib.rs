@@ -12,22 +12,16 @@
 )]
 
 extern crate truck_meshalgo;
-extern crate truck_modeling;
+extern crate truck_topology;
 extern crate truck_platform;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::Arc;
 use truck_platform::{wgpu::*, *};
 
-/// Re-exports `truck_modeling`.
-pub mod modeling {
-    pub use truck_modeling::*;
-}
-pub use modeling::*;
-
 /// Re-exports `truck_polymesh`.
 pub mod polymesh {
-    pub use truck_meshalgo::prelude::{PolygonMesh, StructuredMesh, Vertex};
+    pub use truck_meshalgo::prelude::{base::*, PolygonMesh, StructuredMesh, Vertex};
 }
 pub use polymesh::*;
 
