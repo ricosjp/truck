@@ -13,9 +13,18 @@ struct MyApp {
     instance1: PolygonInstance,
     instance2: WireFrameInstance,
     instance3: WireFrameInstance,
+    wireinstance: WireFrameInstance,
     rotate_flag: bool,
     prev_cursor: Vector2,
-    rendering_shape: bool,
+    render_mode: RenderMode,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum RenderMode {
+    All,
+    Surface,
+    WireFrame,
+    InterferenceOnly,
 }
 
 impl App for MyApp {
@@ -51,8 +60,28 @@ impl App for MyApp {
         let sphere1 = sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
         let intersect = sphere0.extract_interference(&sphere1);
         let creator = scene.instance_creator();
-        let instance0 = creator.create_instance(&sphere0, &Default::default());
-        let instance1 = creator.create_instance(&sphere1, &Default::default());
+        let instance0 = creator.create_instance(&sphere0, &PolygonInstanceDescriptor {
+            instance_state: InstanceState {
+                material: Material {
+                    albedo: Vector4::new(1.0, 1.0, 1.0, 0.8),
+                    alpha_blend: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        let instance1 = creator.create_instance(&sphere1, &PolygonInstanceDescriptor {
+            instance_state: InstanceState {
+                material: Material {
+                    albedo: Vector4::new(1.0, 1.0, 1.0, 0.8),
+                    alpha_blend: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
         let instance2 = creator.create_instance(&sphere0, &Default::default());
         let instance3 = creator.create_instance(&sphere1, &Default::default());
         let wireinstance = creator.create_instance(
@@ -75,7 +104,8 @@ impl App for MyApp {
             instance1,
             instance2,
             instance3,
-            rendering_shape: true,
+            wireinstance,
+            render_mode: RenderMode::All,
         }
     }
     fn mouse_input(&mut self, state: ElementState, button: MouseButton) -> ControlFlow {
@@ -145,18 +175,35 @@ impl App for MyApp {
         };
         match keycode {
             VirtualKeyCode::Space => {
-                if self.rendering_shape {
-                    self.scene.remove_object(&self.instance0);
-                    self.scene.remove_object(&self.instance1);
-                    self.scene.remove_object(&self.instance2);
-                    self.scene.remove_object(&self.instance3);
-                } else {
-                    self.scene.add_object(&self.instance0);
-                    self.scene.add_object(&self.instance1);
-                    self.scene.add_object(&self.instance2);
-                    self.scene.add_object(&self.instance3);
+                self.render_mode = match self.render_mode {
+                    RenderMode::All => RenderMode::Surface,
+                    RenderMode::Surface => RenderMode::WireFrame,
+                    RenderMode::WireFrame => RenderMode::InterferenceOnly,
+                    RenderMode::InterferenceOnly => RenderMode::All,
+                };
+                self.scene.clear_objects();
+                match self.render_mode {
+                    RenderMode::All => {
+                        self.scene.add_object(&self.instance0);
+                        self.scene.add_object(&self.instance1);
+                        self.scene.add_object(&self.instance2);
+                        self.scene.add_object(&self.instance3);
+                        self.scene.add_object(&self.wireinstance);
+                    }
+                    RenderMode::Surface => {
+                        self.scene.add_object(&self.instance0);
+                        self.scene.add_object(&self.instance1);
+                        self.scene.add_object(&self.wireinstance);
+                    }
+                    RenderMode::WireFrame => {
+                        self.scene.add_object(&self.instance2);
+                        self.scene.add_object(&self.instance3);
+                        self.scene.add_object(&self.wireinstance);
+                    }
+                    RenderMode::InterferenceOnly => {
+                        self.scene.add_object(&self.wireinstance);
+                    }
                 }
-                self.rendering_shape = !self.rendering_shape;
             }
             _ => {}
         }

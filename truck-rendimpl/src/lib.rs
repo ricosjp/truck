@@ -45,6 +45,8 @@ pub struct Material {
     pub reflectance: f64,
     /// ratio of ambient: [0, 1]. Default is 0.02.
     pub ambient_ratio: f64,
+    /// alpha blend flag
+    pub alpha_blend: bool,
 }
 
 /// Configures of instances.

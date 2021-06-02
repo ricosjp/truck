@@ -100,6 +100,7 @@ impl App for MyApp {
                         reflectance: s,
                         roughness: t,
                         ambient_ratio: 0.02,
+                        alpha_blend: false,
                     },
                     ..Default::default()
                 };

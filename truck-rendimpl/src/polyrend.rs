@@ -286,6 +286,10 @@ impl Rendered for PolygonInstance {
             true => Some(wgpu::Face::Back),
             false => None,
         };
+        let blend = match self.state.material.alpha_blend {
+            true => Some(BlendState::ALPHA_BLENDING),
+            false => Some(BlendState::REPLACE),
+        };
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
             vertex: VertexState {
@@ -318,7 +322,7 @@ impl Rendered for PolygonInstance {
                 entry_point: fragment_entry,
                 targets: &[ColorTargetState {
                     format: sc_desc.format,
-                    blend: Some(BlendState::REPLACE),
+                    blend,
                     write_mask: ColorWrite::ALL,
                 }],
             }),
@@ -340,7 +344,7 @@ impl Rendered for PolygonInstance {
             multisample: MultisampleState {
                 count: sample_count,
                 mask: !0,
-                alpha_to_coverage_enabled: false,
+                alpha_to_coverage_enabled: true,
             },
             label: None,
         });

@@ -57,6 +57,7 @@ impl MyApp {
                     reflectance: 0.5,
                     roughness: 0.1,
                     ambient_ratio: 0.02,
+                    alpha_blend: false,
                 };
                 self.scene.add_object(&self.instance);
             }
@@ -70,6 +71,7 @@ impl MyApp {
                     reflectance: 0.0,
                     roughness: 0.0,
                     ambient_ratio: 1.0,
+                    alpha_blend: false,
                 };
                 self.wireframe.instance_state_mut().color = Vector4::new(1.0, 1.0, 1.0, 1.0);
                 self.scene.add_object(&self.instance);
@@ -81,6 +83,7 @@ impl MyApp {
                     reflectance: 0.5,
                     roughness: 0.1,
                     ambient_ratio: 0.02,
+                    alpha_blend: false,
                 };
                 self.wireframe.instance_state_mut().color = Vector4::new(0.0, 0.0, 0.0, 1.0);
                 self.scene.add_object(&self.instance);
