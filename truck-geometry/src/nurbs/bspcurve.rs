@@ -204,17 +204,17 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
     #[inline(always)]
     pub fn der(&self, t: f64) -> V {
         let k = self.degree();
-        let BSplineCurve {
-            ref knot_vec,
-            ref control_points,
-        } = self;
-        let basis = knot_vec.try_bspline_basis_functions(k - 1, t).unwrap();
-        let closure = move |sum: V, (i, pt): (usize, &V)| {
-            let coef0 = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
-            let coef1 = inv_or_zero(knot_vec[i + k + 1] - knot_vec[i + 1]);
-            sum + *pt * (basis[i] * coef0 - basis[i + 1] * coef1)
+        let knot_vec = self.knot_vec();
+        let closure = move |sum: V, (i, b): (usize, f64)| {
+            let coef = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
+            sum + self.delta_control_points(i) * b * coef
         };
-        control_points.iter().enumerate().fold(V::zero(), closure) * k as f64
+        knot_vec
+            .bspline_basis_functions(k - 1, t)
+            .into_iter()
+            .enumerate()
+            .fold(V::zero(), closure)
+            * k as f64
     }
     /// Substitutes to the 2nd-ord derived B-spline curve.
     /// # Examples
@@ -242,20 +242,18 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
         if k < 2 {
             return V::zero();
         }
-        let BSplineCurve {
-            ref knot_vec,
-            ref control_points,
-        } = self;
-        let basis = knot_vec.try_bspline_basis_functions(k - 2, t).unwrap();
-        let closure = move |sum: V, (i, pt): (usize, &V)| {
-            let a = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
-            let b = inv_or_zero(knot_vec[i + k + 1] - knot_vec[i + 1]);
-            let c = inv_or_zero(knot_vec[i + k - 1] - knot_vec[i]);
-            let d = inv_or_zero(knot_vec[i + k] - knot_vec[i + 1]);
-            let e = inv_or_zero(knot_vec[i + k + 1] - knot_vec[i + 2]);
-            sum + *pt * (basis[i] * a * c - basis[i + 1] * (a + b) * d + basis[i + 2] * b * e)
+        let knot_vec = self.knot_vec();
+        let closure = move |sum: V, (i, b): (usize, f64)| {
+            let coef = inv_or_zero(knot_vec[i + k - 1] - knot_vec[i]);
+            sum + self.delta2_control_points(i) * b * coef
         };
-        control_points.iter().enumerate().fold(V::zero(), closure) * k as f64 * (k - 1) as f64
+        knot_vec
+            .bspline_basis_functions(k - 2, t)
+            .into_iter()
+            .enumerate()
+            .fold(V::zero(), closure)
+            * k as f64
+            * (k - 1) as f64
     }
     /// Returns the closure of substitution.
     /// # Examples
@@ -282,6 +280,22 @@ impl<V: VectorSpace<Scalar = f64>> BSplineCurve<V> {
             self.control_points[i - 1] * (-1.0)
         } else {
             self.control_points[i] - self.control_points[i - 1]
+        }
+    }
+    #[inline(always)]
+    fn delta2_control_points(&self, i: usize) -> V {
+        let k = self.degree();
+        let knot_vec = self.knot_vec();
+        if i == 0 {
+            let coef = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
+            self.delta_control_points(i) * coef
+        } else if i == self.control_points.len() + 1 {
+            let coef = inv_or_zero(knot_vec[i - 1 + k] - knot_vec[i - 1]);
+            self.delta_control_points(i - 1) * (-coef)
+        } else {
+            let coef0 = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
+            let coef1 = inv_or_zero(knot_vec[i - 1 + k] - knot_vec[i - 1]);
+            self.delta_control_points(i) * coef0 - self.delta_control_points(i - 1) * coef1
         }
     }
     /// Returns the derived B-spline curve.
