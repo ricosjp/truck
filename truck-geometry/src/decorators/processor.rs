@@ -291,8 +291,8 @@ mod tests {
         const DEGREE: usize = 3;
         const DIVISION: usize = 4;
         let knot_vec = KnotVec::uniform_knot(DEGREE, DIVISION);
-        let control_points: Vec<Vector3> = (0..DEGREE + DIVISION)
-            .map(|i| Vector3::new(i as f64, 20.0 * rand::random::<f64>() - 10.0, 0.0))
+        let control_points: Vec<Point3> = (0..DEGREE + DIVISION)
+            .map(|i| Point3::new(i as f64, 20.0 * rand::random::<f64>() - 10.0, 0.0))
             .collect();
         let mut curve = BSplineCurve::new(knot_vec, control_points);
         let mut processor = Processor::new(curve.clone());
@@ -311,7 +311,7 @@ mod tests {
             println!("ommited: {:?}", mat);
             return;
         }
-        curve = mat * curve;
+        curve.transform_by(mat);
         processor.transform_by(mat);
         assert_eq!(curve.parameter_range(), processor.parameter_range());
 
@@ -342,10 +342,10 @@ mod tests {
         const DIVISION: usize = 4;
         let knot_vec = KnotVec::uniform_knot(DEGREE, DIVISION);
         let knot_vecs = (knot_vec.clone(), knot_vec);
-        let control_points: Vec<Vec<Vector3>> = (0..DEGREE + DIVISION)
+        let control_points: Vec<Vec<Point3>> = (0..DEGREE + DIVISION)
             .map(|i| {
                 (0..DEGREE + DIVISION)
-                    .map(|j| Vector3::new(i as f64, j as f64, 20.0 * rand::random::<f64>() - 10.0))
+                    .map(|j| Point3::new(i as f64, j as f64, 20.0 * rand::random::<f64>() - 10.0))
                     .collect()
             })
             .collect();
@@ -366,7 +366,7 @@ mod tests {
             println!("ommited: {:?}", mat);
             return;
         }
-        surface = mat * surface;
+        surface.transform_by(mat);
         processor.transform_by(mat);
         assert_eq!(surface.parameter_range(), processor.parameter_range());
 

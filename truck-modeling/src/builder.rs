@@ -392,7 +392,7 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
         &move |pt| trsl.transform_point(*pt),
         &move |curve| curve.transformed(trsl),
         &move |surface| surface.transformed(trsl),
-        &move |pt0, pt1| Curve::BSplineCurve(geom_impls::line(pt0.to_vec(), pt1.to_vec())),
+        &move |pt0, pt1| Curve::BSplineCurve(geom_impls::line(*pt0, *pt1)),
         &move |curve0, curve1| {
             Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::homotopy(
                 curve0.clone().lift_up(),

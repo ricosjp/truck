@@ -108,7 +108,7 @@ impl MyApp {
                 bdd_box += match curve {
                     Curve::BSplineCurve(curve) => {
                         let bdb = curve.roughly_bounding_box();
-                        vec![Point3::from_vec(*bdb.max()), Point3::from_vec(*bdb.min())]
+                        vec![*bdb.max(), *bdb.min()]
                             .into_iter()
                             .collect()
                     }

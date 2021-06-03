@@ -88,9 +88,9 @@ fn pcurve_test() {
     let curve = BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![
-            Vector2::new(1.0, 1.0),
-            Vector2::new(1.0, 0.0),
-            Vector2::new(0.0, 0.0),
+            Point2::new(1.0, 1.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(0.0, 0.0),
         ],
     );
     let surface = BSplineSurface::new(
@@ -109,7 +109,7 @@ fn pcurve_test() {
         let t = i as f64 / N as f64;
         assert_near!(
             pcurve.subs(t),
-            Point3::new(
+            Vector3::new(
                 (1.0 - t * t) * (1.0 - t * t),
                 (1.0 - t) * (1.0 - t),
                 1.0 - t * t * t * t,

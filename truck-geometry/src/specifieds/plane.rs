@@ -66,7 +66,7 @@ impl Plane {
     /// let pt1 = Point3::new(1.0, 1.0, 3.0);
     /// let pt2 = Point3::new(0.0, 2.0, 3.0);
     /// let plane: Plane = Plane::new(pt0, pt1, pt2);
-    /// let surface: BSplineSurface<Vector3> = plane.into_bspline();
+    /// let surface: BSplineSurface<Point3> = plane.into_bspline();
     /// assert_eq!(surface.parameter_range(), ((0.0, 1.0), (0.0, 1.0)));
     ///
     /// const N: usize = 100;
@@ -74,20 +74,20 @@ impl Plane {
     ///     for j in 0..=N {
     ///         let u = i as f64 / N as f64;
     ///         let v = j as f64 / N as f64;
-    ///         let res = ParametricSurface::subs(&surface, u, v);
+    ///         let res = surface.subs(u, v);
     ///         let ans = plane.subs(u, v);
     ///         assert_near!(ans, res);
     ///     }
     /// }
     /// ```
     #[inline(always)]
-    pub fn into_bspline(&self) -> BSplineSurface<Vector3> {
-        let o = self.o.to_vec();
-        let p = self.p.to_vec();
-        let q = self.q.to_vec();
+    pub fn into_bspline(&self) -> BSplineSurface<Point3> {
+        let o = self.o;
+        let p = self.p;
+        let q = self.q;
         BSplineSurface::debug_new(
             (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
-            vec![vec![o, q], vec![p, p + q - o]],
+            vec![vec![o, q], vec![p, p + (q - o)]],
         )
     }
     /// into NURBS surface
@@ -166,10 +166,10 @@ impl Invertible for Plane {
     fn invert(&mut self) { *self = self.inverse(); }
 }
 
-impl IncludeCurve<BSplineCurve<Vector3>> for Plane {
+impl IncludeCurve<BSplineCurve<Point3>> for Plane {
     #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
-        let origin = self.origin().to_vec();
+    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
+        let origin = self.origin();
         let normal = self.normal();
         curve
             .control_points()

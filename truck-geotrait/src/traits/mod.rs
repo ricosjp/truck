@@ -22,19 +22,29 @@ pub trait SearchParameter {
 }
 
 /// Oriented and reversible
-pub trait Invertible {
+pub trait Invertible: Clone {
     /// Inverts `self`
     fn invert(&mut self);
     /// Returns the inverse.
-    fn inverse(&self) -> Self;
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        let mut res = self.clone();
+        res.invert();
+        res
+    }
 }
 
 /// Transform geometry
-pub trait Transformed<T> {
+pub trait Transformed<T>: Clone {
     /// transform by `trans`.
     fn transform_by(&mut self, trans: T);
     /// transformed geometry by `trans`.
-    fn transformed(&self, trans: T) -> Self;
+    #[inline(always)]
+    fn transformed(&self, trans: T) -> Self {
+        let mut res = self.clone();
+        res.transform_by(trans);
+        res
+    }
 }
 
 impl Invertible for (usize, usize) {
