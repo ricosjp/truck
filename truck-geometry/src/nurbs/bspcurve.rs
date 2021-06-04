@@ -978,15 +978,14 @@ impl<P: ControlPoint + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
     ///
     /// let mut part0 = bspcurve.clone();
     /// let mut part1 = part0.cut(0.56);
-    /// part0.try_concat(&mut part1).unwrap();
-    /// assert!(bspcurve.near2_as_curve(&part0));
+    /// let concatted = part0.try_concat(&mut part1).unwrap();
+    /// assert!(bspcurve.near2_as_curve(&concatted));
     /// ```
     /// # Failure
     /// If the back of the knot vector of `self` does not coincides with the front of the one of `other`,
-    /// returns [`Error::DifferentBackFront`](/errors/enum.Error.html#variant.DifferentBackFront).
     /// ```
     /// use truck_geometry::*;
-    /// use errors::Error;
+    /// use truck_geotrait::traits::ConcatError;
     ///
     /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
@@ -995,29 +994,7 @@ impl<P: ControlPoint + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
     /// let ctrl_pts1 = vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)];
     /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
     ///
-    /// assert_eq!(bspcurve0.try_concat(&mut bspcurve1), Err(Error::DifferentBackFront(1.0, 2.0)));
-    /// ```
-    /// # Remarks
-    /// Unlike `Vec::append()`, this method does not change `other` as a curve.  
-    /// However, side effects, such as degree synchronization, or knot vector clamped, do occur.
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts1 = vec![Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// bspcurve1.knot_translate(1.0);
-    /// let org_curve1 = bspcurve1.clone();
-    ///
-    /// bspcurve0.try_concat(&mut bspcurve1).unwrap();
-    ///
-    /// // do not change bspcurve as a curve
-    /// assert!(bspcurve1.near2_as_curve(&org_curve1));
-    /// // The degree is changed.
-    /// assert_ne!(bspcurve1.degree(), org_curve1.degree());
+    /// assert_eq!(bspcurve0.try_concat(&mut bspcurve1), Err(ConcatError::DisconnectedParameters(1.0, 2.0)));
     /// ```
     fn try_concat(&self, other: &BSplineCurve<P>) -> std::result::Result<Self, ConcatError<P>> {
         let mut curve0 = self.clone();

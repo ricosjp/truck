@@ -88,7 +88,7 @@ where Self::Point: Debug {
 }
 
 /// Error for concat curves
-#[derive(Clone, Copy, Debug, Error)]
+#[derive(Clone, Copy, PartialEq, Debug, Error)]
 pub enum ConcatError<Point: Debug> {
     /// Failed to concat curves since the end parameter of the first curve is different form the start parameter of the second curve.
     #[error("The end parameter {0} of the first curve is different from the start parameter {1} of the second curve.")]
