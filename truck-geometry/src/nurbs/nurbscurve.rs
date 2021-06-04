@@ -261,18 +261,34 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSCurve<V> {
     /// Makes two splines having the same normalized knot vectors.  
     /// cf.[`BSplineCurve::syncro_knots`](./struct.BSplineCurve.html#method.syncro_knots)
     pub fn syncro_knots(&mut self, other: &mut Self) { self.0.syncro_knots(&mut other.0) }
-
-    /// Cuts the curve to two curves at the parameter `t`.  
-    /// cf.[`BSplineCurve::syncro_knots`](./struct.BSplineCurve.html#method.syncro_knots)
-    pub fn cut(&mut self, t: f64) -> Self { NURBSCurve(self.0.cut(t)) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> Concat<NURBSCurve<V>> for NURBSCurve<V>
-where <V as Homogeneous<f64>>::Point: Debug {
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> ParameterTransform
+    for NURBSCurve<V>
+{
+    #[inline(always)]
+    fn parameter_transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
+        self.0.parameter_transform(scalar, r#move);
+        self
+    }
+}
+
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> Cut for NURBSCurve<V> {
+    #[inline(always)]
+    fn cut(&mut self, t: f64) -> Self { NURBSCurve(self.0.cut(t)) }
+}
+
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> Concat<NURBSCurve<V>>
+    for NURBSCurve<V>
+where <V as Homogeneous<f64>>::Point: Debug
+{
     type Output = NURBSCurve<V>;
     /// Concats two NURBS curves.  
     /// cf.[`BSplineCurve::try_concat`](./struct.BSplineCurve.html#method.try_concat)
-    fn try_concat(&self, other: &Self) -> std::result::Result<Self, ConcatError<<V as Homogeneous<f64>>::Point>> {
+    fn try_concat(
+        &self,
+        other: &Self,
+    ) -> std::result::Result<Self, ConcatError<<V as Homogeneous<f64>>::Point>> {
         let curve0 = self.clone();
         let mut curve1 = other.clone();
         let w0 = curve0.0.control_points.last().unwrap().weight();
@@ -280,7 +296,7 @@ where <V as Homogeneous<f64>>::Point: Debug {
         curve1.transform_control_points(|pt| *pt = *pt * (w0 / w1));
         match curve0.0.try_concat(&curve1.0) {
             Ok(curve) => Ok(NURBSCurve::new(curve)),
-            Err(err) => Err(err.point_map(|v| v.to_point()))
+            Err(err) => Err(err.point_map(|v| v.to_point())),
         }
     }
 }
@@ -506,6 +522,19 @@ where M: Copy + std::ops::Mul<V, Output = V>
             .control_points
             .iter_mut()
             .for_each(move |v| *v = trans * *v)
+    }
+}
+
+impl<V: Homogeneous<f64>> From<BSplineCurve<V::Point>> for NURBSCurve<V> {
+    fn from(bspcurve: BSplineCurve<V::Point>) -> NURBSCurve<V> {
+        NURBSCurve::new(BSplineCurve::new_unchecked(
+            bspcurve.knot_vec,
+            bspcurve
+                .control_points
+                .into_iter()
+                .map(|pt| V::from_point(pt))
+                .collect(),
+        ))
     }
 }
 

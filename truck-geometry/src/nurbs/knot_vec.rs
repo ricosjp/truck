@@ -1,5 +1,5 @@
-use crate::errors::Error;
 use super::*;
+use crate::errors::Error;
 use std::slice::SliceIndex;
 use std::vec::Vec;
 
@@ -256,6 +256,28 @@ impl KnotVec {
         res
     }
 
+    /// transform the knot vector
+    /// # Examples
+    /// ```
+    /// use std::vec::Vec;
+    /// use truck_geometry::KnotVec;
+    /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
+    /// knot_vec.transform(2.0, 3.0);
+    /// let res : Vec<f64> = knot_vec.into();
+    /// assert_eq!(res, vec![5.0, 5.0, 7.0, 9.0, 11.0, 13.0, 13.0]);
+    /// ```
+    /// # Panics
+    /// Panic occurs if `scalar` is not positive.
+    pub fn transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
+        if scalar < 0.0 {
+            panic!("The scalar {} is not positive.", scalar);
+        }
+        self.0
+            .iter_mut()
+            .for_each(move |vec| *vec = *vec * scalar + r#move);
+        self
+    }
+
     /// Normalizes the knot vector i.e. makes the first value 0 and the last value 1.
     /// # Failures
     /// Returns [`Error::ZeroRange`] if the range of the knot vector is so small.
@@ -274,14 +296,7 @@ impl KnotVec {
         if range.so_small() {
             return Err(Error::ZeroRange);
         }
-
-        let start = self[0];
-        for vec in self.0.as_mut_slice() {
-            *vec -= start;
-            *vec /= range;
-        }
-
-        Ok(self)
+        Ok(self.transform(1.0 / range, -self[0] / range))
     }
 
     /// Normalizes the knot vector i.e. makes the first value 0 and the last value 1.
@@ -310,14 +325,8 @@ impl KnotVec {
     /// knot_vec.translate(3.0);
     /// let res : Vec<f64> = knot_vec.into();
     /// assert_eq!(res, vec![4.0, 4.0, 5.0, 6.0, 7.0, 8.0, 8.0]);
-    ///
     /// ```
-    pub fn translate(&mut self, x: f64) -> &mut Self {
-        for vec in &mut self.0 {
-            *vec += x;
-        }
-        self
-    }
+    pub fn translate(&mut self, x: f64) -> &mut Self { self.transform(1.0, x) }
 
     /// Inverts the knot vector
     /// # Example

@@ -881,6 +881,28 @@ impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
     }
 }
 
+impl<P: ControlPoint> ParameterTransform for BSplineCurve<P> {
+    #[inline(always)]
+    fn parameter_transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
+        self.knot_vec.transform(scalar, r#move);
+        self
+    }
+}
+
+#[test]
+fn parameter_transform_random_test() {
+    let curve = BSplineCurve::new(
+        KnotVec::uniform_knot(4, 4),
+        (0..8).map(|_| Point3::new(
+            rand::random::<f64>(),
+            rand::random::<f64>(),
+            rand::random::<f64>(),
+        ))
+        .collect()
+    );
+    truck_geotrait::parameter_transform_random_test(&curve, 10);
+}
+
 impl<P: ControlPoint + Tolerance> Cut for BSplineCurve<P> {
     fn cut(&mut self, mut t: f64) -> BSplineCurve<P> {
         let degree = self.degree();
@@ -941,20 +963,6 @@ impl<P: ControlPoint + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(2.0, 2.0),
-    ///     Vector2::new(4.0, 3.0),
-    ///     Vector2::new(5.0, 6.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// let mut part0 = bspcurve.clone();
-    /// let mut part1 = part0.cut(0.56);
-    /// let concatted = part0.try_concat(&mut part1).unwrap();
-    /// assert!(bspcurve.near2_as_curve(&concatted));
     /// ```
     /// # Failure
     /// If the back of the knot vector of `self` does not coincides with the front of the one of `other`,
@@ -992,6 +1000,39 @@ impl<P: ControlPoint + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
         curve0.control_points.extend(curve1.control_points);
         Ok(curve0)
     }
+}
+
+#[test]
+fn concat_positive_test() {
+    let mut part0 = BSplineCurve::new(
+        KnotVec::uniform_knot(4, 4),
+        (0..8)
+            .map(|_| {
+                Point3::new(
+                    rand::random::<f64>(),
+                    rand::random::<f64>(),
+                    rand::random::<f64>(),
+                )
+            })
+            .collect(),
+    );
+    let part1 = part0.cut(0.56);
+    concat_random_test(&part0, &part1, 10);
+}
+
+#[test]
+fn concat_negative_test() {
+    let curve0 = BSplineCurve::new(
+        KnotVec::bezier_knot(1),
+        vec![Point2::new(0.0, 0.0), Point2::new(0.0, 1.0)],
+    );
+    let mut curve1 = BSplineCurve::new(
+        KnotVec::bezier_knot(1),
+        vec![Point2::new(0.0, 1.0), Point2::new(1.0, 1.0)],
+    );
+    concat_random_test(&curve0, &curve1, 1);
+    curve1.knot_translate(1.0);
+    concat_random_test(&curve0, &curve1, 1);
 }
 
 impl<P> ParameterDivision1D for BSplineCurve<P>
@@ -1146,46 +1187,6 @@ impl<P: Clone> Invertible for BSplineCurve<P> {
     #[inline(always)]
     fn invert(&mut self) { self.invert(); }
 }
-
-macro_rules! impl_mat_multi {
-    ($vector: ty, $matrix: ty) => {
-        impl Mul<BSplineCurve<$vector>> for $matrix {
-            type Output = BSplineCurve<$vector>;
-            fn mul(self, mut spline: BSplineCurve<$vector>) -> Self::Output {
-                spline
-                    .control_points
-                    .iter_mut()
-                    .for_each(|vec| *vec = self * *vec);
-                spline
-            }
-        }
-        impl Mul<&BSplineCurve<$vector>> for $matrix {
-            type Output = BSplineCurve<$vector>;
-            fn mul(self, spline: &BSplineCurve<$vector>) -> Self::Output { self * spline.clone() }
-        }
-    };
-}
-
-macro_rules! impl_scalar_multi {
-    ($vector: ty, $scalar: ty) => {
-        impl_mat_multi!($vector, $scalar);
-        impl Mul<$scalar> for &BSplineCurve<$vector> {
-            type Output = BSplineCurve<$vector>;
-            fn mul(self, scalar: $scalar) -> Self::Output { scalar * self }
-        }
-        impl Mul<$scalar> for BSplineCurve<$vector> {
-            type Output = BSplineCurve<$vector>;
-            fn mul(self, scalar: $scalar) -> Self::Output { scalar * self }
-        }
-    };
-}
-
-impl_mat_multi!(Vector2, Matrix2);
-impl_scalar_multi!(Vector2, f64);
-impl_mat_multi!(Vector3, Matrix3);
-impl_scalar_multi!(Vector3, f64);
-impl_mat_multi!(Vector4, Matrix4);
-impl_scalar_multi!(Vector4, f64);
 
 impl<M, P> Transformed<M> for BSplineCurve<P>
 where
