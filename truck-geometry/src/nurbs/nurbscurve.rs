@@ -283,8 +283,6 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> Concat<NURBSCurve
 where <V as Homogeneous<f64>>::Point: Debug
 {
     type Output = NURBSCurve<V>;
-    /// Concats two NURBS curves.  
-    /// cf.[`BSplineCurve::try_concat`](./struct.BSplineCurve.html#method.try_concat)
     fn try_concat(
         &self,
         other: &Self,
@@ -299,6 +297,28 @@ where <V as Homogeneous<f64>>::Point: Debug
             Err(err) => Err(err.point_map(|v| v.to_point())),
         }
     }
+}
+
+#[test]
+fn concat_positive_test() {
+    let mut part0 = NURBSCurve::new(BSplineCurve::new(
+        KnotVec::uniform_knot(4, 4),
+        (0..8)
+            .map(|_| {
+                Vector4::new(
+                    rand::random::<f64>(),
+                    rand::random::<f64>(),
+                    rand::random::<f64>(),
+                    rand::random::<f64>() + 0.5,
+                )
+            })
+            .collect(),
+    ));
+    let mut part1 = part0.cut(0.56);
+    let w = 20.0 * rand::random::<f64>() - 10.0;
+    part1.transform_control_points(|vec| *vec *= w);
+    assert_near!(part0.back(), part1.front());
+    concat_random_test(&part0, &part1, 10);
 }
 
 impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSCurve<V>
