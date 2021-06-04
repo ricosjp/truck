@@ -162,10 +162,19 @@ pub mod control_point {
         + MulAssign<f64>
         + DivAssign<f64>
         + Copy
-        + Clone
-    {
+        + Clone {
         /// differential vector
-        type Diff: VectorSpace<Scalar = f64>;
+        type Diff: Add<Self::Diff, Output = Self::Diff>
+            + Sub<Self::Diff, Output = Self::Diff>
+            + Mul<f64, Output = Self::Diff>
+            + Div<f64, Output = Self::Diff>
+            + AddAssign<Self::Diff>
+            + SubAssign<Self::Diff>
+            + MulAssign<f64>
+            + DivAssign<f64>
+            + Zero
+            + Copy
+            + Clone;
         /// origin
         fn origin() -> Self;
         /// into the vector
