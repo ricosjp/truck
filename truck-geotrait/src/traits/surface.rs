@@ -20,16 +20,39 @@ pub trait ParametricSurface: Clone {
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
 }
 
+impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
+    type Point = S::Point;
+    type Vector = S::Vector;
+    fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
+}
+
 /// 3D parametric surface
 pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector3> {
     /// Returns the normal vector at `(u, v)`.
-    fn normal(&self, u: f64, v: f64) -> Vector3;
+    fn normal(&self, u: f64, v: f64) -> Vector3 {
+        self.uder(u, v).cross(self.vder(u, v)).normalize()
+    }
+}
+
+impl<'a, S: ParametricSurface3D> ParametricSurface3D for &'a S {
+    fn normal(&self, u: f64, v: f64) -> Vector3 { (*self).normal(u, v) }
 }
 
 /// Bounded surface with parametric range
 pub trait BoundedSurface: ParametricSurface {
     /// The range of the parameter of the surface.
     fn parameter_range(&self) -> ((f64, f64), (f64, f64));
+}
+
+impl<'a, S: BoundedSurface> BoundedSurface for &'a S {
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
+        (*self).parameter_range()
+    }
 }
 
 /// Whether the surface includes the boundary curve.
@@ -42,6 +65,12 @@ pub trait IncludeCurve<C: ParametricCurve> {
 pub trait ParameterDivision2D {
     /// Creates the surface division
     fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>);
+}
+
+impl<'a, S: ParameterDivision2D> ParameterDivision2D for &'a S {
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+        (*self).parameter_division(range, tol)
+    }
 }
 
 /// Implementation for the test of topological methods.

@@ -486,19 +486,6 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParametricCurve for NURBSCurv
     }
 }
 
-impl<'a, V: Homogeneous<f64> + ControlPoint<Diff = V>> ParametricCurve for &'a NURBSCurve<V> {
-    type Point = V::Point;
-    type Vector = <V::Point as EuclideanSpace>::Diff;
-    #[inline(always)]
-    fn subs(&self, t: f64) -> Self::Point { (*self).subs(t) }
-    #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
-    #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { (*self).parameter_range() }
-}
-
 impl<V: Clone> Invertible for NURBSCurve<V> {
     #[inline(always)]
     fn invert(&mut self) { self.invert(); }

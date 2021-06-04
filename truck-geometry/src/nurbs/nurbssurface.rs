@@ -601,23 +601,6 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParametricSurface for NURBSSu
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
 }
 
-impl<'a, V: Homogeneous<f64> + ControlPoint<Diff = V>> ParametricSurface for &'a NURBSSurface<V> {
-    type Point = V::Point;
-    type Vector = V::Vector;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
-}
-
 impl ParametricSurface3D for NURBSSurface<Vector4> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
@@ -626,11 +609,6 @@ impl ParametricSurface3D for NURBSSurface<Vector4> {
         let vd = self.0.vder(u, v);
         pt.rat_der(ud).cross(pt.rat_der(vd)).normalize()
     }
-}
-
-impl<'a> ParametricSurface3D for &'a NURBSSurface<Vector4> {
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Vector3 { (*self).normal(u, v) }
 }
 
 impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParameterDivision2D for NURBSSurface<V>

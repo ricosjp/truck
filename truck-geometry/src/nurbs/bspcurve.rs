@@ -367,21 +367,6 @@ impl<P: ControlPoint> ParametricCurve for BSplineCurve<P> {
     }
 }
 
-impl<'a, P: ControlPoint> ParametricCurve for &'a BSplineCurve<P> {
-    type Point = P;
-    type Vector = P::Diff;
-    #[inline(always)]
-    fn subs(&self, t: f64) -> Self::Point { (*self).subs(t) }
-    #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
-    #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) {
-        (self.knot_vec[0], self.knot_vec[self.knot_vec.len() - 1])
-    }
-}
-
 impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
     /// Returns whether all control points are the same or not.
     /// If the knot vector is clamped, it means whether the curve is constant or not.
@@ -897,33 +882,6 @@ impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
 }
 
 impl<P: ControlPoint + Tolerance> Cut for BSplineCurve<P> {
-    /// Cuts the curve to two curves at the parameter `t`
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(2.0, 2.0),
-    ///     Vector2::new(4.0, 3.0),
-    ///     Vector2::new(5.0, 6.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// let mut part0 = bspcurve.clone();
-    /// let part1 = part0.cut(0.56);
-    /// const N: usize = 100;
-    /// for i in 0..=N {
-    ///     let t = 0.56 * (i as f64) / (N as f64);
-    ///     assert_near2!(bspcurve.subs(t), part0.subs(t));
-    /// }
-    /// for i in 0..=N {
-    ///     let t = 0.56 + 0.44 * (i as f64) / (N as f64);
-    ///     assert_near2!(bspcurve.subs(t), part1.subs(t));
-    /// }
-    /// ```
     fn cut(&mut self, mut t: f64) -> BSplineCurve<P> {
         let degree = self.degree();
 
@@ -958,6 +916,23 @@ impl<P: ControlPoint + Tolerance> Cut for BSplineCurve<P> {
         *self = BSplineCurve::new_unchecked(knot_vec0, control_points0);
         BSplineCurve::new_unchecked(knot_vec1, control_points1)
     }
+}
+
+#[test]
+fn cut_random_test() {
+    let curve = BSplineCurve::new(
+        KnotVec::uniform_knot(4, 4),
+        (0..8)
+            .map(|_| {
+                Point3::new(
+                    rand::random::<f64>(),
+                    rand::random::<f64>(),
+                    rand::random::<f64>(),
+                )
+            })
+            .collect(),
+    );
+    truck_geotrait::cut_random_test(&curve, 10);
 }
 
 impl<P: ControlPoint + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
@@ -1012,7 +987,7 @@ impl<P: ControlPoint + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
         let front = curve0.control_points.last().unwrap();
         let back = curve1.control_points.first().unwrap();
         if !front.near(back) {
-            return Err(ConcatError::DisconnectedPoints(*front, *back))
+            return Err(ConcatError::DisconnectedPoints(*front, *back));
         }
         curve0.control_points.extend(curve1.control_points);
         Ok(curve0)

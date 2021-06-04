@@ -839,23 +839,6 @@ impl<P: ControlPoint> ParametricSurface for BSplineSurface<P> {
     }
 }
 
-impl<'a, P: ControlPoint> ParametricSurface for &'a BSplineSurface<P> {
-    type Point = P;
-    type Vector = P::Diff;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
-}
-
 impl<V: Tolerance> BSplineSurface<V> {
     /// Returns whether all control points are same or not.
     /// If the knot vector is clamped, it means whether the curve is constant or not.
@@ -1879,19 +1862,7 @@ where P: EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint>::Diff> + Metric
     }
 }
 
-impl ParametricSurface3D for BSplineSurface<Point3> {
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Vector3 {
-        self.uder(u, v).cross(self.vder(u, v)).normalize()
-    }
-}
-
-impl<'a> ParametricSurface3D for &'a BSplineSurface<Point3> {
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Vector3 {
-        self.uder(u, v).cross(self.vder(u, v)).normalize()
-    }
-}
+impl ParametricSurface3D for BSplineSurface<Point3> {}
 
 impl<V> BoundedSurface for BSplineSurface<V>
 where BSplineSurface<V>: ParametricSurface

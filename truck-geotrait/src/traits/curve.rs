@@ -1,5 +1,6 @@
 use thiserror::Error;
 use std::fmt::Debug;
+use truck_base::{tolerance::Tolerance, assert_near};
 
 /// Parametric curves
 pub trait ParametricCurve: Clone {
@@ -37,10 +38,42 @@ impl ParametricCurve for () {
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
 }
 
+impl ParametricCurve for (usize, usize) {
+    type Point = usize;
+    type Vector = usize;
+    fn subs(&self, t: f64) -> Self::Point {
+        match t < 0.5 {
+            true => self.0,
+            false => self.1,
+        }
+    }
+    fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
+    fn der2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
+    fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
+}
+
+impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
+    type Point = C::Point;
+    type Vector = C::Vector;
+    fn subs(&self, t: f64) -> Self::Point { (*self).subs(t) }
+    #[inline(always)]
+    fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
+    #[inline(always)]
+    fn parameter_range(&self) -> (f64, f64) { (*self).parameter_range() }
+}
+
 /// Dividable curve
 pub trait ParameterDivision1D {
     /// Creates the curve division
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64>;
+}
+
+impl<'a, C: ParameterDivision1D> ParameterDivision1D for &'a C {
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+        (*self).parameter_division(range, tol)
+    }
 }
 
 /// parameter range move by affine transformation
@@ -216,13 +249,13 @@ where
     assert_eq!(transformed.back(), curve.back());
 }
 
-/// positive test implementation for `Concat` by random transformation
+/// positive test implementation for `Concat`.
 pub fn concat_random_test<C0, C1>(curve0: &C0, curve1: &C1, trials: usize)
 where
     C0: Concat<C1>,
-    C0::Point: Debug + PartialEq,
-    C0::Vector: Debug + PartialEq,
-    C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector>,
+    C0::Point: Debug + Tolerance,
+    C0::Vector: Debug + Tolerance,
+    C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
     C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>, {
     (0..trials).for_each(move |_| exec_concat_random_test(curve0, curve1))
 }
@@ -230,28 +263,44 @@ where
 fn exec_concat_random_test<C0, C1>(curve0: &C0, curve1: &C1)
 where
     C0: Concat<C1>,
-    C0::Point: Debug + PartialEq,
-    C0::Vector: Debug + PartialEq,
-    C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector>,
+    C0::Point: Debug + Tolerance,
+    C0::Vector: Debug + Tolerance,
+    C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
     C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>, {
-    let concatted = curve0.concat(curve1);
+    let a = curve0.parameter_range().1;
+    let b = curve1.parameter_range().0;
+    let pt0 = curve0.back();
+    let pt1 = curve1.front();
+    let res = curve0.try_concat(&curve1);
+    let concatted = match (a.near(&b), pt0.near(&pt1)) {
+        (false, _) => {
+            assert_eq!(res.unwrap_err(), ConcatError::DisconnectedParameters(a, b));
+            return;
+        }
+        (_, false) => {
+            assert_eq!(res.unwrap_err(), ConcatError::DisconnectedPoints(pt0, pt1));
+            return;
+        }
+        _ => res.unwrap(),
+    };
     let (t0, t1) = curve0.parameter_range();
     let (_, t2) = curve1.parameter_range();
-    assert_eq!(concatted.parameter_range(), (t0, t2));
+    assert_near!(concatted.parameter_range().0, t0);
+    assert_near!(concatted.parameter_range().1, t2);
 
     let p = rand::random::<f64>();
     let t = t0 * (1.0 - p) + t1 * p;
-    assert_eq!(concatted.subs(t), curve0.subs(t));
-    assert_eq!(concatted.der(t), curve0.der(t));
-    assert_eq!(concatted.der2(t), curve0.der2(t));
-    assert_eq!(concatted.front(), curve0.front());
+    assert_near!(concatted.subs(t), curve0.subs(t));
+    assert_near!(concatted.der(t), curve0.der(t));
+    assert_near!(concatted.der2(t), curve0.der2(t));
+    assert_near!(concatted.front(), curve0.front());
 
     let p = rand::random::<f64>();
     let t = t1 * (1.0 - p) + t2 * p;
-    assert_eq!(concatted.subs(t), curve1.subs(t));
-    assert_eq!(concatted.der(t), curve1.der(t));
-    assert_eq!(concatted.der2(t), curve1.der2(t));
-    assert_eq!(concatted.back(), curve1.back());
+    assert_near!(concatted.subs(t), curve1.subs(t));
+    assert_near!(concatted.der(t), curve1.der(t));
+    assert_near!(concatted.der2(t), curve1.der2(t));
+    assert_near!(concatted.back(), curve1.back());
 }
 
 /// positive test implementation for `Cut` by random transformation
@@ -291,18 +340,4 @@ where
     assert_eq!(part1.der2(s), curve.der2(s));
     assert_eq!(part1.front(), curve.subs(t));
     assert_eq!(part1.back(), curve.back());
-}
-
-impl ParametricCurve for (usize, usize) {
-    type Point = usize;
-    type Vector = usize;
-    fn subs(&self, t: f64) -> Self::Point {
-        match t < 0.5 {
-            true => self.0,
-            false => self.1,
-        }
-    }
-    fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
-    fn der2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
-    fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
 }
