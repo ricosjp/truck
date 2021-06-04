@@ -148,18 +148,6 @@ the number of control points: {1}")]
     /// ```
     #[error("The number of control points is irregular")]
     IrregularControlPoints,
-    /// Attempted to get the curve from the empty curve collector.
-    /// # Example
-    /// ```
-    /// use truck_geometry::*;
-    /// use errors::Error;
-    /// use std::convert::TryInto;
-    /// let cc = CurveCollector::<Vector2>::Singleton;
-    /// let error: Result<BSplineCurve<Vector2>> = cc.try_into();
-    /// assert_eq!(error, Err(Error::EmptyCurveCollector));
-    /// ```
-    #[error("The curve collector is empty.")]
-    EmptyCurveCollector,
 }
 
 #[test]
@@ -177,6 +165,5 @@ fn print_messages() {
     writeln!(stderr, "{}\n", Error::EmptyControlPoints).unwrap();
     writeln!(stderr, "{}\n", Error::TooShortKnotVector(1, 2)).unwrap();
     writeln!(stderr, "{}\n", Error::IrregularControlPoints).unwrap();
-    writeln!(stderr, "{}\n", Error::EmptyCurveCollector).unwrap();
     writeln!(stderr, "*******************************************************").unwrap();
 }

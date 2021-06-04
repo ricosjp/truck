@@ -265,22 +265,23 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSCurve<V> {
     /// Cuts the curve to two curves at the parameter `t`.  
     /// cf.[`BSplineCurve::syncro_knots`](./struct.BSplineCurve.html#method.syncro_knots)
     pub fn cut(&mut self, t: f64) -> Self { NURBSCurve(self.0.cut(t)) }
+}
 
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> Concat<NURBSCurve<V>> for NURBSCurve<V>
+where <V as Homogeneous<f64>>::Point: Debug {
+    type Output = NURBSCurve<V>;
     /// Concats two NURBS curves.  
     /// cf.[`BSplineCurve::try_concat`](./struct.BSplineCurve.html#method.try_concat)
-    pub fn try_concat(&mut self, other: &mut Self) -> Result<&mut Self> {
-        let w0 = self.0.control_points.last().unwrap().weight();
-        let w1 = other.0.control_points[0].weight();
-        other.transform_control_points(|pt| *pt = *pt * (w0 / w1));
-        self.0.try_concat(&mut other.0)?;
-        Ok(self)
-    }
-    /// Concats two NURBS curves.  
-    /// cf.[`BSplineCurve::concat`](./struct.BSplineCurve.html#method.concat)
-    #[inline(always)]
-    pub fn concat(&mut self, other: &mut Self) -> &mut Self {
-        self.try_concat(other)
-            .unwrap_or_else(|error| panic!("{}", error))
+    fn try_concat(&self, other: &Self) -> std::result::Result<Self, ConcatError<<V as Homogeneous<f64>>::Point>> {
+        let curve0 = self.clone();
+        let mut curve1 = other.clone();
+        let w0 = curve0.0.control_points.last().unwrap().weight();
+        let w1 = curve1.0.control_points[0].weight();
+        curve1.transform_control_points(|pt| *pt = *pt * (w0 / w1));
+        match curve0.0.try_concat(&curve1.0) {
+            Ok(curve) => Ok(NURBSCurve::new(curve)),
+            Err(err) => Err(err.point_map(|v| v.to_point()))
+        }
     }
 }
 

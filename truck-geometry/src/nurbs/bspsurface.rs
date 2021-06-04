@@ -1,6 +1,5 @@
 use crate::errors::Error;
 use super::*;
-use std::convert::TryInto;
 use std::iter::FusedIterator;
 use std::ops::*;
 
@@ -1534,7 +1533,7 @@ impl<P: ControlPoint + Tolerance> BSplineSurface<P> {
         let comb = combinatorial(degree);
         let comb2 = combinatorial(degree * 2);
         let (knots, _) = bspsurface.uknot_vec().to_single_multi();
-        let mut cc = CurveCollector::<P>::Singleton;
+        let mut cc = CurveCollector::Singleton;
         for p in 1..knots.len() {
             let mut backup = None;
             if p + 1 != knots.len() {
@@ -1555,12 +1554,12 @@ impl<P: ControlPoint + Tolerance> BSplineSurface<P> {
                     })
                 })
                 .collect();
-            cc.concat(&mut BSplineCurve::new(knot_vec, ctrl_pts));
+            cc.concat(&BSplineCurve::new(knot_vec, ctrl_pts));
             if p + 1 != knots.len() {
                 bspsurface = backup.unwrap().vcut(knots[p]);
             }
         }
-        let mut curve: BSplineCurve<P> = cc.try_into().unwrap();
+        let mut curve: BSplineCurve<P> = cc.unwrap();
         curve.knot_normalize();
         curve
     }
@@ -1797,12 +1796,11 @@ impl<P: ControlPoint + Tolerance> BSplineSurface<P> {
     pub fn boundary(&self) -> BSplineCurve<P> {
         let (uknot_vec, vknot_vec) = self.knot_vecs.clone();
         let (range0, range1) = (uknot_vec.range_length(), vknot_vec.range_length());
-        let [mut bspline0, mut bspline1, mut bspline2, mut bspline3] = self.splitted_boundary();
+        let [bspline0, mut bspline1, mut bspline2, mut bspline3] = self.splitted_boundary();
         bspline0
             .concat(&mut bspline1.knot_translate(range0))
             .concat(&mut bspline2.invert().knot_translate(range0 + range1))
-            .concat(&mut bspline3.invert().knot_translate(range0 * 2.0 + range1));
-        bspline0
+            .concat(&mut bspline3.invert().knot_translate(range0 * 2.0 + range1))
     }
     /// Determines whether `self` and `other` is near as the B-spline surfaces or not.  
     ///

@@ -1,6 +1,5 @@
-use crate::errors::Error;
 use super::*;
-use std::convert::TryInto;
+use crate::errors::Error;
 use std::ops::*;
 
 impl<P> BSplineCurve<P> {
@@ -589,7 +588,7 @@ impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
         for mut bezier in self.bezier_decomposition() {
             result.concat(bezier.elevate_degree_bezier());
         }
-        *self = result.try_into().unwrap();
+        *self = result.unwrap();
         self
     }
 
@@ -738,68 +737,6 @@ impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
         }
     }
 
-    /// Cuts the curve to two curves at the parameter `t`
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(2.0, 2.0),
-    ///     Vector2::new(4.0, 3.0),
-    ///     Vector2::new(5.0, 6.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// let mut part0 = bspcurve.clone();
-    /// let part1 = part0.cut(0.56);
-    /// const N: usize = 100;
-    /// for i in 0..=N {
-    ///     let t = 0.56 * (i as f64) / (N as f64);
-    ///     assert_near2!(bspcurve.subs(t), part0.subs(t));
-    /// }
-    /// for i in 0..=N {
-    ///     let t = 0.56 + 0.44 * (i as f64) / (N as f64);
-    ///     assert_near2!(bspcurve.subs(t), part1.subs(t));
-    /// }
-    /// ```
-    pub fn cut(&mut self, mut t: f64) -> BSplineCurve<P> {
-        let degree = self.degree();
-
-        let idx = match self.knot_vec.floor(t) {
-            Some(idx) => idx,
-            None => {
-                let bspline = self.clone();
-                let knot_vec = KnotVec::from(vec![t, self.knot_vec[0]]);
-                let ctrl_pts = vec![P::origin()];
-                *self = BSplineCurve::new(knot_vec, ctrl_pts);
-                return bspline;
-            }
-        };
-        let s = if t.near(&self.knot_vec[idx]) {
-            t = self.knot_vec[idx];
-            self.knot_vec.multiplicity(idx)
-        } else {
-            0
-        };
-
-        for _ in s..=degree {
-            self.add_knot(t);
-        }
-
-        let k = self.knot_vec.floor(t).unwrap();
-        let m = self.knot_vec.len();
-        let n = self.control_points.len();
-        let knot_vec0 = self.knot_vec.sub_vec(0..=k);
-        let knot_vec1 = self.knot_vec.sub_vec((k - degree)..m);
-        let control_points0 = Vec::from(&self.control_points[0..(k - degree)]);
-        let control_points1 = Vec::from(&self.control_points[(k - degree)..n]);
-        *self = BSplineCurve::new_unchecked(knot_vec0, control_points0);
-        BSplineCurve::new_unchecked(knot_vec1, control_points1)
-    }
-
     /// Separates `self` into Bezier curves by each knots.
     /// # Examples
     /// ```
@@ -835,136 +772,6 @@ impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
         result
     }
 
-    /// Concats two B-spline curves.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 3);
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(2.0, 2.0),
-    ///     Vector2::new(4.0, 3.0),
-    ///     Vector2::new(5.0, 6.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// let mut part0 = bspcurve.clone();
-    /// let mut part1 = part0.cut(0.56);
-    /// part0.try_concat(&mut part1).unwrap();
-    /// assert!(bspcurve.near2_as_curve(&part0));
-    /// ```
-    /// # Failure
-    /// If the back of the knot vector of `self` does not coincides with the front of the one of `other`,
-    /// returns [`Error::DifferentBackFront`](/errors/enum.Error.html#variant.DifferentBackFront).
-    /// ```
-    /// use truck_geometry::*;
-    /// use errors::Error;
-    ///
-    /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
-    /// let ctrl_pts1 = vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    ///
-    /// assert_eq!(bspcurve0.try_concat(&mut bspcurve1), Err(Error::DifferentBackFront(1.0, 2.0)));
-    /// ```
-    /// # Remarks
-    /// Unlike `Vec::append()`, this method does not change `other` as a curve.  
-    /// However, side effects, such as degree synchronization, or knot vector clamped, do occur.
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts1 = vec![Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// bspcurve1.knot_translate(1.0);
-    /// let org_curve1 = bspcurve1.clone();
-    ///
-    /// bspcurve0.try_concat(&mut bspcurve1).unwrap();
-    ///
-    /// // do not change bspcurve as a curve
-    /// assert!(bspcurve1.near2_as_curve(&org_curve1));
-    /// // The degree is changed.
-    /// assert_ne!(bspcurve1.degree(), org_curve1.degree());
-    /// ```
-    pub fn try_concat(&mut self, other: &mut BSplineCurve<P>) -> Result<&mut Self> {
-        self.syncro_degree(other);
-        self.clamp();
-        other.clamp();
-        self.knot_vec.try_concat(&other.knot_vec, self.degree())?;
-        for point in &other.control_points {
-            self.control_points.push(point.clone());
-        }
-        Ok(self)
-    }
-
-    /// Concats two B-spline curves.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
-    /// );
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(2.0, 2.0),
-    ///     Vector2::new(4.0, 3.0),
-    ///     Vector2::new(5.0, 6.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// let mut part0 = bspcurve.clone();
-    /// let mut part1 = part0.cut(1.8);
-    /// part0.concat(&mut part1);
-    /// assert!(bspcurve.near2_as_curve(&part0));
-    /// ```
-    /// # Panics
-    /// Panic occurs if the back of the knot vector of `self` does not coincides
-    /// with the front of the one of `other`
-    /// ```should_panic
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
-    /// let ctrl_pts1 = vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// bspcurve0.concat(&mut bspcurve1);
-    /// ```
-    /// # Remarks
-    /// Unlike `Vec::append()`, this method does not change `other` as a curve.  
-    /// However, side effects, such as degree synchronization, or knot vector clamped, do occur.
-    /// ```
-    /// use truck_geometry::*;
-    ///
-    /// let knot_vec0 = KnotVec::bezier_knot(2);
-    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(2.0, 2.0)];
-    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
-    /// let knot_vec1 = KnotVec::bezier_knot(1);
-    /// let ctrl_pts1 = vec![Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
-    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
-    /// bspcurve1.knot_translate(1.0);
-    /// let org_curve1 = bspcurve1.clone();
-    ///
-    /// bspcurve0.concat(&mut bspcurve1);
-    ///
-    /// // do not change bspcurve as a curve
-    /// assert!(bspcurve1.near2_as_curve(&org_curve1));
-    /// // The degree is changed.
-    /// assert_ne!(bspcurve1.degree(), org_curve1.degree());
-    /// ```
-    #[inline(always)]
-    pub fn concat(&mut self, other: &mut Self) -> &mut Self {
-        self.try_concat(other)
-            .unwrap_or_else(|error| panic!("{}", error))
-    }
     /// Makes the curve locally injective.
     /// # Example
     /// ```
@@ -1086,6 +893,152 @@ impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
     #[inline(always)]
     pub fn near2_as_curve(&self, other: &BSplineCurve<P>) -> bool {
         self.sub_near_as_curve(other, 1, |x, y| x.near2(y))
+    }
+}
+
+impl<P: ControlPoint + Tolerance> Cut for BSplineCurve<P> {
+    /// Cuts the curve to two curves at the parameter `t`
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    ///
+    /// let knot_vec = KnotVec::uniform_knot(2, 3);
+    /// let ctrl_pts = vec![
+    ///     Vector2::new(0.0, 0.0),
+    ///     Vector2::new(1.0, 0.0),
+    ///     Vector2::new(2.0, 2.0),
+    ///     Vector2::new(4.0, 3.0),
+    ///     Vector2::new(5.0, 6.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    ///
+    /// let mut part0 = bspcurve.clone();
+    /// let part1 = part0.cut(0.56);
+    /// const N: usize = 100;
+    /// for i in 0..=N {
+    ///     let t = 0.56 * (i as f64) / (N as f64);
+    ///     assert_near2!(bspcurve.subs(t), part0.subs(t));
+    /// }
+    /// for i in 0..=N {
+    ///     let t = 0.56 + 0.44 * (i as f64) / (N as f64);
+    ///     assert_near2!(bspcurve.subs(t), part1.subs(t));
+    /// }
+    /// ```
+    fn cut(&mut self, mut t: f64) -> BSplineCurve<P> {
+        let degree = self.degree();
+
+        let idx = match self.knot_vec.floor(t) {
+            Some(idx) => idx,
+            None => {
+                let bspline = self.clone();
+                let knot_vec = KnotVec::from(vec![t, self.knot_vec[0]]);
+                let ctrl_pts = vec![P::origin()];
+                *self = BSplineCurve::new(knot_vec, ctrl_pts);
+                return bspline;
+            }
+        };
+        let s = if t.near(&self.knot_vec[idx]) {
+            t = self.knot_vec[idx];
+            self.knot_vec.multiplicity(idx)
+        } else {
+            0
+        };
+
+        for _ in s..=degree {
+            self.add_knot(t);
+        }
+
+        let k = self.knot_vec.floor(t).unwrap();
+        let m = self.knot_vec.len();
+        let n = self.control_points.len();
+        let knot_vec0 = self.knot_vec.sub_vec(0..=k);
+        let knot_vec1 = self.knot_vec.sub_vec((k - degree)..m);
+        let control_points0 = Vec::from(&self.control_points[0..(k - degree)]);
+        let control_points1 = Vec::from(&self.control_points[(k - degree)..n]);
+        *self = BSplineCurve::new_unchecked(knot_vec0, control_points0);
+        BSplineCurve::new_unchecked(knot_vec1, control_points1)
+    }
+}
+
+impl<P: ControlPoint + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
+    type Output = BSplineCurve<P>;
+    /// Concats two B-spline curves.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::uniform_knot(2, 3);
+    /// let ctrl_pts = vec![
+    ///     Vector2::new(0.0, 0.0),
+    ///     Vector2::new(1.0, 0.0),
+    ///     Vector2::new(2.0, 2.0),
+    ///     Vector2::new(4.0, 3.0),
+    ///     Vector2::new(5.0, 6.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    ///
+    /// let mut part0 = bspcurve.clone();
+    /// let mut part1 = part0.cut(0.56);
+    /// part0.try_concat(&mut part1).unwrap();
+    /// assert!(bspcurve.near2_as_curve(&part0));
+    /// ```
+    /// # Failure
+    /// If the back of the knot vector of `self` does not coincides with the front of the one of `other`,
+    /// returns [`Error::DifferentBackFront`](/errors/enum.Error.html#variant.DifferentBackFront).
+    /// ```
+    /// use truck_geometry::*;
+    /// use errors::Error;
+    ///
+    /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
+    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
+    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
+    /// let ctrl_pts1 = vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)];
+    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
+    ///
+    /// assert_eq!(bspcurve0.try_concat(&mut bspcurve1), Err(Error::DifferentBackFront(1.0, 2.0)));
+    /// ```
+    /// # Remarks
+    /// Unlike `Vec::append()`, this method does not change `other` as a curve.  
+    /// However, side effects, such as degree synchronization, or knot vector clamped, do occur.
+    /// ```
+    /// use truck_geometry::*;
+    ///
+    /// let knot_vec0 = KnotVec::bezier_knot(2);
+    /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 1.0), Vector2::new(2.0, 2.0)];
+    /// let mut bspcurve0 = BSplineCurve::new(knot_vec0, ctrl_pts0);
+    /// let knot_vec1 = KnotVec::bezier_knot(1);
+    /// let ctrl_pts1 = vec![Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
+    /// let mut bspcurve1 = BSplineCurve::new(knot_vec1, ctrl_pts1);
+    /// bspcurve1.knot_translate(1.0);
+    /// let org_curve1 = bspcurve1.clone();
+    ///
+    /// bspcurve0.try_concat(&mut bspcurve1).unwrap();
+    ///
+    /// // do not change bspcurve as a curve
+    /// assert!(bspcurve1.near2_as_curve(&org_curve1));
+    /// // The degree is changed.
+    /// assert_ne!(bspcurve1.degree(), org_curve1.degree());
+    /// ```
+    fn try_concat(&self, other: &BSplineCurve<P>) -> std::result::Result<Self, ConcatError<P>> {
+        let mut curve0 = self.clone();
+        let mut curve1 = other.clone();
+        curve0.syncro_degree(&mut curve1);
+        curve0.clamp();
+        curve1.clamp();
+        curve0
+            .knot_vec
+            .try_concat(&curve1.knot_vec, curve0.degree())
+            .map_err(|err| match err {
+                Error::DifferentBackFront(a, b) => ConcatError::DisconnectedParameters(a, b),
+                _ => unreachable!(),
+            })?;
+        let front = curve0.control_points.last().unwrap();
+        let back = curve1.control_points.first().unwrap();
+        if !front.near(back) {
+            return Err(ConcatError::DisconnectedPoints(*front, *back))
+        }
+        curve0.control_points.extend(curve1.control_points);
+        Ok(curve0)
     }
 }
 
@@ -1292,50 +1245,6 @@ where
         self.control_points
             .iter_mut()
             .for_each(|pt| *pt = trans.transform_point(*pt))
-    }
-}
-
-impl<P: ControlPoint + Tolerance> CurveCollector<P> {
-    /// Concats two B-spline curves.
-    #[inline(always)]
-    pub fn try_concat(&mut self, curve: &mut BSplineCurve<P>) -> Result<&mut Self> {
-        match self {
-            CurveCollector::Singleton => {
-                *self = CurveCollector::Curve(curve.clone());
-            }
-            CurveCollector::Curve(ref mut curve0) => {
-                curve0.try_concat(curve)?;
-            }
-        }
-        Ok(self)
-    }
-    /// Concats two B-spline curves.
-    #[inline(always)]
-    pub fn concat(&mut self, curve: &mut BSplineCurve<P>) -> &mut Self {
-        self.try_concat(curve)
-            .unwrap_or_else(|error| panic!("{}", error))
-    }
-
-    /// Returns the entity curve.
-    /// # Panics
-    /// If `self` is `Singleton`, then panics occurs.
-    #[inline(always)]
-    pub fn unwrap(self) -> BSplineCurve<P> {
-        match self {
-            CurveCollector::Curve(curve) => curve,
-            CurveCollector::Singleton => panic!("This curve collector is singleton."),
-        }
-    }
-}
-
-impl<V> std::convert::TryFrom<CurveCollector<V>> for BSplineCurve<V> {
-    type Error = Error;
-    #[inline(always)]
-    fn try_from(collector: CurveCollector<V>) -> Result<Self> {
-        match collector {
-            CurveCollector::Singleton => Err(Error::EmptyCurveCollector),
-            CurveCollector::Curve(curve) => Ok(curve),
-        }
     }
 }
 

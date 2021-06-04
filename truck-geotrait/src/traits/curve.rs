@@ -1,3 +1,6 @@
+use thiserror::Error;
+use std::fmt::Debug;
+
 /// Parametric curves
 pub trait ParametricCurve: Clone {
     /// The curve is in the space of `Self::Point`.
@@ -67,18 +70,110 @@ pub trait ParameterTransform: ParametricCurve {
 }
 
 /// Concats two curves
-pub trait Concat<Rhs: ParametricCurve<Point = Self::Point, Vector = Self::Vector>>: ParametricCurve {
+pub trait Concat<Rhs: ParametricCurve<Point = Self::Point, Vector = Self::Vector>>:
+    ParametricCurve
+where Self::Point: Debug {
     /// The result of concat two curves
     type Output: ParametricCurve<Point = Self::Point, Vector = Self::Vector>;
     /// Try concat two curves.
     /// # Failure
     /// Returns `None` if `self.parameter_range().1 != rhs.parameter_range().0`.
-    fn try_concat(&self, rhs: &Rhs) -> Option<Self::Output>;
+    fn try_concat(&self, rhs: &Rhs) -> Result<Self::Output, ConcatError<Self::Point>>;
     /// Try concat two curves.
     /// # Panic
     /// Panic occurs if `self.parameter_range().1 != rhs.parameter_range().0`.
     fn concat(&self, rhs: &Rhs) -> Self::Output {
-        self.try_concat(rhs).expect("failed to concat curves")
+        self.try_concat(rhs).unwrap_or_else(|err| panic!("{}", err))
+    }
+}
+
+/// Error for concat curves
+#[derive(Clone, Copy, Debug, Error)]
+pub enum ConcatError<Point: Debug> {
+    /// Failed to concat curves since the end parameter of the first curve is different form the start parameter of the second curve.
+    #[error("The end parameter {0} of the first curve is different from the start parameter {1} of the second curve.")]
+    DisconnectedParameters(f64, f64),
+    /// Failed to concat curves since the end point of the first curve is different from the start point of the second curve.
+    #[error("The end point {0:?} of the first curve is different from the start point {1:?} of the second curve.")]
+    DisconnectedPoints(Point, Point),
+}
+
+impl<T: Debug> ConcatError<T> {
+    /// into the 
+    #[inline(always)]
+    pub fn point_map<U: Debug, F>(self, f: F) -> ConcatError<U> where F: Fn(T) -> U {
+        match self {
+            ConcatError::DisconnectedParameters(a, b) => ConcatError::DisconnectedParameters(a, b),
+            ConcatError::DisconnectedPoints(p, q) => ConcatError::DisconnectedPoints(f(p), f(q)),
+        }
+    }
+}
+
+/// Curve for the recursive concatting.
+#[derive(Clone, Debug)]
+pub enum CurveCollector<C> {
+    /// the empty curve
+    Singleton,
+    /// a non-empty curve
+    Curve(C),
+}
+
+impl<C> CurveCollector<C> {
+    /// Concats two B-spline curves.
+    #[inline(always)]
+    pub fn try_concat<Rhs>(&mut self, curve: &Rhs) -> Result<&mut Self, ConcatError<C::Point>>
+    where
+        C: Concat<Rhs, Output = C>,
+        C::Point: Debug,
+        Rhs: ParametricCurve<Point = C::Point, Vector = C::Vector> + Into<C>, {
+        match self {
+            CurveCollector::Singleton => {
+                *self = CurveCollector::Curve(curve.clone().into());
+            }
+            CurveCollector::Curve(ref mut curve0) => {
+                *curve0 = curve0.try_concat(curve)?;
+            }
+        }
+        Ok(self)
+    }
+    /// Concats two B-spline curves.
+    #[inline(always)]
+    pub fn concat<Rhs>(&mut self, curve: &Rhs) -> &mut Self
+    where
+        C: Concat<Rhs, Output = C>,
+        C::Point: Debug,
+        Rhs: ParametricCurve<Point = C::Point, Vector = C::Vector> + Into<C>, {
+        self.try_concat(curve)
+            .unwrap_or_else(|error| panic!("{}", error))
+    }
+
+    /// Whether `self` is the singleton or not.
+    #[inline(always)]
+    pub fn is_singleton(&self) -> bool {
+        match self {
+            CurveCollector::Singleton => true,
+            CurveCollector::Curve(_) => false,
+        }
+    }
+    /// Returns the entity curve.
+    /// # Panics
+    /// If `self` is `Singleton`, then panics occurs.
+    #[inline(always)]
+    pub fn unwrap(self) -> C {
+        match self {
+            CurveCollector::Curve(curve) => curve,
+            CurveCollector::Singleton => panic!("This curve collector is singleton."),
+        }
+    }
+}
+
+impl<C> From<CurveCollector<C>> for Option<C> {
+    #[inline(always)]
+    fn from(collector: CurveCollector<C>) -> Option<C> {
+        match collector {
+            CurveCollector::Singleton => None,
+            CurveCollector::Curve(curve) => Some(curve),
+        }
     }
 }
 
@@ -92,16 +187,16 @@ pub trait Cut: ParametricCurve {
 pub fn parameter_transform_random_test<C>(curve: &C, trials: usize)
 where
     C: ParameterTransform,
-    C::Point: std::fmt::Debug + PartialEq,
-    C::Vector: std::fmt::Debug + PartialEq, {
+    C::Point: Debug + PartialEq,
+    C::Vector: Debug + PartialEq, {
     (0..trials).for_each(move |_| exec_parameter_transform_random_test(curve))
 }
 
 fn exec_parameter_transform_random_test<C>(curve: &C)
 where
     C: ParameterTransform,
-    C::Point: std::fmt::Debug + PartialEq,
-    C::Vector: std::fmt::Debug + PartialEq, {
+    C::Point: Debug + PartialEq,
+    C::Vector: Debug + PartialEq, {
     let mut sign = 0;
     while sign == 0 {
         sign = i32::signum(rand::random::<i32>());
@@ -125,8 +220,8 @@ where
 pub fn concat_random_test<C0, C1>(curve0: &C0, curve1: &C1, trials: usize)
 where
     C0: Concat<C1>,
-    C0::Point: std::fmt::Debug + PartialEq,
-    C0::Vector: std::fmt::Debug + PartialEq,
+    C0::Point: Debug + PartialEq,
+    C0::Vector: Debug + PartialEq,
     C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector>,
     C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>, {
     (0..trials).for_each(move |_| exec_concat_random_test(curve0, curve1))
@@ -135,8 +230,8 @@ where
 fn exec_concat_random_test<C0, C1>(curve0: &C0, curve1: &C1)
 where
     C0: Concat<C1>,
-    C0::Point: std::fmt::Debug + PartialEq,
-    C0::Vector: std::fmt::Debug + PartialEq,
+    C0::Point: Debug + PartialEq,
+    C0::Vector: Debug + PartialEq,
     C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector>,
     C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>, {
     let concatted = curve0.concat(curve1);
@@ -163,16 +258,16 @@ where
 pub fn cut_random_test<C>(curve: &C, trials: usize)
 where
     C: Cut,
-    C::Point: std::fmt::Debug + PartialEq,
-    C::Vector: std::fmt::Debug + PartialEq, {
+    C::Point: Debug + PartialEq,
+    C::Vector: Debug + PartialEq, {
     (0..trials).for_each(move |_| exec_cut_random_test(curve))
 }
 
 fn exec_cut_random_test<C>(curve: &C)
 where
     C: Cut,
-    C::Point: std::fmt::Debug + PartialEq,
-    C::Vector: std::fmt::Debug + PartialEq, {
+    C::Point: Debug + PartialEq,
+    C::Vector: Debug + PartialEq, {
     let mut part0 = curve.clone();
     let (t0, t1) = curve.parameter_range();
     let p = rand::random::<f64>();
