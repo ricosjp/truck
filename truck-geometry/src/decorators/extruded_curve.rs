@@ -97,14 +97,14 @@ where C: ParametricCurve<Point = Point3, Vector = Vector3> {
 #[test]
 fn extruded_curve_test() {
     let cpts = vec![
-        Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
     ];
     let spts = vec![
-        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 1.0)],
-        vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(0.0, 1.0, 1.0)],
-        vec![Vector3::new(1.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0)],
+        vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 1.0)],
+        vec![Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 1.0, 1.0)],
+        vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 1.0)],
     ];
     let curve = BSplineCurve::new(KnotVec::bezier_knot(2), cpts);
     let surface0 = ExtrudedCurve::by_extrusion(curve, Vector3::unit_z());

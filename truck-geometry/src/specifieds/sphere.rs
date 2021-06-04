@@ -81,9 +81,9 @@ impl BoundedSurface for Sphere {
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, PI), (0.0, 2.0 * PI)) }
 }
 
-impl IncludeCurve<BSplineCurve<Vector3>> for Sphere {
+impl IncludeCurve<BSplineCurve<Point3>> for Sphere {
     #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         curve.is_const() && self.include(curve.front())
     }
 }

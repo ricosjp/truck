@@ -40,46 +40,9 @@ pub struct KnotVec(Vec<f64>);
 /// }
 /// ```
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct BSplineCurve<V> {
+pub struct BSplineCurve<P> {
     knot_vec: KnotVec,      // the knot vector
-    control_points: Vec<V>, // the indices of control points
-}
-
-/// NURBS curve
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct NURBSCurve<V>(BSplineCurve<V>);
-
-/// NURBS surface
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct NURBSSurface<V>(BSplineSurface<V>);
-
-/// Curve for the recursive concatting.
-/// # Examples
-/// ```
-/// use truck_geometry::*;
-/// use std::convert::TryInto;
-/// let mut cc = CurveCollector::<Vector2>::Singleton;
-/// cc.concat(&mut BSplineCurve::new(
-///     KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]),
-///     vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)],
-/// ));
-/// cc.concat(&mut BSplineCurve::new(
-///     KnotVec::from(vec![1.0, 1.0, 2.0, 2.0]),
-///     vec![Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0)],
-/// ));
-/// let res: BSplineCurve<Vector2> = cc.try_into().unwrap();
-/// let line = BSplineCurve::new(
-///     KnotVec::from(vec![0.0, 0.0, 2.0, 2.0]),
-///     vec![Vector2::new(0.0, 0.0), Vector2::new(2.0, 2.0)],
-/// );
-/// assert!(res.near2_as_curve(&line));
-/// ```
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub enum CurveCollector<V> {
-    /// the empty curve
-    Singleton,
-    /// a non-empty curve
-    Curve(BSplineCurve<V>),
+    control_points: Vec<P>, // the indices of control points
 }
 
 /// B-spline surface
@@ -145,6 +108,89 @@ pub struct BSplineSurface<V> {
     knot_vecs: (KnotVec, KnotVec),
     control_points: Vec<Vec<V>>,
 }
+
+/// NURBS curve
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct NURBSCurve<V>(BSplineCurve<V>);
+
+/// NURBS surface
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct NURBSSurface<V>(BSplineSurface<V>);
+
+/// trait for control points
+pub mod control_point {
+    use super::*;
+    use std::ops::*;
+    /// trait for abstract control points of B-splines
+    pub trait ControlPoint:
+        Add<Self::Diff, Output = Self>
+        + Sub<Self::Diff, Output = Self>
+        + Sub<Self, Output = Self::Diff>
+        + Mul<f64, Output = Self>
+        + Div<f64, Output = Self>
+        + AddAssign<Self::Diff>
+        + SubAssign<Self::Diff>
+        + MulAssign<f64>
+        + DivAssign<f64>
+        + Copy
+        + Clone
+        + Debug {
+        /// differential vector
+        type Diff: Add<Self::Diff, Output = Self::Diff>
+            + Sub<Self::Diff, Output = Self::Diff>
+            + Mul<f64, Output = Self::Diff>
+            + Div<f64, Output = Self::Diff>
+            + AddAssign<Self::Diff>
+            + SubAssign<Self::Diff>
+            + MulAssign<f64>
+            + DivAssign<f64>
+            + Zero
+            + Copy
+            + Clone
+            + Debug;
+        /// origin
+        fn origin() -> Self;
+        /// into the vector
+        fn to_vec(self) -> Self::Diff;
+    }
+
+    impl ControlPoint for Point1 {
+        type Diff = Vector1;
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+    }
+    impl ControlPoint for Point2 {
+        type Diff = Vector2;
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+    }
+    impl ControlPoint for Point3 {
+        type Diff = Vector3;
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+    }
+    impl ControlPoint for Vector1 {
+        type Diff = Vector1;
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
+    }
+    impl ControlPoint for Vector2 {
+        type Diff = Vector2;
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
+    }
+    impl ControlPoint for Vector3 {
+        type Diff = Vector3;
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
+    }
+    impl ControlPoint for Vector4 {
+        type Diff = Vector4;
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
+    }
+}
+use control_point::ControlPoint;
 
 mod bspcurve;
 mod bspsurface;

@@ -49,12 +49,12 @@ pub struct ExtrudedCurve<C, V> {
 /// Curve processing example
 /// ```
 /// use truck_geometry::*;
-/// let curve: BSplineCurve<Vector3> = BSplineCurve::new(
+/// let curve: BSplineCurve<Point3> = BSplineCurve::new(
 ///     KnotVec::bezier_knot(2),
 ///     vec![
-///         Vector3::new(0.0, 0.0, 0.0),
-///         Vector3::new(0.0, 0.0, 1.0),
-///         Vector3::new(1.0, 0.0, 0.0),
+///         Point3::new(0.0, 0.0, 0.0),
+///         Point3::new(0.0, 0.0, 1.0),
+///         Point3::new(1.0, 0.0, 0.0),
 ///     ],
 /// );
 /// let mut processed = Processor::<_, Matrix4>::new(curve.clone());
@@ -63,14 +63,14 @@ pub struct ExtrudedCurve<C, V> {
 /// const N: usize = 100;
 /// for i in 0..=N {
 ///     let t = i as f64 / N as f64;
-///     assert_eq!(ParametricCurve::subs(&curve, t), processed.subs(t));
+///     assert_eq!(curve.subs(t), processed.subs(t));
 /// }
 ///
 /// // Processed curve can inverted!
 /// processed.invert();
 /// for i in 0..=N {
 ///     let t = i as f64 / N as f64;
-///     assert_eq!(ParametricCurve::subs(&curve, 1.0 - t), processed.subs(t));
+///     assert_eq!(curve.subs(1.0 - t), processed.subs(t));
 /// }
 /// ```
 /// Surface processing example

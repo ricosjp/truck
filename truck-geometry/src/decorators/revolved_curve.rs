@@ -66,7 +66,7 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
     /// use truck_geometry::*;
     /// let line = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
-    ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 1.0)],
+    ///     vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 1.0)],
     /// );
     /// let surface0 = RevolutedCurve::by_revolution(line.clone(), Point3::origin(), Vector3::unit_y());
     /// assert!(surface0.is_front_fixed());
@@ -85,7 +85,7 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
     /// use truck_geometry::*;
     /// let line = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
-    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 0.0, 0.0)],
+    ///     vec![Point3::new(0.0, 0.0, 1.0), Point3::new(0.0, 0.0, 0.0)],
     /// );
     /// let surface0 = RevolutedCurve::by_revolution(line.clone(), Point3::origin(), Vector3::unit_y());
     /// assert!(surface0.is_back_fixed());
@@ -112,7 +112,7 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> SearchParameter for R
     /// use truck_geometry::*;
     /// let line = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
-    ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(1.0, 0.0, 0.0)],
+    ///     vec![Point3::new(0.0, 2.0, 1.0), Point3::new(1.0, 0.0, 0.0)],
     /// );
     /// let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
     /// let pt = Point3::new(-0.5, 1.0, 0.5);
@@ -276,39 +276,39 @@ where
         })
 }
 
-impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+impl<'a> IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&'a BSplineCurve<Point3>> {
+    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = usize::max(2, usize::max(curve.degree(), self.curve.degree()));
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<BSplineCurve<Vector3>> {
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<BSplineCurve<Point3>> {
+    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = usize::max(2, usize::max(curve.degree(), self.curve.degree()));
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl<'a> IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+impl<'a> IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
+    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl IncludeCurve<BSplineCurve<Vector3>> for RevolutedCurve<NURBSCurve<Vector4>> {
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<NURBSCurve<Vector4>> {
+    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Vector3>> {
+impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Point3>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
@@ -316,7 +316,7 @@ impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<V
     }
 }
 
-impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<BSplineCurve<Vector3>> {
+impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<BSplineCurve<Point3>> {
     fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
@@ -368,8 +368,8 @@ where C: ParametricCurve<Point = Point3, Vector = Vector3> + ParameterDivision1D
 
 #[test]
 fn revolve_test() {
-    let pt0 = Vector3::new(0.0, 2.0, 1.0);
-    let pt1 = Vector3::new(1.0, 0.0, 0.0);
+    let pt0 = Point3::new(0.0, 2.0, 1.0);
+    let pt1 = Point3::new(1.0, 0.0, 0.0);
     let curve = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pt0, pt1]);
     let surface = RevolutedCurve::by_revolution(curve, Point3::origin(), Vector3::unit_y());
     const N: usize = 100;
@@ -421,9 +421,9 @@ fn search_parameter_with_fixed_points() {
     let line = BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![
-            Vector3::new(0.0, 1.0, 0.0),
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(0.0, -1.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+            Point3::new(0.0, -1.0, 0.0),
         ],
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
@@ -445,15 +445,15 @@ fn search_parameter_with_fixed_points() {
 fn include_curve_normal() {
     let line = BSplineCurve::new(
         KnotVec::bezier_knot(1),
-        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 2.0, 2.0)],
+        vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 2.0, 2.0)],
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
     let parabola = BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![
-            Vector3::new(1.0, 1.0, 0.0),
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(-1.0, 1.0, 0.0),
+            Point3::new(1.0, 1.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+            Point3::new(-1.0, 1.0, 0.0),
         ],
     );
     assert!(surface.include(&parabola));
@@ -463,15 +463,15 @@ fn include_curve_normal() {
 fn include_curve_abnormal0() {
     let line = BSplineCurve::new(
         KnotVec::bezier_knot(1),
-        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 2.0, 2.0)],
+        vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 2.0, 2.0)],
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
     let parabola = BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![
-            Vector3::new(1.0, 1.0, 0.0),
-            Vector3::new(0.0, 0.0, 2.0),
-            Vector3::new(-1.0, 1.0, 0.0),
+            Point3::new(1.0, 1.0, 0.0),
+            Point3::new(0.0, 0.0, 2.0),
+            Point3::new(-1.0, 1.0, 0.0),
         ],
     );
     assert!(!surface.include(&parabola));
@@ -488,8 +488,8 @@ fn include_curve_abnormal1() {
             Vector4::new(0.0, 0.0, 3.0, 1.0),
         ],
     ));
-    let pt0 = curve.subs(0.2).to_vec();
-    let pt1 = curve.subs(0.6).to_vec();
+    let pt0 = curve.subs(0.2);
+    let pt1 = curve.subs(0.6);
     let surface = RevolutedCurve::by_revolution(curve, Point3::origin(), Vector3::unit_y());
     let line = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pt0, pt1]);
     assert!(!surface.include(&line));

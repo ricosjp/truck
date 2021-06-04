@@ -185,7 +185,7 @@ impl<V> NURBSSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64>> NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSSurface<V> {
     /// Substitutes to a NURBS surface.
     #[inline(always)]
     pub fn subs(&self, u: f64, v: f64) -> V::Point { self.0.subs(u, v).to_point() }
@@ -233,7 +233,7 @@ impl<V: Homogeneous<f64>> NURBSSurface<V> {
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> V::Point + '_ { move |u, v| self.subs(u, v) }
 }
 
-impl<V: Homogeneous<f64>> NURBSSurface<V>
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSSurface<V>
 where V::Point: Tolerance
 {
     /// Returns whether constant curve or not, i.e. all control points are same or not.
@@ -321,7 +321,7 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + Tolerance> NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSSurface<V> {
     /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.  
     #[inline(always)]
     pub fn add_uknot(&mut self, x: f64) -> &mut Self {
@@ -584,7 +584,7 @@ impl<V: Clone> Invertible for NURBSSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64>> ParametricSurface for NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParametricSurface for NURBSSurface<V> {
     type Point = V::Point;
     type Vector = V::Vector;
     #[inline(always)]
@@ -601,23 +601,6 @@ impl<V: Homogeneous<f64>> ParametricSurface for NURBSSurface<V> {
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
 }
 
-impl<'a, V: Homogeneous<f64>> ParametricSurface for &'a NURBSSurface<V> {
-    type Point = V::Point;
-    type Vector = V::Vector;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
-}
-
 impl ParametricSurface3D for NURBSSurface<Vector4> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
@@ -628,12 +611,7 @@ impl ParametricSurface3D for NURBSSurface<Vector4> {
     }
 }
 
-impl<'a> ParametricSurface3D for &'a NURBSSurface<Vector4> {
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Vector3 { (*self).normal(u, v) }
-}
-
-impl<V: Homogeneous<f64>> ParameterDivision2D for NURBSSurface<V>
+impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParameterDivision2D for NURBSSurface<V>
 where V::Point: MetricSpace<Metric = f64>
 {
     #[inline(always)]
@@ -687,9 +665,9 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     }
 }
 
-impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
+impl IncludeCurve<BSplineCurve<Point3>> for NURBSSurface<Vector4> {
     #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Vector3>) -> bool {
+    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let pt = curve.front();
         let mut hint = match self.search_parameter(pt, None, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
@@ -703,7 +681,7 @@ impl IncludeCurve<BSplineCurve<Vector3>> for NURBSSurface<Vector4> {
             for j in 1..=degree {
                 let p = j as f64 / degree as f64;
                 let t = knots[i - 1] * (1.0 - p) + knots[i] * p;
-                let pt = Point3::from_vec(curve.subs(t));
+                let pt = curve.subs(t);
                 hint = match self.search_parameter(pt, Some(hint), INCLUDE_CURVE_TRIALS) {
                     Some(got) => got,
                     None => return false,
@@ -763,45 +741,16 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     }
 }
 
-impl Transformed<Matrix2> for NURBSSurface<Vector3> {
+impl<M, V: Copy> Transformed<M> for NURBSSurface<V>
+where M: Copy + std::ops::Mul<V, Output = V>
+{
     #[inline(always)]
-    fn transform_by(&mut self, trans: Matrix2) { self.transform_by(Matrix3::from(trans)) }
-    #[inline(always)]
-    fn transformed(&self, trans: Matrix2) -> Self { self.transformed(Matrix3::from(trans)) }
-}
-
-impl Transformed<Matrix3> for NURBSSurface<Vector3> {
-    #[inline(always)]
-    fn transform_by(&mut self, trans: Matrix3) { self.0.transform_by(trans) }
-    #[inline(always)]
-    fn transformed(&self, trans: Matrix3) -> Self {
-        let mut surface = self.clone();
-        surface.transform_by(trans);
-        surface
-    }
-}
-
-impl Transformed<Matrix3> for NURBSSurface<Vector4> {
-    #[inline(always)]
-    fn transform_by(&mut self, trans: Matrix3) { self.transform_by(Matrix3::from(trans)) }
-    #[inline(always)]
-    fn transformed(&self, trans: Matrix3) -> Self { self.transformed(Matrix3::from(trans)) }
-}
-
-impl Transformed<Matrix4> for NURBSSurface<Vector4> {
-    #[inline(always)]
-    fn transform_by(&mut self, trans: Matrix4) {
+    fn transform_by(&mut self, trans: M) {
         self.0
             .control_points
             .iter_mut()
             .flatten()
-            .for_each(|pt| *pt = trans * *pt)
-    }
-    #[inline(always)]
-    fn transformed(&self, trans: Matrix4) -> Self {
-        let mut surface = self.clone();
-        surface.transform_by(trans);
-        surface
+            .for_each(move |v| *v = trans * *v)
     }
 }
 
@@ -870,7 +819,6 @@ fn test_include2d() {
     let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
     let mut curve = surface.sectional_curve(bnd_box);
     curve.control_points_mut().for_each(|pt| *pt *= 3.0);
-    assert!(!surface.include(&curve));
     let surface = NURBSSurface::new(surface);
     let curve = NURBSCurve::new(curve);
     assert!(surface.include(&curve));

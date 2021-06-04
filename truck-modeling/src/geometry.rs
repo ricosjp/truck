@@ -9,7 +9,7 @@ pub use truck_geometry::{inv_or_zero, algo};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Curve {
     /// 3-dimensional B-spline curve
-    BSplineCurve(BSplineCurve<Vector3>),
+    BSplineCurve(BSplineCurve<Point3>),
     /// 3-dimensional NURBS curve
     NURBSCurve(NURBSCurve<Vector4>),
 }
@@ -86,7 +86,7 @@ impl Curve {
                 curve
                     .control_points()
                     .iter()
-                    .map(|pt| pt.extend(1.0))
+                    .map(|pt| pt.to_vec().extend(1.0))
                     .collect(),
             ),
             Curve::NURBSCurve(curve) => curve.into_non_rationalized(),
@@ -100,7 +100,7 @@ pub enum Surface {
     /// Plane
     Plane(Plane),
     /// 3-dimensional B-spline surface
-    BSplineSurface(BSplineSurface<Vector3>),
+    BSplineSurface(BSplineSurface<Point3>),
     /// 3-dimensional NURBS Surface
     NURBSSurface(NURBSSurface<Vector4>),
     /// revoluted curve

@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 truck-base = { version = "0.1.1", path = "../truck-base" }
 rand = "0.8.3"
+thiserror = "1.0.24"
