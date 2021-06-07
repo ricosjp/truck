@@ -2,7 +2,7 @@ use truck_topology::*;
 use crate::topo_traits::*;
 use crate::topo_impls::*;
 
-impl<P, C, S> Sweep<P, C, S> for Vertex<P> {
+impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Vertex<P> {
     type Swept = Edge<P, C>;
     /// Transforms a vertex and creates an edge by connecting vertices.
     /// # Examples
@@ -17,9 +17,9 @@ impl<P, C, S> Sweep<P, C, S> for Vertex<P> {
     ///     &move |i: &usize, j: &usize| *i * 10 + j,
     ///     &move |_, _| (),
     /// );
-    /// assert_eq!(*edge.front().lock_point().unwrap(), 1);
-    /// assert_eq!(*edge.back().lock_point().unwrap(), 2);
-    /// assert_eq!(*edge.lock_curve().unwrap(), 12);
+    /// assert_eq!(edge.front().get_point(), 1);
+    /// assert_eq!(edge.back().get_point(), 2);
+    /// assert_eq!(edge.get_curve(), 12);
     /// ```
     fn sweep<
         FP: Fn(&P) -> P,
@@ -41,7 +41,7 @@ impl<P, C, S> Sweep<P, C, S> for Vertex<P> {
     }
 }
 
-impl<P, C, S> Sweep<P, C, S> for Edge<P, C> {
+impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Edge<P, C> {
     type Swept = Face<P, C, S>;
     /// Transforms an edge and creates a face by connecting vertices and edges.
     /// # Examples
@@ -61,7 +61,7 @@ impl<P, C, S> Sweep<P, C, S> for Edge<P, C> {
     ///     &move |i: &usize, j: &usize| *i + *j,
     /// );
     ///
-    /// assert_eq!(*face.lock_surface().unwrap(), 300);
+    /// assert_eq!(face.get_surface(), 300);
     /// assert_eq!(face.boundaries().len(), 1);
     ///
     /// let boundary: Wire<usize, usize> = face.boundaries()[0].clone();
@@ -69,18 +69,18 @@ impl<P, C, S> Sweep<P, C, S> for Edge<P, C> {
     ///
     /// assert_eq!(boundary[0], edge);
     ///
-    /// assert_eq!(*boundary[1].front().lock_point().unwrap(), 2);
-    /// assert_eq!(*boundary[1].back().lock_point().unwrap(), 4);
-    /// assert_eq!(*boundary[1].lock_curve().unwrap(), 24);
+    /// assert_eq!(boundary[1].front().get_point(), 2);
+    /// assert_eq!(boundary[1].back().get_point(), 4);
+    /// assert_eq!(boundary[1].get_curve(), 24);
     ///
-    /// assert_eq!(*boundary[2].front().lock_point().unwrap(), 4);
-    /// assert_eq!(*boundary[2].back().lock_point().unwrap(), 3);
+    /// assert_eq!(boundary[2].front().get_point(), 4);
+    /// assert_eq!(boundary[2].back().get_point(), 3);
     /// // the curve of second edge is determined by connect_curves  
-    /// assert_eq!(*boundary[2].lock_curve().unwrap(), 200);
+    /// assert_eq!(boundary[2].get_curve(), 200);
     ///
-    /// assert_eq!(*boundary[3].front().lock_point().unwrap(), 3);
-    /// assert_eq!(*boundary[3].back().lock_point().unwrap(), 1);
-    /// assert_eq!(*boundary[3].lock_curve().unwrap(), 13);
+    /// assert_eq!(boundary[3].front().get_point(), 3);
+    /// assert_eq!(boundary[3].back().get_point(), 1);
+    /// assert_eq!(boundary[3].get_curve(), 13);
     /// ```
     fn sweep<
         FP: Fn(&P) -> P,
@@ -102,7 +102,7 @@ impl<P, C, S> Sweep<P, C, S> for Edge<P, C> {
     }
 }
 
-impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
+impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Wire<P, C> {
     type Swept = Shell<P, C, S>;
     /// Transforms a wire and creates a shell by connecting vertices and edges.
     /// # Examples
@@ -127,28 +127,28 @@ impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
     /// assert!(shell.is_connected());
     /// 
     /// let face1 = &shell[1];
-    /// assert_eq!(*face1.lock_surface().unwrap(), 320);
+    /// assert_eq!(face1.get_surface(), 320);
     /// let boundary1 = &face1.boundaries()[0];
-    /// assert_eq!(*boundary1[0].lock_curve().unwrap(), 110);
-    /// assert_eq!(*boundary1[1].lock_curve().unwrap(), 37);
-    /// assert_eq!(*boundary1[2].lock_curve().unwrap(), 210);
-    /// assert_eq!(*boundary1[3].lock_curve().unwrap(), 26);
-    /// assert_eq!(*boundary1[0].front().lock_point().unwrap(), 2);
-    /// assert_eq!(*boundary1[1].front().lock_point().unwrap(), 3);
-    /// assert_eq!(*boundary1[2].front().lock_point().unwrap(), 7);
-    /// assert_eq!(*boundary1[3].front().lock_point().unwrap(), 6);
+    /// assert_eq!(boundary1[0].get_curve(), 110);
+    /// assert_eq!(boundary1[1].get_curve(), 37);
+    /// assert_eq!(boundary1[2].get_curve(), 210);
+    /// assert_eq!(boundary1[3].get_curve(), 26);
+    /// assert_eq!(boundary1[0].front().get_point(), 2);
+    /// assert_eq!(boundary1[1].front().get_point(), 3);
+    /// assert_eq!(boundary1[2].front().get_point(), 7);
+    /// assert_eq!(boundary1[3].front().get_point(), 6);
     /// 
     /// let face2 = &shell[2];
-    /// assert_eq!(*face2.lock_surface().unwrap(), 340);
+    /// assert_eq!(face2.get_surface(), 340);
     /// let boundary2 = &face2.boundaries()[0];
-    /// assert_eq!(*boundary2[0].lock_curve().unwrap(), 120);
-    /// assert_eq!(*boundary2[1].lock_curve().unwrap(), 48);
-    /// assert_eq!(*boundary2[2].lock_curve().unwrap(), 220);
-    /// assert_eq!(*boundary2[3].lock_curve().unwrap(), 37);
-    /// assert_eq!(*boundary2[0].front().lock_point().unwrap(), 3);
-    /// assert_eq!(*boundary2[1].front().lock_point().unwrap(), 4);
-    /// assert_eq!(*boundary2[2].front().lock_point().unwrap(), 8);
-    /// assert_eq!(*boundary2[3].front().lock_point().unwrap(), 7);
+    /// assert_eq!(boundary2[0].get_curve(), 120);
+    /// assert_eq!(boundary2[1].get_curve(), 48);
+    /// assert_eq!(boundary2[2].get_curve(), 220);
+    /// assert_eq!(boundary2[3].get_curve(), 37);
+    /// assert_eq!(boundary2[0].front().get_point(), 3);
+    /// assert_eq!(boundary2[1].front().get_point(), 4);
+    /// assert_eq!(boundary2[2].front().get_point(), 8);
+    /// assert_eq!(boundary2[3].front().get_point(), 7);
     /// 
     /// assert_eq!(boundary1[1].id(), boundary2[3].id());
     /// assert_ne!(boundary1[1], boundary2[3]);
@@ -173,7 +173,7 @@ impl<P, C, S> Sweep<P, C, S> for Wire<P, C> {
     }
 }
 
-impl<P, C, S> Sweep<P, C, S> for Face<P, C, S> {
+impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Face<P, C, S> {
     type Swept = Solid<P, C, S>;
     /// Transforms a face and creates a solid by connecting vertices, edges and faces.
     /// # Examples
@@ -207,15 +207,15 @@ impl<P, C, S> Sweep<P, C, S> for Face<P, C, S> {
     /// assert_ne!(shell[0].orientation(), face.orientation());
     /// 
     /// // Check the condition of the third face.
-    /// assert_eq!(*shell[2].lock_surface().unwrap(), 2468);
+    /// assert_eq!(shell[2].get_surface(), 2468);
     /// let bdry = &shell[2].boundaries()[0];
-    /// assert_eq!(*bdry[0].lock_curve().unwrap(), 24);
-    /// assert_eq!(*bdry[1].lock_curve().unwrap(), 48);
-    /// assert_eq!(*bdry[2].lock_curve().unwrap(), 68);
-    /// assert_eq!(*bdry[3].lock_curve().unwrap(), 26);
+    /// assert_eq!(bdry[0].get_curve(), 24);
+    /// assert_eq!(bdry[1].get_curve(), 48);
+    /// assert_eq!(bdry[2].get_curve(), 68);
+    /// assert_eq!(bdry[3].get_curve(), 26);
     /// 
     /// // Check the last face: seiling.
-    /// assert_eq!(*shell[5].lock_surface().unwrap(), 4567);
+    /// assert_eq!(shell[5].get_surface(), 4567);
     /// ```
     fn sweep<
         FP: Fn(&P) -> P,
@@ -243,7 +243,7 @@ impl<P, C, S> Sweep<P, C, S> for Face<P, C, S> {
     }
 }
 
-impl<P, C, S> Sweep<P, C, S> for Shell<P, C, S> {
+impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Shell<P, C, S> {
     type Swept = Vec<Result<Solid<P, C, S>>>;
     /// Transforms a shell and tries to create solids by connecting vertices, edges and faces.
     /// 

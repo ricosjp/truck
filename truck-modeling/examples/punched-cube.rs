@@ -30,7 +30,7 @@ fn main() {
     let edge3 = Edge::new(
         edge3.front(),
         edge0.front(),
-        edge3.lock_curve().unwrap().clone(),
+        edge3.get_curve(),
     );
     let wire = Wire::from(vec![
         edge3.inverse(),

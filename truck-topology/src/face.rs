@@ -189,7 +189,7 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     fn renew_pointer(&mut self)
     where S: Clone {
-        let surface = self.lock_surface().unwrap().clone();
+        let surface = self.get_surface();
         self.surface = Arc::new(Mutex::new(surface));
     }
 
@@ -368,7 +368,13 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     pub fn orientation(&self) -> bool { self.orientation }
 
-    /// Returns the id of face.
+    /// Returns the clone of surface of face.
+    #[inline(always)]
+    pub fn get_surface(&self) -> S where S: Clone {
+        self.surface.lock().unwrap().clone()
+    }
+
+    /// Sets the surface of face.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -382,56 +388,20 @@ impl<P, C, S> Face<P, C, S> {
     /// let face1 = face0.clone();
     ///
     /// // Two faces have the same content.
-    /// assert_eq!(*face0.try_lock_surface().unwrap(), 0);
-    /// assert_eq!(*face1.try_lock_surface().unwrap(), 0);
+    /// assert_eq!(face0.get_surface(), 0);
+    /// assert_eq!(face1.get_surface(), 0);
     ///
-    /// {
-    ///     let mut surface = face0.try_lock_surface().unwrap();
-    ///     *surface = 1;
-    /// }
+    /// // Set surface
+    /// face0.set_surface(1);
+    /// 
     /// // The contents of two vertices are synchronized.
-    /// assert_eq!(*face0.try_lock_surface().unwrap(), 1);
-    /// assert_eq!(*face1.try_lock_surface().unwrap(), 1);
-    ///
-    /// // The thread is not blocked even if the surface is already locked.
-    /// let lock = face0.try_lock_surface();
-    /// assert!(face1.try_lock_surface().is_err());
-    /// ```
+    /// assert_eq!(face0.get_surface(), 1);
+    /// assert_eq!(face1.get_surface(), 1);
+    /// ``` 
     #[inline(always)]
-    pub fn try_lock_surface(&self) -> TryLockResult<MutexGuard<S>> { self.surface.try_lock() }
-    /// Returns the id of face.
-    /// # Examples
-    /// ```
-    /// use truck_topology::*;
-    /// let v = Vertex::news(&[(), (), ()]);
-    /// let wire = Wire::from(vec![
-    ///      Edge::new(&v[0], &v[1], ()),
-    ///      Edge::new(&v[1], &v[2], ()),
-    ///      Edge::new(&v[2], &v[0], ()),
-    /// ]);
-    /// let face0 = Face::new(vec![wire], 0);
-    /// let face1 = face0.clone();
-    ///
-    /// // Two faces have the same content.
-    /// assert_eq!(*face0.lock_surface().unwrap(), 0);
-    /// assert_eq!(*face1.lock_surface().unwrap(), 0);
-    ///
-    /// {
-    ///     let mut surface = face0.lock_surface().unwrap();
-    ///     *surface = 1;
-    /// }
-    /// // The contents of two vertices are synchronized.
-    /// assert_eq!(*face0.lock_surface().unwrap(), 1);
-    /// assert_eq!(*face1.lock_surface().unwrap(), 1);
-    ///
-    /// // Check the behavior of `lock`.
-    /// std::thread::spawn(move || {
-    ///     *face0.lock_surface().unwrap() = 2;
-    /// }).join().expect("thread::spawn failed");
-    /// assert_eq!(*face1.lock_surface().unwrap(), 2);    
-    /// ```
-    #[inline(always)]
-    pub fn lock_surface(&self) -> LockResult<MutexGuard<S>> { self.surface.lock() }
+    pub fn set_surface(&self, surface: S) {
+        *self.surface.lock().unwrap() = surface;
+    }
 
     /// Inverts the direction of the face.
     /// # Examples
@@ -580,8 +550,8 @@ impl<P, C, S: Clone + Invertible> Face<P, C, S> {
     #[inline(always)]
     pub fn oriented_surface(&self) -> S {
         match self.orientation {
-            true => self.lock_surface().unwrap().clone(),
-            false => self.lock_surface().unwrap().inverse(),
+            true => self.surface.lock().unwrap().clone(),
+            false => self.surface.lock().unwrap().inverse(),
         }
     }
 }
@@ -596,10 +566,10 @@ where
     /// and the geometry of edge.
     #[inline(always)]
     pub fn is_geometric_consistent(&self) -> bool {
-        let surface = &*self.lock_surface().unwrap();
+        let surface = &*self.surface.lock().unwrap();
         self.boundary_iters().into_iter().flatten().all(|edge| {
             let edge_consist = edge.is_geometric_consistent();
-            let curve = &*edge.lock_curve().unwrap();
+            let curve = &*edge.curve.lock().unwrap();
             let curve_consist = surface.include(curve);
             edge_consist && curve_consist
         })

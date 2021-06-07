@@ -211,35 +211,13 @@ impl<P, C> Edge<P, C> {
         std::ptr::eq(Arc::as_ptr(&self.curve), Arc::as_ptr(&other.curve))
     }
 
-    /// Tries to lock the mutex of the contained curve.
-    /// The thread will not blocked.
-    /// # Examples
-    /// ```
-    /// use truck_topology::*;
-    /// let v = Vertex::news(&[(), ()]);
-    /// let edge0 = Edge::new(&v[0], &v[1], 0);
-    /// let edge1 = edge0.clone();
-    ///
-    /// // Two vertices have the same content.
-    /// assert_eq!(*edge0.try_lock_curve().unwrap(), 0);
-    /// assert_eq!(*edge1.try_lock_curve().unwrap(), 0);
-    ///
-    /// {
-    ///     let mut curve = edge0.try_lock_curve().unwrap();
-    ///     *curve = 1;
-    /// }
-    /// // The contents of two vertices are synchronized.
-    /// assert_eq!(*edge0.try_lock_curve().unwrap(), 1);
-    /// assert_eq!(*edge1.try_lock_curve().unwrap(), 1);
-    ///
-    /// // The thread is not blocked even if the curve is already locked.
-    /// let lock = edge0.try_lock_curve();
-    /// assert!(edge1.try_lock_curve().is_err());    
-    /// ```
+    /// Returns the clone of the curve.
     #[inline(always)]
-    pub fn try_lock_curve(&self) -> TryLockResult<MutexGuard<C>> { self.curve.try_lock() }
-    /// Acquires the mutex of the contained curve,
-    /// blocking the current thread until it is able to do so.
+    pub fn get_curve(&self) -> C where C: Clone {
+        self.curve.lock().unwrap().clone()
+    }
+
+    /// Set the curve.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -248,25 +226,20 @@ impl<P, C> Edge<P, C> {
     /// let edge1 = edge0.clone();
     ///
     /// // Two edges have the same content.
-    /// assert_eq!(*edge0.lock_curve().unwrap(), 0);
-    /// assert_eq!(*edge1.lock_curve().unwrap(), 0);
-    ///
-    /// {
-    ///     let mut curve = edge0.lock_curve().unwrap();
-    ///     *curve = 1;
-    /// }
+    /// assert_eq!(edge0.get_curve(), 0);
+    /// assert_eq!(edge1.get_curve(), 0);
+    /// 
+    /// // set the content
+    /// edge0.set_curve(1);
+    /// 
     /// // The contents of two edges are synchronized.
-    /// assert_eq!(*edge0.lock_curve().unwrap(), 1);
-    /// assert_eq!(*edge1.lock_curve().unwrap(), 1);
-    ///
-    /// // Check the behavior of `lock`.
-    /// std::thread::spawn(move || {
-    ///     *edge0.lock_curve().unwrap() = 2;
-    /// }).join().expect("thread::spawn failed");
-    /// assert_eq!(*edge1.lock_curve().unwrap(), 2);    
-    /// ```
+    /// assert_eq!(edge0.get_curve(), 1);
+    /// assert_eq!(edge1.get_curve(), 1);
+    /// ``` 
     #[inline(always)]
-    pub fn lock_curve(&self) -> LockResult<MutexGuard<C>> { self.curve.lock() }
+    pub fn set_curve(&self, curve: C) {
+        *self.curve.lock().unwrap() = curve;
+    }
 
     /// Returns the id that does not depend on the direction of the edge.
     /// # Examples
@@ -288,8 +261,8 @@ impl<P, C: Clone + Invertible> Edge<P, C> {
     #[inline(always)]
     pub fn oriented_curve(&self) -> C {
         match self.orientation {
-            true => self.lock_curve().unwrap().clone(),
-            false => self.lock_curve().unwrap().inverse(),
+            true => self.curve.lock().unwrap().clone(),
+            false => self.curve.lock().unwrap().inverse(),
         }
     }
 }
@@ -299,11 +272,11 @@ impl<P, C: ParametricCurve<Point = P>> Edge <P, C> {
     /// and the geometry of edge.
     #[inline(always)]
     pub fn is_geometric_consistent(&self) -> bool where P: Tolerance {
-        let curve = self.lock_curve().unwrap();
+        let curve = self.curve.lock().unwrap();
         let geom_front = curve.front();
         let geom_back = curve.back();
-        let top_front = self.absolute_front().lock_point().unwrap();
-        let top_back = self.absolute_back().lock_point().unwrap();
+        let top_front = self.absolute_front().point.lock().unwrap();
+        let top_back = self.absolute_back().point.lock().unwrap();
         geom_front.near(&*top_front) && geom_back.near(&*top_back)
     }
 }

@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 use truck_topology::*;
 
-pub(super) fn create_edge<P, C, CP: Fn(&P, &P) -> C>(
+pub(super) fn create_edge<P: Clone, C: Clone, CP: Fn(&P, &P) -> C>(
     v0: &Vertex<P>,
     v1: &Vertex<P>,
     connect_points: &CP,
 ) -> C
 {
-    connect_points(&*v0.lock_point().unwrap(), &*v1.lock_point().unwrap())
+    connect_points(&v0.get_point(), &v1.get_point())
 }
 
-pub(super) fn connect_vertices<P, C, CP: Fn(&P, &P) -> C>(
+pub(super) fn connect_vertices<P: Clone, C: Clone, CP: Fn(&P, &P) -> C>(
     v0: &Vertex<P>,
     v1: &Vertex<P>,
     connect_points: &CP,
@@ -19,16 +19,16 @@ pub(super) fn connect_vertices<P, C, CP: Fn(&P, &P) -> C>(
     Edge::debug_new(&v0, &v1, create_edge(v0, v1, connect_points))
 }
 
-pub(super) fn create_surface<P, C, S, CC: Fn(&C, &C) -> S>(
+pub(super) fn create_surface<P: Clone, C: Clone, S: Clone, CC: Fn(&C, &C) -> S>(
     edge0: &Edge<P, C>,
     edge1: &Edge<P, C>,
     connect_curves: &CC,
 ) -> S
 {
-    connect_curves(&*edge0.lock_curve().unwrap(), &*edge1.lock_curve().unwrap())
+    connect_curves(&edge0.get_curve(), &edge1.get_curve())
 }
 
-pub(super) fn connect_edges<P, C, S, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
+pub(super) fn connect_edges<P: Clone, C: Clone, S: Clone, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
     edge0: &Edge<P, C>,
     edge1: &Edge<P, C>,
     connect_points: &CP,
@@ -42,7 +42,7 @@ pub(super) fn connect_edges<P, C, S, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
     Face::debug_new(vec![wire], surface)
 }
 
-fn sub_connect_wires<P, C, S, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
+fn sub_connect_wires<P: Clone, C: Clone, S: Clone, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
     edge0: &Edge<P, C>,
     edge1: &Edge<P, C>,
     connect_points: &CP,
@@ -82,9 +82,9 @@ fn sub_connect_wires<P, C, S, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(
 
 pub(super) fn connect_wires<
     'a,
-    P: 'a,
-    C: 'a,
-    S: 'a,
+    P: 'a + Clone,
+    C: 'a + Clone,
+    S: 'a + Clone,
     CP: Fn(&P, &P) -> C,
     CC: Fn(&C, &C) -> S,
     I: IntoIterator<Item = &'a Edge<P, C>> + 'a,
@@ -106,9 +106,9 @@ pub(super) fn connect_wires<
 
 pub(super) fn connect_raw_wires<
     'a,
-    P: 'a,
-    C: 'a,
-    S: 'a,
+    P: 'a + Clone,
+    C: 'a + Clone,
+    S: 'a + Clone,
     CP: Fn(&P, &P) -> C,
     CC: Fn(&C, &C) -> S,
     I: IntoIterator<Item = Edge<P, C>> + 'a,

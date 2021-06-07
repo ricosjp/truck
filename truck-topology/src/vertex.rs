@@ -32,8 +32,13 @@ impl<P> Vertex<P> {
         points.iter().map(|p| Vertex::new(*p)).collect()
     }
 
-    /// Tries to lock the mutex of the contained point.
-    /// The thread will not blocked.
+    /// Returns the point of vertex.
+    #[inline(always)]
+    pub fn get_point(&self) -> P where P: Clone {
+        self.point.lock().unwrap().clone()
+    }
+
+    /// Sets the point of vertex.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -41,51 +46,20 @@ impl<P> Vertex<P> {
     /// let v1 = v0.clone();
     ///
     /// // Two vertices have the same content.
-    /// assert_eq!(*v0.try_lock_point().unwrap(), 0);
-    /// assert_eq!(*v1.try_lock_point().unwrap(), 0);
+    /// assert_eq!(v0.get_point(), 0);
+    /// assert_eq!(v1.get_point(), 0);
     ///
-    /// {
-    ///     let mut point = v0.try_lock_point().unwrap();
-    ///     *point = 1;
-    /// }
+    /// // set point
+    /// v0.set_point(1);
+    /// 
     /// // The contents of two vertices are synchronized.
-    /// assert_eq!(*v0.try_lock_point().unwrap(), 1);
-    /// assert_eq!(*v1.try_lock_point().unwrap(), 1);
-    ///
-    /// // The thread is not blocked even if the point is already locked.
-    /// let lock = v0.try_lock_point();
-    /// assert!(v1.try_lock_point().is_err());    
-    /// ```
+    /// assert_eq!(v0.get_point(), 1);
+    /// assert_eq!(v1.get_point(), 1);
+    /// ``` 
     #[inline(always)]
-    pub fn try_lock_point(&self) -> TryLockResult<MutexGuard<P>> { self.point.try_lock() }
-    /// Acquires the mutex of the contained point,
-    /// blocking the current thread until it is able to do so.
-    /// # Examples
-    /// ```
-    /// use truck_topology::*;
-    /// let v0 = Vertex::new(0);
-    /// let v1 = v0.clone();
-    ///
-    /// // Two vertices have the same content.
-    /// assert_eq!(*v0.lock_point().unwrap(), 0);
-    /// assert_eq!(*v1.lock_point().unwrap(), 0);
-    ///
-    /// {
-    ///     let mut point = v0.lock_point().unwrap();
-    ///     *point = 1;
-    /// }
-    /// // The contents of two vertices are synchronized.
-    /// assert_eq!(*v0.lock_point().unwrap(), 1);
-    /// assert_eq!(*v1.lock_point().unwrap(), 1);
-    ///
-    /// // Check the behavior of `lock`.
-    /// std::thread::spawn(move || {
-    ///     *v0.lock_point().unwrap() = 2;
-    /// }).join().expect("thread::spawn failed");
-    /// assert_eq!(*v1.lock_point().unwrap(), 2);    
-    /// ```
-    #[inline(always)]
-    pub fn lock_point(&self) -> LockResult<MutexGuard<P>> { self.point.lock() }
+    pub fn set_point(&self, point: P) {
+        *self.point.lock().unwrap() = point;
+    }
 
     /// Returns the id of the vertex.
     #[inline(always)]

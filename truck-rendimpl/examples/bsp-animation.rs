@@ -42,7 +42,7 @@ impl MyApp {
         let v = builder::vertex(Point3::origin());
         let e = builder::tsweep(&v, Vector3::unit_z());
         let f = builder::tsweep(&e, Vector3::unit_x());
-        *f.lock_surface().unwrap() = Self::init_surface(3, 4);
+        f.set_surface(Self::init_surface(3, 4));
         Shell::from(vec![f])
     }
     fn init_camera() -> Camera {
@@ -88,9 +88,10 @@ impl MyApp {
                     instant = std::time::Instant::now();
                     count = 0;
                 }
-                match *shell[0].lock_surface().unwrap() {
-                    Surface::NURBSSurface(ref mut surface) => {
-                        surface.control_point_mut(3, 3)[1] = time.sin()
+                match shell[0].get_surface() {
+                    Surface::NURBSSurface(mut surface) => {
+                        surface.control_point_mut(3, 3)[1] = time.sin();
+                        shell[0].set_surface(Surface::NURBSSurface(surface));
                     }
                     _ => {}
                 }

@@ -77,7 +77,7 @@
 
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, LockResult, Mutex, MutexGuard, TryLockResult};
+use std::sync::{Arc, Mutex};
 use truck_base::{id::ID, tolerance::*};
 use truck_geotrait::*;
 
@@ -196,13 +196,13 @@ impl<T> RemoveTry<T> for Result<T> {
 /// use truck_topology::*;
 /// let v = Vertex::new(0);
 ///
-/// let entity = *v.try_lock_point().unwrap();
+/// let entity = v.get_point();
 /// let v_id: VertexID<usize> = v.id();
 ///
 /// // Change the point!
-/// *v.try_lock_point().unwrap() = 1;
+/// v.set_point(1);
 ///
-/// assert_ne!(entity, *v.try_lock_point().unwrap());
+/// assert_ne!(entity, v.get_point());
 /// assert_eq!(v_id, v.id());
 /// ```
 pub type VertexID<P> = ID<Mutex<P>>;

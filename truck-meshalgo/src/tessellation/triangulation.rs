@@ -34,7 +34,7 @@ impl<C: PolylineableCurve> PolyEdges<C> {
         let mut poly = match self.0.get(&edge.id()) {
             Some(got) => got.clone(),
             None => {
-                let curve = edge.lock_curve().unwrap().clone();
+                let curve = edge.get_curve();
                 let poly: Vec<Point3> = curve
                     .parameter_division(curve.parameter_range(), tol)
                     .into_iter()
