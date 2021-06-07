@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use crate::*;
+use thiserror::Error;
 
 impl<P, C> Edge<P, C> {
     /// Generates the edge from `front` to `back`.  
@@ -213,7 +214,8 @@ impl<P, C> Edge<P, C> {
 
     /// Returns the clone of the curve.
     #[inline(always)]
-    pub fn get_curve(&self) -> C where C: Clone {
+    pub fn get_curve(&self) -> C
+    where C: Clone {
         self.curve.lock().unwrap().clone()
     }
 
@@ -228,18 +230,16 @@ impl<P, C> Edge<P, C> {
     /// // Two edges have the same content.
     /// assert_eq!(edge0.get_curve(), 0);
     /// assert_eq!(edge1.get_curve(), 0);
-    /// 
+    ///
     /// // set the content
     /// edge0.set_curve(1);
-    /// 
+    ///
     /// // The contents of two edges are synchronized.
     /// assert_eq!(edge0.get_curve(), 1);
     /// assert_eq!(edge1.get_curve(), 1);
-    /// ``` 
+    /// ```
     #[inline(always)]
-    pub fn set_curve(&self, curve: C) {
-        *self.curve.lock().unwrap() = curve;
-    }
+    pub fn set_curve(&self, curve: C) { *self.curve.lock().unwrap() = curve; }
 
     /// Returns the id that does not depend on the direction of the edge.
     /// # Examples
@@ -253,31 +253,73 @@ impl<P, C> Edge<P, C> {
     /// ```
     #[inline(always)]
     pub fn id(&self) -> EdgeID<C> { ID::new(Arc::as_ptr(&self.curve)) }
-}
-
-impl<P, C: Clone + Invertible> Edge<P, C> {
     /// Returns the cloned curve in edge.
     /// If edge is inverted, then the returned curve is also inverted.
     #[inline(always)]
-    pub fn oriented_curve(&self) -> C {
+    pub fn oriented_curve(&self) -> C
+    where C: Clone + Invertible {
         match self.orientation {
             true => self.curve.lock().unwrap().clone(),
             false => self.curve.lock().unwrap().inverse(),
         }
     }
-}
-
-impl<P, C: ParametricCurve<Point = P>> Edge <P, C> {
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
-    pub fn is_geometric_consistent(&self) -> bool where P: Tolerance {
+    pub fn is_geometric_consistent(&self) -> bool
+    where
+        P: Tolerance,
+        C: ParametricCurve<Point = P>, {
         let curve = self.curve.lock().unwrap();
         let geom_front = curve.front();
         let geom_back = curve.back();
         let top_front = self.absolute_front().point.lock().unwrap();
         let top_back = self.absolute_back().point.lock().unwrap();
         geom_front.near(&*top_front) && geom_back.near(&*top_back)
+    }
+
+    /// Cuts the edge at the parameter `t`.
+    /// # Remarks
+    /// This method does not consider the orientation of curve.
+    pub fn cut(&self, t: f64) -> (Self, Self)
+    where C: Cut<Point = P>
+    {
+        let mut curve0 = self.curve.lock().unwrap().clone();
+        let curve1 = curve0.cut(t);
+        let v = Vertex::new(curve0.back());
+        (
+            Edge::debug_new(self.absolute_front(), &v, curve0),
+            Edge::debug_new(&v, self.absolute_back(), curve1),
+        )
+    }
+
+    /// Concats two edges.
+    pub fn concat(&self, rhs: &Self) -> std::result::Result<Self, ConcatError<P>>
+    where P: std::fmt::Debug, C: Concat<C, Point = P, Output = C> + Invertible {
+        if self.back() != rhs.front() {
+            return Err(ConcatError::DisconnectedVertex(self.back().clone(), rhs.front().clone()));
+        }
+        let curve0 = self.oriented_curve();
+        let curve1 = rhs.oriented_curve();
+        let curve = curve0.try_concat(&curve1)?;
+        Ok(Edge::debug_new(self.front(), rhs.back(), curve))
+    }
+}
+
+/// Error for concat
+#[derive(Clone, Debug, Error)]
+pub enum ConcatError<P: std::fmt::Debug> {
+    /// Failed to concat edges since the end point of the first curve is different from the start point of the second curve.
+    #[error("The end point {0:?} of the first curve is different from the start point {1:?} of the second curve.")]
+    DisconnectedVertex(Vertex<P>, Vertex<P>),
+    /// From geometric error.
+    #[error("{0}")]
+    FromGeometry(truck_geotrait::ConcatError<P>),
+}
+
+impl<P: std::fmt::Debug> From<truck_geotrait::ConcatError<P>> for ConcatError<P> {
+    fn from(err: truck_geotrait::ConcatError<P>) -> ConcatError<P> {
+        ConcatError::FromGeometry(err)
     }
 }
 
