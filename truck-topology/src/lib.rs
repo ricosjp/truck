@@ -81,6 +81,8 @@ use std::sync::{Arc, Mutex};
 use truck_base::{id::ID, tolerance::*};
 use truck_geotrait::*;
 
+const SEARCH_PARAMETER_TRIALS: usize = 100;
+
 /// Vertex, the minimum topological unit.
 ///
 /// The constructor `Vertex::new()` creates a different vertex each time.

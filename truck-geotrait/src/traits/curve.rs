@@ -38,6 +38,7 @@ impl ParametricCurve for () {
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
 }
 
+/// Implementation for the test of topological methods.
 impl ParametricCurve for (usize, usize) {
     type Point = usize;
     type Vector = usize;

@@ -213,6 +213,20 @@ impl<P, C> Edge<P, C> {
     }
 
     /// Returns the clone of the curve.
+    /// # Remarks
+    /// This method returns absolute curve i.e. does not consider the orientation of curve.
+    /// If you want to get a curve compatible with edge's orientation, use `Edge::oriented_curve`.
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[0, 1]);
+    /// let mut edge = Edge::new(&v[0], &v[1], (0, 1));
+    /// edge.invert();
+    ///
+    /// // absolute curve
+    /// assert_eq!(edge.get_curve(), (0, 1));
+    /// // oriented curve
+    /// assert_eq!(edge.oriented_curve(), (1, 0));
+    /// ```
     #[inline(always)]
     pub fn get_curve(&self) -> C
     where C: Clone {
@@ -278,29 +292,37 @@ impl<P, C> Edge<P, C> {
         geom_front.near(&*top_front) && geom_back.near(&*top_back)
     }
 
-    /// Cuts the edge at the parameter `t`.
-    /// # Remarks
-    /// This method does not consider the orientation of curve.
-    pub fn cut(&self, t: f64) -> (Self, Self)
-    where C: Cut<Point = P>
-    {
-        let mut curve0 = self.curve.lock().unwrap().clone();
+    /// Cuts the edge at a point `pt`.
+    /// # Failure
+    /// Returns `None` if cannot find the parameter `t` such that `edge.get_curve().subs(t) == pt`.
+    pub fn cut(&self, point: P) -> Option<(Self, Self)>
+    where C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64> {
+        let mut curve0 = self.get_curve();
+        let t = curve0.search_parameter(point, None, SEARCH_PARAMETER_TRIALS)?;
         let curve1 = curve0.cut(t);
         let v = Vertex::new(curve0.back());
-        (
+        Some((
             Edge::debug_new(self.absolute_front(), &v, curve0),
             Edge::debug_new(&v, self.absolute_back(), curve1),
-        )
+        ))
     }
 
     /// Concats two edges.
     pub fn concat(&self, rhs: &Self) -> std::result::Result<Self, ConcatError<P>>
-    where P: std::fmt::Debug, C: Concat<C, Point = P, Output = C> + Invertible {
+    where
+        P: std::fmt::Debug,
+        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
         if self.back() != rhs.front() {
-            return Err(ConcatError::DisconnectedVertex(self.back().clone(), rhs.front().clone()));
+            return Err(ConcatError::DisconnectedVertex(
+                self.back().clone(),
+                rhs.front().clone(),
+            ));
         }
         let curve0 = self.oriented_curve();
-        let curve1 = rhs.oriented_curve();
+        let mut curve1 = rhs.oriented_curve();
+        let t0 = curve0.parameter_range().1;
+        let t1 = curve1.parameter_range().0;
+        curve1.parameter_transform(1.0, t0 - t1);
         let curve = curve0.try_concat(&curve1)?;
         Ok(Edge::debug_new(self.front(), rhs.back(), curve))
     }
