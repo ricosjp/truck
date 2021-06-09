@@ -294,17 +294,29 @@ impl<P, C> Edge<P, C> {
 
     /// Cuts the edge at a point `pt`.
     /// # Failure
-    /// Returns `None` if cannot find the parameter `t` such that `edge.get_curve().subs(t) == pt`.
-    pub fn cut(&self, point: P) -> Option<(Self, Self)>
-    where C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64> {
+    /// Returns `None` if cannot find the parameter `t` such that `edge.get_curve().subs(t) == vertex.get_point()`.
+    pub fn cut(&self, vertex: &Vertex<P>) -> Option<(Self, Self)>
+    where
+        P: Clone,
+        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
         let mut curve0 = self.get_curve();
-        let t = curve0.search_parameter(point, None, SEARCH_PARAMETER_TRIALS)?;
+        let t = curve0.search_parameter(vertex.get_point(), None, SEARCH_PARAMETER_TRIALS)?;
         let curve1 = curve0.cut(t);
-        let v = Vertex::new(curve0.back());
-        Some((
-            Edge::debug_new(self.absolute_front(), &v, curve0),
-            Edge::debug_new(&v, self.absolute_back(), curve1),
-        ))
+        let edge0 = Edge {
+            vertices: (self.absolute_front().clone(), vertex.clone()),
+            orientation: self.orientation,
+            curve: Arc::new(Mutex::new(curve0)),
+        };
+        let edge1 = Edge {
+            vertices: (vertex.clone(), self.absolute_back().clone()),
+            orientation: self.orientation,
+            curve: Arc::new(Mutex::new(curve1)),
+        };
+        if self.orientation {
+            Some((edge0, edge1))
+        } else {
+            Some((edge1, edge0))
+        }
     }
 
     /// Concats two edges.

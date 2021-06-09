@@ -424,19 +424,52 @@ impl<P, C, S> Shell<P, C, S> {
             })
             .collect()
     }
-}
-
-impl<P, C, S> Shell<P, C, S>
-where
-    P: Tolerance,
-    C: ParametricCurve<Point = P>,
-    S: IncludeCurve<C>,
-{
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
-    pub fn is_geometric_consistent(&self) -> bool {
+    pub fn is_geometric_consistent(&self) -> bool
+    where
+        P: Tolerance,
+        C: ParametricCurve<Point = P>,
+        S: IncludeCurve<C>, {
         self.iter().all(|face| face.is_geometric_consistent())
+    }
+
+    /// Cuts one edge into two edges at vertex.
+    #[inline(always)]
+    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
+    where
+        P: Clone,
+        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        let mut edges = None;
+        self.iter_mut()
+            .flat_map(|face| face.boundaries.iter_mut())
+            .try_for_each(|wire| {
+                let find_res = wire
+                    .iter()
+                    .enumerate()
+                    .find(|(_, edge)| edge.id() != edge_id);
+                let (idx, edge) = match find_res {
+                    Some(got) => got,
+                    None => return Some(()),
+                };
+                if edges.is_none() {
+                    let absedge = match edge.orientation() {
+                        true => edge.clone(),
+                        false => edge.inverse(),
+                    };
+                    edges = Some(absedge.cut(vertex)?);
+                }
+                let edges = edges.as_ref().unwrap();
+                let new_wire = match edge.orientation() {
+                    true => Wire::from(vec![edges.0.clone(), edges.1.clone()]),
+                    false => Wire::from(vec![edges.1.inverse(), edges.0.inverse()]),
+                };
+                let flag = wire.swap_edge_into_wire(idx, new_wire);
+                debug_assert!(flag);
+                Some(())
+            });
+        true
     }
 }
 

@@ -60,6 +60,18 @@ impl<P, C, S> Solid<P, C, S> {
     /// Returns the boundary shells
     #[inline(always)]
     pub fn into_boundaries(self) -> Vec<Shell<P, C, S>> { self.boundaries }
+
+    /// Cuts one edge into two edges at vertex.
+    #[inline(always)]
+    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
+    where
+        P: Clone,
+        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        let res = self.boundaries.iter_mut().all(|shell| shell.cut_edge(edge_id, vertex));
+        #[cfg(debug_assertions)]
+        Solid::new(self.boundaries.clone());
+        res
+    }
 }
 
 impl<P, C, S> Solid<P, C, S>
