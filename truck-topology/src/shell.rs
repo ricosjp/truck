@@ -31,6 +31,18 @@ impl<P, C, S> Shell<P, C, S> {
     #[inline(always)]
     pub fn face_into_iter(self) -> FaceIntoIter<P, C, S> { self.face_list.into_iter() }
 
+    /// Returns an iterator over the edges.
+    #[inline(always)]
+    pub fn edge_iter<'a>(&'a self) -> impl Iterator<Item = Edge<P, C>> + 'a {
+        self.face_iter().flat_map(Face::boundaries).flatten()
+    }
+
+    /// Returns an iterator over the vertices.
+    #[inline(always)]
+    pub fn vertex_iter<'a>(&'a self) -> impl Iterator<Item = Vertex<P>> + 'a {
+        self.edge_iter().map(|edge| edge.front().clone())
+    }
+
     /// Moves all the faces of `other` into `self`, leaving `other` empty.
     #[inline(always)]
     pub fn append(&mut self, other: &mut Shell<P, C, S>) {
@@ -436,11 +448,18 @@ impl<P, C, S> Shell<P, C, S> {
     }
 
     /// Cuts one edge into two edges at vertex.
+    /// # Failures
+    /// Returns `false` and not edit `self` if:
+    /// - `vertex` is already included in `self`, or
+    /// - cutting of edge fails.
     #[inline(always)]
     pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
     where
         P: Clone,
         C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        if self.vertex_iter().any(|v| &v == vertex) {
+            return false;
+        }
         let mut edges = None;
         self.iter_mut()
             .flat_map(|face| face.boundaries.iter_mut())
@@ -448,7 +467,7 @@ impl<P, C, S> Shell<P, C, S> {
                 let find_res = wire
                     .iter()
                     .enumerate()
-                    .find(|(_, edge)| edge.id() != edge_id);
+                    .find(|(_, edge)| edge.id() == edge_id);
                 let (idx, edge) = match find_res {
                     Some(got) => got,
                     None => return Some(()),
@@ -468,8 +487,8 @@ impl<P, C, S> Shell<P, C, S> {
                 let flag = wire.swap_edge_into_wire(idx, new_wire);
                 debug_assert!(flag);
                 Some(())
-            });
-        true
+            })
+            .is_some()
     }
 }
 
