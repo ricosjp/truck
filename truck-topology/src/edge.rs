@@ -330,6 +330,9 @@ impl<P, C> Edge<P, C> {
                 rhs.front().clone(),
             ));
         }
+        if self.front() == rhs.back() {
+            return Err(ConcatError::SameVertex(self.front().clone()));
+        }
         let curve0 = self.oriented_curve();
         let mut curve1 = rhs.oriented_curve();
         let t0 = curve0.parameter_range().1;
@@ -346,6 +349,8 @@ pub enum ConcatError<P: std::fmt::Debug> {
     /// Failed to concat edges since the end point of the first curve is different from the start point of the second curve.
     #[error("The end point {0:?} of the first curve is different from the start point {1:?} of the second curve.")]
     DisconnectedVertex(Vertex<P>, Vertex<P>),
+    #[error("The end vertices are the same vertex {0:?}.")]
+    SameVertex(Vertex<P>),
     /// From geometric error.
     #[error("{0}")]
     FromGeometry(truck_geotrait::ConcatError<P>),

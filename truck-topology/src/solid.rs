@@ -92,6 +92,17 @@ impl<P, C, S> Solid<P, C, S> {
         Solid::new(self.boundaries.clone());
         res
     }
+    /// Removes `vertex` from `self` by concat two edges on both sides.
+    #[inline(always)]
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
+    where
+        P: std::fmt::Debug,
+        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
+        let res = self.boundaries.iter_mut().all(|shell| shell.remove_vertex_by_concat_edges(vertex_id));
+        #[cfg(debug_assertions)]
+        Solid::new(self.boundaries.clone());
+        res
+    }
 }
 
 impl<P, C, S> Solid<P, C, S>

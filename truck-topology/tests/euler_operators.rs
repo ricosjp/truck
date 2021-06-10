@@ -58,6 +58,32 @@ impl Cut for Segment {
     }
 }
 
+impl Concat<Segment> for Segment {
+    type Output = Segment;
+    #[inline(always)]
+    fn try_concat(&self, rhs: &Self) -> std::result::Result<Self, ConcatError<Point3>> {
+        if !self.range.1.near(&rhs.range.0) {
+            Err(ConcatError::DisconnectedParameters(
+                self.range.1,
+                rhs.range.0,
+            ))
+        } else if !self.ends.1.near(&rhs.ends.0) {
+            Err(ConcatError::DisconnectedPoints(self.ends.1, rhs.ends.0))
+        // by this branch, this is not correctly implementation of concat
+        } else if !(self.ends.1 - self.ends.0)
+            .cross(rhs.ends.1 - rhs.ends.0)
+            .so_small()
+        {
+            Err(ConcatError::DisconnectedPoints(self.ends.1, rhs.ends.0))
+        } else {
+            Ok(Segment {
+                ends: (self.ends.0, rhs.ends.1),
+                range: (self.range.0, rhs.range.1),
+            })
+        }
+    }
+}
+
 impl SearchParameter for Segment {
     type Point = Point3;
     type Parameter = f64;
@@ -73,6 +99,16 @@ impl SearchParameter for Segment {
     }
 }
 
+impl Invertible for Segment {
+    #[inline(always)]
+    fn invert(&mut self) {
+        *self = Segment {
+            ends: (self.ends.1, self.ends.0),
+            range: self.range,
+        };
+    }
+}
+
 #[test]
 fn segment_test() {
     let seg = Segment::new(Point3::new(1.2, 2.3, 3.4), Point3::new(2.4, 3.5, 4.6));
@@ -81,6 +117,20 @@ fn segment_test() {
     assert_eq!(seg.der2(0.5), Vector3::zero());
     parameter_transform_random_test(&seg, 100);
     cut_random_test(&seg, 100);
+
+    let mut seg0 = Segment::new(Point3::new(2.4, 3.5, 4.6), Point3::new(3.6, 4.7, 5.8));
+    assert_eq!(
+        seg.try_concat(&seg0).unwrap_err(),
+        ConcatError::DisconnectedParameters(1.0, 0.0)
+    );
+    seg0.parameter_transform(1.0, 1.0);
+    concat_random_test(&seg, &seg0, 100);
+    seg0.ends.0 += Vector3::new(1.0, 0.0, 0.0);
+    seg0.ends.1 += Vector3::new(1.0, 0.0, 0.0);
+    assert_eq!(
+        seg.try_concat(&seg0).unwrap_err(),
+        ConcatError::DisconnectedPoints(Point3::new(2.4, 3.5, 4.6), Point3::new(3.4, 3.5, 4.6))
+    );
 
     let pt = seg.subs(0.324);
     let a = seg.search_parameter(pt, None, 0).unwrap();
@@ -148,4 +198,8 @@ fn solid_cut_edge() {
         })
         .collect();
     Solid::new(new_shells);
+
+    assert!(tri.remove_vertex_by_concat_edges(v[4].id()));
+    let count = tri.edge_iter().count();
+    assert_eq!(count, 12);
 }

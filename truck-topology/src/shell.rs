@@ -490,6 +490,50 @@ impl<P, C, S> Shell<P, C, S> {
             })
             .is_some()
     }
+    /// Removes `vertex` from `self` by concat two edges on both sides.
+    #[inline(always)]
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
+    where
+        P: std::fmt::Debug,
+        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
+        let mut vec: Vec<(&mut Wire<P, C>, usize)> = self
+            .face_iter_mut()
+            .flat_map(|face| &mut face.boundaries)
+            .filter_map(|wire| {
+                let idx = wire
+                    .edge_iter()
+                    .enumerate()
+                    .find(|(_, e)| e.back().id() == vertex_id)?
+                    .0;
+                Some((wire, idx))
+            })
+            .collect();
+        if vec.len() > 2 || vec.is_empty() {
+            return false;
+        } else if vec.len() == 1 {
+            let (wire, idx) = vec.pop().unwrap();
+            let edge = match wire[idx].concat(&wire[(idx + 1) % wire.len()]) {
+                Ok(got) => got,
+                Err(_) => return false,
+            };
+            wire.swap_subwire_into_edges(idx, edge);
+        } else {
+            let (wire0, idx0) = vec.pop().unwrap();
+            let (wire1, idx1) = vec.pop().unwrap();
+            if !wire0[idx0].is_same(&wire1[(idx1 + 1) % wire1.len()]) {
+                return false;
+            } else if !wire0[(idx0 + 1) % wire0.len()].is_same(&wire1[idx1]) {
+                return false;
+            }
+            let edge = match wire0[idx0].concat(&wire0[(idx0 + 1) % wire0.len()]) {
+                Ok(got) => got,
+                Err(_) => return false,
+            };
+            wire1.swap_subwire_into_edges(idx1, edge.inverse());
+            wire0.swap_subwire_into_edges(idx0, edge);
+        }
+        true
+    }
 }
 
 impl<P, C, S> Clone for Shell<P, C, S> {

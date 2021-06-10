@@ -329,8 +329,21 @@ impl<P, C> Wire<P, C> {
         new_wire.extend(wire);
         self.pop_front();
         new_wire.extend(self.drain(..));
-        *self = Wire::from(new_wire);
+        *self = new_wire.into();
         true
+    }
+    /// Concat edges
+    pub(super) fn swap_subwire_into_edges(&mut self, mut idx: usize, edge: Edge<P, C>) {
+        if idx + 1 == self.len() {
+            self.rotate_left(1);
+            idx -= 1;
+        }
+        let mut new_wire: Vec<_> = self.drain(0..idx).collect();
+        new_wire.push(edge);
+        self.pop_front();
+        self.pop_front();
+        new_wire.extend(self.drain(..));
+        *self = new_wire.into();
     }
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
