@@ -27,9 +27,9 @@ impl<P> Vertex<P> {
     /// assert_ne!(v[0], v[2]);
     /// ```
     #[inline(always)]
-    pub fn news(points: &[P]) -> Vec<Vertex<P>>
+    pub fn news(points: impl AsRef<[P]>) -> Vec<Vertex<P>>
     where P: Copy {
-        points.iter().map(|p| Vertex::new(*p)).collect()
+        points.as_ref().iter().map(|p| Vertex::new(*p)).collect()
     }
 
     /// Returns the point of vertex.

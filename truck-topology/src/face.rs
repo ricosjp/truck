@@ -370,7 +370,8 @@ impl<P, C, S> Face<P, C, S> {
 
     /// Returns the clone of surface of face.
     #[inline(always)]
-    pub fn get_surface(&self) -> S where S: Clone {
+    pub fn get_surface(&self) -> S
+    where S: Clone {
         self.surface.lock().unwrap().clone()
     }
 
@@ -393,15 +394,13 @@ impl<P, C, S> Face<P, C, S> {
     ///
     /// // Set surface
     /// face0.set_surface(1);
-    /// 
+    ///
     /// // The contents of two vertices are synchronized.
     /// assert_eq!(face0.get_surface(), 1);
     /// assert_eq!(face1.get_surface(), 1);
-    /// ``` 
+    /// ```
     #[inline(always)]
-    pub fn set_surface(&self, surface: S) {
-        *self.surface.lock().unwrap() = surface;
-    }
+    pub fn set_surface(&self, surface: S) { *self.surface.lock().unwrap() = surface; }
 
     /// Inverts the direction of the face.
     /// # Examples
@@ -541,6 +540,84 @@ impl<P, C, S> Face<P, C, S> {
             }
         }
         false
+    }
+
+    /// Cuts a face with only one boundary by an edge.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[3], ()),
+    ///     Edge::new(&v[3], &v[0], ()),
+    /// ]);
+    /// let mut face0 = Face::new(vec![wire], ());
+    /// 
+    /// let face1 = face0.cut_by_edge(Edge::new(&v[1], &v[3], ())).unwrap();
+    /// 
+    /// // The front vertex of face0's boundary becomes the back of cutting edge.
+    /// let v0: Vec<Vertex<()>> = face0.boundaries()[0].vertex_iter().collect();
+    /// assert_eq!(v0, vec![v[3].clone(), v[0].clone(), v[1].clone()]);
+    ///
+    /// let v1: Vec<Vertex<()>> = face1.boundaries()[0].vertex_iter().collect();
+    /// assert_eq!(v1, vec![v[1].clone(), v[2].clone(), v[3].clone()]);
+    /// ```
+    /// # Failures
+    /// Returns `None` if:
+    /// - `self` has several boundaries, or
+    /// - `self` does not include vertices of the end vertices of `edge`.
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(); 6]);
+    /// let wire0 = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///     Edge::new(&v[3], &v[4], ()),
+    ///     Edge::new(&v[4], &v[5], ()),
+    ///     Edge::new(&v[5], &v[3], ()),
+    /// ]);
+    /// let mut face = Face::new(vec![wire0, wire1], ());
+    /// assert!(face.cut_by_edge(Edge::new(&v[1], &v[2], ())).is_none());
+    /// ```
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[3], ()),
+    ///     Edge::new(&v[3], &v[0], ()),
+    /// ]);
+    /// let mut face0 = Face::new(vec![wire], ());
+    /// assert!(face0.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none()); 
+    pub fn cut_by_edge(&mut self, edge: Edge<P, C>) -> Option<Self> where S: Clone {
+        if self.boundaries.len() != 1 {
+            return None;
+        }
+        let wire = &mut self.boundaries[0];
+        let i = wire
+            .edge_iter()
+            .enumerate()
+            .find(|(_, e)| e.front() == edge.back())
+            .map(|(i, _)| i)?;
+        let j = wire
+            .edge_iter()
+            .enumerate()
+            .find(|(_, e)| e.back() == edge.front())
+            .map(|(i, _)| i)?;
+        wire.rotate_left(i);
+        let j = (j + wire.len() - i) % wire.len();
+        let mut new_wire = wire.split_off(j + 1);
+        wire.push_back(edge.clone());
+        new_wire.push_back(edge.inverse());
+        self.renew_pointer();
+        debug_assert!(Face::try_new(self.boundaries.clone(), ()).is_ok());
+        Some(Face::debug_new(vec![new_wire], self.get_surface()))
     }
 }
 
