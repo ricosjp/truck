@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::wire::EdgeIter;
 use crate::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 impl<P, C, S> Face<P, C, S> {
     /// Creates a new face by a wire.
@@ -554,9 +554,9 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[3], &v[0], ()),
     /// ]);
     /// let mut face0 = Face::new(vec![wire], ());
-    /// 
+    ///
     /// let face1 = face0.cut_by_edge(Edge::new(&v[1], &v[3], ())).unwrap();
-    /// 
+    ///
     /// // The front vertex of face0's boundary becomes the back of cutting edge.
     /// let v0: Vec<Vertex<()>> = face0.boundaries()[0].vertex_iter().collect();
     /// assert_eq!(v0, vec![v[3].clone(), v[0].clone(), v[1].clone()]);
@@ -594,8 +594,9 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[3], &v[0], ()),
     /// ]);
     /// let mut face0 = Face::new(vec![wire], ());
-    /// assert!(face0.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none()); 
-    pub fn cut_by_edge(&mut self, edge: Edge<P, C>) -> Option<Self> where S: Clone {
+    /// assert!(face0.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none());
+    pub fn cut_by_edge(&mut self, edge: Edge<P, C>) -> Option<Self>
+    where S: Clone {
         if self.boundaries.len() != 1 {
             return None;
         }
@@ -617,7 +618,29 @@ impl<P, C, S> Face<P, C, S> {
         new_wire.push_back(edge.inverse());
         self.renew_pointer();
         debug_assert!(Face::try_new(self.boundaries.clone(), ()).is_ok());
-        Some(Face::debug_new(vec![new_wire], self.get_surface()))
+        debug_assert!(Face::try_new(vec![new_wire.clone()], ()).is_ok());
+        Some(Face {
+            boundaries: vec![new_wire],
+            orientation: self.orientation,
+            surface: Arc::new(Mutex::new(self.get_surface())),
+        })
+    }
+
+    /// Glue two faces at boundaries.
+    pub fn glue_at_boundaries(&self, other: &Self) -> Option<Self>
+    where S: Clone + PartialEq {
+        if self.get_surface() != other.get_surface() {
+            return None;
+        } else if self.orientation() != other.orientation() {
+            return None;
+        }
+        let wires0: Vec<HashSet<EdgeID<C>>> = self
+            .boundaries()
+            .into_iter()
+            .map(|wire| wire.into_iter().map(|edge| edge.id()).collect())
+            .collect();
+        
+        None
     }
 }
 
