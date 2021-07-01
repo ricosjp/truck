@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::wire::EdgeIter;
 use crate::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 impl<P, C, S> Face<P, C, S> {
     /// Creates a new face by a wire.
@@ -627,20 +627,101 @@ impl<P, C, S> Face<P, C, S> {
     }
 
     /// Glue two faces at boundaries.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(); 8]);
+    /// let edge = vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    ///     Edge::new(&v[3], &v[4], ()),
+    ///     Edge::new(&v[4], &v[5], ()),
+    ///     Edge::new(&v[5], &v[3], ()),
+    ///     Edge::new(&v[6], &v[2], ()),
+    ///     Edge::new(&v[1], &v[6], ()),
+    ///     Edge::new(&v[7], &v[5], ()),
+    ///     Edge::new(&v[4], &v[7], ()),
+    /// ];
+    /// let wire0 = Wire::from(vec![
+    ///     edge[0].clone(),
+    ///     edge[1].clone(),
+    ///     edge[2].clone(),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///     edge[3].clone(),
+    ///     edge[4].clone(),
+    ///     edge[5].clone(),
+    /// ]);
+    /// let wire2 = Wire::from(vec![
+    ///     edge[6].clone(),
+    ///     edge[1].inverse(),
+    ///     edge[7].clone(),
+    /// ]);
+    /// let wire3 = Wire::from(vec![
+    ///     edge[8].clone(),
+    ///     edge[4].inverse(),
+    ///     edge[9].clone(),
+    /// ]);
+    /// let face0 = Face::new(vec![wire0, wire1], ());
+    /// let face1 = Face::new(vec![wire2, wire3], ());
+    /// let face = face0.glue_at_boundaries(&face1).unwrap();
+    /// let boundaries = face.boundary_iters();
+    /// assert_eq!(boundaries.len(), 2);
+    /// assert_eq!(boundaries[0].len(), 4);
+    /// assert_eq!(boundaries[1].len(), 4);
+    /// ```
     pub fn glue_at_boundaries(&self, other: &Self) -> Option<Self>
-    where S: Clone + PartialEq {
-        if self.get_surface() != other.get_surface() {
+    where S: Clone + PartialEq, Wire<P, C>: std::fmt::Debug {
+        let surface = self.get_surface();
+        if &surface != &other.get_surface() {
             return None;
         } else if self.orientation() != other.orientation() {
             return None;
         }
-        let wires0: Vec<HashSet<EdgeID<C>>> = self
-            .boundaries()
-            .into_iter()
-            .map(|wire| wire.into_iter().map(|edge| edge.id()).collect())
+        let mut vemap: HashMap<VertexID<P>, &Edge<P, C>> = self
+            .absolute_boundaries()
+            .iter()
+            .flatten()
+            .map(|edge| (edge.front().id(), edge))
             .collect();
-        
-        None
+        other.absolute_boundaries().iter().flatten().try_for_each(|edge| {
+            if let Some(edge0) = vemap.get(&edge.back().id()) {
+                if edge.front() == edge0.back() {
+                    if edge.is_same(&edge0) {
+                        vemap.remove(&edge.back().id());
+                        return Some(());
+                    } else {
+                        return None;
+                    }
+                }
+            }
+            vemap.insert(edge.front().id(), edge);
+            Some(())
+        })?;
+        if vemap.is_empty() {
+            return None;
+        }
+        let mut boundaries = Vec::new();
+        while !vemap.is_empty() {
+            let mut wire = Wire::new();
+            let v = *vemap.iter().next().unwrap().0;
+            let mut edge = vemap.remove(&v).unwrap();
+            wire.push_back(edge.clone());
+            while let Some(edge0) = vemap.remove(&edge.back().id()) {
+                wire.push_back(edge0.clone());
+                edge = edge0;
+            }
+            boundaries.push(wire);
+        }
+        debug_assert!(Face::try_new(boundaries.clone(), ()).is_ok());
+        Some(
+            Face {
+                boundaries,
+                orientation: self.orientation(),
+                surface: Arc::new(Mutex::new(surface)),
+            }
+        )
     }
 }
 
