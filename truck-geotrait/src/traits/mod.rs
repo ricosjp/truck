@@ -47,6 +47,7 @@ pub trait Transformed<T>: Clone {
     }
 }
 
+/// Implementation for the test of topological methods.
 impl Invertible for (usize, usize) {
     fn invert(&mut self) { *self = (self.1, self.0); }
     fn inverse(&self) -> Self { (self.1, self.0) }

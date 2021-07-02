@@ -893,12 +893,15 @@ impl<P: ControlPoint> ParameterTransform for BSplineCurve<P> {
 fn parameter_transform_random_test() {
     let curve = BSplineCurve::new(
         KnotVec::uniform_knot(4, 4),
-        (0..8).map(|_| Point3::new(
-            rand::random::<f64>(),
-            rand::random::<f64>(),
-            rand::random::<f64>(),
-        ))
-        .collect()
+        (0..8)
+            .map(|_| {
+                Point3::new(
+                    rand::random::<f64>(),
+                    rand::random::<f64>(),
+                    rand::random::<f64>(),
+                )
+            })
+            .collect(),
     );
     truck_geotrait::parameter_transform_random_test(&curve, 10);
 }
@@ -1028,11 +1031,20 @@ fn concat_negative_test() {
     );
     let mut curve1 = BSplineCurve::new(
         KnotVec::bezier_knot(1),
-        vec![Point2::new(0.0, 1.0), Point2::new(1.0, 1.0)],
+        vec![Point2::new(1.0, 1.0), Point2::new(1.0, 1.0)],
     );
-    concat_random_test(&curve0, &curve1, 1);
+    assert_eq!(
+        curve0.try_concat(&curve1),
+        Err(ConcatError::DisconnectedParameters(1.0, 0.0))
+    );
     curve1.knot_translate(1.0);
-    concat_random_test(&curve0, &curve1, 1);
+    assert_eq!(
+        curve0.try_concat(&curve1),
+        Err(ConcatError::DisconnectedPoints(
+            Point2::new(0.0, 1.0),
+            Point2::new(1.0, 1.0)
+        ))
+    );
 }
 
 impl<P> ParameterDivision1D for BSplineCurve<P>

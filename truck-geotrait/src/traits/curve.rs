@@ -38,6 +38,7 @@ impl ParametricCurve for () {
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
 }
 
+/// Implementation for the test of topological methods.
 impl ParametricCurve for (usize, usize) {
     type Point = usize;
     type Vector = usize;
@@ -267,22 +268,7 @@ where
     C0::Vector: Debug + Tolerance,
     C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
     C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>, {
-    let a = curve0.parameter_range().1;
-    let b = curve1.parameter_range().0;
-    let pt0 = curve0.back();
-    let pt1 = curve1.front();
-    let res = curve0.try_concat(&curve1);
-    let concatted = match (a.near(&b), pt0.near(&pt1)) {
-        (false, _) => {
-            assert_eq!(res.unwrap_err(), ConcatError::DisconnectedParameters(a, b));
-            return;
-        }
-        (_, false) => {
-            assert_eq!(res.unwrap_err(), ConcatError::DisconnectedPoints(pt0, pt1));
-            return;
-        }
-        _ => res.unwrap(),
-    };
+    let concatted = curve0.try_concat(&curve1).unwrap();
     let (t0, t1) = curve0.parameter_range();
     let (_, t2) = curve1.parameter_range();
     assert_near!(concatted.parameter_range().0, t0);

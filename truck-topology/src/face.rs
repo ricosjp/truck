@@ -189,7 +189,7 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     fn renew_pointer(&mut self)
     where S: Clone {
-        let surface = self.lock_surface().unwrap().clone();
+        let surface = self.get_surface();
         self.surface = Arc::new(Mutex::new(surface));
     }
 
@@ -368,7 +368,14 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     pub fn orientation(&self) -> bool { self.orientation }
 
-    /// Returns the id of face.
+    /// Returns the clone of surface of face.
+    #[inline(always)]
+    pub fn get_surface(&self) -> S
+    where S: Clone {
+        self.surface.lock().unwrap().clone()
+    }
+
+    /// Sets the surface of face.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -382,56 +389,18 @@ impl<P, C, S> Face<P, C, S> {
     /// let face1 = face0.clone();
     ///
     /// // Two faces have the same content.
-    /// assert_eq!(*face0.try_lock_surface().unwrap(), 0);
-    /// assert_eq!(*face1.try_lock_surface().unwrap(), 0);
+    /// assert_eq!(face0.get_surface(), 0);
+    /// assert_eq!(face1.get_surface(), 0);
     ///
-    /// {
-    ///     let mut surface = face0.try_lock_surface().unwrap();
-    ///     *surface = 1;
-    /// }
+    /// // Set surface
+    /// face0.set_surface(1);
+    ///
     /// // The contents of two vertices are synchronized.
-    /// assert_eq!(*face0.try_lock_surface().unwrap(), 1);
-    /// assert_eq!(*face1.try_lock_surface().unwrap(), 1);
-    ///
-    /// // The thread is not blocked even if the surface is already locked.
-    /// let lock = face0.try_lock_surface();
-    /// assert!(face1.try_lock_surface().is_err());
+    /// assert_eq!(face0.get_surface(), 1);
+    /// assert_eq!(face1.get_surface(), 1);
     /// ```
     #[inline(always)]
-    pub fn try_lock_surface(&self) -> TryLockResult<MutexGuard<S>> { self.surface.try_lock() }
-    /// Returns the id of face.
-    /// # Examples
-    /// ```
-    /// use truck_topology::*;
-    /// let v = Vertex::news(&[(), (), ()]);
-    /// let wire = Wire::from(vec![
-    ///      Edge::new(&v[0], &v[1], ()),
-    ///      Edge::new(&v[1], &v[2], ()),
-    ///      Edge::new(&v[2], &v[0], ()),
-    /// ]);
-    /// let face0 = Face::new(vec![wire], 0);
-    /// let face1 = face0.clone();
-    ///
-    /// // Two faces have the same content.
-    /// assert_eq!(*face0.lock_surface().unwrap(), 0);
-    /// assert_eq!(*face1.lock_surface().unwrap(), 0);
-    ///
-    /// {
-    ///     let mut surface = face0.lock_surface().unwrap();
-    ///     *surface = 1;
-    /// }
-    /// // The contents of two vertices are synchronized.
-    /// assert_eq!(*face0.lock_surface().unwrap(), 1);
-    /// assert_eq!(*face1.lock_surface().unwrap(), 1);
-    ///
-    /// // Check the behavior of `lock`.
-    /// std::thread::spawn(move || {
-    ///     *face0.lock_surface().unwrap() = 2;
-    /// }).join().expect("thread::spawn failed");
-    /// assert_eq!(*face1.lock_surface().unwrap(), 2);    
-    /// ```
-    #[inline(always)]
-    pub fn lock_surface(&self) -> LockResult<MutexGuard<S>> { self.surface.lock() }
+    pub fn set_surface(&self, surface: S) { *self.surface.lock().unwrap() = surface; }
 
     /// Inverts the direction of the face.
     /// # Examples
@@ -572,6 +541,188 @@ impl<P, C, S> Face<P, C, S> {
         }
         false
     }
+
+    /// Cuts a face with only one boundary by an edge.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[3], ()),
+    ///     Edge::new(&v[3], &v[0], ()),
+    /// ]);
+    /// let mut face0 = Face::new(vec![wire], ());
+    ///
+    /// let face1 = face0.cut_by_edge(Edge::new(&v[1], &v[3], ())).unwrap();
+    ///
+    /// // The front vertex of face0's boundary becomes the back of cutting edge.
+    /// let v0: Vec<Vertex<()>> = face0.boundaries()[0].vertex_iter().collect();
+    /// assert_eq!(v0, vec![v[3].clone(), v[0].clone(), v[1].clone()]);
+    ///
+    /// let v1: Vec<Vertex<()>> = face1.boundaries()[0].vertex_iter().collect();
+    /// assert_eq!(v1, vec![v[1].clone(), v[2].clone(), v[3].clone()]);
+    /// ```
+    /// # Failures
+    /// Returns `None` if:
+    /// - `self` has several boundaries, or
+    /// - `self` does not include vertices of the end vertices of `edge`.
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(); 6]);
+    /// let wire0 = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///     Edge::new(&v[3], &v[4], ()),
+    ///     Edge::new(&v[4], &v[5], ()),
+    ///     Edge::new(&v[5], &v[3], ()),
+    /// ]);
+    /// let mut face = Face::new(vec![wire0, wire1], ());
+    /// assert!(face.cut_by_edge(Edge::new(&v[1], &v[2], ())).is_none());
+    /// ```
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), (), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[3], ()),
+    ///     Edge::new(&v[3], &v[0], ()),
+    /// ]);
+    /// let mut face0 = Face::new(vec![wire], ());
+    /// assert!(face0.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none());
+    pub fn cut_by_edge(&mut self, edge: Edge<P, C>) -> Option<Self>
+    where S: Clone {
+        if self.boundaries.len() != 1 {
+            return None;
+        }
+        let wire = &mut self.boundaries[0];
+        let i = wire
+            .edge_iter()
+            .enumerate()
+            .find(|(_, e)| e.front() == edge.back())
+            .map(|(i, _)| i)?;
+        let j = wire
+            .edge_iter()
+            .enumerate()
+            .find(|(_, e)| e.back() == edge.front())
+            .map(|(i, _)| i)?;
+        wire.rotate_left(i);
+        let j = (j + wire.len() - i) % wire.len();
+        let mut new_wire = wire.split_off(j + 1);
+        wire.push_back(edge.clone());
+        new_wire.push_back(edge.inverse());
+        self.renew_pointer();
+        debug_assert!(Face::try_new(self.boundaries.clone(), ()).is_ok());
+        debug_assert!(Face::try_new(vec![new_wire.clone()], ()).is_ok());
+        Some(Face {
+            boundaries: vec![new_wire],
+            orientation: self.orientation,
+            surface: Arc::new(Mutex::new(self.get_surface())),
+        })
+    }
+
+    /// Glue two faces at boundaries.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(); 8]);
+    /// let edge = vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    ///     Edge::new(&v[3], &v[4], ()),
+    ///     Edge::new(&v[4], &v[5], ()),
+    ///     Edge::new(&v[5], &v[3], ()),
+    ///     Edge::new(&v[6], &v[2], ()),
+    ///     Edge::new(&v[1], &v[6], ()),
+    ///     Edge::new(&v[7], &v[5], ()),
+    ///     Edge::new(&v[4], &v[7], ()),
+    /// ];
+    /// let wire0 = Wire::from(vec![
+    ///     edge[0].clone(),
+    ///     edge[1].clone(),
+    ///     edge[2].clone(),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///     edge[3].clone(),
+    ///     edge[4].clone(),
+    ///     edge[5].clone(),
+    /// ]);
+    /// let wire2 = Wire::from(vec![
+    ///     edge[6].clone(),
+    ///     edge[1].inverse(),
+    ///     edge[7].clone(),
+    /// ]);
+    /// let wire3 = Wire::from(vec![
+    ///     edge[8].clone(),
+    ///     edge[4].inverse(),
+    ///     edge[9].clone(),
+    /// ]);
+    /// let face0 = Face::new(vec![wire0, wire1], ());
+    /// let face1 = Face::new(vec![wire2, wire3], ());
+    /// let face = face0.glue_at_boundaries(&face1).unwrap();
+    /// let boundaries = face.boundary_iters();
+    /// assert_eq!(boundaries.len(), 2);
+    /// assert_eq!(boundaries[0].len(), 4);
+    /// assert_eq!(boundaries[1].len(), 4);
+    /// ```
+    pub fn glue_at_boundaries(&self, other: &Self) -> Option<Self>
+    where S: Clone + PartialEq, Wire<P, C>: std::fmt::Debug {
+        let surface = self.get_surface();
+        if &surface != &other.get_surface() {
+            return None;
+        } else if self.orientation() != other.orientation() {
+            return None;
+        }
+        let mut vemap: HashMap<VertexID<P>, &Edge<P, C>> = self
+            .absolute_boundaries()
+            .iter()
+            .flatten()
+            .map(|edge| (edge.front().id(), edge))
+            .collect();
+        other.absolute_boundaries().iter().flatten().try_for_each(|edge| {
+            if let Some(edge0) = vemap.get(&edge.back().id()) {
+                if edge.front() == edge0.back() {
+                    if edge.is_same(&edge0) {
+                        vemap.remove(&edge.back().id());
+                        return Some(());
+                    } else {
+                        return None;
+                    }
+                }
+            }
+            vemap.insert(edge.front().id(), edge);
+            Some(())
+        })?;
+        if vemap.is_empty() {
+            return None;
+        }
+        let mut boundaries = Vec::new();
+        while !vemap.is_empty() {
+            let mut wire = Wire::new();
+            let v = *vemap.iter().next().unwrap().0;
+            let mut edge = vemap.remove(&v).unwrap();
+            wire.push_back(edge.clone());
+            while let Some(edge0) = vemap.remove(&edge.back().id()) {
+                wire.push_back(edge0.clone());
+                edge = edge0;
+            }
+            boundaries.push(wire);
+        }
+        debug_assert!(Face::try_new(boundaries.clone(), ()).is_ok());
+        Some(
+            Face {
+                boundaries,
+                orientation: self.orientation(),
+                surface: Arc::new(Mutex::new(surface)),
+            }
+        )
+    }
 }
 
 impl<P, C, S: Clone + Invertible> Face<P, C, S> {
@@ -580,8 +731,8 @@ impl<P, C, S: Clone + Invertible> Face<P, C, S> {
     #[inline(always)]
     pub fn oriented_surface(&self) -> S {
         match self.orientation {
-            true => self.lock_surface().unwrap().clone(),
-            false => self.lock_surface().unwrap().inverse(),
+            true => self.surface.lock().unwrap().clone(),
+            false => self.surface.lock().unwrap().inverse(),
         }
     }
 }
@@ -596,10 +747,10 @@ where
     /// and the geometry of edge.
     #[inline(always)]
     pub fn is_geometric_consistent(&self) -> bool {
-        let surface = &*self.lock_surface().unwrap();
+        let surface = &*self.surface.lock().unwrap();
         self.boundary_iters().into_iter().flatten().all(|edge| {
             let edge_consist = edge.is_geometric_consistent();
-            let curve = &*edge.lock_curve().unwrap();
+            let curve = &*edge.curve.lock().unwrap();
             let curve_consist = surface.include(curve);
             edge_consist && curve_consist
         })

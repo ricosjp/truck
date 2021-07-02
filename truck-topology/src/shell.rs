@@ -31,6 +31,18 @@ impl<P, C, S> Shell<P, C, S> {
     #[inline(always)]
     pub fn face_into_iter(self) -> FaceIntoIter<P, C, S> { self.face_list.into_iter() }
 
+    /// Returns an iterator over the edges.
+    #[inline(always)]
+    pub fn edge_iter<'a>(&'a self) -> impl Iterator<Item = Edge<P, C>> + 'a {
+        self.face_iter().flat_map(Face::boundaries).flatten()
+    }
+
+    /// Returns an iterator over the vertices.
+    #[inline(always)]
+    pub fn vertex_iter<'a>(&'a self) -> impl Iterator<Item = Vertex<P>> + 'a {
+        self.edge_iter().map(|edge| edge.front().clone())
+    }
+
     /// Moves all the faces of `other` into `self`, leaving `other` empty.
     #[inline(always)]
     pub fn append(&mut self, other: &mut Shell<P, C, S>) {
@@ -424,19 +436,103 @@ impl<P, C, S> Shell<P, C, S> {
             })
             .collect()
     }
-}
-
-impl<P, C, S> Shell<P, C, S>
-where
-    P: Tolerance,
-    C: ParametricCurve<Point = P>,
-    S: IncludeCurve<C>,
-{
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
-    pub fn is_geometric_consistent(&self) -> bool {
+    pub fn is_geometric_consistent(&self) -> bool
+    where
+        P: Tolerance,
+        C: ParametricCurve<Point = P>,
+        S: IncludeCurve<C>, {
         self.iter().all(|face| face.is_geometric_consistent())
+    }
+
+    /// Cuts one edge into two edges at vertex.
+    /// # Failures
+    /// Returns `false` and not edit `self` if:
+    /// - `vertex` is already included in `self`, or
+    /// - cutting of edge fails.
+    #[inline(always)]
+    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
+    where
+        P: Clone,
+        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        if self.vertex_iter().any(|v| &v == vertex) {
+            return false;
+        }
+        let mut edges = None;
+        self.iter_mut()
+            .flat_map(|face| face.boundaries.iter_mut())
+            .try_for_each(|wire| {
+                let find_res = wire
+                    .iter()
+                    .enumerate()
+                    .find(|(_, edge)| edge.id() == edge_id);
+                let (idx, edge) = match find_res {
+                    Some(got) => got,
+                    None => return Some(()),
+                };
+                if edges.is_none() {
+                    let absedge = match edge.orientation() {
+                        true => edge.clone(),
+                        false => edge.inverse(),
+                    };
+                    edges = Some(absedge.cut(vertex)?);
+                }
+                let edges = edges.as_ref().unwrap();
+                let new_wire = match edge.orientation() {
+                    true => Wire::from(vec![edges.0.clone(), edges.1.clone()]),
+                    false => Wire::from(vec![edges.1.inverse(), edges.0.inverse()]),
+                };
+                let flag = wire.swap_edge_into_wire(idx, new_wire);
+                debug_assert!(flag);
+                Some(())
+            })
+            .is_some()
+    }
+    /// Removes `vertex` from `self` by concat two edges on both sides.
+    #[inline(always)]
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
+    where
+        P: std::fmt::Debug,
+        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
+        let mut vec: Vec<(&mut Wire<P, C>, usize)> = self
+            .face_iter_mut()
+            .flat_map(|face| &mut face.boundaries)
+            .filter_map(|wire| {
+                let idx = wire
+                    .edge_iter()
+                    .enumerate()
+                    .find(|(_, e)| e.back().id() == vertex_id)?
+                    .0;
+                Some((wire, idx))
+            })
+            .collect();
+        if vec.len() > 2 || vec.is_empty() {
+            return false;
+        } else if vec.len() == 1 {
+            let (wire, idx) = vec.pop().unwrap();
+            let edge = match wire[idx].concat(&wire[(idx + 1) % wire.len()]) {
+                Ok(got) => got,
+                Err(_) => return false,
+            };
+            wire.swap_subwire_into_edges(idx, edge);
+        } else {
+            let (wire0, idx0) = vec.pop().unwrap();
+            let (wire1, idx1) = vec.pop().unwrap();
+            if !wire0[idx0].is_same(&wire1[(idx1 + 1) % wire1.len()]) {
+                return false;
+            } else if !wire0[(idx0 + 1) % wire0.len()].is_same(&wire1[idx1]) {
+                return false;
+            }
+            let edge = match wire0[idx0].concat(&wire0[(idx0 + 1) % wire0.len()]) {
+                Ok(got) => got,
+                Err(_) => return false,
+            };
+            wire1.swap_subwire_into_edges(idx1, edge.inverse());
+            wire0.swap_subwire_into_edges(idx0, edge);
+        }
+        true
     }
 }
 

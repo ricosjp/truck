@@ -56,10 +56,53 @@ impl<P, C, S> Solid<P, C, S> {
     /// Returns the reference of boundary shells
     #[inline(always)]
     pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
-    
     /// Returns the boundary shells
     #[inline(always)]
     pub fn into_boundaries(self) -> Vec<Shell<P, C, S>> { self.boundaries }
+
+    /// Returns an iterator over the faces.
+    #[inline(always)]
+    pub fn face_iter<'a>(&'a self) -> impl Iterator<Item = &'a Face<P, C, S>> {
+        self.boundaries.iter().flatten()
+    }
+
+    /// Returns an iterator over the edges.
+    #[inline(always)]
+    pub fn edge_iter<'a>(&'a self) -> impl Iterator<Item = Edge<P, C>> + 'a {
+        self.face_iter().flat_map(Face::boundaries).flatten()
+    }
+
+    /// Returns an iterator over the vertices.
+    #[inline(always)]
+    pub fn vertex_iter<'a>(&'a self) -> impl Iterator<Item = Vertex<P>> + 'a {
+        self.edge_iter().map(|edge| edge.front().clone())
+    }
+
+    /// Cuts one edge into two edges at vertex.
+    #[inline(always)]
+    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
+    where
+        P: Clone,
+        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        let res = self
+            .boundaries
+            .iter_mut()
+            .all(|shell| shell.cut_edge(edge_id, vertex));
+        #[cfg(debug_assertions)]
+        Solid::new(self.boundaries.clone());
+        res
+    }
+    /// Removes `vertex` from `self` by concat two edges on both sides.
+    #[inline(always)]
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
+    where
+        P: std::fmt::Debug,
+        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
+        let res = self.boundaries.iter_mut().all(|shell| shell.remove_vertex_by_concat_edges(vertex_id));
+        #[cfg(debug_assertions)]
+        Solid::new(self.boundaries.clone());
+        res
+    }
 }
 
 impl<P, C, S> Solid<P, C, S>
@@ -72,7 +115,9 @@ where
     /// and the geometry of edge.
     #[inline(always)]
     pub fn is_geometric_consistent(&self) -> bool {
-        self.boundaries().iter().all(|shell| shell.is_geometric_consistent())
+        self.boundaries()
+            .iter()
+            .all(|shell| shell.is_geometric_consistent())
     }
 }
 
@@ -152,6 +197,4 @@ pub(super) fn cube() -> Solid<(), (), ()> {
 }
 
 #[test]
-fn cube_test() {
-    cube();
-}
+fn cube_test() { cube(); }

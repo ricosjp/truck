@@ -2,7 +2,7 @@ use crate::topo_impls::*;
 use crate::topo_traits::*;
 use truck_topology::*;
 
-impl<P, C, S> MultiSweep<P, C, S> for Vertex<P> {
+impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Vertex<P> {
     type Swept = Wire<P, C>;
     fn multi_sweep<
         FP: Fn(&P) -> P,
@@ -30,7 +30,7 @@ impl<P, C, S> MultiSweep<P, C, S> for Vertex<P> {
     }
 }
 
-impl<P, C, S> MultiSweep<P, C, S> for Edge<P, C> {
+impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Edge<P, C> {
     type Swept = Shell<P, C, S>;
     fn multi_sweep<
         FP: Fn(&P) -> P,
@@ -63,7 +63,7 @@ impl<P, C, S> MultiSweep<P, C, S> for Edge<P, C> {
     }
 }
 
-impl<P, C, S> MultiSweep<P, C, S> for Wire<P, C> {
+impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Wire<P, C> {
     type Swept = Shell<P, C, S>;
     fn multi_sweep<
         FP: Fn(&P) -> P,
@@ -96,7 +96,7 @@ impl<P, C, S> MultiSweep<P, C, S> for Wire<P, C> {
     }
 }
 
-impl<P, C, S> MultiSweep<P, C, S> for Face<P, C, S> {
+impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Face<P, C, S> {
     type Swept = Solid<P, C, S>;
     fn multi_sweep<
         FP: Fn(&P) -> P,
@@ -133,7 +133,7 @@ impl<P, C, S> MultiSweep<P, C, S> for Face<P, C, S> {
     }
 }
 
-impl<P, C, S> MultiSweep<P, C, S> for Shell<P, C, S> {
+impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Shell<P, C, S> {
     type Swept = Vec<Result<Solid<P, C, S>>>;
     fn multi_sweep<
         FP: Fn(&P) -> P,

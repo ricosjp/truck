@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use crate::*;
+use thiserror::Error;
 
 impl<P, C> Edge<P, C> {
     /// Generates the edge from `front` to `back`.  
@@ -211,35 +212,28 @@ impl<P, C> Edge<P, C> {
         std::ptr::eq(Arc::as_ptr(&self.curve), Arc::as_ptr(&other.curve))
     }
 
-    /// Tries to lock the mutex of the contained curve.
-    /// The thread will not blocked.
-    /// # Examples
+    /// Returns the clone of the curve.
+    /// # Remarks
+    /// This method returns absolute curve i.e. does not consider the orientation of curve.
+    /// If you want to get a curve compatible with edge's orientation, use `Edge::oriented_curve`.
     /// ```
     /// use truck_topology::*;
-    /// let v = Vertex::news(&[(), ()]);
-    /// let edge0 = Edge::new(&v[0], &v[1], 0);
-    /// let edge1 = edge0.clone();
+    /// let v = Vertex::news(&[0, 1]);
+    /// let mut edge = Edge::new(&v[0], &v[1], (0, 1));
+    /// edge.invert();
     ///
-    /// // Two vertices have the same content.
-    /// assert_eq!(*edge0.try_lock_curve().unwrap(), 0);
-    /// assert_eq!(*edge1.try_lock_curve().unwrap(), 0);
-    ///
-    /// {
-    ///     let mut curve = edge0.try_lock_curve().unwrap();
-    ///     *curve = 1;
-    /// }
-    /// // The contents of two vertices are synchronized.
-    /// assert_eq!(*edge0.try_lock_curve().unwrap(), 1);
-    /// assert_eq!(*edge1.try_lock_curve().unwrap(), 1);
-    ///
-    /// // The thread is not blocked even if the curve is already locked.
-    /// let lock = edge0.try_lock_curve();
-    /// assert!(edge1.try_lock_curve().is_err());    
+    /// // absolute curve
+    /// assert_eq!(edge.get_curve(), (0, 1));
+    /// // oriented curve
+    /// assert_eq!(edge.oriented_curve(), (1, 0));
     /// ```
     #[inline(always)]
-    pub fn try_lock_curve(&self) -> TryLockResult<MutexGuard<C>> { self.curve.try_lock() }
-    /// Acquires the mutex of the contained curve,
-    /// blocking the current thread until it is able to do so.
+    pub fn get_curve(&self) -> C
+    where C: Clone {
+        self.curve.lock().unwrap().clone()
+    }
+
+    /// Set the curve.
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -248,25 +242,18 @@ impl<P, C> Edge<P, C> {
     /// let edge1 = edge0.clone();
     ///
     /// // Two edges have the same content.
-    /// assert_eq!(*edge0.lock_curve().unwrap(), 0);
-    /// assert_eq!(*edge1.lock_curve().unwrap(), 0);
+    /// assert_eq!(edge0.get_curve(), 0);
+    /// assert_eq!(edge1.get_curve(), 0);
     ///
-    /// {
-    ///     let mut curve = edge0.lock_curve().unwrap();
-    ///     *curve = 1;
-    /// }
+    /// // set the content
+    /// edge0.set_curve(1);
+    ///
     /// // The contents of two edges are synchronized.
-    /// assert_eq!(*edge0.lock_curve().unwrap(), 1);
-    /// assert_eq!(*edge1.lock_curve().unwrap(), 1);
-    ///
-    /// // Check the behavior of `lock`.
-    /// std::thread::spawn(move || {
-    ///     *edge0.lock_curve().unwrap() = 2;
-    /// }).join().expect("thread::spawn failed");
-    /// assert_eq!(*edge1.lock_curve().unwrap(), 2);    
+    /// assert_eq!(edge0.get_curve(), 1);
+    /// assert_eq!(edge1.get_curve(), 1);
     /// ```
     #[inline(always)]
-    pub fn lock_curve(&self) -> LockResult<MutexGuard<C>> { self.curve.lock() }
+    pub fn set_curve(&self, curve: C) { *self.curve.lock().unwrap() = curve; }
 
     /// Returns the id that does not depend on the direction of the edge.
     /// # Examples
@@ -280,31 +267,98 @@ impl<P, C> Edge<P, C> {
     /// ```
     #[inline(always)]
     pub fn id(&self) -> EdgeID<C> { ID::new(Arc::as_ptr(&self.curve)) }
-}
-
-impl<P, C: Clone + Invertible> Edge<P, C> {
     /// Returns the cloned curve in edge.
     /// If edge is inverted, then the returned curve is also inverted.
     #[inline(always)]
-    pub fn oriented_curve(&self) -> C {
+    pub fn oriented_curve(&self) -> C
+    where C: Clone + Invertible {
         match self.orientation {
-            true => self.lock_curve().unwrap().clone(),
-            false => self.lock_curve().unwrap().inverse(),
+            true => self.curve.lock().unwrap().clone(),
+            false => self.curve.lock().unwrap().inverse(),
         }
     }
-}
-
-impl<P, C: ParametricCurve<Point = P>> Edge <P, C> {
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
-    pub fn is_geometric_consistent(&self) -> bool where P: Tolerance {
-        let curve = self.lock_curve().unwrap();
+    pub fn is_geometric_consistent(&self) -> bool
+    where
+        P: Tolerance,
+        C: ParametricCurve<Point = P>, {
+        let curve = self.curve.lock().unwrap();
         let geom_front = curve.front();
         let geom_back = curve.back();
-        let top_front = self.absolute_front().lock_point().unwrap();
-        let top_back = self.absolute_back().lock_point().unwrap();
+        let top_front = self.absolute_front().point.lock().unwrap();
+        let top_back = self.absolute_back().point.lock().unwrap();
         geom_front.near(&*top_front) && geom_back.near(&*top_back)
+    }
+
+    /// Cuts the edge at a point `pt`.
+    /// # Failure
+    /// Returns `None` if cannot find the parameter `t` such that `edge.get_curve().subs(t) == vertex.get_point()`.
+    pub fn cut(&self, vertex: &Vertex<P>) -> Option<(Self, Self)>
+    where
+        P: Clone,
+        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        let mut curve0 = self.get_curve();
+        let t = curve0.search_parameter(vertex.get_point(), None, SEARCH_PARAMETER_TRIALS)?;
+        let curve1 = curve0.cut(t);
+        let edge0 = Edge {
+            vertices: (self.absolute_front().clone(), vertex.clone()),
+            orientation: self.orientation,
+            curve: Arc::new(Mutex::new(curve0)),
+        };
+        let edge1 = Edge {
+            vertices: (vertex.clone(), self.absolute_back().clone()),
+            orientation: self.orientation,
+            curve: Arc::new(Mutex::new(curve1)),
+        };
+        if self.orientation {
+            Some((edge0, edge1))
+        } else {
+            Some((edge1, edge0))
+        }
+    }
+
+    /// Concats two edges.
+    pub fn concat(&self, rhs: &Self) -> std::result::Result<Self, ConcatError<P>>
+    where
+        P: std::fmt::Debug,
+        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
+        if self.back() != rhs.front() {
+            return Err(ConcatError::DisconnectedVertex(
+                self.back().clone(),
+                rhs.front().clone(),
+            ));
+        }
+        if self.front() == rhs.back() {
+            return Err(ConcatError::SameVertex(self.front().clone()));
+        }
+        let curve0 = self.oriented_curve();
+        let mut curve1 = rhs.oriented_curve();
+        let t0 = curve0.parameter_range().1;
+        let t1 = curve1.parameter_range().0;
+        curve1.parameter_transform(1.0, t0 - t1);
+        let curve = curve0.try_concat(&curve1)?;
+        Ok(Edge::debug_new(self.front(), rhs.back(), curve))
+    }
+}
+
+/// Error for concat
+#[derive(Clone, Debug, Error)]
+pub enum ConcatError<P: std::fmt::Debug> {
+    /// Failed to concat edges since the end point of the first curve is different from the start point of the second curve.
+    #[error("The end point {0:?} of the first curve is different from the start point {1:?} of the second curve.")]
+    DisconnectedVertex(Vertex<P>, Vertex<P>),
+    #[error("The end vertices are the same vertex {0:?}.")]
+    SameVertex(Vertex<P>),
+    /// From geometric error.
+    #[error("{0}")]
+    FromGeometry(truck_geotrait::ConcatError<P>),
+}
+
+impl<P: std::fmt::Debug> From<truck_geotrait::ConcatError<P>> for ConcatError<P> {
+    fn from(err: truck_geotrait::ConcatError<P>) -> ConcatError<P> {
+        ConcatError::FromGeometry(err)
     }
 }
 

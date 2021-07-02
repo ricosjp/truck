@@ -273,13 +273,85 @@ impl<P, C> Wire<P, C> {
         }
         true
     }
-}
 
-impl<P: Tolerance, C: ParametricCurve<Point=P>> Wire<P, C> {
+    /// Swap one edge into two edges.
+    /// # Arguments
+    /// - `idx`: Index of edge in wire
+    /// - `edges`: Inserted edges
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// use std::iter::FromIterator;
+    /// let v = Vertex::news(&[(), (), (), (), ()]);
+    /// let edge0 = Edge::new(&v[0], &v[1], 0);
+    /// let edge1 = Edge::new(&v[1], &v[3], 1);
+    /// let edge2 = Edge::new(&v[3], &v[4], 2);
+    /// let edge3 = Edge::new(&v[1], &v[2], 3);
+    /// let edge4 = Edge::new(&v[2], &v[3], 4);
+    /// let mut wire0 = Wire::from(vec![
+    ///     edge0.clone(), edge1, edge2.clone()
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///     edge0, edge3.clone(), edge4.clone(), edge2
+    /// ]);
+    /// assert_ne!(wire0, wire1);
+    /// wire0.swap_edge_into_wire(1, Wire::from(vec![edge3, edge4]));
+    /// println!("{}", wire0.len());
+    /// assert_eq!(wire0, wire1);
+    /// ```
+    /// # Panics
+    /// Panic occars if `idx >= self.len()`.
+    /// # Failure
+    /// Returns `false` and `self` will not be changed if the end points of `self[idx]` and the ones of `wire` is not the same.
+    /// ```
+    /// use truck_topology::*;
+    /// use std::iter::FromIterator;
+    /// let v = Vertex::news(&[(), (), (), (), ()]);
+    /// let edge0 = Edge::new(&v[0], &v[1], 0);
+    /// let edge1 = Edge::new(&v[1], &v[3], 1);
+    /// let edge2 = Edge::new(&v[3], &v[4], 2);
+    /// let edge3 = Edge::new(&v[1], &v[2], 3);
+    /// let edge4 = Edge::new(&v[2], &v[1], 4);
+    /// let mut wire0 = Wire::from(vec![
+    ///     edge0.clone(), edge1, edge2.clone()
+    /// ]);
+    /// let backup = wire0.clone();
+    /// assert!(!wire0.swap_edge_into_wire(1, Wire::from(vec![edge3, edge4])));
+    /// assert_eq!(wire0, backup);
+    /// ```
+    pub fn swap_edge_into_wire(&mut self, idx: usize, wire: Wire<P, C>) -> bool {
+        if wire.is_empty() {
+            return false;
+        } else if self[idx].ends() != wire.ends_vertices().unwrap() {
+            return false;
+        }
+        let mut new_wire: Vec<_> = self.drain(0..idx).collect();
+        new_wire.extend(wire);
+        self.pop_front();
+        new_wire.extend(self.drain(..));
+        *self = new_wire.into();
+        true
+    }
+    /// Concat edges
+    pub(super) fn swap_subwire_into_edges(&mut self, mut idx: usize, edge: Edge<P, C>) {
+        if idx + 1 == self.len() {
+            self.rotate_left(1);
+            idx -= 1;
+        }
+        let mut new_wire: Vec<_> = self.drain(0..idx).collect();
+        new_wire.push(edge);
+        self.pop_front();
+        self.pop_front();
+        new_wire.extend(self.drain(..));
+        *self = new_wire.into();
+    }
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
-    pub fn is_geometric_consistent(&self) -> bool {
+    pub fn is_geometric_consistent(&self) -> bool
+    where
+        P: Tolerance,
+        C: ParametricCurve<Point = P>, {
         self.iter().all(|edge| edge.is_geometric_consistent())
     }
 }
@@ -298,8 +370,7 @@ where T: Into<VecDeque<Edge<P, C>>>
 impl<P, C> std::iter::FromIterator<Edge<P, C>> for Wire<P, C> {
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = Edge<P, C>>>(iter: I) -> Wire<P, C> {
-        let edge_list = VecDeque::from_iter(iter);
-        Wire::from(edge_list)
+        Wire::from(VecDeque::from_iter(iter))
     }
 }
 

@@ -2,7 +2,7 @@ use crate::topo_impls::*;
 use crate::topo_traits::*;
 use truck_topology::*;
 
-impl<P, C, S> ClosedSweep<P, C, S> for Vertex<P> {
+impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Vertex<P> {
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -30,7 +30,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Vertex<P> {
     }
 }
 
-impl<P, C, S> ClosedSweep<P, C, S> for Edge<P, C> {
+impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Edge<P, C> {
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -63,7 +63,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Edge<P, C> {
     }
 }
 
-impl<P, C, S> ClosedSweep<P, C, S> for Wire<P, C> {
+impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Wire<P, C> {
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -96,7 +96,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Wire<P, C> {
     }
 }
 
-impl<P, C, S> ClosedSweep<P, C, S> for Face<P, C, S> {
+impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Face<P, C, S> {
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
@@ -136,7 +136,7 @@ impl<P, C, S> ClosedSweep<P, C, S> for Face<P, C, S> {
     }
 }
 
-impl<P, C, S> ClosedSweep<P, C, S> for Shell<P, C, S> {
+impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Shell<P, C, S> {
     fn closed_sweep<
         FP: Fn(&P) -> P,
         FC: Fn(&C) -> C,
