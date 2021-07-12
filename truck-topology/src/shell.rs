@@ -436,6 +436,128 @@ impl<P, C, S> Shell<P, C, S> {
             })
             .collect()
     }
+
+    /// Returns a new shell whose surfaces are mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
+    /// let wire0 = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], 100),
+    ///     Edge::new(&v[1], &v[2], 200),
+    ///     Edge::new(&v[2], &v[3], 300),
+    ///     Edge::new(&v[3], &v[0], 400),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///     Edge::new(&v[4], &v[5], 500),
+    ///     Edge::new(&v[6], &v[5], 600).inverse(),
+    ///     Edge::new(&v[6], &v[4], 700),
+    /// ]);
+    /// let face0 = Face::new(vec![wire0, wire1], 10000);
+    /// let face1 = face0.mapped(
+    ///     &move |i: &usize| *i + 7,
+    ///     &move |j: &usize| *j + 700,
+    ///     &move |k: &usize| *k + 10000,
+    /// );
+    /// let shell0 = Shell::from(vec![face0, face1.inverse()]);
+    /// let shell1 = shell0.mapped(
+    ///     &move |i: &usize| *i + 50,
+    ///     &move |j: &usize| *j + 5000,
+    ///     &move |k: &usize| *k + 500000,
+    /// );
+    /// # for face in shell1.face_iter() {
+    /// #    for bdry in face.absolute_boundaries() {
+    /// #        assert!(bdry.is_closed());
+    /// #        assert!(bdry.is_simple());
+    /// #    }
+    /// # }
+    ///
+    /// for (face0, face1) in shell0.face_iter().zip(shell1.face_iter()) {
+    ///     assert_eq!(
+    ///         face0.get_surface() + 500000,
+    ///         face1.get_surface(),
+    ///     );
+    ///     assert_eq!(face0.orientation(), face1.orientation());
+    ///     let biters0 = face0.boundary_iters();
+    ///     let biters1 = face1.boundary_iters();
+    ///     for (biter0, biter1) in biters0.into_iter().zip(biters1) {
+    ///         for (edge0, edge1) in biter0.zip(biter1) {
+    ///             assert_eq!(
+    ///                 edge0.front().get_point() + 50,
+    ///                 edge1.front().get_point(),
+    ///             );
+    ///             assert_eq!(
+    ///                 edge0.back().get_point() + 50,
+    ///                 edge1.back().get_point(),
+    ///             );
+    ///             assert_eq!(
+    ///                 edge0.get_curve() + 5000,
+    ///                 edge1.get_curve(),
+    ///             );
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    pub fn mapped<Q, D, T>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Q,
+        mut curve_mapping: impl FnMut(&C) -> D,
+        mut surface_mapping: impl FnMut(&S) -> T,
+    ) -> Shell<Q, D, T> {
+        let mut shell = Shell::new();
+        let mut vmap: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
+        let vertex_iter = self
+            .iter()
+            .flat_map(Face::absolute_boundaries)
+            .flat_map(Wire::vertex_iter);
+        for vertex in vertex_iter {
+            if vmap.get(&vertex.id()).is_none() {
+                let new_vertex = vertex.mapped(&mut point_mapping);
+                vmap.insert(vertex.id(), new_vertex);
+            }
+        }
+        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
+        for face in self.face_iter() {
+            let mut wires = Vec::new();
+            for biter in face.absolute_boundaries() {
+                let mut wire = Wire::new();
+                for edge in biter {
+                    if let Some(new_edge) = edge_map.get(&edge.id()) {
+                        if edge.absolute_front() == edge.front() {
+                            wire.push_back(new_edge.clone());
+                        } else {
+                            wire.push_back(new_edge.inverse());
+                        }
+                    } else {
+                        let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
+                        let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
+                        let curve = curve_mapping(&*edge.curve.lock().unwrap());
+                        let new_edge = Edge::debug_new(v0, v1, curve);
+                        if edge.orientation() {
+                            wire.push_back(new_edge.clone());
+                        } else {
+                            wire.push_back(new_edge.inverse());
+                        }
+                        edge_map.insert(edge.id(), new_edge);
+                    }
+                }
+                wires.push(wire);
+            }
+            let surface = surface_mapping(&*face.surface.lock().unwrap());
+            let mut new_face = Face::debug_new(wires, surface);
+            if !face.orientation() {
+                new_face.invert();
+            }
+            shell.push(new_face);
+        }
+        shell
+    }
+
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]

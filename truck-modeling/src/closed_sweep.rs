@@ -12,8 +12,8 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Vertex<P> {
     >(
         &self,
         point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
+        _: &FC,
+        _: &FS,
         connect_points: &CP,
         _: &CE,
         division: usize,
@@ -21,7 +21,7 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Vertex<P> {
         let mut wire = Wire::new();
         let mut vertex = self.clone();
         for _ in 1..division {
-            let new_vertex = vertex.mapped(point_mapping, curve_mapping, surface_mapping);
+            let new_vertex = vertex.mapped(point_mapping);
             wire.push_back(connect_vertices(&vertex, &new_vertex, connect_points));
             vertex = new_vertex;
         }
@@ -41,7 +41,7 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Edge<P, C> {
         &self,
         point_mapping: &FP,
         curve_mapping: &FC,
-        surface_mapping: &FS,
+        _: &FS,
         connect_points: &CP,
         connect_curves: &CE,
         division: usize,
@@ -49,7 +49,7 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Edge<P, C> {
         let mut shell = Shell::new();
         let mut edge = self.clone();
         for _ in 1..division {
-            let new_edge = edge.mapped(point_mapping, curve_mapping, surface_mapping);
+            let new_edge = edge.mapped(point_mapping, curve_mapping);
             shell.push(connect_edges(
                 &edge,
                 &new_edge,
@@ -74,7 +74,7 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Wire<P, C> {
         &self,
         point_mapping: &FP,
         curve_mapping: &FC,
-        surface_mapping: &FS,
+        _: &FS,
         connect_points: &CP,
         connect_curves: &CE,
         division: usize,
@@ -82,7 +82,7 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Wire<P, C> {
         let mut shell = Shell::new();
         let mut wire = self.clone();
         for _ in 1..division {
-            let new_wire = wire.mapped(point_mapping, curve_mapping, surface_mapping);
+            let new_wire = wire.mapped(point_mapping, curve_mapping);
             shell.extend(connect_wires(
                 &wire,
                 &new_wire,

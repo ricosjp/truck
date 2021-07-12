@@ -62,6 +62,7 @@ pub mod topo_traits {
         /// Returns a new topology whose points are mapped by `point_closure`,
         /// curves are mapped by `curve_closure`,
         /// and surfaces are mapped by `surface_closure`.
+        #[doc(hidden)]
         fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
             &self,
             point_mapping: &FP,

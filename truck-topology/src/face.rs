@@ -361,6 +361,81 @@ impl<P, C, S> Face<P, C, S> {
         self.try_add_boundary(wire).remove_try()
     }
 
+    /// Returns a new face whose surface is mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
+    /// let wire0 = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], 100),
+    ///     Edge::new(&v[1], &v[2], 200),
+    ///     Edge::new(&v[2], &v[3], 300),
+    ///     Edge::new(&v[3], &v[0], 400),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///     Edge::new(&v[4], &v[5], 500),
+    ///     Edge::new(&v[6], &v[5], 600).inverse(),
+    ///     Edge::new(&v[6], &v[4], 700),
+    /// ]);
+    /// let face0 = Face::new(vec![wire0, wire1], 10000);
+    /// let face1 = face0.mapped(
+    ///     &move |i: &usize| *i + 10,
+    ///     &move |j: &usize| *j + 1000,
+    ///     &move |k: &usize| *k + 100000,
+    /// );
+    /// # for wire in face1.boundaries() {
+    /// #    assert!(wire.is_closed());
+    /// #    assert!(wire.is_simple());
+    /// # }
+    ///
+    /// assert_eq!(
+    ///     face0.get_surface() + 100000,
+    ///     face1.get_surface(),
+    /// );
+    /// let biters0 = face0.boundary_iters();
+    /// let biters1 = face1.boundary_iters();
+    /// for (biter0, biter1) in biters0.into_iter().zip(biters1) {
+    ///     for (edge0, edge1) in biter0.zip(biter1) {
+    ///         assert_eq!(
+    ///             edge0.front().get_point() + 10,
+    ///             edge1.front().get_point(),
+    ///         );
+    ///         assert_eq!(
+    ///             edge0.back().get_point() + 10,
+    ///             edge1.back().get_point(),
+    ///         );
+    ///         assert_eq!(edge0.orientation(), edge1.orientation());
+    ///         assert_eq!(
+    ///             edge0.get_curve() + 1000,
+    ///             edge1.get_curve(),
+    ///         );
+    ///     }
+    /// }
+    /// ```
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    pub fn mapped<Q, D, T>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Q,
+        mut curve_mapping: impl FnMut(&C) -> D,
+        mut surface_mapping: impl FnMut(&S) -> T,
+    ) -> Face<Q, D, T> {
+        let wires: Vec<_> = self
+            .absolute_boundaries()
+            .iter()
+            .map(|wire| wire.mapped(&mut point_mapping, &mut curve_mapping))
+            .collect();
+        let surface = surface_mapping(&*self.surface.lock().unwrap());
+        let mut face = Face::debug_new(wires, surface);
+        if !self.orientation() {
+            face.invert();
+        }
+        face
+    }
+
     /// Returns the orientation of face.
     ///
     /// The result of this method is the same with `self.boundaries() == self.absolute_boundaries().clone()`.
@@ -672,7 +747,9 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_eq!(boundaries[1].len(), 4);
     /// ```
     pub fn glue_at_boundaries(&self, other: &Self) -> Option<Self>
-    where S: Clone + PartialEq, Wire<P, C>: std::fmt::Debug {
+    where
+        S: Clone + PartialEq,
+        Wire<P, C>: std::fmt::Debug, {
         let surface = self.get_surface();
         if &surface != &other.get_surface() {
             return None;
@@ -685,20 +762,24 @@ impl<P, C, S> Face<P, C, S> {
             .flatten()
             .map(|edge| (edge.front().id(), edge))
             .collect();
-        other.absolute_boundaries().iter().flatten().try_for_each(|edge| {
-            if let Some(edge0) = vemap.get(&edge.back().id()) {
-                if edge.front() == edge0.back() {
-                    if edge.is_same(&edge0) {
-                        vemap.remove(&edge.back().id());
-                        return Some(());
-                    } else {
-                        return None;
+        other
+            .absolute_boundaries()
+            .iter()
+            .flatten()
+            .try_for_each(|edge| {
+                if let Some(edge0) = vemap.get(&edge.back().id()) {
+                    if edge.front() == edge0.back() {
+                        if edge.is_same(&edge0) {
+                            vemap.remove(&edge.back().id());
+                            return Some(());
+                        } else {
+                            return None;
+                        }
                     }
                 }
-            }
-            vemap.insert(edge.front().id(), edge);
-            Some(())
-        })?;
+                vemap.insert(edge.front().id(), edge);
+                Some(())
+            })?;
         if vemap.is_empty() {
             return None;
         }
@@ -715,13 +796,11 @@ impl<P, C, S> Face<P, C, S> {
             boundaries.push(wire);
         }
         debug_assert!(Face::try_new(boundaries.clone(), ()).is_ok());
-        Some(
-            Face {
-                boundaries,
-                orientation: self.orientation(),
-                surface: Arc::new(Mutex::new(surface)),
-            }
-        )
+        Some(Face {
+            boundaries,
+            orientation: self.orientation(),
+            surface: Arc::new(Mutex::new(surface)),
+        })
     }
 }
 
@@ -846,3 +925,37 @@ impl<'a, P, C> ExactSizeIterator for BoundaryIter<'a, P, C> {
 }
 
 impl<'a, P, C> std::iter::FusedIterator for BoundaryIter<'a, P, C> {}
+
+#[test]
+fn invert_mapped_face() {
+    let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
+    let wire0 = Wire::from(vec![
+        Edge::new(&v[0], &v[1], 100),
+        Edge::new(&v[1], &v[2], 200),
+        Edge::new(&v[2], &v[3], 300),
+        Edge::new(&v[3], &v[0], 400),
+    ]);
+    let wire1 = Wire::from(vec![
+        Edge::new(&v[4], &v[5], 500),
+        Edge::new(&v[6], &v[5], 600).inverse(),
+        Edge::new(&v[6], &v[4], 700),
+    ]);
+    let face0 = Face::new(vec![wire0, wire1], 10000).inverse();
+    let face1 = face0.mapped(
+        &move |i: &usize| *i + 10,
+        &move |j: &usize| *j + 1000,
+        &move |k: &usize| *k + 100000,
+    );
+
+    assert_eq!(face0.get_surface() + 100000, face1.get_surface(),);
+    assert_eq!(face0.orientation(), face1.orientation());
+    let biters0 = face0.boundary_iters();
+    let biters1 = face1.boundary_iters();
+    for (biter0, biter1) in biters0.into_iter().zip(biters1) {
+        for (edge0, edge1) in biter0.zip(biter1) {
+            assert_eq!(edge0.front().get_point() + 10, edge1.front().get_point(),);
+            assert_eq!(edge0.back().get_point() + 10, edge1.back().get_point(),);
+            assert_eq!(edge0.get_curve() + 1000, edge1.get_curve(),);
+        }
+    }
+}

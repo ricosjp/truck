@@ -78,6 +78,29 @@ impl<P, C, S> Solid<P, C, S> {
         self.edge_iter().map(|edge| edge.front().clone())
     }
 
+    /// Returns a new solid whose surfaces are mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn mapped<Q, D, T>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Q,
+        mut curve_mapping: impl FnMut(&C) -> D,
+        mut surface_mapping: impl FnMut(&S) -> T,
+    ) -> Solid<Q, D, T> {
+        Solid::debug_new(
+            self.boundaries()
+                .iter()
+                .map(move |shell| {
+                    shell.mapped(&mut point_mapping, &mut curve_mapping, &mut surface_mapping)
+                })
+                .collect(),
+        )
+    }
+
     /// Cuts one edge into two edges at vertex.
     #[inline(always)]
     pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
@@ -98,7 +121,10 @@ impl<P, C, S> Solid<P, C, S> {
     where
         P: std::fmt::Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
-        let res = self.boundaries.iter_mut().all(|shell| shell.remove_vertex_by_concat_edges(vertex_id));
+        let res = self
+            .boundaries
+            .iter_mut()
+            .all(|shell| shell.remove_vertex_by_concat_edges(vertex_id));
         #[cfg(debug_assertions)]
         Solid::new(self.boundaries.clone());
         res
