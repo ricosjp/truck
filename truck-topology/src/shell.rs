@@ -439,6 +439,67 @@ impl<P, C, S> Shell<P, C, S> {
 
     /// Returns a new shell whose surfaces are mapped by `surface_mapping`,
     /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    pub fn try_mapped<Q, D, T>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Option<Q>,
+        mut curve_mapping: impl FnMut(&C) -> Option<D>,
+        mut surface_mapping: impl FnMut(&S) -> Option<T>,
+    ) -> Option<Shell<Q, D, T>> {
+        let mut shell = Shell::new();
+        let mut vmap: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
+        let vertex_iter = self
+            .iter()
+            .flat_map(Face::absolute_boundaries)
+            .flat_map(Wire::vertex_iter);
+        for vertex in vertex_iter {
+            if vmap.get(&vertex.id()).is_none() {
+                let new_vertex = vertex.try_mapped(&mut point_mapping)?;
+                vmap.insert(vertex.id(), new_vertex);
+            }
+        }
+        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
+        for face in self.face_iter() {
+            let mut wires = Vec::new();
+            for biter in face.absolute_boundaries() {
+                let mut wire = Wire::new();
+                for edge in biter {
+                    if let Some(new_edge) = edge_map.get(&edge.id()) {
+                        if edge.absolute_front() == edge.front() {
+                            wire.push_back(new_edge.clone());
+                        } else {
+                            wire.push_back(new_edge.inverse());
+                        }
+                    } else {
+                        let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
+                        let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
+                        let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
+                        let new_edge = Edge::debug_new(v0, v1, curve);
+                        if edge.orientation() {
+                            wire.push_back(new_edge.clone());
+                        } else {
+                            wire.push_back(new_edge.inverse());
+                        }
+                        edge_map.insert(edge.id(), new_edge);
+                    }
+                }
+                wires.push(wire);
+            }
+            let surface = surface_mapping(&*face.surface.lock().unwrap())?;
+            let mut new_face = Face::debug_new(wires, surface);
+            if !face.orientation() {
+                new_face.invert();
+            }
+            shell.push(new_face);
+        }
+        Some(shell)
+    }
+
+    /// Returns a new shell whose surfaces are mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;

@@ -280,6 +280,28 @@ impl<P, C> Edge<P, C> {
 
     /// Returns a new edge whose curve is mapped by `curve_mapping` and
     /// whose end points are mapped by `point_mapping`.
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn try_mapped<Q, D>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Option<Q>,
+        mut curve_mapping: impl FnMut(&C) -> Option<D>,
+    ) -> Option<Edge<Q, D>> {
+        let v0 = self.absolute_front().try_mapped(&mut point_mapping)?;
+        let v1 = self.absolute_back().try_mapped(&mut point_mapping)?;
+        let curve = curve_mapping(&*self.curve.lock().unwrap())?;
+        let mut edge = Edge::debug_new(&v0, &v1, curve);
+        if edge.orientation() != self.orientation() {
+            edge.invert();
+        }
+        Some(edge)
+    }
+
+    /// Returns a new edge whose curve is mapped by `curve_mapping` and
+    /// whose end points are mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;

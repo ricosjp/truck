@@ -85,6 +85,29 @@ impl<P, C, S> Solid<P, C, S> {
     /// So, this method does not appear to the document.
     #[doc(hidden)]
     #[inline(always)]
+    pub fn try_mapped<Q, D, T>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Option<Q>,
+        mut curve_mapping: impl FnMut(&C) -> Option<D>,
+        mut surface_mapping: impl FnMut(&S) -> Option<T>,
+    ) -> Option<Solid<Q, D, T>> {
+        Some(Solid::debug_new(
+            self.boundaries()
+                .iter()
+                .map(move |shell| {
+                    shell.try_mapped(&mut point_mapping, &mut curve_mapping, &mut surface_mapping)
+                })
+                .collect::<Option<Vec<_>>>()?,
+        ))
+    }
+
+    /// Returns a new solid whose surfaces are mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    #[inline(always)]
     pub fn mapped<Q, D, T>(
         &self,
         mut point_mapping: impl FnMut(&P) -> Q,

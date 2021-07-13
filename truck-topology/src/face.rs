@@ -363,6 +363,31 @@ impl<P, C, S> Face<P, C, S> {
 
     /// Returns a new face whose surface is mapped by `surface_mapping`,
     /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    pub fn try_mapped<Q, D, T>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Option<Q>,
+        mut curve_mapping: impl FnMut(&C) -> Option<D>,
+        mut surface_mapping: impl FnMut(&S) -> Option<T>,
+    ) -> Option<Face<Q, D, T>> {
+        let wires = self
+            .absolute_boundaries()
+            .iter()
+            .map(|wire| wire.try_mapped(&mut point_mapping, &mut curve_mapping))
+            .collect::<Option<Vec<_>>>()?;
+        let surface = surface_mapping(&*self.surface.lock().unwrap())?;
+        let mut face = Face::debug_new(wires, surface);
+        if !self.orientation() {
+            face.invert();
+        }
+        Some(face)
+    }
+
+    /// Returns a new face whose surface is mapped by `surface_mapping`,
+    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
     /// # Examples
     /// ```
     /// use truck_topology::*;
