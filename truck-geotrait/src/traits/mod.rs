@@ -52,3 +52,10 @@ impl Invertible for (usize, usize) {
     fn invert(&mut self) { *self = (self.1, self.0); }
     fn inverse(&self) -> Self { (self.1, self.0) }
 }
+
+impl<P: Clone> Invertible for Vec<P> {
+    #[inline(always)]
+    fn invert(&mut self) { self.reverse(); }
+    #[inline(always)]
+    fn inverse(&self) -> Self { self.iter().rev().map(|p| p.clone()).collect() }
+}

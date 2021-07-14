@@ -3,52 +3,69 @@ use crate::filters::NormalFilters;
 use std::collections::HashMap;
 
 type CDT<V, K> = ConstrainedDelaunayTriangulation<V, K>;
+type MeshedShell = Shell<Point3, Vec<Point3>, PolygonMesh>;
 
 /// Tessellates faces
-pub(super) fn tessellation<'a, C, S>(
-    mut faces: impl Iterator<Item = &'a Face<Point3, C, S>>,
-    tol: f64,
-) -> Option<PolygonMesh>
+pub(super) fn tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> Option<MeshedShell>
 where
     C: PolylineableCurve + 'a,
-    S: MeshableSurface + 'a,
-{
-    let mut poly_edges = PolyEdges::new();
-    faces.try_fold(PolygonMesh::default(), move |mut poly, face| {
-        poly.merge(tessellate_face(face, &mut poly_edges, tol)?);
-        Some(poly)
-    })
-}
-
-/// Remenbers already polylined edges.
-#[derive(Debug, Clone)]
-struct PolyEdges<C>(HashMap<EdgeID<C>, Vec<Point3>>);
-
-impl<C: PolylineableCurve> PolyEdges<C> {
-    /// Constructor
-    #[inline(always)]
-    fn new() -> Self { Self(HashMap::new()) }
-    /// Creates polyline by an edge
-    #[inline(always)]
-    fn make_polyline(&mut self, edge: &Edge<Point3, C>, tol: f64) -> Vec<Point3> {
-        let mut poly = match self.0.get(&edge.id()) {
-            Some(got) => got.clone(),
-            None => {
-                let curve = edge.get_curve();
-                let poly: Vec<Point3> = curve
-                    .parameter_division(curve.parameter_range(), tol)
-                    .into_iter()
-                    .map(|t| curve.subs(t))
-                    .collect();
-                self.0.insert(edge.id(), poly.clone());
-                poly
-            }
-        };
-        if !edge.orientation() {
-            poly.reverse();
+    S: MeshableSurface + 'a, {
+    let mut shell0 = Shell::new();
+    let mut vmap: HashMap<VertexID<Point3>, Vertex<Point3>> = HashMap::new();
+    for vertex in shell.vertex_iter() {
+        if vmap.get(&vertex.id()).is_none() {
+            let new_vertex = vertex.mapped(Point3::clone);
+            vmap.insert(vertex.id(), new_vertex);
         }
-        poly
     }
+    let mut edge_map: HashMap<EdgeID<C>, Edge<Point3, Vec<Point3>>> = HashMap::new();
+    for face in shell.face_iter() {
+        let mut wires = Vec::new();
+        for biter in face.absolute_boundaries() {
+            let mut wire = Wire::new();
+            for edge in biter {
+                if let Some(new_edge) = edge_map.get(&edge.id()) {
+                    if edge.absolute_front() == edge.front() {
+                        wire.push_back(new_edge.clone());
+                    } else {
+                        wire.push_back(new_edge.inverse());
+                    }
+                } else {
+                    let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
+                    let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
+                    let curve = edge.get_curve();
+                    let poly: Vec<Point3> = curve
+                        .parameter_division(curve.parameter_range(), tol)
+                        .into_iter()
+                        .map(|t| curve.subs(t))
+                        .collect();
+                    let new_edge = Edge::debug_new(v0, v1, poly);
+                    if edge.orientation() {
+                        wire.push_back(new_edge.clone());
+                    } else {
+                        wire.push_back(new_edge.inverse());
+                    }
+                    edge_map.insert(edge.id(), new_edge);
+                }
+            }
+            wires.push(wire);
+        }
+        let surface = face.get_surface();
+        let mut polyline = Polyline::default();
+        let polygon = match wires
+            .iter()
+            .all(|wire| polyline.add_wire(&surface, wire))
+        {
+            true => Some(trimming_tessellation(&surface, &polyline, tol)),
+            false => None,
+        }?;
+        let mut new_face = Face::debug_new(wires, polygon);
+        if !face.orientation() {
+            new_face.invert();
+        }
+        shell0.push(new_face);
+    }
+    Some(shell0)
 }
 
 /// polyline, not always connected
@@ -60,21 +77,12 @@ struct Polyline {
 
 impl Polyline {
     /// add an wire into polyline
-    fn add_wire<C, S>(
-        &mut self,
-        surface: &S,
-        wire: impl IntoIterator<Item = Edge<Point3, C>>,
-        poly_edges: &mut PolyEdges<C>,
-        tol: f64,
-    ) -> bool
-    where
-        C: PolylineableCurve,
-        S: MeshableSurface,
-    {
+    fn add_wire<S>(&mut self, surface: &S, wire: &Wire<Point3, Vec<Point3>>) -> bool
+    where S: MeshableSurface {
         let mut counter = 0;
         let len = self.positions.len();
         let res = wire.into_iter().all(|edge| {
-            let mut poly_edge = poly_edges.make_polyline(&edge, tol);
+            let mut poly_edge = edge.oriented_curve();
             poly_edge.pop();
             counter += poly_edge.len();
             let mut hint = None;
@@ -122,28 +130,6 @@ impl Polyline {
         self.indices.iter().for_each(|a| {
             triangulation.add_constraint(poly2tri[a[0]], poly2tri[a[1]]);
         });
-    }
-}
-
-/// Tessellates one face.
-fn tessellate_face<C, S>(
-    face: &Face<Point3, C, S>,
-    poly_edges: &mut PolyEdges<C>,
-    tol: f64,
-) -> Option<PolygonMesh>
-where
-    C: PolylineableCurve,
-    S: MeshableSurface,
-{
-    let surface = face.oriented_surface();
-    let mut polyline = Polyline::default();
-    match face
-        .boundary_iters()
-        .into_iter()
-        .all(|wire| polyline.add_wire(&surface, wire, poly_edges, tol))
-    {
-        true => Some(trimming_tessellation(&surface, &polyline, tol)),
-        false => None,
     }
 }
 
@@ -201,7 +187,7 @@ fn triangulation_into_polymesh<'a>(
             (v.fix(), i)
         })
         .collect();
-    let tri_faces: Vec<[Vertex; 3]> = triangles
+    let tri_faces: Vec<[truck_polymesh::Vertex; 3]> = triangles
         .map(|tri| tri.as_triangle())
         .filter(|tri| {
             let c = Point2::new(

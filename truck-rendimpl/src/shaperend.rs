@@ -28,7 +28,7 @@ impl<Shape: MeshableShape> TryIntoInstance<PolygonInstance> for Shape {
         shaders: &PolygonShaders,
         desc: &ShapeInstanceDescriptor,
     ) -> Option<PolygonInstance> {
-        let polygon = self.triangulation(desc.mesh_precision)?;
+        let polygon = self.triangulation(desc.mesh_precision)?.into_polygon();
         Some(polygon.into_instance(
             handler,
             shaders,

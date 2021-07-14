@@ -451,11 +451,7 @@ impl<P, C, S> Shell<P, C, S> {
     ) -> Option<Shell<Q, D, T>> {
         let mut shell = Shell::new();
         let mut vmap: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
-        let vertex_iter = self
-            .iter()
-            .flat_map(Face::absolute_boundaries)
-            .flat_map(Wire::vertex_iter);
-        for vertex in vertex_iter {
+        for vertex in self.vertex_iter() {
             if vmap.get(&vertex.id()).is_none() {
                 let new_vertex = vertex.try_mapped(&mut point_mapping)?;
                 vmap.insert(vertex.id(), new_vertex);

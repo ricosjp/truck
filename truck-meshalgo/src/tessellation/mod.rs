@@ -1,7 +1,7 @@
 use crate::*;
 use spade::delaunay::*;
 use spade::kernels::*;
-use truck_topology::{Edge, EdgeID, Face, Shell, Solid};
+use truck_topology::{*, Vertex};
 
 /// Gathered the traits used in tessellation.
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -14,46 +14,81 @@ pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<Point = Point3, Parameter = (f64, f64)>> MeshableSurface for S {}
 
+/// Trait for converting tessellated shape into polygon.
+pub trait MeshedShape {
+    /// Converts tessellated shape into polygon.
+    fn into_polygon(&self) -> PolygonMesh;
+}
+
+impl MeshedShape for Shell<Point3, Vec<Point3>, PolygonMesh> {
+    fn into_polygon(&self) -> PolygonMesh {
+        let mut polygon = PolygonMesh::default();
+        self.face_iter().for_each(|face| {
+            polygon.merge(face.oriented_surface());
+        });
+        polygon
+    }
+}
+
+impl MeshedShape for Solid<Point3, Vec<Point3>, PolygonMesh> {
+    fn into_polygon(&self) -> PolygonMesh {
+        let mut polygon = PolygonMesh::default();
+        self.boundaries().iter().for_each(|shell| {
+            polygon.merge(shell.into_polygon());
+        });
+        polygon
+    }
+}
+
 /// Trait for tessellating `Shell` and `Solid` in `truck-modeling`.
 pub trait MeshableShape {
+    /// Shape whose edges are made polylines and faces polygon surface.
+    type MeshedShape: MeshedShape;
     /// Tessellates shapes. The division of curves and surfaces are by `ParameterDivision1D` and `ParameterDivision2D`,
     /// and the constrained Delauney triangulation is based on the crate [`spade`](https://crates.io/crates/spade).
-    /// 
+    ///
     /// # Remarks
-    /// 
+    ///
     /// The tessellated mesh is not necessarily closed even if `self` is `Solid`.
     /// If you want to get closed mesh, use `OptimizationFilter::put_together_same_attrs`.
     /// ```
     /// use truck_meshalgo::prelude::*;
     /// use truck_modeling::builder;
     /// use truck_topology::shell::ShellCondition;
-    /// 
+    ///
     /// // modeling a unit cube
     /// let v = builder::vertex(Point3::origin());
     /// let e = builder::tsweep(&v, Vector3::unit_x());
     /// let f = builder::tsweep(&e, Vector3::unit_y());
     /// let cube = builder::tsweep(&f, Vector3::unit_z());
-    /// 
+    ///
     /// // cube is Solid, however, the tessellated mesh is not closed.
     /// let mut mesh = cube.triangulation(0.01).unwrap();
     /// assert!(mesh.shell_condition() != ShellCondition::Closed);
-    /// 
+    ///
     /// // use optimization filters!
     /// mesh.put_together_same_attrs();
     /// assert!(mesh.shell_condition() == ShellCondition::Closed);
     /// ```
-    fn triangulation(&self, tol: f64) -> Option<PolygonMesh>;
+    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape>;
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C, S> {
-    fn triangulation(&self, tol: f64) -> Option<PolygonMesh> {
-        triangulation::tessellation(self.face_iter(), tol)
+    type MeshedShape = Shell<Point3, Vec<Point3>, PolygonMesh>;
+    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+        triangulation::tessellation(self, tol)
     }
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C, S> {
-    fn triangulation(&self, tol: f64) -> Option<PolygonMesh> {
-        triangulation::tessellation(self.boundaries().iter().flat_map(Shell::face_iter), tol)
+    type MeshedShape = Solid<Point3, Vec<Point3>, PolygonMesh>;
+    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+        let boundaries = self
+            .boundaries()
+            .iter()
+            .map(|shell| shell.triangulation(tol))
+            .collect::<Option<Vec<_>>>()?;
+        Solid::try_new(boundaries).ok()
     }
 }
 
