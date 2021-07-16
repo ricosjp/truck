@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use truck_modeling::base::*;
+use truck_base::{cgmath64::*, tolerance::*};
 
 pub fn construct_polylines(lines: &Vec<(Point3, Point3)>) -> Vec<Vec<Point3>> {
 	let mut lines: HashMap<[i64; 3], (Point3, Point3)> = lines

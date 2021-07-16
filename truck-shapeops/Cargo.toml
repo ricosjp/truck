@@ -6,5 +6,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-truck-modeling = { version = "0.2.1", path = "../truck-modeling" }
+truck-base = { version = "0.1.1", path = "../truck-base" }
+truck-topology = { version = "0.2.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }

@@ -355,7 +355,7 @@ impl<P> BSplineSurface<P> {
     }
 }
 
-impl<P: ControlPoint> BSplineSurface<P> {
+impl<P: ControlPoint<f64>> BSplineSurface<P> {
     /// Returns the closure of substitution.
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> P + '_ { move |u, v| self.subs(u, v) }
@@ -557,7 +557,7 @@ impl<P: ControlPoint> BSplineSurface<P> {
     }
 }
 
-impl<P: ControlPoint> ParametricSurface for BSplineSurface<P> {
+impl<P: ControlPoint<f64>> ParametricSurface for BSplineSurface<P> {
     type Point = P;
     type Vector = P::Diff;
     /// Substitutes to a B-spline surface.
@@ -890,7 +890,7 @@ impl<V: Tolerance> BSplineSurface<V> {
     }
 }
 
-impl<P: ControlPoint + Tolerance> BSplineSurface<P> {
+impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.  
     /// # Examples
     /// ```
@@ -1849,8 +1849,8 @@ where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> +
     }
 }
 
-impl<P: ControlPoint> ParameterDivision2D for BSplineSurface<P>
-where P: EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint>::Diff> + MetricSpace<Metric = f64>
+impl<P: ControlPoint<f64>> ParameterDivision2D for BSplineSurface<P>
+where P: EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff> + MetricSpace<Metric = f64>
 {
     #[inline(always)]
     fn parameter_division(

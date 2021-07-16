@@ -185,7 +185,7 @@ impl<V> NURBSSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSSurface<V> {
     /// Substitutes to a NURBS surface.
     #[inline(always)]
     pub fn subs(&self, u: f64, v: f64) -> V::Point { self.0.subs(u, v).to_point() }
@@ -233,7 +233,7 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSSurface<V> {
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> V::Point + '_ { move |u, v| self.subs(u, v) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSSurface<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSSurface<V>
 where V::Point: Tolerance
 {
     /// Returns whether constant curve or not, i.e. all control points are same or not.
@@ -321,7 +321,7 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface<V> {
     /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.  
     #[inline(always)]
     pub fn add_uknot(&mut self, x: f64) -> &mut Self {
@@ -584,7 +584,7 @@ impl<V: Clone> Invertible for NURBSSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParametricSurface for NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for NURBSSurface<V> {
     type Point = V::Point;
     type Vector = V::Vector;
     #[inline(always)]
@@ -611,7 +611,7 @@ impl ParametricSurface3D for NURBSSurface<Vector4> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParameterDivision2D for NURBSSurface<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D for NURBSSurface<V>
 where V::Point: MetricSpace<Metric = f64>
 {
     #[inline(always)]
