@@ -65,7 +65,7 @@ pub trait MeshableShape {
     /// let cube = builder::tsweep(&f, Vector3::unit_z());
     ///
     /// // cube is Solid, however, the tessellated mesh is not closed.
-    /// let mut mesh = cube.triangulation(0.01).unwrap();
+    /// let mut mesh = cube.triangulation(0.01).unwrap().into_polygon();
     /// assert!(mesh.shell_condition() != ShellCondition::Closed);
     ///
     /// // use optimization filters!
