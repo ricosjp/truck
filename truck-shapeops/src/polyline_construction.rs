@@ -1,7 +1,8 @@
 use std::collections::HashMap;
+use truck_meshalgo::prelude::PolylineCurve;
 use truck_base::{cgmath64::*, tolerance::*};
 
-pub fn construct_polylines(lines: &Vec<(Point3, Point3)>) -> Vec<Vec<Point3>> {
+pub fn construct_polylines(lines: &Vec<(Point3, Point3)>) -> Vec<PolylineCurve<Point3>> {
 	let mut lines: HashMap<[i64; 3], (Point3, Point3)> = lines
 		.iter()
 		.filter(|(pt0, pt1)| pt0.distance2(*pt1) > TOLERANCE2)
@@ -18,7 +19,7 @@ pub fn construct_polylines(lines: &Vec<(Point3, Point3)>) -> Vec<Vec<Point3>> {
 			wire.push(line.0);
 			idx = into_index(line.1);
 		}
-		res.push(wire);
+		res.push(PolylineCurve(wire));
 	}
 	res
 }

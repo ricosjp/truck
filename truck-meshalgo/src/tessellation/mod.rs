@@ -14,13 +14,15 @@ pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<Point = Point3, Parameter = (f64, f64)>> MeshableSurface for S {}
 
+type PolylineCurve = truck_polymesh::PolylineCurve<Point3>;
+
 /// Trait for converting tessellated shape into polygon.
 pub trait MeshedShape {
     /// Converts tessellated shape into polygon.
     fn into_polygon(&self) -> PolygonMesh;
 }
 
-impl MeshedShape for Shell<Point3, Vec<Point3>, PolygonMesh> {
+impl MeshedShape for Shell<Point3, PolylineCurve, PolygonMesh> {
     fn into_polygon(&self) -> PolygonMesh {
         let mut polygon = PolygonMesh::default();
         self.face_iter().for_each(|face| {
@@ -30,7 +32,7 @@ impl MeshedShape for Shell<Point3, Vec<Point3>, PolygonMesh> {
     }
 }
 
-impl MeshedShape for Solid<Point3, Vec<Point3>, PolygonMesh> {
+impl MeshedShape for Solid<Point3, PolylineCurve, PolygonMesh> {
     fn into_polygon(&self) -> PolygonMesh {
         let mut polygon = PolygonMesh::default();
         self.boundaries().iter().for_each(|shell| {
@@ -74,14 +76,14 @@ pub trait MeshableShape {
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C, S> {
-    type MeshedShape = Shell<Point3, Vec<Point3>, PolygonMesh>;
+    type MeshedShape = Shell<Point3, PolylineCurve, PolygonMesh>;
     fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
         triangulation::tessellation(self, tol)
     }
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C, S> {
-    type MeshedShape = Solid<Point3, Vec<Point3>, PolygonMesh>;
+    type MeshedShape = Solid<Point3, PolylineCurve, PolygonMesh>;
     fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
         let boundaries = self
             .boundaries()

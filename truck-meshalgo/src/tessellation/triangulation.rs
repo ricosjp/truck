@@ -3,7 +3,7 @@ use crate::filters::NormalFilters;
 use std::collections::HashMap;
 
 type CDT<V, K> = ConstrainedDelaunayTriangulation<V, K>;
-type MeshedShell = Shell<Point3, Vec<Point3>, PolygonMesh>;
+type MeshedShell = Shell<Point3, PolylineCurve, PolygonMesh>;
 
 /// Tessellates faces
 pub(super) fn tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> Option<MeshedShell>
@@ -18,7 +18,7 @@ where
             vmap.insert(vertex.id(), new_vertex);
         }
     }
-    let mut edge_map: HashMap<EdgeID<C>, Edge<Point3, Vec<Point3>>> = HashMap::new();
+    let mut edge_map: HashMap<EdgeID<C>, Edge<Point3, PolylineCurve>> = HashMap::new();
     for face in shell.face_iter() {
         let mut wires = Vec::new();
         for biter in face.absolute_boundaries() {
@@ -39,7 +39,7 @@ where
                         .into_iter()
                         .map(|t| curve.subs(t))
                         .collect();
-                    let new_edge = Edge::debug_new(v0, v1, poly);
+                    let new_edge = Edge::debug_new(v0, v1, PolylineCurve(poly));
                     if edge.orientation() {
                         wire.push_back(new_edge.clone());
                     } else {
@@ -77,7 +77,7 @@ struct Polyline {
 
 impl Polyline {
     /// add an wire into polyline
-    fn add_wire<S>(&mut self, surface: &S, wire: &Wire<Point3, Vec<Point3>>) -> bool
+    fn add_wire<S>(&mut self, surface: &S, wire: &Wire<Point3, PolylineCurve>) -> bool
     where S: MeshableSurface {
         let mut counter = 0;
         let len = self.positions.len();
@@ -86,7 +86,7 @@ impl Polyline {
             poly_edge.pop();
             counter += poly_edge.len();
             let mut hint = None;
-            poly_edge.into_iter().all(|pt| {
+            Vec::from(poly_edge).into_iter().all(|pt| {
                 hint = surface
                     .search_parameter(pt, hint, 100)
                     .or_else(|| surface.search_parameter(pt, None, 100));
