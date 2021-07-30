@@ -255,7 +255,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
         source += shader;
         source += BASE_SHADER;
 
-        Validator::new(ValidationFlags::all())
+        Validator::new(ValidationFlags::all(), Capabilities::empty())
             .validate(
                 &Parser::new()
                     .parse(&source)
