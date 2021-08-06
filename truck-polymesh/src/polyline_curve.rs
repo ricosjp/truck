@@ -4,26 +4,36 @@ use truck_base::cgmath64::control_point::ControlPoint;
 
 impl<P> Deref for PolylineCurve<P> {
 	type Target = Vec<P>;
-	fn deref(&self) -> &Self::Target { &self.0 }
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
 }
 
 impl<P> DerefMut for PolylineCurve<P> {
-	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
 }
 
 impl<P> From<Vec<P>> for PolylineCurve<P> {
-	fn from(v: Vec<P>) -> Self { Self(v) }
+	fn from(v: Vec<P>) -> Self {
+		Self(v)
+	}
 }
 
 impl<P> From<PolylineCurve<P>> for Vec<P> {
-	fn from(v: PolylineCurve<P>) -> Self { v.0 }
+	fn from(v: PolylineCurve<P>) -> Self {
+		v.0
+	}
 }
 
 impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
 	type Point = P;
 	type Vector = P::Diff;
 	#[inline(always)]
-	fn parameter_range(&self) -> (f64, f64) { (0.0, self.len() as f64 - 1.0) }
+	fn parameter_range(&self) -> (f64, f64) {
+		(0.0, self.len() as f64 - 1.0)
+	}
 	#[inline(always)]
 	fn subs(&self, t: f64) -> P {
 		if self.is_empty() {
@@ -48,14 +58,20 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
 		}
 	}
 	#[inline(always)]
-	fn der2(&self, _: f64) -> P::Diff { P::Diff::zero() }
+	fn der2(&self, _: f64) -> P::Diff {
+		P::Diff::zero()
+	}
 }
 
 impl<P: Clone> Invertible for PolylineCurve<P> {
-    #[inline(always)]
-    fn invert(&mut self) { self.reverse(); }
-    #[inline(always)]
-    fn inverse(&self) -> Self { Self(self.iter().rev().map(|p| p.clone()).collect()) }
+	#[inline(always)]
+	fn invert(&mut self) {
+		self.reverse();
+	}
+	#[inline(always)]
+	fn inverse(&self) -> Self {
+		Self(self.iter().rev().map(|p| p.clone()).collect())
+	}
 }
 
 impl<P: ControlPoint<f64>> Cut for PolylineCurve<P> {
@@ -85,6 +101,27 @@ impl<P: ControlPoint<f64>> Cut for PolylineCurve<P> {
 	}
 }
 
+impl<P> SearchParameter for PolylineCurve<P>
+where
+	P: ControlPoint<f64>,
+	P::Diff: InnerSpace<Scalar = f64> + Tolerance,
+{
+	type Point = P;
+	type Parameter = f64;
+	fn search_parameter(&self, point: P, _: Option<f64>, _: usize) -> Option<f64> {
+		for (i, p) in self.0.windows(2).enumerate() {
+			let a = point - p[0];
+			let b = p[1] - p[0];
+			let t = f64::clamp(a.dot(b) / b.dot(b), 0.0, 1.0);
+			let h = a - b * t;
+			if h.so_small() {
+				return Some(t + i as f64);
+			}
+		}
+		None
+	}
+}
+
 #[test]
 fn polyline_test() {
 	let vec = vec![
@@ -106,12 +143,19 @@ fn polyline_test() {
 	assert_eq!(part1.len(), 6);
 	truck_base::assert_near!(part0.subs(2.5), Point3::new(0.0, 0.75, 0.25));
 	truck_base::assert_near!(part1.subs(0.5), Point3::new(0.0, 0.25, 0.75));
-	
 	let mut part0 = polyline.clone();
 	let part1 = part0.cut(4.0);
 	assert_eq!(part0.len(), 5);
 	assert_eq!(part1.len(), 4);
 	truck_base::assert_near!(part0.subs(2.5), Point3::new(0.0, 0.5, 0.5));
 	truck_base::assert_near!(part1.subs(0.5), Point3::new(0.5, 0.5, 1.0));
-}
 
+	let pt = polyline.subs(2.13);
+	let t = polyline.search_parameter(pt, None, 1).unwrap();
+	truck_base::assert_near!(t, 2.13);
+
+	let pt = Point3::new(2.0, 0.0, 0.0);
+	assert!(polyline.search_parameter(pt, None, 1).is_none());
+	let pt = Point3::new(0.5, 0.5, 0.51);
+	assert!(polyline.search_parameter(pt, None, 1).is_none());
+}
