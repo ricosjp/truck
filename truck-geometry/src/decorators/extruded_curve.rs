@@ -94,6 +94,20 @@ where C: ParametricCurve<Point = Point3, Vector = Vector3> {
     }
 }
 
+impl<C> SearchNearestParameter for ExtrudedCurve<C, Vector3>
+where C: ParametricCurve<Point = Point3, Vector = Vector3> {
+    type Point = Point3;
+    type Parameter = (f64, f64);
+    #[inline(always)]
+    fn search_nearest_parameter(&self, point: Point3, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
+        algo::surface::search_nearest_parameter(self, point, hint, trials)
+    }
+}
+
 #[test]
 fn extruded_curve_test() {
     let cpts = vec![

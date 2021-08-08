@@ -1065,53 +1065,6 @@ where
         + Tolerance,
     <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
-    /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
-    /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
-    /// );
-    /// let ctrl_pts = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 1.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = ParametricCurve::subs(&bspcurve, 1.2);
-    /// let t = bspcurve.search_nearest_parameter(pt, 0.8, 100).unwrap();
-    /// assert_near!(t, 1.2);
-    /// ```
-    /// # Remarks
-    /// It may converge to a local solution depending on the hint.
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
-    /// );
-    /// let ctrl_pts = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 1.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = Point3::new(0.0, 0.5, 1.0);
-    /// let t = bspcurve.search_nearest_parameter(pt, 0.8, 100).unwrap();
-    /// let pt0 = ParametricCurve::subs(&bspcurve, t);
-    /// let pt1 = ParametricCurve::subs(&bspcurve, 3.0);
-    /// // the point corresponding the obtained parameter is not
-    /// // the globally nearest point in the curve.
-    /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
-    /// ```
-    #[inline(always)]
-    pub fn search_nearest_parameter(&self, point: P, hint: f64, trial: usize) -> Option<f64> {
-        algo::curve::search_nearest_parameter(self, point, hint, trial)
-    }
     /// Determines whether `self` is an arc of `curve` by repeating applying Newton method.
     ///
     /// The parameter `hint` is the init value, required that `curve.subs(hint)` is the front point of `self`.
@@ -1157,7 +1110,7 @@ where
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
                 let pt = ParametricCurve::subs(self, t);
-                let res = curve.search_nearest_parameter(pt, hint, 100);
+                let res = curve.search_nearest_parameter(pt, Some(hint), 100);
                 let flag = res.map(|res| hint <= res && curve.subs(res).near(&pt));
                 hint = match flag {
                     Some(true) => res.unwrap(),
@@ -1168,7 +1121,69 @@ where
         Some(hint)
     }
 }
-
+impl<P> SearchNearestParameter for BSplineCurve<P>
+where
+    P: ControlPoint<f64>
+        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
+        + MetricSpace<Metric = f64>
+        + Tolerance,
+    <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
+{
+    type Point = P;
+    type Parameter = f64;
+    /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
+    /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::from(
+    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
+    /// );
+    /// let ctrl_pts = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 1.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let pt = ParametricCurve::subs(&bspcurve, 1.2);
+    /// let t = bspcurve.search_nearest_parameter(pt, Some(0.8), 100).unwrap();
+    /// assert_near!(t, 1.2);
+    /// ```
+    /// # Remarks
+    /// It may converge to a local solution depending on the hint.
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::from(
+    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
+    /// );
+    /// let ctrl_pts = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 1.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let pt = Point3::new(0.0, 0.5, 1.0);
+    /// let t = bspcurve.search_nearest_parameter(pt, Some(0.8), 100).unwrap();
+    /// let pt0 = ParametricCurve::subs(&bspcurve, t);
+    /// let pt1 = ParametricCurve::subs(&bspcurve, 3.0);
+    /// // the point corresponding the obtained parameter is not
+    /// // the globally nearest point in the curve.
+    /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
+    /// ```
+    #[inline(always)]
+    fn search_nearest_parameter(&self, point: P, hint: Option<f64>, trial: usize) -> Option<f64> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
+        algo::curve::search_nearest_parameter(self, point, hint, trial)
+    }
+}
+ 
 impl<P> SearchParameter for BSplineCurve<P>
 where
     P: ControlPoint<f64>
@@ -1187,6 +1202,7 @@ where
         algo::curve::search_parameter(self, point, hint, trial)
     }
 }
+
 impl<P> BSplineCurve<P>
 where P: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy
 {

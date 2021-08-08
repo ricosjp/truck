@@ -21,6 +21,22 @@ pub trait SearchParameter {
     ) -> Option<Self::Parameter>;
 }
 
+/// Search parameter `t` such that `self.subs(t)` is nearest point.
+pub trait SearchNearestParameter {
+    /// point
+    type Point;
+    /// curve => `f64`, surface => `(f64, f64)`
+    type Parameter;
+    /// Search nearest parameter `t` such that `self.subs(t)` is nearest point.  
+    /// Returns `None` if could not find such parameter.
+    fn search_nearest_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter>;
+}
+
 /// Oriented and reversible
 pub trait Invertible: Clone {
     /// Inverts `self`

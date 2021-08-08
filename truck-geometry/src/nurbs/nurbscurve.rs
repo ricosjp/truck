@@ -415,9 +415,13 @@ where V::Point: MetricSpace<Metric = f64>
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSCurve<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter for NURBSCurve<V>
+where
+    V::Point: MetricSpace<Metric = f64>,
+    <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
 {
+    type Point = V::Point;
+    type Parameter = f64;
     /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
@@ -432,7 +436,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
     /// // search rational nearest parameter
     /// let pt = Point2::new(1.0, 2.0);
     /// let hint = 0.8;
-    /// let t = curve.search_nearest_parameter(pt, hint, 100).unwrap();
+    /// let t = curve.search_nearest_parameter(pt, Some(hint), 100).unwrap();
     ///
     /// // check the answer
     /// let res = curve.subs(t);
@@ -454,15 +458,19 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
     /// let hint = 0.5;
     ///
     /// // Newton's method is vibration divergent.
-    /// assert!(curve.search_nearest_parameter(pt, hint, 100).is_none());
+    /// assert!(curve.search_nearest_parameter(pt, Some(hint), 100).is_none());
     /// ```
     #[inline(always)]
-    pub fn search_nearest_parameter(
+    fn search_nearest_parameter(
         &self,
         point: V::Point,
-        hint: f64,
+        hint: Option<f64>,
         trial: usize,
     ) -> Option<f64> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
         algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }

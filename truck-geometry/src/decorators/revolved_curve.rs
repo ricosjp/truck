@@ -39,16 +39,24 @@ impl<C> RevolutedCurve<C> {
     }
     /// Returns the curve before revoluted.
     #[inline(always)]
-    pub fn entity_curve(&self) -> &C { &self.curve }
+    pub fn entity_curve(&self) -> &C {
+        &self.curve
+    }
     /// Into the curve before revoluted.
     #[inline(always)]
-    pub fn into_entity_curve(self) -> C { self.curve }
+    pub fn into_entity_curve(self) -> C {
+        self.curve
+    }
     /// Returns origin of revolution
     #[inline(always)]
-    pub fn origin(&self) -> Point3 { self.origin }
+    pub fn origin(&self) -> Point3 {
+        self.origin
+    }
     /// Returns axis of revolution
     #[inline(always)]
-    pub fn axis(&self) -> Vector3 { self.axis }
+    pub fn axis(&self) -> Vector3 {
+        self.axis
+    }
 
     #[inline(always)]
     fn proj_point(&self, pt: Point3) -> (f64, f64) {
@@ -103,23 +111,6 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> RevolutedCurve<C> {
 impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> SearchParameter for RevolutedCurve<C> {
     type Point = Point3;
     type Parameter = (f64, f64);
-    /// Searches the parameter `(u, v)` such that `self.subs(u, v).near(&point)` by Newton's method.
-    /// Returns `None` if:
-    /// - the converged parameter `(u, v)` is not satisfied `self.subs(u, v).near(&point)`.
-    /// - the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let line = BSplineCurve::new(
-    ///     KnotVec::bezier_knot(1),
-    ///     vec![Point3::new(0.0, 2.0, 1.0), Point3::new(1.0, 0.0, 0.0)],
-    /// );
-    /// let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
-    /// let pt = Point3::new(-0.5, 1.0, 0.5);
-    /// let (u, v) = surface.search_parameter(pt, Some((0.4, 1.2)) ,100).unwrap();
-    /// assert_near!(surface.subs(u, v), pt);
-    /// ```
-    #[inline(always)]
     fn search_parameter(
         &self,
         point: Point3,
@@ -148,6 +139,49 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> SearchParameter for R
                     } else {
                         None
                     }
+                }
+            })
+        }
+    }
+}
+
+impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> SearchNearestParameter
+    for RevolutedCurve<C>
+{
+    type Point = Point3;
+    type Parameter = (f64, f64);
+    fn search_nearest_parameter(
+        &self,
+        point: Point3,
+        hint: Option<(f64, f64)>,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
+        let hint0 = algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION);
+        let (t0, t1) = self.curve.parameter_range();
+        if self.is_front_fixed() && hint0.0 == t0 {
+            if let Some(hint) = hint {
+                Some((t0, hint.1))
+            } else {
+                Some((t0, 0.0))
+            }
+        } else if self.is_back_fixed() && hint0.0 == t1 {
+            if let Some(hint) = hint {
+                Some((t1, hint.1))
+            } else {
+                Some((t1, 0.0))
+            }
+        } else {
+            let hint = match hint {
+                Some(hint) => hint,
+                None => hint0,
+            };
+            algo::surface::search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
+                let dist0 = self.subs(u, v).distance(point);
+                let v1 = if v > PI { v - PI } else { v + PI };
+                let dist1 = self.subs(u, v1).distance(point);
+                match dist0 < dist1 {
+                    true => Some((u, v)),
+                    false => Some((u, v1)),
                 }
             })
         }
@@ -232,7 +266,9 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> BoundedSurface for Re
 
 impl<C: Clone> Invertible for RevolutedCurve<C> {
     #[inline(always)]
-    fn invert(&mut self) { self.axis = -self.axis; }
+    fn invert(&mut self) {
+        self.axis = -self.axis;
+    }
     #[inline(always)]
     fn inverse(&self) -> Self {
         RevolutedCurve {
@@ -341,7 +377,8 @@ impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
 }
 
 impl<C> ParameterDivision2D for RevolutedCurve<C>
-where C: ParametricCurve<Point = Point3, Vector = Vector3> + ParameterDivision1D
+where
+    C: ParametricCurve<Point = Point3, Vector = Vector3> + ParameterDivision1D,
 {
     fn parameter_division(
         &self,
@@ -417,6 +454,18 @@ fn revolve_test() {
 }
 
 #[test]
+fn search_parameter() {
+    let line = BSplineCurve::new(
+        KnotVec::bezier_knot(1),
+        vec![Point3::new(0.0, 2.0, 1.0), Point3::new(1.0, 0.0, 0.0)],
+    );
+    let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
+    let pt = Point3::new(-0.5, 1.0, 0.5);
+    let (u, v) = surface.search_parameter(pt, Some((0.4, 1.2)), 100).unwrap();
+    assert_near!(surface.subs(u, v), pt);
+}
+
+#[test]
 fn search_parameter_with_fixed_points() {
     let line = BSplineCurve::new(
         KnotVec::bezier_knot(2),
@@ -428,17 +477,50 @@ fn search_parameter_with_fixed_points() {
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
 
-    let para = surface
+    let (u, v) = surface
         .search_parameter(Point3::new(0.0, 1.0, 0.0), Some((0.5, 0.3)), 10)
         .unwrap();
-    assert_near!(para.0, 0.0);
-    assert_near!(para.1, 0.3);
+    assert_near!(Vector2::new(u, v), Vector2::new(0.0, 0.3));
 
-    let para = surface
+    let (u, v) = surface
         .search_parameter(Point3::new(0.0, -1.0, 0.0), Some((0.5, 0.3)), 10)
         .unwrap();
-    assert_near!(para.0, 1.0);
-    assert_near!(para.1, 0.3);
+    assert_near!(Vector2::new(u, v), Vector2::new(1.0, 0.3));
+}
+
+#[test]
+fn search_nearest_parameter() {
+    let line = BSplineCurve::new(
+        KnotVec::bezier_knot(1),
+        vec![Point3::new(0.0, 2.0, 1.0), Point3::new(1.0, 0.0, 0.0)],
+    );
+    let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
+    let pt = surface.subs(0.4, 1.2) + 0.1 * surface.normal(0.4, 1.2);
+    let (u, v) = surface.search_nearest_parameter(pt, Some((0.4, 1.2)), 100).unwrap();
+    assert_near!(Vector2::new(u, v), Vector2::new(0.4, 1.2));
+}
+
+#[test]
+fn search_nearest_parameter_with_fixed_points() {
+    let line = BSplineCurve::new(
+        KnotVec::bezier_knot(2),
+        vec![
+            Point3::new(0.0, 1.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+            Point3::new(0.0, -1.0, 0.0),
+        ],
+    );
+    let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
+
+    let (u, v) = surface
+        .search_nearest_parameter(Point3::new(0.0, 2.0, 0.0), Some((0.5, 0.3)), 10)
+        .unwrap();
+    assert_near!(Vector2::new(u, v), Vector2::new(0.0, 0.3));
+
+    let (u, v) = surface
+        .search_nearest_parameter(Point3::new(0.0, -2.0, 0.0), Some((0.5, 0.3)), 10)
+        .unwrap();
+    assert_near!(Vector2::new(u, v), Vector2::new(1.0, 0.3));
 }
 
 #[test]

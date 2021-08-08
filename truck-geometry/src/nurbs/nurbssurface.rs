@@ -487,12 +487,14 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
     pub fn boundary(&self) -> NURBSCurve<V> { NURBSCurve::new(self.0.boundary()) }
 }
 
-impl<V: Homogeneous<f64>> NURBSSurface<V>
+impl<V: Homogeneous<f64>> SearchNearestParameter for NURBSSurface<V>
 where
     Self: ParametricSurface<Point = V::Point, Vector = V::Vector>,
-    V::Point: EuclideanSpace<Scalar = f64>,
+    V::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
     V::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
+    type Point = V::Point;
+    type Parameter = (f64, f64);
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
     /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
     /// # Examples
@@ -507,19 +509,24 @@ where
     /// ];
     /// let surface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
     /// let pt = surface.subs(0.3, 0.7);
-    /// let (u, v) = surface.search_nearest_parameter(pt, (0.5, 0.5), 100).unwrap();
+    /// let (u, v) = surface.search_nearest_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
     /// assert!(u.near(&0.3) && v.near(&0.7));
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// cf. [`BSplineCurve::search_rational_nearest_parameter`](struct.BSplineCurve.html#method.search_rational_nearest_parameter)
-    pub fn search_nearest_parameter(
+    #[inline(always)]
+    fn search_nearest_parameter(
         &self,
-        pt: V::Point,
-        (u0, v0): (f64, f64),
+        point: V::Point,
+        hint: Option<(f64, f64)>,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        algo::surface::search_nearest_parameter(self, pt, (u0, v0), trials)
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
+        algo::surface::search_nearest_parameter(self, point, hint, trials)
     }
 }
 

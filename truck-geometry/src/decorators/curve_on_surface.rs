@@ -71,6 +71,29 @@ where
     }
 }
 
+impl<C, S> SearchNearestParameter for PCurve<C, S>
+where
+    Self: ParametricCurve,
+    <Self as ParametricCurve>::Point: EuclideanSpace<Scalar = f64, Diff = <Self as ParametricCurve>::Vector>
+        + MetricSpace<Metric = f64>,
+    <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,
+{
+    type Point = <Self as ParametricCurve>::Point;
+    type Parameter = f64;
+    fn search_nearest_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<f64>,
+        trials: usize,
+    ) -> Option<f64> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
+        algo::curve::search_nearest_parameter(self, point, hint, trials)
+    }
+}
+
 impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
     C: ParametricCurve<Point = Point2, Vector = Vector2>,
@@ -96,9 +119,9 @@ fn pcurve_test() {
     let surface = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(1)),
         vec![
-            vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 0.0)],
-            vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 1.0, 1.0)],
-            vec![Vector3::new(1.0, 0.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
+            vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0)],
+            vec![Point3::new(0.0, 0.0, 1.0), Point3::new(0.0, 1.0, 1.0)],
+            vec![Point3::new(1.0, 0.0, 1.0), Point3::new(1.0, 1.0, 1.0)],
         ],
     );
     let pcurve = PCurve::new(curve, surface);
@@ -109,7 +132,7 @@ fn pcurve_test() {
         let t = i as f64 / N as f64;
         assert_near!(
             pcurve.subs(t),
-            Vector3::new(
+            Point3::new(
                 (1.0 - t * t) * (1.0 - t * t),
                 (1.0 - t) * (1.0 - t),
                 1.0 - t * t * t * t,
@@ -124,4 +147,13 @@ fn pcurve_test() {
             Vector3::new(4.0 * (3.0 * t * t - 1.0), 2.0, -12.0 * t * t,),
         );
     }
+
+    let t = 0.675;
+    let pt = pcurve.subs(t);
+    assert_near!(pcurve.search_parameter(pt, None, 100).unwrap(), t);
+
+    let pt = pt + Vector3::new(0.01, 0.06, -0.03);
+    assert!(pcurve.search_parameter(pt, None, 100).is_none());
+    let t = pcurve.search_nearest_parameter(pt, None, 100).unwrap();
+    assert!(pcurve.der(t).dot(pcurve.subs(t) - pt).so_small());
 }
