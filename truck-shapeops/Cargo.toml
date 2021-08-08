@@ -9,3 +9,7 @@ edition = "2018"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }
+
+[dev-dependencies]
+rand = "0.8.3"
+truck-geometry = { version = "0.1.1", path = "../truck-geometry" }

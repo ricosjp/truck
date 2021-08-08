@@ -1,4 +1,5 @@
 use crate::*;
+use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut};
 use truck_base::cgmath64::control_point::ControlPoint;
 
@@ -24,6 +25,12 @@ impl<P> From<Vec<P>> for PolylineCurve<P> {
 impl<P> From<PolylineCurve<P>> for Vec<P> {
 	fn from(v: PolylineCurve<P>) -> Self {
 		v.0
+	}
+}
+
+impl<P> FromIterator<P> for PolylineCurve<P> {
+	fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
+		Self(Vec::from_iter(iter))
 	}
 }
 
