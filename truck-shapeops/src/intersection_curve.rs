@@ -161,7 +161,6 @@ where
 	fn parameter_range(&self) -> (f64, f64) {
 		(0.0, self.polyline.len() as f64)
 	}
-	#[inline(always)]
 	fn subs(&self, t: f64) -> Point3 {
 		if t < 0.0 {
 			self.polyline[0]
@@ -183,7 +182,6 @@ where
 			.0
 		}
 	}
-	#[inline(always)]
 	fn der(&self, t: f64) -> Vector3 {
 		if t < 0.0 || t + 1.0 > self.polyline.len() as f64 {
 			Vector3::zero()
@@ -245,6 +243,26 @@ where
 			algo::curve::parameter_division(self, range, tol)
 		}
 	}
+}
+
+pub fn intersection_curves<S>(
+	surface0: S,
+	polygon0: &PolygonMesh,
+	surface1: S,
+	polygon1: &PolygonMesh,
+	tol: f64,
+) -> Vec<Option<IntersectionCurve<S>>>
+where
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+{
+	let interferences = polygon0.extract_interference(polygon1);
+	let polylines = crate::polyline_construction::construct_polylines(&interferences);
+	polylines
+		.into_iter()
+		.map(|polyline| {
+			IntersectionCurve::try_new(surface0.clone(), surface1.clone(), polyline, tol)
+		})
+		.collect()
 }
 
 #[cfg(test)]
