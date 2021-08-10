@@ -277,6 +277,66 @@ impl<P, C> Edge<P, C> {
             false => self.curve.lock().unwrap().inverse(),
         }
     }
+
+    /// Returns a new edge whose curve is mapped by `curve_mapping` and
+    /// whose end points are mapped by `point_mapping`.
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn try_mapped<Q, D>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Option<Q>,
+        mut curve_mapping: impl FnMut(&C) -> Option<D>,
+    ) -> Option<Edge<Q, D>> {
+        let v0 = self.absolute_front().try_mapped(&mut point_mapping)?;
+        let v1 = self.absolute_back().try_mapped(&mut point_mapping)?;
+        let curve = curve_mapping(&*self.curve.lock().unwrap())?;
+        let mut edge = Edge::debug_new(&v0, &v1, curve);
+        if edge.orientation() != self.orientation() {
+            edge.invert();
+        }
+        Some(edge)
+    }
+
+    /// Returns a new edge whose curve is mapped by `curve_mapping` and
+    /// whose end points are mapped by `point_mapping`.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v0 = Vertex::new(0);
+    /// let v1 = Vertex::new(1);
+    /// let edge0 = Edge::new(&v0, &v1, 2);
+    /// let edge1 = edge0.mapped(
+    ///     &move |i: &usize| *i as f64 + 0.5,
+    ///     &move |j: &usize| *j as f64 + 0.5,
+    /// );
+    ///
+    /// assert_eq!(edge1.front().get_point(), 0.5);
+    /// assert_eq!(edge1.back().get_point(), 1.5);
+    /// assert_eq!(edge1.get_curve(), 2.5);
+    /// ```
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn mapped<Q, D>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Q,
+        mut curve_mapping: impl FnMut(&C) -> D,
+    ) -> Edge<Q, D> {
+        let v0 = self.absolute_front().mapped(&mut point_mapping);
+        let v1 = self.absolute_back().mapped(&mut point_mapping);
+        let curve = curve_mapping(&*self.curve.lock().unwrap());
+        let mut edge = Edge::debug_new(&v0, &v1, curve);
+        if edge.orientation() != self.orientation() {
+            edge.invert();
+        }
+        edge
+    }
+
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]
@@ -389,4 +449,19 @@ impl<P, C> Hash for Edge<P, C> {
         std::ptr::hash(Arc::as_ptr(&self.curve), state);
         self.orientation.hash(state);
     }
+}
+
+#[test]
+fn invert_mapped_edge() {
+    let v0 = Vertex::new(0);
+    let v1 = Vertex::new(1);
+    let edge0 = Edge::new(&v0, &v1, 2).inverse();
+    let edge1 = edge0.mapped(
+        &move |i: &usize| *i + 10,
+        &move |j: &usize| *j + 20,
+    );
+    assert_eq!(edge1.absolute_front().get_point(), 10);
+    assert_eq!(edge1.absolute_back().get_point(), 11);
+    assert_eq!(edge0.orientation(), edge1.orientation());
+    assert_eq!(edge1.get_curve(), 22);
 }

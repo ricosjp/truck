@@ -61,6 +61,33 @@ impl<P> Vertex<P> {
         *self.point.lock().unwrap() = point;
     }
 
+    /// Returns vertex whose point is converted by `point_mapping`.
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn try_mapped<Q>(&self, mut point_mapping: impl FnMut(&P) -> Option<Q>) -> Option<Vertex<Q>> {
+        Some(Vertex::new(point_mapping(&*self.point.lock().unwrap())?))
+    }
+
+    /// Returns vertex whose point is converted by `point_mapping`.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v0 = Vertex::new(2);
+    /// let v1 = v0.mapped(|a| *a as f64 + 0.5);
+    /// assert_eq!(v1.get_point(), 2.5);
+    /// ```
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn mapped<Q>(&self, mut point_mapping: impl FnMut(&P) -> Q) -> Vertex<Q> {
+        Vertex::new(point_mapping(&*self.point.lock().unwrap()))
+    }
+
     /// Returns the id of the vertex.
     #[inline(always)]
     pub fn id(&self) -> VertexID<P> { ID::new(Arc::as_ptr(&self.point)) }

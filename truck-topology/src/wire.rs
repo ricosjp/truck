@@ -1,6 +1,6 @@
 use crate::*;
 use std::collections::vec_deque;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashSet, HashMap, VecDeque};
 use std::iter::Peekable;
 
 impl<P, C> Wire<P, C> {
@@ -345,6 +345,130 @@ impl<P, C> Wire<P, C> {
         new_wire.extend(self.drain(..));
         *self = new_wire.into();
     }
+
+    /// Returns a new wire whose curves are mapped by `curve_mapping` and
+    /// whose points are mapped by `point_mapping`.
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    pub fn try_mapped<Q, D>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Option<Q>,
+        mut curve_mapping: impl FnMut(&C) -> Option<D>,
+    ) -> Option<Wire<Q, D>> {
+        let mut vertex_map: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
+        for v in self.vertex_iter() {
+            if vertex_map.get(&v.id()).is_none() {
+                let vert = v.try_mapped(&mut point_mapping)?;
+                vertex_map.insert(v.id(), vert);
+            }
+        }
+        let mut wire = Wire::new();
+        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
+        for edge in self.edge_iter() {
+            if let Some(new_edge) = edge_map.get(&edge.id()) {
+                if edge.absolute_front() == edge.front() {
+                    wire.push_back(new_edge.clone());
+                } else {
+                    wire.push_back(new_edge.inverse());
+                }
+            } else {
+                let vertex0 = vertex_map.get(&edge.absolute_front().id()).unwrap().clone();
+                let vertex1 = vertex_map.get(&edge.absolute_back().id()).unwrap().clone();
+                let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
+                let new_edge = Edge::debug_new(&vertex0, &vertex1, curve);
+                if edge.orientation() {
+                    wire.push_back(new_edge.clone());
+                } else {
+                    wire.push_back(new_edge.inverse());
+                }
+                edge_map.insert(edge.id(), new_edge);
+            }
+        }
+        Some(wire)
+    }
+
+
+    /// Returns a new wire whose curves are mapped by `curve_mapping` and
+    /// whose points are mapped by `point_mapping`.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[0, 1, 2, 3, 4]);
+    /// let wire0: Wire<usize, usize> = vec![
+    ///     Edge::new(&v[0], &v[1], 100),
+    ///     Edge::new(&v[2], &v[1], 110).inverse(),
+    ///     Edge::new(&v[3], &v[4], 120),
+    ///     Edge::new(&v[4], &v[0], 130),
+    /// ].into();
+    /// let wire1 = wire0.mapped(
+    ///     &move |i: &usize| *i as f64 + 0.5,
+    ///     &move |j: &usize| *j as f64 + 1000.5,
+    /// );
+    ///
+    /// // Check the points
+    /// for (v0, v1) in wire0.vertex_iter().zip(wire1.vertex_iter()) {
+    ///     let i = v0.get_point();
+    ///     let j = v1.get_point();
+    ///     assert_eq!(i as f64 + 0.5, j);
+    /// }
+    ///
+    /// // Check the curves and orientation
+    /// for (edge0, edge1) in wire0.edge_iter().zip(wire1.edge_iter()) {
+    ///     let i = edge0.get_curve();
+    ///     let j = edge1.get_curve();
+    ///     assert_eq!(i as f64 + 1000.5, j);
+    ///     assert_eq!(edge0.orientation(), edge1.orientation());
+    /// }
+    ///
+    /// // Check the connection
+    /// assert_eq!(wire1[0].back(), wire1[1].front());
+    /// assert_ne!(wire1[1].back(), wire1[2].front());
+    /// assert_eq!(wire1[2].back(), wire1[3].front());
+    /// assert_eq!(wire1[3].back(), wire1[0].front());
+    /// ```
+    /// # Remarks
+    /// Accessing geometry elements directly in the closure will result in a deadlock.
+    /// So, this method does not appear to the document.
+    #[doc(hidden)]
+    pub fn mapped<Q, D>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Q,
+        mut curve_mapping: impl FnMut(&C) -> D,
+    ) -> Wire<Q, D> {
+        let mut vertex_map: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
+        for v in self.vertex_iter() {
+            if vertex_map.get(&v.id()).is_none() {
+                let vert = v.mapped(&mut point_mapping);
+                vertex_map.insert(v.id(), vert);
+            }
+        }
+        let mut wire = Wire::new();
+        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
+        for edge in self.edge_iter() {
+            if let Some(new_edge) = edge_map.get(&edge.id()) {
+                if edge.absolute_front() == edge.front() {
+                    wire.push_back(new_edge.clone());
+                } else {
+                    wire.push_back(new_edge.inverse());
+                }
+            } else {
+                let vertex0 = vertex_map.get(&edge.absolute_front().id()).unwrap().clone();
+                let vertex1 = vertex_map.get(&edge.absolute_back().id()).unwrap().clone();
+                let curve = curve_mapping(&*edge.curve.lock().unwrap());
+                let new_edge = Edge::debug_new(&vertex0, &vertex1, curve);
+                if edge.orientation() {
+                    wire.push_back(new_edge.clone());
+                } else {
+                    wire.push_back(new_edge.inverse());
+                }
+                edge_map.insert(edge.id(), new_edge);
+            }
+        }
+        wire
+    }
+
     /// Returns the consistence of the geometry of end vertices
     /// and the geometry of edge.
     #[inline(always)]

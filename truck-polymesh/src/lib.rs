@@ -63,6 +63,10 @@ pub struct StructuredMesh {
     normals: Option<Vec<Vec<Vector3>>>,
 }
 
+/// polyline curve
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct PolylineCurve<P>(pub Vec<P>);
+
 /// Error handler for [`Error`](./errors/enum.Error.html)
 pub type Result<T> = std::result::Result<T, errors::Error>;
 
@@ -73,6 +77,8 @@ mod meshing_shape;
 pub mod obj;
 /// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
 pub mod polygon_mesh;
+/// Defines generalized polyline curve.
+pub mod polyline_curve;
 /// I/O of STL
 pub mod stl;
 mod structured_mesh;

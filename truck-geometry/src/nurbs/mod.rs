@@ -1,4 +1,5 @@
 use crate::*;
+use truck_base::cgmath64::control_point::ControlPoint;
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -116,81 +117,6 @@ pub struct NURBSCurve<V>(BSplineCurve<V>);
 /// NURBS surface
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct NURBSSurface<V>(BSplineSurface<V>);
-
-/// trait for control points
-pub mod control_point {
-    use super::*;
-    use std::ops::*;
-    /// trait for abstract control points of B-splines
-    pub trait ControlPoint:
-        Add<Self::Diff, Output = Self>
-        + Sub<Self::Diff, Output = Self>
-        + Sub<Self, Output = Self::Diff>
-        + Mul<f64, Output = Self>
-        + Div<f64, Output = Self>
-        + AddAssign<Self::Diff>
-        + SubAssign<Self::Diff>
-        + MulAssign<f64>
-        + DivAssign<f64>
-        + Copy
-        + Clone
-        + Debug {
-        /// differential vector
-        type Diff: Add<Self::Diff, Output = Self::Diff>
-            + Sub<Self::Diff, Output = Self::Diff>
-            + Mul<f64, Output = Self::Diff>
-            + Div<f64, Output = Self::Diff>
-            + AddAssign<Self::Diff>
-            + SubAssign<Self::Diff>
-            + MulAssign<f64>
-            + DivAssign<f64>
-            + Zero
-            + Copy
-            + Clone
-            + Debug;
-        /// origin
-        fn origin() -> Self;
-        /// into the vector
-        fn to_vec(self) -> Self::Diff;
-    }
-
-    impl ControlPoint for Point1 {
-        type Diff = Vector1;
-        fn origin() -> Self { EuclideanSpace::origin() }
-        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
-    }
-    impl ControlPoint for Point2 {
-        type Diff = Vector2;
-        fn origin() -> Self { EuclideanSpace::origin() }
-        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
-    }
-    impl ControlPoint for Point3 {
-        type Diff = Vector3;
-        fn origin() -> Self { EuclideanSpace::origin() }
-        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
-    }
-    impl ControlPoint for Vector1 {
-        type Diff = Vector1;
-        fn origin() -> Self { Zero::zero() }
-        fn to_vec(self) -> Self { self }
-    }
-    impl ControlPoint for Vector2 {
-        type Diff = Vector2;
-        fn origin() -> Self { Zero::zero() }
-        fn to_vec(self) -> Self { self }
-    }
-    impl ControlPoint for Vector3 {
-        type Diff = Vector3;
-        fn origin() -> Self { Zero::zero() }
-        fn to_vec(self) -> Self { self }
-    }
-    impl ControlPoint for Vector4 {
-        type Diff = Vector4;
-        fn origin() -> Self { Zero::zero() }
-        fn to_vec(self) -> Self { self }
-    }
-}
-use control_point::ControlPoint;
 
 mod bspcurve;
 mod bspsurface;

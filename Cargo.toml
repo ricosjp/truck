@@ -8,6 +8,7 @@ members = [
 	"truck-platform",
 	"truck-polymesh",
 	"truck-rendimpl",
+	"truck-shapeops",
 	"truck-topology",
 	"readme-generator",
 ]

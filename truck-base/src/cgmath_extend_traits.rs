@@ -1,5 +1,80 @@
 use cgmath::*;
 
+/// declare control point
+pub mod control_point {
+    use super::*;
+    use std::fmt::Debug;
+    use std::ops::*;
+    /// trait for abstract control points of polylines and B-splines
+    pub trait ControlPoint<S>:
+        Add<Self::Diff, Output = Self>
+        + Sub<Self::Diff, Output = Self>
+        + Sub<Self, Output = Self::Diff>
+        + Mul<S, Output = Self>
+        + Div<S, Output = Self>
+        + AddAssign<Self::Diff>
+        + SubAssign<Self::Diff>
+        + MulAssign<S>
+        + DivAssign<S>
+        + Copy
+        + Clone
+        + Debug {
+        /// differential vector
+        type Diff: Add<Self::Diff, Output = Self::Diff>
+            + Sub<Self::Diff, Output = Self::Diff>
+            + Mul<S, Output = Self::Diff>
+            + Div<S, Output = Self::Diff>
+            + AddAssign<Self::Diff>
+            + SubAssign<Self::Diff>
+            + MulAssign<S>
+            + DivAssign<S>
+            + Zero
+            + Copy
+            + Clone
+            + Debug;
+        /// origin
+        fn origin() -> Self;
+        /// into the vector
+        fn to_vec(self) -> Self::Diff;
+    }
+
+    impl<S: BaseFloat> ControlPoint<S> for Point1<S> {
+        type Diff = Vector1<S>;
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+    }
+    impl<S: BaseFloat> ControlPoint<S> for Point2<S> {
+        type Diff = Vector2<S>;
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+    }
+    impl<S: BaseFloat> ControlPoint<S> for Point3<S> {
+        type Diff = Vector3<S>;
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+    }
+    impl<S: BaseFloat> ControlPoint<S> for Vector1<S> {
+        type Diff = Vector1<S>;
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
+    }
+    impl<S: BaseFloat> ControlPoint<S> for Vector2<S> {
+        type Diff = Vector2<S>;
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
+    }
+    impl<S: BaseFloat> ControlPoint<S> for Vector3<S> {
+        type Diff = Vector3<S>;
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
+    }
+    impl<S: BaseFloat> ControlPoint<S> for Vector4<S> {
+        type Diff = Vector4<S>;
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
+    }
+}
+
 /// Tangent spaces of euclidean spaces
 /// The inverse of [`EuclideanSpace::Diff`](../cgmath/trait.EuclideanSpace.html)
 pub trait TangentSpace<S: BaseFloat>: VectorSpace<Scalar = S> {
@@ -103,7 +178,6 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
         let res = der2 / self.weight() - der * coef1 + self * coef2;
         res.truncate()
     }
-    
     /// Returns the cross derivation of the rational surface.
     ///
     /// For a surface s(u, v) = (s_0(u, v), s_1(u, v), s_2(u, v), s_3(u, v)), returns the derivation

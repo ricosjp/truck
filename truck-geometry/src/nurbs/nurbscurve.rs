@@ -86,14 +86,14 @@ impl<V> NURBSCurve<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSCurve<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSCurve<V> {
     /// Returns the closure of substitution.
     ///
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSCurve<V>
 where V::Point: Tolerance
 {
     /// Returns whether all control points are the same or not.
@@ -199,7 +199,7 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSCurve<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSCurve<V> {
     /// Adds a knot `x`, and do not change `self` as a curve.  
     /// cf.[`BSplineCurve::add_knot`](./struct.BSplineCurve.html#method.add_knot)
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
@@ -263,7 +263,7 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSCurve<V> {
     pub fn syncro_knots(&mut self, other: &mut Self) { self.0.syncro_knots(&mut other.0) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> ParameterTransform
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> ParameterTransform
     for NURBSCurve<V>
 {
     #[inline(always)]
@@ -273,12 +273,12 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> ParameterTransfor
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> Cut for NURBSCurve<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> Cut for NURBSCurve<V> {
     #[inline(always)]
     fn cut(&mut self, t: f64) -> Self { NURBSCurve(self.0.cut(t)) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> Concat<NURBSCurve<V>>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> Concat<NURBSCurve<V>>
     for NURBSCurve<V>
 where <V as Homogeneous<f64>>::Point: Debug
 {
@@ -321,7 +321,7 @@ fn concat_positive_test() {
     concat_random_test(&part0, &part1, 10);
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSCurve<V>
 where V::Point: Tolerance
 {
     /// Makes the rational curve locally injective.
@@ -406,7 +406,7 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParameterDivision1D for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision1D for NURBSCurve<V>
 where V::Point: MetricSpace<Metric = f64>
 {
     #[inline(always)]
@@ -415,9 +415,13 @@ where V::Point: MetricSpace<Metric = f64>
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSCurve<V>
-where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter for NURBSCurve<V>
+where
+    V::Point: MetricSpace<Metric = f64>,
+    <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
 {
+    type Point = V::Point;
+    type Parameter = f64;
     /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
@@ -432,7 +436,7 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
     /// // search rational nearest parameter
     /// let pt = Point2::new(1.0, 2.0);
     /// let hint = 0.8;
-    /// let t = curve.search_nearest_parameter(pt, hint, 100).unwrap();
+    /// let t = curve.search_nearest_parameter(pt, Some(hint), 100).unwrap();
     ///
     /// // check the answer
     /// let res = curve.subs(t);
@@ -454,20 +458,24 @@ where <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance
     /// let hint = 0.5;
     ///
     /// // Newton's method is vibration divergent.
-    /// assert!(curve.search_nearest_parameter(pt, hint, 100).is_none());
+    /// assert!(curve.search_nearest_parameter(pt, Some(hint), 100).is_none());
     /// ```
     #[inline(always)]
-    pub fn search_nearest_parameter(
+    fn search_nearest_parameter(
         &self,
         point: V::Point,
-        hint: f64,
+        hint: Option<f64>,
         trial: usize,
     ) -> Option<f64> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
         algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> SearchParameter for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchParameter for NURBSCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
@@ -495,7 +503,7 @@ where V::Point:
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParametricCurve for NURBSCurve<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NURBSCurve<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]

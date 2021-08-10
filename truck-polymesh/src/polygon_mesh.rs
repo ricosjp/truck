@@ -284,6 +284,34 @@ impl std::ops::Index<usize> for Faces {
     }
 }
 
+impl Invertible for Faces {
+    #[inline(always)]
+    fn invert(&mut self) { self.face_iter_mut().for_each(|f| f.reverse()); }
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        let tri_faces: Vec<_> = self
+            .tri_faces
+            .iter()
+            .map(|face| [face[2], face[1], face[0]])
+            .collect();
+        let quad_faces: Vec<_> = self
+            .quad_faces
+            .iter()
+            .map(|face| [face[3], face[2], face[1], face[0]])
+            .collect();
+        let other_faces: Vec<_> = self
+            .other_faces
+            .iter()
+            .map(|face| face.iter().rev().map(Clone::clone).collect())
+            .collect();
+        Faces {
+            tri_faces,
+            quad_faces,
+            other_faces,
+        }
+    }
+}
+
 impl std::ops::IndexMut<usize> for Faces {
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
         if idx < self.tri_faces.len() {
@@ -511,6 +539,23 @@ impl PolygonMesh {
     /// Creates the bounding box of the polygon mesh.
     #[inline(always)]
     pub fn bounding_box(&self) -> BoundingBox<Point3> { self.positions().iter().collect() }
+}
+
+impl Invertible for PolygonMesh {
+    #[inline(always)]
+    fn invert(&mut self) {
+        self.normals.iter_mut().for_each(|n| *n = -*n);
+        self.faces.invert();
+    }
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        Self {
+            positions: self.positions.clone(),
+            uv_coords: self.uv_coords.clone(),
+            normals: self.normals.iter().map(|n| -n.clone()).collect(),
+            faces: self.faces.inverse(),
+        }
+    }
 }
 
 /// Editor of polygon mesh

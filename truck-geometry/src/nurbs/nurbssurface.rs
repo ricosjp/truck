@@ -185,7 +185,7 @@ impl<V> NURBSSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSSurface<V> {
     /// Substitutes to a NURBS surface.
     #[inline(always)]
     pub fn subs(&self, u: f64, v: f64) -> V::Point { self.0.subs(u, v).to_point() }
@@ -233,7 +233,7 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSSurface<V> {
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> V::Point + '_ { move |u, v| self.subs(u, v) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> NURBSSurface<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSSurface<V>
 where V::Point: Tolerance
 {
     /// Returns whether constant curve or not, i.e. all control points are same or not.
@@ -321,7 +321,7 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface<V> {
     /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.  
     #[inline(always)]
     pub fn add_uknot(&mut self, x: f64) -> &mut Self {
@@ -487,12 +487,14 @@ impl<V: Homogeneous<f64> + ControlPoint<Diff = V> + Tolerance> NURBSSurface<V> {
     pub fn boundary(&self) -> NURBSCurve<V> { NURBSCurve::new(self.0.boundary()) }
 }
 
-impl<V: Homogeneous<f64>> NURBSSurface<V>
+impl<V: Homogeneous<f64>> SearchNearestParameter for NURBSSurface<V>
 where
     Self: ParametricSurface<Point = V::Point, Vector = V::Vector>,
-    V::Point: EuclideanSpace<Scalar = f64>,
+    V::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
     V::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
+    type Point = V::Point;
+    type Parameter = (f64, f64);
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
     /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
     /// # Examples
@@ -507,19 +509,24 @@ where
     /// ];
     /// let surface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
     /// let pt = surface.subs(0.3, 0.7);
-    /// let (u, v) = surface.search_nearest_parameter(pt, (0.5, 0.5), 100).unwrap();
+    /// let (u, v) = surface.search_nearest_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
     /// assert!(u.near(&0.3) && v.near(&0.7));
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// cf. [`BSplineCurve::search_rational_nearest_parameter`](struct.BSplineCurve.html#method.search_rational_nearest_parameter)
-    pub fn search_nearest_parameter(
+    #[inline(always)]
+    fn search_nearest_parameter(
         &self,
-        pt: V::Point,
-        (u0, v0): (f64, f64),
+        point: V::Point,
+        hint: Option<(f64, f64)>,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        algo::surface::search_nearest_parameter(self, pt, (u0, v0), trials)
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
+        algo::surface::search_nearest_parameter(self, point, hint, trials)
     }
 }
 
@@ -584,7 +591,7 @@ impl<V: Clone> Invertible for NURBSSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParametricSurface for NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for NURBSSurface<V> {
     type Point = V::Point;
     type Vector = V::Vector;
     #[inline(always)]
@@ -611,7 +618,7 @@ impl ParametricSurface3D for NURBSSurface<Vector4> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<Diff = V>> ParameterDivision2D for NURBSSurface<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D for NURBSSurface<V>
 where V::Point: MetricSpace<Metric = f64>
 {
     #[inline(always)]

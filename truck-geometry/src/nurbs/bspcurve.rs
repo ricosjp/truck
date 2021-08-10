@@ -21,11 +21,11 @@ impl<P> BSplineCurve<P> {
     /// * `knot_vec` - the knot vector
     /// * `control_points` - the vector of the control points
     /// # Failures
-    /// * If there are no control points, returns [`Error::EmptyControlPoints`].
+    /// * If there are no control points, returns [`Error::EmptyControlPoint<f64>s`].
     /// * If the number of knots is more than the one of control points, returns [`Error::TooShortKnotVector`].
     /// * If the range of the knot vector is zero, returns [`Error::ZeroRange`].
     ///
-    /// [`Error::EmptyControlPoints`]: errors/enum.Error.html#variant.EmptyControlPoints
+    /// [`Error::EmptyControlPoint<f64>s`]: errors/enum.Error.html#variant.EmptyControlPoint<f64>s
     /// [`Error::TooShortKnotVector`]: errors/enum.Error.html#variant.TooShortKnotVector
     /// [`Error::ZeroRange`]: errors/enum.Error.html#variant.ZeroRange
     pub fn try_new(knot_vec: KnotVec, control_points: Vec<P>) -> Result<BSplineCurve<P>> {
@@ -158,7 +158,7 @@ impl<P> BSplineCurve<P> {
     }
 }
 
-impl<P: ControlPoint> BSplineCurve<P> {
+impl<P: ControlPoint<f64>> BSplineCurve<P> {
     /// Returns the closure of substitution.
     /// # Examples
     /// The following test code is the same test with the one of `BSplineCurve::subs()`.
@@ -263,7 +263,7 @@ impl<P: ControlPoint> BSplineCurve<P> {
     }
 }
 
-impl<P: ControlPoint> ParametricCurve for BSplineCurve<P> {
+impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     type Point = P;
     type Vector = P::Diff;
     /// Substitutes to B-spline curve.
@@ -367,7 +367,7 @@ impl<P: ControlPoint> ParametricCurve for BSplineCurve<P> {
     }
 }
 
-impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
+impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Returns whether all control points are the same or not.
     /// If the knot vector is clamped, it means whether the curve is constant or not.
     /// # Examples
@@ -881,7 +881,7 @@ impl<P: ControlPoint + Tolerance> BSplineCurve<P> {
     }
 }
 
-impl<P: ControlPoint> ParameterTransform for BSplineCurve<P> {
+impl<P: ControlPoint<f64>> ParameterTransform for BSplineCurve<P> {
     #[inline(always)]
     fn parameter_transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
         self.knot_vec.transform(scalar, r#move);
@@ -906,7 +906,7 @@ fn parameter_transform_random_test() {
     truck_geotrait::parameter_transform_random_test(&curve, 10);
 }
 
-impl<P: ControlPoint + Tolerance> Cut for BSplineCurve<P> {
+impl<P: ControlPoint<f64> + Tolerance> Cut for BSplineCurve<P> {
     fn cut(&mut self, mut t: f64) -> BSplineCurve<P> {
         let degree = self.degree();
 
@@ -960,7 +960,7 @@ fn cut_random_test() {
     truck_geotrait::cut_random_test(&curve, 10);
 }
 
-impl<P: ControlPoint + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
+impl<P: ControlPoint<f64> + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<P> {
     type Output = BSplineCurve<P>;
     /// Concats two B-spline curves.
     /// # Examples
@@ -1048,8 +1048,8 @@ fn concat_negative_test() {
 }
 
 impl<P> ParameterDivision1D for BSplineCurve<P>
-where P: ControlPoint
-        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint>::Diff>
+where P: ControlPoint<f64>
+        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
         + MetricSpace<Metric = f64>
 {
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
@@ -1059,59 +1059,12 @@ where P: ControlPoint
 
 impl<P> BSplineCurve<P>
 where
-    P: ControlPoint
-        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint>::Diff>
+    P: ControlPoint<f64>
+        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
         + MetricSpace<Metric = f64>
         + Tolerance,
-    <P as ControlPoint>::Diff: InnerSpace<Scalar = f64> + Tolerance,
+    <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
-    /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
-    /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
-    /// );
-    /// let ctrl_pts = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 1.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = ParametricCurve::subs(&bspcurve, 1.2);
-    /// let t = bspcurve.search_nearest_parameter(pt, 0.8, 100).unwrap();
-    /// assert_near!(t, 1.2);
-    /// ```
-    /// # Remarks
-    /// It may converge to a local solution depending on the hint.
-    /// ```
-    /// use truck_geometry::*;
-    /// let knot_vec = KnotVec::from(
-    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
-    /// );
-    /// let ctrl_pts = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 1.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let pt = Point3::new(0.0, 0.5, 1.0);
-    /// let t = bspcurve.search_nearest_parameter(pt, 0.8, 100).unwrap();
-    /// let pt0 = ParametricCurve::subs(&bspcurve, t);
-    /// let pt1 = ParametricCurve::subs(&bspcurve, 3.0);
-    /// // the point corresponding the obtained parameter is not
-    /// // the globally nearest point in the curve.
-    /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
-    /// ```
-    #[inline(always)]
-    pub fn search_nearest_parameter(&self, point: P, hint: f64, trial: usize) -> Option<f64> {
-        algo::curve::search_nearest_parameter(self, point, hint, trial)
-    }
     /// Determines whether `self` is an arc of `curve` by repeating applying Newton method.
     ///
     /// The parameter `hint` is the init value, required that `curve.subs(hint)` is the front point of `self`.
@@ -1157,7 +1110,7 @@ where
             for j in 1..=degree {
                 let t = knots[i - 1] + range * (j as f64) / (degree as f64);
                 let pt = ParametricCurve::subs(self, t);
-                let res = curve.search_nearest_parameter(pt, hint, 100);
+                let res = curve.search_nearest_parameter(pt, Some(hint), 100);
                 let flag = res.map(|res| hint <= res && curve.subs(res).near(&pt));
                 hint = match flag {
                     Some(true) => res.unwrap(),
@@ -1168,13 +1121,75 @@ where
         Some(hint)
     }
 }
-
+impl<P> SearchNearestParameter for BSplineCurve<P>
+where
+    P: ControlPoint<f64>
+        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
+        + MetricSpace<Metric = f64>
+        + Tolerance,
+    <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
+{
+    type Point = P;
+    type Parameter = f64;
+    /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
+    /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::from(
+    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
+    /// );
+    /// let ctrl_pts = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 1.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let pt = ParametricCurve::subs(&bspcurve, 1.2);
+    /// let t = bspcurve.search_nearest_parameter(pt, Some(0.8), 100).unwrap();
+    /// assert_near!(t, 1.2);
+    /// ```
+    /// # Remarks
+    /// It may converge to a local solution depending on the hint.
+    /// ```
+    /// use truck_geometry::*;
+    /// let knot_vec = KnotVec::from(
+    ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
+    /// );
+    /// let ctrl_pts = vec![
+    ///     Point3::new(0.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 0.0),
+    ///     Point3::new(0.0, 1.0, 1.0),
+    /// ];
+    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let pt = Point3::new(0.0, 0.5, 1.0);
+    /// let t = bspcurve.search_nearest_parameter(pt, Some(0.8), 100).unwrap();
+    /// let pt0 = ParametricCurve::subs(&bspcurve, t);
+    /// let pt1 = ParametricCurve::subs(&bspcurve, 3.0);
+    /// // the point corresponding the obtained parameter is not
+    /// // the globally nearest point in the curve.
+    /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
+    /// ```
+    #[inline(always)]
+    fn search_nearest_parameter(&self, point: P, hint: Option<f64>, trial: usize) -> Option<f64> {
+        let hint = match hint {
+            Some(hint) => hint,
+            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        };
+        algo::curve::search_nearest_parameter(self, point, hint, trial)
+    }
+}
+ 
 impl<P> SearchParameter for BSplineCurve<P>
 where
-    P: ControlPoint
-        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint>::Diff>
+    P: ControlPoint<f64>
+        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
         + MetricSpace<Metric = f64>,
-    <P as ControlPoint>::Diff: InnerSpace<Scalar = f64> + Tolerance,
+    <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
     type Parameter = f64;
@@ -1187,6 +1202,7 @@ where
         algo::curve::search_parameter(self, point, hint, trial)
     }
 }
+
 impl<P> BSplineCurve<P>
 where P: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy
 {
