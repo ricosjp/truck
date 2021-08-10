@@ -1,24 +1,49 @@
-use std::collections::HashMap;
-use truck_meshalgo::prelude::PolylineCurve;
+use std::collections::{HashMap, HashSet};
 use truck_base::{cgmath64::*, tolerance::*};
+use truck_meshalgo::prelude::PolylineCurve;
 
 pub fn construct_polylines(lines: &Vec<(Point3, Point3)>) -> Vec<PolylineCurve<Point3>> {
-	let mut lines: HashMap<[i64; 3], (Point3, Point3)> = lines
-		.iter()
-		.filter(|(pt0, pt1)| pt0.distance2(*pt1) > TOLERANCE)
-		.map(|(pt0, pt1)| (into_index(*pt0), (*pt0, *pt1)))
-		.collect();
+	let mut map = HashMap::<[i64; 3], (Point3, HashSet<[i64; 3]>)>::new();
+	for line in lines {
+		if line.0.near(&line.1) {
+			continue;
+		}
+		let idx0 = into_index(line.0);
+		let idx1 = into_index(line.1);
+		if let Some((_, set)) = map.get_mut(&idx0) {
+			set.insert(idx1);
+		} else {
+			let mut set = HashSet::new();
+			set.insert(idx1);
+			map.insert(idx0, (line.0, set));
+		}
+		if let Some((_, set)) = map.get_mut(&idx1) {
+			set.insert(idx0);
+		} else {
+			let mut set = HashSet::new();
+			set.insert(idx0);
+			map.insert(idx1, (line.1, set));
+		}
+	}
 	let mut res = Vec::new();
-	while !lines.is_empty() {
+	while !map.is_empty() {
 		let mut wire = Vec::new();
-		let mut idx = *lines.iter().next().unwrap().0;
-		let line = lines.remove(&idx).unwrap();
-		wire.push(line.0);
-		wire.push(line.1);
-		idx = into_index(line.1);
-		while let Some(line) = lines.remove(&idx) {
-			wire.push(line.1);
-			idx = into_index(line.1);
+		let (_idx, (pt, _)) = map.iter_mut().next().unwrap();
+		wire.push(*pt);
+		let mut idx = *_idx;
+		while let Some((_, set)) = map.get_mut(&idx) {
+			let idx0 = *set.iter().next().unwrap();
+			set.remove(&idx0);
+			if set.is_empty() {
+				map.remove(&idx);
+			}
+			let (pt, set) = map.get_mut(&idx0).unwrap();
+			wire.push(*pt);
+			set.remove(&idx);
+			if set.is_empty() {
+				map.remove(&idx0);
+			}
+			idx = idx0;
 		}
 		res.push(PolylineCurve(wire));
 	}
@@ -46,10 +71,18 @@ fn construct_polylines_positive0() {
 	assert_eq!(polyline.len(), 1);
 	assert_eq!(polyline[0].len(), 9);
 
+	let mut sign = None;
 	for line in polyline[0].windows(2) {
 		let a = line[0][0] + line[0][1] * 2.0 + line[0][2] * 4.0;
 		let b = line[1][0] + line[1][1] * 2.0 + line[1][2] * 4.0;
-		assert!((b - a) == 1.0 || (b - a) == -7.0);
+		let x = b - a;
+		assert!(f64::abs(x) == 1.0 || f64::abs(x) == 7.0);
+		let s = f64::signum(x * (x - 2.0) * (x + 2.0));
+		if let Some(sign) = sign {
+			assert!(s == sign);
+		} else {
+			sign = Some(s);
+		}
 	}
 }
 
@@ -88,9 +121,17 @@ fn construct_polylines_positive2() {
 	assert_eq!(polyline.len(), 1);
 	assert_eq!(polyline[0].len(), 9);
 
+	let mut sign = None;
 	for line in polyline[0].windows(2) {
 		let a = line[0][0] + line[0][1] * 2.0 + line[0][2] * 4.0;
 		let b = line[1][0] + line[1][1] * 2.0 + line[1][2] * 4.0;
-		assert!((b - a) == 1.0 || (b - a) == -7.0);
+		let x = b - a;
+		assert!(f64::abs(x) == 1.0 || f64::abs(x) == 7.0);
+		let s = f64::signum(x * (x - 2.0) * (x + 2.0));
+		if let Some(sign) = sign {
+			assert!(s == sign);
+		} else {
+			sign = Some(s);
+		}
 	}
 }

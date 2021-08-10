@@ -382,6 +382,8 @@ fn sphere_case() {
 fn collide_parabola() {
 	use truck_geometry::*;
 	const TOL: f64 = 0.05;
+
+	// define surfaces
 	#[cfg_attr(rustfmt, rustfmt_skip)]
 	let ctrl0 = vec![
 		vec![Point3::new(-1.0, -1.0, 3.0), Point3::new(-1.0, 0.0, -1.0), Point3::new(-1.0, 1.0, 3.0)],
@@ -396,11 +398,20 @@ fn collide_parabola() {
 	];
 	let surface0 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl0);
 	let surface1 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl1);
+
+	// meshing surface
+	let instant = std::time::Instant::now();
 	let polygon0 =
 		StructuredMesh::from_surface(&surface0, surface0.parameter_range(), TOL).destruct();
 	let polygon1 =
 		StructuredMesh::from_surface(&surface1, surface1.parameter_range(), TOL).destruct();
+	println!("Meshing Surfaces: {}s", instant.elapsed().as_secs_f64());
+	
+	// extract intersection curves
+	let instant = std::time::Instant::now();
 	let curves = intersection_curves(surface0, &polygon0, surface1, &polygon1, TOL);
+	println!("Extracting Intersection: {}s", instant.elapsed().as_secs_f64());
+	
 	assert_eq!(curves.len(), 1);
 	let curve = curves[0].clone().unwrap();
 	
