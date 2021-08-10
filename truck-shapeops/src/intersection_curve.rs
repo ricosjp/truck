@@ -349,36 +349,66 @@ mod double_projection_tests {
 	}
 }
 
-#[cfg(test)]
-mod intersection_curve_tests {
-	use super::*;
+#[test]
+fn sphere_case() {
 	use std::f64::consts::PI;
 	use truck_geometry::*;
+	let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
+	let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
+	const M: usize = 5;
+	let polyline = (0..=M)
+		.map(|i| {
+			let t = 2.0 * PI * i as f64 / M as f64;
+			Point3::new(0.8 * f64::cos(t), 0.8 * f64::sin(t), 0.0)
+		})
+		.collect::<PolylineCurve<_>>();
+	let curve = IntersectionCurve::try_new(sphere0, sphere1, polyline, 0.5).unwrap();
 
-	#[test]
-	fn sphere_case() {
-		let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
-		let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
-		const M: usize = 5;
-		let polyline = (0..=M)
-			.map(|i| {
-				let t = 2.0 * PI * i as f64 / M as f64;
-				Point3::new(0.8 * f64::cos(t), 0.8 * f64::sin(t), 0.0)
-			})
-			.collect::<PolylineCurve<_>>();
-		let curve = IntersectionCurve::try_new(sphere0, sphere1, polyline, 0.5).unwrap();
+	const N: usize = 100;
+	let mut sum = 0.0;
+	for i in 0..N {
+		let t = 2.0 * PI * i as f64 / N as f64;
+		let pt = curve.subs(t);
+		assert_near!(pt.distance(Point3::origin()), 1.0);
+		let vec = curve.der(t);
+		assert!(pt.dot(vec).so_small());
+		assert!(vec[2].so_small());
+		sum += vec.magnitude() * 2.0 * PI / N as f64;
+	}
+	assert!(f64::abs(sum - 2.0 * PI) < 0.1, "{}", sum);
+}
 
-		const N: usize = 100;
-		let mut sum = 0.0;
-		for i in 0..N {
-			let t = 2.0 * PI * i as f64 / N as f64;
-			let pt = curve.subs(t);
-			assert_near!(pt.distance(Point3::origin()), 1.0);
-			let vec = curve.der(t);
-			assert!(pt.dot(vec).so_small());
-			assert!(vec[2].so_small());
-			sum += vec.magnitude() * 2.0 * PI / N as f64;
-		}
-		assert!(f64::abs(sum - 2.0 * PI) < 0.1, "{}", sum);
+#[test]
+fn collide_parabola() {
+	use truck_geometry::*;
+	const TOL: f64 = 0.05;
+	#[cfg_attr(rustfmt, rustfmt_skip)]
+	let ctrl0 = vec![
+		vec![Point3::new(-1.0, -1.0, 3.0), Point3::new(-1.0, 0.0, -1.0), Point3::new(-1.0, 1.0, 3.0)],
+		vec![Point3::new(0.0, -1.0, -1.0), Point3::new(0.0, 0.0, -5.0), Point3::new(0.0, 1.0, -1.0)],
+		vec![Point3::new(1.0, -1.0, 3.0), Point3::new(1.0, 0.0, -1.0), Point3::new(1.0, 1.0, 3.0)],
+	];
+	#[cfg_attr(rustfmt, rustfmt_skip)]
+	let ctrl1 = vec![
+		vec![Point3::new(-1.0, -1.0, -3.0), Point3::new(-1.0, 0.0, 1.0), Point3::new(-1.0, 1.0, -3.0)],
+		vec![Point3::new(0.0, -1.0, 1.0), Point3::new(0.0, 0.0, 5.0), Point3::new(0.0, 1.0, 1.0)],
+		vec![Point3::new(1.0, -1.0, -3.0), Point3::new(1.0, 0.0, 1.0), Point3::new(1.0, 1.0, -3.0)],
+	];
+	let surface0 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl0);
+	let surface1 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl1);
+	let polygon0 =
+		StructuredMesh::from_surface(&surface0, surface0.parameter_range(), TOL).destruct();
+	let polygon1 =
+		StructuredMesh::from_surface(&surface1, surface1.parameter_range(), TOL).destruct();
+	let curves = intersection_curves(surface0, &polygon0, surface1, &polygon1, TOL);
+	assert_eq!(curves.len(), 1);
+	let curve = curves[0].clone().unwrap();
+	
+	const N: usize = 100;
+	for i in 0..N {
+		let t1 = curve.parameter_range().1;
+		let t = t1 * i as f64 / N as f64;
+		let pt = curve.subs(t);
+		assert_near!(pt.distance(Point3::origin()) * 0.5, f64::sqrt(0.5) * 0.5);
 	}
 }
