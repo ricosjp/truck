@@ -1,3 +1,4 @@
-mod polyline_construction;
+mod divide_faces;
 mod intersection_curve;
-pub use intersection_curve::{IntersectionCurve, intersection_curves};
+mod polyline_construction;
+pub use intersection_curve::{intersection_curves, IntersectionCurve};

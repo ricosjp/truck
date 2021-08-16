@@ -19,7 +19,7 @@ pub fn double_projection<S>(
 	point: Point3,
 	normal: Vector3,
 	trials: usize,
-) -> Option<(Point3, (f64, f64), (f64, f64))>
+) -> Option<(Point3, Point2, Point2)>
 where
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
@@ -37,7 +37,7 @@ where
 	};
 	let pt1 = surface1.subs(u1, v1);
 	if point.near(&pt0) && point.near(&pt1) && pt0.near(&pt1) {
-		Some((point, (u0, v0), (u1, v1)))
+		Some((point, Point2::new(u0, v0), Point2::new(u1, v1)))
 	} else {
 		let n0 = surface0.normal(u0, v0);
 		let n1 = surface1.normal(u1, v1);
@@ -185,7 +185,7 @@ where
 	fn der(&self, t: f64) -> Vector3 {
 		if t < 0.0 || t + 1.0 > self.polyline.len() as f64 {
 			Vector3::zero()
-		} else if (t + TOLERANCE).floor().near(&t) {
+		} else if (t + TOLERANCE / 2.0).floor().near(&t) {
 			let i = t as usize;
 			let n = if i + 1 == self.polyline.len() {
 				self.polyline[i] - self.polyline[i - 1]
@@ -218,8 +218,8 @@ where
 			.unwrap();
 			let d = self
 				.surface0
-				.normal(p0.0, p0.1)
-				.cross(self.surface1.normal(p1.0, p1.1))
+				.normal(p0.x, p0.y)
+				.cross(self.surface1.normal(p1.x, p1.y))
 				.normalize();
 			d * (n.dot(n) / d.dot(n))
 		}
@@ -241,6 +241,46 @@ where
 			(0..self.polyline.len() - 1).map(|i| i as f64).collect()
 		} else {
 			algo::curve::parameter_division(self, range, tol)
+		}
+	}
+}
+
+impl<S> Cut for IntersectionCurve<S>
+where
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+{
+	#[inline(always)]
+	fn cut(&mut self, t: f64) -> Self {
+		let pt = self.polyline.subs(t);
+		let der = self.polyline.der(t);
+		let mut polyline = self.polyline.cut(t);
+		let mut params0 = self.params0.cut(t);
+		let mut params1 = self.params1.cut(t);
+		if !(t + TOLERANCE / 2.0).floor().near(&t) {
+			let (pt, p0, p1) = double_projection(
+				&self.surface0,
+				None,
+				&self.surface1,
+				None,
+				pt,
+				der,
+				100,
+			)
+			.unwrap();
+			*self.polyline.last_mut().unwrap() = pt;
+			*polyline.first_mut().unwrap() = pt;
+			*self.params0.last_mut().unwrap() = p0;
+			*params0.first_mut().unwrap() = p0;
+			*self.params1.last_mut().unwrap() = p1;
+			*params1.first_mut().unwrap() = p1;
+		}
+		Self {
+			surface0: self.surface0.clone(),
+			surface1: self.surface1.clone(),
+			polyline,
+			params0,
+			params1,
+			tol: self.tol,
 		}
 	}
 }
@@ -311,12 +351,12 @@ mod double_projection_tests {
 		for i in 0..10 {
 			let t = i as f64;
 			let p = Point3::origin() + t * n;
-			let (q, (u0, v0), (u1, v1)) =
-				double_projection(&plane0, None, &plane1, None, p, n, 100).unwrap_or_else(|| {
+			let (q, p0, p1) = double_projection(&plane0, None, &plane1, None, p, n, 100)
+				.unwrap_or_else(|| {
 					panic!("plane0: {:?}\nplane1: {:?}\n p: {:?}", plane0, plane1, p)
 				});
-			assert_near!(q, plane0.subs(u0, v0));
-			assert_near!(q, plane1.subs(u1, v1));
+			assert_near!(q, plane0.subs(p0.x, p0.y));
+			assert_near!(q, plane1.subs(p1.x, p1.y));
 			if let Some(o) = o {
 				assert_near!(q.distance2(o), t * t);
 			} else {
@@ -339,18 +379,17 @@ mod double_projection_tests {
 			let r = 2.0 * rand::random::<f64>();
 			let p = Point3::new(r * f64::cos(t), r * f64::sin(t), 0.0);
 			let n = Vector3::new(-f64::sin(t), f64::cos(t), 0.0);
-			let (q, (u0, v0), (u1, v1)) =
-				double_projection(&sphere0, None, &sphere1, None, p, n, 100)
-					.unwrap_or_else(|| panic!("p: {:?}", p));
-			assert_near!(q, sphere0.subs(u0, v0));
-			assert_near!(q, sphere1.subs(u1, v1));
+			let (q, p0, p1) = double_projection(&sphere0, None, &sphere1, None, p, n, 100)
+				.unwrap_or_else(|| panic!("p: {:?}", p));
+			assert_near!(q, sphere0.subs(p0.x, p0.y));
+			assert_near!(q, sphere1.subs(p1.x, p1.y));
 			assert_near!(q, Point3::new(f64::cos(t), f64::sin(t), 0.0));
 		}
 	}
 }
 
 #[test]
-fn sphere_case() {
+fn intersection_curve_sphere_case() {
 	use std::f64::consts::PI;
 	use truck_geometry::*;
 	let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
@@ -376,6 +415,20 @@ fn sphere_case() {
 		sum += vec.magnitude() * 2.0 * PI / N as f64;
 	}
 	assert!(f64::abs(sum - 2.0 * PI) < 0.1, "{}", sum);
+
+	let mut curve0 = curve.clone();
+	let curve1 = curve0.cut(2.5);
+	assert_near!(curve0.front(), curve.front());
+	assert_near!(curve0.back(), curve.subs(2.5));
+	assert_near!(curve1.front(), curve.subs(2.5));
+	assert_near!(curve1.back(), curve.back());
+	
+	let mut curve0 = curve.clone();
+	let curve1 = curve0.cut(2.0);
+	assert_near!(curve0.front(), curve.front());
+	assert_near!(curve0.back(), curve.subs(2.0));
+	assert_near!(curve1.front(), curve.subs(2.0));
+	assert_near!(curve1.back(), curve.back());
 }
 
 #[test]
@@ -406,15 +459,15 @@ fn collide_parabola() {
 	let polygon1 =
 		StructuredMesh::from_surface(&surface1, surface1.parameter_range(), TOL).destruct();
 	println!("Meshing Surfaces: {}s", instant.elapsed().as_secs_f64());
-	
 	// extract intersection curves
 	let instant = std::time::Instant::now();
 	let curves = intersection_curves(surface0, &polygon0, surface1, &polygon1, TOL);
-	println!("Extracting Intersection: {}s", instant.elapsed().as_secs_f64());
-	
+	println!(
+		"Extracting Intersection: {}s",
+		instant.elapsed().as_secs_f64()
+	);
 	assert_eq!(curves.len(), 1);
 	let curve = curves[0].clone().unwrap();
-	
 	const N: usize = 100;
 	for i in 0..N {
 		let t1 = curve.parameter_range().1;
