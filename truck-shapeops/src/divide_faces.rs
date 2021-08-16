@@ -52,19 +52,42 @@ fn reflect_intersection<C, S>(
 			poly_semishell1.get_mut(&poly_face_id1).unwrap(),
 		);
 	} else {
-		let v0 = add_polygon0_vertex(poly_semishell0, poly_face_id0, pt0);
-		add_polygon1_vertex(poly_semishell1, poly_face_id1, &v0);
-		let v1 = add_polygon0_vertex(poly_semishell0, poly_face_id0, pt1);
-		add_polygon1_vertex(poly_semishell1, poly_face_id1, &v1);
-		let edge = Edge::new(&v0, &v1, poly_curve);
+		let (pv0, gv0) = add_vertex0(
+			poly_semishell0,
+			poly_face_id0,
+			geom_semishell0,
+			geom_face_id0,
+			pt0,
+		);
+		add_vertex1(
+			poly_semishell1,
+			poly_face_id1,
+			geom_semishell1,
+			geom_face_id1,
+			&pv0,
+			&gv0,
+		);
+		let (pv1, gv1) = add_vertex0(
+			poly_semishell0,
+			poly_face_id0,
+			geom_semishell0,
+			geom_face_id0,
+			pt1,
+		);
+		add_vertex1(
+			poly_semishell1,
+			poly_face_id1,
+			geom_semishell1,
+			geom_face_id1,
+			&pv1,
+			&gv1,
+		);
+		let edge = Edge::new(&pv0, &pv1, poly_curve);
 		concat_edge_to_wire(
 			edge.clone(),
 			poly_semishell0.get_mut(&poly_face_id0).unwrap(),
 		);
-		concat_edge_to_wire(
-			edge,
-			poly_semishell1.get_mut(&poly_face_id1).unwrap(),
-		);
+		concat_edge_to_wire(edge, poly_semishell1.get_mut(&poly_face_id1).unwrap());
 	}
 }
 
@@ -116,29 +139,47 @@ fn add_independent_loop<C, S>(
 	geom_loops1.push(geom_wire);
 }
 
-fn add_polygon0_vertex(
+fn add_vertex0<C, S>(
 	poly_semishell: &mut HashMap<FaceID<PolygonMesh>, Vec<Wire<Point3, PolylineCurve>>>,
 	poly_face_id: FaceID<PolygonMesh>,
+	geom_semishell: &mut HashMap<FaceID<S>, Vec<Wire<Point3, C>>>,
+	geom_face_id: FaceID<S>,
 	pt: Point3,
-) -> Vertex<Point3> {
+) -> (Vertex<Point3>, Vertex<Point3>)
+where
+	C: ParametricCurve<Point = Point3, Vector = Vector3>
+		+ SearchNearestParameter<Point = Point3, Parameter = f64>
+		+ SearchParameter<Point = Point3, Parameter = f64>
+		+ Cut,
+{
 	let poly_loops = poly_semishell.get_mut(&poly_face_id).unwrap();
+	let geom_loops = geom_semishell.get(&geom_face_id).unwrap();
 
 	let (i, j, t) = poly_loops
 		.iter()
 		.enumerate()
 		.flat_map(move |(i, wire)| wire.iter().enumerate().map(move |(j, edge)| (i, j, edge)))
-		.find_map(move |(i, j, edge)| {
+		.find_map(|(i, j, edge)| {
 			let poly_curve = edge.get_curve();
-			poly_curve.search_parameter(pt, None, 1).map(|t| (i, j, t))
+			poly_curve
+				.search_parameter(pt, None, 1)
+				.filter(|t| -TOLERANCE < *t && t + 1.0 < poly_loops.len() as f64 + TOLERANCE)
+				.map(|t| (i, j, t))
 		})
 		.unwrap();
 	if t.so_small() {
-		poly_loops[i][j].front().clone()
+		(
+			poly_loops[i][j].front().clone(),
+			geom_loops[i][j].front().clone(),
+		)
 	} else if (t + 1.0).near(&(poly_loops.len() as f64)) {
-		poly_loops[i][j].back().clone()
+		(
+			poly_loops[i][j].back().clone(),
+			geom_loops[i][j].back().clone(),
+		)
 	} else {
-		let v = Vertex::new(pt);
-		let (edge0, edge1) = poly_loops[i][j].cut(&v).unwrap();
+		let v0 = Vertex::new(pt);
+		let (edge0, edge1) = poly_loops[i][j].cut(&v0).unwrap();
 		let wire0: Wire<_, _> = vec![edge0, edge1].into();
 		let edge_id = poly_loops[i][j].id();
 		poly_semishell.values_mut().flatten().for_each(|wire| {
@@ -150,16 +191,40 @@ fn add_polygon0_vertex(
 				.0;
 			wire.swap_edge_into_wire(idx, wire0.clone());
 		});
-		v
+		let curve = geom_loops[i][j].get_curve();
+		let t = curve.search_nearest_parameter(pt, None, 100).unwrap();
+		let pt = curve.subs(t);
+		let v1 = Vertex::new(pt);
+		let (edge0, edge1) = geom_loops[i][j].cut(&v1).unwrap();
+		let wire0: Wire<_, _> = vec![edge0, edge1].into();
+		let edge_id = geom_loops[i][j].id();
+		geom_semishell.values_mut().flatten().for_each(|wire| {
+			let idx = wire
+				.iter()
+				.enumerate()
+				.find(|(_, edge)| edge.id() == edge_id)
+				.unwrap()
+				.0;
+			wire.swap_edge_into_wire(idx, wire0.clone());
+		});
+		(v0, v1)
 	}
 }
 
-fn add_polygon1_vertex(
+fn add_vertex1<C, S>(
 	poly_semishell: &mut HashMap<FaceID<PolygonMesh>, Vec<Wire<Point3, PolylineCurve>>>,
 	poly_face_id: FaceID<PolygonMesh>,
-	v: &Vertex<Point3>,
-) {
-	let pt = v.get_point();
+	geom_semishell: &mut HashMap<FaceID<S>, Vec<Wire<Point3, C>>>,
+	geom_face_id: FaceID<S>,
+	pv: &Vertex<Point3>,
+	gv: &Vertex<Point3>,
+) where
+	C: ParametricCurve<Point = Point3, Vector = Vector3>
+		+ SearchNearestParameter<Point = Point3, Parameter = f64>
+		+ SearchParameter<Point = Point3, Parameter = f64>
+		+ Cut,
+{
+	let pt = pv.get_point();
 	let poly_loops = poly_semishell.get_mut(&poly_face_id).unwrap();
 
 	let (i, j, t) = poly_loops
@@ -175,7 +240,7 @@ fn add_polygon1_vertex(
 		})
 		.unwrap();
 	if TOLERANCE < t && t + 1.0 < poly_loops.len() as f64 - TOLERANCE {
-		let (edge0, edge1) = poly_loops[i][j].cut(&v).unwrap();
+		let (edge0, edge1) = poly_loops[i][j].cut(&pv).unwrap();
 		let wire0: Wire<_, _> = vec![edge0, edge1].into();
 		let edge_id = poly_loops[i][j].id();
 		poly_semishell.values_mut().flatten().for_each(|wire| {
@@ -193,7 +258,7 @@ fn add_polygon1_vertex(
 		} else {
 			poly_loops[i][j].back().clone()
 		};
-		if &v0 == v {
+		if &v0 == pv {
 			return;
 		}
 		let mut edge_map = HashMap::<EdgeID<PolylineCurve>, Edge<Point3, PolylineCurve>>::new();
@@ -210,9 +275,9 @@ fn add_polygon1_vertex(
 					}
 				} else {
 					let mut new_edge = if &v0 == edge.absolute_front() {
-						Edge::new(&v, edge.absolute_back(), edge.get_curve())
+						Edge::new(&v0, edge.absolute_back(), edge.get_curve())
 					} else if &v0 == edge.absolute_back() {
-						Edge::new(edge.absolute_front(), &v, edge.get_curve())
+						Edge::new(edge.absolute_front(), &v0, edge.get_curve())
 					} else {
 						return;
 					};
