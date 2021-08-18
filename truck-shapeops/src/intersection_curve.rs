@@ -26,15 +26,9 @@ where
 	if trials == 0 {
 		return None;
 	}
-	let (u0, v0) = match surface0.search_nearest_parameter(point, hint0, 10) {
-		Some(got) => got,
-		None => return None,
-	};
+	let (u0, v0) = surface0.search_nearest_parameter(point, hint0, 10)?;
 	let pt0 = surface0.subs(u0, v0);
-	let (u1, v1) = match surface1.search_nearest_parameter(point, hint1, 10) {
-		Some(got) => got,
-		None => return None,
-	};
+	let (u1, v1) = surface1.search_nearest_parameter(point, hint1, 10)?;
 	let pt1 = surface1.subs(u1, v1);
 	if point.near(&pt0) && point.near(&pt1) && pt0.near(&pt1) {
 		Some((point, Point2::new(u0, v0), Point2::new(u1, v1)))
@@ -42,10 +36,7 @@ where
 		let n0 = surface0.normal(u0, v0);
 		let n1 = surface1.normal(u1, v1);
 		let mat = Matrix3::from_cols(n0, n1, normal).transpose();
-		let inv = match mat.invert() {
-			Some(got) => got,
-			None => return None,
-		};
+		let inv = mat.invert()?;
 		let pt = inv * Vector3::new(pt0.dot(n0), pt1.dot(n1), point.dot(normal));
 		double_projection(
 			surface0,
@@ -59,9 +50,44 @@ where
 	}
 }
 
+impl<S> IntersectionCurve<S> {
+	/// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
+	#[inline(always)]
+	pub fn surface0(&self) -> &S { &self.surface0 }
+	/// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
+	#[inline(always)]
+	pub fn surface1(&self) -> &S { &self.surface1 }
+	/// Returns the polyline leading this curve.
+	#[inline(always)]
+	pub fn polyline(&self) -> &PolylineCurve<Point3> { &self.polyline }
+	/// Returns the polyline leading this curve.
+	#[inline(always)]
+	pub(super) fn polyline_mut(&mut self) -> &mut PolylineCurve<Point3> { &mut self.polyline }
+	/// Returns the parameters of `self.surface0()`. We assume the following.
+	/// # Assumption
+	/// ```ignore
+	/// // let i: usize = ...;
+	/// let p = self.parameters0()[i];
+	/// assert!(self.surface0().subs(p[0], p[1]), self.polyline()[i]);
+	/// ```
+	#[inline(always)]
+	pub fn parameters0(&self) -> &PolylineCurve<Point2> { &self.params0 }
+	/// Returns the parameters of `self.surface0()`. We assume the following.
+	/// # Assumption
+	/// ```ignore
+	/// // let i: usize = ...;
+	/// let p = self.parameters1()[i];
+	/// assert!(self.surface1().subs(p[0], p[1]), self.polyline()[i]);
+	/// ```
+	#[inline(always)]
+	pub fn parameters1(&self) -> &PolylineCurve<Point2> { &self.params1 }
+	/// The tolerance for generating this intersection curve.
+	#[inline(always)]
+	pub fn tolerance(&self) -> f64 { self.tol }
+}
+
 impl<S> IntersectionCurve<S>
-where
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
 {
 	pub(super) fn try_new(
 		surface0: S,
@@ -106,61 +132,15 @@ where
 			tol,
 		})
 	}
-
-	/// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
-	#[inline(always)]
-	pub fn surface0(&self) -> &S {
-		&self.surface0
-	}
-	/// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
-	#[inline(always)]
-	pub fn surface1(&self) -> &S {
-		&self.surface1
-	}
-	/// Returns the polyline leading this curve.
-	#[inline(always)]
-	pub fn polyline(&self) -> &PolylineCurve<Point3> {
-		&self.polyline
-	}
-	/// Returns the parameters of `self.surface0()`. We assume the following.
-	/// # Assumption
-	/// ```ignore
-	/// // let i: usize = ...;
-	/// let p = self.parameters0()[i];
-	/// assert!(self.surface0().subs(p[0], p[1]), self.polyline()[i]);
-	/// ```
-	#[inline(always)]
-	pub fn parameters0(&self) -> &PolylineCurve<Point2> {
-		&self.params0
-	}
-	/// Returns the parameters of `self.surface0()`. We assume the following.
-	/// # Assumption
-	/// ```ignore
-	/// // let i: usize = ...;
-	/// let p = self.parameters1()[i];
-	/// assert!(self.surface1().subs(p[0], p[1]), self.polyline()[i]);
-	/// ```
-	#[inline(always)]
-	pub fn parameters1(&self) -> &PolylineCurve<Point2> {
-		&self.params1
-	}
-	/// The tolerance for generating this intersection curve.
-	#[inline(always)]
-	pub fn tolerance(&self) -> f64 {
-		self.tol
-	}
 }
 
 impl<S> ParametricCurve for IntersectionCurve<S>
-where
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
 {
 	type Point = Point3;
 	type Vector = Vector3;
 	#[inline(always)]
-	fn parameter_range(&self) -> (f64, f64) {
-		(0.0, self.polyline.len() as f64)
-	}
+	fn parameter_range(&self) -> (f64, f64) { (0.0, self.polyline.len() as f64) }
 	fn subs(&self, t: f64) -> Point3 {
 		if t < 0.0 {
 			self.polyline[0]
@@ -232,8 +212,7 @@ where
 }
 
 impl<S> ParameterDivision1D for IntersectionCurve<S>
-where
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
 {
 	#[inline(always)]
 	fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
@@ -246,8 +225,7 @@ where
 }
 
 impl<S> Cut for IntersectionCurve<S>
-where
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
 {
 	#[inline(always)]
 	fn cut(&mut self, t: f64) -> Self {
@@ -257,16 +235,9 @@ where
 		let mut params0 = self.params0.cut(t);
 		let mut params1 = self.params1.cut(t);
 		if !(t + TOLERANCE / 2.0).floor().near(&t) {
-			let (pt, p0, p1) = double_projection(
-				&self.surface0,
-				None,
-				&self.surface1,
-				None,
-				pt,
-				der,
-				100,
-			)
-			.unwrap();
+			let (pt, p0, p1) =
+				double_projection(&self.surface0, None, &self.surface1, None, pt, der, 100)
+					.unwrap();
 			*self.polyline.last_mut().unwrap() = pt;
 			*polyline.first_mut().unwrap() = pt;
 			*self.params0.last_mut().unwrap() = p0;
@@ -291,7 +262,7 @@ pub fn intersection_curves<S>(
 	surface1: S,
 	polygon1: &PolygonMesh,
 	tol: f64,
-) -> Vec<Option<IntersectionCurve<S>>>
+) -> Vec<(PolylineCurve<Point3>, Option<IntersectionCurve<S>>)>
 where
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
@@ -300,7 +271,13 @@ where
 	polylines
 		.into_iter()
 		.map(|polyline| {
-			IntersectionCurve::try_new(surface0.clone(), surface1.clone(), polyline, tol)
+			let curve = IntersectionCurve::try_new(
+				surface0.clone(),
+				surface1.clone(),
+				polyline.clone(),
+				tol,
+			);
+			(polyline, curve)
 		})
 		.collect()
 }
@@ -366,9 +343,7 @@ mod double_projection_tests {
 	}
 
 	#[test]
-	fn plane_case() {
-		(0..100).for_each(|_| exec_plane_case());
-	}
+	fn plane_case() { (0..100).for_each(|_| exec_plane_case()); }
 
 	#[test]
 	fn sphere_case() {
@@ -422,7 +397,6 @@ fn intersection_curve_sphere_case() {
 	assert_near!(curve0.back(), curve.subs(2.5));
 	assert_near!(curve1.front(), curve.subs(2.5));
 	assert_near!(curve1.back(), curve.back());
-	
 	let mut curve0 = curve.clone();
 	let curve1 = curve0.cut(2.0);
 	assert_near!(curve0.front(), curve.front());
@@ -467,7 +441,7 @@ fn collide_parabola() {
 		instant.elapsed().as_secs_f64()
 	);
 	assert_eq!(curves.len(), 1);
-	let curve = curves[0].clone().unwrap();
+	let curve = curves[0].1.clone().unwrap();
 	const N: usize = 100;
 	for i in 0..N {
 		let t1 = curve.parameter_range().1;
