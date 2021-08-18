@@ -285,7 +285,7 @@ where
 #[cfg(test)]
 mod double_projection_tests {
 	use super::*;
-	use truck_geometry::*;
+	use truck_modeling::*;
 
 	fn create_axis(n: Vector3) -> (Vector3, Vector3) {
 		let idx = if n[0].abs() < n[1].abs() { 0 } else { 1 };
@@ -366,7 +366,7 @@ mod double_projection_tests {
 #[test]
 fn intersection_curve_sphere_case() {
 	use std::f64::consts::PI;
-	use truck_geometry::*;
+	use truck_modeling::*;
 	let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
 	let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
 	const M: usize = 5;
@@ -407,7 +407,7 @@ fn intersection_curve_sphere_case() {
 
 #[test]
 fn collide_parabola() {
-	use truck_geometry::*;
+	use truck_modeling::*;
 	const TOL: f64 = 0.05;
 
 	// define surfaces

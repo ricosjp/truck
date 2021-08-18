@@ -305,6 +305,32 @@ where
 	}
 }
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
+trait Length { fn len(&self) -> usize; }
+#[cfg_attr(rustfmt, rustfmt_skip)]
+impl Length for PolylineCurve { fn len(&self) -> usize { self.0.len() } }
+#[cfg_attr(rustfmt, rustfmt_skip)]
+impl<S> Length for IntersectionCurve<S> { fn len(&self) -> usize { self.polyline().len() } }
+
+fn create_independent_loop<P, C, D>(poly_curve: C) -> Wire<P, D>
+where
+	C: Cut<Point = P> + Length,
+	D: From<C>, {
+	let t = if poly_curve.len() % 2 == 0 {
+		poly_curve.len() as f64 / 2.0
+	} else {
+		(poly_curve.len() - 1) as f64 / 2.0
+	};
+
+	let mut poly_curve0 = poly_curve.clone();
+	let poly_curve1 = poly_curve0.cut(t);
+	let v0 = Vertex::new(poly_curve0.front());
+	let v1 = Vertex::new(poly_curve1.front());
+	let edge0 = Edge::new(&v0, &v1, poly_curve0.into());
+	let edge1 = Edge::new(&v1, &v0, poly_curve1.into());
+	vec![edge0, edge1].into()
+}
+
 pub fn polyline_stores<C, S>(
 	geom_shell0: &Shell<Point3, C, S>,
 	poly_shell0: &Shell<Point3, PolylineCurve, PolygonMesh>,
@@ -414,30 +440,4 @@ where
 				Some(())
 			})
 		})
-}
-
-#[cfg_attr(rustfmt, rustfmt_skip)]
-trait Length { fn len(&self) -> usize; }
-#[cfg_attr(rustfmt, rustfmt_skip)]
-impl Length for PolylineCurve { fn len(&self) -> usize { self.0.len() } }
-#[cfg_attr(rustfmt, rustfmt_skip)]
-impl<S> Length for IntersectionCurve<S> { fn len(&self) -> usize { self.polyline().len() } }
-
-fn create_independent_loop<P, C, D>(poly_curve: C) -> Wire<P, D>
-where
-	C: Cut<Point = P> + Length,
-	D: From<C>, {
-	let t = if poly_curve.len() % 2 == 0 {
-		poly_curve.len() as f64 / 2.0
-	} else {
-		(poly_curve.len() - 1) as f64 / 2.0
-	};
-
-	let mut poly_curve0 = poly_curve.clone();
-	let poly_curve1 = poly_curve0.cut(t);
-	let v0 = Vertex::new(poly_curve0.front());
-	let v1 = Vertex::new(poly_curve1.front());
-	let edge0 = Edge::new(&v0, &v1, poly_curve0.into());
-	let edge1 = Edge::new(&v1, &v0, poly_curve1.into());
-	vec![edge0, edge1].into()
 }
