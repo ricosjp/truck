@@ -439,7 +439,7 @@ where
 							edge_index,
 							&gv1,
 							kind,
-							&surface1,
+							&surface0,
 						);
 					}
 					poly_loops_store1[face_index1].add_edge(pedge.clone());

@@ -193,7 +193,11 @@ fn rotated_intersection() {
 	assert!(geom_loops_store0[0][0].is_closed());
 	assert!(geom_loops_store0[0][1].is_closed());
 	assert_eq!(geom_loops_store0[0][0].len() * geom_loops_store0[0][1].len(), 15);
+	assert!(geom_loops_store0[0][0].len() > 2);
+	assert!(geom_loops_store0[0][1].len() > 2);
 	assert_eq!(geom_loops_store0[1].len(), 2);
+	assert!(geom_loops_store0[1][0].is_closed());
+	assert!(geom_loops_store0[1][1].is_closed());
 	assert_eq!(geom_loops_store0[1][0].len() * geom_loops_store0[1][1].len(), 15);
 	assert!(geom_loops_store0[1][0].len() > 2);
 	assert!(geom_loops_store0[1][1].len() > 2);
@@ -202,7 +206,11 @@ fn rotated_intersection() {
 	assert!(geom_loops_store1[0][0].is_closed());
 	assert!(geom_loops_store1[0][1].is_closed());
 	assert_eq!(geom_loops_store1[0][0].len() * geom_loops_store1[0][1].len(), 15);
+	assert!(geom_loops_store1[0][0].len() > 2);
+	assert!(geom_loops_store1[0][1].len() > 2);
 	assert_eq!(geom_loops_store1[1].len(), 2);
+	assert!(geom_loops_store1[1][0].is_closed());
+	assert!(geom_loops_store1[1][1].is_closed());
 	assert_eq!(geom_loops_store1[1][0].len() * geom_loops_store1[1][1].len(), 15);
 	assert!(geom_loops_store1[1][0].len() > 2);
 	assert!(geom_loops_store1[1][1].len() > 2);
