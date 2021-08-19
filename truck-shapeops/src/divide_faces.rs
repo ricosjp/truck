@@ -541,9 +541,21 @@ mod tests {
 		let (geom_loops_store0, geom_loops_store1, poly_loops_store0, poly_loops_store1) =
 		create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL)
 			.unwrap();
-		println!("{:?}", geom_loops_store0[0].len());
-		println!("{:?}", geom_loops_store1[0].len());
-		println!("{:?}", poly_loops_store0[0].len());
-		println!("{:?}", poly_loops_store1[0].len());
+		assert_eq!(geom_loops_store0[0].len(), 3);
+		assert_eq!(geom_loops_store0[0][0].len(), 2);
+		assert_eq!(geom_loops_store0[0][1].len(), 2);
+		assert_eq!(geom_loops_store0[0][2].len(), 2);
+		assert_eq!(geom_loops_store1[0].len(), 3);
+		assert_eq!(geom_loops_store1[0][0].len(), 2);
+		assert_eq!(geom_loops_store1[0][1].len(), 2);
+		assert_eq!(geom_loops_store1[0][2].len(), 2);
+		assert_eq!(poly_loops_store0[0].len(), 3);
+		assert_eq!(poly_loops_store0[0][0].len(), 2);
+		assert_eq!(poly_loops_store0[0][1].len(), 2);
+		assert_eq!(poly_loops_store0[0][2].len(), 2);
+		assert_eq!(poly_loops_store1[0].len(), 3);
+		assert_eq!(poly_loops_store1[0][0].len(), 2);
+		assert_eq!(poly_loops_store1[0][1].len(), 2);
+		assert_eq!(poly_loops_store1[0][2].len(), 2);
 	}
 }
