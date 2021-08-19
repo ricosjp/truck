@@ -108,9 +108,9 @@ impl Polyline {
                 let x = (a[0] * b[1] - a[1] * b[0]) * (b[1] - a[1]);
                 if f64::abs(x) < tol && a[1] * b[1] < 0.0 {
                     None
-                } else if x > tol && a[1] <= -tol && b[1] > tol {
+                } else if x > tol && a[1] <= 0.0 && b[1] > 0.0 {
                     Some(counter + 1)
-                } else if x > tol && a[1] >= tol && b[1] < -tol {
+                } else if x > tol && a[1] >= 0.0 && b[1] < 0.0 {
                     Some(counter - 1)
                 } else {
                     Some(counter)

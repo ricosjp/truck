@@ -170,7 +170,7 @@ fn rotated_intersection() {
 	let wire00: Wire<_, _> = vec![edge00, edge02.inverse()].into();
 	let wire01: Wire<_, _> = vec![edge01, edge02].into();
 	let face00 = Face::new(vec![wire00], surface0.clone());
-	let face01 = Face::new(vec![wire01], surface0);
+	let face01 = Face::new(vec![wire01], surface0.clone());
 	let geom_shell0: Shell<_, _, _> = vec![face00.inverse(), face01.inverse()].into();
 
 	let v10 = Vertex::new(Point3::new(0.0, -1.0, -1.0));
@@ -179,9 +179,9 @@ fn rotated_intersection() {
 	let edge11 = Edge::new(&v11, &v10, arc11);
 	let edge12 = Edge::new(&v10, &v11, arc12);
 	let wire10: Wire<_, _> = vec![edge10, edge12.inverse()].into();
-	let wire11: Wire<_, _> = vec![edge11, edge12].into();
+	let wire11: Wire<_, _> = vec![edge12, edge11].into();
 	let face10 = Face::new(vec![wire10], surface1.clone());
-	let face11 = Face::new(vec![wire11], surface1);
+	let face11 = Face::new(vec![wire11], surface1.clone());
 	let geom_shell1: Shell<_, _, _> = vec![face10, face11].into();
 
 	let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
@@ -214,6 +214,35 @@ fn rotated_intersection() {
 	assert_eq!(geom_loops_store1[1][0].len() * geom_loops_store1[1][1].len(), 15);
 	assert!(geom_loops_store1[1][0].len() > 2);
 	assert!(geom_loops_store1[1][1].len() > 2);
+	
+	let wire = if geom_loops_store0[0][0].len() == 3 {
+		geom_loops_store0[0][0].clone()
+	} else {
+		geom_loops_store0[0][1].clone()
+	};
+	let face0 = Face::new(vec![wire], surface0.clone());
+	let wire = if geom_loops_store0[1][0].len() == 3 {
+		geom_loops_store0[1][0].clone()
+	} else {
+		geom_loops_store0[1][1].clone()
+	};
+	let face1 = Face::new(vec![wire], surface0.clone());
+	let wire = if geom_loops_store1[0][0].len() == 3 {
+		geom_loops_store1[0][0].clone()
+	} else {
+		geom_loops_store1[0][1].clone()
+	};
+	let face2 = Face::new(vec![wire], surface1.clone());
+	let wire = if geom_loops_store1[1][0].len() == 3 {
+		geom_loops_store1[1][0].clone()
+	} else {
+		geom_loops_store1[1][1].clone()
+	};
+	let face3 = Face::new(vec![wire], surface1.clone());
+	let shell: Shell<_, _, _> = vec![face0.inverse(), face1.inverse(), face2, face3].into();
+	let polygon = shell.triangulation(TOL).unwrap().into_polygon();
+	let file = std::fs::File::create("parabola_intersection.obj").unwrap();
+	obj::write(&polygon, file).unwrap();
 }
 
 #[test]
