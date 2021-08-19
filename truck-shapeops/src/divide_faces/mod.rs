@@ -140,11 +140,6 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 				}
 			})
 		});
-		if let Some((wire_index0, edge_index0)) = a {
-			self[wire_index0].rotate_left(edge_index0);
-			self[wire_index0].push_front(edge0.clone());
-			self[wire_index0].push_back(edge0.inverse());
-		}
 		let b = self.iter().enumerate().find_map(|(i, wire)| {
 			wire.iter().enumerate().find_map(|(j, edge)| {
 				if edge.front() == edge0.front() {
@@ -154,9 +149,16 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 				}
 			})
 		});
+		if let Some((wire_index0, edge_index0)) = a {
+			self[wire_index0].rotate_left(edge_index0);
+			self[wire_index0].push_front(edge0.clone());
+			self[wire_index0].push_back(edge0.inverse());
+		}
 		match (a, b) {
-			(Some((wire_index0, _)), Some((wire_index1, edge_index1))) => {
+			(Some((wire_index0, edge_index0)), Some((wire_index1, edge_index1))) => {
 				if wire_index0 == wire_index1 {
+					let len = self[wire_index0].len() - 2;
+					let edge_index1 = (len + edge_index1 - edge_index0 + 1) % len;
 					let new_wire = self[wire_index0].split_off(edge_index1);
 					self.push(new_wire);
 				} else {
@@ -205,11 +207,11 @@ impl<P: Copy + Tolerance, C: Clone> LoopsStore<P, C> {
 		let (wire_index, edge_index, kind) = self[loops_index].search_parameter(pt)?;
 		match kind {
 			ParameterKind::Front => {
-				let old_vertex = self[loops_index][wire_index][edge_index].front().clone();
+				let old_vertex = self[loops_index][wire_index][edge_index].absolute_front().clone();
 				self.change_vertex(&old_vertex, v);
 			}
 			ParameterKind::Back => {
-				let old_vertex = self[loops_index][wire_index][edge_index].back().clone();
+				let old_vertex = self[loops_index][wire_index][edge_index].absolute_back().clone();
 				self.change_vertex(&old_vertex, v);
 			}
 			ParameterKind::Inner(t) => {
@@ -241,11 +243,11 @@ impl<C> LoopsStore<Point3, C> {
 	{
 		match kind {
 			ParameterKind::Front => {
-				let old_vertex = self[loops_index][wire_index][edge_index].front().clone();
+				let old_vertex = self[loops_index][wire_index][edge_index].absolute_front().clone();
 				self.change_vertex(&old_vertex, v);
 			}
 			ParameterKind::Back => {
-				let old_vertex = self[loops_index][wire_index][edge_index].back().clone();
+				let old_vertex = self[loops_index][wire_index][edge_index].absolute_back().clone();
 				self.change_vertex(&old_vertex, v);
 			}
 			ParameterKind::Inner(_) => {
@@ -341,8 +343,8 @@ fn create_loops_stores<C, S>(
 	tol: f64,
 ) -> Option<(
 	LoopsStore<Point3, C>,
-	LoopsStore<Point3, C>,
 	LoopsStore<Point3, PolylineCurve>,
+	LoopsStore<Point3, C>,
 	LoopsStore<Point3, PolylineCurve>,
 )>
 where
@@ -448,8 +450,8 @@ where
 		})?;
 	Some((
 		geom_loops_store0,
-		geom_loops_store1,
 		poly_loops_store0,
+		geom_loops_store1,
 		poly_loops_store1,
 	))
 }
