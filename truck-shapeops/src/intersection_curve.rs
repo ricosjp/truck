@@ -256,6 +256,39 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 	}
 }
 
+impl<S: Clone> Invertible for IntersectionCurve<S> {
+	fn invert(&mut self) {
+		self.polyline.invert();
+		self.params0.invert();
+		self.params1.invert();
+	}
+}
+
+impl<S> SearchParameter for IntersectionCurve<S>
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+{
+	type Point = Point3;
+	type Parameter = f64;
+	fn search_parameter(&self, point: Point3, _: Option<f64>, _: usize) -> Option<f64> {
+		let t = self.polyline.search_nearest_parameter(point, None, 1).unwrap();
+		let pt = self.subs(t);
+		match pt.near(&point) {
+			true => Some(t),
+			false => None,
+		}
+	}
+}
+
+/// Only derive from leading polyline. Not precise.
+impl<S> SearchNearestParameter for IntersectionCurve<S>
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+{
+	type Point = Point3;
+	type Parameter = f64;
+	fn search_nearest_parameter(&self, point: Point3, _: Option<f64>, _: usize) -> Option<f64> {
+		self.polyline.search_nearest_parameter(point, None, 1)
+	}
+}
 pub fn intersection_curves<S>(
 	surface0: S,
 	polygon0: &PolygonMesh,
@@ -285,7 +318,7 @@ where
 #[cfg(test)]
 mod double_projection_tests {
 	use super::*;
-	use truck_modeling::*;
+	use truck_geometry::*;
 
 	fn create_axis(n: Vector3) -> (Vector3, Vector3) {
 		let idx = if n[0].abs() < n[1].abs() { 0 } else { 1 };
@@ -366,7 +399,7 @@ mod double_projection_tests {
 #[test]
 fn intersection_curve_sphere_case() {
 	use std::f64::consts::PI;
-	use truck_modeling::*;
+	use truck_geometry::*;
 	let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
 	let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
 	const M: usize = 5;
@@ -391,6 +424,13 @@ fn intersection_curve_sphere_case() {
 	}
 	assert!(f64::abs(sum - 2.0 * PI) < 0.1, "{}", sum);
 
+	let theta = 2.0 * PI * rand::random::<f64>();
+	let pt = Point3::new(f64::cos(theta), f64::sin(theta), 0.0);
+	let t = curve.search_parameter(pt, None, 1).unwrap();
+	assert!(curve.subs(t).near(&pt));
+	let pt = Point3::new(1.1 * f64::cos(theta), 1.1 * f64::sin(theta), 0.0);
+	assert!(curve.search_parameter(pt, None, 1).is_none());
+
 	let mut curve0 = curve.clone();
 	let curve1 = curve0.cut(2.5);
 	assert_near!(curve0.front(), curve.front());
@@ -407,7 +447,7 @@ fn intersection_curve_sphere_case() {
 
 #[test]
 fn collide_parabola() {
-	use truck_modeling::*;
+	use truck_geometry::*;
 	const TOL: f64 = 0.05;
 
 	// define surfaces
