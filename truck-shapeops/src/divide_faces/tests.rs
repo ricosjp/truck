@@ -80,28 +80,30 @@ fn independent_intersection() {
 	let geom_shell1: Shell<_, _, _> = vec![Face::new(vec![wire1], surface1)].into();
 	let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
 	let poly_shell1 = geom_shell1.triangulation(TOL).unwrap();
-	let (geom_loops_store0, poly_loops_store0, geom_loops_store1, poly_loops_store1) =
+	let (geom_loops_store0, _poly_loops_store0, geom_loops_store1, _poly_loops_store1) =
 		create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL).unwrap();
 	assert_eq!(geom_loops_store0.len(), 1);
 	assert_eq!(geom_loops_store0[0].len(), 3);
 	assert_eq!(geom_loops_store0[0][0].len(), 2);
 	assert_eq!(geom_loops_store0[0][1].len(), 2);
 	assert_eq!(geom_loops_store0[0][2].len(), 2);
-	assert_eq!(poly_loops_store0.len(), 1);
-	assert_eq!(poly_loops_store0[0].len(), 3);
-	assert_eq!(poly_loops_store0[0][0].len(), 2);
-	assert_eq!(poly_loops_store0[0][1].len(), 2);
-	assert_eq!(poly_loops_store0[0][2].len(), 2);
+	assert!(geom_loops_store0[0][0].is_closed());
+	assert!(geom_loops_store0[0][1].is_closed());
+	assert!(geom_loops_store0[0][2].is_closed());
+	assert!(geom_loops_store0[0][0].is_geometric_consistent());
+	assert!(geom_loops_store0[0][1].is_geometric_consistent());
+	assert!(geom_loops_store0[0][2].is_geometric_consistent());
 	assert_eq!(geom_loops_store1.len(), 1);
 	assert_eq!(geom_loops_store1[0].len(), 3);
 	assert_eq!(geom_loops_store1[0][0].len(), 2);
 	assert_eq!(geom_loops_store1[0][1].len(), 2);
 	assert_eq!(geom_loops_store1[0][2].len(), 2);
-	assert_eq!(poly_loops_store1.len(), 1);
-	assert_eq!(poly_loops_store1[0].len(), 3);
-	assert_eq!(poly_loops_store1[0][0].len(), 2);
-	assert_eq!(poly_loops_store1[0][1].len(), 2);
-	assert_eq!(poly_loops_store1[0][2].len(), 2);
+	assert!(geom_loops_store1[0][0].is_closed());
+	assert!(geom_loops_store1[0][1].is_closed());
+	assert!(geom_loops_store1[0][2].is_closed());
+	assert!(geom_loops_store1[0][0].is_geometric_consistent());
+	assert!(geom_loops_store1[0][1].is_geometric_consistent());
+	assert!(geom_loops_store1[0][2].is_geometric_consistent());
 }
 
 #[test]
@@ -196,29 +198,41 @@ fn rotated_intersection() {
 	assert_eq!(geom_loops_store0[0].len(), 2);
 	assert!(geom_loops_store0[0][0].is_closed());
 	assert!(geom_loops_store0[0][1].is_closed());
-	assert_eq!(geom_loops_store0[0][0].len() * geom_loops_store0[0][1].len(), 15);
-	assert!(geom_loops_store0[0][0].len() > 2);
-	assert!(geom_loops_store0[0][1].len() > 2);
+	assert!(geom_loops_store0[0][0].is_geometric_consistent());
+	assert!(geom_loops_store0[0][1].is_geometric_consistent());
+	let (a, b) = (geom_loops_store0[0][0].len(), geom_loops_store0[0][1].len());
+	assert_eq!(a * b, 15, "{} {}", a, b);
+	assert!(a > 2);
+	assert!(b > 2);
 	assert_eq!(geom_loops_store0[1].len(), 2);
 	assert!(geom_loops_store0[1][0].is_closed());
 	assert!(geom_loops_store0[1][1].is_closed());
-	assert_eq!(geom_loops_store0[1][0].len() * geom_loops_store0[1][1].len(), 15);
-	assert!(geom_loops_store0[1][0].len() > 2);
-	assert!(geom_loops_store0[1][1].len() > 2);
+	assert!(geom_loops_store0[1][0].is_geometric_consistent());
+	assert!(geom_loops_store0[1][1].is_geometric_consistent());
+	let (a, b) = (geom_loops_store0[1][0].len(), geom_loops_store0[1][1].len());
+	assert_eq!(a * b, 15, "{} {}", a, b);
+	assert!(a > 2);
+	assert!(b > 2);
 	assert_eq!(geom_loops_store1.len(), 2);
 	assert_eq!(geom_loops_store1[0].len(), 2);
 	assert!(geom_loops_store1[0][0].is_closed());
 	assert!(geom_loops_store1[0][1].is_closed());
-	assert_eq!(geom_loops_store1[0][0].len() * geom_loops_store1[0][1].len(), 15);
-	assert!(geom_loops_store1[0][0].len() > 2);
-	assert!(geom_loops_store1[0][1].len() > 2);
+	assert!(geom_loops_store1[0][0].is_geometric_consistent());
+	assert!(geom_loops_store1[0][1].is_geometric_consistent());
+	let (a, b) = (geom_loops_store1[0][0].len(), geom_loops_store1[0][1].len());
+	assert_eq!(a * b, 15, "{} {}", a, b);
+	assert!(a > 2);
+	assert!(b > 2);
 	assert_eq!(geom_loops_store1[1].len(), 2);
 	assert!(geom_loops_store1[1][0].is_closed());
 	assert!(geom_loops_store1[1][1].is_closed());
-	assert_eq!(geom_loops_store1[1][0].len() * geom_loops_store1[1][1].len(), 15);
-	assert!(geom_loops_store1[1][0].len() > 2);
-	assert!(geom_loops_store1[1][1].len() > 2);
-	
+	assert!(geom_loops_store1[1][0].is_geometric_consistent());
+	assert!(geom_loops_store1[1][1].is_geometric_consistent());
+	let (a, b) = (geom_loops_store1[1][0].len(), geom_loops_store1[1][1].len());
+	assert_eq!(a * b, 15, "{} {}", a, b);
+	assert!(a > 2);
+	assert!(b > 2);
+
 	let wire = if geom_loops_store0[0][0].len() == 3 {
 		geom_loops_store0[0][0].clone()
 	} else {
@@ -337,26 +351,30 @@ fn crossing_edges() {
 	assert_eq!(geom_loops_store0[0].len(), 2);
 	assert!(geom_loops_store0[0][0].is_closed());
 	assert!(geom_loops_store0[0][1].is_closed());
-	assert_eq!(geom_loops_store0[0][0].len() * geom_loops_store0[0][1].len(), 8);
-	assert!(geom_loops_store0[0][0].len() > 1);
-	assert!(geom_loops_store0[0][1].len() > 1);
+	let (a, b) = (geom_loops_store0[0][0].len(), geom_loops_store0[0][1].len());
+	assert_eq!(a * b, 8, "{:?}", geom_loops_store0[0]);
+	assert!(a > 1);
+	assert!(b > 1);
 	assert_eq!(geom_loops_store0[1].len(), 2);
 	assert!(geom_loops_store0[1][0].is_closed());
 	assert!(geom_loops_store0[1][1].is_closed());
-	assert_eq!(geom_loops_store0[1][0].len() * geom_loops_store0[1][1].len(), 8);
-	assert!(geom_loops_store0[1][0].len() > 1);
-	assert!(geom_loops_store0[1][1].len() > 1);
+	let (a, b) = (geom_loops_store0[1][0].len(), geom_loops_store0[1][1].len());
+	assert_eq!(a * b, 8, "{:?}", geom_loops_store0[1]);
+	assert!(a > 1);
+	assert!(b > 1);
 	assert_eq!(geom_loops_store1.len(), 2);
 	assert_eq!(geom_loops_store1[0].len(), 2);
 	assert!(geom_loops_store1[0][0].is_closed());
 	assert!(geom_loops_store1[0][1].is_closed());
-	assert_eq!(geom_loops_store1[0][0].len() * geom_loops_store1[0][1].len(), 8);
-	assert!(geom_loops_store1[0][0].len() > 1);
-	assert!(geom_loops_store1[0][1].len() > 1);
+	let (a, b) = (geom_loops_store1[0][0].len(), geom_loops_store1[0][1].len());
+	assert_eq!(a * b, 8, "{:?}", geom_loops_store1[0]);
+	assert!(a > 1);
+	assert!(b > 1);
 	assert_eq!(geom_loops_store1[1].len(), 2);
 	assert!(geom_loops_store1[1][0].is_closed());
 	assert!(geom_loops_store1[1][1].is_closed());
-	assert_eq!(geom_loops_store1[1][0].len() * geom_loops_store1[1][1].len(), 8);
-	assert!(geom_loops_store1[1][0].len() > 1);
-	assert!(geom_loops_store1[1][1].len() > 1);
+	let (a, b) = (geom_loops_store1[1][0].len(), geom_loops_store1[1][1].len());
+	assert_eq!(a * b, 8, "{:?}", geom_loops_store1[1]);
+	assert!(a > 1);
+	assert!(b > 1);
 }

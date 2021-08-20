@@ -158,7 +158,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 			(Some((wire_index0, edge_index0)), Some((wire_index1, edge_index1))) => {
 				if wire_index0 == wire_index1 {
 					let len = self[wire_index0].len() - 2;
-					let edge_index1 = (len + edge_index1 - edge_index0 + 1) % len;
+					let edge_index1 = (len + edge_index1 - edge_index0) % len + 1;
 					let new_wire = self[wire_index0].split_off(edge_index1);
 					self.push(new_wire);
 				} else {
