@@ -118,7 +118,7 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 				n,
 				100,
 			)?;
-			(q, Point2::from(p0), Point2::from(p1))
+			(q, p0.into(), p1.into())
 		};
 		polyline.push(q);
 		params0.push(p0);
@@ -131,6 +131,36 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 			params1,
 			tol,
 		})
+	}
+
+	pub fn remeshing(&mut self) -> bool {
+		let div = algo::curve::parameter_division(self, self.parameter_range(), self.tol);
+		let mut polyline = PolylineCurve(Vec::new());
+		let mut params0 = PolylineCurve(Vec::new());
+		let mut params1 = PolylineCurve(Vec::new());
+		for t in div {
+			let pt = self.polyline().subs(t);
+			let normal = self.polyline().der(t);
+			let (pt, p0, p1) = match double_projection(
+				self.surface0(),
+				None,
+				self.surface1(),
+				None,
+				pt,
+				normal,
+				100,
+			) {
+				Some(got) => got,
+				None => return false,
+			};
+			polyline.push(pt);
+			params0.push(p0.into());
+			params1.push(p1.into());
+		}
+		self.polyline = polyline;
+		self.params0 = params0;
+		self.params1 = params1;
+		true
 	}
 }
 
@@ -270,7 +300,10 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 	type Point = Point3;
 	type Parameter = f64;
 	fn search_parameter(&self, point: Point3, _: Option<f64>, _: usize) -> Option<f64> {
-		let t = self.polyline.search_nearest_parameter(point, None, 1).unwrap();
+		let t = self
+			.polyline
+			.search_nearest_parameter(point, None, 1)
+			.unwrap();
 		let pt = self.subs(t);
 		match pt.near(&point) {
 			true => Some(t),

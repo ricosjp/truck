@@ -124,16 +124,17 @@ impl Polyline {
             .iter()
             .map(|pt| triangulation.insert((*pt).into()))
             .collect();
-        let mut prev: Option<[usize; 2]> = None;
+        let mut prev: Option<usize> = None;
         self.indices.iter().for_each(|a| {
-            if triangulation.can_add_constraint(poly2tri[a[0]], poly2tri[a[1]]) {
-                triangulation.add_constraint(poly2tri[a[0]], poly2tri[a[1]]);
-                prev = Some(*a);
-            } else if let Some(p) = prev {
-                if triangulation.can_add_constraint(poly2tri[p[0]], poly2tri[a[1]]) {
-                    triangulation.add_constraint(poly2tri[p[0]], poly2tri[a[1]]);
-                    prev = Some([p[0], a[1]]);
+            if let Some(p) = prev {
+                if triangulation.can_add_constraint(poly2tri[p], poly2tri[a[1]]) {
+                    triangulation.add_constraint(poly2tri[p], poly2tri[a[1]]);
+                    prev = None;
                 }
+            } else if triangulation.can_add_constraint(poly2tri[a[0]], poly2tri[a[1]]) {
+                triangulation.add_constraint(poly2tri[a[0]], poly2tri[a[1]]);
+            } else {
+                prev = Some(a[0]);
             }
         });
     }

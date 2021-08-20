@@ -1,6 +1,6 @@
 use super::*;
 use truck_geometry::*;
-const TOL: f64 = 0.05;
+const TOL: f64 = 0.01;
 
 crate::impl_from!(
 	NURBSCurve<Vector4>,
@@ -258,9 +258,24 @@ fn rotated_intersection() {
 	};
 	let face3 = Face::new(vec![wire], surface1.clone());
 	let shell: Shell<_, _, _> = vec![face0.inverse(), face1.inverse(), face2, face3].into();
+	let mut set = std::collections::HashSet::new();
+	for edge in shell.edge_iter() {
+		if set.get(&edge.id()).is_none() {
+			set.insert(edge.id());
+			match edge.get_curve() {
+				AlternativeIntersection::SecondType(mut curve) => {
+					let len = curve.polyline().len();
+					curve.remeshing();
+					println!("{} {}", len, curve.polyline().len());
+					edge.set_curve(AlternativeIntersection::SecondType(curve));
+				}
+				_ => {}
+			}
+		}
+	}
 	assert!(Solid::try_new(vec![shell.clone()]).is_ok(), "{:?}", shell.shell_condition());
 	let polygon = shell.triangulation(TOL).unwrap().into_polygon();
-	let file = std::fs::File::create("parabola_intersection.obj").unwrap();
+	let file = std::fs::File::create("rotated_intersection.obj").unwrap();
 	obj::write(&polygon, file).unwrap();
 }
 
@@ -330,7 +345,7 @@ fn crossing_edges() {
 	let wire00: Wire<_, _> = vec![edge00, edge02.inverse()].into();
 	let wire01: Wire<_, _> = vec![edge01, edge02].into();
 	let face00 = Face::new(vec![wire00], surface0.clone());
-	let face01 = Face::new(vec![wire01], surface0);
+	let face01 = Face::new(vec![wire01], surface0.clone());
 	let geom_shell0: Shell<_, _, _> = vec![face00.inverse(), face01.inverse()].into();
 
 	let v10 = Vertex::new(Point3::new(1.0, 0.0, -1.0));
@@ -341,7 +356,7 @@ fn crossing_edges() {
 	let wire10: Wire<_, _> = vec![edge10, edge12.inverse()].into();
 	let wire11: Wire<_, _> = vec![edge11, edge12].into();
 	let face10 = Face::new(vec![wire10], surface1.clone());
-	let face11 = Face::new(vec![wire11], surface1);
+	let face11 = Face::new(vec![wire11], surface1.clone());
 	let geom_shell1: Shell<_, _, _> = vec![face10, face11].into();
 
 	let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
@@ -386,4 +401,49 @@ fn crossing_edges() {
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store1[1]);
 	assert!(a > 1);
 	assert!(b > 1);
+	
+	let wire = if geom_loops_store0[0][0].len() == 2 {
+		geom_loops_store0[0][0].clone()
+	} else {
+		geom_loops_store0[0][1].clone()
+	};
+	let face0 = Face::new(vec![wire], surface0.clone());
+	let wire = if geom_loops_store0[1][0].len() == 2 {
+		geom_loops_store0[1][0].clone()
+	} else {
+		geom_loops_store0[1][1].clone()
+	};
+	let face1 = Face::new(vec![wire], surface0.clone());
+	let wire = if geom_loops_store1[0][0].len() == 2 {
+		geom_loops_store1[0][0].clone()
+	} else {
+		geom_loops_store1[0][1].clone()
+	};
+	let face2 = Face::new(vec![wire], surface1.clone());
+	let wire = if geom_loops_store1[1][0].len() == 2 {
+		geom_loops_store1[1][0].clone()
+	} else {
+		geom_loops_store1[1][1].clone()
+	};
+	let face3 = Face::new(vec![wire], surface1.clone());
+	let shell: Shell<_, _, _> = vec![face0.inverse(), face1.inverse(), face2, face3].into();
+	let mut set = std::collections::HashSet::new();
+	for edge in shell.edge_iter() {
+		if set.get(&edge.id()).is_none() {
+			set.insert(edge.id());
+			match edge.get_curve() {
+				AlternativeIntersection::SecondType(mut curve) => {
+					let len = curve.polyline().len();
+					curve.remeshing();
+					println!("{} {}", len, curve.polyline().len());
+					edge.set_curve(AlternativeIntersection::SecondType(curve));
+				}
+				_ => {}
+			}
+		}
+	}
+	assert!(Solid::try_new(vec![shell.clone()]).is_ok(), "{:?}", shell.shell_condition());
+	let polygon = shell.triangulation(TOL).unwrap().into_polygon();
+	let file = std::fs::File::create("crossing_edges.obj").unwrap();
+	obj::write(&polygon, file).unwrap();
 }
