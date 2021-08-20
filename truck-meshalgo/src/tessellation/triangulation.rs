@@ -105,12 +105,12 @@ impl Polyline {
             .try_fold(0_i32, move |counter, edge| {
                 let a = self.positions[edge[0]] - c;
                 let b = self.positions[edge[1]] - c;
-                let x = (a[0] * b[1] - a[1] * b[0]) * (b[1] - a[1]);
+                let x = (a[0] * b[1] - a[1] * b[0]) / (b[1] - a[1]);
                 if f64::abs(x) < tol && a[1] * b[1] < 0.0 {
                     None
-                } else if x > tol && a[1] <= 0.0 && b[1] > 0.0 {
+                } else if x > tol && a[1] <= -tol && b[1] > tol {
                     Some(counter + 1)
-                } else if x > tol && a[1] >= 0.0 && b[1] < 0.0 {
+                } else if x > tol && a[1] >= tol && b[1] < -tol {
                     Some(counter - 1)
                 } else {
                     Some(counter)
@@ -127,8 +127,17 @@ impl Polyline {
             .iter()
             .map(|pt| triangulation.insert((*pt).into()))
             .collect();
+        let mut prev: Option<[usize; 2]> = None;
         self.indices.iter().for_each(|a| {
-            triangulation.add_constraint(poly2tri[a[0]], poly2tri[a[1]]);
+            if triangulation.can_add_constraint(poly2tri[a[0]], poly2tri[a[1]]) {
+                triangulation.add_constraint(poly2tri[a[0]], poly2tri[a[1]]);
+                prev = Some(*a);
+            } else if let Some(p) = prev {
+                if p[1] == a[0] {
+                    triangulation.add_constraint(poly2tri[p[0]], poly2tri[a[1]]);
+                    prev = Some([p[0], a[1]]);
+                }
+            }
         });
     }
 }

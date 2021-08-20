@@ -186,6 +186,10 @@ fn rotated_intersection() {
 
 	let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
 	let poly_shell1 = geom_shell1.triangulation(TOL).unwrap();
+	let file = std::fs::File::create("polyshell0.obj").unwrap();
+	obj::write(&poly_shell0.into_polygon(), file).unwrap();
+	let file = std::fs::File::create("polyshell1.obj").unwrap();
+	obj::write(&poly_shell1.into_polygon(), file).unwrap();
 	let (geom_loops_store0, _poly_loops_store0, geom_loops_store1, _poly_loops_store1) =
 		create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL).unwrap();
 	assert_eq!(geom_loops_store0.len(), 2);
