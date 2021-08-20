@@ -195,6 +195,27 @@ impl<P, C> Edge<P, C> {
     #[inline(always)]
     pub fn absolute_ends(&self) -> (&Vertex<P>, &Vertex<P>) { (&self.vertices.0, &self.vertices.1) }
 
+    /// Returns a clone of the edge without inversion.
+    /// # Examples
+    /// ```
+    /// use truck_topology::{Vertex, Edge};
+    /// let v = Vertex::news(&[(), ()]);
+    /// let edge0 = Edge::new(&v[0], &v[1], ());
+    /// let edge1 = edge0.inverse();
+    /// let edge2 = edge1.absolute_clone();
+    /// assert_eq!(edge0, edge2);
+    /// assert_ne!(edge1, edge2);
+    /// assert!(edge1.is_same(&edge2));
+    /// ```
+    #[inline(always)]
+    pub fn absolute_clone(&self) -> Self {
+        Self {
+            vertices: self.vertices.clone(),
+            curve: Arc::clone(&self.curve),
+            orientation: true,
+        }
+    }
+
     /// Returns whether two edges are the same. Returns `true` even if the orientaions are different.
     /// ```
     /// use truck_topology::{Vertex, Edge};

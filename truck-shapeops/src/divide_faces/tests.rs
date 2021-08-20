@@ -258,9 +258,7 @@ fn rotated_intersection() {
 	};
 	let face3 = Face::new(vec![wire], surface1.clone());
 	let shell: Shell<_, _, _> = vec![face0.inverse(), face1.inverse(), face2, face3].into();
-	let polygon = shell.triangulation(TOL).unwrap().into_polygon();
-	let file = std::fs::File::create("parabola_intersection.obj").unwrap();
-	obj::write(&polygon, file).unwrap();
+	assert!(Solid::try_new(vec![shell.clone()]).is_ok(), "{:?}", shell.shell_condition());
 }
 
 #[test]
@@ -351,6 +349,8 @@ fn crossing_edges() {
 	assert_eq!(geom_loops_store0[0].len(), 2);
 	assert!(geom_loops_store0[0][0].is_closed());
 	assert!(geom_loops_store0[0][1].is_closed());
+	assert!(geom_loops_store0[0][0].is_geometric_consistent());
+	assert!(geom_loops_store0[0][1].is_geometric_consistent());
 	let (a, b) = (geom_loops_store0[0][0].len(), geom_loops_store0[0][1].len());
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store0[0]);
 	assert!(a > 1);
@@ -358,6 +358,8 @@ fn crossing_edges() {
 	assert_eq!(geom_loops_store0[1].len(), 2);
 	assert!(geom_loops_store0[1][0].is_closed());
 	assert!(geom_loops_store0[1][1].is_closed());
+	assert!(geom_loops_store0[1][0].is_geometric_consistent());
+	assert!(geom_loops_store0[1][1].is_geometric_consistent());
 	let (a, b) = (geom_loops_store0[1][0].len(), geom_loops_store0[1][1].len());
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store0[1]);
 	assert!(a > 1);
@@ -366,6 +368,8 @@ fn crossing_edges() {
 	assert_eq!(geom_loops_store1[0].len(), 2);
 	assert!(geom_loops_store1[0][0].is_closed());
 	assert!(geom_loops_store1[0][1].is_closed());
+	assert!(geom_loops_store1[0][0].is_geometric_consistent());
+	assert!(geom_loops_store1[0][1].is_geometric_consistent());
 	let (a, b) = (geom_loops_store1[0][0].len(), geom_loops_store1[0][1].len());
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store1[0]);
 	assert!(a > 1);
@@ -373,6 +377,8 @@ fn crossing_edges() {
 	assert_eq!(geom_loops_store1[1].len(), 2);
 	assert!(geom_loops_store1[1][0].is_closed());
 	assert!(geom_loops_store1[1][1].is_closed());
+	assert!(geom_loops_store1[1][0].is_geometric_consistent());
+	assert!(geom_loops_store1[1][1].is_geometric_consistent());
 	let (a, b) = (geom_loops_store1[1][0].len(), geom_loops_store1[1][1].len());
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store1[1]);
 	assert!(a > 1);
