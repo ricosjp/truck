@@ -52,10 +52,7 @@ where
         }
         let surface = face.get_surface();
         let mut polyline = Polyline::default();
-        let polygon = match wires
-            .iter()
-            .all(|wire| polyline.add_wire(&surface, wire))
-        {
+        let polygon = match wires.iter().all(|wire| polyline.add_wire(&surface, wire)) {
             true => Some(trimming_tessellation(&surface, &polyline, tol)),
             false => None,
         }?;
@@ -133,7 +130,7 @@ impl Polyline {
                 triangulation.add_constraint(poly2tri[a[0]], poly2tri[a[1]]);
                 prev = Some(*a);
             } else if let Some(p) = prev {
-                if p[1] == a[0] {
+                if triangulation.can_add_constraint(poly2tri[p[0]], poly2tri[a[1]]) {
                     triangulation.add_constraint(poly2tri[p[0]], poly2tri[a[1]]);
                     prev = Some([p[0], a[1]]);
                 }

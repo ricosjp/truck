@@ -9,13 +9,13 @@ const SHAPE_JSONS: [&'static [u8]; 3] = [
 
 #[test]
 fn solid_is_closed() {
-    for json in SHAPE_JSONS.iter() {
+    for (i, json) in SHAPE_JSONS.iter().enumerate() {
         let solid = Solid::extract(serde_json::from_reader(*json).unwrap()).unwrap();
         let mut poly = solid.triangulation(0.01).unwrap().into_polygon();
         poly.put_together_same_attrs()
             .remove_degenerate_faces()
             .remove_unused_attrs();
-        assert_eq!(poly.shell_condition(), ShellCondition::Closed);
+        assert_eq!(poly.shell_condition(), ShellCondition::Closed, "not closed: file no. {}", i);
     }
 }
 

@@ -229,9 +229,7 @@ impl<P, C> Edge<P, C> {
     /// assert!(edge0.is_same(&edge3)); // The inversed edge is the "same" edge
     /// ```
     #[inline(always)]
-    pub fn is_same(&self, other: &Edge<P, C>) -> bool {
-        std::ptr::eq(Arc::as_ptr(&self.curve), Arc::as_ptr(&other.curve))
-    }
+    pub fn is_same(&self, other: &Edge<P, C>) -> bool { self.id() == other.id() }
 
     /// Returns the clone of the curve.
     /// # Remarks

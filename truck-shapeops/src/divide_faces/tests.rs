@@ -259,6 +259,9 @@ fn rotated_intersection() {
 	let face3 = Face::new(vec![wire], surface1.clone());
 	let shell: Shell<_, _, _> = vec![face0.inverse(), face1.inverse(), face2, face3].into();
 	assert!(Solid::try_new(vec![shell.clone()]).is_ok(), "{:?}", shell.shell_condition());
+	let polygon = shell.triangulation(TOL).unwrap().into_polygon();
+	let file = std::fs::File::create("parabola_intersection.obj").unwrap();
+	obj::write(&polygon, file).unwrap();
 }
 
 #[test]
