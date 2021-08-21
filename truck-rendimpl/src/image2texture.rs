@@ -32,13 +32,14 @@ where
         sample_count: 1,
         dimension: TextureDimension::D2,
         format,
-        usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
+        usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
     });
     queue.write_texture(
         ImageCopyTexture {
             texture: &texture,
             mip_level: 0,
             origin: Origin3d::ZERO,
+            aspect: TextureAspect::All,
         },
         bytemuck::cast_slice(&image_buffer),
         ImageDataLayout {

@@ -35,7 +35,6 @@ impl PolygonShaders {
             + include_str!("shaders/polygon.wgsl");
         let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(source.into()),
-            flags: ShaderFlags::VALIDATION,
             label: None,
         }));
         Self::new(
@@ -76,7 +75,6 @@ impl WireShaders {
     fn default(device: &Device) -> Self {
         let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(include_str!("shaders/line.wgsl").into()),
-            flags: ShaderFlags::VALIDATION,
             label: None,
         }));
         Self::new(

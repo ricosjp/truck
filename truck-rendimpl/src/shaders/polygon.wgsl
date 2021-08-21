@@ -19,7 +19,7 @@ struct Lights {
 };
 
 [[group(0), binding(1)]]
-var<storage> lights: [[access(read)]] Lights;
+var<storage> lights: Lights;
 
 [[block]]
 struct SceneInfo {

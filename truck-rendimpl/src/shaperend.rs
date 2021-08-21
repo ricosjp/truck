@@ -40,7 +40,8 @@ impl<Shape: MeshableShape> TryIntoInstance<PolygonInstance> for Shape {
 }
 
 impl<P, C, S> IntoInstance<PolygonInstance> for Shell<P, C, S>
-where Shell<P, C, S>: MeshableShape
+where
+    Shell<P, C, S>: MeshableShape,
 {
     type Descriptor = ShapeInstanceDescriptor;
     /// Creates `PolygonInstance` from `Shell`.
@@ -64,7 +65,8 @@ where Shell<P, C, S>: MeshableShape
 }
 
 impl<P, C, S> IntoInstance<PolygonInstance> for Solid<P, C, S>
-where Solid<P, C, S>: MeshableShape
+where
+    Solid<P, C, S>: MeshableShape,
 {
     type Descriptor = ShapeInstanceDescriptor;
     /// Creates `PolygonInstance` from `Solid`.
@@ -88,7 +90,8 @@ where Solid<P, C, S>: MeshableShape
 }
 
 impl<C, S> IntoInstance<WireFrameInstance> for Shell<Point3, C, S>
-where C: PolylineableCurve
+where
+    C: PolylineableCurve,
 {
     type Descriptor = ShapeWireFrameDescriptor;
     fn into_instance(
@@ -121,8 +124,8 @@ where C: PolylineableCurve
             }
             counter += len;
         }
-        let vertices = BufferHandler::from_slice(&points, handler.device(), BufferUsage::VERTEX);
-        let strips = BufferHandler::from_slice(&strips, handler.device(), BufferUsage::INDEX);
+        let vertices = BufferHandler::from_slice(&points, handler.device(), BufferUsages::VERTEX);
+        let strips = BufferHandler::from_slice(&strips, handler.device(), BufferUsages::INDEX);
         WireFrameInstance {
             vertices: Arc::new(vertices),
             strips: Arc::new(strips),
@@ -134,7 +137,8 @@ where C: PolylineableCurve
 }
 
 impl<C, S> IntoInstance<WireFrameInstance> for Solid<Point3, C, S>
-where C: PolylineableCurve
+where
+    C: PolylineableCurve,
 {
     type Descriptor = ShapeWireFrameDescriptor;
     fn into_instance(
@@ -169,8 +173,8 @@ where C: PolylineableCurve
             }
             counter += len;
         }
-        let vertices = BufferHandler::from_slice(&points, handler.device(), BufferUsage::VERTEX);
-        let strips = BufferHandler::from_slice(&strips, handler.device(), BufferUsage::INDEX);
+        let vertices = BufferHandler::from_slice(&points, handler.device(), BufferUsages::VERTEX);
+        let strips = BufferHandler::from_slice(&strips, handler.device(), BufferUsages::INDEX);
         WireFrameInstance {
             vertices: Arc::new(vertices),
             strips: Arc::new(strips),

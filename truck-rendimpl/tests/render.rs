@@ -10,12 +10,12 @@ use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (1024, 768);
 
-fn test_scene(backend: BackendBit) -> Scene {
+fn test_scene(backend: Backends) -> Scene {
     let instance = wgpu::Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = common::swap_chain_descriptor(PICTURE_SIZE);
-    let sc_desc = Arc::new(Mutex::new(sc_desc));
-    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let config = common::swap_chain_descriptor(PICTURE_SIZE);
+    let config = Arc::new(Mutex::new(config));
+    let handler = DeviceHandler::new(device, queue, config);
     Scene::new(
         handler,
         &SceneDescriptor {
@@ -49,8 +49,8 @@ fn shape_cube() -> Solid {
 }
 
 fn nontex_raytracing(scene: &mut Scene) -> Vec<u8> {
-    let (device, sc_desc) = (scene.device(), scene.sc_desc());
-    let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let (device, config) = (scene.device(), scene.config());
+    let texture = device.create_texture(&common::texture_descriptor(&config));
     let mut shader = include_str!("../src/shaders/microfacet-module.wgsl").to_string();
     shader += include_str!("shaders/raytraces.wgsl");
     let plane = Plane {
@@ -64,8 +64,8 @@ fn nontex_raytracing(scene: &mut Scene) -> Vec<u8> {
 }
 
 fn nontex_polygon(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
-    let (device, sc_desc) = (scene.device(), scene.sc_desc());
-    let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let (device, config) = (scene.device(), scene.config());
+    let texture = device.create_texture(&common::texture_descriptor(&config));
     let cube: PolygonInstance = creator.create_instance(
         &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
         &PolygonInstanceDescriptor {
@@ -86,8 +86,8 @@ fn nontex_polygon(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
 }
 
 fn nontex_shape(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
-    let (device, sc_desc) = (scene.device(), scene.sc_desc());
-    let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let (device, config) = (scene.device(), scene.config());
+    let texture = device.create_texture(&common::texture_descriptor(&config));
     let cube: PolygonInstance = creator.create_instance(
         &shape_cube(),
         &ShapeInstanceDescriptor {
@@ -108,7 +108,7 @@ fn nontex_shape(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn exec_nontex_render_test(backend: BackendBit, out_dir: &str) {
+fn exec_nontex_render_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
     let mut scene = test_scene(backend);
@@ -133,7 +133,9 @@ fn exec_nontex_render_test(backend: BackendBit, out_dir: &str) {
 }
 
 #[test]
-fn nontex_render_test() { common::os_alt_exec_test(exec_nontex_render_test); }
+fn nontex_render_test() {
+    common::os_alt_exec_test(exec_nontex_render_test);
+}
 
 fn generate_texture(scene: &mut Scene, out_dir: String) -> DynamicImage {
     let texture = common::gradation_texture(scene);
@@ -145,8 +147,8 @@ fn generate_texture(scene: &mut Scene, out_dir: String) -> DynamicImage {
 }
 
 fn tex_raytracing(scene: &mut Scene) -> Vec<u8> {
-    let (device, sc_desc) = (scene.device(), scene.sc_desc());
-    let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let (device, config) = (scene.device(), scene.config());
+    let texture = device.create_texture(&common::texture_descriptor(&config));
     let shader = include_str!("../src/shaders/microfacet-module.wgsl").to_string()
         + include_str!("shaders/raytraces.wgsl");
     let plane = Plane {
@@ -164,8 +166,8 @@ fn tex_polygon(
     creator: &InstanceCreator,
     gradtex: &Arc<DynamicImage>,
 ) -> Vec<u8> {
-    let (device, sc_desc) = (scene.device(), scene.sc_desc());
-    let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let (device, config) = (scene.device(), scene.config());
+    let texture = device.create_texture(&common::texture_descriptor(&config));
     let attach = creator.create_texture(gradtex);
     let cube: PolygonInstance = creator.create_instance(
         &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
@@ -188,8 +190,8 @@ fn tex_polygon(
 }
 
 fn tex_shape(scene: &mut Scene, creator: &InstanceCreator, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
-    let (device, sc_desc) = (scene.device(), scene.sc_desc());
-    let texture = device.create_texture(&common::texture_descriptor(&sc_desc));
+    let (device, config) = (scene.device(), scene.config());
+    let texture = device.create_texture(&common::texture_descriptor(&config));
     let attach = creator.create_texture(gradtex);
     let cube: PolygonInstance = creator.create_instance(
         &shape_cube(),
@@ -212,7 +214,7 @@ fn tex_shape(scene: &mut Scene, creator: &InstanceCreator, gradtex: &Arc<Dynamic
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn exec_tex_render_test(backend: BackendBit, out_dir: &str) {
+fn exec_tex_render_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
     let mut scene = test_scene(backend);
@@ -241,4 +243,6 @@ fn exec_tex_render_test(backend: BackendBit, out_dir: &str) {
 }
 
 #[test]
-fn tex_render_test() { common::os_alt_exec_test(exec_tex_render_test) }
+fn tex_render_test() {
+    common::os_alt_exec_test(exec_tex_render_test)
+}

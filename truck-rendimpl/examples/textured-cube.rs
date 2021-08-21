@@ -217,7 +217,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
 fn main() { MyApp::run(); }

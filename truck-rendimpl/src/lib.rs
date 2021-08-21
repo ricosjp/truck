@@ -162,8 +162,8 @@ pub trait CreateBuffers {
     /// Creates buffer handlers of attributes and indices.
     fn buffers(
         &self,
-        vertex_usage: BufferUsage,
-        index_usage: BufferUsage,
+        vertex_usage: BufferUsages,
+        index_usage: BufferUsages,
         device: &Device,
     ) -> (BufferHandler, BufferHandler);
 }

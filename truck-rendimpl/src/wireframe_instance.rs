@@ -34,15 +34,21 @@ impl WireFrameInstance {
     }
     /// Returns the wireframe state
     #[inline(always)]
-    pub fn instance_state(&self) -> &WireFrameState { &self.state }
+    pub fn instance_state(&self) -> &WireFrameState {
+        &self.state
+    }
     /// Returns the mutable reference to wireframe state
     #[inline(always)]
-    pub fn instance_state_mut(&mut self) -> &mut WireFrameState { &mut self.state }
+    pub fn instance_state_mut(&mut self) -> &mut WireFrameState {
+        &mut self.state
+    }
 }
 
 impl Instance for WireFrameInstance {
     type Shaders = WireShaders;
-    fn standard_shaders(creator: &InstanceCreator) -> WireShaders { creator.wire_shaders.clone() }
+    fn standard_shaders(creator: &InstanceCreator) -> WireShaders {
+        creator.wire_shaders.clone()
+    }
 }
 
 impl Rendered for WireFrameInstance {
@@ -56,7 +62,7 @@ impl Rendered for WireFrameInstance {
             &[
                 // matrix
                 PreBindGroupLayoutEntry {
-                    visibility: ShaderStage::VERTEX,
+                    visibility: ShaderStages::VERTEX,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -66,7 +72,7 @@ impl Rendered for WireFrameInstance {
                 },
                 // color
                 PreBindGroupLayoutEntry {
-                    visibility: ShaderStage::FRAGMENT,
+                    visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -80,9 +86,9 @@ impl Rendered for WireFrameInstance {
     fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
         let device = handler.device();
         let matrix_data: [[f32; 4]; 4] = self.state.matrix.cast::<f32>().unwrap().into();
-        let matrix_buffer = BufferHandler::from_slice(&matrix_data, device, BufferUsage::UNIFORM);
+        let matrix_buffer = BufferHandler::from_slice(&matrix_data, device, BufferUsages::UNIFORM);
         let color_data: [f32; 4] = self.state.color.cast::<f32>().unwrap().into();
-        let color_buffer = BufferHandler::from_slice(&color_data, device, BufferUsage::UNIFORM);
+        let color_buffer = BufferHandler::from_slice(&color_data, device, BufferUsages::UNIFORM);
         Arc::new(bind_group_util::create_bind_group(
             device,
             layout,
@@ -98,7 +104,7 @@ impl Rendered for WireFrameInstance {
         layout: &PipelineLayout,
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
-        let (device, sc_desc) = (handler.device(), handler.sc_desc());
+        let (device, config) = (handler.device(), handler.config());
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
             vertex: VertexState {
@@ -106,7 +112,7 @@ impl Rendered for WireFrameInstance {
                 entry_point: self.shaders.vertex_entry,
                 buffers: &[VertexBufferLayout {
                     array_stride: std::mem::size_of::<[f32; 3]>() as BufferAddress,
-                    step_mode: InputStepMode::Vertex,
+                    step_mode: VertexStepMode::Vertex,
                     attributes: &[VertexAttribute {
                         format: VertexFormat::Float32x3,
                         offset: 0,
@@ -118,9 +124,9 @@ impl Rendered for WireFrameInstance {
                 module: &self.shaders.fragment_module,
                 entry_point: self.shaders.fragment_entry,
                 targets: &[ColorTargetState {
-                    format: sc_desc.format,
+                    format: config.format,
                     blend: Some(BlendState::REPLACE),
-                    write_mask: ColorWrite::ALL,
+                    write_mask: ColorWrites::ALL,
                 }],
             }),
             primitive: PrimitiveState {
@@ -160,8 +166,8 @@ impl IntoInstance<WireFrameInstance> for Vec<(Point3, Point3)> {
             .map(|p| p.cast().unwrap().into())
             .collect();
         let strips: Vec<u32> = (0..2 * self.len()).map(|i| i as u32).collect();
-        let vb = BufferHandler::from_slice(&positions, device, BufferUsage::VERTEX);
-        let ib = BufferHandler::from_slice(&strips, device, BufferUsage::INDEX);
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
         WireFrameInstance {
             vertices: Arc::new(vb),
             strips: Arc::new(ib),

@@ -114,7 +114,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
             let vertex_buffer = BufferHandler::from_slice(
                 &[0 as u32, 1, 2, 2, 1, 3],
                 handler.device(),
-                BufferUsage::VERTEX,
+                BufferUsages::VERTEX,
             );
             (Arc::new(vertex_buffer), None)
         }
@@ -129,7 +129,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                         entries: &[
                             BindGroupLayoutEntry {
                                 binding: 0,
-                                visibility: ShaderStage::FRAGMENT,
+                                visibility: ShaderStages::FRAGMENT,
                                 ty: BindingType::Buffer {
                                     ty: BufferBindingType::Uniform,
                                     has_dynamic_offset: false,
@@ -139,7 +139,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             },
                             BindGroupLayoutEntry {
                                 binding: 1,
-                                visibility: ShaderStage::FRAGMENT,
+                                visibility: ShaderStages::FRAGMENT,
                                 ty: BindingType::Buffer {
                                     ty: BufferBindingType::Uniform,
                                     has_dynamic_offset: false,
@@ -153,15 +153,15 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
         }
         // bind group is only one uniform buffer: resolution
         fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
-            let sc_desc = handler.sc_desc();
-            let resolution = [sc_desc.width as f32, sc_desc.height as f32];
+            let config = handler.config();
+            let resolution = [config.width as f32, config.height as f32];
             Arc::new(bind_group_util::create_bind_group(
                 handler.device(),
                 layout,
                 vec![
-                    BufferHandler::from_slice(&resolution, handler.device(), BufferUsage::UNIFORM)
+                    BufferHandler::from_slice(&resolution, handler.device(), BufferUsages::UNIFORM)
                         .binding_resource(),
-                    BufferHandler::from_slice(&self.mouse, handler.device(), BufferUsage::UNIFORM)
+                    BufferHandler::from_slice(&self.mouse, handler.device(), BufferUsages::UNIFORM)
                         .binding_resource(),
                 ],
             ))
@@ -174,7 +174,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
             layout: &PipelineLayout,
             sample_count: u32,
         ) -> Arc<RenderPipeline> {
-            let sc_desc = handler.sc_desc();
+            let config = handler.config();
             Arc::new(
                 handler
                     .device()
@@ -185,7 +185,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             entry_point: "vs_main",
                             buffers: &[VertexBufferLayout {
                                 array_stride: std::mem::size_of::<u32>() as BufferAddress,
-                                step_mode: InputStepMode::Vertex,
+                                step_mode: VertexStepMode::Vertex,
                                 attributes: &[VertexAttribute {
                                     format: VertexFormat::Uint32,
                                     offset: 0,
@@ -197,9 +197,9 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             module: &self.module,
                             entry_point: "fs_main",
                             targets: &[ColorTargetState {
-                                format: sc_desc.format,
+                                format: config.format,
                                 blend: Some(BlendState::REPLACE),
-                                write_mask: ColorWrite::ALL,
+                                write_mask: ColorWrites::ALL,
                             }],
                         }),
                         primitive: PrimitiveState {
@@ -268,7 +268,6 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
         Some(device.create_shader_module(&ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(source.into()),
             label: None,
-            flags: ShaderFlags::VALIDATION,
         }))
     }
 }
@@ -280,7 +279,7 @@ fn main() {
     wb = wb.with_title("wGSL Sandbox");
     let window = wb.build(&event_loop).unwrap();
     let size = window.inner_size();
-    let instance = Instance::new(BackendBit::PRIMARY);
+    let instance = Instance::new(Backends::PRIMARY);
     let surface = unsafe { instance.create_surface(&window) };
 
     let (device, queue) = futures::executor::block_on(async {
@@ -305,19 +304,21 @@ fn main() {
             .unwrap()
     });
 
-    let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::RENDER_ATTACHMENT,
+    let config = SurfaceConfiguration {
+        usage: TextureUsages::RENDER_ATTACHMENT,
         format: TextureFormat::Bgra8Unorm,
         width: size.width,
         height: size.height,
         present_mode: PresentMode::Mailbox,
     };
 
-    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+    let mut surface = unsafe { instance.create_surface(&window) };
+    surface.configure(&device, &config);
+    // let mut swap_chain = device.create_swap_chain(&surface, &config);
     let handler = DeviceHandler::new(
         Arc::new(device),
         Arc::new(queue),
-        Arc::new(Mutex::new(sc_desc)),
+        Arc::new(Mutex::new(config)),
     );
     let mut scene = Scene::new(handler.clone(), &Default::default());
     let args: Vec<_> = std::env::args().collect();
@@ -347,10 +348,20 @@ fn main() {
             }
             Event::RedrawRequested(_) => {
                 scene.update_bind_group(&plane);
-                let frame = swap_chain
-                    .get_current_frame()
-                    .expect("Timeout when acquiring next swap chain texture");
-                scene.render_scene(&frame.output.view);
+                let frame = match surface.get_current_frame() {
+                    Ok(frame) => frame,
+                    Err(_) => {
+                        surface.configure(handler.device().as_ref(), &handler.config());
+                        surface
+                            .get_current_frame()
+                            .expect("Failed to acquire next surface texture!")
+                    }
+                };
+                let view = frame
+                    .output
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
+                scene.render_scene(&view);
                 if clicked {
                     plane.mouse[3] = -plane.mouse[3];
                     clicked = false;
@@ -359,10 +370,10 @@ fn main() {
             }
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Resized(size) => {
-                    let mut sc_desc = handler.lock_sc_desc().unwrap();
-                    sc_desc.width = size.width;
-                    sc_desc.height = size.height;
-                    swap_chain = handler.device().create_swap_chain(&surface, &sc_desc);
+                    let mut config = handler.lock_config().unwrap();
+                    config.width = size.width;
+                    config.height = size.height;
+                    surface = unsafe { instance.create_surface(&window) };
                     ControlFlow::Poll
                 }
                 WindowEvent::CloseRequested => ControlFlow::Exit,
@@ -390,7 +401,7 @@ fn main() {
                     ControlFlow::Poll
                 }
                 WindowEvent::CursorMoved { position, .. } => {
-                    let height = scene.sc_desc().height as f32;
+                    let height = scene.config().height as f32;
                     cursor = [position.x as f32, height - position.y as f32];
                     if dragging {
                         plane.mouse[0] = cursor[0];

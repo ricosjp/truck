@@ -7,7 +7,9 @@ static MAXID: AtomicUsize = AtomicUsize::new(0);
 impl RenderID {
     /// Generate the unique `RenderID`.
     #[inline(always)]
-    pub fn gen() -> Self { RenderID(MAXID.fetch_add(1, Ordering::SeqCst)) }
+    pub fn gen() -> Self {
+        RenderID(MAXID.fetch_add(1, Ordering::SeqCst))
+    }
 }
 
 impl DeviceHandler {
@@ -16,27 +18,33 @@ impl DeviceHandler {
     pub fn new(
         device: Arc<Device>,
         queue: Arc<Queue>,
-        sc_desc: Arc<Mutex<SwapChainDescriptor>>,
+        config: Arc<Mutex<SurfaceConfiguration>>,
     ) -> DeviceHandler {
         DeviceHandler {
             device,
             queue,
-            sc_desc,
+            config,
         }
     }
     /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Arc<Device> { &self.device }
+    pub fn device(&self) -> &Arc<Device> {
+        &self.device
+    }
     /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Arc<Queue> { &self.queue }
-    /// Returns the copy of swap chain descriptor.
+    pub fn queue(&self) -> &Arc<Queue> {
+        &self.queue
+    }
+    /// Returns the copy of surface configuration.
     #[inline(always)]
-    pub fn sc_desc(&self) -> SwapChainDescriptor { self.sc_desc.lock().unwrap().clone() }
-    /// Locks the swap chain descriptor.
+    pub fn config(&self) -> SurfaceConfiguration {
+        self.config.lock().unwrap().clone()
+    }
+    /// Locks the surface configuration.    
     #[inline(always)]
-    pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SwapChainDescriptor>> {
-        self.sc_desc.lock()
+    pub fn lock_config(&self) -> LockResult<MutexGuard<SurfaceConfiguration>> {
+        self.config.lock()
     }
 }
 
@@ -66,8 +74,8 @@ impl SceneDescriptor {
     /// ```
     #[inline(always)]
     pub fn camera_buffer(&self, handler: &DeviceHandler) -> BufferHandler {
-        let sc_desc = handler.sc_desc();
-        let as_rat = sc_desc.width as f64 / sc_desc.height as f64;
+        let config = handler.config();
+        let as_rat = config.width as f64 / config.height as f64;
         self.camera.buffer(as_rat, handler.device())
     }
 
@@ -90,7 +98,7 @@ impl SceneDescriptor {
     #[inline(always)]
     pub fn lights_buffer(&self, device: &Device) -> BufferHandler {
         let light_vec: Vec<_> = self.lights.iter().map(Light::light_info).collect();
-        BufferHandler::from_slice(&light_vec, device, BufferUsage::STORAGE)
+        BufferHandler::from_slice(&light_vec, device, BufferUsages::STORAGE)
     }
 }
 
@@ -98,7 +106,7 @@ impl Scene {
     #[inline(always)]
     fn camera_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
             ty: BindingType::Buffer {
                 ty: BufferBindingType::Uniform,
                 has_dynamic_offset: false,
@@ -111,7 +119,7 @@ impl Scene {
     #[inline(always)]
     fn lights_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
             ty: BindingType::Buffer {
                 ty: BufferBindingType::Storage { read_only: true },
                 has_dynamic_offset: false,
@@ -124,7 +132,7 @@ impl Scene {
     #[inline(always)]
     fn scene_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
             ty: BindingType::Buffer {
                 ty: BufferBindingType::Uniform,
                 has_dynamic_offset: false,
@@ -149,52 +157,52 @@ impl Scene {
     #[inline(always)]
     fn sampling_buffer(
         device: &Device,
-        sc_desc: &SwapChainDescriptor,
+        config: &SurfaceConfiguration,
         sample_count: u32,
     ) -> Texture {
         device.create_texture(&TextureDescriptor {
             size: Extent3d {
-                width: sc_desc.width,
-                height: sc_desc.height,
+                width: config.width,
+                height: config.height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count,
             dimension: TextureDimension::D2,
-            format: sc_desc.format,
-            usage: TextureUsage::RENDER_ATTACHMENT,
+            format: config.format,
+            usage: TextureUsages::RENDER_ATTACHMENT,
             label: None,
         })
     }
 
     #[inline(always)]
-    fn depth_texture(device: &Device, sc_desc: &SwapChainDescriptor, sample_count: u32) -> Texture {
+    fn depth_texture(device: &Device, config: &SurfaceConfiguration, sample_count: u32) -> Texture {
         device.create_texture(&TextureDescriptor {
             size: Extent3d {
-                width: sc_desc.width,
-                height: sc_desc.height,
+                width: config.width,
+                height: config.height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count,
             dimension: TextureDimension::D2,
             format: TextureFormat::Depth32Float,
-            usage: TextureUsage::RENDER_ATTACHMENT,
+            usage: TextureUsages::RENDER_ATTACHMENT,
             label: None,
         })
     }
 
     #[inline(always)]
     fn update_textures(&mut self) {
-        let sc_desc = self.sc_desc();
+        let config = self.config();
         let sample_count = self.scene_desc.sample_count;
-        if self.depth_texture_size != (sc_desc.width, sc_desc.height)
+        if self.depth_texture_size != (config.width, config.height)
             || sample_count != self.previous_sample_count
         {
-            self.depth_texture_size = (sc_desc.width, sc_desc.height);
+            self.depth_texture_size = (config.width, config.height);
             self.previous_sample_count = sample_count;
-            self.foward_depth = Self::depth_texture(self.device(), &sc_desc, sample_count);
-            self.sampling_buffer = Self::sampling_buffer(self.device(), &sc_desc, sample_count);
+            self.foward_depth = Self::depth_texture(self.device(), &config, sample_count);
+            self.sampling_buffer = Self::sampling_buffer(self.device(), &config, sample_count);
         }
     }
 
@@ -203,14 +211,14 @@ impl Scene {
     // This is referece because only for as wgpu is.
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
-        let (device, sc_desc) = (device_handler.device(), device_handler.sc_desc());
+        let (device, config) = (device_handler.device(), device_handler.config());
         let bind_group_layout = Self::init_scene_bind_group_layout(device);
         Scene {
             objects: Default::default(),
             bind_group_layout,
-            foward_depth: Self::depth_texture(device, &sc_desc, scene_desc.sample_count),
-            depth_texture_size: (sc_desc.width, sc_desc.height),
-            sampling_buffer: Self::sampling_buffer(device, &sc_desc, scene_desc.sample_count),
+            foward_depth: Self::depth_texture(device, &config, scene_desc.sample_count),
+            depth_texture_size: (config.width, config.height),
+            sampling_buffer: Self::sampling_buffer(device, &config, scene_desc.sample_count),
             previous_sample_count: scene_desc.sample_count,
             clock: std::time::Instant::now(),
             scene_desc: scene_desc.clone(),
@@ -220,38 +228,54 @@ impl Scene {
 
     /// Returns the reference of its own `DeviceHandler`.
     #[inline(always)]
-    pub fn device_handler(&self) -> &DeviceHandler { &self.device_handler }
+    pub fn device_handler(&self) -> &DeviceHandler {
+        &self.device_handler
+    }
 
     /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Arc<Device> { &self.device_handler.device }
+    pub fn device(&self) -> &Arc<Device> {
+        &self.device_handler.device
+    }
 
     /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Arc<Queue> { &self.device_handler.queue }
+    pub fn queue(&self) -> &Arc<Queue> {
+        &self.device_handler.queue
+    }
 
     /// Returns the copy of swap chain descriptor.
     #[inline(always)]
-    pub fn sc_desc(&self) -> SwapChainDescriptor { self.device_handler.sc_desc() }
+    pub fn config(&self) -> SurfaceConfiguration {
+        self.device_handler.config()
+    }
     /// Locks the swap chain descriptor.
     #[inline(always)]
-    pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SwapChainDescriptor>> {
-        self.device_handler.lock_sc_desc()
+    pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SurfaceConfiguration>> {
+        self.device_handler.lock_config()
     }
     /// Returns the elapsed time since the scene was created.
     #[inline(always)]
-    pub fn elapsed(&self) -> std::time::Duration { self.clock.elapsed() }
+    pub fn elapsed(&self) -> std::time::Duration {
+        self.clock.elapsed()
+    }
 
     /// Returns the reference of the descriptor.
     #[inline(always)]
-    pub fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
+    pub fn descriptor(&self) -> &SceneDescriptor {
+        &self.scene_desc
+    }
 
     /// Returns the mutable reference of the descriptor.
     #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> &mut SceneDescriptor { &mut self.scene_desc }
+    pub fn descriptor_mut(&mut self) -> &mut SceneDescriptor {
+        &mut self.scene_desc
+    }
     /// Returns the bind group layout in the scene.
     #[inline(always)]
-    pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
+    pub fn bind_group_layout(&self) -> &BindGroupLayout {
+        &self.bind_group_layout
+    }
 
     /// Creates a `UNIFORM` buffer of the camera.
     ///
@@ -286,7 +310,9 @@ impl Scene {
     /// };
     /// ```
     #[inline(always)]
-    pub fn lights_buffer(&self) -> BufferHandler { self.scene_desc.lights_buffer(self.device()) }
+    pub fn lights_buffer(&self) -> BufferHandler {
+        self.scene_desc.lights_buffer(self.device())
+    }
 
     /// Creates a `UNIFORM` buffer of the scene status.
     ///
@@ -305,7 +331,7 @@ impl Scene {
             time: self.elapsed().as_secs_f32(),
             num_of_lights: self.scene_desc.lights.len() as u32,
         };
-        BufferHandler::from_slice(&[scene_info], self.device(), BufferUsage::UNIFORM)
+        BufferHandler::from_slice(&[scene_info], self.device(), BufferUsages::UNIFORM)
     }
 
     /// Creates bind group.
@@ -364,7 +390,8 @@ impl Scene {
     pub fn add_objects<'a, R, I>(&mut self, objects: I) -> bool
     where
         R: 'a + Rendered,
-        I: IntoIterator<Item = &'a R>, {
+        I: IntoIterator<Item = &'a R>,
+    {
         let closure = move |flag, object| flag && self.add_object(object);
         objects.into_iter().fold(true, closure)
     }
@@ -382,18 +409,23 @@ impl Scene {
     pub fn remove_objects<'a, R, I>(&mut self, objects: I) -> bool
     where
         R: 'a + Rendered,
-        I: IntoIterator<Item = &'a R>, {
+        I: IntoIterator<Item = &'a R>,
+    {
         let closure = move |flag, object| flag && self.remove_object(object);
         objects.into_iter().fold(true, closure)
     }
 
     /// Removes all render objects from the scene.
     #[inline(always)]
-    pub fn clear_objects(&mut self) { self.objects.clear() }
+    pub fn clear_objects(&mut self) {
+        self.objects.clear()
+    }
 
     /// Returns the number of the render objects in the scene.
     #[inline(always)]
-    pub fn number_of_objects(&self) -> usize { self.objects.len() }
+    pub fn number_of_objects(&self) -> usize {
+        self.objects.len()
+    }
 
     /// Syncronizes the information of vertices of `object` in the CPU memory
     /// and that in the GPU memory.
@@ -421,7 +453,8 @@ impl Scene {
     pub fn update_vertex_buffers<'a, R, I>(&mut self, objects: I) -> bool
     where
         R: 'a + Rendered,
-        I: IntoIterator<Item = &'a R>, {
+        I: IntoIterator<Item = &'a R>,
+    {
         let closure = move |flag, object: &R| flag && self.update_vertex_buffer(object);
         objects.into_iter().fold(true, closure)
     }
@@ -450,7 +483,8 @@ impl Scene {
     pub fn update_bind_groups<'a, R, I>(&mut self, objects: I) -> bool
     where
         R: 'a + Rendered,
-        I: IntoIterator<Item = &'a R>, {
+        I: IntoIterator<Item = &'a R>,
+    {
         let closure = move |flag, object: &R| flag && self.update_bind_group(object);
         objects.into_iter().fold(true, closure)
     }
@@ -487,7 +521,8 @@ impl Scene {
     pub fn update_pipelines<'a, R, I>(&mut self, objects: I) -> bool
     where
         R: 'a + Rendered,
-        I: IntoIterator<Item = &'a R>, {
+        I: IntoIterator<Item = &'a R>,
+    {
         let closure = move |flag, object: &R| flag && self.update_pipeline(object);
         objects.into_iter().fold(true, closure)
     }
@@ -548,7 +583,10 @@ impl Scene {
                             index_buffer.size as u32 / std::mem::size_of::<u32>() as u32;
                         rpass.draw_indexed(0..index_size, 0, 0..1);
                     }
-                    None => rpass.draw(0..(object.vertex_buffer.size / object.vertex_buffer.stride) as u32, 0..1),
+                    None => rpass.draw(
+                        0..(object.vertex_buffer.size / object.vertex_buffer.stride) as u32,
+                        0..1,
+                    ),
                 }
             }
         }

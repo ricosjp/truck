@@ -71,7 +71,7 @@ impl MyApp {
                     reflectance: 0.0,
                     roughness: 0.0,
                     ambient_ratio: 1.0,
-                    alpha_blend: false,
+                    alpha_blend: true,
                 };
                 self.wireframe.instance_state_mut().color = Vector4::new(1.0, 1.0, 1.0, 1.0);
                 self.scene.add_object(&self.instance);
@@ -85,7 +85,7 @@ impl MyApp {
                     ambient_ratio: 0.02,
                     alpha_blend: false,
                 };
-                self.wireframe.instance_state_mut().color = Vector4::new(0.0, 0.0, 0.0, 1.0);
+                self.wireframe.instance_state_mut().color = Vector4::new(1.0, 1.0, 1.0, 1.0);
                 self.scene.add_object(&self.instance);
                 self.scene.add_object(&self.wireframe);
             }
@@ -109,9 +109,7 @@ impl MyApp {
                 bdd_box += match curve {
                     Curve::BSplineCurve(curve) => {
                         let bdb = curve.roughly_bounding_box();
-                        vec![*bdb.max(), *bdb.min()]
-                            .into_iter()
-                            .collect()
+                        vec![*bdb.max(), *bdb.min()].into_iter().collect()
                     }
                     Curve::NURBSCurve(curve) => curve.roughly_bounding_box(),
                 };
@@ -174,7 +172,9 @@ impl App for MyApp {
         app
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("simple shape viewer") }
+    fn app_title<'a>() -> Option<&'a str> {
+        Some("simple shape viewer")
+    }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         let file = std::fs::File::open(path).unwrap();
@@ -302,7 +302,11 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, view: &TextureView) {
+        self.scene.render_scene(view);
+    }
 }
 
-fn main() { MyApp::run(); }
+fn main() {
+    MyApp::run();
+}

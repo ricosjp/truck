@@ -169,7 +169,7 @@ impl App for MyApp {
         }
     }
 
-    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         *self.closed.lock().unwrap() = true;
         self.thread.take().unwrap().join().unwrap();

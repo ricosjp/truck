@@ -129,7 +129,7 @@ impl App for MyApp {
             self.scene.update_bind_group(shape);
         }
     }
-    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
 fn main() { MyApp::run() }

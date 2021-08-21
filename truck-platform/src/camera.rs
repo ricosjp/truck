@@ -249,7 +249,7 @@ impl Camera {
     /// };
     /// ```
     pub fn buffer(&self, as_rat: f64, device: &Device) -> BufferHandler {
-        BufferHandler::from_slice(&[self.camera_info(as_rat)], device, BufferUsage::UNIFORM)
+        BufferHandler::from_slice(&[self.camera_info(as_rat)], device, BufferUsages::UNIFORM)
     }
 }
 

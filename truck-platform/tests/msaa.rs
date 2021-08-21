@@ -19,22 +19,22 @@ fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
     .unwrap();
 }
 
-fn exec_msaa_test(backend: BackendBit, out_dir: &str) {
+fn exec_msaa_test(backend: Backends, out_dir: &str) {
     let out_dir = String::from(out_dir);
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::RENDER_ATTACHMENT,
+    let config = SurfaceConfiguration {
+        usage: TextureUsages::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,
         present_mode: PresentMode::Mailbox,
     };
-    let texture0 = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let texture1 = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let sc_desc = Arc::new(Mutex::new(sc_desc));
-    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let texture0 = device.create_texture(&common::texture_descriptor(&config));
+    let texture1 = device.create_texture(&common::texture_descriptor(&config));
+    let config = Arc::new(Mutex::new(config));
+    let handler = DeviceHandler::new(device, queue, config);
     let mut scene = Scene::new(
         handler.clone(),
         &SceneDescriptor {
@@ -57,8 +57,8 @@ fn exec_msaa_test(backend: BackendBit, out_dir: &str) {
 fn msaa_test() {
     let _ = env_logger::try_init();
     if cfg!(target_os = "windows") {
-        exec_msaa_test(BackendBit::VULKAN, "output/vulkan/");
-        exec_msaa_test(BackendBit::DX12, "output/dx12/");
+        exec_msaa_test(Backends::VULKAN, "output/vulkan/");
+        exec_msaa_test(Backends::DX12, "output/dx12/");
     } else if cfg!(target_os = "macos") {
         writeln!(
             &mut std::io::stderr(),
@@ -66,6 +66,6 @@ fn msaa_test() {
         )
         .unwrap();
     } else {
-        exec_msaa_test(BackendBit::VULKAN, "output/");
+        exec_msaa_test(Backends::VULKAN, "output/");
     }
 }

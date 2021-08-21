@@ -37,14 +37,14 @@ impl Material {
             self.reflectance as f32,
             self.ambient_ratio as f32,
         ];
-        BufferHandler::from_slice(&material_data, device, BufferUsage::UNIFORM)
+        BufferHandler::from_slice(&material_data, device, BufferUsages::UNIFORM)
     }
 
     #[doc(hidden)]
     #[inline(always)]
     pub fn bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::FRAGMENT,
+            visibility: ShaderStages::FRAGMENT,
             ty: BindingType::Buffer {
                 ty: BufferBindingType::Uniform,
                 has_dynamic_offset: false,
@@ -80,14 +80,14 @@ impl InstanceState {
     #[inline(always)]
     pub fn matrix_buffer(&self, device: &Device) -> BufferHandler {
         let matrix_data: [[f32; 4]; 4] = self.matrix.cast::<f32>().unwrap().into();
-        BufferHandler::from_slice(&matrix_data, device, BufferUsage::UNIFORM)
+        BufferHandler::from_slice(&matrix_data, device, BufferUsages::UNIFORM)
     }
 
     #[doc(hidden)]
     #[inline(always)]
     pub fn matrix_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+            visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
             ty: BindingType::Buffer {
                 ty: BufferBindingType::Uniform,
                 has_dynamic_offset: false,
@@ -110,11 +110,15 @@ impl InstanceState {
     /// };
     /// ```
     #[inline(always)]
-    pub fn material_buffer(&self, device: &Device) -> BufferHandler { self.material.buffer(device) }
+    pub fn material_buffer(&self, device: &Device) -> BufferHandler {
+        self.material.buffer(device)
+    }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn material_bgl_entry() -> PreBindGroupLayoutEntry { Material::bgl_entry() }
+    pub fn material_bgl_entry() -> PreBindGroupLayoutEntry {
+        Material::bgl_entry()
+    }
 
     /// Creates texture view and sampler of the instance's texture image.
     ///
@@ -142,7 +146,7 @@ impl InstanceState {
     #[inline(always)]
     pub fn textureview_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::FRAGMENT,
+            visibility: ShaderStages::FRAGMENT,
             ty: BindingType::Texture {
                 view_dimension: TextureViewDimension::D2,
                 sample_type: TextureSampleType::Float { filterable: true },
@@ -156,7 +160,7 @@ impl InstanceState {
     #[inline(always)]
     pub fn sampler_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
-            visibility: ShaderStage::FRAGMENT,
+            visibility: ShaderStages::FRAGMENT,
             ty: BindingType::Sampler {
                 filtering: true,
                 comparison: false,
