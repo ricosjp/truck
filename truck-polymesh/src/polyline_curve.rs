@@ -45,11 +45,15 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
 	}
 	#[inline(always)]
 	fn der(&self, t: f64) -> P::Diff {
-		if t <= 0.0 || self.len() as f64 <= t + 1.0 {
+		if t < 0.0 || (self.len() as f64) < t + 1.0 {
 			P::Diff::zero()
 		} else {
 			let n = t as usize;
-			self[n + 1] - self[n]
+			if n + 1 == self.len() {
+				self[n] - self[n - 1]
+			} else {
+				self[n + 1] - self[n]
+			}
 		}
 	}
 	#[inline(always)]

@@ -1,13 +1,12 @@
+use serde::{Deserialize, Serialize};
 use truck_base::cgmath64::*;
 use truck_meshalgo::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntersectionCurve<S> {
 	surface0: S,
 	surface1: S,
 	polyline: PolylineCurve<Point3>,
-	params0: PolylineCurve<Point2>,
-	params1: PolylineCurve<Point2>,
 	tol: f64,
 }
 
@@ -63,24 +62,6 @@ impl<S> IntersectionCurve<S> {
 	/// Returns the polyline leading this curve.
 	#[inline(always)]
 	pub(super) fn polyline_mut(&mut self) -> &mut PolylineCurve<Point3> { &mut self.polyline }
-	/// Returns the parameters of `self.surface0()`. We assume the following.
-	/// # Assumption
-	/// ```ignore
-	/// // let i: usize = ...;
-	/// let p = self.parameters0()[i];
-	/// assert!(self.surface0().subs(p[0], p[1]), self.polyline()[i]);
-	/// ```
-	#[inline(always)]
-	pub fn parameters0(&self) -> &PolylineCurve<Point2> { &self.params0 }
-	/// Returns the parameters of `self.surface0()`. We assume the following.
-	/// # Assumption
-	/// ```ignore
-	/// // let i: usize = ...;
-	/// let p = self.parameters1()[i];
-	/// assert!(self.surface1().subs(p[0], p[1]), self.polyline()[i]);
-	/// ```
-	#[inline(always)]
-	pub fn parameters1(&self) -> &PolylineCurve<Point2> { &self.params1 }
 	/// The tolerance for generating this intersection curve.
 	#[inline(always)]
 	pub fn tolerance(&self) -> f64 { self.tol }
@@ -96,20 +77,16 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 		tol: f64,
 	) -> Option<Self> {
 		let mut polyline = PolylineCurve(Vec::new());
-		let mut params0 = PolylineCurve(Vec::new());
-		let mut params1 = PolylineCurve(Vec::new());
 		for p in poly.windows(2) {
 			let n = (p[1] - p[0]).normalize();
-			let (q, p0, p1) = double_projection(&surface0, None, &surface1, None, p[0], n, 100)?;
+			let q = double_projection(&surface0, None, &surface1, None, p[0], n, 100)?.0;
 			polyline.push(q);
-			params0.push(Point2::from(p0));
-			params1.push(Point2::from(p1));
 		}
-		let (q, p0, p1) = if poly[0].near(&poly[poly.len() - 1]) {
-			(polyline[0], params0[0], params1[0])
+		let q = if poly[0].near(&poly[poly.len() - 1]) {
+			polyline[0]
 		} else {
 			let n = (poly[poly.len() - 1] - poly[poly.len() - 2]).normalize();
-			let (q, p0, p1) = double_projection(
+			double_projection(
 				&surface0,
 				None,
 				&surface1,
@@ -117,18 +94,13 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 				poly[poly.len() - 1],
 				n,
 				100,
-			)?;
-			(q, p0.into(), p1.into())
+			)?.0
 		};
 		polyline.push(q);
-		params0.push(p0);
-		params1.push(p1);
 		Some(Self {
 			surface0,
 			surface1,
 			polyline,
-			params0,
-			params1,
 			tol,
 		})
 	}
@@ -136,12 +108,10 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 	pub fn remeshing(&mut self) -> bool {
 		let div = algo::curve::parameter_division(self, self.parameter_range(), self.tol);
 		let mut polyline = PolylineCurve(Vec::new());
-		let mut params0 = PolylineCurve(Vec::new());
-		let mut params1 = PolylineCurve(Vec::new());
 		for t in div {
 			let pt = self.polyline().subs(t);
 			let normal = self.polyline().der(t);
-			let (pt, p0, p1) = match double_projection(
+			let (pt, _, _) = match double_projection(
 				self.surface0(),
 				None,
 				self.surface1(),
@@ -154,12 +124,8 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 				None => return false,
 			};
 			polyline.push(pt);
-			params0.push(p0.into());
-			params1.push(p1.into());
 		}
 		self.polyline = polyline;
-		self.params0 = params0;
-		self.params1 = params1;
 		true
 	}
 }
@@ -170,69 +136,38 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 	type Point = Point3;
 	type Vector = Vector3;
 	#[inline(always)]
-	fn parameter_range(&self) -> (f64, f64) { (0.0, self.polyline.len() as f64) }
+	fn parameter_range(&self) -> (f64, f64) { (0.0, self.polyline.len() as f64 - 1.0) }
 	fn subs(&self, t: f64) -> Point3 {
-		if t < 0.0 {
-			self.polyline[0]
-		} else if t + 1.0 > self.polyline.len() as f64 {
-			*self.polyline.last().unwrap()
-		} else if t.floor().near(&t) {
-			self.polyline[t as usize]
-		} else {
-			double_projection(
-				&self.surface0,
-				None,
-				&self.surface1,
-				None,
-				self.polyline.subs(t),
-				self.polyline.der(t),
-				100,
-			)
-			.unwrap()
-			.0
-		}
+		double_projection(
+			&self.surface0,
+			None,
+			&self.surface1,
+			None,
+			self.polyline.subs(t),
+			self.polyline.der(t),
+			100,
+		)
+		.unwrap()
+		.0
 	}
 	fn der(&self, t: f64) -> Vector3 {
-		if t < 0.0 || t + 1.0 > self.polyline.len() as f64 {
-			Vector3::zero()
-		} else if (t + TOLERANCE / 2.0).floor().near(&t) {
-			let i = t as usize;
-			let n = if i + 1 == self.polyline.len() {
-				self.polyline[i] - self.polyline[i - 1]
-			} else {
-				self.polyline[i + 1] - self.polyline[i]
-			};
-			let i = (t + TOLERANCE) as usize;
-			let d = self
-				.surface0
-				.normal(self.params0[i][0], self.params0[i][1])
-				.cross(self.surface1.normal(self.params1[i][0], self.params1[i][1]))
-				.normalize();
-			d * (n.dot(n) / d.dot(n))
-		} else {
-			let i = t as usize;
-			let n = if i + 1 == self.polyline.len() {
-				self.polyline[i] - self.polyline[i - 1]
-			} else {
-				self.polyline[i + 1] - self.polyline[i]
-			};
-			let (_, p0, p1) = double_projection(
-				&self.surface0,
-				None,
-				&self.surface1,
-				None,
-				self.polyline.subs(t),
-				n.normalize(),
-				100,
-			)
-			.unwrap();
-			let d = self
-				.surface0
-				.normal(p0.x, p0.y)
-				.cross(self.surface1.normal(p1.x, p1.y))
-				.normalize();
-			d * (n.dot(n) / d.dot(n))
-		}
+		let n = self.polyline.der(t);
+		let (_, p0, p1) = double_projection(
+			&self.surface0,
+			None,
+			&self.surface1,
+			None,
+			self.polyline.subs(t),
+			n.normalize(),
+			100,
+		)
+		.unwrap();
+		let d = self
+			.surface0
+			.normal(p0.x, p0.y)
+			.cross(self.surface1.normal(p1.x, p1.y))
+			.normalize();
+		d * (n.dot(n) / d.dot(n))
 	}
 	/// This method is unimplemented! Should panic!!
 	#[inline(always)]
@@ -262,25 +197,17 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 		let pt = self.polyline.subs(t);
 		let der = self.polyline.der(t);
 		let mut polyline = self.polyline.cut(t);
-		let mut params0 = self.params0.cut(t);
-		let mut params1 = self.params1.cut(t);
 		if !(t + TOLERANCE / 2.0).floor().near(&t) {
-			let (pt, p0, p1) =
+			let (pt, _, _) =
 				double_projection(&self.surface0, None, &self.surface1, None, pt, der, 100)
 					.unwrap();
 			*self.polyline.last_mut().unwrap() = pt;
 			*polyline.first_mut().unwrap() = pt;
-			*self.params0.last_mut().unwrap() = p0;
-			*params0.first_mut().unwrap() = p0;
-			*self.params1.last_mut().unwrap() = p1;
-			*params1.first_mut().unwrap() = p1;
 		}
 		Self {
 			surface0: self.surface0.clone(),
 			surface1: self.surface1.clone(),
 			polyline,
-			params0,
-			params1,
 			tol: self.tol,
 		}
 	}
@@ -289,8 +216,6 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 impl<S: Clone> Invertible for IntersectionCurve<S> {
 	fn invert(&mut self) {
 		self.polyline.invert();
-		self.params0.invert();
-		self.params1.invert();
 	}
 }
 

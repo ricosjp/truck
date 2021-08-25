@@ -96,14 +96,15 @@ fn intersection_curve_sphere_case() {
 
 	const N: usize = 100;
 	let mut sum = 0.0;
+	let (t0, t1) = curve.parameter_range();
 	for i in 0..N {
-		let t = 2.0 * PI * i as f64 / N as f64;
+		let t = t0 + (t1 - t0) * i as f64 / N as f64;
 		let pt = curve.subs(t);
 		assert_near!(pt.distance(Point3::origin()), 1.0);
 		let vec = curve.der(t);
-		assert!(pt.dot(vec).so_small());
+		assert!(pt.dot(vec).so_small(), "{} {} {:?}", i, t, vec);
 		assert!(vec[2].so_small());
-		sum += vec.magnitude() * 2.0 * PI / N as f64;
+		sum += vec.magnitude() * (t1 - t0) / N as f64;
 	}
 	assert!(f64::abs(sum - 2.0 * PI) < 0.1, "{}", sum);
 
