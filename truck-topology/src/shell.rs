@@ -631,7 +631,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// Returns `false` and not edit `self` if:
     /// - `vertex` is already included in `self`, or
     /// - cutting of edge fails.
-    #[inline(always)]
     pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
     where
         P: Clone,
@@ -670,7 +669,6 @@ impl<P, C, S> Shell<P, C, S> {
             .is_some()
     }
     /// Removes `vertex` from `self` by concat two edges on both sides.
-    #[inline(always)]
     pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
     where
         P: std::fmt::Debug,

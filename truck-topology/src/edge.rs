@@ -195,6 +195,27 @@ impl<P, C> Edge<P, C> {
     #[inline(always)]
     pub fn absolute_ends(&self) -> (&Vertex<P>, &Vertex<P>) { (&self.vertices.0, &self.vertices.1) }
 
+    /// Returns a clone of the edge without inversion.
+    /// # Examples
+    /// ```
+    /// use truck_topology::{Vertex, Edge};
+    /// let v = Vertex::news(&[(), ()]);
+    /// let edge0 = Edge::new(&v[0], &v[1], ());
+    /// let edge1 = edge0.inverse();
+    /// let edge2 = edge1.absolute_clone();
+    /// assert_eq!(edge0, edge2);
+    /// assert_ne!(edge1, edge2);
+    /// assert!(edge1.is_same(&edge2));
+    /// ```
+    #[inline(always)]
+    pub fn absolute_clone(&self) -> Self {
+        Self {
+            vertices: self.vertices.clone(),
+            curve: Arc::clone(&self.curve),
+            orientation: true,
+        }
+    }
+
     /// Returns whether two edges are the same. Returns `true` even if the orientaions are different.
     /// ```
     /// use truck_topology::{Vertex, Edge};
@@ -208,9 +229,7 @@ impl<P, C> Edge<P, C> {
     /// assert!(edge0.is_same(&edge3)); // The inversed edge is the "same" edge
     /// ```
     #[inline(always)]
-    pub fn is_same(&self, other: &Edge<P, C>) -> bool {
-        std::ptr::eq(Arc::as_ptr(&self.curve), Arc::as_ptr(&other.curve))
-    }
+    pub fn is_same(&self, other: &Edge<P, C>) -> bool { self.id() == other.id() }
 
     /// Returns the clone of the curve.
     /// # Remarks
@@ -352,15 +371,54 @@ impl<P, C> Edge<P, C> {
         geom_front.near(&*top_front) && geom_back.near(&*top_back)
     }
 
-    /// Cuts the edge at a point `pt`.
+    /// Cuts the edge at `vertex`.
     /// # Failure
-    /// Returns `None` if cannot find the parameter `t` such that `edge.get_curve().subs(t) == vertex.get_point()`.
+    /// Returns `None` if:
+    /// - cannot find the parameter `t` such that `edge.get_curve().subs(t) == vertex.get_point()`, or
+    /// - the found parameter is not in the parameter range without end points.
     pub fn cut(&self, vertex: &Vertex<P>) -> Option<(Self, Self)>
     where
         P: Clone,
         C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
         let mut curve0 = self.get_curve();
         let t = curve0.search_parameter(vertex.get_point(), None, SEARCH_PARAMETER_TRIALS)?;
+        let (t0, t1) = curve0.parameter_range();
+        if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
+            return None;
+        }
+        let curve1 = curve0.cut(t);
+        let edge0 = Edge {
+            vertices: (self.absolute_front().clone(), vertex.clone()),
+            orientation: self.orientation,
+            curve: Arc::new(Mutex::new(curve0)),
+        };
+        let edge1 = Edge {
+            vertices: (vertex.clone(), self.absolute_back().clone()),
+            orientation: self.orientation,
+            curve: Arc::new(Mutex::new(curve1)),
+        };
+        if self.orientation {
+            Some((edge0, edge1))
+        } else {
+            Some((edge1, edge0))
+        }
+    }
+
+    /// Cuts the edge at `vertex` with parameter `t`.
+    /// # Failure
+    /// Returns `None` if `!edge.get_curve().subs(t).near(&vertex.get_point())`.
+    pub fn cut_with_parameter(&self, vertex: &Vertex<P>, t: f64) -> Option<(Self, Self)>
+    where
+        P: Clone + Tolerance,
+        C: Cut<Point = P>, {
+        let mut curve0 = self.get_curve();
+        if !curve0.subs(t).near(&vertex.get_point()) {
+            return None;
+        }
+        let (t0, t1) = curve0.parameter_range();
+        if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
+            return None;
+        }
         let curve1 = curve0.cut(t);
         let edge0 = Edge {
             vertices: (self.absolute_front().clone(), vertex.clone()),
@@ -456,10 +514,7 @@ fn invert_mapped_edge() {
     let v0 = Vertex::new(0);
     let v1 = Vertex::new(1);
     let edge0 = Edge::new(&v0, &v1, 2).inverse();
-    let edge1 = edge0.mapped(
-        &move |i: &usize| *i + 10,
-        &move |j: &usize| *j + 20,
-    );
+    let edge1 = edge0.mapped(&move |i: &usize| *i + 10, &move |j: &usize| *j + 20);
     assert_eq!(edge1.absolute_front().get_point(), 10);
     assert_eq!(edge1.absolute_back().get_point(), 11);
     assert_eq!(edge0.orientation(), edge1.orientation());
