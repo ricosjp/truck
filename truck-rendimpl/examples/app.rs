@@ -20,9 +20,7 @@ pub trait App: Sized + 'static {
     fn init(handler: &DeviceHandler, info: AdapterInfo) -> Self;
     /// By overriding this function, you can change the display of the title bar.
     /// It is not possible to change the window while it is running.
-    fn app_title<'a>() -> Option<&'a str> {
-        None
-    }
+    fn app_title<'a>() -> Option<&'a str> { None }
     /// Default is `ControlFlow::WaitUntil(1 / 60 seconds)`.
     fn default_control_flow() -> ControlFlow {
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
@@ -33,21 +31,15 @@ pub trait App: Sized + 'static {
     /// By overriding this function, one can set the rendering process for each frame.
     fn render(&mut self, _frame: &TextureView) {}
     /// By overriding this function, one can change the behavior when the window is resized.
-    fn resized(&mut self, _size: PhysicalSize<u32>) -> ControlFlow {
-        Self::default_control_flow()
-    }
+    fn resized(&mut self, _size: PhysicalSize<u32>) -> ControlFlow { Self::default_control_flow() }
     /// By overriding this function, one can change the behavior when the window is moved.
     fn moved(&mut self, _position: PhysicalPosition<i32>) -> ControlFlow {
         Self::default_control_flow()
     }
     /// By overriding this function, one can change the behavior when the X button is pushed.
-    fn closed_requested(&mut self) -> ControlFlow {
-        ControlFlow::Exit
-    }
+    fn closed_requested(&mut self) -> ControlFlow { ControlFlow::Exit }
     /// By overriding this function, one can change the behavior when the window is destoroyed.
-    fn destroyed(&mut self) -> ControlFlow {
-        Self::default_control_flow()
-    }
+    fn destroyed(&mut self) -> ControlFlow { Self::default_control_flow() }
     /// By overriding this function, one can change the behavior when a file is dropped to the window.
     fn dropped_file(&mut self, _path: std::path::PathBuf) -> ControlFlow {
         Self::default_control_flow()
@@ -187,9 +179,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
 fn main() {
     struct MyApp;
     impl App for MyApp {
-        fn init(_: &DeviceHandler, _: AdapterInfo) -> MyApp {
-            MyApp
-        }
+        fn init(_: &DeviceHandler, _: AdapterInfo) -> MyApp { MyApp }
     }
     MyApp::run()
 }
