@@ -46,7 +46,7 @@ fn exec_msaa_test(backend: Backends, out_dir: &str) {
     common::render_one(&mut scene, &texture0, &plane);
     let buffer0 = common::read_texture(&handler, &texture0);
     save_buffer(out_dir.clone() + "sample_count_one.png", &buffer0);
-    scene.descriptor_mut().sample_count = 2;
+    scene.descriptor_mut().sample_count = 4;
     common::render_one(&mut scene, &texture1, &plane);
     let buffer1 = common::read_texture(&handler, &texture1);
     save_buffer(out_dir.clone() + "sample_count_two.png", &buffer1);

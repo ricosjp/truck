@@ -31,8 +31,8 @@ impl App for MyApp {
         let a = side_length / 2.0;
         let b = camera_dist / 2.0;
         let sample_count = match info.backend {
-            Backend::Vulkan => 2,
-            Backend::Dx12 => 2,
+            Backend::Vulkan => 4,
+            Backend::Dx12 => 4,
             _ => 1,
         };
         let scene_desc = SceneDescriptor {

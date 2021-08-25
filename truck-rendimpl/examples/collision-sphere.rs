@@ -30,8 +30,8 @@ enum RenderMode {
 impl App for MyApp {
     fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
         let sample_count = match info.backend {
-            Backend::Vulkan => 2,
-            Backend::Dx12 => 2,
+            Backend::Vulkan => 4,
+            Backend::Dx12 => 4,
             _ => 1,
         };
         let matrix = Matrix4::look_at_rh(

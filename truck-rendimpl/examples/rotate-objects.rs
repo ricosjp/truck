@@ -114,8 +114,8 @@ impl MyRender {
 impl App for MyRender {
     fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyRender {
         let sample_count = match info.backend {
-            Backend::Vulkan => 2,
-            Backend::Dx12 => 2,
+            Backend::Vulkan => 4,
+            Backend::Dx12 => 4,
             _ => 1,
         };
         let scene_desc = SceneDescriptor {

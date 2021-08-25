@@ -92,7 +92,7 @@ pub struct BufferHandler {
 /// use truck_platform::*;
 /// use wgpu::*;
 /// // let device: Device = ...
-/// # let instance = Instance::new(BackendBit::PRIMARY);
+/// # let instance = Instance::new(Backends::PRIMARY);
 /// # let (device, queue) = futures::executor::block_on(async {
 /// #    let adapter = instance
 /// #        .request_adapter(&RequestAdapterOptions {
@@ -212,7 +212,7 @@ pub struct Light {
 /// use std::sync::{Arc, Mutex};
 /// use truck_platform::*;
 /// use wgpu::*;
-/// let instance = Instance::new(BackendBit::PRIMARY);
+/// let instance = Instance::new(Backends::PRIMARY);
 /// let (device, queue) = futures::executor::block_on(async {
 ///     let adapter = instance
 ///         .request_adapter(&RequestAdapterOptions {
@@ -234,7 +234,7 @@ pub struct Light {
 ///         .unwrap()
 /// });
 /// let config = SurfaceConfiguration {
-///     usage: TextureUsage::RENDER_ATTACHMENT,
+///     usage: TextureUsages::RENDER_ATTACHMENT,
 ///     format: TextureFormat::Bgra8UnormSrgb,
 ///     width: 512,
 ///     height: 512,
