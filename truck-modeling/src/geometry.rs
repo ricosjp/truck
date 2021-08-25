@@ -1,9 +1,9 @@
 use super::*;
-use serde::{Serialize, Deserialize};
-use truck_geotrait::{Invertible, ParametricSurface};
-pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
+use serde::{Deserialize, Serialize};
 #[doc(hidden)]
-pub use truck_geometry::{inv_or_zero, algo};
+pub use truck_geometry::{algo, inv_or_zero};
+pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
+use truck_geotrait::{Invertible, ParametricSurface};
 
 /// 3-dimensional curve
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -183,39 +183,39 @@ impl IncludeCurve<Curve> for Surface {
     #[inline(always)]
     fn include(&self, curve: &Curve) -> bool {
         match self {
-            Surface::BSplineSurface(surface) => {
-                match curve {
-                    Curve::BSplineCurve(curve) => surface.include(curve),
-                    Curve::NURBSCurve(curve) => surface.include(curve),
-                }
+            Surface::BSplineSurface(surface) => match curve {
+                Curve::BSplineCurve(curve) => surface.include(curve),
+                Curve::NURBSCurve(curve) => surface.include(curve),
             },
-            Surface::NURBSSurface(surface) => {
-                match curve {
-                    Curve::BSplineCurve(curve) => surface.include(curve),
-                    Curve::NURBSCurve(curve) => surface.include(curve),
-                }
+            Surface::NURBSSurface(surface) => match curve {
+                Curve::BSplineCurve(curve) => surface.include(curve),
+                Curve::NURBSCurve(curve) => surface.include(curve),
             },
-            Surface::Plane(surface) => {
-                match curve {
-                    Curve::BSplineCurve(curve) => surface.include(curve),
-                    Curve::NURBSCurve(curve) => surface.include(curve),
-                }
+            Surface::Plane(surface) => match curve {
+                Curve::BSplineCurve(curve) => surface.include(curve),
+                Curve::NURBSCurve(curve) => surface.include(curve),
             },
-            Surface::RevolutedCurve(surface) => {
-                match surface.entity_curve() {
-                    Curve::BSplineCurve(entity_curve) => {
-                        let surface = RevolutedCurve::by_revolution(entity_curve, surface.origin(), surface.axis());
-                        match curve {
-                            Curve::BSplineCurve(curve) => surface.include(curve),
-                            Curve::NURBSCurve(curve) => surface.include(curve),
-                        }
-                    },
-                    Curve::NURBSCurve(entity_curve) => {
-                        let surface = RevolutedCurve::by_revolution(entity_curve, surface.origin(), surface.axis());
-                        match curve {
-                            Curve::BSplineCurve(curve) => surface.include(curve),
-                            Curve::NURBSCurve(curve) => surface.include(curve),
-                        }
+            Surface::RevolutedCurve(surface) => match surface.entity_curve() {
+                Curve::BSplineCurve(entity_curve) => {
+                    let surface = RevolutedCurve::by_revolution(
+                        entity_curve,
+                        surface.origin(),
+                        surface.axis(),
+                    );
+                    match curve {
+                        Curve::BSplineCurve(curve) => surface.include(curve),
+                        Curve::NURBSCurve(curve) => surface.include(curve),
+                    }
+                }
+                Curve::NURBSCurve(entity_curve) => {
+                    let surface = RevolutedCurve::by_revolution(
+                        entity_curve,
+                        surface.origin(),
+                        surface.axis(),
+                    );
+                    match curve {
+                        Curve::BSplineCurve(curve) => surface.include(curve),
+                        Curve::NURBSCurve(curve) => surface.include(curve),
                     }
                 }
             },
@@ -226,14 +226,49 @@ impl IncludeCurve<Curve> for Surface {
 impl SearchParameter for Surface {
     type Point = Point3;
     type Parameter = (f64, f64);
-    fn search_parameter(&self, point: Point3, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+    fn search_parameter(
+        &self,
+        point: Point3,
+        hint: Option<(f64, f64)>,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
         derive_surface_method!(self, SearchParameter::search_parameter, point, hint, trials)
+    }
+}
+
+impl SearchNearestParameter for Surface {
+    type Point = Point3;
+    type Parameter = (f64, f64);
+    fn search_nearest_parameter(
+        &self,
+        point: Point3,
+        hint: Option<(f64, f64)>,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
+        match self {
+            Surface::Plane(plane) => plane.search_nearest_parameter(point, hint, trials),
+            Surface::BSplineSurface(bspsurface) => {
+                bspsurface.search_nearest_parameter(point, hint, trials)
+            }
+            Surface::NURBSSurface(surface) => surface.search_nearest_parameter(point, hint, trials),
+            Surface::RevolutedCurve(rotted) => {
+                let hint = match hint {
+                    Some(hint) => hint,
+                    None => algo::surface::presearch(rotted, point, rotted.parameter_range(), 100),
+                };
+                algo::surface::search_nearest_parameter(rotted, point, hint, trials)
+            }
+        }
     }
 }
 
 impl ParameterDivision2D for Surface {
     #[inline(always)]
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
         derive_surface_method!(self, ParameterDivision2D::parameter_division, range, tol)
     }
 }
