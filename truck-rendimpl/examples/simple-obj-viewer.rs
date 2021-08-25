@@ -124,12 +124,8 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
-        let sample_count = match info.backend {
-            Backend::Vulkan => 4,
-            Backend::Dx12 => 4,
-            _ => 1,
-        };
+    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+        let sample_count = 4;
         let scene_desc = SceneDescriptor {
             background: Color::BLACK,
             camera: MyApp::create_camera(),

@@ -28,12 +28,8 @@ enum RenderMode {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
-        let sample_count = match info.backend {
-            Backend::Vulkan => 4,
-            Backend::Dx12 => 4,
-            _ => 1,
-        };
+    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+        let sample_count = 4;
         let matrix = Matrix4::look_at_rh(
             Point3::new(2.0, 2.0, 2.0),
             Point3::origin(),

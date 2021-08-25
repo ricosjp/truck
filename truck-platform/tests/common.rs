@@ -229,3 +229,15 @@ pub fn same_buffer(vec0: &Vec<u8>, vec1: &Vec<u8>) -> bool {
         .zip(vec1)
         .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)
 }
+
+pub fn os_alt_exec_test<F: Fn(Backends, &str)>(test: F) {
+    let _ = env_logger::try_init();
+    if cfg!(target_os = "windows") {
+        test(Backends::VULKAN, "output/vulkan/");
+        test(Backends::DX12, "output/dx12/");
+    } else if cfg!(target_os = "macos") {
+        test(Backends::METAL, "output/");
+    } else {
+        test(Backends::VULKAN, "output/");
+    }
+}

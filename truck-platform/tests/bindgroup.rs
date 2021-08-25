@@ -89,14 +89,4 @@ fn exec_bind_group_test(backend: Backends, out_dir: &str) {
 }
 
 #[test]
-fn bind_group_test() {
-    let _ = env_logger::try_init();
-    if cfg!(target_os = "windows") {
-        exec_bind_group_test(Backends::VULKAN, "output/vulkan/");
-        exec_bind_group_test(Backends::DX12, "output/dx12/");
-    } else if cfg!(target_os = "macos") {
-        exec_bind_group_test(Backends::METAL, "output/");
-    } else {
-        exec_bind_group_test(Backends::VULKAN, "output/");
-    }
-}
+fn bind_group_test() { common::os_alt_exec_test(exec_bind_group_test); }

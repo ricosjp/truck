@@ -25,16 +25,12 @@ struct MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
+    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
         let side_length = (N + 1) as f64 * 1.5;
         let camera_dist = side_length / 2.0 / (PI / 8.0).tan();
         let a = side_length / 2.0;
         let b = camera_dist / 2.0;
-        let sample_count = match info.backend {
-            Backend::Vulkan => 4,
-            Backend::Dx12 => 4,
-            _ => 1,
-        };
+        let sample_count = 4;
         let scene_desc = SceneDescriptor {
             camera: Camera::perspective_camera(
                 Matrix4::from_translation(camera_dist * Vector3::unit_z()),

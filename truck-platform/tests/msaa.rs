@@ -1,6 +1,5 @@
 mod common;
 use common::Plane;
-use std::io::Write;
 use std::sync::{Arc, Mutex};
 use truck_platform::*;
 use wgpu::*;
@@ -54,18 +53,4 @@ fn exec_msaa_test(backend: Backends, out_dir: &str) {
 }
 
 #[test]
-fn msaa_test() {
-    let _ = env_logger::try_init();
-    if cfg!(target_os = "windows") {
-        exec_msaa_test(Backends::VULKAN, "output/vulkan/");
-        exec_msaa_test(Backends::DX12, "output/dx12/");
-    } else if cfg!(target_os = "macos") {
-        writeln!(
-            &mut std::io::stderr(),
-            "Metal is not compatible with wgpu MSAA."
-        )
-        .unwrap();
-    } else {
-        exec_msaa_test(Backends::VULKAN, "output/");
-    }
-}
+fn msaa_test() { common::os_alt_exec_test(exec_msaa_test); }

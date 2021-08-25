@@ -112,12 +112,8 @@ impl MyRender {
 }
 
 impl App for MyRender {
-    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyRender {
-        let sample_count = match info.backend {
-            Backend::Vulkan => 4,
-            Backend::Dx12 => 4,
-            _ => 1,
-        };
+    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyRender {
+        let sample_count = 4;
         let scene_desc = SceneDescriptor {
             camera: MyRender::create_camera(),
             lights: vec![Light {
