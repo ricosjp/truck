@@ -4,10 +4,10 @@ const TOL: f64 = 0.01;
 
 crate::impl_from!(
 	NURBSCurve<Vector4>,
-	IntersectionCurve<BSplineSurface<Point3>>
+	IntersectionCurve<PolylineCurve, BSplineSurface<Point3>>
 );
 type AlternativeIntersection =
-	crate::test_util::Alternatives<NURBSCurve<Vector4>, IntersectionCurve<BSplineSurface<Point3>>>;
+	crate::test_util::Alternatives<NURBSCurve<Vector4>, IntersectionCurve<PolylineCurve, BSplineSurface<Point3>>>;
 
 fn parabola_surfaces() -> (BSplineSurface<Point3>, BSplineSurface<Point3>) {
 	// define surfaces
@@ -264,9 +264,9 @@ fn rotated_intersection() {
 			set.insert(edge.id());
 			match edge.get_curve() {
 				AlternativeIntersection::SecondType(mut curve) => {
-					let len = curve.polyline().len();
+					let len = curve.leader().len();
 					curve.remeshing();
-					println!("{} {}", len, curve.polyline().len());
+					println!("{} {}", len, curve.leader().len());
 					edge.set_curve(AlternativeIntersection::SecondType(curve));
 				}
 				_ => {}
@@ -433,9 +433,9 @@ fn crossing_edges() {
 			set.insert(edge.id());
 			match edge.get_curve() {
 				AlternativeIntersection::SecondType(mut curve) => {
-					let len = curve.polyline().len();
+					let len = curve.leader().len();
 					curve.remeshing();
-					println!("{} {}", len, curve.polyline().len());
+					println!("{} {}", len, curve.leader().len());
 					edge.set_curve(AlternativeIntersection::SecondType(curve));
 				}
 				_ => {}

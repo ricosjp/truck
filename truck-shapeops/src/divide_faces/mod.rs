@@ -334,23 +334,12 @@ where
 	}
 }
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
-trait Length { fn len(&self) -> usize; }
-#[cfg_attr(rustfmt, rustfmt_skip)]
-impl Length for PolylineCurve { fn len(&self) -> usize { self.0.len() } }
-#[cfg_attr(rustfmt, rustfmt_skip)]
-impl<S> Length for IntersectionCurve<S> { fn len(&self) -> usize { self.polyline().len() } }
-
 fn create_independent_loop<P, C, D>(poly_curve: C) -> Wire<P, D>
 where
-	C: Cut<Point = P> + Length,
+	C: Cut<Point = P>,
 	D: From<C>, {
-	let t = if poly_curve.len() % 2 == 0 {
-		poly_curve.len() as f64 / 2.0
-	} else {
-		(poly_curve.len() - 1) as f64 / 2.0
-	};
-
+	let (t0, t1) = poly_curve.parameter_range();
+	let t = (t0 + t1) / 2.0;
 	let mut poly_curve0 = poly_curve.clone();
 	let poly_curve1 = poly_curve0.cut(t);
 	let v0 = Vertex::new(poly_curve0.front());
@@ -376,7 +365,7 @@ where
 	C: SearchNearestParameter<Point = Point3, Parameter = f64>
 		+ SearchParameter<Point = Point3, Parameter = f64>
 		+ Cut<Point = Point3, Vector = Vector3>
-		+ From<IntersectionCurve<S>>,
+		+ From<IntersectionCurve<PolylineCurve, S>>,
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	let mut geom_loops_store0: LoopsStore<_, _> = geom_shell0.face_iter().collect();
@@ -430,7 +419,7 @@ where
 							&surface1,
 							&mut gemap0,
 						);
-						let polyline = intersection_curve.polyline_mut();
+						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
 					let idx01 =
@@ -445,7 +434,7 @@ where
 							&surface1,
 							&mut gemap1,
 						);
-						let polyline = intersection_curve.polyline_mut();
+						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
 					let idx10 =
@@ -460,7 +449,7 @@ where
 							&surface0,
 							&mut gemap0,
 						);
-						let polyline = intersection_curve.polyline_mut();
+						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
 					let idx11 =
@@ -475,7 +464,7 @@ where
 							&surface0,
 							&mut gemap1,
 						);
-						let polyline = intersection_curve.polyline_mut();
+						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
 					let pedge = Edge::new(&pv0, &pv1, polyline);
