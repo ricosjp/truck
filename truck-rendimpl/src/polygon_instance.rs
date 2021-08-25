@@ -184,7 +184,7 @@ impl Rendered for PolygonInstance {
             multisample: MultisampleState {
                 count: sample_count,
                 mask: !0,
-                alpha_to_coverage_enabled: true,
+                alpha_to_coverage_enabled: sample_count > 1,
             },
             label: None,
         });
