@@ -41,22 +41,22 @@ fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
     .unwrap();
 }
 
-fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
+fn exec_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = String::from(out_dir);
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = SwapChainDescriptor {
-        usage: TextureUsage::RENDER_ATTACHMENT,
+    let config = SurfaceConfiguration {
+        usage: TextureUsages::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8UnormSrgb,
         width: PICTURE_WIDTH,
         height: PICTURE_HEIGHT,
         present_mode: PresentMode::Mailbox,
     };
-    let texture0 = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let texture1 = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let texture2 = device.create_texture(&common::texture_descriptor(&sc_desc));
-    let sc_desc = Arc::new(Mutex::new(sc_desc));
+    let texture0 = device.create_texture(&common::texture_descriptor(&config));
+    let texture1 = device.create_texture(&common::texture_descriptor(&config));
+    let texture2 = device.create_texture(&common::texture_descriptor(&config));
+    let config = Arc::new(Mutex::new(config));
     let camera = Camera::perspective_camera(
         CAMERA_MATRIX.into(),
         CAMERA_FOV,
@@ -70,7 +70,7 @@ fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
         lights,
         ..Default::default()
     };
-    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let handler = DeviceHandler::new(device, queue, config);
     let mut scene = Scene::new(handler.clone(), &desc);
     let plane = new_plane!("shaders/unicolor.wgsl", "vs_main", "fs_main");
     common::render_one(&mut scene, &texture0, &plane);
@@ -89,14 +89,4 @@ fn exec_bind_group_test(backend: BackendBit, out_dir: &str) {
 }
 
 #[test]
-fn bind_group_test() {
-    let _ = env_logger::try_init();
-    if cfg!(target_os = "windows") {
-        exec_bind_group_test(BackendBit::VULKAN, "output/vulkan/");
-        exec_bind_group_test(BackendBit::DX12, "output/dx12/");
-    } else if cfg!(target_os = "macos") {
-        exec_bind_group_test(BackendBit::METAL, "output/");
-    } else {
-        exec_bind_group_test(BackendBit::VULKAN, "output/");
-    }
-}
+fn bind_group_test() { common::os_alt_exec_test(exec_bind_group_test); }

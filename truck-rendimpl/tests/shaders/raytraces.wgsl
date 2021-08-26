@@ -9,7 +9,7 @@ struct Lights {
 };
 
 [[group(0), binding(1)]]
-var<storage> lights: [[access(read)]] Lights;
+var<storage> lights: Lights;
 
 let PI: f32 = 3.141592653;
 let EPS: f32 = 1.0e-6;

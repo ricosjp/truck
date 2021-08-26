@@ -25,7 +25,7 @@ impl Light {
     /// ```
     #[inline(always)]
     pub fn buffer(&self, device: &Device) -> BufferHandler {
-        BufferHandler::from_slice(&[self.light_info()], device, BufferUsage::UNIFORM)
+        BufferHandler::from_slice(&[self.light_info()], device, BufferUsages::UNIFORM)
     }
 }
 

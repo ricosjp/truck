@@ -15,7 +15,6 @@ fn bgcheck_shaders(handler: &DeviceHandler) -> PolygonShaders {
             .device()
             .create_shader_module(&ShaderModuleDescriptor {
                 source: ShaderSource::Wgsl(source.into()),
-                flags: ShaderFlags::VALIDATION,
                 label: None,
             }),
     );
@@ -36,7 +35,6 @@ fn bgcheck_anti_shaders(handler: &DeviceHandler) -> PolygonShaders {
             .device()
             .create_shader_module(&ShaderModuleDescriptor {
                 source: ShaderSource::Wgsl(source.into()),
-                flags: ShaderFlags::VALIDATION,
                 label: None,
             }),
     );
@@ -94,8 +92,8 @@ fn exec_polygon_bgtest(
     id: usize,
     out_dir: String,
 ) -> bool {
-    let sc_desc = scene.sc_desc();
-    let tex_desc = common::texture_descriptor(&sc_desc);
+    let config = scene.config();
+    let tex_desc = common::texture_descriptor(&config);
     let texture = scene.device().create_texture(&tex_desc);
     common::render_one(scene, &texture, instance);
     let buffer = common::read_texture(scene.device_handler(), &texture);
@@ -104,13 +102,13 @@ fn exec_polygon_bgtest(
     common::same_buffer(&answer, &buffer)
 }
 
-fn exec_polymesh_nontex_bind_group_test(backend: BackendBit, out_dir: &str) {
+fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = wgpu::Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
-    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let config = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
+    let handler = DeviceHandler::new(device, queue, config);
     let mut scene = Scene::new(handler, &Default::default());
     let answer = common::nontex_answer_texture(&mut scene);
     let answer = common::read_texture(scene.device_handler(), &answer);
@@ -151,13 +149,13 @@ fn polymesh_nontex_bind_group_test() {
     common::os_alt_exec_test(exec_polymesh_nontex_bind_group_test)
 }
 
-fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
+fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = wgpu::Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
-    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let config = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
+    let handler = DeviceHandler::new(device, queue, config);
     let mut scene = Scene::new(handler, &Default::default());
     let answer = common::random_texture(&mut scene);
     let buffer = common::read_texture(scene.device_handler(), &answer);
@@ -204,4 +202,6 @@ fn exec_polymesh_tex_bind_group_test(backend: BackendBit, out_dir: &str) {
 }
 
 #[test]
-fn polymesh_tex_bind_group_test() { common::os_alt_exec_test(exec_polymesh_tex_bind_group_test) }
+fn polymesh_tex_bind_group_test() {
+    common::os_alt_exec_test(exec_polymesh_tex_bind_group_test)
+}

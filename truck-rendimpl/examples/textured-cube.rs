@@ -44,12 +44,8 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
-        let sample_count = match info.backend {
-            Backend::Vulkan => 2,
-            Backend::Dx12 => 2,
-            _ => 1,
-        };
+    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+        let sample_count = 4;
         let desc = SceneDescriptor {
             camera: MyApp::create_camera(),
             lights: vec![Light {
@@ -217,7 +213,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
 fn main() { MyApp::run(); }

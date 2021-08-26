@@ -28,12 +28,8 @@ enum RenderMode {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
-        let sample_count = match info.backend {
-            Backend::Vulkan => 2,
-            Backend::Dx12 => 2,
-            _ => 1,
-        };
+    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+        let sample_count = 4;
         let matrix = Matrix4::look_at_rh(
             Point3::new(2.0, 2.0, 2.0),
             Point3::origin(),
@@ -209,7 +205,7 @@ impl App for MyApp {
         }
         Self::default_control_flow()
     }
-    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
 fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh {

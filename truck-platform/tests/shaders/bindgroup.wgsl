@@ -25,7 +25,7 @@ struct SceneInfo {
 var<uniform> camera: Camera;
 
 [[group(0), binding(1)]]
-var<storage> lights: [[access(read)]] Lights;
+var<storage> lights: Lights;
 
 [[group(0), binding(2)]]
 var<uniform> info: SceneInfo;

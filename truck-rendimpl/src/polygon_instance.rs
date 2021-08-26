@@ -13,10 +13,14 @@ impl PolygonInstance {
     }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
-    pub fn instance_state(&self) -> &InstanceState { &self.state }
+    pub fn instance_state(&self) -> &InstanceState {
+        &self.state
+    }
     /// Returns the mutable reference to instance descriptor.
     #[inline(always)]
-    pub fn instance_state_mut(&mut self) -> &mut InstanceState { &mut self.state }
+    pub fn instance_state_mut(&mut self) -> &mut InstanceState {
+        &mut self.state
+    }
 
     /// swap vertex buffers
     #[inline(always)]
@@ -110,9 +114,12 @@ impl Rendered for PolygonInstance {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         let device = device_handler.device();
-        let sc_desc = device_handler.sc_desc();
+        let config = device_handler.config();
         let (fragment_module, fragment_entry) = match self.state.texture.is_some() {
-            true => (&self.shaders.tex_fragment_module, self.shaders.tex_fragment_entry),
+            true => (
+                &self.shaders.tex_fragment_module,
+                self.shaders.tex_fragment_entry,
+            ),
             false => (&self.shaders.fragment_module, self.shaders.fragment_entry),
         };
         let cull_mode = match self.state.backface_culling {
@@ -130,7 +137,7 @@ impl Rendered for PolygonInstance {
                 entry_point: self.shaders.vertex_entry,
                 buffers: &[VertexBufferLayout {
                     array_stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
-                    step_mode: InputStepMode::Vertex,
+                    step_mode: VertexStepMode::Vertex,
                     attributes: &[
                         VertexAttribute {
                             format: VertexFormat::Float32x3,
@@ -154,9 +161,9 @@ impl Rendered for PolygonInstance {
                 module: fragment_module,
                 entry_point: fragment_entry,
                 targets: &[ColorTargetState {
-                    format: sc_desc.format,
+                    format: config.format,
                     blend,
-                    write_mask: ColorWrite::ALL,
+                    write_mask: ColorWrites::ALL,
                 }],
             }),
             primitive: PrimitiveState {
@@ -177,12 +184,10 @@ impl Rendered for PolygonInstance {
             multisample: MultisampleState {
                 count: sample_count,
                 mask: !0,
-                alpha_to_coverage_enabled: true,
+                alpha_to_coverage_enabled: sample_count > 1,
             },
             label: None,
         });
         Arc::new(pipeline)
- 
     }
 }
-

@@ -5,8 +5,8 @@ use std::collections::HashMap;
 impl<V: Sized + Zeroable + Pod> ExpandedPolygon<V> {
     pub fn buffers(
         &self,
-        vertex_usage: BufferUsage,
-        index_usage: BufferUsage,
+        vertex_usage: BufferUsages,
+        index_usage: BufferUsages,
         device: &Device,
     ) -> (BufferHandler, BufferHandler) {
         let vertex_buffer = BufferHandler::from_slice(&self.vertices, device, vertex_usage);
@@ -28,8 +28,8 @@ impl CreateBuffers for PolygonMesh {
     #[inline(always)]
     fn buffers(
         &self,
-        vertex_usage: BufferUsage,
-        index_usage: BufferUsage,
+        vertex_usage: BufferUsages,
+        index_usage: BufferUsages,
         device: &Device,
     ) -> (BufferHandler, BufferHandler) {
         ExpandedPolygon::from(self).buffers(vertex_usage, index_usage, device)
@@ -52,11 +52,7 @@ impl IntoInstance<PolygonInstance> for PolygonMesh {
         shaders: &PolygonShaders,
         desc: &PolygonInstanceDescriptor,
     ) -> PolygonInstance {
-        let (vb, ib) = self.buffers(
-            BufferUsage::VERTEX,
-            BufferUsage::INDEX,
-            handler.device(),
-        );
+        let (vb, ib) = self.buffers(BufferUsages::VERTEX, BufferUsages::INDEX, handler.device());
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             state: desc.instance_state.clone(),
@@ -88,8 +84,8 @@ impl IntoInstance<WireFrameInstance> for PolygonMesh {
                 strips.push(face[(i + 1) % face.len()].pos as u32);
             }
         });
-        let vb = BufferHandler::from_slice(&positions, device, BufferUsage::VERTEX);
-        let ib = BufferHandler::from_slice(&strips, device, BufferUsage::INDEX);
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
         WireFrameInstance {
             vertices: Arc::new(vb),
             strips: Arc::new(ib),
@@ -104,8 +100,8 @@ impl CreateBuffers for StructuredMesh {
     #[inline(always)]
     fn buffers(
         &self,
-        vertex_usage: BufferUsage,
-        index_usage: BufferUsage,
+        vertex_usage: BufferUsages,
+        index_usage: BufferUsages,
         device: &Device,
     ) -> (BufferHandler, BufferHandler) {
         ExpandedPolygon::from(self).buffers(vertex_usage, index_usage, device)
@@ -121,11 +117,7 @@ impl IntoInstance<PolygonInstance> for StructuredMesh {
         shaders: &PolygonShaders,
         desc: &PolygonInstanceDescriptor,
     ) -> PolygonInstance {
-        let (vb, ib) = self.buffers(
-            BufferUsage::VERTEX,
-            BufferUsage::INDEX,
-            handler.device(),
-        );
+        let (vb, ib) = self.buffers(BufferUsages::VERTEX, BufferUsages::INDEX, handler.device());
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
             state: desc.instance_state.clone(),
@@ -169,8 +161,8 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
                 strips.push(i * len + j);
             }
         }
-        let vb = BufferHandler::from_slice(&positions, device, BufferUsage::VERTEX);
-        let ib = BufferHandler::from_slice(&strips, device, BufferUsage::INDEX);
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
         WireFrameInstance {
             vertices: Arc::new(vb),
             strips: Arc::new(ib),

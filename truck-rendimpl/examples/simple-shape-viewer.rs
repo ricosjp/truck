@@ -109,9 +109,7 @@ impl MyApp {
                 bdd_box += match curve {
                     Curve::BSplineCurve(curve) => {
                         let bdb = curve.roughly_bounding_box();
-                        vec![*bdb.max(), *bdb.min()]
-                            .into_iter()
-                            .collect()
+                        vec![*bdb.max(), *bdb.min()].into_iter().collect()
                     }
                     Curve::NURBSCurve(curve) => curve.roughly_bounding_box(),
                 };
@@ -141,12 +139,8 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, info: AdapterInfo) -> MyApp {
-        let sample_count = match info.backend {
-            Backend::Vulkan => 2,
-            Backend::Dx12 => 2,
-            _ => 1,
-        };
+    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+        let sample_count = 4;
         let scene_desc = SceneDescriptor {
             background: Color::BLACK,
             camera: MyApp::create_camera(),
@@ -174,7 +168,9 @@ impl App for MyApp {
         app
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("simple shape viewer") }
+    fn app_title<'a>() -> Option<&'a str> {
+        Some("simple shape viewer")
+    }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         let file = std::fs::File::open(path).unwrap();
@@ -302,7 +298,11 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, frame: &SwapChainFrame) { self.scene.render_scene(&frame.output.view); }
+    fn render(&mut self, view: &TextureView) {
+        self.scene.render_scene(view);
+    }
 }
 
-fn main() { MyApp::run(); }
+fn main() {
+    MyApp::run();
+}

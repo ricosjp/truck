@@ -6,13 +6,13 @@ use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (256, 256);
 
-fn exec_microfacet_module_test(backend: BackendBit, out_dir: &str) {
+fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = Instance::new(backend);
     let (device, queue) = common::init_device(&instance);
-    let sc_desc = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
-    let handler = DeviceHandler::new(device, queue, sc_desc);
+    let config = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
+    let handler = DeviceHandler::new(device, queue, config);
     let mut scene = Scene::new(handler, &Default::default());
     let answer = common::nontex_answer_texture(&mut scene);
     let answer = common::read_texture(scene.device_handler(), &answer);
@@ -21,8 +21,8 @@ fn exec_microfacet_module_test(backend: BackendBit, out_dir: &str) {
         &answer,
         PICTURE_SIZE,
     );
-    let sc_desc = scene.sc_desc();
-    let tex_desc = common::texture_descriptor(&sc_desc);
+    let config = scene.config();
+    let tex_desc = common::texture_descriptor(&config);
     let texture = scene.device().create_texture(&tex_desc);
 
     let mut shader = include_str!("../src/shaders/microfacet-module.wgsl").to_string();
@@ -54,4 +54,6 @@ fn exec_microfacet_module_test(backend: BackendBit, out_dir: &str) {
 }
 
 #[test]
-fn microfacet_module_test() { common::os_alt_exec_test(exec_microfacet_module_test) }
+fn microfacet_module_test() {
+    common::os_alt_exec_test(exec_microfacet_module_test)
+}

@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
 	"truck-base",
 	"truck-geotrait",

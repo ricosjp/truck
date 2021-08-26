@@ -35,11 +35,11 @@ impl<'a> Rendered for Plane<'a> {
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         writeln!(&mut std::io::stderr(), "create vertex buffer").unwrap();
         let vertex_buffer =
-            BufferHandler::from_slice(&[0 as u32, 1, 2, 3], handler.device(), BufferUsage::VERTEX);
+            BufferHandler::from_slice(&[0 as u32, 1, 2, 3], handler.device(), BufferUsages::VERTEX);
         let index_buffer = BufferHandler::from_slice(
             &[0 as u32, 1, 2, 2, 1, 3],
             handler.device(),
-            BufferUsage::INDEX,
+            BufferUsages::INDEX,
         );
         (Arc::new(vertex_buffer), Some(Arc::new(index_buffer)))
     }
@@ -65,12 +65,11 @@ impl<'a> Rendered for Plane<'a> {
         sample_count: u32,
     ) -> Arc<RenderPipeline> {
         writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
-        let (device, sc_desc) = (handler.device(), handler.sc_desc());
+        let (device, config) = (handler.device(), handler.config());
         let source = ShaderSource::Wgsl(self.shader.into());
         let module = device.create_shader_module(&ShaderModuleDescriptor {
             source,
             label: None,
-            flags: ShaderFlags::VALIDATION,
         });
         Arc::new(
             handler
@@ -82,7 +81,7 @@ impl<'a> Rendered for Plane<'a> {
                         entry_point: self.vs_entpt,
                         buffers: &[VertexBufferLayout {
                             array_stride: std::mem::size_of::<u32>() as BufferAddress,
-                            step_mode: InputStepMode::Vertex,
+                            step_mode: VertexStepMode::Vertex,
                             attributes: &[VertexAttribute {
                                 format: VertexFormat::Uint32,
                                 offset: 0,
@@ -94,9 +93,9 @@ impl<'a> Rendered for Plane<'a> {
                         module: &module,
                         entry_point: self.fs_entpt,
                         targets: &[ColorTargetState {
-                            format: sc_desc.format,
+                            format: config.format,
                             blend: Some(BlendState::REPLACE),
-                            write_mask: ColorWrite::ALL,
+                            write_mask: ColorWrites::ALL,
                         }],
                     }),
                     primitive: PrimitiveState {
@@ -141,8 +140,8 @@ pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(
 }
 
 pub fn nontex_answer_texture(scene: &mut Scene) -> Texture {
-    let sc_desc = scene.sc_desc();
-    let tex_desc = texture_descriptor(&sc_desc);
+    let config = scene.config();
+    let tex_desc = texture_descriptor(&config);
     let texture = scene.device().create_texture(&tex_desc);
     let plane = new_plane!("shaders/plane.wgsl", "vs_main", "unicolor");
     render_one(scene, &texture, &plane);
@@ -150,8 +149,8 @@ pub fn nontex_answer_texture(scene: &mut Scene) -> Texture {
 }
 
 pub fn random_texture(scene: &mut Scene) -> Texture {
-    let sc_desc = scene.sc_desc();
-    let tex_desc = texture_descriptor(&sc_desc);
+    let config = scene.config();
+    let tex_desc = texture_descriptor(&config);
     let texture = scene.device().create_texture(&tex_desc);
     let plane = new_plane!("shaders/plane.wgsl", "vs_main", "random_texture");
     render_one(scene, &texture, &plane);
@@ -159,8 +158,8 @@ pub fn random_texture(scene: &mut Scene) -> Texture {
 }
 
 pub fn gradation_texture(scene: &mut Scene) -> Texture {
-    let sc_desc = scene.sc_desc();
-    let tex_desc = texture_descriptor(&sc_desc);
+    let config = scene.config();
+    let tex_desc = texture_descriptor(&config);
     let texture = scene.device().create_texture(&tex_desc);
     let mut plane = new_plane!("shaders/plane.wgsl", "vs_main", "gradation_texture");
     render_one(scene, &texture, &mut plane);
@@ -192,9 +191,9 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
     })
 }
 
-pub fn swap_chain_descriptor(size: (u32, u32)) -> SwapChainDescriptor {
-    SwapChainDescriptor {
-        usage: TextureUsage::RENDER_ATTACHMENT,
+pub fn swap_chain_descriptor(size: (u32, u32)) -> SurfaceConfiguration {
+    SurfaceConfiguration {
+        usage: TextureUsages::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8Unorm,
         width: size.0,
         height: size.1,
@@ -202,19 +201,19 @@ pub fn swap_chain_descriptor(size: (u32, u32)) -> SwapChainDescriptor {
     }
 }
 
-pub fn texture_descriptor(sc_desc: &SwapChainDescriptor) -> TextureDescriptor<'static> {
+pub fn texture_descriptor(config: &SurfaceConfiguration) -> TextureDescriptor<'static> {
     TextureDescriptor {
         label: None,
         size: Extent3d {
-            width: sc_desc.width,
-            height: sc_desc.height,
+            width: config.width,
+            height: config.height,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
         sample_count: 1,
         dimension: TextureDimension::D2,
-        format: sc_desc.format,
-        usage: TextureUsage::RENDER_ATTACHMENT | TextureUsage::COPY_SRC,
+        format: config.format,
+        usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC,
     }
 }
 
@@ -223,6 +222,7 @@ pub fn texture_copy_view<'a>(texture: &'a Texture) -> ImageCopyTexture<'a> {
         texture: &texture,
         mip_level: 0,
         origin: Origin3d::ZERO,
+        aspect: TextureAspect::All,
     }
 }
 
@@ -250,21 +250,21 @@ pub fn read_buffer(device: &Device, buffer: &Buffer) -> Vec<u8> {
 }
 
 pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
-    let (device, queue, sc_desc) = (handler.device(), handler.queue(), handler.sc_desc());
-    let size = (sc_desc.width * sc_desc.height * 4) as u64;
+    let (device, queue, config) = (handler.device(), handler.queue(), handler.config());
+    let size = (config.width * config.height * 4) as u64;
     let buffer = device.create_buffer(&BufferDescriptor {
         label: None,
         mapped_at_creation: false,
-        usage: BufferUsage::COPY_DST | BufferUsage::MAP_READ,
+        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
         size,
     });
     let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
     encoder.copy_texture_to_buffer(
         texture_copy_view(&texture),
-        buffer_copy_view(&buffer, (sc_desc.width, sc_desc.height)),
+        buffer_copy_view(&buffer, (config.width, config.height)),
         Extent3d {
-            width: sc_desc.width,
-            height: sc_desc.height,
+            width: config.width,
+            height: config.height,
             depth_or_array_layers: 1,
         },
     );
@@ -289,14 +289,14 @@ pub fn count_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> usize {
         .count()
 }
 
-pub fn os_alt_exec_test<F: Fn(BackendBit, &str)>(test: F) {
+pub fn os_alt_exec_test<F: Fn(Backends, &str)>(test: F) {
     let _ = env_logger::try_init();
     if cfg!(target_os = "windows") {
-        test(BackendBit::VULKAN, "output/vulkan/");
-        test(BackendBit::DX12, "output/dx12/");
+        test(Backends::VULKAN, "output/vulkan/");
+        test(Backends::DX12, "output/dx12/");
     } else if cfg!(target_os = "macos") {
-        test(BackendBit::METAL, "output/");
+        test(Backends::METAL, "output/");
     } else {
-        test(BackendBit::VULKAN, "output/");
+        test(Backends::VULKAN, "output/");
     }
 }

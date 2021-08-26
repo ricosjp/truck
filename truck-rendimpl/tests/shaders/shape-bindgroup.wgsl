@@ -16,7 +16,7 @@ struct Boundary {
     boundary: [[stride(16)]] array<vec4<f32>>;
 };
 [[group(1), binding(0)]]
-var<storage> boundary: [[access(read)]] Boundary;
+var<storage> boundary: Boundary;
 
 [[group(1), binding(1)]]
 var<uniform> model_matrix: ModelMatrix;

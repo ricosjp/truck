@@ -29,7 +29,7 @@ pub trait App: Sized + 'static {
     /// By overriding this function, one can set the update process for each frame.
     fn update(&mut self, _handler: &DeviceHandler) {}
     /// By overriding this function, one can set the rendering process for each frame.
-    fn render(&mut self, _frame: &SwapChainFrame) {}
+    fn render(&mut self, _frame: &TextureView) {}
     /// By overriding this function, one can change the behavior when the window is resized.
     fn resized(&mut self, _size: PhysicalSize<u32>) -> ControlFlow { Self::default_control_flow() }
     /// By overriding this function, one can change the behavior when the window is moved.
@@ -73,24 +73,26 @@ pub trait App: Sized + 'static {
         }
         let window = wb.build(&event_loop).expect("failed to build window");
         let size = window.inner_size();
-        let instance = Instance::new(BackendBit::PRIMARY);
+        let instance = Instance::new(Backends::PRIMARY);
         let surface = unsafe { instance.create_surface(&window) };
 
         let (device, queue, info) = futures::executor::block_on(init_device(&instance, &surface));
 
-        let sc_desc = SwapChainDescriptor {
-            usage: TextureUsage::RENDER_ATTACHMENT,
+        let config = SurfaceConfiguration {
+            usage: TextureUsages::RENDER_ATTACHMENT,
             format: TextureFormat::Bgra8Unorm,
             width: size.width,
             height: size.height,
             present_mode: PresentMode::Mailbox,
         };
 
-        let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+        let mut surface = unsafe { instance.create_surface(&window) };
+        surface.configure(&device, &config);
+
         let handler = DeviceHandler::new(
             Arc::new(device),
             Arc::new(queue),
-            Arc::new(Mutex::new(sc_desc)),
+            Arc::new(Mutex::new(config)),
         );
 
         let mut app = Self::init(&handler, info);
@@ -103,18 +105,28 @@ pub trait App: Sized + 'static {
                 }
                 Event::RedrawRequested(_) => {
                     app.update(&handler);
-                    let frame = swap_chain
-                        .get_current_frame()
-                        .expect("Timeout when acquiring next swap chain texture");
-                    app.render(&frame);
+                    let frame = match surface.get_current_frame() {
+                        Ok(frame) => frame,
+                        Err(_) => {
+                            surface.configure(handler.device().as_ref(), &handler.config());
+                            surface
+                                .get_current_frame()
+                                .expect("Failed to acquire next surface texture!")
+                        }
+                    };
+                    let view = frame
+                        .output
+                        .texture
+                        .create_view(&TextureViewDescriptor::default());
+                    app.render(&view);
                     Self::default_control_flow()
                 }
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::Resized(size) => {
-                        let mut sc_desc = handler.lock_sc_desc().unwrap();
-                        sc_desc.width = size.width;
-                        sc_desc.height = size.height;
-                        swap_chain = handler.device().create_swap_chain(&surface, &sc_desc);
+                        let mut config = handler.lock_config().unwrap();
+                        config.width = size.width;
+                        config.height = size.height;
+                        surface = unsafe { instance.create_surface(&window) };
                         Self::default_control_flow()
                     }
                     WindowEvent::Moved(position) => app.moved(position),

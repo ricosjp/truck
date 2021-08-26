@@ -6,7 +6,7 @@ impl BufferHandler {
     pub fn from_slice<T: Sized + Pod + Zeroable, A: AsRef<[T]>>(
         vec: &A,
         device: &Device,
-        usage: BufferUsage,
+        usage: BufferUsages,
     ) -> Self {
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             contents: bytemuck::cast_slice(vec.as_ref()),

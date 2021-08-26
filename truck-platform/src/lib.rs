@@ -73,7 +73,7 @@ struct SceneInfo {
 }
 
 /// safe handler of GPU buffer
-/// [`Buffer`](https://docs.rs/wgpu/0.6.2/wgpu/struct.Buffer.html)
+/// [`Buffer`](https://docs.rs/wgpu/0.10.1/wgpu/struct.Buffer.html)
 #[derive(Debug)]
 pub struct BufferHandler {
     buffer: Buffer,
@@ -92,7 +92,7 @@ pub struct BufferHandler {
 /// use truck_platform::*;
 /// use wgpu::*;
 /// // let device: Device = ...
-/// # let instance = Instance::new(BackendBit::PRIMARY);
+/// # let instance = Instance::new(Backends::PRIMARY);
 /// # let (device, queue) = futures::executor::block_on(async {
 /// #    let adapter = instance
 /// #        .request_adapter(&RequestAdapterOptions {
@@ -115,7 +115,7 @@ pub struct BufferHandler {
 /// # });
 /// let entries = [
 ///     PreBindGroupLayoutEntry {
-///         visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+///         visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
 ///         ty: BindingType::Buffer {
 ///             ty: BufferBindingType::Uniform,
 ///             has_dynamic_offset: false,
@@ -124,7 +124,7 @@ pub struct BufferHandler {
 ///         count: None,
 ///     },
 ///     PreBindGroupLayoutEntry {
-///         visibility: ShaderStage::VERTEX | ShaderStage::FRAGMENT,
+///         visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
 ///         ty: BindingType::Buffer {
 ///             ty: BufferBindingType::Uniform,
 ///             has_dynamic_offset: false,
@@ -136,11 +136,11 @@ pub struct BufferHandler {
 /// let layout: BindGroupLayout = bind_group_util::create_bind_group_layout(&device, &entries);
 /// ```
 ///
-/// [`BindGroupLayoutEntry`]: https://docs.rs/wgpu/0.6.2/wgpu/struct.BindGroupLayoutEntry.html
+/// [`BindGroupLayoutEntry`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.BindGroupLayoutEntry.html
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct PreBindGroupLayoutEntry {
-    pub visibility: ShaderStage,
+    pub visibility: ShaderStages,
     pub ty: BindingType,
     pub count: Option<core::num::NonZeroU32>,
 }
@@ -202,17 +202,17 @@ pub struct Light {
     pub light_type: LightType,
 }
 
-/// Chain that holds [`Device`], [`Queue`] and [`SwapChainDescriptor`].
+/// Chain that holds [`Device`], [`Queue`] and [`SurfaceConfiguration`].
 ///
 /// This struct is used for creating [`Scene`].
 /// [`Device`] and [`Queue`] must be wrapped `Arc`,
-/// and [`SwapChainDescriptor`] `Arc<Mutex>`.
+/// and [`SurfaceConfiguration`] `Arc<Mutex>`.
 /// # Examples
 /// ```
 /// use std::sync::{Arc, Mutex};
 /// use truck_platform::*;
 /// use wgpu::*;
-/// let instance = Instance::new(BackendBit::PRIMARY);
+/// let instance = Instance::new(Backends::PRIMARY);
 /// let (device, queue) = futures::executor::block_on(async {
 ///     let adapter = instance
 ///         .request_adapter(&RequestAdapterOptions {
@@ -233,8 +233,8 @@ pub struct Light {
 ///         .await
 ///         .unwrap()
 /// });
-/// let sc_desc = SwapChainDescriptor {
-///     usage: TextureUsage::RENDER_ATTACHMENT,
+/// let config = SurfaceConfiguration {
+///     usage: TextureUsages::RENDER_ATTACHMENT,
 ///     format: TextureFormat::Bgra8UnormSrgb,
 ///     width: 512,
 ///     height: 512,
@@ -244,19 +244,19 @@ pub struct Light {
 /// let device_handler = DeviceHandler::new(
 ///     Arc::new(device),
 ///     Arc::new(queue),
-///     Arc::new(Mutex::new(sc_desc)),
+///     Arc::new(Mutex::new(config)),
 /// );
 /// ```
 ///
-/// [`Device`]: https://docs.rs/wgpu/0.6.2/wgpu/struct.Device.html
-/// [`Queue`]: https://docs.rs/wgpu/0.6.2/wgpu/struct.Queue.html
-/// [`SwapChainDescriptor`]: https://docs.rs/wgpu/0.6.2/wgpu/struct.SwapChainDescriptor.html
+/// [`Device`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.Device.html
+/// [`Queue`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.Queue.html
+/// [`SurfaceConfiguration`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.SurfaceConfiguration.html
 /// [`Scene`]: ./struct.Scene.html
 #[derive(Debug, Clone)]
 pub struct DeviceHandler {
     device: Arc<Device>,
     queue: Arc<Queue>,
-    sc_desc: Arc<Mutex<SwapChainDescriptor>>,
+    config: Arc<Mutex<SurfaceConfiguration>>,
 }
 
 /// The unique ID for `Rendered` struct.
