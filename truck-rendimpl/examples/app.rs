@@ -86,7 +86,7 @@ pub trait App: Sized + 'static {
             present_mode: PresentMode::Mailbox,
         };
 
-        let mut surface = unsafe { instance.create_surface(&window) };
+        let surface = unsafe { instance.create_surface(&window) };
         surface.configure(&device, &config);
 
         let handler = DeviceHandler::new(
@@ -108,7 +108,7 @@ pub trait App: Sized + 'static {
                     let frame = match surface.get_current_frame() {
                         Ok(frame) => frame,
                         Err(_) => {
-                            surface.configure(handler.device().as_ref(), &handler.config());
+                            surface.configure(handler.device(), &handler.config());
                             surface
                                 .get_current_frame()
                                 .expect("Failed to acquire next surface texture!")
@@ -126,7 +126,7 @@ pub trait App: Sized + 'static {
                         let mut config = handler.lock_config().unwrap();
                         config.width = size.width;
                         config.height = size.height;
-                        surface = unsafe { instance.create_surface(&window) };
+                        surface.configure(handler.device(), &config);
                         Self::default_control_flow()
                     }
                     WindowEvent::Moved(position) => app.moved(position),
