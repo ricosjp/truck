@@ -2,6 +2,7 @@ use super::*;
 use std::collections::HashMap;
 use std::iter::Iterator;
 use std::ops::{Div, Mul};
+use truck_base::maputil::GetOrInsert;
 
 /// Filters for optimizing data
 pub trait OptimizingFilter {
@@ -187,13 +188,7 @@ fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usiz
     let mut map = HashMap::new();
     for (i, attr) in attrs.iter().enumerate() {
         let v = ((*attr).add_element_wise(TOLERANCE) / (TOLERANCE * 2.0)).cast_int();
-        match map.get(&v) {
-            Some(j) => res.push(*j),
-            None => {
-                map.insert(v, i);
-                res.push(i);
-            }
-        }
+        res.push(*map.get_or_insert(v, || i));
     }
     res
 }
@@ -241,8 +236,9 @@ fn split_into_nondegenerate(poly: Vec<Vertex>) -> Vec<Vec<Vertex>> {
     vec![poly]
 }
 
-trait CastIntVector: Sized + ElementWise<f64> + Mul<f64, Output = Self> + Div<f64, Output = Self> {
-    type IntVector: std::hash::Hash + Eq;
+trait CastIntVector:
+    Sized + ElementWise<f64> + Mul<f64, Output = Self> + Div<f64, Output = Self> {
+    type IntVector: Copy + std::hash::Hash + Eq;
     fn cast_int(&self) -> Self::IntVector;
 }
 

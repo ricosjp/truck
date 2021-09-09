@@ -449,49 +449,48 @@ impl<P, C, S> Shell<P, C, S> {
         mut curve_mapping: impl FnMut(&C) -> Option<D>,
         mut surface_mapping: impl FnMut(&S) -> Option<T>,
     ) -> Option<Shell<Q, D, T>> {
-        let mut shell = Shell::new();
         let mut vmap: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
-        for vertex in self.vertex_iter() {
-            if vmap.get(&vertex.id()).is_none() {
-                let new_vertex = vertex.try_mapped(&mut point_mapping)?;
-                vmap.insert(vertex.id(), new_vertex);
-            }
-        }
         let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
-        for face in self.face_iter() {
-            let mut wires = Vec::new();
-            for biter in face.absolute_boundaries() {
-                let mut wire = Wire::new();
-                for edge in biter {
-                    if let Some(new_edge) = edge_map.get(&edge.id()) {
-                        if edge.absolute_front() == edge.front() {
-                            wire.push_back(new_edge.clone());
-                        } else {
-                            wire.push_back(new_edge.inverse());
-                        }
-                    } else {
-                        let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
-                        let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
-                        let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
-                        let new_edge = Edge::debug_new(v0, v1, curve);
-                        if edge.orientation() {
-                            wire.push_back(new_edge.clone());
-                        } else {
-                            wire.push_back(new_edge.inverse());
-                        }
-                        edge_map.insert(edge.id(), new_edge);
-                    }
+        self.face_iter()
+            .map(|face| {
+                let wires = face
+                    .absolute_boundaries()
+                    .iter()
+                    .map(|wire| {
+                        wire.edge_iter()
+                            .map(|edge| {
+                                let new_edge = edge_map.try_get_or_insert(edge.id(), || {
+                                    let vf = edge.absolute_front();
+                                    let v0 = vmap
+                                        .try_get_or_insert(vf.id(), || {
+                                            vf.try_mapped(&mut point_mapping)
+                                        })?
+                                        .clone();
+                                    let vb = edge.absolute_back();
+                                    let v1 = vmap
+                                        .try_get_or_insert(vb.id(), || {
+                                            vb.try_mapped(&mut point_mapping)
+                                        })?
+                                        .clone();
+                                    let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
+                                    Some(Edge::debug_new(&v0, &v1, curve))
+                                })?;
+                                match edge.orientation() {
+                                    true => Some(new_edge.clone()),
+                                    false => Some(new_edge.inverse()),
+                                }
+                            })
+                            .collect()
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                let surface = surface_mapping(&*face.surface.lock().unwrap())?;
+                let mut new_face = Face::debug_new(wires, surface);
+                if !face.orientation() {
+                    new_face.invert();
                 }
-                wires.push(wire);
-            }
-            let surface = surface_mapping(&*face.surface.lock().unwrap())?;
-            let mut new_face = Face::debug_new(wires, surface);
-            if !face.orientation() {
-                new_face.invert();
-            }
-            shell.push(new_face);
-        }
-        Some(shell)
+                Some(new_face)
+            })
+            .collect()
     }
 
     /// Returns a new shell whose surfaces are mapped by `surface_mapping`,
@@ -566,53 +565,50 @@ impl<P, C, S> Shell<P, C, S> {
         mut curve_mapping: impl FnMut(&C) -> D,
         mut surface_mapping: impl FnMut(&S) -> T,
     ) -> Shell<Q, D, T> {
-        let mut shell = Shell::new();
         let mut vmap: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
-        let vertex_iter = self
-            .iter()
+        self.iter()
             .flat_map(Face::absolute_boundaries)
-            .flat_map(Wire::vertex_iter);
-        for vertex in vertex_iter {
-            if vmap.get(&vertex.id()).is_none() {
-                let new_vertex = vertex.mapped(&mut point_mapping);
-                vmap.insert(vertex.id(), new_vertex);
-            }
-        }
+            .flat_map(Wire::vertex_iter)
+            .for_each(|vertex| {
+                vmap.get_or_insert(vertex.id(), || vertex.mapped(&mut point_mapping));
+            });
         let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
-        for face in self.face_iter() {
-            let mut wires = Vec::new();
-            for biter in face.absolute_boundaries() {
-                let mut wire = Wire::new();
-                for edge in biter {
-                    if let Some(new_edge) = edge_map.get(&edge.id()) {
-                        if edge.absolute_front() == edge.front() {
-                            wire.push_back(new_edge.clone());
-                        } else {
-                            wire.push_back(new_edge.inverse());
-                        }
-                    } else {
-                        let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
-                        let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
-                        let curve = curve_mapping(&*edge.curve.lock().unwrap());
-                        let new_edge = Edge::debug_new(v0, v1, curve);
-                        if edge.orientation() {
-                            wire.push_back(new_edge.clone());
-                        } else {
-                            wire.push_back(new_edge.inverse());
-                        }
-                        edge_map.insert(edge.id(), new_edge);
-                    }
+        self.face_iter()
+            .map(|face| {
+                let wires: Vec<Wire<_, _>> = face
+                    .absolute_boundaries()
+                    .iter()
+                    .map(|wire| {
+                        wire.edge_iter()
+                            .map(|edge| {
+                                let new_edge = edge_map.get_or_insert(edge.id(), || {
+                                    let vf = edge.absolute_front();
+                                    let v0 = vmap
+                                        .get_or_insert(vf.id(), || vf.mapped(&mut point_mapping))
+                                        .clone();
+                                    let vb = edge.absolute_back();
+                                    let v1 = vmap
+                                        .get_or_insert(vb.id(), || vb.mapped(&mut point_mapping))
+                                        .clone();
+                                    let curve = curve_mapping(&*edge.curve.lock().unwrap());
+                                    Edge::debug_new(&v0, &v1, curve)
+                                });
+                                match edge.absolute_front() == edge.front() {
+                                    true => new_edge.clone(),
+                                    false => new_edge.inverse(),
+                                }
+                            })
+                            .collect()
+                    })
+                    .collect();
+                let surface = surface_mapping(&*face.surface.lock().unwrap());
+                let mut new_face = Face::debug_new(wires, surface);
+                if !face.orientation() {
+                    new_face.invert();
                 }
-                wires.push(wire);
-            }
-            let surface = surface_mapping(&*face.surface.lock().unwrap());
-            let mut new_face = Face::debug_new(wires, surface);
-            if !face.orientation() {
-                new_face.invert();
-            }
-            shell.push(new_face);
-        }
-        shell
+                new_face
+            })
+            .collect()
     }
 
     /// Returns the consistence of the geometry of end vertices
