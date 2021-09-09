@@ -2,6 +2,7 @@ use crate::*;
 use std::collections::vec_deque;
 use std::collections::{HashSet, HashMap, VecDeque};
 use std::iter::Peekable;
+use truck_base::maputil::GetOrInsert;
 
 impl<P, C> Wire<P, C> {
     /// Creates the empty wire.
@@ -359,10 +360,7 @@ impl<P, C> Wire<P, C> {
     ) -> Option<Wire<Q, D>> {
         let mut vertex_map: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
         for v in self.vertex_iter() {
-            if vertex_map.get(&v.id()).is_none() {
-                let vert = v.try_mapped(&mut point_mapping)?;
-                vertex_map.insert(v.id(), vert);
-            }
+            //vertex_map.try_insert_if_none(v.id(), || v.try_mapped(&mut point_mapping))?;
         }
         let mut wire = Wire::new();
         let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
