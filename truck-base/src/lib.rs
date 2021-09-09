@@ -21,3 +21,5 @@ pub mod cgmath_extend_traits;
 pub mod id;
 /// Setting Tolerance
 pub mod tolerance;
+/// Get or insert trait
+pub mod maputil;
