@@ -491,6 +491,18 @@ impl<P, C> Clone for Edge<P, C> {
     }
 }
 
+impl<P: Debug, C: Debug> Debug for Edge<P, C> {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        f.debug_struct("Edge")
+            .field("id", &Arc::as_ptr(&self.curve))
+            .field("entity", &MutexFmt(&self.curve))
+            .field("vertices", &self.vertices)
+            .field("orientation", &self.orientation)
+            .finish()
+    }
+}
+
 impl<P, C> PartialEq for Edge<P, C> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
@@ -507,6 +519,20 @@ impl<P, C> Hash for Edge<P, C> {
         std::ptr::hash(Arc::as_ptr(&self.curve), state);
         self.orientation.hash(state);
     }
+}
+
+#[test]
+fn edge_debug() {
+    let v = Vertex::news(&[0, 1]);
+    let edge = Edge::new(&v[0], &v[1], (2, 3));
+    assert_eq!(
+        format!("{:?}", edge),
+        format!(
+            "Edge {{ id: {:p}, entity: (2, 3), vertices: {:?}, orientation: true }}",
+            Arc::as_ptr(&edge.curve),
+            edge.vertices
+        )
+    );
 }
 
 #[test]

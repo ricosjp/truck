@@ -34,7 +34,8 @@ impl<P> Vertex<P> {
 
     /// Returns the point of vertex.
     #[inline(always)]
-    pub fn get_point(&self) -> P where P: Clone {
+    pub fn get_point(&self) -> P
+    where P: Clone {
         self.point.lock().unwrap().clone()
     }
 
@@ -51,15 +52,13 @@ impl<P> Vertex<P> {
     ///
     /// // set point
     /// v0.set_point(1);
-    /// 
+    ///
     /// // The contents of two vertices are synchronized.
     /// assert_eq!(v0.get_point(), 1);
     /// assert_eq!(v1.get_point(), 1);
-    /// ``` 
+    /// ```
     #[inline(always)]
-    pub fn set_point(&self, point: P) {
-        *self.point.lock().unwrap() = point;
-    }
+    pub fn set_point(&self, point: P) { *self.point.lock().unwrap() = point; }
 
     /// Returns vertex whose point is converted by `point_mapping`.
     /// # Remarks
@@ -67,7 +66,10 @@ impl<P> Vertex<P> {
     /// So, this method does not appear to the document.
     #[doc(hidden)]
     #[inline(always)]
-    pub fn try_mapped<Q>(&self, mut point_mapping: impl FnMut(&P) -> Option<Q>) -> Option<Vertex<Q>> {
+    pub fn try_mapped<Q>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Option<Q>,
+    ) -> Option<Vertex<Q>> {
         Some(Vertex::new(point_mapping(&*self.point.lock().unwrap())?))
     }
 
@@ -102,6 +104,16 @@ impl<P> Clone for Vertex<P> {
     }
 }
 
+impl<P: Debug> Debug for Vertex<P> {
+    #[inline(always)]
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        f.debug_struct("Vertex")
+            .field("id", &Arc::as_ptr(&self.point))
+            .field("entity", &MutexFmt(&self.point))
+            .finish()
+    }
+}
+
 impl<P> PartialEq for Vertex<P> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
@@ -114,4 +126,17 @@ impl<P> Eq for Vertex<P> {}
 impl<P> Hash for Vertex<P> {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(Arc::as_ptr(&self.point), state); }
+}
+
+#[test]
+fn vertex_debug() {
+    let pt = [1.0, 2.0, 3.0];
+    let v = Vertex::new(pt);
+    assert_eq!(
+        format!("{:?}", v),
+        format!(
+            "Vertex {{ id: {:p}, entity: [1.0, 2.0, 3.0] }}",
+            Arc::as_ptr(&v.point)
+        )
+    );
 }

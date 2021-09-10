@@ -76,10 +76,10 @@
 )]
 
 use std::collections::VecDeque;
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use truck_base::{id::ID, tolerance::*, maputil::GetOrInsert};
+use truck_base::{id::ID, maputil::GetOrInsert, tolerance::*};
 use truck_geotrait::*;
 
 const SEARCH_PARAMETER_TRIALS: usize = 100;
@@ -94,7 +94,6 @@ const SEARCH_PARAMETER_TRIALS: usize = 100;
 /// let v1 = Vertex::new(()); // another vertex
 /// assert_ne!(v0, v1); // two vertices are different
 /// ```
-#[derive(Debug)]
 pub struct Vertex<P> {
     point: Arc<Mutex<P>>,
 }
@@ -111,7 +110,6 @@ pub struct Vertex<P> {
 /// let edge1 = Edge::new(&v[0], &v[1], ());
 /// assert_ne!(edge0.id(), edge1.id());
 /// ```
-#[derive(Debug)]
 pub struct Edge<P, C> {
     vertices: (Vertex<P>, Vertex<P>),
     orientation: bool,
@@ -255,3 +253,38 @@ mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
 pub use compress::{CompressedShell, CompressedSolid};
+
+#[derive(Clone)]
+struct MutexFmt<'a, T>(&'a Mutex<T>);
+
+impl<'a, T: Debug> Debug for MutexFmt<'a, T> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        use std::sync::TryLockError;
+        match self.0.try_lock() {
+            Ok(guard) => f.write_fmt(format_args!("{:?}", &&*guard)),
+            Err(TryLockError::Poisoned(err)) => {
+                f.write_fmt(format_args!("{:?}", &&**err.get_ref()))
+            }
+            Err(TryLockError::WouldBlock) => f.pad("<locked>"),
+        }
+    }
+}
+
+#[test]
+fn mutex_fmt() {
+    let mutex = Arc::new(Mutex::new([0.0, 1.0]));
+    let mf = MutexFmt(&mutex);
+    assert_eq!(&format!("{:?}", mf), "[0.0, 1.0]");
+    let a = mutex.lock();
+    assert_eq!(&format!("{:?}", mf), "<locked>");
+    drop(a);
+    let mutex0 = Arc::clone(&mutex);
+    let _ = std::thread::spawn(move || {
+        let mut a = mutex0.lock().unwrap();
+        *a = [1.0, 2.0];
+        panic!();
+    })
+    .join();
+    assert!(mutex.is_poisoned());
+    assert_eq!(&format!("{:?}", mf), "[1.0, 2.0]");
+}
