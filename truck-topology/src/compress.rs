@@ -74,15 +74,10 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
     }
     #[inline(always)]
     fn get_vid(&mut self, vertex: &Vertex<P>) -> usize {
-        match self.vmap.get(&vertex.id()) {
-            Some(got) => got.0,
-            None => {
-                let id = self.vmap.len();
-                let pt = vertex.get_point();
-                self.vmap.insert(vertex.id(), (id, pt));
-                id
-            }
-        }
+        let id = self.vmap.len();
+        self.vmap
+            .get_or_insert(vertex.id(), || (id, vertex.get_point()))
+            .0
     }
 
     #[inline(always)]

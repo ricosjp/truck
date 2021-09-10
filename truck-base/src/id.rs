@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 
 /// ID structure with `Copy`, `Hash` and `Eq` using raw pointers
@@ -28,7 +29,7 @@ impl<T> PartialEq for ID<T> {
 
 impl<T> Eq for ID<T> {}
 
-impl<T> std::fmt::Debug for ID<T> {
+impl<T> Debug for ID<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         f.write_fmt(format_args!("{:p}", self.0))
     }

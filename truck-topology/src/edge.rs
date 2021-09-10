@@ -313,7 +313,7 @@ impl<P, C> Edge<P, C> {
         let v1 = self.absolute_back().try_mapped(&mut point_mapping)?;
         let curve = curve_mapping(&*self.curve.lock().unwrap())?;
         let mut edge = Edge::debug_new(&v0, &v1, curve);
-        if edge.orientation() != self.orientation() {
+        if !self.orientation() {
             edge.invert();
         }
         Some(edge)

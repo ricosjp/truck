@@ -1,6 +1,7 @@
 use super::*;
 use crate::filters::NormalFilters;
 use std::collections::HashMap;
+use truck_base::maputil::GetOrInsert;
 
 type CDT<V, K> = ConstrainedDelaunayTriangulation<V, K>;
 type MeshedShell = Shell<Point3, PolylineCurve, PolygonMesh>;
@@ -10,59 +11,55 @@ pub(super) fn tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> O
 where
     C: PolylineableCurve + 'a,
     S: MeshableSurface + 'a, {
-    let mut shell0 = Shell::new();
     let mut vmap: HashMap<VertexID<Point3>, Vertex<Point3>> = HashMap::new();
-    for vertex in shell.vertex_iter() {
-        if vmap.get(&vertex.id()).is_none() {
-            let new_vertex = vertex.mapped(Point3::clone);
-            vmap.insert(vertex.id(), new_vertex);
-        }
-    }
     let mut edge_map: HashMap<EdgeID<C>, Edge<Point3, PolylineCurve>> = HashMap::new();
-    for face in shell.face_iter() {
-        let mut wires = Vec::new();
-        for biter in face.absolute_boundaries() {
-            let mut wire = Wire::new();
-            for edge in biter {
-                if let Some(new_edge) = edge_map.get(&edge.id()) {
-                    if edge.absolute_front() == edge.front() {
-                        wire.push_back(new_edge.clone());
-                    } else {
-                        wire.push_back(new_edge.inverse());
-                    }
-                } else {
-                    let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
-                    let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
-                    let curve = edge.get_curve();
-                    let poly: Vec<Point3> = curve
-                        .parameter_division(curve.parameter_range(), tol)
-                        .into_iter()
-                        .map(|t| curve.subs(t))
-                        .collect();
-                    let new_edge = Edge::debug_new(v0, v1, PolylineCurve(poly));
-                    if edge.orientation() {
-                        wire.push_back(new_edge.clone());
-                    } else {
-                        wire.push_back(new_edge.inverse());
-                    }
-                    edge_map.insert(edge.id(), new_edge);
-                }
+    shell
+        .face_iter()
+        .map(|face| {
+            let wires: Vec<_> = face
+                .absolute_boundaries()
+                .iter()
+                .map(|wire| {
+                    wire.edge_iter()
+                        .map(|edge| {
+                            let new_edge = edge_map.get_or_insert(edge.id(), || {
+                                let vf = edge.absolute_front();
+                                let v0 = vmap
+                                    .get_or_insert(vf.id(), || vf.mapped(Point3::clone))
+                                    .clone();
+                                let vb = edge.absolute_back();
+                                let v1 = vmap
+                                    .get_or_insert(vb.id(), || vb.mapped(Point3::clone))
+                                    .clone();
+                                let curve = edge.get_curve();
+                                let poly: Vec<Point3> = curve
+                                    .parameter_division(curve.parameter_range(), tol)
+                                    .into_iter()
+                                    .map(|t| curve.subs(t))
+                                    .collect();
+                                Edge::debug_new(&v0, &v1, PolylineCurve(poly))
+                            });
+                            match edge.orientation() {
+                                true => new_edge.clone(),
+                                false => new_edge.inverse(),
+                            }
+                        })
+                        .collect()
+                })
+                .collect();
+            let surface = face.get_surface();
+            let mut polyline = Polyline::default();
+            let polygon = match wires.iter().all(|wire| polyline.add_wire(&surface, wire)) {
+                true => Some(trimming_tessellation(&surface, &polyline, tol)),
+                false => None,
+            }?;
+            let mut new_face = Face::debug_new(wires, polygon);
+            if !face.orientation() {
+                new_face.invert();
             }
-            wires.push(wire);
-        }
-        let surface = face.get_surface();
-        let mut polyline = Polyline::default();
-        let polygon = match wires.iter().all(|wire| polyline.add_wire(&surface, wire)) {
-            true => Some(trimming_tessellation(&surface, &polyline, tol)),
-            false => None,
-        }?;
-        let mut new_face = Face::debug_new(wires, polygon);
-        if !face.orientation() {
-            new_face.invert();
-        }
-        shell0.push(new_face);
-    }
-    Some(shell0)
+            Some(new_face)
+        })
+        .collect()
 }
 
 /// polyline, not always connected

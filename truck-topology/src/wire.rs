@@ -1,6 +1,6 @@
 use crate::*;
 use std::collections::vec_deque;
-use std::collections::{HashSet, HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::Peekable;
 
 impl<P, C> Wire<P, C> {
@@ -358,37 +358,28 @@ impl<P, C> Wire<P, C> {
         mut curve_mapping: impl FnMut(&C) -> Option<D>,
     ) -> Option<Wire<Q, D>> {
         let mut vertex_map: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
-        for v in self.vertex_iter() {
-            if vertex_map.get(&v.id()).is_none() {
-                let vert = v.try_mapped(&mut point_mapping)?;
-                vertex_map.insert(v.id(), vert);
-            }
-        }
-        let mut wire = Wire::new();
         let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
-        for edge in self.edge_iter() {
-            if let Some(new_edge) = edge_map.get(&edge.id()) {
-                if edge.absolute_front() == edge.front() {
-                    wire.push_back(new_edge.clone());
-                } else {
-                    wire.push_back(new_edge.inverse());
+        self.edge_iter()
+            .map(|edge| {
+                let new_edge = edge_map.try_get_or_insert(edge.id(), || {
+                    let vf = edge.absolute_front();
+                    let vertex0 = vertex_map
+                        .try_get_or_insert(vf.id(), || vf.try_mapped(&mut point_mapping))?
+                        .clone();
+                    let vb = edge.absolute_back();
+                    let vertex1 = vertex_map
+                        .try_get_or_insert(vb.id(), || vb.try_mapped(&mut point_mapping))?
+                        .clone();
+                    let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
+                    Some(Edge::debug_new(&vertex0, &vertex1, curve))
+                })?;
+                match edge.orientation() {
+                    true => Some(new_edge.clone()),
+                    false => Some(new_edge.inverse()),
                 }
-            } else {
-                let vertex0 = vertex_map.get(&edge.absolute_front().id()).unwrap().clone();
-                let vertex1 = vertex_map.get(&edge.absolute_back().id()).unwrap().clone();
-                let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
-                let new_edge = Edge::debug_new(&vertex0, &vertex1, curve);
-                if edge.orientation() {
-                    wire.push_back(new_edge.clone());
-                } else {
-                    wire.push_back(new_edge.inverse());
-                }
-                edge_map.insert(edge.id(), new_edge);
-            }
-        }
-        Some(wire)
+            })
+            .collect()
     }
-
 
     /// Returns a new wire whose curves are mapped by `curve_mapping` and
     /// whose points are mapped by `point_mapping`.
@@ -438,35 +429,27 @@ impl<P, C> Wire<P, C> {
         mut curve_mapping: impl FnMut(&C) -> D,
     ) -> Wire<Q, D> {
         let mut vertex_map: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
-        for v in self.vertex_iter() {
-            if vertex_map.get(&v.id()).is_none() {
-                let vert = v.mapped(&mut point_mapping);
-                vertex_map.insert(v.id(), vert);
-            }
-        }
-        let mut wire = Wire::new();
         let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
-        for edge in self.edge_iter() {
-            if let Some(new_edge) = edge_map.get(&edge.id()) {
-                if edge.absolute_front() == edge.front() {
-                    wire.push_back(new_edge.clone());
-                } else {
-                    wire.push_back(new_edge.inverse());
+        self.edge_iter()
+            .map(|edge| {
+                let new_edge = edge_map.get_or_insert(edge.id(), || {
+                    let vf = edge.absolute_front();
+                    let vertex0 = vertex_map
+                        .get_or_insert(vf.id(), || vf.mapped(&mut point_mapping))
+                        .clone();
+                    let vb = edge.absolute_back();
+                    let vertex1 = vertex_map
+                        .get_or_insert(vb.id(), || vb.mapped(&mut point_mapping))
+                        .clone();
+                    let curve = curve_mapping(&*edge.curve.lock().unwrap());
+                    Edge::debug_new(&vertex0, &vertex1, curve)
+                });
+                match edge.orientation() {
+                    true => new_edge.clone(),
+                    false => new_edge.inverse(),
                 }
-            } else {
-                let vertex0 = vertex_map.get(&edge.absolute_front().id()).unwrap().clone();
-                let vertex1 = vertex_map.get(&edge.absolute_back().id()).unwrap().clone();
-                let curve = curve_mapping(&*edge.curve.lock().unwrap());
-                let new_edge = Edge::debug_new(&vertex0, &vertex1, curve);
-                if edge.orientation() {
-                    wire.push_back(new_edge.clone());
-                } else {
-                    wire.push_back(new_edge.inverse());
-                }
-                edge_map.insert(edge.id(), new_edge);
-            }
-        }
-        wire
+            })
+            .collect()
     }
 
     /// Returns the consistence of the geometry of end vertices
