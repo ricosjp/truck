@@ -491,18 +491,6 @@ impl<P, C> Clone for Edge<P, C> {
     }
 }
 
-impl<P: Debug, C: Debug> Debug for Edge<P, C> {
-    #[inline(always)]
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        f.debug_struct("Edge")
-            .field("id", &Arc::as_ptr(&self.curve))
-            .field("entity", &MutexFmt(&self.curve))
-            .field("vertices", &self.vertices)
-            .field("orientation", &self.orientation)
-            .finish()
-    }
-}
-
 impl<P, C> PartialEq for Edge<P, C> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
@@ -519,30 +507,4 @@ impl<P, C> Hash for Edge<P, C> {
         std::ptr::hash(Arc::as_ptr(&self.curve), state);
         self.orientation.hash(state);
     }
-}
-
-#[test]
-fn edge_debug() {
-    let v = Vertex::news(&[0, 1]);
-    let edge = Edge::new(&v[0], &v[1], (2, 3));
-    assert_eq!(
-        format!("{:?}", edge),
-        format!(
-            "Edge {{ id: {:p}, entity: (2, 3), vertices: {:?}, orientation: true }}",
-            Arc::as_ptr(&edge.curve),
-            edge.vertices
-        )
-    );
-}
-
-#[test]
-fn invert_mapped_edge() {
-    let v0 = Vertex::new(0);
-    let v1 = Vertex::new(1);
-    let edge0 = Edge::new(&v0, &v1, 2).inverse();
-    let edge1 = edge0.mapped(&move |i: &usize| *i + 10, &move |j: &usize| *j + 20);
-    assert_eq!(edge1.absolute_front().get_point(), 10);
-    assert_eq!(edge1.absolute_back().get_point(), 11);
-    assert_eq!(edge0.orientation(), edge1.orientation());
-    assert_eq!(edge1.get_curve(), 22);
 }
