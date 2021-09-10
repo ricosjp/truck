@@ -27,7 +27,7 @@ where
                                 let v0 = vmap
                                     .get_or_insert(vf.id(), || vf.mapped(Point3::clone))
                                     .clone();
-                                let vb = edge.absolute_front();
+                                let vb = edge.absolute_back();
                                 let v1 = vmap
                                     .get_or_insert(vb.id(), || vb.mapped(Point3::clone))
                                     .clone();
