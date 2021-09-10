@@ -17,6 +17,7 @@ exclude = ["*.png"]
 [dependencies]
 image = "0.23.14"
 bytemuck = { version = "1.7.2", features = ["derive"] }
+truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-platform = { version = "0.2.1", path = "../truck-platform" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }

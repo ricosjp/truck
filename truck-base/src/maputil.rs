@@ -163,3 +163,10 @@ impl<K: Copy + Eq + Hash> IDMap<K> {
 		*self.0.get_or_insert(key, || len)
 	}
 }
+
+impl<K> IntoIterator for IDMap<K> {
+	type Item = (K, usize);
+	type IntoIter = <HashMap<K, usize> as IntoIterator>::IntoIter;
+	#[inline(always)]
+	fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}

@@ -1,6 +1,7 @@
 use crate::*;
 use polymesh::Vertex;
 use std::collections::HashMap;
+use truck_base::maputil::GetOrInsert;
 
 impl<V: Sized + Zeroable + Pod> ExpandedPolygon<V> {
     pub fn buffers(
@@ -179,29 +180,25 @@ fn signup_vertex(
     glpolymesh: &mut ExpandedPolygon<AttrVertex>,
     vertex_map: &mut HashMap<Vertex, u32>,
 ) {
-    let idx = match vertex_map.get(&vertex) {
-        Some(idx) => *idx,
-        None => {
-            let idx = glpolymesh.vertices.len() as u32;
-            let position = polymesh.positions()[vertex.pos].cast().unwrap().into();
-            let uv_coord = match vertex.uv {
-                Some(uv) => polymesh.uv_coords()[uv].cast().unwrap().into(),
-                None => [0.0, 0.0],
-            };
-            let normal = match vertex.nor {
-                Some(nor) => polymesh.normals()[nor].cast().unwrap().into(),
-                None => [0.0, 0.0, 0.0],
-            };
-            let wgpuvertex = AttrVertex {
-                position,
-                uv_coord,
-                normal,
-            };
-            vertex_map.insert(vertex, idx);
-            glpolymesh.vertices.push(wgpuvertex);
-            idx
-        }
-    };
+    let idx = *vertex_map.get_or_insert(vertex, || {
+        let idx = glpolymesh.vertices.len() as u32;
+        let position = polymesh.positions()[vertex.pos].cast().unwrap().into();
+        let uv_coord = match vertex.uv {
+            Some(uv) => polymesh.uv_coords()[uv].cast().unwrap().into(),
+            None => [0.0, 0.0],
+        };
+        let normal = match vertex.nor {
+            Some(nor) => polymesh.normals()[nor].cast().unwrap().into(),
+            None => [0.0, 0.0, 0.0],
+        };
+        let wgpuvertex = AttrVertex {
+            position,
+            uv_coord,
+            normal,
+        };
+        glpolymesh.vertices.push(wgpuvertex);
+        idx
+    });
     glpolymesh.indices.push(idx);
 }
 

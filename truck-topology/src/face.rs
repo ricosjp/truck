@@ -631,15 +631,12 @@ impl<P, C, S> Face<P, C, S> {
     /// ```
     pub fn border_on(&self, other: &Face<P, C, S>) -> bool {
         let mut hashmap = HashMap::new();
-        for edge in self.boundaries.iter().flat_map(|wire| wire.edge_iter()) {
+        let edge_iter = self.boundary_iters().into_iter().flatten();
+        edge_iter.for_each(|edge| {
             hashmap.insert(edge.id(), edge);
-        }
-        for edge in other.boundaries.iter().flat_map(|wire| wire.edge_iter()) {
-            if hashmap.insert(edge.id(), edge).is_some() {
-                return true;
-            }
-        }
-        false
+        });
+        let mut edge_iter = other.boundary_iters().into_iter().flatten();
+        edge_iter.any(|edge| hashmap.insert(edge.id(), edge).is_some())
     }
 
     /// Cuts a face with only one boundary by an edge.
