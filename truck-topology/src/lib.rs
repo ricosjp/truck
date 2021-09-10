@@ -76,6 +76,7 @@
 )]
 
 use std::collections::VecDeque;
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use truck_base::{id::ID, tolerance::*, maputil::GetOrInsert};
