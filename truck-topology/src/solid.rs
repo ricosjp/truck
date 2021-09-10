@@ -142,7 +142,7 @@ impl<P, C, S> Solid<P, C, S> {
     #[inline(always)]
     pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
     where
-        P: std::fmt::Debug,
+        P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
         let res = self
             .boundaries

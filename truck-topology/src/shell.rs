@@ -667,7 +667,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// Removes `vertex` from `self` by concat two edges on both sides.
     pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
     where
-        P: std::fmt::Debug,
+        P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
         let mut vec: Vec<(&mut Wire<P, C>, usize)> = self
             .face_iter_mut()

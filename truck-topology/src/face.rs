@@ -771,7 +771,7 @@ impl<P, C, S> Face<P, C, S> {
     pub fn glue_at_boundaries(&self, other: &Self) -> Option<Self>
     where
         S: Clone + PartialEq,
-        Wire<P, C>: std::fmt::Debug, {
+        Wire<P, C>: Debug, {
         let surface = self.get_surface();
         if &surface != &other.get_surface() {
             return None;

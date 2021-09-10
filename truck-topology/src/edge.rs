@@ -440,7 +440,7 @@ impl<P, C> Edge<P, C> {
     /// Concats two edges.
     pub fn concat(&self, rhs: &Self) -> std::result::Result<Self, ConcatError<P>>
     where
-        P: std::fmt::Debug,
+        P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
         if self.back() != rhs.front() {
             return Err(ConcatError::DisconnectedVertex(
@@ -463,7 +463,7 @@ impl<P, C> Edge<P, C> {
 
 /// Error for concat
 #[derive(Clone, Debug, Error)]
-pub enum ConcatError<P: std::fmt::Debug> {
+pub enum ConcatError<P: Debug> {
     /// Failed to concat edges since the end point of the first curve is different from the start point of the second curve.
     #[error("The end point {0:?} of the first curve is different from the start point {1:?} of the second curve.")]
     DisconnectedVertex(Vertex<P>, Vertex<P>),
@@ -474,7 +474,7 @@ pub enum ConcatError<P: std::fmt::Debug> {
     FromGeometry(truck_geotrait::ConcatError<P>),
 }
 
-impl<P: std::fmt::Debug> From<truck_geotrait::ConcatError<P>> for ConcatError<P> {
+impl<P: Debug> From<truck_geotrait::ConcatError<P>> for ConcatError<P> {
     fn from(err: truck_geotrait::ConcatError<P>) -> ConcatError<P> {
         ConcatError::FromGeometry(err)
     }
