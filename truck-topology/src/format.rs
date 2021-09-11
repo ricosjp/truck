@@ -1,5 +1,7 @@
 use crate::*;
 pub use vertex::VertexDisplay;
+pub use edge::EdgeDisplay;
+pub use wire::WireDisplay;
 
 #[derive(Clone)]
 pub(super) struct MutexFmt<'a, T>(pub &'a Mutex<T>);

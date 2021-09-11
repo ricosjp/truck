@@ -824,6 +824,70 @@ impl<P, C, S> Face<P, C, S> {
             surface: Arc::new(Mutex::new(surface)),
         })
     }
+
+    /// Creates display struct for debugging the face.
+    ///
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// use FaceDisplayFormat as FDF;
+    /// let v = Vertex::news(&[0, 1, 2, 3, 4, 5]);
+    /// let edge = vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    ///     Edge::new(&v[3], &v[4], ()),
+    ///     Edge::new(&v[4], &v[5], ()),
+    ///     Edge::new(&v[5], &v[3], ()),
+    /// ];
+    /// let wire0 = Wire::from(vec![
+    ///     edge[0].clone(),
+    ///     edge[1].clone(),
+    ///     edge[2].clone(),
+    /// ]);
+    /// let wire1 = Wire::from(vec![
+    ///     edge[3].clone(),
+    ///     edge[4].clone(),
+    ///     edge[5].clone(),
+    /// ]);
+    /// let face = Face::new(vec![wire0, wire1], 120); 
+    /// 
+    /// let vertex_format = VertexDisplayFormat::AsPoint;
+    /// let edge_format = EdgeDisplayFormat::VerticesTuple { vertex_format };
+    /// let wire_format = WireDisplayFormat::EdgesList { edge_format };
+    /// 
+    /// assert_eq!(
+    ///     format!("{:?}", face.display(FDF::Full { wire_format })),
+    ///     format!("Face {{ id: {:?}, boundaries: [[(0, 1), (1, 2), (2, 0)], [(3, 4), (4, 5), (5, 3)]], entity: 120 }}", face.id()),
+    /// );
+    /// assert_eq!(
+    ///     format!("{:?}", face.display(FDF::BoundariesAndID { wire_format })),
+    ///     format!("Face {{ id: {:?}, boundaries: [[(0, 1), (1, 2), (2, 0)], [(3, 4), (4, 5), (5, 3)]] }}", face.id()),
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", face.display(FDF::BoundariesAndSurface { wire_format })),
+    ///     "Face { boundaries: [[(0, 1), (1, 2), (2, 0)], [(3, 4), (4, 5), (5, 3)]], entity: 120 }",
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", face.display(FDF::LoopsListTuple { wire_format })),
+    ///     "Face([[(0, 1), (1, 2), (2, 0)], [(3, 4), (4, 5), (5, 3)]])",
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", face.display(FDF::LoopsList { wire_format })),
+    ///     "[[(0, 1), (1, 2), (2, 0)], [(3, 4), (4, 5), (5, 3)]]",
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", face.display(FDF::AsSurface)),
+    ///     "120",
+    /// );
+    /// ```
+    #[inline(always)]
+    pub fn display(&self, format: FaceDisplayFormat) -> FaceDisplay<P, C, S> {
+        FaceDisplay {
+            face: self,
+            format,
+        }
+    }
 }
 
 impl<P, C, S: Clone + Invertible> Face<P, C, S> {
@@ -947,6 +1011,83 @@ impl<'a, P, C> ExactSizeIterator for BoundaryIter<'a, P, C> {
 }
 
 impl<'a, P, C> std::iter::FusedIterator for BoundaryIter<'a, P, C> {}
+
+/// Display struct for debugging the face
+#[derive(Clone, Copy)]
+pub struct FaceDisplay<'a, P, C, S> {
+    face: &'a Face<P, C, S>,
+    format: FaceDisplayFormat,
+}
+
+impl<'a, P: Debug, C: Debug, S: Debug> Debug for FaceDisplay<'a, P, C, S> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self.format {
+            FaceDisplayFormat::Full { wire_format } => f
+                .debug_struct("Face")
+                .field("id", &Arc::as_ptr(&self.face.surface))
+                .field(
+                    "boundaries",
+                    &self
+                        .face
+                        .boundaries()
+                        .iter()
+                        .map(|wire| wire.display(wire_format))
+                        .collect::<Vec<_>>(),
+                )
+                .field("entity", &MutexFmt(&self.face.surface))
+                .finish(),
+            FaceDisplayFormat::BoundariesAndID { wire_format } => f
+                .debug_struct("Face")
+                .field("id", &Arc::as_ptr(&self.face.surface))
+                .field(
+                    "boundaries",
+                    &self
+                        .face
+                        .boundaries()
+                        .iter()
+                        .map(|wire| wire.display(wire_format))
+                        .collect::<Vec<_>>(),
+                )
+                .finish(),
+            FaceDisplayFormat::BoundariesAndSurface { wire_format } => f
+                .debug_struct("Face")
+                .field(
+                    "boundaries",
+                    &self
+                        .face
+                        .boundaries()
+                        .iter()
+                        .map(|wire| wire.display(wire_format))
+                        .collect::<Vec<_>>(),
+                )
+                .field("entity", &MutexFmt(&self.face.surface))
+                .finish(),
+            FaceDisplayFormat::LoopsListTuple { wire_format } => f
+                .debug_tuple("Face")
+                .field(
+                    &self
+                        .face
+                        .boundaries()
+                        .iter()
+                        .map(|wire| wire.display(wire_format))
+                        .collect::<Vec<_>>(),
+                )
+                .finish(),
+            FaceDisplayFormat::LoopsList { wire_format } => f
+                .debug_list()
+                .entries(
+                    self.face
+                        .boundaries()
+                        .iter()
+                        .map(|wire| wire.display(wire_format)),
+                )
+                .finish(),
+            FaceDisplayFormat::AsSurface => {
+                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.face.surface)))
+            }
+        }
+    }
+}
 
 #[test]
 fn invert_mapped_face() {

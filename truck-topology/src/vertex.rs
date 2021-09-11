@@ -94,31 +94,31 @@ impl<P> Vertex<P> {
     #[inline(always)]
     pub fn id(&self) -> VertexID<P> { ID::new(Arc::as_ptr(&self.point)) }
 
-    /// Create display struct for debug the vertex.
+    /// Create display struct for debugging the vertex.
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use VertexFormat as VF;
+    /// use VertexDisplayFormat as VDF;
     /// let v = Vertex::new([0, 2]);
     /// assert_eq!(
-    ///     format!("{}", v.display(VF::Full)),
+    ///     format!("{:?}", v.display(VDF::Full)),
     ///     format!("Vertex {{ id: {:?}, entity: [0, 2] }}", v.id()),
     /// );
     /// assert_eq!(
-    ///     format!("{}", v.display(VF::IDTuple)),
+    ///     format!("{:?}", v.display(VDF::IDTuple)),
     ///     format!("Vertex({:?})", v.id()),
     /// );
     /// assert_eq!(
-    ///     &format!("{}", v.display(VF::PointTuple)),
+    ///     &format!("{:?}", v.display(VDF::PointTuple)),
     ///     "Vertex([0, 2])",
     /// );
     /// assert_eq!(
-    ///     &format!("{}", v.display(VF::AsPoint)),
+    ///     &format!("{:?}", v.display(VDF::AsPoint)),
     ///     "[0, 2]",
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: VertexFormat) -> VertexDisplay<P> {
+    pub fn display(&self, format: VertexDisplayFormat) -> VertexDisplay<P> {
         VertexDisplay {
             vertex: self,
             format,
@@ -149,33 +149,33 @@ impl<P> Hash for Vertex<P> {
     fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(Arc::as_ptr(&self.point), state); }
 }
 
-/// Display struct for vertex display
-#[derive(Clone, Debug)]
+/// Display struct for debugging the vertex
+#[derive(Clone, Copy)]
 pub struct VertexDisplay<'a, P> {
     vertex: &'a Vertex<P>,
-    format: VertexFormat,
+    format: VertexDisplayFormat,
 }
 
-impl<'a, P: Debug> Display for VertexDisplay<'a, P> {
+impl<'a, P: Debug> Debug for VertexDisplay<'a, P> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self.format {
-            VertexFormat::Full => {
+            VertexDisplayFormat::Full => {
                 f.debug_struct("Vertex")
                     .field("id", &Arc::as_ptr(&self.vertex.point))
                     .field("entity", &MutexFmt(&self.vertex.point))
                     .finish()
             }
-            VertexFormat::IDTuple => {
+            VertexDisplayFormat::IDTuple => {
                 f.debug_tuple("Vertex")
                     .field(&Arc::as_ptr(&self.vertex.point))
                     .finish()
             }
-            VertexFormat::PointTuple => {
+            VertexDisplayFormat::PointTuple => {
                 f.debug_tuple("Vertex")
                     .field(&MutexFmt(&self.vertex.point))
                     .finish()
             }
-            VertexFormat::AsPoint => {
+            VertexDisplayFormat::AsPoint => {
                 f.write_fmt(format_args!("{:?}", &MutexFmt(&self.vertex.point)))
             }
         }

@@ -707,6 +707,50 @@ impl<P, C, S> Shell<P, C, S> {
         }
         true
     }
+
+    /// Creates display struct for debugging the shell.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// use truck_topology::shell::ShellCondition;
+    /// use ShellDisplayFormat as SDF;
+    /// use std::iter::FromIterator;
+    ///
+    /// let v = Vertex::news(&[0, 1, 2, 3]);
+    /// let edge = [
+    ///     Edge::new(&v[0], &v[1], ()), // 0
+    ///     Edge::new(&v[1], &v[2], ()), // 1
+    ///     Edge::new(&v[2], &v[0], ()), // 2
+    ///     Edge::new(&v[1], &v[3], ()), // 3
+    ///     Edge::new(&v[3], &v[2], ()), // 4
+    ///     Edge::new(&v[0], &v[3], ()), // 5
+    /// ];
+    /// let wire = vec![
+    ///     Wire::from_iter(vec![&edge[0], &edge[3], &edge[4], &edge[2]]),
+    ///     Wire::from_iter(vec![&edge[1], &edge[2], &edge[5], &edge[3].inverse()]),
+    /// ];
+    /// let shell: Shell<_, _, _> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect(); 
+    ///
+    /// let vertex_format = VertexDisplayFormat::AsPoint;
+    /// let edge_format = EdgeDisplayFormat::VerticesTuple { vertex_format };
+    /// let wire_format = WireDisplayFormat::EdgesList { edge_format };
+    /// let face_format = FaceDisplayFormat::LoopsListTuple { wire_format };
+    /// 
+    /// assert_eq!(
+    ///     &format!("{:?}", shell.display(SDF::FacesListTuple {face_format})),
+    ///     "Shell([Face([[(0, 1), (1, 3), (3, 2), (2, 0)]]), Face([[(1, 2), (2, 0), (0, 3), (3, 1)]])])",
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", shell.display(SDF::FacesList {face_format})),
+    ///     "[Face([[(0, 1), (1, 3), (3, 2), (2, 0)]]), Face([[(1, 2), (2, 0), (0, 3), (3, 1)]])]",
+    /// );
+    /// ```
+    pub fn display(&self, format: ShellDisplayFormat) -> ShellDisplay<P, C, S> {
+        ShellDisplay {
+            shell: self,
+            format,
+        }
+    }
 }
 
 impl<P, C, S> Clone for Shell<P, C, S> {
@@ -1003,4 +1047,29 @@ where T: Eq + Hash + Clone {
         }
     }
     res
+}
+
+/// Display struct for debugging the shell
+#[derive(Clone, Copy)]
+pub struct ShellDisplay<'a, P, C, S> {
+    shell: &'a Shell<P, C, S>,
+    format: ShellDisplayFormat,
+}
+
+impl<'a, P: Debug, C: Debug, S: Debug> Debug for ShellDisplay<'a, P, C, S> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self.format {
+            ShellDisplayFormat::FacesList { face_format } => f
+                .debug_list()
+                .entries(self.shell.face_iter().map(|face| face.display(face_format)))
+                .finish(),
+            ShellDisplayFormat::FacesListTuple { face_format } => f
+                .debug_tuple("Shell")
+                .field(&ShellDisplay {
+                    shell: self.shell,
+                    format: ShellDisplayFormat::FacesList { face_format },
+                })
+                .finish(),
+        }
+    }
 }

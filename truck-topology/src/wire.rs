@@ -461,6 +461,42 @@ impl<P, C> Wire<P, C> {
         C: ParametricCurve<Point = P>, {
         self.iter().all(|edge| edge.is_geometric_consistent())
     }
+
+    /// Creates display struct for debugging the wire.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// use WireDisplayFormat as WDF;
+    /// let v = Vertex::news(&[0, 1, 2, 3, 4]);
+    /// let wire: Wire<usize, usize> = vec![
+    ///     Edge::new(&v[0], &v[1], 100),
+    ///     Edge::new(&v[2], &v[1], 110).inverse(),
+    ///     Edge::new(&v[3], &v[4], 120),
+    /// ].into();
+    /// 
+    /// let vertex_format = VertexDisplayFormat::AsPoint;
+    /// let edge_format = EdgeDisplayFormat::VerticesTuple { vertex_format };
+    /// 
+    /// assert_eq!(
+    ///     &format!("{:?}", wire.display(WDF::EdgesListTuple {edge_format})),
+    ///     "Wire([(0, 1), (1, 2), (3, 4)])",
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", wire.display(WDF::EdgesList {edge_format})),
+    ///     "[(0, 1), (1, 2), (3, 4)]",
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", wire.display(WDF::VerticesList {vertex_format})),
+    ///     "[0, 1, 2, 3, 4]",
+    /// );
+    /// ```
+    #[inline(always)]
+    pub fn display(&self, format: WireDisplayFormat) -> WireDisplay<P, C> {
+        WireDisplay {
+            wire: self,
+            format
+        }
+    }
 }
 
 impl<T, P, C> From<T> for Wire<P, C>
@@ -653,3 +689,34 @@ impl<P, C> PartialEq for Wire<P, C> {
 }
 
 impl<P, C> Eq for Wire<P, C> {}
+
+/// Display struct for debugging the wire
+#[derive(Clone, Copy)]
+pub struct WireDisplay<'a, P, C> {
+    wire: &'a Wire<P, C>,
+    format: WireDisplayFormat,
+}
+
+impl<'a, P: Debug, C: Debug> Debug for WireDisplay<'a, P, C> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self.format {
+            WireDisplayFormat::EdgesListTuple { edge_format } => f
+                .debug_tuple("Wire")
+                .field(&WireDisplay {
+                    wire: self.wire,
+                    format: WireDisplayFormat::EdgesList { edge_format },
+                })
+                .finish(),
+            WireDisplayFormat::EdgesList { edge_format } => f
+                .debug_list()
+                .entries(self.wire.edge_iter().map(|edge| edge.display(edge_format)))
+                .finish(),
+            WireDisplayFormat::VerticesList { vertex_format } => {
+                let vertices: Vec<_> = self.wire.vertex_iter().collect();
+                f.debug_list()
+                    .entries(vertices.iter().map(|vertex| vertex.display(vertex_format)))
+                    .finish()
+            }
+        }
+    }
+}

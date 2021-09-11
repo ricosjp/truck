@@ -124,6 +124,19 @@ impl<P, C, S> Solid<P, C, S> {
         )
     }
 
+    /// Returns the consistence of the geometry of end vertices
+    /// and the geometry of edge.
+    #[inline(always)]
+    pub fn is_geometric_consistent(&self) -> bool
+    where
+        P: Tolerance,
+        C: ParametricCurve<Point = P>,
+        S: IncludeCurve<C>, {
+        self.boundaries()
+            .iter()
+            .all(|shell| shell.is_geometric_consistent())
+    }
+
     /// Cuts one edge into two edges at vertex.
     #[inline(always)]
     pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
@@ -152,25 +165,58 @@ impl<P, C, S> Solid<P, C, S> {
         Solid::new(self.boundaries.clone());
         res
     }
-}
 
-impl<P, C, S> Solid<P, C, S>
-where
-    P: Tolerance,
-    C: ParametricCurve<Point = P>,
-    S: IncludeCurve<C>,
-{
-    /// Returns the consistence of the geometry of end vertices
-    /// and the geometry of edge.
+    /// Creates display struct for debugging the solid.
     #[inline(always)]
-    pub fn is_geometric_consistent(&self) -> bool {
-        self.boundaries()
-            .iter()
-            .all(|shell| shell.is_geometric_consistent())
+    pub fn display(&self, format: SolidDisplayFormat) -> SolidDisplay<P, C, S> {
+        SolidDisplay {
+            solid: self,
+            format,
+        }
     }
 }
 
-#[allow(dead_code)]
+/// Display struct for debugging the shell
+#[derive(Clone, Copy)]
+pub struct SolidDisplay<'a, P, C, S> {
+    solid: &'a Solid<P, C, S>,
+    format: SolidDisplayFormat,
+}
+
+impl<'a, P: Debug, C: Debug, S: Debug> Debug for SolidDisplay<'a, P, C, S> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self.format {
+            SolidDisplayFormat::ShellsList { shell_format } => f
+                .debug_list()
+                .entries(
+                    self.solid
+                        .boundaries
+                        .iter()
+                        .map(|shell| shell.display(shell_format)),
+                )
+                .finish(),
+            SolidDisplayFormat::ShellsListTuple { shell_format } => f
+                .debug_tuple("Solid")
+                .field(&SolidDisplay {
+                    solid: self.solid,
+                    format: SolidDisplayFormat::ShellsList { shell_format },
+                })
+                .finish(),
+            SolidDisplayFormat::Struct { shell_format } => f
+                .debug_struct("Solid")
+                .field(
+                    "boundaries",
+                    &SolidDisplay {
+                        solid: self.solid,
+                        format: SolidDisplayFormat::ShellsList { shell_format },
+                    },
+                )
+                .finish(),
+        }
+    }
+}
+
+#[cfg(test)]
 pub(super) fn cube() -> Solid<(), (), ()> {
     use crate::*;
     use std::iter::FromIterator;
