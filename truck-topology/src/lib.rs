@@ -76,9 +76,10 @@
 )]
 
 use std::collections::VecDeque;
+use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use truck_base::{id::ID, tolerance::*, maputil::GetOrInsert};
+use truck_base::{id::ID, maputil::GetOrInsert, tolerance::*};
 use truck_geotrait::*;
 
 const SEARCH_PARAMETER_TRIALS: usize = 100;
@@ -241,6 +242,138 @@ pub type EdgeID<C> = ID<Mutex<C>>;
 /// ```
 pub type FaceID<S> = ID<Mutex<S>>;
 
+/// configuation for vertex display format.
+#[derive(Clone, Copy, Debug)]
+pub enum VertexDisplayFormat {
+    /// Display all data like `Vertex { id: 0x123456789ab, entity: [0.0, 1.0] }`.
+    Full,
+    /// Display id like `Vertex(0x123456789ab)`.
+    IDTuple,
+    /// Display entity point like `Vertex([0.0, 1.0])`.
+    PointTuple,
+    /// Display only entity point like `[0.0, 1.0]`.
+    AsPoint,
+}
+
+/// Configuation for edge display format.
+#[derive(Clone, Copy, Debug)]
+pub enum EdgeDisplayFormat {
+    /// Display all data like `Edge { id: 0x123456789ab, vertices: (0, 1), entity: BSplineCurve {..} }`.
+    Full {
+        /// vertex display format
+        vertex_format: VertexDisplayFormat,
+    },
+    /// Display vertices tuple and id like `Edge { id: 0x123456789ab, vertices: (0, 1) }`.
+    VerticesTupleAndID {
+        /// vertex display format
+        vertex_format: VertexDisplayFormat,
+    },
+    /// Display end vertices tuple and entity curve like `Edge { vertices: (1, 0), entity: BSplineCurve {..} }`.
+    VerticesTupleAndCurve {
+        /// vertex display format
+        vertex_format: VertexDisplayFormat,
+    },
+    /// Display only end vertices like `Edge(0, 1)`.
+    VerticesTupleStruct {
+        /// vertex display format
+        vertex_format: VertexDisplayFormat,
+    },
+    /// Display only end vertices like `(0, 1)`.
+    VerticesTuple {
+        /// vertex display format
+        vertex_format: VertexDisplayFormat,
+    },
+    /// Display only entity curve like `BSplineCurve {..}`.
+    AsCurve,
+}
+
+/// Configuation for wire display format.
+#[derive(Clone, Copy, Debug)]
+pub enum WireDisplayFormat {
+    /// Display tuple struct of edge list like `Wire([Edge {..}, Edge {..}, ..])`.
+    EdgesListTuple {
+        /// edge display format
+        edge_format: EdgeDisplayFormat,
+    },
+    /// Display as edge list like `[Edge {..}, Edge {..}, ..]`.
+    EdgesList {
+        /// edge display format
+        edge_format: EdgeDisplayFormat,
+    },
+    /// Display as vertex list like `[Vertex {..}, Vertex {..}, ..]`.
+    VerticesList {
+        /// vertex display format
+        vertex_format: VertexDisplayFormat,
+    },
+}
+
+/// Configuation for face display format
+#[derive(Clone, Copy, Debug)]
+pub enum FaceDisplayFormat {
+    /// Display all data like `Face { id: 0x123456789ab, boundaries: [Wire(..), Wire(..)], entity: BSplineSurface {..} }`.
+    Full {
+        /// display format for boundary wire
+        wire_format: WireDisplayFormat,
+    },
+    /// Display boundary and id like `Face { id: 0x123456789ab, boundaries: [Wire(..), Wire(..)] }`.
+    BoundariesAndID {
+        /// display format for boundary wire
+        wire_format: WireDisplayFormat,
+    },
+    /// Display boundary and entity surface like `Face { boundaries: [Wire(..), Wire(..)], entity: BSplineSurface {..} }`.
+    BoundariesAndSurface {
+        /// display format for boundary wire
+        wire_format: WireDisplayFormat,
+    },
+    /// Display boundary loops list tuple like `Face([Wire(..), Wire(..)])`.
+    LoopsListTuple {
+        /// display format for boundary wire
+        wire_format: WireDisplayFormat,
+    },
+    /// Display boundary loops list like `[Wire(..), Wire(..)]`.
+    LoopsList {
+        /// display format for boundary wire
+        wire_format: WireDisplayFormat,
+    },
+    /// Display as surface like `BSplineSurface {..}`.
+    AsSurface,
+}
+
+/// Configuation for shell display format
+#[derive(Clone, Copy, Debug)]
+pub enum ShellDisplayFormat {
+    /// Display as faces list tuple struct like `Shell([Face {..}, Face {..}, ..])`.
+    FacesListTuple {
+        /// face display format
+        face_format: FaceDisplayFormat,
+    },
+    /// Display as faces list like `[Face {..}, Face {..}, ..]`.
+    FacesList {
+        /// face display format
+        face_format: FaceDisplayFormat,
+    },
+}
+
+/// Configuation for solid display format
+#[derive(Clone, Copy, Debug)]
+pub enum SolidDisplayFormat {
+    /// Display solid struct like `Solid { boundaries: [Shell(..), Shell(..), ..] }`.
+    Struct {
+        /// shell display format
+        shell_format: ShellDisplayFormat,
+    },
+    /// Display as boundary shell list tuple struct like `Solid([Shell(..), Shell(..), ..])`.
+    ShellsListTuple {
+        /// shell display format
+        shell_format: ShellDisplayFormat,
+    },
+    /// Display as boundary shell list like `[Shell(..), Shell(..), ..]`.
+    ShellsList {
+        /// shell display format
+        shell_format: ShellDisplayFormat,
+    },
+}
+
 mod compress;
 mod edge;
 /// classifies the errors that can occur in this crate.
@@ -254,3 +387,30 @@ mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
 pub use compress::{CompressedShell, CompressedSolid};
+
+/// Display structs for debug or display topological elements
+pub mod format {
+    use crate::*;
+    pub use edge::EdgeDisplay;
+    pub use vertex::VertexDisplay;
+    pub use wire::WireDisplay;
+    pub use face::FaceDisplay;
+    pub use shell::ShellDisplay;
+
+    #[derive(Clone)]
+    pub(super) struct MutexFmt<'a, T>(pub &'a Mutex<T>);
+
+    impl<'a, T: Debug> Debug for MutexFmt<'a, T> {
+        fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+            use std::sync::TryLockError;
+            match self.0.try_lock() {
+                Ok(guard) => f.write_fmt(format_args!("{:?}", &&*guard)),
+                Err(TryLockError::Poisoned(err)) => {
+                    f.write_fmt(format_args!("{:?}", &&**err.get_ref()))
+                }
+                Err(TryLockError::WouldBlock) => f.pad("<locked>"),
+            }
+        }
+    }
+}
+use format::*;

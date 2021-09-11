@@ -34,7 +34,8 @@ impl<P> Vertex<P> {
 
     /// Returns the point of vertex.
     #[inline(always)]
-    pub fn get_point(&self) -> P where P: Clone {
+    pub fn get_point(&self) -> P
+    where P: Clone {
         self.point.lock().unwrap().clone()
     }
 
@@ -51,15 +52,13 @@ impl<P> Vertex<P> {
     ///
     /// // set point
     /// v0.set_point(1);
-    /// 
+    ///
     /// // The contents of two vertices are synchronized.
     /// assert_eq!(v0.get_point(), 1);
     /// assert_eq!(v1.get_point(), 1);
-    /// ``` 
+    /// ```
     #[inline(always)]
-    pub fn set_point(&self, point: P) {
-        *self.point.lock().unwrap() = point;
-    }
+    pub fn set_point(&self, point: P) { *self.point.lock().unwrap() = point; }
 
     /// Returns vertex whose point is converted by `point_mapping`.
     /// # Remarks
@@ -67,7 +66,10 @@ impl<P> Vertex<P> {
     /// So, this method does not appear to the document.
     #[doc(hidden)]
     #[inline(always)]
-    pub fn try_mapped<Q>(&self, mut point_mapping: impl FnMut(&P) -> Option<Q>) -> Option<Vertex<Q>> {
+    pub fn try_mapped<Q>(
+        &self,
+        mut point_mapping: impl FnMut(&P) -> Option<Q>,
+    ) -> Option<Vertex<Q>> {
         Some(Vertex::new(point_mapping(&*self.point.lock().unwrap())?))
     }
 
@@ -91,6 +93,37 @@ impl<P> Vertex<P> {
     /// Returns the id of the vertex.
     #[inline(always)]
     pub fn id(&self) -> VertexID<P> { ID::new(Arc::as_ptr(&self.point)) }
+
+    /// Create display struct for debugging the vertex.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// use VertexDisplayFormat as VDF;
+    /// let v = Vertex::new([0, 2]);
+    /// assert_eq!(
+    ///     format!("{:?}", v.display(VDF::Full)),
+    ///     format!("Vertex {{ id: {:?}, entity: [0, 2] }}", v.id()),
+    /// );
+    /// assert_eq!(
+    ///     format!("{:?}", v.display(VDF::IDTuple)),
+    ///     format!("Vertex({:?})", v.id()),
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", v.display(VDF::PointTuple)),
+    ///     "Vertex([0, 2])",
+    /// );
+    /// assert_eq!(
+    ///     &format!("{:?}", v.display(VDF::AsPoint)),
+    ///     "[0, 2]",
+    /// );
+    /// ```
+    #[inline(always)]
+    pub fn display(&self, format: VertexDisplayFormat) -> VertexDisplay<P> {
+        VertexDisplay {
+            vertex: self,
+            format,
+        }
+    }
 }
 
 impl<P> Clone for Vertex<P> {
@@ -114,4 +147,37 @@ impl<P> Eq for Vertex<P> {}
 impl<P> Hash for Vertex<P> {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(Arc::as_ptr(&self.point), state); }
+}
+
+/// Display struct for debugging the vertex
+#[derive(Clone, Copy)]
+pub struct VertexDisplay<'a, P> {
+    vertex: &'a Vertex<P>,
+    format: VertexDisplayFormat,
+}
+
+impl<'a, P: Debug> Debug for VertexDisplay<'a, P> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self.format {
+            VertexDisplayFormat::Full => {
+                f.debug_struct("Vertex")
+                    .field("id", &Arc::as_ptr(&self.vertex.point))
+                    .field("entity", &MutexFmt(&self.vertex.point))
+                    .finish()
+            }
+            VertexDisplayFormat::IDTuple => {
+                f.debug_tuple("Vertex")
+                    .field(&Arc::as_ptr(&self.vertex.point))
+                    .finish()
+            }
+            VertexDisplayFormat::PointTuple => {
+                f.debug_tuple("Vertex")
+                    .field(&MutexFmt(&self.vertex.point))
+                    .finish()
+            }
+            VertexDisplayFormat::AsPoint => {
+                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.vertex.point)))
+            }
+        }
+    }
 }
