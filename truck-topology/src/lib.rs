@@ -249,7 +249,7 @@ pub enum VertexDisplayFormat {
     Full,
     /// Display id like `Vertex(0x123456789ab)`.
     IDTuple,
-    /// Display entity point like `Vertex([0.0, 1.0])`. 
+    /// Display entity point like `Vertex([0.0, 1.0])`.
     PointTuple,
     /// Display only entity point like `[0.0, 1.0]`.
     AsPoint,
@@ -351,7 +351,7 @@ pub enum ShellDisplayFormat {
     FacesList {
         /// face display format
         face_format: FaceDisplayFormat,
-    }
+    },
 }
 
 /// Configuation for solid display format
@@ -371,25 +371,7 @@ pub enum SolidDisplayFormat {
     ShellsList {
         /// shell display format
         shell_format: ShellDisplayFormat,
-    }
-}
-
-
-/// configuation for format topological elements
-#[derive(Clone, Copy, Debug)]
-pub struct FormatConfiguation {
-    /// display vertex id
-    pub vertex_id: bool,
-    /// display vertex entity point
-    pub vertex_entity: bool,
-    /// display edge id
-    pub edge_id: bool,
-    /// display edge entity curve
-    pub edge_entity: bool,
-    /// display face id
-    pub face_id: bool,
-    /// display face entity surface
-    pub face_entity: bool,
+    },
 }
 
 mod compress;
@@ -407,5 +389,28 @@ pub mod wire;
 pub use compress::{CompressedShell, CompressedSolid};
 
 /// Display structs for debug or display topological elements
-pub mod format;
+pub mod format {
+    use crate::*;
+    pub use edge::EdgeDisplay;
+    pub use vertex::VertexDisplay;
+    pub use wire::WireDisplay;
+    pub use face::FaceDisplay;
+    pub use shell::ShellDisplay;
+
+    #[derive(Clone)]
+    pub(super) struct MutexFmt<'a, T>(pub &'a Mutex<T>);
+
+    impl<'a, T: Debug> Debug for MutexFmt<'a, T> {
+        fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+            use std::sync::TryLockError;
+            match self.0.try_lock() {
+                Ok(guard) => f.write_fmt(format_args!("{:?}", &&*guard)),
+                Err(TryLockError::Poisoned(err)) => {
+                    f.write_fmt(format_args!("{:?}", &&**err.get_ref()))
+                }
+                Err(TryLockError::WouldBlock) => f.pad("<locked>"),
+            }
+        }
+    }
+}
 use format::*;
