@@ -496,9 +496,9 @@ impl<P, C> Edge<P, C> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: EdgeDisplayFormat) -> EdgeDisplay<P, C> {
-        EdgeDisplay {
-            edge: self,
+    pub fn display(&self, format: EdgeDisplayFormat) -> DebugDisplay<Self, EdgeDisplayFormat> {
+        DebugDisplay {
+            entity: self,
             format,
         }
     }
@@ -552,36 +552,29 @@ impl<P, C> Hash for Edge<P, C> {
     }
 }
 
-/// Display struct for debugging the edge
-#[derive(Clone, Copy)]
-pub struct EdgeDisplay<'a, P, C> {
-    edge: &'a Edge<P, C>,
-    format: EdgeDisplayFormat,
-}
-
-impl<'a, P: Debug, C: Debug> Debug for EdgeDisplay<'a, P, C> {
+impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Edge<P, C>, EdgeDisplayFormat> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self.format {
             EdgeDisplayFormat::Full { vertex_format } => f
                 .debug_struct("Edge")
-                .field("id", &Arc::as_ptr(&self.edge.curve))
+                .field("id", &Arc::as_ptr(&self.entity.curve))
                 .field(
                     "vertices",
                     &(
-                        self.edge.front().display(vertex_format),
-                        self.edge.back().display(vertex_format),
+                        self.entity.front().display(vertex_format),
+                        self.entity.back().display(vertex_format),
                     ),
                 )
-                .field("entity", &MutexFmt(&self.edge.curve))
+                .field("entity", &MutexFmt(&self.entity.curve))
                 .finish(),
             EdgeDisplayFormat::VerticesTupleAndID { vertex_format } => f
                 .debug_struct("Edge")
-                .field("id", &Arc::as_ptr(&self.edge.curve))
+                .field("id", &Arc::as_ptr(&self.entity.curve))
                 .field(
                     "vertices",
                     &(
-                        self.edge.front().display(vertex_format),
-                        self.edge.back().display(vertex_format),
+                        self.entity.front().display(vertex_format),
+                        self.entity.back().display(vertex_format),
                     ),
                 )
                 .finish(),
@@ -590,24 +583,24 @@ impl<'a, P: Debug, C: Debug> Debug for EdgeDisplay<'a, P, C> {
                 .field(
                     "vertices",
                     &(
-                        self.edge.front().display(vertex_format),
-                        self.edge.back().display(vertex_format),
+                        self.entity.front().display(vertex_format),
+                        self.entity.back().display(vertex_format),
                     ),
                 )
-                .field("entity", &MutexFmt(&self.edge.curve))
+                .field("entity", &MutexFmt(&self.entity.curve))
                 .finish(),
             EdgeDisplayFormat::VerticesTupleStruct { vertex_format } => f
                 .debug_tuple("Edge")
-                .field(&self.edge.front().display(vertex_format))
-                .field(&self.edge.back().display(vertex_format))
+                .field(&self.entity.front().display(vertex_format))
+                .field(&self.entity.back().display(vertex_format))
                 .finish(),
             EdgeDisplayFormat::VerticesTuple { vertex_format } => f.write_fmt(format_args!(
                 "({:?}, {:?})",
-                self.edge.front().display(vertex_format),
-                self.edge.back().display(vertex_format),
+                self.entity.front().display(vertex_format),
+                self.entity.back().display(vertex_format),
             )),
             EdgeDisplayFormat::AsCurve => {
-                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.edge.curve)))
+                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.entity.curve)))
             }
         }
     }

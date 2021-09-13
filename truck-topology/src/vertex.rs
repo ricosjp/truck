@@ -118,9 +118,9 @@ impl<P> Vertex<P> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: VertexDisplayFormat) -> VertexDisplay<P> {
-        VertexDisplay {
-            vertex: self,
+    pub fn display(&self, format: VertexDisplayFormat) -> DebugDisplay<Self, VertexDisplayFormat> {
+        DebugDisplay {
+            entity: self,
             format,
         }
     }
@@ -149,34 +149,27 @@ impl<P> Hash for Vertex<P> {
     fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(Arc::as_ptr(&self.point), state); }
 }
 
-/// Display struct for debugging the vertex
-#[derive(Clone, Copy)]
-pub struct VertexDisplay<'a, P> {
-    vertex: &'a Vertex<P>,
-    format: VertexDisplayFormat,
-}
-
-impl<'a, P: Debug> Debug for VertexDisplay<'a, P> {
+impl<'a, P: Debug> Debug for DebugDisplay<'a, Vertex<P>, VertexDisplayFormat> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self.format {
             VertexDisplayFormat::Full => {
                 f.debug_struct("Vertex")
-                    .field("id", &Arc::as_ptr(&self.vertex.point))
-                    .field("entity", &MutexFmt(&self.vertex.point))
+                    .field("id", &Arc::as_ptr(&self.entity.point))
+                    .field("entity", &MutexFmt(&self.entity.point))
                     .finish()
             }
             VertexDisplayFormat::IDTuple => {
                 f.debug_tuple("Vertex")
-                    .field(&Arc::as_ptr(&self.vertex.point))
+                    .field(&Arc::as_ptr(&self.entity.point))
                     .finish()
             }
             VertexDisplayFormat::PointTuple => {
                 f.debug_tuple("Vertex")
-                    .field(&MutexFmt(&self.vertex.point))
+                    .field(&MutexFmt(&self.entity.point))
                     .finish()
             }
             VertexDisplayFormat::AsPoint => {
-                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.vertex.point)))
+                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.entity.point)))
             }
         }
     }
