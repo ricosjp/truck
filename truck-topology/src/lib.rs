@@ -391,11 +391,14 @@ pub use compress::{CompressedShell, CompressedSolid};
 /// Display structs for debug or display topological elements
 pub mod format {
     use crate::*;
-    pub use edge::EdgeDisplay;
-    pub use vertex::VertexDisplay;
-    pub use wire::WireDisplay;
-    pub use face::FaceDisplay;
-    pub use shell::ShellDisplay;
+
+    /// struct for debug formatting
+    #[allow(missing_debug_implementations)]
+    #[derive(Clone, Copy)]
+    pub struct DebugDisplay<'a, T, Format> {
+        pub(super) entity: &'a T,
+        pub(super) format: Format,
+    }
 
     #[derive(Clone)]
     pub(super) struct MutexFmt<'a, T>(pub &'a Mutex<T>);

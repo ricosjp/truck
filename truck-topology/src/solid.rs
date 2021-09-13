@@ -168,28 +168,23 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Creates display struct for debugging the solid.
     #[inline(always)]
-    pub fn display(&self, format: SolidDisplayFormat) -> SolidDisplay<P, C, S> {
-        SolidDisplay {
-            solid: self,
+    pub fn display(&self, format: SolidDisplayFormat) -> DebugDisplay<Self, SolidDisplayFormat> {
+        DebugDisplay {
+            entity: self,
             format,
         }
     }
 }
 
-/// Display struct for debugging the shell
-#[derive(Clone, Copy)]
-pub struct SolidDisplay<'a, P, C, S> {
-    solid: &'a Solid<P, C, S>,
-    format: SolidDisplayFormat,
-}
-
-impl<'a, P: Debug, C: Debug, S: Debug> Debug for SolidDisplay<'a, P, C, S> {
+impl<'a, P: Debug, C: Debug, S: Debug> Debug
+    for DebugDisplay<'a, Solid<P, C, S>, SolidDisplayFormat>
+{
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self.format {
             SolidDisplayFormat::ShellsList { shell_format } => f
                 .debug_list()
                 .entries(
-                    self.solid
+                    self.entity
                         .boundaries
                         .iter()
                         .map(|shell| shell.display(shell_format)),
@@ -197,8 +192,8 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug for SolidDisplay<'a, P, C, S> {
                 .finish(),
             SolidDisplayFormat::ShellsListTuple { shell_format } => f
                 .debug_tuple("Solid")
-                .field(&SolidDisplay {
-                    solid: self.solid,
+                .field(&DebugDisplay {
+                    entity: self.entity,
                     format: SolidDisplayFormat::ShellsList { shell_format },
                 })
                 .finish(),
@@ -206,8 +201,8 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug for SolidDisplay<'a, P, C, S> {
                 .debug_struct("Solid")
                 .field(
                     "boundaries",
-                    &SolidDisplay {
-                        solid: self.solid,
+                    &DebugDisplay {
+                        entity: self.entity,
                         format: SolidDisplayFormat::ShellsList { shell_format },
                     },
                 )

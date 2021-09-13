@@ -850,12 +850,12 @@ impl<P, C, S> Face<P, C, S> {
     ///     edge[4].clone(),
     ///     edge[5].clone(),
     /// ]);
-    /// let face = Face::new(vec![wire0, wire1], 120); 
-    /// 
+    /// let face = Face::new(vec![wire0, wire1], 120);
+    ///
     /// let vertex_format = VertexDisplayFormat::AsPoint;
     /// let edge_format = EdgeDisplayFormat::VerticesTuple { vertex_format };
     /// let wire_format = WireDisplayFormat::EdgesList { edge_format };
-    /// 
+    ///
     /// assert_eq!(
     ///     format!("{:?}", face.display(FDF::Full { wire_format })),
     ///     format!("Face {{ id: {:?}, boundaries: [[(0, 1), (1, 2), (2, 0)], [(3, 4), (4, 5), (5, 3)]], entity: 120 }}", face.id()),
@@ -882,9 +882,9 @@ impl<P, C, S> Face<P, C, S> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: FaceDisplayFormat) -> FaceDisplay<P, C, S> {
-        FaceDisplay {
-            face: self,
+    pub fn display(&self, format: FaceDisplayFormat) -> DebugDisplay<Self, FaceDisplayFormat> {
+        DebugDisplay {
+            entity: self,
             format,
         }
     }
@@ -1012,37 +1012,32 @@ impl<'a, P, C> ExactSizeIterator for BoundaryIter<'a, P, C> {
 
 impl<'a, P, C> std::iter::FusedIterator for BoundaryIter<'a, P, C> {}
 
-/// Display struct for debugging the face
-#[derive(Clone, Copy)]
-pub struct FaceDisplay<'a, P, C, S> {
-    face: &'a Face<P, C, S>,
-    format: FaceDisplayFormat,
-}
-
-impl<'a, P: Debug, C: Debug, S: Debug> Debug for FaceDisplay<'a, P, C, S> {
+impl<'a, P: Debug, C: Debug, S: Debug> Debug
+    for DebugDisplay<'a, Face<P, C, S>, FaceDisplayFormat>
+{
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self.format {
             FaceDisplayFormat::Full { wire_format } => f
                 .debug_struct("Face")
-                .field("id", &Arc::as_ptr(&self.face.surface))
+                .field("id", &Arc::as_ptr(&self.entity.surface))
                 .field(
                     "boundaries",
                     &self
-                        .face
+                        .entity
                         .boundaries()
                         .iter()
                         .map(|wire| wire.display(wire_format))
                         .collect::<Vec<_>>(),
                 )
-                .field("entity", &MutexFmt(&self.face.surface))
+                .field("entity", &MutexFmt(&self.entity.surface))
                 .finish(),
             FaceDisplayFormat::BoundariesAndID { wire_format } => f
                 .debug_struct("Face")
-                .field("id", &Arc::as_ptr(&self.face.surface))
+                .field("id", &Arc::as_ptr(&self.entity.surface))
                 .field(
                     "boundaries",
                     &self
-                        .face
+                        .entity
                         .boundaries()
                         .iter()
                         .map(|wire| wire.display(wire_format))
@@ -1054,19 +1049,19 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug for FaceDisplay<'a, P, C, S> {
                 .field(
                     "boundaries",
                     &self
-                        .face
+                        .entity
                         .boundaries()
                         .iter()
                         .map(|wire| wire.display(wire_format))
                         .collect::<Vec<_>>(),
                 )
-                .field("entity", &MutexFmt(&self.face.surface))
+                .field("entity", &MutexFmt(&self.entity.surface))
                 .finish(),
             FaceDisplayFormat::LoopsListTuple { wire_format } => f
                 .debug_tuple("Face")
                 .field(
                     &self
-                        .face
+                        .entity
                         .boundaries()
                         .iter()
                         .map(|wire| wire.display(wire_format))
@@ -1076,14 +1071,14 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug for FaceDisplay<'a, P, C, S> {
             FaceDisplayFormat::LoopsList { wire_format } => f
                 .debug_list()
                 .entries(
-                    self.face
+                    self.entity
                         .boundaries()
                         .iter()
                         .map(|wire| wire.display(wire_format)),
                 )
                 .finish(),
             FaceDisplayFormat::AsSurface => {
-                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.face.surface)))
+                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.entity.surface)))
             }
         }
     }
