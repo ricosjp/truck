@@ -1,4 +1,5 @@
 use super::*;
+use std::fmt::Debug;
 use truck_geometry::*;
 const TOL: f64 = 0.01;
 
@@ -10,6 +11,46 @@ type AlternativeIntersection = crate::test_util::Alternatives<
 	NURBSCurve<Vector4>,
 	IntersectionCurve<PolylineCurve, BSplineSurface<Point3>>,
 >;
+
+struct DebugDisplay<'a, T, Format> {
+	entity: &'a T,
+	format: Format,
+}
+
+impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Loops<P, C>, WireDisplayFormat> {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		f.debug_tuple("Loops")
+			.field(
+				&self
+					.entity
+					.0
+					.iter()
+					.map(|wire| wire.display(self.format))
+					.collect::<Vec<_>>(),
+			)
+			.finish()
+	}
+}
+
+impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, LoopsStore<P, C>, WireDisplayFormat> {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		f.debug_list()
+			.entries(self.entity.0.iter().map(|loops| DebugDisplay {
+				entity: loops,
+				format: self.format,
+			}))
+			.finish()
+	}
+}
+
+impl<P: Debug, C: Debug> LoopsStore<P, C> {
+	fn display(&self, format: WireDisplayFormat) -> DebugDisplay<Self, WireDisplayFormat> {
+		DebugDisplay {
+			entity: self,
+			format,
+		}
+	}
+}
 
 fn parabola_surfaces() -> (BSplineSurface<Point3>, BSplineSurface<Point3>) {
 	// define surfaces
@@ -101,32 +142,32 @@ fn independent_intersection() {
 	assert!(
 		geom_loops_store0[0][0].is_closed(),
 		"{:?}",
-		geom_loops_store0[0][0].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[0][1].is_closed(),
 		"{:?}",
-		geom_loops_store0[0][1].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[0][2].is_closed(),
 		"{:?}",
-		geom_loops_store0[0][2].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[0][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[0][0].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store0[0][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[0][1].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store0[0][2].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[0][2].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	assert_eq!(geom_loops_store1.len(), 1);
 	assert_eq!(geom_loops_store1[0].len(), 3);
@@ -136,32 +177,32 @@ fn independent_intersection() {
 	assert!(
 		geom_loops_store1[0][0].is_closed(),
 		"{:?}",
-		geom_loops_store1[0][0].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[0][1].is_closed(),
 		"{:?}",
-		geom_loops_store1[0][1].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[0][2].is_closed(),
 		"{:?}",
-		geom_loops_store1[0][2].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[0][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[0][0].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store1[0][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[0][1].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store1[0][2].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[0][2].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 }
 
@@ -268,22 +309,22 @@ fn rotated_intersection() {
 	assert!(
 		geom_loops_store0[0][0].is_closed(),
 		"{:?}",
-		geom_loops_store0[0][0].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[0][1].is_closed(),
 		"{:?}",
-		geom_loops_store0[0][1].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[0][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[0][0].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store0[0][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[0][1].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	let (a, b) = (geom_loops_store0[0][0].len(), geom_loops_store0[0][1].len());
 	assert_eq!(a * b, 15, "{} {}", a, b);
@@ -293,22 +334,22 @@ fn rotated_intersection() {
 	assert!(
 		geom_loops_store0[1][0].is_closed(),
 		"{:?}",
-		geom_loops_store0[1][0].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[1][1].is_closed(),
 		"{:?}",
-		geom_loops_store0[1][1].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[1][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[1][0].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store0[1][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[1][1].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	let (a, b) = (geom_loops_store0[1][0].len(), geom_loops_store0[1][1].len());
 	assert_eq!(a * b, 15, "{} {}", a, b);
@@ -319,22 +360,22 @@ fn rotated_intersection() {
 	assert!(
 		geom_loops_store1[0][0].is_closed(),
 		"{:?}",
-		geom_loops_store1[0][0].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[0][1].is_closed(),
 		"{:?}",
-		geom_loops_store1[0][1].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[0][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[0][0].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store1[0][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[0][1].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	let (a, b) = (geom_loops_store1[0][0].len(), geom_loops_store1[0][1].len());
 	assert_eq!(a * b, 15, "{} {}", a, b);
@@ -344,22 +385,22 @@ fn rotated_intersection() {
 	assert!(
 		geom_loops_store1[1][0].is_closed(),
 		"{:?}",
-		geom_loops_store1[1][0].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[1][1].is_closed(),
 		"{:?}",
-		geom_loops_store1[1][1].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[1][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[1][0].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store1[1][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[1][1].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	let (a, b) = (geom_loops_store1[1][0].len(), geom_loops_store1[1][1].len());
 	assert_eq!(a * b, 15, "{} {}", a, b);
@@ -515,22 +556,22 @@ fn crossing_edges() {
 	assert!(
 		geom_loops_store0[0][0].is_closed(),
 		"{:?}",
-		geom_loops_store0[0][0].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[0][1].is_closed(),
 		"{:?}",
-		geom_loops_store0[0][1].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[0][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[0][0].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store0[0][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[0][1].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	let (a, b) = (geom_loops_store0[0][0].len(), geom_loops_store0[0][1].len());
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store0[0]);
@@ -540,22 +581,22 @@ fn crossing_edges() {
 	assert!(
 		geom_loops_store0[1][0].is_closed(),
 		"{:?}",
-		geom_loops_store0[1][0].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[1][1].is_closed(),
 		"{:?}",
-		geom_loops_store0[1][1].display(wire_id_format)
+		geom_loops_store0.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store0[1][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[1][0].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store0[1][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store0[1][1].display(wire_geom_format)
+		geom_loops_store0.display(wire_geom_format)
 	);
 	let (a, b) = (geom_loops_store0[1][0].len(), geom_loops_store0[1][1].len());
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store0[1]);
@@ -566,22 +607,22 @@ fn crossing_edges() {
 	assert!(
 		geom_loops_store1[0][0].is_closed(),
 		"{:?}",
-		geom_loops_store1[0][0].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[0][1].is_closed(),
 		"{:?}",
-		geom_loops_store1[0][1].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[0][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[0][0].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store1[0][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[0][1].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	let (a, b) = (geom_loops_store1[0][0].len(), geom_loops_store1[0][1].len());
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store1[0]);
@@ -591,22 +632,22 @@ fn crossing_edges() {
 	assert!(
 		geom_loops_store1[1][0].is_closed(),
 		"{:?}",
-		geom_loops_store1[1][0].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[1][1].is_closed(),
 		"{:?}",
-		geom_loops_store1[1][1].display(wire_id_format)
+		geom_loops_store1.display(wire_id_format)
 	);
 	assert!(
 		geom_loops_store1[1][0].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[1][0].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	assert!(
 		geom_loops_store1[1][1].is_geometric_consistent(),
 		"{:?}",
-		geom_loops_store1[1][1].display(wire_geom_format)
+		geom_loops_store1.display(wire_geom_format)
 	);
 	let (a, b) = (geom_loops_store1[1][0].len(), geom_loops_store1[1][1].len());
 	assert_eq!(a * b, 8, "{:?}", geom_loops_store1[1]);
