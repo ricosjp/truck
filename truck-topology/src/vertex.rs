@@ -94,6 +94,28 @@ impl<P> Vertex<P> {
     #[inline(always)]
     pub fn id(&self) -> VertexID<P> { ID::new(Arc::as_ptr(&self.point)) }
 
+    /// Returns how many same vertices.
+    ///
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// // Create one vertex
+    /// let v0 = Vertex::new(());
+    /// assert_eq!(v0.count(), 1);
+    /// // Create another vertex, independent from v0
+    /// let v1 = Vertex::new(());
+    /// assert_eq!(v0.count(), 1);
+    /// // Clone v0, count will be 2
+    /// let v2 = v0.clone();
+    /// assert_eq!(v0.count(), 2);
+    /// assert_eq!(v2.count(), 2);
+    /// // drop v2, count will be 1
+    /// drop(v2);
+    /// assert_eq!(v0.count(), 1);
+    /// ```
+    #[inline(always)]
+    pub fn count(&self) -> usize { Arc::strong_count(&self.point) }
+
     /// Create display struct for debugging the vertex.
     /// # Examples
     /// ```
@@ -137,9 +159,7 @@ impl<P> Clone for Vertex<P> {
 
 impl<P> PartialEq for Vertex<P> {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(Arc::as_ptr(&self.point), Arc::as_ptr(&other.point))
-    }
+    fn eq(&self, other: &Self) -> bool { self.id() == other.id() }
 }
 
 impl<P> Eq for Vertex<P> {}
@@ -152,22 +172,19 @@ impl<P> Hash for Vertex<P> {
 impl<'a, P: Debug> Debug for DebugDisplay<'a, Vertex<P>, VertexDisplayFormat> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self.format {
-            VertexDisplayFormat::Full => {
-                f.debug_struct("Vertex")
-                    .field("id", &Arc::as_ptr(&self.entity.point))
-                    .field("entity", &MutexFmt(&self.entity.point))
-                    .finish()
-            }
-            VertexDisplayFormat::IDTuple => {
-                f.debug_tuple("Vertex")
-                    .field(&Arc::as_ptr(&self.entity.point))
-                    .finish()
-            }
-            VertexDisplayFormat::PointTuple => {
-                f.debug_tuple("Vertex")
-                    .field(&MutexFmt(&self.entity.point))
-                    .finish()
-            }
+            VertexDisplayFormat::Full => f
+                .debug_struct("Vertex")
+                .field("id", &Arc::as_ptr(&self.entity.point))
+                .field("entity", &MutexFmt(&self.entity.point))
+                .finish(),
+            VertexDisplayFormat::IDTuple => f
+                .debug_tuple("Vertex")
+                .field(&self.entity.id())
+                .finish(),
+            VertexDisplayFormat::PointTuple => f
+                .debug_tuple("Vertex")
+                .field(&MutexFmt(&self.entity.point))
+                .finish(),
             VertexDisplayFormat::AsPoint => {
                 f.write_fmt(format_args!("{:?}", &MutexFmt(&self.entity.point)))
             }
