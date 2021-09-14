@@ -87,7 +87,6 @@ struct ProjectedSurface<'a, S> {
     origin: Point3,
     u_axis: Vector3,
     v_axis: Vector3,
-    normal: Vector3,
 }
 
 impl<'a, S: ParametricSurface3D> ProjectedSurface<'a, S> {
@@ -115,7 +114,6 @@ impl<'a, S: ParametricSurface3D> ProjectedSurface<'a, S> {
             origin,
             u_axis,
             v_axis,
-            normal,
         }
     }
     #[inline(always)]
