@@ -106,6 +106,10 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 				if !edge.orientation() {
 					new_edge.invert();
 				}
+				// Remove the edge from the HashMap when it is no longer there because ID reassignment will occur.
+				if edge.count() == 1 {
+					emap.remove(&edge.id());
+				}
 				*edge = new_edge;
 			})
 	}
