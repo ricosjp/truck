@@ -286,6 +286,30 @@ impl<P, C> Edge<P, C> {
     /// ```
     #[inline(always)]
     pub fn id(&self) -> EdgeID<C> { ID::new(Arc::as_ptr(&self.curve)) }
+
+    /// Returns how many same edges.
+    /// 
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// // Create one edge
+    /// let v = Vertex::news(&[(), ()]);
+    /// let e0 = Edge::new(&v[0], &v[1], ());
+    /// assert_eq!(e0.count(), 1);
+    /// // Create another edge, independent from e0
+    /// let e1 = Edge::new(&v[0], &v[1], ());
+    /// assert_eq!(e0.count(), 1);
+    /// // Clone e0, count will be 2
+    /// let e2 = e0.clone();
+    /// assert_eq!(e0.count(), 2);
+    /// assert_eq!(e2.count(), 2);
+    /// // drop e2, count will be 1
+    /// drop(e2);
+    /// assert_eq!(e0.count(), 1);
+    /// ```
+    #[inline(always)]
+    pub fn count(&self) -> usize { Arc::strong_count(&self.curve) }
+
     /// Returns the cloned curve in edge.
     /// If edge is inverted, then the returned curve is also inverted.
     #[inline(always)]
@@ -569,7 +593,7 @@ impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Edge<P, C>, EdgeDisplayF
                 .finish(),
             EdgeDisplayFormat::VerticesTupleAndID { vertex_format } => f
                 .debug_struct("Edge")
-                .field("id", &Arc::as_ptr(&self.entity.curve))
+                .field("id", &self.entity.id())
                 .field(
                     "vertices",
                     &(

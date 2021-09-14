@@ -575,6 +575,35 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     pub fn id(&self) -> FaceID<S> { ID::new(Arc::as_ptr(&self.surface)) }
 
+    /// Returns how many same faces.
+    ///
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(); 3]);
+    /// let wire = Wire::from(vec![
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// 
+    /// // Create one face
+    /// let face0 = Face::new(vec![wire.clone()], ());
+    /// assert_eq!(face0.count(), 1);
+    /// // Create another face, independent from face0
+    /// let face1 = Face::new(vec![wire.clone()], ());
+    /// assert_eq!(face0.count(), 1);
+    /// // Clone face0, the result will be 2.
+    /// let face2 = face0.clone();
+    /// assert_eq!(face0.count(), 2);
+    /// assert_eq!(face2.count(), 2);
+    /// // drop face2, the result will be 1.
+    /// drop(face2);
+    /// assert_eq!(face0.count(), 1);
+    /// ```
+    #[inline(always)]
+    pub fn count(&self) -> usize { Arc::strong_count(&self.surface) }
+
     /// Returns the inverse face.
     /// # Examples
     /// ```
@@ -1019,7 +1048,7 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug
         match self.format {
             FaceDisplayFormat::Full { wire_format } => f
                 .debug_struct("Face")
-                .field("id", &Arc::as_ptr(&self.entity.surface))
+                .field("id", &self.entity.id())
                 .field(
                     "boundaries",
                     &self
@@ -1033,7 +1062,7 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug
                 .finish(),
             FaceDisplayFormat::BoundariesAndID { wire_format } => f
                 .debug_struct("Face")
-                .field("id", &Arc::as_ptr(&self.entity.surface))
+                .field("id", &self.entity.id())
                 .field(
                     "boundaries",
                     &self
