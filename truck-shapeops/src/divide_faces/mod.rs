@@ -61,7 +61,7 @@ impl BoundaryStatus {
 		let der = curve.leader().der(t);
 		let normal0 = curve.surface0().normal(pt0[0], pt0[1]);
 		let normal1 = curve.surface1().normal(pt1[0], pt1[1]);
-		match normal0.cross(der).dot(normal1) < 0.0 {
+		match normal0.cross(der).dot(normal1) > 0.0 {
 			true => Some(BoundaryStatus::Or),
 			false => Some(BoundaryStatus::And),
 		}
@@ -458,8 +458,6 @@ where
 	(0..store0_len)
 		.flat_map(move |i| (0..store1_len).map(move |j| (i, j)))
 		.try_for_each(|(face_index0, face_index1)| {
-			let ori0 = geom_shell0[face_index0].orientation();
-			let ori1 = geom_shell1[face_index1].orientation();
 			let surface0 = geom_shell0[face_index0].get_surface();
 			let surface1 = geom_shell1[face_index1].get_surface();
 			let polygon0 = poly_shell0[face_index0].get_surface();
@@ -475,23 +473,17 @@ where
 			.try_for_each(|(polyline, intersection_curve)| {
 				let mut intersection_curve = intersection_curve?;
 				let status = BoundaryStatus::from_is_curve(&intersection_curve)?;
-				let (status0, status1) = match (ori0, ori1) {
-					(true, true) => (status, status.not()),
-					(true, false) => (status, status),
-					(false, true) => (status.not(), status.not()),
-					(false, false) => (status.not(), status),
-				};
 				if polyline.front().near(&polyline.back()) {
 					let poly_wire = create_independent_loop(polyline);
 					poly_loops_store0[face_index0]
-						.add_independent_loop(BoundaryWire::new(poly_wire.clone(), status0));
+						.add_independent_loop(BoundaryWire::new(poly_wire.clone(), status));
 					poly_loops_store1[face_index1]
-						.add_independent_loop(BoundaryWire::new(poly_wire, status1));
+						.add_independent_loop(BoundaryWire::new(poly_wire, status.not()));
 					let geom_wire = create_independent_loop(intersection_curve);
 					geom_loops_store0[face_index0]
-						.add_independent_loop(BoundaryWire::new(geom_wire.clone(), status0));
+						.add_independent_loop(BoundaryWire::new(geom_wire.clone(), status));
 					geom_loops_store1[face_index1]
-						.add_independent_loop(BoundaryWire::new(geom_wire, status1));
+						.add_independent_loop(BoundaryWire::new(geom_wire, status.not()));
 				} else {
 					let pv0 = Vertex::new(polyline.front());
 					let pv1 = Vertex::new(polyline.back());
@@ -563,10 +555,10 @@ where
 					}
 					let pedge = Edge::new(&pv0, &pv1, polyline);
 					let gedge = Edge::new(&gv0, &gv1, intersection_curve.into());
-					poly_loops_store0[face_index0].add_edge(pedge.clone(), status0);
-					geom_loops_store0[face_index0].add_edge(gedge.clone(), status0);
-					poly_loops_store1[face_index1].add_edge(pedge, status1);
-					geom_loops_store1[face_index1].add_edge(gedge, status1);
+					poly_loops_store0[face_index0].add_edge(pedge.clone(), status);
+					geom_loops_store0[face_index0].add_edge(gedge.clone(), status);
+					poly_loops_store1[face_index1].add_edge(pedge, status.not());
+					geom_loops_store1[face_index1].add_edge(gedge, status.not());
 				}
 				Some(())
 			})
