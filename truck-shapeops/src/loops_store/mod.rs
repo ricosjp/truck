@@ -9,7 +9,7 @@ use truck_topology::{Vertex, *};
 type PolylineCurve = truck_meshalgo::prelude::PolylineCurve<Point3>;
 
 #[derive(Clone, Copy, Debug)]
-enum BoundaryStatus {
+pub enum BoundaryStatus {
 	Unknown,
 	And,
 	Or,
@@ -26,7 +26,7 @@ impl BoundaryStatus {
 }
 
 #[derive(Clone, Debug)]
-struct BoundaryWire<P, C> {
+pub struct BoundaryWire<P, C> {
 	wire: Wire<P, C>,
 	status: BoundaryStatus,
 }
@@ -80,9 +80,9 @@ impl<P, C> std::ops::DerefMut for BoundaryWire<P, C> {
 }
 
 #[derive(Clone, Debug)]
-struct Loops<P, C>(Vec<BoundaryWire<P, C>>);
+pub struct Loops<P, C>(Vec<BoundaryWire<P, C>>);
 #[derive(Clone, Debug)]
-struct LoopsStore<P, C>(Vec<Loops<P, C>>);
+pub struct LoopsStore<P, C>(Vec<Loops<P, C>>);
 
 impl<P, C> std::ops::Deref for Loops<P, C> {
 	type Target = Vec<BoundaryWire<P, C>>;

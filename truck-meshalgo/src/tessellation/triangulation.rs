@@ -32,12 +32,9 @@ where
                                     .get_or_insert(vb.id(), || vb.mapped(Point3::clone))
                                     .clone();
                                 let curve = edge.get_curve();
-                                let poly: Vec<Point3> = curve
-                                    .parameter_division(curve.parameter_range(), tol)
-                                    .into_iter()
-                                    .map(|t| curve.subs(t))
-                                    .collect();
-                                Edge::debug_new(&v0, &v1, PolylineCurve(poly))
+                                let poly =
+                                    PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
+                                Edge::debug_new(&v0, &v1, poly)
                             });
                             match edge.orientation() {
                                 true => new_edge.clone(),
