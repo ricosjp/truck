@@ -408,27 +408,27 @@ fn rotated_intersection() {
 	assert!(b > 2);
 
 	let wire = if geom_loops_store0[0][0].len() == 3 {
-		geom_loops_store0[0][0].clone()
+		(*geom_loops_store0[0][0]).clone()
 	} else {
-		geom_loops_store0[0][1].clone()
+		(*geom_loops_store0[0][1]).clone()
 	};
 	let face0 = Face::new(vec![wire], surface0.clone());
 	let wire = if geom_loops_store0[1][0].len() == 3 {
-		geom_loops_store0[1][0].clone()
+		(*geom_loops_store0[1][0]).clone()
 	} else {
-		geom_loops_store0[1][1].clone()
+		(*geom_loops_store0[1][1]).clone()
 	};
 	let face1 = Face::new(vec![wire], surface0.clone());
 	let wire = if geom_loops_store1[0][0].len() == 3 {
-		geom_loops_store1[0][0].clone()
+		(*geom_loops_store1[0][0]).clone()
 	} else {
-		geom_loops_store1[0][1].clone()
+		(*geom_loops_store1[0][1]).clone()
 	};
 	let face2 = Face::new(vec![wire], surface1.clone());
 	let wire = if geom_loops_store1[1][0].len() == 3 {
-		geom_loops_store1[1][0].clone()
+		(*geom_loops_store1[1][0]).clone()
 	} else {
-		geom_loops_store1[1][1].clone()
+		(*geom_loops_store1[1][1]).clone()
 	};
 	let face3 = Face::new(vec![wire], surface1.clone());
 	let shell: Shell<_, _, _> = vec![face0.inverse(), face1.inverse(), face2, face3].into();
@@ -654,27 +654,27 @@ fn crossing_edges() {
 	assert!(a > 1);
 	assert!(b > 1);
 	let wire = if geom_loops_store0[0][0].len() == 2 {
-		geom_loops_store0[0][0].clone()
+		(*geom_loops_store0[0][0]).clone()
 	} else {
-		geom_loops_store0[0][1].clone()
+		(*geom_loops_store0[0][1]).clone()
 	};
 	let face0 = Face::new(vec![wire], surface0.clone());
 	let wire = if geom_loops_store0[1][0].len() == 2 {
-		geom_loops_store0[1][0].clone()
+		(*geom_loops_store0[1][0]).clone()
 	} else {
-		geom_loops_store0[1][1].clone()
+		(*geom_loops_store0[1][1]).clone()
 	};
 	let face1 = Face::new(vec![wire], surface0.clone());
 	let wire = if geom_loops_store1[0][0].len() == 2 {
-		geom_loops_store1[0][0].clone()
+		(*geom_loops_store1[0][0]).clone()
 	} else {
-		geom_loops_store1[0][1].clone()
+		(*geom_loops_store1[0][1]).clone()
 	};
 	let face2 = Face::new(vec![wire], surface1.clone());
 	let wire = if geom_loops_store1[1][0].len() == 2 {
-		geom_loops_store1[1][0].clone()
+		(*geom_loops_store1[1][0]).clone()
 	} else {
-		geom_loops_store1[1][1].clone()
+		(*geom_loops_store1[1][1]).clone()
 	};
 	let face3 = Face::new(vec![wire], surface1.clone());
 	let shell: Shell<_, _, _> = vec![face0.inverse(), face1.inverse(), face2, face3].into();

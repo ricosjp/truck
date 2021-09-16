@@ -8,13 +8,84 @@ use truck_topology::{Vertex, *};
 
 type PolylineCurve = truck_meshalgo::prelude::PolylineCurve<Point3>;
 
+#[derive(Clone, Copy, Debug)]
+enum BoundaryStatus {
+	Unknown,
+	And,
+	Or,
+}
+
+impl BoundaryStatus {
+	fn not(self) -> Self {
+		match self {
+			Self::Unknown => Self::Unknown,
+			Self::And => Self::Or,
+			Self::Or => Self::And,
+		}
+	}
+}
+
 #[derive(Clone, Debug)]
-struct Loops<P, C>(Vec<Wire<P, C>>);
+struct BoundaryWire<P, C> {
+	wire: Wire<P, C>,
+	status: BoundaryStatus,
+}
+
+impl<P, C> BoundaryWire<P, C> {
+	#[inline(always)]
+	pub fn new(wire: Wire<P, C>, status: BoundaryStatus) -> Self { Self { wire, status } }
+	#[inline(always)]
+	pub fn status(&self) -> BoundaryStatus { self.status }
+	#[inline(always)]
+	pub fn invert(&mut self) {
+		self.wire.invert();
+		self.status = self.status.not();
+	}
+	#[inline(always)]
+	pub fn inverse(&self) -> Self {
+		Self {
+			wire: self.wire.inverse(),
+			status: self.status.not(),
+		}
+	}
+}
+
+impl BoundaryStatus {
+	fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<BoundaryStatus>
+	where
+		C: ParametricCurve<Point = Point3, Vector = Vector3>,
+		S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>, {
+		let (t0, t1) = curve.parameter_range();
+		let t = (t0 + t1) / 2.0;
+		let (_, pt0, pt1) = curve.search_triple(t)?;
+		let der = curve.leader().der(t);
+		let normal0 = curve.surface0().normal(pt0[0], pt0[1]);
+		let normal1 = curve.surface1().normal(pt1[0], pt1[1]);
+		match normal0.cross(der).dot(normal1) < 0.0 {
+			true => Some(BoundaryStatus::Or),
+			false => Some(BoundaryStatus::And),
+		}
+	}
+}
+
+impl<P, C> std::ops::Deref for BoundaryWire<P, C> {
+	type Target = Wire<P, C>;
+	#[inline(always)]
+	fn deref(&self) -> &Self::Target { &self.wire }
+}
+
+impl<P, C> std::ops::DerefMut for BoundaryWire<P, C> {
+	#[inline(always)]
+	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.wire }
+}
+
+#[derive(Clone, Debug)]
+struct Loops<P, C>(Vec<BoundaryWire<P, C>>);
 #[derive(Clone, Debug)]
 struct LoopsStore<P, C>(Vec<Loops<P, C>>);
 
 impl<P, C> std::ops::Deref for Loops<P, C> {
-	type Target = Vec<Wire<P, C>>;
+	type Target = Vec<BoundaryWire<P, C>>;
 	#[inline(always)]
 	fn deref(&self) -> &Self::Target { &self.0 }
 }
@@ -37,7 +108,14 @@ impl<P, C> std::ops::DerefMut for LoopsStore<P, C> {
 
 impl<'a, P, C, S> From<&'a Face<P, C, S>> for Loops<P, C> {
 	#[inline(always)]
-	fn from(face: &'a Face<P, C, S>) -> Loops<P, C> { Loops(face.absolute_boundaries().clone()) }
+	fn from(face: &'a Face<P, C, S>) -> Loops<P, C> {
+		Loops(
+			face.absolute_boundaries()
+				.iter()
+				.map(|wire| BoundaryWire::new(wire.clone(), BoundaryStatus::Unknown))
+				.collect(),
+		)
+	}
 }
 
 impl<'a, P, C, S> std::iter::FromIterator<&'a Face<P, C, S>> for LoopsStore<P, C> {
@@ -128,12 +206,16 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 	}
 
 	#[inline(always)]
-	fn add_independent_loop(&mut self, r#loop: Wire<P, C>) {
+	fn add_independent_loop(&mut self, r#loop: BoundaryWire<P, C>) {
 		self.push(r#loop.inverse());
 		self.push(r#loop);
 	}
 
-	fn add_edge(&mut self, edge0: Edge<P, C>) -> (Option<(usize, usize)>, Option<(usize, usize)>) {
+	fn add_edge(
+		&mut self,
+		edge0: Edge<P, C>,
+		status: BoundaryStatus,
+	) -> (Option<(usize, usize)>, Option<(usize, usize)>) {
 		let a = self.iter().enumerate().find_map(|(i, wire)| {
 			wire.iter().enumerate().find_map(|(j, edge)| {
 				if edge.front() == edge0.back() {
@@ -163,7 +245,8 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 					let len = self[wire_index0].len() - 2;
 					let edge_index1 = (len + edge_index1 - edge_index0) % len + 1;
 					let new_wire = self[wire_index0].split_off(edge_index1);
-					self.push(new_wire);
+					self[wire_index0].status = status;
+					self.push(BoundaryWire::new(new_wire, status.not()));
 				} else {
 					let mut new_wire0 = self[wire_index1].clone();
 					let mut new_wire1 = new_wire0.split_off(edge_index1);
@@ -178,7 +261,10 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 				self[wire_index1].push_front(edge0.inverse());
 				self[wire_index1].push_back(edge0);
 			}
-			(None, None) => self.push(vec![edge0.inverse(), edge0].into()),
+			(None, None) => self.push(BoundaryWire::new(
+				vec![edge0.inverse(), edge0].into(),
+				BoundaryStatus::Unknown,
+			)),
 			_ => {}
 		}
 		(a, b)
@@ -372,6 +458,8 @@ where
 	(0..store0_len)
 		.flat_map(move |i| (0..store1_len).map(move |j| (i, j)))
 		.try_for_each(|(face_index0, face_index1)| {
+			let ori0 = geom_shell0[face_index0].orientation();
+			let ori1 = geom_shell1[face_index1].orientation();
 			let surface0 = geom_shell0[face_index0].get_surface();
 			let surface1 = geom_shell1[face_index1].get_surface();
 			let polygon0 = poly_shell0[face_index0].get_surface();
@@ -386,13 +474,24 @@ where
 			.into_iter()
 			.try_for_each(|(polyline, intersection_curve)| {
 				let mut intersection_curve = intersection_curve?;
+				let status = BoundaryStatus::from_is_curve(&intersection_curve)?;
+				let (status0, status1) = match (ori0, ori1) {
+					(true, true) => (status, status.not()),
+					(true, false) => (status, status),
+					(false, true) => (status.not(), status.not()),
+					(false, false) => (status.not(), status),
+				};
 				if polyline.front().near(&polyline.back()) {
 					let poly_wire = create_independent_loop(polyline);
-					poly_loops_store0[face_index0].add_independent_loop(poly_wire.clone());
-					poly_loops_store1[face_index1].add_independent_loop(poly_wire);
+					poly_loops_store0[face_index0]
+						.add_independent_loop(BoundaryWire::new(poly_wire.clone(), status0));
+					poly_loops_store1[face_index1]
+						.add_independent_loop(BoundaryWire::new(poly_wire, status1));
 					let geom_wire = create_independent_loop(intersection_curve);
-					geom_loops_store0[face_index0].add_independent_loop(geom_wire.clone());
-					geom_loops_store1[face_index0].add_independent_loop(geom_wire);
+					geom_loops_store0[face_index0]
+						.add_independent_loop(BoundaryWire::new(geom_wire.clone(), status0));
+					geom_loops_store1[face_index1]
+						.add_independent_loop(BoundaryWire::new(geom_wire, status1));
 				} else {
 					let pv0 = Vertex::new(polyline.front());
 					let pv1 = Vertex::new(polyline.back());
@@ -464,10 +563,10 @@ where
 					}
 					let pedge = Edge::new(&pv0, &pv1, polyline);
 					let gedge = Edge::new(&gv0, &gv1, intersection_curve.into());
-					poly_loops_store0[face_index0].add_edge(pedge.clone());
-					geom_loops_store0[face_index0].add_edge(gedge.clone());
-					poly_loops_store1[face_index1].add_edge(pedge.clone());
-					geom_loops_store1[face_index1].add_edge(gedge.clone());
+					poly_loops_store0[face_index0].add_edge(pedge.clone(), status0);
+					geom_loops_store0[face_index0].add_edge(gedge.clone(), status0);
+					poly_loops_store1[face_index1].add_edge(pedge, status1);
+					geom_loops_store1[face_index1].add_edge(gedge, status1);
 				}
 				Some(())
 			})
