@@ -91,17 +91,22 @@ impl Polyline {
 
     /// whether `c` is included in the domain with bounday = `self`.
     fn include(&self, c: Point2, tol: f64) -> bool {
+        let t = 2.0 * std::f64::consts::PI * rand::random::<f64>();
+        let v = Vector2::new(f64::cos(t), f64::sin(t));
         self.indices
             .iter()
             .try_fold(0_i32, move |counter, edge| {
                 let a = self.positions[edge[0]] - c;
                 let b = self.positions[edge[1]] - c;
-                let x = (a[0] * b[1] - a[1] * b[0]) / (b[1] - a[1]);
-                if f64::abs(x) < tol && a[1] * b[1] < 0.0 {
+                let s0 = v[0] * a[1] - v[1] * a[0]; // v times a
+                let s1 = v[0] * b[1] - v[1] * b[0]; // v times b
+                let s2 = a[0] * b[1] - a[1] * b[0]; // a times b
+                let x = s2 / (s1 - s0);
+                if f64::abs(x) < tol && s0 * s1 < 0.0 {
                     None
-                } else if x > tol && a[1] <= -tol && b[1] > tol {
+                } else if x > tol && s0 <= -tol && s1 > tol {
                     Some(counter + 1)
-                } else if x > tol && a[1] >= tol && b[1] < -tol {
+                } else if x > tol && s0 >= tol && s1 < -tol {
                     Some(counter - 1)
                 } else {
                     Some(counter)
@@ -195,7 +200,7 @@ fn triangulation_into_polymesh<'a>(
                 (tri[0][0] + tri[1][0] + tri[2][0]) / 3.0,
                 (tri[0][1] + tri[1][1] + tri[2][1]) / 3.0,
             );
-            polyline.include(c, 0.0)
+            polyline.include(c, TOLERANCE)
         })
         .map(|tri| {
             let idcs = [

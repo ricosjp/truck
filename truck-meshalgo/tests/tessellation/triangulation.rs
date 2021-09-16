@@ -11,7 +11,7 @@ const SHAPE_JSONS: [&'static [u8]; 3] = [
 fn solid_is_closed() {
     for (i, json) in SHAPE_JSONS.iter().enumerate() {
         let solid = Solid::extract(serde_json::from_reader(*json).unwrap()).unwrap();
-        let mut poly = solid.triangulation(0.01).unwrap().into_polygon();
+        let mut poly = solid.triangulation(0.05).unwrap().into_polygon();
         poly.put_together_same_attrs()
             .remove_degenerate_faces()
             .remove_unused_attrs();
