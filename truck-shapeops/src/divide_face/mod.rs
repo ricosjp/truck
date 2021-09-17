@@ -153,7 +153,7 @@ where
 		.try_for_each(|(face, loops)| {
 			if loops
 				.iter()
-				.any(|wire| wire.status() == BoundaryStatus::Unknown)
+				.all(|wire| wire.status() == BoundaryStatus::Unknown)
 			{
 				res.unknown.push(face.clone());
 			} else {

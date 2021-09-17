@@ -441,7 +441,7 @@ where
 	vec![edge0, edge1].into()
 }
 
-fn create_loops_stores<C, S>(
+pub fn create_loops_stores<C, S>(
 	geom_shell0: &Shell<Point3, C, S>,
 	poly_shell0: &Shell<Point3, PolylineCurve, PolygonMesh>,
 	geom_shell1: &Shell<Point3, C, S>,
