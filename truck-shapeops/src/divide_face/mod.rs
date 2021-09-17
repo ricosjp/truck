@@ -120,7 +120,11 @@ where
 				.into_iter()
 				.map(|chunk| chunk.wire.deref().clone())
 				.collect();
-			(Face::debug_new(wires, surface), status)
+			let mut new_face = Face::debug_new(wires, surface);
+			if !face.orientation() {
+				new_face.invert();
+			}
+			(new_face, status)
 		})
 		.collect();
 	Some(vec)
@@ -147,13 +151,23 @@ where
 		.iter()
 		.zip(loops_store)
 		.try_for_each(|(face, loops)| {
-			let vec = divide_one_face(face, loops, tol)?;
-			vec.into_iter().for_each(|(face, status)| match status {
-				BoundaryStatus::And => res.and.push(face),
-				BoundaryStatus::Or => res.or.push(face),
-				BoundaryStatus::Unknown => res.unknown.push(face),
-			});
+			if loops
+				.iter()
+				.any(|wire| wire.status() == BoundaryStatus::Unknown)
+			{
+				res.unknown.push(face.clone());
+			} else {
+				let vec = divide_one_face(face, loops, tol)?;
+				vec.into_iter().for_each(|(face, status)| match status {
+					BoundaryStatus::And => res.and.push(face),
+					BoundaryStatus::Or => res.or.push(face),
+					BoundaryStatus::Unknown => res.unknown.push(face),
+				});
+			}
 			Some(())
 		})?;
 	Some(res)
 }
+
+#[cfg(test)]
+mod tests;

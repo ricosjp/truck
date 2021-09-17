@@ -106,15 +106,20 @@ impl<P, C> std::ops::DerefMut for LoopsStore<P, C> {
 	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
 
+impl<P, C> std::iter::FromIterator<BoundaryWire<P, C>> for Loops<P, C> {
+	#[inline(always)]
+	fn from_iter<I: IntoIterator<Item = BoundaryWire<P, C>>>(iter: I) -> Self {
+		Self(std::iter::FromIterator::from_iter(iter))
+	}
+}
+
 impl<'a, P, C, S> From<&'a Face<P, C, S>> for Loops<P, C> {
 	#[inline(always)]
 	fn from(face: &'a Face<P, C, S>) -> Loops<P, C> {
-		Loops(
-			face.absolute_boundaries()
-				.iter()
-				.map(|wire| BoundaryWire::new(wire.clone(), BoundaryStatus::Unknown))
-				.collect(),
-		)
+		face.absolute_boundaries()
+			.iter()
+			.map(|wire| BoundaryWire::new(wire.clone(), BoundaryStatus::Unknown))
+			.collect()
 	}
 }
 
