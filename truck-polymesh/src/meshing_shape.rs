@@ -1,12 +1,32 @@
 use crate::*;
 
+impl<P> PolylineCurve<P> {
+    /// meshing the curve
+    pub fn from_curve<C>(curve: &C, range: (f64, f64), tol: f64) -> Self
+    where C: ParametricCurve<Point = P> + ParameterDivision1D {
+        PolylineCurve(
+            curve
+                .parameter_division(range, tol)
+                .into_iter()
+                .map(|t| curve.subs(t))
+                .collect(),
+        )
+    }
+}
+
 impl StructuredMesh {
-    /// meshing the bspline surface
+    /// meshing the surface
     /// # Arguments
     /// * `bspsurface` - bspline surface to meshed
     /// * `tol` - standard tolerance for meshing
-    pub fn from_surface<S>(surface: &S, range: ((f64, f64), (f64, f64)), tol: f64) -> StructuredMesh
-    where S: ParametricSurface3D + ParameterDivision2D {
+    pub fn from_surface<S>(
+        surface: &S,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> StructuredMesh
+    where
+        S: ParametricSurface3D + ParameterDivision2D,
+    {
         let (div0, div1) = surface.parameter_division(range, tol);
         create_mesh(surface, div0, div1)
     }
@@ -19,7 +39,7 @@ where S: ParametricSurface3D {
     div0.iter()
         .zip(positions.iter_mut().zip(normals.iter_mut()))
         .for_each(|(u, (prow, nrow))| {
-            div1.iter().for_each(move|v| {
+            div1.iter().for_each(move |v| {
                 prow.push(surface.subs(*u, *v));
                 nrow.push(surface.normal(*u, *v));
             })

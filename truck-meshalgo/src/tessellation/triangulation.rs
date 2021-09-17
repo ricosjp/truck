@@ -32,12 +32,9 @@ where
                                     .get_or_insert(vb.id(), || vb.mapped(Point3::clone))
                                     .clone();
                                 let curve = edge.get_curve();
-                                let poly: Vec<Point3> = curve
-                                    .parameter_division(curve.parameter_range(), tol)
-                                    .into_iter()
-                                    .map(|t| curve.subs(t))
-                                    .collect();
-                                Edge::debug_new(&v0, &v1, PolylineCurve(poly))
+                                let poly =
+                                    PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
+                                Edge::debug_new(&v0, &v1, poly)
                             });
                             match edge.orientation() {
                                 true => new_edge.clone(),
@@ -93,18 +90,23 @@ impl Polyline {
     }
 
     /// whether `c` is included in the domain with bounday = `self`.
-    fn include(&self, c: Point2, tol: f64) -> bool {
+    fn include(&self, c: Point2) -> bool {
+        let t = 2.0 * std::f64::consts::PI * rand::random::<f64>();
+        let r = Vector2::new(f64::cos(t), f64::sin(t));
         self.indices
             .iter()
             .try_fold(0_i32, move |counter, edge| {
                 let a = self.positions[edge[0]] - c;
                 let b = self.positions[edge[1]] - c;
-                let x = (a[0] * b[1] - a[1] * b[0]) / (b[1] - a[1]);
-                if f64::abs(x) < tol && a[1] * b[1] < 0.0 {
+                let s0 = r[0] * a[1] - r[1] * a[0]; // v times a
+                let s1 = r[0] * b[1] - r[1] * b[0]; // v times b
+                let s2 = a[0] * b[1] - a[1] * b[0]; // a times b
+                let x = s2 / (s1 - s0);
+                if x.so_small() && s0 * s1 < 0.0 {
                     None
-                } else if x > tol && a[1] <= -tol && b[1] > tol {
+                } else if x > 0.0 && s0 <= 0.0 && s1 > 0.0 {
                     Some(counter + 1)
-                } else if x > tol && a[1] >= tol && b[1] < -tol {
+                } else if x > 0.0 && s0 >= 0.0 && s1 < 0.0 {
                     Some(counter - 1)
                 } else {
                     Some(counter)
@@ -165,7 +167,7 @@ fn insert_surface(
     let (udiv, vdiv) = surface.parameter_division(range, tol);
     udiv.into_iter()
         .flat_map(|u| vdiv.iter().map(move |v| Point2::new(u, *v)))
-        .filter(|pt| polyline.include(*pt, TOLERANCE))
+        .filter(|pt| polyline.include(*pt))
         .for_each(|pt| {
             triangulation.insert(pt.into());
         });
@@ -198,7 +200,7 @@ fn triangulation_into_polymesh<'a>(
                 (tri[0][0] + tri[1][0] + tri[2][0]) / 3.0,
                 (tri[0][1] + tri[1][1] + tri[2][1]) / 3.0,
             );
-            polyline.include(c, 0.0)
+            polyline.include(c)
         })
         .map(|tri| {
             let idcs = [

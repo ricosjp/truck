@@ -806,6 +806,15 @@ impl<P, C, S> std::ops::DerefMut for Shell<P, C, S> {
     fn deref_mut(&mut self) -> &mut Vec<Face<P, C, S>> { &mut self.face_list }
 }
 
+impl<P, C, S> Default for Shell<P, C, S> {
+    #[inline(always)]
+    fn default() -> Self {
+        Self {
+            face_list: Vec::new(),
+        }
+    }
+}
+
 /// The reference iterator over all faces in shells
 pub type FaceIter<'a, P, C, S> = std::slice::Iter<'a, Face<P, C, S>>;
 /// The mutable reference iterator over all faces in shells

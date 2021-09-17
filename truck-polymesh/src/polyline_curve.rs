@@ -138,6 +138,18 @@ where
 	}
 }
 
+impl<P> ParameterDivision1D for PolylineCurve<P> {
+	#[inline(always)]
+	fn parameter_division(&self, range: (f64, f64), _: f64) -> Vec<f64> {
+		let r0 = range.0 as isize + 1;
+		let r1 = range.1 as isize;
+		let mut res = vec![range.0];
+		res.extend((r0..=r1).map(|i| i as f64));
+		res.push(range.1);
+		res
+	}
+}
+
 #[test]
 fn polyline_test() {
 	let vec = vec![
@@ -177,4 +189,7 @@ fn polyline_test() {
 	assert!(polyline.search_parameter(pt, None, 1).is_none());
 	let t = polyline.search_nearest_parameter(pt, None, 1).unwrap();
 	assert!(polyline.der(t).dot(pt - polyline.subs(t)).so_small());
+
+	let div = polyline.parameter_division((1.5, 6.2), 0.0);
+	assert_eq!(div, vec![1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 6.2]);
 }

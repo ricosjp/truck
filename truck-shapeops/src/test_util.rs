@@ -47,6 +47,29 @@ where
 	derive_method!(parameter_range, (f64, f64),);
 }
 
+impl<S0, S1> ParametricSurface for Alternatives<S0, S1>
+where
+	S0: ParametricSurface,
+	S1: ParametricSurface<Point = S0::Point, Vector = S0::Vector>,
+{
+	type Point = S0::Point;
+	type Vector = S0::Vector;
+	derive_method!(subs, S0::Point, u: f64, v: f64);
+	derive_method!(uder, S0::Vector, u: f64, v: f64);
+	derive_method!(vder, S0::Vector, u: f64, v: f64);
+	derive_method!(uuder, S0::Vector, u: f64, v: f64);
+	derive_method!(uvder, S0::Vector, u: f64, v: f64);
+	derive_method!(vvder, S0::Vector, u: f64, v: f64);
+}
+
+impl<S0, S1> ParametricSurface3D for Alternatives<S0, S1>
+where
+	S0: ParametricSurface3D,
+	S1: ParametricSurface3D,
+{
+	derive_method!(normal, Vector3, u: f64, v: f64);
+}
+
 impl<C0, C1> Cut for Alternatives<C0, C1>
 where
 	C0: Cut,
@@ -66,6 +89,14 @@ where
 	C1: ParameterDivision1D,
 {
 	derive_method!(parameter_division, Vec<f64>, range: (f64, f64), tol: f64);
+}
+
+impl<S0, S1> ParameterDivision2D for Alternatives<S0, S1>
+where
+	S0: ParameterDivision2D,
+	S1: ParameterDivision2D,
+{
+	derive_method!(parameter_division, (Vec<f64>, Vec<f64>), range: ((f64, f64), (f64, f64)), tol: f64);
 }
 
 impl<T, U> SearchParameter for Alternatives<T, U>

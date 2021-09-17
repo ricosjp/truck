@@ -1,5 +1,6 @@
-pub mod divide_faces;
+mod divide_face;
 mod intersection_curve;
+mod loops_store;
 mod polyline_construction;
 pub use intersection_curve::{intersection_curves, IntersectionCurve};
 

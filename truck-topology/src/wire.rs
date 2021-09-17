@@ -6,11 +6,8 @@ use std::iter::Peekable;
 impl<P, C> Wire<P, C> {
     /// Creates the empty wire.
     #[inline(always)]
-    pub fn new() -> Wire<P, C> {
-        Wire {
-            edge_list: VecDeque::new(),
-        }
-    }
+    pub fn new() -> Wire<P, C> { Self::default() }
+
     /// Creates the empty wire with space for at least `capacity` edges.
     #[inline(always)]
     pub fn with_capacity(capacity: usize) -> Wire<P, C> {
@@ -473,10 +470,10 @@ impl<P, C> Wire<P, C> {
     ///     Edge::new(&v[2], &v[1], 110).inverse(),
     ///     Edge::new(&v[3], &v[4], 120),
     /// ].into();
-    /// 
+    ///
     /// let vertex_format = VertexDisplayFormat::AsPoint;
     /// let edge_format = EdgeDisplayFormat::VerticesTuple { vertex_format };
-    /// 
+    ///
     /// assert_eq!(
     ///     &format!("{:?}", wire.display(WDF::EdgesListTuple {edge_format})),
     ///     "Wire([(0, 1), (1, 2), (3, 4)])",
@@ -494,7 +491,7 @@ impl<P, C> Wire<P, C> {
     pub fn display(&self, format: WireDisplayFormat) -> DebugDisplay<Self, WireDisplayFormat> {
         DebugDisplay {
             entity: self,
-            format
+            format,
         }
     }
 }
@@ -690,6 +687,15 @@ impl<P, C> PartialEq for Wire<P, C> {
 
 impl<P, C> Eq for Wire<P, C> {}
 
+impl<P, C> Default for Wire<P, C> {
+    #[inline(always)]
+    fn default() -> Self {
+        Self {
+            edge_list: Default::default(),
+        }
+    }
+}
+
 impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Wire<P, C>, WireDisplayFormat> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self.format {
@@ -702,7 +708,11 @@ impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Wire<P, C>, WireDisplayF
                 .finish(),
             WireDisplayFormat::EdgesList { edge_format } => f
                 .debug_list()
-                .entries(self.entity.edge_iter().map(|edge| edge.display(edge_format)))
+                .entries(
+                    self.entity
+                        .edge_iter()
+                        .map(|edge| edge.display(edge_format)),
+                )
                 .finish(),
             WireDisplayFormat::VerticesList { vertex_format } => {
                 let vertices: Vec<_> = self.entity.vertex_iter().collect();

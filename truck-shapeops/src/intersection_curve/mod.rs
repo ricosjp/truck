@@ -68,8 +68,7 @@ impl<C, S> IntersectionCurve<C, S> {
 }
 
 impl<S> IntersectionCurve<PolylineCurve<Point3>, S>
-where
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
 {
 	pub(super) fn try_new(
 		surface0: S,
@@ -95,7 +94,8 @@ where
 				poly[poly.len() - 1],
 				n,
 				100,
-			)?.0
+			)?
+			.0
 		};
 		polyline.push(q);
 		Some(Self {
@@ -110,18 +110,8 @@ where
 		let div = algo::curve::parameter_division(self, self.parameter_range(), self.tol);
 		let mut polyline = PolylineCurve(Vec::new());
 		for t in div {
-			let pt = self.leader().subs(t);
-			let normal = self.leader().der(t);
-			let (pt, _, _) = match double_projection(
-				self.surface0(),
-				None,
-				self.surface1(),
-				None,
-				pt,
-				normal,
-				100,
-			) {
-				Some(got) => got,
+			let pt = match self.search_triple(t) {
+				Some(got) => got.0,
 				None => return false,
 			};
 			polyline.push(pt);
@@ -131,16 +121,13 @@ where
 	}
 }
 
-impl<C, S> ParametricCurve for IntersectionCurve<C, S>
+impl<C, S> IntersectionCurve<C, S>
 where
 	C: ParametricCurve<Point = Point3, Vector = Vector3>,
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
-	type Point = Point3;
-	type Vector = Vector3;
 	#[inline(always)]
-	fn parameter_range(&self) -> (f64, f64) { self.leader.parameter_range() }
-	fn subs(&self, t: f64) -> Point3 {
+	pub fn search_triple(&self, t: f64) -> Option<(Point3, Point2, Point2)> {
 		double_projection(
 			&self.surface0,
 			None,
@@ -150,21 +137,22 @@ where
 			self.leader.der(t),
 			100,
 		)
-		.unwrap()
-		.0
 	}
+}
+
+impl<C, S> ParametricCurve for IntersectionCurve<C, S>
+where
+	C: ParametricCurve<Point = Point3, Vector = Vector3>,
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+{
+	type Point = Point3;
+	type Vector = Vector3;
+	#[inline(always)]
+	fn parameter_range(&self) -> (f64, f64) { self.leader.parameter_range() }
+	fn subs(&self, t: f64) -> Point3 { self.search_triple(t).unwrap().0 }
 	fn der(&self, t: f64) -> Vector3 {
 		let n = self.leader.der(t);
-		let (_, p0, p1) = double_projection(
-			&self.surface0,
-			None,
-			&self.surface1,
-			None,
-			self.leader.subs(t),
-			n.normalize(),
-			100,
-		)
-		.unwrap();
+		let (_, p0, p1) = self.search_triple(t).unwrap();
 		let d = self
 			.surface0
 			.normal(p0.x, p0.y)
@@ -182,7 +170,7 @@ where
 impl<C, S> ParameterDivision1D for IntersectionCurve<C, S>
 where
 	C: ParametricCurve<Point = Point3, Vector = Vector3>,
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	#[inline(always)]
 	fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
@@ -193,7 +181,7 @@ where
 impl<C, S> Cut for IntersectionCurve<C, S>
 where
 	C: Cut<Point = Point3, Vector = Vector3>,
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	#[inline(always)]
 	fn cut(&mut self, t: f64) -> Self {
@@ -207,15 +195,14 @@ where
 }
 
 impl<C: Invertible, S: Clone> Invertible for IntersectionCurve<C, S> {
-	fn invert(&mut self) {
-		self.leader.invert();
-	}
+	fn invert(&mut self) { self.leader.invert(); }
 }
 
 impl<C, S> SearchParameter for IntersectionCurve<C, S>
 where
-	C: ParametricCurve<Point = Point3, Vector = Vector3> + SearchNearestParameter<Point = Point3, Parameter = f64>,
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+	C: ParametricCurve<Point = Point3, Vector = Vector3>
+		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	type Point = Point3;
 	type Parameter = f64;
@@ -235,12 +222,18 @@ where
 /// Only derive from leading curve. Not precise.
 impl<C, S> SearchNearestParameter for IntersectionCurve<C, S>
 where
-	C: ParametricCurve<Point = Point3, Vector = Vector3> + SearchNearestParameter<Point = Point3, Parameter = f64>,
-	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+	C: ParametricCurve<Point = Point3, Vector = Vector3>
+		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	type Point = Point3;
 	type Parameter = f64;
-	fn search_nearest_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
+	fn search_nearest_parameter(
+		&self,
+		point: Point3,
+		hint: Option<f64>,
+		trials: usize,
+	) -> Option<f64> {
 		self.leader().search_nearest_parameter(point, hint, trials)
 	}
 }
@@ -250,7 +243,10 @@ pub fn intersection_curves<S>(
 	surface1: S,
 	polygon1: &PolygonMesh,
 	tol: f64,
-) -> Vec<(PolylineCurve<Point3>, Option<IntersectionCurve<PolylineCurve<Point3>, S>>)>
+) -> Vec<(
+	PolylineCurve<Point3>,
+	Option<IntersectionCurve<PolylineCurve<Point3>, S>>,
+)>
 where
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
