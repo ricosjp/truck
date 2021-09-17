@@ -249,7 +249,7 @@ fn independent_intersection() {
 				assert!(flags[0]);
 				flags[0] = false;
 			}
-			BoundaryStatus::And => {
+			BoundaryStatus::Or => {
 				let curve = bw[0].oriented_curve();
 				let pt = curve.subs(0.5) - Point3::origin();
 				let der = curve.der(0.5);
@@ -257,7 +257,7 @@ fn independent_intersection() {
 				assert!(flags[1]);
 				flags[1] = false;
 			}
-			BoundaryStatus::Or => {
+			BoundaryStatus::And => {
 				let curve = bw[0].oriented_curve();
 				let pt = curve.subs(0.5) - Point3::origin();
 				let der = curve.der(0.5);
@@ -467,13 +467,13 @@ fn rotated_intersection() {
 	);
 	let (a, b) = (geom_loops_store1[0][0].len(), geom_loops_store1[0][1].len());
 	let compatible0 = match geom_loops_store1[0][0].status() {
-		BoundaryStatus::And => a == 5,
-		BoundaryStatus::Or => a == 3,
+		BoundaryStatus::And => a == 3,
+		BoundaryStatus::Or => a == 5,
 		_ => false,
 	};
 	let compatible1 = match geom_loops_store1[0][1].status() {
-		BoundaryStatus::And => b == 5,
-		BoundaryStatus::Or => b == 3,
+		BoundaryStatus::And => b == 3,
+		BoundaryStatus::Or => b == 5,
 		_ => false,
 	};
 	assert!(
@@ -504,13 +504,13 @@ fn rotated_intersection() {
 	);
 	let (a, b) = (geom_loops_store1[1][0].len(), geom_loops_store1[1][1].len());
 	let compatible0 = match geom_loops_store1[1][0].status() {
-		BoundaryStatus::And => a == 5,
-		BoundaryStatus::Or => a == 3,
+		BoundaryStatus::And => a == 3,
+		BoundaryStatus::Or => a == 5,
 		_ => false,
 	};
 	let compatible1 = match geom_loops_store1[1][1].status() {
-		BoundaryStatus::And => b == 5,
-		BoundaryStatus::Or => b == 3,
+		BoundaryStatus::And => b == 3,
+		BoundaryStatus::Or => b == 5,
 		_ => false,
 	};
 	assert!(
@@ -713,13 +713,13 @@ fn crossing_edges() {
 	);
 	let (a, b) = (geom_loops_store1[0][0].len(), geom_loops_store1[0][1].len());
 	let compatible0 = match geom_loops_store1[0][0].status() {
-		BoundaryStatus::And => a == 4,
-		BoundaryStatus::Or => a == 2,
+		BoundaryStatus::And => a == 2,
+		BoundaryStatus::Or => a == 4,
 		_ => false,
 	};
 	let compatible1 = match geom_loops_store1[0][1].status() {
-		BoundaryStatus::And => b == 4,
-		BoundaryStatus::Or => b == 2,
+		BoundaryStatus::And => b == 2,
+		BoundaryStatus::Or => b == 4,
 		_ => false,
 	};
 	assert!(
@@ -750,13 +750,13 @@ fn crossing_edges() {
 	);
 	let (a, b) = (geom_loops_store1[1][0].len(), geom_loops_store1[1][1].len());
 	let compatible0 = match geom_loops_store1[1][0].status() {
-		BoundaryStatus::And => a == 4,
-		BoundaryStatus::Or => a == 2,
+		BoundaryStatus::And => a == 2,
+		BoundaryStatus::Or => a == 4,
 		_ => false,
 	};
 	let compatible1 = match geom_loops_store1[1][1].status() {
-		BoundaryStatus::And => b == 4,
-		BoundaryStatus::Or => b == 2,
+		BoundaryStatus::And => b == 2,
+		BoundaryStatus::Or => b == 4,
 		_ => false,
 	};
 	assert!(

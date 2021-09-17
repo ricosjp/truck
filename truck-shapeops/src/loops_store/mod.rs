@@ -8,7 +8,7 @@ use truck_topology::{Vertex, *};
 
 type PolylineCurve = truck_meshalgo::prelude::PolylineCurve<Point3>;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BoundaryStatus {
 	Unknown,
 	And,
@@ -122,6 +122,12 @@ impl<'a, P, C, S> std::iter::FromIterator<&'a Face<P, C, S>> for LoopsStore<P, C
 	fn from_iter<I: IntoIterator<Item = &'a Face<P, C, S>>>(iter: I) -> Self {
 		Self(iter.into_iter().map(|face| Loops::from(face)).collect())
 	}
+}
+
+impl<'a, P, C> std::iter::IntoIterator for &'a LoopsStore<P, C> {
+	type Item = <&'a Vec<Loops<P, C>> as IntoIterator>::Item;
+	type IntoIter = <&'a Vec<Loops<P, C>> as IntoIterator>::IntoIter;
+	fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
 #[derive(Clone, Debug, Copy, PartialEq)]
@@ -458,6 +464,8 @@ where
 	(0..store0_len)
 		.flat_map(move |i| (0..store1_len).map(move |j| (i, j)))
 		.try_for_each(|(face_index0, face_index1)| {
+			let ori0 = geom_shell0[face_index0].orientation();
+			let ori1 = geom_shell1[face_index1].orientation();
 			let surface0 = geom_shell0[face_index0].get_surface();
 			let surface1 = geom_shell1[face_index1].get_surface();
 			let polygon0 = poly_shell0[face_index0].get_surface();
@@ -473,17 +481,23 @@ where
 			.try_for_each(|(polyline, intersection_curve)| {
 				let mut intersection_curve = intersection_curve?;
 				let status = BoundaryStatus::from_is_curve(&intersection_curve)?;
+				let (status0, status1) = match (ori0, ori1) {
+					(true, true) => (status, status.not()),
+					(true, false) => (status.not(), status.not()),
+					(false, true) => (status, status),
+					(false, false) => (status.not(), status),
+				};
 				if polyline.front().near(&polyline.back()) {
 					let poly_wire = create_independent_loop(polyline);
 					poly_loops_store0[face_index0]
-						.add_independent_loop(BoundaryWire::new(poly_wire.clone(), status));
+						.add_independent_loop(BoundaryWire::new(poly_wire.clone(), status0));
 					poly_loops_store1[face_index1]
-						.add_independent_loop(BoundaryWire::new(poly_wire, status.not()));
+						.add_independent_loop(BoundaryWire::new(poly_wire, status1));
 					let geom_wire = create_independent_loop(intersection_curve);
 					geom_loops_store0[face_index0]
-						.add_independent_loop(BoundaryWire::new(geom_wire.clone(), status));
+						.add_independent_loop(BoundaryWire::new(geom_wire.clone(), status0));
 					geom_loops_store1[face_index1]
-						.add_independent_loop(BoundaryWire::new(geom_wire, status.not()));
+						.add_independent_loop(BoundaryWire::new(geom_wire, status1));
 				} else {
 					let pv0 = Vertex::new(polyline.front());
 					let pv1 = Vertex::new(polyline.back());
@@ -555,10 +569,10 @@ where
 					}
 					let pedge = Edge::new(&pv0, &pv1, polyline);
 					let gedge = Edge::new(&gv0, &gv1, intersection_curve.into());
-					poly_loops_store0[face_index0].add_edge(pedge.clone(), status);
-					geom_loops_store0[face_index0].add_edge(gedge.clone(), status);
-					poly_loops_store1[face_index1].add_edge(pedge, status.not());
-					geom_loops_store1[face_index1].add_edge(gedge, status.not());
+					poly_loops_store0[face_index0].add_edge(pedge.clone(), status0);
+					geom_loops_store0[face_index0].add_edge(gedge.clone(), status0);
+					poly_loops_store1[face_index1].add_edge(pedge, status1);
+					geom_loops_store1[face_index1].add_edge(gedge, status1);
 				}
 				Some(())
 			})
