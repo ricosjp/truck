@@ -1,0 +1,57 @@
+[config]
+default_to_workspace = false
+
+# --- test ---
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.cpu-test]
+description = "Tests using only CPU"
+command = "cargo"
+args = [
+	"test",
+	"-p", "truck-base",
+	"-p", "truck-geotrait",
+	"-p", "truck-geometry",
+	"-p", "truck-topology",
+	"-p", "truck-polymesh",
+	"-p", "truck-meshalgo",
+	"-p", "truck-modeling",
+	"-p", "truck-shapeops",
+	"--", "--nocapture",
+]
+
+[tasks.gpu-test]
+description = "Tests using GPU"
+command = "cargo"
+args = [
+	"test",
+	"-p", "truck-platform",
+	"-p", "truck-rendimpl",
+	"--", "--nocapture", "--test-threads=1",
+]
+
+[tasks.gpu-release-build-test]
+description = "Tests using GPU"
+command = "cargo"
+args = [
+	"test", "--release",
+	"-p", "truck-platform",
+	"-p", "truck-rendimpl",
+	"--", "--nocapture", "--test-threads=1",
+]
+
+[tasks.collect-gpu-artifacts]
+description = "Collects artifacts for gpu tests"
+script = [
+	"mkdir images",
+	"mv truck-platform/output images/platform",
+	"mv truck-rendimpl/output images/rendimpl",
+]
+
+[tasks.ci-cpu-test]
+dependencies = ["clean", "cpu-test"]
+
+[tasks.ci-gpu-test]
+dependencies = ["clean", "gpu-release-build-test", "collect-gpu-artifacts"]

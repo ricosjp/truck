@@ -38,7 +38,8 @@ where
     let der2 = curve.der2(hint);
     let f = der.dot(pt - point);
     let fprime = der2.dot(pt - point) + der.magnitude2();
-    if f.so_small2() || fprime.so_small() {
+    let dermag = f64::min(der.magnitude(), 1.0);
+    if f64::abs(f) < TOLERANCE * dermag || fprime.so_small() {
         return Some(hint);
     } else if trials == 0 {
         None
