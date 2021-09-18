@@ -7,20 +7,13 @@ cpu-test:
     stage: test
     script:
         - cargo install cargo-make
-        - cargo clean
-        - cargo make cpu-test
+        - cargo make ci-cpu-test
 
 gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
-        - /root/.cargo/bin/cargo clean
-        # test by release build for the bug of Vulkan-ValidationLayers
-        # cf: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2502
-        - /root/.cargo/bin/cargo make gpu-release-build-test
-        - mkdir images
-        - mv truck-platform/output images/platform
-        - mv truck-rendimpl/output images/rendimpl
+        - /root/.cargo/bin/cargo make ci-gpu-test
     tags:
         - gpu
     artifacts:
