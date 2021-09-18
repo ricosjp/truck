@@ -44,11 +44,11 @@ workspace = false
 
 [tasks.collect-gpu-artifacts]
 description = "Collects artifacts for gpu tests"
-script = ```
-mkdir images
-mv truck-platform/output images/platform
-mv truck-rendimpl/output images/rendimpl
-```
+script = [
+	"mkdir images",
+	"mv truck-platform/output images/platform",
+	"mv truck-rendimpl/output images/rendimpl",
+]
 workspace = false
 
 [tasks.ci-cpu-test]
