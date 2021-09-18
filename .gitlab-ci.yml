@@ -6,28 +6,19 @@ cpu-test:
     image: rust:latest
     stage: test
     script:
+        - cargo install cargo-make
         - cargo clean
-        - cargo test -p truck-base
-            -p truck-geotrait
-            -p truck-geometry
-            -p truck-topology
-            -p truck-polymesh
-            -p truck-meshalgo
-            -p truck-modeling
-            -p truck-shapeops
-            -- --nocapture
+        - cargo make cpu-test
 
 gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
+        - /root/.cargo/bin/cargo install cargo-make
         - /root/.cargo/bin/cargo clean
         # test by release build for the bug of Vulkan-ValidationLayers
         # cf: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2502
-        - /root/.cargo/bin/cargo test --release
-            -p truck-platform
-            -p truck-rendimpl
-            -- --nocapture --test-threads=1
+        - /root/.cargo/bin/cargo make gpu-release-build-test
         - mkdir images
         - mv truck-platform/output images/platform
         - mv truck-rendimpl/output images/rendimpl

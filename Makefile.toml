@@ -1,0 +1,38 @@
+[tasks.cpu-test]
+description = "Tests using only CPU"
+command = "cargo"
+args = [
+	"test",
+	"-p", "truck-base",
+	"-p", "truck-geotrait",
+	"-p", "truck-geometry",
+	"-p", "truck-topology",
+	"-p", "truck-polymesh",
+	"-p", "truck-meshalgo",
+	"-p", "truck-modeling",
+	"-p", "truck-shapeops",
+	"--", "--nocapture",
+]
+workspace = false
+
+[tasks.gpu-test]
+description = "Tests using GPU"
+command = "cargo"
+args = [
+	"test",
+	"-p", "truck-platform",
+	"-p", "truck-rendimpl",
+	"--", "--nocapture", "--test-threads=1",
+]
+workspace = false
+
+[tasks.gpu-release-build-test]
+description = "Tests using GPU"
+command = "cargo"
+args = [
+	"test", "--release",
+	"-p", "truck-platform",
+	"-p", "truck-rendimpl",
+	"--", "--nocapture", "--test-threads=1",
+]
+workspace = false
