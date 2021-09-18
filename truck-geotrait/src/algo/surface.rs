@@ -2,10 +2,16 @@ use super::*;
 
 /// Divides the domain into equal parts, examines all the values, and returns `(u, v)` such that `surface.subs(u, v)` is closest to `point`.
 /// This method is useful to get an efficient hint of `search_nearest_parameter`.
-pub fn presearch<S>(surface: &S, point: S::Point, (urange, vrange): ((f64, f64), (f64, f64)), division: usize) -> (f64, f64)
+pub fn presearch<S>(
+    surface: &S,
+    point: S::Point,
+    (urange, vrange): ((f64, f64), (f64, f64)),
+    division: usize,
+) -> (f64, f64)
 where
     S: ParametricSurface,
-    S::Point: MetricSpace<Metric = f64> + Copy, {
+    S::Point: MetricSpace<Metric = f64> + Copy,
+{
     let mut res = (0.0, 0.0);
     let mut min = std::f64::INFINITY;
     let ((u0, u1), (v0, v1)) = (urange, vrange);
@@ -132,23 +138,33 @@ impl<'a, S: ParametricSurface3D> ProjectedSurface<'a, S> {
     }
 }
 
-impl<'a, S: ParametricSurface3D> ParametricSurface
-    for ProjectedSurface<'a, S>
-{
+impl<'a, S: ParametricSurface3D> ParametricSurface for ProjectedSurface<'a, S> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point2 { self.point_proj(self.surface.subs(u, v)) }
+    fn subs(&self, u: f64, v: f64) -> Point2 {
+        self.point_proj(self.surface.subs(u, v))
+    }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uder(u, v)) }
+    fn uder(&self, u: f64, v: f64) -> Vector2 {
+        self.vector_proj(self.surface.uder(u, v))
+    }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vder(u, v)) }
+    fn vder(&self, u: f64, v: f64) -> Vector2 {
+        self.vector_proj(self.surface.vder(u, v))
+    }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uuder(u, v)) }
+    fn uuder(&self, u: f64, v: f64) -> Vector2 {
+        self.vector_proj(self.surface.uuder(u, v))
+    }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uvder(u, v)) }
+    fn uvder(&self, u: f64, v: f64) -> Vector2 {
+        self.vector_proj(self.surface.uvder(u, v))
+    }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vvder(u, v)) }
+    fn vvder(&self, u: f64, v: f64) -> Vector2 {
+        self.vector_proj(self.surface.vvder(u, v))
+    }
 }
 
 /// Searches the parameter by Newton's method.
@@ -163,10 +179,7 @@ pub fn search_parameter3d<S: ParametricSurface3D>(
     search_parameter2d(&proj, proj.point_proj(point), (u0, v0), trials).and_then(|(u, v)| {
         match surface.subs(u, v).near(&point) {
             true => Some((u, v)),
-            false => {
-                println!("not near!");
-                None
-            },
+            false => None,
         }
     })
 }
@@ -190,7 +203,8 @@ where
 fn sub_parameter_division<S>(surface: &S, (udiv, vdiv): (&mut Vec<f64>, &mut Vec<f64>), tol: f64)
 where
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>, {
+    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+{
     let mut divide_flag0 = vec![false; udiv.len() - 1];
     let mut divide_flag1 = vec![false; vdiv.len() - 1];
 
