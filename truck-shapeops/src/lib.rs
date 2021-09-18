@@ -1,4 +1,5 @@
 mod divide_face;
+mod faces_classification;
 mod intersection_curve;
 mod loops_store;
 mod polyline_construction;

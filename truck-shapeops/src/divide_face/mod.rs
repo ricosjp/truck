@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::faces_classification::FacesClassification;
 use crate::loops_store::*;
 use std::ops::Deref;
 use truck_meshalgo::prelude::*;
@@ -85,7 +86,7 @@ fn divide_one_face<C, S>(
 	face: &Face<Point3, C, S>,
 	loops: &Loops<Point3, C>,
 	tol: f64,
-) -> Option<Vec<(Face<Point3, C, S>, BoundaryStatus)>>
+) -> Option<Vec<(Face<Point3, C, S>, ShapesOpStatus)>>
 where
 	C: ParametricCurve<Point = Point3> + ParameterDivision1D,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
@@ -111,10 +112,10 @@ where
 			let surface = face.get_surface();
 			let op = pre_face
 				.iter()
-				.find(|chunk| chunk.wire.status() != BoundaryStatus::Unknown);
+				.find(|chunk| chunk.wire.status() != ShapesOpStatus::Unknown);
 			let status = match op {
 				Some(chunk) => chunk.wire.status(),
-				None => BoundaryStatus::Unknown,
+				None => ShapesOpStatus::Unknown,
 			};
 			let wires: Vec<Wire<Point3, C>> = pre_face
 				.into_iter()
@@ -130,39 +131,29 @@ where
 	Some(vec)
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct DivideFacesResult<Shell> {
-	and: Shell,
-	or: Shell,
-	unknown: Shell,
-}
-
 pub fn divide_faces<C, S>(
 	shell: &Shell<Point3, C, S>,
 	loops_store: &LoopsStore<Point3, C>,
 	tol: f64,
-) -> Option<DivideFacesResult<Shell<Point3, C, S>>>
+) -> Option<FacesClassification<Point3, C, S>>
 where
 	C: ParametricCurve<Point = Point3> + ParameterDivision1D,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
-	let mut res = DivideFacesResult::<Shell<Point3, C, S>>::default();
+	let mut res = FacesClassification::<Point3, C, S>::default();
 	shell
 		.iter()
 		.zip(loops_store)
 		.try_for_each(|(face, loops)| {
 			if loops
 				.iter()
-				.all(|wire| wire.status() == BoundaryStatus::Unknown)
+				.all(|wire| wire.status() == ShapesOpStatus::Unknown)
 			{
-				res.unknown.push(face.clone());
+				res.push(face.clone(), ShapesOpStatus::Unknown);
 			} else {
 				let vec = divide_one_face(face, loops, tol)?;
-				vec.into_iter().for_each(|(face, status)| match status {
-					BoundaryStatus::And => res.and.push(face),
-					BoundaryStatus::Or => res.or.push(face),
-					BoundaryStatus::Unknown => res.unknown.push(face),
-				});
+				vec.into_iter()
+					.for_each(|(face, status)| res.push(face, status));
 			}
 			Some(())
 		})?;

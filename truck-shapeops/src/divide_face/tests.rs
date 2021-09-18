@@ -59,10 +59,10 @@ fn divide_plane_test() {
 		),
 	);
 	let loops: Loops<_, _> = vec![
-		BoundaryWire::new(wire[1].clone(), BoundaryStatus::Or),
-		BoundaryWire::new(wire[2].clone(), BoundaryStatus::And),
-		BoundaryWire::new(wire[3].clone(), BoundaryStatus::Unknown),
-		BoundaryWire::new(wire[4].clone(), BoundaryStatus::Unknown),
+		BoundaryWire::new(wire[1].clone(), ShapesOpStatus::Or),
+		BoundaryWire::new(wire[2].clone(), ShapesOpStatus::And),
+		BoundaryWire::new(wire[3].clone(), ShapesOpStatus::Unknown),
+		BoundaryWire::new(wire[4].clone(), ShapesOpStatus::Unknown),
 	]
 	.into_iter()
 	.collect();
@@ -72,7 +72,7 @@ fn divide_plane_test() {
 	for (face, status) in res {
 		let bdd = face.absolute_boundaries();
 		match status {
-			BoundaryStatus::Or => {
+			ShapesOpStatus::Or => {
 				assert_eq!(bdd.len(), 2);
 				assert!(bdd[0] == wire[1] || bdd[0] == wire[3]);
 				assert!(bdd[1] == wire[1] || bdd[1] == wire[3]);
@@ -80,7 +80,7 @@ fn divide_plane_test() {
 				assert!(or);
 				or = false;
 			}
-			BoundaryStatus::And => {
+			ShapesOpStatus::And => {
 				assert_eq!(bdd.len(), 2);
 				assert!(bdd[0] == wire[2] || bdd[0] == wire[4]);
 				assert!(bdd[1] == wire[2] || bdd[1] == wire[4]);
@@ -203,16 +203,12 @@ fn independent_intersection() {
 	let (loops_store0, _, loops_store1, _) =
 		crate::loops_store::create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1, TOL)
 			.unwrap();
-	let DivideFacesResult {
-		and: and0,
-		or: or0,
-		unknown: unknown0,
-	} = divide_faces(&shell0, &loops_store0, TOL).unwrap();
-	let DivideFacesResult {
-		and: and1,
-		or: or1,
-		unknown: unknown1,
-	} = divide_faces(&shell1, &loops_store1, TOL).unwrap();
+	let (and0, or0, unknown0) = divide_faces(&shell0, &loops_store0, TOL)
+		.unwrap()
+		.and_or_unknown();
+	let (and1, or1, unknown1) = divide_faces(&shell1, &loops_store1, TOL)
+		.unwrap()
+		.and_or_unknown();
 	assert_eq!(and0.len(), 1);
 	assert_eq!(or0.len(), 1);
 	assert_eq!(unknown0.len(), 1);
