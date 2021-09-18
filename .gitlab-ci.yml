@@ -6,7 +6,7 @@ cpu-test:
     image: rust:latest
     stage: test
     cache:
-        - /root/.cargo/bin/cargo-make
+        - /root/.cargo/
     script:
         - cargo install cargo-make
         - cargo make ci-cpu-test
