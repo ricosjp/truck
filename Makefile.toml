@@ -53,6 +53,8 @@ workspace = false
 
 [tasks.ci-cpu-test]
 dependencies = ["clean", "cpu-test"]
+workspace = false
 
 [tasks.ci-gpu-test]
 dependencies = ["clean", "gpu-test", "collect-gpu-artifacts"]
+workspace = false
