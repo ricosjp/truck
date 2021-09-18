@@ -9,13 +9,13 @@ use truck_topology::{Vertex, *};
 type PolylineCurve = truck_meshalgo::prelude::PolylineCurve<Point3>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BoundaryStatus {
+pub enum ShapesOpStatus {
 	Unknown,
 	And,
 	Or,
 }
 
-impl BoundaryStatus {
+impl ShapesOpStatus {
 	fn not(self) -> Self {
 		match self {
 			Self::Unknown => Self::Unknown,
@@ -28,14 +28,14 @@ impl BoundaryStatus {
 #[derive(Clone, Debug)]
 pub struct BoundaryWire<P, C> {
 	wire: Wire<P, C>,
-	status: BoundaryStatus,
+	status: ShapesOpStatus,
 }
 
 impl<P, C> BoundaryWire<P, C> {
 	#[inline(always)]
-	pub fn new(wire: Wire<P, C>, status: BoundaryStatus) -> Self { Self { wire, status } }
+	pub fn new(wire: Wire<P, C>, status: ShapesOpStatus) -> Self { Self { wire, status } }
 	#[inline(always)]
-	pub fn status(&self) -> BoundaryStatus { self.status }
+	pub fn status(&self) -> ShapesOpStatus { self.status }
 	#[inline(always)]
 	pub fn invert(&mut self) {
 		self.wire.invert();
@@ -50,8 +50,8 @@ impl<P, C> BoundaryWire<P, C> {
 	}
 }
 
-impl BoundaryStatus {
-	fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<BoundaryStatus>
+impl ShapesOpStatus {
+	fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<ShapesOpStatus>
 	where
 		C: ParametricCurve<Point = Point3, Vector = Vector3>,
 		S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>, {
@@ -62,8 +62,8 @@ impl BoundaryStatus {
 		let normal0 = curve.surface0().normal(pt0[0], pt0[1]);
 		let normal1 = curve.surface1().normal(pt1[0], pt1[1]);
 		match normal0.cross(der).dot(normal1) > 0.0 {
-			true => Some(BoundaryStatus::Or),
-			false => Some(BoundaryStatus::And),
+			true => Some(ShapesOpStatus::Or),
+			false => Some(ShapesOpStatus::And),
 		}
 	}
 }
@@ -118,7 +118,7 @@ impl<'a, P, C, S> From<&'a Face<P, C, S>> for Loops<P, C> {
 	fn from(face: &'a Face<P, C, S>) -> Loops<P, C> {
 		face.absolute_boundaries()
 			.iter()
-			.map(|wire| BoundaryWire::new(wire.clone(), BoundaryStatus::Unknown))
+			.map(|wire| BoundaryWire::new(wire.clone(), ShapesOpStatus::Unknown))
 			.collect()
 	}
 }
@@ -225,7 +225,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 	fn add_edge(
 		&mut self,
 		edge0: Edge<P, C>,
-		status: BoundaryStatus,
+		status: ShapesOpStatus,
 	) -> (Option<(usize, usize)>, Option<(usize, usize)>) {
 		let a = self.iter().enumerate().find_map(|(i, wire)| {
 			wire.iter().enumerate().find_map(|(j, edge)| {
@@ -274,7 +274,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 			}
 			(None, None) => self.push(BoundaryWire::new(
 				vec![edge0.inverse(), edge0].into(),
-				BoundaryStatus::Unknown,
+				ShapesOpStatus::Unknown,
 			)),
 			_ => {}
 		}
@@ -485,7 +485,7 @@ where
 			.into_iter()
 			.try_for_each(|(polyline, intersection_curve)| {
 				let mut intersection_curve = intersection_curve?;
-				let status = BoundaryStatus::from_is_curve(&intersection_curve)?;
+				let status = ShapesOpStatus::from_is_curve(&intersection_curve)?;
 				let (status0, status1) = match (ori0, ori1) {
 					(true, true) => (status, status.not()),
 					(true, false) => (status.not(), status.not()),
