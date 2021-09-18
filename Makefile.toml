@@ -1,7 +1,10 @@
+[config]
+default_to_workspace = false
+
+# --- test ---
 [tasks.clean]
 command = "cargo"
 args = ["clean"]
-workspace = false
 
 [tasks.cpu-test]
 description = "Tests using only CPU"
@@ -18,7 +21,6 @@ args = [
 	"-p", "truck-shapeops",
 	"--", "--nocapture",
 ]
-workspace = false
 
 [tasks.gpu-test]
 description = "Tests using GPU"
@@ -29,7 +31,6 @@ args = [
 	"-p", "truck-rendimpl",
 	"--", "--nocapture", "--test-threads=1",
 ]
-workspace = false
 
 [tasks.gpu-release-build-test]
 description = "Tests using GPU"
@@ -40,7 +41,6 @@ args = [
 	"-p", "truck-rendimpl",
 	"--", "--nocapture", "--test-threads=1",
 ]
-workspace = false
 
 [tasks.collect-gpu-artifacts]
 description = "Collects artifacts for gpu tests"
@@ -49,12 +49,9 @@ script = [
 	"mv truck-platform/output images/platform",
 	"mv truck-rendimpl/output images/rendimpl",
 ]
-workspace = false
 
 [tasks.ci-cpu-test]
 dependencies = ["clean", "cpu-test"]
-workspace = false
 
 [tasks.ci-gpu-test]
-dependencies = ["clean", "gpu-test", "collect-gpu-artifacts"]
-workspace = false
+dependencies = ["clean", "gpu-release-build-test", "collect-gpu-artifacts"]
