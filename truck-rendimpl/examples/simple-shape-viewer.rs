@@ -121,7 +121,7 @@ impl MyApp {
                 matrix: mat.invert().unwrap(),
                 ..Default::default()
             },
-            mesh_precision: 0.005,
+            mesh_precision: size * 0.005,
             ..Default::default()
         };
         let wire_desc = ShapeWireFrameDescriptor {

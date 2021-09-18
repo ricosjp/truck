@@ -35,21 +35,7 @@ fn compare_occt_mesh() {
 
 #[test]
 fn large_number_meshing() {
-    const RADIUS0: f64 = 500.0;
-    const RADIUS1: f64 = 100.0;
-    let vertex = builder::vertex(Point3::new(RADIUS0, 0.0, RADIUS1));
-    let circle: Wire = builder::rsweep(
-        &vertex,
-        Point3::new(RADIUS0, 0.0, 0.0),
-        Vector3::unit_y(),
-        Rad(7.0),
-    );
-    let disk = builder::try_attach_plane(&vec![circle]).unwrap();
-    let torus = builder::rsweep(
-        &disk,
-        Point3::origin(),
-        Vector3::unit_z(),
-        Rad(7.0),
-    );
+    let torus = Solid::extract(serde_json::from_slice(include_bytes!("large-torus.json")).unwrap())
+        .unwrap();
     let _ = torus.triangulation(1.0).unwrap().into_polygon();
 }
