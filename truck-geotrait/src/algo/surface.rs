@@ -48,7 +48,9 @@ where
     let c = uvd.dot(s - point) + ud.dot(vd);
     let b = vvd.dot(s - point) + vd.dot(vd);
     let fprime = Matrix2::new(a, c, c, b);
-    if f.so_small2() || fprime.determinant().so_small() {
+    let dermag2 = f64::min(1.0, ud.magnitude2());
+    let dermag2 = f64::min(dermag2, vd.magnitude2());
+    if f.magnitude2() < TOLERANCE2 * dermag2 || fprime.determinant().so_small() {
         Some((u0, v0))
     } else if trials == 0 {
         None
@@ -67,7 +69,11 @@ pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>
     trials: usize,
 ) -> Option<(f64, f64)> {
     let pt = surface.subs(u0, v0);
-    if pt.near2(&point) {
+    let uder = surface.uder(u0, v0);
+    let vder = surface.vder(u0, v0);
+    let dermag2 = f64::min(1.0, uder.magnitude2());
+    let dermag2 = f64::min(dermag2, vder.magnitude2());
+    if pt.distance2(point) < TOLERANCE2 * dermag2 {
         return Some((u0, v0));
     } else if trials == 0 {
         return None;
