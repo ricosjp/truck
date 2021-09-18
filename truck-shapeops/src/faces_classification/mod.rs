@@ -67,3 +67,6 @@ impl<P, C, S> FacesClassification<P, C, S> {
 		}
 	}
 }
+
+#[cfg(test)]
+mod tests;
