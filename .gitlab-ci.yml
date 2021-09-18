@@ -14,7 +14,6 @@ gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     script:
-        - /root/.cargo/bin/cargo install cargo-make
         - /root/.cargo/bin/cargo clean
         # test by release build for the bug of Vulkan-ValidationLayers
         # cf: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2502
