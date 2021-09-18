@@ -71,7 +71,7 @@ pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>
     let pt = surface.subs(u0, v0);
     let uder = surface.uder(u0, v0);
     let vder = surface.vder(u0, v0);
-    let dermag2 = f64::min(1.0, uder.magnitude2());
+    let dermag2 = f64::min(0.05, uder.magnitude2());
     let dermag2 = f64::min(dermag2, vder.magnitude2());
     if pt.distance2(point) < TOLERANCE2 * dermag2 {
         return Some((u0, v0));
@@ -79,7 +79,7 @@ pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>
         return None;
     }
     let hint = Vector2::new(u0, v0);
-    let jacobi = Matrix2::from_cols(surface.uder(u0, v0), surface.vder(u0, v0));
+    let jacobi = Matrix2::from_cols(uder, vder);
     let res = jacobi.invert().map(move |inv| hint - inv * (pt - point));
     match res {
         Some(vec) => search_parameter2d(surface, point, (vec[0], vec[1]), trials - 1),
@@ -163,7 +163,10 @@ pub fn search_parameter3d<S: ParametricSurface3D>(
     search_parameter2d(&proj, proj.point_proj(point), (u0, v0), trials).and_then(|(u, v)| {
         match surface.subs(u, v).near(&point) {
             true => Some((u, v)),
-            false => None,
+            false => {
+                println!("not near!");
+                None
+            },
         }
     })
 }
