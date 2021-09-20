@@ -10,6 +10,7 @@ mod app;
 use app::*;
 use std::f64::consts::PI;
 use truck_modeling::*;
+use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
@@ -74,9 +75,10 @@ impl App for MyApp {
         let e = builder::tsweep(&v, Vector3::unit_x());
         let f = builder::tsweep(&e, Vector3::unit_y());
         let cube = builder::tsweep(&f, Vector3::unit_z());
+        let mesh = cube.triangulation(0.01).unwrap().into_polygon();
         let instance: PolygonInstance = scene
             .instance_creator()
-            .create_instance(&cube, &Default::default());
+            .create_instance(&mesh, &Default::default());
         let mut matrices = Vec::new();
         let instances: Vec<_> = (0..N)
             .flat_map(move |i| (0..N).map(move |j| (i, j)))
@@ -89,7 +91,7 @@ impl App for MyApp {
                     0.0,
                 ));
                 matrices.push(matrix);
-                *instance.instance_state_mut() = InstanceState {
+                *instance.instance_state_mut() = PolygonState {
                     matrix,
                     material: Material {
                         albedo: Vector4::from(BOXCOLOR),

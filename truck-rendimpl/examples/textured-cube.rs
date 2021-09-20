@@ -4,6 +4,7 @@
 // https://cc0textures.com/view?id=WoodFloor024
 
 use std::io::Read;
+use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -62,8 +63,7 @@ impl App for MyApp {
         tex_file.read_to_end(&mut bytes).unwrap();
         let texture = image::load_from_memory(&bytes).unwrap();
         let texture = image2texture::image2texture(&handler, &texture);
-        let desc = ShapeInstanceDescriptor {
-            instance_state: InstanceState {
+        let state = PolygonState {
                 matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
                 material: Material {
                     albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
@@ -74,12 +74,12 @@ impl App for MyApp {
                 },
                 texture: Some(std::sync::Arc::new(texture)),
                 backface_culling: true,
-            },
-            ..Default::default()
         };
-        let shape: PolygonInstance = scene
-            .instance_creator()
-            .create_instance(&Self::create_cube(), &desc);
+        let mesh = Self::create_cube()
+            .triangulation(0.05)
+            .unwrap()
+            .into_polygon();
+        let shape: PolygonInstance = scene.instance_creator().create_instance(&mesh, &state);
         scene.add_object(&shape);
         MyApp {
             scene,
@@ -90,7 +90,9 @@ impl App for MyApp {
         }
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("textured cube") }
+    fn app_title<'a>() -> Option<&'a str> {
+        Some("textured cube")
+    }
 
     fn mouse_input(&mut self, state: ElementState, button: MouseButton) -> ControlFlow {
         match button {
@@ -213,7 +215,11 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) {
+        self.scene.render_scene(view);
+    }
 }
 
-fn main() { MyApp::run(); }
+fn main() {
+    MyApp::run();
+}

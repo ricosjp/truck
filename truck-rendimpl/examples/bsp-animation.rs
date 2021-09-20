@@ -4,9 +4,9 @@
 
 use std::sync::{Arc, Mutex};
 use std::thread::*;
+use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use truck_modeling::{*, Surface};
 use wgpu::*;
 mod app;
 use app::*;
@@ -20,7 +20,7 @@ struct MyApp {
 }
 
 impl MyApp {
-    fn init_surface(degree: usize, division: usize) -> Surface {
+    fn init_surface(degree: usize, division: usize) -> BSplineSurface<Point3> {
         let range = degree + division - 1;
         let knot_vec = KnotVec::uniform_knot(degree, division);
         let mut ctrl_pts = Vec::new();
@@ -29,21 +29,11 @@ impl MyApp {
             let mut vec = Vec::new();
             for j in 0..=range {
                 let v = (j as f64) / (range as f64);
-                vec.push(Vector4::new(v, 0.0, u, 1.0));
+                vec.push(Point3::new(v, 0.0, u));
             }
             ctrl_pts.push(vec);
         }
-        Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::new(
-            (knot_vec.clone(), knot_vec),
-            ctrl_pts,
-        )))
-    }
-    fn init_shell() -> Shell {
-        let v = builder::vertex(Point3::origin());
-        let e = builder::tsweep(&v, Vector3::unit_z());
-        let f = builder::tsweep(&e, Vector3::unit_x());
-        f.set_surface(Self::init_surface(3, 4));
-        Shell::from(vec![f])
+        BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts)
     }
     fn init_camera() -> Camera {
         let mut vec0 = Vector4::new(1.5, 0.0, -1.5, 0.0);
@@ -63,7 +53,7 @@ impl MyApp {
         object: Arc<Mutex<PolygonInstance>>,
         closed: Arc<Mutex<bool>>,
         updated: Arc<Mutex<bool>>,
-        shell: Shell,
+        surface: Arc<Mutex<BSplineSurface<Point3>>>,
     ) -> JoinHandle<()> {
         std::thread::spawn(move || {
             let mut time: f64 = 0.0;
@@ -88,20 +78,23 @@ impl MyApp {
                     instant = std::time::Instant::now();
                     count = 0;
                 }
-                match shell[0].get_surface() {
-                    Surface::NURBSSurface(mut surface) => {
+                let mut mesh = None;
+                match surface.lock() {
+                    Ok(mut surface) => {
                         surface.control_point_mut(3, 3)[1] = time.sin();
-                        shell[0].set_surface(Surface::NURBSSurface(surface));
+                        let surface0 = surface.clone();
+                        drop(surface);
+                        mesh = Some(StructuredMesh::from_surface(
+                            &surface0,
+                            surface0.parameter_range(),
+                            0.01,
+                        ));
                     }
                     _ => {}
                 }
                 let mut another_object = creator.create_instance(
-                    &shell,
-                    &ShapeInstanceDescriptor {
-                        instance_state: Default::default(),
-                        mesh_precision: 0.01,
-                        ..Default::default()
-                    },
+                    &mesh.unwrap(),
+                    &Default::default(),
                 );
                 let mut object = object.lock().unwrap();
                 object.swap_vertex(&mut another_object);
@@ -125,14 +118,10 @@ impl App for MyApp {
         };
         let mut scene = Scene::new(handler.clone(), &desc);
         let creator = scene.instance_creator();
-        let shell = Self::init_shell();
+        let surface = Self::init_surface(3, 4);
         let object = creator.create_instance(
-            &shell,
-            &ShapeInstanceDescriptor {
-                instance_state: Default::default(),
-                mesh_precision: 0.01,
-                ..Default::default()
-            },
+            &StructuredMesh::from_surface(&surface, surface.parameter_range(), 0.01),
+            &Default::default(),
         );
         scene.add_object(&object);
         let object = Arc::new(Mutex::new(object));
@@ -143,7 +132,7 @@ impl App for MyApp {
             Arc::clone(&object),
             Arc::clone(&closed),
             Arc::clone(&updated),
-            shell,
+            Arc::new(Mutex::new(surface)),
         ));
         MyApp {
             scene,
@@ -154,7 +143,9 @@ impl App for MyApp {
         }
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("BSpline Benchmark Animation") }
+    fn app_title<'a>() -> Option<&'a str> {
+        Some("BSpline Benchmark Animation")
+    }
 
     fn update(&mut self, _: &DeviceHandler) {
         let mut updated = self.updated.lock().unwrap();
@@ -165,7 +156,9 @@ impl App for MyApp {
         }
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) {
+        self.scene.render_scene(view);
+    }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         *self.closed.lock().unwrap() = true;
         self.thread.take().unwrap().join().unwrap();
@@ -173,4 +166,6 @@ impl App for MyApp {
     }
 }
 
-fn main() { MyApp::run(); }
+fn main() {
+    MyApp::run();
+}

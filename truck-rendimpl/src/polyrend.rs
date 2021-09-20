@@ -45,18 +45,18 @@ impl Instance for PolygonInstance {
 }
 
 impl IntoInstance<PolygonInstance> for PolygonMesh {
-    type Descriptor = PolygonInstanceDescriptor;
+    type State = PolygonState;
     #[inline(always)]
     fn into_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &PolygonShaders,
-        desc: &PolygonInstanceDescriptor,
+        state: &PolygonState,
     ) -> PolygonInstance {
         let (vb, ib) = self.buffers(BufferUsages::VERTEX, BufferUsages::INDEX, handler.device());
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
-            state: desc.instance_state.clone(),
+            state: state.clone(),
             shaders: shaders.clone(),
             id: RenderID::gen(),
         }
@@ -64,13 +64,13 @@ impl IntoInstance<PolygonInstance> for PolygonMesh {
 }
 
 impl IntoInstance<WireFrameInstance> for PolygonMesh {
-    type Descriptor = PolygonWireFrameDescriptor;
+    type State = WireFrameState;
     #[doc(hidden)]
     fn into_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,
-        desc: &PolygonWireFrameDescriptor,
+        state: &WireFrameState,
     ) -> WireFrameInstance {
         let device = handler.device();
         let positions: Vec<[f32; 3]> = self
@@ -90,7 +90,7 @@ impl IntoInstance<WireFrameInstance> for PolygonMesh {
         WireFrameInstance {
             vertices: Arc::new(vb),
             strips: Arc::new(ib),
-            state: desc.wireframe_state.clone(),
+            state: state.clone(),
             shaders: shaders.clone(),
             id: RenderID::gen(),
         }
@@ -110,18 +110,18 @@ impl CreateBuffers for StructuredMesh {
 }
 
 impl IntoInstance<PolygonInstance> for StructuredMesh {
-    type Descriptor = PolygonInstanceDescriptor;
+    type State = PolygonState;
     #[inline(always)]
     fn into_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &PolygonShaders,
-        desc: &PolygonInstanceDescriptor,
+        state: &PolygonState,
     ) -> PolygonInstance {
         let (vb, ib) = self.buffers(BufferUsages::VERTEX, BufferUsages::INDEX, handler.device());
         PolygonInstance {
             polygon: (Arc::new(vb), Arc::new(ib)),
-            state: desc.instance_state.clone(),
+            state: state.clone(),
             shaders: shaders.clone(),
             id: RenderID::gen(),
         }
@@ -129,13 +129,13 @@ impl IntoInstance<PolygonInstance> for StructuredMesh {
 }
 
 impl IntoInstance<WireFrameInstance> for StructuredMesh {
-    type Descriptor = PolygonWireFrameDescriptor;
+    type State = WireFrameState;
     #[doc(hidden)]
     fn into_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,
-        desc: &PolygonWireFrameDescriptor,
+        state: &WireFrameState,
     ) -> WireFrameInstance {
         let device = handler.device();
         let positions: Vec<[f32; 3]> = self
@@ -145,7 +145,7 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
             .map(|p| p.cast().unwrap().into())
             .collect();
         let mut strips = Vec::<u32>::new();
-        let len = positions[0].len() as u32;
+        let len = self.positions()[0].len() as u32;
         for i in 1..positions.len() as u32 {
             strips.push((i - 1) * len);
             strips.push(i * len);
@@ -154,7 +154,7 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
             strips.push(j - 1);
             strips.push(j);
         }
-        for i in 1..positions.len() as u32 {
+        for i in 1..self.positions().len() as u32 {
             for j in 1..len {
                 strips.push((i - 1) * len + j);
                 strips.push(i * len + j);
@@ -167,7 +167,67 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
         WireFrameInstance {
             vertices: Arc::new(vb),
             strips: Arc::new(ib),
-            state: desc.wireframe_state.clone(),
+            state: state.clone(),
+            shaders: shaders.clone(),
+            id: RenderID::gen(),
+        }
+    }
+}
+
+impl IntoInstance<WireFrameInstance> for PolylineCurve<Point3> {
+    type State = WireFrameState;
+    fn into_instance(
+        &self,
+        handler: &DeviceHandler,
+        shaders: &WireShaders,
+        state: &WireFrameState,
+    ) -> WireFrameInstance {
+        let device = handler.device();
+        let positions: Vec<[f32; 3]> = self.iter().map(|p| p.cast().unwrap().into()).collect();
+        let strips: Vec<u32> = (1..positions.len())
+            .flat_map(|i| vec![i as u32 - 1, i as u32])
+            .collect();
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: state.clone(),
+            shaders: shaders.clone(),
+            id: RenderID::gen(),
+        }
+    }
+}
+
+impl IntoInstance<WireFrameInstance> for Vec<PolylineCurve<Point3>> {
+    type State = WireFrameState;
+    fn into_instance(
+        &self,
+        handler: &DeviceHandler,
+        shaders: &WireShaders,
+        state: &WireFrameState,
+    ) -> WireFrameInstance {
+        let device = handler.device();
+        let positions: Vec<[f32; 3]> = self
+            .iter()
+            .flat_map(|poly| poly.iter())
+            .map(|p| p.cast().unwrap().into())
+            .collect();
+        let mut counter = 0;
+        let strips: Vec<u32> = self
+            .iter()
+            .flat_map(|poly| {
+                let len = counter as u32;
+                counter += poly.len();
+                (1..poly.len()).flat_map(move |i| vec![len + i as u32 - 1, len + i as u32])
+            })
+            .collect();
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: state.clone(),
             shaders: shaders.clone(),
             id: RenderID::gen(),
         }

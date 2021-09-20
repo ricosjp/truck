@@ -55,10 +55,10 @@ impl Material {
     }
 }
 
-impl Default for InstanceState {
+impl Default for PolygonState {
     #[inline(always)]
-    fn default() -> InstanceState {
-        InstanceState {
+    fn default() -> PolygonState {
+        PolygonState {
             matrix: Matrix4::identity(),
             material: Default::default(),
             texture: None,
@@ -67,7 +67,7 @@ impl Default for InstanceState {
     }
 }
 
-impl InstanceState {
+impl PolygonState {
     /// Creates a `UNIFORM` buffer of instance matrix.
     ///
     /// The bind group provided by the instances holds this uniform buffer.

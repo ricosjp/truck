@@ -56,8 +56,9 @@ impl App for MyApp {
         let sphere1 = sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
         let intersect = sphere0.extract_interference(&sphere1);
         let creator = scene.instance_creator();
-        let instance0 = creator.create_instance(&sphere0, &PolygonInstanceDescriptor {
-            instance_state: InstanceState {
+        let instance0 = creator.create_instance(
+            &sphere0,
+            &PolygonState {
                 material: Material {
                     albedo: Vector4::new(1.0, 1.0, 1.0, 0.8),
                     alpha_blend: true,
@@ -65,10 +66,10 @@ impl App for MyApp {
                 },
                 ..Default::default()
             },
-            ..Default::default()
-        });
-        let instance1 = creator.create_instance(&sphere1, &PolygonInstanceDescriptor {
-            instance_state: InstanceState {
+        );
+        let instance1 = creator.create_instance(
+            &sphere1,
+            &PolygonState {
                 material: Material {
                     albedo: Vector4::new(1.0, 1.0, 1.0, 0.8),
                     alpha_blend: true,
@@ -76,8 +77,7 @@ impl App for MyApp {
                 },
                 ..Default::default()
             },
-            ..Default::default()
-        });
+        );
         let instance2 = creator.create_instance(&sphere0, &Default::default());
         let instance3 = creator.create_instance(&sphere1, &Default::default());
         let wireinstance = creator.create_instance(
@@ -205,7 +205,9 @@ impl App for MyApp {
         }
         Self::default_control_flow()
     }
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) {
+        self.scene.render_scene(view);
+    }
 }
 
 fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh {
@@ -246,4 +248,6 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
     PolygonMesh::new(positions, Vec::new(), normals, faces)
 }
 
-fn main() { MyApp::run() }
+fn main() {
+    MyApp::run()
+}

@@ -10,16 +10,6 @@ impl Default for WireFrameState {
     }
 }
 
-impl Default for ShapeWireFrameDescriptor {
-    #[inline(always)]
-    fn default() -> Self {
-        ShapeWireFrameDescriptor {
-            wireframe_state: WireFrameState::default(),
-            polyline_precision: 0.005,
-        }
-    }
-}
-
 impl WireFrameInstance {
     /// Clone the instance as another drawn element.
     #[inline(always)]
@@ -152,12 +142,12 @@ impl Rendered for WireFrameInstance {
 }
 
 impl IntoInstance<WireFrameInstance> for Vec<(Point3, Point3)> {
-    type Descriptor = WireFrameState;
+    type State = WireFrameState;
     fn into_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,
-        desc: &WireFrameState,
+        state: &WireFrameState,
     ) -> WireFrameInstance {
         let device = handler.device();
         let positions: Vec<[f32; 3]> = self
@@ -171,7 +161,7 @@ impl IntoInstance<WireFrameInstance> for Vec<(Point3, Point3)> {
         WireFrameInstance {
             vertices: Arc::new(vb),
             strips: Arc::new(ib),
-            state: desc.clone(),
+            state: state.clone(),
             shaders: shaders.clone(),
             id: RenderID::gen(),
         }

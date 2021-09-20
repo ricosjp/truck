@@ -11,9 +11,8 @@
     unused_qualifications
 )]
 
-extern crate truck_meshalgo;
-extern crate truck_topology;
 extern crate truck_platform;
+extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::Arc;
@@ -21,7 +20,9 @@ use truck_platform::{wgpu::*, *};
 
 /// Re-exports `truck_polymesh`.
 pub mod polymesh {
-    pub use truck_meshalgo::prelude::{base::*, PolygonMesh, StructuredMesh, Vertex};
+    pub use truck_polymesh::{
+        base::*, PolygonMesh, PolylineCurve, StructuredMesh, Vertex,
+    };
 }
 pub use polymesh::*;
 
@@ -45,7 +46,7 @@ pub struct Material {
 
 /// Configures of instances.
 #[derive(Clone, Debug)]
-pub struct InstanceState {
+pub struct PolygonState {
     /// instance matrix
     pub matrix: Matrix4,
     /// material of instance
@@ -63,38 +64,6 @@ pub struct WireFrameState {
     pub matrix: Matrix4,
     /// color of instance
     pub color: Vector4,
-}
-
-/// Configures of polygon instance
-#[derive(Clone, Debug, Default)]
-pub struct PolygonInstanceDescriptor {
-    /// configure of instance
-    pub instance_state: InstanceState,
-}
-
-/// Configures of shape instance
-#[derive(Clone, Debug)]
-pub struct ShapeInstanceDescriptor {
-    /// configure of instance
-    pub instance_state: InstanceState,
-    /// precision for meshing
-    pub mesh_precision: f64,
-}
-
-/// Configures of wire frame instance of polygon
-#[derive(Clone, Debug, Default)]
-pub struct PolygonWireFrameDescriptor {
-    /// configure of wire frame
-    pub wireframe_state: WireFrameState,
-}
-
-/// Configures of wire frame instance of shape
-#[derive(Clone, Debug)]
-pub struct ShapeWireFrameDescriptor {
-    /// configure of wire frame
-    pub wireframe_state: WireFrameState,
-    /// precision for polyline
-    pub polyline_precision: f64,
 }
 
 /// shaders for rendering polygons
@@ -128,7 +97,7 @@ pub struct WireShaders {
 #[derive(Debug)]
 pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
-    state: InstanceState,
+    state: PolygonState,
     shaders: PolygonShaders,
     id: RenderID,
 }
@@ -169,28 +138,15 @@ pub trait CreateBuffers {
 }
 
 /// The trait for generating `Instance` from `Self`.
-pub trait TryIntoInstance<I: Instance> {
-    /// Configuation deacriptor for instance.
-    type Descriptor;
-    #[doc(hidden)]
-    fn try_into_instance(
-        &self,
-        handler: &DeviceHandler,
-        shaders: &I::Shaders,
-        desc: &Self::Descriptor,
-    ) -> Option<I>;
-}
-
-/// The trait for generating `Instance` from `Self`.
 pub trait IntoInstance<I: Instance> {
     /// Configuation deacriptor for instance.
-    type Descriptor;
+    type State;
     /// Creates `Instance` from `self`.
     fn into_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &I::Shaders,
-        desc: &Self::Descriptor,
+        desc: &Self::State,
     ) -> I;
 }
 
@@ -223,5 +179,4 @@ mod instance_creator;
 mod instance_descriptor;
 mod polygon_instance;
 mod polyrend;
-mod shaperend;
 mod wireframe_instance;
