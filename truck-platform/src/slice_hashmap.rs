@@ -26,6 +26,10 @@ impl<K: Copy + Eq + Hash, V> SliceHashMap<K, V> {
 	pub fn get(&self, key: &K) -> Option<&V> {
 		self.map.get(&key).map(|idx| &self.vec[*idx].1)
 	}
+	pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+		let idx = *self.map.get(&key)?;
+		Some(&mut self.vec[idx].1)
+	}
 	pub fn len(&self) -> usize { self.vec.len() }
 	pub fn insert(&mut self, key: K, value: V) -> Option<V> {
 		match self.map.get(&key) {

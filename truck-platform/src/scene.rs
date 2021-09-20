@@ -535,7 +535,7 @@ impl Scene {
                 ..Default::default()
             });
             rpass.set_bind_group(0, &bind_group, &[]);
-            for (_, object) in self.objects.iter() {
+            for (_, object) in &self.objects {
                 rpass.set_pipeline(&object.pipeline);
                 rpass.set_bind_group(1, &object.bind_group, &[]);
                 rpass.set_vertex_buffer(0, object.vertex_buffer.buffer.slice(..));
