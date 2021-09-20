@@ -91,7 +91,7 @@ impl App for MyApp {
                     0.0,
                 ));
                 matrices.push(matrix);
-                *instance.instance_state_mut() = InstanceState {
+                *instance.instance_state_mut() = PolygonState {
                     matrix,
                     material: Material {
                         albedo: Vector4::from(BOXCOLOR),

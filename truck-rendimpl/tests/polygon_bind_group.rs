@@ -63,25 +63,23 @@ fn test_polygons() -> [PolygonMesh; 2] {
     ]
 }
 
-fn nontex_inst_desc() -> PolygonInstanceDescriptor {
-    PolygonInstanceDescriptor {
-        instance_state: InstanceState {
-            matrix: Matrix4::from_cols(
-                [1.0, 2.0, 3.0, 4.0].into(),
-                [5.0, 6.0, 7.0, 8.0].into(),
-                [9.0, 10.0, 11.0, 12.0].into(),
-                [13.0, 14.0, 15.0, 16.0].into(),
-            ),
-            material: Material {
-                albedo: Vector4::new(0.2, 0.4, 0.6, 1.0),
-                roughness: 0.31415,
-                reflectance: 0.29613,
-                ambient_ratio: 0.92,
-                alpha_blend: false,
-            },
-            texture: None,
-            backface_culling: true,
+fn nontex_inst_state() -> PolygonState {
+    PolygonState {
+        matrix: Matrix4::from_cols(
+            [1.0, 2.0, 3.0, 4.0].into(),
+            [5.0, 6.0, 7.0, 8.0].into(),
+            [9.0, 10.0, 11.0, 12.0].into(),
+            [13.0, 14.0, 15.0, 16.0].into(),
+        ),
+        material: Material {
+            albedo: Vector4::new(0.2, 0.4, 0.6, 1.0),
+            roughness: 0.31415,
+            reflectance: 0.29613,
+            ambient_ratio: 0.92,
+            alpha_blend: false,
         },
+        texture: None,
+        backface_culling: true,
     }
 }
 
@@ -112,7 +110,7 @@ fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
     let mut scene = Scene::new(handler, &Default::default());
     let answer = common::nontex_answer_texture(&mut scene);
     let answer = common::read_texture(scene.device_handler(), &answer);
-    let inst_desc = nontex_inst_desc();
+    let inst_desc = nontex_inst_state();
     test_polygons()
         .iter()
         .enumerate()
@@ -161,7 +159,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
     let buffer = common::read_texture(scene.device_handler(), &answer);
     let pngpath = out_dir.clone() + "random-texture.png";
     common::save_buffer(pngpath, &buffer, PICTURE_SIZE);
-    let mut desc = nontex_inst_desc();
+    let mut state = nontex_inst_state();
     let image_buffer =
         ImageBuffer::<Rgba<_>, _>::from_raw(PICTURE_SIZE.0, PICTURE_SIZE.1, buffer.clone())
             .unwrap();
@@ -169,7 +167,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
         scene.device_handler(),
         &DynamicImage::ImageRgba8(image_buffer),
     );
-    desc.instance_state.texture = Some(Arc::new(attach));
+    state.texture = Some(Arc::new(attach));
     test_polygons()
         .iter()
         .enumerate()
@@ -177,7 +175,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
             let instance: PolygonInstance = polygon.into_instance(
                 scene.device_handler(),
                 &bgcheck_shaders(scene.device_handler()),
-                &desc,
+                &state,
             );
             assert!(exec_polygon_bgtest(
                 &mut scene,
@@ -189,7 +187,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
             let instance: PolygonInstance = polygon.into_instance(
                 scene.device_handler(),
                 &bgcheck_anti_shaders(scene.device_handler()),
-                &desc,
+                &state,
             );
             assert!(!exec_polygon_bgtest(
                 &mut scene,

@@ -105,11 +105,11 @@ impl CreatorCreator for Scene {
 impl InstanceCreator {
     /// Creates Instance from object.
     #[inline(always)]
-    pub fn create_instance<I, T>(&self, object: &T, desc: &T::Descriptor) -> I
+    pub fn create_instance<I, T>(&self, object: &T, state: &T::State) -> I
     where
         T: IntoInstance<I>,
         I: Instance, {
-        object.into_instance(&self.handler, &I::standard_shaders(self), desc)
+        object.into_instance(&self.handler, &I::standard_shaders(self), state)
     }
     /// Creates `Texture` for attaching faces.
     #[inline(always)]

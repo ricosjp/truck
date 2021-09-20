@@ -122,21 +122,16 @@ impl MyApp {
             .edge_iter()
             .map(|edge| edge.get_curve())
             .collect::<Vec<_>>();
-        let inst_desc = PolygonInstanceDescriptor {
-            instance_state: InstanceState {
-                matrix: mat.invert().unwrap(),
-                ..Default::default()
-            },
+        let polygon_state = PolygonState {
+            matrix: mat.invert().unwrap(),
             ..Default::default()
         };
-        let wire_state = PolygonWireFrameDescriptor {
-            wireframe_state: WireFrameState {
-                matrix: mat.invert().unwrap(),
-                ..Default::default()
-            },
+        let wire_state = WireFrameState {
+            matrix: mat.invert().unwrap(),
+            ..Default::default()
         };
         (
-            creator.create_instance(&mesh_solid.into_polygon(), &inst_desc),
+            creator.create_instance(&mesh_solid.into_polygon(), &polygon_state),
             creator.create_instance(&curves, &wire_state),
         )
     }

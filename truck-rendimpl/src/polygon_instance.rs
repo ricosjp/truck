@@ -13,12 +13,12 @@ impl PolygonInstance {
     }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
-    pub fn instance_state(&self) -> &InstanceState {
+    pub fn instance_state(&self) -> &PolygonState {
         &self.state
     }
     /// Returns the mutable reference to instance descriptor.
     #[inline(always)]
-    pub fn instance_state_mut(&mut self) -> &mut InstanceState {
+    pub fn instance_state_mut(&mut self) -> &mut PolygonState {
         &mut self.state
     }
 
@@ -34,8 +34,8 @@ impl PolygonInstance {
     fn non_textured_bdl(&self, device: &Device) -> BindGroupLayout {
         bind_group_util::create_bind_group_layout(device, {
             &[
-                InstanceState::matrix_bgl_entry(),
-                InstanceState::material_bgl_entry(),
+                PolygonState::matrix_bgl_entry(),
+                PolygonState::material_bgl_entry(),
             ]
         })
     }
@@ -45,10 +45,10 @@ impl PolygonInstance {
         bind_group_util::create_bind_group_layout(
             device,
             &[
-                InstanceState::matrix_bgl_entry(),
-                InstanceState::material_bgl_entry(),
-                InstanceState::textureview_bgl_entry(),
-                InstanceState::sampler_bgl_entry(),
+                PolygonState::matrix_bgl_entry(),
+                PolygonState::material_bgl_entry(),
+                PolygonState::textureview_bgl_entry(),
+                PolygonState::sampler_bgl_entry(),
             ],
         )
     }

@@ -61,17 +61,15 @@ fn nontex_polygon(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
     let texture = device.create_texture(&common::texture_descriptor(&config));
     let cube: PolygonInstance = creator.create_instance(
         &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
-        &PolygonInstanceDescriptor {
-            instance_state: InstanceState {
-                material: Material {
-                    albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
-                    roughness: 0.5,
-                    reflectance: 0.25,
-                    ambient_ratio: 0.02,
-                    alpha_blend: false,
-                },
-                ..Default::default()
+        &PolygonState {
+            material: Material {
+                albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                roughness: 0.5,
+                reflectance: 0.25,
+                ambient_ratio: 0.02,
+                alpha_blend: false,
             },
+            ..Default::default()
         },
     );
     common::render_one(scene, &texture, &cube);
@@ -133,18 +131,16 @@ fn tex_polygon(
     let attach = creator.create_texture(gradtex);
     let cube: PolygonInstance = creator.create_instance(
         &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
-        &PolygonInstanceDescriptor {
-            instance_state: InstanceState {
-                material: Material {
-                    albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
-                    roughness: 0.5,
-                    reflectance: 0.25,
-                    ambient_ratio: 0.02,
-                    alpha_blend: false,
-                },
-                texture: Some(attach),
-                ..Default::default()
+        &PolygonState {
+            material: Material {
+                albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                roughness: 0.5,
+                reflectance: 0.25,
+                ambient_ratio: 0.02,
+                alpha_blend: false,
             },
+            texture: Some(attach),
+            ..Default::default()
         },
     );
     common::render_one(scene, &texture, &cube);

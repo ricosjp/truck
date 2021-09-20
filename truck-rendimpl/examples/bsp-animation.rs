@@ -94,10 +94,7 @@ impl MyApp {
                 }
                 let mut another_object = creator.create_instance(
                     &mesh.unwrap(),
-                    &PolygonInstanceDescriptor {
-                        instance_state: Default::default(),
-                        ..Default::default()
-                    },
+                    &Default::default(),
                 );
                 let mut object = object.lock().unwrap();
                 object.swap_vertex(&mut another_object);
@@ -124,10 +121,7 @@ impl App for MyApp {
         let surface = Self::init_surface(3, 4);
         let object = creator.create_instance(
             &StructuredMesh::from_surface(&surface, surface.parameter_range(), 0.01),
-            &PolygonInstanceDescriptor {
-                instance_state: Default::default(),
-                ..Default::default()
-            },
+            &Default::default(),
         );
         scene.add_object(&object);
         let object = Arc::new(Mutex::new(object));

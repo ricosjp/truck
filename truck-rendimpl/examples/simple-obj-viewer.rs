@@ -102,23 +102,17 @@ impl MyApp {
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
-        let inst_desc = PolygonInstanceDescriptor {
-            instance_state: InstanceState {
-                matrix: mat.invert().unwrap(),
-                ..Default::default()
-            },
+        let polygon_state = PolygonState {
+            matrix: mat.invert().unwrap(),
             ..Default::default()
         };
-        let wire_inst_desc = PolygonWireFrameDescriptor {
-            wireframe_state: WireFrameState {
-                matrix: mat.invert().unwrap(),
-                ..Default::default()
-            },
+        let wire_state = WireFrameState {
+            matrix: mat.invert().unwrap(),
             ..Default::default()
         };
         (
-            creator.create_instance(&mesh, &inst_desc),
-            creator.create_instance(&mesh, &wire_inst_desc),
+            creator.create_instance(&mesh, &polygon_state),
+            creator.create_instance(&mesh, &wire_state),
         )
     }
 }
@@ -153,7 +147,9 @@ impl App for MyApp {
         app
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("simple obj viewer") }
+    fn app_title<'a>() -> Option<&'a str> {
+        Some("simple obj viewer")
+    }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         let file = std::fs::File::open(path).unwrap();
@@ -282,7 +278,11 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) {
+        self.scene.render_scene(view);
+    }
 }
 
-fn main() { MyApp::run(); }
+fn main() {
+    MyApp::run();
+}
