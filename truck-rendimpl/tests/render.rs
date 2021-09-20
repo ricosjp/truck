@@ -41,13 +41,6 @@ fn test_scene(backend: Backends) -> Scene {
     )
 }
 
-fn shape_cube() -> Solid {
-    let s = builder::vertex(Point3::new(0.0, 0.0, 0.0));
-    let s = builder::tsweep(&s, Vector3::unit_x());
-    let s = builder::tsweep(&s, Vector3::unit_y());
-    builder::tsweep(&s, Vector3::unit_z())
-}
-
 fn nontex_raytracing(scene: &mut Scene) -> Vec<u8> {
     let (device, config) = (scene.device(), scene.config());
     let texture = device.create_texture(&common::texture_descriptor(&config));
@@ -85,29 +78,6 @@ fn nontex_polygon(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn nontex_shape(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
-    let (device, config) = (scene.device(), scene.config());
-    let texture = device.create_texture(&common::texture_descriptor(&config));
-    let cube: PolygonInstance = creator.create_instance(
-        &shape_cube(),
-        &ShapeInstanceDescriptor {
-            instance_state: InstanceState {
-                material: Material {
-                    albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
-                    roughness: 0.5,
-                    reflectance: 0.25,
-                    ambient_ratio: 0.02,
-                    alpha_blend: false,
-                },
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-    );
-    common::render_one(scene, &texture, &cube);
-    common::read_texture(scene.device_handler(), &texture)
-}
-
 fn exec_nontex_render_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
@@ -115,21 +85,13 @@ fn exec_nontex_render_test(backend: Backends, out_dir: &str) {
     let creator = scene.instance_creator();
     let buffer0 = nontex_raytracing(&mut scene);
     let buffer1 = nontex_polygon(&mut scene, &creator);
-    let buffer2 = nontex_shape(&mut scene, &creator);
     let filename = out_dir.clone() + "nontex-raytracing.png";
     common::save_buffer(filename, &buffer0, PICTURE_SIZE);
     let filename = out_dir.clone() + "nontex-polygon.png";
     common::save_buffer(filename, &buffer1, PICTURE_SIZE);
-    common::save_buffer(out_dir.clone() + "nontex-shape.png", &buffer2, PICTURE_SIZE);
-    let diff0 = common::count_difference(&buffer0, &buffer1);
-    let diff1 = common::count_difference(&buffer1, &buffer2);
-    let diff2 = common::count_difference(&buffer2, &buffer0);
-    println!("{} pixel difference: ray-tracing and polymesh", diff0);
-    println!("{} pixel difference: polymesh and shape", diff1);
-    println!("{} pixel difference: ray-tracing and shape", diff2);
-    assert!(diff0 < 10);
-    assert!(diff1 == 0);
-    assert!(diff2 < 10);
+    let diff = common::count_difference(&buffer0, &buffer1);
+    println!("{} pixel difference: ray-tracing and polymesh", diff);
+    assert!(diff < 10);
 }
 
 #[test]
@@ -189,31 +151,6 @@ fn tex_polygon(
     common::read_texture(scene.device_handler(), &texture)
 }
 
-fn tex_shape(scene: &mut Scene, creator: &InstanceCreator, gradtex: &Arc<DynamicImage>) -> Vec<u8> {
-    let (device, config) = (scene.device(), scene.config());
-    let texture = device.create_texture(&common::texture_descriptor(&config));
-    let attach = creator.create_texture(gradtex);
-    let cube: PolygonInstance = creator.create_instance(
-        &shape_cube(),
-        &ShapeInstanceDescriptor {
-            instance_state: InstanceState {
-                material: Material {
-                    albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
-                    roughness: 0.5,
-                    reflectance: 0.25,
-                    ambient_ratio: 0.02,
-                    alpha_blend: false,
-                },
-                texture: Some(attach),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-    );
-    common::render_one(scene, &texture, &cube);
-    common::read_texture(scene.device_handler(), &texture)
-}
-
 fn exec_tex_render_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
@@ -223,22 +160,14 @@ fn exec_tex_render_test(backend: Backends, out_dir: &str) {
     let anti_buffer = nontex_raytracing(&mut scene);
     let buffer0 = tex_raytracing(&mut scene);
     let buffer1 = tex_polygon(&mut scene, &creator, &image);
-    let buffer2 = tex_shape(&mut scene, &creator, &image);
     let filename = out_dir.clone() + "tex-raytracing.png";
     common::save_buffer(filename, &buffer0, PICTURE_SIZE);
     let filename = out_dir.clone() + "tex-polygon.png";
     common::save_buffer(filename, &buffer1, PICTURE_SIZE);
-    common::save_buffer(out_dir.clone() + "tex-shape.png", &buffer2, PICTURE_SIZE);
-    let diff0 = common::count_difference(&buffer0, &buffer1);
-    let diff1 = common::count_difference(&buffer1, &buffer2);
-    let diff2 = common::count_difference(&buffer2, &buffer0);
+    let diff = common::count_difference(&buffer0, &buffer1);
     let anti_diff = common::count_difference(&anti_buffer, &buffer0);
-    println!("{} pixel difference: ray-tracing and polymesh", diff0);
-    println!("{} pixel difference: polymesh and shape", diff1);
-    println!("{} pixel difference: ray-tracing and shape", diff2);
-    assert!(diff0 < 10);
-    assert!(diff1 == 0);
-    assert!(diff2 < 10);
+    println!("{} pixel difference: ray-tracing and polymesh", diff);
+    assert!(diff < 10);
     assert!(anti_diff > 1000);
 }
 

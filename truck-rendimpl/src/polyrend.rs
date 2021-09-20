@@ -145,7 +145,7 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
             .map(|p| p.cast().unwrap().into())
             .collect();
         let mut strips = Vec::<u32>::new();
-        let len = positions[0].len() as u32;
+        let len = self.positions()[0].len() as u32;
         for i in 1..positions.len() as u32 {
             strips.push((i - 1) * len);
             strips.push(i * len);
@@ -154,7 +154,7 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
             strips.push(j - 1);
             strips.push(j);
         }
-        for i in 1..positions.len() as u32 {
+        for i in 1..self.positions().len() as u32 {
             for j in 1..len {
                 strips.push((i - 1) * len + j);
                 strips.push(i * len + j);
@@ -162,6 +162,66 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
                 strips.push(i * len + j);
             }
         }
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: desc.wireframe_state.clone(),
+            shaders: shaders.clone(),
+            id: RenderID::gen(),
+        }
+    }
+}
+
+impl IntoInstance<WireFrameInstance> for PolylineCurve<Point3> {
+    type Descriptor = PolygonWireFrameDescriptor;
+    fn into_instance(
+        &self,
+        handler: &DeviceHandler,
+        shaders: &WireShaders,
+        desc: &PolygonWireFrameDescriptor,
+    ) -> WireFrameInstance {
+        let device = handler.device();
+        let positions: Vec<[f32; 3]> = self.iter().map(|p| p.cast().unwrap().into()).collect();
+        let strips: Vec<u32> = (1..positions.len())
+            .flat_map(|i| vec![i as u32 - 1, i as u32])
+            .collect();
+        let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
+        let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
+        WireFrameInstance {
+            vertices: Arc::new(vb),
+            strips: Arc::new(ib),
+            state: desc.wireframe_state.clone(),
+            shaders: shaders.clone(),
+            id: RenderID::gen(),
+        }
+    }
+}
+
+impl IntoInstance<WireFrameInstance> for Vec<PolylineCurve<Point3>> {
+    type Descriptor = PolygonWireFrameDescriptor;
+    fn into_instance(
+        &self,
+        handler: &DeviceHandler,
+        shaders: &WireShaders,
+        desc: &PolygonWireFrameDescriptor,
+    ) -> WireFrameInstance {
+        let device = handler.device();
+        let positions: Vec<[f32; 3]> = self
+            .iter()
+            .flat_map(|poly| poly.iter())
+            .map(|p| p.cast().unwrap().into())
+            .collect();
+        let mut counter = 0;
+        let strips: Vec<u32> = self
+            .iter()
+            .flat_map(|poly| {
+                let len = counter as u32;
+                counter += poly.len();
+                (1..poly.len()).flat_map(move |i| vec![len + i as u32 - 1, len + i as u32])
+            })
+            .collect();
         let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
         let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
         WireFrameInstance {

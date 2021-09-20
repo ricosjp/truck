@@ -105,14 +105,6 @@ impl CreatorCreator for Scene {
 impl InstanceCreator {
     /// Creates Instance from object.
     #[inline(always)]
-    pub fn try_create_instance<I, T>(&self, object: &T, desc: &T::Descriptor) -> Option<I>
-    where
-        T: TryIntoInstance<I>,
-        I: Instance, {
-        object.try_into_instance(&self.handler, &I::standard_shaders(self), desc)
-    }
-    /// Creates Instance from object.
-    #[inline(always)]
     pub fn create_instance<I, T>(&self, object: &T, desc: &T::Descriptor) -> I
     where
         T: IntoInstance<I>,

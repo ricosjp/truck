@@ -12,8 +12,8 @@
 )]
 
 extern crate truck_meshalgo;
-extern crate truck_topology;
 extern crate truck_platform;
+extern crate truck_topology;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::Arc;
@@ -21,7 +21,9 @@ use truck_platform::{wgpu::*, *};
 
 /// Re-exports `truck_polymesh`.
 pub mod polymesh {
-    pub use truck_meshalgo::prelude::{base::*, PolygonMesh, StructuredMesh, Vertex};
+    pub use truck_meshalgo::prelude::{
+        base::*, PolygonMesh, PolylineCurve, StructuredMesh, Vertex,
+    };
 }
 pub use polymesh::*;
 
@@ -169,19 +171,6 @@ pub trait CreateBuffers {
 }
 
 /// The trait for generating `Instance` from `Self`.
-pub trait TryIntoInstance<I: Instance> {
-    /// Configuation deacriptor for instance.
-    type Descriptor;
-    #[doc(hidden)]
-    fn try_into_instance(
-        &self,
-        handler: &DeviceHandler,
-        shaders: &I::Shaders,
-        desc: &Self::Descriptor,
-    ) -> Option<I>;
-}
-
-/// The trait for generating `Instance` from `Self`.
 pub trait IntoInstance<I: Instance> {
     /// Configuation deacriptor for instance.
     type Descriptor;
@@ -223,5 +212,4 @@ mod instance_creator;
 mod instance_descriptor;
 mod polygon_instance;
 mod polyrend;
-mod shaperend;
 mod wireframe_instance;
