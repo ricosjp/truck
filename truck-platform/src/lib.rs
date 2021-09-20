@@ -44,7 +44,6 @@ extern crate bytemuck;
 extern crate truck_base;
 pub extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use truck_base::cgmath64::*;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
@@ -295,7 +294,7 @@ pub struct SceneDescriptor {
 #[derive(Debug)]
 pub struct Scene {
     device_handler: DeviceHandler,
-    objects: HashMap<RenderID, RenderObject>,
+    objects: SliceHashMap<RenderID, RenderObject>,
     bind_group_layout: BindGroupLayout,
     foward_depth: Texture,
     depth_texture_size: (u32, u32), // (width, height)
@@ -365,6 +364,8 @@ mod light;
 #[doc(hidden)]
 pub mod rendered_macros;
 mod scene;
+mod slice_hashmap;
+use slice_hashmap::SliceHashMap;
 
 #[doc(hidden)]
 pub mod bind_group_util {
