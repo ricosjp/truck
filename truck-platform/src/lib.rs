@@ -365,6 +365,7 @@ mod light;
 #[doc(hidden)]
 pub mod rendered_macros;
 mod scene;
+mod slice_hashmap;
 
 #[doc(hidden)]
 pub mod bind_group_util {
