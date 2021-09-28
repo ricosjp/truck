@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::faces_classification::FacesClassification;
 use crate::loops_store::*;
 use std::ops::Deref;

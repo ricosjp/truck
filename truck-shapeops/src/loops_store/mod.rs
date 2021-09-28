@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::*;
 use std::collections::HashMap;
 use truck_base::{cgmath64::*, maputil::GetOrInsert};

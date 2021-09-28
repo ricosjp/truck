@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::loops_store::ShapesOpStatus;
 use std::collections::HashMap;
 use truck_topology::*;
