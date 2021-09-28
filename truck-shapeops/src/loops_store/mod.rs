@@ -513,6 +513,10 @@ where
 					let idx00 =
 						poly_loops_store0.add_polygon_vertex(face_index0, &pv0, &mut pemap0);
 					if let Some((wire_index, edge_index, kind)) = idx00 {
+						if geom_loops_store0[face_index0][wire_index].len() <= edge_index {
+							println!("{}", poly_loops_store0[face_index0][wire_index].len());
+							println!("{}", geom_loops_store0[face_index0][wire_index].len());
+						}
 						geom_loops_store0.add_geom_vertex(
 							face_index0,
 							wire_index,
@@ -528,6 +532,10 @@ where
 					let idx01 =
 						poly_loops_store0.add_polygon_vertex(face_index0, &pv1, &mut pemap1);
 					if let Some((wire_index, edge_index, kind)) = idx01 {
+						if geom_loops_store0[face_index0][wire_index].len() <= edge_index {
+							println!("{}", poly_loops_store0[face_index0][wire_index].len());
+							println!("{}", geom_loops_store0[face_index0][wire_index].len());
+						}
 						geom_loops_store0.add_geom_vertex(
 							face_index0,
 							wire_index,
@@ -543,6 +551,10 @@ where
 					let idx10 =
 						poly_loops_store1.add_polygon_vertex(face_index1, &pv0, &mut pemap0);
 					if let Some((wire_index, edge_index, kind)) = idx10 {
+						if geom_loops_store1[face_index1][wire_index].len() <= edge_index {
+							println!("{}", poly_loops_store1[face_index1][wire_index].len());
+							println!("{}", geom_loops_store1[face_index1][wire_index].len());
+						}
 						geom_loops_store1.add_geom_vertex(
 							face_index1,
 							wire_index,
@@ -558,6 +570,10 @@ where
 					let idx11 =
 						poly_loops_store1.add_polygon_vertex(face_index1, &pv1, &mut pemap1);
 					if let Some((wire_index, edge_index, kind)) = idx11 {
+						if geom_loops_store1[face_index1][wire_index].len() <= edge_index {
+							println!("{}", poly_loops_store1[face_index1][wire_index].len());
+							println!("{}", geom_loops_store1[face_index1][wire_index].len());
+						}
 						geom_loops_store1.add_geom_vertex(
 							face_index1,
 							wire_index,
