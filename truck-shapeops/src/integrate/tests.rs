@@ -9,7 +9,7 @@ crate::impl_from!(
 );
 
 #[test]
-fn torus_punched_cube() {
+fn punched_cube() {
 	let v = builder::vertex(Point3::origin());
 	let e = builder::tsweep(&v, Vector3::unit_x());
 	let f = builder::tsweep(&e, Vector3::unit_y());
@@ -20,19 +20,19 @@ fn torus_punched_cube() {
 		Surface::clone,
 	);
 
-	let v = builder::vertex(Point3::new(0.5, 0.0, 0.25));
-	let w = builder::rsweep(&v, Point3::new(0.5, 0.0, 0.5), Vector3::unit_y(), Rad(7.0));
-	let s = builder::rsweep(&w, Point3::new(0.0, 0.0, 0.0), Vector3::unit_z(), Rad(7.0));
-	let s = Solid::new(vec![s]);
-	let mut torus = s.mapped(
+	let v = builder::vertex(Point3::new(0.5, 0.25, -0.5));
+	let w = builder::rsweep(&v, Point3::new(0.5, 0.5, 0.0), Vector3::unit_z(), Rad(7.0));
+	let f = builder::try_attach_plane(&vec![w]).unwrap();
+	let s = builder::tsweep(&f, Vector3::unit_z() * 2.0);
+	let mut cylinder = s.mapped(
 		Point3::clone,
 		|c| AlternativeCurve::from(c.clone()),
 		Surface::clone,
 	);
-	torus.not();
-	let and = crate::and(&cube, &torus, 0.05).unwrap();
+	cylinder.not();
+	let and = crate::and(&cube, &cylinder, 0.05).unwrap();
 
 	let poly = and.triangulation(0.01).unwrap().into_polygon();
-	let file = std::fs::File::create("torus-punched-cube.obj").unwrap();
+	let file = std::fs::File::create("punched-cube.obj").unwrap();
 	obj::write(&poly, file).unwrap();
 }
