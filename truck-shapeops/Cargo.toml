@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0.123", features = ["derive"] }
 rand = "0.8.3"
+thiserror = "1.0.24"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }

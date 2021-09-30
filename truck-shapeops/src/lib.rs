@@ -7,5 +7,4 @@ mod polyline_construction;
 pub use intersection_curve::{intersection_curves, IntersectionCurve};
 pub use integrate::{and, or};
 
-#[cfg(test)]
-mod test_util;
+mod alternative;

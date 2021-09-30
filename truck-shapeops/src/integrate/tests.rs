@@ -2,7 +2,7 @@ use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 
 type AlternativeCurve =
-	crate::test_util::Alternatives<Curve, crate::IntersectionCurve<PolylineCurve<Point3>, Surface>>;
+	crate::alternative::AlType<Curve, crate::IntersectionCurve<PolylineCurve<Point3>, Surface>>;
 crate::impl_from!(
 	Curve,
 	crate::IntersectionCurve<PolylineCurve<Point3>, Surface>
