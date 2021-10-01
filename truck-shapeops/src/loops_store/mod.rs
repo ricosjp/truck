@@ -522,8 +522,7 @@ where
 								kind,
 								&surface1,
 								&mut gemap0,
-							)
-							.unwrap();
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
@@ -539,8 +538,7 @@ where
 								kind,
 								&surface1,
 								&mut gemap1,
-							)
-							.unwrap();
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
@@ -556,8 +554,7 @@ where
 								kind,
 								&surface0,
 								&mut gemap0,
-							)
-							.unwrap();
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
@@ -573,8 +570,7 @@ where
 								kind,
 								&surface0,
 								&mut gemap1,
-							)
-							.unwrap();
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
