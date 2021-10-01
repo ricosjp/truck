@@ -10,7 +10,7 @@ fn process_one_pair_of_shells<C, S>(
 ) -> Option<(Shell<Point3, C, S>, Shell<Point3, C, S>)>
 where
 	C: Cut<Point = Point3, Vector = Vector3>
-		+ ParameterDivision1D
+		+ ParameterDivision1D<Point = Point3>
 		+ Invertible
 		+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
 		+ SearchParameter<Point = Point3, Parameter = f64>
@@ -85,7 +85,7 @@ pub fn and<C, S>(
 ) -> Option<Solid<Point3, C, S>>
 where
 	C: Cut<Point = Point3, Vector = Vector3>
-		+ ParameterDivision1D
+		+ ParameterDivision1D<Point = Point3>
 		+ Invertible
 		+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
 		+ SearchParameter<Point = Point3, Parameter = f64>
@@ -118,7 +118,7 @@ pub fn or<C, S>(
 ) -> Option<Solid<Point3, C, S>>
 where
 	C: Cut<Point = Point3, Vector = Vector3>
-		+ ParameterDivision1D
+		+ ParameterDivision1D<Point = Point3>
 		+ Invertible
 		+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
 		+ SearchParameter<Point = Point3, Parameter = f64>

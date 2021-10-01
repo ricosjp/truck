@@ -223,8 +223,9 @@ where
 impl<S> ParameterDivision1D for IntersectionCurveWithParameters<S>
 where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
 {
+	type Point = Point3;
 	#[inline(always)]
-	fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+	fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Point3>) {
 		self.ic.parameter_division(range, tol)
 	}
 }
