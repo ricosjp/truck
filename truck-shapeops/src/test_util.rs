@@ -86,9 +86,10 @@ where
 impl<C0, C1> ParameterDivision1D for Alternatives<C0, C1>
 where
 	C0: ParameterDivision1D,
-	C1: ParameterDivision1D,
+	C1: ParameterDivision1D<Point = C0::Point>,
 {
-	derive_method!(parameter_division, Vec<f64>, range: (f64, f64), tol: f64);
+	type Point = C0::Point;
+	derive_method!(parameter_division, (Vec<f64>, Vec<C0::Point>), range: (f64, f64), tol: f64);
 }
 
 impl<S0, S1> ParameterDivision2D for Alternatives<S0, S1>

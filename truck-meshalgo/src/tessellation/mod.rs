@@ -5,9 +5,9 @@ use truck_topology::{*, Vertex};
 
 /// Gathered the traits used in tessellation.
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub trait PolylineableCurve: ParametricCurve<Point = Point3, Vector = Vector3> + Invertible + ParameterDivision1D {}
+pub trait PolylineableCurve: ParametricCurve3D + Invertible + ParameterDivision1D<Point = Point3> {}
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<C: ParametricCurve<Point = Point3, Vector = Vector3> + Invertible + ParameterDivision1D> PolylineableCurve for C {}
+impl<C: ParametricCurve3D + Invertible + ParameterDivision1D<Point = Point3>> PolylineableCurve for C {}
 #[cfg_attr(rustfmt, rustfmt_skip)]
 /// Gathered the traits used in tessellation.
 pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<Point = Point3, Parameter = (f64, f64)> {}

@@ -16,7 +16,7 @@ impl<C, S> PCurve<C, S> {
 
 impl<C, S> ParametricCurve for PCurve<C, S>
 where
-    C: ParametricCurve<Point = Point2, Vector = Vector2>,
+    C: ParametricCurve2D,
     S: ParametricSurface,
     S::Vector: VectorSpace<Scalar = f64>,
 {
@@ -96,12 +96,13 @@ where
 
 impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
-    C: ParametricCurve<Point = Point2, Vector = Vector2>,
+    C: ParametricCurve2D,
     S: ParametricSurface,
     S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
     S::Vector: VectorSpace<Scalar = f64>,
 {
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+    type Point = S::Point;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<S::Point>) {
         algo::curve::parameter_division(self, range, tol)
     }
 }
