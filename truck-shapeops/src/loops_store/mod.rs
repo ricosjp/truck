@@ -51,7 +51,7 @@ impl<P, C> BoundaryWire<P, C> {
 impl ShapesOpStatus {
 	fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<ShapesOpStatus>
 	where
-		C: ParametricCurve<Point = Point3, Vector = Vector3>,
+		C: ParametricCurve3D,
 		S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>, {
 		let (t0, t1) = curve.parameter_range();
 		let t = (t0 + t1) / 2.0;
@@ -396,7 +396,7 @@ fn curve_surface_projection<C, S>(
 	trials: usize,
 ) -> Option<(Point3, f64, Point2)>
 where
-	C: ParametricCurve<Point = Point3, Vector = Vector3>
+	C: ParametricCurve3D
 		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {

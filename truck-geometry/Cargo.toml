@@ -16,8 +16,8 @@ categories = ["graphics"]
 [dependencies]
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
-serde = { version = "1.0.123", features = ["derive"] }
-thiserror = "1.0.24"
+serde = { version = "1.0.130", features = ["derive"] }
+thiserror = "1.0.29"
 
 [dev-dependencies]
-rand = "0.8.3"
+rand = "0.8.4"

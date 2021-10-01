@@ -1052,7 +1052,8 @@ where P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
         + MetricSpace<Metric = f64>
 {
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+    type Point = P;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<P>) {
         algo::curve::parameter_division(self, range, tol)
     }
 }
@@ -1290,13 +1291,15 @@ fn test_parameter_division() {
     ];
     let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     let tol = 0.01;
-    let div = bspcurve.parameter_division(bspcurve.parameter_range(), tol);
+    let (div, pts) = bspcurve.parameter_division(bspcurve.parameter_range(), tol);
     let knot_vec = bspcurve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
     for i in 1..div.len() {
         let pt0 = bspcurve.subs(div[i - 1]);
+        assert_eq!(pt0, pts[i - 1]);
         let pt1 = bspcurve.subs(div[i]);
+        assert_eq!(pt1, pts[i]);
         let value_middle = pt0 + (pt1 - pt0) / 2.0;
         let param_middle = bspcurve.subs((div[i - 1] + div[i]) / 2.0);
         assert!(value_middle.distance(param_middle) < tol);

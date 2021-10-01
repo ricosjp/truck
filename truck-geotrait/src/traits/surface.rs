@@ -31,6 +31,10 @@ impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
 }
 
+/// 2D parametric surface
+pub trait ParametricSurface2D: ParametricSurface<Point = Point2, Vector = Vector2> {}
+impl<S: ParametricSurface<Point = Point2, Vector = Vector2>> ParametricSurface2D for S {}
+
 /// 3D parametric surface
 pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector3> {
     /// Returns the normal vector at `(u, v)`.

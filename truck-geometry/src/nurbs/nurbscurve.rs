@@ -409,8 +409,9 @@ where V::Point: Tolerance
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision1D for NURBSCurve<V>
 where V::Point: MetricSpace<Metric = f64>
 {
+    type Point = V::Point;
     #[inline(always)]
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<V::Point>) {
         algo::curve::parameter_division(self, range, tol)
     }
 }
@@ -578,13 +579,15 @@ fn test_parameter_division() {
     ];
     let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     let tol = 0.01;
-    let div = curve.parameter_division(curve.parameter_range(), tol * 0.5);
+    let (div, pts) = curve.parameter_division(curve.parameter_range(), tol * 0.5);
     let knot_vec = curve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
     for i in 1..div.len() {
         let pt0 = curve.subs(div[i - 1]);
+        assert_eq!(pt0, pts[i - 1]);
         let pt1 = curve.subs(div[i]);
+        assert_eq!(pt1, pts[i]);
         let value_middle = pt0.midpoint(pt1);
         let param_middle = curve.subs((div[i - 1] + div[i]) / 2.0);
         println!("{}", value_middle.distance(param_middle));

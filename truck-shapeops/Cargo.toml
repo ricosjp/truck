@@ -7,14 +7,14 @@ edition = "2018"
 
 [dependencies]
 derive_more = "0.99.16"
-serde = { version = "1.0.123", features = ["derive"] }
-rand = "0.8.3"
+serde = { version = "1.0.130", features = ["derive"] }
+rand = "0.8.4"
 thiserror = "1.0.24"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }
 
 [dev-dependencies]
-rand = "0.8.3"
+rand = "0.8.4"
 truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
 truck-modeling = { version = "0.2.1", path = "../truck-modeling" }

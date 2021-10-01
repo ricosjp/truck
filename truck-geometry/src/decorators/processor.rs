@@ -199,7 +199,8 @@ where
 }
 
 impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+    type Point = C::Point;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
         let a = self.transform;
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
@@ -215,7 +216,8 @@ impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
 }
 
 impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+    type Point = C::Point;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
         let a = self.transform;
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]

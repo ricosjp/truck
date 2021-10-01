@@ -51,7 +51,7 @@ fn create_parameter_boundary<P, C, S>(
 ) -> Option<PolylineCurve<Point2>>
 where
 	P: Copy,
-	C: ParametricCurve<Point = P> + ParameterDivision1D,
+	C: ParametricCurve<Point = P> + ParameterDivision1D<Point = P>,
 	S: Clone + SearchParameter<Point = P, Parameter = (f64, f64)>,
 {
 	let surface = face.get_surface();
@@ -60,8 +60,8 @@ where
 	let vec = wire.edge_iter().try_fold(vec![p], |mut vec, edge| {
 		let poly = polys.get_or_insert(edge.id(), || {
 			let curve = edge.get_curve();
-			let div = curve.parameter_division(curve.parameter_range(), tol);
-			PolylineCurve(div.into_iter().map(|t| curve.subs(t)).collect())
+			let div = curve.parameter_division(curve.parameter_range(), tol).1;
+			PolylineCurve(div)
 		});
 		let mut p = *vec.last().unwrap();
 		let closure = |q: &P| -> Option<Point2> {
@@ -92,7 +92,7 @@ fn divide_one_face<C, S>(
 	tol: f64,
 ) -> Option<Vec<(Face<Point3, C, S>, ShapesOpStatus)>>
 where
-	C: ParametricCurve<Point = Point3> + ParameterDivision1D,
+	C: ParametricCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	let (mut pre_faces, mut negative_wires) = (Vec::new(), Vec::new());
@@ -142,7 +142,7 @@ pub fn divide_faces<C, S>(
 	tol: f64,
 ) -> Option<FacesClassification<Point3, C, S>>
 where
-	C: ParametricCurve<Point = Point3> + ParameterDivision1D,
+	C: ParametricCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	let mut res = FacesClassification::<Point3, C, S>::default();
