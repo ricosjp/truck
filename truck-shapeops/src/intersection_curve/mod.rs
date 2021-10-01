@@ -27,38 +27,33 @@ pub fn double_projection<S>(
 	hint0: Option<(f64, f64)>,
 	surface1: &S,
 	hint1: Option<(f64, f64)>,
-	point: Point3,
+	mut point: Point3,
 	normal: Vector3,
 	trials: usize,
 ) -> Option<(Point3, Point2, Point2)>
 where
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
-	if trials == 0 {
-		return None;
+	let mut uv0 = surface0.search_nearest_parameter(point, hint0, 10)?;
+	let mut uv1 = surface1.search_nearest_parameter(point, hint1, 10)?;
+	for _ in 0..trials {
+		uv0 = surface0.search_nearest_parameter(point, Some(uv0), 10)?;
+		let pt0 = surface0.subs(uv0.0, uv0.1);
+		uv1 = surface1.search_nearest_parameter(point, Some(uv1), 10)?;
+		let pt1 = surface1.subs(uv1.0, uv1.1);
+		if point.near(&pt0) && point.near(&pt1) && pt0.near(&pt1) {
+			return Some((point, Point2::new(uv0.0, uv0.1), Point2::new(uv1.0, uv1.1)));
+		} else {
+			let n0 = surface0.normal(uv0.0, uv0.1);
+			let n1 = surface1.normal(uv1.0, uv1.1);
+			let mat = Matrix3::from_cols(n0, n1, normal).transpose();
+			let inv = mat.invert()?;
+			let pt = inv * Vector3::new(pt0.dot(n0), pt1.dot(n1), point.dot(normal));
+			point = Point3::from_vec(pt);
+		}
 	}
-	let (u0, v0) = surface0.search_nearest_parameter(point, hint0, 10)?;
-	let pt0 = surface0.subs(u0, v0);
-	let (u1, v1) = surface1.search_nearest_parameter(point, hint1, 10)?;
-	let pt1 = surface1.subs(u1, v1);
-	if point.near(&pt0) && point.near(&pt1) && pt0.near(&pt1) {
-		Some((point, Point2::new(u0, v0), Point2::new(u1, v1)))
-	} else {
-		let n0 = surface0.normal(u0, v0);
-		let n1 = surface1.normal(u1, v1);
-		let mat = Matrix3::from_cols(n0, n1, normal).transpose();
-		let inv = mat.invert()?;
-		let pt = inv * Vector3::new(pt0.dot(n0), pt1.dot(n1), point.dot(normal));
-		double_projection(
-			surface0,
-			Some((u0, v0)),
-			surface1,
-			Some((u1, v1)),
-			Point3::from_vec(pt),
-			normal,
-			trials - 1,
-		)
-	}
+	eprintln!("current parameter: {:?} {:?} {:?}", point, uv0, uv1);
+	None
 }
 
 impl<C, S> IntersectionCurve<C, S> {
@@ -273,8 +268,7 @@ impl<S: Clone> Invertible for IntersectionCurveWithParameters<S> {
 
 impl<C, S> SearchParameter for IntersectionCurve<C, S>
 where
-	C: ParametricCurve3D
-		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
+	C: ParametricCurve3D + SearchNearestParameter<Point = Point3, Parameter = f64>,
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	type Point = Point3;
@@ -293,7 +287,8 @@ where
 }
 
 impl<S> SearchParameter for IntersectionCurveWithParameters<S>
-where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)> {
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+{
 	type Point = Point3;
 	type Parameter = f64;
 	fn search_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
@@ -304,8 +299,7 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 /// Only derive from leading curve. Not precise.
 impl<C, S> SearchNearestParameter for IntersectionCurve<C, S>
 where
-	C: ParametricCurve3D
-		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
+	C: ParametricCurve3D + SearchNearestParameter<Point = Point3, Parameter = f64>,
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	type Point = Point3;
@@ -321,10 +315,16 @@ where
 }
 
 impl<S> SearchNearestParameter for IntersectionCurveWithParameters<S>
-where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)> {
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+{
 	type Point = Point3;
 	type Parameter = f64;
-	fn search_nearest_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
+	fn search_nearest_parameter(
+		&self,
+		point: Point3,
+		hint: Option<f64>,
+		trials: usize,
+	) -> Option<f64> {
 		self.ic.search_nearest_parameter(point, hint, trials)
 	}
 }
