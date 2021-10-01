@@ -42,7 +42,7 @@ where
 		uv1 = surface1.search_nearest_parameter(point, Some(uv1), 10)?;
 		let pt1 = surface1.subs(uv1.0, uv1.1);
 		if point.near(&pt0) && point.near(&pt1) && pt0.near(&pt1) {
-			return Some((point, Point2::new(uv0.0, uv0.1), Point2::new(uv1.0, uv1.1)));
+			return Some((point, Point2::from(uv0), Point2::from(uv1)));
 		} else {
 			let n0 = surface0.normal(uv0.0, uv0.1);
 			let n1 = surface1.normal(uv1.0, uv1.1);
