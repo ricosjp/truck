@@ -107,16 +107,8 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 	}
 
 	pub fn remeshing(&mut self) -> bool {
-		let div = algo::curve::parameter_division(self, self.parameter_range(), self.tol);
-		let mut polyline = PolylineCurve(Vec::new());
-		for t in div {
-			let pt = match self.search_triple(t) {
-				Some(got) => got.0,
-				None => return false,
-			};
-			polyline.push(pt);
-		}
-		self.leader = polyline;
+		let pt = algo::curve::parameter_division(self, self.parameter_range(), self.tol).1;
+		self.leader = PolylineCurve(pt);
 		true
 	}
 }
@@ -172,8 +164,9 @@ where
 	C: ParametricCurve<Point = Point3, Vector = Vector3>,
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
+	type Point = Point3;
 	#[inline(always)]
-	fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+	fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Point3>) {
 		algo::curve::parameter_division(self, range, tol)
 	}
 }

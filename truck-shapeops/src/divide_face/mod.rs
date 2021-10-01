@@ -58,7 +58,7 @@ where
 	let p: Point2 = surface.search_parameter(pt, None, 100)?.into();
 	let vec = wire.edge_iter().try_fold(vec![p], |mut vec, edge| {
 		let curve = edge.get_curve();
-		let div = curve.parameter_division(curve.parameter_range(), tol);
+		let div = curve.parameter_division(curve.parameter_range(), tol).0;
 		let mut p = *vec.last().unwrap();
 		let closure = |t: f64| -> Option<Point2> {
 			p = surface

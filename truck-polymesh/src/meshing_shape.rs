@@ -3,14 +3,8 @@ use crate::*;
 impl<P> PolylineCurve<P> {
     /// meshing the curve
     pub fn from_curve<C>(curve: &C, range: (f64, f64), tol: f64) -> Self
-    where C: ParametricCurve<Point = P> + ParameterDivision1D {
-        PolylineCurve(
-            curve
-                .parameter_division(range, tol)
-                .into_iter()
-                .map(|t| curve.subs(t))
-                .collect(),
-        )
+    where C: ParameterDivision1D<Point = P> {
+        PolylineCurve(curve.parameter_division(range, tol).1)
     }
 }
 

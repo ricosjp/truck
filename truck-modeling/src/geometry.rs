@@ -58,7 +58,8 @@ impl Transformed<Matrix4> for Curve {
 }
 
 impl ParameterDivision1D for Curve {
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+    type Point = Point3;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Point3>) {
         derive_curve_method!(self, ParameterDivision1D::parameter_division, range, tol)
     }
 }

@@ -63,22 +63,29 @@ where
 }
 
 /// Creates the curve division
-pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> Vec<f64>
+pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<C::Point>)
+where
+    C: ParametricCurve,
+    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>, {
+    sub_parameter_division(curve, range, (curve.subs(range.0), curve.subs(range.1)), tol)
+}
+
+fn sub_parameter_division<C>(curve: &C, range: (f64, f64), ends: (C::Point, C::Point), tol: f64) -> (Vec<f64>, Vec<C::Point>)
 where
     C: ParametricCurve,
     C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>, {
     let p = 0.5 + (0.2 * rand::random::<f64>() - 0.1);
     let t = range.0 * (1.0 - p) + range.1 * p;
-    let pt0 = curve.subs(range.0);
-    let pt1 = curve.subs(range.1);
-    let mid = pt0 + (pt1 - pt0) * p;
+    let mid = ends.0 + (ends.1 - ends.0) * p;
     if curve.subs(t).distance(mid) < tol {
-        vec![range.0, range.1]
+        (vec![range.0, range.1], vec![ends.0, ends.1])
     } else {
         let mid = (range.0 + range.1) / 2.0;
-        let mut res = parameter_division(curve, (range.0, mid), tol);
-        let _ = res.pop();
-        res.extend(parameter_division(curve, (mid, range.1), tol));
-        res
+        let (mut params, mut pts) = parameter_division(curve, (range.0, mid), tol);
+        let _ = (params.pop(), pts.pop());
+        let (new_params, new_pts) = parameter_division(curve, (mid, range.1), tol);
+        params.extend(new_params);
+        pts.extend(new_pts);
+        (params, pts)
     }
 }

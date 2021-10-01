@@ -67,12 +67,15 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
 
 /// Dividable curve
 pub trait ParameterDivision1D {
-    /// Creates the curve division
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64>;
+    /// The curve is in the space of `Self::Point`.
+    type Point;
+    /// Creates the curve division (prameters, corresponding points).
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>);
 }
 
 impl<'a, C: ParameterDivision1D> ParameterDivision1D for &'a C {
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> Vec<f64> {
+    type Point = C::Point;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
         (*self).parameter_division(range, tol)
     }
 }
