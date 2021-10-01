@@ -1,6 +1,10 @@
 use std::fmt::Debug;
 use thiserror::Error;
-use truck_base::{assert_near, tolerance::Tolerance};
+use truck_base::{
+    assert_near,
+    cgmath64::{Point2, Point3, Vector2, Vector3},
+    tolerance::Tolerance,
+};
 
 /// Parametric curves
 pub trait ParametricCurve: Clone {
@@ -64,6 +68,13 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { (*self).parameter_range() }
 }
+
+/// 2D parametric curve
+pub trait ParametricCurve2D: ParametricCurve<Point = Point2, Vector = Vector2> {}
+impl<C: ParametricCurve<Point = Point2, Vector = Vector2>> ParametricCurve2D for C {}
+/// 3D parametric curve
+pub trait ParametricCurve3D: ParametricCurve<Point = Point3, Vector = Vector3> {}
+impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> ParametricCurve3D for C {}
 
 /// Dividable curve
 pub trait ParameterDivision1D {
