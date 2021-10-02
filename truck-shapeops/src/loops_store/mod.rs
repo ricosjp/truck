@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::*;
 use std::collections::HashMap;
 use truck_base::{cgmath64::*, maputil::GetOrInsert};
@@ -484,7 +482,7 @@ where
 			)
 			.into_iter()
 			.try_for_each(|(polyline, intersection_curve)| {
-				let mut intersection_curve = intersection_curve?;
+				let mut intersection_curve = intersection_curve?.into();
 				let status = ShapesOpStatus::from_is_curve(&intersection_curve)?;
 				let (status0, status1) = match (ori0, ori1) {
 					(true, true) => (status, status.not()),
@@ -515,60 +513,64 @@ where
 					let idx00 =
 						poly_loops_store0.add_polygon_vertex(face_index0, &pv0, &mut pemap0);
 					if let Some((wire_index, edge_index, kind)) = idx00 {
-						geom_loops_store0.add_geom_vertex(
-							face_index0,
-							wire_index,
-							edge_index,
-							&gv0,
-							kind,
-							&surface1,
-							&mut gemap0,
-						);
+						geom_loops_store0
+							.add_geom_vertex(
+								face_index0,
+								wire_index,
+								edge_index,
+								&gv0,
+								kind,
+								&surface1,
+								&mut gemap0,
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
 					let idx01 =
 						poly_loops_store0.add_polygon_vertex(face_index0, &pv1, &mut pemap1);
 					if let Some((wire_index, edge_index, kind)) = idx01 {
-						geom_loops_store0.add_geom_vertex(
-							face_index0,
-							wire_index,
-							edge_index,
-							&gv1,
-							kind,
-							&surface1,
-							&mut gemap1,
-						);
+						geom_loops_store0
+							.add_geom_vertex(
+								face_index0,
+								wire_index,
+								edge_index,
+								&gv1,
+								kind,
+								&surface1,
+								&mut gemap1,
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
 					let idx10 =
 						poly_loops_store1.add_polygon_vertex(face_index1, &pv0, &mut pemap0);
 					if let Some((wire_index, edge_index, kind)) = idx10 {
-						geom_loops_store1.add_geom_vertex(
-							face_index1,
-							wire_index,
-							edge_index,
-							&gv0,
-							kind,
-							&surface0,
-							&mut gemap0,
-						);
+						geom_loops_store1
+							.add_geom_vertex(
+								face_index1,
+								wire_index,
+								edge_index,
+								&gv0,
+								kind,
+								&surface0,
+								&mut gemap0,
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
 					let idx11 =
 						poly_loops_store1.add_polygon_vertex(face_index1, &pv1, &mut pemap1);
 					if let Some((wire_index, edge_index, kind)) = idx11 {
-						geom_loops_store1.add_geom_vertex(
-							face_index1,
-							wire_index,
-							edge_index,
-							&gv1,
-							kind,
-							&surface0,
-							&mut gemap1,
-						);
+						geom_loops_store1
+							.add_geom_vertex(
+								face_index1,
+								wire_index,
+								edge_index,
+								&gv1,
+								kind,
+								&surface0,
+								&mut gemap1,
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}

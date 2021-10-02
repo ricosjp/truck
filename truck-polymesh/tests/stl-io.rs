@@ -87,8 +87,8 @@ fn through_polymesh() {
         assert_near!(face0.vertices[2][1] as f64, face1.vertices[2][1] as f64);
         assert_near!(face0.vertices[2][2] as f64, face1.vertices[2][2] as f64);
         // This is not assert_near, since VTK is single precision.
-        assert!(f32::abs(face0.normal[0] - face1.normal[0]) < 1.0e-4);
-        assert!(f32::abs(face0.normal[1] - face1.normal[1]) < 1.0e-4);
-        assert!(f32::abs(face0.normal[2] - face1.normal[2]) < 1.0e-4);
+        assert!(f32::abs(face0.normal[0] - face1.normal[0]) < 5.0e-4);
+        assert!(f32::abs(face0.normal[1] - face1.normal[1]) < 5.0e-4);
+        assert!(f32::abs(face0.normal[2] - face1.normal[2]) < 5.0e-4);
     }
 }

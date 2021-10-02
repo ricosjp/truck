@@ -6,12 +6,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+derive_more = "0.99.16"
+rand = "0.8.4"
+spade = "1.8.2"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-polymesh = { version = "0.2.1", path = "../truck-polymesh" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
-spade = "1.8.2"
-rand = "0.8.4"
 
 [dev-dependencies]
 truck-modeling = { version = "0.2.1", path = "../truck-modeling" }

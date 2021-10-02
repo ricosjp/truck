@@ -4,11 +4,11 @@ use truck_geometry::*;
 use truck_topology::{Vertex, shell::ShellCondition};
 const TOL: f64 = 0.05;
 
-type AlternativeIntersection = crate::test_util::Alternatives<
+type AlternativeIntersection = crate::alternative::Alternative<
 	NURBSCurve<Vector4>,
 	crate::intersection_curve::IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface>,
 >;
-type AlternativeSurface = crate::test_util::Alternatives<BSplineSurface<Point3>, Plane>;
+type AlternativeSurface = crate::alternative::Alternative<BSplineSurface<Point3>, Plane>;
 
 fn parabola_surfaces() -> (AlternativeSurface, AlternativeSurface) {
 	// define surfaces

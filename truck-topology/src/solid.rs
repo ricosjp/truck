@@ -55,10 +55,14 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Returns the reference of boundary shells
     #[inline(always)]
-    pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
+    pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> {
+        &self.boundaries
+    }
     /// Returns the boundary shells
     #[inline(always)]
-    pub fn into_boundaries(self) -> Vec<Shell<P, C, S>> { self.boundaries }
+    pub fn into_boundaries(self) -> Vec<Shell<P, C, S>> {
+        self.boundaries
+    }
 
     /// Returns an iterator over the faces.
     #[inline(always)]
@@ -76,6 +80,17 @@ impl<P, C, S> Solid<P, C, S> {
     #[inline(always)]
     pub fn vertex_iter<'a>(&'a self) -> impl Iterator<Item = Vertex<P>> + 'a {
         self.edge_iter().map(|edge| edge.front().clone())
+    }
+
+    /// invert all faces
+    #[inline(always)]
+    pub fn not(&mut self) {
+        self.boundaries
+            .iter_mut()
+            .flat_map(|shell| shell.face_iter_mut())
+            .for_each(|face| {
+                face.invert();
+            })
     }
 
     /// Returns a new solid whose surfaces are mapped by `surface_mapping`,
@@ -131,7 +146,8 @@ impl<P, C, S> Solid<P, C, S> {
     where
         P: Tolerance,
         C: ParametricCurve<Point = P>,
-        S: IncludeCurve<C>, {
+        S: IncludeCurve<C>,
+    {
         self.boundaries()
             .iter()
             .all(|shell| shell.is_geometric_consistent())
@@ -142,7 +158,8 @@ impl<P, C, S> Solid<P, C, S> {
     pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>,
+    {
         let res = self
             .boundaries
             .iter_mut()
@@ -156,7 +173,8 @@ impl<P, C, S> Solid<P, C, S> {
     pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
     where
         P: Debug,
-        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
+        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform,
+    {
         let res = self
             .boundaries
             .iter_mut()
@@ -287,4 +305,6 @@ pub(super) fn cube() -> Solid<(), (), ()> {
 }
 
 #[test]
-fn cube_test() { cube(); }
+fn cube_test() {
+    cube();
+}

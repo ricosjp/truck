@@ -64,6 +64,26 @@ impl ParameterDivision1D for Curve {
     }
 }
 
+impl Cut for Curve {
+    fn cut(&mut self, t: f64) -> Self { derive_curve_self_method!(self, Cut::cut, t) }
+}
+
+impl SearchNearestParameter for Curve {
+    type Point = Point3;
+    type Parameter = f64;
+    fn search_nearest_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
+        derive_curve_method!(self, SearchNearestParameter::search_nearest_parameter, point, hint, trials)
+    }
+}
+
+impl SearchParameter for Curve {
+    type Point = Point3;
+    type Parameter = f64;
+    fn search_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
+        derive_curve_method!(self, SearchParameter::search_parameter, point, hint, trials)
+    }
+}
+
 impl Curve {
     #[inline(always)]
     pub(super) fn knot_vec(&self) -> &KnotVec {

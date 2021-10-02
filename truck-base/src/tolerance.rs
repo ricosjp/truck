@@ -3,7 +3,7 @@ use cgmath::AbsDiffEq;
 use std::fmt::Debug;
 
 /// general tolerance
-pub const TOLERANCE: f64 = 1.0e-7;
+pub const TOLERANCE: f64 = 1.0e-6;
 
 /// general tolerance of square order
 pub const TOLERANCE2: f64 = TOLERANCE * TOLERANCE;

@@ -7,7 +7,7 @@ crate::impl_from!(
 	NURBSCurve<Vector4>,
 	IntersectionCurve<PolylineCurve, BSplineSurface<Point3>>
 );
-type AlternativeIntersection = crate::test_util::Alternatives<
+type AlternativeIntersection = crate::alternative::Alternative<
 	NURBSCurve<Vector4>,
 	IntersectionCurve<PolylineCurve, BSplineSurface<Point3>>,
 >;
