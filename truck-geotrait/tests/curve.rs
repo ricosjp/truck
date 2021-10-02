@@ -90,9 +90,10 @@ fn exec_polycurve_division() -> bool {
         })
         .collect();
     let poly = PolyCurve::<Point3>(coef);
-    let division = algo::curve::parameter_division(&poly, (-10.0, 10.0), 0.05);
-    division.windows(2).all(|a| {
+    let (division, pts) = algo::curve::parameter_division(&poly, (-10.0, 10.0), 0.05);
+    division.windows(2).zip(pts).all(|(a, pt)| {
         let pt0 = poly.subs(a[0]);
+        assert_eq!(pt0, pt);
         let pt1 = poly.subs(a[1]);
         (1..3).all(|i| {
             let t = i as f64 / 3.0;

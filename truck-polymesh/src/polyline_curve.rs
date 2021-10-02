@@ -138,14 +138,17 @@ where
 	}
 }
 
-impl<P> ParameterDivision1D for PolylineCurve<P> {
+impl<P: ControlPoint<f64>> ParameterDivision1D for PolylineCurve<P> {
+	type Point = P;
 	#[inline(always)]
-	fn parameter_division(&self, range: (f64, f64), _: f64) -> Vec<f64> {
+	fn parameter_division(&self, range: (f64, f64), _: f64) -> (Vec<f64>, Vec<P>) {
 		let r0 = range.0 as isize + 1;
 		let r1 = range.1 as isize;
-		let mut res = vec![range.0];
-		res.extend((r0..=r1).map(|i| i as f64));
-		res.push(range.1);
+		let mut res = (vec![range.0], vec![self.subs(range.0)]);
+		res.0.extend((r0..=r1).map(|i| i as f64));
+		res.1.extend((r0..=r1).map(|i| self[i as usize]));
+		res.0.push(range.1);
+		res.1.push(self.subs(range.1));
 		res
 	}
 }
@@ -191,5 +194,13 @@ fn polyline_test() {
 	assert!(polyline.der(t).dot(pt - polyline.subs(t)).so_small());
 
 	let div = polyline.parameter_division((1.5, 6.2), 0.0);
-	assert_eq!(div, vec![1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 6.2]);
+	assert_eq!(div.0, vec![1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 6.2]);
+	assert_eq!(div.0.len(), div.1.len());
+	truck_base::assert_near!(div.1[0], Point3::new(0.5, 0.5, 0.0));
+	truck_base::assert_near!(div.1[1], Point3::new(0.0, 1.0, 0.0));
+	truck_base::assert_near!(div.1[2], Point3::new(0.0, 0.0, 1.0));
+	truck_base::assert_near!(div.1[3], Point3::new(0.0, 1.0, 1.0));
+	truck_base::assert_near!(div.1[4], Point3::new(1.0, 0.0, 1.0));
+	truck_base::assert_near!(div.1[5], Point3::new(1.0, 1.0, 0.0));
+	truck_base::assert_near!(div.1[6], Point3::new(1.0, 1.0, 0.2));
 }

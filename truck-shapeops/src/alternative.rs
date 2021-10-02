@@ -1,7 +1,7 @@
 use truck_meshalgo::prelude::*;
 
 #[derive(Clone, Debug)]
-pub enum Alternatives<T, U> {
+pub enum Alternative<T, U> {
 	FirstType(T),
 	SecondType(U),
 }
@@ -9,15 +9,16 @@ pub enum Alternatives<T, U> {
 #[macro_export]
 macro_rules! impl_from {
 	($firsttype: ty, $secondtype: ty) => {
-		impl From<$firsttype> for $crate::test_util::Alternatives<$firsttype, $secondtype> {
+		impl From<$firsttype> for $crate::alternative::Alternative<$firsttype, $secondtype> {
 			#[inline(always)]
-			fn from(t: $firsttype) -> Self { $crate::test_util::Alternatives::FirstType(t) }
-		}
-		impl From<$secondtype> for $crate::test_util::Alternatives<$firsttype, $secondtype> {
-			#[inline(always)]
-			fn from(t: $secondtype) -> Self { $crate::test_util::Alternatives::SecondType(t) }
+			fn from(t: $firsttype) -> Self { $crate::alternative::Alternative::FirstType(t) }
 		}
 	};
+}
+
+impl<T, U> From<U> for Alternative<T, U> {
+	#[inline(always)]
+	fn from(u: U) -> Self { Alternative::SecondType(u) }
 }
 
 // test for impl_from
@@ -27,14 +28,14 @@ macro_rules! derive_method {
 	($method: tt, $return_type: ty, $($var: ident : $paramtype: ty),*) => {
 		fn $method(&self, $($var: $paramtype),*) -> $return_type {
 			match &self {
-				Alternatives::FirstType(got) => got.$method($($var),*),
-				Alternatives::SecondType(got) => got.$method($($var),*),
+				Alternative::FirstType(got) => got.$method($($var),*),
+				Alternative::SecondType(got) => got.$method($($var),*),
 			}
 		}
 	};
 }
 
-impl<C0, C1> ParametricCurve for Alternatives<C0, C1>
+impl<C0, C1> ParametricCurve for Alternative<C0, C1>
 where
 	C0: ParametricCurve,
 	C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>,
@@ -47,7 +48,7 @@ where
 	derive_method!(parameter_range, (f64, f64),);
 }
 
-impl<S0, S1> ParametricSurface for Alternatives<S0, S1>
+impl<S0, S1> ParametricSurface for Alternative<S0, S1>
 where
 	S0: ParametricSurface,
 	S1: ParametricSurface<Point = S0::Point, Vector = S0::Vector>,
@@ -62,7 +63,7 @@ where
 	derive_method!(vvder, S0::Vector, u: f64, v: f64);
 }
 
-impl<S0, S1> ParametricSurface3D for Alternatives<S0, S1>
+impl<S0, S1> ParametricSurface3D for Alternative<S0, S1>
 where
 	S0: ParametricSurface3D,
 	S1: ParametricSurface3D,
@@ -70,7 +71,7 @@ where
 	derive_method!(normal, Vector3, u: f64, v: f64);
 }
 
-impl<C0, C1> Cut for Alternatives<C0, C1>
+impl<C0, C1> Cut for Alternative<C0, C1>
 where
 	C0: Cut,
 	C1: Cut<Point = C0::Point, Vector = C0::Vector>,
@@ -83,15 +84,16 @@ where
 	}
 }
 
-impl<C0, C1> ParameterDivision1D for Alternatives<C0, C1>
+impl<C0, C1> ParameterDivision1D for Alternative<C0, C1>
 where
 	C0: ParameterDivision1D,
-	C1: ParameterDivision1D,
+	C1: ParameterDivision1D<Point = C0::Point>,
 {
-	derive_method!(parameter_division, Vec<f64>, range: (f64, f64), tol: f64);
+	type Point = C0::Point;
+	derive_method!(parameter_division, (Vec<f64>, Vec<C0::Point>), range: (f64, f64), tol: f64);
 }
 
-impl<S0, S1> ParameterDivision2D for Alternatives<S0, S1>
+impl<S0, S1> ParameterDivision2D for Alternative<S0, S1>
 where
 	S0: ParameterDivision2D,
 	S1: ParameterDivision2D,
@@ -99,7 +101,7 @@ where
 	derive_method!(parameter_division, (Vec<f64>, Vec<f64>), range: ((f64, f64), (f64, f64)), tol: f64);
 }
 
-impl<T, U> SearchParameter for Alternatives<T, U>
+impl<T, U> SearchParameter for Alternative<T, U>
 where
 	T: SearchParameter,
 	U: SearchParameter<Point = T::Point, Parameter = T::Parameter>,
@@ -115,7 +117,7 @@ where
 	);
 }
 
-impl<T, U> SearchNearestParameter for Alternatives<T, U>
+impl<T, U> SearchNearestParameter for Alternative<T, U>
 where
 	T: SearchNearestParameter,
 	U: SearchNearestParameter<Point = T::Point, Parameter = T::Parameter>,
@@ -131,7 +133,7 @@ where
 	);
 }
 
-impl<T, U> Invertible for Alternatives<T, U>
+impl<T, U> Invertible for Alternative<T, U>
 where
 	T: Invertible,
 	U: Invertible,

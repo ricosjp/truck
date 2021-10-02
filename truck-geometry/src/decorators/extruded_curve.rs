@@ -39,9 +39,7 @@ where
     fn vvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
 }
 
-impl<C> ParametricSurface3D for ExtrudedCurve<C, Vector3>
-where C: ParametricCurve<Point = Point3, Vector = Vector3>
-{
+impl<C: ParametricCurve3D> ParametricSurface3D for ExtrudedCurve<C, Vector3> {
     #[inline(always)]
     fn normal(&self, u: f64, _: f64) -> C::Vector {
         self.curve.der(u).cross(self.vector).normalize()
@@ -62,12 +60,11 @@ where
 impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
     #[inline(always)]
     fn parameter_division(&self, (urange, vrange): ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
-        (self.curve.parameter_division(urange, tol), vec![vrange.0, vrange.1])
+        (self.curve.parameter_division(urange, tol).0, vec![vrange.0, vrange.1])
     }
 }
 
-impl<C> SearchParameter for ExtrudedCurve<C, Vector2>
-where C: ParametricCurve<Point = Point2, Vector = Vector2> {
+impl<C: ParametricCurve2D> SearchParameter for ExtrudedCurve<C, Vector2> {
     type Point = Point2;
     type Parameter = (f64, f64);
     #[inline(always)]
@@ -80,8 +77,7 @@ where C: ParametricCurve<Point = Point2, Vector = Vector2> {
     }
 }
 
-impl<C> SearchParameter for ExtrudedCurve<C, Vector3>
-where C: ParametricCurve<Point = Point3, Vector = Vector3> {
+impl<C: ParametricCurve3D> SearchParameter for ExtrudedCurve<C, Vector3> {
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]
@@ -94,8 +90,7 @@ where C: ParametricCurve<Point = Point3, Vector = Vector3> {
     }
 }
 
-impl<C> SearchNearestParameter for ExtrudedCurve<C, Vector3>
-where C: ParametricCurve<Point = Point3, Vector = Vector3> {
+impl<C: ParametricCurve3D> SearchNearestParameter for ExtrudedCurve<C, Vector3> {
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]

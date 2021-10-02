@@ -1,6 +1,8 @@
 use crate::faces_classification::FacesClassification;
 use crate::loops_store::*;
 use std::ops::Deref;
+use std::collections::HashMap;
+use truck_base::maputil::GetOrInsert;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 
@@ -44,29 +46,33 @@ impl PolylineBoundary for PolylineCurve<Point2> {
 fn create_parameter_boundary<P, C, S>(
 	face: &Face<P, C, S>,
 	wire: &Wire<P, C>,
+	polys: &mut HashMap<EdgeID<C>, PolylineCurve<P>>,
 	tol: f64,
 ) -> Option<PolylineCurve<Point2>>
 where
 	P: Copy,
-	C: ParametricCurve<Point = P> + ParameterDivision1D,
+	C: ParametricCurve<Point = P> + ParameterDivision1D<Point = P>,
 	S: Clone + SearchParameter<Point = P, Parameter = (f64, f64)>,
 {
 	let surface = face.get_surface();
 	let pt = wire.front_vertex().unwrap().get_point();
 	let p: Point2 = surface.search_parameter(pt, None, 100)?.into();
 	let vec = wire.edge_iter().try_fold(vec![p], |mut vec, edge| {
-		let curve = edge.get_curve();
-		let div = curve.parameter_division(curve.parameter_range(), tol);
+		let poly = polys.get_or_insert(edge.id(), || {
+			let curve = edge.get_curve();
+			let div = curve.parameter_division(curve.parameter_range(), tol).1;
+			PolylineCurve(div)
+		});
 		let mut p = *vec.last().unwrap();
-		let closure = |t: f64| -> Option<Point2> {
+		let closure = |q: &P| -> Option<Point2> {
 			p = surface
-				.search_parameter(curve.subs(t), Some(p.into()), 100)?
+				.search_parameter(*q, Some(p.into()), 100)?
 				.into();
 			Some(p)
 		};
 		let add: Option<Vec<Point2>> = match edge.orientation() {
-			true => div.into_iter().skip(1).map(closure).collect(),
-			false => div.into_iter().rev().skip(1).map(closure).collect(),
+			true => poly.iter().skip(1).map(closure).collect(),
+			false => poly.iter().rev().skip(1).map(closure).collect(),
 		};
 		vec.append(&mut add?);
 		Some(vec)
@@ -86,12 +92,13 @@ fn divide_one_face<C, S>(
 	tol: f64,
 ) -> Option<Vec<(Face<Point3, C, S>, ShapesOpStatus)>>
 where
-	C: ParametricCurve<Point = Point3> + ParameterDivision1D,
+	C: ParametricCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	let (mut pre_faces, mut negative_wires) = (Vec::new(), Vec::new());
+	let mut map = HashMap::new();
 	loops.iter().try_for_each(|wire| {
-		let poly = create_parameter_boundary(face, wire, tol)?;
+		let poly = create_parameter_boundary(face, wire, &mut map, tol)?;
 		match poly.area() > 0.0 {
 			true => pre_faces.push(vec![WireChunk { poly, wire }]),
 			false => negative_wires.push(WireChunk { poly, wire }),
@@ -135,7 +142,7 @@ pub fn divide_faces<C, S>(
 	tol: f64,
 ) -> Option<FacesClassification<Point3, C, S>>
 where
-	C: ParametricCurve<Point = Point3> + ParameterDivision1D,
+	C: ParametricCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	let mut res = FacesClassification::<Point3, C, S>::default();

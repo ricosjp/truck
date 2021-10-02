@@ -1,5 +1,5 @@
 use super::*;
-use derive_deref::{Deref, DerefMut};
+use derive_more::{Deref, DerefMut};
 use std::f64::consts::PI;
 
 #[derive(Clone, Copy, Debug)]

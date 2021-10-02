@@ -51,7 +51,7 @@ impl<P, C> BoundaryWire<P, C> {
 impl ShapesOpStatus {
 	fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<ShapesOpStatus>
 	where
-		C: ParametricCurve<Point = Point3, Vector = Vector3>,
+		C: ParametricCurve3D,
 		S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>, {
 		let (t0, t1) = curve.parameter_range();
 		let t = (t0 + t1) / 2.0;
@@ -396,7 +396,7 @@ fn curve_surface_projection<C, S>(
 	trials: usize,
 ) -> Option<(Point3, f64, Point2)>
 where
-	C: ParametricCurve<Point = Point3, Vector = Vector3>
+	C: ParametricCurve3D
 		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
@@ -482,7 +482,7 @@ where
 			)
 			.into_iter()
 			.try_for_each(|(polyline, intersection_curve)| {
-				let mut intersection_curve = intersection_curve?;
+				let mut intersection_curve = intersection_curve?.into();
 				let status = ShapesOpStatus::from_is_curve(&intersection_curve)?;
 				let (status0, status1) = match (ori0, ori1) {
 					(true, true) => (status, status.not()),
@@ -522,8 +522,7 @@ where
 								kind,
 								&surface1,
 								&mut gemap0,
-							)
-							.unwrap();
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
@@ -539,8 +538,7 @@ where
 								kind,
 								&surface1,
 								&mut gemap1,
-							)
-							.unwrap();
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
@@ -556,8 +554,7 @@ where
 								kind,
 								&surface0,
 								&mut gemap0,
-							)
-							.unwrap();
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
@@ -573,8 +570,7 @@ where
 								kind,
 								&surface0,
 								&mut gemap1,
-							)
-							.unwrap();
+							)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
