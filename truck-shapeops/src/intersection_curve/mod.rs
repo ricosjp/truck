@@ -34,9 +34,13 @@ pub fn double_projection<S>(
 where
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
+    #[cfg(all(test, debug_assertions))]
+    let mut log = Vec::new();
 	let mut uv0 = surface0.search_nearest_parameter(point, hint0, 10)?;
 	let mut uv1 = surface1.search_nearest_parameter(point, hint1, 10)?;
 	for _ in 0..trials {
+        #[cfg(all(test, debug_assertions))]
+        log.push((point, uv0, uv1));
 		uv0 = surface0.search_nearest_parameter(point, Some(uv0), 10)?;
 		let pt0 = surface0.subs(uv0.0, uv0.1);
 		uv1 = surface1.search_nearest_parameter(point, Some(uv1), 10)?;
@@ -52,7 +56,11 @@ where
 			point = Point3::from_vec(pt);
 		}
 	}
-	eprintln!("current parameter: {:?} {:?} {:?}", point, uv0, uv1);
+    #[cfg(all(test, debug_assertions))]
+	{
+        eprintln!("Newton method is not converges");
+        log.into_iter().for_each(|t| eprintln!("{:?}", t));
+	}
 	None
 }
 
