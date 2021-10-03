@@ -43,7 +43,11 @@ where
     S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>,
     S::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
+    #[cfg(all(test, debug_assertions))]
+    let mut log = Vec::new();
     for _ in 0..=trials {
+        #[cfg(all(test, debug_assertions))]
+        log.push(hint);
         let (u0, v0) = hint;
         let s = surface.subs(u0, v0);
         let ud = surface.uder(u0, v0);
@@ -64,6 +68,8 @@ where
             hint = (Vector2::from(hint) - fprime.invert()? * f).into();
         }
     }
+    #[cfg(all(test, debug_assertions))]
+    newton_log_error!(log);
     None
 }
 
@@ -75,7 +81,11 @@ pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>
     mut hint: (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)> {
+    #[cfg(all(test, debug_assertions))]
+    let mut log = Vec::new();
     for _ in 0..=trials {
+        #[cfg(all(test, debug_assertions))]
+        log.push(hint);
         let (u0, v0) = hint;
         let pt = surface.subs(u0, v0);
         let uder = surface.uder(u0, v0);
@@ -88,6 +98,8 @@ pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>
         let inv = Matrix2::from_cols(uder, vder).invert()?;
         hint = (Vector2::from(hint) - inv * (pt - point)).into();
     }
+    #[cfg(all(test, debug_assertions))]
+    newton_log_error!(log);
     None
 }
 

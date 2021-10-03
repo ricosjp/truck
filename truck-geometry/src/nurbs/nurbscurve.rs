@@ -590,7 +590,7 @@ fn test_parameter_division() {
         assert_eq!(pt1, pts[i]);
         let value_middle = pt0.midpoint(pt1);
         let param_middle = curve.subs((div[i - 1] + div[i]) / 2.0);
-        println!("{}", value_middle.distance(param_middle));
-        assert!(value_middle.distance(param_middle) < tol);
+        let dist = value_middle.distance(param_middle);
+        assert!(dist < tol, "large distance: {}", dist);
     }
 }
