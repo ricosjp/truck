@@ -76,6 +76,7 @@ fn nontex_inst_state() -> PolygonState {
             roughness: 0.31415,
             reflectance: 0.29613,
             ambient_ratio: 0.92,
+            background_ratio: 0.32,
             alpha_blend: false,
         },
         texture: None,

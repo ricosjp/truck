@@ -9,6 +9,7 @@ struct Material {
     roughness: f32;
     reflectance: f32;
     ambient_ratio: f32;
+    background_ratio: f32;
 };
 
 [[group(1), binding(0)]]
@@ -77,6 +78,8 @@ fn nontex_main() -> [[location(0)]] vec4<f32> {
     } elseif (abs(material.reflectance - 0.29613) > EPS) {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
     } elseif (abs(material.ambient_ratio - 0.92) > EPS) {
+        return vec4<f32>(0.25, 0.25, 0.25, 1.0);
+    } elseif (abs(material.background_ratio - 0.32) > EPS) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
     } else {
         return vec4<f32>(0.2, 0.4, 0.6, 0.8);

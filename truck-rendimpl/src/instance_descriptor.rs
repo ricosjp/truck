@@ -8,6 +8,7 @@ impl Default for Material {
             roughness: 0.5,
             reflectance: 0.25,
             ambient_ratio: 0.02,
+            background_ratio: 0.0,
             alpha_blend: false,
         }
     }
@@ -28,7 +29,7 @@ impl Material {
     /// ```
     #[inline(always)]
     pub fn buffer(&self, device: &Device) -> BufferHandler {
-        let material_data: [f32; 7] = [
+        let material_data: [f32; 8] = [
             self.albedo[0] as f32,
             self.albedo[1] as f32,
             self.albedo[2] as f32,
@@ -36,6 +37,7 @@ impl Material {
             self.roughness as f32,
             self.reflectance as f32,
             self.ambient_ratio as f32,
+            self.background_ratio as f32,
         ];
         BufferHandler::from_slice(&material_data, device, BufferUsages::UNIFORM)
     }

@@ -70,6 +70,7 @@ impl App for MyApp {
                     roughness: 0.9,
                     reflectance: 0.04,
                     ambient_ratio: 0.05,
+                    background_ratio: 0.0,
                     alpha_blend: false,
                 },
                 texture: Some(std::sync::Arc::new(texture)),
