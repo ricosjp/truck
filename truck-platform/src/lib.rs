@@ -67,6 +67,7 @@ struct LightInfo {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct SceneInfo {
+    background_color: [f32; 4],
     time: f32,
     num_of_lights: u32,
 }

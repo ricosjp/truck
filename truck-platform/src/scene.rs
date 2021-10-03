@@ -293,13 +293,21 @@ impl Scene {
     /// # Shader Example
     /// ```glsl
     /// layout(set = 0, binding = 2) uniform Scene {
+    ///     vec4 bk_color;  // color of back ground
     ///     float time;     // elapsed time since the scene was created.
     ///     uint nlights;   // the number of lights
     /// };
     /// ```
     #[inline(always)]
     pub fn scene_status_buffer(&self) -> BufferHandler {
+        let bk = self.scene_desc.background;
         let scene_info = SceneInfo {
+            background_color: [
+                bk.r as f32,
+                bk.g as f32,
+                bk.b as f32,
+                bk.a as f32,
+            ],
             time: self.elapsed().as_secs_f32(),
             num_of_lights: self.scene_desc.lights.len() as u32,
         };
