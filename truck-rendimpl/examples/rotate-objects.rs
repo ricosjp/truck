@@ -95,6 +95,7 @@ impl MyRender {
                 roughness: (0.5 + (time / 5.0).sin() / 2.0),
                 reflectance: 0.04 + 0.96 * (0.5 + (time / 2.0).sin() / 2.0),
                 ambient_ratio: 0.02,
+                background_ratio: 0.0,
                 alpha_blend: false,
             };
             self.scene.update_bind_group(&*instance);

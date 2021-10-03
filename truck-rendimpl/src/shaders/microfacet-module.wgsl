@@ -12,6 +12,7 @@ struct Material {
     roughness: f32;
     reflectance: f32;
     ambient_ratio: f32;
+    background_ratio: f32;
 };
 
 fn light_direction(light: Light, position: vec3<f32>) -> vec3<f32> {
@@ -81,4 +82,9 @@ fn microfacet_color(position: vec3<f32>, normal: vec3<f32>, light: Light, camera
 fn ambient_correction(pre_color: vec3<f32>, material: Material) -> vec3<f32> {
     return pre_color * (1.0 - material.ambient_ratio)
         + material.albedo.xyz * material.ambient_ratio;
+}
+
+fn background_correction(pre_color: vec3<f32>, bk_color: vec3<f32>, material: Material) -> vec3<f32> {
+    return pre_color * (1.0 - material.background_ratio)
+        + bk_color * material.background_ratio;
 }

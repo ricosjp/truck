@@ -68,6 +68,7 @@ fn exec_bind_group_test(backend: Backends, out_dir: &str) {
     let desc = SceneDescriptor {
         camera,
         lights,
+        background: Color { r: 0.1, g: 0.2, b: 0.3, a: 0.4 },
         ..Default::default()
     };
     let handler = DeviceHandler::new(device, queue, config);
