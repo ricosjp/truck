@@ -21,6 +21,7 @@ where
 		+ SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
 		+ Invertible,
 {
+	nonpositive_tolerance!(tol);
 	let poly_shell0 = shell0.triangulation(tol)?;
 	let poly_shell1 = shell1.triangulation(tol)?;
 	let (loops_store0, _, loops_store1, _) =

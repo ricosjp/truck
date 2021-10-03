@@ -113,6 +113,7 @@ pub trait DistanceWithPointCloud: Sized {
         f64::sqrt(self.distance2(space))
     }
     fn is_colliding(self, space: &HashedPointCloud, tol: f64) -> bool {
+        nonpositive_tolerance!(tol);
         self.distance2(space) < tol * tol
     }
 }
@@ -197,6 +198,7 @@ impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
         }
     }
     fn is_colliding(self, space: &HashedPointCloud, tol: f64) -> bool {
+        nonpositive_tolerance!(tol);
         Triangulate::new(self)
             .into_iter()
             .find(|tri| {

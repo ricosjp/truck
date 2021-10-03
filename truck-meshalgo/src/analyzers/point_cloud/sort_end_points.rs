@@ -100,6 +100,7 @@ pub fn pointcloud_in_polygon_neighborhood(
     points: &Vec<Point3>,
     tol: f64,
 ) -> bool {
+    nonpositive_tolerance!(tol);
     let triangulate = Triangulate::new(polygon);
     let mut current = Vec::new();
     sorted_endpoints_by_polymesh_points(&triangulate, points, tol)

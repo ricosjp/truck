@@ -81,6 +81,10 @@ pub trait ParameterDivision1D {
     /// The curve is in the space of `Self::Point`.
     type Point;
     /// Creates the curve division (prameters, corresponding points).
+    ///
+    /// # Panics
+    /// 
+    /// `tol` must be more than `TOLERANCE`.
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>);
 }
 

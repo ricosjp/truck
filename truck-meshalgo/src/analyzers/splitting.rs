@@ -46,6 +46,8 @@ pub trait Splitting {
     /// # Returns
     /// - The first polygon consists the faces included in planes.
     /// - The second polygon is the extracted remainder.
+    /// # Panics
+    /// `tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
     /// use truck_polymesh::*;
@@ -126,6 +128,7 @@ impl Splitting for PolygonMesh {
     }
 
     fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        nonpositive_tolerance!(tol);
         self.faces_into_two_clusters(|face: &[Vertex]| {
             is_in_the_plane(self.positions(), self.normals(), face, tol * tol)
         })

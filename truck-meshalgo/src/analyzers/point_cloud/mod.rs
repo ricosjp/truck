@@ -8,6 +8,8 @@ pub trait WithPointCloud {
     /// Whether all faces of the polygon mesh `self` has intersection with the neighborhood of `point_cloud`.
     /// # Arguments
     /// - `tol`: the radius of the neighborhoods of points in point cloud.
+    /// # Panics
+    /// `tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
     /// use truck_meshalgo::prelude::*;
@@ -29,14 +31,19 @@ pub trait WithPointCloud {
     /// ```
     fn is_clung_to_by(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
     /// Whether the neighborhood of the polygon mesh `self` includes `point_cloud`.
+    /// # Panics
+    /// `tol` must be more than `TOLERANCE`.
     fn neighborhood_include(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
     /// Whether the polygon mesh `self` and `point_cloud` collides.
+    /// # Panics
+    /// `tol` must be more than `TOLERANCE`.
     fn collide_with_neiborhood_of(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
 }
 
 impl WithPointCloud for PolygonMesh {
     #[inline(always)]
     fn is_clung_to_by(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool {
+        nonpositive_tolerance!(tol);
         HashedPointCloud::from_points(point_cloud, tol * 2.0)
             .distance2(self)
             < tol * tol
