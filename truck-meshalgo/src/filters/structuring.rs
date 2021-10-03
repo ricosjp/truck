@@ -86,8 +86,8 @@ impl StructuringFilter for PolygonMesh {
         self
     }
     fn quadrangulate(&mut self, plane_tol: f64, score_tol: f64) -> &mut Self {
-        nonpositive_tolerance!(plane_tol);
-        nonpositive_tolerance!(score_tol);
+        nonpositive_tolerance!(plane_tol, 0.0);
+        nonpositive_tolerance!(score_tol, 0.0);
         let list = self.create_face_edge_list(plane_tol, score_tol);
         self.reflect_face_edge_list(list);
         self

@@ -15,8 +15,11 @@
 #[macro_export]
 #[doc(hidden)]
 macro_rules! nonpositive_tolerance {
+	($tol: expr, $minimum: expr) => {
+		assert!($tol >= $minimum, "tolerance must be no less than {:e}", $minimum);
+	};
 	($tol: expr) => {
-		assert!($tol > TOLERANCE, "tolerance must be more than {:e}", TOLERANCE);
+        nonpositive_tolerance!($tol, TOLERANCE)
 	};
 }
 

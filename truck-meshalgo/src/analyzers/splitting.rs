@@ -128,7 +128,7 @@ impl Splitting for PolygonMesh {
     }
 
     fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
-        nonpositive_tolerance!(tol);
+        nonpositive_tolerance!(tol, 0.0);
         self.faces_into_two_clusters(|face: &[Vertex]| {
             is_in_the_plane(self.positions(), self.normals(), face, tol * tol)
         })
