@@ -153,6 +153,7 @@ pub struct RenderObject {
     pipeline: Arc<RenderPipeline>,
     bind_group_layout: Arc<BindGroupLayout>,
     bind_group: Arc<BindGroup>,
+    visible: bool,
 }
 
 /// the projection type of camera
@@ -354,6 +355,7 @@ pub trait Rendered {
             bind_group_layout,
             bind_group,
             pipeline,
+            visible: true,
         }
     }
 }
