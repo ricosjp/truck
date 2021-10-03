@@ -35,7 +35,7 @@ where
 pub fn search_nearest_parameter<S>(
     surface: &S,
     point: S::Point,
-    (u0, v0): (f64, f64),
+    mut hint: (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)>
 where
@@ -43,27 +43,28 @@ where
     S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>,
     S::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
-    let s = surface.subs(u0, v0);
-    let ud = surface.uder(u0, v0);
-    let vd = surface.vder(u0, v0);
-    let uud = surface.uuder(u0, v0);
-    let uvd = surface.uvder(u0, v0);
-    let vvd = surface.vvder(u0, v0);
-    let f = Vector2::new(ud.dot(s - point), vd.dot(s - point));
-    let a = uud.dot(s - point) + ud.dot(ud);
-    let c = uvd.dot(s - point) + ud.dot(vd);
-    let b = vvd.dot(s - point) + vd.dot(vd);
-    let fprime = Matrix2::new(a, c, c, b);
-    let dermag2 = f64::min(1.0, ud.magnitude2());
-    let dermag2 = f64::min(dermag2, vd.magnitude2());
-    if f.magnitude2() < TOLERANCE2 * dermag2 || fprime.determinant().so_small() {
-        Some((u0, v0))
-    } else if trials == 0 {
-        None
-    } else {
-        let vec = Vector2::new(u0, v0) - fprime.invert().unwrap() * f;
-        search_nearest_parameter(surface, point, (vec[0], vec[1]), trials - 1)
+    for _ in 0..=trials {
+        let (u0, v0) = hint;
+        let s = surface.subs(u0, v0);
+        let ud = surface.uder(u0, v0);
+        let vd = surface.vder(u0, v0);
+        let uud = surface.uuder(u0, v0);
+        let uvd = surface.uvder(u0, v0);
+        let vvd = surface.vvder(u0, v0);
+        let f = Vector2::new(ud.dot(s - point), vd.dot(s - point));
+        let a = uud.dot(s - point) + ud.dot(ud);
+        let c = uvd.dot(s - point) + ud.dot(vd);
+        let b = vvd.dot(s - point) + vd.dot(vd);
+        let fprime = Matrix2::new(a, c, c, b);
+        let dermag2 = f64::min(1.0, ud.magnitude2());
+        let dermag2 = f64::min(dermag2, vd.magnitude2());
+        if f.magnitude2() < TOLERANCE2 * dermag2 || fprime.determinant().so_small() {
+            return Some(hint);
+        } else {
+            hint = (Vector2::from(hint) - fprime.invert()? * f).into();
+        }
     }
+    None
 }
 
 /// Searches the parameter by Newton's method.
@@ -71,26 +72,23 @@ where
 pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
     surface: &S,
     point: Point2,
-    (u0, v0): (f64, f64),
+    mut hint: (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)> {
-    let pt = surface.subs(u0, v0);
-    let uder = surface.uder(u0, v0);
-    let vder = surface.vder(u0, v0);
-    let dermag2 = f64::min(0.05, uder.magnitude2());
-    let dermag2 = f64::min(dermag2, vder.magnitude2());
-    if pt.distance2(point) < TOLERANCE2 * dermag2 {
-        return Some((u0, v0));
-    } else if trials == 0 {
-        return None;
+    for _ in 0..=trials {
+        let (u0, v0) = hint;
+        let pt = surface.subs(u0, v0);
+        let uder = surface.uder(u0, v0);
+        let vder = surface.vder(u0, v0);
+        let dermag2 = f64::min(0.05, uder.magnitude2());
+        let dermag2 = f64::min(dermag2, vder.magnitude2());
+        if pt.distance2(point) < TOLERANCE2 * dermag2 {
+            return Some(hint);
+        }
+        let inv = Matrix2::from_cols(uder, vder).invert()?;
+        hint = (Vector2::from(hint) - inv * (pt - point)).into();
     }
-    let hint = Vector2::new(u0, v0);
-    let jacobi = Matrix2::from_cols(uder, vder);
-    let res = jacobi.invert().map(move |inv| hint - inv * (pt - point));
-    match res {
-        Some(vec) => search_parameter2d(surface, point, (vec[0], vec[1]), trials - 1),
-        None => None,
-    }
+    None
 }
 
 #[derive(Clone, Debug)]
@@ -175,7 +173,7 @@ pub fn search_parameter3d<S: ParametricSurface3D>(
 /// Creates the surface division
 ///
 /// # Panics
-/// 
+///
 /// `tol` must be more than `TOLERANCE`.
 #[inline(always)]
 pub fn parameter_division<S>(
