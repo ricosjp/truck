@@ -12,6 +12,17 @@
     unused_qualifications
 )]
 
+#[macro_export]
+#[doc(hidden)]
+macro_rules! nonpositive_tolerance {
+	($tol: expr, $minimum: expr) => {
+		assert!($tol >= $minimum, "tolerance must be no less than {:e}", $minimum);
+	};
+	($tol: expr) => {
+        nonpositive_tolerance!($tol, TOLERANCE)
+	};
+}
+
 /// Abstract traits: `Curve` and `Surface`.
 pub mod traits;
 pub use traits::*;

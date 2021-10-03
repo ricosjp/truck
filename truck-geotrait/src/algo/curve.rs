@@ -63,10 +63,15 @@ where
 }
 
 /// Creates the curve division
+/// 
+/// # Panics
+/// 
+/// `tol` must be more than `TOLERANCE`.
 pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<C::Point>)
 where
     C: ParametricCurve,
     C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>, {
+    nonpositive_tolerance!(tol);
     sub_parameter_division(
         curve,
         range,

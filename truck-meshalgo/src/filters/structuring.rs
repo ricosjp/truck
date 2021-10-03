@@ -46,6 +46,8 @@ pub trait StructuringFilter {
     /// 1. sort the list of the pairs of triangles by the score
     /// 1. take a pair of triangles in order from the top of the list and register a new one
     /// if it doesn't conflict with the one has been already registered.
+    /// # Panics
+    /// `plane_tol` and `score_tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
     /// use truck_polymesh::*;
@@ -84,6 +86,8 @@ impl StructuringFilter for PolygonMesh {
         self
     }
     fn quadrangulate(&mut self, plane_tol: f64, score_tol: f64) -> &mut Self {
+        nonpositive_tolerance!(plane_tol, 0.0);
+        nonpositive_tolerance!(score_tol, 0.0);
         let list = self.create_face_edge_list(plane_tol, score_tol);
         self.reflect_face_edge_list(list);
         self

@@ -68,6 +68,10 @@ pub trait IncludeCurve<C: ParametricCurve> {
 /// Dividable surface
 pub trait ParameterDivision2D {
     /// Creates the surface division
+    ///
+    /// # Panics
+    /// 
+    /// `tol` must be more than `TOLERANCE`.
     fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>);
 }
 

@@ -142,29 +142,17 @@ impl<'a, S: ParametricSurface3D> ParametricSurface for ProjectedSurface<'a, S> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point2 {
-        self.point_proj(self.surface.subs(u, v))
-    }
+    fn subs(&self, u: f64, v: f64) -> Point2 { self.point_proj(self.surface.subs(u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector2 {
-        self.vector_proj(self.surface.uder(u, v))
-    }
+    fn uder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uder(u, v)) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector2 {
-        self.vector_proj(self.surface.vder(u, v))
-    }
+    fn vder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vder(u, v)) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector2 {
-        self.vector_proj(self.surface.uuder(u, v))
-    }
+    fn uuder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uuder(u, v)) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector2 {
-        self.vector_proj(self.surface.uvder(u, v))
-    }
+    fn uvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uvder(u, v)) }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector2 {
-        self.vector_proj(self.surface.vvder(u, v))
-    }
+    fn vvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vvder(u, v)) }
 }
 
 /// Searches the parameter by Newton's method.
@@ -185,6 +173,10 @@ pub fn search_parameter3d<S: ParametricSurface3D>(
 }
 
 /// Creates the surface division
+///
+/// # Panics
+/// 
+/// `tol` must be more than `TOLERANCE`.
 #[inline(always)]
 pub fn parameter_division<S>(
     surface: &S,
@@ -195,6 +187,7 @@ where
     S: ParametricSurface,
     S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
 {
+    nonpositive_tolerance!(tol);
     let (mut udiv, mut vdiv) = (vec![urange.0, urange.1], vec![vrange.0, vrange.1]);
     sub_parameter_division(surface, (&mut udiv, &mut vdiv), tol);
     (udiv, vdiv)
@@ -203,8 +196,7 @@ where
 fn sub_parameter_division<S>(surface: &S, (udiv, vdiv): (&mut Vec<f64>, &mut Vec<f64>), tol: f64)
 where
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-{
+    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>, {
     let mut divide_flag0 = vec![false; udiv.len() - 1];
     let mut divide_flag1 = vec![false; vdiv.len() - 1];
 

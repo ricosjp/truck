@@ -108,9 +108,8 @@ impl ParameterDivision2D for Sphere {
         (urange, vrange): ((f64, f64), (f64, f64)),
         tol: f64,
     ) -> (Vec<f64>, Vec<f64>) {
-        if tol > self.radius {
-            panic!("Tolerance is larger than the radius of sphere.");
-        }
+        nonpositive_tolerance!(tol);
+        assert!(tol < self.radius, "Tolerance is larger than the radius of sphere.");
         let acos = f64::acos(1.0 - tol / self.radius);
         let u_div: usize = 1 + ((urange.1 - urange.0) / acos).floor() as usize;
         let v_div: usize = 1 + ((vrange.1 - vrange.0) / acos).floor() as usize;

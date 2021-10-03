@@ -48,6 +48,10 @@ pub trait MeshableShape {
     type MeshedShape: MeshedShape;
     /// Tessellates shapes. The division of curves and surfaces are by `ParameterDivision1D` and `ParameterDivision2D`,
     /// and the constrained Delauney triangulation is based on the crate [`spade`](https://crates.io/crates/spade).
+    /// 
+    /// # Panics
+    /// 
+    /// `tol` must be more than `TOLERANCE`.
     ///
     /// # Remarks
     ///
@@ -78,6 +82,7 @@ pub trait MeshableShape {
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C, S> {
     type MeshedShape = Shell<Point3, PolylineCurve, PolygonMesh>;
     fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+        nonpositive_tolerance!(tol);
         triangulation::tessellation(self, tol)
     }
 }
