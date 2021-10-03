@@ -129,7 +129,6 @@ impl IncludingPointInDomain for PolygonMesh {
 					self.positions()[face[i].pos],
 				]);
 				if tri.is_crossing(ray) {
-					println!("{}", tri.normal().dot(ray.direction));
 					counter += f64::signum(tri.normal().dot(ray.direction)) as isize;
 				}
 			}
