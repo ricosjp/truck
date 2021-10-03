@@ -354,6 +354,16 @@ impl Scene {
             .insert(object.render_id(), render_object)
             .is_none()
     }
+    /// Sets the visibility of a render object.
+    ///
+    /// If there does not exist the render object in the scene, does nothing and returns `false`.
+    #[inline(always)]
+    pub fn set_visibility<R: Rendered>(&mut self, object: &R, visible: bool) -> bool {
+        self.objects
+            .get_mut(&object.render_id())
+            .map(|obj| obj.visible = visible)
+            .is_some()
+    }
     /// Adds render objects to the scene.
     ///
     /// If there already exists a render object with the same ID,
@@ -368,14 +378,14 @@ impl Scene {
     }
     /// Removes a render object from the scene.
     ///
-    /// If there does not exist the render object in the scene, does nothing and returns false.
+    /// If there does not exist the render object in the scene, does nothing and returns `false`.
     #[inline(always)]
     pub fn remove_object<R: Rendered>(&mut self, object: &R) -> bool {
         self.objects.remove(&object.render_id()).is_some()
     }
     /// Removes render objects from the scene.
     ///
-    /// If there exists a render object which does not exist in the scene, returns false.
+    /// If there exists a render object which does not exist in the scene, returns `false`.
     #[inline(always)]
     pub fn remove_objects<'a, R, I>(&mut self, objects: I) -> bool
     where
@@ -536,6 +546,9 @@ impl Scene {
             });
             rpass.set_bind_group(0, &bind_group, &[]);
             for (_, object) in &self.objects {
+                if !object.visible {
+                    continue;
+                }
                 rpass.set_pipeline(&object.pipeline);
                 rpass.set_bind_group(1, &object.bind_group, &[]);
                 rpass.set_vertex_buffer(0, object.vertex_buffer.buffer.slice(..));

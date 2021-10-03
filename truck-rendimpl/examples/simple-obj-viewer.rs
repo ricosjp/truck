@@ -49,7 +49,6 @@ impl MyApp {
     }
 
     fn update_render_mode(&mut self) {
-        self.scene.clear_objects();
         match self.render_mode {
             RenderMode::NaiveSurface => {
                 self.instance.instance_state_mut().material = Material {
@@ -59,11 +58,15 @@ impl MyApp {
                     ambient_ratio: 0.02,
                     alpha_blend: false,
                 };
-                self.scene.add_object(&self.instance);
+                self.scene.update_bind_group(&self.instance);
+                self.scene.set_visibility(&self.instance, true);
+                self.scene.set_visibility(&self.wireframe, false);
             }
             RenderMode::NaiveWireFrame => {
                 self.wireframe.instance_state_mut().color = Vector4::new(1.0, 1.0, 1.0, 1.0);
-                self.scene.add_object(&self.wireframe);
+                self.scene.update_bind_group(&self.wireframe);
+                self.scene.set_visibility(&self.instance, false);
+                self.scene.set_visibility(&self.wireframe, true);
             }
             RenderMode::HiddenLineEliminate => {
                 self.instance.instance_state_mut().material = Material {
@@ -74,8 +77,10 @@ impl MyApp {
                     alpha_blend: false,
                 };
                 self.wireframe.instance_state_mut().color = Vector4::new(1.0, 1.0, 1.0, 1.0);
-                self.scene.add_object(&self.instance);
-                self.scene.add_object(&self.wireframe);
+                self.scene.update_bind_group(&self.instance);
+                self.scene.update_bind_group(&self.wireframe);
+                self.scene.set_visibility(&self.instance, true);
+                self.scene.set_visibility(&self.wireframe, true);
             }
             RenderMode::SurfaceAndWireFrame => {
                 self.instance.instance_state_mut().material = Material {
@@ -86,8 +91,10 @@ impl MyApp {
                     alpha_blend: false,
                 };
                 self.wireframe.instance_state_mut().color = Vector4::new(0.0, 0.0, 0.0, 1.0);
-                self.scene.add_object(&self.instance);
-                self.scene.add_object(&self.wireframe);
+                self.scene.update_bind_group(&self.instance);
+                self.scene.update_bind_group(&self.wireframe);
+                self.scene.set_visibility(&self.instance, true);
+                self.scene.set_visibility(&self.wireframe, true);
             }
         }
     }
@@ -130,10 +137,12 @@ impl App for MyApp {
             }],
             sample_count,
         };
-        let scene = Scene::new(handler.clone(), &scene_desc);
+        let mut scene = Scene::new(handler.clone(), &scene_desc);
         let creator = scene.instance_creator();
         let (instance, wireframe) =
             MyApp::load_obj(&creator, include_bytes!("teapot.obj").as_ref());
+        scene.add_object(&instance);
+        scene.add_object(&wireframe);
         let mut app = MyApp {
             scene,
             creator,
@@ -147,13 +156,14 @@ impl App for MyApp {
         app
     }
 
-    fn app_title<'a>() -> Option<&'a str> {
-        Some("simple obj viewer")
-    }
+    fn app_title<'a>() -> Option<&'a str> { Some("simple obj viewer") }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         let file = std::fs::File::open(path).unwrap();
+        self.scene.clear_objects();
         let (instance, wireframe) = MyApp::load_obj(&self.creator, file);
+        self.scene.add_object(&instance);
+        self.scene.add_object(&wireframe);
         self.instance = instance;
         self.wireframe = wireframe;
         self.update_render_mode();
@@ -278,11 +288,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) {
-        self.scene.render_scene(view);
-    }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
-fn main() {
-    MyApp::run();
-}
+fn main() { MyApp::run(); }
