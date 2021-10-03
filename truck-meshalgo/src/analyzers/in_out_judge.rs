@@ -13,9 +13,7 @@ struct Triangle([Point3; 3]);
 
 impl Triangle {
 	#[inline(always)]
-	fn normal(self) -> Vector3 {
-		(self[1] - self[0]).cross(self[2] - self[0]).normalize()
-	}
+	fn normal(self) -> Vector3 { (self[1] - self[0]).cross(self[2] - self[0]).normalize() }
 
 	fn is_crossing(self, ray: Ray) -> bool {
 		let a = self[0] - self[1];
@@ -26,7 +24,7 @@ impl Triangle {
 		} else {
 			let inv = mat.invert().unwrap();
 			let uvt = inv * (self[0] - ray.origin);
-			f64::abs(uvt[0] - 0.5) < 0.5 && f64::abs(uvt[1] - 0.5) < 0.5 && uvt[2] > 0.0
+			uvt[0] > 0.0 && uvt[1] > 0.0 && uvt[0] + uvt[1] < 1.0 && uvt[2] > 0.0
 		}
 	}
 }
@@ -60,7 +58,7 @@ pub trait IncludingPointInDomain {
 	/// Count signed number of faces crossing ray with origin `point` and direction `ray_direction`.
 	/// Counter increase if the dot product of the ray and the normal of a face is positive,
 	/// and decrease if it is negative.
-	/// 
+	///
 	/// # Examples
 	/// ```
 	/// use truck_meshalgo::prelude::*;
@@ -131,6 +129,7 @@ impl IncludingPointInDomain for PolygonMesh {
 					self.positions()[face[i].pos],
 				]);
 				if tri.is_crossing(ray) {
+					println!("{}", tri.normal().dot(ray.direction));
 					counter += f64::signum(tri.normal().dot(ray.direction)) as isize;
 				}
 			}
@@ -144,5 +143,22 @@ impl IncludingPointInDomain for PolygonMesh {
 		}
 		let dir = dir.normalize();
 		self.signed_crossing_faces(point, dir) >= 1
+	}
+}
+
+#[test]
+fn inside100() {
+	let positions = vec![
+		Point3::new(0.0, 0.0, 0.0),
+		Point3::new(1.0, 0.0, 0.0),
+		Point3::new(0.0, 1.0, 0.0),
+		Point3::new(0.0, 0.0, 1.0),
+	];
+	let faces = Faces::from_iter(vec![[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]]);
+	let simplex = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+
+	for _ in 0..100 {
+		assert!(simplex.inside(Point3::new(0.1, 0.1, 0.1)));
+		assert!(!simplex.inside(Point3::new(-0.1, 0.1, 0.1)));
 	}
 }
