@@ -1,6 +1,7 @@
 use truck_base::cgmath64::*;
 use truck_meshalgo::prelude::*;
 
+/// Intersection curve between two surfaces.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct IntersectionCurve<C, S> {
 	surface0: S,
@@ -143,6 +144,7 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 	) -> Option<Self> {
 		IntersectionCurveWithParameters::try_new(surface0, surface1, poly, tol).map(Into::into)
 	}
+	/// Perform polylining again within the tolerance range to generate a new lead polyline for optimization.
 	pub fn remeshing(&mut self) -> bool {
 		let pt = algo::curve::parameter_division(self, self.parameter_range(), self.tol).1;
 		self.leader = PolylineCurve(pt);
@@ -156,7 +158,7 @@ where
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	#[inline(always)]
-	pub fn search_triple(&self, t: f64) -> Option<(Point3, Point2, Point2)> {
+	pub(super) fn search_triple(&self, t: f64) -> Option<(Point3, Point2, Point2)> {
 		double_projection(
 			&self.surface0,
 			None,

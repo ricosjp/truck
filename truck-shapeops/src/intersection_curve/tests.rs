@@ -68,7 +68,7 @@ mod double_projection_tests {
 		let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
 		let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
 		for _ in 0..100 {
-			let t = 2.0 * std::f64::consts::PI * rand::random::<f64>();
+			let t = 2.0 * PI * rand::random::<f64>();
 			let r = 2.0 * rand::random::<f64>();
 			let p = Point3::new(r * f64::cos(t), r * f64::sin(t), 0.0);
 			let n = Vector3::new(-f64::sin(t), f64::cos(t), 0.0);
