@@ -68,7 +68,6 @@ impl App for MyApp {
                 a: BACKGROUND[3],
             },
             sample_count,
-            ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
         let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));

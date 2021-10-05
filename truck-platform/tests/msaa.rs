@@ -7,10 +7,10 @@ use wgpu::*;
 pub const PICTURE_WIDTH: u32 = 512;
 pub const PICTURE_HEIGHT: u32 = 512;
 
-fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
+fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &[u8]) {
     image::save_buffer(
         path,
-        &vec,
+        vec,
         PICTURE_WIDTH,
         PICTURE_HEIGHT,
         image::ColorType::Rgba8,
@@ -48,7 +48,7 @@ fn exec_msaa_test(backend: Backends, out_dir: &str) {
     scene.descriptor_mut().sample_count = 4;
     common::render_one(&mut scene, &texture1, &plane);
     let buffer1 = common::read_texture(&handler, &texture1);
-    save_buffer(out_dir.clone() + "sample_count_two.png", &buffer1);
+    save_buffer(out_dir + "sample_count_two.png", &buffer1);
     assert!(!common::same_buffer(&buffer0, &buffer1));
 }
 

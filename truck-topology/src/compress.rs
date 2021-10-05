@@ -193,7 +193,7 @@ fn compress_extract() {
     let cube = solid::cube();
     let shell0 = &cube.boundaries()[0];
     let shell1 = Shell::extract(shell0.compress()).unwrap();
-    assert!(same_topology(&shell0, &shell1));
+    assert!(same_topology(shell0, &shell1));
 }
 
 #[allow(dead_code)]

@@ -26,11 +26,17 @@ impl ParametricCurve for Segment {
             + (self.ends.1 - self.ends.0) * (t - self.range.0) / (self.range.1 - self.range.0)
     }
     #[inline(always)]
-    fn der(&self, _: f64) -> Vector3 { (self.ends.1 - self.ends.0) / (self.range.1 - self.range.0) }
+    fn der(&self, _: f64) -> Vector3 {
+        (self.ends.1 - self.ends.0) / (self.range.1 - self.range.0)
+    }
     #[inline(always)]
-    fn der2(&self, _: f64) -> Vector3 { Vector3::zero() }
+    fn der2(&self, _: f64) -> Vector3 {
+        Vector3::zero()
+    }
     #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { self.range }
+    fn parameter_range(&self) -> (f64, f64) {
+        self.range
+    }
 }
 
 impl ParameterTransform for Segment {
@@ -67,12 +73,9 @@ impl Concat<Segment> for Segment {
                 self.range.1,
                 rhs.range.0,
             ))
-        } else if !self.ends.1.near(&rhs.ends.0) {
-            Err(ConcatError::DisconnectedPoints(self.ends.1, rhs.ends.0))
-        // by this branch, this is not correctly implementation of concat
-        } else if !(self.ends.1 - self.ends.0)
-            .cross(rhs.ends.1 - rhs.ends.0)
-            .so_small()
+        } else if !self.ends.1.near(&rhs.ends.0)
+            // by this condition, this is not correctly implementation of concat
+            || !(self.ends.1 - self.ends.0).cross(rhs.ends.1 - rhs.ends.0).so_small()
         {
             Err(ConcatError::DisconnectedPoints(self.ends.1, rhs.ends.0))
         } else {
@@ -190,10 +193,7 @@ fn solid_cut_edge() {
         .map(|shell| {
             shell
                 .into_iter()
-                .map(|face| {
-                    let wires = face.boundaries().into_iter().map(|wire| wire).collect();
-                    Face::new(wires, ())
-                })
+                .map(|face| Face::new(face.boundaries(), ()))
                 .collect()
         })
         .collect();

@@ -26,7 +26,7 @@ fn body_shell(bottom: f64, height: f64, width: f64, thickness: f64) -> Shell {
 fn cylinder(bottom: f64, height: f64, radius: f64) -> Shell {
     let vertex = builder::vertex(Point3::new(0.0, bottom, radius));
     let circle = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0));
-    let disk = builder::try_attach_plane(&vec![circle]).unwrap();
+    let disk = builder::try_attach_plane(&[circle]).unwrap();
     let solid = builder::tsweep(&disk, Vector3::new(0.0, height, 0.0));
     solid.into_boundaries().pop().unwrap()
 }

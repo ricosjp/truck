@@ -234,12 +234,12 @@ impl App for MyApp {
         let position = Vector2::new(position.x, position.y);
         if self.rotate_flag {
             let matrix = &mut self.scene.descriptor_mut().camera.matrix;
-            let dir2d = &position - self.prev_cursor;
+            let dir2d = position - self.prev_cursor;
             if dir2d.so_small() {
                 return Self::default_control_flow();
             }
             let mut axis = dir2d[1] * matrix[0].truncate();
-            axis += dir2d[0] * &matrix[1].truncate();
+            axis += dir2d[0] * matrix[1].truncate();
             axis /= axis.magnitude();
             let angle = dir2d.magnitude() * 0.01;
             let mat = Matrix4::from_axis_angle(axis, Rad(angle));

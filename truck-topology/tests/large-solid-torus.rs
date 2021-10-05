@@ -51,6 +51,6 @@ fn main() {
     println!(
         "excute time: {}.{:03} sec",
         end_time.as_secs(),
-        end_time.subsec_nanos() / 1_000_000,
+        end_time.subsec_millis(),
     );
 }

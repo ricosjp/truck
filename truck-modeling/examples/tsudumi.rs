@@ -11,12 +11,12 @@ fn main() {
     let mut shell = builder::rsweep(&line, Point3::origin(), Vector3::unit_y(), Rad(7.0));
     let wires = shell.extract_boundaries();
     shell.push(
-        builder::try_attach_plane(&vec![wires[0].clone()])
+        builder::try_attach_plane(&[wires[0].clone()])
             .unwrap()
             .inverse(),
     );
     shell.push(
-        builder::try_attach_plane(&vec![wires[1].clone()])
+        builder::try_attach_plane(&[wires[1].clone()])
             .unwrap()
             .inverse(),
     );

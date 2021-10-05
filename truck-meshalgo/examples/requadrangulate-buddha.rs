@@ -18,7 +18,6 @@ fn main() {
     let instant = std::time::Instant::now();
     mesh.triangulate().quadrangulate(0.01, 1.0);
     let filter_time = instant.elapsed();
-    let mesh: PolygonMesh = mesh.into();
     let tris = mesh.tri_faces().len();
     let quads = mesh.quad_faces().len();
     let instant = std::time::Instant::now();
@@ -35,16 +34,16 @@ fn main() {
     println!(
         "file reading: {}.{:03} sec",
         read_time.as_secs(),
-        read_time.subsec_nanos() / 1_000_000,
+        read_time.subsec_millis(),
     );
     println!(
         "filter run time: {}.{:03} sec",
         filter_time.as_secs(),
-        filter_time.subsec_nanos() / 1_000_000
+        filter_time.subsec_millis(),
     );
     println!(
         "file writing: {}.{:03} sec",
         writing_time.as_secs(),
-        writing_time.subsec_nanos() / 1_000_000,
+        writing_time.subsec_millis(),
     );
 }

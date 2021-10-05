@@ -87,7 +87,7 @@ fn nontex_inst_state() -> PolygonState {
 fn exec_polygon_bgtest(
     scene: &mut Scene,
     instance: &PolygonInstance,
-    answer: &Vec<u8>,
+    answer: &[u8],
     id: usize,
     out_dir: String,
 ) -> bool {
@@ -98,7 +98,7 @@ fn exec_polygon_bgtest(
     let buffer = common::read_texture(scene.device_handler(), &texture);
     let path = format!("{}polygon-bgtest-{}.png", out_dir, id);
     common::save_buffer(path, &buffer, PICTURE_SIZE);
-    common::same_buffer(&answer, &buffer)
+    common::same_buffer(answer, &buffer)
 }
 
 fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {

@@ -64,7 +64,7 @@ impl MyRender {
         for _ in 0..NUM_OF_OBJECTS {
             let mut instance = original_mesh.clone_instance();
             instance.instance_state_mut().matrix = mat;
-            scene.add_object(&mut instance);
+            scene.add_object(&instance);
             self.instances.push(instance);
             mat = Matrix4::from_axis_angle(Vector3::unit_y(), rad) * mat;
         }
@@ -85,7 +85,7 @@ impl MyRender {
             *matrix = mat * *matrix;
             let obj_pos = matrix[3].truncate();
             let new_length = 5.0 + time.sin() + (time * 3.0).sin() / 3.0;
-            let obj_dir = &obj_pos / obj_pos.magnitude();
+            let obj_dir = obj_pos / obj_pos.magnitude();
             let move_vec = obj_dir * (new_length - obj_pos.magnitude());
             let mat = Matrix4::from_translation(move_vec);
             *matrix = mat * *matrix;
@@ -189,7 +189,7 @@ impl App for MyRender {
             let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
                 let camera = &mut self.scene.descriptor_mut().camera;
-                let dir2d = &position - prev_position;
+                let dir2d = position - prev_position;
                 if dir2d.so_small() {
                     return Self::default_control_flow();
                 }

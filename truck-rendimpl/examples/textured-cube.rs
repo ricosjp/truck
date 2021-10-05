@@ -62,7 +62,7 @@ impl App for MyApp {
         let mut bytes = Vec::new();
         tex_file.read_to_end(&mut bytes).unwrap();
         let texture = image::load_from_memory(&bytes).unwrap();
-        let texture = image2texture::image2texture(&handler, &texture);
+        let texture = image2texture::image2texture(handler, &texture);
         let state = PolygonState {
             matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
             material: Material {
@@ -136,7 +136,7 @@ impl App for MyApp {
             let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
                 let matrix = &mut self.scene.descriptor_mut().camera.matrix;
-                let dir2d = &position - prev_position;
+                let dir2d = position - prev_position;
                 if dir2d.so_small() {
                     return Self::default_control_flow();
                 }

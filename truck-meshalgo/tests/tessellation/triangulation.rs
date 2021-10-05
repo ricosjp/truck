@@ -1,7 +1,7 @@
 use super::*;
 use truck_topology::shell::ShellCondition;
 
-const SHAPE_JSONS: [&'static [u8]; 3] = [
+const SHAPE_JSONS: [&[u8]; 3] = [
     include_bytes!("bottle.json"),
     include_bytes!("punched-cube.json"),
     include_bytes!("torus-punched-cube.json"),

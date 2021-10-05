@@ -1274,17 +1274,17 @@ fn test_near_as_curve() {
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 2.5, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
     let control_points = vec![
-        control_points[0].clone(),
-        control_points[1].clone(),
-        control_points[2].clone(),
-        &control_points[3] * (5.0 / 6.0) + &control_points[2] * (1.0 / 6.0),
-        &control_points[4] * 0.5 + &control_points[3] * 0.5,
-        &control_points[5] * (1.0 / 6.0) + &control_points[4] * (5.0 / 6.0),
-        control_points[5].clone(),
-        control_points[6].clone(),
-        control_points[7].clone(),
+        control_points[0],
+        control_points[1],
+        control_points[2],
+        control_points[3] * (5.0 / 6.0) + control_points[2] * (1.0 / 6.0),
+        control_points[4] * 0.5 + control_points[3] * 0.5,
+        control_points[5] * (1.0 / 6.0) + control_points[4] * (5.0 / 6.0),
+        control_points[5],
+        control_points[6],
+        control_points[7],
     ];
-    let bspline1 = BSplineCurve::new(knot_vec, control_points.clone());
+    let bspline1 = BSplineCurve::new(knot_vec, control_points);
     let knot_vec = KnotVec::from(vec![
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
@@ -1298,7 +1298,7 @@ fn test_near_as_curve() {
         Vector4::new(1.0, 0.0, 0.0, 1.0),
         Vector4::new(1.0, 1.0, 1.0, 0.0),
     ];
-    let bspline2 = BSplineCurve::new(knot_vec, control_points.clone());
+    let bspline2 = BSplineCurve::new(knot_vec, control_points);
     assert!(bspline0.near_as_curve(&bspline1));
     assert!(!bspline0.near_as_curve(&bspline2));
 }
