@@ -17,13 +17,13 @@ pub trait GetOrInsert<K, V> {
 	///
 	/// let mut counter = 0;
 	/// let mut try_get_index = move || -> Option<usize> {
-	/// 	if counter % 2 == 0 {
-	/// 		counter += 1;
-	/// 		Some(counter / 2)
-	/// 	} else {
-	/// 		counter += 1;
-	/// 		None
-	/// 	}
+	///     if counter % 2 == 0 {
+	///         counter += 1;
+	///         Some(counter / 2)
+	///     } else {
+	///         counter += 1;
+	///         None
+	///     }
 	/// };
 	///
 	/// let mut map = HashMap::new();
@@ -66,13 +66,13 @@ pub trait GetOrInsert<K, V> {
 	///
 	/// let mut counter = 0;
 	/// let mut try_get_index = move || -> Option<usize> {
-	/// 	if counter % 2 == 0 {
-	/// 		counter += 1;
-	/// 		Some(counter / 2)
-	/// 	} else {
-	/// 		counter += 1;
-	/// 		None
-	/// 	}
+	///     if counter % 2 == 0 {
+	///         counter += 1;
+	///         Some(counter / 2)
+	///     } else {
+	///         counter += 1;
+	///         None
+	///     }
 	/// };
 	///
 	/// let mut map = HashMap::new();
@@ -131,6 +131,12 @@ where
 	}
 }
 
+impl<K: Copy + Eq + Hash> Default for IDMap<K> {
+	fn default() -> Self {
+		Self(HashMap::new())
+	}
+}
+
 /// Records the registered number.
 ///
 /// It can be used as a reverse lookup of an index when a separate array containing entities is available.
@@ -140,7 +146,9 @@ pub struct IDMap<K>(HashMap<K, usize>);
 impl<K: Copy + Eq + Hash> IDMap<K> {
 	/// Creates a new `IDMap`.
 	#[inline(always)]
-	pub fn new() -> Self { Self(HashMap::new()) }
+	pub fn new() -> Self {
+		Self::default()
+	}
 	/// Returns the registered number or insert key.
 	///
 	/// # Examples
@@ -168,5 +176,7 @@ impl<K> IntoIterator for IDMap<K> {
 	type Item = (K, usize);
 	type IntoIter = <HashMap<K, usize> as IntoIterator>::IntoIter;
 	#[inline(always)]
-	fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+	fn into_iter(self) -> Self::IntoIter {
+		self.0.into_iter()
+	}
 }

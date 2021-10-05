@@ -83,6 +83,15 @@ impl_bounded!(Vector3, Vector3, 0, 1, 2);
 impl_bounded!(Point3, Vector3, 0, 1, 2);
 impl_bounded!(Vector4, Vector4, 0, 1, 2, 3);
 
+impl<F, V> Default for BoundingBox<V>
+where
+    F: BaseFloat,
+    V: MetricSpace<Metric = F> + Index<usize, Output = F> + Bounded<F> + Copy
+{
+    #[inline(always)]
+    fn default() -> Self { BoundingBox(V::infinity(), V::neg_infinity()) }
+}
+
 impl<F, V> BoundingBox<V>
 where
     F: BaseFloat,
@@ -90,7 +99,7 @@ where
 {
     /// Creats an empty bounding box
     #[inline(always)]
-    pub fn new() -> BoundingBox<V> { BoundingBox(V::infinity(), V::neg_infinity()) }
+    pub fn new() -> Self { Self::default() }
     /// Adds a point to the bouding box.
     /// # Examples
     /// ```
