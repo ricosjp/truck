@@ -15,7 +15,7 @@ pub(super) fn connect_vertices<P: Clone, C: Clone, CP: Fn(&P, &P) -> C>(
     v1: &Vertex<P>,
     connect_points: &CP,
 ) -> Edge<P, C> {
-    Edge::debug_new(&v0, &v1, create_edge(v0, v1, connect_points))
+    Edge::debug_new(v0, v1, create_edge(v0, v1, connect_points))
 }
 
 pub(super) fn create_surface<P: Clone, C: Clone, S: Clone, CC: Fn(&C, &C) -> S>(

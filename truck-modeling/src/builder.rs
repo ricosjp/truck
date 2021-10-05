@@ -285,7 +285,7 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 /// assert!(builder::try_attach_plane(&wires).is_ok());
 /// ```
 #[inline(always)]
-pub fn try_attach_plane(wires: &Vec<Wire>) -> Result<Face> {
+pub fn try_attach_plane(wires: &[Wire]) -> Result<Face> {
     let pts = wires
         .iter()
         .flatten()
@@ -303,7 +303,7 @@ pub fn try_attach_plane(wires: &Vec<Wire>) -> Result<Face> {
         None => return Err(Error::WireNotInOnePlane),
     };
     let surface = Surface::Plane(plane);
-    Ok(Face::try_new(wires.clone(), surface)?)
+    Ok(Face::try_new(wires.to_owned(), surface)?)
 }
 
 /// Returns another topology whose points, curves, and surfaces are cloned.
