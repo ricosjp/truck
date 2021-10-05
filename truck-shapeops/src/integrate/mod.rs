@@ -3,23 +3,55 @@ use std::f64::consts::PI;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 
+/// Only solids consisting of faces whose surface is implemented this trait can be used for set operations.
+pub trait ShapeOpsSurface:
+	ParametricSurface3D
+	+ ParameterDivision2D
+	+ SearchParameter<Point = Point3, Parameter = (f64, f64)>
+	+ SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+	+ Invertible
+{
+}
+impl<S> ShapeOpsSurface for S where
+	S: ParametricSurface3D
+		+ ParameterDivision2D
+		+ SearchParameter<Point = Point3, Parameter = (f64, f64)>
+		+ SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+		+ Invertible
+{
+}
+
+/// Only solids consisting of edges whose curve is implemented this trait can be used for set operations.
+pub trait ShapeOpsCurve<S: ShapeOpsSurface>:
+	ParametricCurve3D
+	+ ParameterDivision1D<Point = Point3>
+	+ Cut
+	+ Invertible
+	+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
+	+ SearchParameter<Point = Point3, Parameter = f64>
+	+ SearchNearestParameter<Point = Point3, Parameter = f64>
+{
+}
+
+impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where
+	C: ParametricCurve3D
+		+ ParameterDivision1D<Point = Point3>
+		+ Cut
+		+ Invertible
+		+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
+		+ SearchParameter<Point = Point3, Parameter = f64>
+		+ SearchNearestParameter<Point = Point3, Parameter = f64>
+{
+}
+
 fn process_one_pair_of_shells<C, S>(
 	shell0: &Shell<Point3, C, S>,
 	shell1: &Shell<Point3, C, S>,
 	tol: f64,
 ) -> Option<(Shell<Point3, C, S>, Shell<Point3, C, S>)>
 where
-	C: Cut<Point = Point3, Vector = Vector3>
-		+ ParameterDivision1D<Point = Point3>
-		+ Invertible
-		+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
-		+ SearchParameter<Point = Point3, Parameter = f64>
-		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
-	S: ParametricSurface3D
-		+ ParameterDivision2D
-		+ SearchParameter<Point = Point3, Parameter = (f64, f64)>
-		+ SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
-		+ Invertible,
+	C: ShapeOpsCurve<S>,
+	S: ShapeOpsSurface,
 {
 	nonpositive_tolerance!(tol);
 	let poly_shell0 = shell0.triangulation(tol)?;
@@ -86,17 +118,8 @@ pub fn and<C, S>(
 	tol: f64,
 ) -> Option<Solid<Point3, C, S>>
 where
-	C: Cut<Point = Point3, Vector = Vector3>
-		+ ParameterDivision1D<Point = Point3>
-		+ Invertible
-		+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
-		+ SearchParameter<Point = Point3, Parameter = f64>
-		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
-	S: ParametricSurface3D
-		+ ParameterDivision2D
-		+ SearchParameter<Point = Point3, Parameter = (f64, f64)>
-		+ SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
-		+ Invertible,
+	C: ShapeOpsCurve<S>,
+	S: ShapeOpsSurface,
 {
 	let mut iter0 = solid0.boundaries().iter();
 	let mut iter1 = solid1.boundaries().iter();
