@@ -3,7 +3,7 @@ use crate::filters::NormalFilters;
 use std::collections::HashMap;
 use truck_base::maputil::GetOrInsert;
 
-type CDT<V, K> = ConstrainedDelaunayTriangulation<V, K>;
+type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
 type MeshedShell = Shell<Point3, PolylineCurve, PolygonMesh>;
 
 /// Tessellates faces
@@ -117,7 +117,7 @@ impl Polyline {
     }
 
     /// Inserts points and adds constraint into triangulation.
-    fn insert_to(&self, triangulation: &mut CDT<[f64; 2], impl DelaunayKernel<f64>>) {
+    fn insert_to(&self, triangulation: &mut Cdt<[f64; 2], impl DelaunayKernel<f64>>) {
         let poly2tri: Vec<usize> = self
             .positions
             .iter()
@@ -142,7 +142,7 @@ impl Polyline {
 /// Tessellates one surface trimmed by polyline.
 fn trimming_tessellation<S>(surface: &S, polyline: &Polyline, tol: f64) -> PolygonMesh
 where S: MeshableSurface {
-    let mut triangulation = CDT::<[f64; 2], FloatKernel>::new();
+    let mut triangulation = Cdt::<[f64; 2], FloatKernel>::new();
     polyline.insert_to(&mut triangulation);
     insert_surface(&mut triangulation, surface, polyline, tol);
     let mut mesh = triangulation_into_polymesh(
@@ -157,7 +157,7 @@ where S: MeshableSurface {
 
 /// Inserts parameter divisions into triangulation.
 fn insert_surface(
-    triangulation: &mut CDT<[f64; 2], impl DelaunayKernel<f64>>,
+    triangulation: &mut Cdt<[f64; 2], impl DelaunayKernel<f64>>,
     surface: &impl MeshableSurface,
     polyline: &Polyline,
     tol: f64,

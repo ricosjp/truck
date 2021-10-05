@@ -141,7 +141,7 @@ impl MyApp {
             ..Default::default()
         };
         (
-            creator.create_instance(&mesh_solid.into_polygon(), &polygon_state),
+            creator.create_instance(&mesh_solid.to_polygon(), &polygon_state),
             creator.create_instance(&curves, &wire_state),
         )
     }

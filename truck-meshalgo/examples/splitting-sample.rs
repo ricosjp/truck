@@ -14,8 +14,8 @@ fn main() {
     let (planes, others) = mesh.extract_planes(0.01);
     let planes = mesh.create_mesh_by_face_indices(&planes);
     let others = mesh.create_mesh_by_face_indices(&others);
-    let planes_parts = planes.into_components(true);
-    let others_parts = others.into_components(true);
+    let planes_parts = planes.components(true);
+    let others_parts = others.components(true);
 
     std::fs::DirBuilder::new()
         .recursive(true)

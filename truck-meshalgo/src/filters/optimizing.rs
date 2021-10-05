@@ -9,6 +9,7 @@ pub trait OptimizingFilter {
     /// remove all unused position, texture coordinates, and normal vectors.
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     /// let positions = vec![
@@ -28,6 +29,7 @@ pub trait OptimizingFilter {
     /// Removes degenerate polygons.
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     /// let positions = vec![
@@ -57,6 +59,7 @@ pub trait OptimizingFilter {
     ///
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     /// let positions = vec![
@@ -154,9 +157,9 @@ impl OptimizingFilter for PolygonMesh {
             .collect::<Vec<_>>();
         let pos_map = sub_put_together_same_attrs(&normalized_positions);
         all_pos_mut(mesh.faces).for_each(|idx| *idx = pos_map[*idx]);
-        let uv_map = sub_put_together_same_attrs(&mesh.uv_coords);
+        let uv_map = sub_put_together_same_attrs(mesh.uv_coords);
         all_uv_mut(mesh.faces).for_each(|idx| *idx = uv_map[*idx]);
-        let nor_map = sub_put_together_same_attrs(&mesh.normals);
+        let nor_map = sub_put_together_same_attrs(mesh.normals);
         all_nor_mut(mesh.faces).for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
         self
@@ -204,11 +207,10 @@ enum QuadrangleType {
 }
 
 fn degenerate_quadrangle(quad: [Vertex; 4]) -> QuadrangleType {
-    if quad[0].pos == quad[2].pos || quad[1].pos == quad[3].pos {
-        QuadrangleType::TotallyDegenerate
-    } else if quad[0].pos == quad[1].pos && quad[2].pos == quad[3].pos {
-        QuadrangleType::TotallyDegenerate
-    } else if quad[1].pos == quad[2].pos && quad[3].pos == quad[0].pos {
+    if (quad[0].pos == quad[2].pos || quad[1].pos == quad[3].pos)
+        || (quad[0].pos == quad[1].pos && quad[2].pos == quad[3].pos)
+        || quad[1].pos == quad[2].pos && quad[3].pos == quad[0].pos
+    {
         QuadrangleType::TotallyDegenerate
     } else if quad[0].pos == quad[1].pos || quad[1].pos == quad[2].pos {
         QuadrangleType::Triangle([quad[0], quad[2], quad[3]])
@@ -237,7 +239,8 @@ fn split_into_nondegenerate(poly: Vec<Vertex>) -> Vec<Vec<Vertex>> {
 }
 
 trait CastIntVector:
-    Sized + ElementWise<f64> + Mul<f64, Output = Self> + Div<f64, Output = Self> {
+    Sized + ElementWise<f64> + Mul<f64, Output = Self> + Div<f64, Output = Self>
+{
     type IntVector: Copy + std::hash::Hash + Eq;
     fn cast_int(&self) -> Self::IntVector;
 }
@@ -246,7 +249,9 @@ macro_rules! impl_cast_int {
     ($typename: ident, $n: expr) => {
         impl CastIntVector for $typename {
             type IntVector = [i64; $n];
-            fn cast_int(&self) -> [i64; $n] { self.cast::<i64>().unwrap().into() }
+            fn cast_int(&self) -> [i64; $n] {
+                self.cast::<i64>().unwrap().into()
+            }
         }
     };
 }
@@ -258,7 +263,9 @@ impl_cast_int!(Point3, 3);
 mod tests {
     use super::*;
 
-    fn into_vertices(iter: &[usize]) -> Vec<Vertex> { iter.iter().map(|i| i.into()).collect() }
+    fn into_vertices(iter: &[usize]) -> Vec<Vertex> {
+        iter.iter().map(|i| i.into()).collect()
+    }
 
     #[test]
     fn degenerate_polygon_test() {

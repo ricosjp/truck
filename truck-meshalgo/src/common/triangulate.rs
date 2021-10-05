@@ -83,7 +83,7 @@ impl<'a> Triangulate<'a> {
         }
     }
     #[inline(always)]
-    pub fn entity(&self) -> &PolygonMesh { &self.entity }
+    pub fn entity(&self) -> &PolygonMesh { self.entity }
 }
 
 impl<'a> IntoIterator for &'a Triangulate<'a> {

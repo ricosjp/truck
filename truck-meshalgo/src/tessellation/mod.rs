@@ -4,14 +4,14 @@ use spade::kernels::*;
 use truck_topology::{*, Vertex};
 
 /// Gathered the traits used in tessellation.
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub trait PolylineableCurve: ParametricCurve3D + Invertible + ParameterDivision1D<Point = Point3> {}
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 impl<C: ParametricCurve3D + Invertible + ParameterDivision1D<Point = Point3>> PolylineableCurve for C {}
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 /// Gathered the traits used in tessellation.
 pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<Point = Point3, Parameter = (f64, f64)> {}
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<Point = Point3, Parameter = (f64, f64)>> MeshableSurface for S {}
 
 type PolylineCurve = truck_polymesh::PolylineCurve<Point3>;
@@ -19,11 +19,11 @@ type PolylineCurve = truck_polymesh::PolylineCurve<Point3>;
 /// Trait for converting tessellated shape into polygon.
 pub trait MeshedShape {
     /// Converts tessellated shape into polygon.
-    fn into_polygon(&self) -> PolygonMesh;
+    fn to_polygon(&self) -> PolygonMesh;
 }
 
 impl MeshedShape for Shell<Point3, PolylineCurve, PolygonMesh> {
-    fn into_polygon(&self) -> PolygonMesh {
+    fn to_polygon(&self) -> PolygonMesh {
         let mut polygon = PolygonMesh::default();
         self.face_iter().for_each(|face| {
             polygon.merge(face.oriented_surface());
@@ -33,10 +33,10 @@ impl MeshedShape for Shell<Point3, PolylineCurve, PolygonMesh> {
 }
 
 impl MeshedShape for Solid<Point3, PolylineCurve, PolygonMesh> {
-    fn into_polygon(&self) -> PolygonMesh {
+    fn to_polygon(&self) -> PolygonMesh {
         let mut polygon = PolygonMesh::default();
         self.boundaries().iter().for_each(|shell| {
-            polygon.merge(shell.into_polygon());
+            polygon.merge(shell.to_polygon());
         });
         polygon
     }
@@ -69,7 +69,7 @@ pub trait MeshableShape {
     /// let cube = builder::tsweep(&f, Vector3::unit_z());
     ///
     /// // cube is Solid, however, the tessellated mesh is not closed.
-    /// let mut mesh = cube.triangulation(0.01).unwrap().into_polygon();
+    /// let mut mesh = cube.triangulation(0.01).unwrap().to_polygon();
     /// assert!(mesh.shell_condition() != ShellCondition::Closed);
     ///
     /// // use optimization filters!

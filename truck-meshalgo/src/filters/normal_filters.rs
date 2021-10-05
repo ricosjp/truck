@@ -7,6 +7,7 @@ pub trait NormalFilters {
     /// that has irregular normals.
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     ///
@@ -32,6 +33,7 @@ pub trait NormalFilters {
     /// # Examples
     /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     /// let positions = vec![
@@ -74,6 +76,7 @@ pub trait NormalFilters {
     /// # Examples
     /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     /// let positions = vec![
@@ -113,7 +116,7 @@ pub trait NormalFilters {
     /// ```
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
-    /// 
+    ///
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
     ///     Point3::new(1.0, 0.0, 0.0),
@@ -140,7 +143,7 @@ pub trait NormalFilters {
     /// ```
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
-    /// 
+    ///
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
     ///     Point3::new(1.0, 0.0, 0.0),
@@ -185,7 +188,7 @@ impl NormalFilters for PolygonMesh {
         let (positions, normals, faces) = (&*mesh.positions, &*mesh.normals, &mut *mesh.faces);
         for face in faces.face_iter_mut() {
             let normal = face.iter().fold(Vector3::zero(), |normal, v| {
-                normal + v.nor.map(|i| normals[i]).unwrap_or(Vector3::zero())
+                normal + v.nor.map(|i| normals[i]).unwrap_or_else(Vector3::zero)
             });
             let face_normal = FaceNormal::new(positions, face, 0).normal;
             if normal.dot(face_normal) < 0.0 {
@@ -201,10 +204,12 @@ impl NormalFilters for PolygonMesh {
         for face in faces.face_iter_mut() {
             let face_normal = FaceNormal::new(positions, face, 0).normal;
             face.iter_mut().for_each(|v| {
-                v.nor.as_mut().map(|idx| {
-                    if normals[*idx].dot(face_normal) < 0.0 {
-                        normals.push(-normals[*idx]);
-                        *idx = normals.len() - 1;
+                v.nor = v.nor.map(|idx| {
+                    if normals[idx].dot(face_normal) < 0.0 {
+                        normals.push(-normals[idx]);
+                        normals.len() - 1
+                    } else {
+                        idx
                     }
                 });
             })

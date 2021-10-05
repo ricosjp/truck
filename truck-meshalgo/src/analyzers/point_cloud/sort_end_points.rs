@@ -79,7 +79,7 @@ where
 
 fn sorted_endpoints_by_polymesh_points(
     polygon: &Triangulate,
-    points: &Vec<Point3>,
+    points: &[Point3],
     tol: f64,
 ) -> Vec<EndPoint> {
     sorted_endpoints(
@@ -97,7 +97,7 @@ fn sorted_endpoints_by_polymesh_points(
 
 pub fn pointcloud_in_polygon_neighborhood(
     polygon: &PolygonMesh,
-    points: &Vec<Point3>,
+    points: &[Point3],
     tol: f64,
 ) -> bool {
     nonpositive_tolerance!(tol, 0.0);

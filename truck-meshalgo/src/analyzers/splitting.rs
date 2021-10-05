@@ -6,6 +6,7 @@ pub trait Splitting {
     /// Creates a sub mesh by the face indices.
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::analyzers::*;
     ///
@@ -50,6 +51,7 @@ pub trait Splitting {
     /// `tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::analyzers::*;
     /// let positions = vec![
@@ -81,6 +83,7 @@ pub trait Splitting {
     /// whose vertices has the same positions (and normals if `use_normal == true`).
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::{analyzers::*, filters::*};
     ///
@@ -106,16 +109,16 @@ pub trait Splitting {
     /// mesh.add_naive_normals(true).put_together_same_attrs();
     ///
     /// // into components with normals
-    /// let components = mesh.into_components(true);
+    /// let components = mesh.components(true);
     /// // The number of components is six because the mesh is a cube.
     /// assert_eq!(components.len(), 6);
     ///
     /// // into components without normals
-    /// let components = mesh.into_components(false);
+    /// let components = mesh.components(false);
     /// // The number of components is one because the mesh is a connected cube.
     /// assert_eq!(components.len(), 1);
     /// ```
-    fn into_components(&self, use_normal: bool) -> Vec<Vec<usize>>;
+    fn components(&self, use_normal: bool) -> Vec<Vec<usize>>;
 }
 
 impl Splitting for PolygonMesh {
@@ -134,7 +137,7 @@ impl Splitting for PolygonMesh {
         })
     }
 
-    fn into_components(&self, use_normal: bool) -> Vec<Vec<usize>> {
+    fn components(&self, use_normal: bool) -> Vec<Vec<usize>> {
         let face_adjacency = self.faces().face_adjacency(use_normal);
         get_components(&face_adjacency)
     }
@@ -225,7 +228,7 @@ impl ExperimentalSplitters for PolygonMesh {
 /// * adjacency - the adjacency matrix
 /// # Return
 /// * the list of the indices of faces contained in each components
-fn get_components(adjacency: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
+fn get_components(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
     let mut unchecked = vec![true; adjacency.len()];
     let mut components = Vec::new();
     loop {
@@ -264,33 +267,27 @@ fn is_in_the_plane(positions: &[Point3], normals: &[Vector3], face: &[Vertex], t
 
 fn is_signed_up_upper(
     face: &[Vertex],
-    gcurve: &Vec<f64>,
+    gcurve: &[f64],
     preferred_upper: bool,
     threshold: f64,
 ) -> bool {
     if preferred_upper {
-        match face.as_ref().iter().find(|v| gcurve[v.pos] > threshold) {
-            Some(_) => true,
-            None => false,
-        }
+        face.as_ref().iter().any(|v| gcurve[v.pos] > threshold)
     } else {
-        match face.as_ref().iter().find(|v| gcurve[v.pos] < threshold) {
-            Some(_) => false,
-            None => true,
-        }
+        face.as_ref().iter().all(|v| gcurve[v.pos] > threshold)
     }
 }
 
 fn get_angle(positions: &[Point3], face: &[Vertex], idx0: usize, idx1: usize, idx2: usize) -> f64 {
-    let vec0 = &positions[face[idx1].pos] - &positions[face[idx0].pos];
-    let vec1 = &positions[face[idx2].pos] - &positions[face[idx0].pos];
+    let vec0 = positions[face[idx1].pos] - positions[face[idx0].pos];
+    let vec1 = positions[face[idx2].pos] - positions[face[idx0].pos];
     vec0.angle(vec1).0
 }
 
-fn add_weights(weights: &mut Vec<f64>, positions: &[Point3], face: &[Vertex]) {
+fn add_weights(weights: &mut [f64], positions: &[Point3], face: &[Vertex]) {
     let area = (2..face.len()).fold(0.0, |sum, i| {
-        let vec0 = &positions[face[i - 1].pos] - &positions[face[0].pos];
-        let vec1 = &positions[face[i].pos] - &positions[face[0].pos];
+        let vec0 = positions[face[i - 1].pos] - positions[face[0].pos];
+        let vec1 = positions[face[i].pos] - positions[face[0].pos];
         sum + (vec0.cross(vec1)).magnitude() / 2.0
     }) / (face.len() as f64);
     for v in face {
@@ -317,7 +314,7 @@ fn into_components_test() {
     let positions = vec![Point3::origin(); 8];
     let normals = vec![Vector3::unit_x(); 8];
     let mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
-    let comp = mesh.into_components(true);
+    let comp = mesh.components(true);
     assert_eq!(comp.len(), 2);
     assert_eq!(comp[0], vec![0, 1, 4]);
     assert_eq!(comp[1], vec![2, 3]);
