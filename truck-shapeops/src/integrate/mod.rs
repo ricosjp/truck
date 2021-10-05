@@ -48,7 +48,7 @@ fn process_one_pair_of_shells<C, S>(
 	shell0: &Shell<Point3, C, S>,
 	shell1: &Shell<Point3, C, S>,
 	tol: f64,
-) -> Option<(Shell<Point3, C, S>, Shell<Point3, C, S>)>
+) -> Option<[Shell<Point3, C, S>; 2]>
 where
 	C: ShapeOpsCurve<S>,
 	S: ShapeOpsSurface,
@@ -56,13 +56,16 @@ where
 	nonpositive_tolerance!(tol);
 	let poly_shell0 = shell0.triangulation(tol)?;
 	let poly_shell1 = shell1.triangulation(tol)?;
-	let (loops_store0, _, loops_store1, _) =
-		loops_store::create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1, tol)?;
-	let mut cls0 = divide_face::divide_faces(&shell0, &loops_store0, tol)?;
+	let loops_store::LoopsStoreQuadruple {
+		geom_loops_store0: loops_store0,
+		geom_loops_store1: loops_store1,
+		..
+	} = loops_store::create_loops_stores(shell0, &poly_shell0, shell1, &poly_shell1, tol)?;
+	let mut cls0 = divide_face::divide_faces(shell0, &loops_store0, tol)?;
 	cls0.integrate_by_component();
-	let mut cls1 = divide_face::divide_faces(&shell1, &loops_store1, tol)?;
+	let mut cls1 = divide_face::divide_faces(shell1, &loops_store1, tol)?;
 	cls1.integrate_by_component();
-	let (mut and0, mut or0, unknown0) = cls0.and_or_unknown();
+	let [mut and0, mut or0, unknown0] = cls0.and_or_unknown();
 	unknown0.into_iter().for_each(|face| {
 		let pt = face.boundaries()[0]
 			.vertex_iter()
@@ -84,7 +87,7 @@ where
 			or0.push(face);
 		}
 	});
-	let (mut and1, mut or1, unknown1) = cls1.and_or_unknown();
+	let [mut and1, mut or1, unknown1] = cls1.and_or_unknown();
 	unknown1.into_iter().for_each(|face| {
 		let pt = face.boundaries()[0]
 			.vertex_iter()
@@ -108,7 +111,7 @@ where
 	});
 	and0.append(&mut and1);
 	or0.append(&mut or1);
-	Some((and0, or0))
+	Some([and0, or0])
 }
 
 /// AND operation between two solids.
@@ -125,12 +128,14 @@ where
 	let mut iter1 = solid1.boundaries().iter();
 	let shell0 = iter0.next().unwrap();
 	let shell1 = iter1.next().unwrap();
-	let (mut and_shell, _) = process_one_pair_of_shells(shell0, shell1, tol)?;
+	let [mut and_shell, _] = process_one_pair_of_shells(shell0, shell1, tol)?;
 	for shell in iter0 {
-		and_shell = process_one_pair_of_shells(&and_shell, shell, tol)?.0;
+		let [res, _] = process_one_pair_of_shells(&and_shell, shell, tol)?;
+		and_shell = res;
 	}
 	for shell in iter1 {
-		and_shell = process_one_pair_of_shells(&and_shell, shell, tol)?.0;
+		let [res, _] = process_one_pair_of_shells(&and_shell, shell, tol)?;
+		and_shell = res;
 	}
 	let boundaries = and_shell.connected_components();
 	Some(Solid::new(boundaries))
@@ -159,12 +164,14 @@ where
 	let mut iter1 = solid1.boundaries().iter();
 	let shell0 = iter0.next().unwrap();
 	let shell1 = iter1.next().unwrap();
-	let (_, mut or_shell) = process_one_pair_of_shells(shell0, shell1, tol)?;
+	let [_, mut or_shell] = process_one_pair_of_shells(shell0, shell1, tol)?;
 	for shell in iter0 {
-		or_shell = process_one_pair_of_shells(&or_shell, shell, tol)?.1;
+		let [_, res] = process_one_pair_of_shells(&or_shell, shell, tol)?;
+		or_shell = res;
 	}
 	for shell in iter1 {
-		or_shell = process_one_pair_of_shells(&or_shell, shell, tol)?.1;
+		let [_, res] = process_one_pair_of_shells(&or_shell, shell, tol)?;
+		or_shell = res;
 	}
 	let boundaries = or_shell.connected_components();
 	Some(Solid::new(boundaries))

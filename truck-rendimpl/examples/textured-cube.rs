@@ -62,24 +62,24 @@ impl App for MyApp {
         let mut bytes = Vec::new();
         tex_file.read_to_end(&mut bytes).unwrap();
         let texture = image::load_from_memory(&bytes).unwrap();
-        let texture = image2texture::image2texture(&handler, &texture);
+        let texture = image2texture::image2texture(handler, &texture);
         let state = PolygonState {
-                matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
-                material: Material {
-                    albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
-                    roughness: 0.9,
-                    reflectance: 0.04,
-                    ambient_ratio: 0.05,
-                    background_ratio: 0.0,
-                    alpha_blend: false,
-                },
-                texture: Some(std::sync::Arc::new(texture)),
-                backface_culling: true,
+            matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
+            material: Material {
+                albedo: Vector4::new(0.402, 0.262, 0.176, 1.0),
+                roughness: 0.9,
+                reflectance: 0.04,
+                ambient_ratio: 0.05,
+                background_ratio: 0.0,
+                alpha_blend: false,
+            },
+            texture: Some(std::sync::Arc::new(texture)),
+            backface_culling: true,
         };
         let mesh = Self::create_cube()
             .triangulation(0.05)
             .unwrap()
-            .into_polygon();
+            .to_polygon();
         let shape: PolygonInstance = scene.instance_creator().create_instance(&mesh, &state);
         scene.add_object(&shape);
         MyApp {
@@ -91,9 +91,7 @@ impl App for MyApp {
         }
     }
 
-    fn app_title<'a>() -> Option<&'a str> {
-        Some("textured cube")
-    }
+    fn app_title<'a>() -> Option<&'a str> { Some("textured cube") }
 
     fn mouse_input(&mut self, state: ElementState, button: MouseButton) -> ControlFlow {
         match button {
@@ -138,7 +136,7 @@ impl App for MyApp {
             let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
                 let matrix = &mut self.scene.descriptor_mut().camera.matrix;
-                let dir2d = &position - prev_position;
+                let dir2d = position - prev_position;
                 if dir2d.so_small() {
                     return Self::default_control_flow();
                 }
@@ -216,11 +214,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) {
-        self.scene.render_scene(view);
-    }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
-fn main() {
-    MyApp::run();
-}
+fn main() { MyApp::run(); }

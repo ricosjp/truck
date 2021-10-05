@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use truck_base::{cgmath64::*, tolerance::*};
 use truck_meshalgo::prelude::PolylineCurve;
 
-pub fn construct_polylines(lines: &Vec<(Point3, Point3)>) -> Vec<PolylineCurve<Point3>> {
-	let mut graph: Graph = lines.into_iter().collect();
+pub fn construct_polylines(lines: &[(Point3, Point3)]) -> Vec<PolylineCurve<Point3>> {
+	let mut graph: Graph = lines.iter().collect();
 	let mut res = Vec::new();
 	while !graph.is_empty() {
 		let (mut idx, node) = graph.get_one();

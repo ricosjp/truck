@@ -1,3 +1,4 @@
+use super::*;
 use truck_polymesh::*;
 use truck_meshalgo::filters::*;
 
@@ -37,7 +38,7 @@ fn triangulate_test() {
         &[4, 5, 6, 7],
     ]);
     let tri_mesh = PolygonMesh::new(positions.clone(), Vec::new(), Vec::new(), tri_faces);
-    let mut quad_mesh = PolygonMesh::new(positions.clone(), Vec::new(), Vec::new(), quad_faces);
+    let mut quad_mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), quad_faces);
     quad_mesh.triangulate();
     assert_eq!(tri_mesh.faces(), quad_mesh.faces());
 }
@@ -78,7 +79,7 @@ fn quadrangulate_test() {
         &[4, 5, 6, 7],
     ]);
     let mut tri_mesh = PolygonMesh::new(positions.clone(), Vec::new(), Vec::new(), tri_faces);
-    let quad_mesh = PolygonMesh::new(positions.clone(), Vec::new(), Vec::new(), quad_faces);
+    let quad_mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), quad_faces);
     tri_mesh.quadrangulate(TOLERANCE, TOLERANCE);
     assert_eq!(tri_mesh.faces(), quad_mesh.faces());
 }

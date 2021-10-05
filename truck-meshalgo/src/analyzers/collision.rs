@@ -143,7 +143,7 @@ fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> impl Iterator<Item 
                 }
             },
         )
-        .flat_map(|x| x)
+        .flatten()
 }
 
 fn disjoint_bdbs(tri0: [Point3; 3], tri1: [Point3; 3]) -> bool {

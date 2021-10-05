@@ -286,7 +286,7 @@ where
     C0::Vector: Debug + Tolerance,
     C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
     C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>, {
-    let concatted = curve0.try_concat(&curve1).unwrap();
+    let concatted = curve0.try_concat(curve1).unwrap();
     let (t0, t1) = curve0.parameter_range();
     let (_, t2) = curve1.parameter_range();
     assert_near!(concatted.parameter_range().0, t0);

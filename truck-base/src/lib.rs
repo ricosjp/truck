@@ -19,7 +19,7 @@ pub mod cgmath64;
 pub mod cgmath_extend_traits;
 /// ID structure with `Copy`, `Hash` and `Eq` using raw pointers
 pub mod id;
-/// Setting Tolerance
-pub mod tolerance;
 /// Get or insert trait
 pub mod maputil;
+/// Setting Tolerance
+pub mod tolerance;

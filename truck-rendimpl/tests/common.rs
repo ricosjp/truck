@@ -35,9 +35,9 @@ impl<'a> Rendered for Plane<'a> {
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         writeln!(&mut std::io::stderr(), "create vertex buffer").unwrap();
         let vertex_buffer =
-            BufferHandler::from_slice(&[0 as u32, 1, 2, 3], handler.device(), BufferUsages::VERTEX);
+            BufferHandler::from_slice(&[0, 1, 2, 3], handler.device(), BufferUsages::VERTEX);
         let index_buffer = BufferHandler::from_slice(
-            &[0 as u32, 1, 2, 2, 1, 3],
+            &[0, 1, 2, 2, 1, 3],
             handler.device(),
             BufferUsages::INDEX,
         );
@@ -161,8 +161,8 @@ pub fn gradation_texture(scene: &mut Scene) -> Texture {
     let config = scene.config();
     let tex_desc = texture_descriptor(&config);
     let texture = scene.device().create_texture(&tex_desc);
-    let mut plane = new_plane!("shaders/plane.wgsl", "vs_main", "gradation_texture");
-    render_one(scene, &texture, &mut plane);
+    let plane = new_plane!("shaders/plane.wgsl", "vs_main", "gradation_texture");
+    render_one(scene, &texture, &plane);
     texture
 }
 
@@ -217,18 +217,18 @@ pub fn texture_descriptor(config: &SurfaceConfiguration) -> TextureDescriptor<'s
     }
 }
 
-pub fn texture_copy_view<'a>(texture: &'a Texture) -> ImageCopyTexture<'a> {
+pub fn texture_copy_view(texture: &Texture) -> ImageCopyTexture {
     ImageCopyTexture {
-        texture: &texture,
+        texture,
         mip_level: 0,
         origin: Origin3d::ZERO,
         aspect: TextureAspect::All,
     }
 }
 
-pub fn buffer_copy_view<'a>(buffer: &'a Buffer, size: (u32, u32)) -> ImageCopyBuffer<'a> {
+pub fn buffer_copy_view(buffer: &Buffer, size: (u32, u32)) -> ImageCopyBuffer {
     ImageCopyBuffer {
-        buffer: &buffer,
+        buffer,
         layout: ImageDataLayout {
             offset: 0,
             bytes_per_row: (size.0 * 4).try_into().ok(),
@@ -243,7 +243,7 @@ pub fn read_buffer(device: &Device, buffer: &Buffer) -> Vec<u8> {
     device.poll(Maintain::Wait);
     futures::executor::block_on(async {
         match buffer_future.await {
-            Ok(_) => buffer_slice.get_mapped_range().iter().map(|b| *b).collect(),
+            Ok(_) => buffer_slice.get_mapped_range().iter().copied().collect(),
             Err(_) => panic!("failed to run compute on gpu!"),
         }
     })
@@ -260,7 +260,7 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
     });
     let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
     encoder.copy_texture_to_buffer(
-        texture_copy_view(&texture),
+        texture_copy_view(texture),
         buffer_copy_view(&buffer, (config.width, config.height)),
         Extent3d {
             width: config.width,
@@ -272,17 +272,17 @@ pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
     read_buffer(device, &buffer)
 }
 
-pub fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>, size: (u32, u32)) {
-    image::save_buffer(path, &vec, size.0, size.1, image::ColorType::Rgba8).unwrap();
+pub fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &[u8], size: (u32, u32)) {
+    image::save_buffer(path, vec, size.0, size.1, image::ColorType::Rgba8).unwrap();
 }
 
-pub fn same_buffer(vec0: &Vec<u8>, vec1: &Vec<u8>) -> bool {
+pub fn same_buffer(vec0: &[u8], vec1: &[u8]) -> bool {
     vec0.par_iter()
         .zip(vec1)
         .all(move |(i, j)| std::cmp::max(i, j) - std::cmp::min(i, j) < 3)
 }
 
-pub fn count_difference(vec0: &Vec<u8>, vec1: &Vec<u8>) -> usize {
+pub fn count_difference(vec0: &[u8], vec1: &[u8]) -> usize {
     vec0.par_iter()
         .zip(vec1)
         .filter(move |(i, j)| *std::cmp::max(i, j) - *std::cmp::min(i, j) > 2)

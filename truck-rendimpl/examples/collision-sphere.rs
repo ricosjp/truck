@@ -146,12 +146,12 @@ impl App for MyApp {
         if self.rotate_flag {
             let matrix = &mut self.scene.descriptor_mut().camera.matrix;
             let position = Vector2::new(position.x, position.y);
-            let dir2d = &position - self.prev_cursor;
+            let dir2d = position - self.prev_cursor;
             if dir2d.so_small() {
                 return Self::default_control_flow();
             }
             let mut axis = dir2d[1] * matrix[0].truncate();
-            axis += dir2d[0] * &matrix[1].truncate();
+            axis += dir2d[0] * matrix[1].truncate();
             axis /= axis.magnitude();
             let angle = dir2d.magnitude() * 0.01;
             let mat = Matrix4::from_axis_angle(axis, Rad(angle));
@@ -169,39 +169,36 @@ impl App for MyApp {
             Some(keycode) => keycode,
             None => return Self::default_control_flow(),
         };
-        match keycode {
-            VirtualKeyCode::Space => {
-                self.render_mode = match self.render_mode {
-                    RenderMode::All => RenderMode::Surface,
-                    RenderMode::Surface => RenderMode::WireFrame,
-                    RenderMode::WireFrame => RenderMode::InterferenceOnly,
-                    RenderMode::InterferenceOnly => RenderMode::All,
-                };
-                self.scene.clear_objects();
-                match self.render_mode {
-                    RenderMode::All => {
-                        self.scene.add_object(&self.instance0);
-                        self.scene.add_object(&self.instance1);
-                        self.scene.add_object(&self.instance2);
-                        self.scene.add_object(&self.instance3);
-                        self.scene.add_object(&self.wireinstance);
-                    }
-                    RenderMode::Surface => {
-                        self.scene.add_object(&self.instance0);
-                        self.scene.add_object(&self.instance1);
-                        self.scene.add_object(&self.wireinstance);
-                    }
-                    RenderMode::WireFrame => {
-                        self.scene.add_object(&self.instance2);
-                        self.scene.add_object(&self.instance3);
-                        self.scene.add_object(&self.wireinstance);
-                    }
-                    RenderMode::InterferenceOnly => {
-                        self.scene.add_object(&self.wireinstance);
-                    }
+        if keycode == VirtualKeyCode::Space {
+            self.render_mode = match self.render_mode {
+                RenderMode::All => RenderMode::Surface,
+                RenderMode::Surface => RenderMode::WireFrame,
+                RenderMode::WireFrame => RenderMode::InterferenceOnly,
+                RenderMode::InterferenceOnly => RenderMode::All,
+            };
+            self.scene.clear_objects();
+            match self.render_mode {
+                RenderMode::All => {
+                    self.scene.add_object(&self.instance0);
+                    self.scene.add_object(&self.instance1);
+                    self.scene.add_object(&self.instance2);
+                    self.scene.add_object(&self.instance3);
+                    self.scene.add_object(&self.wireinstance);
+                }
+                RenderMode::Surface => {
+                    self.scene.add_object(&self.instance0);
+                    self.scene.add_object(&self.instance1);
+                    self.scene.add_object(&self.wireinstance);
+                }
+                RenderMode::WireFrame => {
+                    self.scene.add_object(&self.instance2);
+                    self.scene.add_object(&self.instance3);
+                    self.scene.add_object(&self.wireinstance);
+                }
+                RenderMode::InterferenceOnly => {
+                    self.scene.add_object(&self.wireinstance);
                 }
             }
-            _ => {}
         }
         Self::default_control_flow()
     }
@@ -229,22 +226,24 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
             })
         })
         .collect::<Vec<_>>();
-    let faces = Faces::from_iter((0..udiv).flat_map(move |i| {
-        (0..vdiv - 1).map(move |j| {
-            let a = [
-                i * vdiv + j,
-                i * vdiv + (j + 1) % vdiv,
-                (i + 1) % udiv * vdiv + (j + 1) % vdiv,
-                (i + 1) % udiv * vdiv + j,
-            ];
-            [
-                (a[0], None, Some(a[0])),
-                (a[1], None, Some(a[1])),
-                (a[2], None, Some(a[2])),
-                (a[3], None, Some(a[3])),
-            ]
+    let faces = (0..udiv)
+        .flat_map(move |i| {
+            (0..vdiv - 1).map(move |j| {
+                let a = [
+                    i * vdiv + j,
+                    i * vdiv + (j + 1) % vdiv,
+                    (i + 1) % udiv * vdiv + (j + 1) % vdiv,
+                    (i + 1) % udiv * vdiv + j,
+                ];
+                [
+                    (a[0], None, Some(a[0])),
+                    (a[1], None, Some(a[1])),
+                    (a[2], None, Some(a[2])),
+                    (a[3], None, Some(a[3])),
+                ]
+            })
         })
-    }));
+        .collect();
     PolygonMesh::new(positions, Vec::new(), normals, faces)
 }
 

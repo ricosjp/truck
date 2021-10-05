@@ -2,6 +2,7 @@ use crate::*;
 use std::collections::{HashMap, HashSet};
 use std::vec::Vec;
 
+type FaceAdjacencyMap<'a, P, C, S> = HashMap<&'a Face<P, C, S>, Vec<&'a Face<P, C, S>>>;
 impl<P, C, S> Shell<P, C, S> {
     /// Creates the empty shell.
     #[inline(always)]
@@ -21,25 +22,31 @@ impl<P, C, S> Shell<P, C, S> {
 
     /// Returns an iterator over the faces. Practically, an alias of `iter()`.
     #[inline(always)]
-    pub fn face_iter(&self) -> FaceIter<P, C, S> { self.iter() }
+    pub fn face_iter(&self) -> FaceIter<P, C, S> {
+        self.iter()
+    }
 
     /// Returns a mutable iterator over the faces. Practically, an alias of `iter_mut()`.
     #[inline(always)]
-    pub fn face_iter_mut(&mut self) -> FaceIterMut<P, C, S> { self.iter_mut() }
+    pub fn face_iter_mut(&mut self) -> FaceIterMut<P, C, S> {
+        self.iter_mut()
+    }
 
     /// Creates a consuming iterator. Practically, an alias of `into_iter()`.
     #[inline(always)]
-    pub fn face_into_iter(self) -> FaceIntoIter<P, C, S> { self.face_list.into_iter() }
+    pub fn face_into_iter(self) -> FaceIntoIter<P, C, S> {
+        self.face_list.into_iter()
+    }
 
     /// Returns an iterator over the edges.
     #[inline(always)]
-    pub fn edge_iter<'a>(&'a self) -> impl Iterator<Item = Edge<P, C>> + 'a {
+    pub fn edge_iter(&self) -> impl Iterator<Item = Edge<P, C>> + '_ {
         self.face_iter().flat_map(Face::boundaries).flatten()
     }
 
     /// Returns an iterator over the vertices.
     #[inline(always)]
-    pub fn vertex_iter<'a>(&'a self) -> impl Iterator<Item = Vertex<P>> + 'a {
+    pub fn vertex_iter(&self) -> impl Iterator<Item = Vertex<P>> + '_ {
         self.edge_iter().map(|edge| edge.front().clone())
     }
 
@@ -114,10 +121,10 @@ impl<P, C, S> Shell<P, C, S> {
         }
         let mut res = Vec::new();
         for edge in boundary_edges {
-            if let Some(mut cursor) = vemap.remove(&edge.front()) {
+            if let Some(mut cursor) = vemap.remove(edge.front()) {
                 let mut wire = Wire::from(vec![cursor.clone()]);
                 loop {
-                    cursor = match vemap.remove(&cursor.back()) {
+                    cursor = match vemap.remove(cursor.back()) {
                         None => break,
                         Some(got) => {
                             wire.push_back(got.clone());
@@ -172,8 +179,8 @@ impl<P, C, S> Shell<P, C, S> {
             }
             let v0 = edge.front().id();
             let v1 = edge.back().id();
-            adjacency.entry(v0).or_insert(Vec::new()).push(v1);
-            adjacency.entry(v1).or_insert(Vec::new()).push(v0);
+            adjacency.entry(v0).or_insert_with(Vec::new).push(v1);
+            adjacency.entry(v1).or_insert_with(Vec::new).push(v0);
         }
         adjacency
     }
@@ -212,8 +219,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(face_adjacency[&shell[2]].len(), 1);
     /// assert_eq!(face_adjacency[&shell[3]].len(), 3);
     /// ```
-    pub fn face_adjacency(&self) -> HashMap<&Face<P, C, S>, Vec<&Face<P, C, S>>> {
-        let mut adjacency: HashMap<&Face<P, C, S>, Vec<&Face<P, C, S>>> = HashMap::new();
+    pub fn face_adjacency(&self) -> FaceAdjacencyMap<P, C, S> {
+        let mut adjacency: FaceAdjacencyMap<P, C, S> = HashMap::new();
         let mut edge_face_map: HashMap<EdgeID<C>, Vec<&Face<P, C, S>>> = HashMap::new();
         for face in self.face_iter() {
             let edge_iter = face
@@ -223,11 +230,11 @@ impl<P, C, S> Shell<P, C, S> {
             for edge in edge_iter {
                 if let Some(vec) = edge_face_map.get_mut(&edge.id()) {
                     for tmp in vec {
-                        adjacency.entry(face).or_insert(Vec::new()).push(tmp);
-                        adjacency.entry(tmp).or_insert(Vec::new()).push(face);
+                        adjacency.entry(face).or_insert_with(Vec::new).push(tmp);
+                        adjacency.entry(tmp).or_insert_with(Vec::new).push(face);
                     }
                 } else {
-                    adjacency.entry(face).or_insert(Vec::new());
+                    adjacency.entry(face).or_insert_with(Vec::new);
                     edge_face_map.insert(edge.id(), vec![face]);
                 }
             }
@@ -333,7 +340,7 @@ impl<P, C, S> Shell<P, C, S> {
         let components = create_components(&mut adjacency);
         components
             .into_iter()
-            .map(|vec| vec.into_iter().map(|face| face.clone()).collect())
+            .map(|vec| vec.into_iter().cloned().collect())
             .collect()
     }
 
@@ -405,8 +412,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(shell.singular_vertices(), vec![v[0].clone()]);
     /// ```
     pub fn singular_vertices(&self) -> Vec<Vertex<P>> {
-        let mut vert_wise_adjacency: HashMap<Vertex<P>, HashMap<EdgeID<C>, Vec<EdgeID<C>>>> =
-            HashMap::new();
+        let mut vert_wise_adjacency = HashMap::new();
         for face in self.face_iter() {
             let first_edge = &face.absolute_boundaries()[0][0];
             let mut edge_iter = face
@@ -417,15 +423,15 @@ impl<P, C, S> Shell<P, C, S> {
             while let Some(edge) = edge_iter.next() {
                 let adjacency = vert_wise_adjacency
                     .entry(edge.back().clone())
-                    .or_insert(HashMap::new());
+                    .or_insert_with(HashMap::new);
                 let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
                 adjacency
                     .entry(edge.id())
-                    .or_insert(Vec::new())
+                    .or_insert_with(Vec::new)
                     .push(next_edge.id());
                 adjacency
                     .entry(next_edge.id())
-                    .or_insert(Vec::new())
+                    .or_insert_with(Vec::new)
                     .push(edge.id());
             }
         }
@@ -618,7 +624,8 @@ impl<P, C, S> Shell<P, C, S> {
     where
         P: Tolerance,
         C: ParametricCurve<Point = P>,
-        S: IncludeCurve<C>, {
+        S: IncludeCurve<C>,
+    {
         self.iter().all(|face| face.is_geometric_consistent())
     }
 
@@ -630,7 +637,8 @@ impl<P, C, S> Shell<P, C, S> {
     pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>,
+    {
         if self.vertex_iter().any(|v| &v == vertex) {
             return false;
         }
@@ -668,7 +676,8 @@ impl<P, C, S> Shell<P, C, S> {
     pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
     where
         P: Debug,
-        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
+        C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform,
+    {
         let mut vec: Vec<(&mut Wire<P, C>, usize)> = self
             .face_iter_mut()
             .flat_map(|face| &mut face.boundaries)
@@ -693,9 +702,8 @@ impl<P, C, S> Shell<P, C, S> {
         } else {
             let (wire0, idx0) = vec.pop().unwrap();
             let (wire1, idx1) = vec.pop().unwrap();
-            if !wire0[idx0].is_same(&wire1[(idx1 + 1) % wire1.len()]) {
-                return false;
-            } else if !wire0[(idx0 + 1) % wire0.len()].is_same(&wire1[idx1]) {
+            if !wire0[idx0].is_same(&wire1[(idx1 + 1) % wire1.len()]) 
+                || !wire0[(idx0 + 1) % wire0.len()].is_same(&wire1[idx1]) {
                 return false;
             }
             let edge = match wire0[idx0].concat(&wire0[(idx0 + 1) % wire0.len()]) {
@@ -764,12 +772,16 @@ impl<P, C, S> Clone for Shell<P, C, S> {
 
 impl<P, C, S> From<Shell<P, C, S>> for Vec<Face<P, C, S>> {
     #[inline(always)]
-    fn from(shell: Shell<P, C, S>) -> Vec<Face<P, C, S>> { shell.face_list }
+    fn from(shell: Shell<P, C, S>) -> Vec<Face<P, C, S>> {
+        shell.face_list
+    }
 }
 
 impl<P, C, S> From<Vec<Face<P, C, S>>> for Shell<P, C, S> {
     #[inline(always)]
-    fn from(faces: Vec<Face<P, C, S>>) -> Shell<P, C, S> { Shell { face_list: faces } }
+    fn from(faces: Vec<Face<P, C, S>>) -> Shell<P, C, S> {
+        Shell { face_list: faces }
+    }
 }
 
 impl<P, C, S> std::iter::FromIterator<Face<P, C, S>> for Shell<P, C, S> {
@@ -785,25 +797,33 @@ impl<P, C, S> IntoIterator for Shell<P, C, S> {
     type Item = Face<P, C, S>;
     type IntoIter = std::vec::IntoIter<Face<P, C, S>>;
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter { self.face_list.into_iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.face_list.into_iter()
+    }
 }
 
 impl<'a, P, C, S> IntoIterator for &'a Shell<P, C, S> {
     type Item = &'a Face<P, C, S>;
     type IntoIter = std::slice::Iter<'a, Face<P, C, S>>;
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter { self.face_list.iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.face_list.iter()
+    }
 }
 
 impl<P, C, S> std::ops::Deref for Shell<P, C, S> {
     type Target = Vec<Face<P, C, S>>;
     #[inline(always)]
-    fn deref(&self) -> &Vec<Face<P, C, S>> { &self.face_list }
+    fn deref(&self) -> &Vec<Face<P, C, S>> {
+        &self.face_list
+    }
 }
 
 impl<P, C, S> std::ops::DerefMut for Shell<P, C, S> {
     #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Vec<Face<P, C, S>> { &mut self.face_list }
+    fn deref_mut(&mut self) -> &mut Vec<Face<P, C, S>> {
+        &mut self.face_list
+    }
 }
 
 impl<P, C, S> Default for Shell<P, C, S> {
@@ -1019,13 +1039,17 @@ impl<P, C> std::iter::FromIterator<Edge<P, C>> for Boundaries<C> {
 }
 
 fn check_connectivity<T>(adjacency: &mut HashMap<T, Vec<T>>) -> bool
-where T: Eq + Clone + Hash {
+where
+    T: Eq + Clone + Hash,
+{
     create_one_component(adjacency);
     adjacency.is_empty()
 }
 
 fn create_components<T>(adjacency: &mut HashMap<T, Vec<T>>) -> Vec<Vec<T>>
-where T: Eq + Clone + Hash {
+where
+    T: Eq + Clone + Hash,
+{
     let mut res = Vec::new();
     loop {
         let component = create_one_component(adjacency);
@@ -1038,7 +1062,9 @@ where T: Eq + Clone + Hash {
 }
 
 fn create_one_component<T>(adjacency: &mut HashMap<T, Vec<T>>) -> Vec<T>
-where T: Eq + Hash + Clone {
+where
+    T: Eq + Hash + Clone,
+{
     let mut iter = adjacency.keys();
     let first = match iter.next() {
         Some(key) => key.clone(),

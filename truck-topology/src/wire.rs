@@ -6,7 +6,9 @@ use std::iter::Peekable;
 impl<P, C> Wire<P, C> {
     /// Creates the empty wire.
     #[inline(always)]
-    pub fn new() -> Wire<P, C> { Self::default() }
+    pub fn new() -> Wire<P, C> {
+        Self::default()
+    }
 
     /// Creates the empty wire with space for at least `capacity` edges.
     #[inline(always)]
@@ -18,14 +20,20 @@ impl<P, C> Wire<P, C> {
 
     /// Returns an iterator over the edges. Practically, an alias of `iter()`.
     #[inline(always)]
-    pub fn edge_iter(&self) -> EdgeIter<P, C> { self.iter() }
+    pub fn edge_iter(&self) -> EdgeIter<P, C> {
+        self.iter()
+    }
     /// Returns a mutable iterator over the edges. Practically, an alias of `iter_mut()`.
     #[inline(always)]
-    pub fn edge_iter_mut(&mut self) -> EdgeIterMut<P, C> { self.iter_mut() }
+    pub fn edge_iter_mut(&mut self) -> EdgeIterMut<P, C> {
+        self.iter_mut()
+    }
 
     /// Creates a consuming iterator. Practically, an alias of `into_iter()`.
     #[inline(always)]
-    pub fn edge_into_iter(self) -> EdgeIntoIter<P, C> { self.into_iter() }
+    pub fn edge_into_iter(self) -> EdgeIntoIter<P, C> {
+        self.into_iter()
+    }
 
     /// Returns an iterator over the vertices.
     #[inline(always)]
@@ -40,7 +48,9 @@ impl<P, C> Wire<P, C> {
     /// Returns the front edge. If `self` is empty wire, returns None.  
     /// Practically, an alias of the inherited method `VecDeque::front()`.
     #[inline(always)]
-    pub fn front_edge(&self) -> Option<&Edge<P, C>> { self.front() }
+    pub fn front_edge(&self) -> Option<&Edge<P, C>> {
+        self.front()
+    }
 
     /// Returns the front vertex. If `self` is empty wire, returns None.
     /// # Examples
@@ -54,12 +64,16 @@ impl<P, C> Wire<P, C> {
     /// assert_eq!(wire.front_vertex(), Some(&v[0]));
     /// ```
     #[inline(always)]
-    pub fn front_vertex(&self) -> Option<&Vertex<P>> { self.front().map(|edge| edge.front()) }
+    pub fn front_vertex(&self) -> Option<&Vertex<P>> {
+        self.front().map(|edge| edge.front())
+    }
 
     /// Returns the back edge. If `self` is empty wire, returns None.  
     /// Practically, an alias of the inherited method `VecDeque::back()`
     #[inline(always)]
-    pub fn back_edge(&self) -> Option<&Edge<P, C>> { self.back() }
+    pub fn back_edge(&self) -> Option<&Edge<P, C>> {
+        self.back()
+    }
 
     /// Returns the back edge. If `self` is empty wire, returns None.
     /// # Examples
@@ -73,7 +87,9 @@ impl<P, C> Wire<P, C> {
     /// assert_eq!(wire.back_vertex(), Some(&v[2]));
     /// ```
     #[inline(always)]
-    pub fn back_vertex(&self) -> Option<&Vertex<P>> { self.back().map(|edge| edge.back()) }
+    pub fn back_vertex(&self) -> Option<&Vertex<P>> {
+        self.back().map(|edge| edge.back())
+    }
 
     /// Returns vertices at both ends.
     /// ```
@@ -95,7 +111,9 @@ impl<P, C> Wire<P, C> {
 
     /// Moves all the faces of `other` into `self`, leaving `other` empty.
     #[inline(always)]
-    pub fn append(&mut self, other: &mut Wire<P, C>) { self.edge_list.append(&mut other.edge_list) }
+    pub fn append(&mut self, other: &mut Wire<P, C>) {
+        self.edge_list.append(&mut other.edge_list)
+    }
 
     /// Splits the `Wire` into two at the given index.
     /// # Examples
@@ -216,12 +234,16 @@ impl<P, C> Wire<P, C> {
     /// assert!(Wire::<(), ()>::new().is_cyclic());
     /// ```
     #[inline(always)]
-    pub fn is_cyclic(&self) -> bool { self.front_vertex() == self.back_vertex() }
+    pub fn is_cyclic(&self) -> bool {
+        self.front_vertex() == self.back_vertex()
+    }
 
     /// Returns whether the wire is closed or not.
     /// Here, "closed" means "continuous" and "cyclic".
     #[inline(always)]
-    pub fn is_closed(&self) -> bool { self.is_continuous() && self.is_cyclic() }
+    pub fn is_closed(&self) -> bool {
+        self.is_continuous() && self.is_cyclic()
+    }
 
     /// Returns whether simple or not.
     /// Here, "simple" means all the vertices in the wire are shared from only two edges at most.
@@ -258,7 +280,7 @@ impl<P, C> Wire<P, C> {
     }
 
     /// Determines whether all the wires in `wires` has no same vertices.
-    pub fn disjoint_wires(wires: &Vec<Wire<P, C>>) -> bool {
+    pub fn disjoint_wires(wires: &[Wire<P, C>]) -> bool {
         let mut set = HashSet::new();
         for vertex in wires.iter().flat_map(|wire| wire.vertex_iter()) {
             if set.get(&vertex.id()).is_some() {
@@ -316,9 +338,7 @@ impl<P, C> Wire<P, C> {
     /// assert_eq!(wire0, backup);
     /// ```
     pub fn swap_edge_into_wire(&mut self, idx: usize, wire: Wire<P, C>) -> bool {
-        if wire.is_empty() {
-            return false;
-        } else if self[idx].ends() != wire.ends_vertices().unwrap() {
+        if wire.is_empty() || self[idx].ends() != wire.ends_vertices().unwrap() {
             return false;
         }
         let mut new_wire: Vec<_> = self.drain(0..idx).collect();
@@ -454,7 +474,8 @@ impl<P, C> Wire<P, C> {
     pub fn is_geometric_consistent(&self) -> bool
     where
         P: Tolerance,
-        C: ParametricCurve<Point = P>, {
+        C: ParametricCurve<Point = P>,
+    {
         self.iter().all(|edge| edge.is_geometric_consistent())
     }
 
@@ -496,7 +517,8 @@ impl<P, C> Wire<P, C> {
 }
 
 impl<T, P, C> From<T> for Wire<P, C>
-where T: Into<VecDeque<Edge<P, C>>>
+where
+    T: Into<VecDeque<Edge<P, C>>>,
 {
     #[inline(always)]
     fn from(edge_list: T) -> Wire<P, C> {
@@ -516,8 +538,7 @@ impl<P, C> std::iter::FromIterator<Edge<P, C>> for Wire<P, C> {
 impl<'a, P, C> std::iter::FromIterator<&'a Edge<P, C>> for Wire<P, C> {
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = &'a Edge<P, C>>>(iter: I) -> Wire<P, C> {
-        let edge_list = VecDeque::from_iter(iter.into_iter().map(|edge| edge.clone()));
-        Wire::from(edge_list)
+        Wire::from(VecDeque::from_iter(iter.into_iter().map(Edge::clone)))
     }
 }
 
@@ -525,14 +546,18 @@ impl<P, C> IntoIterator for Wire<P, C> {
     type Item = Edge<P, C>;
     type IntoIter = std::collections::vec_deque::IntoIter<Edge<P, C>>;
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter { self.edge_list.into_iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.edge_list.into_iter()
+    }
 }
 
 impl<'a, P, C> IntoIterator for &'a Wire<P, C> {
     type Item = &'a Edge<P, C>;
     type IntoIter = std::collections::vec_deque::Iter<'a, Edge<P, C>>;
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter { self.edge_list.iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.edge_list.iter()
+    }
 }
 
 /// The reference iterator over all edges in a wire.
@@ -620,10 +645,8 @@ impl<'a, P, C> Iterator for VertexIter<'a, P, C> {
                 if edge.back() != next.front() {
                     self.unconti_next = Some(edge.back().clone());
                 }
-            } else {
-                if !self.cyclic {
-                    self.unconti_next = Some(edge.back().clone());
-                }
+            } else if !self.cyclic {
+                self.unconti_next = Some(edge.back().clone());
             }
             Some(edge.front().clone())
         } else {
@@ -662,12 +685,16 @@ impl<P, C> Extend<Edge<P, C>> for Wire<P, C> {
 impl<P, C> std::ops::Deref for Wire<P, C> {
     type Target = VecDeque<Edge<P, C>>;
     #[inline(always)]
-    fn deref(&self) -> &Self::Target { &self.edge_list }
+    fn deref(&self) -> &Self::Target {
+        &self.edge_list
+    }
 }
 
 impl<P, C> std::ops::DerefMut for Wire<P, C> {
     #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.edge_list }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.edge_list
+    }
 }
 
 impl<P, C> Clone for Wire<P, C> {
@@ -681,7 +708,9 @@ impl<P, C> Clone for Wire<P, C> {
 
 impl<P, C> PartialEq for Wire<P, C> {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { self.edge_list == other.edge_list }
+    fn eq(&self, other: &Self) -> bool {
+        self.edge_list == other.edge_list
+    }
 }
 
 impl<P, C> Eq for Wire<P, C> {}

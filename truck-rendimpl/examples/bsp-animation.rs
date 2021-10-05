@@ -2,7 +2,10 @@
 //!
 //! In each frame, the NURBS surface is devided into mesh.
 
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use std::thread::*;
 use truck_modeling::*;
 use truck_platform::*;
@@ -14,8 +17,8 @@ use app::*;
 struct MyApp {
     scene: Scene,
     object: Arc<Mutex<PolygonInstance>>,
-    closed: Arc<Mutex<bool>>,
-    updated: Arc<Mutex<bool>>,
+    closed: Arc<AtomicBool>,
+    updated: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
 }
 
@@ -51,8 +54,8 @@ impl MyApp {
     fn init_thread(
         creator: InstanceCreator,
         object: Arc<Mutex<PolygonInstance>>,
-        closed: Arc<Mutex<bool>>,
-        updated: Arc<Mutex<bool>>,
+        closed: Arc<AtomicBool>,
+        updated: Arc<AtomicBool>,
         surface: Arc<Mutex<BSplineSurface<Point3>>>,
     ) -> JoinHandle<()> {
         std::thread::spawn(move || {
@@ -61,15 +64,13 @@ impl MyApp {
             let mut instant = std::time::Instant::now();
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(1));
-                if *closed.lock().unwrap() {
+                if closed.load(Ordering::SeqCst) {
                     break;
                 }
-                let mut updated = updated.lock().unwrap();
-                if *updated {
+                if updated.load(Ordering::SeqCst) {
                     continue;
                 }
-                *updated = true;
-                drop(updated);
+                updated.store(true, Ordering::SeqCst);
                 count += 1;
                 time += 0.1;
                 if count == 100 {
@@ -79,23 +80,18 @@ impl MyApp {
                     count = 0;
                 }
                 let mut mesh = None;
-                match surface.lock() {
-                    Ok(mut surface) => {
-                        surface.control_point_mut(3, 3)[1] = time.sin();
-                        let surface0 = surface.clone();
-                        drop(surface);
-                        mesh = Some(StructuredMesh::from_surface(
-                            &surface0,
-                            surface0.parameter_range(),
-                            0.01,
-                        ));
-                    }
-                    _ => {}
+                if let Ok(mut surface) = surface.lock() {
+                    surface.control_point_mut(3, 3)[1] = time.sin();
+                    let surface0 = surface.clone();
+                    drop(surface);
+                    mesh = Some(StructuredMesh::from_surface(
+                        &surface0,
+                        surface0.parameter_range(),
+                        0.01,
+                    ));
                 }
-                let mut another_object = creator.create_instance(
-                    &mesh.unwrap(),
-                    &Default::default(),
-                );
+                let mut another_object =
+                    creator.create_instance(&mesh.unwrap(), &Default::default());
                 let mut object = object.lock().unwrap();
                 object.swap_vertex(&mut another_object);
             }
@@ -125,8 +121,8 @@ impl App for MyApp {
         );
         scene.add_object(&object);
         let object = Arc::new(Mutex::new(object));
-        let closed = Arc::new(Mutex::new(false));
-        let updated = Arc::new(Mutex::new(false));
+        let closed = Arc::new(AtomicBool::new(false));
+        let updated = Arc::new(AtomicBool::new(false));
         let thread = Some(MyApp::init_thread(
             creator,
             Arc::clone(&object),
@@ -148,11 +144,10 @@ impl App for MyApp {
     }
 
     fn update(&mut self, _: &DeviceHandler) {
-        let mut updated = self.updated.lock().unwrap();
-        if *updated {
+        if self.updated.load(Ordering::SeqCst) {
             let object = self.object.lock().unwrap();
             self.scene.update_vertex_buffer(&*object);
-            *updated = false;
+            self.updated.store(false, Ordering::SeqCst);
         }
     }
 
@@ -160,7 +155,7 @@ impl App for MyApp {
         self.scene.render_scene(view);
     }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
-        *self.closed.lock().unwrap() = true;
+        self.closed.store(true, Ordering::SeqCst);
         self.thread.take().unwrap().join().unwrap();
         winit::event_loop::ControlFlow::Exit
     }

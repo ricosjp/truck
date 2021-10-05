@@ -112,7 +112,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
             handler: &DeviceHandler,
         ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
             let vertex_buffer = BufferHandler::from_slice(
-                &[0 as u32, 1, 2, 2, 1, 3],
+                &[0, 1, 2, 2, 1, 3],
                 handler.device(),
                 BufferUsages::VERTEX,
             );
@@ -335,7 +335,7 @@ fn main() {
     };
     let mut plane = Plane::new(handler.device(), &source);
     // Adds a plane to the scene!
-    scene.add_object(&mut plane);
+    scene.add_object(&plane);
 
     let mut dragging = false;
     let mut clicked = false;

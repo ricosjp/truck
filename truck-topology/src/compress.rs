@@ -9,7 +9,7 @@ struct CompressedEdge<C> {
 }
 
 impl<C> CompressedEdge<C> {
-    fn create_edge<P>(self, v: &Vec<Vertex<P>>) -> Result<Edge<P, C>> {
+    fn create_edge<P>(self, v: &[Vertex<P>]) -> Result<Edge<P, C>> {
         let front = &v[self.vertices.0];
         let back = &v[self.vertices.1];
         Edge::try_new(front, back, self.curve)
@@ -24,7 +24,7 @@ struct CompressedFace<S> {
 }
 
 impl<S> CompressedFace<S> {
-    fn create_face<P, C>(self, edges: &Vec<Edge<P, C>>) -> Result<Face<P, C, S>> {
+    fn create_face<P, C>(self, edges: &[Edge<P, C>]) -> Result<Face<P, C, S>> {
         let wires: Vec<Wire<P, C>> = self
             .boundaries
             .into_iter()
@@ -193,7 +193,7 @@ fn compress_extract() {
     let cube = solid::cube();
     let shell0 = &cube.boundaries()[0];
     let shell1 = Shell::extract(shell0.compress()).unwrap();
-    assert!(same_topology(&shell0, &shell1));
+    assert!(same_topology(shell0, &shell1));
 }
 
 #[allow(dead_code)]

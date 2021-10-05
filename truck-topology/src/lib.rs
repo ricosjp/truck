@@ -122,7 +122,7 @@ pub struct Edge<P, C> {
 ///
 /// The entity of this struct is `VecDeque<Edge>` and almost methods are inherited from
 /// `VecDeque<Edge>` by `Deref` and `DerefMut` traits.
-#[derive(Hash, Debug)]
+#[derive(Debug)]
 pub struct Wire<P, C> {
     edge_list: VecDeque<Edge<P, C>>,
 }

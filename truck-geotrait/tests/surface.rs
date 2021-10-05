@@ -158,7 +158,7 @@ fn exec_polysurface_sp_on_surface() -> bool {
 fn polysurface_sp_on_surface() {
     let flag = (0..10).any(|_| {
         let count = (0..100)
-        .filter(|_| exec_polysurface_sp_on_surface())
+            .filter(|_| exec_polysurface_sp_on_surface())
             .count();
         if count <= 90 {
             eprintln!("wrong answer: {:?}", 100 - count);

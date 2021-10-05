@@ -64,7 +64,7 @@ impl<P: Clone> Invertible for PolylineCurve<P> {
 	#[inline(always)]
 	fn invert(&mut self) { self.reverse(); }
 	#[inline(always)]
-	fn inverse(&self) -> Self { Self(self.iter().rev().map(|p| p.clone()).collect()) }
+	fn inverse(&self) -> Self { Self(self.iter().rev().cloned().collect()) }
 }
 
 impl<P: ControlPoint<f64>> Cut for PolylineCurve<P> {

@@ -285,7 +285,7 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 /// assert!(builder::try_attach_plane(&wires).is_ok());
 /// ```
 #[inline(always)]
-pub fn try_attach_plane(wires: &Vec<Wire>) -> Result<Face> {
+pub fn try_attach_plane(wires: &[Wire]) -> Result<Face> {
     let pts = wires
         .iter()
         .flatten()
@@ -303,7 +303,7 @@ pub fn try_attach_plane(wires: &Vec<Wire>) -> Result<Face> {
         None => return Err(Error::WireNotInOnePlane),
     };
     let surface = Surface::Plane(plane);
-    Ok(Face::try_new(wires.clone(), surface)?)
+    Ok(Face::try_new(wires.to_owned(), surface)?)
 }
 
 /// Returns another topology whose points, curves, and surfaces are cloned.
@@ -581,7 +581,7 @@ fn whole_rsweep<T: ClosedSweep<Point3, Curve, Surface>>(
 fn partial_torus() {
     let v = vertex(Point3::new(0.5, 0.0, 0.0));
     let w = rsweep(&v, Point3::new(0.75, 0.0, 0.0), Vector3::unit_y(), Rad(7.0));
-    let face = try_attach_plane(&vec![w]).unwrap();
+    let face = try_attach_plane(&[w]).unwrap();
     let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(2.0));
     assert!(torus.is_geometric_consistent());
     let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(5.0));

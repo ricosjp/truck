@@ -30,10 +30,10 @@ const UNIFORM_LIGHT: Light = Light {
     light_type: LightType::Uniform,
 };
 
-fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &Vec<u8>) {
+fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &[u8]) {
     image::save_buffer(
         path,
-        &vec,
+        vec,
         PICTURE_WIDTH,
         PICTURE_HEIGHT,
         image::ColorType::Rgba8,
@@ -58,7 +58,7 @@ fn exec_bind_group_test(backend: Backends, out_dir: &str) {
     let texture2 = device.create_texture(&common::texture_descriptor(&config));
     let config = Arc::new(Mutex::new(config));
     let camera = Camera::perspective_camera(
-        CAMERA_MATRIX.into(),
+        CAMERA_MATRIX,
         CAMERA_FOV,
         CAMERA_NEARCLIP,
         CAMERA_FARCLIP,
@@ -68,7 +68,12 @@ fn exec_bind_group_test(backend: Backends, out_dir: &str) {
     let desc = SceneDescriptor {
         camera,
         lights,
-        background: Color { r: 0.1, g: 0.2, b: 0.3, a: 0.4 },
+        background: Color {
+            r: 0.1,
+            g: 0.2,
+            b: 0.3,
+            a: 0.4,
+        },
         ..Default::default()
     };
     let handler = DeviceHandler::new(device, queue, config);
@@ -84,7 +89,7 @@ fn exec_bind_group_test(backend: Backends, out_dir: &str) {
     let buffer2 = common::read_texture(&handler, &texture2);
     save_buffer(out_dir.clone() + "unicolor.png", &buffer0);
     save_buffer(out_dir.clone() + "bindgroup.png", &buffer1);
-    save_buffer(out_dir.clone() + "anti-bindgroup.png", &buffer2);
+    save_buffer(out_dir + "anti-bindgroup.png", &buffer2);
     assert!(common::same_buffer(&buffer0, &buffer1));
     assert!(!common::same_buffer(&buffer0, &buffer2));
 }

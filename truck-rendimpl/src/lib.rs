@@ -20,9 +20,7 @@ use truck_platform::{wgpu::*, *};
 
 /// Re-exports `truck_polymesh`.
 pub mod polymesh {
-    pub use truck_polymesh::{
-        base::*, PolygonMesh, PolylineCurve, StructuredMesh, Vertex,
-    };
+    pub use truck_polymesh::{base::*, PolygonMesh, PolylineCurve, StructuredMesh, Vertex};
 }
 pub use polymesh::*;
 
@@ -140,16 +138,11 @@ pub trait CreateBuffers {
 }
 
 /// The trait for generating `Instance` from `Self`.
-pub trait IntoInstance<I: Instance> {
+pub trait ToInstance<I: Instance> {
     /// Configuation deacriptor for instance.
     type State;
     /// Creates `Instance` from `self`.
-    fn into_instance(
-        &self,
-        handler: &DeviceHandler,
-        shaders: &I::Shaders,
-        desc: &Self::State,
-    ) -> I;
+    fn to_instance(&self, handler: &DeviceHandler, shaders: &I::Shaders, desc: &Self::State) -> I;
 }
 
 /// Instance for rendering

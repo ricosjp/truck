@@ -141,7 +141,7 @@ impl MyApp {
             ..Default::default()
         };
         (
-            creator.create_instance(&mesh_solid.into_polygon(), &polygon_state),
+            creator.create_instance(&mesh_solid.to_polygon(), &polygon_state),
             creator.create_instance(&curves, &wire_state),
         )
     }
@@ -179,9 +179,7 @@ impl App for MyApp {
         app
     }
 
-    fn app_title<'a>() -> Option<&'a str> {
-        Some("simple shape viewer")
-    }
+    fn app_title<'a>() -> Option<&'a str> { Some("simple shape viewer") }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         let file = std::fs::File::open(path).unwrap();
@@ -236,12 +234,12 @@ impl App for MyApp {
         let position = Vector2::new(position.x, position.y);
         if self.rotate_flag {
             let matrix = &mut self.scene.descriptor_mut().camera.matrix;
-            let dir2d = &position - self.prev_cursor;
+            let dir2d = position - self.prev_cursor;
             if dir2d.so_small() {
                 return Self::default_control_flow();
             }
             let mut axis = dir2d[1] * matrix[0].truncate();
-            axis += dir2d[0] * &matrix[1].truncate();
+            axis += dir2d[0] * matrix[1].truncate();
             axis /= axis.magnitude();
             let angle = dir2d.magnitude() * 0.01;
             let mat = Matrix4::from_axis_angle(axis, Rad(angle));
@@ -312,11 +310,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) {
-        self.scene.render_scene(view);
-    }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
-fn main() {
-    MyApp::run();
-}
+fn main() { MyApp::run(); }

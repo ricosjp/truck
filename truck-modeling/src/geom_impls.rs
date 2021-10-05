@@ -14,8 +14,8 @@ pub(super) fn circle_arc_by_three_points(
     let pt0 = Point3::from_homogeneous(point0);
     let pt1 = Point3::from_homogeneous(point1);
     let origin = circum_center(pt0, pt1, transit);
-    let vec0 = &pt0 - transit;
-    let vec1 = &pt1 - transit;
+    let vec0 = pt0 - transit;
+    let vec1 = pt1 - transit;
     let angle = Rad(PI) - vec0.angle(vec1);
     let mut axis = vec1.cross(vec0);
     axis /= axis.magnitude();
@@ -55,15 +55,15 @@ pub(super) fn circle_arc(
     };
     let trsf_inverse = axis_trsf.invert().unwrap();
     let rotation = Matrix4::from_angle_z(angle / 2.0);
-    let rotation2 = &axis_trsf * &rotation * &rotation;
+    let rotation2 = axis_trsf * rotation * rotation;
     let cos = (angle / 2.0).cos();
-    let pt = &trsf_inverse * point;
-    let mut point1 = &rotation * pt;
+    let pt = trsf_inverse * point;
+    let mut point1 = rotation * pt;
     point1[3] *= cos;
-    point1 = &axis_trsf * point1;
+    point1 = axis_trsf * point1;
     let mut curve = BSplineCurve::new(
         KnotVec::bezier_knot(2),
-        vec![point.clone(), point1, rotation2 * pt],
+        vec![point, point1, rotation2 * pt],
     );
     curve.add_knot(0.25);
     curve.add_knot(0.5);
@@ -71,7 +71,7 @@ pub(super) fn circle_arc(
     curve
 }
 
-fn closed_polyline_orientation(pts: &Vec<Point3>) -> bool {
+fn closed_polyline_orientation(pts: &[Point3]) -> bool {
     pts.windows(2).fold(0.0, |sum, pt| {
         sum + (pt[1][0] + pt[0][0]) * (pt[1][1] - pt[0][1])
     }) >= 0.0

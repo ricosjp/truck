@@ -291,7 +291,7 @@ where <V as Homogeneous<f64>>::Point: Debug
         let mut curve1 = other.clone();
         let w0 = curve0.0.control_points.last().unwrap().weight();
         let w1 = curve1.0.control_points[0].weight();
-        curve1.transform_control_points(|pt| *pt = *pt * (w0 / w1));
+        curve1.transform_control_points(|pt| *pt *= w0 / w1);
         match curve0.0.try_concat(&curve1.0) {
             Ok(curve) => Ok(NURBSCurve::new(curve)),
             Err(err) => Err(err.point_map(|v| v.to_point())),
@@ -398,7 +398,7 @@ where V::Point: Tolerance
                     .0
                     .control_points
                     .iter_mut()
-                    .for_each(move |vec| *vec = *vec * (s0 / s1));
+                    .for_each(move |vec| *vec *= s0 / s1);
                 self.concat(bezier.knot_translate(-x));
             }
         }

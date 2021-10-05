@@ -199,10 +199,10 @@ impl StructuredMesh {
                     .flat_map(|u| vdiv.iter().map(move |v| Vector2::new(u, *v)))
                     .collect()
             })
-            .unwrap_or(Vec::new());
+            .unwrap_or_else(Vec::new);
         let normals = normals
             .map(|n| n.into_iter().flatten().collect())
-            .unwrap_or(Vec::new());
+            .unwrap_or_else(Vec::new);
         let uv = !uv_coords.is_empty();
         let nor = !normals.is_empty();
         let quad_faces: Vec<_> = (1..m)
@@ -230,7 +230,7 @@ impl StructuredMesh {
 }
 
 #[inline(always)]
-fn check_matrix_regularity<T>(matrix: &Vec<Vec<T>>) -> Result<()> {
+fn check_matrix_regularity<T>(matrix: &[Vec<T>]) -> Result<()> {
     for arr in matrix {
         if arr.len() != matrix[0].len() {
             return Err(Error::IrregularArray);
@@ -240,7 +240,7 @@ fn check_matrix_regularity<T>(matrix: &Vec<Vec<T>>) -> Result<()> {
 }
 
 #[inline(always)]
-fn check_matrices_compatibility<S, T>(matrix0: &Vec<Vec<S>>, matrix1: &Vec<Vec<T>>) -> Result<()> {
+fn check_matrices_compatibility<S, T>(matrix0: &[Vec<S>], matrix1: &[Vec<T>]) -> Result<()> {
     if matrix0.len() != matrix1.len() {
         return Err(Error::DifferentLengthArrays);
     }
@@ -253,7 +253,7 @@ fn check_matrices_compatibility<S, T>(matrix0: &Vec<Vec<S>>, matrix1: &Vec<Vec<T
 }
 
 #[inline(always)]
-fn check_vectors_regularity(vec0: &Vec<f64>, vec1: &Vec<f64>) -> Result<()> {
+fn check_vectors_regularity(vec0: &[f64], vec1: &[f64]) -> Result<()> {
     for i in 1..vec0.len() {
         if vec0[i - 1] > vec0[i] {
             return Err(Error::UnsortedDivision);
@@ -269,9 +269,9 @@ fn check_vectors_regularity(vec0: &Vec<f64>, vec1: &Vec<f64>) -> Result<()> {
 
 #[inline(always)]
 fn check_matrix_vectors_compatibility<T>(
-    matrix: &Vec<Vec<T>>,
-    vec0: &Vec<f64>,
-    vec1: &Vec<f64>,
+    matrix: &[Vec<T>],
+    vec0: &[f64],
+    vec1: &[f64],
 ) -> Result<()> {
     if matrix.len() != vec0.len() {
         return Err(Error::DifferentLengthArrays);

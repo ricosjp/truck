@@ -31,9 +31,13 @@ pub struct BoundaryWire<P, C> {
 
 impl<P, C> BoundaryWire<P, C> {
 	#[inline(always)]
-	pub fn new(wire: Wire<P, C>, status: ShapesOpStatus) -> Self { Self { wire, status } }
+	pub fn new(wire: Wire<P, C>, status: ShapesOpStatus) -> Self {
+		Self { wire, status }
+	}
 	#[inline(always)]
-	pub fn status(&self) -> ShapesOpStatus { self.status }
+	pub fn status(&self) -> ShapesOpStatus {
+		self.status
+	}
 	#[inline(always)]
 	pub fn invert(&mut self) {
 		self.wire.invert();
@@ -52,7 +56,8 @@ impl ShapesOpStatus {
 	fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<ShapesOpStatus>
 	where
 		C: ParametricCurve3D,
-		S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>, {
+		S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+	{
 		let (t0, t1) = curve.parameter_range();
 		let t = (t0 + t1) / 2.0;
 		let (_, pt0, pt1) = curve.search_triple(t)?;
@@ -69,12 +74,16 @@ impl ShapesOpStatus {
 impl<P, C> std::ops::Deref for BoundaryWire<P, C> {
 	type Target = Wire<P, C>;
 	#[inline(always)]
-	fn deref(&self) -> &Self::Target { &self.wire }
+	fn deref(&self) -> &Self::Target {
+		&self.wire
+	}
 }
 
 impl<P, C> std::ops::DerefMut for BoundaryWire<P, C> {
 	#[inline(always)]
-	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.wire }
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.wire
+	}
 }
 
 #[derive(Clone, Debug)]
@@ -85,23 +94,31 @@ pub struct LoopsStore<P, C>(Vec<Loops<P, C>>);
 impl<P, C> std::ops::Deref for Loops<P, C> {
 	type Target = Vec<BoundaryWire<P, C>>;
 	#[inline(always)]
-	fn deref(&self) -> &Self::Target { &self.0 }
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
 }
 
 impl<P, C> std::ops::DerefMut for Loops<P, C> {
 	#[inline(always)]
-	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
 }
 
 impl<P, C> std::ops::Deref for LoopsStore<P, C> {
 	type Target = Vec<Loops<P, C>>;
 	#[inline(always)]
-	fn deref(&self) -> &Self::Target { &self.0 }
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
 }
 
 impl<P, C> std::ops::DerefMut for LoopsStore<P, C> {
 	#[inline(always)]
-	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
 }
 
 impl<P, C> std::iter::FromIterator<BoundaryWire<P, C>> for Loops<P, C> {
@@ -121,16 +138,18 @@ impl<'a, P, C, S> From<&'a Face<P, C, S>> for Loops<P, C> {
 	}
 }
 
-impl<'a, P, C, S> std::iter::FromIterator<&'a Face<P, C, S>> for LoopsStore<P, C> {
+impl<'a, P: 'a, C: 'a, S: 'a> std::iter::FromIterator<&'a Face<P, C, S>> for LoopsStore<P, C> {
 	fn from_iter<I: IntoIterator<Item = &'a Face<P, C, S>>>(iter: I) -> Self {
-		Self(iter.into_iter().map(|face| Loops::from(face)).collect())
+		Self(iter.into_iter().map(Loops::from).collect())
 	}
 }
 
 impl<'a, P, C> IntoIterator for &'a LoopsStore<P, C> {
 	type Item = <&'a Vec<Loops<P, C>> as IntoIterator>::Item;
 	type IntoIter = <&'a Vec<Loops<P, C>> as IntoIterator>::IntoIter;
-	fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+	fn into_iter(self) -> Self::IntoIter {
+		self.0.iter()
+	}
 }
 
 #[derive(Clone, Debug, Copy, PartialEq)]
@@ -156,7 +175,9 @@ impl ParameterKind {
 
 impl<P: Copy, C: Clone> Loops<P, C> {
 	fn search_parameter(&self, pt: P) -> Option<(usize, usize, ParameterKind)>
-	where C: ParametricCurve<Point = P> + SearchParameter<Point = P, Parameter = f64> {
+	where
+		C: ParametricCurve<Point = P> + SearchParameter<Point = P, Parameter = f64>,
+	{
 		self.iter()
 			.enumerate()
 			.flat_map(move |(i, wire)| wire.iter().enumerate().map(move |(j, edge)| (i, j, edge)))
@@ -224,7 +245,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 		&mut self,
 		edge0: Edge<P, C>,
 		status: ShapesOpStatus,
-	) -> (Option<(usize, usize)>, Option<(usize, usize)>) {
+	) -> [Option<(usize, usize)>; 2] {
 		let a = self.iter().enumerate().find_map(|(i, wire)| {
 			wire.iter().enumerate().find_map(|(j, edge)| {
 				if edge.front() == edge0.back() {
@@ -276,7 +297,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 			)),
 			_ => {}
 		}
-		(a, b)
+		[a, b]
 	}
 }
 
@@ -337,9 +358,7 @@ impl<P: Copy + Tolerance, C: Clone> LoopsStore<P, C> {
 impl<C> LoopsStore<Point3, C> {
 	fn add_geom_vertex<S>(
 		&mut self,
-		loops_index: usize,
-		wire_index: usize,
-		edge_index: usize,
+		(loops_index, wire_index, edge_index): (usize, usize, usize),
 		v: &Vertex<Point3>,
 		kind: ParameterKind,
 		another_surface: &S,
@@ -396,8 +415,7 @@ fn curve_surface_projection<C, S>(
 	trials: usize,
 ) -> Option<(Point3, f64, Point2)>
 where
-	C: ParametricCurve3D
-		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
+	C: ParametricCurve3D + SearchNearestParameter<Point = Point3, Parameter = f64>,
 	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	if trials == 0 {
@@ -424,13 +442,13 @@ where
 	}
 }
 
-fn create_independent_loop<P, C, D>(poly_curve: C) -> Wire<P, D>
+fn create_independent_loop<P, C, D>(mut poly_curve0: C) -> Wire<P, D>
 where
 	C: Cut<Point = P>,
-	D: From<C>, {
-	let (t0, t1) = poly_curve.parameter_range();
+	D: From<C>,
+{
+	let (t0, t1) = poly_curve0.parameter_range();
 	let t = (t0 + t1) / 2.0;
-	let mut poly_curve0 = poly_curve.clone();
 	let poly_curve1 = poly_curve0.cut(t);
 	let v0 = Vertex::new(poly_curve0.front());
 	let v1 = Vertex::new(poly_curve1.front());
@@ -439,18 +457,20 @@ where
 	vec![edge0, edge1].into()
 }
 
+pub struct LoopsStoreQuadruple<C> {
+	pub geom_loops_store0: LoopsStore<Point3, C>,
+	pub poly_loops_store0: LoopsStore<Point3, PolylineCurve>,
+	pub geom_loops_store1: LoopsStore<Point3, C>,
+	pub poly_loops_store1: LoopsStore<Point3, PolylineCurve>,
+}
+
 pub fn create_loops_stores<C, S>(
 	geom_shell0: &Shell<Point3, C, S>,
 	poly_shell0: &Shell<Point3, PolylineCurve, PolygonMesh>,
 	geom_shell1: &Shell<Point3, C, S>,
 	poly_shell1: &Shell<Point3, PolylineCurve, PolygonMesh>,
 	tol: f64,
-) -> Option<(
-	LoopsStore<Point3, C>,
-	LoopsStore<Point3, PolylineCurve>,
-	LoopsStore<Point3, C>,
-	LoopsStore<Point3, PolylineCurve>,
-)>
+) -> Option<LoopsStoreQuadruple<C>>
 where
 	C: SearchNearestParameter<Point = Point3, Parameter = f64>
 		+ SearchParameter<Point = Point3, Parameter = f64>
@@ -513,64 +533,52 @@ where
 					let idx00 =
 						poly_loops_store0.add_polygon_vertex(face_index0, &pv0, &mut pemap0);
 					if let Some((wire_index, edge_index, kind)) = idx00 {
-						geom_loops_store0
-							.add_geom_vertex(
-								face_index0,
-								wire_index,
-								edge_index,
-								&gv0,
-								kind,
-								&surface1,
-								&mut gemap0,
-							)?;
+						geom_loops_store0.add_geom_vertex(
+							(face_index0, wire_index, edge_index),
+							&gv0,
+							kind,
+							&surface1,
+							&mut gemap0,
+						)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
 					let idx01 =
 						poly_loops_store0.add_polygon_vertex(face_index0, &pv1, &mut pemap1);
 					if let Some((wire_index, edge_index, kind)) = idx01 {
-						geom_loops_store0
-							.add_geom_vertex(
-								face_index0,
-								wire_index,
-								edge_index,
-								&gv1,
-								kind,
-								&surface1,
-								&mut gemap1,
-							)?;
+						geom_loops_store0.add_geom_vertex(
+							(face_index0, wire_index, edge_index),
+							&gv1,
+							kind,
+							&surface1,
+							&mut gemap1,
+						)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
 					let idx10 =
 						poly_loops_store1.add_polygon_vertex(face_index1, &pv0, &mut pemap0);
 					if let Some((wire_index, edge_index, kind)) = idx10 {
-						geom_loops_store1
-							.add_geom_vertex(
-								face_index1,
-								wire_index,
-								edge_index,
-								&gv0,
-								kind,
-								&surface0,
-								&mut gemap0,
-							)?;
+						geom_loops_store1.add_geom_vertex(
+							(face_index1, wire_index, edge_index),
+							&gv0,
+							kind,
+							&surface0,
+							&mut gemap0,
+						)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.first_mut().unwrap() = gv0.get_point();
 					}
 					let idx11 =
 						poly_loops_store1.add_polygon_vertex(face_index1, &pv1, &mut pemap1);
 					if let Some((wire_index, edge_index, kind)) = idx11 {
-						geom_loops_store1
-							.add_geom_vertex(
-								face_index1,
-								wire_index,
-								edge_index,
-								&gv1,
-								kind,
-								&surface0,
-								&mut gemap1,
-							)?;
+						geom_loops_store1.add_geom_vertex(
+							(face_index1, wire_index, edge_index),
+							&gv1,
+							kind,
+							&surface0,
+							&mut gemap1,
+						)?;
 						let polyline = intersection_curve.leader_mut();
 						*polyline.last_mut().unwrap() = gv1.get_point();
 					}
@@ -584,12 +592,12 @@ where
 				Some(())
 			})
 		})?;
-	Some((
+	Some(LoopsStoreQuadruple {
 		geom_loops_store0,
 		poly_loops_store0,
 		geom_loops_store1,
 		poly_loops_store1,
-	))
+	})
 }
 
 #[cfg(test)]

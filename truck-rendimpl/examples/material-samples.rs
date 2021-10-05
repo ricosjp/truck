@@ -9,8 +9,8 @@
 mod app;
 use app::*;
 use std::f64::consts::PI;
-use truck_modeling::*;
 use truck_meshalgo::prelude::*;
+use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
@@ -68,14 +68,13 @@ impl App for MyApp {
                 a: BACKGROUND[3],
             },
             sample_count,
-            ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
         let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
         let e = builder::tsweep(&v, Vector3::unit_x());
         let f = builder::tsweep(&e, Vector3::unit_y());
         let cube = builder::tsweep(&f, Vector3::unit_z());
-        let mesh = cube.triangulation(0.01).unwrap().into_polygon();
+        let mesh = cube.triangulation(0.01).unwrap().to_polygon();
         let instance: PolygonInstance = scene
             .instance_creator()
             .create_instance(&mesh, &Default::default());

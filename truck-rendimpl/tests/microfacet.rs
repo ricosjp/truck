@@ -46,7 +46,7 @@ fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
     common::render_one(&mut scene, &texture, &plane);
     let buffer1 = common::read_texture(scene.device_handler(), &texture);
     common::save_buffer(
-        out_dir.clone() + "anti-check-mf-module.png",
+        out_dir + "anti-check-mf-module.png",
         &buffer1,
         PICTURE_SIZE,
     );
@@ -54,6 +54,4 @@ fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
 }
 
 #[test]
-fn microfacet_module_test() {
-    common::os_alt_exec_test(exec_microfacet_module_test)
-}
+fn microfacet_module_test() { common::os_alt_exec_test(exec_microfacet_module_test) }

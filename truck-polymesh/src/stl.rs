@@ -61,14 +61,14 @@ impl<R: Read> STLReader<R> {
     fn text_reader(reader: R) -> STLReader<R> { STLReader::ASCII(BufReader::new(reader).lines()) }
     fn binary_reader(mut reader: R, header_judge: bool) -> Result<STLReader<R>> {
         let mut header = [0; 5];
-        reader.read(&mut header)?;
+        reader.read_exact(&mut header)?;
         if header_judge && &header == b"solid" {
             return Ok(Self::text_reader(reader));
         }
         let mut header = [0; 75];
-        reader.read(&mut header)?;
+        reader.read_exact(&mut header)?;
         let mut length_bytes = [0; 4];
-        reader.read(&mut length_bytes)?;
+        reader.read_exact(&mut length_bytes)?;
         let length = u32::from_le_bytes(length_bytes) as usize;
         Ok(STLReader::Binary(reader, length))
     }
@@ -184,23 +184,23 @@ pub fn write<I: IntoSTLIterator, W: Write>(
 /// Writes ASCII STL data
 fn write_ascii<I: IntoSTLIterator, W: Write>(iter: I, writer: &mut W) -> Result<()> {
     let mut iter = iter.into_iter();
-    writer.write(b"solid\n")?;
+    writer.write_all(b"solid\n")?;
     iter.try_for_each::<_, Result<()>>(|face| {
         writer.write_fmt(format_args!(
             "  facet normal {:e} {:e} {:e}\n",
             face.normal[0], face.normal[1], face.normal[2]
         ))?;
-        writer.write(b"    outer loop\n")?;
+        writer.write_all(b"    outer loop\n")?;
         face.vertices.iter().try_for_each(|pt| {
             writer.write_fmt(format_args!(
                 "      vertex {:e} {:e} {:e}\n",
                 pt[0], pt[1], pt[2]
             ))
         })?;
-        writer.write(b"    endloop\n  endfacet\n")?;
+        writer.write_all(b"    endloop\n  endfacet\n")?;
         Ok(())
     })?;
-    writer.write(b"endsolid\n")?;
+    writer.write_all(b"endsolid\n")?;
     Ok(())
 }
 
@@ -209,11 +209,11 @@ fn write_ascii<I: IntoSTLIterator, W: Write>(iter: I, writer: &mut W) -> Result<
 fn write_binary<I: IntoSTLIterator, W: Write>(iter: I, writer: &mut W) -> Result<()> {
     let mut iter = iter.into_iter();
     let len = iter.len() as u32;
-    writer.write(&[0u8; 80])?;
-    writer.write(&len.to_le_bytes())?;
+    writer.write_all(&[0u8; 80])?;
+    writer.write_all(&len.to_le_bytes())?;
     iter.try_for_each(|face| {
-        writer.write(bytemuck::cast_slice(&[face]))?;
-        writer.write(&[0u8, 0u8])?;
+        writer.write_all(bytemuck::cast_slice(&[face]))?;
+        writer.write_all(&[0u8, 0u8])?;
         Ok(())
     })
 }

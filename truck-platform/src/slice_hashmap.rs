@@ -24,10 +24,10 @@ impl<K: Copy + Eq + Hash, V> SliceHashMap<K, V> {
 		Self::default()
 	}
 	pub fn get(&self, key: &K) -> Option<&V> {
-		self.map.get(&key).map(|idx| &self.vec[*idx].1)
+		self.map.get(key).map(|idx| &self.vec[*idx].1)
 	}
 	pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-		let idx = *self.map.get(&key)?;
+		let idx = *self.map.get(key)?;
 		Some(&mut self.vec[idx].1)
 	}
 	pub fn len(&self) -> usize { self.vec.len() }
@@ -45,7 +45,7 @@ impl<K: Copy + Eq + Hash, V> SliceHashMap<K, V> {
 		}
 	}
 	pub fn remove(&mut self, key: &K) -> Option<V> {
-		self.map.remove(&key).map(|idx| {
+		self.map.remove(key).map(|idx| {
 			let output = self.vec.swap_remove(idx);
 			if idx < self.vec.len() {
 				let key = self.vec[idx].0;

@@ -4,23 +4,33 @@ use std::f64::consts::PI;
 impl Sphere {
     /// Creates a sphere
     #[inline(always)]
-    pub fn new(center: Point3, radius: f64) -> Sphere { Sphere { center, radius } }
+    pub fn new(center: Point3, radius: f64) -> Sphere {
+        Sphere { center, radius }
+    }
     /// Returns the center
     #[inline(always)]
-    pub fn center(&self) -> Point3 { self.center }
+    pub fn center(&self) -> Point3 {
+        self.center
+    }
     /// Returns the radius
     #[inline(always)]
-    pub fn radius(&self) -> f64 { self.radius }
+    pub fn radius(&self) -> f64 {
+        self.radius
+    }
     /// Returns whether the point `pt` is on sphere
     #[inline(always)]
-    pub fn include(&self, pt: Point3) -> bool { self.center.distance(pt).near(&self.radius) }
+    pub fn include(&self, pt: Point3) -> bool {
+        self.center.distance(pt).near(&self.radius)
+    }
 }
 
 impl ParametricSurface for Sphere {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 { self.center() + self.radius * self.normal(u, v) }
+    fn subs(&self, u: f64, v: f64) -> Point3 {
+        self.center() + self.radius * self.normal(u, v)
+    }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Vector3 {
         self.radius
@@ -35,7 +45,9 @@ impl ParametricSurface for Sphere {
         self.radius * f64::sin(u) * Vector3::new(-f64::sin(v), f64::cos(v), 0.0)
     }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 { -self.radius * self.normal(u, v) }
+    fn uuder(&self, u: f64, v: f64) -> Vector3 {
+        -self.radius * self.normal(u, v)
+    }
     #[inline(always)]
     fn uvder(&self, u: f64, v: f64) -> Vector3 {
         self.radius * f64::cos(u) * Vector3::new(-f64::sin(v), f64::cos(v), 0.0)
@@ -76,7 +88,9 @@ fn sphere_derivation_test() {
 
 impl BoundedSurface for Sphere {
     #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, PI), (0.0, 2.0 * PI)) }
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
+        ((0.0, PI), (0.0, 2.0 * PI))
+    }
 }
 
 impl IncludeCurve<BSplineCurve<Point3>> for Sphere {
@@ -109,7 +123,10 @@ impl ParameterDivision2D for Sphere {
         tol: f64,
     ) -> (Vec<f64>, Vec<f64>) {
         nonpositive_tolerance!(tol);
-        assert!(tol < self.radius, "Tolerance is larger than the radius of sphere.");
+        assert!(
+            tol < self.radius,
+            "Tolerance is larger than the radius of sphere."
+        );
         let acos = f64::acos(1.0 - tol / self.radius);
         let u_div: usize = 1 + ((urange.1 - urange.0) / acos).floor() as usize;
         let v_div: usize = 1 + ((vrange.1 - vrange.0) / acos).floor() as usize;
@@ -145,12 +162,10 @@ impl SearchParameter for Sphere {
                     Some(hint) => hint.1,
                     None => 0.0,
                 }
+            } else if radius[1] > 0.0 {
+                f64::acos(cosv)
             } else {
-                if radius[1] > 0.0 {
-                    f64::acos(cosv)
-                } else {
-                    2.0 * PI - f64::acos(cosv)
-                }
+                2.0 * PI - f64::acos(cosv)
             };
             Some((u, v))
         } else {
@@ -211,4 +226,6 @@ fn exec_search_parameter_test() {
 }
 
 #[test]
-fn search_parameter_test() { (0..10).for_each(|_| exec_search_parameter_test()) }
+fn search_parameter_test() {
+    (0..10).for_each(|_| exec_search_parameter_test())
+}

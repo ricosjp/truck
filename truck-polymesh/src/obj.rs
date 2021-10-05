@@ -4,6 +4,7 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 /// Writes obj data to output stream
 /// # Examples
 /// ```
+/// use std::iter::FromIterator;
 /// use truck_polymesh::*;
 /// let positions = vec![
 ///     Point3::new(0.0, 0.0, 0.0),
@@ -45,7 +46,7 @@ pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<()> {
 }
 
 /// Writes obj data to output stream
-pub fn write_vec<W: Write>(mesh: &Vec<PolygonMesh>, writer: W) -> Result<()> {
+pub fn write_vec<W: Write>(mesh: &[PolygonMesh], writer: W) -> Result<()> {
     let mut writer = BufWriter::new(writer);
     for (i, mesh) in mesh.iter().enumerate() {
         writer.write_fmt(format_args!("g {}\n", i))?;
@@ -95,12 +96,12 @@ impl Vertex {
 impl Faces {
     fn write<W: Write>(&self, writer: &mut W) -> Result<()> {
         for face in self.face_iter() {
-            writer.write(b"f")?;
+            writer.write_all(b"f")?;
             for v in face {
-                writer.write(b" ")?;
+                writer.write_all(b" ")?;
                 v.write(writer)?;
             }
-            writer.write(b"\n")?;
+            writer.write_all(b"\n")?;
         }
         Ok(())
     }
@@ -143,7 +144,7 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
                     if &vert_str[0..1] == "#" {
                         break;
                     }
-                    let mut iter = vert_str.split("/");
+                    let mut iter = vert_str.split('/');
                     let pos = iter
                         .next()
                         .map(|val| val.parse::<usize>().map(|i| i - 1).ok())

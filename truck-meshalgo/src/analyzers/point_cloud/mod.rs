@@ -12,6 +12,7 @@ pub trait WithPointCloud {
     /// `tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_meshalgo::prelude::*;
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
@@ -29,31 +30,31 @@ pub trait WithPointCloud {
     /// point_cloud.push(Point3::new(0.25, 0.25, 2.0));
     /// assert!(mesh.is_clung_to_by(&point_cloud, 0.001));
     /// ```
-    fn is_clung_to_by(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
+    fn is_clung_to_by(&self, point_cloud: &[Point3], tol: f64) -> bool;
     /// Whether the neighborhood of the polygon mesh `self` includes `point_cloud`.
     /// # Panics
     /// `tol` must be more than `TOLERANCE`.
-    fn neighborhood_include(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
+    fn neighborhood_include(&self, point_cloud: &[Point3], tol: f64) -> bool;
     /// Whether the polygon mesh `self` and `point_cloud` collides.
     /// # Panics
     /// `tol` must be more than `TOLERANCE`.
-    fn collide_with_neiborhood_of(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool;
+    fn collide_with_neiborhood_of(&self, point_cloud: &[Point3], tol: f64) -> bool;
 }
 
 impl WithPointCloud for PolygonMesh {
     #[inline(always)]
-    fn is_clung_to_by(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool {
+    fn is_clung_to_by(&self, point_cloud: &[Point3], tol: f64) -> bool {
         nonpositive_tolerance!(tol);
         HashedPointCloud::from_points(point_cloud, tol * 2.0)
             .distance2(self)
             < tol * tol
     }
     #[inline(always)]
-    fn collide_with_neiborhood_of(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool {
+    fn collide_with_neiborhood_of(&self, point_cloud: &[Point3], tol: f64) -> bool {
         HashedPointCloud::from_points(point_cloud, tol * 2.0).is_colliding(self, tol)
     }
     #[inline(always)]
-    fn neighborhood_include(&self, point_cloud: &Vec<Point3>, tol: f64) -> bool {
+    fn neighborhood_include(&self, point_cloud: &[Point3], tol: f64) -> bool {
         sort_end_points::pointcloud_in_polygon_neighborhood(self, point_cloud, tol)
     }
 }

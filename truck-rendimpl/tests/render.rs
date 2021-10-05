@@ -86,7 +86,7 @@ fn exec_nontex_render_test(backend: Backends, out_dir: &str) {
     let buffer1 = nontex_polygon(&mut scene, &creator);
     let filename = out_dir.clone() + "nontex-raytracing.png";
     common::save_buffer(filename, &buffer0, PICTURE_SIZE);
-    let filename = out_dir.clone() + "nontex-polygon.png";
+    let filename = out_dir + "nontex-polygon.png";
     common::save_buffer(filename, &buffer1, PICTURE_SIZE);
     let diff = common::count_difference(&buffer0, &buffer1);
     println!("{} pixel difference: ray-tracing and polymesh", diff);
@@ -94,9 +94,7 @@ fn exec_nontex_render_test(backend: Backends, out_dir: &str) {
 }
 
 #[test]
-fn nontex_render_test() {
-    common::os_alt_exec_test(exec_nontex_render_test);
-}
+fn nontex_render_test() { common::os_alt_exec_test(exec_nontex_render_test); }
 
 fn generate_texture(scene: &mut Scene, out_dir: String) -> DynamicImage {
     let texture = common::gradation_texture(scene);
@@ -160,7 +158,7 @@ fn exec_tex_render_test(backend: Backends, out_dir: &str) {
     let buffer1 = tex_polygon(&mut scene, &creator, &image);
     let filename = out_dir.clone() + "tex-raytracing.png";
     common::save_buffer(filename, &buffer0, PICTURE_SIZE);
-    let filename = out_dir.clone() + "tex-polygon.png";
+    let filename = out_dir + "tex-polygon.png";
     common::save_buffer(filename, &buffer1, PICTURE_SIZE);
     let diff = common::count_difference(&buffer0, &buffer1);
     let anti_diff = common::count_difference(&anti_buffer, &buffer0);
@@ -170,6 +168,4 @@ fn exec_tex_render_test(backend: Backends, out_dir: &str) {
 }
 
 #[test]
-fn tex_render_test() {
-    common::os_alt_exec_test(exec_tex_render_test)
-}
+fn tex_render_test() { common::os_alt_exec_test(exec_tex_render_test) }

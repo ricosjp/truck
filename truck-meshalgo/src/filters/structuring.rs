@@ -6,6 +6,7 @@ pub trait StructuringFilter {
     /// triangulate all n-gons
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     ///
@@ -50,6 +51,7 @@ pub trait StructuringFilter {
     /// `plane_tol` and `score_tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
+	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     ///
@@ -110,8 +112,9 @@ impl SubStructureFilter for PolygonMesh {
     fn create_face_edge_list(&self, plane_tol: f64, score_tol: f64) -> Vec<FaceEdge> {
         let face_adjacency = self.faces().face_adjacency(true);
         let mut passed = Vec::new();
-        for i in 0..self.faces().tri_faces().len() {
-            for j in &face_adjacency[i] {
+        let tri_len = self.faces().tri_faces().len();
+        for (i, face) in face_adjacency.iter().enumerate().take(tri_len) {
+            for j in face {
                 if i > *j {
                     continue;
                 } else if let Some(face_edge) = self.get_face_edge(i, *j, plane_tol, score_tol) {
@@ -158,28 +161,28 @@ impl SubStructureFilter for PolygonMesh {
         let face1 = self.faces().tri_faces()[face1_id];
 
         let k = (0..3)
-            .find(|k| face0.iter().find(|x| x.pos == face1[*k].pos).is_none())
+            .find(|k| face0.iter().all(|x| x.pos != face1[*k].pos))
             .unwrap();
         let vec0 = self.positions()[face0[1].pos] - self.positions()[face0[0].pos];
         let vec1 = self.positions()[face0[2].pos] - self.positions()[face0[0].pos];
         let mut n = vec0.cross(vec1);
         n /= n.magnitude();
         let vec2 = self.positions()[face1[k].pos] - self.positions()[face0[0].pos];
-        let mat = Matrix3::from_cols(vec0.clone(), vec1.clone(), n.clone());
+        let mat = Matrix3::from_cols(vec0, vec1, n);
         let coef = mat.invert().unwrap() * vec2;
 
         if coef[2] > plane_tol {
             None
         } else if coef[0] > 0.0 && coef[1] > 0.0 {
-            let score = calc_score(&vec0, &(&vec2 - &vec0), &(&vec1 - &vec2), &vec1);
+            let score = calc_score(vec0, vec2 - vec0, vec1 - vec2, vec1);
             if score < score_tol {
                 Some(FaceEdge {
                     faces: (face0_id, face1_id),
                     positions: [
-                        face0[0].clone(),
-                        face0[1].clone(),
-                        face1[k].clone(),
-                        face0[2].clone(),
+                        face0[0],
+                        face0[1],
+                        face1[k],
+                        face0[2],
                     ],
                     score,
                 })
@@ -187,15 +190,15 @@ impl SubStructureFilter for PolygonMesh {
                 None
             }
         } else if coef[0] < 0.0 && coef[1] > 0.0 && coef[0] + coef[1] < 1.0 {
-            let score = calc_score(&vec0, &(&vec1 - &vec0), &(&vec2 - &vec1), &vec2);
+            let score = calc_score(vec0, vec1 - vec0, vec2 - vec1, vec2);
             if score < score_tol {
                 Some(FaceEdge {
                     faces: (face0_id, face1_id),
                     positions: [
-                        face0[0].clone(),
-                        face0[1].clone(),
-                        face0[2].clone(),
-                        face1[k].clone(),
+                        face0[0],
+                        face0[1],
+                        face0[2],
+                        face1[k],
                     ],
                     score,
                 })
@@ -203,15 +206,15 @@ impl SubStructureFilter for PolygonMesh {
                 None
             }
         } else if coef[0] > 0.0 && coef[1] < 0.0 && coef[0] + coef[1] < 1.0 {
-            let score = calc_score(&vec2, &(&vec0 - &vec2), &(&vec1 - &vec0), &vec1);
+            let score = calc_score(vec2, vec0 - vec2, vec1 - vec0, vec1);
             if score < score_tol {
                 Some(FaceEdge {
                     faces: (face0_id, face1_id),
                     positions: [
-                        face0[0].clone(),
-                        face1[k].clone(),
-                        face0[1].clone(),
-                        face0[2].clone(),
+                        face0[0],
+                        face1[k],
+                        face0[1],
+                        face0[2],
                     ],
                     score,
                 })
@@ -231,7 +234,7 @@ struct FaceEdge {
 }
 
 #[inline(always)]
-fn calc_score(edge0: &Vector3, edge1: &Vector3, edge2: &Vector3, edge3: &Vector3) -> f64 {
+fn calc_score(edge0: Vector3, edge1: Vector3, edge2: Vector3, edge3: Vector3) -> f64 {
     edge0.cos_angle(edge1).abs()
         + edge1.cos_angle(edge2).abs()
         + edge2.cos_angle(edge3).abs()
@@ -239,11 +242,11 @@ fn calc_score(edge0: &Vector3, edge1: &Vector3, edge2: &Vector3, edge3: &Vector3
 }
 
 trait CosAngle {
-    fn cos_angle(&self, other: &Self) -> f64;
+    fn cos_angle(self, other: Self) -> f64;
 }
 
 impl CosAngle for Vector3 {
-    fn cos_angle(&self, other: &Self) -> f64 {
-        self.dot(*other) / (self.magnitude() * other.magnitude())
+    fn cos_angle(self, other: Self) -> f64 {
+        self.dot(other) / (self.magnitude() * other.magnitude())
     }
 }

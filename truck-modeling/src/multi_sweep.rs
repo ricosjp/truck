@@ -155,7 +155,7 @@ impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Shell<P, C, S> {
             .map(move |shell| {
                 let mut bdry = Shell::new();
                 bdry.extend(shell.face_iter().map(|face| face.inverse()));
-                let mut shell_cursor = shell.clone();
+                let mut shell_cursor = shell;
                 for _ in 0..division {
                     let seiling =
                         shell_cursor.mapped(point_mapping, curve_mapping, surface_mapping);

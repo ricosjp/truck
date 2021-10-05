@@ -87,7 +87,7 @@ fn nontex_inst_state() -> PolygonState {
 fn exec_polygon_bgtest(
     scene: &mut Scene,
     instance: &PolygonInstance,
-    answer: &Vec<u8>,
+    answer: &[u8],
     id: usize,
     out_dir: String,
 ) -> bool {
@@ -98,7 +98,7 @@ fn exec_polygon_bgtest(
     let buffer = common::read_texture(scene.device_handler(), &texture);
     let path = format!("{}polygon-bgtest-{}.png", out_dir, id);
     common::save_buffer(path, &buffer, PICTURE_SIZE);
-    common::same_buffer(&answer, &buffer)
+    common::same_buffer(answer, &buffer)
 }
 
 fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
@@ -116,7 +116,7 @@ fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance: PolygonInstance = polygon.into_instance(
+            let instance: PolygonInstance = polygon.to_instance(
                 scene.device_handler(),
                 &bgcheck_shaders(scene.device_handler()),
                 &inst_desc,
@@ -128,7 +128,7 @@ fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
                 i,
                 out_dir.clone()
             ));
-            let instance: PolygonInstance = polygon.into_instance(
+            let instance: PolygonInstance = polygon.to_instance(
                 scene.device_handler(),
                 &bgcheck_anti_shaders(scene.device_handler()),
                 &inst_desc,
@@ -173,7 +173,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance: PolygonInstance = polygon.into_instance(
+            let instance: PolygonInstance = polygon.to_instance(
                 scene.device_handler(),
                 &bgcheck_shaders(scene.device_handler()),
                 &state,
@@ -185,7 +185,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
                 i + 3,
                 out_dir.clone(),
             ));
-            let instance: PolygonInstance = polygon.into_instance(
+            let instance: PolygonInstance = polygon.to_instance(
                 scene.device_handler(),
                 &bgcheck_anti_shaders(scene.device_handler()),
                 &state,
@@ -201,6 +201,4 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
 }
 
 #[test]
-fn polymesh_tex_bind_group_test() {
-    common::os_alt_exec_test(exec_polymesh_tex_bind_group_test)
-}
+fn polymesh_tex_bind_group_test() { common::os_alt_exec_test(exec_polymesh_tex_bind_group_test) }

@@ -1,4 +1,5 @@
 use truck_polymesh::*;
+use std::iter::FromIterator;
 
 const TEAPOT_POSITION_OBJ: &[u8] = include_bytes!("data/teapot-position.obj");
 const TEAPOT_WITHNORMALS_OBJ: &[u8] = include_bytes!("data/teapot-with-normals.obj");
