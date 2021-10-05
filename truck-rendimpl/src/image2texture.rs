@@ -41,7 +41,7 @@ where
             origin: Origin3d::ZERO,
             aspect: TextureAspect::All,
         },
-        bytemuck::cast_slice(&image_buffer),
+        bytemuck::cast_slice(image_buffer),
         ImageDataLayout {
             offset: 0,
             bytes_per_row: (size.width * std::mem::size_of::<P>() as u32)

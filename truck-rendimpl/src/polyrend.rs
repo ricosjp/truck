@@ -44,10 +44,10 @@ impl Instance for PolygonInstance {
     }
 }
 
-impl IntoInstance<PolygonInstance> for PolygonMesh {
+impl ToInstance<PolygonInstance> for PolygonMesh {
     type State = PolygonState;
     #[inline(always)]
-    fn into_instance(
+    fn to_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &PolygonShaders,
@@ -63,10 +63,10 @@ impl IntoInstance<PolygonInstance> for PolygonMesh {
     }
 }
 
-impl IntoInstance<WireFrameInstance> for PolygonMesh {
+impl ToInstance<WireFrameInstance> for PolygonMesh {
     type State = WireFrameState;
     #[doc(hidden)]
-    fn into_instance(
+    fn to_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,
@@ -109,10 +109,10 @@ impl CreateBuffers for StructuredMesh {
     }
 }
 
-impl IntoInstance<PolygonInstance> for StructuredMesh {
+impl ToInstance<PolygonInstance> for StructuredMesh {
     type State = PolygonState;
     #[inline(always)]
-    fn into_instance(
+    fn to_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &PolygonShaders,
@@ -128,10 +128,10 @@ impl IntoInstance<PolygonInstance> for StructuredMesh {
     }
 }
 
-impl IntoInstance<WireFrameInstance> for StructuredMesh {
+impl ToInstance<WireFrameInstance> for StructuredMesh {
     type State = WireFrameState;
     #[doc(hidden)]
-    fn into_instance(
+    fn to_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,
@@ -141,7 +141,7 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
         let positions: Vec<[f32; 3]> = self
             .positions()
             .iter()
-            .flat_map(|vec| vec)
+            .flatten()
             .map(|p| p.cast().unwrap().into())
             .collect();
         let mut strips = Vec::<u32>::new();
@@ -174,9 +174,9 @@ impl IntoInstance<WireFrameInstance> for StructuredMesh {
     }
 }
 
-impl IntoInstance<WireFrameInstance> for PolylineCurve<Point3> {
+impl ToInstance<WireFrameInstance> for PolylineCurve<Point3> {
     type State = WireFrameState;
-    fn into_instance(
+    fn to_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,
@@ -199,9 +199,9 @@ impl IntoInstance<WireFrameInstance> for PolylineCurve<Point3> {
     }
 }
 
-impl IntoInstance<WireFrameInstance> for Vec<PolylineCurve<Point3>> {
+impl ToInstance<WireFrameInstance> for Vec<PolylineCurve<Point3>> {
     type State = WireFrameState;
-    fn into_instance(
+    fn to_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,

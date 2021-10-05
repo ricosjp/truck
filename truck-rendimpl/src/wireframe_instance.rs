@@ -141,9 +141,9 @@ impl Rendered for WireFrameInstance {
     }
 }
 
-impl IntoInstance<WireFrameInstance> for Vec<(Point3, Point3)> {
+impl ToInstance<WireFrameInstance> for Vec<(Point3, Point3)> {
     type State = WireFrameState;
-    fn into_instance(
+    fn to_instance(
         &self,
         handler: &DeviceHandler,
         shaders: &WireShaders,

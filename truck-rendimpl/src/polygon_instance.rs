@@ -103,7 +103,7 @@ impl Rendered for PolygonInstance {
     ) -> Arc<BindGroup> {
         Arc::new(match self.state.texture.is_some() {
             true => self.textured_bg(device_handler.device(), layout),
-            false => self.non_textured_bg(&device_handler.device(), layout),
+            false => self.non_textured_bg(device_handler.device(), layout),
         })
     }
     #[inline(always)]

@@ -205,9 +205,7 @@ impl App for MyApp {
         }
         Self::default_control_flow()
     }
-    fn render(&mut self, view: &TextureView) {
-        self.scene.render_scene(view);
-    }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
 fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh {
@@ -250,6 +248,4 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
     PolygonMesh::new(positions, Vec::new(), normals, faces)
 }
 
-fn main() {
-    MyApp::run()
-}
+fn main() { MyApp::run() }

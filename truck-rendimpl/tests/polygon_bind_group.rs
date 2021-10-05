@@ -116,7 +116,7 @@ fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance: PolygonInstance = polygon.into_instance(
+            let instance: PolygonInstance = polygon.to_instance(
                 scene.device_handler(),
                 &bgcheck_shaders(scene.device_handler()),
                 &inst_desc,
@@ -128,7 +128,7 @@ fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
                 i,
                 out_dir.clone()
             ));
-            let instance: PolygonInstance = polygon.into_instance(
+            let instance: PolygonInstance = polygon.to_instance(
                 scene.device_handler(),
                 &bgcheck_anti_shaders(scene.device_handler()),
                 &inst_desc,
@@ -173,7 +173,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
         .iter()
         .enumerate()
         .for_each(move |(i, polygon)| {
-            let instance: PolygonInstance = polygon.into_instance(
+            let instance: PolygonInstance = polygon.to_instance(
                 scene.device_handler(),
                 &bgcheck_shaders(scene.device_handler()),
                 &state,
@@ -185,7 +185,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
                 i + 3,
                 out_dir.clone(),
             ));
-            let instance: PolygonInstance = polygon.into_instance(
+            let instance: PolygonInstance = polygon.to_instance(
                 scene.device_handler(),
                 &bgcheck_anti_shaders(scene.device_handler()),
                 &state,

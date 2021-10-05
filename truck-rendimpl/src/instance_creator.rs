@@ -107,9 +107,9 @@ impl InstanceCreator {
     #[inline(always)]
     pub fn create_instance<I, T>(&self, object: &T, state: &T::State) -> I
     where
-        T: IntoInstance<I>,
+        T: ToInstance<I>,
         I: Instance, {
-        object.into_instance(&self.handler, &I::standard_shaders(self), state)
+        object.to_instance(&self.handler, &I::standard_shaders(self), state)
     }
     /// Creates `Texture` for attaching faces.
     #[inline(always)]
