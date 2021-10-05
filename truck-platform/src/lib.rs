@@ -346,7 +346,7 @@ pub trait Rendered {
                 label: None,
             });
         let pipeline = self.pipeline(
-            &scene.device_handler(),
+            scene.device_handler(),
             &pipeline_layout,
             scene.scene_desc.sample_count,
         );
@@ -405,7 +405,7 @@ pub mod bind_group_util {
             .map(|(i, e)| BindGroupLayoutEntry {
                 binding: i as u32,
                 visibility: e.visibility,
-                ty: e.ty.clone(),
+                ty: e.ty,
                 count: e.count,
             })
             .collect();
