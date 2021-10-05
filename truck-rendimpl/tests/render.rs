@@ -94,9 +94,7 @@ fn exec_nontex_render_test(backend: Backends, out_dir: &str) {
 }
 
 #[test]
-fn nontex_render_test() {
-    common::os_alt_exec_test(exec_nontex_render_test);
-}
+fn nontex_render_test() { common::os_alt_exec_test(exec_nontex_render_test); }
 
 fn generate_texture(scene: &mut Scene, out_dir: String) -> DynamicImage {
     let texture = common::gradation_texture(scene);
@@ -170,6 +168,4 @@ fn exec_tex_render_test(backend: Backends, out_dir: &str) {
 }
 
 #[test]
-fn tex_render_test() {
-    common::os_alt_exec_test(exec_tex_render_test)
-}
+fn tex_render_test() { common::os_alt_exec_test(exec_tex_render_test) }

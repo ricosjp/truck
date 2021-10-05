@@ -61,7 +61,7 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     pub fn new_unchecked(boundaries: Vec<Wire<P, C>>, surface: S) -> Face<P, C, S> {
         Face {
-            boundaries: boundaries,
+            boundaries,
             orientation: true,
             surface: Arc::new(Mutex::new(surface)),
         }
@@ -802,9 +802,7 @@ impl<P, C, S> Face<P, C, S> {
         S: Clone + PartialEq,
         Wire<P, C>: Debug, {
         let surface = self.get_surface();
-        if &surface != &other.get_surface() {
-            return None;
-        } else if self.orientation() != other.orientation() {
+        if surface != other.get_surface() || self.orientation() != other.orientation() {
             return None;
         }
         let mut vemap: HashMap<VertexID<P>, &Edge<P, C>> = self
@@ -820,7 +818,7 @@ impl<P, C, S> Face<P, C, S> {
             .try_for_each(|edge| {
                 if let Some(edge0) = vemap.get(&edge.back().id()) {
                     if edge.front() == edge0.back() {
-                        if edge.is_same(&edge0) {
+                        if edge.is_same(edge0) {
                             vemap.remove(&edge.back().id());
                             return Some(());
                         } else {
@@ -1012,7 +1010,7 @@ impl<'a, P, C> Iterator for BoundaryIter<'a, P, C> {
     #[inline(always)]
     fn next(&mut self) -> Option<Edge<P, C>> {
         match self.orientation {
-            true => self.edge_iter.next().map(|edge| edge.clone()),
+            true => self.edge_iter.next().cloned(),
             false => self.edge_iter.next_back().map(|edge| edge.inverse()),
         }
     }
@@ -1028,7 +1026,7 @@ impl<'a, P, C> DoubleEndedIterator for BoundaryIter<'a, P, C> {
     #[inline(always)]
     fn next_back(&mut self) -> Option<Edge<P, C>> {
         match self.orientation {
-            true => self.edge_iter.next_back().map(|edge| edge.clone()),
+            true => self.edge_iter.next_back().cloned(),
             false => self.edge_iter.next().map(|edge| edge.inverse()),
         }
     }

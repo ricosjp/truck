@@ -92,10 +92,8 @@ impl MyApp {
                     }
                     _ => {}
                 }
-                let mut another_object = creator.create_instance(
-                    &mesh.unwrap(),
-                    &Default::default(),
-                );
+                let mut another_object =
+                    creator.create_instance(&mesh.unwrap(), &Default::default());
                 let mut object = object.lock().unwrap();
                 object.swap_vertex(&mut another_object);
             }
@@ -143,9 +141,7 @@ impl App for MyApp {
         }
     }
 
-    fn app_title<'a>() -> Option<&'a str> {
-        Some("BSpline Benchmark Animation")
-    }
+    fn app_title<'a>() -> Option<&'a str> { Some("BSpline Benchmark Animation") }
 
     fn update(&mut self, _: &DeviceHandler) {
         let mut updated = self.updated.lock().unwrap();
@@ -156,9 +152,7 @@ impl App for MyApp {
         }
     }
 
-    fn render(&mut self, view: &TextureView) {
-        self.scene.render_scene(view);
-    }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         *self.closed.lock().unwrap() = true;
         self.thread.take().unwrap().join().unwrap();
@@ -166,6 +160,4 @@ impl App for MyApp {
     }
 }
 
-fn main() {
-    MyApp::run();
-}
+fn main() { MyApp::run(); }

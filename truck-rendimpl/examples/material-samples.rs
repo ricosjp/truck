@@ -9,8 +9,8 @@
 mod app;
 use app::*;
 use std::f64::consts::PI;
-use truck_modeling::*;
 use truck_meshalgo::prelude::*;
+use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;

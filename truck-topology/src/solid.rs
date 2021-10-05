@@ -37,7 +37,7 @@ impl<P, C, S> Solid<P, C, S> {
     #[inline(always)]
     pub fn new_unchecked(boundaries: Vec<Shell<P, C, S>>) -> Solid<P, C, S> {
         Solid {
-            boundaries: boundaries,
+            boundaries,
         }
     }
 
@@ -66,19 +66,19 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Returns an iterator over the faces.
     #[inline(always)]
-    pub fn face_iter<'a>(&'a self) -> impl Iterator<Item = &'a Face<P, C, S>> {
+    pub fn face_iter(&self) -> impl Iterator<Item = &Face<P, C, S>> {
         self.boundaries.iter().flatten()
     }
 
     /// Returns an iterator over the edges.
     #[inline(always)]
-    pub fn edge_iter<'a>(&'a self) -> impl Iterator<Item = Edge<P, C>> + 'a {
+    pub fn edge_iter(&self) -> impl Iterator<Item = Edge<P, C>> + '_ {
         self.face_iter().flat_map(Face::boundaries).flatten()
     }
 
     /// Returns an iterator over the vertices.
     #[inline(always)]
-    pub fn vertex_iter<'a>(&'a self) -> impl Iterator<Item = Vertex<P>> + 'a {
+    pub fn vertex_iter(&self) -> impl Iterator<Item = Vertex<P>> + '_ {
         self.edge_iter().map(|edge| edge.front().clone())
     }
 

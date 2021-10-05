@@ -179,9 +179,7 @@ impl App for MyApp {
         app
     }
 
-    fn app_title<'a>() -> Option<&'a str> {
-        Some("simple shape viewer")
-    }
+    fn app_title<'a>() -> Option<&'a str> { Some("simple shape viewer") }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         let file = std::fs::File::open(path).unwrap();
@@ -312,11 +310,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) {
-        self.scene.render_scene(view);
-    }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
-fn main() {
-    MyApp::run();
-}
+fn main() { MyApp::run(); }
