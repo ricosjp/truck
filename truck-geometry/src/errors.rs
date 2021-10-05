@@ -151,7 +151,7 @@ the number of control points: {1}")]
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn print_messages() {
     use std::io::Write;
     let stderr = &mut std::io::stderr();

@@ -175,13 +175,13 @@ impl<C: ParametricCurve3D> SearchNearestParameter
                 Some(hint) => hint,
                 None => hint0,
             };
-            algo::surface::search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
+            algo::surface::search_nearest_parameter(self, point, hint, trials).map(|(u, v)| {
                 let dist0 = self.subs(u, v).distance(point);
                 let v1 = if v > PI { v - PI } else { v + PI };
                 let dist1 = self.subs(u, v1).distance(point);
                 match dist0 < dist1 {
-                    true => Some((u, v)),
-                    false => Some((u, v1)),
+                    true => (u, v),
+                    false => (u, v1),
                 }
             })
         }
@@ -282,7 +282,7 @@ impl<C: Clone> Invertible for RevolutedCurve<C> {
 fn sub_include<C0, C1>(
     surface: &RevolutedCurve<C0>,
     curve: &C1,
-    knots: &Vec<f64>,
+    knots: &[f64],
     degree: usize,
 ) -> bool
 where

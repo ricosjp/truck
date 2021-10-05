@@ -269,9 +269,7 @@ impl KnotVec {
     /// # Panics
     /// Panic occurs if `scalar` is not positive.
     pub fn transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
-        if scalar < 0.0 {
-            panic!("The scalar {} is not positive.", scalar);
-        }
+        assert!(scalar > 0.0, "The scalar {} is not positive.", scalar);
         self.0
             .iter_mut()
             .for_each(move |vec| *vec = *vec * scalar + r#move);

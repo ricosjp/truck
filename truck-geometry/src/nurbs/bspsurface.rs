@@ -32,9 +32,7 @@ impl<P> BSplineSurface<P> {
         knot_vecs: (KnotVec, KnotVec),
         control_points: Vec<Vec<P>>,
     ) -> Result<BSplineSurface<P>> {
-        if control_points.is_empty() {
-            Err(Error::EmptyControlPoints)
-        } else if control_points[0].is_empty() {
+        if control_points.is_empty() || control_points[0].is_empty() {
             Err(Error::EmptyControlPoints)
         } else if knot_vecs.0.len() <= control_points.len() {
             Err(Error::TooShortKnotVector(
@@ -50,10 +48,7 @@ impl<P> BSplineSurface<P> {
             Err(Error::ZeroRange)
         } else {
             let len = control_points[0].len();
-            if control_points
-                .iter()
-                .fold(false, |flag, vec| flag || vec.len() != len)
-            {
+            if control_points.iter().any(|vec| vec.len() != len) {
                 Err(Error::IrregularControlPoints)
             } else {
                 Ok(BSplineSurface::new_unchecked(knot_vecs, control_points))
@@ -139,10 +134,7 @@ impl<P> BSplineSurface<P> {
     /// Apply the given transformation to all control points.
     #[inline(always)]
     pub fn transform_control_points<F: FnMut(&mut P)>(&mut self, f: F) {
-        self.control_points
-            .iter_mut()
-            .flat_map(|vec| vec)
-            .for_each(f)
+        self.control_points.iter_mut().flatten().for_each(f)
     }
 
     /// Returns the iterator over the control points in the `column_idx`th row.
@@ -373,10 +365,7 @@ impl<P> BSplineSurface<P> {
         P: Clone,
     {
         let knot_vec = self.uknot_vec().clone();
-        let ctrl_pts: Vec<_> = self
-            .ctrl_pts_row_iter(column_idx)
-            .map(|pt| pt.clone())
-            .collect();
+        let ctrl_pts: Vec<_> = self.ctrl_pts_row_iter(column_idx).cloned().collect();
         BSplineCurve::new_unchecked(knot_vec, ctrl_pts)
     }
 }
@@ -1008,7 +997,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         } else {
             self.control_points
                 .iter_mut()
-                .for_each(|vec| vec.insert(idx - 1, vec[idx - 1].clone()));
+                .for_each(|vec| vec.insert(idx - 1, vec[idx - 1]));
             idx
         };
         for j in start..end {
@@ -1059,7 +1048,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         let mut new_points = Vec::with_capacity(k + 1);
         let first_vec = self
             .ctrl_pts_column_iter(idx - k - 1)
-            .map(|pt| pt.clone())
+            .cloned()
             .collect::<Vec<_>>();
         new_points.push(first_vec);
         for i in (idx - k)..idx {
@@ -1157,7 +1146,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         let mut new_points = Vec::with_capacity(k + 1);
         let first_vec = self
             .ctrl_pts_row_iter(idx - k - 1)
-            .map(|pt| pt.clone())
+            .cloned()
             .collect::<Vec<_>>();
         new_points.push(first_vec);
         for i in (idx - k)..idx {
@@ -1352,16 +1341,20 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
 
         let ulen = self.uknot_vec().len();
         let vlen = self.vknot_vec().len();
-        if ulen > vlen {
-            for _ in 0..ulen - vlen {
-                self.add_vknot(1.0);
+        use std::cmp::Ordering;
+        match usize::cmp(&ulen, &vlen) {
+            Ordering::Less => {
+                for _ in 0..vlen - ulen {
+                    self.add_uknot(1.0);
+                }
             }
-        } else if ulen < vlen {
-            for _ in 0..vlen - ulen {
-                self.add_uknot(1.0);
+            Ordering::Greater => {
+                for _ in 0..ulen - vlen {
+                    self.add_vknot(1.0);
+                }
             }
+            _ => {}
         }
-
         self
     }
 
@@ -1613,8 +1606,8 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         let mut control_points = Vec::new();
         for i in 0..bspcurve0.control_points().len() {
             control_points.push(Vec::new());
-            control_points[i].push(bspcurve0.control_point(i).clone());
-            control_points[i].push(bspcurve1.control_point(i).clone());
+            control_points[i].push(*bspcurve0.control_point(i));
+            control_points[i].push(*bspcurve1.control_point(i));
         }
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
     }
@@ -1697,23 +1690,21 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         curve1.syncro_knots(&mut curve3);
 
         let knot_vecs = (curve0.knot_vec().clone(), curve3.knot_vec().clone());
-        let mut control_points = Vec::new();
-        control_points.push(curve3.control_points().clone());
+        let mut control_points = vec![curve3.control_points().clone()];
         let n = curve0.control_points().len();
         let m = curve3.control_points().len();
         for i in 1..(n - 1) {
             let u = (i as f64) / (n as f64);
             let pt0 = curve2.control_points[i]
                 + (curve0.control_points[i] - curve2.control_points[i]) * u;
-            let mut new_row = Vec::new();
-            new_row.push(curve0.control_point(i).clone());
+            let mut new_row = vec![*curve0.control_point(i)];
             for j in 1..(m - 1) {
                 let v = (j as f64) / (m as f64);
                 let pt1 = curve1.control_points[j]
                     + (curve3.control_points[j] - curve1.control_points[j]) * v;
                 new_row.push(pt0 + (pt1 - pt0) / 2.0);
             }
-            new_row.push(curve2.control_point(i).clone());
+            new_row.push(*curve2.control_point(i));
             control_points.push(new_row);
         }
         control_points.push(curve1.control_points().clone());
@@ -1786,12 +1777,12 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     /// ```
     pub fn splitted_boundary(&self) -> [BSplineCurve<P>; 4] {
         let (uknot_vec, vknot_vec) = self.knot_vecs.clone();
-        let control_points0 = self.control_points.iter().map(|x| x[0].clone()).collect();
+        let control_points0 = self.control_points.iter().map(|x| x[0]).collect();
         let control_points1 = self.control_points.last().unwrap().clone();
         let control_points2 = self
             .control_points
             .iter()
-            .map(|x| x.last().unwrap().clone())
+            .map(|x| *x.last().unwrap())
             .collect();
         let control_points3 = self.control_points[0].clone();
         let curve0 = BSplineCurve::new_unchecked(uknot_vec.clone(), control_points0);
@@ -1809,9 +1800,9 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         let (range0, range1) = (uknot_vec.range_length(), vknot_vec.range_length());
         let [bspline0, mut bspline1, mut bspline2, mut bspline3] = self.splitted_boundary();
         bspline0
-            .concat(&mut bspline1.knot_translate(range0))
-            .concat(&mut bspline2.invert().knot_translate(range0 + range1))
-            .concat(&mut bspline3.invert().knot_translate(range0 * 2.0 + range1))
+            .concat(bspline1.knot_translate(range0))
+            .concat(bspline2.invert().knot_translate(range0 + range1))
+            .concat(bspline3.invert().knot_translate(range0 * 2.0 + range1))
     }
     /// Determines whether `self` and `other` is near as the B-spline surfaces or not.  
     ///
@@ -1998,13 +1989,10 @@ impl IncludeCurve<BSplineCurve<Point2>> for BSplineSurface<Point2> {
                     Some(got) => got,
                     None => return false,
                 };
-                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt) {
-                    return false;
-                } else if hint.0 < uknot_vec[0] - TOLERANCE
+                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt)
+                    || hint.0 < uknot_vec[0] - TOLERANCE
                     || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
-                {
-                    return false;
-                } else if hint.1 < vknot_vec[0] - TOLERANCE
+                    || hint.1 < vknot_vec[0] - TOLERANCE
                     || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
                 {
                     return false;
@@ -2038,13 +2026,10 @@ impl IncludeCurve<BSplineCurve<Point3>> for BSplineSurface<Point3> {
                     Some(got) => got,
                     None => return false,
                 };
-                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt) {
-                    return false;
-                } else if hint.0 < uknot_vec[0] - TOLERANCE
+                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt)
+                    || hint.0 < uknot_vec[0] - TOLERANCE
                     || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
-                {
-                    return false;
-                } else if hint.1 < vknot_vec[0] - TOLERANCE
+                    || hint.1 < vknot_vec[0] - TOLERANCE
                     || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
                 {
                     return false;
@@ -2078,13 +2063,10 @@ impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Point3> {
                     Some(got) => got,
                     None => return false,
                 };
-                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt) {
-                    return false;
-                } else if hint.0 < uknot_vec[0] - TOLERANCE
+                if !ParametricSurface::subs(self, hint.0, hint.1).near(&pt)
+                    || hint.0 < uknot_vec[0] - TOLERANCE
                     || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
-                {
-                    return false;
-                } else if hint.1 < vknot_vec[0] - TOLERANCE
+                    || hint.1 < vknot_vec[0] - TOLERANCE
                     || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
                 {
                     return false;
@@ -2156,8 +2138,7 @@ where
 }
 
 fn combinatorial(n: usize) -> Vec<usize> {
-    let mut res = Vec::new();
-    res.push(1);
+    let mut res = vec![1];
     for i in 1..=n {
         res.push(res[i - 1] * (n - i + 1) / i);
     }
