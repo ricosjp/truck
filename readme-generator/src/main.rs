@@ -25,7 +25,7 @@ fn create_readme(path: &str) {
     let mut readme = std::fs::File::create("README.md").unwrap();
     let output = Command::new("cargo").args(&["readme"]).output().unwrap();
     let output = String::from_utf8(output.stdout).unwrap();
-    let lines: Vec<_> = output.split("\n").collect();
+    let lines: Vec<_> = output.split('\n').collect();
     readme
         .write_fmt(format_args!(
             "{}\n\n{}\n\n{}\n",
@@ -61,7 +61,7 @@ fn create_readme(path: &str) {
             .arg(&path.to_str().unwrap())
             .output()
             .unwrap();
-        readme.write(&output.stdout).unwrap();
+        readme.write_all(&output.stdout).unwrap();
     }
 }
 
