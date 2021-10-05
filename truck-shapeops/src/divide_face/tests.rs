@@ -201,8 +201,7 @@ fn independent_intersection() {
 	let poly_shell1 = shell1.triangulation(TOL).unwrap();
 
 	let (loops_store0, _, loops_store1, _) =
-		crate::loops_store::create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1, TOL)
-			.unwrap();
+		create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1, TOL).unwrap();
 	let (and0, or0, unknown0) = divide_faces(&shell0, &loops_store0, TOL)
 		.unwrap()
 		.and_or_unknown();

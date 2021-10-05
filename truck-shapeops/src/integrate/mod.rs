@@ -79,6 +79,7 @@ where
 	Some((and0, or0))
 }
 
+/// AND operation between two solids.
 pub fn and<C, S>(
 	solid0: &Solid<Point3, C, S>,
 	solid1: &Solid<Point3, C, S>,
@@ -112,6 +113,7 @@ where
 	Some(Solid::new(boundaries))
 }
 
+/// OR operation between two solids.
 pub fn or<C, S>(
 	solid0: &Solid<Point3, C, S>,
 	solid1: &Solid<Point3, C, S>,

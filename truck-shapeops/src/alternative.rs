@@ -6,6 +6,7 @@ pub enum Alternative<T, U> {
 	SecondType(U),
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! impl_from {
 	($firsttype: ty, $secondtype: ty) => {

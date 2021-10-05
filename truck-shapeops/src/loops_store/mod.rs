@@ -127,7 +127,7 @@ impl<'a, P, C, S> std::iter::FromIterator<&'a Face<P, C, S>> for LoopsStore<P, C
 	}
 }
 
-impl<'a, P, C> std::iter::IntoIterator for &'a LoopsStore<P, C> {
+impl<'a, P, C> IntoIterator for &'a LoopsStore<P, C> {
 	type Item = <&'a Vec<Loops<P, C>> as IntoIterator>::Item;
 	type IntoIter = <&'a Vec<Loops<P, C>> as IntoIterator>::IntoIter;
 	fn into_iter(self) -> Self::IntoIter { self.0.iter() }
