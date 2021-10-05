@@ -153,7 +153,7 @@ fn inside100() {
 		Point3::new(0.0, 1.0, 0.0),
 		Point3::new(0.0, 0.0, 1.0),
 	];
-	let faces = Faces::from_iter(vec![[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]]);
+	let faces: Faces = vec![[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]].into_iter().collect();
 	let simplex = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
 
 	for _ in 0..100 {

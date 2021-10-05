@@ -205,7 +205,9 @@ impl App for MyApp {
         }
         Self::default_control_flow()
     }
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) {
+        self.scene.render_scene(view);
+    }
 }
 
 fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh {
@@ -227,23 +229,27 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
             })
         })
         .collect::<Vec<_>>();
-    let faces = Faces::from_iter((0..udiv).flat_map(move |i| {
-        (0..vdiv - 1).map(move |j| {
-            let a = [
-                i * vdiv + j,
-                i * vdiv + (j + 1) % vdiv,
-                (i + 1) % udiv * vdiv + (j + 1) % vdiv,
-                (i + 1) % udiv * vdiv + j,
-            ];
-            [
-                (a[0], None, Some(a[0])),
-                (a[1], None, Some(a[1])),
-                (a[2], None, Some(a[2])),
-                (a[3], None, Some(a[3])),
-            ]
+    let faces = (0..udiv)
+        .flat_map(move |i| {
+            (0..vdiv - 1).map(move |j| {
+                let a = [
+                    i * vdiv + j,
+                    i * vdiv + (j + 1) % vdiv,
+                    (i + 1) % udiv * vdiv + (j + 1) % vdiv,
+                    (i + 1) % udiv * vdiv + j,
+                ];
+                [
+                    (a[0], None, Some(a[0])),
+                    (a[1], None, Some(a[1])),
+                    (a[2], None, Some(a[2])),
+                    (a[3], None, Some(a[3])),
+                ]
+            })
         })
-    }));
+        .collect();
     PolygonMesh::new(positions, Vec::new(), normals, faces)
 }
 
-fn main() { MyApp::run() }
+fn main() {
+    MyApp::run()
+}

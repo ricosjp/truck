@@ -7,6 +7,7 @@ pub enum Error {
     /// # Examples
     /// ```
     /// use truck_polymesh::*;
+    /// use std::iter::FromIterator;
     /// use errors::Error;
     /// 
     /// let positions = vec![

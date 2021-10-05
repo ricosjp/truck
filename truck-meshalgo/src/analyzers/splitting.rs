@@ -109,7 +109,7 @@ pub trait Splitting {
     /// let components = mesh.into_components(true);
     /// // The number of components is six because the mesh is a cube.
     /// assert_eq!(components.len(), 6);
-    /// 
+    ///
     /// // into components without normals
     /// let components = mesh.into_components(false);
     /// // The number of components is one because the mesh is a connected cube.
@@ -123,7 +123,7 @@ impl Splitting for PolygonMesh {
         let positions = self.positions().clone();
         let uv_coords = self.uv_coords().clone();
         let normals = self.normals().clone();
-        let faces = Faces::from_iter(indices.iter().map(|i| &self.faces()[*i]));
+        let faces: Faces = indices.iter().map(|i| &self.faces()[*i]).collect();
         PolygonMesh::new(positions, uv_coords, normals, faces)
     }
 
@@ -311,10 +311,12 @@ fn into_components_test() {
             (3, None, Some(3)),
             (2, None, Some(2)),
         ],
-    ];
+    ]
+    .into_iter()
+    .collect();
     let positions = vec![Point3::origin(); 8];
     let normals = vec![Vector3::unit_x(); 8];
-    let mesh = PolygonMesh::new(positions, Vec::new(), normals, Faces::from_iter(&faces));
+    let mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
     let comp = mesh.into_components(true);
     assert_eq!(comp.len(), 2);
     assert_eq!(comp[0], vec![0, 1, 4]);

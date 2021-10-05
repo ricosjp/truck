@@ -39,7 +39,7 @@ where S: ParametricSurface3D {
             })
         });
     StructuredMesh {
-        positions: positions,
+        positions,
         uv_division: Some((div0, div1)),
         normals: Some(normals),
     }

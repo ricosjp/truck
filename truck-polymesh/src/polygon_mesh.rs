@@ -2,89 +2,114 @@ use crate::*;
 use errors::Error;
 use std::iter::FromIterator;
 
-impl From<(usize, Option<usize>, Option<usize>)> for Vertex {
-    fn from(tuple: (usize, Option<usize>, Option<usize>)) -> Vertex {
-        Vertex {
-            pos: tuple.0,
-            uv: tuple.1,
-            nor: tuple.2,
+/// can be regarded as a vertex slice
+pub trait AsVertexSlice: AsRef<[Self::V]> {
+    /// items converted to vertex
+    type V: Copy + Into<Vertex>;
+}
+
+impl From<&Vertex> for Vertex {
+    fn from(v: &Vertex) -> Vertex {
+        *v
+    }
+}
+
+impl<'a, T: AsVertexSlice> AsVertexSlice for &'a T {
+    type V = T::V;
+}
+
+macro_rules! impl_as_vertex_slice {
+    ($vertex: ty) => {
+        impl<'a> AsVertexSlice for &'a [$vertex] {
+            type V = $vertex;
+        }
+        impl<const N: usize> AsVertexSlice for [$vertex; N] {
+            type V = $vertex;
+        }
+        impl AsVertexSlice for Vec<$vertex> {
+            type V = $vertex;
+        }
+        impl<'a> AsVertexSlice for &'a [&'a $vertex] {
+            type V = &'a $vertex;
+        }
+        impl<'a> AsVertexSlice for Vec<&'a $vertex> {
+            type V = &'a $vertex;
+        }
+    };
+}
+
+impl_as_vertex_slice!(Vertex);
+
+macro_rules! impl_as_vertex {
+    (impl From<$vertex: ty> for Vertex { $from: item }) => {
+        impl From<$vertex> for Vertex {
+            #[inline(always)]
+            $from
+        }
+        impl From<&$vertex> for Vertex {
+            #[inline(always)]
+            fn from(v: &$vertex) -> Vertex { Vertex::from(*v) }
+        }
+        impl_as_vertex_slice!($vertex);
+    };
+}
+
+impl_as_vertex! {
+    impl From<(usize, Option<usize>, Option<usize>)> for Vertex {
+        fn from(tuple: (usize, Option<usize>, Option<usize>)) -> Vertex {
+            Vertex {
+                pos: tuple.0,
+                uv: tuple.1,
+                nor: tuple.2,
+            }
         }
     }
 }
 
-impl From<&(usize, Option<usize>, Option<usize>)> for Vertex {
-    fn from(tuple: &(usize, Option<usize>, Option<usize>)) -> Vertex {
-        Vertex {
-            pos: tuple.0,
-            uv: tuple.1,
-            nor: tuple.2,
+impl_as_vertex! {
+    impl From<[usize; 3]> for Vertex {
+        fn from(arr: [usize; 3]) -> Vertex {
+            Vertex {
+                pos: arr[0],
+                uv: Some(arr[1]),
+                nor: Some(arr[2]),
+            }
         }
     }
 }
 
-impl From<[usize; 3]> for Vertex {
-    fn from(arr: [usize; 3]) -> Vertex {
-        Vertex {
-            pos: arr[0],
-            uv: Some(arr[1]),
-            nor: Some(arr[2]),
+impl_as_vertex! {
+    impl From<usize> for Vertex {
+        fn from(idx: usize) -> Vertex {
+            Vertex {
+                pos: idx,
+                uv: None,
+                nor: None,
+            }
         }
     }
 }
 
-impl From<&[usize; 3]> for Vertex {
-    fn from(arr: &[usize; 3]) -> Vertex {
-        Vertex {
-            pos: arr[0],
-            uv: Some(arr[1]),
-            nor: Some(arr[2]),
-        }
-    }
-}
-
-impl From<usize> for Vertex {
-    fn from(idx: usize) -> Vertex {
-        Vertex {
-            pos: idx,
-            uv: None,
-            nor: None,
-        }
-    }
-}
-
-impl From<&usize> for Vertex {
-    fn from(idx: &usize) -> Vertex {
-        Vertex {
-            pos: *idx,
-            uv: None,
-            nor: None,
-        }
-    }
-}
-
-impl Faces {
-    /// Creates faces of a polygon by iterator of slice.
-    ///
-    /// If `face.len() < 3`, the face is ignored.
-    /// # Examples
-    /// ```
-    /// use truck_polymesh::*;
-    /// let slice: &[&[[usize; 3]]] = &[
-    ///     &[[0, 0, 0], [1, 1, 1], [2, 2, 2]],
-    ///     &[[0, 0, 0], [2, 2, 2], [3, 3, 3]],
-    ///     &[[0, 0, 0], [4, 4, 4], [5, 5, 5], [1, 1, 1]],
-    /// ];
-    /// let faces = Faces::from_iter(slice);
-    /// ```
+impl<T: AsVertexSlice> FromIterator<T> for Faces {
     #[inline(always)]
-    pub fn from_iter<V: Copy + Into<Vertex>, T: AsRef<[V]>, I: IntoIterator<Item = T>>(
-        iter: I,
-    ) -> Faces {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Faces {
         let mut faces = Faces::default();
         faces.extend(iter);
         faces
     }
+}
 
+#[test]
+fn faces_from_iter() {
+    let slice: &[&[[usize; 3]]] = &[
+        &[[0, 0, 0], [1, 1, 1], [2, 2, 2]],
+        &[[0, 0, 0], [2, 2, 2], [3, 3, 3]],
+        &[[0, 0, 0], [4, 4, 4], [5, 5, 5], [1, 1, 1]],
+    ];
+    let _faces = Faces::from_iter(slice);
+}
+
+impl Faces {
     /// Extends faces by an iterator.
     #[inline(always)]
     pub fn extend<V: Copy + Into<Vertex>, T: AsRef<[V]>, I: IntoIterator<Item = T>>(
@@ -153,23 +178,33 @@ impl Faces {
 
     /// Returns the vector of triangles.
     #[inline(always)]
-    pub fn tri_faces(&self) -> &Vec<[Vertex; 3]> { &self.tri_faces }
+    pub fn tri_faces(&self) -> &Vec<[Vertex; 3]> {
+        &self.tri_faces
+    }
 
     /// Returns the mutable slice of triangles.
     #[inline(always)]
-    pub fn tri_faces_mut(&mut self) -> &mut [[Vertex; 3]] { &mut self.tri_faces }
+    pub fn tri_faces_mut(&mut self) -> &mut [[Vertex; 3]] {
+        &mut self.tri_faces
+    }
 
     /// Returns the vector of quadrangles.
     #[inline(always)]
-    pub fn quad_faces(&self) -> &Vec<[Vertex; 4]> { &self.quad_faces }
+    pub fn quad_faces(&self) -> &Vec<[Vertex; 4]> {
+        &self.quad_faces
+    }
 
     /// Returns the mutable slice of quadrangles.
     #[inline(always)]
-    pub fn quad_faces_mut(&mut self) -> &mut [[Vertex; 4]] { &mut self.quad_faces }
+    pub fn quad_faces_mut(&mut self) -> &mut [[Vertex; 4]] {
+        &mut self.quad_faces
+    }
 
     /// Returns the vector of n-gons (n > 4).
     #[inline(always)]
-    pub fn other_faces(&self) -> &Vec<Vec<Vertex>> { &self.other_faces }
+    pub fn other_faces(&self) -> &Vec<Vec<Vertex>> {
+        &self.other_faces
+    }
 
     /// Returns the mutable iterator of n-gons (n > 4).
     #[inline(always)]
@@ -183,6 +218,7 @@ impl Faces {
     /// in which they are registered, but runs order: triangle, square, and the others.
     /// # Examples
     /// ```
+    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// let slice: &[&[usize]] = &[
     ///     &[0, 1, 2],
@@ -219,7 +255,7 @@ impl Faces {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn face_iter<'a>(&'a self) -> impl Iterator<Item = &'a [Vertex]> {
+    pub fn face_iter(&self) -> impl Iterator<Item = &[Vertex]> {
         self.tri_faces
             .iter()
             .map(|v| v.as_ref())
@@ -233,12 +269,18 @@ impl Faces {
     /// in which they are registered, but runs order: triangle, square, and the others.
     /// cf: [`Faces:face_iter`](./struct.Faces.html#method.face_iter)
     #[inline(always)]
-    pub fn face_iter_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut [Vertex]> {
+    pub fn face_iter_mut(&mut self) -> impl Iterator<Item = &mut [Vertex]> {
         self.tri_faces
             .iter_mut()
             .map(|v| v.as_mut())
             .chain(self.quad_faces.iter_mut().map(|v| v.as_mut()))
             .chain(self.other_faces.iter_mut().map(|v| v.as_mut()))
+    }
+
+    /// Returns true if the faces is empty.
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Returns the number of faces.
@@ -286,7 +328,9 @@ impl std::ops::Index<usize> for Faces {
 
 impl Invertible for Faces {
     #[inline(always)]
-    fn invert(&mut self) { self.face_iter_mut().for_each(|f| f.reverse()); }
+    fn invert(&mut self) {
+        self.face_iter_mut().for_each(|f| f.reverse());
+    }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let tri_faces: Vec<_> = self
@@ -391,15 +435,21 @@ impl PolygonMesh {
 
     /// Returns the vector of all positions.
     #[inline(always)]
-    pub fn positions(&self) -> &Vec<Point3> { &self.positions }
+    pub fn positions(&self) -> &Vec<Point3> {
+        &self.positions
+    }
 
     /// Returns the mutable slice of all positions.
     #[inline(always)]
-    pub fn positions_mut(&mut self) -> &mut [Point3] { &mut self.positions }
+    pub fn positions_mut(&mut self) -> &mut [Point3] {
+        &mut self.positions
+    }
 
     /// Adds a position.
     #[inline(always)]
-    pub fn push_position(&mut self, position: Point3) { self.positions.push(position) }
+    pub fn push_position(&mut self, position: Point3) {
+        self.positions.push(position)
+    }
 
     /// Extend positions by iterator.
     #[inline(always)]
@@ -409,15 +459,21 @@ impl PolygonMesh {
 
     /// Returns the vector of all uv (texture) coordinates.
     #[inline(always)]
-    pub fn uv_coords(&self) -> &Vec<Vector2> { &self.uv_coords }
+    pub fn uv_coords(&self) -> &Vec<Vector2> {
+        &self.uv_coords
+    }
 
     /// Returns the mutable slice of all uv (texture) coordinates.
     #[inline(always)]
-    pub fn uv_coords_mut(&mut self) -> &mut [Vector2] { &mut self.uv_coords }
+    pub fn uv_coords_mut(&mut self) -> &mut [Vector2] {
+        &mut self.uv_coords
+    }
 
     /// Adds a uv (texture) coordinate.
     #[inline(always)]
-    pub fn push_uv_coord(&mut self, uv_coord: Vector2) { self.uv_coords.push(uv_coord) }
+    pub fn push_uv_coord(&mut self, uv_coord: Vector2) {
+        self.uv_coords.push(uv_coord)
+    }
 
     /// Extend uv (texture) coordinates by iterator.
     #[inline(always)]
@@ -427,11 +483,15 @@ impl PolygonMesh {
 
     /// Returns the vector of all normals.
     #[inline(always)]
-    pub fn normals(&self) -> &Vec<Vector3> { &self.normals }
+    pub fn normals(&self) -> &Vec<Vector3> {
+        &self.normals
+    }
 
     /// Returns the mutable slice of all normals.
     #[inline(always)]
-    pub fn normals_mut(&mut self) -> &mut [Vector3] { &mut self.normals }
+    pub fn normals_mut(&mut self) -> &mut [Vector3] {
+        &mut self.normals
+    }
 
     /// Extend normals by iterator
     #[inline(always)]
@@ -441,31 +501,45 @@ impl PolygonMesh {
 
     /// Returns the faces of the polygon.
     #[inline(always)]
-    pub fn faces(&self) -> &Faces { &self.faces }
+    pub fn faces(&self) -> &Faces {
+        &self.faces
+    }
 
     /// Returns the vector of all triangles of the polygon.
     #[inline(always)]
-    pub fn tri_faces(&self) -> &Vec<[Vertex; 3]> { &self.faces.tri_faces }
+    pub fn tri_faces(&self) -> &Vec<[Vertex; 3]> {
+        &self.faces.tri_faces
+    }
 
     /// Returns the mutable slice of all triangles.
     #[inline(always)]
-    pub fn tri_faces_mut(&mut self) -> &mut [[Vertex; 3]] { &mut self.faces.tri_faces }
+    pub fn tri_faces_mut(&mut self) -> &mut [[Vertex; 3]] {
+        &mut self.faces.tri_faces
+    }
 
     /// Returns the vector of all quadrangles.
     #[inline(always)]
-    pub fn quad_faces(&self) -> &Vec<[Vertex; 4]> { &self.faces.quad_faces }
+    pub fn quad_faces(&self) -> &Vec<[Vertex; 4]> {
+        &self.faces.quad_faces
+    }
 
     /// Returns the mutable slice of all quadrangles.
     #[inline(always)]
-    pub fn quad_faces_mut(&mut self) -> &mut [[Vertex; 4]] { &mut self.faces.quad_faces }
+    pub fn quad_faces_mut(&mut self) -> &mut [[Vertex; 4]] {
+        &mut self.faces.quad_faces
+    }
 
     /// Returns the vector of n-gons (n > 4).
     #[inline(always)]
-    pub fn other_faces(&self) -> &[Vec<Vertex>] { &self.faces.other_faces }
+    pub fn other_faces(&self) -> &[Vec<Vertex>] {
+        &self.faces.other_faces
+    }
 
     /// Returns the mutable iterator of n-gons (n > 4).
     #[inline(always)]
-    pub fn other_faces_mut(&mut self) -> &mut [Vec<Vertex>] { &mut self.faces.other_faces }
+    pub fn other_faces_mut(&mut self) -> &mut [Vec<Vertex>] {
+        &mut self.faces.other_faces
+    }
 
     /// Returns the iterator of the slice.
     ///
@@ -473,7 +547,9 @@ impl PolygonMesh {
     /// in which they are registered, but runs order: triangle, square, and the others.
     /// cf: [`Faces::face_iter`](./struct.Faces.html#method.face_iter)
     #[inline(always)]
-    pub fn face_iter<'a>(&'a self) -> impl Iterator<Item = &'a [Vertex]> { self.faces.face_iter() }
+    pub fn face_iter(&self) -> impl Iterator<Item = &[Vertex]> {
+        self.faces.face_iter()
+    }
 
     /// Returns the iterator of the slice.
     ///
@@ -481,7 +557,7 @@ impl PolygonMesh {
     /// in which they are registered, but runs order: triangle, square, and the others.
     /// cf: [`Faces::face_iter`](./struct.Faces.html#method.face_iter)
     #[inline(always)]
-    pub fn face_iter_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut [Vertex]> {
+    pub fn face_iter_mut(&mut self) -> impl Iterator<Item = &mut [Vertex]> {
         self.faces.face_iter_mut()
     }
 
@@ -527,8 +603,8 @@ impl PolygonMesh {
         mesh.faces.face_iter_mut().for_each(move |face| {
             face.iter_mut().for_each(|v| {
                 v.pos += n_pos;
-                v.uv.as_mut().map(|uv| *uv += n_uv);
-                v.nor.as_mut().map(|nor| *nor += n_nor);
+                v.uv = v.uv.map(|uv| uv + n_uv);
+                v.nor = v.nor.map(|nor| nor + n_nor);
             })
         });
         self.positions.extend(mesh.positions);
@@ -538,7 +614,9 @@ impl PolygonMesh {
     }
     /// Creates the bounding box of the polygon mesh.
     #[inline(always)]
-    pub fn bounding_box(&self) -> BoundingBox<Point3> { self.positions().iter().collect() }
+    pub fn bounding_box(&self) -> BoundingBox<Point3> {
+        self.positions().iter().collect()
+    }
 }
 
 impl Invertible for PolygonMesh {
@@ -552,7 +630,7 @@ impl Invertible for PolygonMesh {
         Self {
             positions: self.positions.clone(),
             uv_coords: self.uv_coords.clone(),
-            normals: self.normals.iter().map(|n| -n.clone()).collect(),
+            normals: self.normals.iter().map(|n| -*n).collect(),
             faces: self.faces.inverse(),
         }
     }
@@ -568,6 +646,7 @@ impl Invertible for PolygonMesh {
 /// # Examples
 /// ```
 /// use truck_polymesh::*;
+/// use std::iter::FromIterator;
 ///
 /// let positions = vec![
 ///     Point3::new(1.0, 0.0, 0.0),
@@ -586,6 +665,7 @@ impl Invertible for PolygonMesh {
 /// ```
 /// ```should_panic
 /// use truck_polymesh::*;
+/// use std::iter::FromIterator;
 ///
 /// let positions = vec![
 ///     Point3::new(1.0, 0.0, 0.0),
