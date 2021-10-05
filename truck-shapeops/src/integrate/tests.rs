@@ -22,7 +22,7 @@ fn punched_cube() {
 
 	let v = builder::vertex(Point3::new(0.5, 0.25, -0.5));
 	let w = builder::rsweep(&v, Point3::new(0.5, 0.5, 0.0), Vector3::unit_z(), Rad(7.0));
-	let f = builder::try_attach_plane(&vec![w]).unwrap();
+	let f = builder::try_attach_plane(&[w]).unwrap();
 	let s = builder::tsweep(&f, Vector3::unit_z() * 2.0);
 	let mut cylinder = s.mapped(
 		Point3::clone,

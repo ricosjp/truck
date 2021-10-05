@@ -9,7 +9,7 @@ fn line(v0: &Vertex<Point3>, v1: &Vertex<Point3>) -> Edge<Point3, BSplineCurve<P
 		KnotVec::bezier_knot(1),
 		vec![v0.get_point(), v1.get_point()],
 	);
-	Edge::new(&v0, &v1, curve)
+	Edge::new(v0, v1, curve)
 }
 
 fn parabola(
@@ -107,13 +107,13 @@ crate::impl_from!(BSplineSurface<Point3>, Plane);
 
 fn parabola_surfaces() -> (AlternativeSurface, AlternativeSurface) {
 	// define surfaces
-	#[cfg_attr(rustfmt, rustfmt_skip)]
+	#[rustfmt::skip]
 	let ctrl0 = vec![
 		vec![Point3::new(-1.0, -1.0, 3.0), Point3::new(-1.0, 0.0, -1.0), Point3::new(-1.0, 1.0, 3.0)],
 		vec![Point3::new(0.0, -1.0, -1.0), Point3::new(0.0, 0.0, -5.0), Point3::new(0.0, 1.0, -1.0)],
 		vec![Point3::new(1.0, -1.0, 3.0), Point3::new(1.0, 0.0, -1.0), Point3::new(1.0, 1.0, 3.0)],
 	];
-	#[cfg_attr(rustfmt, rustfmt_skip)]
+	#[rustfmt::skip]
 	let ctrl1 = vec![
 		vec![Point3::new(-1.0, -1.0, -3.0), Point3::new(-1.0, 0.0, 1.0), Point3::new(-1.0, 1.0, -3.0)],
 		vec![Point3::new(0.0, -1.0, 1.0), Point3::new(0.0, 0.0, 5.0), Point3::new(0.0, 1.0, 1.0)],
@@ -200,12 +200,15 @@ fn independent_intersection() {
 	let poly_shell0 = shell0.triangulation(TOL).unwrap();
 	let poly_shell1 = shell1.triangulation(TOL).unwrap();
 
-	let (loops_store0, _, loops_store1, _) =
-		create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1, TOL).unwrap();
-	let (and0, or0, unknown0) = divide_faces(&shell0, &loops_store0, TOL)
+	let LoopsStoreQuadruple {
+		geom_loops_store0: loops_store0,
+		geom_loops_store1: loops_store1,
+		..
+	} = create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1, TOL).unwrap();
+	let [and0, or0, unknown0] = divide_faces(&shell0, &loops_store0, TOL)
 		.unwrap()
 		.and_or_unknown();
-	let (and1, or1, unknown1) = divide_faces(&shell1, &loops_store1, TOL)
+	let [and1, or1, unknown1] = divide_faces(&shell1, &loops_store1, TOL)
 		.unwrap()
 		.and_or_unknown();
 	assert_eq!(and0.len(), 1);

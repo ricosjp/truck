@@ -54,13 +54,13 @@ impl<P: Debug, C: Debug> LoopsStore<P, C> {
 
 fn parabola_surfaces() -> (BSplineSurface<Point3>, BSplineSurface<Point3>) {
 	// define surfaces
-	#[cfg_attr(rustfmt, rustfmt_skip)]
+	#[rustfmt::skip]
 	let ctrl0 = vec![
 		vec![Point3::new(-1.0, -1.0, 3.0), Point3::new(-1.0, 0.0, -1.0), Point3::new(-1.0, 1.0, 3.0)],
 		vec![Point3::new(0.0, -1.0, -1.0), Point3::new(0.0, 0.0, -5.0), Point3::new(0.0, 1.0, -1.0)],
 		vec![Point3::new(1.0, -1.0, 3.0), Point3::new(1.0, 0.0, -1.0), Point3::new(1.0, 1.0, 3.0)],
 	];
-	#[cfg_attr(rustfmt, rustfmt_skip)]
+	#[rustfmt::skip]
 	let ctrl1 = vec![
 		vec![Point3::new(-1.0, -1.0, -3.0), Point3::new(-1.0, 0.0, 1.0), Point3::new(-1.0, 1.0, -3.0)],
 		vec![Point3::new(0.0, -1.0, 1.0), Point3::new(0.0, 0.0, 5.0), Point3::new(0.0, 1.0, 1.0)],
@@ -126,8 +126,11 @@ fn independent_intersection() {
 	let poly_shell1 = geom_shell1.triangulation(TOL).unwrap();
 
 	// exec create loops stores!
-	let (geom_loops_store0, _poly_loops_store0, geom_loops_store1, _poly_loops_store1) =
-		create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL).unwrap();
+	let LoopsStoreQuadruple {
+		geom_loops_store0,
+		geom_loops_store1,
+		..
+	} = create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL).unwrap();
 
 	// check the topology
 	let vertex_format = VertexDisplayFormat::AsPoint;
@@ -336,7 +339,7 @@ fn rotated_intersection() {
 	let wire00: Wire<_, _> = vec![edge00, edge02.inverse()].into();
 	let wire01: Wire<_, _> = vec![edge01, edge02].into();
 	let face00 = Face::new(vec![wire00], surface0.clone());
-	let face01 = Face::new(vec![wire01], surface0.clone());
+	let face01 = Face::new(vec![wire01], surface0);
 	let geom_shell0: Shell<_, _, _> = vec![face00.inverse(), face01.inverse()].into();
 
 	let v10 = Vertex::new(Point3::new(0.0, -1.0, -1.0));
@@ -347,7 +350,7 @@ fn rotated_intersection() {
 	let wire10: Wire<_, _> = vec![edge10, edge12.inverse()].into();
 	let wire11: Wire<_, _> = vec![edge12, edge11].into();
 	let face10 = Face::new(vec![wire10], surface1.clone());
-	let face11 = Face::new(vec![wire11], surface1.clone());
+	let face11 = Face::new(vec![wire11], surface1);
 	let geom_shell1: Shell<_, _, _> = vec![face10, face11].into();
 
 	let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
@@ -356,8 +359,11 @@ fn rotated_intersection() {
 	obj::write(&poly_shell0.to_polygon(), file).unwrap();
 	let file = std::fs::File::create("polyshell1.obj").unwrap();
 	obj::write(&poly_shell1.to_polygon(), file).unwrap();
-	let (geom_loops_store0, _poly_loops_store0, geom_loops_store1, _poly_loops_store1) =
-		create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL).unwrap();
+	let LoopsStoreQuadruple {
+		geom_loops_store0,
+		geom_loops_store1,
+		..
+	} = create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL).unwrap();
 
 	let vertex_format = VertexDisplayFormat::AsPoint;
 	let edge_id_format = EdgeDisplayFormat::VerticesTupleAndID { vertex_format };
@@ -586,7 +592,7 @@ fn crossing_edges() {
 	let wire00: Wire<_, _> = vec![edge00, edge02.inverse()].into();
 	let wire01: Wire<_, _> = vec![edge01, edge02].into();
 	let face00 = Face::new(vec![wire00], surface0.clone());
-	let face01 = Face::new(vec![wire01], surface0.clone());
+	let face01 = Face::new(vec![wire01], surface0);
 	let geom_shell0: Shell<_, _, _> = vec![face00.inverse(), face01.inverse()].into();
 
 	let v10 = Vertex::new(Point3::new(1.0, 0.0, -1.0));
@@ -597,13 +603,16 @@ fn crossing_edges() {
 	let wire10: Wire<_, _> = vec![edge10, edge12.inverse()].into();
 	let wire11: Wire<_, _> = vec![edge11, edge12].into();
 	let face10 = Face::new(vec![wire10], surface1.clone());
-	let face11 = Face::new(vec![wire11], surface1.clone());
+	let face11 = Face::new(vec![wire11], surface1);
 	let geom_shell1: Shell<_, _, _> = vec![face10, face11].into();
 
 	let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
 	let poly_shell1 = geom_shell1.triangulation(TOL).unwrap();
-	let (geom_loops_store0, _poly_loops_store0, geom_loops_store1, _poly_loops_store1) =
-		create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL).unwrap();
+	let LoopsStoreQuadruple {
+		geom_loops_store0,
+		geom_loops_store1,
+		..
+	} = create_loops_stores(&geom_shell0, &poly_shell0, &geom_shell1, &poly_shell1, TOL).unwrap();
 
 	let vertex_format = VertexDisplayFormat::AsPoint;
 	let edge_id_format = EdgeDisplayFormat::VerticesTupleAndID { vertex_format };

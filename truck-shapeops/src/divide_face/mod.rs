@@ -86,11 +86,12 @@ struct WireChunk<'a, C> {
 	wire: &'a BoundaryWire<Point3, C>,
 }
 
+type FaceWithShapesOpStatus<C, S> = (Face<Point3, C, S>, ShapesOpStatus);
 fn divide_one_face<C, S>(
 	face: &Face<Point3, C, S>,
 	loops: &Loops<Point3, C>,
 	tol: f64,
-) -> Option<Vec<(Face<Point3, C, S>, ShapesOpStatus)>>
+) -> Option<Vec<FaceWithShapesOpStatus<C, S>>>
 where
 	C: ParametricCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,

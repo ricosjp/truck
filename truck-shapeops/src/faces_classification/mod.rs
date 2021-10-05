@@ -23,9 +23,8 @@ impl<P, C, S> FacesClassification<P, C, S> {
 		self.shell.push(face);
 	}
 
-	pub fn and_or_unknown(&self) -> (Shell<P, C, S>, Shell<P, C, S>, Shell<P, C, S>) {
-		let (mut and, mut or, mut unknown) =
-			<(Shell<P, C, S>, Shell<P, C, S>, Shell<P, C, S>)>::default();
+	pub fn and_or_unknown(&self) -> [Shell<P, C, S>; 3] {
+		let [mut and, mut or, mut unknown] = <[Shell<P, C, S>; 3]>::default();
 		for face in &self.shell {
 			match self.status.get(&face.id()).unwrap() {
 				ShapesOpStatus::And => and.push(face.clone()),
@@ -33,11 +32,11 @@ impl<P, C, S> FacesClassification<P, C, S> {
 				ShapesOpStatus::Unknown => unknown.push(face.clone()),
 			}
 		}
-		(and, or, unknown)
+		[and, or, unknown]
 	}
 
 	pub fn integrate_by_component(&mut self) {
-		let (and, or, unknown) = self.and_or_unknown();
+		let [and, or, unknown] = self.and_or_unknown();
 		let and_boundary = and.extract_boundaries();
 		let or_boundary = or.extract_boundaries();
 		let components = unknown.connected_components();
@@ -46,8 +45,7 @@ impl<P, C, S> FacesClassification<P, C, S> {
 			if and_boundary
 				.iter()
 				.flatten()
-				.find(|edge| edge.id() == boundary[0][0].id())
-				.is_some()
+				.any(|edge| edge.id() == boundary[0][0].id())
 			{
 				comp.iter().for_each(|face| {
 					*self.status.get_mut(&face.id()).unwrap() = ShapesOpStatus::And;
@@ -55,8 +53,7 @@ impl<P, C, S> FacesClassification<P, C, S> {
 			} else if or_boundary
 				.iter()
 				.flatten()
-				.find(|edge| edge.id() == boundary[0][0].id())
-				.is_some()
+				.any(|edge| edge.id() == boundary[0][0].id())
 			{
 				comp.iter().for_each(|face| {
 					*self.status.get_mut(&face.id()).unwrap() = ShapesOpStatus::Or;

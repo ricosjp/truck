@@ -134,13 +134,13 @@ fn collide_parabola() {
 	const TOL: f64 = 0.05;
 
 	// define surfaces
-	#[cfg_attr(rustfmt, rustfmt_skip)]
+	#[rustfmt::skip]
 	let ctrl0 = vec![
 		vec![Point3::new(-1.0, -1.0, 3.0), Point3::new(-1.0, 0.0, -1.0), Point3::new(-1.0, 1.0, 3.0)],
 		vec![Point3::new(0.0, -1.0, -1.0), Point3::new(0.0, 0.0, -5.0), Point3::new(0.0, 1.0, -1.0)],
 		vec![Point3::new(1.0, -1.0, 3.0), Point3::new(1.0, 0.0, -1.0), Point3::new(1.0, 1.0, 3.0)],
 	];
-	#[cfg_attr(rustfmt, rustfmt_skip)]
+	#[rustfmt::skip]
 	let ctrl1 = vec![
 		vec![Point3::new(-1.0, -1.0, -3.0), Point3::new(-1.0, 0.0, 1.0), Point3::new(-1.0, 1.0, -3.0)],
 		vec![Point3::new(0.0, -1.0, 1.0), Point3::new(0.0, 0.0, 5.0), Point3::new(0.0, 1.0, 1.0)],
