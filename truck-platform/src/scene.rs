@@ -210,7 +210,7 @@ impl Scene {
             depth_texture_size: (config.width, config.height),
             sampling_buffer: Self::sampling_buffer(device, &config, scene_desc.sample_count),
             previous_sample_count: scene_desc.sample_count,
-            clock: std::time::Instant::now(),
+            clock: instant::Instant::now(),
             scene_desc: scene_desc.clone(),
             device_handler,
         }

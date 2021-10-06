@@ -13,8 +13,13 @@ categories = ["graphics"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+stdweb = [ "instant/stdweb" ]
+wasm-bindgen = [ "instant/wasm-bindgen" ]
+
 [dependencies]
 bytemuck = { version = "1.7.2", features = ["derive"] }
+instant = { version = "0.1", features = [ "now" ] }
 rustc-hash = "1.1.0"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 wgpu = "0.10.2"
