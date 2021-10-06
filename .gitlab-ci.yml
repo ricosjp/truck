@@ -7,9 +7,8 @@ cpu-test:
     stage: test
     cache:
         paths:
-            - /root/.cargo/
+            - /usr/local/cargo
     before_script:
-        - pwd
         - cargo install cargo-make
     script:
         - cargo make ci-cpu-test
