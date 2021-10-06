@@ -49,7 +49,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face { builder::homotopy(&*edge0,
 /// Try attatiching a plane whose boundary is `wire`.
 #[wasm_bindgen]
 pub fn try_attach_plane(wire: &Wire) -> Option<Face> {
-	builder::try_attach_plane(&[wire.0.clone()])
+	builder::try_attach_plane(&[wire.as_ref().clone()])
 		.map(|face| face.into())
 		.map_err(|e| eprintln!("{}", e))
 		.ok()
@@ -57,15 +57,15 @@ pub fn try_attach_plane(wire: &Wire) -> Option<Face> {
 
 macro_rules! transform_if_chain {
     ($shape: expr, $function: expr, ($($arg: expr),*), $exception: expr, $member: ident) => {
-        if let Some(entity) = &$shape.$member {
-            $function(&entity.0, $($arg),*).into_wasm().upcast()
+        if let Some(entity) = AbstractShape::$member($shape) {
+            $function(entity.as_ref(), $($arg),*).into_wasm().upcast()
         } else {
             $exception
         }
     };
     ($shape: expr, $function: expr, ($($arg: expr),*), $exception: expr, $member: ident, $($a: ident),*) => {
-        if let Some(entity) = &$shape.$member {
-            $function(&entity.0, $($arg),*).into_wasm().upcast()
+        if let Some(entity) = AbstractShape::$member($shape) {
+            $function(entity.as_ref(), $($arg),*).into_wasm().upcast()
         } else {
             transform_if_chain!($shape, $function, ($($arg),*), $exception, $($a),*)
         }
@@ -79,12 +79,12 @@ macro_rules! derive_all_shape {
             $function,
             ($($arg),*),
             unreachable!(),
-            vertex,
-            edge,
-            wire,
-            face,
-            shell,
-            solid
+            as_vertex,
+            as_edge,
+            as_wire,
+            as_face,
+            as_shell,
+            as_solid
         )
     };
 }
@@ -125,10 +125,10 @@ macro_rules! derive_all_sweepable{
             $function,
             ($($arg),*),
             panic!("sweep is only implemented to Vertex, Edge, Wire and Face."),
-            vertex,
-            edge,
-            wire,
-            face
+            as_vertex,
+            as_edge,
+            as_wire,
+            as_face
         )
     };
 }
