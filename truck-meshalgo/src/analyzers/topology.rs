@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use truck_topology::shell::ShellCondition;
 
 /// Extracts boundaries, and check shell condition: closed or orientation.

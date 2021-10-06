@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::wire::EdgeIter;
 use crate::*;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 impl<P, C, S> Face<P, C, S> {
     /// Creates a new face by a wire.
@@ -659,7 +659,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert!(face[0].border_on(&face[3]));
     /// ```
     pub fn border_on(&self, other: &Face<P, C, S>) -> bool {
-        let mut hashmap = HashMap::new();
+        let mut hashmap = HashMap::default();
         let edge_iter = self.boundary_iters().into_iter().flatten();
         edge_iter.for_each(|edge| {
             hashmap.insert(edge.id(), edge);

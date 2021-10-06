@@ -1,7 +1,7 @@
 use crate::faces_classification::FacesClassification;
 use crate::loops_store::*;
+use rustc_hash::FxHashMap as HashMap;
 use std::ops::Deref;
-use std::collections::HashMap;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 
@@ -96,7 +96,7 @@ where
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	let (mut pre_faces, mut negative_wires) = (Vec::new(), Vec::new());
-	let mut map = HashMap::new();
+	let mut map = HashMap::default();
 	loops.iter().try_for_each(|wire| {
 		let poly = create_parameter_boundary(face, wire, &mut map, tol)?;
 		match poly.area() > 0.0 {

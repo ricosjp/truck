@@ -1,6 +1,7 @@
 use crate::*;
 use std::collections::vec_deque;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::VecDeque;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::iter::Peekable;
 
 impl<P, C> Wire<P, C> {
@@ -248,7 +249,7 @@ impl<P, C> Wire<P, C> {
     /// assert!(Wire::<(), ()>::new().is_simple());
     /// ```
     pub fn is_simple(&self) -> bool {
-        let mut set = HashSet::new();
+        let mut set = HashSet::default();
         for vertex in self.vertex_iter() {
             if !set.insert(vertex.id()) {
                 return false;
@@ -259,7 +260,7 @@ impl<P, C> Wire<P, C> {
 
     /// Determines whether all the wires in `wires` has no same vertices.
     pub fn disjoint_wires(wires: &[Wire<P, C>]) -> bool {
-        let mut set = HashSet::new();
+        let mut set = HashSet::default();
         for vertex in wires.iter().flat_map(|wire| wire.vertex_iter()) {
             if set.get(&vertex.id()).is_some() {
                 return false;
@@ -351,8 +352,8 @@ impl<P, C> Wire<P, C> {
         mut point_mapping: impl FnMut(&P) -> Option<Q>,
         mut curve_mapping: impl FnMut(&C) -> Option<D>,
     ) -> Option<Wire<Q, D>> {
-        let mut vertex_map: HashMap<VertexID<P>, Option<Vertex<Q>>> = HashMap::new();
-        let mut edge_map: HashMap<EdgeID<C>, Option<Edge<Q, D>>> = HashMap::new();
+        let mut vertex_map: HashMap<VertexID<P>, Option<Vertex<Q>>> = HashMap::default();
+        let mut edge_map: HashMap<EdgeID<C>, Option<Edge<Q, D>>> = HashMap::default();
         self.edge_iter()
             .map(|edge| {
                 let new_edge = edge_map
@@ -429,8 +430,8 @@ impl<P, C> Wire<P, C> {
         mut point_mapping: impl FnMut(&P) -> Q,
         mut curve_mapping: impl FnMut(&C) -> D,
     ) -> Wire<Q, D> {
-        let mut vertex_map: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
-        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
+        let mut vertex_map: HashMap<VertexID<P>, Vertex<Q>> = HashMap::default();
+        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::default();
         self.edge_iter()
             .map(|edge| {
                 let new_edge = edge_map.entry(edge.id()).or_insert_with(|| {

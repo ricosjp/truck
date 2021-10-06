@@ -1,6 +1,6 @@
 use super::*;
 use crate::filters::NormalFilters;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
 type MeshedShell = Shell<Point3, PolylineCurve, PolygonMesh>;
@@ -10,8 +10,8 @@ pub(super) fn tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> O
 where
     C: PolylineableCurve + 'a,
     S: MeshableSurface + 'a, {
-    let mut vmap: HashMap<VertexID<Point3>, Vertex<Point3>> = HashMap::new();
-    let mut edge_map: HashMap<EdgeID<C>, Edge<Point3, PolylineCurve>> = HashMap::new();
+    let mut vmap = HashMap::default();
+    let mut edge_map = HashMap::default();
     shell
         .face_iter()
         .map(|face| {
@@ -194,7 +194,8 @@ fn triangulation_into_polymesh<'a>(
             (v.fix(), i)
         })
         .collect();
-    let tri_faces: Vec<[truck_polymesh::Vertex; 3]> = triangles
+    use truck_polymesh::Vertex;
+    let tri_faces: Vec<[Vertex; 3]> = triangles
         .map(|tri| tri.as_triangle())
         .filter(|tri| {
             let c = Point2::new(

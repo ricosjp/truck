@@ -1,7 +1,7 @@
 use crate::*;
 use bytemuck::{Pod, Zeroable};
 use std::io::{BufRead, BufReader, Lines, Read, Write};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 const FACESIZE: usize = std::mem::size_of::<STLFace>();
 const CHUNKSIZE: usize = FACESIZE + 2;
@@ -322,8 +322,8 @@ fn signup_vector(vector: [f32; 3], map: &mut HashMap<[i64; 3], usize>) -> usize 
 
 impl std::iter::FromIterator<STLFace> for PolygonMesh {
     fn from_iter<I: IntoIterator<Item = STLFace>>(iter: I) -> PolygonMesh {
-        let mut positions = HashMap::<[i64; 3], usize>::new();
-        let mut normals = HashMap::<[i64; 3], usize>::new();
+        let mut positions = HashMap::<[i64; 3], usize>::default();
+        let mut normals = HashMap::<[i64; 3], usize>::default();
         let faces: Vec<[Vertex; 3]> = iter
             .into_iter()
             .map(|face| {

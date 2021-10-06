@@ -14,9 +14,10 @@ categories = ["graphics"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wgpu = "0.10.2"
 bytemuck = { version = "1.7.2", features = ["derive"] }
+rustc-hash = "1.1.0"
 truck-base = { version = "0.1.1", path = "../truck-base" }
+wgpu = "0.10.2"
 
 [dev-dependencies]
 winit = "0.25.0"

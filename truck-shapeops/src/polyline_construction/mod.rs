@@ -1,4 +1,5 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::collections::VecDeque;
 use truck_base::{cgmath64::*, tolerance::*};
 use truck_meshalgo::prelude::PolylineCurve;
 
@@ -69,7 +70,7 @@ impl Graph {
 		if let Some(node) = self.get_mut(&idx0) {
 			node.adjacency.insert(idx1);
 		} else {
-			let mut set = HashSet::new();
+			let mut set = HashSet::default();
 			set.insert(idx1);
 			self.insert(idx0, Node::new(pt0, set));
 		}
@@ -106,7 +107,7 @@ impl Graph {
 
 impl<'a> std::iter::FromIterator<&'a (Point3, Point3)> for Graph {
 	fn from_iter<I: IntoIterator<Item = &'a (Point3, Point3)>>(iter: I) -> Graph {
-		let mut res = Graph(HashMap::new());
+		let mut res = Graph(HashMap::default());
 		iter.into_iter().for_each(|line| res.add_edge(*line));
 		res
 	}

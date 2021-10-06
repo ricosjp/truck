@@ -15,10 +15,11 @@ exclude = ["examples/**/*.obj"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytemuck = { version = "1.7.2", features = ["derive"] }
+rustc-hash = "1.1.0"
+serde = { version = "1.0.130", features = ["derive"] }
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
-serde = { version = "1.0.130", features = ["derive"] }
-bytemuck = { version = "1.7.2", features = ["derive"] }
 thiserror = "1.0.29"
 
 [dev-dependencies]
