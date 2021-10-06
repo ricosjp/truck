@@ -56,8 +56,17 @@ dependencies = ["clean", "cpu-test"]
 [tasks.ci-gpu-test]
 dependencies = ["clean", "gpu-release-build-test", "collect-gpu-artifacts"]
 
-[tasks.wasm-build]
-env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
+[tasks.wasm-build-debug]
 description = "Build to wasm-target"
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
 command = "cargo"
 args = ["build", "--target=wasm32-unknown-unknown", "--tests", "--examples"]
+
+[tasks.wasm-build-release]
+description = "Build to wasm-target"
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
+command = "cargo"
+args = ["build", "--release", "--target=wasm32-unknown-unknown", "--tests", "--examples"]
+
+[tasks.wasm-build]
+dependencies = ["wasm-build-debug", "wasm-build-release"]
