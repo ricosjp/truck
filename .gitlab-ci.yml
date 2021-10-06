@@ -5,11 +5,9 @@ stages:
 cpu-test:
     image: rust:latest
     stage: test
-    cache:
-        paths:
-            - /root/.cargo/
-    script:
+    before_script:
         - cargo install cargo-make
+    script:
         - cargo make ci-cpu-test
 
 gpu-test:
@@ -23,6 +21,17 @@ gpu-test:
         paths:
             - images
 
+
+wasm-build:
+    image: rust:latest
+    stage: test
+    before_script:
+        - cargo install cargo-make
+        - rustup target add wasm32-unknown-unknown
+    script:
+        - cargo make wasm-build
+
+    
 pages:
     image: rust:latest
     stage: pages

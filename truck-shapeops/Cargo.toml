@@ -15,6 +15,9 @@ truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2.3", features = ["js"] }
+
 [dev-dependencies]
 truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
 truck-modeling = { version = "0.2.1", path = "../truck-modeling" }

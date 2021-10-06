@@ -302,7 +302,7 @@ pub struct Scene {
     depth_texture_size: (u32, u32), // (width, height)
     sampling_buffer: Texture,
     previous_sample_count: u32,
-    clock: std::time::Instant,
+    clock: instant::Instant,
     scene_desc: SceneDescriptor,
 }
 
