@@ -7,7 +7,7 @@ cpu-test:
     stage: test
     cache:
         paths:
-            - ../../../usr/local/cargo
+            - /usr/local/cargo/bin/cargo-make
     before_script:
         - cargo install cargo-make
     script:
@@ -30,7 +30,7 @@ wasm-build:
     stage: test
     cache:
         paths:
-            - ../../../usr/local/cargo
+            - /usr/local/cargo/bin/cargo-make
     before_script:
         - cargo install cargo-make
         - rustup target add wasm32-unknown-unknown
