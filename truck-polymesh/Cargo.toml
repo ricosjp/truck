@@ -21,5 +21,3 @@ serde = { version = "1.0.130", features = ["derive"] }
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 thiserror = "1.0.29"
-
-[dev-dependencies]

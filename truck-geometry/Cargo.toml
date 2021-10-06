@@ -21,3 +21,6 @@ thiserror = "1.0.29"
 
 [dev-dependencies]
 rand = "0.8.4"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+getrandom = { version = "0.2.3", features = ["js"] }
