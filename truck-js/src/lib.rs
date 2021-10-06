@@ -22,7 +22,17 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+/// truck struct wrapped by wasm
+pub trait IntoWasm: Sized {
+    /// wasm wrapper struct
+    type WasmWrapper: From<Self>;
+    /// Into wasm wrapper
+    fn into_wasm(self) -> Self::WasmWrapper { self.into() }
+}
+
 mod shape_wrappers;
-pub use shape_wrappers::{Vertex, Edge, Wire, Face, Shell, Solid, AbstractShape, IntoWasm};
+pub use shape_wrappers::{AbstractShape, Edge, Face, Shell, Solid, Vertex, Wire};
 /// the building model utility API
 pub mod builder;
+mod polygon;
+pub use polygon::{PolygonMesh, PolygonBuffer, STLType};
