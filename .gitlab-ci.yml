@@ -9,6 +9,11 @@ cpu-test:
         - cargo install cargo-make
     script:
         - cargo make ci-cpu-test
+    cache:
+        paths:
+          - cargo/
+    variables:
+        CARGO_HOME: $CI_PROJECT_DIR/cargo
 
 gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
@@ -21,7 +26,6 @@ gpu-test:
         paths:
             - images
 
-
 wasm-build:
     image: rust:latest
     stage: test
@@ -30,8 +34,12 @@ wasm-build:
         - rustup target add wasm32-unknown-unknown
     script:
         - cargo make wasm-build
+    cache:
+        paths:
+          - cargo/
+    variables:
+        CARGO_HOME: $CI_PROJECT_DIR/cargo
 
-    
 pages:
     image: rust:latest
     stage: pages
