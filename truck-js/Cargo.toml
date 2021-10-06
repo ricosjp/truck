@@ -12,8 +12,10 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 console_error_panic_hook = { version = "0.1.6", optional = true }
-wasm-bindgen = "0.2.63"
+derive_more = "0.99.16"
+truck-modeling = { version = "0.2.1", path = "../truck-modeling" }
+wasm-bindgen = "0.2.78"
 wee_alloc = { version = "0.4.5", optional = true }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.13"
+wasm-bindgen-test = "0.3.28"
