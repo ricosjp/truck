@@ -34,11 +34,8 @@ impl<'a> Rendered for Plane<'a> {
         handler: &DeviceHandler,
     ) -> (Arc<BufferHandler>, Option<Arc<BufferHandler>>) {
         writeln!(&mut std::io::stderr(), "create vertex buffer").unwrap();
-        let vertex_buffer = BufferHandler::from_slice(
-            &[0, 1, 2, 2, 1, 3],
-            handler.device(),
-            BufferUsages::VERTEX,
-        );
+        let vertex_buffer =
+            BufferHandler::from_slice(&[0, 1, 2, 2, 1, 3], handler.device(), BufferUsages::VERTEX);
         (Arc::new(vertex_buffer), None)
     }
     fn bind_group_layout(&self, handler: &DeviceHandler) -> Arc<BindGroupLayout> {

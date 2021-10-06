@@ -1,6 +1,6 @@
 use crate::*;
 use std::collections::HashMap;
-use truck_base::{cgmath64::*, maputil::GetOrInsert};
+use truck_base::cgmath64::*;
 use truck_meshalgo::prelude::*;
 use truck_topology::{Vertex, *};
 
@@ -200,11 +200,11 @@ impl<P: Copy, C: Clone> Loops<P, C> {
 			.flat_map(|wire| wire.iter_mut())
 			.for_each(|edge| {
 				let mut new_edge = if edge.absolute_front() == old_vertex {
-					emap.get_or_insert(edge.id(), || {
+					emap.entry(edge.id()).or_insert_with(|| {
 						Edge::new(new_vertex, edge.absolute_back(), edge.get_curve())
 					})
 				} else if edge.absolute_back() == old_vertex {
-					emap.get_or_insert(edge.id(), || {
+					emap.entry(edge.id()).or_insert_with(|| {
 						Edge::new(edge.absolute_front(), new_vertex, edge.get_curve())
 					})
 				} else {

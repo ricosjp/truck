@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use truck_base::maputil::GetOrInsert;
 use truck_topology::*;
 
 pub(super) fn create_edge<P: Clone, C: Clone, CP: Fn(&P, &P) -> C>(
@@ -53,14 +52,12 @@ fn sub_connect_wires<P: Clone, C: Clone, S: Clone, CP: Fn(&P, &P) -> C, CC: Fn(&
     vemap: &mut HashMap<VertexID<P>, Edge<P, C>>,
 ) -> Face<P, C, S> {
     let edge2 = vemap
-        .get_or_insert(edge0.front().id(), || {
-            connect_vertices(edge0.front(), edge1.front(), connect_points)
-        })
+        .entry(edge0.front().id())
+        .or_insert_with(|| connect_vertices(edge0.front(), edge1.front(), connect_points))
         .clone();
     let edge3 = vemap
-        .get_or_insert(edge0.back().id(), || {
-            connect_vertices(edge0.back(), edge1.back(), connect_points)
-        })
+        .entry(edge0.back().id())
+        .or_insert_with(|| connect_vertices(edge0.back(), edge1.back(), connect_points))
         .clone();
     let ori = edge0.orientation();
     let wire = match ori {

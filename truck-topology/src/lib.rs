@@ -79,7 +79,7 @@ use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use truck_base::{id::ID, maputil::GetOrInsert, tolerance::*};
+use truck_base::{id::ID, tolerance::*};
 use truck_geotrait::*;
 
 const SEARCH_PARAMETER_TRIALS: usize = 100;

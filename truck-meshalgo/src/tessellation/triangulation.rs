@@ -1,7 +1,6 @@
 use super::*;
 use crate::filters::NormalFilters;
 use std::collections::HashMap;
-use truck_base::maputil::GetOrInsert;
 
 type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
 type MeshedShell = Shell<Point3, PolylineCurve, PolygonMesh>;
@@ -22,14 +21,16 @@ where
                 .map(|wire| {
                     wire.edge_iter()
                         .map(|edge| {
-                            let new_edge = edge_map.get_or_insert(edge.id(), || {
+                            let new_edge = edge_map.entry(edge.id()).or_insert_with(|| {
                                 let vf = edge.absolute_front();
                                 let v0 = vmap
-                                    .get_or_insert(vf.id(), || vf.mapped(Point3::clone))
+                                    .entry(vf.id())
+                                    .or_insert_with(|| vf.mapped(Point3::clone))
                                     .clone();
                                 let vb = edge.absolute_back();
                                 let v1 = vmap
-                                    .get_or_insert(vb.id(), || vb.mapped(Point3::clone))
+                                    .entry(vb.id())
+                                    .or_insert_with(|| vb.mapped(Point3::clone))
                                     .clone();
                                 let curve = edge.get_curve();
                                 let poly =

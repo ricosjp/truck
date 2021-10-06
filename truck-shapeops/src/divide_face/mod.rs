@@ -2,7 +2,6 @@ use crate::faces_classification::FacesClassification;
 use crate::loops_store::*;
 use std::ops::Deref;
 use std::collections::HashMap;
-use truck_base::maputil::GetOrInsert;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 
@@ -58,7 +57,7 @@ where
 	let pt = wire.front_vertex().unwrap().get_point();
 	let p: Point2 = surface.search_parameter(pt, None, 100)?.into();
 	let vec = wire.edge_iter().try_fold(vec![p], |mut vec, edge| {
-		let poly = polys.get_or_insert(edge.id(), || {
+		let poly = polys.entry(edge.id()).or_insert_with(|| {
 			let curve = edge.get_curve();
 			let div = curve.parameter_division(curve.parameter_range(), tol).1;
 			PolylineCurve(div)
