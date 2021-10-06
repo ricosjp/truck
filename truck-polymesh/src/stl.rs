@@ -1,7 +1,7 @@
 use crate::*;
 use bytemuck::{Pod, Zeroable};
 use std::io::{BufRead, BufReader, Lines, Read, Write};
-use truck_base::maputil::IDMap;
+use std::collections::HashMap;
 
 const FACESIZE: usize = std::mem::size_of::<STLFace>();
 const CHUNKSIZE: usize = FACESIZE + 2;
@@ -310,19 +310,20 @@ where
     fn into_iter(self) -> I::IntoIter { self.into_iter() }
 }
 
-fn signup_vector(vector: [f32; 3], map: &mut IDMap<[i64; 3]>) -> usize {
+fn signup_vector(vector: [f32; 3], map: &mut HashMap<[i64; 3], usize>) -> usize {
     let vector = [
         ((vector[0] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
         ((vector[1] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
         ((vector[2] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
     ];
-    map.get_number_or_insert(vector)
+    let len = map.len();
+    *map.entry(vector).or_insert_with(|| len)
 }
 
 impl std::iter::FromIterator<STLFace> for PolygonMesh {
     fn from_iter<I: IntoIterator<Item = STLFace>>(iter: I) -> PolygonMesh {
-        let mut positions = IDMap::<[i64; 3]>::new();
-        let mut normals = IDMap::<[i64; 3]>::new();
+        let mut positions = HashMap::<[i64; 3], usize>::new();
+        let mut normals = HashMap::<[i64; 3], usize>::new();
         let faces: Vec<[Vertex; 3]> = iter
             .into_iter()
             .map(|face| {

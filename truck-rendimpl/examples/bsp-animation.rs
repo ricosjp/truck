@@ -139,9 +139,7 @@ impl App for MyApp {
         }
     }
 
-    fn app_title<'a>() -> Option<&'a str> {
-        Some("BSpline Benchmark Animation")
-    }
+    fn app_title<'a>() -> Option<&'a str> { Some("BSpline Benchmark Animation") }
 
     fn update(&mut self, _: &DeviceHandler) {
         if self.updated.load(Ordering::SeqCst) {
@@ -151,9 +149,7 @@ impl App for MyApp {
         }
     }
 
-    fn render(&mut self, view: &TextureView) {
-        self.scene.render_scene(view);
-    }
+    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         self.closed.store(true, Ordering::SeqCst);
         self.thread.take().unwrap().join().unwrap();
@@ -161,6 +157,4 @@ impl App for MyApp {
     }
 }
 
-fn main() {
-    MyApp::run();
-}
+fn main() { MyApp::run(); }

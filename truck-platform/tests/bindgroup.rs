@@ -57,12 +57,8 @@ fn exec_bind_group_test(backend: Backends, out_dir: &str) {
     let texture1 = device.create_texture(&common::texture_descriptor(&config));
     let texture2 = device.create_texture(&common::texture_descriptor(&config));
     let config = Arc::new(Mutex::new(config));
-    let camera = Camera::perspective_camera(
-        CAMERA_MATRIX,
-        CAMERA_FOV,
-        CAMERA_NEARCLIP,
-        CAMERA_FARCLIP,
-    );
+    let camera =
+        Camera::perspective_camera(CAMERA_MATRIX, CAMERA_FOV, CAMERA_NEARCLIP, CAMERA_FARCLIP);
     println!("camera projection:\n{:?}", camera.projection(PICTURE_ASP));
     let lights = vec![POINT_LIGHT, UNIFORM_LIGHT];
     let desc = SceneDescriptor {

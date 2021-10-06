@@ -132,9 +132,7 @@ where
 }
 
 impl<K: Copy + Eq + Hash> Default for IDMap<K> {
-	fn default() -> Self {
-		Self(HashMap::new())
-	}
+	fn default() -> Self { Self(HashMap::new()) }
 }
 
 /// Records the registered number.
@@ -146,9 +144,7 @@ pub struct IDMap<K>(HashMap<K, usize>);
 impl<K: Copy + Eq + Hash> IDMap<K> {
 	/// Creates a new `IDMap`.
 	#[inline(always)]
-	pub fn new() -> Self {
-		Self::default()
-	}
+	pub fn new() -> Self { Self::default() }
 	/// Returns the registered number or insert key.
 	///
 	/// # Examples
@@ -176,7 +172,5 @@ impl<K> IntoIterator for IDMap<K> {
 	type Item = (K, usize);
 	type IntoIter = <HashMap<K, usize> as IntoIterator>::IntoIter;
 	#[inline(always)]
-	fn into_iter(self) -> Self::IntoIter {
-		self.0.into_iter()
-	}
+	fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }

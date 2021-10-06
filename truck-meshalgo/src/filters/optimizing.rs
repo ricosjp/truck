@@ -2,7 +2,6 @@ use super::*;
 use std::collections::HashMap;
 use std::iter::Iterator;
 use std::ops::{Div, Mul};
-use truck_base::maputil::GetOrInsert;
 
 /// Filters for optimizing data
 pub trait OptimizingFilter {
@@ -191,7 +190,7 @@ fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usiz
     let mut map = HashMap::new();
     for (i, attr) in attrs.iter().enumerate() {
         let v = ((*attr).add_element_wise(TOLERANCE * 2.0) / (TOLERANCE * 4.0)).cast_int();
-        res.push(*map.get_or_insert(v, || i));
+        res.push(*map.entry(v).or_insert(i));
     }
     res
 }

@@ -45,11 +45,7 @@ fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
     plane.fs_entpt = "fs_main_anti";
     common::render_one(&mut scene, &texture, &plane);
     let buffer1 = common::read_texture(scene.device_handler(), &texture);
-    common::save_buffer(
-        out_dir + "anti-check-mf-module.png",
-        &buffer1,
-        PICTURE_SIZE,
-    );
+    common::save_buffer(out_dir + "anti-check-mf-module.png", &buffer1, PICTURE_SIZE);
     assert!(!common::same_buffer(&answer, &buffer1));
 }
 

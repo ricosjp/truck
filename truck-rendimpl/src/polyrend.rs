@@ -1,7 +1,6 @@
 use crate::*;
 use polymesh::Vertex;
 use std::collections::HashMap;
-use truck_base::maputil::GetOrInsert;
 
 impl<V: Sized + Zeroable + Pod> ExpandedPolygon<V> {
     pub fn buffers(
@@ -240,7 +239,7 @@ fn signup_vertex(
     glpolymesh: &mut ExpandedPolygon<AttrVertex>,
     vertex_map: &mut HashMap<Vertex, u32>,
 ) {
-    let idx = *vertex_map.get_or_insert(vertex, || {
+    let idx = *vertex_map.entry(vertex).or_insert_with(|| {
         let idx = glpolymesh.vertices.len() as u32;
         let position = polymesh.positions()[vertex.pos].cast().unwrap().into();
         let uv_coord = match vertex.uv {
