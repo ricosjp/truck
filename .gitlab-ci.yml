@@ -8,8 +8,10 @@ cpu-test:
     cache:
         paths:
             - /root/.cargo/
-    script:
+    before_script:
+        - pwd
         - cargo install cargo-make
+    script:
         - cargo make ci-cpu-test
 
 gpu-test:
@@ -27,6 +29,8 @@ gpu-test:
 wasm-build:
     image: rust:latest
     stage: test
+    before_script:
+        - rustup target add wasm32-unknown-unknown
     script:
         - RUSTFLAGS=--cfg=web_sys_unstable_apis cargo build --target wasm32-unknown-unknown
 
