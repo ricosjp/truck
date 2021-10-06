@@ -81,9 +81,13 @@ impl PolygonMesh {
 	}
 	/// Returns polygon buffer
 	#[inline(always)]
-	pub fn to_expanded(&self) -> PolygonBuffer {
-		PolygonBuffer::from(&self.0)
-	}
+	pub fn to_expanded(&self) -> PolygonBuffer { PolygonBuffer::from(&self.0) }
+	/// meshing shell
+	#[inline(always)]
+	pub fn from_shell(shell: Shell, tol: f64) -> Option<PolygonMesh> { shell.to_polygon(tol) }
+	/// meshing solid
+	#[inline(always)]
+	pub fn from_solid(solid: Solid, tol: f64) -> Option<PolygonMesh> { solid.to_polygon(tol) }
 }
 
 #[wasm_bindgen]

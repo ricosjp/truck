@@ -30,8 +30,8 @@ pub trait IntoWasm: Sized {
     fn into_wasm(self) -> Self::WasmWrapper { self.into() }
 }
 
-mod shape_wrappers;
-pub use shape_wrappers::{AbstractShape, Edge, Face, Shell, Solid, Vertex, Wire};
+mod shape;
+pub use shape::{AbstractShape, Edge, Face, Shell, Solid, Vertex, Wire};
 /// the building model utility API
 pub mod builder;
 mod polygon;

@@ -1,4 +1,5 @@
 use crate::*;
+use truck_meshalgo::tessellation::*;
 
 macro_rules! toporedef {
     ($type: ident, $member: ident) => {
@@ -113,4 +114,20 @@ impl AbstractShape {
     /// downcast as reference
     #[inline(always)]
     pub fn as_solid(&self) -> Option<&Solid> { self.solid.as_ref() }
+}
+
+#[wasm_bindgen]
+impl Shell {
+    /// meshing shape
+    pub fn to_polygon(&self, tol: f64) -> Option<PolygonMesh> {
+        Some(self.triangulation(tol)?.to_polygon().into_wasm())
+    }
+}
+
+#[wasm_bindgen]
+impl Solid {
+    /// meshing shape
+    pub fn to_polygon(&self, tol: f64) -> Option<PolygonMesh> {
+        Some(self.triangulation(tol)?.to_polygon().into_wasm())
+    }
 }
