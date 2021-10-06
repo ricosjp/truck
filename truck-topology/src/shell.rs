@@ -1,5 +1,5 @@
 use crate::*;
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::vec::Vec;
 
 type FaceAdjacencyMap<'a, P, C, S> = HashMap<&'a Face<P, C, S>, Vec<&'a Face<P, C, S>>>;
@@ -105,7 +105,7 @@ impl<P, C, S> Shell<P, C, S> {
             .flatten()
             .collect();
         let mut boundary_edges = Vec::new();
-        let mut vemap: HashMap<Vertex<P>, Edge<P, C>> = HashMap::new();
+        let mut vemap: HashMap<Vertex<P>, Edge<P, C>> = HashMap::default();
         let edge_iter = self.face_iter().flat_map(Face::boundary_iters).flatten();
         for edge in edge_iter {
             if boundaries.boundaries.get(&edge.id()).is_some() {
@@ -160,8 +160,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(v0_ads, HashSet::from_iter(vec![&v[2].id(), &v[3].id()]));
     /// ```
     pub fn vertex_adjacency(&self) -> HashMap<VertexID<P>, Vec<VertexID<P>>> {
-        let mut adjacency: HashMap<VertexID<P>, Vec<VertexID<P>>> = HashMap::new();
-        let mut done_edge: HashSet<EdgeID<C>> = HashSet::new();
+        let mut adjacency: HashMap<VertexID<P>, Vec<VertexID<P>>> = HashMap::default();
+        let mut done_edge: HashSet<EdgeID<C>> = HashSet::default();
         let edge_iter = self.face_iter().flat_map(|face| {
             face.absolute_boundaries()
                 .iter()
@@ -214,8 +214,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(face_adjacency[&shell[3]].len(), 3);
     /// ```
     pub fn face_adjacency(&self) -> FaceAdjacencyMap<P, C, S> {
-        let mut adjacency: FaceAdjacencyMap<P, C, S> = HashMap::new();
-        let mut edge_face_map: HashMap<EdgeID<C>, Vec<&Face<P, C, S>>> = HashMap::new();
+        let mut adjacency: FaceAdjacencyMap<P, C, S> = HashMap::default();
+        let mut edge_face_map: HashMap<EdgeID<C>, Vec<&Face<P, C, S>>> = HashMap::default();
         for face in self.face_iter() {
             let edge_iter = face
                 .absolute_boundaries()
@@ -406,7 +406,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(shell.singular_vertices(), vec![v[0].clone()]);
     /// ```
     pub fn singular_vertices(&self) -> Vec<Vertex<P>> {
-        let mut vert_wise_adjacency = HashMap::new();
+        let mut vert_wise_adjacency = HashMap::default();
         for face in self.face_iter() {
             let first_edge = &face.absolute_boundaries()[0][0];
             let mut edge_iter = face
@@ -417,7 +417,7 @@ impl<P, C, S> Shell<P, C, S> {
             while let Some(edge) = edge_iter.next() {
                 let adjacency = vert_wise_adjacency
                     .entry(edge.back().clone())
-                    .or_insert_with(HashMap::new);
+                    .or_insert_with(HashMap::default);
                 let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
                 adjacency
                     .entry(edge.id())
@@ -449,8 +449,8 @@ impl<P, C, S> Shell<P, C, S> {
         mut curve_mapping: impl FnMut(&C) -> Option<D>,
         mut surface_mapping: impl FnMut(&S) -> Option<T>,
     ) -> Option<Shell<Q, D, T>> {
-        let mut vmap: HashMap<VertexID<P>, Option<Vertex<Q>>> = HashMap::new();
-        let mut edge_map: HashMap<EdgeID<C>, Option<Edge<Q, D>>> = HashMap::new();
+        let mut vmap: HashMap<VertexID<P>, Option<Vertex<Q>>> = HashMap::default();
+        let mut edge_map: HashMap<EdgeID<C>, Option<Edge<Q, D>>> = HashMap::default();
         self.face_iter()
             .map(|face| {
                 let wires = face
@@ -568,7 +568,7 @@ impl<P, C, S> Shell<P, C, S> {
         mut curve_mapping: impl FnMut(&C) -> D,
         mut surface_mapping: impl FnMut(&S) -> T,
     ) -> Shell<Q, D, T> {
-        let mut vmap: HashMap<VertexID<P>, Vertex<Q>> = HashMap::new();
+        let mut vmap: HashMap<VertexID<P>, Vertex<Q>> = HashMap::default();
         self.iter()
             .flat_map(Face::absolute_boundaries)
             .flat_map(Wire::vertex_iter)
@@ -576,7 +576,7 @@ impl<P, C, S> Shell<P, C, S> {
                 vmap.entry(vertex.id())
                     .or_insert_with(|| vertex.mapped(&mut point_mapping));
             });
-        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::new();
+        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::default();
         self.face_iter()
             .map(|face| {
                 let wires: Vec<Wire<_, _>> = face

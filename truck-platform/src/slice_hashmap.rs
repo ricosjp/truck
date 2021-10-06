@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::hash::Hash;
 
 /// Hashmap for optimizing iteration.
@@ -14,7 +14,7 @@ impl<K, V> Default for SliceHashMap<K, V> {
 	fn default() -> Self {
 		SliceHashMap {
 			vec: Vec::new(),
-			map: HashMap::new(),
+			map: HashMap::default(),
 		}
 	}
 }

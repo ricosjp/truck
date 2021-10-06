@@ -1,5 +1,5 @@
 use crate::loops_store::ShapesOpStatus;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use truck_topology::*;
 
 #[derive(Clone, Debug)]

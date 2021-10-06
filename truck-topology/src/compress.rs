@@ -1,6 +1,6 @@
 use crate::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CompressedEdge<C> {
@@ -68,8 +68,8 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
     #[inline(always)]
     fn new() -> Self {
         Self {
-            vmap: HashMap::new(),
-            emap: HashMap::new(),
+            vmap: HashMap::default(),
+            emap: HashMap::default(),
         }
     }
     #[inline(always)]
@@ -231,8 +231,8 @@ fn emap_subroutin<P, Q, C, D>(
 
 #[allow(dead_code)]
 fn same_topology<P, C, S, Q, D, T>(one: &Shell<P, C, S>, other: &Shell<Q, D, T>) -> bool {
-    let mut vmap = HashMap::<VertexID<P>, VertexID<Q>>::new();
-    let mut emap = HashMap::<EdgeID<C>, EdgeID<D>>::new();
+    let mut vmap = HashMap::<VertexID<P>, VertexID<Q>>::default();
+    let mut emap = HashMap::<EdgeID<C>, EdgeID<D>>::default();
     if one.len() != other.len() {
         return false;
     }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use truck_topology::*;
 
 pub(super) fn create_edge<P: Clone, C: Clone, CP: Fn(&P, &P) -> C>(
@@ -86,7 +86,7 @@ pub(super) fn connect_wires<
     connect_points: &'a CP,
     connect_curves: &'a CC,
 ) -> impl Iterator<Item = Face<P, C, S>> + 'a {
-    let mut vemap = HashMap::<VertexID<P>, Edge<P, C>>::new();
+    let mut vemap = HashMap::<VertexID<P>, Edge<P, C>>::default();
     wire0
         .into_iter()
         .zip(wire1.into_iter())
@@ -109,7 +109,7 @@ pub(super) fn connect_raw_wires<
     connect_points: &'a CP,
     connect_curves: &'a CC,
 ) -> impl Iterator<Item = Face<P, C, S>> + 'a {
-    let mut vemap = HashMap::<VertexID<P>, Edge<P, C>>::new();
+    let mut vemap = HashMap::<VertexID<P>, Edge<P, C>>::default();
     wire0
         .into_iter()
         .zip(wire1.into_iter())

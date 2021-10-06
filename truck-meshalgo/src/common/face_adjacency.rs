@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 pub trait FaceAdjacency {
     /// create the adjacency list of the faces
@@ -10,7 +10,7 @@ impl FaceAdjacency for Faces {
     fn face_adjacency(&self, use_normal: bool) -> Vec<Vec<usize>> {
         let len = self.len();
         let mut face_adjacency = vec![Vec::<usize>::new(); len];
-        let mut edge_face_map: HashMap<[(usize, Option<usize>); 2], usize> = HashMap::new();
+        let mut edge_face_map = HashMap::default();
         for (i, face) in self.face_iter().enumerate() {
             face.windows(2)
                 .chain(std::iter::once([face[face.len() - 1], face[0]].as_ref()))

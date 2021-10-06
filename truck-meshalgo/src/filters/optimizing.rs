@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::iter::Iterator;
 use std::ops::{Div, Mul};
 
@@ -187,7 +187,7 @@ fn sub_remove_unused_attrs<'a, I: Iterator<Item = &'a mut usize>>(
 
 fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usize> {
     let mut res = Vec::new();
-    let mut map = HashMap::new();
+    let mut map = HashMap::default();
     for (i, attr) in attrs.iter().enumerate() {
         let v = ((*attr).add_element_wise(TOLERANCE * 2.0) / (TOLERANCE * 4.0)).cast_int();
         res.push(*map.entry(v).or_insert(i));

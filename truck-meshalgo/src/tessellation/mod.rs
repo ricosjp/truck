@@ -1,7 +1,7 @@
 use crate::*;
 use spade::delaunay::*;
 use spade::kernels::*;
-use truck_topology::{*, Vertex};
+use truck_topology::*;
 
 /// Gathered the traits used in tessellation.
 #[rustfmt::skip]

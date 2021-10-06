@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 /// Filters for adding normals
 pub trait NormalFilters {
@@ -258,7 +258,7 @@ trait SubNormalFilter {
 impl SubNormalFilter for PolygonMesh {
     fn clustering_noraml_faces(&self, inf: f64) -> HashMap<usize, Vec<Vec<FaceNormal>>> {
         let positions = self.positions();
-        let mut vnmap = HashMap::new();
+        let mut vnmap = HashMap::default();
         self.face_iter()
             .enumerate()
             .for_each(|(i, face)| add_face_normal(positions, i, face, &mut vnmap, inf));

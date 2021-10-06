@@ -1,5 +1,5 @@
 use crate::*;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use truck_base::cgmath64::*;
 use truck_meshalgo::prelude::*;
 use truck_topology::{Vertex, *};
@@ -526,10 +526,10 @@ where
 					let pv1 = Vertex::new(polyline.back());
 					let gv0 = Vertex::new(polyline.front());
 					let gv1 = Vertex::new(polyline.back());
-					let mut pemap0 = HashMap::new();
-					let mut pemap1 = HashMap::new();
-					let mut gemap0 = HashMap::new();
-					let mut gemap1 = HashMap::new();
+					let mut pemap0 = HashMap::default();
+					let mut pemap1 = HashMap::default();
+					let mut gemap0 = HashMap::default();
+					let mut gemap1 = HashMap::default();
 					let idx00 =
 						poly_loops_store0.add_polygon_vertex(face_index0, &pv0, &mut pemap0);
 					if let Some((wire_index, edge_index, kind)) = idx00 {

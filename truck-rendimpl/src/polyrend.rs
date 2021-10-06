@@ -1,6 +1,6 @@
 use crate::*;
 use polymesh::Vertex;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 impl<V: Sized + Zeroable + Pod> ExpandedPolygon<V> {
     pub fn buffers(
@@ -264,7 +264,7 @@ fn signup_vertex(
 impl From<&PolygonMesh> for ExpandedPolygon<AttrVertex> {
     fn from(polymesh: &PolygonMesh) -> ExpandedPolygon<AttrVertex> {
         let mut glpolymesh = ExpandedPolygon::default();
-        let mut vertex_map = HashMap::<Vertex, u32>::new();
+        let mut vertex_map = HashMap::<Vertex, u32>::default();
         for tri in polymesh.faces().tri_faces() {
             signup_vertex(polymesh, tri[0], &mut glpolymesh, &mut vertex_map);
             signup_vertex(polymesh, tri[1], &mut glpolymesh, &mut vertex_map);
