@@ -16,11 +16,11 @@ categories = ["graphics"]
 [dependencies]
 rustc-hash = "1.1.0"
 serde = { version = "1.0.130", features = ["derive"] }
+thiserror = "1.0.29"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
-thiserror = "1.0.29"
 
 [dev-dependencies]
 rand = "0.8.4"

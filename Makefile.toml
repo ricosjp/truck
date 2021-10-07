@@ -57,7 +57,27 @@ dependencies = ["clean", "cpu-test"]
 dependencies = ["clean", "gpu-release-build-test", "collect-gpu-artifacts"]
 
 [tasks.wasm-build]
-env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
 description = "Build to wasm-target"
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
 command = "cargo"
 args = ["build", "--target=wasm32-unknown-unknown", "--tests", "--examples"]
+
+[tasks.js-test]
+description = "test for js"
+script = [
+	"cd truck-js",
+	"wasm-pack build --target web",
+	"deno test -A tests/",
+]
+
+[tasks.adhoc-viewer]
+description = "build adhoc viewer"
+script = [
+	"cd truck-js",
+	"wasm-pack build",
+	"cd examples",
+	"npm install && npm run build",
+]
+
+[tasks.wasm-test]
+dependencies = ["wasm-build", "js-test", "adhoc-viewer"]

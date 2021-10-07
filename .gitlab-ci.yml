@@ -10,6 +10,7 @@ cpu-test:
     script:
         - cargo make ci-cpu-test
     cache:
+        key: cpu-test
         paths:
           - cargo/
     variables:
@@ -26,26 +27,28 @@ gpu-test:
         paths:
             - images
 
-wasm-build:
-    image: rust:latest
+wasm-test:
+    image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
     stage: test
     before_script:
-        - cargo install cargo-make
         - rustup target add wasm32-unknown-unknown
     script:
-        - cargo make wasm-build
-    cache:
+        - mkdir public
+        - cargo make wasm-test
+        - cp -r truck-js/examples/dist public
+    artifacts:
         paths:
-          - cargo/
-    variables:
-        CARGO_HOME: $CI_PROJECT_DIR/cargo
+            - public
 
 pages:
-    image: rust:latest
+    image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
     stage: pages
     script:
+        - mkdir public
         - cargo doc --no-deps
-        - mv target/doc public
+        - mv target/doc public/doc
+        - cargo make adhoc-viewer
+        - mv truck-js/examples/dist public/adhoc-viewer
     artifacts:
         paths:
             - public
