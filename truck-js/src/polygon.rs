@@ -100,12 +100,12 @@ impl PolygonBuffer {
 	#[inline(always)]
 	pub fn vertex_buffer(&self) -> *const f32 { self.vertices.as_ptr() }
 	#[inline(always)]
-	/// the length of vertex buffer. (Num of attributes) * 32.
+	/// the length of vertex buffer. (Num of attributes) * 8 components * 4 bytes.
 	pub fn vertex_buffer_size(&self) -> usize { self.vertices.len() * 4 }
 	/// index buffer. `u32`.
 	#[inline(always)]
 	pub fn index_buffer(&self) -> *const u32 { self.indices.as_ptr() }
-	/// the length of index buffer. (Num of triangle) * 12.
+	/// the length of index buffer. (Num of triangles) * 3 vertices * 4 bytes.
 	#[inline(always)]
 	pub fn indices_length(&self) -> usize { self.indices.len() * 4 }
 }

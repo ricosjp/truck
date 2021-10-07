@@ -23,8 +23,7 @@ macro_rules! toporedef {
         }
     };
     ($type: ident, $member: ident, $($a: ident, $b: ident),*) => {
-        toporedef!($type, $member);
-        toporedef!($($a, $b),*);
+        toporedef!($type, $member); toporedef!($($a, $b),*);
     }
 }
 
@@ -116,18 +115,34 @@ impl AbstractShape {
     pub fn as_solid(&self) -> Option<&Solid> { self.solid.as_ref() }
 }
 
-#[wasm_bindgen]
-impl Shell {
-    /// meshing shape
-    pub fn to_polygon(&self, tol: f64) -> Option<PolygonMesh> {
-        Some(self.triangulation(tol)?.to_polygon().into_wasm())
-    }
+macro_rules! impl_shape {
+    ($type: ident) => {
+        #[wasm_bindgen]
+        impl $type {
+            /// meshing shape
+            pub fn to_polygon(&self, tol: f64) -> Option<PolygonMesh> {
+                Some(self.triangulation(tol)?.to_polygon().into_wasm())
+            }
+            /// read shape from json
+            pub fn from_json(data: &[u8]) -> Option<$type> {
+                truck_modeling::$type::extract(
+                    serde_json::from_reader(data)
+                        .map_err(|e| eprintln!("{}", e))
+                        .ok()?,
+                )
+                .map_err(|e| eprintln!("{}", e))
+                .ok()
+                .map(|res| res.into_wasm())
+            }
+            /// write shape from json
+            pub fn to_json(&self) -> Vec<u8> {
+                serde_json::to_vec_pretty(&self.0.compress())
+                    .map_err(|e| eprintln!("{}", e))
+                    .unwrap()
+            }
+        }
+    };
+    ($a: ident, $($b: ident),*) => { impl_shape!($a); impl_shape!($($b),*); }
 }
 
-#[wasm_bindgen]
-impl Solid {
-    /// meshing shape
-    pub fn to_polygon(&self, tol: f64) -> Option<PolygonMesh> {
-        Some(self.triangulation(tol)?.to_polygon().into_wasm())
-    }
-}
+impl_shape!(Shell, Solid);
