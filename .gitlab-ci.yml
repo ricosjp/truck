@@ -41,7 +41,7 @@ wasm-test:
             - public
 
 pages:
-    image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
+    image: rust:latest
     stage: pages
     script:
         - cargo doc --no-deps
