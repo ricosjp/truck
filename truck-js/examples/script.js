@@ -32,7 +32,13 @@ let indexLength = object.indices_length() / 4;
 
 let loaded = true;
 
-addEventListener("load", () => {
+if (document.readyState !== 'loading') {
+  onLoad();
+} else {
+  addEventListener('load', onLoad, false);
+}
+
+function onLoad () {
   c = document.getElementById("canvas");
   c.width = cw;
   c.height = ch;
@@ -41,7 +47,6 @@ addEventListener("load", () => {
   c.addEventListener("mousedown", mouseDown);
   c.addEventListener("mouseup", mouseUp);
 
-  document.querySelector("input").addEventListener("drop", fileRead);
   document.querySelector("input").addEventListener("change", fileRead);
 
   gl = c.getContext("webgl2") || c.getContext("experimental-webgl");
@@ -68,7 +73,7 @@ addEventListener("load", () => {
   gl.clearDepth(1.0);
 
   render();
-});
+};
 
 function render() {
   if (loaded) {
