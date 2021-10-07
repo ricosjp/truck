@@ -35,7 +35,7 @@ wasm-test:
     script:
         - mkdir public
         - cargo make wasm-test
-        - cp -r truck-js/examples/dist public
+        - mv truck-js/examples/dist public/adhoc-viewer
     artifacts:
         paths:
             - public
@@ -44,11 +44,8 @@ pages:
     image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
     stage: pages
     script:
-        - mkdir public
         - cargo doc --no-deps
         - mv target/doc public/doc
-        - cargo make adhoc-viewer
-        - mv truck-js/examples/dist public/adhoc-viewer
     artifacts:
         paths:
             - public
