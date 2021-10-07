@@ -5,6 +5,8 @@
 /.vscode
 *.png
 *.stl
-truck-js/bin/
-truck-js/pkg/
-truck-js/wasm-pack.log
+.bin/
+pkg/
+wasm-pack.log
+node_modules/
+dist/

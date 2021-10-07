@@ -121,7 +121,7 @@ mod to_expanded {
 		vertex_map: &mut HashMap<Vertex, u32>,
 	) {
 		let idx = *vertex_map.entry(vertex).or_insert_with(|| {
-			let idx = glpolymesh.vertices.len() as u32;
+			let idx = glpolymesh.vertices.len() as u32 / 8;
 			let position: [f32; 3] = polymesh.positions()[vertex.pos].cast().unwrap().into();
 			let uv_coord = match vertex.uv {
 				Some(uv) => polymesh.uv_coords()[uv].cast().unwrap().into(),

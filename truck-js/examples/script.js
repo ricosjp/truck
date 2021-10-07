@@ -17,8 +17,7 @@ var vPositionLocation, vUVLocation, vNormalLocation;
 
 var uniLocation = new Array();
 
-import init, * as Truck from "../pkg/truck_js.js";
-init(undefined);
+import * as Truck from "truck-js";
 const v = Truck.vertex(-0.5, -0.5, -0.5);
 const e = Truck.tsweep(v.upcast(), [1.0, 0.0, 0.0]);
 const f = Truck.tsweep(e, [0.0, 1.0, 0.0]);
@@ -28,7 +27,7 @@ const polygon = solid.to_polygon(0.01);
 const object = polygon.to_expanded();
 const vBuffer = object.vertex_buffer();
 const iBuffer = object.index_buffer();
-const index_length = object.index_length() / 4;
+const index_length = object.indices_length() / 4;
 
 window.onload = function () {
   c = document.getElementById("canvas");
@@ -49,7 +48,6 @@ window.onload = function () {
   uniLocation[1] = gl.getUniformLocation(prg, "camera_direction");
   uniLocation[2] = gl.getUniformLocation(prg, "camera_updirection");
   uniLocation[3] = gl.getUniformLocation(prg, "resolution");
-  uniLocation[4] = gl.getUniformLocation(prg, "drawbuffer");
 
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
@@ -77,11 +75,11 @@ function render() {
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vAttributes);
   gl.enableVertexAttribArray(vPositionLocation);
-  gl.vertexAttribPointer(vPositionLocation, 3, gl.FLOAT, false, 0, 0);
+  gl.vertexAttribPointer(vPositionLocation, 3, gl.FLOAT, false, 3 * 4 + 2 * 4 + 3 * 4, 0);
   gl.enableVertexAttribArray(vUVLocation);
-  gl.vertexAttribPointer(vUVLocation, 2, gl.FLOAT, false, 0, 3 * 4);
+  gl.vertexAttribPointer(vUVLocation, 2, gl.FLOAT, false, 3 * 4 + 2 * 4 + 3 * 4, 3 * 4);
   gl.enableVertexAttribArray(vNormalLocation);
-  gl.vertexAttribPointer(vNormalLocation, 3, gl.FLOAT, false, 0, 2 * 4 + 3 * 4);
+  gl.vertexAttribPointer(vNormalLocation, 3, gl.FLOAT, false, 3 * 4 + 2 * 4 + 3 * 4, 2 * 4 + 3 * 4);
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vIndex);
 
@@ -199,7 +197,7 @@ function create_shader(id) {
 function create_vbo(data) {
   var vbo = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   return vbo;
 }
@@ -207,7 +205,7 @@ function create_vbo(data) {
 function create_ibo(data) {
   var ibo = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(data), gl.STATIC_DRAW);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
   return ibo;
 }
