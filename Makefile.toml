@@ -70,5 +70,14 @@ script = [
 	"deno test -A tests/",
 ]
 
+[tasks.adhoc-viewer]
+description = "build adhoc viewer"
+script = [
+	"cd truck-js",
+	"wasm-pack build",
+	"cd examples",
+	"npm install && npm run build",
+]
+
 [tasks.wasm-test]
-dependencies = ["wasm-build", "js-test"]
+dependencies = ["wasm-build", "js-test", "adhoc-viewer"]

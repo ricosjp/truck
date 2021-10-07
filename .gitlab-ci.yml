@@ -28,34 +28,27 @@ gpu-test:
             - images
 
 wasm-test:
-    image: rust:latest
+    image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
     stage: test
     before_script:
-        - cargo install cargo-make
-        - cargo install deno
-        - cargo install wasm-pack
         - rustup target add wasm32-unknown-unknown
     script:
         - mkdir public
         - cargo make wasm-test
-        - cp -r truck-js/pkg public/
-        - cp -r truck-js/examples public/
+        - cp -r truck-js/examples/dist public
     artifacts:
         paths:
             - public
-    cache:
-        key: wasm-test
-        paths:
-          - cargo/
-    variables:
-        CARGO_HOME: $CI_PROJECT_DIR/cargo
 
 pages:
-    image: rust:latest
+    image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
     stage: pages
     script:
+        - mkdir public
         - cargo doc --no-deps
-        - mv target/doc public
+        - mv target/doc public/doc
+        - cargo make adhoc-viewer
+        - mv truck-js/examples/dist public/adhoc-viewer
     artifacts:
         paths:
             - public

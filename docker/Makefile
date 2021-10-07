@@ -5,7 +5,7 @@ IMAGE_NAME := nvidia/vulkan
 CI_COMMIT_REF_SLUG ?= _no_branch
 
 
-all: build
+all: build-rust-vulkan
 
 login:
 ifeq ($(CI_BUILD_TOKEN),)
@@ -14,13 +14,22 @@ else
 	docker login -u gitlab-ci-token -p $(CI_BUILD_TOKEN) $(REGISTORY)
 endif
 
-build:
+build-rust-vulkan:
 	docker build -t $(REGISTORY)/rust-vulkan:$(CI_COMMIT_REF_SLUG) \
-		-f build.Dockerfile \
+		-f rust-vulkan.Dockerfile \
 		--target=rust-vulkan \
 		--no-cache \
 		.
 
-push: login build
+push-rust-vulkan: login build-rust-vulkan
 	docker push $(REGISTORY)/rust-vulkan:$(CI_COMMIT_REF_SLUG)
 
+build-rust-webtools:
+	docker build -t $(REGISTORY)/rust-webtools:$(CI_COMMIT_REF_SLUG) \
+		-f rust-webtools.Dockerfile \
+		--target=rust-webtools \
+		--no-cache \
+		.
+
+push-rust-webtools: login build-rust-webtools
+	docker push $(REGISTORY)/rust-webtools:$(CI_COMMIT_REF_SLUG)
