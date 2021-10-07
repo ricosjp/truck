@@ -3,24 +3,21 @@ import * as Truck from "truck-js";
 const cw = 768;
 const ch = 768;
 
-var c, gl;
+let c, gl;
 
-var mouse = [0.0, 0.0];
-var rotflag = false;
-var camera_position = [0.0, 0.0, 3.0];
-var camera_direction = [0.0, 0.0, -1.0];
-var camera_updirection = [0.0, 1.0, 0.0];
-var camera_gaze = [0.0, 0.0, 0.0];
-var fps = 1000 / 30;
+let mouse = [0.0, 0.0];
+let rotflag = false;
+let cameraPosition = [0.0, 0.0, 3.0];
+let cameraDirection = [0.0, 0.0, -1.0];
+let cameraUpdirection = [0.0, 1.0, 0.0];
+let cameraGaze = [0.0, 0.0, 0.0];
+const fps = 1000 / 30;
 
-var vAttributes;
-var vIndex;
+let vAttributes;
+let vIndex;
 
-var vPositionLocation, vUVLocation, vNormalLocation;
-
-var uniLocation = new Array();
-
-var loaded = true;
+let vPositionLocation, vUVLocation, vNormalLocation;
+let uniLocation;
 
 const v = Truck.vertex(-0.5, -0.5, -0.5);
 const e = Truck.tsweep(v.upcast(), [1.0, 0.0, 0.0]);
@@ -29,11 +26,13 @@ const abst = Truck.tsweep(f, [0.0, 0.0, 1.0]);
 const solid = abst.into_solid();
 const polygon = solid.to_polygon(0.01);
 const object = polygon.to_expanded();
-var vBuffer = object.vertex_buffer();
-var iBuffer = object.index_buffer();
-var index_length = object.indices_length() / 4;
+let vBuffer = object.vertex_buffer();
+let iBuffer = object.index_buffer();
+let indexLength = object.indices_length() / 4;
 
-window.onload = function () {
+let loaded = true;
+
+addEventListener("load", () => {
   c = document.getElementById("canvas");
   c.width = cw;
   c.height = ch;
@@ -42,19 +41,21 @@ window.onload = function () {
   c.addEventListener("mousedown", mouseDown);
   c.addEventListener("mouseup", mouseUp);
 
-  document.querySelector('input').addEventListener("drop", fileRead);
-  document.querySelector('input').addEventListener("change", fileRead);
+  document.querySelector("input").addEventListener("drop", fileRead);
+  document.querySelector("input").addEventListener("change", fileRead);
 
   gl = c.getContext("webgl2") || c.getContext("experimental-webgl");
 
-  var prg = create_program(
-    create_shader("vertexshader"),
-    create_shader("fragmentshader"),
+  const prg = createProgram(
+    createShader("vertexshader"),
+    createShader("fragmentshader"),
   );
-  uniLocation[0] = gl.getUniformLocation(prg, "camera_position");
-  uniLocation[1] = gl.getUniformLocation(prg, "camera_direction");
-  uniLocation[2] = gl.getUniformLocation(prg, "camera_updirection");
-  uniLocation[3] = gl.getUniformLocation(prg, "resolution");
+  uniLocation = [
+    gl.getUniformLocation(prg, "camera_position"),
+    gl.getUniformLocation(prg, "camera_direction"),
+    gl.getUniformLocation(prg, "camera_updirection"),
+    gl.getUniformLocation(prg, "resolution"),
+  ];
 
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
@@ -67,33 +68,54 @@ window.onload = function () {
   gl.clearDepth(1.0);
 
   render();
-};
+});
 
 function render() {
   if (loaded) {
-    vAttributes = create_vbo(vBuffer);
-    vIndex = create_ibo(iBuffer);
+    vAttributes = createVbo(vBuffer);
+    vIndex = createIbo(iBuffer);
     loaded = false;
   }
-  
+
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  gl.uniform3fv(uniLocation[0], camera_position);
-  gl.uniform3fv(uniLocation[1], camera_direction);
-  gl.uniform3fv(uniLocation[2], camera_updirection);
+  gl.uniform3fv(uniLocation[0], cameraPosition);
+  gl.uniform3fv(uniLocation[1], cameraDirection);
+  gl.uniform3fv(uniLocation[2], cameraUpdirection);
   gl.uniform2fv(uniLocation[3], [c.width, c.height]);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vAttributes);
   gl.enableVertexAttribArray(vPositionLocation);
-  gl.vertexAttribPointer(vPositionLocation, 3, gl.FLOAT, false, 3 * 4 + 2 * 4 + 3 * 4, 0);
+  gl.vertexAttribPointer(
+    vPositionLocation,
+    3,
+    gl.FLOAT,
+    false,
+    3 * 4 + 2 * 4 + 3 * 4,
+    0,
+  );
   gl.enableVertexAttribArray(vUVLocation);
-  gl.vertexAttribPointer(vUVLocation, 2, gl.FLOAT, false, 3 * 4 + 2 * 4 + 3 * 4, 3 * 4);
+  gl.vertexAttribPointer(
+    vUVLocation,
+    2,
+    gl.FLOAT,
+    false,
+    3 * 4 + 2 * 4 + 3 * 4,
+    3 * 4,
+  );
   gl.enableVertexAttribArray(vNormalLocation);
-  gl.vertexAttribPointer(vNormalLocation, 3, gl.FLOAT, false, 3 * 4 + 2 * 4 + 3 * 4, 2 * 4 + 3 * 4);
+  gl.vertexAttribPointer(
+    vNormalLocation,
+    3,
+    gl.FLOAT,
+    false,
+    3 * 4 + 2 * 4 + 3 * 4,
+    2 * 4 + 3 * 4,
+  );
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vIndex);
 
-  gl.drawElements(gl.TRIANGLES, index_length, gl.UNSIGNED_SHORT, 0);
+  gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_SHORT, 0);
 
   gl.flush();
 
@@ -102,7 +124,9 @@ function render() {
 
 function rotation(origin, axis, theta, vec) {
   vec = [
-    vec[0] - origin[0], vec[1] - origin[1], vec[2] - origin[2]
+    vec[0] - origin[0],
+    vec[1] - origin[1],
+    vec[2] - origin[2],
   ];
   vec = [
     (axis[0] * axis[0] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[0] +
@@ -122,39 +146,46 @@ function rotation(origin, axis, theta, vec) {
     (axis[2] * axis[2] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[2],
   ];
   return [
-    vec[0] + origin[0], vec[1] + origin[1], vec[2] + origin[2]
+    vec[0] + origin[0],
+    vec[1] + origin[1],
+    vec[2] + origin[2],
   ];
 }
 
 function mouseMove(e) {
-  var offset = [e.offsetX, e.offsetY];
+  const offset = [e.offsetX, e.offsetY];
   if (rotflag) {
-    var diff = [offset[0] - mouse[0], mouse[1] - offset[1]];
+    const diff = [offset[0] - mouse[0], mouse[1] - offset[1]];
     if (diff[0] == 0 || diff[1] == 0) return;
     diff[0] *= 0.01;
     diff[1] *= 0.01;
-    var camera_rightdirection = [
-      camera_direction[1] * camera_updirection[2] -
-      camera_direction[2] * camera_updirection[1],
-      camera_direction[2] * camera_updirection[0] -
-      camera_direction[0] * camera_updirection[2],
-      camera_direction[0] * camera_updirection[1] -
-      camera_direction[1] * camera_updirection[0],
+    const cameraRightdirection = [
+      cameraDirection[1] * cameraUpdirection[2] -
+      cameraDirection[2] * cameraUpdirection[1],
+      cameraDirection[2] * cameraUpdirection[0] -
+      cameraDirection[0] * cameraUpdirection[2],
+      cameraDirection[0] * cameraUpdirection[1] -
+      cameraDirection[1] * cameraUpdirection[0],
     ];
-    var axis = [
-      diff[0] * camera_updirection[0] - diff[1] * camera_rightdirection[0],
-      diff[0] * camera_updirection[1] - diff[1] * camera_rightdirection[1],
-      diff[0] * camera_updirection[2] - diff[1] * camera_rightdirection[2],
+    const axis = [
+      diff[0] * cameraUpdirection[0] - diff[1] * cameraRightdirection[0],
+      diff[0] * cameraUpdirection[1] - diff[1] * cameraRightdirection[1],
+      diff[0] * cameraUpdirection[2] - diff[1] * cameraRightdirection[2],
     ];
-    var len = Math.sqrt(
+    const len = Math.sqrt(
       axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2],
     );
     axis[0] /= len;
     axis[1] /= len;
     axis[2] /= len;
-    camera_position = rotation(camera_gaze, axis, -len, camera_position);
-    camera_direction = rotation([0.0, 0.0, 0.0], axis, -len, camera_direction);
-    camera_updirection = rotation([0.0, 0.0, 0.0], axis, -len, camera_updirection);
+    cameraPosition = rotation(cameraGaze, axis, -len, cameraPosition);
+    cameraDirection = rotation([0.0, 0.0, 0.0], axis, -len, cameraDirection);
+    cameraUpdirection = rotation(
+      [0.0, 0.0, 0.0],
+      axis,
+      -len,
+      cameraUpdirection,
+    );
   }
   mouse = offset;
 }
@@ -170,48 +201,48 @@ function mouseUp(_e) {
 function fileRead(e) {
   e.preventDefault();
   const file0 = this.files[0];
-  if (typeof file0 === 'undefined') {
-    console.log("invalid input");
+  if (typeof file0 === "undefined") {
+    console.warn("invalid input");
     return;
   }
   console.log(file0.name);
 
-  var reader = new FileReader();
+  const reader = new FileReader();
   reader.readAsArrayBuffer(file0);
-  reader.onload = function() {
+  reader.onload = function () {
     const result = new Uint8Array(reader.result);
     const solid = Truck.Solid.from_json(result);
-    if (typeof solid === 'undefined') {
-      console.log("invalid json");
+    if (typeof solid === "undefined") {
+      console.warn("invalid json");
       return;
     }
     const polygon = solid.to_polygon(0.01);
-    if (typeof polygon === 'undefined') {
-      console.log("meshing failed");
+    if (typeof polygon === "undefined") {
+      console.warn("meshing failed");
       return;
     }
     const box = polygon.bounding_box();
-    const box_center = [
+    const boxCenter = [
       (box[0] + box[3]) / 2.0,
       (box[1] + box[4]) / 2.0,
-      (box[2] + box[5]) / 2.0
+      (box[2] + box[5]) / 2.0,
     ];
-    camera_position = [
-      camera_position[0] - camera_gaze[0] + box_center[0],
-      camera_position[1] - camera_gaze[1] + box_center[1],
-      camera_position[2] - camera_gaze[2] + box_center[2]
+    cameraPosition = [
+      cameraPosition[0] - cameraGaze[0] + boxCenter[0],
+      cameraPosition[1] - cameraGaze[1] + boxCenter[1],
+      cameraPosition[2] - cameraGaze[2] + boxCenter[2],
     ];
-    camera_gaze = box_center;
+    cameraGaze = boxCenter;
     const object = polygon.to_expanded();
     vBuffer = object.vertex_buffer();
     iBuffer = object.index_buffer();
-    index_length = object.indices_length() / 4;
+    indexLength = object.indices_length() / 4;
     loaded = true;
   };
 }
 
-function create_program(vs, fs) {
-  var program = gl.createProgram();
+function createProgram(vs, fs) {
+  const program = gl.createProgram();
 
   gl.attachShader(program, vs);
   gl.attachShader(program, fs);
@@ -226,10 +257,10 @@ function create_program(vs, fs) {
   }
 }
 
-function create_shader(id) {
-  var shader;
+function createShader(id) {
+  let shader;
 
-  var scriptElement = document.getElementById(id);
+  const scriptElement = document.getElementById(id);
   if (!scriptElement) return;
 
   switch (scriptElement.type) {
@@ -253,16 +284,16 @@ function create_shader(id) {
   }
 }
 
-function create_vbo(data) {
-  var vbo = gl.createBuffer();
+function createVbo(data) {
+  const vbo = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
   gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   return vbo;
 }
 
-function create_ibo(data) {
-  var ibo = gl.createBuffer();
+function createIbo(data) {
+  const ibo = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
