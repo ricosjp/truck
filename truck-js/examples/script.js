@@ -1,5 +1,7 @@
+import * as Truck from "truck-js";
+
 const cw = 768;
-const ch = 512;
+const ch = 768;
 
 var c, gl;
 
@@ -8,6 +10,7 @@ var rotflag = false;
 var camera_position = [0.0, 0.0, 3.0];
 var camera_direction = [0.0, 0.0, -1.0];
 var camera_updirection = [0.0, 1.0, 0.0];
+var camera_gaze = [0.0, 0.0, 0.0];
 var fps = 1000 / 30;
 
 var vAttributes;
@@ -17,7 +20,8 @@ var vPositionLocation, vUVLocation, vNormalLocation;
 
 var uniLocation = new Array();
 
-import * as Truck from "truck-js";
+var loaded = true;
+
 const v = Truck.vertex(-0.5, -0.5, -0.5);
 const e = Truck.tsweep(v.upcast(), [1.0, 0.0, 0.0]);
 const f = Truck.tsweep(e, [0.0, 1.0, 0.0]);
@@ -25,18 +29,21 @@ const abst = Truck.tsweep(f, [0.0, 0.0, 1.0]);
 const solid = abst.into_solid();
 const polygon = solid.to_polygon(0.01);
 const object = polygon.to_expanded();
-const vBuffer = object.vertex_buffer();
-const iBuffer = object.index_buffer();
-const index_length = object.indices_length() / 4;
+var vBuffer = object.vertex_buffer();
+var iBuffer = object.index_buffer();
+var index_length = object.indices_length() / 4;
 
 window.onload = function () {
   c = document.getElementById("canvas");
   c.width = cw;
   c.height = ch;
 
-  c.addEventListener("mousemove", mouseMove, true);
-  c.addEventListener("mousedown", mouseDown, true);
-  c.addEventListener("mouseup", mouseUp, true);
+  c.addEventListener("mousemove", mouseMove);
+  c.addEventListener("mousedown", mouseDown);
+  c.addEventListener("mouseup", mouseUp);
+
+  document.querySelector('input').addEventListener("drop", fileRead);
+  document.querySelector('input').addEventListener("change", fileRead);
 
   gl = c.getContext("webgl2") || c.getContext("experimental-webgl");
 
@@ -52,9 +59,6 @@ window.onload = function () {
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
 
-  vAttributes = create_vbo(vBuffer);
-  vIndex = create_ibo(iBuffer);
-
   vPositionLocation = gl.getAttribLocation(prg, "position");
   vUVLocation = gl.getAttribLocation(prg, "uv");
   vNormalLocation = gl.getAttribLocation(prg, "normal");
@@ -66,6 +70,12 @@ window.onload = function () {
 };
 
 function render() {
+  if (loaded) {
+    vAttributes = create_vbo(vBuffer);
+    vIndex = create_ibo(iBuffer);
+    loaded = false;
+  }
+  
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   gl.uniform3fv(uniLocation[0], camera_position);
@@ -90,8 +100,11 @@ function render() {
   setTimeout(render, fps);
 }
 
-function rotation(axis, theta, vec) {
-  return [
+function rotation(origin, axis, theta, vec) {
+  vec = [
+    vec[0] - origin[0], vec[1] - origin[1], vec[2] - origin[2]
+  ];
+  vec = [
     (axis[0] * axis[0] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[0] +
     (axis[0] * axis[1] * (1.0 - Math.cos(theta)) - axis[2] * Math.sin(theta)) *
       vec[1] +
@@ -107,6 +120,9 @@ function rotation(axis, theta, vec) {
     (axis[1] * axis[2] * (1.0 - Math.cos(theta)) + axis[0] * Math.sin(theta)) *
       vec[1] +
     (axis[2] * axis[2] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[2],
+  ];
+  return [
+    vec[0] + origin[0], vec[1] + origin[1], vec[2] + origin[2]
   ];
 }
 
@@ -136,19 +152,62 @@ function mouseMove(e) {
     axis[0] /= len;
     axis[1] /= len;
     axis[2] /= len;
-    camera_position = rotation(axis, -len, camera_position);
-    camera_direction = rotation(axis, -len, camera_direction);
-    camera_updirection = rotation(axis, -len, camera_updirection);
+    camera_position = rotation(camera_gaze, axis, -len, camera_position);
+    camera_direction = rotation([0.0, 0.0, 0.0], axis, -len, camera_direction);
+    camera_updirection = rotation([0.0, 0.0, 0.0], axis, -len, camera_updirection);
   }
   mouse = offset;
 }
 
-function mouseDown(e) {
+function mouseDown(_e) {
   rotflag = true;
 }
 
-function mouseUp(e) {
+function mouseUp(_e) {
   rotflag = false;
+}
+
+function fileRead(e) {
+  e.preventDefault();
+  const file0 = this.files[0];
+  if (typeof file0 === 'undefined') {
+    console.log("invalid input");
+    return;
+  }
+  console.log(file0.name);
+
+  var reader = new FileReader();
+  reader.readAsArrayBuffer(file0);
+  reader.onload = function() {
+    const result = new Uint8Array(reader.result);
+    const solid = Truck.Solid.from_json(result);
+    if (typeof solid === 'undefined') {
+      console.log("invalid json");
+      return;
+    }
+    const polygon = solid.to_polygon(0.01);
+    if (typeof polygon === 'undefined') {
+      console.log("meshing failed");
+      return;
+    }
+    const box = polygon.bounding_box();
+    const box_center = [
+      (box[0] + box[3]) / 2.0,
+      (box[1] + box[4]) / 2.0,
+      (box[2] + box[5]) / 2.0
+    ];
+    camera_position = [
+      camera_position[0] - camera_gaze[0] + box_center[0],
+      camera_position[1] - camera_gaze[1] + box_center[1],
+      camera_position[2] - camera_gaze[2] + box_center[2]
+    ];
+    camera_gaze = box_center;
+    const object = polygon.to_expanded();
+    vBuffer = object.vertex_buffer();
+    iBuffer = object.index_buffer();
+    index_length = object.indices_length() / 4;
+    loaded = true;
+  };
 }
 
 function create_program(vs, fs) {
@@ -208,60 +267,4 @@ function create_ibo(data) {
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
   return ibo;
-}
-
-function create_framebuffer(width, height) {
-  var frameBuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-
-  var depthRenderBuffer = gl.createRenderbuffer();
-  gl.bindRenderbuffer(gl.RENDERBUFFER, depthRenderBuffer);
-  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
-  gl.framebufferRenderbuffer(
-    gl.FRAMEBUFFER,
-    gl.DEPTH_ATTACHMENT,
-    gl.RENDERBUFFER,
-    depthRenderBuffer,
-  );
-
-  var fTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, fTexture);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    width,
-    height,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    null,
-  );
-
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.framebufferTexture2D(
-    gl.FRAMEBUFFER,
-    gl.COLOR_ATTACHMENT0,
-    gl.TEXTURE_2D,
-    fTexture,
-    0,
-  );
-
-  gl.bindTexture(gl.TEXTURE_2D, null);
-  gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  return { f: frameBuffer, d: depthRenderBuffer, t: fTexture };
-}
-
-function create_texture(source, i) {
-  var img = new Image();
-  img.src = source;
-  img.onload = function () {
-    vTexture[i] = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, vTexture[i]);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-  };
 }

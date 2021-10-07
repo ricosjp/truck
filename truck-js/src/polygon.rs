@@ -92,6 +92,14 @@ impl PolygonMesh {
 	/// meshing solid
 	#[inline(always)]
 	pub fn from_solid(solid: Solid, tol: f64) -> Option<PolygonMesh> { solid.to_polygon(tol) }
+	/// Returns the bonding box
+	#[inline(always)]
+	pub fn bounding_box(&self) -> Vec<f64> {
+		let bdd = self.0.bounding_box();
+		let min = bdd.min();
+		let max = bdd.max();
+		vec![min[0], min[1], min[2], max[0], max[1], max[2]]
+	}
 }
 
 #[wasm_bindgen]
