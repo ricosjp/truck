@@ -33,9 +33,16 @@ wasm-test:
     before_script:
         - cargo install cargo-make
         - cargo install deno
+        - cargo install wasm-pack
         - rustup target add wasm32-unknown-unknown
     script:
+        - mkdir public
         - cargo make wasm-test
+        - cp -r truck-js/pkg public/
+        - cp -r truck-js/examples public/
+    artifacts:
+        paths:
+            - public
     cache:
         key: wasm-test
         paths:
