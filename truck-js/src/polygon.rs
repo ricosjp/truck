@@ -51,33 +51,37 @@ pub struct PolygonBuffer {
 impl PolygonMesh {
 	/// input from obj format
 	#[inline(always)]
-	pub fn from_obj(file: &str) -> Option<PolygonMesh> {
-		obj::read::<&[u8]>(file.as_ref())
+	pub fn from_obj(data: &[u8]) -> Option<PolygonMesh> {
+		obj::read::<&[u8]>(data)
 			.map_err(|e| eprintln!("{}", e))
 			.ok()
 			.map(|mesh| mesh.into_wasm())
 	}
 	/// input from STL format
 	#[inline(always)]
-	pub fn from_stl(file: &str, stl_type: STLType) -> Option<PolygonMesh> {
-		stl::read::<&[u8]>(file.as_ref(), stl_type.into())
+	pub fn from_stl(data: &[u8], stl_type: STLType) -> Option<PolygonMesh> {
+		stl::read::<&[u8]>(data, stl_type.into())
 			.map_err(|e| eprintln!("{}", e))
 			.ok()
 			.map(|mesh| mesh.into_wasm())
 	}
 	/// output obj format
 	#[inline(always)]
-	pub fn to_obj(&self) -> Option<String> {
+	pub fn to_obj(&self) -> Option<Vec<u8>> {
 		let mut res = Vec::new();
-		obj::write(&self.0, &mut res).unwrap();
-		String::from_utf8(res).ok()
+		obj::write(&self.0, &mut res)
+			.map_err(|e| eprintln!("{}", e))
+			.ok()?;
+		Some(res)
 	}
 	/// output stl format
 	#[inline(always)]
-	pub fn to_stl(&self, stl_type: STLType) -> Option<String> {
+	pub fn to_stl(&self, stl_type: STLType) -> Option<Vec<u8>> {
 		let mut res = Vec::new();
-		stl::write(&self.0, &mut res, stl_type.into()).unwrap();
-		String::from_utf8(res).ok()
+		stl::write(&self.0, &mut res, stl_type.into())
+			.map_err(|e| eprintln!("{}", e))
+			.ok()?;
+		Some(res)
 	}
 	/// Returns polygon buffer
 	#[inline(always)]
