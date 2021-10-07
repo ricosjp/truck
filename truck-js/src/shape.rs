@@ -146,3 +146,14 @@ macro_rules! impl_shape {
 }
 
 impl_shape!(Shell, Solid);
+
+#[wasm_bindgen]
+impl Shell {
+    /// Creates Solid if `self` is a closed shell.
+    pub fn into_solid(self) -> Option<Solid> {
+        truck_modeling::Solid::try_new(vec![self.0])
+            .map_err(|e| eprintln!("{}", e))
+            .ok()
+            .map(IntoWasm::into_wasm)
+    }
+}
