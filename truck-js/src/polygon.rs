@@ -131,16 +131,9 @@ mod to_expanded {
 				Some(nor) => polymesh.normals()[nor].cast().unwrap().into(),
 				None => [0.0, 0.0, 0.0],
 			};
-			glpolymesh.vertices.extend(&[
-				position[0],
-				position[1],
-				position[2],
-				uv_coord[0],
-				uv_coord[1],
-				normal[0],
-				normal[1],
-				normal[2],
-			]);
+			glpolymesh.vertices.extend(&position);
+			glpolymesh.vertices.extend(&uv_coord);
+			glpolymesh.vertices.extend(&normal);
 			idx
 		});
 		glpolymesh.indices.push(idx);
