@@ -98,13 +98,13 @@ impl PolygonMesh {
 impl PolygonBuffer {
 	/// vertex buffer. One attribute contains `position: [f32; 3]`, `uv_coord: [f32; 2]` and `normal: [f32; 3]`.
 	#[inline(always)]
-	pub fn vertex_buffer(&self) -> *const f32 { self.vertices.as_ptr() }
+	pub fn vertex_buffer(&self) -> Vec<f32> { self.vertices.clone() }
 	#[inline(always)]
 	/// the length of vertex buffer. (Num of attributes) * 8 components * 4 bytes.
 	pub fn vertex_buffer_size(&self) -> usize { self.vertices.len() * 4 }
 	/// index buffer. `u32`.
 	#[inline(always)]
-	pub fn index_buffer(&self) -> *const u32 { self.indices.as_ptr() }
+	pub fn index_buffer(&self) -> Vec<u32> { self.indices.clone() }
 	/// the length of index buffer. (Num of triangles) * 3 vertices * 4 bytes.
 	#[inline(always)]
 	pub fn indices_length(&self) -> usize { self.indices.len() * 4 }

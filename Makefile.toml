@@ -71,4 +71,4 @@ script = [
 ]
 
 [tasks.wasm-test]
-dependncies = ["wasm-build", "js-test"]
+dependencies = ["wasm-build", "js-test"]
