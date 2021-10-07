@@ -10,6 +10,7 @@ cpu-test:
     script:
         - cargo make ci-cpu-test
     cache:
+        key: cpu-test
         paths:
           - cargo/
     variables:
@@ -26,15 +27,17 @@ gpu-test:
         paths:
             - images
 
-wasm-build:
+wasm-test:
     image: rust:latest
     stage: test
     before_script:
         - cargo install cargo-make
+        - cargo install deno
         - rustup target add wasm32-unknown-unknown
     script:
-        - cargo make wasm-build
+        - cargo make wasm-test
     cache:
+        key: wasm-test
         paths:
           - cargo/
     variables:
