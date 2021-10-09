@@ -20,6 +20,25 @@ pub mod base {
 }
 pub use base::*;
 
+/// attribution container for polygin mesh
+pub trait Attributes<Vertex> {
+    /// attribution
+    type Output;
+    /// get attribution corresponding to vertex
+    fn get(&self, vertex: Vertex) -> Option<Self::Output>;
+}
+
+/// standard attributions
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct StandardAttributes {
+    /// positions
+    pub positions: Vec<Point3>,
+    /// texture uv coordinate
+    pub uv_coords: Vec<Vector2>,
+    /// normal of vertices
+    pub normals: Vec<Vector3>,
+}
+
 /// Index vertex of a face of the polygon mesh
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Vertex {
@@ -35,11 +54,11 @@ pub struct Vertex {
 ///
 /// To optimize for the case where the polygon mesh consists only triangles and quadrangle,
 /// there are vectors which consist by each triangles and quadrilaterals, internally.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-pub struct Faces {
-    tri_faces: Vec<[Vertex; 3]>,
-    quad_faces: Vec<[Vertex; 4]>,
-    other_faces: Vec<Vec<Vertex>>,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Faces<V = Vertex> {
+    tri_faces: Vec<[V; 3]>,
+    quad_faces: Vec<[V; 4]>,
+    other_faces: Vec<Vec<V>>,
 }
 
 /// Polygon mesh
@@ -47,12 +66,10 @@ pub struct Faces {
 /// The polygon data is held in a method compliant with wavefront obj.
 /// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
 /// and each face vertex accesses those values by an indices triple.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-pub struct PolygonMesh {
-    positions: Vec<Point3>,
-    uv_coords: Vec<Vector2>,
-    normals: Vec<Vector3>,
-    faces: Faces,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PolygonMesh<V = Vertex, A = StandardAttributes> {
+    attributes: A,
+    faces: Faces<V>,
 }
 
 /// structured quadrangle mesh
@@ -67,9 +84,8 @@ pub struct StructuredMesh {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct PolylineCurve<P>(pub Vec<P>);
 
-/// Error handler for [`Error`](./errors/enum.Error.html)
-pub type Result<T> = std::result::Result<T, errors::Error>;
-
+mod attributes;
+mod faces;
 /// Defines errors
 pub mod errors;
 mod meshing_shape;

@@ -16,16 +16,17 @@ fn sphere_distance() {
 fn in_sphere() {
     let sphere = common::shapes::sphere(Point3::origin(), 100.0, 500, 500);
     let polygon = PolygonMesh::new(
-        vec![
-            Point3::new(0.0, 0.0, 0.0),
-            Point3::new(1.0, 0.0, 0.0),
-            Point3::new(0.0, 1.0, 0.0),
-            Point3::new(99.0, 0.0, 0.0),
-            Point3::new(99.0, 2.0, 0.0),
-            Point3::new(101.0, 0.0, 0.0),
-        ],
-        Vec::new(),
-        Vec::new(),
+        StandardAttributes {
+            positions: vec![
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(99.0, 0.0, 0.0),
+                Point3::new(99.0, 2.0, 0.0),
+                Point3::new(101.0, 0.0, 0.0),
+            ],
+            ..Default::default()
+        },
         Faces::from_iter(vec![[0, 1, 2], [3, 4, 5]]),
     );
     assert!(!polygon.is_clung_to_by(sphere.positions(), 0.1));
@@ -33,33 +34,32 @@ fn in_sphere() {
 
 #[test]
 fn tetrahedron_distance() {
-    let positions = vec![
-        Point3::new(0.0, 0.0, 0.0),
-        Point3::new(0.0, -1.0, 1.0),
-        Point3::new(1.0, -1.0, 0.0),
-        Point3::new(-1.0, -1.0, 0.0),
-    ];
     let tri_faces = vec![[0, 2, 1], [0, 3, 2], [0, 1, 3], [1, 2, 3]];
     let mesh0 = PolygonMesh::new(
-        positions,
-        Vec::new(),
-        Vec::new(),
+        StandardAttributes {
+            positions: vec![
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(0.0, -1.0, 1.0),
+                Point3::new(1.0, -1.0, 0.0),
+                Point3::new(-1.0, -1.0, 0.0),
+            ],
+            ..Default::default()
+        },
         Faces::from_iter(tri_faces),
     );
-    let positions = vec![
-        Point3::new(0.0, 1.0, 0.0),
-        Point3::new(0.0, 0.0, 1.0),
-        Point3::new(1.0, 0.0, 0.0),
-        Point3::new(-1.0, 0.0, 0.0),
-    ];
     let tri_faces = vec![[0, 2, 1], [0, 3, 2], [0, 1, 3], [1, 2, 3]];
     let mesh1 = PolygonMesh::new(
-        positions,
-        Vec::new(),
-        Vec::new(),
+        StandardAttributes {
+            positions: vec![
+                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(0.0, 0.0, 1.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(-1.0, 0.0, 0.0),
+            ],
+            ..Default::default()
+        },
         Faces::from_iter(tri_faces),
     );
     assert!(mesh0.is_clung_to_by(mesh1.positions(), 1.0 + TOLERANCE));
     assert!(!mesh0.is_clung_to_by(mesh1.positions(), 1.0 - TOLERANCE));
 }
-

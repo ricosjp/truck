@@ -12,7 +12,7 @@
 )]
 
 use common::*;
-use truck_polymesh::*;
+use truck_polymesh::{polygon_mesh::PolygonMeshEditor, *};
 
 /// polygon mesh analizers, including
 ///

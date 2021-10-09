@@ -20,6 +20,12 @@ pub fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonM
                 (i + 1) % udiv * vdiv + j,
             ]
         })
-    })); 
-    PolygonMesh::new(positions, Vec::new(), Vec::new(), faces)
+    }));
+    PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            ..Default::default()
+        },
+        faces,
+    )
 }

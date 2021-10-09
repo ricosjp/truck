@@ -1,7 +1,6 @@
-
 use super::*;
-use truck_polymesh::*;
 use truck_meshalgo::filters::*;
+use truck_polymesh::*;
 
 #[test]
 fn remove_unused_attrs_test() {
@@ -32,7 +31,14 @@ fn remove_unused_attrs_test() {
         &[[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6]],
         &[[2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8]],
     ]);
-    let mut mesh = PolygonMesh::new(positions, uv_coords, normals, faces);
+    let mut mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            uv_coords,
+            normals,
+        },
+        faces,
+    );
     mesh.remove_unused_attrs();
     assert_eq!(mesh.positions().len(), 7);
     assert_eq!(mesh.uv_coords().len(), 7);
@@ -74,7 +80,13 @@ fn remove_degenerate_faces_test() {
         &[0, 1, 2, 0, 3, 4],    // two triangles
         &[0, 1, 0, 2, 0, 3],    // death
     ]);
-    let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    let mut mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            ..Default::default()
+        },
+        faces,
+    );
     mesh.remove_degenerate_faces();
     assert_eq!(
         mesh.faces().tri_faces().len(),
@@ -133,7 +145,14 @@ fn put_together_same_attrs_test() {
             _ => {}
         }
     }
-    let mut mesh = PolygonMesh::new(positions, uv_coords, normals, faces);
+    let mut mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            uv_coords,
+            normals,
+        },
+        faces,
+    );
     let attrs: Vec<_> = mesh
         .faces()
         .face_iter()

@@ -218,9 +218,11 @@ fn triangulation_into_polymesh<'a>(
         })
         .collect();
     PolygonMesh::debug_new(
-        positions,
-        uv_coords,
-        normals,
+        StandardAttributes {
+            positions,
+            uv_coords,
+            normals,
+        },
         Faces::from_tri_and_quad_faces(tri_faces, Vec::new()),
     )
 }

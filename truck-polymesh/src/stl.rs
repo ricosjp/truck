@@ -1,10 +1,12 @@
 use crate::*;
 use bytemuck::{Pod, Zeroable};
-use std::io::{BufRead, BufReader, Lines, Read, Write};
 use rustc_hash::FxHashMap as HashMap;
+use std::io::{BufRead, BufReader, Lines, Read, Write};
 
 const FACESIZE: usize = std::mem::size_of::<STLFace>();
 const CHUNKSIZE: usize = FACESIZE + 2;
+
+type Result<T> = std::result::Result<T, errors::Error>;
 
 fn syntax_error() -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::InvalidData, "syntax error")
@@ -365,7 +367,14 @@ impl std::iter::FromIterator<STLFace> for PolygonMesh {
                 )
             })
             .collect();
-        PolygonMesh::debug_new(positions, Vec::new(), normals, faces)
+        PolygonMesh::debug_new(
+            StandardAttributes {
+                positions,
+                uv_coords: Vec::new(),
+                normals,
+            },
+            faces,
+        )
     }
 }
 

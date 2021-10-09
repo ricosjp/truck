@@ -14,16 +14,20 @@ pub trait WithPointCloud {
     /// ```
 	/// use std::iter::FromIterator;
     /// use truck_meshalgo::prelude::*;
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 0.0, 2.0),
-    ///     Point3::new(1.0, 0.0, 2.0),
-    ///     Point3::new(0.0, 1.0, 2.0),
-    /// ];
-    /// let faces = Faces::from_iter(vec![[0, 1, 2], [3, 4, 5]]);
-    /// let mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// let mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 0.0, 2.0),
+    ///             Point3::new(1.0, 0.0, 2.0),
+    ///             Point3::new(0.0, 1.0, 2.0),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     Faces::from_iter(vec![[0, 1, 2], [3, 4, 5]]),
+    /// );
     ///
     /// let mut point_cloud = vec![Point3::new(0.25, 0.25, 0.0)];
     /// assert!(!mesh.is_clung_to_by(&point_cloud, 0.001));

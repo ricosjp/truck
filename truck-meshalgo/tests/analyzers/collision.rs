@@ -34,11 +34,23 @@ fn in_plane() {
         .map(|_| Point3::new(rand::random::<f64>(), 0.0, rand::random::<f64>()))
         .collect();
     let faces = Faces::from_iter((0..100).map(|i| [i, i + 100, i + 200]));
-    let polygon0 = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces.clone());
+    let polygon0 = PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            ..Default::default()
+        },
+        faces.clone(),
+    );
     let positions: Vec<_> = (0..300)
         .map(|_| Point3::new(rand::random::<f64>(), 0.0, rand::random::<f64>()))
         .collect();
-    let polygon1 = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    let polygon1 = PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            ..Default::default()
+        },
+        faces,
+    );
     assert!(polygon0.collide_with(&polygon1).is_none());
 }
 
@@ -64,5 +76,8 @@ fn collision_sphere() {
             assert!(sphere0.collide_with(&sphere1).is_none());
         }
     }
-    println!("10 times collision check: {}s", instant.elapsed().as_secs_f64());
+    println!(
+        "10 times collision check: {}s",
+        instant.elapsed().as_secs_f64()
+    );
 }

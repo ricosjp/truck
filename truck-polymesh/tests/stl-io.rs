@@ -1,6 +1,7 @@
 use stl::{IntoSTLIterator, STLFace, STLReader, STLType};
 use truck_base::assert_near;
 use truck_polymesh::*;
+type Result<T> = std::result::Result<T, errors::Error>;
 
 #[test]
 fn stl_oi_test() {

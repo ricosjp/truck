@@ -11,21 +11,25 @@ pub trait StructuringFilter {
     /// use truck_meshalgo::filters::*;
     ///
     /// // cube consisting quad faces
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 0.0, 1.0),
-    ///     Point3::new(1.0, 0.0, 1.0),
-    ///     Point3::new(1.0, 1.0, 1.0),
-    ///     Point3::new(0.0, 1.0, 1.0),
-    /// ];
-    /// let faces = Faces::from_iter(&[
-    ///     &[3, 2, 1, 0], &[0, 1, 5, 4], &[1, 2, 6, 5],
-    ///     &[2, 3, 7, 6], &[3, 0, 4, 7], &[4, 5, 6, 7],
-    /// ]);
-    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// let mut mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 0.0, 1.0),
+    ///             Point3::new(1.0, 0.0, 1.0),
+    ///             Point3::new(1.0, 1.0, 1.0),
+    ///             Point3::new(0.0, 1.0, 1.0),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     Faces::from_iter(&[
+    ///         &[3, 2, 1, 0], &[0, 1, 5, 4], &[1, 2, 6, 5],
+    ///         &[2, 3, 7, 6], &[3, 0, 4, 7], &[4, 5, 6, 7],
+    ///     ]),
+    /// );
     ///
     /// // the number of face becomes twice since each quadrangle decompose into two triangles.
     /// assert_eq!(mesh.faces().len(), 6);
@@ -56,22 +60,26 @@ pub trait StructuringFilter {
     /// use truck_meshalgo::filters::*;
     ///
     /// // cube consisting tri_faces
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 0.0, 1.0),
-    ///     Point3::new(1.0, 0.0, 1.0),
-    ///     Point3::new(1.0, 1.0, 1.0),
-    ///     Point3::new(0.0, 1.0, 1.0),
-    /// ];
-    /// let faces = Faces::from_iter(&[
-    ///     &[3, 2, 0], &[1, 0, 2], &[0, 1, 4], &[5, 4, 1],
-    ///     &[1, 2, 5], &[6, 5, 2], &[2, 3, 6], &[7, 6, 3],
-    ///     &[3, 0, 7], &[4, 7, 0], &[4, 5, 7], &[6, 7, 5],
-    /// ]);
-    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// let mut mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 0.0, 1.0),
+    ///             Point3::new(1.0, 0.0, 1.0),
+    ///             Point3::new(1.0, 1.0, 1.0),
+    ///             Point3::new(0.0, 1.0, 1.0),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     Faces::from_iter(&[
+    ///         &[3, 2, 0], &[1, 0, 2], &[0, 1, 4], &[5, 4, 1],
+    ///             &[1, 2, 5], &[6, 5, 2], &[2, 3, 6], &[7, 6, 3],
+    ///         &[3, 0, 7], &[4, 7, 0], &[4, 5, 7], &[6, 7, 5],
+    ///     ]),
+    /// );
     ///
     /// // The number of faces becomes a half since each pair of triangles is combined.
     /// assert_eq!(mesh.faces().len(), 12);

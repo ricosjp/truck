@@ -8,17 +8,22 @@ pub trait OptimizingFilter {
     /// remove all unused position, texture coordinates, and normal vectors.
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
+    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 0.0, 1.0),
-    /// ];
-    /// let faces = Faces::from_iter(&[&[1, 2, 3]]); // 0 is not used!
-    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// let mut mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 0.0, 1.0),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     // 0 is not used!
+    ///     Faces::from_iter(&[&[1, 2, 3]]),
+    /// );
     ///
     /// assert_eq!(mesh.positions().len(), 4);
     /// mesh.remove_unused_attrs();
@@ -28,21 +33,25 @@ pub trait OptimizingFilter {
     /// Removes degenerate polygons.
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
+    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 0.0, 1.0),
-    /// ];
-    /// let faces = Faces::from_iter(&[
-    ///     &[0, 1, 2],
-    ///     &[2, 1, 2], // degenerate face!
-    ///     &[2, 1, 3],
-    /// ]);
-    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// let mut mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 0.0, 1.0),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     Faces::from_iter(&[
+    ///         &[0, 1, 2],
+    ///         &[2, 1, 2], // degenerate face!
+    ///         &[2, 1, 3],
+    ///     ]),
+    /// );
     ///
     /// assert_eq!(mesh.faces().len(), 3);
     /// mesh.remove_degenerate_faces();
@@ -58,22 +67,26 @@ pub trait OptimizingFilter {
     ///
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
+    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    /// ];
-    /// let faces = Faces::from_iter(&[
-    ///     &[0, 1, 2],
-    ///     &[3, 4, 5],
-    /// ]);
-    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// let mut mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(1.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     Faces::from_iter(&[
+    ///         &[0, 1, 2],
+    ///         &[3, 4, 5],
+    ///     ]),
+    /// );
     ///
     /// assert_eq!(mesh.faces()[1][1], Vertex { pos: 4, uv: None, nor: None });
     /// mesh.put_together_same_attrs();
@@ -107,16 +120,26 @@ fn all_nor_mut(faces: &mut Faces) -> impl Iterator<Item = &mut usize> {
 
 impl OptimizingFilter for PolygonMesh {
     fn remove_unused_attrs(&mut self) -> &mut Self {
-        let mesh = self.debug_editor();
-        let pos_iter = all_pos_mut(mesh.faces);
-        let idcs = sub_remove_unused_attrs(pos_iter, mesh.positions.len());
-        *mesh.positions = idcs.iter().map(|i| mesh.positions[*i]).collect();
-        let uv_iter = all_uv_mut(mesh.faces);
-        let idcs = sub_remove_unused_attrs(uv_iter, mesh.uv_coords.len());
-        *mesh.uv_coords = idcs.iter().map(|i| mesh.uv_coords[*i]).collect();
-        let nor_iter = all_nor_mut(mesh.faces);
-        let idcs = sub_remove_unused_attrs(nor_iter, mesh.normals.len());
-        *mesh.normals = idcs.iter().map(|i| mesh.normals[*i]).collect();
+        let mut mesh = self.debug_editor();
+        let PolygonMeshEditor {
+            attributes:
+                StandardAttributes {
+                    positions,
+                    uv_coords,
+                    normals,
+                },
+            faces,
+            ..
+        } = &mut mesh;
+        let pos_iter = all_pos_mut(faces);
+        let idcs = sub_remove_unused_attrs(pos_iter, positions.len());
+        *positions = idcs.iter().map(|i| positions[*i]).collect();
+        let uv_iter = all_uv_mut(faces);
+        let idcs = sub_remove_unused_attrs(uv_iter, uv_coords.len());
+        *uv_coords = idcs.iter().map(|i| uv_coords[*i]).collect();
+        let nor_iter = all_nor_mut(faces);
+        let idcs = sub_remove_unused_attrs(nor_iter, normals.len());
+        *normals = idcs.iter().map(|i| normals[*i]).collect();
         drop(mesh);
         self
     }
@@ -145,21 +168,30 @@ impl OptimizingFilter for PolygonMesh {
     }
 
     fn put_together_same_attrs(&mut self) -> &mut Self {
-        let mesh = self.debug_editor();
-        let bnd_box: BoundingBox<_> = mesh.positions.iter().collect();
+        let mut mesh = self.debug_editor();
+        let PolygonMeshEditor {
+            attributes:
+                StandardAttributes {
+                    positions,
+                    uv_coords,
+                    normals,
+                },
+            faces,
+            ..
+        } = &mut mesh;
+        let bnd_box: BoundingBox<_> = positions.iter().collect();
         let center = bnd_box.center();
         let diag = bnd_box.diagonal().map(|a| f64::max(a.abs(), 1.0));
-        let normalized_positions = mesh
-            .positions
+        let normalized_positions = positions
             .iter()
             .map(move |position| 2.0 * (position - center).zip(diag, |a, b| a / b))
             .collect::<Vec<_>>();
         let pos_map = sub_put_together_same_attrs(&normalized_positions);
-        all_pos_mut(mesh.faces).for_each(|idx| *idx = pos_map[*idx]);
-        let uv_map = sub_put_together_same_attrs(mesh.uv_coords);
-        all_uv_mut(mesh.faces).for_each(|idx| *idx = uv_map[*idx]);
-        let nor_map = sub_put_together_same_attrs(mesh.normals);
-        all_nor_mut(mesh.faces).for_each(|idx| *idx = nor_map[*idx]);
+        all_pos_mut(faces).for_each(|idx| *idx = pos_map[*idx]);
+        let uv_map = sub_put_together_same_attrs(uv_coords);
+        all_uv_mut(faces).for_each(|idx| *idx = uv_map[*idx]);
+        let nor_map = sub_put_together_same_attrs(normals);
+        all_nor_mut(faces).for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
         self
     }
@@ -238,8 +270,7 @@ fn split_into_nondegenerate(poly: Vec<Vertex>) -> Vec<Vec<Vertex>> {
 }
 
 trait CastIntVector:
-    Sized + ElementWise<f64> + Mul<f64, Output = Self> + Div<f64, Output = Self>
-{
+    Sized + ElementWise<f64> + Mul<f64, Output = Self> + Div<f64, Output = Self> {
     type IntVector: Copy + std::hash::Hash + Eq;
     fn cast_int(&self) -> Self::IntVector;
 }
@@ -248,9 +279,7 @@ macro_rules! impl_cast_int {
     ($typename: ident, $n: expr) => {
         impl CastIntVector for $typename {
             type IntVector = [i64; $n];
-            fn cast_int(&self) -> [i64; $n] {
-                self.cast::<i64>().unwrap().into()
-            }
+            fn cast_int(&self) -> [i64; $n] { self.cast::<i64>().unwrap().into() }
         }
     };
 }
@@ -262,9 +291,7 @@ impl_cast_int!(Point3, 3);
 mod tests {
     use super::*;
 
-    fn into_vertices(iter: &[usize]) -> Vec<Vertex> {
-        iter.iter().map(|i| i.into()).collect()
-    }
+    fn into_vertices(iter: &[usize]) -> Vec<Vertex> { iter.iter().map(|i| i.into()).collect() }
 
     #[test]
     fn degenerate_polygon_test() {

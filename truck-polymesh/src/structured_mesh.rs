@@ -1,5 +1,6 @@
-use crate::errors::Error;
 use crate::*;
+use errors::Error;
+type Result<T> = std::result::Result<T, Error>;
 
 impl Vertex {
     #[inline(always)]
@@ -221,9 +222,11 @@ impl StructuredMesh {
             ..Default::default()
         };
         PolygonMesh {
-            positions,
-            uv_coords,
-            normals,
+            attributes: StandardAttributes {
+                positions,
+                uv_coords,
+                normals,
+            },
             faces,
         }
     }
