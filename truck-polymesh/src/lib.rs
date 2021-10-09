@@ -20,9 +20,39 @@ pub mod base {
 }
 pub use base::*;
 
+/// attribution container for polygin mesh
+pub trait Attributes<V> {
+    /// attribution
+    type Output;
+    /// get attribution corresponding to vertex
+    fn get(&self, vertex: V) -> Option<Self::Output>;
+}
+
+/// standard attributions
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct StandardAttributes {
+    /// positions
+    pub positions: Vec<Point3>,
+    /// texture uv coordinates
+    pub uv_coords: Vec<Vector2>,
+    /// normals at vertices
+    pub normals: Vec<Vector3>,
+}
+
+/// standard attribution
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct StandardAttribute {
+    /// position
+    pub position: Point3,
+    /// texture uv coordinate
+    pub uv_coord: Option<Vector2>,
+    /// normal at vertex
+    pub normal: Option<Vector3>,
+}
+
 /// Index vertex of a face of the polygon mesh
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug, Serialize, Deserialize)]
-pub struct Vertex {
+pub struct StandardVertex {
     /// index of vertex's position
     pub pos: usize,
     /// index of vertex's texture coordinate
@@ -35,11 +65,11 @@ pub struct Vertex {
 ///
 /// To optimize for the case where the polygon mesh consists only triangles and quadrangle,
 /// there are vectors which consist by each triangles and quadrilaterals, internally.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-pub struct Faces {
-    tri_faces: Vec<[Vertex; 3]>,
-    quad_faces: Vec<[Vertex; 4]>,
-    other_faces: Vec<Vec<Vertex>>,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Faces<V = StandardVertex> {
+    tri_faces: Vec<[V; 3]>,
+    quad_faces: Vec<[V; 4]>,
+    other_faces: Vec<Vec<V>>,
 }
 
 /// Polygon mesh
@@ -47,12 +77,10 @@ pub struct Faces {
 /// The polygon data is held in a method compliant with wavefront obj.
 /// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
 /// and each face vertex accesses those values by an indices triple.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-pub struct PolygonMesh {
-    positions: Vec<Point3>,
-    uv_coords: Vec<Vector2>,
-    normals: Vec<Vector3>,
-    faces: Faces,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PolygonMesh<V = StandardVertex, A = StandardAttributes> {
+    attributes: A,
+    faces: Faces<V>,
 }
 
 /// structured quadrangle mesh
@@ -67,18 +95,19 @@ pub struct StructuredMesh {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct PolylineCurve<P>(pub Vec<P>);
 
-/// Error handler for [`Error`](./errors/enum.Error.html)
-pub type Result<T> = std::result::Result<T, errors::Error>;
-
+mod attributes;
 /// Defines errors
 pub mod errors;
+mod expand;
+/// Defines triangle
+pub mod faces;
 mod meshing_shape;
-/// I/O of wavefront obj
+/// wavefront obj I/O
 pub mod obj;
 /// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
 pub mod polygon_mesh;
 /// Defines generalized polyline curve.
 pub mod polyline_curve;
-/// I/O of STL
+/// STL I/O
 pub mod stl;
 mod structured_mesh;

@@ -102,7 +102,13 @@ fn positions_obj_oi_test() {
         &[(3, None, None), (6, None, None), (7, None, None)],
         &[(3, None, None), (7, None, None), (5, None, None)],
     ]);
-    let mesh = PolygonMesh::new(cube::POSITIONS.to_vec(), Vec::new(), Vec::new(), faces);
+    let mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions: cube::POSITIONS.to_vec(),
+            ..Default::default()
+        },
+        faces,
+    );
     let mut gened_obj: Vec<u8> = Vec::new();
     obj::write(&mesh, &mut gened_obj).unwrap();
     let read_mesh = obj::read(AsRef::<[u8]>::as_ref(&gened_obj)).unwrap();
@@ -134,9 +140,11 @@ fn withtexcoords_obj_oi_test() {
         &[(3, Some(3), None), (7, Some(2), None), (5, Some(1), None)],
     ]);
     let mesh = PolygonMesh::new(
-        cube::POSITIONS.to_vec(),
-        cube::UV_COORDS.to_vec(),
-        Vec::new(),
+        StandardAttributes {
+            positions: cube::POSITIONS.to_vec(),
+            uv_coords: cube::UV_COORDS.to_vec(),
+            ..Default::default()
+        },
         faces,
     );
     let mut gened_obj: Vec<u8> = Vec::new();
@@ -170,9 +178,11 @@ fn withnormals_obj_oi_test() {
         &[(3, None, Some(2)), (7, None, Some(2)), (5, None, Some(2))],
     ]);
     let mesh = PolygonMesh::new(
-        cube::POSITIONS.to_vec(),
-        Vec::new(),
-        cube::NORMALS.to_vec(),
+        StandardAttributes {
+            positions: cube::POSITIONS.to_vec(),
+            normals: cube::NORMALS.to_vec(),
+            ..Default::default()
+        },
         faces,
     );
     let mut gened_obj: Vec<u8> = Vec::new();
@@ -237,9 +247,11 @@ fn incomplete_obj_oi_test() {
         ],
     ]);
     let mesh = PolygonMesh::new(
-        cube::POSITIONS.to_vec(),
-        cube::UV_COORDS.to_vec(),
-        cube::NORMALS.to_vec(),
+        StandardAttributes {
+            positions: cube::POSITIONS.to_vec(),
+            uv_coords: cube::UV_COORDS.to_vec(),
+            normals: cube::NORMALS.to_vec(),
+        },
         faces,
     );
     let mut gened_obj: Vec<u8> = Vec::new();

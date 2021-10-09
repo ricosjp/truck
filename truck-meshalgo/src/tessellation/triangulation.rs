@@ -194,8 +194,7 @@ fn triangulation_into_polymesh<'a>(
             (v.fix(), i)
         })
         .collect();
-    use truck_polymesh::Vertex;
-    let tri_faces: Vec<[Vertex; 3]> = triangles
+    let tri_faces: Vec<[StandardVertex; 3]> = triangles
         .map(|tri| tri.as_triangle())
         .filter(|tri| {
             let c = Point2::new(
@@ -218,9 +217,11 @@ fn triangulation_into_polymesh<'a>(
         })
         .collect();
     PolygonMesh::debug_new(
-        positions,
-        uv_coords,
-        normals,
+        StandardAttributes {
+            positions,
+            uv_coords,
+            normals,
+        },
         Faces::from_tri_and_quad_faces(tri_faces, Vec::new()),
     )
 }

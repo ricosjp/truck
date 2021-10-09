@@ -6,26 +6,30 @@ pub trait Splitting {
     /// Creates a sub mesh by the face indices.
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
+    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::analyzers::*;
     ///
     /// // cube
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 0.0, 1.0),
-    ///     Point3::new(1.0, 0.0, 1.0),
-    ///     Point3::new(1.0, 1.0, 1.0),
-    ///     Point3::new(0.0, 1.0, 1.0),
-    /// ];
-    /// let faces = Faces::from_iter(&[
-    ///     &[3, 2, 1, 0], &[0, 1, 5, 4], &[1, 2, 6, 5],
-    ///     &[2, 3, 7, 6], &[3, 0, 4, 7], &[4, 5, 6, 7],
-    /// ]);
-    /// let mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// let mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 0.0, 1.0),
+    ///             Point3::new(1.0, 0.0, 1.0),
+    ///             Point3::new(1.0, 1.0, 1.0),
+    ///             Point3::new(0.0, 1.0, 1.0),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     Faces::from_iter(&[
+    ///         &[3, 2, 1, 0], &[0, 1, 5, 4], &[1, 2, 6, 5],
+    ///         &[2, 3, 7, 6], &[3, 0, 4, 7], &[4, 5, 6, 7],
+    ///     ]),
+    /// );
     ///
     /// let submesh = mesh.create_mesh_by_face_indices(&[0, 3, 5]);
     ///
@@ -51,27 +55,31 @@ pub trait Splitting {
     /// `tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
+    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::analyzers::*;
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.5, 0.0),
-    ///     Point3::new(0.0, 0.5, 1.0),
-    ///     Point3::new(1.0, 0.5, 1.0),
-    ///     Point3::new(1.0, 0.5, 0.0),
-    ///     Point3::new(0.0, 0.0, 2.0),
-    ///     Point3::new(1.0, 0.0, 2.0),
-    /// ];
-    /// let normals = vec![
-    ///     Vector3::new(0.0, 1.0, 0.0),
-    ///     // displaced normals for smooth rendering
-    ///     Vector3::new(0.0, 1.0, 1.0).normalize(),
-    /// ];
-    /// let faces = Faces::from_iter(&[
-    ///     &[(0, None, Some(0)), (1, None, Some(0)), (2, None, Some(0)), (3, None, Some(0))],
-    ///     &[(2, None, Some(0)), (1, None, Some(0)), (4, None, Some(1)), (5, None, Some(1))],
-    /// ]);
-    /// let mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
+    /// let mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.5, 0.0),
+    ///             Point3::new(0.0, 0.5, 1.0),
+    ///             Point3::new(1.0, 0.5, 1.0),
+    ///             Point3::new(1.0, 0.5, 0.0),
+    ///             Point3::new(0.0, 0.0, 2.0),
+    ///             Point3::new(1.0, 0.0, 2.0),
+    ///         ],
+    ///         normals: vec![
+    ///             Vector3::new(0.0, 1.0, 0.0),
+    ///             // displaced normals for smooth rendering
+    ///             Vector3::new(0.0, 1.0, 1.0).normalize(),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     Faces::from_iter(&[
+    ///         &[(0, None, Some(0)), (1, None, Some(0)), (2, None, Some(0)), (3, None, Some(0))],
+    ///         &[(2, None, Some(0)), (1, None, Some(0)), (4, None, Some(1)), (5, None, Some(1))],
+    ///     ]),
+    /// );
     /// let (plane, remained) = mesh.extract_planes(TOLERANCE); // TOLERANCE == 1.0e-7
     /// assert_eq!(plane.len(), 1); assert_eq!(plane[0], 0);
     /// assert_eq!(remained.len(), 1); assert_eq!(remained[0], 1);
@@ -83,27 +91,31 @@ pub trait Splitting {
     /// whose vertices has the same positions (and normals if `use_normal == true`).
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
+    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::{analyzers::*, filters::*};
     ///
     /// // cube consisting tri_faces
-    /// let positions = vec![
-    ///     Point3::new(0.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 0.0, 0.0),
-    ///     Point3::new(1.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 1.0, 0.0),
-    ///     Point3::new(0.0, 0.0, 1.0),
-    ///     Point3::new(1.0, 0.0, 1.0),
-    ///     Point3::new(1.0, 1.0, 1.0),
-    ///     Point3::new(0.0, 1.0, 1.0),
-    /// ];
-    /// let faces = Faces::from_iter(&[
-    ///     &[3, 2, 0], &[1, 0, 2], &[0, 1, 4], &[5, 4, 1],
-    ///     &[1, 2, 5], &[6, 5, 2], &[2, 3, 6], &[7, 6, 3],
-    ///     &[3, 0, 7], &[4, 7, 0], &[4, 5, 7], &[6, 7, 5],
-    /// ]);
-    /// let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    /// let mut mesh = PolygonMesh::new(
+    ///     StandardAttributes {
+    ///         positions: vec![
+    ///             Point3::new(0.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 0.0, 0.0),
+    ///             Point3::new(1.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 1.0, 0.0),
+    ///             Point3::new(0.0, 0.0, 1.0),
+    ///             Point3::new(1.0, 0.0, 1.0),
+    ///             Point3::new(1.0, 1.0, 1.0),
+    ///             Point3::new(0.0, 1.0, 1.0),
+    ///         ],
+    ///         ..Default::default()
+    ///     },
+    ///     Faces::from_iter(&[
+    ///         &[3, 2, 0], &[1, 0, 2], &[0, 1, 4], &[5, 4, 1],
+    ///         &[1, 2, 5], &[6, 5, 2], &[2, 3, 6], &[7, 6, 3],
+    ///         &[3, 0, 7], &[4, 7, 0], &[4, 5, 7], &[6, 7, 5],
+    ///     ]),
+    /// );
     ///
     /// // sign up normals
     /// mesh.add_naive_normals(true).put_together_same_attrs();
@@ -127,7 +139,14 @@ impl Splitting for PolygonMesh {
         let uv_coords = self.uv_coords().clone();
         let normals = self.normals().clone();
         let faces: Faces = indices.iter().map(|i| &self.faces()[*i]).collect();
-        PolygonMesh::new(positions, uv_coords, normals, faces)
+        PolygonMesh::new(
+            StandardAttributes {
+                positions,
+                uv_coords,
+                normals,
+            },
+            faces,
+        )
     }
 
     fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
@@ -313,7 +332,7 @@ fn into_components_test() {
     .collect();
     let positions = vec![Point3::origin(); 8];
     let normals = vec![Vector3::unit_x(); 8];
-    let mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
+    let mesh = PolygonMesh::new( StandardAttributes { positions, normals, ..Default::default() }, faces);
     let comp = mesh.components(true);
     assert_eq!(comp.len(), 2);
     assert_eq!(comp[0], vec![0, 1, 4]);

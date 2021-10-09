@@ -25,10 +25,10 @@ const f = Truck.tsweep(e, [0.0, 1.0, 0.0]);
 const abst = Truck.tsweep(f, [0.0, 0.0, 1.0]);
 const solid = abst.into_solid();
 const polygon = solid.to_polygon(0.01);
-const object = polygon.to_expanded();
+const object = polygon.to_buffer();
 let vBuffer = object.vertex_buffer();
 let iBuffer = object.index_buffer();
-let indexLength = object.indices_length() / 4;
+let indexLength = object.index_buffer_size() / 4;
 
 let loaded = true;
 
@@ -241,7 +241,7 @@ function fileRead(e) {
     const object = polygon.to_expanded();
     vBuffer = object.vertex_buffer();
     iBuffer = object.index_buffer();
-    indexLength = object.indices_length() / 4;
+    indexLength = object.index_buffer_size() / 4;
     loaded = true;
   };
 }

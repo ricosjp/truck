@@ -32,4 +32,4 @@ pub use shape::{AbstractShape, Edge, Face, Shell, Solid, Vertex, Wire};
 /// the building model utility API
 pub mod builder;
 mod polygon;
-pub use polygon::{PolygonMesh, PolygonBuffer, STLType};
+pub use polygon::{PolygonBuffer, PolygonMesh, STLType};

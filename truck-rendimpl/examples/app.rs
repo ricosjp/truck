@@ -3,9 +3,9 @@
 // Copyright © 2021 RICOS
 // Apache license 2.0
 
+use instant::Instant;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use instant::Instant;
 use truck_platform::{wgpu::*, DeviceHandler};
 use winit::dpi::*;
 use winit::event::*;

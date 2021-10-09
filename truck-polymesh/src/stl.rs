@@ -1,10 +1,13 @@
 use crate::*;
 use bytemuck::{Pod, Zeroable};
-use std::io::{BufRead, BufReader, Lines, Read, Write};
 use rustc_hash::FxHashMap as HashMap;
+use std::io::{BufRead, BufReader, Lines, Read, Write};
 
 const FACESIZE: usize = std::mem::size_of::<STLFace>();
 const CHUNKSIZE: usize = FACESIZE + 2;
+
+type Vertex = StandardVertex;
+type Result<T> = std::result::Result<T, errors::Error>;
 
 fn syntax_error() -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::InvalidData, "syntax error")
@@ -231,53 +234,28 @@ pub trait IntoSTLIterator {
 #[derive(Debug)]
 pub struct PolygonMeshSTLFaceIterator<'a> {
     positions: &'a Vec<Point3>,
-    tri_faces: std::slice::Iter<'a, [Vertex; 3]>,
-    quad_faces: std::slice::Iter<'a, [Vertex; 4]>,
-    other_faces: std::slice::Iter<'a, Vec<Vertex>>,
-    current_face: Option<&'a [Vertex]>,
-    current_vertex: usize,
+    faces: faces::TriangleIterator<'a, Vertex>,
     len: usize,
-}
-
-#[inline(always)]
-fn pos_to_face(a: Point3, b: Point3, c: Point3) -> STLFace {
-    let normal = (b - a).cross(c - a).normalize().cast().unwrap().into();
-    let vertices = [
-        a.cast().unwrap().into(),
-        b.cast().unwrap().into(),
-        c.cast().unwrap().into(),
-    ];
-    STLFace { normal, vertices }
 }
 
 impl<'a> Iterator for PolygonMeshSTLFaceIterator<'a> {
     type Item = STLFace;
     fn next(&mut self) -> Option<STLFace> {
-        if self.current_face.is_none() {
-            self.current_face = if let Some(face) = self.tri_faces.next() {
-                Some(face)
-            } else if let Some(face) = self.quad_faces.next() {
-                Some(face)
-            } else if let Some(face) = self.other_faces.next() {
-                Some(face)
-            } else {
-                return None;
-            }
-        }
-        let face = self.current_face.unwrap();
-        let res = pos_to_face(
-            self.positions[face[0].pos],
-            self.positions[face[self.current_vertex + 1].pos],
-            self.positions[face[self.current_vertex + 2].pos],
-        );
-        if self.current_vertex + 3 == face.len() {
-            self.current_face = None;
-            self.current_vertex = 0;
-        } else {
-            self.current_vertex += 1;
-        }
-        self.len -= 1;
-        Some(res)
+        self.faces.next().map(|face| {
+            let p = [
+                self.positions[face[0].pos],
+                self.positions[face[1].pos],
+                self.positions[face[2].pos],
+            ];
+            let n = (p[1] - p[0]).cross(p[2] - p[0]).normalize();
+            let normal = n.cast().unwrap().into();
+            let vertices = [
+                p[0].cast().unwrap().into(),
+                p[1].cast().unwrap().into(),
+                p[2].cast().unwrap().into(),
+            ];
+            STLFace { normal, vertices }
+        })
     }
     #[inline(always)]
     fn size_hint(&self) -> (usize, Option<usize>) { (self.len, Some(self.len)) }
@@ -291,11 +269,7 @@ impl<'a> IntoSTLIterator for &'a PolygonMesh {
         let len = self.face_iter().fold(0, |len, face| len + face.len());
         Self::IntoIter {
             positions: self.positions(),
-            tri_faces: self.tri_faces().iter(),
-            quad_faces: self.quad_faces().iter(),
-            other_faces: self.other_faces().iter(),
-            current_face: None,
-            current_vertex: 0,
+            faces: self.faces().triangle_iter(),
             len,
         }
     }
@@ -365,7 +339,14 @@ impl std::iter::FromIterator<STLFace> for PolygonMesh {
                 )
             })
             .collect();
-        PolygonMesh::debug_new(positions, Vec::new(), normals, faces)
+        PolygonMesh::debug_new(
+            StandardAttributes {
+                positions,
+                uv_coords: Vec::new(),
+                normals,
+            },
+            faces,
+        )
     }
 }
 
