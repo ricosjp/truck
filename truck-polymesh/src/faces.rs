@@ -9,9 +9,7 @@ pub trait AsVertexSlice: AsRef<[Self::V]> {
 }
 
 impl From<&Vertex> for Vertex {
-	fn from(v: &Vertex) -> Vertex {
-		*v
-	}
+	fn from(v: &Vertex) -> Vertex { *v }
 }
 
 impl<'a, T: AsVertexSlice> AsVertexSlice for &'a T {
@@ -108,6 +106,15 @@ impl<'a> FromIterator<&'a [usize]> for Faces<usize> {
 	}
 }
 
+impl<'a> FromIterator<&'a &'a [usize]> for Faces<usize> {
+	#[inline(always)]
+	fn from_iter<I: IntoIterator<Item = &'a &'a [usize]>>(iter: I) -> Faces<usize> {
+		let mut faces = Faces::default();
+		faces.extend(iter);
+		faces
+	}
+}
+
 #[test]
 fn faces_from_iter() {
 	let slice: &[&[[usize; 3]]] = &[
@@ -181,33 +188,23 @@ impl<V: Copy> Faces<V> {
 
 	/// Returns the vector of triangles.
 	#[inline(always)]
-	pub fn tri_faces(&self) -> &Vec<[V; 3]> {
-		&self.tri_faces
-	}
+	pub fn tri_faces(&self) -> &Vec<[V; 3]> { &self.tri_faces }
 
 	/// Returns the mutable slice of triangles.
 	#[inline(always)]
-	pub fn tri_faces_mut(&mut self) -> &mut [[V; 3]] {
-		&mut self.tri_faces
-	}
+	pub fn tri_faces_mut(&mut self) -> &mut [[V; 3]] { &mut self.tri_faces }
 
 	/// Returns the vector of quadrangles.
 	#[inline(always)]
-	pub fn quad_faces(&self) -> &Vec<[V; 4]> {
-		&self.quad_faces
-	}
+	pub fn quad_faces(&self) -> &Vec<[V; 4]> { &self.quad_faces }
 
 	/// Returns the mutable slice of quadrangles.
 	#[inline(always)]
-	pub fn quad_faces_mut(&mut self) -> &mut [[V; 4]] {
-		&mut self.quad_faces
-	}
+	pub fn quad_faces_mut(&mut self) -> &mut [[V; 4]] { &mut self.quad_faces }
 
 	/// Returns the vector of n-gons (n > 4).
 	#[inline(always)]
-	pub fn other_faces(&self) -> &Vec<Vec<V>> {
-		&self.other_faces
-	}
+	pub fn other_faces(&self) -> &Vec<Vec<V>> { &self.other_faces }
 
 	/// Returns the mutable iterator of n-gons (n > 4).
 	#[inline(always)]
@@ -229,32 +226,12 @@ impl<V: Copy> Faces<V> {
 	///     &[1, 2, 6, 7, 8, 9],
 	///     &[0, 2, 3],
 	/// ];
-	/// let faces = Faces::from_iter(slice);
+	/// let faces = Faces::<usize>::from_iter(slice);
 	/// let mut iter = faces.face_iter();
-	/// assert_eq!(iter.next(), Some([
-	///     Vertex { pos: 0, uv: None, nor: None },
-	///     Vertex { pos: 1, uv: None, nor: None },
-	///     Vertex { pos: 2, uv: None, nor: None },
-	/// ].as_ref()));
-	/// assert_eq!(iter.next(), Some([
-	///     Vertex { pos: 0, uv: None, nor: None },
-	///     Vertex { pos: 2, uv: None, nor: None },
-	///     Vertex { pos: 3, uv: None, nor: None },
-	/// ].as_ref()));
-	/// assert_eq!(iter.next(), Some([
-	///     Vertex { pos: 0, uv: None, nor: None },
-	///     Vertex { pos: 4, uv: None, nor: None },
-	///     Vertex { pos: 5, uv: None, nor: None },
-	///     Vertex { pos: 1, uv: None, nor: None },
-	/// ].as_ref()));
-	/// assert_eq!(iter.next(), Some([
-	///     Vertex { pos: 1, uv: None, nor: None },
-	///     Vertex { pos: 2, uv: None, nor: None },
-	///     Vertex { pos: 6, uv: None, nor: None },
-	///     Vertex { pos: 7, uv: None, nor: None },
-	///     Vertex { pos: 8, uv: None, nor: None },
-	///     Vertex { pos: 9, uv: None, nor: None },
-	/// ].as_ref()));
+	/// assert_eq!(iter.next(), Some([0, 1, 2].as_ref()));
+	/// assert_eq!(iter.next(), Some([0, 2, 3].as_ref()));
+	/// assert_eq!(iter.next(), Some([0, 4, 5, 1].as_ref()));
+	/// assert_eq!(iter.next(), Some([1, 2, 6, 7, 8, 9].as_ref()));
 	/// assert_eq!(iter.next(), None);
 	/// ```
 	#[inline(always)]
@@ -282,9 +259,7 @@ impl<V: Copy> Faces<V> {
 
 	/// Returns true if the faces is empty.
 	#[inline(always)]
-	pub fn is_empty(&self) -> bool {
-		self.len() == 0
-	}
+	pub fn is_empty(&self) -> bool { self.len() == 0 }
 
 	/// Returns the number of faces.
 	#[inline(always)]
@@ -302,15 +277,55 @@ impl<V: Copy> Faces<V> {
 
 	#[inline(always)]
 	pub(super) fn is_compatible(&self, attrs: &impl Attributes<V>) -> Result<(), Error<V>>
-	where
-		V: std::fmt::Debug,
-	{
+	where V: std::fmt::Debug {
 		self.face_iter()
 			.flatten()
 			.try_for_each(|v| match attrs.get(*v) {
 				Some(_) => Ok(()),
 				None => Err(Error::OutOfRange(*v)),
 			})
+	}
+
+	/// Returns iterator with triangulation faces
+	///
+	/// # Examples
+	/// ```
+	/// use std::iter::FromIterator;
+	/// use truck_polymesh::*;
+	/// let slice: &[&[usize]] = &[
+	///     &[0, 1, 2],
+	///     &[0, 4, 5, 1],
+	///     &[1, 2, 6, 7, 8, 9],
+	///     &[1, 2, 4, 3],
+	///     &[0, 2, 3],
+	/// ];
+	/// let faces = Faces::<usize>::from_iter(slice);
+	/// let mut iter = faces.triangle_iter();
+	/// assert_eq!(iter.len(), 10);
+	/// assert_eq!(iter.next(), Some([0, 1, 2]));
+	/// assert_eq!(iter.next(), Some([0, 2, 3]));
+	/// assert_eq!(iter.next(), Some([0, 4, 5]));
+	/// assert_eq!(iter.next(), Some([0, 5, 1]));
+	/// assert_eq!(iter.next(), Some([1, 2, 4]));
+	/// assert_eq!(iter.next(), Some([1, 4, 3]));
+	/// assert_eq!(iter.next(), Some([1, 2, 6]));
+	/// assert_eq!(iter.next(), Some([1, 6, 7]));
+	/// assert_eq!(iter.next(), Some([1, 7, 8]));
+	/// assert_eq!(iter.next(), Some([1, 8, 9]));
+	/// assert_eq!(iter.len(), 0);
+	/// assert_eq!(iter.next(), None);
+	/// ```
+	#[inline(always)]
+	pub fn triangle_iter(&self) -> TriangleIterator<V> {
+		let len = self.face_iter().fold(0, |sum, face| sum + face.len() - 2);
+		TriangleIterator {
+			tri_faces: self.tri_faces.iter(),
+			quad_faces: self.quad_faces.iter(),
+			other_faces: self.other_faces.iter(),
+			current_face: None,
+			current_vertex: 0,
+			len,
+		}
 	}
 }
 
@@ -339,9 +354,7 @@ impl<V> std::ops::Index<usize> for Faces<V> {
 
 impl<V: Copy> Invertible for Faces<V> {
 	#[inline(always)]
-	fn invert(&mut self) {
-		self.face_iter_mut().for_each(|f| f.reverse());
-	}
+	fn invert(&mut self) { self.face_iter_mut().for_each(|f| f.reverse()); }
 	#[inline(always)]
 	fn inverse(&self) -> Self {
 		let tri_faces: Vec<_> = self
@@ -378,3 +391,58 @@ impl std::ops::IndexMut<usize> for Faces {
 		}
 	}
 }
+
+/// iterator run on faces as the set of triangle.
+#[derive(Clone, Debug)]
+pub struct TriangleIterator<'a, V> {
+	tri_faces: std::slice::Iter<'a, [V; 3]>,
+	quad_faces: std::slice::Iter<'a, [V; 4]>,
+	other_faces: std::slice::Iter<'a, Vec<V>>,
+	current_face: Option<&'a [V]>,
+	current_vertex: usize,
+	len: usize,
+}
+
+impl<'a, V: Copy> Iterator for TriangleIterator<'a, V> {
+	type Item = [V; 3];
+	fn next(&mut self) -> Option<[V; 3]> {
+		let TriangleIterator {
+			tri_faces,
+			quad_faces,
+			other_faces,
+			current_face,
+			current_vertex,
+			len,
+		} = self;
+		if *len == 0 {
+			return None;
+		}
+		*len -= 1;
+		if let Some(face) = tri_faces.next() {
+			Some(*face)
+		} else {
+			if current_face.is_none() {
+				*current_face = quad_faces
+					.next()
+					.map(AsRef::as_ref)
+					.or_else(|| other_faces.next().map(AsRef::as_ref));
+			}
+			let face = current_face.unwrap();
+			let res = [
+				face[0],
+				face[*current_vertex + 1],
+				face[*current_vertex + 2],
+			];
+			*current_vertex += 1;
+			if current_face.unwrap().len() == *current_vertex + 2 {
+				*current_face = None;
+				*current_vertex = 0;
+			}
+			Some(res)
+		}
+	}
+	#[inline(always)]
+	fn size_hint(&self) -> (usize, Option<usize>) { (self.len, Some(self.len)) }
+}
+
+impl<'a, V: Copy> ExactSizeIterator for TriangleIterator<'a, V> {}

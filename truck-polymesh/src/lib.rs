@@ -85,16 +85,18 @@ pub struct StructuredMesh {
 pub struct PolylineCurve<P>(pub Vec<P>);
 
 mod attributes;
-mod faces;
+/// Defines triangle
+pub mod faces;
 /// Defines errors
 pub mod errors;
+mod expand;
 mod meshing_shape;
-/// I/O of wavefront obj
+/// wavefront obj I/O
 pub mod obj;
 /// Defines [`PolygonMeshEditor`](./polygon_mesh/struct.PolygonMeshEditor.html).
 pub mod polygon_mesh;
 /// Defines generalized polyline curve.
 pub mod polyline_curve;
-/// I/O of STL
+/// STL I/O
 pub mod stl;
 mod structured_mesh;
