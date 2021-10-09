@@ -63,8 +63,8 @@ pub trait NormalFilters {
     /// );
     ///
     /// mesh.add_naive_normals(true);
-    /// let v0: Vertex = mesh.faces()[0][1];
-    /// let v1: Vertex = mesh.faces()[3][0];
+    /// let v0: StandardVertex = mesh.faces()[0][1];
+    /// let v1: StandardVertex = mesh.faces()[3][0];
     ///
     /// // those vertices are at position with the index 2.
     /// assert_eq!(v0.pos, 2); assert_eq!(v1.pos, 2);
@@ -109,8 +109,8 @@ pub trait NormalFilters {
     /// );
     ///
     /// mesh.add_smooth_normals(0.8, true);
-    /// let v0: Vertex = mesh.faces()[0][1];
-    /// let v1: Vertex = mesh.faces()[3][0];
+    /// let v0: StandardVertex = mesh.faces()[0][1];
+    /// let v1: StandardVertex = mesh.faces()[3][0];
     ///
     /// // those vertices are at position with the index 2.
     /// assert_eq!(v0.pos, 2); assert_eq!(v1.pos, 2);
@@ -122,8 +122,8 @@ pub trait NormalFilters {
     ///
     /// // If the tolerance is enough little, the faces are recognized as edges.
     /// mesh.add_smooth_normals(0.6, true); // Normals are overwritten!
-    /// let v0: Vertex = mesh.faces()[0][1];
-    /// let v1: Vertex = mesh.faces()[3][0];
+    /// let v0: StandardVertex = mesh.faces()[0][1];
+    /// let v1: StandardVertex = mesh.faces()[3][0];
     /// assert!(mesh.normals()[v0.nor.unwrap()].near(&Vector3::new(-2.0, 5.0, 0.0).normalize()));
     /// assert!(mesh.normals()[v1.nor.unwrap()].near(&Vector3::new(2.0, 5.0, 0.0).normalize()));
     /// ```

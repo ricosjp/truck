@@ -87,9 +87,9 @@ pub trait OptimizingFilter {
     ///     ]),
     /// );
     ///
-    /// assert_eq!(mesh.faces()[1][1], Vertex { pos: 4, uv: None, nor: None });
+    /// assert_eq!(mesh.faces()[1][1], StandardVertex { pos: 4, uv: None, nor: None });
     /// mesh.put_together_same_attrs();
-    /// assert_eq!(mesh.faces()[1][1], Vertex { pos: 2, uv: None, nor: None });
+    /// assert_eq!(mesh.faces()[1][1], StandardVertex { pos: 2, uv: None, nor: None });
     ///
     /// // Remarks: No longer needed attributes are NOT autoremoved!
     /// assert_eq!(mesh.positions().len(), 6);

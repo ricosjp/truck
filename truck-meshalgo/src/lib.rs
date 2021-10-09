@@ -37,6 +37,4 @@ pub mod prelude {
     pub use crate::filters::*;
     pub use crate::tessellation::*;
     pub use crate::rexport_polymesh::*;
-    /// alias of `StandardVertex`
-    pub type Vertex = StandardVertex;
 }
