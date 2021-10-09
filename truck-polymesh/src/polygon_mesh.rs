@@ -38,6 +38,10 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
         }
     }
 
+    /// Returns attributes
+    #[inline(always)]
+    pub fn attributes(&self) -> &A { &self.attributes }
+
     /// Returns the faces of the polygon.
     #[inline(always)]
     pub fn faces(&self) -> &Faces<V> { &self.faces }
@@ -46,25 +50,13 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
     #[inline(always)]
     pub fn tri_faces(&self) -> &Vec<[V; 3]> { &self.faces.tri_faces }
 
-    /// Returns the mutable slice of all triangles.
-    #[inline(always)]
-    pub fn tri_faces_mut(&mut self) -> &mut [[V; 3]] { &mut self.faces.tri_faces }
-
     /// Returns the vector of all quadrangles.
     #[inline(always)]
     pub fn quad_faces(&self) -> &Vec<[V; 4]> { &self.faces.quad_faces }
 
-    /// Returns the mutable slice of all quadrangles.
-    #[inline(always)]
-    pub fn quad_faces_mut(&mut self) -> &mut [[V; 4]] { &mut self.faces.quad_faces }
-
     /// Returns the vector of n-gons (n > 4).
     #[inline(always)]
     pub fn other_faces(&self) -> &[Vec<V>] { &self.faces.other_faces }
-
-    /// Returns the mutable iterator of n-gons (n > 4).
-    #[inline(always)]
-    pub fn other_faces_mut(&mut self) -> &mut [Vec<V>] { &mut self.faces.other_faces }
 
     /// Returns the iterator of the slice.
     ///

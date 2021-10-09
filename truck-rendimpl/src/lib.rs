@@ -162,12 +162,6 @@ struct AttrVertex {
     pub normal: [f32; 3],
 }
 
-#[derive(Debug, Clone)]
-struct ExpandedPolygon<V> {
-    vertices: Vec<V>,
-    indices: Vec<u32>,
-}
-
 /// utility for creating `Texture`
 pub mod image2texture;
 mod instance_creator;
