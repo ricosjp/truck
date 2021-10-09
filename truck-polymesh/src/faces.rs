@@ -2,6 +2,8 @@ use crate::*;
 use errors::Error;
 use std::iter::FromIterator;
 
+type Vertex = StandardVertex;
+
 /// can be regarded as a vertex slice
 pub trait AsVertexSlice: AsRef<[Self::V]> {
 	/// items converted to vertex
@@ -137,7 +139,7 @@ impl<V: Copy> Faces<V> {
 	/// ```
 	/// // Creates faces consisis only triangles.
 	/// use truck_polymesh::*;
-	/// let tri_faces: Vec<[Vertex; 3]> = vec![
+	/// let tri_faces: Vec<[StandardVertex; 3]> = vec![
 	///     [[0, 0, 0].into(), [1, 1, 1].into(), [2, 2, 2].into()],
 	///     [[0, 0, 0].into(), [2, 2, 2].into(), [3, 3, 3].into()],
 	/// ];
@@ -158,7 +160,7 @@ impl<V: Copy> Faces<V> {
 	/// # Examples
 	/// ```
 	/// use truck_polymesh::*;
-	/// let mut faces = Faces::<Vertex>::default(); // empty faces
+	/// let mut faces = Faces::<StandardVertex>::default(); // empty faces
 	/// faces.push(&[[0, 0, 0], [1, 1, 1], [2, 2, 2]]);
 	/// faces.push(&[[3, 3, 3], [0, 0, 0], [2, 2, 2]]);
 	/// faces.push(&[[0, 0, 0], [4, 4, 4], [5, 5, 5], [1, 1, 1]]);

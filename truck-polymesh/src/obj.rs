@@ -1,5 +1,6 @@
 use crate::*;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+type Vertex = StandardVertex;
 type Result<T> = std::result::Result<T, errors::Error>;
 
 /// Writes obj data to output stream

@@ -20,7 +20,7 @@ use truck_platform::{wgpu::*, *};
 
 /// Re-exports `truck_polymesh`.
 pub mod polymesh {
-    pub use truck_polymesh::{base::*, PolygonMesh, PolylineCurve, StructuredMesh, Vertex};
+    pub use truck_polymesh::{base::*, PolygonMesh, PolylineCurve, StructuredMesh, StandardVertex};
 }
 pub use polymesh::*;
 

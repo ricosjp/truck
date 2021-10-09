@@ -194,8 +194,7 @@ fn triangulation_into_polymesh<'a>(
             (v.fix(), i)
         })
         .collect();
-    use truck_polymesh::Vertex;
-    let tri_faces: Vec<[Vertex; 3]> = triangles
+    let tri_faces: Vec<[StandardVertex; 3]> = triangles
         .map(|tri| tri.as_triangle())
         .filter(|tri| {
             let c = Point2::new(

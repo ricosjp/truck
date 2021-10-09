@@ -2,7 +2,7 @@ use thiserror::Error;
 
 /// Errors occured by polygon mesh handling
 #[derive(Debug, Error)]
-pub enum Error<V: std::fmt::Debug = crate::Vertex> {
+pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     /// There is an index in out of range.
     /// # Examples
     /// ```

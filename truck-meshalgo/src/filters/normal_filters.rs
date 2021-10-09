@@ -42,8 +42,7 @@ pub trait NormalFilters {
     /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
     /// ```
     /// use std::iter::FromIterator;
-    /// use truck_polymesh::*;
-    /// use truck_meshalgo::filters::*;
+    /// use truck_meshalgo::prelude::*;
     /// let mut mesh = PolygonMesh::new(
     ///     StandardAttributes {
     ///         positions: vec![
@@ -92,8 +91,7 @@ pub trait NormalFilters {
     /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
     /// ```
     /// use std::iter::FromIterator;
-    /// use truck_polymesh::*;
-    /// use truck_meshalgo::filters::*;
+    /// use truck_meshalgo::prelude::*;
     /// let mut mesh = PolygonMesh::new(
     ///     StandardAttributes {
     ///         positions: vec![    

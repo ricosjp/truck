@@ -7,9 +7,9 @@ impl<T: Copy> Attributes<usize> for Vec<T> {
 	}
 }
 
-impl Attributes<Vertex> for StandardAttributes {
+impl Attributes<StandardVertex> for StandardAttributes {
 	type Output = (Point3, Option<Vector2>, Option<Vector3>);
-	fn get(&self, v: Vertex) -> Option<Self::Output> {
+	fn get(&self, v: StandardVertex) -> Option<Self::Output> {
 		Some((
 			self.positions.get(v.pos)?,
 			match v.uv {

@@ -2,13 +2,13 @@ use crate::*;
 use errors::Error;
 type Result<T> = std::result::Result<T, Error>;
 
-impl Vertex {
+impl StandardVertex {
     #[inline(always)]
-    fn tuple(x: usize, uv: bool, nor: bool) -> Vertex {
+    fn tuple(x: usize, uv: bool, nor: bool) -> StandardVertex {
         let pos = x;
         let uv = if uv { Some(x) } else { None };
         let nor = if nor { Some(x) } else { None };
-        Vertex { pos, uv, nor }
+        StandardVertex { pos, uv, nor }
     }
 }
 
@@ -210,10 +210,10 @@ impl StructuredMesh {
             .flat_map(|i| (1..n).map(move |j| (i, j)))
             .map(move |(i, j)| {
                 [
-                    Vertex::tuple((i - 1) * n + j - 1, uv, nor),
-                    Vertex::tuple(i * n + j - 1, uv, nor),
-                    Vertex::tuple(i * n + j, uv, nor),
-                    Vertex::tuple((i - 1) * n + j, uv, nor),
+                    StandardVertex::tuple((i - 1) * n + j - 1, uv, nor),
+                    StandardVertex::tuple(i * n + j - 1, uv, nor),
+                    StandardVertex::tuple(i * n + j, uv, nor),
+                    StandardVertex::tuple((i - 1) * n + j, uv, nor),
                 ]
             })
             .collect();

@@ -1,5 +1,5 @@
 use crate::*;
-use polymesh::Vertex;
+use polymesh::StandardVertex as Vertex;
 use rustc_hash::FxHashMap as HashMap;
 
 impl<V: Sized + Zeroable + Pod> ExpandedPolygon<V> {

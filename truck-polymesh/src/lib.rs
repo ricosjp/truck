@@ -21,11 +21,11 @@ pub mod base {
 pub use base::*;
 
 /// attribution container for polygin mesh
-pub trait Attributes<Vertex> {
+pub trait Attributes<V> {
     /// attribution
     type Output;
     /// get attribution corresponding to vertex
-    fn get(&self, vertex: Vertex) -> Option<Self::Output>;
+    fn get(&self, vertex: V) -> Option<Self::Output>;
 }
 
 /// standard attributions
@@ -41,7 +41,7 @@ pub struct StandardAttributes {
 
 /// Index vertex of a face of the polygon mesh
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug, Serialize, Deserialize)]
-pub struct Vertex {
+pub struct StandardVertex {
     /// index of vertex's position
     pub pos: usize,
     /// index of vertex's texture coordinate
@@ -55,7 +55,7 @@ pub struct Vertex {
 /// To optimize for the case where the polygon mesh consists only triangles and quadrangle,
 /// there are vectors which consist by each triangles and quadrilaterals, internally.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Faces<V = Vertex> {
+pub struct Faces<V = StandardVertex> {
     tri_faces: Vec<[V; 3]>,
     quad_faces: Vec<[V; 4]>,
     other_faces: Vec<Vec<V>>,
@@ -67,7 +67,7 @@ pub struct Faces<V = Vertex> {
 /// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
 /// and each face vertex accesses those values by an indices triple.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PolygonMesh<V = Vertex, A = StandardAttributes> {
+pub struct PolygonMesh<V = StandardVertex, A = StandardAttributes> {
     attributes: A,
     faces: Faces<V>,
 }

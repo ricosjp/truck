@@ -6,6 +6,7 @@ use std::io::{BufRead, BufReader, Lines, Read, Write};
 const FACESIZE: usize = std::mem::size_of::<STLFace>();
 const CHUNKSIZE: usize = FACESIZE + 2;
 
+type Vertex = StandardVertex;
 type Result<T> = std::result::Result<T, errors::Error>;
 
 fn syntax_error() -> std::io::Error {

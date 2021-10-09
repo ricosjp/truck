@@ -68,8 +68,7 @@ pub trait OptimizingFilter {
     /// # Examples
     /// ```
     /// use std::iter::FromIterator;
-    /// use truck_polymesh::*;
-    /// use truck_meshalgo::filters::*;
+    /// use truck_meshalgo::prelude::*;
     /// let mut mesh = PolygonMesh::new(
     ///     StandardAttributes {
     ///         positions: vec![
