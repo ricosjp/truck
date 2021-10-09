@@ -33,10 +33,21 @@ pub trait Attributes<V> {
 pub struct StandardAttributes {
     /// positions
     pub positions: Vec<Point3>,
-    /// texture uv coordinate
+    /// texture uv coordinates
     pub uv_coords: Vec<Vector2>,
-    /// normal of vertices
+    /// normals at vertices
     pub normals: Vec<Vector3>,
+}
+
+/// standard attribution
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct StandardAttribute {
+    /// position
+    pub position: Point3,
+    /// texture uv coordinate
+    pub uv_coord: Option<Vector2>,
+    /// normal at vertex
+    pub normal: Option<Vector3>,
 }
 
 /// Index vertex of a face of the polygon mesh

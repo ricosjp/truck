@@ -99,18 +99,9 @@ impl<T: AsVertexSlice> FromIterator<T> for Faces {
 	}
 }
 
-impl<'a> FromIterator<&'a [usize]> for Faces<usize> {
+impl<S: AsRef<[usize]>> FromIterator<S> for Faces<usize> {
 	#[inline(always)]
-	fn from_iter<I: IntoIterator<Item = &'a [usize]>>(iter: I) -> Faces<usize> {
-		let mut faces = Faces::default();
-		faces.extend(iter);
-		faces
-	}
-}
-
-impl<'a> FromIterator<&'a &'a [usize]> for Faces<usize> {
-	#[inline(always)]
-	fn from_iter<I: IntoIterator<Item = &'a &'a [usize]>>(iter: I) -> Faces<usize> {
+	fn from_iter<I: IntoIterator<Item = S>>(iter: I) -> Faces<usize> {
 		let mut faces = Faces::default();
 		faces.extend(iter);
 		faces
