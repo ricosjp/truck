@@ -61,7 +61,9 @@ impl HashedPointCloud {
     #[inline(always)]
     pub fn distance2(&self, t: impl DistanceWithPointCloud) -> f64 { t.distance2(self) }
     #[inline(always)]
-    pub fn is_colliding(&self, t: impl DistanceWithPointCloud, tol: f64) -> bool { t.is_colliding(self, tol) }
+    pub fn is_colliding(&self, t: impl DistanceWithPointCloud, tol: f64) -> bool {
+        t.is_colliding(self, tol)
+    }
 }
 
 impl std::ops::Index<[usize; 3]> for HashedPointCloud {
@@ -109,9 +111,7 @@ impl SpaceHash for usize {
 
 pub trait DistanceWithPointCloud: Sized {
     fn distance2(&self, space: &HashedPointCloud) -> f64;
-    fn distance(&self, space: &HashedPointCloud) -> f64 {
-        f64::sqrt(self.distance2(space))
-    }
+    fn distance(&self, space: &HashedPointCloud) -> f64 { f64::sqrt(self.distance2(space)) }
     fn is_colliding(&self, space: &HashedPointCloud, tol: f64) -> bool {
         nonpositive_tolerance!(tol, 0.0);
         self.distance2(space) < tol * tol
@@ -183,7 +183,7 @@ impl DistanceWithPointCloud for [Point3; 3] {
 
 impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
     fn distance2(&self, space: &HashedPointCloud) -> f64 {
-        let dist2 = Triangulate::new(self).into_iter().fold(-1.0, |dist2, tri| {
+        let dist2 = self.faces().triangle_iter().fold(-1.0, |dist2, tri| {
             let tri = [
                 self.positions()[tri[0].pos],
                 self.positions()[tri[1].pos],
@@ -199,16 +199,14 @@ impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
     }
     fn is_colliding(&self, space: &HashedPointCloud, tol: f64) -> bool {
         nonpositive_tolerance!(tol, 0.0);
-        Triangulate::new(self)
-            .into_iter()
-            .any(|tri| {
-                let tri = [
-                    self.positions()[tri[0].pos],
-                    self.positions()[tri[1].pos],
-                    self.positions()[tri[2].pos],
-                ];
-                tri.distance2(space) < tol * tol
-            })
+        self.faces().triangle_iter().any(|tri| {
+            let tri = [
+                self.positions()[tri[0].pos],
+                self.positions()[tri[1].pos],
+                self.positions()[tri[2].pos],
+            ];
+            tri.distance2(space) < tol * tol
+        })
     }
 }
 

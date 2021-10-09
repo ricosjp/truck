@@ -1,5 +1,4 @@
 use super::*;
-use crate::common::Triangulate;
 
 /// triangulation, quadrangulation, give a structure
 pub trait StructuringFilter {
@@ -91,7 +90,7 @@ pub trait StructuringFilter {
 
 impl StructuringFilter for PolygonMesh {
     fn triangulate(&mut self) -> &mut Self {
-        let tri_faces = Triangulate::new(&*self).into_iter().collect::<Vec<_>>();
+        let tri_faces = self.faces().triangle_iter().collect::<Vec<_>>();
         *self.debug_editor().faces = Faces::from_tri_and_quad_faces(tri_faces, Vec::new());
         self
     }

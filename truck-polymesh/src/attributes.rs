@@ -2,7 +2,7 @@ use crate::*;
 
 impl<T: Copy> Attributes<usize> for Vec<T> {
     type Output = T;
-    fn get(&self, idx: usize) -> Option<T> { self.as_slice().get(idx).map(|x| *x) }
+    fn get(&self, idx: usize) -> Option<T> { self.as_slice().get(idx).copied() }
 }
 
 impl Attributes<StandardVertex> for StandardAttributes {

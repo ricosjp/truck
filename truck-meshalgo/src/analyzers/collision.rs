@@ -1,16 +1,16 @@
 use super::*;
 
 /// Find collisions between two polygon meshes and extract interference lines.
-/// 
+///
 /// # Details
-/// 
+///
 /// The algorithm for mesh extraction is as follows.
 /// All the triangles are projected toward the axis to form intervals.
 /// By looking at the overlap of these intervals, we can narrow down the interfering triangles.
 /// The overlap of the intervals is obtained by sorting the endpoints.
-/// 
+///
 /// # Remarks
-/// 
+///
 /// We see that the surfaces that are in contact are not interfering with each other.
 /// Therefore, polygon meshes included in one plane are not interfering.
 pub trait Collision {
@@ -218,16 +218,16 @@ fn collide_triangles(tri0: [Point3; 3], tri1: [Point3; 3]) -> Option<(Point3, Po
 }
 
 fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point3)> {
-    let tris0 = Triangulate::new(poly0);
-    let tris1 = Triangulate::new(poly1);
-    let iter0 = tris0.into_iter().map(|face| {
+    let tris0 = poly0.faces().triangle_iter().collect::<Vec<_>>();
+    let tris1 = poly1.faces().triangle_iter().collect::<Vec<_>>();
+    let iter0 = tris0.iter().map(|face| {
         [
             poly0.positions()[face[0].pos],
             poly0.positions()[face[1].pos],
             poly0.positions()[face[2].pos],
         ]
     });
-    let iter1 = tris1.into_iter().map(|face| {
+    let iter1 = tris1.iter().map(|face| {
         [
             poly1.positions()[face[0].pos],
             poly1.positions()[face[1].pos],
@@ -236,13 +236,13 @@ fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point3)> 
     });
     colliding_segment_pairs(sorted_endpoints(iter0, iter1))
         .filter_map(|(idx0, idx1)| {
-            let face0 = tris0.get(idx0);
+            let face0 = tris0[idx0];
             let tri0 = [
                 poly0.positions()[face0[0].pos],
                 poly0.positions()[face0[1].pos],
                 poly0.positions()[face0[2].pos],
             ];
-            let face1 = tris1.get(idx1);
+            let face1 = tris1[idx1];
             let tri1 = [
                 poly1.positions()[face1[0].pos],
                 poly1.positions()[face1[1].pos],
@@ -258,16 +258,16 @@ fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point3)> 
 }
 
 fn are_colliding(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Option<(Point3, Point3)> {
-    let tris0 = Triangulate::new(poly0);
-    let tris1 = Triangulate::new(poly1);
-    let iter0 = tris0.into_iter().map(|face| {
+    let tris0 = poly0.faces().triangle_iter().collect::<Vec<_>>();
+    let tris1 = poly1.faces().triangle_iter().collect::<Vec<_>>();
+    let iter0 = tris0.iter().map(|face| {
         [
             poly0.positions()[face[0].pos],
             poly0.positions()[face[1].pos],
             poly0.positions()[face[2].pos],
         ]
     });
-    let iter1 = tris1.into_iter().map(|face| {
+    let iter1 = tris1.iter().map(|face| {
         [
             poly1.positions()[face[0].pos],
             poly1.positions()[face[1].pos],
@@ -275,13 +275,13 @@ fn are_colliding(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Option<(Point3, Po
         ]
     });
     colliding_segment_pairs(sorted_endpoints(iter0, iter1)).find_map(|(idx0, idx1)| {
-        let face0 = tris0.get(idx0);
+        let face0 = tris0[idx0];
         let tri0 = [
             poly0.positions()[face0[0].pos],
             poly0.positions()[face0[1].pos],
             poly0.positions()[face0[2].pos],
         ];
-        let face1 = tris1.get(idx1);
+        let face1 = tris1[idx1];
         let tri1 = [
             poly1.positions()[face1[0].pos],
             poly1.positions()[face1[1].pos],

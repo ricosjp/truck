@@ -78,16 +78,16 @@ where
 }
 
 fn sorted_endpoints_by_polymesh_points(
-    polygon: &Triangulate,
+    polygon: &PolygonMesh,
     points: &[Point3],
     tol: f64,
 ) -> Vec<EndPoint> {
     sorted_endpoints(
-        polygon.into_iter().map(|tri| {
+        polygon.faces().triangle_iter().map(|tri| {
             [
-                polygon.entity().positions()[tri[0].pos],
-                polygon.entity().positions()[tri[1].pos],
-                polygon.entity().positions()[tri[2].pos],
+                polygon.positions()[tri[0].pos],
+                polygon.positions()[tri[1].pos],
+                polygon.positions()[tri[2].pos],
             ]
         }),
         points.iter(),
@@ -101,9 +101,9 @@ pub fn pointcloud_in_polygon_neighborhood(
     tol: f64,
 ) -> bool {
     nonpositive_tolerance!(tol, 0.0);
-    let triangulate = Triangulate::new(polygon);
     let mut current = Vec::new();
-    sorted_endpoints_by_polymesh_points(&triangulate, points, tol)
+    let triangles = polygon.faces().triangle_iter().collect::<Vec<_>>();
+    sorted_endpoints_by_polymesh_points(polygon, points, tol)
         .into_iter()
         .all(move |EndPoint { r#type, index, .. }| match r#type {
             EndPointType::Front => {
@@ -121,7 +121,7 @@ pub fn pointcloud_in_polygon_neighborhood(
                 true
             }
             EndPointType::Middle => current.iter().any(|i| {
-                let tri = triangulate.get(*i);
+                let tri = triangles[*i];
                 let tri = [
                     polygon.positions()[tri[0].pos],
                     polygon.positions()[tri[1].pos],
