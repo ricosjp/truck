@@ -238,7 +238,7 @@ function fileRead(e) {
       cameraPosition[2] - cameraGaze[2] + boxCenter[2],
     ];
     cameraGaze = boxCenter;
-    const object = polygon.to_expanded();
+    const object = polygon.to_buffer();
     vBuffer = object.vertex_buffer();
     iBuffer = object.index_buffer();
     indexLength = object.index_buffer_size() / 4;
