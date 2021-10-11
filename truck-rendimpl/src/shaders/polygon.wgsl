@@ -15,11 +15,11 @@ var<uniform> camera: Camera;
 
 [[block]]
 struct Lights {
-    lights: [[stride(48)]] array<Light>;
+    lights: array<Light, 255>;
 };
 
 [[group(0), binding(1)]]
-var<storage> lights: Lights;
+var<uniform> lights: Lights;
 
 [[block]]
 struct SceneInfo {

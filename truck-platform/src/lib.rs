@@ -49,6 +49,9 @@ use truck_base::cgmath64::*;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
+/// maximum number of light
+pub const LIGHT_MAX: usize = 255;
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct CameraInfo {
