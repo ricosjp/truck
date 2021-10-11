@@ -26,12 +26,17 @@ instant = { version = "0.1.11", features = [ "now", "wasm-bindgen" ] }
 
 [dev-dependencies]
 image = "0.23.14"
-futures = "0.3.17"
 rayon = "1.5.1"
 env_logger = "0.9.0"
 naga = { version = "0.7.0", features = ["wgsl-in"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 winit = "0.25.0"
+futures = "0.3.17"
+
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 winit = { version = "0.25.0", features = ["web-sys"] }
+wasm-bindgen-futures = "0.4.28"
+console_error_panic_hook = "0.1.6"
+console_log = "0.1.2"
+web-sys = { version = "0.3.53", features = ["Location"] }

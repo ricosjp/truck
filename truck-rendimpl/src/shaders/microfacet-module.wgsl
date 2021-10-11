@@ -16,11 +16,13 @@ struct Material {
 };
 
 fn light_direction(light: Light, position: vec3<f32>) -> vec3<f32> {
+    var res: vec3<f32>;
     if (light.light_type[0] == 0u) {
-        return normalize(light.position.xyz - position);
+        res = normalize(light.position.xyz - position);
     } else {
-        return light.position.xyz;
+        res = light.position.xyz;
     }
+    return res;
 }
 
 fn irradiance(light: Light, position: vec3<f32>, normal: vec3<f32>) -> vec3<f32> {
@@ -39,8 +41,8 @@ fn microfacet_distribution(middle: vec3<f32>, normal: vec3<f32>, alpha: f32) -> 
     return alpha2 / (sqrt_denom * sqrt_denom);
 }
 
-fn schlick_approxy(vec: vec3<f32>, normal: vec3<f32>, k: f32) -> f32 {
-    let dotNV = dot(normal, vec);
+fn schlick_approxy(vector: vec3<f32>, normal: vec3<f32>, k: f32) -> f32 {
+    let dotNV = dot(normal, vector);
     return dotNV / (dotNV * (1.0 - k) + k);
 }
 

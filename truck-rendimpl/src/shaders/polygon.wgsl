@@ -97,8 +97,8 @@ fn nontex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
 
 [[stage(fragment)]]
 fn tex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
-    var mat: Material = material.material;
-    mat.albedo = textureSample(r_color, r_sampler, in.uv);
+    var matr: Material = material.material;
+    matr.albedo = textureSample(r_color, r_sampler, in.uv);
     let camera_dir = normalize((camera.matrix * e.yyyx).xyz - in.position);
     let normal = normalize(in.normal);
     var pre_color: vec3<f32> = vec3<f32>(0.0);
@@ -108,12 +108,12 @@ fn tex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
             normal,
             lights.lights[i],
             camera_dir,
-            mat,
+            matr,
         );
     }
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
     pre_color = background_correction(pre_color, info.bk_color.xyz, material.material);
-    pre_color = ambient_correction(pre_color, mat);
+    pre_color = ambient_correction(pre_color, matr);
 
-    return vec4<f32>(pre_color, mat.albedo.a);
+    return vec4<f32>(pre_color, matr.albedo.a);
 }
