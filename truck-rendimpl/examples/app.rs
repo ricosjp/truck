@@ -119,6 +119,7 @@ pub trait App: Sized + 'static {
                         .texture
                         .create_view(&TextureViewDescriptor::default());
                     app.render(&view);
+                    surface_texture.present();
                     Self::default_control_flow()
                 }
                 Event::WindowEvent { event, .. } => match event {
