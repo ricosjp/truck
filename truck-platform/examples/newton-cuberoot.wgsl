@@ -29,7 +29,7 @@ fn main_image(coord: vec2<f32>, env: Environment) -> vec4<f32> {
     }
 
     var z: vec2<f32> = uv;
-    for (var _i: u32 = 0u; _i < 20u; _i = _i + 1u) {
+    for (var i: u32 = 0u; i < 20u; i = i + 1u) {
         let z2 = cmult(z, z);
         let z3 = cmult(z2, z);
         z = z - cmult(z3 - ONE, cinv(3.0 * z2));

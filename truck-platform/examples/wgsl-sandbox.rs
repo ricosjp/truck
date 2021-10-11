@@ -60,13 +60,13 @@ struct Mouse {
 };
 
 [[group(0), binding(2)]]
-var<uniform> __info: SceneInfo;
+var<uniform> info__: SceneInfo;
 
 [[group(1), binding(0)]]
-var<uniform> __resolution: Resolution;
+var<uniform> resolution__: Resolution;
 
 [[group(1), binding(1)]]
-var<uniform> __mouse: Mouse;
+var<uniform> mouse__: Mouse;
 
 struct Environment {
     resolution: vec2<f32>;
@@ -89,12 +89,12 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
 [[stage(fragment)]]
 fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f32> {
     var env: Environment;
-    env.resolution = __resolution.resolution;
-    env.mouse = __mouse.mouse;
-    env.time = __info.time;
+    env.resolution = resolution__.resolution;
+    env.mouse = mouse__.mouse;
+    env.time = info__.time;
     let coord = vec2<f32>(
         position.x,
-        __resolution.resolution.y - position.y,
+        resolution__.resolution.y - position.y,
     );
     return main_image(coord, env);
 }
@@ -287,6 +287,7 @@ fn main() {
             .request_adapter(&RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
             })
             .await
             .unwrap();
@@ -348,17 +349,16 @@ fn main() {
             }
             Event::RedrawRequested(_) => {
                 scene.update_bind_group(&plane);
-                let frame = match surface.get_current_frame() {
-                    Ok(frame) => frame,
+                let surface_texture = match surface.get_current_texture() {
+                    Ok(got) => got,
                     Err(_) => {
                         surface.configure(handler.device(), &handler.config());
                         surface
-                            .get_current_frame()
+                            .get_current_texture()
                             .expect("Failed to acquire next surface texture!")
                     }
                 };
-                let view = frame
-                    .output
+                let view = surface_texture
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
                 scene.render_scene(&view);
@@ -366,6 +366,7 @@ fn main() {
                     plane.mouse[3] = -plane.mouse[3];
                     clicked = false;
                 }
+                surface_texture.present();
                 ControlFlow::Poll
             }
             Event::WindowEvent { event, .. } => match event {
