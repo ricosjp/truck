@@ -14,7 +14,7 @@ const EXAMPLES: &[&str] = &[
 
 fn main() {
     let output = Command::new("cargo")
-        .args(&["build", "--target", "wasm32-unknown-unknown", "--examples"])
+        .args(&["build", "--target", "wasm32-unknown-unknown", "--examples", "--release"])
         .output()
         .unwrap_or_else(|e| panic!("{}", e));
     std::io::stdout().write_all(&output.stdout).unwrap();
@@ -33,7 +33,7 @@ fn main() {
                 "web",
                 "--out-dir",
                 &output_dir,
-                &format!("target/wasm32-unknown-unknown/debug/examples/{}.wasm", dir),
+                &format!("target/wasm32-unknown-unknown/release/examples/{}.wasm", dir),
             ])
             .output()
             .unwrap_or_else(|e| panic!("{}", e));

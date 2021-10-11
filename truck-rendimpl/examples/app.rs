@@ -94,10 +94,13 @@ pub trait App: Sized + 'static {
     }
 }
 
-async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, AdapterInfo) {
+async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, Adapter) {
     let adapter = instance
         .request_adapter(&RequestAdapterOptions {
+            #[cfg(not(feature = "webgl"))]
             power_preference: PowerPreference::HighPerformance,
+            #[cfg(feature = "webgl")]
+            power_preference: PowerPreference::LowPower,
             compatible_surface: Some(surface),
             force_fallback_adapter: false,
         })
@@ -108,26 +111,32 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
         .request_device(
             &DeviceDescriptor {
                 features: Default::default(),
-                limits: Limits::default(),
+                #[cfg(not(feature = "webgl"))]
+                limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
+                #[cfg(feature = "webgl")]
+                limits: Limits::downlevel_webgl2_defaults(),
                 label: None,
             },
             None,
         )
         .await
         .expect("Failed to create device");
-    (tuple.0, tuple.1, adapter.get_info())
+    (tuple.0, tuple.1, adapter)
 }
 
 async fn run<A: App>(event_loop: winit::event_loop::EventLoop<()>, window: winit::window::Window) {
     let size = window.inner_size();
+    #[cfg(not(feature = "webgl"))]
     let instance = Instance::new(Backends::PRIMARY);
+    #[cfg(feature = "webgl")]
+    let instance = Instance::new(Backends::all());
     let surface = unsafe { instance.create_surface(&window) };
 
-    let (device, queue, info) = init_device(&instance, &surface).await;
+    let (device, queue, adapter) = init_device(&instance, &surface).await;
 
     let config = SurfaceConfiguration {
         usage: TextureUsages::RENDER_ATTACHMENT,
-        format: TextureFormat::Bgra8Unorm,
+        format: surface.get_preferred_format(&adapter).unwrap(),
         width: size.width,
         height: size.height,
         present_mode: PresentMode::Mailbox,
@@ -142,7 +151,7 @@ async fn run<A: App>(event_loop: winit::event_loop::EventLoop<()>, window: winit
         Arc::new(Mutex::new(config)),
     );
 
-    let mut app = A::init(&handler, info);
+    let mut app = A::init(&handler, adapter.get_info());
 
     event_loop.run(move |ev, _, control_flow| {
         *control_flow = match ev {

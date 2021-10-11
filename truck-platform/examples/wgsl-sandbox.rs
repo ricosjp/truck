@@ -275,35 +275,42 @@ use plane::Plane;
 
 async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window::Window) {
     let size = window.inner_size();
+    #[cfg(not(feature = "webgl"))]
+    let instance = Instance::new(Backends::PRIMARY);
+    #[cfg(feature = "webgl")]
     let instance = Instance::new(Backends::all());
     let surface = unsafe { instance.create_surface(&window) };
 
-    let (device, queue) = {
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::default(),
-                compatible_surface: Some(&surface),
-                force_fallback_adapter: false,
-            })
-            .await
-            .unwrap();
+    let adapter = instance
+        .request_adapter(&RequestAdapterOptions {
+            #[cfg(not(feature = "webgl"))]
+            power_preference: PowerPreference::HighPerformance,
+            #[cfg(feature = "webgl")]
+            power_preference: PowerPreference::LowPower,
+            compatible_surface: Some(&surface),
+            force_fallback_adapter: false,
+        })
+        .await
+        .unwrap();
 
-        adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
-                    label: None,
-                },
-                None,
-            )
-            .await
-            .unwrap()
-    };
+    let (device, queue) = adapter
+        .request_device(
+            &DeviceDescriptor {
+                features: Default::default(),
+                #[cfg(not(feature = "webgl"))]
+                limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
+                #[cfg(feature = "webgl")]
+                limits: Limits::downlevel_webgl2_defaults(),
+                label: None,
+            },
+            None,
+        )
+        .await
+        .unwrap();
 
     let config = SurfaceConfiguration {
         usage: TextureUsages::RENDER_ATTACHMENT,
-        format: TextureFormat::Bgra8Unorm,
+        format: surface.get_preferred_format(&adapter).unwrap(),
         width: size.width,
         height: size.height,
         present_mode: PresentMode::Mailbox,
@@ -412,7 +419,6 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
         };
     })
 }
-
 
 fn main() {
     let event_loop = winit::event_loop::EventLoop::new();
