@@ -36,6 +36,7 @@ wasm-test:
         - mkdir public
         - cargo make wasm-test
         - mv truck-js/pkg public/adhoc-viewer
+        - mv dist public/webgpu-examples
     artifacts:
         paths:
             - public

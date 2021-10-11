@@ -12,7 +12,7 @@ struct Light {
 
 [[block]]
 struct Lights {
-    lights: [[stride(48)]] array<Light>;
+    lights: array<Light, 255>;
 };
 
 [[block]]
@@ -26,7 +26,7 @@ struct SceneInfo {
 var<uniform> camera: Camera;
 
 [[group(0), binding(1)]]
-var<storage> lights: Lights;
+var<uniform> lights: Lights;
 
 [[group(0), binding(2)]]
 var<uniform> info: SceneInfo;

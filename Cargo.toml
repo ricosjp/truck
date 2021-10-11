@@ -11,6 +11,7 @@ members = [
 	"truck-rendimpl",
 	"truck-shapeops",
 	"truck-topology",
-	"readme-generator",
 	"truck-js",
+	"readme-generator",
+	"example-pages-generator",
 ]

@@ -12,7 +12,9 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 exclude = ["*.png"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+webgl = ["truck-platform/webgl"]
 
 [dependencies]
 bytemuck = { version = "1.7.2", features = ["derive"] }
@@ -33,6 +35,11 @@ truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 instant = { version = "0.1.11", features = [ "now" ] }
 winit = "0.25.0"
+
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 instant = { version = "0.1.11", features = [ "now", "wasm-bindgen" ] }
 winit = { version = "0.25.0", features = ["web-sys"] }
+wasm-bindgen-futures = "0.4.28"
+console_error_panic_hook = "0.1.6"
+console_log = "0.1.2"
+web-sys = { version = "0.3.53", features = ["Location"] }
