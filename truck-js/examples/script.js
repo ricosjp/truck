@@ -1,4 +1,5 @@
-import * as Truck from "truck-js";
+import init, * as Truck from "./truck_js.js";
+await init();
 
 const cw = 768;
 const ch = 768;
