@@ -106,17 +106,16 @@ pub trait App: Sized + 'static {
                 }
                 Event::RedrawRequested(_) => {
                     app.update(&handler);
-                    let frame = match surface.get_current_frame() {
-                        Ok(frame) => frame,
+                    let surface_texture = match surface.get_current_texture() {
+                        Ok(got) => got,
                         Err(_) => {
                             surface.configure(handler.device(), &handler.config());
                             surface
-                                .get_current_frame()
+                                .get_current_texture()
                                 .expect("Failed to acquire next surface texture!")
                         }
                     };
-                    let view = frame
-                        .output
+                    let view = surface_texture
                         .texture
                         .create_view(&TextureViewDescriptor::default());
                     app.render(&view);
@@ -156,6 +155,7 @@ async fn init_device(instance: &Instance, surface: &Surface) -> (Device, Queue, 
         .request_adapter(&RequestAdapterOptions {
             power_preference: PowerPreference::HighPerformance,
             compatible_surface: Some(surface),
+            force_fallback_adapter: false,
         })
         .await
         .expect("Failed to find an appropriate adapter");

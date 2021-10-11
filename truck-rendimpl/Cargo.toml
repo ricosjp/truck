@@ -31,8 +31,8 @@ truck-modeling = { version = "0.2.1", path = "../truck-modeling" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-instant = { version = "0.1", features = [ "now" ] }
+instant = { version = "0.1.11", features = [ "now" ] }
 winit = "0.25.0"
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-instant = { version = "0.1", features = [ "now", "wasm-bindgen" ] }
+instant = { version = "0.1.11", features = [ "now", "wasm-bindgen" ] }
 winit = { version = "0.25.0", features = ["web-sys"] }

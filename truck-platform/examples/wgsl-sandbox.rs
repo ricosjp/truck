@@ -287,6 +287,7 @@ fn main() {
             .request_adapter(&RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
             })
             .await
             .unwrap();
@@ -348,17 +349,16 @@ fn main() {
             }
             Event::RedrawRequested(_) => {
                 scene.update_bind_group(&plane);
-                let frame = match surface.get_current_frame() {
-                    Ok(frame) => frame,
+                let surface_texture = match surface.get_current_texture() {
+                    Ok(got) => got,
                     Err(_) => {
                         surface.configure(handler.device(), &handler.config());
                         surface
-                            .get_current_frame()
+                            .get_current_texture()
                             .expect("Failed to acquire next surface texture!")
                     }
                 };
-                let view = frame
-                    .output
+                let view = surface_texture
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
                 scene.render_scene(&view);

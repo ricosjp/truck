@@ -169,6 +169,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
             .request_adapter(&RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,
                 compatible_surface: None,
+                force_fallback_adapter: false,
             })
             .await
             .unwrap();

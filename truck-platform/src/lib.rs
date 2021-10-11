@@ -98,6 +98,7 @@ pub struct BufferHandler {
 /// #        .request_adapter(&RequestAdapterOptions {
 /// #            power_preference: PowerPreference::HighPerformance,
 /// #            compatible_surface: None,
+/// #            force_fallback_adapter: false,            
 /// #        })
 /// #        .await
 /// #        .unwrap();
@@ -219,6 +220,7 @@ pub struct Light {
 ///         .request_adapter(&RequestAdapterOptions {
 ///             power_preference: PowerPreference::HighPerformance,
 ///             compatible_surface: None,
+///             force_fallback_adapter: false,
 ///         })
 ///         .await
 ///         .unwrap();
