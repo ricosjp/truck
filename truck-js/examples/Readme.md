@@ -2,11 +2,20 @@
 
 ## How to run
 
-Prepare `cargo`, `wasm-pack`, and `npm`. Run the following.
+### Prepare
 
 ```bash
-wasm-pack build
-npm run start
+cargo install wasm-pack
+cargo install basic-http-server
+```
+
+### Running script
+
+```bash
+wasm-pack build --target web
+cp examples/bootstrap.js examples/index.html examples/script.js pkg
+cd pkg
+basic-http-server -a 127.0.0.1:8080
 ```
 
 ## How to use

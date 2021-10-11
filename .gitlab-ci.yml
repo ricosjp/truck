@@ -35,7 +35,7 @@ wasm-test:
     script:
         - mkdir public
         - cargo make wasm-test
-        - mv truck-js/examples/dist public/adhoc-viewer
+        - mv truck-js/pkg public/adhoc-viewer
     artifacts:
         paths:
             - public
