@@ -3,7 +3,6 @@
 // The texture is referenced by:
 // https://cc0textures.com/view?id=WoodFloor024
 
-use std::io::Read;
 use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 use truck_platform::*;
@@ -12,6 +11,11 @@ use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
+
+const TEXTURE_BYTES: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/texture/WoodFloor024_1K_Color.png",
+));
 
 struct MyApp {
     scene: Scene,
@@ -58,10 +62,7 @@ impl App for MyApp {
             ..Default::default()
         };
         let mut scene = Scene::new(handler.clone(), &desc);
-        let mut tex_file = std::fs::File::open("examples/WoodFloor024_2K_Color.png").unwrap();
-        let mut bytes = Vec::new();
-        tex_file.read_to_end(&mut bytes).unwrap();
-        let texture = image::load_from_memory(&bytes).unwrap();
+        let texture = image::load_from_memory(TEXTURE_BYTES).unwrap();
         let texture = image2texture::image2texture(handler, &texture);
         let state = PolygonState {
             matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),

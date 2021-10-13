@@ -16,6 +16,11 @@ use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
 
+const TEAPOT_BYTES: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/obj/teapot.obj",
+));
+
 enum RenderMode {
     NaiveSurface,
     NaiveWireFrame,
@@ -143,7 +148,7 @@ impl App for MyApp {
         let mut scene = Scene::new(handler.clone(), &scene_desc);
         let creator = scene.instance_creator();
         let (instance, wireframe) =
-            MyApp::load_obj(&creator, include_bytes!("teapot.obj").as_ref());
+            MyApp::load_obj(&creator, TEAPOT_BYTES);
         scene.add_object(&instance);
         scene.add_object(&wireframe);
         let mut app = MyApp {

@@ -4,6 +4,7 @@
 *.json
 /.vscode
 *.png
+*.jpg
 *.stl
 .bin/
 pkg/

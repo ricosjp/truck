@@ -1,16 +1,23 @@
 use super::*;
 use truck_topology::shell::ShellCondition;
 
-const SHAPE_JSONS: [&[u8]; 3] = [
-    include_bytes!("bottle.json"),
-    include_bytes!("punched-cube.json"),
-    include_bytes!("torus-punched-cube.json"),
+macro_rules! dir ( () => { concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/shape/") });
+
+const SHAPE_JSONS: [&str; 3] = [
+    concat!(dir!(), "bottle.json"),
+    concat!(dir!(), "punched-cube.json"),
+    concat!(dir!(), "torus-punched-cube.json"),
 ];
+
+fn read_jsons() -> Vec<Vec<u8>> {
+    let closure = |json| std::fs::read(json).unwrap();
+    SHAPE_JSONS.iter().map(closure).collect()
+}
 
 #[test]
 fn solid_is_closed() {
-    for (i, json) in SHAPE_JSONS.iter().enumerate() {
-        let solid = Solid::extract(serde_json::from_reader(*json).unwrap()).unwrap();
+    for (i, json) in read_jsons().into_iter().enumerate() {
+        let solid = Solid::extract(serde_json::from_reader(json.as_slice()).unwrap()).unwrap();
         let mut poly = solid.triangulation(0.02).unwrap().to_polygon();
         poly.put_together_same_attrs()
             .remove_degenerate_faces()
@@ -26,16 +33,18 @@ fn solid_is_closed() {
 
 #[test]
 fn compare_occt_mesh() {
-    let solid = Solid::extract(serde_json::from_slice(SHAPE_JSONS[2]).unwrap()).unwrap();
+    let jsons = read_jsons();
+    let solid = Solid::extract(serde_json::from_slice(jsons[2].as_slice()).unwrap()).unwrap();
     let res = solid.triangulation(0.01).unwrap().to_polygon();
-    let ans = obj::read(include_bytes!("by_occt.obj").as_ref()).unwrap();
+    let path = concat!(dir!(), "../obj/by_occt.obj");
+    let ans = obj::read(std::fs::read(path).unwrap().as_slice()).unwrap();
     assert!(res.is_clung_to_by(ans.positions(), 0.05));
     assert!(ans.is_clung_to_by(res.positions(), 0.05));
 }
 
 #[test]
 fn large_number_meshing() {
-    let torus = Solid::extract(serde_json::from_slice(include_bytes!("large-torus.json")).unwrap())
-        .unwrap();
+    let json = std::fs::read(concat!(dir!(), "large-torus.json")).unwrap();
+    let torus = Solid::extract(serde_json::from_slice(json.as_slice()).unwrap()).unwrap();
     let _ = torus.triangulation(1.0).unwrap().to_polygon();
 }

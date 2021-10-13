@@ -3,6 +3,16 @@ use truck_base::assert_near;
 use truck_polymesh::*;
 type Result<T> = std::result::Result<T, errors::Error>;
 
+const ASCII_BUNNY: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/stl/bunny_ascii.stl",
+));
+
+const BINARY_BUNNY: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/stl/bunny_binary.stl",
+));
+
 #[test]
 fn stl_oi_test() {
     let mesh = vec![
@@ -37,30 +47,27 @@ fn stl_oi_test() {
 
 #[test]
 fn stl_io_test() {
-    let amesh = STLReader::<&[u8]>::new(include_bytes!("data/bunny_ascii.stl"), STLType::Automatic)
+    let amesh = STLReader::new(ASCII_BUNNY, STLType::Automatic)
         .unwrap()
-        .collect::<Result<Vec<_>>>()
-        .unwrap();
-    let bmesh =
-        STLReader::<&[u8]>::new(include_bytes!("data/bunny_binary.stl"), STLType::Automatic)
-            .unwrap()
-            .collect::<Result<Vec<_>>>()
-            .unwrap();
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    let bmesh = STLReader::new(BINARY_BUNNY, STLType::Automatic)
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
     assert_eq!(amesh, bmesh);
     let mut bytes = Vec::<u8>::new();
     stl::write(bmesh.iter().cloned(), &mut bytes, STLType::Binary).unwrap();
     // Binary data is free from notational distortions except for the headers.
-    assert_eq!(&bytes[80..], &include_bytes!("data/bunny_binary.stl")[80..]);
+    assert_eq!(&bytes[80..], &BINARY_BUNNY[80..]);
 }
 
 #[test]
 fn through_polymesh() {
-    let iter = STLReader::<&[u8]>::new(include_bytes!("data/bunny_binary.stl"), STLType::Automatic)
-        .unwrap();
+    let iter = STLReader::<&[u8]>::new(BINARY_BUNNY, STLType::Automatic).unwrap();
     let polymesh: PolygonMesh = iter.map(|face| face.unwrap()).collect();
     let mesh: Vec<STLFace> = polymesh.into_iter().collect();
-    let iter = STLReader::<&[u8]>::new(include_bytes!("data/bunny_binary.stl"), STLType::Automatic)
-        .unwrap();
+    let iter = STLReader::<&[u8]>::new(BINARY_BUNNY, STLType::Automatic).unwrap();
     for (face0, face1) in mesh.iter().zip(iter) {
         let face1 = face1.unwrap();
         assert_near!(face0.vertices[0][0] as f64, face1.vertices[0][0] as f64);

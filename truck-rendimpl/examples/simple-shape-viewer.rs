@@ -18,6 +18,11 @@ use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
 
+const PUNCHED_CUBE_BYTES: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/shape/punched-cube.json",
+));
+
 enum RenderMode {
     NaiveSurface,
     NaiveWireFrame,
@@ -162,8 +167,7 @@ impl App for MyApp {
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
         let creator = scene.instance_creator();
-        let (instance, wireframe) =
-            Self::load_shape(&creator, include_bytes!("punched-cube.json").as_ref());
+        let (instance, wireframe) = Self::load_shape(&creator, PUNCHED_CUBE_BYTES);
         scene.add_object(&instance);
         scene.add_object(&wireframe);
         let mut app = MyApp {

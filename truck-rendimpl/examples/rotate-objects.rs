@@ -18,6 +18,11 @@ use app::*;
 
 const NUM_OF_OBJECTS: usize = 8;
 
+const TEAPOT_BYTES: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/obj/teapot.obj",
+));
+
 struct MyRender {
     scene: Scene,
     instances: Vec<PolygonInstance>,
@@ -135,7 +140,7 @@ impl App for MyRender {
             camera_changed: None,
             light_changed: None,
         };
-        app.load_obj(include_bytes!("teapot.obj").as_ref());
+        app.load_obj(TEAPOT_BYTES);
         app
     }
 

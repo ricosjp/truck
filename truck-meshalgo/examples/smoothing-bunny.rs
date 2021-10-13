@@ -7,7 +7,12 @@ use truck_meshalgo::filters::*;
 use truck_polymesh::*;
 
 fn main() {
-    let file = std::fs::File::open("examples/data/bunny.obj").unwrap();
+    const PATH: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../resources/obj/bunny.obj",
+    );
+    std::fs::copy(PATH, "bunny.obj").unwrap();
+    let file = std::fs::File::open(PATH).unwrap();
     let mut mesh = obj::read(file).unwrap();
     mesh.add_smooth_normals(std::f64::consts::PI / 3.0, true);
 

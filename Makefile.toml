@@ -76,6 +76,7 @@ args = ["build", "--target=wasm32-unknown-unknown", "--tests", "--examples"]
 
 [tasks.build-wgpu-examples]
 description = "Build wasms"
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
 command = "cargo"
 args = ["run", "--bin", "example-pages-generator"]
 
