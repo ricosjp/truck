@@ -40,6 +40,7 @@ These examples use the default syntax for running examples, as found in the [Car
 At first, let's run the following example!
 
 ```bash
+git submodule update --init
 cargo run --example rotate-objects
 ```
 
