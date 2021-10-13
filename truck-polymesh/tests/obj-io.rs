@@ -1,16 +1,28 @@
 use std::iter::FromIterator;
 use truck_polymesh::*;
 
-const TEAPOT_POSITION_OBJ: &[u8] = include_bytes!("data/teapot-position.obj");
-const TEAPOT_WITHNORMALS_OBJ: &[u8] = include_bytes!("data/teapot-with-normals.obj");
+const TEAPOT_POSITION_OBJ: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/obj/teapot.obj",
+));
+const TEAPOT_WITHNORMALS_OBJ: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/obj/teapot-with-normals.obj",
+));
 
 // https://sketchfab.com/3d-models/skull-downloadable-1a9db900738d44298b0bc59f68123393
 // Skull downloadable - CC Attribution © martinjario
-const SKULL_WITHTEXCOORD_OBJ: &[u8] = include_bytes!("data/skull-with-texcoord.obj");
+const SKULL_WITHTEXCOORD_OBJ: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/obj/skull-with-texcoord.obj",
+));
 
 // https://sketchfab.com/3d-models/pony-cartoon-885d9f60b3a9429bb4077cfac5653cf9
 // Pony Cartoon - CC Attribution © Slava Z.
-const PONY_COMPLETE_OBJ: &[u8] = include_bytes!("data/pony-complete.obj");
+const PONY_COMPLETE_OBJ: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/obj/pony-complete.obj",
+));
 
 #[test]
 fn position_obj_ioi_test() {

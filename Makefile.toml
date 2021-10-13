@@ -6,6 +6,18 @@ default_to_workspace = false
 command = "cargo"
 args = ["clean"]
 
+[tasks.create-shape-json]
+description = "Creates shape jsons for test"
+script = [
+	"cd resources/shape",
+	"cargo run -p truck-modeling --example bottle",
+	"cargo run -p truck-modeling --example cube",
+	"cargo run -p truck-modeling --example punched-cube",
+	"cargo run -p truck-modeling --example torus-punched-cube",
+	"cargo run -p truck-modeling --example torus",
+	"cargo run -p truck-modeling --example torus -- 500 100 large-torus.json",
+]
+
 [tasks.cpu-test]
 description = "Tests using only CPU"
 command = "cargo"
@@ -64,6 +76,7 @@ args = ["build", "--target=wasm32-unknown-unknown", "--tests", "--examples"]
 
 [tasks.build-wgpu-examples]
 description = "Build wasms"
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
 command = "cargo"
 args = ["run", "--bin", "example-pages-generator"]
 

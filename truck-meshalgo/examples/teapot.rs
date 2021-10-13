@@ -7,7 +7,12 @@ use truck_meshalgo::filters::*;
 use truck_polymesh::*;
 
 fn main() {
-    let file = std::fs::File::open("examples/data/teapot.obj").unwrap();
+    const PATH: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../resources/obj/teapot.obj",
+    );
+    std::fs::copy(PATH, "teapot.obj").unwrap();
+    let file = std::fs::File::open(PATH).unwrap();
     let mut mesh = obj::read(file).unwrap();
 
     mesh.put_together_same_attrs()

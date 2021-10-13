@@ -6,11 +6,15 @@
 use truck_meshalgo::filters::*;
 use truck_polymesh::*;
 
-const INPUT: &str = "examples/data/happy-buddha.obj";
+const INPUT: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/obj/happy-buddha.obj",
+);
 const OUTPUT: &str = "requadrangulated-buddha.obj";
 
 fn main() {
     let instant = std::time::Instant::now();
+    std::fs::copy(INPUT, "happy-buddha.obj").unwrap();
     let file = std::fs::File::open(INPUT).unwrap();
     let mut mesh = obj::read(file).unwrap();
     let read_time = instant.elapsed();

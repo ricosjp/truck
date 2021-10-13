@@ -8,7 +8,12 @@ use truck_meshalgo::filters::*;
 use truck_polymesh::*;
 
 fn main() {
-    let file = std::fs::File::open("examples/data/irregular_sphere.obj").unwrap();
+    const PATH: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../resources/obj/irregular_sphere.obj"
+    );
+    std::fs::copy(PATH, "irregular_shpere.obj").unwrap();
+    let file = std::fs::File::open(PATH).unwrap();
     let mut mesh = obj::read(file).unwrap();
     mesh.normalize_normals()
         .remove_unused_attrs()

@@ -8,6 +8,11 @@ use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
 
+const CUBE_OBJ: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/obj/cube.obj",
+));
+
 const PICTURE_SIZE: (u32, u32) = (1024, 768);
 
 fn test_scene(backend: Backends) -> Scene {
@@ -60,7 +65,7 @@ fn nontex_polygon(scene: &mut Scene, creator: &InstanceCreator) -> Vec<u8> {
     let (device, config) = (scene.device(), scene.config());
     let texture = device.create_texture(&common::texture_descriptor(&config));
     let cube: PolygonInstance = creator.create_instance(
-        &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
+        &obj::read(CUBE_OBJ).unwrap(),
         &PolygonState {
             material: Material {
                 albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
@@ -129,7 +134,7 @@ fn tex_polygon(
     let texture = device.create_texture(&common::texture_descriptor(&config));
     let attach = creator.create_texture(gradtex);
     let cube: PolygonInstance = creator.create_instance(
-        &obj::read(include_bytes!("cube.obj").as_ref()).unwrap(),
+        &obj::read(CUBE_OBJ).unwrap(),
         &PolygonState {
             material: Material {
                 albedo: Vector4::new(1.0, 1.0, 1.0, 1.0),
