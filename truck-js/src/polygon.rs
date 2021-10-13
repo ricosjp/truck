@@ -85,7 +85,32 @@ impl PolygonMesh {
 	}
 	/// Returns polygon buffer
 	#[inline(always)]
-	pub fn to_expanded(&self) -> PolygonBuffer { PolygonBuffer::from(&self.0) }
+	pub fn to_buffer(&self) -> PolygonBuffer {
+		let exp = self.0.expands(|attr| {
+			let position = attr.position;
+			let uv_coord = attr.uv_coord.unwrap_or_else(Vector2::zero);
+			let normal = attr.normal.unwrap_or_else(Vector3::zero);
+			[
+				position[0] as f32,
+				position[1] as f32,
+				position[2] as f32,
+				uv_coord[0] as f32,
+				uv_coord[1] as f32,
+				normal[0] as f32,
+				normal[1] as f32,
+				normal[2] as f32,
+			]
+		});
+		PolygonBuffer {
+			vertices: exp.attributes().iter().flatten().copied().collect(),
+			indices: exp
+				.faces()
+				.triangle_iter()
+				.flatten()
+				.map(|x| x as u32)
+				.collect(),
+		}
+	}
 	/// meshing shell
 	#[inline(always)]
 	pub fn from_shell(shell: Shell, tol: f64) -> Option<PolygonMesh> { shell.to_polygon(tol) }
@@ -108,70 +133,12 @@ impl PolygonBuffer {
 	#[inline(always)]
 	pub fn vertex_buffer(&self) -> Vec<f32> { self.vertices.clone() }
 	#[inline(always)]
-	/// the length of vertex buffer. (Num of attributes) * 8 components * 4 bytes.
+	/// the length (bytes) of vertex buffer. (Num of attributes) * 8 components * 4 bytes.
 	pub fn vertex_buffer_size(&self) -> usize { self.vertices.len() * 4 }
 	/// index buffer. `u32`.
 	#[inline(always)]
 	pub fn index_buffer(&self) -> Vec<u32> { self.indices.clone() }
-	/// the length of index buffer. (Num of triangles) * 3 vertices * 4 bytes.
+	/// the length (bytes) of index buffer. (Num of triangles) * 3 vertices * 4 bytes.
 	#[inline(always)]
-	pub fn indices_length(&self) -> usize { self.indices.len() * 4 }
-}
-
-mod to_expanded {
-	use super::PolygonBuffer;
-	use rustc_hash::FxHashMap as HashMap;
-	use truck_meshalgo::prelude::*;
-	fn signup_vertex(
-		polymesh: &PolygonMesh,
-		vertex: Vertex,
-		glpolymesh: &mut PolygonBuffer,
-		vertex_map: &mut HashMap<Vertex, u32>,
-	) {
-		let idx = *vertex_map.entry(vertex).or_insert_with(|| {
-			let idx = glpolymesh.vertices.len() as u32 / 8;
-			let position: [f32; 3] = polymesh.positions()[vertex.pos].cast().unwrap().into();
-			let uv_coord = match vertex.uv {
-				Some(uv) => polymesh.uv_coords()[uv].cast().unwrap().into(),
-				None => [0.0, 0.0],
-			};
-			let normal = match vertex.nor {
-				Some(nor) => polymesh.normals()[nor].cast().unwrap().into(),
-				None => [0.0, 0.0, 0.0],
-			};
-			glpolymesh.vertices.extend(&position);
-			glpolymesh.vertices.extend(&uv_coord);
-			glpolymesh.vertices.extend(&normal);
-			idx
-		});
-		glpolymesh.indices.push(idx);
-	}
-
-	impl From<&PolygonMesh> for PolygonBuffer {
-		fn from(polymesh: &PolygonMesh) -> PolygonBuffer {
-			let mut glpolymesh = PolygonBuffer::default();
-			let mut vertex_map = HashMap::<Vertex, u32>::default();
-			for tri in polymesh.faces().tri_faces() {
-				signup_vertex(polymesh, tri[0], &mut glpolymesh, &mut vertex_map);
-				signup_vertex(polymesh, tri[1], &mut glpolymesh, &mut vertex_map);
-				signup_vertex(polymesh, tri[2], &mut glpolymesh, &mut vertex_map);
-			}
-			for quad in polymesh.faces().quad_faces() {
-				signup_vertex(polymesh, quad[0], &mut glpolymesh, &mut vertex_map);
-				signup_vertex(polymesh, quad[1], &mut glpolymesh, &mut vertex_map);
-				signup_vertex(polymesh, quad[3], &mut glpolymesh, &mut vertex_map);
-				signup_vertex(polymesh, quad[1], &mut glpolymesh, &mut vertex_map);
-				signup_vertex(polymesh, quad[2], &mut glpolymesh, &mut vertex_map);
-				signup_vertex(polymesh, quad[3], &mut glpolymesh, &mut vertex_map);
-			}
-			for face in polymesh.faces().other_faces() {
-				for i in 2..face.len() {
-					signup_vertex(polymesh, face[0], &mut glpolymesh, &mut vertex_map);
-					signup_vertex(polymesh, face[i - 1], &mut glpolymesh, &mut vertex_map);
-					signup_vertex(polymesh, face[i], &mut glpolymesh, &mut vertex_map);
-				}
-			}
-			glpolymesh
-		}
-	}
+	pub fn index_buffer_size(&self) -> usize { self.indices.len() * 4 }
 }

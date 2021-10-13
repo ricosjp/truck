@@ -12,7 +12,12 @@
 )]
 
 use common::*;
-use truck_polymesh::*;
+
+/// re-export polymesh
+pub mod rexport_polymesh {
+    pub use truck_polymesh::*;
+}
+use truck_polymesh::{polygon_mesh::PolygonMeshEditor, StandardVertex as Vertex, *};
 
 /// polygon mesh analizers, including
 ///
@@ -30,6 +35,6 @@ pub mod tessellation;
 pub mod prelude {
     pub use crate::analyzers::*;
     pub use crate::filters::*;
+    pub use crate::rexport_polymesh::*;
     pub use crate::tessellation::*;
-    pub use truck_polymesh::*;
 }

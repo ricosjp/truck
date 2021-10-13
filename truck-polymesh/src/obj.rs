@@ -1,5 +1,7 @@
 use crate::*;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+type Vertex = StandardVertex;
+type Result<T> = std::result::Result<T, errors::Error>;
 
 /// Writes obj data to output stream
 /// # Examples
@@ -38,7 +40,14 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 ///     [(3, None, Some(2)), (6, None, Some(2)), (7, None, Some(2))],
 ///     [(3, None, Some(2)), (7, None, Some(2)), (5, None, Some(2))],
 /// ]);
-/// let mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
+/// let mesh = PolygonMesh::new(
+///     StandardAttributes {
+///         positions,
+///         normals,
+///         ..Default::default()
+///     },
+///     faces,
+/// );
 /// obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
 /// ```
 pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<()> {
@@ -167,5 +176,12 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
             }
         }
     }
-    PolygonMesh::try_new(positions, uv_coords, normals, faces)
+    PolygonMesh::try_new(
+        StandardAttributes {
+            positions,
+            uv_coords,
+            normals,
+        },
+        faces,
+    )
 }

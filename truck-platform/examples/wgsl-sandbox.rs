@@ -60,13 +60,13 @@ struct Mouse {
 };
 
 [[group(0), binding(2)]]
-var<uniform> __info: SceneInfo;
+var<uniform> info__: SceneInfo;
 
 [[group(1), binding(0)]]
-var<uniform> __resolution: Resolution;
+var<uniform> resolution__: Resolution;
 
 [[group(1), binding(1)]]
-var<uniform> __mouse: Mouse;
+var<uniform> mouse__: Mouse;
 
 struct Environment {
     resolution: vec2<f32>;
@@ -89,12 +89,12 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
 [[stage(fragment)]]
 fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f32> {
     var env: Environment;
-    env.resolution = __resolution.resolution;
-    env.mouse = __mouse.mouse;
-    env.time = __info.time;
+    env.resolution = resolution__.resolution;
+    env.mouse = mouse__.mouse;
+    env.time = info__.time;
     let coord = vec2<f32>(
         position.x,
-        __resolution.resolution.y - position.y,
+        resolution__.resolution.y - position.y,
     );
     return main_image(coord, env);
 }
@@ -273,40 +273,44 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
 }
 use plane::Plane;
 
-fn main() {
-    let event_loop = winit::event_loop::EventLoop::new();
-    let mut wb = winit::window::WindowBuilder::new();
-    wb = wb.with_title("wGSL Sandbox");
-    let window = wb.build(&event_loop).unwrap();
+async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window::Window) {
     let size = window.inner_size();
+    #[cfg(not(feature = "webgl"))]
     let instance = Instance::new(Backends::PRIMARY);
+    #[cfg(feature = "webgl")]
+    let instance = Instance::new(Backends::all());
     let surface = unsafe { instance.create_surface(&window) };
 
-    let (device, queue) = futures::executor::block_on(async {
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
-                compatible_surface: Some(&surface),
-            })
-            .await
-            .unwrap();
+    let adapter = instance
+        .request_adapter(&RequestAdapterOptions {
+            #[cfg(not(feature = "webgl"))]
+            power_preference: PowerPreference::HighPerformance,
+            #[cfg(feature = "webgl")]
+            power_preference: PowerPreference::LowPower,
+            compatible_surface: Some(&surface),
+            force_fallback_adapter: false,
+        })
+        .await
+        .unwrap();
 
-        adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Limits::default(),
-                    label: None,
-                },
-                None,
-            )
-            .await
-            .unwrap()
-    });
+    let (device, queue) = adapter
+        .request_device(
+            &DeviceDescriptor {
+                features: Default::default(),
+                #[cfg(not(feature = "webgl"))]
+                limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
+                #[cfg(feature = "webgl")]
+                limits: Limits::downlevel_webgl2_defaults(),
+                label: None,
+            },
+            None,
+        )
+        .await
+        .unwrap();
 
     let config = SurfaceConfiguration {
         usage: TextureUsages::RENDER_ATTACHMENT,
-        format: TextureFormat::Bgra8Unorm,
+        format: surface.get_preferred_format(&adapter).unwrap(),
         width: size.width,
         height: size.height,
         present_mode: PresentMode::Mailbox,
@@ -348,17 +352,16 @@ fn main() {
             }
             Event::RedrawRequested(_) => {
                 scene.update_bind_group(&plane);
-                let frame = match surface.get_current_frame() {
-                    Ok(frame) => frame,
+                let surface_texture = match surface.get_current_texture() {
+                    Ok(got) => got,
                     Err(_) => {
                         surface.configure(handler.device(), &handler.config());
                         surface
-                            .get_current_frame()
+                            .get_current_texture()
                             .expect("Failed to acquire next surface texture!")
                     }
                 };
-                let view = frame
-                    .output
+                let view = surface_texture
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
                 scene.render_scene(&view);
@@ -366,6 +369,7 @@ fn main() {
                     plane.mouse[3] = -plane.mouse[3];
                     clicked = false;
                 }
+                surface_texture.present();
                 ControlFlow::Poll
             }
             Event::WindowEvent { event, .. } => match event {
@@ -414,4 +418,29 @@ fn main() {
             _ => ControlFlow::Poll,
         };
     })
+}
+
+fn main() {
+    let event_loop = winit::event_loop::EventLoop::new();
+    let mut wb = winit::window::WindowBuilder::new();
+    wb = wb.with_title("wGSL Sandbox");
+    let window = wb.build(&event_loop).unwrap();
+    #[cfg(not(target_arch = "wasm32"))]
+    futures::executor::block_on(run(event_loop, window));
+    #[cfg(target_arch = "wasm32")]
+    {
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        console_log::init().expect("could not initialize logger");
+        use winit::platform::web::WindowExtWebSys;
+        // On wasm, append the canvas to the document body
+        web_sys::window()
+            .and_then(|win| win.document())
+            .and_then(|doc| doc.body())
+            .and_then(|body| {
+                body.append_child(&web_sys::Element::from(window.canvas()))
+                    .ok()
+            })
+            .expect("couldn't append canvas to document body");
+        wasm_bindgen_futures::spawn_local(run(event_loop, window));
+    }
 }

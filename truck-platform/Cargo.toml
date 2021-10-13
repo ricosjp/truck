@@ -11,27 +11,34 @@ license = "Apache-2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+webgl = ["wgpu/webgl"]
 
 [dependencies]
 bytemuck = { version = "1.7.2", features = ["derive"] }
+futures = "0.3.17"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.1.1", path = "../truck-base" }
-wgpu = "0.10.2"
+wgpu = "0.11.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-instant = { version = "0.1", features = [ "now" ] }
+instant = { version = "0.1.11", features = [ "now" ] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-instant = { version = "0.1", features = [ "now", "wasm-bindgen" ] }
+instant = { version = "0.1.11", features = [ "now", "wasm-bindgen" ] }
 
 [dev-dependencies]
 image = "0.23.14"
-futures = "0.3.17"
 rayon = "1.5.1"
 env_logger = "0.9.0"
-naga = { version = "0.6.3", features = ["wgsl-in"] }
+naga = { version = "0.7.0", features = ["wgsl-in"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 winit = "0.25.0"
+
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 winit = { version = "0.25.0", features = ["web-sys"] }
+wasm-bindgen-futures = "0.4.28"
+console_error_panic_hook = "0.1.6"
+console_log = "0.1.2"
+web-sys = { version = "0.3.53", features = ["Location"] }

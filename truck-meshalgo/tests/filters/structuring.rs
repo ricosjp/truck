@@ -1,6 +1,6 @@
 use super::*;
-use truck_polymesh::*;
 use truck_meshalgo::filters::*;
+use truck_polymesh::*;
 
 #[test]
 fn triangulate_test() {
@@ -37,8 +37,20 @@ fn triangulate_test() {
         &[3, 0, 4, 7],
         &[4, 5, 6, 7],
     ]);
-    let tri_mesh = PolygonMesh::new(positions.clone(), Vec::new(), Vec::new(), tri_faces);
-    let mut quad_mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), quad_faces);
+    let tri_mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions: positions.clone(),
+            ..Default::default()
+        },
+        tri_faces,
+    );
+    let mut quad_mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            ..Default::default()
+        },
+        quad_faces,
+    );
     quad_mesh.triangulate();
     assert_eq!(tri_mesh.faces(), quad_mesh.faces());
 }
@@ -78,8 +90,20 @@ fn quadrangulate_test() {
         &[3, 0, 4, 7],
         &[4, 5, 6, 7],
     ]);
-    let mut tri_mesh = PolygonMesh::new(positions.clone(), Vec::new(), Vec::new(), tri_faces);
-    let quad_mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), quad_faces);
+    let mut tri_mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions: positions.clone(),
+            ..Default::default()
+        },
+        tri_faces,
+    );
+    let quad_mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            ..Default::default()
+        },
+        quad_faces,
+    );
     tri_mesh.quadrangulate(TOLERANCE, TOLERANCE);
     assert_eq!(tri_mesh.faces(), quad_mesh.faces());
 }

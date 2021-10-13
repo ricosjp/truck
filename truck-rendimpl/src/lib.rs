@@ -20,7 +20,7 @@ use truck_platform::{wgpu::*, *};
 
 /// Re-exports `truck_polymesh`.
 pub mod polymesh {
-    pub use truck_polymesh::{base::*, PolygonMesh, PolylineCurve, StructuredMesh, Vertex};
+    pub use truck_polymesh::{base::*, PolygonMesh, PolylineCurve, StandardVertex, StructuredMesh};
 }
 pub use polymesh::*;
 
@@ -160,12 +160,6 @@ struct AttrVertex {
     pub position: [f32; 3],
     pub uv_coord: [f32; 2],
     pub normal: [f32; 3],
-}
-
-#[derive(Debug, Clone)]
-struct ExpandedPolygon<V> {
-    vertices: Vec<V>,
-    indices: Vec<u32>,
 }
 
 /// utility for creating `Texture`

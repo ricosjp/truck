@@ -2,7 +2,7 @@ use thiserror::Error;
 
 /// Errors occured by polygon mesh handling
 #[derive(Debug, Error)]
-pub enum Error {
+pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     /// There is an index in out of range.
     /// # Examples
     /// ```
@@ -20,17 +20,22 @@ pub enum Error {
     ///     &[1, 2, 4],
     /// ]);
     /// 
-    /// match PolygonMesh::try_new(positions, Vec::new(), Vec::new(), faces) {
-    ///     Err(Error::OutOfRange(typename, length, index)) => {
-    ///         assert_eq!(typename, "positions");
-    ///         assert_eq!(length, 3);
-    ///         assert_eq!(index, 4);
+    /// let res = PolygonMesh::try_new(
+    ///     StandardAttributes {
+    ///         positions,
+    ///         ..Default::default()
+    ///     },
+    ///     faces,
+    /// );
+    /// match res {
+    ///     Err(Error::OutOfRange(vertex)) => {
+    ///         assert_eq!(vertex.pos, 4);
     ///     }
     ///     _ => panic!("wrong result!"),
     /// }
     /// ```
-    #[error("The index {2} is out of range of {0} with the length {1}.")]
-    OutOfRange(&'static str, usize, usize),
+    #[error("The index {0:?} is out of range.")]
+    OutOfRange(V),
     /// There are no normal in polygon mesh.
     #[error("This mesh has no normal vectors.")]
     NoNormal,

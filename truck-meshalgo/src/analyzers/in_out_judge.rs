@@ -63,23 +63,22 @@ pub trait IncludingPointInDomain {
 	/// ```
 	/// use std::iter::FromIterator;
 	/// use truck_meshalgo::prelude::*;
-	/// let positions = vec![
-	///     Point3::new(0.0, 0.0, 0.0),
-	///     Point3::new(1.0, 0.0, 0.0),
-	///     Point3::new(0.0, 1.0, 0.0),
-	///     Point3::new(0.0, 0.0, 1.0),
-	/// ];
-	/// let faces = Faces::from_iter(vec![
-	///     [0, 2, 1],
-	///     [0, 1, 3],
-	///     [0, 3, 2],
-	///     [1, 2, 3],
-	/// ]);
 	/// let simplex = PolygonMesh::new(
-	///     positions,
-	///     Vec::new(),
-	///     Vec::new(),
-	///     faces,
+	///     StandardAttributes {
+	///         positions: vec![
+	///             Point3::new(0.0, 0.0, 0.0),
+	///             Point3::new(1.0, 0.0, 0.0),
+	///             Point3::new(0.0, 1.0, 0.0),
+	///             Point3::new(0.0, 0.0, 1.0),
+	///         ],
+	///         ..Default::default()
+	///     },
+	///     Faces::from_iter(vec![
+	///         [0, 2, 1],
+	///         [0, 1, 3],
+	///         [0, 3, 2],
+	///         [1, 2, 3],
+	///     ]),
 	/// );
 	///
 	/// assert_eq!(simplex.signed_crossing_faces(Point3::new(0.1, 0.1, 0.1), Vector3::unit_x()), 1);
@@ -92,23 +91,22 @@ pub trait IncludingPointInDomain {
 	/// ```
 	/// use std::iter::FromIterator;
 	/// use truck_meshalgo::prelude::*;
-	/// let positions = vec![
-	///     Point3::new(0.0, 0.0, 0.0),
-	///     Point3::new(1.0, 0.0, 0.0),
-	///     Point3::new(0.0, 1.0, 0.0),
-	///     Point3::new(0.0, 0.0, 1.0),
-	/// ];
-	/// let faces = Faces::from_iter(vec![
-	///     [0, 2, 1],
-	///     [0, 1, 3],
-	///     [0, 3, 2],
-	///     [1, 2, 3],
-	/// ]);
 	/// let simplex = PolygonMesh::new(
-	///     positions,
-	///     Vec::new(),
-	///     Vec::new(),
-	///     faces,
+	///     StandardAttributes {
+	///         positions: vec![
+	///             Point3::new(0.0, 0.0, 0.0),
+	///             Point3::new(1.0, 0.0, 0.0),
+	///             Point3::new(0.0, 1.0, 0.0),
+	///             Point3::new(0.0, 0.0, 1.0),
+	///         ],
+	///         ..Default::default()
+	///     },
+	///     Faces::from_iter(vec![
+	///         [0, 2, 1],
+	///         [0, 1, 3],
+	///         [0, 3, 2],
+	///         [1, 2, 3],
+	///     ]),
 	/// );
 	///
 	/// assert!(simplex.inside(Point3::new(0.1, 0.1, 0.1)));
@@ -155,8 +153,16 @@ fn inside100() {
 		Point3::new(0.0, 1.0, 0.0),
 		Point3::new(0.0, 0.0, 1.0),
 	];
-	let faces: Faces = vec![[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]].into_iter().collect();
-	let simplex = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+	let faces: Faces = vec![[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]]
+		.into_iter()
+		.collect();
+	let simplex = PolygonMesh::new(
+		StandardAttributes {
+			positions,
+			..Default::default()
+		},
+		faces,
+	);
 
 	for _ in 0..100 {
 		assert!(simplex.inside(Point3::new(0.1, 0.1, 0.1)));

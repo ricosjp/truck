@@ -74,6 +74,11 @@ env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
 command = "cargo"
 args = ["build", "--target=wasm32-unknown-unknown", "--tests", "--examples"]
 
+[tasks.build-wgpu-examples]
+description = "Build wasms"
+command = "cargo"
+args = ["run", "--bin", "example-pages-generator"]
+
 [tasks.js-test]
 description = "test for js"
 script = [
@@ -86,10 +91,9 @@ script = [
 description = "build adhoc viewer"
 script = [
 	"cd truck-js",
-	"wasm-pack build",
-	"cd examples",
-	"npm install && npm run build",
+	"wasm-pack build --target web",
+	"cp examples/index.html examples/bootstrap.js examples/script.js pkg",
 ]
 
 [tasks.wasm-test]
-dependencies = ["wasm-build", "js-test", "adhoc-viewer"]
+dependencies = ["wasm-build", "js-test", "adhoc-viewer", "build-wgpu-examples"]

@@ -1,35 +1,39 @@
 use super::*;
-use truck_polymesh::*;
 use truck_meshalgo::filters::*;
+use truck_polymesh::*;
 #[path = "../common/mod.rs"]
 mod common;
 
 #[test]
 fn normalize_normals_test() {
-    let positions = vec![Point3::new(0.0, 0.0, 0.0)];
-    let normals = vec![
-        Vector3::new(100.0, 20.0, 56.0),
-        Vector3::new(1.0e-12, 3.536e10, std::f64::NAN),
-        Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-    ];
-    let faces = Faces::from_iter(&[
-        [(0, None, Some(0)), (0, None, Some(1)), (0, None, Some(2))].as_ref(),
-        &[
-            (0, None, Some(0)),
-            (0, None, Some(1)),
-            (0, None, Some(2)),
-            (0, None, Some(3)),
-        ],
-        &[
-            (0, None, Some(0)),
-            (0, None, Some(1)),
-            (0, None, Some(2)),
-            (0, None, Some(3)),
-            (0, None, Some(3)),
-        ],
-    ]);
-    let mut mesh = PolygonMesh::new(positions, Vec::new(), normals, faces);
+    let mut mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions: vec![Point3::new(0.0, 0.0, 0.0)],
+            normals: vec![
+                Vector3::new(100.0, 20.0, 56.0),
+                Vector3::new(1.0e-12, 3.536e10, std::f64::NAN),
+                Vector3::new(0.0, 0.0, 0.0),
+                Vector3::new(0.0, 1.0, 0.0),
+            ],
+            ..Default::default()
+        },
+        Faces::from_iter(&[
+            [(0, None, Some(0)), (0, None, Some(1)), (0, None, Some(2))].as_ref(),
+            &[
+                (0, None, Some(0)),
+                (0, None, Some(1)),
+                (0, None, Some(2)),
+                (0, None, Some(3)),
+            ],
+            &[
+                (0, None, Some(0)),
+                (0, None, Some(1)),
+                (0, None, Some(2)),
+                (0, None, Some(3)),
+                (0, None, Some(3)),
+            ],
+        ]),
+    );
     mesh.normalize_normals();
 
     assert!(mesh.normals()[0].magnitude().near(&1.0));
@@ -57,17 +61,21 @@ fn normalize_normals_test() {
 
 #[test]
 fn add_naive_normals_test() {
-    let positions = vec![
-        Point3::new(-5.0, 0.0, -2.0),
-        Point3::new(-5.0, 0.0, 0.0),
-        Point3::new(0.0, 2.0, -2.0),
-        Point3::new(0.0, 2.0, 0.0),
-        Point3::new(0.0, 2.0, 2.0),
-        Point3::new(5.0, 0.0, 0.0),
-        Point3::new(5.0, 0.0, 2.0),
-    ];
-    let faces = Faces::from_iter(&[[0, 1, 3, 2].as_ref(), &[1, 4, 3], &[2, 3, 5], &[3, 4, 6, 5]]);
-    let mut mesh = PolygonMesh::new(positions, Vec::new(), Vec::new(), faces);
+    let mut mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions: vec![
+                Point3::new(-5.0, 0.0, -2.0),
+                Point3::new(-5.0, 0.0, 0.0),
+                Point3::new(0.0, 2.0, -2.0),
+                Point3::new(0.0, 2.0, 0.0),
+                Point3::new(0.0, 2.0, 2.0),
+                Point3::new(5.0, 0.0, 0.0),
+                Point3::new(5.0, 0.0, 2.0),
+            ],
+            ..Default::default()
+        },
+        Faces::from_iter(&[[0, 1, 3, 2].as_ref(), &[1, 4, 3], &[2, 3, 5], &[3, 4, 6, 5]]),
+    );
 
     // test of overwrite flag
     mesh.add_smooth_normals(1.0, true);

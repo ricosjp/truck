@@ -242,7 +242,14 @@ fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh 
             })
         })
         .collect();
-    PolygonMesh::new(positions, Vec::new(), normals, faces)
+    PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            normals,
+            ..Default::default()
+        },
+        faces,
+    )
 }
 
 fn main() { MyApp::run() }

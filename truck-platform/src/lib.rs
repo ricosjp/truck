@@ -49,6 +49,9 @@ use truck_base::cgmath64::*;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
+/// maximum number of light
+pub const LIGHT_MAX: usize = 255;
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct CameraInfo {
@@ -98,6 +101,7 @@ pub struct BufferHandler {
 /// #        .request_adapter(&RequestAdapterOptions {
 /// #            power_preference: PowerPreference::HighPerformance,
 /// #            compatible_surface: None,
+/// #            force_fallback_adapter: false,            
 /// #        })
 /// #        .await
 /// #        .unwrap();
@@ -219,6 +223,7 @@ pub struct Light {
 ///         .request_adapter(&RequestAdapterOptions {
 ///             power_preference: PowerPreference::HighPerformance,
 ///             compatible_surface: None,
+///             force_fallback_adapter: false,
 ///         })
 ///         .await
 ///         .unwrap();

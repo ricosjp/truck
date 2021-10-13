@@ -87,8 +87,9 @@ impl SceneDescriptor {
     /// ```
     #[inline(always)]
     pub fn lights_buffer(&self, device: &Device) -> BufferHandler {
-        let light_vec: Vec<_> = self.lights.iter().map(Light::light_info).collect();
-        BufferHandler::from_slice(&light_vec, device, BufferUsages::STORAGE)
+        let mut light_vec: Vec<_> = self.lights.iter().map(Light::light_info).collect();
+        light_vec.resize(LIGHT_MAX, LightInfo::zeroed());
+        BufferHandler::from_slice(&light_vec, device, BufferUsages::UNIFORM)
     }
 }
 
@@ -111,7 +112,7 @@ impl Scene {
         PreBindGroupLayoutEntry {
             visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
             ty: BindingType::Buffer {
-                ty: BufferBindingType::Storage { read_only: true },
+                ty: BufferBindingType::Uniform,
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },
