@@ -6,7 +6,8 @@ cpu-test:
     image: rust:latest
     stage: test
     variables:
-      GIT_SUBMODULE_STRATEGY: recursive
+        GIT_SUBMODULE_STRATEGY: recursive
+        CARGO_HOME: $CI_PROJECT_DIR/cargo
     before_script:
         - cargo install cargo-make
     script:
@@ -15,14 +16,12 @@ cpu-test:
         key: cpu-test
         paths:
           - cargo/
-    variables:
-        CARGO_HOME: $CI_PROJECT_DIR/cargo
 
 gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test
     variables:
-      GIT_SUBMODULE_STRATEGY: recursive
+        GIT_SUBMODULE_STRATEGY: recursive
     script:
         - /root/.cargo/bin/cargo make ci-gpu-test
     tags:
@@ -35,7 +34,7 @@ wasm-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
     stage: test
     variables:
-      GIT_SUBMODULE_STRATEGY: recursive
+        GIT_SUBMODULE_STRATEGY: recursive
     before_script:
         - rustup target add wasm32-unknown-unknown
     script:
