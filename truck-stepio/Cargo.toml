@@ -1,0 +1,21 @@
+[package]
+name = "truck-stepio"
+version = "0.1.0"
+edition = "2018"
+build = "build.rs"
+
+[build-dependencies]
+espr = "0.1.0"
+quote = "1.0.9"
+
+[dependencies]
+derive-new = "0.5.9"
+derive_more = "0.99.16"
+dyn-clone = "1.0.4"
+nom = "7.0.0"
+serde = { version = "1.0.129", features = ["derive"] }
+thiserror = "1.0.26"
+Inflector = "0.11.4"
+itertools = "0.10.1"
+ruststep = "0.1.0"
+ruststep-derive = "0.1.0"
