@@ -149,7 +149,7 @@ impl App for MyApp {
         }
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render(view); }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         self.closed.store(true, Ordering::SeqCst);
         self.thread.take().unwrap().join().unwrap();

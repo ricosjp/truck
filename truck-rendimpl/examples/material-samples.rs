@@ -127,7 +127,7 @@ impl App for MyApp {
             self.scene.update_bind_group(shape);
         }
     }
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render(view); }
 }
 
 fn main() { MyApp::run() }

@@ -283,7 +283,7 @@ impl App for MyRender {
         }
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render(view); }
 }
 
 fn main() { MyRender::run() }

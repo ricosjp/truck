@@ -26,11 +26,13 @@
 //!
 //! Also, see the sample `newton-cuberoot.wgsl`, default shader, in `examples`.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;
+
+const DEFAULT_SHADER: &str = include_str!("newton-cuberoot.wgsl");
 
 /// minimum example for implementing `Rendered`.
 mod plane {
@@ -274,70 +276,21 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
 use plane::Plane;
 
 async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window::Window) {
-    let size = window.inner_size();
-    #[cfg(not(feature = "webgl"))]
-    let instance = Instance::new(Backends::PRIMARY);
-    #[cfg(feature = "webgl")]
-    let instance = Instance::new(Backends::all());
-    let surface = unsafe { instance.create_surface(&window) };
-
-    let adapter = instance
-        .request_adapter(&RequestAdapterOptions {
-            #[cfg(not(feature = "webgl"))]
-            power_preference: PowerPreference::HighPerformance,
-            #[cfg(feature = "webgl")]
-            power_preference: PowerPreference::LowPower,
-            compatible_surface: Some(&surface),
-            force_fallback_adapter: false,
-        })
-        .await
-        .unwrap();
-
-    let (device, queue) = adapter
-        .request_device(
-            &DeviceDescriptor {
-                features: Default::default(),
-                #[cfg(not(feature = "webgl"))]
-                limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
-                #[cfg(feature = "webgl")]
-                limits: Limits::downlevel_webgl2_defaults(),
-                label: None,
-            },
-            None,
-        )
-        .await
-        .unwrap();
-
-    let config = SurfaceConfiguration {
-        usage: TextureUsages::RENDER_ATTACHMENT,
-        format: surface.get_preferred_format(&adapter).unwrap(),
-        width: size.width,
-        height: size.height,
-        present_mode: PresentMode::Mailbox,
-    };
-
-    let surface = unsafe { instance.create_surface(&window) };
-    surface.configure(&device, &config);
-    // let mut swap_chain = device.create_swap_chain(&surface, &config);
-    let handler = DeviceHandler::new(
-        Arc::new(device),
-        Arc::new(queue),
-        Arc::new(Mutex::new(config)),
-    );
-    let mut scene = Scene::new(handler.clone(), &Default::default());
+    let window = Arc::new(window);
+    let mut scene = Scene::from_window(Arc::clone(&window), &Default::default()).await;
     let args: Vec<_> = std::env::args().collect();
     let source = if args.len() > 1 {
         match std::fs::read_to_string(&args[1]) {
             Ok(code) => code,
             Err(error) => {
                 println!("{:?}", error);
-                include_str!("newton-cuberoot.wgsl").to_string()
+                DEFAULT_SHADER.to_string()
             }
         }
     } else {
-        include_str!("newton-cuberoot.wgsl").to_string()
+        DEFAULT_SHADER.to_string()
     };
-    let mut plane = Plane::new(handler.device(), &source);
+    let mut plane = Plane::new(scene.device(), &source);
     // Adds a plane to the scene!
     scene.add_object(&plane);
 
@@ -352,39 +305,19 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
             }
             Event::RedrawRequested(_) => {
                 scene.update_bind_group(&plane);
-                let surface_texture = match surface.get_current_texture() {
-                    Ok(got) => got,
-                    Err(_) => {
-                        surface.configure(handler.device(), &handler.config());
-                        surface
-                            .get_current_texture()
-                            .expect("Failed to acquire next surface texture!")
-                    }
-                };
-                let view = surface_texture
-                    .texture
-                    .create_view(&wgpu::TextureViewDescriptor::default());
-                scene.render_scene(&view);
                 if clicked {
                     plane.mouse[3] = -plane.mouse[3];
                     clicked = false;
                 }
-                surface_texture.present();
+                scene.render_frame();
                 ControlFlow::Poll
             }
             Event::WindowEvent { event, .. } => match event {
-                WindowEvent::Resized(size) => {
-                    let mut config = handler.lock_config().unwrap();
-                    config.width = size.width;
-                    config.height = size.height;
-                    surface.configure(handler.device(), &config);
-                    ControlFlow::Poll
-                }
                 WindowEvent::CloseRequested => ControlFlow::Exit,
                 WindowEvent::DroppedFile(path) => {
                     match std::fs::read_to_string(path) {
                         Ok(code) => {
-                            plane.set_shader(handler.device(), &code);
+                            plane.set_shader(scene.device(), &code);
                             scene.update_pipeline(&plane);
                         }
                         Err(error) => println!("{:?}", error),

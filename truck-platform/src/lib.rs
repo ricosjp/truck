@@ -265,6 +265,12 @@ pub struct DeviceHandler {
     config: Arc<Mutex<SurfaceConfiguration>>,
 }
 
+#[derive(Debug)]
+struct WindowHandler {
+    window: Arc<winit::window::Window>,
+    surface: Surface,
+}
+
 /// The unique ID for `Rendered` struct.
 ///
 /// This structure is not used explicitly by users for modeling by `truck-modeling` and `truck-rendimpl`.
@@ -301,6 +307,7 @@ pub struct SceneDescriptor {
 #[derive(Debug)]
 pub struct Scene {
     device_handler: DeviceHandler,
+    window_handler: Option<WindowHandler>,
     objects: SliceHashMap<RenderID, RenderObject>,
     bind_group_layout: BindGroupLayout,
     foward_depth: Texture,

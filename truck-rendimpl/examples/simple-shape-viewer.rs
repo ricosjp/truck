@@ -314,7 +314,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self, view: &TextureView) { self.scene.render(view); }
 }
 
 fn main() { MyApp::run(); }
