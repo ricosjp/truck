@@ -9,6 +9,8 @@ espr = "0.1.0"
 quote = "1.0.9"
 
 [dependencies]
+truck-base = { version = "0.1.1", path = "../truck-base" }
+truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 derive-new = "0.5.9"
 derive_more = "0.99.16"
 dyn-clone = "1.0.4"
