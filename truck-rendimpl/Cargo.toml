@@ -2,7 +2,7 @@
 name = "truck-rendimpl"
 version = "0.2.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2018"
+edition = "2021"
 description = "visualization of shape and polygon mesh based on platform"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
