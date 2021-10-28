@@ -8,7 +8,6 @@ impl<V: Copy + Hash + Debug + Eq, A: Attributes<V>> PolygonMesh<V, A> {
 	///
 	/// # Examples
 	/// ```
-	/// use std::iter::FromIterator;
 	/// use truck_polymesh::*;
 	/// let polygon = PolygonMesh::new(
 	///     StandardAttributes {

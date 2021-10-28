@@ -1,5 +1,5 @@
 use crate::*;
-use std::iter::FromIterator;
+use FromIterator;
 use std::ops::{Deref, DerefMut};
 use truck_base::cgmath64::control_point::ControlPoint;
 

@@ -1,4 +1,4 @@
-use std::iter::FromIterator;
+use FromIterator;
 
 // type definition for test
 type Vertex = truck_topology::Vertex<()>;

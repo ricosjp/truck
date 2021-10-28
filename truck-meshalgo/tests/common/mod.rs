@@ -1,4 +1,4 @@
 use truck_meshalgo::prelude::*;
-use std::iter::FromIterator;
+use FromIterator;
 
 pub mod shapes;

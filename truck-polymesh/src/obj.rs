@@ -6,7 +6,6 @@ type Result<T> = std::result::Result<T, errors::Error>;
 /// Writes obj data to output stream
 /// # Examples
 /// ```
-/// use std::iter::FromIterator;
 /// use truck_polymesh::*;
 /// let positions = vec![
 ///     Point3::new(0.0, 0.0, 0.0),

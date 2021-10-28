@@ -294,7 +294,7 @@ fn signup_vector(vector: [f32; 3], map: &mut HashMap<[i64; 3], usize>) -> usize 
     *map.entry(vector).or_insert_with(|| len)
 }
 
-impl std::iter::FromIterator<STLFace> for PolygonMesh {
+impl FromIterator<STLFace> for PolygonMesh {
     fn from_iter<I: IntoIterator<Item = STLFace>>(iter: I) -> PolygonMesh {
         let mut positions = HashMap::<[i64; 3], usize>::default();
         let mut normals = HashMap::<[i64; 3], usize>::default();

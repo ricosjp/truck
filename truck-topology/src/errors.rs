@@ -95,7 +95,6 @@ pub enum Error {
     /// // the wedge sum of two spheres
     /// use truck_topology::*;
     /// use truck_topology::errors::Error;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(), (), ()]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1], ()),
