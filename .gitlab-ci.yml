@@ -23,6 +23,7 @@ gpu-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
+        - /root/.cargo/bin/rustup update
         - /root/.cargo/bin/cargo make ci-gpu-test
     tags:
         - gpu
@@ -36,6 +37,7 @@ wasm-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     before_script:
+        - rustup update
         - rustup target add wasm32-unknown-unknown
     script:
         - mkdir public
