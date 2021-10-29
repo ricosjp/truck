@@ -147,8 +147,7 @@ impl App for MyApp {
         };
         let mut scene = Scene::new(handler.clone(), &scene_desc);
         let creator = scene.instance_creator();
-        let (instance, wireframe) =
-            MyApp::load_obj(&creator, TEAPOT_BYTES);
+        let (instance, wireframe) = MyApp::load_obj(&creator, TEAPOT_BYTES);
         scene.add_object(&instance);
         scene.add_object(&wireframe);
         let mut app = MyApp {
