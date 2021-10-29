@@ -52,7 +52,7 @@ lint-check:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     before_script:
-        - cargo install rustfmt cargo-clippy
+        - rustup component add clippy rustfmt
     script:
         - cargo fmt -- --check
         - cargo clippy
