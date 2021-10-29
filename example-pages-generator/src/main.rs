@@ -60,7 +60,7 @@ fn main() {
         sum += &format!("<li><a href=\"{}/index.html\">{0}</a></li>", dir);
     }
     std::fs::write(
-        format!("dist/index.html"),
+        "dist/index.html",
         include_str!("index.html").replace("<!-- index -->", &sum),
     )
     .unwrap_or_else(|e| panic!("{}", e));
