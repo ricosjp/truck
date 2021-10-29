@@ -46,6 +46,17 @@ wasm-test:
         paths:
             - public
 
+lint-check:
+    image: rust:latest
+    stage: test
+    variables:
+        GIT_SUBMODULE_STRATEGY: recursive
+    before_script:
+        - cargo install rustfmt cargo-clippy
+    script:
+        - cargo fmt -- --check
+        - cargo clippy
+
 pages:
     image: rust:latest
     stage: pages
