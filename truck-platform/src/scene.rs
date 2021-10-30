@@ -206,7 +206,6 @@ impl Scene {
         let bind_group_layout = Self::init_scene_bind_group_layout(device);
         Scene {
             objects: Default::default(),
-            window_handler: None,
             bind_group_layout,
             foward_depth: Self::depth_texture(device, &config, scene_desc.sample_count),
             depth_texture_size: (config.width, config.height),
@@ -268,69 +267,6 @@ impl Scene {
             Arc::new(Mutex::new(config)),
         );
         Scene::new(handler, scene_desc)
-    }
-
-    /// Initialize scene compatible with `window`.
-    pub async fn from_window(
-        window: Arc<winit::window::Window>,
-        scene_desc: &SceneDescriptor,
-    ) -> Scene {
-        let size = window.inner_size();
-        #[cfg(not(feature = "webgl"))]
-        let instance = Instance::new(Backends::PRIMARY);
-        #[cfg(feature = "webgl")]
-        let instance = Instance::new(Backends::all());
-
-        // trust winit
-        #[allow(unsafe_code)]
-        let surface = unsafe { instance.create_surface(window.as_ref()) };
-
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                #[cfg(not(feature = "webgl"))]
-                power_preference: PowerPreference::HighPerformance,
-                #[cfg(feature = "webgl")]
-                power_preference: PowerPreference::LowPower,
-                compatible_surface: Some(&surface),
-                force_fallback_adapter: false,
-            })
-            .await
-            .expect("Failed to find an appropriate adapter");
-
-        let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Default::default(),
-                    #[cfg(not(feature = "webgl"))]
-                    limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
-                    #[cfg(feature = "webgl")]
-                    limits: Limits::downlevel_webgl2_defaults(),
-                    label: None,
-                },
-                None,
-            )
-            .await
-            .expect("Failed to create device");
-
-        let config = SurfaceConfiguration {
-            usage: TextureUsages::RENDER_ATTACHMENT,
-            format: surface
-                .get_preferred_format(&adapter)
-                .expect("Failed to get preferred texture."),
-            width: size.width,
-            height: size.height,
-            present_mode: PresentMode::Mailbox,
-        };
-        surface.configure(&device, &config);
-
-        let handler = DeviceHandler::new(
-            Arc::new(device),
-            Arc::new(queue),
-            Arc::new(Mutex::new(config)),
-        );
-        let mut scene = Scene::new(handler, scene_desc);
-        scene.window_handler = Some(WindowHandler { window, surface });
-        scene
     }
 
     /// Returns the reference of its own `DeviceHandler`.
@@ -688,16 +624,79 @@ impl Scene {
         }
         self.queue().submit(vec![encoder.finish()]);
     }
+}
+
+impl WindowScene {
+    /// Initialize scene compatible with `window`.
+    pub async fn from_window(
+        window: Arc<winit::window::Window>,
+        scene_desc: &SceneDescriptor,
+    ) -> Self {
+        let size = window.inner_size();
+        #[cfg(not(feature = "webgl"))]
+        let instance = Instance::new(Backends::PRIMARY);
+        #[cfg(feature = "webgl")]
+        let instance = Instance::new(Backends::all());
+
+        // trust winit
+        #[allow(unsafe_code)]
+        let surface = unsafe { instance.create_surface(window.as_ref()) };
+
+        let adapter = instance
+            .request_adapter(&RequestAdapterOptions {
+                #[cfg(not(feature = "webgl"))]
+                power_preference: PowerPreference::HighPerformance,
+                #[cfg(feature = "webgl")]
+                power_preference: PowerPreference::LowPower,
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+            })
+            .await
+            .expect("Failed to find an appropriate adapter");
+
+        let (device, queue) = adapter
+            .request_device(
+                &DeviceDescriptor {
+                    features: Default::default(),
+                    #[cfg(not(feature = "webgl"))]
+                    limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
+                    #[cfg(feature = "webgl")]
+                    limits: Limits::downlevel_webgl2_defaults(),
+                    label: None,
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create device");
+
+        let config = SurfaceConfiguration {
+            usage: TextureUsages::RENDER_ATTACHMENT,
+            format: surface
+                .get_preferred_format(&adapter)
+                .expect("Failed to get preferred texture."),
+            width: size.width,
+            height: size.height,
+            present_mode: PresentMode::Mailbox,
+        };
+        surface.configure(&device, &config);
+
+        let handler = DeviceHandler::new(
+            Arc::new(device),
+            Arc::new(queue),
+            Arc::new(Mutex::new(config)),
+        );
+        Self {
+            scene: Scene::new(handler, scene_desc),
+            window_handler: WindowHandler { window, surface },
+        }
+    }
 
     /// Render scene to initialized window.
     pub fn render_frame(&mut self) {
         let WindowHandler {
             ref window,
             ref surface,
-        } = match &self.window_handler {
-            Some(got) => got,
-            None => panic!("This scene is not generated by window."),
-        };
+        } = &self.window_handler;
         {
             let size = window.inner_size();
             let mut config = self.device_handler.config.lock().unwrap();

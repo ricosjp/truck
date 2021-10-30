@@ -44,6 +44,7 @@ extern crate bytemuck;
 extern crate truck_base;
 pub extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
+use derive_more::*;
 use std::sync::{Arc, Mutex};
 use truck_base::cgmath64::*;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
@@ -307,7 +308,6 @@ pub struct SceneDescriptor {
 #[derive(Debug)]
 pub struct Scene {
     device_handler: DeviceHandler,
-    window_handler: Option<WindowHandler>,
     objects: SliceHashMap<RenderID, RenderObject>,
     bind_group_layout: BindGroupLayout,
     foward_depth: Texture,
@@ -316,6 +316,15 @@ pub struct Scene {
     previous_sample_count: u32,
     clock: instant::Instant,
     scene_desc: SceneDescriptor,
+}
+
+/// Utility for wrapp
+#[derive(Debug, Deref, DerefMut)]
+pub struct WindowScene {
+    #[deref]
+    #[deref_mut]
+    scene: Scene,
+    window_handler: WindowHandler,
 }
 
 /// Rendered objects in the scene.

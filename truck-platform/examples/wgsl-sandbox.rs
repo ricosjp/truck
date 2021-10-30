@@ -277,7 +277,7 @@ use plane::Plane;
 
 async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window::Window) {
     let window = Arc::new(window);
-    let mut scene = Scene::from_window(Arc::clone(&window), &Default::default()).await;
+    let mut scene = WindowScene::from_window(Arc::clone(&window), &Default::default()).await;
     let args: Vec<_> = std::env::args().collect();
     let source = if args.len() > 1 {
         match std::fs::read_to_string(&args[1]) {
