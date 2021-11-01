@@ -1,6 +1,5 @@
 mod common;
 use common::Plane;
-use std::sync::{Arc, Mutex};
 use truck_base::cgmath64::*;
 use truck_platform::*;
 use wgpu::*;
@@ -44,45 +43,35 @@ fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &[u8]) {
 fn exec_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = String::from(out_dir);
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = Instance::new(backend);
-    let (device, queue) = common::init_device(&instance);
-    let config = SurfaceConfiguration {
-        usage: TextureUsages::RENDER_ATTACHMENT,
-        format: TextureFormat::Rgba8UnormSrgb,
-        width: PICTURE_WIDTH,
-        height: PICTURE_HEIGHT,
-        present_mode: PresentMode::Mailbox,
-    };
-    let texture0 = device.create_texture(&common::texture_descriptor(&config));
-    let texture1 = device.create_texture(&common::texture_descriptor(&config));
-    let texture2 = device.create_texture(&common::texture_descriptor(&config));
-    let config = Arc::new(Mutex::new(config));
     let camera =
         Camera::perspective_camera(CAMERA_MATRIX, CAMERA_FOV, CAMERA_NEARCLIP, CAMERA_FARCLIP);
     println!("camera projection:\n{:?}", camera.projection(PICTURE_ASP));
     let lights = vec![POINT_LIGHT, UNIFORM_LIGHT];
     let desc = SceneDescriptor {
-        camera,
-        lights,
-        background: Color {
-            r: 0.1,
-            g: 0.2,
-            b: 0.3,
-            a: 0.4,
+        studio: StudioConfig {
+            camera,
+            lights,
+            background: Color {
+                r: 0.1,
+                g: 0.2,
+                b: 0.3,
+                a: 0.4,
+            },
+        },
+        render_texture: RenderTextureConfig {
+            canvas_size: (PICTURE_WIDTH, PICTURE_HEIGHT),
+            format: TextureFormat::Rgba8UnormSrgb,
         },
         ..Default::default()
     };
-    let handler = DeviceHandler::new(device, queue, config);
-    let mut scene = Scene::new(handler.clone(), &desc);
+    let handler = common::init_device(backend);
+    let mut scene = Scene::new(handler, &desc);
     let plane = new_plane!("shaders/unicolor.wgsl", "vs_main", "fs_main");
-    common::render_one(&mut scene, &texture0, &plane);
+    let buffer0 = common::render_one(&mut scene, &plane);
     let plane = new_plane!("shaders/bindgroup.wgsl", "vs_main", "fs_main");
-    common::render_one(&mut scene, &texture1, &plane);
+    let buffer1 = common::render_one(&mut scene, &plane);
     let plane = new_plane!("shaders/bindgroup.wgsl", "vs_main", "fs_main_anti");
-    common::render_one(&mut scene, &texture2, &plane);
-    let buffer0 = common::read_texture(&handler, &texture0);
-    let buffer1 = common::read_texture(&handler, &texture1);
-    let buffer2 = common::read_texture(&handler, &texture2);
+    let buffer2 = common::render_one(&mut scene, &plane);
     save_buffer(out_dir.clone() + "unicolor.png", &buffer0);
     save_buffer(out_dir.clone() + "bindgroup.png", &buffer1);
     save_buffer(out_dir + "anti-bindgroup.png", &buffer2);

@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use rayon::prelude::*;
-use std::convert::TryInto;
 use std::io::Write;
 use std::sync::Arc;
 use truck_platform::*;
@@ -59,10 +58,10 @@ impl<'a> Rendered for Plane<'a> {
         &self,
         handler: &DeviceHandler,
         layout: &PipelineLayout,
-        sample_count: u32,
+        scene_desc: &SceneDescriptor,
     ) -> Arc<RenderPipeline> {
         writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
-        let (device, config) = (handler.device(), handler.config());
+        let device = handler.device();
         let source = ShaderSource::Wgsl(self.shader.into());
         let module = device.create_shader_module(&ShaderModuleDescriptor {
             source,
@@ -90,7 +89,7 @@ impl<'a> Rendered for Plane<'a> {
                         module: &module,
                         entry_point: self.fs_entpt,
                         targets: &[ColorTargetState {
-                            format: config.format,
+                            format: scene_desc.render_texture.format,
                             blend: Some(BlendState::REPLACE),
                             write_mask: ColorWrites::ALL,
                         }],
@@ -110,7 +109,7 @@ impl<'a> Rendered for Plane<'a> {
                         bias: Default::default(),
                     }),
                     multisample: MultisampleState {
-                        count: sample_count,
+                        count: scene_desc.backend_buffer.sample_count,
                         mask: !0,
                         alpha_to_coverage_enabled: false,
                     },
@@ -120,10 +119,11 @@ impl<'a> Rendered for Plane<'a> {
     }
 }
 
-pub fn render_one<R: Rendered>(scene: &mut Scene, texture: &Texture, object: &R) {
+pub fn render_one<R: Rendered>(scene: &mut Scene, object: &R) -> Vec<u8> {
     scene.add_object(object);
-    scene.render_scene(&texture.create_view(&Default::default()));
+    let res = pollster::block_on(scene.render_to_buffer());
     scene.remove_object(object);
+    res
 }
 
 pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(
@@ -132,39 +132,27 @@ pub fn render_ones<'a, R: 'a + Rendered, I: IntoIterator<Item = &'a R>>(
     object: I,
 ) {
     scene.add_objects(object);
-    scene.render_scene(&texture.create_view(&Default::default()));
+    scene.render(&texture.create_view(&Default::default()));
     scene.clear_objects();
 }
 
-pub fn nontex_answer_texture(scene: &mut Scene) -> Texture {
-    let config = scene.config();
-    let tex_desc = texture_descriptor(&config);
-    let texture = scene.device().create_texture(&tex_desc);
+pub fn nontex_answer_texture(scene: &mut Scene) -> Vec<u8> {
     let plane = new_plane!("shaders/plane.wgsl", "vs_main", "unicolor");
-    render_one(scene, &texture, &plane);
-    texture
+    render_one(scene, &plane)
 }
 
-pub fn random_texture(scene: &mut Scene) -> Texture {
-    let config = scene.config();
-    let tex_desc = texture_descriptor(&config);
-    let texture = scene.device().create_texture(&tex_desc);
+pub fn random_texture(scene: &mut Scene) -> Vec<u8> {
     let plane = new_plane!("shaders/plane.wgsl", "vs_main", "random_texture");
-    render_one(scene, &texture, &plane);
-    texture
+    render_one(scene, &plane)
 }
 
-pub fn gradation_texture(scene: &mut Scene) -> Texture {
-    let config = scene.config();
-    let tex_desc = texture_descriptor(&config);
-    let texture = scene.device().create_texture(&tex_desc);
+pub fn gradation_texture(scene: &mut Scene) -> Vec<u8> {
     let plane = new_plane!("shaders/plane.wgsl", "vs_main", "gradation_texture");
-    render_one(scene, &texture, &plane);
-    texture
+    render_one(scene, &plane)
 }
 
-pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
-    futures::executor::block_on(async {
+pub fn init_device(instance: &Instance) -> DeviceHandler {
+    pollster::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,
@@ -185,7 +173,7 @@ pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
             )
             .await
             .unwrap();
-        (Arc::new(device), Arc::new(queue))
+        DeviceHandler::new(Arc::new(adapter), Arc::new(device), Arc::new(queue))
     })
 }
 
@@ -199,12 +187,12 @@ pub fn swap_chain_descriptor(size: (u32, u32)) -> SurfaceConfiguration {
     }
 }
 
-pub fn texture_descriptor(config: &SurfaceConfiguration) -> TextureDescriptor<'static> {
+pub fn texture_descriptor(config: &RenderTextureConfig) -> TextureDescriptor<'static> {
     TextureDescriptor {
         label: None,
         size: Extent3d {
-            width: config.width,
-            height: config.height,
+            width: config.canvas_size.0,
+            height: config.canvas_size.1,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
@@ -213,61 +201,6 @@ pub fn texture_descriptor(config: &SurfaceConfiguration) -> TextureDescriptor<'s
         format: config.format,
         usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC,
     }
-}
-
-pub fn texture_copy_view(texture: &Texture) -> ImageCopyTexture {
-    ImageCopyTexture {
-        texture,
-        mip_level: 0,
-        origin: Origin3d::ZERO,
-        aspect: TextureAspect::All,
-    }
-}
-
-pub fn buffer_copy_view(buffer: &Buffer, size: (u32, u32)) -> ImageCopyBuffer {
-    ImageCopyBuffer {
-        buffer,
-        layout: ImageDataLayout {
-            offset: 0,
-            bytes_per_row: (size.0 * 4).try_into().ok(),
-            rows_per_image: size.1.try_into().ok(),
-        },
-    }
-}
-
-pub fn read_buffer(device: &Device, buffer: &Buffer) -> Vec<u8> {
-    let buffer_slice = buffer.slice(..);
-    let buffer_future = buffer_slice.map_async(MapMode::Read);
-    device.poll(Maintain::Wait);
-    futures::executor::block_on(async {
-        match buffer_future.await {
-            Ok(_) => buffer_slice.get_mapped_range().iter().copied().collect(),
-            Err(_) => panic!("failed to run compute on gpu!"),
-        }
-    })
-}
-
-pub fn read_texture(handler: &DeviceHandler, texture: &Texture) -> Vec<u8> {
-    let (device, queue, config) = (handler.device(), handler.queue(), handler.config());
-    let size = (config.width * config.height * 4) as u64;
-    let buffer = device.create_buffer(&BufferDescriptor {
-        label: None,
-        mapped_at_creation: false,
-        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
-        size,
-    });
-    let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
-    encoder.copy_texture_to_buffer(
-        texture_copy_view(texture),
-        buffer_copy_view(&buffer, (config.width, config.height)),
-        Extent3d {
-            width: config.width,
-            height: config.height,
-            depth_or_array_layers: 1,
-        },
-    );
-    queue.submit(Some(encoder.finish()));
-    read_buffer(device, &buffer)
 }
 
 pub fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &[u8], size: (u32, u32)) {

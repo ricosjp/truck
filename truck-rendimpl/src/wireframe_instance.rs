@@ -92,9 +92,10 @@ impl Rendered for WireFrameInstance {
         &self,
         handler: &DeviceHandler,
         layout: &PipelineLayout,
-        sample_count: u32,
+        scene_desc: &SceneDescriptor,
     ) -> Arc<RenderPipeline> {
-        let (device, config) = (handler.device(), handler.config());
+        let device = handler.device();
+        let sample_count = scene_desc.backend_buffer.sample_count;
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
             vertex: VertexState {
@@ -114,7 +115,7 @@ impl Rendered for WireFrameInstance {
                 module: &self.shaders.fragment_module,
                 entry_point: self.shaders.fragment_entry,
                 targets: &[ColorTargetState {
-                    format: config.format,
+                    format: scene_desc.render_texture.format,
                     blend: Some(BlendState::REPLACE),
                     write_mask: ColorWrites::ALL,
                 }],
@@ -133,7 +134,7 @@ impl Rendered for WireFrameInstance {
             multisample: MultisampleState {
                 count: sample_count,
                 mask: !0,
-                alpha_to_coverage_enabled: false,
+                alpha_to_coverage_enabled: sample_count > 1,
             },
             label: None,
         });

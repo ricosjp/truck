@@ -111,10 +111,9 @@ impl Rendered for PolygonInstance {
         &self,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
-        sample_count: u32,
+        scene_desc: &SceneDescriptor,
     ) -> Arc<RenderPipeline> {
         let device = device_handler.device();
-        let config = device_handler.config();
         let (fragment_module, fragment_entry) = match self.state.texture.is_some() {
             true => (
                 &self.shaders.tex_fragment_module,
@@ -130,6 +129,17 @@ impl Rendered for PolygonInstance {
             true => Some(BlendState::ALPHA_BLENDING),
             false => Some(BlendState::REPLACE),
         };
+        let depth_stencil = match scene_desc.backend_buffer.depth_test {
+            true => Some(DepthStencilState {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: Default::default(),
+                bias: Default::default(),
+            }),
+            false => None,
+        };
+        let sample_count = scene_desc.backend_buffer.sample_count;
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             layout: Some(layout),
             vertex: VertexState {
@@ -161,7 +171,7 @@ impl Rendered for PolygonInstance {
                 module: fragment_module,
                 entry_point: fragment_entry,
                 targets: &[ColorTargetState {
-                    format: config.format,
+                    format: scene_desc.render_texture.format,
                     blend,
                     write_mask: ColorWrites::ALL,
                 }],
@@ -174,13 +184,7 @@ impl Rendered for PolygonInstance {
                 clamp_depth: false,
                 ..Default::default()
             },
-            depth_stencil: Some(DepthStencilState {
-                format: TextureFormat::Depth32Float,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::Less,
-                stencil: Default::default(),
-                bias: Default::default(),
-            }),
+            depth_stencil,
             multisample: MultisampleState {
                 count: sample_count,
                 mask: !0,

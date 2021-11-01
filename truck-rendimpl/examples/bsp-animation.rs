@@ -10,12 +10,12 @@ use std::thread::*;
 use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use wgpu::*;
+use winit::window::Window;
 mod app;
 use app::*;
 
 struct MyApp {
-    scene: Scene,
+    scene: WindowScene,
     object: Arc<Mutex<PolygonInstance>>,
     closed: Arc<AtomicBool>,
     updated: Arc<AtomicBool>,
@@ -100,19 +100,23 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
-        let sample_count = 4;
-        let desc = SceneDescriptor {
-            camera: MyApp::init_camera(),
-            lights: vec![Light {
-                position: Point3::new(0.5, 2.0, 0.5),
-                color: Vector3::new(1.0, 1.0, 1.0),
-                light_type: LightType::Point,
-            }],
-            sample_count,
-            ..Default::default()
+    fn init(window: Arc<Window>) -> MyApp {
+        let desc = WindowSceneDescriptor {
+            studio: StudioConfig {
+                camera: MyApp::init_camera(),
+                lights: vec![Light {
+                    position: Point3::new(0.5, 2.0, 0.5),
+                    color: Vector3::new(1.0, 1.0, 1.0),
+                    light_type: LightType::Point,
+                }],
+                ..Default::default()
+            },
+            backend_buffer: BackendBufferConfig {
+                sample_count: 4,
+                ..Default::default()
+            },
         };
-        let mut scene = Scene::new(handler.clone(), &desc);
+        let mut scene = app::block_on(async move { WindowScene::from_window(window, &desc).await });
         let creator = scene.instance_creator();
         let surface = Self::init_surface(3, 4);
         let object = creator.create_instance(
@@ -141,15 +145,15 @@ impl App for MyApp {
 
     fn app_title<'a>() -> Option<&'a str> { Some("BSpline Benchmark Animation") }
 
-    fn update(&mut self, _: &DeviceHandler) {
+    fn render(&mut self) {
         if self.updated.load(Ordering::SeqCst) {
             let object = self.object.lock().unwrap();
             self.scene.update_vertex_buffer(&*object);
             self.updated.store(false, Ordering::SeqCst);
         }
+        self.scene.render_frame();
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
     fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
         self.closed.store(true, Ordering::SeqCst);
         self.thread.take().unwrap().join().unwrap();

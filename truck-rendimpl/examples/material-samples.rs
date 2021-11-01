@@ -9,67 +9,73 @@
 mod app;
 use app::*;
 use std::f64::consts::PI;
+use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use wgpu::*;
 
 const N: usize = 5;
 const BACKGROUND: [f64; 4] = [45.0 / 255.0, 36.0 / 255.0, 42.0 / 255.0, 1.0];
 const BOXCOLOR: [f64; 4] = [208.0 / 255.0, 176.0 / 255.0, 107.0 / 255.0, 1.0];
 
 struct MyApp {
-    scene: Scene,
+    scene: WindowScene,
     instances: Vec<PolygonInstance>,
     matrices: Vec<Matrix4>,
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+    fn init(window: Arc<winit::window::Window>) -> MyApp {
         let side_length = (N + 1) as f64 * 1.5;
         let camera_dist = side_length / 2.0 / (PI / 8.0).tan();
         let a = side_length / 2.0;
         let b = camera_dist / 2.0;
         let sample_count = 4;
-        let scene_desc = SceneDescriptor {
-            camera: Camera::perspective_camera(
-                Matrix4::from_translation(camera_dist * Vector3::unit_z()),
-                Rad(PI / 4.0),
-                0.1,
-                100.0,
-            ),
-            lights: vec![
-                Light {
-                    position: Point3::new(-a, -a, b),
-                    color: Vector3::new(0.5, 0.5, 0.5),
-                    light_type: LightType::Point,
+        let scene_desc = WindowSceneDescriptor {
+            studio: StudioConfig {
+                camera: Camera::perspective_camera(
+                    Matrix4::from_translation(camera_dist * Vector3::unit_z()),
+                    Rad(PI / 4.0),
+                    0.1,
+                    100.0,
+                ),
+                lights: vec![
+                    Light {
+                        position: Point3::new(-a, -a, b),
+                        color: Vector3::new(0.5, 0.5, 0.5),
+                        light_type: LightType::Point,
+                    },
+                    Light {
+                        position: Point3::new(-a, a, b),
+                        color: Vector3::new(0.5, 0.5, 0.5),
+                        light_type: LightType::Point,
+                    },
+                    Light {
+                        position: Point3::new(a, -a, b),
+                        color: Vector3::new(0.5, 0.5, 0.5),
+                        light_type: LightType::Point,
+                    },
+                    Light {
+                        position: Point3::new(a, a, b),
+                        color: Vector3::new(0.5, 0.5, 0.5),
+                        light_type: LightType::Point,
+                    },
+                ],
+                background: wgpu::Color {
+                    r: BACKGROUND[0],
+                    g: BACKGROUND[1],
+                    b: BACKGROUND[2],
+                    a: BACKGROUND[3],
                 },
-                Light {
-                    position: Point3::new(-a, a, b),
-                    color: Vector3::new(0.5, 0.5, 0.5),
-                    light_type: LightType::Point,
-                },
-                Light {
-                    position: Point3::new(a, -a, b),
-                    color: Vector3::new(0.5, 0.5, 0.5),
-                    light_type: LightType::Point,
-                },
-                Light {
-                    position: Point3::new(a, a, b),
-                    color: Vector3::new(0.5, 0.5, 0.5),
-                    light_type: LightType::Point,
-                },
-            ],
-            background: Color {
-                r: BACKGROUND[0],
-                g: BACKGROUND[1],
-                b: BACKGROUND[2],
-                a: BACKGROUND[3],
             },
-            sample_count,
+            backend_buffer: BackendBufferConfig {
+                sample_count,
+                ..Default::default()
+            },
         };
-        let mut scene = Scene::new(handler.clone(), &scene_desc);
+        let mut scene =
+            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
         let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
         let e = builder::tsweep(&v, Vector3::unit_x());
         let f = builder::tsweep(&e, Vector3::unit_y());
@@ -114,7 +120,7 @@ impl App for MyApp {
             matrices,
         }
     }
-    fn update(&mut self, _: &DeviceHandler) {
+    fn render(&mut self) {
         let time = self.scene.elapsed().as_secs_f64();
         for (i, shape) in self.instances.iter_mut().enumerate() {
             let axis = if i % 2 == 0 {
@@ -126,8 +132,8 @@ impl App for MyApp {
                 self.matrices[i] * Matrix4::from_axis_angle(axis, Rad(time * PI / 2.0));
             self.scene.update_bind_group(shape);
         }
+        self.scene.render_frame();
     }
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
 }
 
 fn main() { MyApp::run() }

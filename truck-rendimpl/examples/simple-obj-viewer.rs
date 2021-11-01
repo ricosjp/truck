@@ -8,6 +8,7 @@
 //! - Enter "Space" on the keyboard to switch the rendering mode for the wireframe and surface.
 
 use std::io::Read;
+use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -29,7 +30,7 @@ enum RenderMode {
 }
 
 struct MyApp {
-    scene: Scene,
+    scene: WindowScene,
     creator: InstanceCreator,
     rotate_flag: bool,
     prev_cursor: Vector2,
@@ -133,19 +134,25 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+    fn init(window: Arc<winit::window::Window>) -> MyApp {
         let sample_count = 4;
-        let scene_desc = SceneDescriptor {
-            background: Color::BLACK,
-            camera: MyApp::create_camera(),
-            lights: vec![Light {
-                position: Point3::new(1.0, 1.0, 1.0),
-                color: Vector3::new(1.0, 1.0, 1.0),
-                light_type: LightType::Point,
-            }],
-            sample_count,
+        let scene_desc = WindowSceneDescriptor {
+            studio: StudioConfig {
+                background: Color::BLACK,
+                camera: MyApp::create_camera(),
+                lights: vec![Light {
+                    position: Point3::new(1.0, 1.0, 1.0),
+                    color: Vector3::new(1.0, 1.0, 1.0),
+                    light_type: LightType::Point,
+                }],
+            },
+            backend_buffer: BackendBufferConfig {
+                sample_count,
+                ..Default::default()
+            },
         };
-        let mut scene = Scene::new(handler.clone(), &scene_desc);
+        let mut scene =
+            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
         let creator = scene.instance_creator();
         let (instance, wireframe) = MyApp::load_obj(&creator, TEAPOT_BYTES);
         scene.add_object(&instance);
@@ -184,7 +191,7 @@ impl App for MyApp {
             }
             MouseButton::Right => {
                 let (light, camera) = {
-                    let desc = self.scene.descriptor_mut();
+                    let desc = self.scene.studio_config_mut();
                     (&mut desc.lights[0], &desc.camera)
                 };
                 match light.light_type {
@@ -205,7 +212,7 @@ impl App for MyApp {
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
-                let camera = &mut self.scene.descriptor_mut().camera;
+                let camera = &mut self.scene.studio_config_mut().camera;
                 let trans_vec = camera.eye_direction() * 0.2 * y as f64;
                 camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
             }
@@ -217,7 +224,7 @@ impl App for MyApp {
     fn cursor_moved(&mut self, position: PhysicalPosition<f64>) -> ControlFlow {
         let position = Vector2::new(position.x, position.y);
         if self.rotate_flag {
-            let matrix = &mut self.scene.descriptor_mut().camera.matrix;
+            let matrix = &mut self.scene.studio_config_mut().camera.matrix;
             let position = Vector2::new(position.x, position.y);
             let dir2d = position - self.prev_cursor;
             if dir2d.so_small() {
@@ -243,7 +250,7 @@ impl App for MyApp {
         };
         match keycode {
             VirtualKeyCode::P => {
-                let camera = &mut self.scene.descriptor_mut().camera;
+                let camera = &mut self.scene.studio_config_mut().camera;
                 *camera = match camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
                         camera.matrix,
@@ -258,7 +265,7 @@ impl App for MyApp {
             }
             VirtualKeyCode::L => {
                 let (light, camera) = {
-                    let desc = self.scene.descriptor_mut();
+                    let desc = self.scene.studio_config_mut();
                     (&mut desc.lights[0], &desc.camera)
                 };
                 *light = match light.light_type {
@@ -295,7 +302,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self) { self.scene.render_frame(); }
 }
 
 fn main() { MyApp::run(); }
