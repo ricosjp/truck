@@ -696,7 +696,7 @@ impl Scene {
                 }],
                 depth_stencil_attachment: depth_view
                     .as_ref()
-                    .map(|depth_view| Self::depth_stencil_attachment_descriptor(depth_view)),
+                    .map(Self::depth_stencil_attachment_descriptor),
                 ..Default::default()
             });
             rpass.set_bind_group(0, &bind_group, &[]);
@@ -757,8 +757,8 @@ impl Scene {
                 },
             },
             Extent3d {
-                width: width,
-                height: height,
+                width,
+                height,
                 depth_or_array_layers: 1,
             },
         );

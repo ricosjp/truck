@@ -339,11 +339,7 @@ pub trait Rendered {
                 push_constant_ranges: &[],
                 label: None,
             });
-        let pipeline = self.pipeline(
-            scene.device_handler(),
-            &pipeline_layout,
-            &scene.scene_desc,
-        );
+        let pipeline = self.pipeline(scene.device_handler(), &pipeline_layout, &scene.scene_desc);
         RenderObject {
             vertex_buffer,
             index_buffer,
