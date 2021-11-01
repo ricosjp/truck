@@ -382,7 +382,7 @@ impl Scene {
     /// # Remarks
     ///
     /// When the return value is dropped, the depth buffer and sampling buffer are automatically updated.
-    /// Use [`studio_config_mut`] if you only want to update the colors of the camera, lights, and background.
+    /// Use `studio_config_mut` if you only want to update the colors of the camera, lights, and background.
     #[inline(always)]
     pub fn descriptor_mut(&mut self) -> SceneDescriptorMut { SceneDescriptorMut(self) }
 

@@ -118,9 +118,9 @@ impl<'a> Rendered for Plane<'a> {
     }
 }
 
-pub fn init_device(bacends: Backends) -> DeviceHandler {
-    let instance = Instance::new(bacends);
+pub fn init_device(backends: Backends) -> DeviceHandler {
     pollster::block_on(async {
+        let instance = Instance::new(backends);
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,
