@@ -66,7 +66,7 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene = app::block_on(WindowScene::from_window(window, &desc));
+        let mut scene = app::block_on(async move { WindowScene::from_window(window, &desc).await });
         let texture = image::load_from_memory(TEXTURE_BYTES).unwrap();
         let texture = image2texture::image2texture(scene.device_handler(), &texture);
         let state = PolygonState {

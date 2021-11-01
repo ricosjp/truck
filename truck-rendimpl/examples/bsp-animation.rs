@@ -116,7 +116,7 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene = app::block_on(WindowScene::from_window(window, &desc));
+        let mut scene = app::block_on(async move { WindowScene::from_window(window, &desc).await });
         let creator = scene.instance_creator();
         let surface = Self::init_surface(3, 4);
         let object = creator.create_instance(

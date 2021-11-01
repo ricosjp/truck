@@ -151,7 +151,8 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene = app::block_on(WindowScene::from_window(window, &scene_desc));
+        let mut scene =
+            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
         let creator = scene.instance_creator();
         let (instance, wireframe) = MyApp::load_obj(&creator, TEAPOT_BYTES);
         scene.add_object(&instance);

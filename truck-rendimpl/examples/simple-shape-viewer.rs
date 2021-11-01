@@ -158,21 +158,21 @@ impl App for MyApp {
         let sample_count = 4;
         let scene_desc = WindowSceneDescriptor {
             studio: StudioConfig {
-            background: Color::BLACK,
-            camera: MyApp::create_camera(),
-            lights: vec![Light {
-                position: Point3::new(1.0, 1.0, 1.0),
-                color: Vector3::new(1.0, 1.0, 1.0),
-                light_type: LightType::Point,
-            }],
-
+                background: Color::BLACK,
+                camera: MyApp::create_camera(),
+                lights: vec![Light {
+                    position: Point3::new(1.0, 1.0, 1.0),
+                    color: Vector3::new(1.0, 1.0, 1.0),
+                    light_type: LightType::Point,
+                }],
             },
             backend_buffer: BackendBufferConfig {
                 sample_count,
                 ..Default::default()
             },
         };
-        let mut scene = app::block_on(WindowScene::from_window(window, &scene_desc));
+        let mut scene =
+            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
         let creator = scene.instance_creator();
         let (instance, wireframe) = Self::load_shape(&creator, PUNCHED_CUBE_BYTES);
         scene.add_object(&instance);

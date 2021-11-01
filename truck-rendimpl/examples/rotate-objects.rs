@@ -136,7 +136,9 @@ impl App for MyRender {
             },
         };
         let mut app = MyRender {
-            scene: app::block_on(WindowScene::from_window(window, &scene_desc)),
+            scene: app::block_on(
+                async move { WindowScene::from_window(window, &scene_desc).await },
+            ),
             instances: Vec::new(),
             rotate_flag: false,
             prev_cursor: None,

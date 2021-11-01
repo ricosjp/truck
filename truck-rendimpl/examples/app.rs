@@ -128,7 +128,7 @@ pub trait App: Sized + 'static {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
-pub fn block_on<T: 'static, F: core::future::Future<Output = T>>(f: F) -> T {
+pub fn block_on<T: 'static, F: core::future::Future<Output = T> + 'static>(f: F) -> T {
     pollster::block_on(f)
 }
 

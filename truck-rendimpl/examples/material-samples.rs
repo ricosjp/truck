@@ -74,7 +74,8 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene = app::block_on(WindowScene::from_window(window, &scene_desc));
+        let mut scene =
+            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
         let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
         let e = builder::tsweep(&v, Vector3::unit_x());
         let f = builder::tsweep(&e, Vector3::unit_y());
