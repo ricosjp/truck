@@ -3,11 +3,11 @@
 // The texture is referenced by:
 // https://cc0textures.com/view?id=WoodFloor024
 
+use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
@@ -18,7 +18,7 @@ const TEXTURE_BYTES: &[u8] = include_bytes!(concat!(
 ));
 
 struct MyApp {
-    scene: Scene,
+    scene: WindowScene,
     rotate_flag: bool,
     prev_cursor: Option<Vector2>,
     light_changed: Option<std::time::Instant>,
@@ -49,21 +49,26 @@ impl MyApp {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+    fn init(window: Arc<winit::window::Window>) -> MyApp {
         let sample_count = 4;
-        let desc = SceneDescriptor {
-            camera: MyApp::create_camera(),
-            lights: vec![Light {
-                position: Point3::new(1.0, 1.0, 1.0),
-                color: Vector3::new(1.0, 1.0, 1.0),
-                light_type: LightType::Point,
-            }],
-            sample_count,
-            ..Default::default()
+        let desc = WindowSceneDescriptor {
+            studio: StudioConfig {
+                camera: MyApp::create_camera(),
+                lights: vec![Light {
+                    position: Point3::new(1.0, 1.0, 1.0),
+                    color: Vector3::new(1.0, 1.0, 1.0),
+                    light_type: LightType::Point,
+                }],
+                ..Default::default()
+            },
+            backend_buffer: BackendBufferConfig {
+                sample_count,
+                ..Default::default()
+            },
         };
-        let mut scene = Scene::new(handler.clone(), &desc);
+        let mut scene = app::block_on(WindowScene::from_window(window, &desc));
         let texture = image::load_from_memory(TEXTURE_BYTES).unwrap();
-        let texture = image2texture::image2texture(handler, &texture);
+        let texture = image2texture::image2texture(scene.device_handler(), &texture);
         let state = PolygonState {
             matrix: Matrix4::from_translation(Vector3::new(-0.5, -0.5, -0.5)),
             material: Material {
@@ -104,7 +109,7 @@ impl App for MyApp {
             }
             MouseButton::Right => {
                 let (light, camera) = {
-                    let desc = self.scene.descriptor_mut();
+                    let desc = self.scene.studio_config_mut();
                     (&mut desc.lights[0], &desc.camera)
                 };
                 match light.light_type {
@@ -123,7 +128,7 @@ impl App for MyApp {
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
-                let camera = &mut self.scene.descriptor_mut().camera;
+                let camera = &mut self.scene.studio_config_mut().camera;
                 let trans_vec = camera.eye_direction() * 0.2 * y as f64;
                 camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
             }
@@ -136,7 +141,7 @@ impl App for MyApp {
         if self.rotate_flag {
             let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
-                let matrix = &mut self.scene.descriptor_mut().camera.matrix;
+                let matrix = &mut self.scene.studio_config_mut().camera.matrix;
                 let dir2d = position - prev_position;
                 if dir2d.so_small() {
                     return Self::default_control_flow();
@@ -165,7 +170,7 @@ impl App for MyApp {
                         return Self::default_control_flow();
                     }
                 }
-                let camera = &mut self.scene.descriptor_mut().camera;
+                let camera = &mut self.scene.studio_config_mut().camera;
                 self.camera_changed = Some(std::time::Instant::now());
                 *camera = match camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
@@ -188,7 +193,7 @@ impl App for MyApp {
                 }
                 self.light_changed = Some(std::time::Instant::now());
                 let (light, camera) = {
-                    let desc = self.scene.descriptor_mut();
+                    let desc = self.scene.studio_config_mut();
                     (&mut desc.lights[0], &desc.camera)
                 };
                 *light = match light.light_type {
@@ -215,7 +220,7 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self, view: &TextureView) { self.scene.render(view); }
+    fn render(&mut self) { self.scene.render_frame(); }
 }
 
 fn main() { MyApp::run(); }

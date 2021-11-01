@@ -192,47 +192,6 @@ pub struct Light {
 /// This struct is used for creating [`Scene`].
 /// [`Device`] and [`Queue`] must be wrapped `Arc`,
 /// and [`SurfaceConfiguration`] `Arc<Mutex>`.
-/// # Examples
-/// ```
-/// use std::sync::{Arc, Mutex};
-/// use truck_platform::*;
-/// use wgpu::*;
-/// let instance = Instance::new(Backends::PRIMARY);
-/// let (device, queue) = futures::executor::block_on(async {
-///     let adapter = instance
-///         .request_adapter(&RequestAdapterOptions {
-///             power_preference: PowerPreference::HighPerformance,
-///             compatible_surface: None,
-///             force_fallback_adapter: false,
-///         })
-///         .await
-///         .unwrap();
-///     adapter
-///         .request_device(
-///             &DeviceDescriptor {
-///                 features: Default::default(),
-///                 limits: Limits::default(),
-///                 label: None,
-///             },
-///             None,
-///         )
-///         .await
-///         .unwrap()
-/// });
-/// let config = SurfaceConfiguration {
-///     usage: TextureUsages::RENDER_ATTACHMENT,
-///     format: TextureFormat::Bgra8UnormSrgb,
-///     width: 512,
-///     height: 512,
-///     present_mode: PresentMode::Mailbox,
-/// };
-/// // creates SwapChain or Texture to draw by Scene.
-/// let device_handler = DeviceHandler::new(
-///     Arc::new(device),
-///     Arc::new(queue),
-///     Arc::new(Mutex::new(config)),
-/// );
-/// ```
 ///
 /// [`Device`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.Device.html
 /// [`Queue`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.Queue.html

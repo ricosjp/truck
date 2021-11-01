@@ -8,10 +8,10 @@
 
 use std::f64::consts::PI;
 use std::io::Read;
+use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
 mod app;
 use app::*;
@@ -24,7 +24,7 @@ const TEAPOT_BYTES: &[u8] = include_bytes!(concat!(
 ));
 
 struct MyRender {
-    scene: Scene,
+    scene: WindowScene,
     instances: Vec<PolygonInstance>,
     rotate_flag: bool,
     prev_cursor: Option<Vector2>,
@@ -118,20 +118,25 @@ impl MyRender {
 }
 
 impl App for MyRender {
-    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyRender {
+    fn init(window: Arc<winit::window::Window>) -> MyRender {
         let sample_count = 4;
-        let scene_desc = SceneDescriptor {
-            camera: MyRender::create_camera(),
-            lights: vec![Light {
-                position: Point3::new(0.0, 20.0, 0.0),
-                color: Vector3::new(1.0, 1.0, 1.0) * 1.5,
-                light_type: LightType::Point,
-            }],
-            sample_count,
-            ..Default::default()
+        let scene_desc = WindowSceneDescriptor {
+            studio: StudioConfig {
+                camera: MyRender::create_camera(),
+                lights: vec![Light {
+                    position: Point3::new(0.0, 20.0, 0.0),
+                    color: Vector3::new(1.0, 1.0, 1.0) * 1.5,
+                    light_type: LightType::Point,
+                }],
+                ..Default::default()
+            },
+            backend_buffer: BackendBufferConfig {
+                sample_count,
+                ..Default::default()
+            },
         };
         let mut app = MyRender {
-            scene: Scene::new(handler.clone(), &scene_desc),
+            scene: app::block_on(WindowScene::from_window(window, &scene_desc)),
             instances: Vec::new(),
             rotate_flag: false,
             prev_cursor: None,
@@ -161,7 +166,7 @@ impl App for MyRender {
             }
             MouseButton::Right => {
                 let (light, camera) = {
-                    let desc = self.scene.descriptor_mut();
+                    let desc = self.scene.studio_config_mut();
                     (&mut desc.lights[0], &desc.camera)
                 };
                 match light.light_type {
@@ -180,7 +185,7 @@ impl App for MyRender {
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
-                let camera = &mut self.scene.descriptor_mut().camera;
+                let camera = &mut self.scene.studio_config_mut().camera;
                 let trans_vec = camera.eye_direction() * 0.2 * y as f64;
                 camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
             }
@@ -193,7 +198,7 @@ impl App for MyRender {
         if self.rotate_flag {
             let position = Vector2::new(position.x, position.y);
             if let Some(ref prev_position) = self.prev_cursor {
-                let camera = &mut self.scene.descriptor_mut().camera;
+                let camera = &mut self.scene.studio_config_mut().camera;
                 let dir2d = position - prev_position;
                 if dir2d.so_small() {
                     return Self::default_control_flow();
@@ -222,7 +227,7 @@ impl App for MyRender {
                         return Self::default_control_flow();
                     }
                 }
-                let camera = &mut self.scene.descriptor_mut().camera;
+                let camera = &mut self.scene.studio_config_mut().camera;
                 self.camera_changed = Some(std::time::Instant::now());
                 *camera = match camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
@@ -245,7 +250,7 @@ impl App for MyRender {
                 }
                 self.light_changed = Some(std::time::Instant::now());
                 let (light, camera) = {
-                    let desc = self.scene.descriptor_mut();
+                    let desc = self.scene.studio_config_mut();
                     (&mut desc.lights[0], &desc.camera)
                 };
                 *light = match light.light_type {
@@ -273,7 +278,7 @@ impl App for MyRender {
         Self::default_control_flow()
     }
 
-    fn update(&mut self, _: &DeviceHandler) {
+    fn render(&mut self) {
         if let Some(path) = self.path.take() {
             let file = std::fs::File::open(path).unwrap();
             self.load_obj(file);
@@ -281,9 +286,8 @@ impl App for MyRender {
         if self.scene.number_of_objects() != 0 {
             self.update_objects();
         }
+        self.scene.render_frame();
     }
-
-    fn render(&mut self, view: &TextureView) { self.scene.render(view); }
 }
 
 fn main() { MyRender::run() }

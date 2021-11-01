@@ -768,7 +768,7 @@ impl Scene {
         device.poll(Maintain::Wait);
         match buffer_future.await {
             Ok(_) => buffer_slice.get_mapped_range().iter().copied().collect(),
-            Err(_) => panic!("failed to run compute on gpu!"),
+            Err(e) => panic!("{}", e),
         }
     }
 }

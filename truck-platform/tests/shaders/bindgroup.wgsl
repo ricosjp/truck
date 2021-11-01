@@ -18,7 +18,7 @@ struct Lights {
 [[block]]
 struct SceneInfo {
     bk_color: vec4<f32>;
-    resolution: vec2<i32>;
+    resolution: vec2<u32>;
     time: f32;
     nlights: u32;
 };
@@ -50,6 +50,7 @@ let alc1: vec4<f32> = vec4<f32>(1.4, 1.5, 1.6, 1.0);
 let alt1: vec4<u32> = vec4<u32>(1u, 0u, 0u, 0u);
 let asnl: u32 = 2u;
 let abk: vec4<f32> = vec4<f32>(0.1, 0.2, 0.3, 0.4);
+let arsl: vec2<u32> = vec2<u32>(256u, 256u);
  
 let EPS: f32 = 1.0e-5;
 let e: vec2<f32> = vec2<f32>(1.0, 0.0);
@@ -93,6 +94,8 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } elseif (distance(info.bk_color, abk) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    } elseif (any(info.resolution != arsl)) {
+        return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } else {
         return vec4<f32>(vertex[idx], 0.0, 1.0);
     }
@@ -132,6 +135,8 @@ fn fs_main() -> [[location(0)]] vec4<f32> {
         return vec4<f32>(0.8, 0.8, 0.8, 1.0);
     } elseif (distance(info.bk_color, abk) > EPS) {
         return vec4<f32>(0.9, 0.9, 0.9, 1.0);
+    } elseif (any(info.resolution != arsl)) {
+        return vec4<f32>(0.9, 0.9, 0.9, 1.0);
     } else {
         return vec4<f32>(0.2, 0.4, 0.6, 0.8);
     }
@@ -170,6 +175,8 @@ fn fs_main_anti() -> [[location(0)]] vec4<f32> {
     } elseif (info.nlights != asnl) {
         return vec4<f32>(0.8, 0.8, 0.8, 1.0);
     } elseif (distance(info.bk_color, abk) > EPS) {
+        return vec4<f32>(0.9, 0.9, 0.9, 1.0);
+    } elseif (any(info.resolution != arsl)) {
         return vec4<f32>(0.9, 0.9, 0.9, 1.0);
     } else {
         return vec4<f32>(0.2, 0.4, 0.6, 0.8);
