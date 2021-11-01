@@ -22,7 +22,10 @@ fn main_image(coord: vec2<f32>, env: Environment) -> vec4<f32> {
     ROOTS[1] = vec2<f32>(1.0, sqrt(3.0)) / 2.0;
     ROOTS[2] = vec2<f32>(1.0, -sqrt(3.0)) / 2.0;
 
-    let uv = (2.0 * coord - env.resolution) / env.resolution.y;
+    let uv = mat2x2<f32>(
+        vec2<f32>(cos(env.time), -sin(env.time)),
+        vec2<f32>(sin(env.time), cos(env.time))
+    ) * (2.0 * coord - env.resolution) / env.resolution.y;
 
     if (length(uv) < 1.0e-5) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);

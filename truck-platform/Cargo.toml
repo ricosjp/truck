@@ -18,7 +18,6 @@ webgl = ["wgpu/webgl"]
 [dependencies]
 bytemuck = { version = "1.7.2", features = ["derive"] }
 derive_more = "0.99.16"
-futures = "0.3.17"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 wgpu = "0.11.0"
@@ -35,6 +34,7 @@ image = "0.23.14"
 rayon = "1.5.1"
 env_logger = "0.9.0"
 naga = { version = "0.7.0", features = ["wgsl-in"] }
+pollster = "0.2.4"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-futures = "0.4.28"

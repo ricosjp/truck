@@ -18,6 +18,7 @@ struct Lights {
 [[block]]
 struct SceneInfo {
     bk_color: vec4<f32>;
+    resolution: vec2<i32>;
     time: f32;
     nlights: u32;
 };

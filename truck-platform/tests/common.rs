@@ -57,10 +57,10 @@ impl<'a> Rendered for Plane<'a> {
         &self,
         handler: &DeviceHandler,
         layout: &PipelineLayout,
-        sample_count: u32,
+        scene_desc: &SceneDescriptor,
     ) -> Arc<RenderPipeline> {
         writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
-        let (device, config) = (handler.device(), handler.config());
+        let device = handler.device();
         let source = ShaderSource::Wgsl(self.shader.into());
         let module = device.create_shader_module(&ShaderModuleDescriptor {
             label: None,
@@ -88,7 +88,7 @@ impl<'a> Rendered for Plane<'a> {
                         module: &module,
                         entry_point: self.fs_entpt,
                         targets: &[ColorTargetState {
-                            format: config.format,
+                            format: scene_desc.render_texture.format,
                             blend: Some(BlendState::REPLACE),
                             write_mask: ColorWrites::ALL,
                         }],
@@ -109,7 +109,7 @@ impl<'a> Rendered for Plane<'a> {
                         bias: Default::default(),
                     }),
                     multisample: MultisampleState {
-                        count: sample_count,
+                        count: scene_desc.backend_buffer.sample_count,
                         mask: !0,
                         alpha_to_coverage_enabled: false,
                     },
@@ -120,7 +120,7 @@ impl<'a> Rendered for Plane<'a> {
 }
 
 pub fn init_device(instance: &Instance) -> (Arc<Device>, Arc<Queue>) {
-    futures::executor::block_on(async {
+    pollster::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,

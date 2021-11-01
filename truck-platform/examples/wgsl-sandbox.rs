@@ -47,13 +47,10 @@ mod plane {
 
     const BASE_PREFIX: &str = "[[block]]
 struct SceneInfo {
+    background_color: vec4<f32>;
+    resolution: vec2<u32>;
     time: f32;
     nlights: u32;
-};
-
-[[block]]
-struct Resolution {
-    resolution: vec2<f32>;
 };
 
 [[block]]
@@ -65,9 +62,6 @@ struct Mouse {
 var<uniform> info__: SceneInfo;
 
 [[group(1), binding(0)]]
-var<uniform> resolution__: Resolution;
-
-[[group(1), binding(1)]]
 var<uniform> mouse__: Mouse;
 
 struct Environment {
@@ -91,12 +85,12 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
 [[stage(fragment)]]
 fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f32> {
     var env: Environment;
-    env.resolution = resolution__.resolution;
+    env.resolution = vec2<f32>(info__.resolution);
     env.mouse = mouse__.mouse;
     env.time = info__.time;
     let coord = vec2<f32>(
         position.x,
-        resolution__.resolution.y - position.y,
+        env.resolution.y - position.y,
     );
     return main_image(coord, env);
 }
@@ -128,44 +122,30 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                     .device()
                     .create_bind_group_layout(&BindGroupLayoutDescriptor {
                         label: None,
-                        entries: &[
-                            BindGroupLayoutEntry {
-                                binding: 0,
-                                visibility: ShaderStages::FRAGMENT,
-                                ty: BindingType::Buffer {
-                                    ty: BufferBindingType::Uniform,
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
+                        entries: &[BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: ShaderStages::FRAGMENT,
+                            ty: BindingType::Buffer {
+                                ty: BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
                             },
-                            BindGroupLayoutEntry {
-                                binding: 1,
-                                visibility: ShaderStages::FRAGMENT,
-                                ty: BindingType::Buffer {
-                                    ty: BufferBindingType::Uniform,
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
-                        ],
+                            count: None,
+                        }],
                     }),
             )
         }
         // bind group is only one uniform buffer: resolution
         fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
-            let config = handler.config();
-            let resolution = [config.width as f32, config.height as f32];
             Arc::new(bind_group_util::create_bind_group(
                 handler.device(),
                 layout,
-                vec![
-                    BufferHandler::from_slice(&resolution, handler.device(), BufferUsages::UNIFORM)
-                        .binding_resource(),
-                    BufferHandler::from_slice(&self.mouse, handler.device(), BufferUsages::UNIFORM)
-                        .binding_resource(),
-                ],
+                vec![BufferHandler::from_slice(
+                    &self.mouse,
+                    handler.device(),
+                    BufferUsages::UNIFORM,
+                )
+                .binding_resource()],
             ))
         }
 
@@ -174,9 +154,13 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
             &self,
             handler: &DeviceHandler,
             layout: &PipelineLayout,
-            sample_count: u32,
+            scene_desc: &SceneDescriptor,
         ) -> Arc<RenderPipeline> {
-            let config = handler.config();
+            let SceneDescriptor {
+                backend_buffer,
+                render_texture,
+                ..
+            } = scene_desc;
             Arc::new(
                 handler
                     .device()
@@ -199,7 +183,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             module: &self.module,
                             entry_point: "fs_main",
                             targets: &[ColorTargetState {
-                                format: config.format,
+                                format: render_texture.format,
                                 blend: Some(BlendState::REPLACE),
                                 write_mask: ColorWrites::ALL,
                             }],
@@ -220,7 +204,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             bias: Default::default(),
                         }),
                         multisample: MultisampleState {
-                            count: sample_count,
+                            count: backend_buffer.sample_count,
                             mask: !0,
                             alpha_to_coverage_enabled: false,
                         },
@@ -338,7 +322,7 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
                     ControlFlow::Poll
                 }
                 WindowEvent::CursorMoved { position, .. } => {
-                    let height = scene.config().height as f32;
+                    let height = scene.descriptor().render_texture.canvas_size.1 as f32;
                     cursor = [position.x as f32, height - position.y as f32];
                     if dragging {
                         plane.mouse[0] = cursor[0];
@@ -359,7 +343,7 @@ fn main() {
     wb = wb.with_title("wGSL Sandbox");
     let window = wb.build(&event_loop).unwrap();
     #[cfg(not(target_arch = "wasm32"))]
-    futures::executor::block_on(run(event_loop, window));
+    pollster::block_on(run(event_loop, window));
     #[cfg(target_arch = "wasm32")]
     {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
