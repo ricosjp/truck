@@ -69,6 +69,18 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     fn parameter_range(&self) -> (f64, f64) { (*self).parameter_range() }
 }
 
+impl<'a, C: ParametricCurve> ParametricCurve for Box<C> {
+    type Point = C::Point;
+    type Vector = C::Vector;
+    fn subs(&self, t: f64) -> Self::Point { C::subs(&*self, t) }
+    #[inline(always)]
+    fn der(&self, t: f64) -> Self::Vector { C::der(&*self, t) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector { C::der2(&*self, t) }
+    #[inline(always)]
+    fn parameter_range(&self) -> (f64, f64) { C::parameter_range(&*self) }
+}
+
 /// 2D parametric curve
 pub trait ParametricCurve2D: ParametricCurve<Point = Point2, Vector = Vector2> {}
 impl<C: ParametricCurve<Point = Point2, Vector = Vector2>> ParametricCurve2D for C {}
@@ -92,6 +104,13 @@ impl<'a, C: ParameterDivision1D> ParameterDivision1D for &'a C {
     type Point = C::Point;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
         (*self).parameter_division(range, tol)
+    }
+}
+
+impl<C: ParameterDivision1D> ParameterDivision1D for Box<C> {
+    type Point = C::Point;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
+        C::parameter_division(&*self, range, tol)
     }
 }
 
