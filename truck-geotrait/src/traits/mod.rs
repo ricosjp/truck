@@ -76,18 +76,6 @@ impl<'a, T: SearchNearestParameter> SearchNearestParameter for &'a T {
     }
 }
 
-impl<T: SearchNearestParameter> SearchNearestParameter for Box<T> {
-    type Point = T::Point;
-    type Parameter = T::Parameter;
-    fn search_nearest_parameter(
-        &self,
-        point: Self::Point,
-        hint: Option<Self::Parameter>,
-        trial: usize,
-    ) -> Option<Self::Parameter> {
-        T::search_nearest_parameter(&*self, point, hint, trial)
-    }
-}
 /// Oriented and reversible
 pub trait Invertible: Clone {
     /// Inverts `self`
@@ -117,11 +105,6 @@ pub trait Transformed<T>: Clone {
         res.transform_by(trans);
         res
     }
-}
-
-impl<T, S: Transformed<T>> Transformed<T> for Box<S> {
-    fn transform_by(&mut self, trans: T) { S::transform_by(&mut *self, trans) }
-    fn transformed(&self, trans: T) -> Self { Box::new(S::transformed(&*self, trans)) }
 }
 
 /// Implementation for the test of topological methods.

@@ -15,7 +15,7 @@ pub enum Curve {
     /// 3-dimensional NURBS curve
     NURBSCurve(NURBSCurve<Vector4>),
     /// intersection curve 
-    IntersectionCurve(IntersectionCurve<PolylineCurve<Point3>, Box<Surface>>),
+    IntersectionCurve(IntersectionCurve<PolylineCurve<Point3>, Surface>),
 }
 
 macro_rules! derive_curve_method {

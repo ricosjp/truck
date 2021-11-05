@@ -4,8 +4,10 @@ use truck_meshalgo::prelude::*;
 /// Intersection curve between two surfaces.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct IntersectionCurve<C, S> {
-	surface0: S,
-	surface1: S,
+	// Considering rotational surfaces, we can consider the case
+	// where the class `S` holds the curve `C` as a variable.
+	surface0: Box<S>,
+	surface1: Box<S>,
 	leader: C,
 	tol: f64,
 }
@@ -121,8 +123,8 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 		params1.push(p1);
 		Some(Self {
 			ic: IntersectionCurve {
-				surface0,
-				surface1,
+				surface0: Box::new(surface0),
+				surface1: Box::new(surface1),
 				leader: polyline,
 				tol,
 			},
@@ -160,9 +162,9 @@ where
 	#[inline(always)]
 	pub(super) fn search_triple(&self, t: f64) -> Option<(Point3, Point2, Point2)> {
 		double_projection(
-			&self.surface0,
+			self.surface0(),
 			None,
-			&self.surface1,
+			self.surface1(),
 			None,
 			self.leader.subs(t),
 			self.leader.der(t),

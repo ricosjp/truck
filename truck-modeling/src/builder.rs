@@ -51,7 +51,7 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
 /// let semi_circle = builder::circle_arc(&vertex0, &vertex1, Point3::new(0.0, 1.0, 0.0));
 /// # let curve = match semi_circle.oriented_curve() {
 /// #       Curve::NURBSCurve(curve) => curve,
-/// #       Curve::BSplineCurve(_) => panic!("this is bspcurve"),
+/// #       _ => unreachable!(),
 /// # };
 /// # const N: usize = 10;
 /// # for i in 0..=N {
