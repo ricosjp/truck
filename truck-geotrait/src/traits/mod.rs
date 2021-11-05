@@ -34,19 +34,6 @@ impl<'a, T: SearchParameter> SearchParameter for &'a T {
     }
 }
 
-impl<T: SearchParameter> SearchParameter for Box<T> {
-    type Point = T::Point;
-    type Parameter = T::Parameter;
-    fn search_parameter(
-        &self,
-        point: Self::Point,
-        hint: Option<Self::Parameter>,
-        trial: usize,
-    ) -> Option<Self::Parameter> {
-        T::search_parameter(&*self, point, hint, trial)
-    }
-}
-
 /// Search parameter `t` such that `self.subs(t)` is nearest point.
 pub trait SearchNearestParameter {
     /// point
