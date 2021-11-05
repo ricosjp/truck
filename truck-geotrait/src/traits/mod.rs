@@ -76,11 +76,6 @@ pub trait Invertible: Clone {
     }
 }
 
-impl<T: Invertible> Invertible for Box<T> {
-    fn invert(&mut self) { T::invert(&mut *self) }
-    fn inverse(&self) -> Self { Box::new(T::inverse(&*self)) }
-}
-
 /// Transform geometry
 pub trait Transformed<T>: Clone {
     /// transform by `trans`.
