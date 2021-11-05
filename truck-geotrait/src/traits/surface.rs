@@ -31,17 +31,6 @@ impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
 }
 
-impl<S: ParametricSurface> ParametricSurface for Box<S> {
-    type Point = S::Point;
-    type Vector = S::Vector;
-    fn subs(&self, u: f64, v: f64) -> Self::Point { S::subs(&*self, u, v) }
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { S::uder(&*self, u, v) }
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { S::vder(&*self, u, v) }
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { S::uuder(&*self, u, v) }
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { S::uvder(&*self, u, v) }
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { S::vvder(&*self, u, v) }
-}
-
 /// 2D parametric surface
 pub trait ParametricSurface2D: ParametricSurface<Point = Point2, Vector = Vector2> {}
 impl<S: ParametricSurface<Point = Point2, Vector = Vector2>> ParametricSurface2D for S {}
@@ -58,10 +47,6 @@ impl<'a, S: ParametricSurface3D> ParametricSurface3D for &'a S {
     fn normal(&self, u: f64, v: f64) -> Vector3 { (*self).normal(u, v) }
 }
 
-impl<S: ParametricSurface3D> ParametricSurface3D for Box<S> {
-    fn normal(&self, u: f64, v: f64) -> Vector3 { S::normal(&*self, u, v) }
-}
-
 /// Bounded surface with parametric range
 pub trait BoundedSurface: ParametricSurface {
     /// The range of the parameter of the surface.
@@ -69,11 +54,9 @@ pub trait BoundedSurface: ParametricSurface {
 }
 
 impl<'a, S: BoundedSurface> BoundedSurface for &'a S {
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { (*self).parameter_range() }
-}
-
-impl<S: BoundedSurface> BoundedSurface for Box<S> {
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { S::parameter_range(&*self) }
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
+        (*self).parameter_range()
+    }
 }
 
 /// Whether the surface includes the boundary curve.
@@ -87,29 +70,14 @@ pub trait ParameterDivision2D {
     /// Creates the surface division
     ///
     /// # Panics
-    ///
+    /// 
     /// `tol` must be more than `TOLERANCE`.
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64)
-        -> (Vec<f64>, Vec<f64>);
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>);
 }
 
 impl<'a, S: ParameterDivision2D> ParameterDivision2D for &'a S {
-    fn parameter_division(
-        &self,
-        range: ((f64, f64), (f64, f64)),
-        tol: f64,
-    ) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
         (*self).parameter_division(range, tol)
-    }
-}
-
-impl<S: ParameterDivision2D> ParameterDivision2D for Box<S> {
-    fn parameter_division(
-        &self,
-        range: ((f64, f64), (f64, f64)),
-        tol: f64,
-    ) -> (Vec<f64>, Vec<f64>) {
-        S::parameter_division(&*self, range, tol)
     }
 }
 
