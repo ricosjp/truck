@@ -20,6 +20,8 @@ thiserror = "1.0.29"
 truck-base = { version = "0.1.1", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
+truck-polymesh = { version = "0.2.1", path = "../truck-polymesh" }
+truck-shapeops = { version = "0.1.0", path = "../truck-shapeops" }
 truck-topology = { version = "0.2.0", path = "../truck-topology" }
 
 [dev-dependencies]

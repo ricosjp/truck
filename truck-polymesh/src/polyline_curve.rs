@@ -153,6 +153,18 @@ impl<P: ControlPoint<f64>> ParameterDivision1D for PolylineCurve<P> {
 	}
 }
 
+impl<P, T> Transformed<T> for PolylineCurve<P>
+where
+	P: EuclideanSpace,
+	T: Transform<P>,
+{
+	fn transform_by(&mut self, trans: T) {
+		self.0
+			.iter_mut()
+			.for_each(|p| *p = trans.transform_point(*p))
+	}
+}
+
 #[test]
 fn polyline_test() {
 	let vec = vec![

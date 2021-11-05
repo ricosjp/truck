@@ -339,6 +339,28 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 	}
 }
 
+impl<C, S> Transformed<Matrix4> for IntersectionCurve<C, S>
+where
+	C: Transformed<Matrix4>,
+	S: Transformed<Matrix4>,	
+{
+	fn transform_by(&mut self, trans: Matrix4) {
+		self.surface0.transform_by(trans);
+		self.surface1.transform_by(trans);
+		self.leader.transform_by(trans);
+        let a = trans;
+        self.tol *= a[0][0] * a[0][0]
+            + a[0][1] * a[0][1]
+            + a[0][2] * a[0][2]
+            + a[1][0] * a[1][0]
+            + a[1][1] * a[1][1]
+            + a[1][2] * a[1][2]
+            + a[2][0] * a[2][0]
+            + a[2][1] * a[2][1]
+            + a[2][2] * a[2][2];
+	}
+}
+
 pub fn intersection_curves<S>(
 	surface0: S,
 	polygon0: &PolygonMesh,

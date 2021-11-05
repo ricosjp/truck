@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 #[doc(hidden)]
 pub use truck_geometry::{algo, inv_or_zero};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
+pub use truck_polymesh::PolylineCurve;
+pub use truck_shapeops::IntersectionCurve;
 use truck_geotrait::{Invertible, ParametricSurface};
 
 /// 3-dimensional curve
@@ -12,6 +14,8 @@ pub enum Curve {
     BSplineCurve(BSplineCurve<Point3>),
     /// 3-dimensional NURBS curve
     NURBSCurve(NURBSCurve<Vector4>),
+    /// intersection curve 
+    IntersectionCurve(IntersectionCurve<PolylineCurve<Point3>, Box<Surface>>),
 }
 
 macro_rules! derive_curve_method {
@@ -19,6 +23,7 @@ macro_rules! derive_curve_method {
         match $curve {
             Curve::BSplineCurve(got) => $method(got, $($ver), *),
             Curve::NURBSCurve(got) => $method(got, $($ver), *),
+            Curve::IntersectionCurve(got) => $method(got, $($ver), *),
         }
     };
 }
@@ -28,6 +33,7 @@ macro_rules! derive_curve_self_method {
         match $curve {
             Curve::BSplineCurve(got) => Curve::BSplineCurve($method(got, $($ver), *)),
             Curve::NURBSCurve(got) => Curve::NURBSCurve($method(got, $($ver), *)),
+            Curve::IntersectionCurve(got) => Curve::IntersectionCurve($method(got, $($ver), *)),
         }
     };
 }
@@ -85,20 +91,6 @@ impl SearchParameter for Curve {
 }
 
 impl Curve {
-    #[inline(always)]
-    pub(super) fn knot_vec(&self) -> &KnotVec {
-        match self {
-            Curve::BSplineCurve(curve) => curve.knot_vec(),
-            Curve::NURBSCurve(curve) => curve.knot_vec(),
-        }
-    }
-    #[inline(always)]
-    pub(super) fn cut(&mut self, t: f64) -> Self {
-        match self {
-            Curve::BSplineCurve(curve) => Curve::BSplineCurve(curve.cut(t)),
-            Curve::NURBSCurve(curve) => Curve::NURBSCurve(curve.cut(t)),
-        }
-    }
     /// Into non-ratinalized 4-dimensinal B-spline curve
     pub fn lift_up(self) -> BSplineCurve<Vector4> {
         match self {
@@ -111,6 +103,7 @@ impl Curve {
                     .collect(),
             ),
             Curve::NURBSCurve(curve) => curve.into_non_rationalized(),
+            Curve::IntersectionCurve(_) => unimplemented!("intersection curve cannot connect by homotopy"),
         }
     }
 }
@@ -207,14 +200,17 @@ impl IncludeCurve<Curve> for Surface {
             Surface::BSplineSurface(surface) => match curve {
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
+                Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::NURBSSurface(surface) => match curve {
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
+                Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::Plane(surface) => match curve {
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
+                Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::RevolutedCurve(surface) => match surface.entity_curve() {
                 Curve::BSplineCurve(entity_curve) => {
@@ -226,6 +222,7 @@ impl IncludeCurve<Curve> for Surface {
                     match curve {
                         Curve::BSplineCurve(curve) => surface.include(curve),
                         Curve::NURBSCurve(curve) => surface.include(curve),
+                        Curve::IntersectionCurve(_) => unimplemented!(),
                     }
                 }
                 Curve::NURBSCurve(entity_curve) => {
@@ -237,8 +234,10 @@ impl IncludeCurve<Curve> for Surface {
                     match curve {
                         Curve::BSplineCurve(curve) => surface.include(curve),
                         Curve::NURBSCurve(curve) => surface.include(curve),
+                        Curve::IntersectionCurve(_) => unimplemented!(),
                     }
                 }
+                Curve::IntersectionCurve(_) => unimplemented!(),
             },
         }
     }

@@ -21,6 +21,32 @@ pub trait SearchParameter {
     ) -> Option<Self::Parameter>;
 }
 
+impl<'a, T: SearchParameter> SearchParameter for &'a T {
+    type Point = T::Point;
+    type Parameter = T::Parameter;
+    fn search_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter> {
+        T::search_parameter(&*self, point, hint, trial)
+    }
+}
+
+impl<T: SearchParameter> SearchParameter for Box<T> {
+    type Point = T::Point;
+    type Parameter = T::Parameter;
+    fn search_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter> {
+        T::search_parameter(&*self, point, hint, trial)
+    }
+}
+
 /// Search parameter `t` such that `self.subs(t)` is nearest point.
 pub trait SearchNearestParameter {
     /// point
@@ -37,6 +63,31 @@ pub trait SearchNearestParameter {
     ) -> Option<Self::Parameter>;
 }
 
+impl<'a, T: SearchNearestParameter> SearchNearestParameter for &'a T {
+    type Point = T::Point;
+    type Parameter = T::Parameter;
+    fn search_nearest_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter> {
+        T::search_nearest_parameter(&*self, point, hint, trial)
+    }
+}
+
+impl<T: SearchNearestParameter> SearchNearestParameter for Box<T> {
+    type Point = T::Point;
+    type Parameter = T::Parameter;
+    fn search_nearest_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter> {
+        T::search_nearest_parameter(&*self, point, hint, trial)
+    }
+}
 /// Oriented and reversible
 pub trait Invertible: Clone {
     /// Inverts `self`
@@ -50,6 +101,11 @@ pub trait Invertible: Clone {
     }
 }
 
+impl<T: Invertible> Invertible for Box<T> {
+    fn invert(&mut self) { T::invert(&mut *self) }
+    fn inverse(&self) -> Self { Box::new(T::inverse(&*self)) }
+}
+
 /// Transform geometry
 pub trait Transformed<T>: Clone {
     /// transform by `trans`.
@@ -61,6 +117,11 @@ pub trait Transformed<T>: Clone {
         res.transform_by(trans);
         res
     }
+}
+
+impl<T, S: Transformed<T>> Transformed<T> for Box<S> {
+    fn transform_by(&mut self, trans: T) { S::transform_by(&mut *self, trans) }
+    fn transformed(&self, trans: T) -> Self { Box::new(S::transformed(&*self, trans)) }
 }
 
 /// Implementation for the test of topological methods.
