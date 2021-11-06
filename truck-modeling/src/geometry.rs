@@ -5,7 +5,6 @@ use derive_more::From;
 pub use truck_geometry::{algo, inv_or_zero};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
 pub use truck_polymesh::PolylineCurve;
-pub use truck_shapeops::IntersectionCurve;
 use truck_geotrait::{Invertible, ParametricSurface};
 
 /// 3-dimensional curve

@@ -150,35 +150,6 @@ pub type Result<T> = std::result::Result<T, errors::Error>;
 
 /// the building model utility API
 pub mod builder;
-/// shape operators: `and`, `or`, `not`.
-pub mod shapeops {
-    use crate::Solid;
-    const SHAPEOPS_TOLERANCE: f64 = 0.05;
-    /// and operator.
-    pub fn and(solid0: &Solid, solid1: &Solid) -> Solid {
-        truck_shapeops::and(solid0, solid1, SHAPEOPS_TOLERANCE)
-            .expect("Shape is invalid or too complicated.")
-    }
-    /// or operator.
-    pub fn or(solid0: &Solid, solid1: &Solid) -> Solid {
-        truck_shapeops::or(solid0, solid1, SHAPEOPS_TOLERANCE)
-            .expect("Shape is invalid or too complicated.")
-    }
-    /// not operator.
-    pub fn not(solid: &Solid) -> Solid {
-        let mut solid = solid.clone();
-        solid.not();
-        solid
-    }
-    /// and operator with some options.
-    pub fn try_and_with_tolerance(solid0: &Solid, solid1: &Solid, tol: f64) -> Option<Solid> {
-        truck_shapeops::and(solid0, solid1, tol)
-    }
-    /// or operator with some options.
-    pub fn try_or_with_tolerance(solid0: &Solid, solid1: &Solid, tol: f64) -> Option<Solid> {
-        truck_shapeops::or(solid0, solid1, tol)
-    }
-}
 mod closed_sweep;
 /// declare errors
 pub mod errors;

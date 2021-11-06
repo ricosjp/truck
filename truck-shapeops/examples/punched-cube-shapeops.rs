@@ -9,8 +9,9 @@ fn main() {
     let v = builder::vertex(Point3::new(0.5, 0.25, -0.5));
     let w = builder::rsweep(&v, Point3::new(0.5, 0.5, 0.0), Vector3::unit_z(), Rad(7.0));
     let f = builder::try_attach_plane(&[w]).unwrap();
-    let cylinder = shapeops::not(&builder::tsweep(&f, Vector3::unit_z() * 2.0));
-    let and = shapeops::and(&cube, &cylinder);
+    let mut cylinder = builder::tsweep(&f, Vector3::unit_z() * 2.0);
+    cylinder.not();
+    let and = truck_shapeops::and(&cube, &cylinder, 0.05).unwrap();
 
     let json = serde_json::to_vec_pretty(&and.compress()).unwrap();
     std::fs::write("punched-cube-shapeops.json", &json).unwrap();
