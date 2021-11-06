@@ -174,6 +174,3 @@ fn random_normal_3d() -> Vector3 {
 		f64::sqrt(-2.0 * f64::ln(z)) * f64::cos(2.0 * PI * w),
 	)
 }
-
-#[cfg(test)]
-mod tests;
