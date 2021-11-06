@@ -30,7 +30,7 @@ impl<'a, T: SearchParameter> SearchParameter for &'a T {
         hint: Option<Self::Parameter>,
         trial: usize,
     ) -> Option<Self::Parameter> {
-        T::search_parameter(&*self, point, hint, trial)
+        T::search_parameter(*self, point, hint, trial)
     }
 }
 
@@ -59,7 +59,7 @@ impl<'a, T: SearchNearestParameter> SearchNearestParameter for &'a T {
         hint: Option<Self::Parameter>,
         trial: usize,
     ) -> Option<Self::Parameter> {
-        T::search_nearest_parameter(&*self, point, hint, trial)
+        T::search_nearest_parameter(*self, point, hint, trial)
     }
 }
 
