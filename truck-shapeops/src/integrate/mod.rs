@@ -1,6 +1,7 @@
 use crate::*;
 use std::f64::consts::PI;
 use truck_meshalgo::prelude::*;
+use truck_geometry::IntersectionCurve;
 use truck_topology::*;
 
 /// Only solids consisting of faces whose surface is implemented this trait can be used for set operations.
@@ -9,11 +10,9 @@ pub trait ShapeOpsSurface:
 	+ ParameterDivision2D
 	+ SearchParameter<Point = Point3, Parameter = (f64, f64)>
 	+ SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
-	+ Invertible
-{
+	+ Invertible {
 }
-impl<S> ShapeOpsSurface for S where
-	S: ParametricSurface3D
+impl<S> ShapeOpsSurface for S where S: ParametricSurface3D
 		+ ParameterDivision2D
 		+ SearchParameter<Point = Point3, Parameter = (f64, f64)>
 		+ SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
@@ -29,12 +28,9 @@ pub trait ShapeOpsCurve<S: ShapeOpsSurface>:
 	+ Invertible
 	+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
 	+ SearchParameter<Point = Point3, Parameter = f64>
-	+ SearchNearestParameter<Point = Point3, Parameter = f64>
-{
+	+ SearchNearestParameter<Point = Point3, Parameter = f64> {
 }
-
-impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where
-	C: ParametricCurve3D
+impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where C: ParametricCurve3D
 		+ ParameterDivision1D<Point = Point3>
 		+ Cut
 		+ Invertible
@@ -44,15 +40,11 @@ impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where
 {
 }
 
-fn process_one_pair_of_shells<C, S>(
+fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
 	shell0: &Shell<Point3, C, S>,
 	shell1: &Shell<Point3, C, S>,
 	tol: f64,
-) -> Option<[Shell<Point3, C, S>; 2]>
-where
-	C: ShapeOpsCurve<S>,
-	S: ShapeOpsSurface,
-{
+) -> Option<[Shell<Point3, C, S>; 2]> {
 	nonpositive_tolerance!(tol);
 	let poly_shell0 = shell0.triangulation(tol)?;
 	let poly_shell1 = shell1.triangulation(tol)?;
@@ -115,15 +107,11 @@ where
 }
 
 /// AND operation between two solids.
-pub fn and<C, S>(
+pub fn and<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
 	solid0: &Solid<Point3, C, S>,
 	solid1: &Solid<Point3, C, S>,
 	tol: f64,
-) -> Option<Solid<Point3, C, S>>
-where
-	C: ShapeOpsCurve<S>,
-	S: ShapeOpsSurface,
-{
+) -> Option<Solid<Point3, C, S>> {
 	let mut iter0 = solid0.boundaries().iter();
 	let mut iter1 = solid1.boundaries().iter();
 	let shell0 = iter0.next().unwrap();
@@ -142,24 +130,11 @@ where
 }
 
 /// OR operation between two solids.
-pub fn or<C, S>(
+pub fn or<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
 	solid0: &Solid<Point3, C, S>,
 	solid1: &Solid<Point3, C, S>,
 	tol: f64,
-) -> Option<Solid<Point3, C, S>>
-where
-	C: Cut<Point = Point3, Vector = Vector3>
-		+ ParameterDivision1D<Point = Point3>
-		+ Invertible
-		+ From<IntersectionCurve<PolylineCurve<Point3>, S>>
-		+ SearchParameter<Point = Point3, Parameter = f64>
-		+ SearchNearestParameter<Point = Point3, Parameter = f64>,
-	S: ParametricSurface3D
-		+ ParameterDivision2D
-		+ SearchParameter<Point = Point3, Parameter = (f64, f64)>
-		+ SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
-		+ Invertible,
-{
+) -> Option<Solid<Point3, C, S>> {
 	let mut iter0 = solid0.boundaries().iter();
 	let mut iter1 = solid1.boundaries().iter();
 	let shell0 = iter0.next().unwrap();
