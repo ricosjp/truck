@@ -29,6 +29,8 @@ pub trait IntoWasm: Sized {
 
 mod shape;
 pub use shape::{AbstractShape, Edge, Face, Shell, Solid, Vertex, Wire};
+/// the boolean operators: `and`, `or`, `not`.
+pub mod shapeops;
 /// the building model utility API
 pub mod builder;
 mod polygon;
