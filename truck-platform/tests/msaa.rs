@@ -22,7 +22,7 @@ fn exec_msaa_test(backend: Backends, out_dir: &str) {
     std::fs::create_dir_all(&out_dir).unwrap();
     let handler = common::init_device(backend);
     let mut scene = Scene::new(
-        handler.clone(),
+        handler,
         &SceneDescriptor {
             backend_buffer: BackendBufferConfig {
                 sample_count: 1,
