@@ -25,7 +25,7 @@ const e = Truck.tsweep(v.upcast(), [1.0, 0.0, 0.0]);
 const f = Truck.tsweep(e, [0.0, 1.0, 0.0]);
 const abst = Truck.tsweep(f, [0.0, 0.0, 1.0]);
 const solid = abst.into_solid();
-const polygon = solid.to_polygon(0.01);
+let polygon = solid.to_polygon(0.01);
 const object = polygon.to_buffer();
 let vBuffer = object.vertex_buffer();
 let iBuffer = object.index_buffer();
@@ -49,6 +49,7 @@ function onLoad () {
   c.addEventListener("mouseup", mouseUp);
 
   document.querySelector("input").addEventListener("change", fileRead);
+  document.getElementById("download-mesh").addEventListener("click", downloadObj);
 
   gl = c.getContext("webgl2") || c.getContext("experimental-webgl");
 
@@ -222,7 +223,7 @@ function fileRead(e) {
       console.warn("invalid json");
       return;
     }
-    const polygon = solid.to_polygon(0.01);
+    polygon = solid.to_polygon(0.01);
     if (typeof polygon === "undefined") {
       console.warn("meshing failed");
       return;
@@ -245,6 +246,24 @@ function fileRead(e) {
     indexLength = object.index_buffer_size() / 4;
     loaded = true;
   };
+}
+
+function downloadObj(e) {
+  e.preventDefault();
+  const obj = polygon.to_obj();
+  if (typeof obj === "undefined") {
+    console.warn("Failed to generate obj.")
+    return;
+  }
+  const blob = new Blob([(new TextDecoder()).decode(obj)], {type: "text/plain"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  document.body.appendChild(a);
+  a.download = "meshdata.obj";
+  a.href = url;
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function createProgram(vs, fs) {
