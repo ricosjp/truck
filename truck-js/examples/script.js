@@ -75,7 +75,7 @@ function onLoad () {
   gl.clearDepth(1.0);
 
   render();
-};
+}
 
 function render() {
   if (loaded) {

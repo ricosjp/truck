@@ -9,8 +9,8 @@ Deno.test("tseep cube", async () => {
   const abst = Truck.tsweep(f, [0.0, 0.0, 1.0]);
   const solid = abst.into_solid();
   const vec = solid.to_json();
-  const read_vec = await Deno.readFile("./tests/cube.json");
-  assertEquals(vec, read_vec);
+  const readVec = await Deno.readFile("./tests/cube.json");
+  assertEquals(vec, readVec);
 });
 
 Deno.test("rseep torus", async () => {
@@ -31,6 +31,6 @@ Deno.test("rseep torus", async () => {
   const shell = abst.into_shell();
   const solid = shell.into_solid();
   const vec = solid.to_json();
-  const read_vec = await Deno.readFile("./tests/torus.json");
-  assertEquals(vec, read_vec);
+  const readVec = await Deno.readFile("./tests/torus.json");
+  assertEquals(vec, readVec);
 });
