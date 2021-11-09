@@ -1,5 +1,6 @@
 use crate::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use winit::window::Window;
 
 static MAXID: AtomicUsize = AtomicUsize::new(0);
 
@@ -10,7 +11,7 @@ impl RenderID {
 }
 
 async fn init_default_device(
-    window: Option<Arc<winit::window::Window>>,
+    window: Option<Arc<Window>>,
 ) -> (DeviceHandler, Option<WindowHandler>) {
     #[cfg(not(feature = "webgl"))]
     let instance = Instance::new(Backends::PRIMARY);
@@ -57,7 +58,7 @@ async fn init_default_device(
     };
     let window_handler = window.map(|window| WindowHandler {
         window,
-        surface: surface.unwrap(),
+        surface: Arc::new(surface.unwrap()),
     });
     (device_handler, window_handler)
 }
@@ -775,10 +776,7 @@ impl Scene {
 
 impl WindowScene {
     /// Initialize scene compatible with `window`.
-    pub async fn from_window(
-        window: Arc<winit::window::Window>,
-        scene_desc: &WindowSceneDescriptor,
-    ) -> Self {
+    pub async fn from_window(window: Arc<Window>, scene_desc: &WindowSceneDescriptor) -> Self {
         let size = window.inner_size();
         let got = init_default_device(Some(window)).await;
         let (device_handler, window_handler) = (got.0, got.1.unwrap());
@@ -804,24 +802,28 @@ impl WindowScene {
             window_handler,
         }
     }
-
-    /// Render scene to initialized window.
-    pub fn render_frame(&mut self) {
-        let WindowHandler {
-            ref window,
-            ref surface,
-        } = &self.window_handler;
-        {
-            let size = window.inner_size();
-            let canvas_size = self.scene.scene_desc.render_texture.canvas_size;
-            if canvas_size != (size.width, size.height) {
-                let mut desc = self.scene.descriptor_mut();
-                desc.render_texture.canvas_size = size.into();
-                let config = desc.render_texture.compatible_surface_config();
-                drop(desc);
-                surface.configure(self.device(), &config);
-            }
+    /// Get the reference of initializing window.
+    #[inline(always)]
+    pub fn window(&self) -> &Arc<Window> { &self.window_handler.window }
+    /// Get the reference of surface.
+    #[inline(always)]
+    pub fn surface(&self) -> &Arc<Surface> { &self.window_handler.surface }
+    /// Adjusts the size of the backend buffers (depth or sampling buffer) to the size of the window.
+    pub fn size_alignment(&mut self) {
+        let size = self.window().inner_size();
+        let canvas_size = self.scene.scene_desc.render_texture.canvas_size;
+        if canvas_size != (size.width, size.height) {
+            let mut desc = self.scene.descriptor_mut();
+            desc.render_texture.canvas_size = size.into();
+            let config = desc.render_texture.compatible_surface_config();
+            drop(desc);
+            self.surface().configure(self.device(), &config);
         }
+    }
+    /// Render scene to initializing window.
+    pub fn render_frame(&mut self) {
+        self.size_alignment();
+        let surface = self.surface();
         let surface_texture = match surface.get_current_texture() {
             Ok(got) => got,
             Err(_) => {

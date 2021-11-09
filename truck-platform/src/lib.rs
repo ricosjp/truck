@@ -207,7 +207,7 @@ pub struct DeviceHandler {
 #[derive(Debug)]
 struct WindowHandler {
     window: Arc<winit::window::Window>,
-    surface: Surface,
+    surface: Arc<Surface>,
 }
 
 /// The unique ID for `Rendered` struct.
