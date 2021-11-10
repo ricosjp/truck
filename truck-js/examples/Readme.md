@@ -5,8 +5,7 @@
 ### Prepare
 
 ```bash
-cargo install wasm-pack
-cargo install basic-http-server
+cargo install wasm-pack basic-http-server
 ```
 
 ### Running script
