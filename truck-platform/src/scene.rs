@@ -119,7 +119,9 @@ impl Default for RenderTextureConfig {
 }
 
 impl RenderTextureConfig {
-    fn compatible_surface_config(self) -> SurfaceConfiguration {
+    /// Returns compatible `SurfaceConfiguation`.
+    #[inline(always)]
+    pub fn compatible_surface_config(self) -> SurfaceConfiguration {
         SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             format: self.format,
