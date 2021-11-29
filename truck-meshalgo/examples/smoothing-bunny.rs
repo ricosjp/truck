@@ -7,10 +7,7 @@ use truck_meshalgo::filters::*;
 use truck_polymesh::*;
 
 fn main() {
-    const PATH: &str = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../resources/obj/bunny.obj",
-    );
+    const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/obj/bunny.obj",);
     std::fs::copy(PATH, "bunny.obj").unwrap();
     let file = std::fs::File::open(PATH).unwrap();
     let mut mesh = obj::read(file).unwrap();

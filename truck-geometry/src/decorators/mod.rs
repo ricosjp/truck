@@ -116,7 +116,20 @@ pub struct PCurve<C, S> {
     surface: S,
 }
 
+/// Intersection curve between two surfaces.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntersectionCurve<C, S> {
+    // Considering rotational surfaces, we can consider the case
+    // where the class `S` holds the curve `C` as a variable.
+    surface0: Box<S>,
+    surface1: Box<S>,
+    leader: C,
+    tol: f64,
+}
+
 mod curve_on_surface;
 mod extruded_curve;
+mod intersection_curve;
 mod processor;
 mod revolved_curve;
+pub use intersection_curve::double_projection;

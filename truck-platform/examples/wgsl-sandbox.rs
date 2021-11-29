@@ -26,11 +26,13 @@
 //!
 //! Also, see the sample `newton-cuberoot.wgsl`, default shader, in `examples`.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow;
+
+const DEFAULT_SHADER: &str = include_str!("newton-cuberoot.wgsl");
 
 /// minimum example for implementing `Rendered`.
 mod plane {
@@ -45,13 +47,10 @@ mod plane {
 
     const BASE_PREFIX: &str = "[[block]]
 struct SceneInfo {
+    background_color: vec4<f32>;
+    resolution: vec2<u32>;
     time: f32;
     nlights: u32;
-};
-
-[[block]]
-struct Resolution {
-    resolution: vec2<f32>;
 };
 
 [[block]]
@@ -63,9 +62,6 @@ struct Mouse {
 var<uniform> info__: SceneInfo;
 
 [[group(1), binding(0)]]
-var<uniform> resolution__: Resolution;
-
-[[group(1), binding(1)]]
 var<uniform> mouse__: Mouse;
 
 struct Environment {
@@ -89,12 +85,12 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
 [[stage(fragment)]]
 fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f32> {
     var env: Environment;
-    env.resolution = resolution__.resolution;
+    env.resolution = vec2<f32>(info__.resolution);
     env.mouse = mouse__.mouse;
     env.time = info__.time;
     let coord = vec2<f32>(
         position.x,
-        resolution__.resolution.y - position.y,
+        env.resolution.y - position.y,
     );
     return main_image(coord, env);
 }
@@ -126,44 +122,30 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                     .device()
                     .create_bind_group_layout(&BindGroupLayoutDescriptor {
                         label: None,
-                        entries: &[
-                            BindGroupLayoutEntry {
-                                binding: 0,
-                                visibility: ShaderStages::FRAGMENT,
-                                ty: BindingType::Buffer {
-                                    ty: BufferBindingType::Uniform,
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
+                        entries: &[BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: ShaderStages::FRAGMENT,
+                            ty: BindingType::Buffer {
+                                ty: BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
                             },
-                            BindGroupLayoutEntry {
-                                binding: 1,
-                                visibility: ShaderStages::FRAGMENT,
-                                ty: BindingType::Buffer {
-                                    ty: BufferBindingType::Uniform,
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
-                        ],
+                            count: None,
+                        }],
                     }),
             )
         }
         // bind group is only one uniform buffer: resolution
         fn bind_group(&self, handler: &DeviceHandler, layout: &BindGroupLayout) -> Arc<BindGroup> {
-            let config = handler.config();
-            let resolution = [config.width as f32, config.height as f32];
             Arc::new(bind_group_util::create_bind_group(
                 handler.device(),
                 layout,
-                vec![
-                    BufferHandler::from_slice(&resolution, handler.device(), BufferUsages::UNIFORM)
-                        .binding_resource(),
-                    BufferHandler::from_slice(&self.mouse, handler.device(), BufferUsages::UNIFORM)
-                        .binding_resource(),
-                ],
+                vec![BufferHandler::from_slice(
+                    &self.mouse,
+                    handler.device(),
+                    BufferUsages::UNIFORM,
+                )
+                .binding_resource()],
             ))
         }
 
@@ -172,9 +154,13 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
             &self,
             handler: &DeviceHandler,
             layout: &PipelineLayout,
-            sample_count: u32,
+            scene_desc: &SceneDescriptor,
         ) -> Arc<RenderPipeline> {
-            let config = handler.config();
+            let SceneDescriptor {
+                backend_buffer,
+                render_texture,
+                ..
+            } = scene_desc;
             Arc::new(
                 handler
                     .device()
@@ -197,7 +183,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             module: &self.module,
                             entry_point: "fs_main",
                             targets: &[ColorTargetState {
-                                format: config.format,
+                                format: render_texture.format,
                                 blend: Some(BlendState::REPLACE),
                                 write_mask: ColorWrites::ALL,
                             }],
@@ -218,7 +204,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             bias: Default::default(),
                         }),
                         multisample: MultisampleState {
-                            count: sample_count,
+                            count: backend_buffer.sample_count,
                             mask: !0,
                             alpha_to_coverage_enabled: false,
                         },
@@ -274,70 +260,21 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
 use plane::Plane;
 
 async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window::Window) {
-    let size = window.inner_size();
-    #[cfg(not(feature = "webgl"))]
-    let instance = Instance::new(Backends::PRIMARY);
-    #[cfg(feature = "webgl")]
-    let instance = Instance::new(Backends::all());
-    let surface = unsafe { instance.create_surface(&window) };
-
-    let adapter = instance
-        .request_adapter(&RequestAdapterOptions {
-            #[cfg(not(feature = "webgl"))]
-            power_preference: PowerPreference::HighPerformance,
-            #[cfg(feature = "webgl")]
-            power_preference: PowerPreference::LowPower,
-            compatible_surface: Some(&surface),
-            force_fallback_adapter: false,
-        })
-        .await
-        .unwrap();
-
-    let (device, queue) = adapter
-        .request_device(
-            &DeviceDescriptor {
-                features: Default::default(),
-                #[cfg(not(feature = "webgl"))]
-                limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
-                #[cfg(feature = "webgl")]
-                limits: Limits::downlevel_webgl2_defaults(),
-                label: None,
-            },
-            None,
-        )
-        .await
-        .unwrap();
-
-    let config = SurfaceConfiguration {
-        usage: TextureUsages::RENDER_ATTACHMENT,
-        format: surface.get_preferred_format(&adapter).unwrap(),
-        width: size.width,
-        height: size.height,
-        present_mode: PresentMode::Mailbox,
-    };
-
-    let surface = unsafe { instance.create_surface(&window) };
-    surface.configure(&device, &config);
-    // let mut swap_chain = device.create_swap_chain(&surface, &config);
-    let handler = DeviceHandler::new(
-        Arc::new(device),
-        Arc::new(queue),
-        Arc::new(Mutex::new(config)),
-    );
-    let mut scene = Scene::new(handler.clone(), &Default::default());
+    let window = Arc::new(window);
+    let mut scene = WindowScene::from_window(Arc::clone(&window), &Default::default()).await;
     let args: Vec<_> = std::env::args().collect();
     let source = if args.len() > 1 {
         match std::fs::read_to_string(&args[1]) {
             Ok(code) => code,
             Err(error) => {
                 println!("{:?}", error);
-                include_str!("newton-cuberoot.wgsl").to_string()
+                DEFAULT_SHADER.to_string()
             }
         }
     } else {
-        include_str!("newton-cuberoot.wgsl").to_string()
+        DEFAULT_SHADER.to_string()
     };
-    let mut plane = Plane::new(handler.device(), &source);
+    let mut plane = Plane::new(scene.device(), &source);
     // Adds a plane to the scene!
     scene.add_object(&plane);
 
@@ -352,39 +289,19 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
             }
             Event::RedrawRequested(_) => {
                 scene.update_bind_group(&plane);
-                let surface_texture = match surface.get_current_texture() {
-                    Ok(got) => got,
-                    Err(_) => {
-                        surface.configure(handler.device(), &handler.config());
-                        surface
-                            .get_current_texture()
-                            .expect("Failed to acquire next surface texture!")
-                    }
-                };
-                let view = surface_texture
-                    .texture
-                    .create_view(&wgpu::TextureViewDescriptor::default());
-                scene.render_scene(&view);
                 if clicked {
                     plane.mouse[3] = -plane.mouse[3];
                     clicked = false;
                 }
-                surface_texture.present();
+                scene.render_frame();
                 ControlFlow::Poll
             }
             Event::WindowEvent { event, .. } => match event {
-                WindowEvent::Resized(size) => {
-                    let mut config = handler.lock_config().unwrap();
-                    config.width = size.width;
-                    config.height = size.height;
-                    surface.configure(handler.device(), &config);
-                    ControlFlow::Poll
-                }
                 WindowEvent::CloseRequested => ControlFlow::Exit,
                 WindowEvent::DroppedFile(path) => {
                     match std::fs::read_to_string(path) {
                         Ok(code) => {
-                            plane.set_shader(handler.device(), &code);
+                            plane.set_shader(scene.device(), &code);
                             scene.update_pipeline(&plane);
                         }
                         Err(error) => println!("{:?}", error),
@@ -405,7 +322,7 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
                     ControlFlow::Poll
                 }
                 WindowEvent::CursorMoved { position, .. } => {
-                    let height = scene.config().height as f32;
+                    let height = scene.descriptor().render_texture.canvas_size.1 as f32;
                     cursor = [position.x as f32, height - position.y as f32];
                     if dragging {
                         plane.mouse[0] = cursor[0];
@@ -426,7 +343,7 @@ fn main() {
     wb = wb.with_title("wGSL Sandbox");
     let window = wb.build(&event_loop).unwrap();
     #[cfg(not(target_arch = "wasm32"))]
-    futures::executor::block_on(run(event_loop, window));
+    pollster::block_on(run(event_loop, window));
     #[cfg(target_arch = "wasm32")]
     {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));

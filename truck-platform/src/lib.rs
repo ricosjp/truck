@@ -44,7 +44,8 @@ extern crate bytemuck;
 extern crate truck_base;
 pub extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
-use std::sync::{Arc, Mutex};
+use derive_more::*;
+use std::sync::Arc;
 use truck_base::cgmath64::*;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
@@ -71,6 +72,7 @@ struct LightInfo {
 #[derive(Clone, Copy, Debug, Zeroable, Pod)]
 struct SceneInfo {
     background_color: [f32; 4],
+    resolution: [u32; 2],
     time: f32,
     num_of_lights: u32,
 }
@@ -94,29 +96,7 @@ pub struct BufferHandler {
 /// use std::sync::{Arc, Mutex};
 /// use truck_platform::*;
 /// use wgpu::*;
-/// // let device: Device = ...
-/// # let instance = Instance::new(Backends::PRIMARY);
-/// # let (device, queue) = futures::executor::block_on(async {
-/// #    let adapter = instance
-/// #        .request_adapter(&RequestAdapterOptions {
-/// #            power_preference: PowerPreference::HighPerformance,
-/// #            compatible_surface: None,
-/// #            force_fallback_adapter: false,            
-/// #        })
-/// #        .await
-/// #        .unwrap();
-/// #    adapter
-/// #        .request_device(
-/// #            &DeviceDescriptor {
-/// #                features: Default::default(),
-/// #                limits: Limits::default(),
-/// #                label: None,
-/// #            },
-/// #            None,
-/// #        )
-/// #        .await
-/// #        .unwrap()
-/// # });
+/// let handler = pollster::block_on(DeviceHandler::default_device());
 /// let entries = [
 ///     PreBindGroupLayoutEntry {
 ///         visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
@@ -137,7 +117,7 @@ pub struct BufferHandler {
 ///         count: None,
 ///     },
 /// ];
-/// let layout: BindGroupLayout = bind_group_util::create_bind_group_layout(&device, &entries);
+/// let layout: BindGroupLayout = bind_group_util::create_bind_group_layout(handler.device(), &entries);
 /// ```
 ///
 /// [`BindGroupLayoutEntry`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.BindGroupLayoutEntry.html
@@ -173,7 +153,7 @@ pub enum ProjectionType {
 /// Camera
 ///
 /// A [`Scene`](./struct.Scene.html) holds only one `Camera`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Camera {
     /// camera matrix
     ///
@@ -212,47 +192,6 @@ pub struct Light {
 /// This struct is used for creating [`Scene`].
 /// [`Device`] and [`Queue`] must be wrapped `Arc`,
 /// and [`SurfaceConfiguration`] `Arc<Mutex>`.
-/// # Examples
-/// ```
-/// use std::sync::{Arc, Mutex};
-/// use truck_platform::*;
-/// use wgpu::*;
-/// let instance = Instance::new(Backends::PRIMARY);
-/// let (device, queue) = futures::executor::block_on(async {
-///     let adapter = instance
-///         .request_adapter(&RequestAdapterOptions {
-///             power_preference: PowerPreference::HighPerformance,
-///             compatible_surface: None,
-///             force_fallback_adapter: false,
-///         })
-///         .await
-///         .unwrap();
-///     adapter
-///         .request_device(
-///             &DeviceDescriptor {
-///                 features: Default::default(),
-///                 limits: Limits::default(),
-///                 label: None,
-///             },
-///             None,
-///         )
-///         .await
-///         .unwrap()
-/// });
-/// let config = SurfaceConfiguration {
-///     usage: TextureUsages::RENDER_ATTACHMENT,
-///     format: TextureFormat::Bgra8UnormSrgb,
-///     width: 512,
-///     height: 512,
-///     present_mode: PresentMode::Mailbox,
-/// };
-/// // creates SwapChain or Texture to draw by Scene.
-/// let device_handler = DeviceHandler::new(
-///     Arc::new(device),
-///     Arc::new(queue),
-///     Arc::new(Mutex::new(config)),
-/// );
-/// ```
 ///
 /// [`Device`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.Device.html
 /// [`Queue`]: https://docs.rs/wgpu/0.10.1/wgpu/struct.Queue.html
@@ -260,9 +199,15 @@ pub struct Light {
 /// [`Scene`]: ./struct.Scene.html
 #[derive(Debug, Clone)]
 pub struct DeviceHandler {
+    adapter: Arc<Adapter>,
     device: Arc<Device>,
     queue: Arc<Queue>,
-    config: Arc<Mutex<SurfaceConfiguration>>,
+}
+
+#[derive(Debug)]
+struct WindowHandler {
+    window: Arc<winit::window::Window>,
+    surface: Arc<Surface>,
 }
 
 /// The unique ID for `Rendered` struct.
@@ -280,17 +225,54 @@ pub struct DeviceHandler {
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct RenderID(usize);
 
-/// Configures of [`Scene`](./struct.Scene.html).
+/// Configuation for studio to shoot the scene.
 #[derive(Debug, Clone)]
-pub struct SceneDescriptor {
-    /// background color. Default is `Color::BLACK`.
-    pub background: Color,
+pub struct StudioConfig {
     /// camera of the scene. Default is `Camera::default()`.
     pub camera: Camera,
     /// All lights in the scene. Default is `vec![Light::default()]`.
     pub lights: Vec<Light>,
-    /// sample count for anti-aliasing by MSAA. 1, 2, 4, 8, or 16.
+    /// background color. Default is `Color::BLACK`.
+    pub background: Color,
+}
+
+/// Configuation for buffer preparation
+#[derive(Clone, Debug, Copy)]
+pub struct BackendBufferConfig {
+    /// depth test flag. Default is `true`.
+    pub depth_test: bool,
+    /// sample count for anti-aliasing by MSAA. 1, 2, 4, 8, or 16. Default is `1`.
     pub sample_count: u32,
+}
+
+/// Configuation for rendering texture
+#[derive(Clone, Debug, Copy)]
+pub struct RenderTextureConfig {
+    /// canvas size `(width, height)`. Default is `(1024, 768)`.
+    pub canvas_size: (u32, u32),
+    /// texture format. Default is `TextureFormat::Rgba8UnormSrgb`.
+    pub format: TextureFormat,
+}
+
+/// Configures of [`Scene`](./struct.Scene.html).
+#[derive(Debug, Clone, Default)]
+pub struct SceneDescriptor {
+    /// Configures for studio i.e. camera, lights, and background.
+    pub studio: StudioConfig,
+    /// Configures buffer preparation, depth and MSAA.
+    pub backend_buffer: BackendBufferConfig,
+    /// Configuation for rendering texture
+    pub render_texture: RenderTextureConfig,
+}
+
+/// Configures of [`WindowScene`](./struct.WindowScene.html).
+/// Compared to the structure `SceneDescriptor`, this excludes `render_texture`, which can be obtained from window.
+#[derive(Debug, Clone, Default)]
+pub struct WindowSceneDescriptor {
+    /// Configures for studio i.e. camera, lights, and background.
+    pub studio: StudioConfig,
+    /// Configures buffer preparation, depth and MSAA.
+    pub backend_buffer: BackendBufferConfig,
 }
 
 /// Wraps `wgpu` and provides an intuitive graphics API.
@@ -303,12 +285,19 @@ pub struct Scene {
     device_handler: DeviceHandler,
     objects: SliceHashMap<RenderID, RenderObject>,
     bind_group_layout: BindGroupLayout,
-    foward_depth: Texture,
-    depth_texture_size: (u32, u32), // (width, height)
-    sampling_buffer: Texture,
-    previous_sample_count: u32,
-    clock: instant::Instant,
+    foward_depth: Option<Texture>,
+    sampling_buffer: Option<Texture>,
     scene_desc: SceneDescriptor,
+    clock: instant::Instant,
+}
+
+/// Utility for wrapp
+#[derive(Debug, Deref, DerefMut)]
+pub struct WindowScene {
+    #[deref]
+    #[deref_mut]
+    scene: Scene,
+    window_handler: WindowHandler,
 }
 
 /// Rendered objects in the scene.
@@ -336,7 +325,7 @@ pub trait Rendered {
         &self,
         device_handler: &DeviceHandler,
         layout: &PipelineLayout,
-        sample_count: u32,
+        scene_descriptor: &SceneDescriptor,
     ) -> Arc<RenderPipeline>;
     #[doc(hidden)]
     fn render_object(&self, scene: &Scene) -> RenderObject {
@@ -350,11 +339,7 @@ pub trait Rendered {
                 push_constant_ranges: &[],
                 label: None,
             });
-        let pipeline = self.pipeline(
-            scene.device_handler(),
-            &pipeline_layout,
-            scene.scene_desc.sample_count,
-        );
+        let pipeline = self.pipeline(scene.device_handler(), &pipeline_layout, &scene.scene_desc);
         RenderObject {
             vertex_buffer,
             index_buffer,

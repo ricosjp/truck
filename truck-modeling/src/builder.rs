@@ -51,7 +51,7 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
 /// let semi_circle = builder::circle_arc(&vertex0, &vertex1, Point3::new(0.0, 1.0, 0.0));
 /// # let curve = match semi_circle.oriented_curve() {
 /// #       Curve::NURBSCurve(curve) => curve,
-/// #       Curve::BSplineCurve(_) => panic!("this is bspcurve"),
+/// #       _ => unreachable!(),
 /// # };
 /// # const N: usize = 10;
 /// # for i in 0..=N {
@@ -187,7 +187,8 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
         let v0 = edge.front().clone();
         let v2 = edge.back().clone();
         let mut curve = edge.get_curve();
-        let t = curve.knot_vec()[0] + curve.knot_vec().range_length() * 0.5;
+        let (t0, t1) = curve.parameter_range();
+        let t = (t0 + t1) * 0.5;
         let v1 = Vertex::new(curve.subs(t));
         let curve1 = curve.cut(t);
         wire.push_back(Edge::debug_new(&v0, &v1, curve));

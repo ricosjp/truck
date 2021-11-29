@@ -32,4 +32,6 @@ pub use shape::{AbstractShape, Edge, Face, Shell, Solid, Vertex, Wire};
 /// the building model utility API
 pub mod builder;
 mod polygon;
+/// the boolean operators: `and`, `or`, `not`.
+pub mod shapeops;
 pub use polygon::{PolygonBuffer, PolygonMesh, STLType};

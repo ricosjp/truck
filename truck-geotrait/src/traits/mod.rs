@@ -21,6 +21,19 @@ pub trait SearchParameter {
     ) -> Option<Self::Parameter>;
 }
 
+impl<'a, T: SearchParameter> SearchParameter for &'a T {
+    type Point = T::Point;
+    type Parameter = T::Parameter;
+    fn search_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter> {
+        T::search_parameter(*self, point, hint, trial)
+    }
+}
+
 /// Search parameter `t` such that `self.subs(t)` is nearest point.
 pub trait SearchNearestParameter {
     /// point
@@ -35,6 +48,19 @@ pub trait SearchNearestParameter {
         hint: Option<Self::Parameter>,
         trial: usize,
     ) -> Option<Self::Parameter>;
+}
+
+impl<'a, T: SearchNearestParameter> SearchNearestParameter for &'a T {
+    type Point = T::Point;
+    type Parameter = T::Parameter;
+    fn search_nearest_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter> {
+        T::search_nearest_parameter(*self, point, hint, trial)
+    }
 }
 
 /// Oriented and reversible
