@@ -22,7 +22,7 @@ The broad concept consists of the following three elements.
 
 ### Theseus' ship
 
-- We are modularizing into smaller crates that can be replaced, like [the Ship of Teseus](https://en.wikipedia.org/wiki/Ship_of_Theseus).
+- We are modularizing into smaller crates that can be replaced, like [the Ship of Theseus](https://en.wikipedia.org/wiki/Ship_of_Theseus).
 - Based on the many lessons learned in the past, we have given up on overall optimization as a single application, and design as a collection of individual optimized crates.
 - Since unexpected expansions are bound to occur, we deal with uncontrolled expansions in the form of small modules.
 
