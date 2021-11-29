@@ -61,7 +61,6 @@ pub trait IncludingPointInDomain {
 	///
 	/// # Examples
 	/// ```
-	/// use std::iter::FromIterator;
 	/// use truck_meshalgo::prelude::*;
 	/// let simplex = PolygonMesh::new(
 	///     StandardAttributes {
@@ -89,7 +88,6 @@ pub trait IncludingPointInDomain {
 	///
 	/// # Examples
 	/// ```
-	/// use std::iter::FromIterator;
 	/// use truck_meshalgo::prelude::*;
 	/// let simplex = PolygonMesh::new(
 	///     StandardAttributes {

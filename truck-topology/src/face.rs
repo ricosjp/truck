@@ -642,7 +642,6 @@ impl<P, C, S> Face<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 4]);
     /// let shared_edge = Edge::new(&v[0], &v[1], ());
     /// let another_edge = Edge::new(&v[0], &v[1], ());

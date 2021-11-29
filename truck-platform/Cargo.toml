@@ -2,7 +2,7 @@
 name = "truck-platform"
 version = "0.2.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2018"
+edition = "2021"
 description = "graphic utility library based on wgpu"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"

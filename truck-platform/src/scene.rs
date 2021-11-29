@@ -729,7 +729,6 @@ impl Scene {
 
     /// Render image to buffer.
     pub async fn render_to_buffer(&self) -> Vec<u8> {
-        use std::convert::TryInto;
         let texture = self.compatible_texture();
         let view = texture.create_view(&Default::default());
         self.render(&view);

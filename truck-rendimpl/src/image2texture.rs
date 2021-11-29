@@ -1,6 +1,5 @@
 use super::*;
 use image::*;
-use std::convert::TryInto;
 
 /// Utility for creating `Texture` from `DynamicImage`
 #[inline(always)]

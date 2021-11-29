@@ -7,7 +7,6 @@ pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     /// # Examples
     /// ```
     /// use truck_polymesh::*;
-    /// use std::iter::FromIterator;
     /// use errors::Error;
     /// 
     /// let positions = vec![

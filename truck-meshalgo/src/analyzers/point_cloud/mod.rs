@@ -12,7 +12,6 @@ pub trait WithPointCloud {
     /// `tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
     /// use truck_meshalgo::prelude::*;
     /// let mesh = PolygonMesh::new(
     ///     StandardAttributes {

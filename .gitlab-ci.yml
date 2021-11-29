@@ -23,6 +23,7 @@ gpu-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
+        - /root/.cargo/bin/rustup update
         - /root/.cargo/bin/cargo make ci-gpu-test
     tags:
         - gpu
@@ -37,6 +38,7 @@ wasm-test:
         GIT_SUBMODULE_STRATEGY: recursive
     before_script:
         - rustup target add wasm32-unknown-unknown
+        - rustup update stable
     script:
         - deno lint
         - mkdir public
@@ -53,11 +55,12 @@ lint-check:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     before_script:
-        - rustup default nightly
-        - rustup component add clippy rustfmt
     script:
-        - cargo fmt -- --check
+        - rustup component add clippy
         - cargo clippy
+        - rustup default nightly
+        - rustup component add rustfmt
+        - cargo fmt -- --check
 
 pages:
     image: rust:latest

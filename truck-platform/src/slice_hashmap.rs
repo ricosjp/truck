@@ -79,7 +79,7 @@ impl<'a, K, V> IntoIterator for &'a SliceHashMap<K, V> {
 	}
 }
 
-impl<K: Copy + Eq + Hash, V> std::iter::FromIterator<(K, V)> for SliceHashMap<K, V> {
+impl<K: Copy + Eq + Hash, V> FromIterator<(K, V)> for SliceHashMap<K, V> {
 	fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
 		let mut res = Self::default();
 		iter.into_iter().enumerate().for_each(|(i, (key, val))| {

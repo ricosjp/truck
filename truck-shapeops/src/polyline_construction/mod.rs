@@ -105,7 +105,7 @@ impl Graph {
 	}
 }
 
-impl<'a> std::iter::FromIterator<&'a (Point3, Point3)> for Graph {
+impl<'a> FromIterator<&'a (Point3, Point3)> for Graph {
 	fn from_iter<I: IntoIterator<Item = &'a (Point3, Point3)>>(iter: I) -> Graph {
 		let mut res = Graph(HashMap::default());
 		iter.into_iter().for_each(|line| res.add_edge(*line));

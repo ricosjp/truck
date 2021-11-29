@@ -5,7 +5,6 @@ pub trait StructuringFilter {
     /// triangulate all n-gons
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     ///
@@ -54,7 +53,6 @@ pub trait StructuringFilter {
     /// `plane_tol` and `score_tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
-	/// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     ///

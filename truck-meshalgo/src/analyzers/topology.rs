@@ -62,7 +62,7 @@ impl Boundaries {
     }
 }
 
-impl std::iter::FromIterator<[Vertex; 2]> for Boundaries {
+impl FromIterator<[Vertex; 2]> for Boundaries {
     fn from_iter<I: IntoIterator<Item = [Vertex; 2]>>(iter: I) -> Boundaries {
         let mut boundaries = Boundaries::new();
         iter.into_iter().for_each(|edge| boundaries.insert(edge));

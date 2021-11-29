@@ -5,7 +5,6 @@
 //! by this package.
 //! ```
 //! use truck_topology::*;
-//! use std::iter::FromIterator;
 //!
 //! // Create vertices. A tetrahedron has four vertices.
 //! let v = Vertex::news(&[(), (), (), ()]);
@@ -134,7 +133,6 @@ pub struct Wire<P, C> {
 /// A face is uniquely identified by their `id`.
 /// ```
 /// use truck_topology::*;
-/// use std::iter::FromIterator;
 /// let v = Vertex::news(&[(), ()]);
 /// let edge0 = Edge::new(&v[0], &v[1], ());
 /// let edge1 = Edge::new(&v[1], &v[0], ());

@@ -1,3 +1,5 @@
+#![allow(clippy::many_single_char_names)]
+
 use crate::faces_classification::FacesClassification;
 use crate::loops_store::*;
 use rustc_hash::FxHashMap as HashMap;
