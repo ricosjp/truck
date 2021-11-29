@@ -2207,7 +2207,6 @@ fn test_include_bspcurve2() {
 
 #[test]
 fn test_include_bspcurve3() {
-    use FromIterator;
     let knot_vec = KnotVec::uniform_knot(2, 3);
     let ctrl_pts = vec![
         vec![

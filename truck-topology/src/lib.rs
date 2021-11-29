@@ -5,7 +5,6 @@
 //! by this package.
 //! ```
 //! use truck_topology::*;
-//! use FromIterator;
 //!
 //! // Create vertices. A tetrahedron has four vertices.
 //! let v = Vertex::news(&[(), (), (), ()]);

@@ -1,6 +1,5 @@
 use crate::*;
 use errors::Error;
-use FromIterator;
 
 type Vertex = StandardVertex;
 

@@ -1,5 +1,3 @@
-use FromIterator;
-
 // type definition for test
 type Vertex = truck_topology::Vertex<()>;
 type Edge = truck_topology::Edge<(), ()>;

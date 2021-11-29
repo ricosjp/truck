@@ -1,4 +1,3 @@
-use FromIterator;
 use truck_meshalgo::prelude::*;
 
 mod collision;

@@ -871,7 +871,6 @@ impl SearchParameter for NURBSSurface<Vector4> {
 
 #[test]
 fn test_include2d() {
-    use FromIterator;
     let knot_vec = KnotVec::uniform_knot(2, 3);
     let ctrl_pts = vec![
         vec![

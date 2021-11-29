@@ -125,7 +125,7 @@ impl<P, C> std::ops::DerefMut for LoopsStore<P, C> {
 impl<P, C> FromIterator<BoundaryWire<P, C>> for Loops<P, C> {
 	#[inline(always)]
 	fn from_iter<I: IntoIterator<Item = BoundaryWire<P, C>>>(iter: I) -> Self {
-		Self(FromIterator::from_iter(iter))
+		Self(Vec::from_iter(iter))
 	}
 }
 
