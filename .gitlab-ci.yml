@@ -55,11 +55,11 @@ lint-check:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     before_script:
-        - rustup default nightly
         - rustup component add clippy rustfmt
     script:
-        - cargo fmt -- --check
         - cargo clippy
+        - rustup default nightly
+        - cargo fmt -- --check
 
 pages:
     image: rust:latest

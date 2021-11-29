@@ -521,7 +521,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
                 .splitted_boundary()
                 .to_vec()
                 .into_iter()
-                .map(|curve| NURBSCurve::new(curve))
+                .map(NURBSCurve::new)
                 .collect::<Vec<_>>(),
         )
         .unwrap()
