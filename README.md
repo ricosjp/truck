@@ -1,5 +1,7 @@
 # truck - Truck is a rust CAD kernel
 
+‚Ä‚·‚Ä‚·‚Ä‚·‚Æ
+
 ## Overview
 
 Truck is an open-source shape processing kernel by Rust.  
