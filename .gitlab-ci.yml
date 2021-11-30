@@ -62,6 +62,14 @@ lint-check:
         - rustup component add rustfmt
         - cargo fmt -- --check
 
+change-log:
+    image: debian:latest
+    stage: test
+    script:
+        - bash -c "! git diff --exit-code origin/master... CHANGELOG.md"
+    except:
+        - master
+
 pages:
     image: rust:latest
     stage: pages
