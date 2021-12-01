@@ -68,8 +68,8 @@ change-log:
         GIT_STRATEGY: clone
     before_script:
         - apt-get update && apt-get install git -y
-    script:
         - git fetch
+    script:
         - bash -c "! git diff --exit-code origin/master CHANGELOG.md"
     except:
         - master
