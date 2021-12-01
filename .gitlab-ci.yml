@@ -69,6 +69,7 @@ change-log:
     before_script:
         - apt-get update && apt-get install git -y
     script:
+        - git fetch
         - bash -c "! git diff --exit-code origin/master CHANGELOG.md"
     except:
         - master
