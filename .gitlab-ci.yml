@@ -64,6 +64,8 @@ lint-check:
 change-log:
     image: debian:latest
     stage: test
+    before_script:
+        - apt-get update && apt-get install git
     script:
         - bash -c "! git diff --exit-code origin/master... CHANGELOG.md"
     except:
