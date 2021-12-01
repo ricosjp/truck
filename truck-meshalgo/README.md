@@ -52,4 +52,10 @@ Adds smooth normals to and quadrangulate the famous teapot.
 
 ### tessellate_shape
 
+Tesellate a shape and output an obj file.
 
+```bash
+usage: tessellate_shape <input json file> <output json file>
+```
+
+The default `<output file>` is output.obj.

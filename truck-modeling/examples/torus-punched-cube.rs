@@ -1,3 +1,5 @@
+//! A cube punched by a torus.
+
 use std::f64::consts::PI;
 use truck_modeling::*;
 

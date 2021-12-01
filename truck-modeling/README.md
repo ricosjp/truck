@@ -37,7 +37,7 @@ Generated json file can be visualized by `simple-shape-viewer`, an example of `t
 
 ### torus-punched-cube
 
-
+A cube punched by a torus.
 
 ### torus
 
