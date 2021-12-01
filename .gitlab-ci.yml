@@ -65,7 +65,7 @@ change-log:
     image: debian:latest
     stage: test
     variables:
-        GIT_STRATEGY: fetch
+        GIT_STRATEGY: clone
     before_script:
         - apt-get update && apt-get install git -y
     script:
