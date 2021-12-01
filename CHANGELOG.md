@@ -22,6 +22,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - Added a new crate `truck-js`, which provides wasm bindings of CAD APIs.
 - Updates to edition 2021!
 - Updates readme-generator.
+- Fixed test for keep changelog.
 
 ## v0.2
 

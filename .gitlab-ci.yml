@@ -65,9 +65,10 @@ change-log:
     image: debian:latest
     stage: test
     variables:
-        GIT_STRATEGY: fetch
+        GIT_STRATEGY: clone
     before_script:
         - apt-get update && apt-get install git -y
+        - git fetch
     script:
         - bash -c "! git diff --exit-code origin/master CHANGELOG.md"
     except:
