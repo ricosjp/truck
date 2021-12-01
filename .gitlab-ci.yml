@@ -65,7 +65,7 @@ change-log:
     image: debian:latest
     stage: test
     before_script:
-        - apt-get update && apt-get install git
+        - apt-get update && apt-get install git -y
     script:
         - bash -c "! git diff --exit-code origin/master... CHANGELOG.md"
     except:
