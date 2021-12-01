@@ -1,13 +1,16 @@
 use std::io::Write;
 use std::process::Command;
 
-const WORKSPACES: [&str; 7] = [
+const WORKSPACES: [&str; 10] = [
     "truck-base",
     "truck-geometry",
+    "truck-geotrait",
+    "truck-meshalgo",
     "truck-modeling",
-    "truck-polymesh",
     "truck-platform",
+    "truck-polymesh",
     "truck-rendimpl",
+    "truck-shapeops",
     "truck-topology",
 ];
 
@@ -25,6 +28,7 @@ fn create_readme(path: &str) {
     let mut readme = std::fs::File::create("README.md").unwrap();
     let output = Command::new("cargo").args(&["readme"]).output().unwrap();
     let output = String::from_utf8(output.stdout).unwrap();
+    println!("{}", output);
     let lines: Vec<_> = output.split('\n').collect();
     readme
         .write_fmt(format_args!(
@@ -67,6 +71,7 @@ fn create_readme(path: &str) {
 
 fn main() {
     for path in &WORKSPACES {
+        println!("{}", path);
         std::env::set_current_dir(path).unwrap();
         create_readme(path);
         std::env::set_current_dir("..").unwrap();

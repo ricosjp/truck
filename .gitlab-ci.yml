@@ -54,7 +54,6 @@ lint-check:
     stage: test
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
-    before_script:
     script:
         - rustup component add clippy
         - cargo clippy
@@ -65,10 +64,21 @@ lint-check:
 change-log:
     image: debian:latest
     stage: test
+    before_script:
+        - apt-get update && apt-get install git -y
     script:
-        - bash -c "! git diff --exit-code origin/master... CHANGELOG.md"
+        - bash -c "! git diff --exit-code origin/master CHANGELOG.md"
     except:
         - master
+
+readme-generator:
+    image: rust:latest
+    stage: test
+    before_script:
+        - cargo install cargo-readme
+    script:
+        - cargo run --bin readme-generator
+        - git diff --exit-code
 
 pages:
     image: rust:latest

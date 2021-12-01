@@ -21,6 +21,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - Added a new crate `truck-shapeops`, which provides solid boolean operator functions: `and` and `or`.
 - Added a new crate `truck-js`, which provides wasm bindings of CAD APIs.
 - Updates to edition 2021!
+- Updates readme-generator.
 
 ## v0.2
 
