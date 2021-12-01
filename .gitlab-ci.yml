@@ -72,6 +72,8 @@ change-log:
 readme-generator:
     image: rust:latest
     stage: test
+    before_script:
+        - cargo install cargo-readme
     script:
         - cargo run --bin readme-generator
         - git diff --exit-code
