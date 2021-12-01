@@ -35,6 +35,10 @@ Modeling a unit cube with a hole through it.
 
 Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
+### torus-punched-cube
+
+
+
 ### torus
 
 Modeling a torus by two sweeps.
