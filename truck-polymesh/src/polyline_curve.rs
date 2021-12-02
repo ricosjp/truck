@@ -1,5 +1,4 @@
 use crate::*;
-use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut};
 use truck_base::cgmath64::control_point::ControlPoint;
 
@@ -150,6 +149,18 @@ impl<P: ControlPoint<f64>> ParameterDivision1D for PolylineCurve<P> {
 		res.0.push(range.1);
 		res.1.push(self.subs(range.1));
 		res
+	}
+}
+
+impl<P, T> Transformed<T> for PolylineCurve<P>
+where
+	P: EuclideanSpace,
+	T: Transform<P>,
+{
+	fn transform_by(&mut self, trans: T) {
+		self.0
+			.iter_mut()
+			.for_each(|p| *p = trans.transform_point(*p))
 	}
 }
 

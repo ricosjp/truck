@@ -92,7 +92,10 @@ fn intersection_curve_sphere_case() {
 			Point3::new(0.8 * f64::cos(t), 0.8 * f64::sin(t), 0.0)
 		})
 		.collect::<PolylineCurve<_>>();
-	let curve = IntersectionCurve::try_new(sphere0, sphere1, polyline, 0.5).unwrap();
+	let curve: IntersectionCurve<_, _> =
+		IntersectionCurveWithParameters::try_new(sphere0, sphere1, polyline, 0.5)
+			.unwrap()
+			.into();
 
 	const N: usize = 100;
 	let mut sum = 0.0;

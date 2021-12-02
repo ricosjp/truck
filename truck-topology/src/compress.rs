@@ -181,7 +181,7 @@ impl<P: Clone, C: Clone, S: Clone> Solid<P, C, S> {
         let shells: Result<Vec<Shell<P, C, S>>> = csolid
             .boundaries
             .into_iter()
-            .map(|cshell| Shell::extract(cshell))
+            .map(Shell::extract)
             .collect();
         Solid::try_new(shells?)
     }

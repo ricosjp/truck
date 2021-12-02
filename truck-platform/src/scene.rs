@@ -1,6 +1,6 @@
 use crate::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{LockResult, MutexGuard};
+use winit::window::Window;
 
 static MAXID: AtomicUsize = AtomicUsize::new(0);
 
@@ -10,42 +10,124 @@ impl RenderID {
     pub fn gen() -> Self { RenderID(MAXID.fetch_add(1, Ordering::SeqCst)) }
 }
 
+async fn init_default_device(
+    window: Option<Arc<Window>>,
+) -> (DeviceHandler, Option<WindowHandler>) {
+    #[cfg(not(feature = "webgl"))]
+    let instance = Instance::new(Backends::PRIMARY);
+    #[cfg(feature = "webgl")]
+    let instance = Instance::new(Backends::all());
+
+    // trust winit
+    #[allow(unsafe_code)]
+    let surface = unsafe {
+        let window = window.as_ref();
+        window.map(|window| instance.create_surface(window.as_ref()))
+    };
+
+    let adapter = instance
+        .request_adapter(&RequestAdapterOptions {
+            #[cfg(not(feature = "webgl"))]
+            power_preference: PowerPreference::HighPerformance,
+            #[cfg(feature = "webgl")]
+            power_preference: PowerPreference::LowPower,
+            compatible_surface: surface.as_ref(),
+            force_fallback_adapter: false,
+        })
+        .await
+        .expect("Failed to find an appropriate adapter");
+
+    let (device, queue) = adapter
+        .request_device(
+            &DeviceDescriptor {
+                features: Default::default(),
+                #[cfg(not(feature = "webgl"))]
+                limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
+                #[cfg(feature = "webgl")]
+                limits: Limits::downlevel_webgl2_defaults(),
+                label: None,
+            },
+            None,
+        )
+        .await
+        .expect("Failed to create device");
+    let device_handler = DeviceHandler {
+        adapter: Arc::new(adapter),
+        device: Arc::new(device),
+        queue: Arc::new(queue),
+    };
+    let window_handler = window.map(|window| WindowHandler {
+        window,
+        surface: Arc::new(surface.unwrap()),
+    });
+    (device_handler, window_handler)
+}
+
 impl DeviceHandler {
     /// constructor
     #[inline(always)]
-    pub fn new(
-        device: Arc<Device>,
-        queue: Arc<Queue>,
-        config: Arc<Mutex<SurfaceConfiguration>>,
-    ) -> DeviceHandler {
+    pub fn new(adapter: Arc<Adapter>, device: Arc<Device>, queue: Arc<Queue>) -> DeviceHandler {
         DeviceHandler {
+            adapter,
             device,
             queue,
-            config,
         }
     }
+    /// Returns the reference of the adapter.
+    #[inline(always)]
+    pub fn adapter(&self) -> &Arc<Adapter> { &self.adapter }
     /// Returns the reference of the device.
     #[inline(always)]
     pub fn device(&self) -> &Arc<Device> { &self.device }
     /// Returns the reference of the queue.
     #[inline(always)]
     pub fn queue(&self) -> &Arc<Queue> { &self.queue }
-    /// Returns the copy of surface configuration.
-    #[inline(always)]
-    pub fn config(&self) -> SurfaceConfiguration { self.config.lock().unwrap().clone() }
-    /// Locks the surface configuration.    
-    #[inline(always)]
-    pub fn lock_config(&self) -> LockResult<MutexGuard<SurfaceConfiguration>> { self.config.lock() }
+
+    /// Creates default device handler.
+    pub async fn default_device() -> Self { init_default_device(None).await.0 }
 }
 
-impl Default for SceneDescriptor {
+impl Default for StudioConfig {
     #[inline(always)]
-    fn default() -> SceneDescriptor {
-        SceneDescriptor {
+    fn default() -> StudioConfig {
+        StudioConfig {
             background: Color::BLACK,
             camera: Camera::default(),
             lights: vec![Light::default()],
+        }
+    }
+}
+
+impl Default for BackendBufferConfig {
+    #[inline(always)]
+    fn default() -> BackendBufferConfig {
+        BackendBufferConfig {
+            depth_test: true,
             sample_count: 1,
+        }
+    }
+}
+
+impl Default for RenderTextureConfig {
+    #[inline(always)]
+    fn default() -> RenderTextureConfig {
+        RenderTextureConfig {
+            canvas_size: (1024, 768),
+            format: TextureFormat::Rgba8Unorm,
+        }
+    }
+}
+
+impl RenderTextureConfig {
+    /// Returns compatible `SurfaceConfiguation`.
+    #[inline(always)]
+    pub fn compatible_surface_config(self) -> SurfaceConfiguration {
+        SurfaceConfiguration {
+            usage: TextureUsages::RENDER_ATTACHMENT,
+            format: self.format,
+            width: self.canvas_size.0,
+            height: self.canvas_size.1,
+            present_mode: PresentMode::Mailbox,
         }
     }
 }
@@ -63,10 +145,10 @@ impl SceneDescriptor {
     /// };
     /// ```
     #[inline(always)]
-    pub fn camera_buffer(&self, handler: &DeviceHandler) -> BufferHandler {
-        let config = handler.config();
-        let as_rat = config.width as f64 / config.height as f64;
-        self.camera.buffer(as_rat, handler.device())
+    pub fn camera_buffer(&self, device: &Device) -> BufferHandler {
+        let (width, height) = self.render_texture.canvas_size;
+        let as_rat = width as f64 / height as f64;
+        self.studio.camera.buffer(as_rat, device)
     }
 
     /// Creates a `STORAGE` buffer of all lights.
@@ -87,9 +169,94 @@ impl SceneDescriptor {
     /// ```
     #[inline(always)]
     pub fn lights_buffer(&self, device: &Device) -> BufferHandler {
-        let mut light_vec: Vec<_> = self.lights.iter().map(Light::light_info).collect();
+        let mut light_vec: Vec<_> = self.studio.lights.iter().map(Light::light_info).collect();
         light_vec.resize(LIGHT_MAX, LightInfo::zeroed());
         BufferHandler::from_slice(&light_vec, device, BufferUsages::UNIFORM)
+    }
+
+    #[inline(always)]
+    fn sampling_buffer(
+        device: &Device,
+        render_texture: RenderTextureConfig,
+        sample_count: u32,
+    ) -> Texture {
+        device.create_texture(&TextureDescriptor {
+            size: Extent3d {
+                width: render_texture.canvas_size.0,
+                height: render_texture.canvas_size.1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count,
+            dimension: TextureDimension::D2,
+            format: render_texture.format,
+            usage: TextureUsages::RENDER_ATTACHMENT,
+            label: None,
+        })
+    }
+
+    #[inline(always)]
+    fn depth_texture(device: &Device, size: (u32, u32), sample_count: u32) -> Texture {
+        device.create_texture(&TextureDescriptor {
+            size: Extent3d {
+                width: size.0,
+                height: size.1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Depth32Float,
+            usage: TextureUsages::RENDER_ATTACHMENT,
+            label: None,
+        })
+    }
+
+    fn backend_buffers(&self, device: &Device) -> (Option<Texture>, Option<Texture>) {
+        let foward_depth = if self.backend_buffer.depth_test {
+            Some(Self::depth_texture(
+                device,
+                self.render_texture.canvas_size,
+                self.backend_buffer.sample_count,
+            ))
+        } else {
+            None
+        };
+        let sampling_buffer = if self.backend_buffer.sample_count > 1 {
+            Some(Self::sampling_buffer(
+                device,
+                self.render_texture,
+                self.backend_buffer.sample_count,
+            ))
+        } else {
+            None
+        };
+        (foward_depth, sampling_buffer)
+    }
+}
+
+/// Mutable reference of `SceneDescriptor` in `Scene`.
+///
+/// When this struct is dropped, the backend buffers of scene will be updated.
+#[derive(Debug)]
+pub struct SceneDescriptorMut<'a>(&'a mut Scene);
+
+impl<'a> std::ops::Deref for SceneDescriptorMut<'a> {
+    type Target = SceneDescriptor;
+    #[inline(always)]
+    fn deref(&self) -> &SceneDescriptor { &self.0.scene_desc }
+}
+
+impl<'a> std::ops::DerefMut for SceneDescriptorMut<'a> {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut SceneDescriptor { &mut self.0.scene_desc }
+}
+
+impl<'a> Drop for SceneDescriptorMut<'a> {
+    fn drop(&mut self) {
+        let (forward_depth, sampling_buffer) = self.backend_buffers(self.0.device());
+        self.0.foward_depth = forward_depth;
+        self.0.sampling_buffer = sampling_buffer;
     }
 }
 
@@ -145,76 +312,52 @@ impl Scene {
         )
     }
 
-    #[inline(always)]
-    fn sampling_buffer(
-        device: &Device,
-        config: &SurfaceConfiguration,
-        sample_count: u32,
-    ) -> Texture {
-        device.create_texture(&TextureDescriptor {
-            size: Extent3d {
-                width: config.width,
-                height: config.height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count,
-            dimension: TextureDimension::D2,
-            format: config.format,
-            usage: TextureUsages::RENDER_ATTACHMENT,
-            label: None,
-        })
-    }
-
-    #[inline(always)]
-    fn depth_texture(device: &Device, config: &SurfaceConfiguration, sample_count: u32) -> Texture {
-        device.create_texture(&TextureDescriptor {
-            size: Extent3d {
-                width: config.width,
-                height: config.height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Depth32Float,
-            usage: TextureUsages::RENDER_ATTACHMENT,
-            label: None,
-        })
-    }
-
-    #[inline(always)]
-    fn update_textures(&mut self) {
-        let config = self.config();
-        let sample_count = self.scene_desc.sample_count;
-        if self.depth_texture_size != (config.width, config.height)
-            || sample_count != self.previous_sample_count
-        {
-            self.depth_texture_size = (config.width, config.height);
-            self.previous_sample_count = sample_count;
-            self.foward_depth = Self::depth_texture(self.device(), &config, sample_count);
-            self.sampling_buffer = Self::sampling_buffer(self.device(), &config, sample_count);
-        }
-    }
-
     /// constructor
     // About `scene_desc`, entity is better than reference for the performance.
     // This is referece because only for as wgpu is.
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
-        let (device, config) = (device_handler.device(), device_handler.config());
+        let device = device_handler.device();
+        let (foward_depth, sampling_buffer) = scene_desc.backend_buffers(device);
         let bind_group_layout = Self::init_scene_bind_group_layout(device);
         Scene {
             objects: Default::default(),
             bind_group_layout,
-            foward_depth: Self::depth_texture(device, &config, scene_desc.sample_count),
-            depth_texture_size: (config.width, config.height),
-            sampling_buffer: Self::sampling_buffer(device, &config, scene_desc.sample_count),
-            previous_sample_count: scene_desc.sample_count,
+            foward_depth,
+            sampling_buffer,
             clock: instant::Instant::now(),
             scene_desc: scene_desc.clone(),
             device_handler,
         }
+    }
+
+    /// Construct scene from default GPU device.
+    /// # Arguments
+    /// - `size`: (width, height)
+    pub async fn from_default_device(scene_desc: &SceneDescriptor) -> Scene {
+        Scene::new(DeviceHandler::default_device().await, scene_desc)
+    }
+
+    /// Creates compatible texture for render attachment.
+    ///
+    /// # Remarks
+    /// The usage of texture is `TextureUsages::RENDER_ATTACHMENT | TetureUsages::COPY_SRC`.
+    #[inline(always)]
+    pub fn compatible_texture(&self) -> Texture {
+        let config = self.scene_desc.render_texture;
+        self.device().create_texture(&TextureDescriptor {
+            label: None,
+            size: Extent3d {
+                width: config.canvas_size.0,
+                height: config.canvas_size.1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: config.format,
+            usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC,
+        })
     }
 
     /// Returns the reference of its own `DeviceHandler`.
@@ -229,14 +372,6 @@ impl Scene {
     #[inline(always)]
     pub fn queue(&self) -> &Arc<Queue> { &self.device_handler.queue }
 
-    /// Returns the copy of swap chain descriptor.
-    #[inline(always)]
-    pub fn config(&self) -> SurfaceConfiguration { self.device_handler.config() }
-    /// Locks the swap chain descriptor.
-    #[inline(always)]
-    pub fn lock_sc_desc(&self) -> LockResult<MutexGuard<SurfaceConfiguration>> {
-        self.device_handler.lock_config()
-    }
     /// Returns the elapsed time since the scene was created.
     #[inline(always)]
     pub fn elapsed(&self) -> std::time::Duration { self.clock.elapsed() }
@@ -246,8 +381,22 @@ impl Scene {
     pub fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
 
     /// Returns the mutable reference of the descriptor.
+    ///
+    /// # Remarks
+    ///
+    /// When the return value is dropped, the depth buffer and sampling buffer are automatically updated.
+    /// Use `studio_config_mut` if you only want to update the colors of the camera, lights, and background.
     #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> &mut SceneDescriptor { &mut self.scene_desc }
+    pub fn descriptor_mut(&mut self) -> SceneDescriptorMut { SceneDescriptorMut(self) }
+
+    /// Returns the reference of the studio configuation.
+    #[inline(always)]
+    pub fn studio_config(&self) -> &StudioConfig { &self.scene_desc.studio }
+
+    /// Returns the mutable reference of the studio configuation.
+    #[inline(always)]
+    pub fn studio_config_mut(&mut self) -> &mut StudioConfig { &mut self.scene_desc.studio }
+
     /// Returns the bind group layout in the scene.
     #[inline(always)]
     pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
@@ -264,9 +413,7 @@ impl Scene {
     /// };
     /// ```
     #[inline(always)]
-    pub fn camera_buffer(&self) -> BufferHandler {
-        self.scene_desc.camera_buffer(self.device_handler())
-    }
+    pub fn camera_buffer(&self) -> BufferHandler { self.scene_desc.camera_buffer(self.device()) }
 
     /// Creates a `STORAGE` buffer of all lights.
     ///
@@ -301,16 +448,13 @@ impl Scene {
     /// ```
     #[inline(always)]
     pub fn scene_status_buffer(&self) -> BufferHandler {
-        let bk = self.scene_desc.background;
+        let bk = self.scene_desc.studio.background;
+        let size = self.scene_desc.render_texture.canvas_size;
         let scene_info = SceneInfo {
-            background_color: [
-                bk.r as f32,
-                bk.g as f32,
-                bk.b as f32,
-                bk.a as f32,
-            ],
+            background_color: [bk.r as f32, bk.g as f32, bk.b as f32, bk.a as f32],
+            resolution: [size.0, size.1],
             time: self.elapsed().as_secs_f32(),
-            num_of_lights: self.scene_desc.lights.len() as u32,
+            num_of_lights: self.scene_desc.studio.lights.len() as u32,
         };
         BufferHandler::from_slice(&[scene_info], self.device(), BufferUsages::UNIFORM)
     }
@@ -490,7 +634,7 @@ impl Scene {
                     label: None,
                 });
                 render_object.pipeline =
-                    object.pipeline(handler, &pipeline_layout, self.scene_desc.sample_count);
+                    object.pipeline(handler, &pipeline_layout, &self.scene_desc);
                 true
             }
             _ => false,
@@ -526,31 +670,36 @@ impl Scene {
     }
 
     /// Renders the scene to `view`.
-    pub fn render_scene(&mut self, view: &TextureView) {
-        self.update_textures();
+    pub fn render(&self, view: &TextureView) {
         let bind_group = self.scene_bind_group();
-        let depth_view = self.foward_depth.create_view(&Default::default());
-        let sampled_view = self.sampling_buffer.create_view(&Default::default());
+        let depth_view = self
+            .foward_depth
+            .as_ref()
+            .map(|tex| tex.create_view(&Default::default()));
+        let sampled_view = self
+            .sampling_buffer
+            .as_ref()
+            .map(|tex| tex.create_view(&Default::default()));
         let mut encoder = self
             .device()
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
         {
-            let (attachment, resolve_target) = match self.scene_desc.sample_count != 1 {
-                true => (&sampled_view, Some(view)),
-                false => (view, None),
+            let (attachment, resolve_target) = match sampled_view.as_ref() {
+                Some(sampled_view) => (sampled_view, Some(view)),
+                None => (view, None),
             };
             let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
                 color_attachments: &[RenderPassColorAttachment {
                     view: attachment,
                     resolve_target,
                     ops: Operations {
-                        load: LoadOp::Clear(self.scene_desc.background),
+                        load: LoadOp::Clear(self.scene_desc.studio.background),
                         store: true,
                     },
                 }],
-                depth_stencil_attachment: Some(Self::depth_stencil_attachment_descriptor(
-                    &depth_view,
-                )),
+                depth_stencil_attachment: depth_view
+                    .as_ref()
+                    .map(Self::depth_stencil_attachment_descriptor),
                 ..Default::default()
             });
             rpass.set_bind_group(0, &bind_group, &[]);
@@ -576,5 +725,124 @@ impl Scene {
             }
         }
         self.queue().submit(vec![encoder.finish()]);
+    }
+
+    /// Render image to buffer.
+    pub async fn render_to_buffer(&self) -> Vec<u8> {
+        let texture = self.compatible_texture();
+        let view = texture.create_view(&Default::default());
+        self.render(&view);
+        let (device, queue) = (self.device(), self.queue());
+
+        let (width, height) = self.scene_desc.render_texture.canvas_size;
+        let size = (width * height * 4) as u64;
+        let buffer = device.create_buffer(&BufferDescriptor {
+            label: None,
+            mapped_at_creation: false,
+            usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+            size,
+        });
+        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
+        encoder.copy_texture_to_buffer(
+            ImageCopyTexture {
+                texture: &texture,
+                mip_level: 0,
+                origin: Origin3d::ZERO,
+                aspect: TextureAspect::All,
+            },
+            ImageCopyBuffer {
+                buffer: &buffer,
+                layout: ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: (width * 4).try_into().ok(),
+                    rows_per_image: height.try_into().ok(),
+                },
+            },
+            Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+        queue.submit(Some(encoder.finish()));
+        let buffer_slice = buffer.slice(..);
+        let buffer_future = buffer_slice.map_async(MapMode::Read);
+        device.poll(Maintain::Wait);
+        match buffer_future.await {
+            Ok(_) => buffer_slice.get_mapped_range().iter().copied().collect(),
+            Err(e) => panic!("{}", e),
+        }
+    }
+}
+
+impl WindowScene {
+    /// Initialize scene compatible with `window`.
+    pub async fn from_window(window: Arc<Window>, scene_desc: &WindowSceneDescriptor) -> Self {
+        let size = window.inner_size();
+        let got = init_default_device(Some(window)).await;
+        let (device_handler, window_handler) = (got.0, got.1.unwrap());
+        let (device, surface) = (&device_handler.device, &window_handler.surface);
+        let render_texture = RenderTextureConfig {
+            canvas_size: size.into(),
+            format: surface
+                .get_preferred_format(&device_handler.adapter)
+                .expect("Failed to get preferred texture."),
+        };
+        let config = render_texture.compatible_surface_config();
+        surface.configure(device, &config);
+
+        Self {
+            scene: Scene::new(
+                device_handler,
+                &SceneDescriptor {
+                    studio: scene_desc.studio.clone(),
+                    backend_buffer: scene_desc.backend_buffer,
+                    render_texture,
+                },
+            ),
+            window_handler,
+        }
+    }
+    /// Get the reference of initializing window.
+    #[inline(always)]
+    pub fn window(&self) -> &Arc<Window> { &self.window_handler.window }
+    /// Get the reference of surface.
+    #[inline(always)]
+    pub fn surface(&self) -> &Arc<Surface> { &self.window_handler.surface }
+    /// Adjusts the size of the backend buffers (depth or sampling buffer) to the size of the window.
+    pub fn size_alignment(&mut self) {
+        let size = self.window().inner_size();
+        let canvas_size = self.scene.scene_desc.render_texture.canvas_size;
+        if canvas_size != (size.width, size.height) {
+            let mut desc = self.scene.descriptor_mut();
+            desc.render_texture.canvas_size = size.into();
+            let config = desc.render_texture.compatible_surface_config();
+            drop(desc);
+            self.surface().configure(self.device(), &config);
+        }
+    }
+    /// Render scene to initializing window.
+    pub fn render_frame(&mut self) {
+        self.size_alignment();
+        let surface = self.surface();
+        let surface_texture = match surface.get_current_texture() {
+            Ok(got) => got,
+            Err(_) => {
+                let config = self
+                    .scene
+                    .scene_desc
+                    .render_texture
+                    .compatible_surface_config();
+                surface.configure(self.device(), &config);
+                surface
+                    .get_current_texture()
+                    .expect("Failed to acquire next surface texture!")
+            }
+        };
+        let view = surface_texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        self.render(&view);
+        surface_texture.present();
     }
 }

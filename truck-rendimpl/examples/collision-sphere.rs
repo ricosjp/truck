@@ -1,14 +1,14 @@
 mod app;
 use app::App;
 use std::f64::consts::PI;
+use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use wgpu::*;
 use winit::{dpi::*, event::*, event_loop::ControlFlow};
 
 struct MyApp {
-    scene: Scene,
+    scene: WindowScene,
     instance0: PolygonInstance,
     instance1: PolygonInstance,
     instance2: WireFrameInstance,
@@ -28,7 +28,7 @@ enum RenderMode {
 }
 
 impl App for MyApp {
-    fn init(handler: &DeviceHandler, _info: AdapterInfo) -> MyApp {
+    fn init(window: Arc<winit::window::Window>) -> MyApp {
         let sample_count = 4;
         let matrix = Matrix4::look_at_rh(
             Point3::new(2.0, 2.0, 2.0),
@@ -41,17 +41,23 @@ impl App for MyApp {
             0.1,
             40.0,
         );
-        let scene_desc = SceneDescriptor {
-            background: Color::BLACK,
-            camera,
-            lights: vec![Light {
-                position: Point3::new(2.0, 2.0, 2.0),
-                color: Vector3::new(1.0, 1.0, 1.0),
-                light_type: LightType::Point,
-            }],
-            sample_count,
+        let scene_desc = WindowSceneDescriptor {
+            studio: StudioConfig {
+                camera,
+                lights: vec![Light {
+                    position: Point3::new(2.0, 2.0, 2.0),
+                    color: Vector3::new(1.0, 1.0, 1.0),
+                    light_type: LightType::Point,
+                }],
+                ..Default::default()
+            },
+            backend_buffer: BackendBufferConfig {
+                sample_count,
+                ..Default::default()
+            },
         };
-        let mut scene = Scene::new(handler.clone(), &scene_desc);
+        let mut scene =
+            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
         let sphere0 = sphere(Point3::new(0.0, 0.0, 0.7), 1.0, 50, 50);
         let sphere1 = sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
         let intersect = sphere0.extract_interference(&sphere1);
@@ -111,7 +117,7 @@ impl App for MyApp {
             }
             MouseButton::Right => {
                 let (light, camera) = {
-                    let desc = self.scene.descriptor_mut();
+                    let desc = self.scene.studio_config_mut();
                     (&mut desc.lights[0], &desc.camera)
                 };
                 match light.light_type {
@@ -132,7 +138,7 @@ impl App for MyApp {
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
-                let camera = &mut self.scene.descriptor_mut().camera;
+                let camera = &mut self.scene.studio_config_mut().camera;
                 let trans_vec = camera.eye_direction() * 0.2 * y as f64;
                 camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
             }
@@ -144,7 +150,7 @@ impl App for MyApp {
     fn cursor_moved(&mut self, position: PhysicalPosition<f64>) -> ControlFlow {
         let position = Vector2::new(position.x, position.y);
         if self.rotate_flag {
-            let matrix = &mut self.scene.descriptor_mut().camera.matrix;
+            let matrix = &mut self.scene.studio_config_mut().camera.matrix;
             let position = Vector2::new(position.x, position.y);
             let dir2d = position - self.prev_cursor;
             if dir2d.so_small() {
@@ -202,7 +208,7 @@ impl App for MyApp {
         }
         Self::default_control_flow()
     }
-    fn render(&mut self, view: &TextureView) { self.scene.render_scene(view); }
+    fn render(&mut self) { self.scene.render_frame(); }
 }
 
 fn sphere(center: Point3, radius: f64, udiv: usize, vdiv: usize) -> PolygonMesh {

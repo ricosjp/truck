@@ -573,7 +573,7 @@ impl From<KnotVec> for Vec<f64> {
     fn from(knotvec: KnotVec) -> Vec<f64> { knotvec.0 }
 }
 
-impl std::iter::FromIterator<f64> for KnotVec {
+impl FromIterator<f64> for KnotVec {
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = f64>>(iter: I) -> KnotVec {
         KnotVec::try_from(iter.into_iter().collect::<Vec<_>>()).unwrap()

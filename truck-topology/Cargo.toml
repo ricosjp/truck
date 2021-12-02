@@ -2,7 +2,7 @@
 name = "truck-topology"
 version = "0.2.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2018"
+edition = "2021"
 description = "topological structs: vertex, edge, wire, face, shell, and solid"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"

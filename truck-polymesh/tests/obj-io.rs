@@ -1,4 +1,3 @@
-use std::iter::FromIterator;
 use truck_polymesh::*;
 
 const TEAPOT_POSITION_OBJ: &[u8] = include_bytes!(concat!(

@@ -1,6 +1,9 @@
+#![allow(clippy::many_single_char_names)]
+
 use crate::*;
 use rustc_hash::FxHashMap as HashMap;
 use truck_base::cgmath64::*;
+use truck_geometry::IntersectionCurve;
 use truck_meshalgo::prelude::*;
 use truck_topology::{Vertex, *};
 
@@ -121,10 +124,10 @@ impl<P, C> std::ops::DerefMut for LoopsStore<P, C> {
 	}
 }
 
-impl<P, C> std::iter::FromIterator<BoundaryWire<P, C>> for Loops<P, C> {
+impl<P, C> FromIterator<BoundaryWire<P, C>> for Loops<P, C> {
 	#[inline(always)]
 	fn from_iter<I: IntoIterator<Item = BoundaryWire<P, C>>>(iter: I) -> Self {
-		Self(std::iter::FromIterator::from_iter(iter))
+		Self(Vec::from_iter(iter))
 	}
 }
 
@@ -138,7 +141,7 @@ impl<'a, P, C, S> From<&'a Face<P, C, S>> for Loops<P, C> {
 	}
 }
 
-impl<'a, P: 'a, C: 'a, S: 'a> std::iter::FromIterator<&'a Face<P, C, S>> for LoopsStore<P, C> {
+impl<'a, P: 'a, C: 'a, S: 'a> FromIterator<&'a Face<P, C, S>> for LoopsStore<P, C> {
 	fn from_iter<I: IntoIterator<Item = &'a Face<P, C, S>>>(iter: I) -> Self {
 		Self(iter.into_iter().map(Loops::from).collect())
 	}

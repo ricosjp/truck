@@ -8,7 +8,6 @@ pub trait OptimizingFilter {
     /// remove all unused position, texture coordinates, and normal vectors.
     /// # Examples
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     /// let mut mesh = PolygonMesh::new(
@@ -33,7 +32,6 @@ pub trait OptimizingFilter {
     /// Removes degenerate polygons.
     /// # Examples
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     /// let mut mesh = PolygonMesh::new(
@@ -67,7 +65,6 @@ pub trait OptimizingFilter {
     ///
     /// # Examples
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_meshalgo::prelude::*;
     /// let mut mesh = PolygonMesh::new(
     ///     StandardAttributes {

@@ -2,7 +2,7 @@
 name = "truck-geometry"
 version = "0.1.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2018"
+edition = "2021"
 description = "geometrical structs: knot vector, B-spline and NURBS"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
@@ -14,10 +14,11 @@ categories = ["graphics"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-truck-base = { version = "0.1.1", path = "../truck-base" }
-truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
+derive_more = "0.99.16"
 serde = { version = "1.0.130", features = ["derive"] }
 thiserror = "1.0.29"
+truck-base = { version = "0.1.1", path = "../truck-base" }
+truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 
 [dev-dependencies]
 rand = "0.8.4"

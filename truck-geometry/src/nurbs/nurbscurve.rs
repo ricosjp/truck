@@ -381,14 +381,14 @@ where V::Point: Tolerance
     /// ```
     pub fn make_locally_injective(&mut self) -> &mut Self {
         let mut iter = self.0.bezier_decomposition().into_iter();
-        while let Some(bezier) = iter.next().map(|curve| NURBSCurve(curve)) {
+        while let Some(bezier) = iter.next().map(NURBSCurve::new) {
             if !bezier.is_const() {
                 *self = bezier;
                 break;
             }
         }
         let mut x = 0.0;
-        for mut bezier in iter.map(|curve| NURBSCurve(curve)) {
+        for mut bezier in iter.map(NURBSCurve::new) {
             if bezier.is_const() {
                 x += bezier.0.knot_vec.range_length();
             } else {
@@ -561,7 +561,7 @@ impl<V: Homogeneous<f64>> From<BSplineCurve<V::Point>> for NURBSCurve<V> {
             bspcurve
                 .control_points
                 .into_iter()
-                .map(|pt| V::from_point(pt))
+                .map(V::from_point)
                 .collect(),
         ))
     }

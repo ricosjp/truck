@@ -1,3 +1,11 @@
+//! Tesellate a shape and output an obj file.
+//!
+//! ```bash
+//! usage: tessellate_shape <input json file> <output json file>
+//! ```
+//!
+//! The default `<output file>` is output.obj.
+
 use truck_meshalgo::{filters::*, tessellation::*};
 use truck_modeling::*;
 

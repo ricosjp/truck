@@ -2,7 +2,7 @@
 name = "truck-polymesh"
 version = "0.2.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2018"
+edition = "2021"
 description = "defines polygon data structure and some algorithms handling mesh, including meshing the shapes"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"

@@ -6,7 +6,6 @@ pub trait Splitting {
     /// Creates a sub mesh by the face indices.
     /// # Examples
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::analyzers::*;
     ///
@@ -55,7 +54,6 @@ pub trait Splitting {
     /// `tol` must be more than `TOLERANCE`.
     /// # Examples
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::analyzers::*;
     /// let mesh = PolygonMesh::new(
@@ -91,7 +89,6 @@ pub trait Splitting {
     /// whose vertices has the same positions (and normals if `use_normal == true`).
     /// # Examples
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::{analyzers::*, filters::*};
     ///

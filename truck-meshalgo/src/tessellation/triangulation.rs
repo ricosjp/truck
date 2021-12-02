@@ -1,3 +1,5 @@
+#![allow(clippy::many_single_char_names)]
+
 use super::*;
 use crate::filters::NormalFilters;
 use rustc_hash::FxHashMap as HashMap;

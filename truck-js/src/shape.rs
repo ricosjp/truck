@@ -2,7 +2,8 @@ use crate::*;
 use truck_meshalgo::tessellation::*;
 
 macro_rules! toporedef {
-    ($type: ident, $member: ident) => {
+    ($($type: ident, $is: ident, $into: ident, $to: ident),*) => {
+        $(
         /// wasm shape wrapper
         #[wasm_bindgen]
         #[derive(Clone, Debug, From, Into, Deref, DerefMut, AsRef)]
@@ -16,103 +17,74 @@ macro_rules! toporedef {
             /// upcast to abstract shape
             #[inline(always)]
             pub fn upcast(self) -> AbstractShape {
-                let mut res = AbstractShape::empty();
-                res.$member = Some(self);
-                res
+                AbstractShape(SubAbstractShape::$type(self))
             }
         }
-    };
-    ($type: ident, $member: ident, $($a: ident, $b: ident),*) => {
-        toporedef!($type, $member); toporedef!($($a, $b),*);
+        )*
+
+        /// wasm wrapped methods
+        #[wasm_bindgen]
+        impl AbstractShape {
+            $(
+                /// check the type
+                #[inline(always)]
+                pub fn $is(&self) -> bool {
+                    match &self.0 {
+                        SubAbstractShape::$type(_) => true,
+                        _ => false,
+                    }
+                }
+
+                /// downcast
+                #[inline(always)]
+                pub fn $into(self) -> Option<$type> {
+                    match self.0 {
+                        SubAbstractShape::$type(got) => Some(got),
+                        _ => None,
+                    }
+                }
+            )*
+        }
+
+        /// only for rust
+        impl AbstractShape {
+            $(
+                /// reference downcast
+                #[inline(always)]
+                pub fn $to(&self) -> Option<&$type> {
+                    match &self.0 {
+                        SubAbstractShape::$type(got) => Some(got),
+                        _ => None,
+                    }
+                }
+            )*
+        }
     }
 }
 
-toporedef!(Vertex, vertex, Edge, edge, Wire, wire, Face, face, Shell, shell, Solid, solid);
+#[rustfmt::skip]
+toporedef!(
+    Vertex, is_vertex, into_vertex, as_vertex,
+    Edge, is_edge, into_edge, as_edge,
+    Wire, is_wire, into_wire, as_wire,
+    Face, is_face, into_face, as_face,
+    Shell, is_shell, into_shell, as_shell,
+    Solid, is_solid, into_solid, as_solid
+);
 
 /// abstract shape, effectively an enumerated type
 #[wasm_bindgen]
 #[derive(Clone, Debug)]
-pub struct AbstractShape {
-    vertex: Option<Vertex>,
-    edge: Option<Edge>,
-    wire: Option<Wire>,
-    face: Option<Face>,
-    shell: Option<Shell>,
-    solid: Option<Solid>,
-}
+pub struct AbstractShape(SubAbstractShape);
 
-impl AbstractShape {
-    fn empty() -> Self {
-        Self {
-            vertex: None,
-            edge: None,
-            wire: None,
-            face: None,
-            shell: None,
-            solid: None,
-        }
-    }
-}
-
-#[wasm_bindgen]
-impl AbstractShape {
-    /// whether `self` is vertex or not.
-    #[inline(always)]
-    pub fn is_vertex(self) -> bool { self.vertex.is_some() }
-    /// whether `self` is edge or not.
-    #[inline(always)]
-    pub fn is_edge(self) -> bool { self.edge.is_some() }
-    /// whether `self` is wire or not.
-    #[inline(always)]
-    pub fn is_wire(self) -> bool { self.wire.is_some() }
-    /// whether `self` is face or not.
-    #[inline(always)]
-    pub fn is_face(self) -> bool { self.face.is_some() }
-    /// whether `self` is shell or not.
-    #[inline(always)]
-    pub fn is_shell(self) -> bool { self.shell.is_some() }
-    /// whether `self` is solid or not.
-    #[inline(always)]
-    pub fn is_solid(self) -> bool { self.solid.is_some() }
-    /// downcast
-    #[inline(always)]
-    pub fn into_vertex(self) -> Option<Vertex> { self.vertex }
-    /// downcast
-    #[inline(always)]
-    pub fn into_edge(self) -> Option<Edge> { self.edge }
-    /// downcast
-    #[inline(always)]
-    pub fn into_wire(self) -> Option<Wire> { self.wire }
-    /// downcast
-    #[inline(always)]
-    pub fn into_face(self) -> Option<Face> { self.face }
-    /// downcast
-    #[inline(always)]
-    pub fn into_shell(self) -> Option<Shell> { self.shell }
-    /// downcast
-    #[inline(always)]
-    pub fn into_solid(self) -> Option<Solid> { self.solid }
-}
-
-impl AbstractShape {
-    /// downcast as reference
-    #[inline(always)]
-    pub fn as_vertex(&self) -> Option<&Vertex> { self.vertex.as_ref() }
-    /// downcast as reference
-    #[inline(always)]
-    pub fn as_edge(&self) -> Option<&Edge> { self.edge.as_ref() }
-    /// downcast as reference
-    #[inline(always)]
-    pub fn as_wire(&self) -> Option<&Wire> { self.wire.as_ref() }
-    /// downcast as reference
-    #[inline(always)]
-    pub fn as_face(&self) -> Option<&Face> { self.face.as_ref() }
-    /// downcast as reference
-    #[inline(always)]
-    pub fn as_shell(&self) -> Option<&Shell> { self.shell.as_ref() }
-    /// downcast as reference
-    #[inline(always)]
-    pub fn as_solid(&self) -> Option<&Solid> { self.solid.as_ref() }
+#[derive(Clone, Debug)]
+enum SubAbstractShape {
+    Vertex(Vertex),
+    Edge(Edge),
+    Wire(Wire),
+    Face(Face),
+    Shell(Shell),
+    Solid(Solid),
 }
 
 macro_rules! impl_shape {

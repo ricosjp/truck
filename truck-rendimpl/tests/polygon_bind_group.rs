@@ -1,6 +1,6 @@
 mod common;
 use image::{DynamicImage, ImageBuffer, Rgba};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use truck_meshalgo::prelude::obj;
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -91,11 +91,7 @@ fn exec_polygon_bgtest(
     id: usize,
     out_dir: String,
 ) -> bool {
-    let config = scene.config();
-    let tex_desc = common::texture_descriptor(&config);
-    let texture = scene.device().create_texture(&tex_desc);
-    common::render_one(scene, &texture, instance);
-    let buffer = common::read_texture(scene.device_handler(), &texture);
+    let buffer = common::render_one(scene, instance);
     let path = format!("{}polygon-bgtest-{}.png", out_dir, id);
     common::save_buffer(path, &buffer, PICTURE_SIZE);
     common::same_buffer(answer, &buffer)
@@ -105,12 +101,18 @@ fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = wgpu::Instance::new(backend);
-    let (device, queue) = common::init_device(&instance);
-    let config = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
-    let handler = DeviceHandler::new(device, queue, config);
-    let mut scene = Scene::new(handler, &Default::default());
+    let handler = common::init_device(&instance);
+    let mut scene = Scene::new(
+        handler,
+        &SceneDescriptor {
+            render_texture: RenderTextureConfig {
+                canvas_size: PICTURE_SIZE,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
     let answer = common::nontex_answer_texture(&mut scene);
-    let answer = common::read_texture(scene.device_handler(), &answer);
     let inst_desc = nontex_inst_state();
     test_polygons()
         .iter()
@@ -152,12 +154,18 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = wgpu::Instance::new(backend);
-    let (device, queue) = common::init_device(&instance);
-    let config = Arc::new(Mutex::new(common::swap_chain_descriptor(PICTURE_SIZE)));
-    let handler = DeviceHandler::new(device, queue, config);
-    let mut scene = Scene::new(handler, &Default::default());
-    let answer = common::random_texture(&mut scene);
-    let buffer = common::read_texture(scene.device_handler(), &answer);
+    let handler = common::init_device(&instance);
+    let mut scene = Scene::new(
+        handler,
+        &SceneDescriptor {
+            render_texture: RenderTextureConfig {
+                canvas_size: PICTURE_SIZE,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+    let buffer = common::random_texture(&mut scene);
     let pngpath = out_dir.clone() + "random-texture.png";
     common::save_buffer(pngpath, &buffer, PICTURE_SIZE);
     let mut state = nontex_inst_state();

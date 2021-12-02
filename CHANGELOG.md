@@ -10,7 +10,19 @@ The version is of the bottom crate `truck-rendimpl`.
 - STL handling module `stl` in `truck-polymesh`.
 - In `truck-rendimpl`, wireframe for polygon.
   - Abort traits `Shape` and `Polygon`, and add new traits `IntoInstance` and `TryIntoInstance`.
-- Applied wgpu v0.8 and made all shaders WGSL, including shaders for test. Now, all dependence on cmake has been removed!
+- Applied wgpu v0.11 and made all shaders WGSL, including shaders for test. Now, all dependence on cmake has been removed!
+  - The sample code `glsl-sandbox` becomes `wgsl-sandbox`. You can easily experience WGSL shading.
+- Splitted `truck-base::geom_trait` into `truck-geotrait` and added some algorithms `algo`. Some methods in curves and surfaces were standardized.
+- Added a new crate `truck-meshalgo`. Moved the polygon processing algorithm from polymesh to meshalgo.
+- Added a new CAD meshing algorithm. Meshing trimmed surfaces. The same edge is made into the same polyline. A solid is made into a closed polygon.
+- Added some meshing algorithms, including mesh collision.
+- `ShapeInstance` has been removed. Tessellation should be done in advance by `truck-meshalgo` when drawing the modeled shape.
+- `BSplineCurve<Point3>` was made to be `ParametricCurve3D`. Conflicts related to methods `subs` have been resolved.
+- Added a new crate `truck-shapeops`, which provides solid boolean operator functions: `and` and `or`.
+- Added a new crate `truck-js`, which provides wasm bindings of CAD APIs.
+- Updates to edition 2021!
+- Updates readme-generator.
+- Fixed test for keep changelog.
 
 ## v0.2
 

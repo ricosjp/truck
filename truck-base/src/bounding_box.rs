@@ -261,7 +261,7 @@ where
     pub fn center(&self) -> V { self.0.mid(self.1) }
 }
 
-impl<'a, F, V> std::iter::FromIterator<&'a V> for BoundingBox<V>
+impl<'a, F, V> FromIterator<&'a V> for BoundingBox<V>
 where
     F: BaseFloat,
     V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
@@ -274,7 +274,7 @@ where
     }
 }
 
-impl<F, V> std::iter::FromIterator<V> for BoundingBox<V>
+impl<F, V> FromIterator<V> for BoundingBox<V>
 where
     F: BaseFloat,
     V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F>,
@@ -296,7 +296,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let mut bdd_box = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -326,7 +325,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let mut bdd_box = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -354,7 +352,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0, 6.0),
     /// ]);
@@ -383,7 +380,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -415,7 +411,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -444,7 +439,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -472,7 +466,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let mut bdd_box = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -501,7 +494,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let mut bdd_box = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -528,7 +520,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0, 2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -556,7 +547,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0,  2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -587,7 +577,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0,  2.0), Vector2::new(5.0,  6.0),
     /// ]);
@@ -615,7 +604,6 @@ where
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
-    /// use std::iter::FromIterator;
     /// let bdd_box0 = BoundingBox::from_iter(&[
     ///     Vector2::new(3.0,  2.0), Vector2::new(5.0,  6.0),
     /// ]);

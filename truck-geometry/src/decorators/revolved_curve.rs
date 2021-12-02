@@ -158,13 +158,13 @@ impl<C: ParametricCurve3D> SearchNearestParameter
     ) -> Option<(f64, f64)> {
         let hint0 = algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION);
         let (t0, t1) = self.curve.parameter_range();
-        if self.is_front_fixed() && hint0.0 == t0 {
+        if self.is_front_fixed() && hint0.0.near(&t0) {
             if let Some(hint) = hint {
                 Some((t0, hint.1))
             } else {
                 Some((t0, 0.0))
             }
-        } else if self.is_back_fixed() && hint0.0 == t1 {
+        } else if self.is_back_fixed() && hint0.0.near(&t1) {
             if let Some(hint) = hint {
                 Some((t1, hint.1))
             } else {

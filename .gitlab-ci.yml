@@ -23,6 +23,7 @@ gpu-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
+        - /root/.cargo/bin/rustup update
         - /root/.cargo/bin/cargo make ci-gpu-test
     tags:
         - gpu
@@ -37,7 +38,9 @@ wasm-test:
         GIT_SUBMODULE_STRATEGY: recursive
     before_script:
         - rustup target add wasm32-unknown-unknown
+        - rustup update stable
     script:
+        - deno lint
         - mkdir public
         - cargo make wasm-test
         - mv truck-js/pkg public/adhoc-viewer
@@ -45,6 +48,40 @@ wasm-test:
     artifacts:
         paths:
             - public
+
+lint-check:
+    image: rust:latest
+    stage: test
+    variables:
+        GIT_SUBMODULE_STRATEGY: recursive
+    script:
+        - rustup component add clippy
+        - cargo clippy
+        - rustup default nightly
+        - rustup component add rustfmt
+        - cargo fmt -- --check
+
+change-log:
+    image: debian:latest
+    stage: test
+    variables:
+        GIT_STRATEGY: clone
+    before_script:
+        - apt-get update && apt-get install git -y
+        - git fetch
+    script:
+        - bash -c "! git diff --exit-code origin/master CHANGELOG.md"
+    except:
+        - master
+
+readme-generator:
+    image: rust:latest
+    stage: test
+    before_script:
+        - cargo install cargo-readme
+    script:
+        - cargo run --bin readme-generator
+        - git diff --exit-code
 
 pages:
     image: rust:latest

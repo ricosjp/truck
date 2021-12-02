@@ -1486,7 +1486,6 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// use std::iter::FromIterator;
     ///
     /// // a parabola surface: x = 2u - 1, y = 2v - 1, z = x^2 + y^z
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
@@ -2208,7 +2207,6 @@ fn test_include_bspcurve2() {
 
 #[test]
 fn test_include_bspcurve3() {
-    use std::iter::FromIterator;
     let knot_vec = KnotVec::uniform_knot(2, 3);
     let ctrl_pts = vec![
         vec![

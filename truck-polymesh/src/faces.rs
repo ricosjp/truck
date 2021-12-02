@@ -1,6 +1,5 @@
 use crate::*;
 use errors::Error;
-use std::iter::FromIterator;
 
 type Vertex = StandardVertex;
 
@@ -211,7 +210,6 @@ impl<V: Copy> Faces<V> {
 	/// in which they are registered, but runs order: triangle, square, and the others.
 	/// # Examples
 	/// ```
-	/// use std::iter::FromIterator;
 	/// use truck_polymesh::*;
 	/// let slice: &[&[usize]] = &[
 	///     &[0, 1, 2],
@@ -283,7 +281,6 @@ impl<V: Copy> Faces<V> {
 	///
 	/// # Examples
 	/// ```
-	/// use std::iter::FromIterator;
 	/// use truck_polymesh::*;
 	/// let slice: &[&[usize]] = &[
 	///     &[0, 1, 2],
