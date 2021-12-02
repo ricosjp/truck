@@ -408,6 +408,8 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
 /// If the absolute value of `angle` is more than 2π rad, then the result is closed shape.
 /// For example, the result of sweeping a disk is a bent cylinder if `angle` is less than 2π rad
 /// and a solid torus if `angle` is more than 2π rad.
+/// # Remarks
+/// `axis` must be normalized. If not, panics occurs in debug mode.
 /// # Examples
 /// ```
 /// // Torus
@@ -502,6 +504,7 @@ pub fn rsweep<T: ClosedSweep<Point3, Curve, Surface>, R: Into<Rad<f64>>>(
     axis: Vector3,
     angle: R,
 ) -> T::Swept {
+    debug_assert!(axis.magnitude().so_small());
     let angle = angle.into();
     if angle.0.abs() < 2.0 * PI.0 {
         partial_rsweep(elem, origin, axis, angle)
