@@ -19,7 +19,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - `ShapeInstance` has been removed. Tessellation should be done in advance by `truck-meshalgo` when drawing the modeled shape.
 - `BSplineCurve<Point3>` was made to be `ParametricCurve3D`. Conflicts related to methods `subs` have been resolved.
 - Added a new crate `truck-shapeops`, which provides solid boolean operator functions: `and` and `or`.
-- Added a new crate `truck-js`, which provides wasm bindings of CAD APIs.
+- Added a new crate `truck-js`, which provides wasm bindings of CAD APIs. (not released to crates.io)
 
 ## v0.2
 
