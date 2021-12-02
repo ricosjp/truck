@@ -7,7 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-truck-base = { version = "0.1.1", path = "../truck-base" }
+truck-base = { version = "0.2.0", path = "../truck-base" }
 rand = "0.8.4"
 thiserror = "1.0.29"
 
