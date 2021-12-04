@@ -504,7 +504,7 @@ pub fn rsweep<T: ClosedSweep<Point3, Curve, Surface>, R: Into<Rad<f64>>>(
     axis: Vector3,
     angle: R,
 ) -> T::Swept {
-    debug_assert!(axis.magnitude().so_small());
+    debug_assert!(axis.magnitude().near(&1.0));
     let angle = angle.into();
     if angle.0.abs() < 2.0 * PI.0 {
         partial_rsweep(elem, origin, axis, angle)
