@@ -3,6 +3,10 @@ name = "truck-geotrait"
 version = "0.1.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
+description = "Defines geometric traits for truck"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
