@@ -1,6 +1,6 @@
 [package]
 name = "truck-platform"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "graphic utility library based on wgpu"
@@ -19,7 +19,7 @@ webgl = ["wgpu/webgl"]
 bytemuck = { version = "1.7.2", features = ["derive"] }
 derive_more = "0.99.16"
 rustc-hash = "1.1.0"
-truck-base = { version = "0.1.1", path = "../truck-base" }
+truck-base = { version = "0.2.0", path = "../truck-base" }
 wgpu = "0.11.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

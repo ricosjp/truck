@@ -2,7 +2,7 @@
 
 The version is of the bottom crate `truck-rendimpl`.
 
-## Unreleased
+## v0.3
 
 - Specified surface for STEP I/O and modeling revolved sphere and cone.
   - In `truck-base`, the trait `Surface` is decomposed into `ParametricSurface`, `BoundedSurface`, `IncludeCurve` and `Invertible`.
@@ -19,11 +19,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - `ShapeInstance` has been removed. Tessellation should be done in advance by `truck-meshalgo` when drawing the modeled shape.
 - `BSplineCurve<Point3>` was made to be `ParametricCurve3D`. Conflicts related to methods `subs` have been resolved.
 - Added a new crate `truck-shapeops`, which provides solid boolean operator functions: `and` and `or`.
-- Added a new crate `truck-js`, which provides wasm bindings of CAD APIs.
-- Updates to edition 2021!
-- Updates readme-generator.
-- Fixed test for keep changelog.
-- Added an example for modeling cylinder.
+- Added a new crate `truck-js`, which provides wasm bindings of CAD APIs. (not released to crates.io)
 
 ## v0.2
 
