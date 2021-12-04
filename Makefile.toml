@@ -12,6 +12,7 @@ script = [
 	"cd resources/shape",
 	"cargo run -p truck-modeling --example bottle",
 	"cargo run -p truck-modeling --example cube",
+	"cargo run -p truck-modeling --example cylinder",
 	"cargo run -p truck-modeling --example punched-cube",
 	"cargo run -p truck-modeling --example torus-punched-cube",
 	"cargo run -p truck-modeling --example torus",
