@@ -76,11 +76,12 @@ impl App for MyApp {
         };
         let mut scene =
             app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
-        let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
-        let e = builder::tsweep(&v, Vector3::unit_x());
-        let f = builder::tsweep(&e, Vector3::unit_y());
-        let cube = builder::tsweep(&f, Vector3::unit_z());
-        let mesh = cube.triangulation(0.01).unwrap().to_polygon();
+        let (radius, height) = (0.5, 1.0);
+        let vertex = builder::vertex(Point3::new(0.0, -height / 2.0, radius));
+        let circle = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0));
+        let disk = builder::try_attach_plane(&vec![circle]).unwrap();
+        let solid = builder::tsweep(&disk, Vector3::new(0.0, height, 0.0));
+        let mesh = solid.triangulation(0.01).unwrap().to_polygon();
         let instance: PolygonInstance = scene
             .instance_creator()
             .create_instance(&mesh, &Default::default());
