@@ -23,6 +23,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - Updates to edition 2021!
 - Updates readme-generator.
 - Fixed test for keep changelog.
+- Added an example for modeling cylinder.
 
 ## v0.2
 
