@@ -1070,7 +1070,9 @@ impl<P> ParameterDivision1D for BSplineCurve<P>
 where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
-        + MetricSpace<Metric = f64>,
+        + MetricSpace<Metric = f64>
+        + HashGen<f64>
+        ,
 {
     type Point = P;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<P>) {

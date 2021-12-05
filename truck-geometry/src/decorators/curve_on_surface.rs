@@ -98,7 +98,7 @@ impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
     S::Vector: VectorSpace<Scalar = f64>,
 {
     type Point = S::Point;

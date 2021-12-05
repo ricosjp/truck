@@ -11,7 +11,6 @@ license = "Apache-2.0"
 
 [dependencies]
 derive_more = "0.99.16"
-rand = "0.8.4"
 rustc-hash = "1.1.0"
 serde = { version = "1.0.130", features = ["derive"] }
 thiserror = "1.0.24"
@@ -20,9 +19,10 @@ truck-geometry = { version = "0.2.0", path = "../truck-geometry" }
 truck-topology = { version = "0.3.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.3", features = ["js"] }
-
 [dev-dependencies]
+rand = "0.8.4"
 serde_json = "1.0.68"
 truck-modeling = { version = "0.3.0", path = "../truck-modeling" }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+getrandom = { version = "0.2.3", features = ["js"] }

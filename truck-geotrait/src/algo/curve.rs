@@ -77,7 +77,7 @@ where
 pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<C::Point>)
 where
     C: ParametricCurve,
-    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>, {
+    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>, {
     nonpositive_tolerance!(tol);
     sub_parameter_division(
         curve,
@@ -97,9 +97,10 @@ fn sub_parameter_division<C>(
 ) -> (Vec<f64>, Vec<C::Point>)
 where
     C: ParametricCurve,
-    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
 {
-    let p = 0.5 + (0.2 * rand::random::<f64>() - 0.1);
+    let gen = curve.subs((range.0 + range.1) / 2.0);
+    let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
     let t = range.0 * (1.0 - p) + range.1 * p;
     let mid = ends.0 + (ends.1 - ends.0) * p;
     if curve.subs(t).distance(mid) < tol || trials == 0 {
