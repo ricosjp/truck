@@ -12,6 +12,8 @@ cpu-test:
         - cargo install cargo-make
     script:
         - cargo make ci-cpu-test
+        - cargo make create-shape-json
+        - cd resources && git diff --exit-code
     cache:
         key: cpu-test
         paths:
