@@ -10,10 +10,10 @@ const VEC4UNIT: Vector4<f64> = Vector4::new(1.0, 1.0, 1.0, 1.0);
 fn hash11_test() {
     fn exec_test<S: BaseFloat + FromPrimitive>() {
         const N: usize = 10000;
-        let mean = (0..N).fold(S::zero(), |sum, i| sum + hash11(S::from_usize(i).unwrap()))
+        let mean = (0..N).fold(S::zero(), |sum, i| sum + HashGen::hash1(S::from_usize(i).unwrap()))
             / S::from_usize(N).unwrap();
         let var = (0..N).fold(S::zero(), |sum, i| {
-            let x = hash11(S::from_usize(i).unwrap()) - S::from_f64(0.5).unwrap();
+            let x = HashGen::hash1(S::from_usize(i).unwrap()) - S::from_f64(0.5).unwrap();
             sum + x * x
         }) / S::from_usize(N).unwrap();
         assert!(
@@ -40,10 +40,10 @@ macro_rules! define_hashx1_test {
                 const N: usize = 10000;
                 let unit = $unit.cast().unwrap();
                 let mean = (0..N).fold(<$vec>::zero(), |sum, i| {
-                    sum + <$vec>::from($hash(S::from_usize(i).unwrap()))
+                    sum + <$vec>::from(HashGen::$hash(S::from_usize(i).unwrap()))
                 }) / S::from_usize(N).unwrap();
                 let var = (0..N).fold(<$vec>::zero(), |sum, i| {
-                    let x = <$vec>::from($hash(S::from_usize(i).unwrap()))
+                    let x = <$vec>::from(HashGen::$hash(S::from_usize(i).unwrap()))
                         - (unit * 0.5).cast().unwrap();
                     sum + x.mul_element_wise(x)
                 }) / S::from_usize(N).unwrap();
@@ -66,9 +66,9 @@ macro_rules! define_hashx1_test {
     };
 }
 
-define_hashx1_test!(hash21_test, Vector2<S>, VEC2UNIT, hash21);
-define_hashx1_test!(hash31_test, Vector3<S>, VEC3UNIT, hash31);
-define_hashx1_test!(hash41_test, Vector4<S>, VEC4UNIT, hash41);
+define_hashx1_test!(hash21_test, Vector2<S>, VEC2UNIT, hash2);
+define_hashx1_test!(hash31_test, Vector3<S>, VEC3UNIT, hash3);
+define_hashx1_test!(hash41_test, Vector4<S>, VEC4UNIT, hash4);
 
 #[test]
 fn hash12_test() {
@@ -76,11 +76,11 @@ fn hash12_test() {
         const N: usize = 100;
         let mean = (0..(N * N)).fold(S::zero(), |sum, i| {
             let v = [S::from_usize(i / N).unwrap(), S::from_usize(i % N).unwrap()];
-            sum + hash12(v)
+            sum + HashGen::hash1(v)
         }) / S::from_usize(N * N).unwrap();
         let var = (0..(N * N)).fold(S::zero(), |sum, i| {
             let v = [S::from_usize(i / N).unwrap(), S::from_usize(i % N).unwrap()];
-            let x = hash12(v) - S::from_f64(0.5).unwrap();
+            let x = HashGen::hash1(v) - S::from_f64(0.5).unwrap();
             sum + x * x
         }) / S::from_usize(N * N).unwrap();
         assert!(
@@ -108,11 +108,11 @@ macro_rules! define_hashx2_test {
                 let unit = $unit.cast().unwrap();
                 let mean = (0..(N * N)).fold(<$vec>::zero(), |sum, i| {
                     let v = [S::from_usize(i / N).unwrap(), S::from_usize(i % N).unwrap()];
-                    sum + <$vec>::from($hash(v))
+                    sum + <$vec>::from(HashGen::$hash(v))
                 }) / S::from_usize(N * N).unwrap();
                 let var = (0..(N * N)).fold(<$vec>::zero(), |sum, i| {
                     let v = [S::from_usize(i / N).unwrap(), S::from_usize(i % N).unwrap()];
-                    let x = <$vec>::from($hash(v)) - (unit * 0.5).cast().unwrap();
+                    let x = <$vec>::from(HashGen::$hash(v)) - (unit * 0.5).cast().unwrap();
                     sum + x.mul_element_wise(x)
                 }) / S::from_usize(N * N).unwrap();
                 assert!(
@@ -134,9 +134,9 @@ macro_rules! define_hashx2_test {
     };
 }
 
-define_hashx2_test!(hash22_test, Vector2<S>, VEC2UNIT, hash22);
-define_hashx2_test!(hash32_test, Vector3<S>, VEC3UNIT, hash32);
-define_hashx2_test!(hash42_test, Vector4<S>, VEC4UNIT, hash42);
+define_hashx2_test!(hash22_test, Vector2<S>, VEC2UNIT, hash2);
+define_hashx2_test!(hash32_test, Vector3<S>, VEC3UNIT, hash3);
+define_hashx2_test!(hash42_test, Vector4<S>, VEC4UNIT, hash4);
 
 #[test]
 fn hash13_test() {
@@ -148,7 +148,7 @@ fn hash13_test() {
                 S::from_usize((i / N) % N).unwrap(),
                 S::from_usize(i % N).unwrap(),
             ];
-            sum + hash13(v)
+            sum + HashGen::hash1(v)
         }) / S::from_usize(N * N * N).unwrap();
         let var = (0..(N * N * N)).fold(S::zero(), |sum, i| {
             let v = [
@@ -156,7 +156,7 @@ fn hash13_test() {
                 S::from_usize((i / N) % N).unwrap(),
                 S::from_usize(i % N).unwrap(),
             ];
-            let x = hash13(v) - S::from_f64(0.5).unwrap();
+            let x = HashGen::hash1(v) - S::from_f64(0.5).unwrap();
             sum + x * x
         }) / S::from_usize(N * N * N).unwrap();
         assert!(
@@ -188,7 +188,7 @@ macro_rules! define_hashx3_test {
                         S::from_usize((i / N) % N).unwrap(),
                         S::from_usize(i % N).unwrap(),
                     ];
-                    sum + <$vec>::from($hash(v))
+                    sum + <$vec>::from(HashGen::$hash(v))
                 }) / S::from_usize(N * N * N).unwrap();
                 let var = (0..(N * N * N)).fold(<$vec>::zero(), |sum, i| {
                     let v = [
@@ -196,7 +196,7 @@ macro_rules! define_hashx3_test {
                         S::from_usize((i / N) % N).unwrap(),
                         S::from_usize(i % N).unwrap(),
                     ];
-                    let x = <$vec>::from($hash(v)) - unit * S::from_f64(0.5).unwrap();
+                    let x = <$vec>::from(HashGen::$hash(v)) - unit * S::from_f64(0.5).unwrap();
                     sum + x.mul_element_wise(x)
                 }) / S::from_usize(N * N * N).unwrap();
                 assert!(
@@ -219,9 +219,9 @@ macro_rules! define_hashx3_test {
     };
 }
 
-define_hashx3_test!(hash23_test, Vector2<S>, VEC2UNIT, hash23);
-define_hashx3_test!(hash33_test, Vector3<S>, VEC3UNIT, hash33);
-define_hashx3_test!(hash43_test, Vector4<S>, VEC4UNIT, hash43);
+define_hashx3_test!(hash23_test, Vector2<S>, VEC2UNIT, hash2);
+define_hashx3_test!(hash33_test, Vector3<S>, VEC3UNIT, hash3);
+define_hashx3_test!(hash43_test, Vector4<S>, VEC4UNIT, hash4);
 
 #[test]
 fn hash14_test() {
@@ -234,7 +234,7 @@ fn hash14_test() {
                 S::from_usize((i / N) % N).unwrap(),
                 S::from_usize(i % N).unwrap(),
             ];
-            sum + hash14(v)
+            sum + HashGen::hash1(v)
         }) / S::from_usize(N * N * N * N).unwrap();
         let var = (0..(N * N * N * N)).fold(S::zero(), |sum, i| {
             let v = [
@@ -243,7 +243,7 @@ fn hash14_test() {
                 S::from_usize((i / N) % N).unwrap(),
                 S::from_usize(i % N).unwrap(),
             ];
-            let x = hash14(v) - S::from_f64(0.5).unwrap();
+            let x = HashGen::hash1(v) - S::from_f64(0.5).unwrap();
             sum + x * x
         }) / S::from_usize(N * N * N * N).unwrap();
         assert!(
@@ -276,7 +276,7 @@ macro_rules! define_hashx4_test {
                         S::from_usize((i / N) % N).unwrap(),
                         S::from_usize(i % N).unwrap(),
                     ];
-                    sum + <$vec>::from($hash(v))
+                    sum + <$vec>::from(HashGen::$hash(v))
                 }) / S::from_usize(N * N * N * N).unwrap();
                 let var = (0..(N * N * N * N)).fold(<$vec>::zero(), |sum, i| {
                     let v = [
@@ -285,7 +285,7 @@ macro_rules! define_hashx4_test {
                         S::from_usize((i / N) % N).unwrap(),
                         S::from_usize(i % N).unwrap(),
                     ];
-                    let x = <$vec>::from($hash::<S>(v)) - unit * S::from_f64(0.5).unwrap();
+                    let x = <$vec>::from(HashGen::$hash(v)) - unit * S::from_f64(0.5).unwrap();
                     sum + x.mul_element_wise(x)
                 }) / S::from_usize(N * N * N * N).unwrap();
                 assert!(
@@ -308,6 +308,6 @@ macro_rules! define_hashx4_test {
     };
 }
 
-define_hashx4_test!(hash24_test, Vector2<S>, VEC2UNIT, hash24);
-define_hashx4_test!(hash34_test, Vector3<S>, VEC3UNIT, hash34);
-define_hashx4_test!(hash44_test, Vector4<S>, VEC4UNIT, hash44);
+define_hashx4_test!(hash24_test, Vector2<S>, VEC2UNIT, hash2);
+define_hashx4_test!(hash34_test, Vector3<S>, VEC3UNIT, hash3);
+define_hashx4_test!(hash44_test, Vector4<S>, VEC4UNIT, hash4);
