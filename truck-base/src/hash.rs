@@ -356,3 +356,12 @@ derive_hashgen!(Vector1<S>, [S; 1]);
 derive_hashgen!(Vector2<S>, [S; 2]);
 derive_hashgen!(Vector3<S>, [S; 3]);
 derive_hashgen!(Vector4<S>, [S; 4]);
+
+/// Take one random unit vector
+pub fn take_one_unit<G: HashGen<f64>>(gen: G) -> Vector3<f64> {
+    let u = HashGen::hash2(gen);
+    let theta = 2.0 * std::f64::consts::PI * u[0];
+    let z = 2.0 * u[1] - 1.0;
+    let r = f64::sqrt(1.0 - z * z);
+    Vector3::new(r * f64::cos(theta), r * f64::sin(theta), z)
+}

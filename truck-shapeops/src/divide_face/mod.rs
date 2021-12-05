@@ -19,7 +19,7 @@ impl PolylineBoundary for PolylineCurve<Point2> {
 		}) / 2.0
 	}
 	fn include(&self, c: Point2) -> bool {
-		let t = 2.0 * std::f64::consts::PI * rand::random::<f64>();
+		let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
 		let r = Vector2::new(f64::cos(t), f64::sin(t));
 		self.windows(2)
 			.try_fold(0_i32, |counter, p| {

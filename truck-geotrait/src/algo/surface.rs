@@ -195,7 +195,7 @@ pub fn parameter_division<S>(
 ) -> (Vec<f64>, Vec<f64>)
 where
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
 {
     nonpositive_tolerance!(tol);
     let (mut udiv, mut vdiv) = (vec![urange.0, urange.1], vec![vrange.0, vrange.1]);
@@ -206,14 +206,16 @@ where
 fn sub_parameter_division<S>(surface: &S, (udiv, vdiv): (&mut Vec<f64>, &mut Vec<f64>), tol: f64)
 where
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>, {
+    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>, {
     let mut divide_flag0 = vec![false; udiv.len() - 1];
     let mut divide_flag1 = vec![false; vdiv.len() - 1];
 
     for (u, ub) in udiv.windows(2).zip(&mut divide_flag0) {
         for (v, vb) in vdiv.windows(2).zip(&mut divide_flag1) {
-            let p = 0.5 + (0.2 * rand::random::<f64>() - 0.1);
-            let q = 0.5 + (0.2 * rand::random::<f64>() - 0.1);
+            let (u_gen, v_gen) = ((u[0] + u[1]) / 2.0, (v[0] + v[1]) / 2.0); 
+            let gen = surface.subs(u_gen, v_gen);
+            let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+            let q = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
             let pt00 = surface.subs(u[0], v[0]);
             let pt01 = surface.subs(u[0], v[1]);
             let pt10 = surface.subs(u[1], v[0]);

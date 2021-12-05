@@ -68,19 +68,6 @@ impl EndPoint {
     }
 }
 
-fn take_one_unit() -> Vector3 {
-    loop {
-        let normal = Vector3::new(
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-        );
-        if !normal.so_small() {
-            return normal.normalize();
-        }
-    }
-}
-
 fn tri_to_seg(tri: [Point3; 3], unit: Vector3) -> (f64, f64) {
     let a = tri[0].to_vec().dot(unit);
     let b = tri[1].to_vec().dot(unit);
@@ -88,11 +75,10 @@ fn tri_to_seg(tri: [Point3; 3], unit: Vector3) -> (f64, f64) {
     (f64::min(f64::min(a, b), c), f64::max(f64::max(a, b), c))
 }
 
-fn sorted_endpoints<I, J>(iter0: I, iter1: J) -> Vec<EndPoint>
+fn sorted_endpoints<I, J>(iter0: I, iter1: J, unit: Vector3) -> Vec<EndPoint>
 where
     I: IntoIterator<Item = [Point3; 3]>,
     J: IntoIterator<Item = [Point3; 3]>, {
-    let unit = take_one_unit();
     let mut res: Vec<EndPoint> = iter0
         .into_iter()
         .enumerate()
@@ -218,6 +204,10 @@ fn collide_triangles(tri0: [Point3; 3], tri1: [Point3; 3]) -> Option<(Point3, Po
 }
 
 fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point3)> {
+    let unit = match poly0.positions().is_empty() {
+        true => return Vec::new(),
+        false => hash::take_one_unit(poly0.positions()[0]),
+    };
     let tris0 = poly0.faces().triangle_iter().collect::<Vec<_>>();
     let tris1 = poly1.faces().triangle_iter().collect::<Vec<_>>();
     let iter0 = tris0.iter().map(|face| {
@@ -234,7 +224,7 @@ fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point3)> 
             poly1.positions()[face[2].pos],
         ]
     });
-    colliding_segment_pairs(sorted_endpoints(iter0, iter1))
+    colliding_segment_pairs(sorted_endpoints(iter0, iter1, unit))
         .filter_map(|(idx0, idx1)| {
             let face0 = tris0[idx0];
             let tri0 = [
@@ -258,6 +248,10 @@ fn collision(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Vec<(Point3, Point3)> 
 }
 
 fn are_colliding(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Option<(Point3, Point3)> {
+    let unit = match poly0.positions().is_empty() {
+        true => return None,
+        false => hash::take_one_unit(poly0.positions()[0]),
+    };
     let tris0 = poly0.faces().triangle_iter().collect::<Vec<_>>();
     let tris1 = poly1.faces().triangle_iter().collect::<Vec<_>>();
     let iter0 = tris0.iter().map(|face| {
@@ -274,7 +268,7 @@ fn are_colliding(poly0: &PolygonMesh, poly1: &PolygonMesh) -> Option<(Point3, Po
             poly1.positions()[face[2].pos],
         ]
     });
-    colliding_segment_pairs(sorted_endpoints(iter0, iter1)).find_map(|(idx0, idx1)| {
+    colliding_segment_pairs(sorted_endpoints(iter0, iter1, unit)).find_map(|(idx0, idx1)| {
         let face0 = tris0[idx0];
         let tri0 = [
             poly0.positions()[face0[0].pos],

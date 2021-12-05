@@ -407,7 +407,7 @@ where V::Point: Tolerance
 }
 
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision1D for NURBSCurve<V>
-where V::Point: MetricSpace<Metric = f64>
+where V::Point: MetricSpace<Metric = f64> + HashGen<f64>,
 {
     type Point = V::Point;
     #[inline(always)]

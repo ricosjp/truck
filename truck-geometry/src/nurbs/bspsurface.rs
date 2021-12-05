@@ -1871,7 +1871,8 @@ where
 impl<P: ControlPoint<f64>> ParameterDivision2D for BSplineSurface<P>
 where
     P: EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
-        + MetricSpace<Metric = f64>,
+        + MetricSpace<Metric = f64>
+        + HashGen<f64>,
 {
     #[inline(always)]
     fn parameter_division(
