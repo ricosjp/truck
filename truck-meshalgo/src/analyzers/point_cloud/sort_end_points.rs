@@ -68,9 +68,9 @@ fn sorted_endpoints_by_polymesh_points(
     points: &[Point3],
     tol: f64,
 ) -> Vec<EndPoint> {
-    let unit = if polygon.positions().len() != 0 {
+    let unit = if !polygon.positions().is_empty() {
         hash::take_one_unit(polygon.positions()[0])
-    } else if points.len() != 0 {
+    } else if !points.is_empty() {
         hash::take_one_unit(points[0])
     } else {
         return Vec::new();

@@ -2,6 +2,10 @@
 
 The version is of the bottom crate `truck-rendimpl`.
 
+## Unreleased
+
+- In order to make meshing reproducible, we decided to implement random perturbations by means of a deterministic hash function.
+
 ## v0.3
 
 - Specified surface for STEP I/O and modeling revolved sphere and cone.

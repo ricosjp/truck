@@ -10,8 +10,9 @@ const VEC4UNIT: Vector4<f64> = Vector4::new(1.0, 1.0, 1.0, 1.0);
 fn hash11_test() {
     fn exec_test<S: BaseFloat + FromPrimitive>() {
         const N: usize = 10000;
-        let mean = (0..N).fold(S::zero(), |sum, i| sum + HashGen::hash1(S::from_usize(i).unwrap()))
-            / S::from_usize(N).unwrap();
+        let mean = (0..N).fold(S::zero(), |sum, i| {
+            sum + HashGen::hash1(S::from_usize(i).unwrap())
+        }) / S::from_usize(N).unwrap();
         let var = (0..N).fold(S::zero(), |sum, i| {
             let x = HashGen::hash1(S::from_usize(i).unwrap()) - S::from_f64(0.5).unwrap();
             sum + x * x
