@@ -1,6 +1,5 @@
 use super::*;
 use derive_more::{Deref, DerefMut};
-use std::f64::consts::PI;
 
 #[derive(Clone, Copy, Debug)]
 struct Ray {
@@ -27,30 +26,6 @@ impl Triangle {
 			uvt[0] > 0.0 && uvt[1] > 0.0 && uvt[0] + uvt[1] < 1.0 && uvt[2] > 0.0
 		}
 	}
-}
-
-fn random_normal_3d() -> Vector3 {
-	let mut x = rand::random::<f64>();
-	if x.so_small() {
-		x = rand::random::<f64>();
-	}
-	let mut y = rand::random::<f64>();
-	if y.so_small() {
-		y = rand::random::<f64>();
-	}
-	let mut z = rand::random::<f64>();
-	if z.so_small() {
-		z = rand::random::<f64>();
-	}
-	let mut w = rand::random::<f64>();
-	if w.so_small() {
-		w = rand::random::<f64>();
-	}
-	Vector3::new(
-		f64::sqrt(-2.0 * f64::ln(x)) * f64::cos(2.0 * PI * y),
-		f64::sqrt(-2.0 * f64::ln(x)) * f64::sin(2.0 * PI * y),
-		f64::sqrt(-2.0 * f64::ln(z)) * f64::cos(2.0 * PI * w),
-	)
 }
 
 /// whether a point is in a domain rounded by a closed polygon.
@@ -134,11 +109,7 @@ impl IncludingPointInDomain for PolygonMesh {
 		})
 	}
 	fn inside(&self, point: Point3) -> bool {
-		let mut dir = random_normal_3d();
-		if dir.so_small() {
-			dir = random_normal_3d();
-		}
-		let dir = dir.normalize();
+		let dir = hash::take_one_unit(point);
 		self.signed_crossing_faces(point, dir) >= 1
 	}
 }

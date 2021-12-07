@@ -1,7 +1,7 @@
 #![allow(clippy::many_single_char_names)]
 
 use crate::traits::*;
-use truck_base::{cgmath64::*, tolerance::*};
+use truck_base::{cgmath64::*, tolerance::*, hash::HashGen};
 
 #[cfg(all(test, debug_assertions))]
 macro_rules! newton_log_error {

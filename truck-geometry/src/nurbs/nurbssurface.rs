@@ -690,7 +690,7 @@ impl ParametricSurface3D for NURBSSurface<Vector4> {
 
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D for NURBSSurface<V>
 where
-    V::Point: MetricSpace<Metric = f64>,
+    V::Point: MetricSpace<Metric = f64> + HashGen<f64>,
 {
     #[inline(always)]
     fn parameter_division(

@@ -33,19 +33,6 @@ impl EndPoint {
     }
 }
 
-fn take_one_unit() -> Vector3 {
-    loop {
-        let normal = Vector3::new(
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-        );
-        if !normal.so_small() {
-            return normal.normalize();
-        }
-    }
-}
-
 fn tri_to_seg(tri: [Point3; 3], unit: Vector3, tol: f64) -> (f64, f64) {
     let a = tri[0].to_vec().dot(unit);
     let b = tri[1].to_vec().dot(unit);
@@ -56,11 +43,10 @@ fn tri_to_seg(tri: [Point3; 3], unit: Vector3, tol: f64) -> (f64, f64) {
     )
 }
 
-fn sorted_endpoints<'a, I, J>(iter0: I, iter1: J, tol: f64) -> Vec<EndPoint>
+fn sorted_endpoints<'a, I, J>(iter0: I, iter1: J, unit: Vector3, tol: f64) -> Vec<EndPoint>
 where
     I: IntoIterator<Item = [Point3; 3]>,
     J: IntoIterator<Item = &'a Point3>, {
-    let unit = take_one_unit();
     let mut res: Vec<EndPoint> = iter0
         .into_iter()
         .enumerate()
@@ -82,6 +68,13 @@ fn sorted_endpoints_by_polymesh_points(
     points: &[Point3],
     tol: f64,
 ) -> Vec<EndPoint> {
+    let unit = if !polygon.positions().is_empty() {
+        hash::take_one_unit(polygon.positions()[0])
+    } else if !points.is_empty() {
+        hash::take_one_unit(points[0])
+    } else {
+        return Vec::new();
+    };
     sorted_endpoints(
         polygon.faces().triangle_iter().map(|tri| {
             [
@@ -91,6 +84,7 @@ fn sorted_endpoints_by_polymesh_points(
             ]
         }),
         points.iter(),
+        unit,
         tol,
     )
 }
