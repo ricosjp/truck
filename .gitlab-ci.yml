@@ -73,6 +73,7 @@ change-log:
         - bash -c "! git diff --exit-code origin/master CHANGELOG.md"
     except:
         - master
+        - tags
 
 readme-generator:
     image: rust:latest
@@ -82,6 +83,8 @@ readme-generator:
     script:
         - cargo run --bin readme-generator
         - git diff --exit-code
+    except:
+        - tags
 
 pages:
     image: rust:latest
