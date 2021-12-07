@@ -5,6 +5,7 @@ The version is of the bottom crate `truck-rendimpl`.
 ## Unreleased
 
 - In order to make meshing reproducible, we decided to implement random perturbations by means of a deterministic hash function.
+- except tags from some tests
 
 ## v0.3
 
