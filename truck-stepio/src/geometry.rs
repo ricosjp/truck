@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use ruststep::primitive::Logical;
+use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum BSplineCurveForm {
@@ -65,5 +65,3 @@ pub struct RationalBSplineCurve<P> {
 pub struct UniformCurve<P> {
     pub b_spline_curve: BSplineCurve<P>,
 }
-
-

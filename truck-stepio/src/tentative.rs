@@ -40,9 +40,42 @@ pub struct CartesianPoint {
 }
 
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub enum CartesianPointAny {
+    CartesianPoint(Box<CartesianPoint>),
+}
+
+impl AsRef<CartesianPoint> for CartesianPointAny {
+    fn as_ref(&self) -> &CartesianPoint {
+        match self {
+            CartesianPointAny::CartesianPoint(got) => got,
+        }
+    }
+}
+
+impl std::ops::Deref for CartesianPointAny {
+    type Target = CartesianPoint;
+    fn deref(&self) -> &CartesianPoint {
+        match self {
+            CartesianPointAny::CartesianPoint(got) => got,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
 pub struct Vector {
     pub orientation: Direction,
     pub magnitude: LengthMeasure,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Curve {
+    pub label: String,
+}
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Line {
+    pub curve: Curve,
+    pub pnt: CartesianPointAny,
+    pub dir: Vector,
 }
 
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
