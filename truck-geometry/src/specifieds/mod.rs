@@ -1,5 +1,9 @@
 use crate::*;
 
+/// line
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Line<P>(pub P, pub P);
+
 /// plane
 /// # Example
 /// ```
@@ -65,3 +69,4 @@ pub struct Sphere {
 
 mod plane;
 mod sphere;
+mod line;
