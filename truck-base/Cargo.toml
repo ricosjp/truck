@@ -15,4 +15,4 @@ categories = ["graphics"]
 
 [dependencies]
 cgmath = { version = "0.18.0", features = ["serde"] }
-serde = { version = "1.0.130", features = ["derive"] }
+serde = { version = "1.0.131", features = ["derive"] }
