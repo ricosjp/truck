@@ -46,4 +46,4 @@ web-sys = { version = "0.3.53", features = ["Location"] }
 
 # Without this line, the build of winit will fail.
 [target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))'.dev-dependencies]
-mio = "0.7.14"
+mio-misc = "1.2.2"
