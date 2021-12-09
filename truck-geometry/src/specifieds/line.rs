@@ -1,14 +1,17 @@
 use super::*;
 use truck_base::cgmath64::control_point::ControlPoint;
 
-impl<P> Line<P> {
+impl<P: Copy> Line<P> {
 	/// initialize line from vector
 	#[inline]
 	pub fn from_origin_direction<V>(origin: P, direction: V) -> Self
-	where
-		P: Copy,
-		P: std::ops::Add<V, Output = P>, {
+	where P: std::ops::Add<V, Output = P> {
 		Self(origin, origin + direction)
+	}
+	/// to a bspline curve
+	#[inline]
+	pub fn to_bspline(&self) -> BSplineCurve<P> {
+		BSplineCurve::new(KnotVec::bezier_knot(1), vec![self.0, self.1])
 	}
 }
 
