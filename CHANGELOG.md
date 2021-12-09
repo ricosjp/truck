@@ -6,6 +6,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 - In order to make meshing reproducible, we decided to implement random perturbations by means of a deterministic hash function.
 - except tags from some tests
+- describe the explicit dependency on `mio` for build `winit`.
 
 ## v0.3
 
