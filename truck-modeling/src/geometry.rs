@@ -44,8 +44,11 @@ impl ParametricCurve for Curve {
     fn subs(&self, t: f64) -> Self::Point { derive_curve_method!(self, ParametricCurve::subs, t) }
     fn der(&self, t: f64) -> Self::Vector { derive_curve_method!(self, ParametricCurve::der, t) }
     fn der2(&self, t: f64) -> Self::Vector { derive_curve_method!(self, ParametricCurve::der2, t) }
+}
+
+impl BoundedCurve for Curve {
     fn parameter_range(&self) -> (f64, f64) {
-        derive_curve_method!(self, ParametricCurve::parameter_range,)
+        derive_curve_method!(self, BoundedCurve::parameter_range,)
     }
 }
 
