@@ -99,8 +99,6 @@ where
 {
 	type Point = Point3;
 	type Vector = Vector3;
-	#[inline(always)]
-	fn parameter_range(&self) -> (f64, f64) { self.leader.parameter_range() }
 	fn subs(&self, t: f64) -> Point3 { self.search_triple(t).unwrap().0 }
 	fn der(&self, t: f64) -> Vector3 {
 		let n = self.leader.der(t);
@@ -117,6 +115,15 @@ where
 	fn der2(&self, _: f64) -> Vector3 {
 		unimplemented!();
 	}
+}
+
+impl<C, S> BoundedCurve for IntersectionCurve<C, S>
+where
+	C: ParametricCurve3D + BoundedCurve,
+	S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+{
+	#[inline(always)]
+	fn parameter_range(&self) -> (f64, f64) { self.leader.parameter_range() }
 }
 
 impl<C, S> ParameterDivision1D for IntersectionCurve<C, S>

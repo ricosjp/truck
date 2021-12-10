@@ -615,7 +615,7 @@ impl<P, C, S> Shell<P, C, S> {
     pub fn is_geometric_consistent(&self) -> bool
     where
         P: Tolerance,
-        C: ParametricCurve<Point = P>,
+        C: BoundedCurve<Point = P>,
         S: IncludeCurve<C>, {
         self.iter().all(|face| face.is_geometric_consistent())
     }

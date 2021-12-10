@@ -5,9 +5,9 @@ use truck_topology::*;
 
 /// Gathered the traits used in tessellation.
 #[rustfmt::skip]
-pub trait PolylineableCurve: ParametricCurve3D + Invertible + ParameterDivision1D<Point = Point3> {}
+pub trait PolylineableCurve: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> {}
 #[rustfmt::skip]
-impl<C: ParametricCurve3D + Invertible + ParameterDivision1D<Point = Point3>> PolylineableCurve for C {}
+impl<C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3>> PolylineableCurve for C {}
 #[rustfmt::skip]
 /// Gathered the traits used in tessellation.
 pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<Point = Point3, Parameter = (f64, f64)> {}

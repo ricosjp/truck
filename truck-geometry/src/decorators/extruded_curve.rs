@@ -48,7 +48,7 @@ impl<C: ParametricCurve3D> ParametricSurface3D for ExtrudedCurve<C, Vector3> {
 
 impl<C, V> BoundedSurface for ExtrudedCurve<C, V>
 where
-    C: ParametricCurve,
+    C: BoundedCurve,
     Self: ParametricSurface,
 {
     #[inline(always)]
@@ -64,7 +64,7 @@ impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
     }
 }
 
-impl<C: ParametricCurve2D> SearchParameter for ExtrudedCurve<C, Vector2> {
+impl<C: ParametricCurve2D + BoundedCurve> SearchParameter for ExtrudedCurve<C, Vector2> {
     type Point = Point2;
     type Parameter = (f64, f64);
     #[inline(always)]
@@ -77,7 +77,7 @@ impl<C: ParametricCurve2D> SearchParameter for ExtrudedCurve<C, Vector2> {
     }
 }
 
-impl<C: ParametricCurve3D> SearchParameter for ExtrudedCurve<C, Vector3> {
+impl<C: ParametricCurve3D + BoundedCurve> SearchParameter for ExtrudedCurve<C, Vector3> {
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]
@@ -90,7 +90,7 @@ impl<C: ParametricCurve3D> SearchParameter for ExtrudedCurve<C, Vector3> {
     }
 }
 
-impl<C: ParametricCurve3D> SearchNearestParameter for ExtrudedCurve<C, Vector3> {
+impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter for ExtrudedCurve<C, Vector3> {
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]

@@ -145,7 +145,7 @@ impl<P, C, S> Solid<P, C, S> {
     pub fn is_geometric_consistent(&self) -> bool
     where
         P: Tolerance,
-        C: ParametricCurve<Point = P>,
+        C: BoundedCurve<Point = P>,
         S: IncludeCurve<C>,
     {
         self.boundaries()

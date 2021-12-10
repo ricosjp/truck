@@ -35,7 +35,7 @@ impl<E: Clone, T: Clone> Invertible for Processor<E, T> {
     }
 }
 
-impl<C: ParametricCurve, T> Processor<C, T> {
+impl<C: BoundedCurve, T> Processor<C, T> {
     #[inline(always)]
     fn get_curve_parameter(&self, t: f64) -> f64 {
         let (t0, t1) = self.parameter_range();
@@ -48,7 +48,7 @@ impl<C: ParametricCurve, T> Processor<C, T> {
 
 impl<C, T> ParametricCurve for Processor<C, T>
 where
-    C: ParametricCurve,
+    C: BoundedCurve,
     C::Point: EuclideanSpace<Diff = C::Vector>,
     C::Vector: VectorSpace<Scalar = f64>,
     T: Transform<C::Point> + Clone,
@@ -70,9 +70,19 @@ where
         let t = self.get_curve_parameter(t);
         self.transform.transform_vector(self.entity.der2(t))
     }
+}
+
+impl<C, T> BoundedCurve for Processor<C, T>
+where
+    C: BoundedCurve,
+    C::Point: EuclideanSpace<Diff = C::Vector>,
+    C::Vector: VectorSpace<Scalar = f64>,
+    T: Transform<C::Point> + Clone,
+{
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.entity.parameter_range() }
 }
+
 
 impl<S, T> ParametricSurface for Processor<S, T>
 where
