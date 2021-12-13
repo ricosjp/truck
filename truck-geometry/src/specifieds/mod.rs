@@ -18,6 +18,10 @@ pub struct UnitCircle<P>(std::marker::PhantomData<P>);
 #[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct UnitHyperbola<P>(std::marker::PhantomData<P>);
 
+/// parabola whose apex is the origin.
+#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct UnitParabola<P> (std::marker::PhantomData<P>);
+
 /// plane
 /// # Example
 /// ```
@@ -83,6 +87,7 @@ pub struct Sphere {
 
 mod circle;
 mod hyperbola;
+mod parabola;
 mod plane;
 mod sphere;
 mod line;
