@@ -38,3 +38,33 @@ impl BoundedCurve for UnitCircle<Point3> {
 	#[inline]
 	fn parameter_range(&self) -> (f64, f64) { (0.0, 2.0 * PI) }
 }
+
+impl<P> ParameterDivision1D for UnitCircle<P>
+where UnitCircle<P>: ParametricCurve<Point = P>
+{
+	type Point = P;
+	fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<P>) {
+		nonpositive_tolerance!(tol);
+		let tol = f64::min(tol, 0.8);
+		let delta = 2.0 * f64::acos(1.0 - tol);
+		let n = 1 + ((range.1 - range.0) / delta) as usize;
+		let params = (0..=n)
+			.map(|i| {
+				let t = i as f64 / n as f64;
+				range.0 * (1.0 - t) + range.1 * t
+			})
+			.collect::<Vec<_>>();
+		let pts = params.iter().map(|t| self.subs(*t)).collect();
+		(params, pts)
+	}
+}
+
+#[test]
+fn parameter_division() {
+	let c = UnitCircle::<Point2>::new();
+	let (_div, pts) = c.parameter_division(c.parameter_range(), 0.05);
+	for a in pts.windows(2) {
+		let p = a[0].midpoint(a[1]);
+		assert!(p.to_vec().magnitude() > 0.95);
+	}
+}
