@@ -82,6 +82,7 @@ pub struct Sphere {
 }
 
 mod circle;
+mod hyperbola;
 mod plane;
 mod sphere;
 mod line;
