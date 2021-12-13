@@ -58,7 +58,7 @@ impl<P, C> BoundaryWire<P, C> {
 impl ShapesOpStatus {
 	fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<ShapesOpStatus>
 	where
-		C: ParametricCurve3D,
+		C: ParametricCurve3D + BoundedCurve,
 		S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
 	{
 		let (t0, t1) = curve.parameter_range();
@@ -179,7 +179,7 @@ impl ParameterKind {
 impl<P: Copy, C: Clone> Loops<P, C> {
 	fn search_parameter(&self, pt: P) -> Option<(usize, usize, ParameterKind)>
 	where
-		C: ParametricCurve<Point = P> + SearchParameter<Point = P, Parameter = f64>,
+		C: BoundedCurve<Point = P> + SearchParameter<Point = P, Parameter = f64>,
 	{
 		self.iter()
 			.enumerate()

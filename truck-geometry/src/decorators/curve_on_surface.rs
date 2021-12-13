@@ -44,13 +44,20 @@ where
             + self.surface.uder(pt[0], pt[1]) * der2[0]
             + self.surface.vder(pt[0], pt[1]) * der2[1]
     }
+}
+
+impl<C, S> BoundedCurve for PCurve<C, S>
+where
+    C: BoundedCurve,
+    PCurve<C, S>: ParametricCurve,
+{
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.curve.parameter_range() }
 }
 
 impl<C, S> SearchParameter for PCurve<C, S>
 where
-    Self: ParametricCurve,
+    Self: BoundedCurve,
     <Self as ParametricCurve>::Point: EuclideanSpace<Scalar = f64, Diff = <Self as ParametricCurve>::Vector>
         + MetricSpace<Metric = f64>,
     <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,
@@ -73,7 +80,7 @@ where
 
 impl<C, S> SearchNearestParameter for PCurve<C, S>
 where
-    Self: ParametricCurve,
+    Self: BoundedCurve,
     <Self as ParametricCurve>::Point: EuclideanSpace<Scalar = f64, Diff = <Self as ParametricCurve>::Vector>
         + MetricSpace<Metric = f64>,
     <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,

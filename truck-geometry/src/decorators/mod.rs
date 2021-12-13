@@ -127,9 +127,17 @@ pub struct IntersectionCurve<C, S> {
     tol: f64,
 }
 
+/// trimmed curve for parametric curve
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct TrimmedCurve<C> {
+    curve: C,
+    range: (f64, f64),
+}
+
 mod curve_on_surface;
 mod extruded_curve;
 mod intersection_curve;
 mod processor;
 mod revolved_curve;
+mod trimmied_curve;
 pub use intersection_curve::double_projection;

@@ -67,7 +67,7 @@ impl<C> RevolutedCurve<C> {
     }
 }
 
-impl<C: ParametricCurve3D> RevolutedCurve<C> {
+impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
     /// Returns true if the front point of the curve is on the axis of rotation.
     /// # Examples
     /// ```
@@ -108,7 +108,7 @@ impl<C: ParametricCurve3D> RevolutedCurve<C> {
     }
 }
 
-impl<C: ParametricCurve3D> SearchParameter for RevolutedCurve<C> {
+impl<C: ParametricCurve3D + BoundedCurve> SearchParameter for RevolutedCurve<C> {
     type Point = Point3;
     type Parameter = (f64, f64);
     fn search_parameter(
@@ -145,7 +145,7 @@ impl<C: ParametricCurve3D> SearchParameter for RevolutedCurve<C> {
     }
 }
 
-impl<C: ParametricCurve3D> SearchNearestParameter
+impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter
     for RevolutedCurve<C>
 {
     type Point = Point3;
@@ -226,7 +226,7 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
     }
 }
 
-impl<C: ParametricCurve3D> ParametricSurface3D
+impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D
     for RevolutedCurve<C>
 {
     #[inline(always)]
@@ -257,7 +257,7 @@ impl<C: ParametricCurve3D> ParametricSurface3D
     }
 }
 
-impl<C: ParametricCurve3D> BoundedSurface for RevolutedCurve<C> {
+impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
         (self.curve.parameter_range(), (0.0, 2.0 * PI))
@@ -286,8 +286,8 @@ fn sub_include<C0, C1>(
     degree: usize,
 ) -> bool
 where
-    C0: ParametricCurve3D,
-    C1: ParametricCurve3D,
+    C0: ParametricCurve3D + BoundedCurve,
+    C1: ParametricCurve3D + BoundedCurve,
 {
     let first = ParametricCurve::subs(curve, knots[0]);
     let mut hint = match surface.search_parameter(first, None, INCLUDE_CURVE_TRIALS) {

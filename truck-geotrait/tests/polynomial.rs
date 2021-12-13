@@ -35,6 +35,9 @@ impl<P: EuclideanSpace<Scalar = f64>> ParametricCurve for PolyCurve<P> {
             })
             .1
     }
+}
+
+impl<P: EuclideanSpace<Scalar = f64>> BoundedCurve for PolyCurve<P> {
     fn parameter_range(&self) -> (f64, f64) { (-100.0, 100.0) }
 }
 

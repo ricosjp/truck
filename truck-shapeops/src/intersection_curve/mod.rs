@@ -77,6 +77,11 @@ where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter 
 	fn der(&self, t: f64) -> Vector3 { self.ic.der(t) }
 	#[inline(always)]
 	fn der2(&self, t: f64) -> Vector3 { self.ic.der2(t) }
+}
+
+impl<S> BoundedCurve for IntersectionCurveWithParameters<S>
+where S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+{
 	#[inline(always)]
 	fn parameter_range(&self) -> (f64, f64) { self.ic.parameter_range() }
 }
