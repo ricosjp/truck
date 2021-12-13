@@ -10,15 +10,49 @@ impl<E, T: One> Processor<E, T> {
             orientation: true,
         }
     }
+
     /// Returns the reference of entity
     #[inline(always)]
     pub fn entity(&self) -> &E { &self.entity }
+
     #[inline(always)]
     fn sign(&self) -> f64 {
         match self.orientation {
             true => 1.0,
             false => -1.0,
         }
+    }
+
+    /// apply the function to the entity geometry
+    #[inline(always)]
+    pub fn map<G, F: FnOnce(E) -> G>(self, f: F) -> Processor<G, T> {
+        Processor {
+            entity: f(self.entity),
+            transform: self.transform,
+            orientation: self.orientation,
+        }
+    }
+
+    /// apply the function to the entity geometry
+    #[inline(always)]
+    pub fn map_ref<G, F: FnOnce(&E) -> G>(&self, f: F) -> Processor<G, T>
+    where T: Copy {
+        Processor {
+            entity: f(&self.entity),
+            transform: self.transform,
+            orientation: self.orientation,
+        }
+    }
+
+    /// apply the transform and inverse
+    pub fn constract(self) -> E
+    where E: Transformed<T> + Invertible {
+        let mut res = self.entity;
+        res.transform_by(self.transform);
+        if !self.orientation {
+            res.invert();
+        }
+        res
     }
 }
 
@@ -35,7 +69,7 @@ impl<E: Clone, T: Clone> Invertible for Processor<E, T> {
     }
 }
 
-impl<C: ParametricCurve, T> Processor<C, T> {
+impl<C: BoundedCurve, T> Processor<C, T> {
     #[inline(always)]
     fn get_curve_parameter(&self, t: f64) -> f64 {
         let (t0, t1) = self.parameter_range();
@@ -48,7 +82,7 @@ impl<C: ParametricCurve, T> Processor<C, T> {
 
 impl<C, T> ParametricCurve for Processor<C, T>
 where
-    C: ParametricCurve,
+    C: BoundedCurve,
     C::Point: EuclideanSpace<Diff = C::Vector>,
     C::Vector: VectorSpace<Scalar = f64>,
     T: Transform<C::Point> + Clone,
@@ -70,6 +104,15 @@ where
         let t = self.get_curve_parameter(t);
         self.transform.transform_vector(self.entity.der2(t))
     }
+}
+
+impl<C, T> BoundedCurve for Processor<C, T>
+where
+    C: BoundedCurve,
+    C::Point: EuclideanSpace<Diff = C::Vector>,
+    C::Vector: VectorSpace<Scalar = f64>,
+    T: Transform<C::Point> + Clone,
+{
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.entity.parameter_range() }
 }
@@ -240,7 +283,11 @@ impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
@@ -256,7 +303,11 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
@@ -279,9 +330,15 @@ where
 {
     type Point = E::Point;
     type Parameter = E::Parameter;
-    fn search_parameter(&self, point: E::Point, hint: Option<E::Parameter>, trials: usize) -> Option<E::Parameter> {
+    fn search_parameter(
+        &self,
+        point: E::Point,
+        hint: Option<E::Parameter>,
+        trials: usize,
+    ) -> Option<E::Parameter> {
         let inv = self.transform.inverse_transform().unwrap();
-        self.entity.search_parameter(inv.transform_point(point), hint, trials)
+        self.entity
+            .search_parameter(inv.transform_point(point), hint, trials)
     }
 }
 

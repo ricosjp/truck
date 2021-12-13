@@ -459,7 +459,7 @@ impl<P, C> Wire<P, C> {
     pub fn is_geometric_consistent(&self) -> bool
     where
         P: Tolerance,
-        C: ParametricCurve<Point = P>, {
+        C: BoundedCurve<Point = P>, {
         self.iter().all(|edge| edge.is_geometric_consistent())
     }
 

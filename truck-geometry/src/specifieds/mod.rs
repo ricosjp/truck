@@ -1,5 +1,27 @@
 use crate::*;
 
+/// line
+/// # Example
+/// ```
+/// use truck_geometry::*;
+/// let line = Line(Point2::new(0.0, 0.0), Point2::new(1.0, 1.0));
+/// assert_near!(line.subs(0.5), Point2::new(0.5, 0.5));
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Line<P>(pub P, pub P);
+
+/// unit circle
+#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct UnitCircle<P>(std::marker::PhantomData<P>);
+
+/// unit hyperbola
+#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct UnitHyperbola<P>(std::marker::PhantomData<P>);
+
+/// parabola whose apex is the origin.
+#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct UnitParabola<P> (std::marker::PhantomData<P>);
+
 /// plane
 /// # Example
 /// ```
@@ -63,5 +85,9 @@ pub struct Sphere {
     radius: f64,
 }
 
+mod circle;
+mod hyperbola;
+mod parabola;
 mod plane;
 mod sphere;
+mod line;

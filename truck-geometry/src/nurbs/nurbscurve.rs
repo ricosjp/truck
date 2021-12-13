@@ -522,6 +522,9 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NURB
         let der2 = self.0.der2(t);
         pt.rat_der2(der, der2)
     }
+}
+
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NURBSCurve<V> {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) {
         (

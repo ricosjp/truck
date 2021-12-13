@@ -27,8 +27,6 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
 	type Point = P;
 	type Vector = P::Diff;
 	#[inline(always)]
-	fn parameter_range(&self) -> (f64, f64) { (0.0, self.len() as f64 - 1.0) }
-	#[inline(always)]
 	fn subs(&self, t: f64) -> P {
 		if self.is_empty() {
 			P::origin()
@@ -57,6 +55,11 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
 	}
 	#[inline(always)]
 	fn der2(&self, _: f64) -> P::Diff { P::Diff::zero() }
+}
+
+impl<P: ControlPoint<f64>> BoundedCurve for PolylineCurve<P> {
+	#[inline(always)]
+	fn parameter_range(&self) -> (f64, f64) { (0.0, self.len() as f64 - 1.0) }
 }
 
 impl<P: Clone> Invertible for PolylineCurve<P> {

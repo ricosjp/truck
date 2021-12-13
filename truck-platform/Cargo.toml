@@ -17,27 +17,32 @@ webgl = ["wgpu/webgl"]
 
 [dependencies]
 bytemuck = { version = "1.7.2", features = ["derive"] }
-derive_more = "0.99.16"
+derive_more = "0.99.17"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.2.0", path = "../truck-base" }
-wgpu = "0.11.0"
+wgpu = "0.11.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-instant = { version = "0.1.11", features = [ "now" ] }
+instant = { version = "0.1.12", features = [ "now" ] }
 winit = "0.25.0"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-instant = { version = "0.1.11", features = [ "now", "wasm-bindgen" ] }
+instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
 winit = { version = "0.25.0", features = ["web-sys"] }
+
+# Without this line, the build of winit will fail.
+[target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
+mio = "=0.7.14"
+mio-misc = "=1.2.2"
 
 [dev-dependencies]
 image = "0.23.14"
 rayon = "1.5.1"
 env_logger = "0.9.0"
-naga = { version = "0.7.0", features = ["wgsl-in"] }
+naga = { version = "0.7.2", features = ["wgsl-in"] }
 pollster = "0.2.4"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-futures = "0.4.28"
-console_error_panic_hook = "0.1.6"
-console_log = "0.1.2"
-web-sys = { version = "0.3.53", features = ["Location"] }
+console_error_panic_hook = "0.1.7"
+console_log = "0.2.0"
+web-sys = { version = "0.3.55", features = ["Location"] }

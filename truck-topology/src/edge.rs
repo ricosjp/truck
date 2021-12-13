@@ -386,7 +386,7 @@ impl<P, C> Edge<P, C> {
     pub fn is_geometric_consistent(&self) -> bool
     where
         P: Tolerance,
-        C: ParametricCurve<Point = P>, {
+        C: BoundedCurve<Point = P>, {
         let curve = self.curve.lock().unwrap();
         let geom_front = curve.front();
         let geom_back = curve.back();
