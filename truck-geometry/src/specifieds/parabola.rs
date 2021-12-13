@@ -3,7 +3,7 @@ use super::*;
 impl<P> UnitParabola<P> {
 	/// constructor
 	#[inline]
-	pub const fn new(focus: f64) -> Self { Self(std::marker::PhantomData) }
+	pub const fn new() -> Self { Self(std::marker::PhantomData) }
 }
 
 impl ParametricCurve for UnitParabola<Point2> {
@@ -14,7 +14,7 @@ impl ParametricCurve for UnitParabola<Point2> {
 	#[inline]
 	fn der(&self, t: f64) -> Self::Vector { Vector2::new(2.0 * t, 2.0) }
 	#[inline]
-	fn der2(&self, t: f64) -> Self::Vector { Vector2::new(2.0, 0.0) }
+	fn der2(&self, _: f64) -> Self::Vector { Vector2::new(2.0, 0.0) }
 }
 
 impl ParametricCurve for UnitParabola<Point3> {
@@ -25,7 +25,7 @@ impl ParametricCurve for UnitParabola<Point3> {
 	#[inline]
 	fn der(&self, t: f64) -> Self::Vector { Vector3::new(2.0 * t, 2.0, 0.0) }
 	#[inline]
-	fn der2(&self, t: f64) -> Self::Vector { Vector3::new(2.0, 0.0, 0.0) }
+	fn der2(&self, _: f64) -> Self::Vector { Vector3::new(2.0, 0.0, 0.0) }
 }
 
 impl<P> ParameterDivision1D for UnitParabola<P>
