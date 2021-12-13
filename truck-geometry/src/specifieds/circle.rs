@@ -16,6 +16,9 @@ impl ParametricCurve for UnitCircle<Point2> {
 	fn der(&self, t: f64) -> Self::Vector { Vector2::new(-f64::sin(t), f64::cos(t)) }
 	#[inline]
 	fn der2(&self, t: f64) -> Self::Vector { Vector2::new(-f64::cos(t), -f64::sin(t)) }
+}
+
+impl BoundedCurve for UnitCircle<Point2> {
 	#[inline]
 	fn parameter_range(&self) -> (f64, f64) { (0.0, 2.0 * PI) }
 }
@@ -29,8 +32,9 @@ impl ParametricCurve for UnitCircle<Point3> {
 	fn der(&self, t: f64) -> Self::Vector { Vector3::new(-f64::sin(t), f64::cos(t), 0.0) }
 	#[inline]
 	fn der2(&self, t: f64) -> Self::Vector { Vector3::new(-f64::cos(t), -f64::sin(t), 0.0) }
+}
+
+impl BoundedCurve for UnitCircle<Point3> {
 	#[inline]
 	fn parameter_range(&self) -> (f64, f64) { (0.0, 2.0 * PI) }
 }
-
-
