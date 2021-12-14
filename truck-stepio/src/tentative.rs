@@ -16,6 +16,11 @@ use ruststep::primitive::Logical;
 pub struct LengthMeasure(pub f64);
 
 #[derive(
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, :: serde :: Serialize, :: serde :: Deserialize,
+)]
+pub struct PositiveLengthMeasure(pub LengthMeasure);
+
+#[derive(
     Clone,
     Debug,
     PartialEq,
@@ -68,14 +73,62 @@ pub struct Vector {
 }
 
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
-pub struct Curve {
-    pub label: String,
+pub struct Placement {
+    pub location: CartesianPointAny,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Axis2Placement2D {
+    pub placement: Placement,
+    pub ref_direction: Option<Direction>,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Axis2Placement3D {
+    pub placement: Placement,
+    pub axis: Option<Direction>,
+    pub ref_direction: Option<Direction>,
+}
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub enum Axis2Placement {
+    Axis2Placement2D(Box<Axis2Placement2D>),
+    Axis2Placement3D(Box<Axis2Placement3D>),
 }
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
 pub struct Line {
-    pub curve: Curve,
     pub pnt: CartesianPointAny,
     pub dir: Vector,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Conic {
+    pub position: Axis2Placement,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Circle {
+    pub conic: Conic,
+    pub radius: PositiveLengthMeasure,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Ellipse {
+    pub conic: Conic,
+    pub semi_axis_1: PositiveLengthMeasure,
+    pub semi_axis_2: PositiveLengthMeasure,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Hyperbola {
+    pub conic: Conic,
+    pub semi_axis: PositiveLengthMeasure,
+    pub semi_imag_axis: PositiveLengthMeasure,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Parabola {
+    pub conic: Conic,
+    pub focal_dist: LengthMeasure,
 }
 
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
