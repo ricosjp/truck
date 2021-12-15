@@ -132,6 +132,10 @@ pub struct Parabola {
 }
 
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Polyline {
+    pub points: Vec<CartesianPointAny>,
+}
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
 pub enum BSplineCurveForm {
     EllipticArc,
     PolylineForm,

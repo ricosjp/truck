@@ -95,6 +95,23 @@ macro_rules! impl_curve {
                 )
             }
         }
+        impl<'a, P> std::convert::TryFrom<&'a $mod::Hyperbola>
+            for truck_geometry::Processor<truck_geometry::UnitHyperbola<P>, Matrix4>
+        where P: From<&'a $mod::CartesianPoint> + Clone
+        {
+            type Error = String;
+            fn try_from(circle: &'a $mod::Hyperbola) -> Result<Self, String> {
+                use truck_geometry::Transformed;
+                let radius0: f64 = **circle.semi_axis;
+                let radius1: f64 = **circle.semi_imag_axis;
+                let transform = Matrix4::try_from(&circle.conic.position)?
+                    * Matrix4::from_nonuniform_scale(radius0, radius1, 1.0);
+                Ok(
+                    truck_geometry::Processor::new(truck_geometry::UnitHyperbola::new())
+                        .transformed(transform),
+                )
+            }
+        }
         impl<'a, P> std::convert::TryFrom<&'a $mod::Parabola>
             for truck_geometry::Processor<truck_geometry::UnitParabola<P>, Matrix3>
         where P: From<&'a $mod::CartesianPoint> + Clone
@@ -125,21 +142,11 @@ macro_rules! impl_curve {
                 )
             }
         }
-        impl<'a, P> std::convert::TryFrom<&'a $mod::Hyperbola>
-            for truck_geometry::Processor<truck_geometry::UnitHyperbola<P>, Matrix4>
-        where P: From<&'a $mod::CartesianPoint> + Clone
+        impl<'a, P: From<&'a $mod::CartesianPoint>> From<&'a $mod::Polyline>
+            for truck_polymesh::PolylineCurve<P>
         {
-            type Error = String;
-            fn try_from(circle: &'a $mod::Hyperbola) -> Result<Self, String> {
-                use truck_geometry::Transformed;
-                let radius0: f64 = **circle.semi_axis;
-                let radius1: f64 = **circle.semi_imag_axis;
-                let transform = Matrix4::try_from(&circle.conic.position)?
-                    * Matrix4::from_nonuniform_scale(radius0, radius1, 1.0);
-                Ok(
-                    truck_geometry::Processor::new(truck_geometry::UnitHyperbola::new())
-                        .transformed(transform),
-                )
+            fn from(poly: &'a $mod::Polyline) -> Self {
+                Self(poly.points.iter().map(|pt| P::from(&pt)).collect())
             }
         }
         impl<'a, P: From<&'a $mod::CartesianPoint>> From<&'a $mod::BSplineCurveWithKnots>

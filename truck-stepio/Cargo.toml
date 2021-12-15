@@ -12,6 +12,7 @@ quote = "1.0.9"
 truck-base = { version = "0.2.0", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 truck-geometry = { version = "0.2.0", path = "../truck-geometry" }
+truck-polymesh = { version = "0.3.0", path = "../truck-polymesh" }
 derive-new = "0.5.9"
 derive_more = "0.99.16"
 dyn-clone = "1.0.4"
