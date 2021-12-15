@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add the method `swap_vertex` to `WireFrameInstance`.
 - In `truck-geotrait`, the trait `ParametricCurve` is decomposed into `ParametricCurve` and `BoundedCurve`.
 - In order to make meshing reproducible, we decided to implement random perturbations by means of a deterministic hash function.
 - except tags from some tests
