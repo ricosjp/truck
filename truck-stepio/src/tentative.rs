@@ -199,3 +199,13 @@ pub struct RationalBSplineCurve {
 pub struct UniformCurve {
     pub b_spline_curve: BSplineCurve,
 }
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct ElementarySurface {
+    pub position: Axis2Placement3D,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct Plane {
+    pub elementary_surface: ElementarySurface,
+}
