@@ -10,5 +10,25 @@ macro_rules! impl_surface {
 				Self::new(o, p, q)
 			}
 		}
+		impl From<&$mod::CylindricalSurface>
+			for truck_geometry::RevolutedCurve<truck_geometry::Line<Point3>>
+		{
+			fn from(cs: &$mod::CylindricalSurface) -> Self {
+				let mat = Matrix4::from(&cs.elementary_surface.position);
+				let radius = **cs.radius;
+				let o = Point3::from_homogeneous(mat[3]);
+				let p = o + radius * mat[0].truncate();
+				let q = p + mat[2].truncate();
+				Self::by_revolution(truck_geometry::Line(p, q), o, mat[2].truncate())
+			}
+		}
+		impl From<&$mod::ConicalSurface> for truck_geometry::RevolutedCurve<truck_geometry::Line<Point3>> {
+			fn from(cs: &$mod::ConicalSurface) -> Self {
+				let mat = Matrix4::from(&cs.elementary_surface.position);
+				let radius = *cs.radius;
+				let o = Point3::from_homogeneous(mat[3]);
+				let p = o + radius * mat[0].truncate();
+			}
+		}
 	};
 }

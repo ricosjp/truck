@@ -16,6 +16,20 @@ use ruststep::primitive::Logical;
 pub struct LengthMeasure(pub f64);
 
 #[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    AsRef,
+    Deref,
+    DerefMut,
+    From,
+    Into,
+    :: serde :: Serialize,
+    :: serde :: Deserialize,
+)]
+pub struct PlaneAngleMeasure(pub f64);
+
+#[derive(
     Clone, Debug, PartialEq, AsRef, Deref, DerefMut, :: serde :: Serialize, :: serde :: Deserialize,
 )]
 pub struct PositiveLengthMeasure(pub LengthMeasure);
@@ -208,4 +222,17 @@ pub struct ElementarySurface {
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
 pub struct Plane {
     pub elementary_surface: ElementarySurface,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct CylindricalSurface {
+    pub elementary_surface: ElementarySurface,
+    pub radius: PositiveLengthMeasure,
+}
+
+#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+pub struct ConicalSurface {
+    pub elementary_surface: ElementarySurface,
+    pub radius: LengthMeasure,
+    pub semi_angle: PlaneAngleMeasure,
 }
