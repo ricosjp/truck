@@ -1,7 +1,21 @@
 #[macro_export]
 macro_rules! impl_surface {
+	($mod: tt, $mod_impl_surface: ident) => {
+		mod $mod_impl_surface {
+			use super::$mod;
+			//use std::convert::TryFrom;
+			//use std::result::Result;
+			use $crate::truck_geometry::*;
+			$crate::sub_impl_surface!($mod);
+		}
+	};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! sub_impl_surface {
 	($mod: tt) => {
-		impl From<&$mod::Plane> for truck_geometry::Plane {
+		impl From<&$mod::Plane> for Plane {
 			fn from(plane: &$mod::Plane) -> Self {
 				let mat = Matrix4::from(&plane.elementary_surface.position);
 				let o = Point3::from_homogeneous(mat[3]);
@@ -10,24 +24,26 @@ macro_rules! impl_surface {
 				Self::new(o, p, q)
 			}
 		}
-		impl From<&$mod::CylindricalSurface>
-			for truck_geometry::RevolutedCurve<truck_geometry::Line<Point3>>
-		{
+		impl From<&$mod::CylindricalSurface> for RevolutedCurve<Line<Point3>> {
 			fn from(cs: &$mod::CylindricalSurface) -> Self {
 				let mat = Matrix4::from(&cs.elementary_surface.position);
 				let radius = **cs.radius;
 				let o = Point3::from_homogeneous(mat[3]);
-				let p = o + radius * mat[0].truncate();
-				let q = p + mat[2].truncate();
-				Self::by_revolution(truck_geometry::Line(p, q), o, mat[2].truncate())
+				let (x, z) = (mat[0].truncate(), mat[2].truncate());
+				let p = o + radius * x;
+				let q = p + z;
+				Self::by_revolution(Line(q, p), o, z)
 			}
 		}
-		impl From<&$mod::ConicalSurface> for truck_geometry::RevolutedCurve<truck_geometry::Line<Point3>> {
+		impl From<&$mod::ConicalSurface> for RevolutedCurve<Line<Point3>> {
 			fn from(cs: &$mod::ConicalSurface) -> Self {
 				let mat = Matrix4::from(&cs.elementary_surface.position);
-				let radius = *cs.radius;
+				let (radius, angle) = (*cs.radius, *cs.semi_angle);
 				let o = Point3::from_homogeneous(mat[3]);
-				let p = o + radius * mat[0].truncate();
+				let (x, z) = (mat[0].truncate(), mat[2].truncate());
+				let p = o + radius * x;
+				let q = p + f64::sin(angle) * x + f64::cos(angle) * z;
+				Self::by_revolution(Line(q, p), o, z)
 			}
 		}
 	};

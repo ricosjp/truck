@@ -1,5 +1,17 @@
 #[macro_export]
 macro_rules! parse_primitives {
+    ($mod: tt, $mod_parse_primitives: ident) => {
+        mod $mod_parse_primitives {
+            use super::$mod;
+            use $crate::truck_geometry::base::*;
+            $crate::sub_parse_primitives!($mod);
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! sub_parse_primitives {
     ($mod: tt) => {
         impl From<&$mod::CartesianPoint> for Point2 {
             fn from(pt: &$mod::CartesianPoint) -> Self {
