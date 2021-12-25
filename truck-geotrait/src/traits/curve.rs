@@ -88,6 +88,25 @@ impl<'a, C: BoundedCurve> BoundedCurve for &'a C {
     fn back(&self) -> Self::Point { (*self).back() }
 }
 
+impl<C: ParametricCurve> ParametricCurve for Box<C> {
+    type Point = C::Point;
+    type Vector = C::Vector;
+    fn subs(&self, t: f64) -> Self::Point { (**self).subs(t) }
+    #[inline(always)]
+    fn der(&self, t: f64) -> Self::Vector { (**self).der(t) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector { (**self).der2(t) }
+}
+
+impl<C: BoundedCurve> BoundedCurve for Box<C> {
+    #[inline(always)]
+    fn parameter_range(&self) -> (f64, f64) { (**self).parameter_range() }
+    #[inline(always)]
+    fn front(&self) -> Self::Point { (**self).front() }
+    #[inline(always)]
+    fn back(&self) -> Self::Point { (**self).back() }
+}
+
 /// 2D parametric curve
 pub trait ParametricCurve2D: ParametricCurve<Point = Point2, Vector = Vector2> {}
 impl<C: ParametricCurve<Point = Point2, Vector = Vector2>> ParametricCurve2D for C {}
@@ -102,7 +121,7 @@ pub trait ParameterDivision1D {
     /// Creates the curve division (prameters, corresponding points).
     ///
     /// # Panics
-    /// 
+    ///
     /// `tol` must be more than `TOLERANCE`.
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>);
 }
@@ -111,6 +130,13 @@ impl<'a, C: ParameterDivision1D> ParameterDivision1D for &'a C {
     type Point = C::Point;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
         (*self).parameter_division(range, tol)
+    }
+}
+
+impl<C: ParameterDivision1D> ParameterDivision1D for Box<C> {
+    type Point = C::Point;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
+        (**self).parameter_division(range, tol)
     }
 }
 
@@ -142,6 +168,23 @@ pub trait ParameterTransform: BoundedCurve {
     }
 }
 
+impl<C: ParameterTransform> ParameterTransform for Box<C> {
+    #[inline(always)]
+    fn parameter_transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
+        (**self).parameter_transform(scalar, r#move);
+        self
+    }
+    #[inline(always)]
+    fn parameter_transformed(&self, scalar: f64, r#move: f64) -> Self {
+        Box::new((**self).parameter_transformed(scalar, r#move))
+    }
+    #[inline(always)]
+    fn parameter_normalization(&mut self) -> &mut Self {
+        (**self).parameter_normalization();
+        self
+    }
+}
+
 /// Concats two curves
 pub trait Concat<Rhs: BoundedCurve<Point = Self::Point, Vector = Self::Vector>>:
     BoundedCurve
@@ -158,6 +201,19 @@ where Self::Point: Debug {
     fn concat(&self, rhs: &Rhs) -> Self::Output {
         self.try_concat(rhs).unwrap_or_else(|err| panic!("{}", err))
     }
+}
+
+impl<Rhs, C> Concat<Rhs> for Box<C>
+where
+    Rhs: BoundedCurve<Point = C::Point, Vector = C::Vector>,
+    C: Concat<Rhs>,
+    C::Point: Debug,
+{
+    type Output = C::Output;
+    fn try_concat(&self, rhs: &Rhs) -> Result<Self::Output, ConcatError<C::Point>> {
+        (**self).try_concat(rhs)
+    }
+    fn concat(&self, rhs: &Rhs) -> Self::Output { (**self).concat(rhs) }
 }
 
 /// Error for concat curves
