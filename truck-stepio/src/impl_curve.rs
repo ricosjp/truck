@@ -5,7 +5,7 @@ macro_rules! impl_curve {
             use super::$mod;
             use std::convert::TryFrom;
             use std::result::Result;
-            use $crate::truck_geometry::*;
+            use $crate::alias::*;
             $crate::sub_impl_curve!($mod);
         }
     };
@@ -26,33 +26,27 @@ macro_rules! sub_impl_curve {
                 Self(p, q)
             }
         }
-        impl<'a, P> TryFrom<&'a $mod::Circle> for Processor<UnitCircle<P>, Matrix3>
-        where P: From<&'a $mod::CartesianPoint> + Clone
-        {
+        impl TryFrom<&$mod::Circle> for Ellipse<Point2, Matrix3> {
             type Error = String;
-            fn try_from(circle: &'a $mod::Circle) -> Result<Self, String> {
+            fn try_from(circle: &$mod::Circle) -> Result<Self, String> {
                 let radius: f64 = **circle.radius;
                 let transform =
                     Matrix3::try_from(&circle.conic.position)? * Matrix3::from_scale(radius);
                 Ok(Processor::new(UnitCircle::new()).transformed(transform))
             }
         }
-        impl<'a, P> TryFrom<&'a $mod::Circle> for Processor<UnitCircle<P>, Matrix4>
-        where P: From<&'a $mod::CartesianPoint> + Clone
-        {
+        impl TryFrom<&$mod::Circle> for Ellipse<Point3, Matrix4> {
             type Error = String;
-            fn try_from(circle: &'a $mod::Circle) -> Result<Self, String> {
+            fn try_from(circle: &$mod::Circle) -> Result<Self, String> {
                 let radius: f64 = **circle.radius;
                 let transform =
                     Matrix4::try_from(&circle.conic.position)? * Matrix4::from_scale(radius);
                 Ok(Processor::new(UnitCircle::new()).transformed(transform))
             }
         }
-        impl<'a, P> TryFrom<&'a $mod::Ellipse> for Processor<UnitCircle<P>, Matrix3>
-        where P: From<&'a $mod::CartesianPoint> + Clone
-        {
+        impl TryFrom<&$mod::Ellipse> for Ellipse<Point2, Matrix3> {
             type Error = String;
-            fn try_from(circle: &'a $mod::Ellipse) -> Result<Self, String> {
+            fn try_from(circle: &$mod::Ellipse) -> Result<Self, String> {
                 let radius0: f64 = **circle.semi_axis_1;
                 let radius1: f64 = **circle.semi_axis_2;
                 let transform = Matrix3::try_from(&circle.conic.position)?
@@ -60,96 +54,59 @@ macro_rules! sub_impl_curve {
                 Ok(Processor::new(UnitCircle::new()).transformed(transform))
             }
         }
-        impl<'a, P> std::convert::TryFrom<&'a $mod::Ellipse>
-            for truck_geometry::Processor<truck_geometry::UnitCircle<P>, Matrix4>
-        where P: From<&'a $mod::CartesianPoint> + Clone
-        {
+        impl TryFrom<&$mod::Ellipse> for Ellipse<Point3, Matrix4> {
             type Error = String;
-            fn try_from(circle: &'a $mod::Ellipse) -> Result<Self, String> {
-                use truck_geometry::Transformed;
+            fn try_from(circle: &$mod::Ellipse) -> Result<Self, String> {
                 let radius0: f64 = **circle.semi_axis_1;
                 let radius1: f64 = **circle.semi_axis_2;
                 let transform = Matrix4::try_from(&circle.conic.position)?
                     * Matrix4::from_nonuniform_scale(radius0, radius1, 1.0);
-                Ok(
-                    truck_geometry::Processor::new(truck_geometry::UnitCircle::new())
-                        .transformed(transform),
-                )
+                Ok(Processor::new(UnitCircle::new()).transformed(transform))
             }
         }
-        impl<'a, P> std::convert::TryFrom<&'a $mod::Hyperbola>
-            for truck_geometry::Processor<truck_geometry::UnitHyperbola<P>, Matrix3>
-        where P: From<&'a $mod::CartesianPoint> + Clone
-        {
+        impl TryFrom<&$mod::Hyperbola> for Hyperbola<Point2, Matrix3> {
             type Error = String;
-            fn try_from(circle: &'a $mod::Hyperbola) -> Result<Self, String> {
-                use truck_geometry::Transformed;
+            fn try_from(circle: &$mod::Hyperbola) -> Result<Self, String> {
                 let radius0: f64 = **circle.semi_axis;
                 let radius1: f64 = **circle.semi_imag_axis;
                 let transform = Matrix3::try_from(&circle.conic.position)?
                     * Matrix3::from_nonuniform_scale(radius0, radius1);
-                Ok(
-                    truck_geometry::Processor::new(truck_geometry::UnitHyperbola::new())
-                        .transformed(transform),
-                )
+                Ok(Processor::new(UnitHyperbola::new()).transformed(transform))
             }
         }
-        impl<'a, P> std::convert::TryFrom<&'a $mod::Hyperbola>
-            for truck_geometry::Processor<truck_geometry::UnitHyperbola<P>, Matrix4>
-        where P: From<&'a $mod::CartesianPoint> + Clone
-        {
+        impl TryFrom<&$mod::Hyperbola> for Hyperbola<Point3, Matrix4> {
             type Error = String;
-            fn try_from(circle: &'a $mod::Hyperbola) -> Result<Self, String> {
-                use truck_geometry::Transformed;
+            fn try_from(circle: &$mod::Hyperbola) -> Result<Self, String> {
                 let radius0: f64 = **circle.semi_axis;
                 let radius1: f64 = **circle.semi_imag_axis;
                 let transform = Matrix4::try_from(&circle.conic.position)?
                     * Matrix4::from_nonuniform_scale(radius0, radius1, 1.0);
-                Ok(
-                    truck_geometry::Processor::new(truck_geometry::UnitHyperbola::new())
-                        .transformed(transform),
-                )
+                Ok(Processor::new(UnitHyperbola::new()).transformed(transform))
             }
         }
-        impl<'a, P> std::convert::TryFrom<&'a $mod::Parabola>
-            for truck_geometry::Processor<truck_geometry::UnitParabola<P>, Matrix3>
-        where P: From<&'a $mod::CartesianPoint> + Clone
-        {
+        impl TryFrom<&$mod::Parabola> for Parabola<Point2, Matrix3> {
             type Error = String;
-            fn try_from(circle: &'a $mod::Parabola) -> Result<Self, String> {
-                use truck_geometry::Transformed;
+            fn try_from(circle: &$mod::Parabola) -> Result<Self, String> {
                 let f: f64 = *circle.focal_dist;
                 let transform = Matrix3::try_from(&circle.conic.position)? * Matrix3::from_scale(f);
-                Ok(
-                    truck_geometry::Processor::new(truck_geometry::UnitParabola::new())
-                        .transformed(transform),
-                )
+                Ok(Processor::new(UnitParabola::new()).transformed(transform))
             }
         }
-        impl<'a, P> std::convert::TryFrom<&'a $mod::Parabola>
-            for truck_geometry::Processor<truck_geometry::UnitParabola<P>, Matrix4>
-        where P: From<&'a $mod::CartesianPoint> + Clone
-        {
+        impl TryFrom<&$mod::Parabola> for Parabola<Point3, Matrix4> {
             type Error = String;
-            fn try_from(circle: &'a $mod::Parabola) -> Result<Self, String> {
-                use truck_geometry::Transformed;
+            fn try_from(circle: &$mod::Parabola) -> Result<Self, String> {
                 let f: f64 = *circle.focal_dist;
                 let transform = Matrix4::try_from(&circle.conic.position)? * Matrix4::from_scale(f);
-                Ok(
-                    truck_geometry::Processor::new(truck_geometry::UnitParabola::new())
-                        .transformed(transform),
-                )
+                Ok(Processor::new(UnitParabola::new()).transformed(transform))
             }
         }
-        impl<'a, P: From<&'a $mod::CartesianPoint>> From<&'a $mod::Polyline>
-            for truck_polymesh::PolylineCurve<P>
-        {
+        impl<'a, P: From<&'a $mod::CartesianPoint>> From<&'a $mod::Polyline> for PolylineCurve<P> {
             fn from(poly: &'a $mod::Polyline) -> Self {
                 Self(poly.points.iter().map(|pt| P::from(&pt)).collect())
             }
         }
         impl<'a, P: From<&'a $mod::CartesianPoint>> From<&'a $mod::BSplineCurveWithKnots>
-            for truck_geometry::BSplineCurve<P>
+            for BSplineCurve<P>
         {
             fn from(curve: &'a $mod::BSplineCurveWithKnots) -> Self {
                 let knots = curve.knots.iter().map(|a| **a).collect();
@@ -158,7 +115,7 @@ macro_rules! sub_impl_curve {
                     .iter()
                     .map(|n| *n as usize)
                     .collect();
-                let knots = truck_geometry::KnotVec::from_single_multi(knots, multi).unwrap();
+                let knots = KnotVec::from_single_multi(knots, multi).unwrap();
                 let ctrpts = curve
                     .b_spline_curve
                     .control_points_list

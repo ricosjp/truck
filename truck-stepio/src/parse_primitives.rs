@@ -3,7 +3,8 @@ macro_rules! parse_primitives {
     ($mod: tt, $mod_parse_primitives: ident) => {
         mod $mod_parse_primitives {
             use super::$mod;
-            use $crate::truck_geometry::base::*;
+            use std::result::Result;
+            use $crate::alias::*;
             $crate::sub_parse_primitives!($mod);
         }
     };
