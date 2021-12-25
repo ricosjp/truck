@@ -244,6 +244,17 @@ mod tentative {
 		pub radius: LengthMeasure,
 		pub semi_angle: PlaneAngleMeasure,
 	}
+	#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub struct SphericalSurface {
+        pub elementary_surface: ElementarySurface,
+        pub radius: PositiveLengthMeasure,
+    }
+	#[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub struct ToroidalSurface {
+        pub elementary_surface: ElementarySurface,
+        pub major_radius: PositiveLengthMeasure,
+        pub minor_radius: PositiveLengthMeasure,
+    }
 }
 
 truck_stepio::parse_primitives!(tentative, __parse_primitives);
