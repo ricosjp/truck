@@ -34,6 +34,19 @@ impl<'a, T: SearchParameter> SearchParameter for &'a T {
     }
 }
 
+impl<T: SearchParameter> SearchParameter for Box<T> {
+    type Point = T::Point;
+    type Parameter = T::Parameter;
+    fn search_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter> {
+        T::search_parameter(&**self, point, hint, trial)
+    }
+}
+
 /// Search parameter `t` such that `self.subs(t)` is nearest point.
 pub trait SearchNearestParameter {
     /// point
@@ -63,6 +76,19 @@ impl<'a, T: SearchNearestParameter> SearchNearestParameter for &'a T {
     }
 }
 
+impl<T: SearchNearestParameter> SearchNearestParameter for Box<T> {
+    type Point = T::Point;
+    type Parameter = T::Parameter;
+    fn search_nearest_parameter(
+        &self,
+        point: Self::Point,
+        hint: Option<Self::Parameter>,
+        trial: usize,
+    ) -> Option<Self::Parameter> {
+        T::search_nearest_parameter(&**self, point, hint, trial)
+    }
+}
+
 /// Oriented and reversible
 pub trait Invertible: Clone {
     /// Inverts `self`
@@ -72,19 +98,6 @@ pub trait Invertible: Clone {
     fn inverse(&self) -> Self {
         let mut res = self.clone();
         res.invert();
-        res
-    }
-}
-
-/// Transform geometry
-pub trait Transformed<T>: Clone {
-    /// transform by `trans`.
-    fn transform_by(&mut self, trans: T);
-    /// transformed geometry by `trans`.
-    #[inline(always)]
-    fn transformed(&self, trans: T) -> Self {
-        let mut res = self.clone();
-        res.transform_by(trans);
         res
     }
 }
@@ -100,4 +113,31 @@ impl<P: Clone> Invertible for Vec<P> {
     fn invert(&mut self) { self.reverse(); }
     #[inline(always)]
     fn inverse(&self) -> Self { self.iter().rev().cloned().collect() }
+}
+
+impl<T: Invertible> Invertible for Box<T> {
+    #[inline(always)]
+    fn invert(&mut self) { (**self).invert() }
+    #[inline(always)]
+    fn inverse(&self) -> Self { Box::new((**self).inverse()) }
+}
+
+/// Transform geometry
+pub trait Transformed<T>: Clone {
+    /// transform by `trans`.
+    fn transform_by(&mut self, trans: T);
+    /// transformed geometry by `trans`.
+    #[inline(always)]
+    fn transformed(&self, trans: T) -> Self {
+        let mut res = self.clone();
+        res.transform_by(trans);
+        res
+    }
+}
+
+impl<S: Transformed<T>, T> Transformed<T> for Box<S> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: T) { (**self).transform_by(trans) }
+    #[inline(always)]
+    fn transformed(&self, trans: T) -> Self { Box::new((**self).transformed(trans)) }
 }

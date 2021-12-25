@@ -31,6 +31,17 @@ impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
 }
 
+impl<S: ParametricSurface> ParametricSurface for Box<S> {
+    type Point = S::Point;
+    type Vector = S::Vector;
+    fn subs(&self, u: f64, v: f64) -> Self::Point { (**self).subs(u, v) }
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { (**self).uder(u, v) }
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { (**self).vder(u, v) }
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (**self).uuder(u, v) }
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (**self).uvder(u, v) }
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
+}
+
 /// 2D parametric surface
 pub trait ParametricSurface2D: ParametricSurface<Point = Point2, Vector = Vector2> {}
 impl<S: ParametricSurface<Point = Point2, Vector = Vector2>> ParametricSurface2D for S {}
@@ -59,6 +70,12 @@ impl<'a, S: BoundedSurface> BoundedSurface for &'a S {
     }
 }
 
+impl<S: BoundedSurface> BoundedSurface for Box<S> {
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
+        (**self).parameter_range()
+    }
+}
+
 /// Whether the surface includes the boundary curve.
 pub trait IncludeCurve<C: ParametricCurve> {
     /// Returns whether the curve `curve` is included in the surface `self`.
@@ -78,6 +95,12 @@ pub trait ParameterDivision2D {
 impl<'a, S: ParameterDivision2D> ParameterDivision2D for &'a S {
     fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
         (*self).parameter_division(range, tol)
+    }
+}
+
+impl<S: ParameterDivision2D> ParameterDivision2D for Box<S> {
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+        (**self).parameter_division(range, tol)
     }
 }
 
