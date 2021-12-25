@@ -13,21 +13,15 @@ impl PolygonInstance {
     }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
-    pub fn instance_state(&self) -> &PolygonState {
-        &self.state
-    }
+    pub fn instance_state(&self) -> &PolygonState { &self.state }
     /// Returns the mutable reference to instance descriptor.
     #[inline(always)]
-    pub fn instance_state_mut(&mut self) -> &mut PolygonState {
-        &mut self.state
-    }
+    pub fn instance_state_mut(&mut self) -> &mut PolygonState { &mut self.state }
 
-    /// swap vertex buffers
+    /// swap vertex buffers and index buffers
     #[inline(always)]
     pub fn swap_vertex(&mut self, other: &mut PolygonInstance) {
-        let polygon = self.polygon.clone();
-        self.polygon = other.polygon.clone();
-        other.polygon = polygon;
+        std::mem::swap(&mut self.polygon, &mut other.polygon);
     }
 
     #[inline(always)]

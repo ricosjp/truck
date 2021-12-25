@@ -5,6 +5,8 @@ The version is of the bottom crate `truck-rendimpl`.
 ## Unreleased
 
 - add some specified geometries for STEP I/O
+- Derive geometric traits to `Box`.
+- Add the method `swap_vertex` to `WireFrameInstance`.
 - In `truck-geotrait`, the trait `ParametricCurve` is decomposed into `ParametricCurve` and `BoundedCurve`.
 - In order to make meshing reproducible, we decided to implement random perturbations by means of a deterministic hash function.
 - except tags from some tests
