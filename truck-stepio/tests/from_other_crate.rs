@@ -79,15 +79,6 @@ mod tentative {
         }
     }
 
-    impl std::ops::Deref for CartesianPointAny {
-        type Target = CartesianPoint;
-        fn deref(&self) -> &CartesianPoint {
-            match self {
-                CartesianPointAny::CartesianPoint(got) => got,
-            }
-        }
-    }
-
     #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
     pub struct Vector {
         pub orientation: Direction,
@@ -125,6 +116,15 @@ mod tentative {
     #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
     pub struct Conic {
         pub position: Axis2Placement,
+    }
+
+    #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub enum ConicAny {
+        Conic(Box<Conic>),
+        Circle(Box<Circle>),
+        Ellipse(Box<Ellipse>),
+        Hyperbola(Box<Hyperbola>),
+        Parabola(Box<Parabola>),
     }
 
     #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
@@ -170,7 +170,7 @@ mod tentative {
     #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
     pub struct BSplineCurve {
         pub degree: i64,
-        pub control_points_list: Vec<CartesianPoint>,
+        pub control_points_list: Vec<CartesianPointAny>,
         pub curve_form: BSplineCurveForm,
         pub closed_curve: Logical,
         pub self_intersect: Logical,
@@ -178,6 +178,7 @@ mod tentative {
 
     #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
     pub enum BSplineCurveAny {
+        BSplineCurve(Box<BSplineCurve>),
         BSplineCurveWithKnots(Box<BSplineCurveWithKnots>),
         BezierCurve(Box<BezierCurve>),
         QuasiUniformCurve(Box<QuasiUniformCurve>),

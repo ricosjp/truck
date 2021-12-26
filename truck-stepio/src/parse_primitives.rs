@@ -33,7 +33,7 @@ macro_rules! sub_parse_primitives {
         }
         impl From<&$mod::CartesianPointAny> for Point2 {
             fn from(pt: &$mod::CartesianPointAny) -> Self {
-                let mut pt = pt.coordinates.clone();
+                let mut pt = pt.as_ref().coordinates.clone();
                 pt.resize(2, 0.0_f64.into());
                 Point2::new(*pt[0], *pt[1])
             }
@@ -43,7 +43,7 @@ macro_rules! sub_parse_primitives {
         }
         impl From<&$mod::CartesianPointAny> for Point3 {
             fn from(pt: &$mod::CartesianPointAny) -> Self {
-                let mut pt = pt.coordinates.clone();
+                let mut pt = pt.as_ref().coordinates.clone();
                 pt.resize(3, 0.0_f64.into());
                 Point3::new(*pt[0], *pt[1], *pt[2])
             }
@@ -74,6 +74,14 @@ macro_rules! sub_parse_primitives {
         }
         impl From<$mod::Direction> for Vector3 {
             fn from(dir: $mod::Direction) -> Self { Vector3::from(&dir) }
+        }
+        impl From<&$mod::Vector> for Vector2 {
+            fn from(vec: &$mod::Vector) -> Self {
+                Vector2::from(&vec.orientation) * vec.magnitude.0
+            }
+        }
+        impl From<$mod::Vector> for Vector2 {
+            fn from(vec: $mod::Vector) -> Self { Vector2::from(&vec) }
         }
         impl From<&$mod::Vector> for Vector3 {
             fn from(vec: &$mod::Vector) -> Self {

@@ -56,5 +56,18 @@ macro_rules! sub_impl_surface {
                 Processor::new(Sphere::new(center, radius)).transformed(mat)
             }
         }
+        impl From<&$mod::ToroidalSurface> for ToroidalSurface {
+            fn from(ts: &$mod::ToroidalSurface) -> Self {
+                let mat = Matrix4::from(&ts.elementary_surface.position);
+                let r0 = **ts.major_radius;
+                let r1 = **ts.minor_radius;
+                let circle_mat =
+                    Matrix4::from_translation(Vector3::new(r0, 0.0, 0.0)) * Matrix4::from_scale(r1);
+                let circle = Processor::new(UnitCircle::new()).transformed(circle_mat);
+                let torus =
+                    RevolutedCurve::by_revolution(circle, Point3::origin(), Vector3::unit_y());
+                Processor::new(torus).transformed(mat)
+            }
+        }
     };
 }
