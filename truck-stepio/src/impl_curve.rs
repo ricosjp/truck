@@ -151,8 +151,10 @@ macro_rules! sub_impl_curve {
             fn try_from(curve: &$mod::CurveAny) -> Result<Self, ExpressParseError> {
                 use $mod::CurveAny::*;
                 match curve {
+                    Curve(_) => Err("not enough data!".to_string()),
                     Line(x) => Ok(Self::Line((&**x).into())),
-                    Conic(x) => Ok(Self::Conic((&**x).try_into()?))
+                    Conic(x) => Ok(Self::Conic((&**x).try_into()?)),
+                    BoundedCurve(_x) => unimplemented!(),
                 }
             }
         }
