@@ -89,6 +89,12 @@ mod tentative {
     pub struct Placement {
         pub location: CartesianPointAny,
     }
+    
+    #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub struct Axis1Placement {
+        pub placement: Placement,
+        pub axis: Option<Direction>,
+    }
 
     #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
     pub struct Axis2Placement2D {
@@ -106,6 +112,18 @@ mod tentative {
     pub enum Axis2Placement {
         Axis2Placement2D(Box<Axis2Placement2D>),
         Axis2Placement3D(Box<Axis2Placement3D>),
+    }
+    #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub enum CurveAny {
+        //Curve(Box<Curve>),
+        Line(Box<Line>),
+        Conic(Box<ConicAny>),
+        //BoundedCurve(Box<BoundedCurveAny>),
+        //Pcurve(Box<PcurveAny>),
+        //SurfaceCurve(Box<SurfaceCurveAny>),
+        //OffsetCurve2D(Box<OffsetCurve2D>),
+        //OffsetCurve3D(Box<OffsetCurve3D>),
+        //CurveReplica(Box<CurveReplica>),
     }
     #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
     pub struct Line {
@@ -255,6 +273,26 @@ mod tentative {
         pub elementary_surface: ElementarySurface,
         pub major_radius: PositiveLengthMeasure,
         pub minor_radius: PositiveLengthMeasure,
+    }
+    #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub struct SweptSurface {
+        pub swept_curve: CurveAny,
+    }
+    #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub enum SweptSurfaceAny {
+        SweptSurface(Box<SweptSurface>),
+        SurfaceOfLinearExtrusion(Box<SurfaceOfLinearExtrusion>),
+        SurfaceOfRevolution(Box<SurfaceOfRevolution>),
+    }
+    #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub struct SurfaceOfLinearExtrusion {
+        pub swept_surface: SweptSurface,
+        pub extrusion_axis: Vector,
+    }
+    #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
+    pub struct SurfaceOfRevolution {
+        pub swept_surface: SweptSurface,
+        pub axis_position: Axis1Placement,
     }
 }
 

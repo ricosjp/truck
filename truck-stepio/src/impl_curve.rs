@@ -61,7 +61,7 @@ macro_rules! sub_impl_curve {
                 Ok(Processor::new(UnitParabola::new()).transformed(transform))
             }
         }
-        impl TryFrom<&$mod::ConicAny> for FromConic<$point, $matrix> {
+        impl TryFrom<&$mod::ConicAny> for Conic<$point, $matrix> {
             type Error = ExpressParseError;
             fn try_from(conic: &$mod::ConicAny) -> Result<Self, ExpressParseError> {
                 use $mod::ConicAny::*;
@@ -144,6 +144,16 @@ macro_rules! sub_impl_curve {
                 );
                 let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
                 Self::new(knots.unwrap(), ctrpts)
+            }
+        }
+        impl TryFrom<&$mod::CurveAny> for Curve<$point, $homogeneous, $matrix> {
+            type Error = ExpressParseError;
+            fn try_from(curve: &$mod::CurveAny) -> Result<Self, ExpressParseError> {
+                use $mod::CurveAny::*;
+                match curve {
+                    Line(x) => Ok(Self::Line((&**x).into())),
+                    Conic(x) => Ok(Self::Conic((&**x).try_into()?))
+                }
             }
         }
     };

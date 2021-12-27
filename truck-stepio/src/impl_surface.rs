@@ -3,8 +3,8 @@ macro_rules! impl_surface {
     ($mod: tt, $mod_impl_surface: ident) => {
         mod $mod_impl_surface {
             use super::$mod;
-            //use std::convert::TryFrom;
-            //use std::result::Result;
+            use std::convert::{TryFrom, TryInto};
+            use std::result::Result;
             use $crate::alias::*;
             $crate::sub_impl_surface!($mod);
         }
@@ -67,6 +67,39 @@ macro_rules! sub_impl_surface {
                 let torus =
                     RevolutedCurve::by_revolution(circle, Point3::origin(), Vector3::unit_y());
                 Processor::new(torus).transformed(mat)
+            }
+        }
+        impl TryFrom<&$mod::SurfaceOfLinearExtrusion> for StepExtrudedCurve {
+            type Error = ExpressParseError;
+            fn try_from(sle: &$mod::SurfaceOfLinearExtrusion) -> Result<Self, ExpressParseError> {
+                Ok(ExtrudedCurve::by_extrusion(
+                    Curve::try_from(&sle.swept_surface.swept_curve)?,
+                    Vector3::from(&sle.extrusion_axis),
+                ))
+            }
+        }
+        impl TryFrom<&$mod::SurfaceOfRevolution> for StepRevolutedCurve {
+            type Error = ExpressParseError;
+            fn try_from(sr: &$mod::SurfaceOfRevolution) -> Result<Self, ExpressParseError> {
+                Ok(Processor::new(RevolutedCurve::by_revolution(
+                    Curve::try_from(&sr.swept_surface.swept_curve)?,
+                    Point3::from(&sr.axis_position.placement.location),
+                    match &sr.axis_position.axis {
+                        Some(x) => Vector3::from(x),
+                        None => Vector3::unit_z(),
+                    },
+                )))
+            }
+        }
+        impl TryFrom<&$mod::SweptSurfaceAny> for SweptCurve {
+            type Error = ExpressParseError;
+            fn try_from(ss: &$mod::SweptSurfaceAny) -> Result<Self, ExpressParseError> {
+                use $mod::SweptSurfaceAny::*;
+                match ss {
+                    SweptSurface(_) => Err("not enough data!".to_string()),
+                    SurfaceOfLinearExtrusion(x) => Ok(Self::ExtrudedCurve((&**x).try_into()?)),
+                    SurfaceOfRevolution(x) => Ok(Self::RevolutedCurve((&**x).try_into()?)),
+                }
             }
         }
     };
