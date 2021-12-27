@@ -1,11 +1,9 @@
-espr_derive::inline_express!("
+espr_derive::inline_express!(
+  "
 SCHEMA ap04x;
 
-TYPE label = STRING; 
-END_TYPE;
-
 ENTITY representation_item;
-  name : label;
+  name : INTEGER;
 WHERE
   WR1: SIZEOF(using_representations(SELF)) > 0;
 END_ENTITY;
@@ -348,8 +346,124 @@ DERIVE
                     vector(axis_position.z, 1.0));
 END_ENTITY;
 
+ENTITY bounded_surface
+   SUPERTYPE OF (ONEOF(b_spline_surface
+    (*, rectangular_trimmed_surface,
+                       curve_bounded_surface, rectangular_composite_surface*)
+    ))
+   SUBTYPE OF (surface);
+END_ENTITY;
+
+TYPE b_spline_surface_form = ENUMERATION OF
+   (plane_surf,
+    cylindrical_surf,
+    conical_surf,
+    spherical_surf,
+    toroidal_surf,
+    surf_of_revolution,
+    ruled_surf,
+    generalised_cone,
+    quadric_surf,
+    surf_of_linear_extrusion,
+    unspecified);
+END_TYPE;
+
+ENTITY CONTROL_POINTS_DUMMY;
+END_ENTITY;
+
+ENTITY b_spline_surface
+   SUPERTYPE OF (ONEOF(b_spline_surface_with_knots, uniform_surface,
+                       quasi_uniform_surface, bezier_surface)
+                         ANDOR rational_b_spline_surface)
+   SUBTYPE OF (bounded_surface);
+   u_degree             : INTEGER;
+   v_degree             : INTEGER;
+   --control_points_list  : LIST [2:?] OF LIST [2:?] OF cartesian_point;
+   control_points_list : CONTROL_POINTS_DUMMY;
+   surface_form         : b_spline_surface_form;
+   u_closed             : LOGICAL;
+   v_closed             : LOGICAL;
+   self_intersect       : LOGICAL;
+ DERIVE
+   u_upper             : INTEGER := SIZEOF(control_points_list) - 1;
+   v_upper             : INTEGER := SIZEOF(control_points_list[1]) - 1;
+   control_points      : ARRAY [0:u_upper] OF ARRAY [0:v_upper] OF 
+                         cartesian_point 
+                       := make_array_of_array(control_points_list,
+                                              0,u_upper,0,v_upper);
+ WHERE
+   WR1: ('GEOMETRY_SCHEMA.UNIFORM_SURFACE' IN TYPEOF(SELF)) OR
+        ('GEOMETRY_SCHEMA.QUASI_UNIFORM_SURFACE' IN TYPEOF(SELF)) OR
+        ('GEOMETRY_SCHEMA.BEZIER_SURFACE' IN TYPEOF(SELF)) OR
+        ('GEOMETRY_SCHEMA.B_SPLINE_SURFACE_WITH_KNOTS' IN TYPEOF(SELF));
+END_ENTITY;
+
+ENTITY b_spline_surface_with_knots
+   SUBTYPE OF (b_spline_surface);
+   u_multiplicities  : LIST [2:?] OF INTEGER;
+   v_multiplicities  : LIST [2:?] OF INTEGER;
+   u_knots           : LIST [2:?] OF parameter_value;
+   v_knots           : LIST [2:?] OF parameter_value;
+   knot_spec         : knot_type;
+ DERIVE
+   knot_u_upper      : INTEGER := SIZEOF(u_knots);
+   knot_v_upper      : INTEGER := SIZEOF(v_knots);
+ WHERE
+    WR1: constraints_param_b_spline(SELF\\b_spline_surface.u_degree,
+                   knot_u_upper, SELF\\b_spline_surface.u_upper,
+                               u_multiplicities, u_knots);
+    WR2: constraints_param_b_spline(SELF\\b_spline_surface.v_degree,
+                   knot_v_upper, SELF\\b_spline_surface.v_upper,
+                               v_multiplicities, v_knots);
+    WR3: SIZEOF(u_multiplicities) = knot_u_upper;
+    WR4: SIZEOF(v_multiplicities) = knot_v_upper;
+END_ENTITY;
+
+ENTITY uniform_surface
+   SUBTYPE OF (b_spline_surface);
+END_ENTITY;
+
+ENTITY quasi_uniform_surface
+   SUBTYPE OF (b_spline_surface);
+END_ENTITY;
+
+ENTITY bezier_surface
+   SUBTYPE OF (b_spline_surface);
+END_ENTITY;
+
+ENTITY rational_b_spline_surface
+   SUBTYPE OF (b_spline_surface);
+   weights_data : LIST [2:?] OF
+                    LIST [2:?] OF REAL;
+                                
+ DERIVE
+   weights       : ARRAY [0:u_upper] OF
+                      ARRAY [0:v_upper] OF REAL
+                 := make_array_of_array(weights_data,0,u_upper,0,v_upper);
+ WHERE
+   WR1: (SIZEOF(weights_data) =
+                          SIZEOF(SELF\\b_spline_surface.control_points_list))
+           AND (SIZEOF(weights_data[1]) =
+                          SIZEOF(SELF\\b_spline_surface.control_points_list[1]));
+   WR2: surface_weights_positive(SELF);
+END_ENTITY;
+
 END_SCHEMA;
-");
+
+"
+);
+
+impl ap04x::ControlPointsDummy {
+  fn iter(&self) -> impl Iterator<Item = &Vec<ap04x::CartesianPoint>> {
+    None.into_iter()
+  }
+  fn len(&self) -> usize { 0 }
+}
+
+impl std::ops::Index<usize> for ap04x::ControlPointsDummy {
+  type Output = Self;
+  fn index(&self, _: usize) -> &Self::Output { self }
+}
 
 truck_stepio::parse_primitives!(ap04x, __parse_primitives);
 truck_stepio::impl_curve!(ap04x, __impl_curve);

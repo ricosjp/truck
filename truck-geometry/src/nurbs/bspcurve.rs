@@ -279,6 +279,14 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     }
 }
 
+impl<V: Homogeneous<f64>> BSplineCurve<V> {
+    /// lift up control points to homogeneous coordinate.
+    pub fn lift_up(curve: BSplineCurve<V::Point>) -> Self {
+        let control_points = curve.control_points.into_iter().map(V::from_point).collect();
+        BSplineCurve::new_unchecked(curve.knot_vec, control_points)
+    }
+} 
+
 impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     type Point = P;
     type Vector = P::Diff;

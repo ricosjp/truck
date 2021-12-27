@@ -18,6 +18,7 @@ truck-polymesh = { version = "0.3.0", path = "../truck-polymesh" }
 derive-new = "0.5.9"
 serde = { version = "1.0.131", features = ["derive"] }
 itertools = "0.10.1"
+nom = "7.0.0"
 ruststep = { git = "https://github.com/ricosjp/ruststep.git" }
 ruststep-derive = { git = "https://github.com/ricosjp/ruststep.git" }
 espr-derive = { git = "https://github.com/ricosjp/ruststep.git", branch = "asref-from-any-to-supertype" }

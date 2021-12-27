@@ -574,6 +574,18 @@ impl<P: ControlPoint<f64>> BSplineSurface<P> {
     }
 }
 
+impl<V: Homogeneous<f64>> BSplineSurface<V> {
+    /// lift up control points to homogeneous coordinate.
+    pub fn lift_up(surface: BSplineSurface<V::Point>) -> Self {
+        let control_points = surface
+            .control_points
+            .into_iter()
+            .map(|vec| vec.into_iter().map(V::from_point).collect())
+            .collect();
+        BSplineSurface::new_unchecked(surface.knot_vecs, control_points)
+    }
+}
+
 impl<P: ControlPoint<f64>> ParametricSurface for BSplineSurface<P> {
     type Point = P;
     type Vector = P::Diff;

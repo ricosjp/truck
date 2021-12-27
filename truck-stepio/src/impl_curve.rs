@@ -146,6 +146,28 @@ macro_rules! sub_impl_curve {
                 Self::new(knots.unwrap(), ctrpts)
             }
         }
+        impl TryFrom<&$mod::BSplineCurveAny> for NURBSCurve<$homogeneous> {
+            type Error = ExpressParseError;
+            fn try_from(curve: &$mod::BSplineCurveAny) -> Result<Self, ExpressParseError> {
+                use $mod::BSplineCurveAny as BSCA;
+                match curve {
+                    BSCA::BSplineCurve(_) => Err("not enough data!".to_string()),
+                    BSCA::BSplineCurveWithKnots(x) => Ok(NURBSCurve::new(BSplineCurve::lift_up(
+                        BSplineCurve::<$point>::from(&**x),
+                    ))),
+                    BSCA::UniformCurve(x) => Ok(NURBSCurve::new(BSplineCurve::lift_up(
+                        BSplineCurve::<$point>::from(&**x),
+                    ))),
+                    BSCA::QuasiUniformCurve(x) => Ok(NURBSCurve::new(BSplineCurve::lift_up(
+                        BSplineCurve::<$point>::from(&**x),
+                    ))),
+                    BSCA::BezierCurve(x) => Ok(NURBSCurve::new(BSplineCurve::lift_up(
+                        BSplineCurve::<$point>::from(&**x),
+                    ))),
+                    BSCA::RationalBSplineCurve(x) => Ok(NURBSCurve::from(&**x)),
+                }
+            }
+        }
         impl TryFrom<&$mod::CurveAny> for Curve<$point, $homogeneous, $matrix> {
             type Error = ExpressParseError;
             fn try_from(curve: &$mod::CurveAny) -> Result<Self, ExpressParseError> {
