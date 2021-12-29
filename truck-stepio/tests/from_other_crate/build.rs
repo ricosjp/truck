@@ -2,8 +2,11 @@ espr_derive::inline_express!(
   "
 SCHEMA ap04x;
 
+TYPE LABEL = STRING;
+END_TYPE;
+
 ENTITY representation_item;
-  name : INTEGER;
+  name : LABEL;
 WHERE
   WR1: SIZEOF(using_representations(SELF)) > 0;
 END_ENTITY;
@@ -368,9 +371,6 @@ TYPE b_spline_surface_form = ENUMERATION OF
     unspecified);
 END_TYPE;
 
-ENTITY CONTROL_POINTS_DUMMY;
-END_ENTITY;
-
 ENTITY b_spline_surface
    SUPERTYPE OF (ONEOF(b_spline_surface_with_knots, uniform_surface,
                        quasi_uniform_surface, bezier_surface)
@@ -378,8 +378,7 @@ ENTITY b_spline_surface
    SUBTYPE OF (bounded_surface);
    u_degree             : INTEGER;
    v_degree             : INTEGER;
-   --control_points_list  : LIST [2:?] OF LIST [2:?] OF cartesian_point;
-   control_points_list : CONTROL_POINTS_DUMMY;
+   control_points_list  : LIST [2:?] OF LIST [2:?] OF cartesian_point;
    surface_form         : b_spline_surface_form;
    u_closed             : LOGICAL;
    v_closed             : LOGICAL;
@@ -433,8 +432,7 @@ END_ENTITY;
 
 ENTITY rational_b_spline_surface
    SUBTYPE OF (b_spline_surface);
-   weights_data : LIST [2:?] OF
-                    LIST [2:?] OF REAL;
+   weights_data : LIST [2:?] OF LIST [2:?] OF REAL;
                                 
  DERIVE
    weights       : ARRAY [0:u_upper] OF
@@ -448,22 +446,209 @@ ENTITY rational_b_spline_surface
    WR2: surface_weights_positive(SELF);
 END_ENTITY;
 
+ENTITY topological_representation_item
+   SUPERTYPE OF (ONEOF(vertex, edge, face_bound, face, vertex_shell,
+                   wire_shell, connected_edge_set, connected_face_set,
+                    (loop ANDOR path)))
+   SUBTYPE OF (representation_item);
+END_ENTITY;
+
+ENTITY vertex
+   SUBTYPE OF (topological_representation_item);
+END_ENTITY;
+
+ENTITY vertex_point
+    SUBTYPE OF(vertex,geometric_representation_item);
+      vertex_geometry : point;
+END_ENTITY;
+
+ENTITY edge
+   SUPERTYPE OF(ONEOF(edge_curve, oriented_edge))
+   SUBTYPE OF (topological_representation_item);
+   edge_start : vertex;
+   edge_end   : vertex;
+END_ENTITY;
+
+ENTITY edge_curve
+   SUBTYPE OF(edge,geometric_representation_item);
+   edge_geometry : curve;
+   same_sense    : BOOLEAN;
+END_ENTITY;
+
+ENTITY oriented_edge
+   SUBTYPE OF (edge);
+   edge_element : edge;
+   orientation  : BOOLEAN;
+ DERIVE
+   SELF\\edge.edge_start : vertex := boolean_choose (SELF.orientation,
+                                            SELF.edge_element.edge_start,
+                                            SELF.edge_element.edge_end);
+   SELF\\edge.edge_end   : vertex := boolean_choose (SELF.orientation,
+                                            SELF.edge_element.edge_end,
+                                            SELF.edge_element.edge_start);
+ WHERE
+   WR1: NOT ('TOPOLOGY_SCHEMA.ORIENTED_EDGE' IN TYPEOF (SELF.edge_element));
+END_ENTITY;
+
+ENTITY path
+   SUPERTYPE OF (ONEOF(open_path, edge_loop, oriented_path))
+   SUBTYPE OF (topological_representation_item);
+   edge_list  : LIST [1:?] OF UNIQUE oriented_edge;
+ WHERE
+   WR1: path_head_to_tail(SELF);
+END_ENTITY;
+
+ENTITY oriented_path
+   SUBTYPE OF (path);
+   path_element : path;
+   orientation  : BOOLEAN;
+ DERIVE
+   SELF\\path.edge_list : LIST [1:?] OF UNIQUE oriented_edge
+                           := conditional_reverse(SELF.orientation,
+                                         SELF.path_element.edge_list);
+ WHERE
+   WR1: NOT ('TOPOLOGY_SCHEMA.ORIENTED_PATH' IN TYPEOF (SELF.path_element));
+END_ENTITY;
+
+ENTITY open_path
+   SUBTYPE OF (path);
+ DERIVE
+   ne : INTEGER := SIZEOF(SELF\\path.edge_list);
+ WHERE
+   WR1: (SELF\\path.edge_list[1].edge_element.edge_start) :<>:
+                       (SELF\\path.edge_list[ne].edge_element.edge_end);
+END_ENTITY;
+
+ENTITY loop
+   SUPERTYPE OF (ONEOF(vertex_loop, edge_loop, poly_loop))
+   SUBTYPE OF (topological_representation_item);
+END_ENTITY;
+
+ENTITY vertex_loop
+   SUBTYPE OF (loop);
+   loop_vertex : vertex;
+END_ENTITY;
+
+ENTITY edge_loop
+   SUBTYPE OF (loop,path);
+ DERIVE
+   ne : INTEGER := SIZEOF(SELF\\path.edge_list);
+ WHERE
+   WR1: (SELF\\path.edge_list[1].edge_start) :=:
+        (SELF\\path.edge_list[ne].edge_end);
+END_ENTITY;
+
+ENTITY poly_loop
+   SUBTYPE OF (loop,geometric_representation_item);
+   polygon : LIST [3:?] OF UNIQUE cartesian_point;
+END_ENTITY;
+
+ENTITY face_bound
+   SUBTYPE OF(topological_representation_item);
+   bound       :  loop;
+   orientation :  BOOLEAN;
+END_ENTITY;
+
+ENTITY face_outer_bound
+    SUBTYPE OF (face_bound);
+END_ENTITY;
+
+ENTITY face
+   SUPERTYPE OF(ONEOF(face_surface, subface, oriented_face))
+   SUBTYPE OF (topological_representation_item);
+   bounds : SET[1:?] OF face_bound;
+ WHERE
+   WR1: NOT (mixed_loop_type_set(list_to_set(list_face_loops(SELF))));
+   WR2: SIZEOF(QUERY(temp <* bounds | 'TOPOLOGY_SCHEMA.FACE_OUTER_BOUND' IN
+                                               TYPEOF(temp))) <= 1;
+END_ENTITY;
+
+ENTITY face_surface
+   SUBTYPE OF(face,geometric_representation_item);
+   face_geometry :  surface;
+   same_sense    :  BOOLEAN;
+END_ENTITY;
+
+ENTITY oriented_face
+   SUBTYPE OF (face);
+   face_element : face;
+   orientation  : BOOLEAN;
+ DERIVE
+   SELF\\face.bounds : SET[1:?] OF face_bound
+          := conditional_reverse(SELF.orientation,SELF.face_element.bounds);
+ WHERE
+   WR1: NOT ('TOPOLOGY_SCHEMA.ORIENTED_FACE' IN TYPEOF (SELF.face_element));
+END_ENTITY;
+
+ENTITY subface
+   SUBTYPE OF (face);
+   parent_face   :  face;
+ WHERE
+   WR1: NOT (mixed_loop_type_set(list_to_set(list_face_loops(SELF)) +
+              list_to_set(list_face_loops(parent_face))));
+END_ENTITY;
+
+ENTITY connected_face_set
+   SUPERTYPE OF (ONEOF (closed_shell, open_shell))
+   SUBTYPE OF (topological_representation_item);
+   cfs_faces : SET [1:?] OF face;
+END_ENTITY;
+
+ENTITY vertex_shell
+   SUBTYPE OF (topological_representation_item);
+   vertex_shell_extent : vertex_loop;
+END_ENTITY;
+
+ENTITY wire_shell
+   SUBTYPE OF (topological_representation_item);
+   wire_shell_extent : SET [1:?] OF loop;
+ WHERE
+   WR1: NOT mixed_loop_type_set(wire_shell_extent);
+END_ENTITY;
+
+ENTITY open_shell
+   SUBTYPE OF (connected_face_set);
+END_ENTITY;
+
+ENTITY oriented_open_shell
+   SUBTYPE OF (open_shell);
+   open_shell_element : open_shell;
+   orientation        : BOOLEAN;
+ DERIVE
+   SELF\\connected_face_set.cfs_faces : SET [1:?] OF face
+                                      := conditional_reverse(SELF.orientation,
+                                           SELF.open_shell_element.cfs_faces);
+ WHERE
+   WR1: NOT ('TOPOLOGY_SCHEMA.ORIENTED_OPEN_SHELL' 
+                IN TYPEOF (SELF.open_shell_element));
+END_ENTITY;
+
+ENTITY closed_shell
+   SUBTYPE OF (connected_face_set);
+END_ENTITY;
+
+ENTITY oriented_closed_shell
+   SUBTYPE OF (closed_shell);
+   closed_shell_element : closed_shell;
+   orientation          : BOOLEAN;
+ DERIVE
+   SELF\\connected_face_set.cfs_faces : SET [1:?] OF face
+                                       := conditional_reverse(SELF.orientation,
+                                          SELF.closed_shell_element.cfs_faces);
+ WHERE
+   WR1: NOT ('TOPOLOGY_SCHEMA.ORIENTED_CLOSED_SHELL' 
+                IN TYPEOF (SELF.closed_shell_element));
+END_ENTITY;
+
+ENTITY connected_edge_set
+   SUBTYPE OF (topological_representation_item);
+   ces_edges : SET [1:?] OF edge;
+END_ENTITY;
+
 END_SCHEMA;
 
 "
 );
-
-impl ap04x::ControlPointsDummy {
-  fn iter(&self) -> impl Iterator<Item = &Vec<ap04x::CartesianPoint>> {
-    None.into_iter()
-  }
-  fn len(&self) -> usize { 0 }
-}
-
-impl std::ops::Index<usize> for ap04x::ControlPointsDummy {
-  type Output = Self;
-  fn index(&self, _: usize) -> &Self::Output { self }
-}
 
 truck_stepio::parse_primitives!(ap04x, __parse_primitives);
 truck_stepio::impl_curve!(ap04x, __impl_curve);

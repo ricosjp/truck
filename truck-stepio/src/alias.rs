@@ -3,6 +3,10 @@ pub use truck_polymesh::*;
 
 pub type ExpressParseError = String;
 
+pub trait Empty {
+	fn empty() -> Self;
+}
+
 pub type Ellipse<P, M> = Processor<UnitCircle<P>, M>;
 pub type Hyperbola<P, M> = Processor<UnitHyperbola<P>, M>;
 pub type Parabola<P, M> = Processor<UnitParabola<P>, M>;

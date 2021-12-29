@@ -3,6 +3,7 @@ macro_rules! parse_primitives {
     ($mod: tt, $mod_parse_primitives: ident) => {
         mod $mod_parse_primitives {
             use super::$mod;
+            use std::convert::TryFrom;
             use std::result::Result;
             use $crate::alias::*;
             $crate::sub_parse_primitives!($mod);
@@ -14,6 +15,16 @@ macro_rules! parse_primitives {
 #[macro_export]
 macro_rules! sub_parse_primitives {
     ($mod: tt) => {
+        impl Empty for $mod::RepresentationItem {
+            fn empty() -> Self { Self::new(String::new().into()) }
+        }
+        impl Empty for $mod::GeometricRepresentationItem {
+            fn empty() -> Self { Self::new(Empty::empty()) }
+        }
+        impl Empty for $mod::Point {
+            fn empty() -> $mod::Point { Self::new(Empty::empty()) }
+        }
+
         impl From<&$mod::CartesianPoint> for Point2 {
             fn from(pt: &$mod::CartesianPoint) -> Self {
                 let mut pt = pt.coordinates.clone();
@@ -29,6 +40,22 @@ macro_rules! sub_parse_primitives {
                 let mut pt = pt.coordinates.clone();
                 pt.resize(3, 0.0_f64.into());
                 Point3::new(*pt[0], *pt[1], *pt[2])
+            }
+        }
+        impl From<Point2> for $mod::CartesianPoint {
+            fn from(p: Point2) -> Self {
+                Self {
+                    point: Empty::empty(),
+                    coordinates: vec![p.x.into(), p.y.into()],
+                }
+            }
+        }
+        impl From<Point3> for $mod::CartesianPoint {
+            fn from(p: Point3) -> Self {
+                Self {
+                    point: Empty::empty(),
+                    coordinates: vec![p.x.into(), p.y.into(), p.z.into()],
+                }
             }
         }
         impl From<&$mod::CartesianPointAny> for Point2 {
@@ -71,6 +98,19 @@ macro_rules! sub_parse_primitives {
         impl From<$mod::Direction> for Vector3 {
             fn from(dir: $mod::Direction) -> Self { Vector3::from(&dir) }
         }
+        impl From<Vector2> for $mod::Direction {
+            fn from(dir: Vector2) -> Self {
+                Self::new(Empty::empty(), vec![dir.x.into(), dir.y.into()])
+            }
+        }
+        impl From<Vector3> for $mod::Direction {
+            fn from(dir: Vector3) -> Self {
+                Self::new(
+                    Empty::empty(),
+                    vec![dir.x.into(), dir.y.into(), dir.z.into()],
+                )
+            }
+        }
         impl From<&$mod::Vector> for Vector2 {
             fn from(vec: &$mod::Vector) -> Self {
                 Vector2::from(&vec.orientation) * vec.magnitude.0
@@ -87,6 +127,30 @@ macro_rules! sub_parse_primitives {
         impl From<$mod::Vector> for Vector3 {
             fn from(vec: $mod::Vector) -> Self { Vector3::from(&vec) }
         }
+        impl From<Vector2> for $mod::Vector {
+            fn from(dir: Vector2) -> Self {
+                let mag = dir.magnitude();
+                let ori = dir / mag;
+                Self::new(Empty::empty(), ori.into(), mag.into())
+            }
+        }
+        impl From<Vector3> for $mod::Vector {
+            fn from(dir: Vector3) -> Self {
+                let mag = dir.magnitude();
+                let ori = dir / mag;
+                Self::new(Empty::empty(), ori.into(), mag.into())
+            }
+        }
+        impl From<Point2> for $mod::Placement {
+            fn from(p: Point2) -> $mod::Placement {
+                Self::new(Empty::empty(), $mod::CartesianPoint::from(p).into())
+            }
+        }
+        impl From<Point3> for $mod::Placement {
+            fn from(p: Point3) -> $mod::Placement {
+                Self::new(Empty::empty(), $mod::CartesianPoint::from(p).into())
+            }
+        }
         impl From<&$mod::Axis2Placement2D> for Matrix3 {
             fn from(axis: &$mod::Axis2Placement2D) -> Self {
                 let z = Point2::from(&axis.placement.location);
@@ -99,6 +163,14 @@ macro_rules! sub_parse_primitives {
         }
         impl From<$mod::Axis2Placement2D> for Matrix3 {
             fn from(axis: $mod::Axis2Placement2D) -> Self { Matrix3::from(&axis) }
+        }
+        impl From<Matrix3> for $mod::Axis2Placement2D {
+            fn from(mat: Matrix3) -> Self {
+                Self {
+                    placement: Homogeneous::to_point(mat[2]).into(),
+                    ref_direction: Some(mat[0].truncate().into()),
+                }
+            }
         }
         impl From<&$mod::Axis2Placement3D> for Matrix4 {
             fn from(axis: &$mod::Axis2Placement3D) -> Matrix4 {
@@ -121,7 +193,16 @@ macro_rules! sub_parse_primitives {
         impl From<$mod::Axis2Placement3D> for Matrix4 {
             fn from(axis: $mod::Axis2Placement3D) -> Self { Matrix4::from(&axis) }
         }
-        impl std::convert::TryFrom<&$mod::Axis2Placement> for Matrix3 {
+        impl From<Matrix4> for $mod::Axis2Placement3D {
+            fn from(mat: Matrix4) -> Self {
+                Self {
+                    placement: Homogeneous::to_point(mat[3]).into(),
+                    axis: Some(mat[2].truncate().into()),
+                    ref_direction: Some(mat[0].truncate().into()),
+                }
+            }
+        }
+        impl TryFrom<&$mod::Axis2Placement> for Matrix3 {
             type Error = String;
             fn try_from(axis: &$mod::Axis2Placement) -> Result<Self, String> {
                 use $mod::Axis2Placement::*;
@@ -131,7 +212,7 @@ macro_rules! sub_parse_primitives {
                 }
             }
         }
-        impl std::convert::TryFrom<&$mod::Axis2Placement> for Matrix4 {
+        impl TryFrom<&$mod::Axis2Placement> for Matrix4 {
             type Error = String;
             fn try_from(axis: &$mod::Axis2Placement) -> Result<Self, String> {
                 use $mod::Axis2Placement::*;
