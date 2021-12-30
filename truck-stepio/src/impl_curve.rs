@@ -176,7 +176,7 @@ macro_rules! sub_impl_curve {
                     Curve(_) => Err("not enough data!".to_string()),
                     Line(x) => Ok(Self::Line((&**x).into())),
                     Conic(x) => Ok(Self::Conic((&**x).try_into()?)),
-                    BoundedCurve(_x) => unimplemented!(),
+                    _ => unimplemented!(),
                 }
             }
         }

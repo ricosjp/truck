@@ -58,6 +58,7 @@ macro_rules! sub_parse_primitives {
                 }
             }
         }
+        /*
         impl From<&$mod::CartesianPointAny> for Point2 {
             fn from(pt: &$mod::CartesianPointAny) -> Self {
                 Self::from(AsRef::<$mod::CartesianPoint>::as_ref(pt))
@@ -74,7 +75,7 @@ macro_rules! sub_parse_primitives {
         impl From<$mod::CartesianPointAny> for Point3 {
             fn from(pt: $mod::CartesianPointAny) -> Self { Point3::from(&pt) }
         }
-
+        */
         impl From<$mod::CartesianPoint> for Point3 {
             fn from(pt: $mod::CartesianPoint) -> Self { Point3::from(&pt) }
         }
