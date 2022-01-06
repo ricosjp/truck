@@ -272,8 +272,65 @@ pub struct Tables {
     volume_unit: HashMap<u64, as_holder!(VolumeUnit)>,
     week_of_year_and_day_date: HashMap<u64, as_holder!(WeekOfYearAndDayDate)>,
     wire_shell: HashMap<u64, as_holder!(WireShell)>,
+    approved_item: HashMap<u64, as_holder!(ApprovedItem)>,
+    area_measure: HashMap<u64, as_holder!(AreaMeasure)>,
+    axis2_placement: HashMap<u64, as_holder!(Axis2Placement)>,
+    boolean_operand: HashMap<u64, as_holder!(BooleanOperand)>,
+    certified_item: HashMap<u64, as_holder!(CertifiedItem)>,
+    change_request_item: HashMap<u64, as_holder!(ChangeRequestItem)>,
+    characterized_definition: HashMap<u64, as_holder!(CharacterizedDefinition)>,
+    characterized_product_definition: HashMap<u64, as_holder!(CharacterizedProductDefinition)>,
+    classified_item: HashMap<u64, as_holder!(ClassifiedItem)>,
+    context_dependent_measure: HashMap<u64, as_holder!(ContextDependentMeasure)>,
+    contracted_item: HashMap<u64, as_holder!(ContractedItem)>,
+    count_measure: HashMap<u64, as_holder!(CountMeasure)>,
+    curve_on_surface: HashMap<u64, as_holder!(CurveOnSurface)>,
+    date_time_item: HashMap<u64, as_holder!(DateTimeItem)>,
+    date_time_select: HashMap<u64, as_holder!(DateTimeSelect)>,
+    day_in_month_number: HashMap<u64, as_holder!(DayInMonthNumber)>,
+    day_in_week_number: HashMap<u64, as_holder!(DayInWeekNumber)>,
+    day_in_year_number: HashMap<u64, as_holder!(DayInYearNumber)>,
+    descriptive_measure: HashMap<u64, as_holder!(DescriptiveMeasure)>,
+    dimension_count: HashMap<u64, as_holder!(DimensionCount)>,
+    founded_item_select: HashMap<u64, as_holder!(FoundedItemSelect)>,
+    geometric_set_select: HashMap<u64, as_holder!(GeometricSetSelect)>,
+    hour_in_day: HashMap<u64, as_holder!(HourInDay)>,
+    identifier: HashMap<u64, as_holder!(Identifier)>,
+    label: HashMap<u64, as_holder!(Label)>,
+    length_measure: HashMap<u64, as_holder!(LengthMeasure)>,
     list_of_reversible_topology_item: HashMap<u64, as_holder!(ListOfReversibleTopologyItem)>,
+    mass_measure: HashMap<u64, as_holder!(MassMeasure)>,
+    measure_value: HashMap<u64, as_holder!(MeasureValue)>,
+    minute_in_hour: HashMap<u64, as_holder!(MinuteInHour)>,
+    month_in_year_number: HashMap<u64, as_holder!(MonthInYearNumber)>,
+    parameter_value: HashMap<u64, as_holder!(ParameterValue)>,
+    pcurve_or_surface: HashMap<u64, as_holder!(PcurveOrSurface)>,
+    person_organization_item: HashMap<u64, as_holder!(PersonOrganizationItem)>,
+    person_organization_select: HashMap<u64, as_holder!(PersonOrganizationSelect)>,
+    plane_angle_measure: HashMap<u64, as_holder!(PlaneAngleMeasure)>,
+    positive_length_measure: HashMap<u64, as_holder!(PositiveLengthMeasure)>,
+    positive_plane_angle_measure: HashMap<u64, as_holder!(PositivePlaneAngleMeasure)>,
+    reversible_topology: HashMap<u64, as_holder!(ReversibleTopology)>,
+    reversible_topology_item: HashMap<u64, as_holder!(ReversibleTopologyItem)>,
+    second_in_minute: HashMap<u64, as_holder!(SecondInMinute)>,
     set_of_reversible_topology_item: HashMap<u64, as_holder!(SetOfReversibleTopologyItem)>,
+    shape_definition: HashMap<u64, as_holder!(ShapeDefinition)>,
+    shell: HashMap<u64, as_holder!(Shell)>,
+    solid_angle_measure: HashMap<u64, as_holder!(SolidAngleMeasure)>,
+    specified_item: HashMap<u64, as_holder!(SpecifiedItem)>,
+    start_request_item: HashMap<u64, as_holder!(StartRequestItem)>,
+    supported_item: HashMap<u64, as_holder!(SupportedItem)>,
+    surface_model: HashMap<u64, as_holder!(SurfaceModel)>,
+    text: HashMap<u64, as_holder!(Text)>,
+    transformation: HashMap<u64, as_holder!(Transformation)>,
+    trimming_select: HashMap<u64, as_holder!(TrimmingSelect)>,
+    unit: HashMap<u64, as_holder!(Unit)>,
+    vector_or_direction: HashMap<u64, as_holder!(VectorOrDirection)>,
+    volume_measure: HashMap<u64, as_holder!(VolumeMeasure)>,
+    week_in_year_number: HashMap<u64, as_holder!(WeekInYearNumber)>,
+    wireframe_model: HashMap<u64, as_holder!(WireframeModel)>,
+    work_item: HashMap<u64, as_holder!(WorkItem)>,
+    year_number: HashMap<u64, as_holder!(YearNumber)>,
 }
 impl Tables {
     pub fn action_iter<'table>(&'table self) -> impl Iterator<Item = Result<Action>> + 'table {
@@ -2247,6 +2304,212 @@ impl Tables {
             .cloned()
             .map(move |value| value.into_owned(&self))
     }
+    pub fn approved_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ApprovedItem>> + 'table {
+        self.approved_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn area_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<AreaMeasure>> + 'table {
+        self.area_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn axis2_placement_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<Axis2Placement>> + 'table {
+        self.axis2_placement
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn boolean_operand_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<BooleanOperand>> + 'table {
+        self.boolean_operand
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn certified_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<CertifiedItem>> + 'table {
+        self.certified_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn change_request_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ChangeRequestItem>> + 'table {
+        self.change_request_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn characterized_definition_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<CharacterizedDefinition>> + 'table {
+        self.characterized_definition
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn characterized_product_definition_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<CharacterizedProductDefinition>> + 'table {
+        self.characterized_product_definition
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn classified_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ClassifiedItem>> + 'table {
+        self.classified_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn context_dependent_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ContextDependentMeasure>> + 'table {
+        self.context_dependent_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn contracted_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ContractedItem>> + 'table {
+        self.contracted_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn count_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<CountMeasure>> + 'table {
+        self.count_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn curve_on_surface_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<CurveOnSurface>> + 'table {
+        self.curve_on_surface
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn date_time_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<DateTimeItem>> + 'table {
+        self.date_time_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn date_time_select_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<DateTimeSelect>> + 'table {
+        self.date_time_select
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn day_in_month_number_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<DayInMonthNumber>> + 'table {
+        self.day_in_month_number
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn day_in_week_number_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<DayInWeekNumber>> + 'table {
+        self.day_in_week_number
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn day_in_year_number_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<DayInYearNumber>> + 'table {
+        self.day_in_year_number
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn descriptive_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<DescriptiveMeasure>> + 'table {
+        self.descriptive_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn dimension_count_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<DimensionCount>> + 'table {
+        self.dimension_count
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn founded_item_select_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<FoundedItemSelect>> + 'table {
+        self.founded_item_select
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn geometric_set_select_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<GeometricSetSelect>> + 'table {
+        self.geometric_set_select
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn hour_in_day_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<HourInDay>> + 'table {
+        self.hour_in_day
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn identifier_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<Identifier>> + 'table {
+        self.identifier
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn label_iter<'table>(&'table self) -> impl Iterator<Item = Result<Label>> + 'table {
+        self.label
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn length_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<LengthMeasure>> + 'table {
+        self.length_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
     pub fn list_of_reversible_topology_item_iter<'table>(
         &'table self,
     ) -> impl Iterator<Item = Result<ListOfReversibleTopologyItem>> + 'table {
@@ -2255,10 +2518,250 @@ impl Tables {
             .cloned()
             .map(move |value| value.into_owned(&self))
     }
+    pub fn mass_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<MassMeasure>> + 'table {
+        self.mass_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn measure_value_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<MeasureValue>> + 'table {
+        self.measure_value
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn minute_in_hour_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<MinuteInHour>> + 'table {
+        self.minute_in_hour
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn month_in_year_number_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<MonthInYearNumber>> + 'table {
+        self.month_in_year_number
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn parameter_value_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ParameterValue>> + 'table {
+        self.parameter_value
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn pcurve_or_surface_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<PcurveOrSurface>> + 'table {
+        self.pcurve_or_surface
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn person_organization_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<PersonOrganizationItem>> + 'table {
+        self.person_organization_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn person_organization_select_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<PersonOrganizationSelect>> + 'table {
+        self.person_organization_select
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn plane_angle_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<PlaneAngleMeasure>> + 'table {
+        self.plane_angle_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn positive_length_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<PositiveLengthMeasure>> + 'table {
+        self.positive_length_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn positive_plane_angle_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<PositivePlaneAngleMeasure>> + 'table {
+        self.positive_plane_angle_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn reversible_topology_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ReversibleTopology>> + 'table {
+        self.reversible_topology
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn reversible_topology_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ReversibleTopologyItem>> + 'table {
+        self.reversible_topology_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn second_in_minute_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<SecondInMinute>> + 'table {
+        self.second_in_minute
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
     pub fn set_of_reversible_topology_item_iter<'table>(
         &'table self,
     ) -> impl Iterator<Item = Result<SetOfReversibleTopologyItem>> + 'table {
         self.set_of_reversible_topology_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn shape_definition_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<ShapeDefinition>> + 'table {
+        self.shape_definition
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn shell_iter<'table>(&'table self) -> impl Iterator<Item = Result<Shell>> + 'table {
+        self.shell
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn solid_angle_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<SolidAngleMeasure>> + 'table {
+        self.solid_angle_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn specified_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<SpecifiedItem>> + 'table {
+        self.specified_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn start_request_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<StartRequestItem>> + 'table {
+        self.start_request_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn supported_item_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<SupportedItem>> + 'table {
+        self.supported_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn surface_model_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<SurfaceModel>> + 'table {
+        self.surface_model
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn text_iter<'table>(&'table self) -> impl Iterator<Item = Result<Text>> + 'table {
+        self.text
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn transformation_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<Transformation>> + 'table {
+        self.transformation
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn trimming_select_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<TrimmingSelect>> + 'table {
+        self.trimming_select
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn unit_iter<'table>(&'table self) -> impl Iterator<Item = Result<Unit>> + 'table {
+        self.unit
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn vector_or_direction_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<VectorOrDirection>> + 'table {
+        self.vector_or_direction
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn volume_measure_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<VolumeMeasure>> + 'table {
+        self.volume_measure
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn week_in_year_number_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<WeekInYearNumber>> + 'table {
+        self.week_in_year_number
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn wireframe_model_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<WireframeModel>> + 'table {
+        self.wireframe_model
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn work_item_iter<'table>(&'table self) -> impl Iterator<Item = Result<WorkItem>> + 'table {
+        self.work_item
+            .values()
+            .cloned()
+            .map(move |value| value.into_owned(&self))
+    }
+    pub fn year_number_iter<'table>(
+        &'table self,
+    ) -> impl Iterator<Item = Result<YearNumber>> + 'table {
+        self.year_number
             .values()
             .cloned()
             .map(move |value| value.into_owned(&self))
@@ -2306,17 +2809,11 @@ pub enum ApprovedItem {
     Contract(Box<Contract>),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = area_measure)]
+#[holder(generate_deserialize)]
 pub struct AreaMeasure(pub f64);
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
@@ -2402,17 +2899,11 @@ pub enum ClassifiedItem {
     AssemblyComponentUsage(AssemblyComponentUsageAny),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = context_dependent_measure)]
+#[holder(generate_deserialize)]
 pub struct ContextDependentMeasure(pub f64);
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
@@ -2422,17 +2913,11 @@ pub enum ContractedItem {
     ProductDefinitionFormation(ProductDefinitionFormationAny),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = count_measure)]
+#[holder(generate_deserialize)]
 pub struct CountMeasure(pub f64);
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
@@ -2490,69 +2975,39 @@ pub enum DateTimeSelect {
     DateAndTime(Box<DateAndTime>),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = day_in_month_number)]
+#[holder(generate_deserialize)]
 pub struct DayInMonthNumber(pub i64);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = day_in_week_number)]
+#[holder(generate_deserialize)]
 pub struct DayInWeekNumber(pub i64);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = day_in_year_number)]
+#[holder(generate_deserialize)]
 pub struct DayInYearNumber(pub i64);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = descriptive_measure)]
+#[holder(generate_deserialize)]
 pub struct DescriptiveMeasure(pub String);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = dimension_count)]
+#[holder(generate_deserialize)]
 pub struct DimensionCount(pub i64);
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
@@ -2575,30 +3030,18 @@ pub enum GeometricSetSelect {
     Surface(SurfaceAny),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = hour_in_day)]
+#[holder(generate_deserialize)]
 pub struct HourInDay(pub i64);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = identifier)]
+#[holder(generate_deserialize)]
 pub struct Identifier(pub String);
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
 pub enum KnotType {
@@ -2608,32 +3051,22 @@ pub enum KnotType {
     PiecewiseBezierKnots,
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = label)]
+#[holder(generate_deserialize)]
 pub struct Label(pub String);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = length_measure)]
+#[holder(generate_deserialize)]
 pub struct LengthMeasure(pub f64);
-#[derive(Clone, Debug, PartialEq, AsRef, Deref, DerefMut, :: ruststep_derive :: Holder)]
+#[derive(
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
+)]
 # [holder (table = Tables)]
 # [holder (field = list_of_reversible_topology_item)]
 #[holder(generate_deserialize)]
@@ -2641,73 +3074,61 @@ pub struct ListOfReversibleTopologyItem(
     #[holder(use_place_holder)] pub Vec<ReversibleTopologyItem>,
 );
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = mass_measure)]
+#[holder(generate_deserialize)]
 pub struct MassMeasure(pub f64);
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
 #[holder(generate_deserialize)]
 pub enum MeasureValue {
-    LengthMeasure(LengthMeasure),
-    MassMeasure(MassMeasure),
-    PlaneAngleMeasure(PlaneAngleMeasure),
-    SolidAngleMeasure(SolidAngleMeasure),
-    AreaMeasure(AreaMeasure),
-    VolumeMeasure(VolumeMeasure),
-    ParameterValue(ParameterValue),
-    ContextDependentMeasure(ContextDependentMeasure),
-    DescriptiveMeasure(DescriptiveMeasure),
-    PositiveLengthMeasure(PositiveLengthMeasure),
-    PositivePlaneAngleMeasure(PositivePlaneAngleMeasure),
-    CountMeasure(CountMeasure),
+    #[holder(use_place_holder)]
+    LengthMeasure(Box<LengthMeasure>),
+    #[holder(use_place_holder)]
+    MassMeasure(Box<MassMeasure>),
+    #[holder(use_place_holder)]
+    PlaneAngleMeasure(Box<PlaneAngleMeasure>),
+    #[holder(use_place_holder)]
+    SolidAngleMeasure(Box<SolidAngleMeasure>),
+    #[holder(use_place_holder)]
+    AreaMeasure(Box<AreaMeasure>),
+    #[holder(use_place_holder)]
+    VolumeMeasure(Box<VolumeMeasure>),
+    #[holder(use_place_holder)]
+    ParameterValue(Box<ParameterValue>),
+    #[holder(use_place_holder)]
+    ContextDependentMeasure(Box<ContextDependentMeasure>),
+    #[holder(use_place_holder)]
+    DescriptiveMeasure(Box<DescriptiveMeasure>),
+    #[holder(use_place_holder)]
+    PositiveLengthMeasure(Box<PositiveLengthMeasure>),
+    #[holder(use_place_holder)]
+    PositivePlaneAngleMeasure(Box<PositivePlaneAngleMeasure>),
+    #[holder(use_place_holder)]
+    CountMeasure(Box<CountMeasure>),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = minute_in_hour)]
+#[holder(generate_deserialize)]
 pub struct MinuteInHour(pub i64);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = month_in_year_number)]
+#[holder(generate_deserialize)]
 pub struct MonthInYearNumber(pub i64);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = parameter_value)]
+#[holder(generate_deserialize)]
 pub struct ParameterValue(pub f64);
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
@@ -2766,26 +3187,26 @@ pub enum PersonOrganizationSelect {
     PersonAndOrganization(Box<PersonAndOrganization>),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = plane_angle_measure)]
+#[holder(generate_deserialize)]
 pub struct PlaneAngleMeasure(pub f64);
 #[derive(
-    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, :: serde :: Serialize, :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
-pub struct PositiveLengthMeasure(pub LengthMeasure);
+# [holder (table = Tables)]
+# [holder (field = positive_length_measure)]
+#[holder(generate_deserialize)]
+pub struct PositiveLengthMeasure(#[holder(use_place_holder)] pub LengthMeasure);
 #[derive(
-    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, :: serde :: Serialize, :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
-pub struct PositivePlaneAngleMeasure(pub PlaneAngleMeasure);
+# [holder (table = Tables)]
+# [holder (field = positive_plane_angle_measure)]
+#[holder(generate_deserialize)]
+pub struct PositivePlaneAngleMeasure(#[holder(use_place_holder)] pub PlaneAngleMeasure);
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
 pub enum PreferredSurfaceCurveRepresentation {
     Curve3D,
@@ -2821,19 +3242,15 @@ pub enum ReversibleTopologyItem {
     OpenShell(OpenShellAny),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = second_in_minute)]
+#[holder(generate_deserialize)]
 pub struct SecondInMinute(pub f64);
-#[derive(Clone, Debug, PartialEq, AsRef, Deref, DerefMut, :: ruststep_derive :: Holder)]
+#[derive(
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
+)]
 # [holder (table = Tables)]
 # [holder (field = set_of_reversible_topology_item)]
 #[holder(generate_deserialize)]
@@ -2918,17 +3335,11 @@ pub enum SiUnitName {
     Sievert,
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = solid_angle_measure)]
+#[holder(generate_deserialize)]
 pub struct SolidAngleMeasure(pub f64);
 #[derive(Debug, Clone, PartialEq, :: serde :: Deserialize)]
 pub enum Source {
@@ -2975,17 +3386,11 @@ pub enum SurfaceModel {
     ShellBasedSurfaceModel(Box<ShellBasedSurfaceModel>),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = text)]
+#[holder(generate_deserialize)]
 pub struct Text(pub String);
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
@@ -3017,7 +3422,8 @@ pub enum TrimmingSelect {
     # [holder (field = cartesian_point)]
     #[holder(use_place_holder)]
     CartesianPoint(Box<CartesianPoint>),
-    ParameterValue(ParameterValue),
+    #[holder(use_place_holder)]
+    ParameterValue(Box<ParameterValue>),
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
@@ -3038,30 +3444,18 @@ pub enum VectorOrDirection {
     Direction(Box<Direction>),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = volume_measure)]
+#[holder(generate_deserialize)]
 pub struct VolumeMeasure(pub f64);
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = week_in_year_number)]
+#[holder(generate_deserialize)]
 pub struct WeekInYearNumber(pub i64);
 #[derive(Debug, Clone, PartialEq, Holder)]
 # [holder (table = Tables)]
@@ -3082,24 +3476,20 @@ pub enum WorkItem {
     ProductDefinitionFormation(ProductDefinitionFormationAny),
 }
 #[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    AsRef,
-    Deref,
-    DerefMut,
-    From,
-    Into,
-    :: serde :: Serialize,
-    :: serde :: Deserialize,
+    Clone, Debug, PartialEq, AsRef, Deref, DerefMut, Into, From, :: ruststep_derive :: Holder,
 )]
+# [holder (table = Tables)]
+# [holder (field = year_number)]
+#[holder(generate_deserialize)]
 pub struct YearNumber(pub i64);
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
 # [holder (table = Tables)]
 # [holder (field = action)]
 #[holder(generate_deserialize)]
 pub struct Action {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub chosen_method: ActionMethod,
@@ -3116,10 +3506,14 @@ pub enum ActionAny {
     ExecutedAction(Box<ExecutedActionAny>),
 }
 impl Into<ActionAny> for Action {
-    fn into(self) -> ActionAny { ActionAny::Action(Box::new(self)) }
+    fn into(self) -> ActionAny {
+        ActionAny::Action(Box::new(self))
+    }
 }
 impl Into<ActionAny> for ExecutedAction {
-    fn into(self) -> ActionAny { ActionAny::ExecutedAction(Box::new(self.into())) }
+    fn into(self) -> ActionAny {
+        ActionAny::ExecutedAction(Box::new(self.into()))
+    }
 }
 impl AsRef<Action> for ActionAny {
     fn as_ref(&self) -> &Action {
@@ -3152,13 +3546,19 @@ pub enum ActionAssignmentAny {
     StartWork(Box<StartWork>),
 }
 impl Into<ActionAssignmentAny> for ActionAssignment {
-    fn into(self) -> ActionAssignmentAny { ActionAssignmentAny::ActionAssignment(Box::new(self)) }
+    fn into(self) -> ActionAssignmentAny {
+        ActionAssignmentAny::ActionAssignment(Box::new(self))
+    }
 }
 impl Into<ActionAssignmentAny> for Change {
-    fn into(self) -> ActionAssignmentAny { ActionAssignmentAny::Change(Box::new(self.into())) }
+    fn into(self) -> ActionAssignmentAny {
+        ActionAssignmentAny::Change(Box::new(self.into()))
+    }
 }
 impl Into<ActionAssignmentAny> for StartWork {
-    fn into(self) -> ActionAssignmentAny { ActionAssignmentAny::StartWork(Box::new(self.into())) }
+    fn into(self) -> ActionAssignmentAny {
+        ActionAssignmentAny::StartWork(Box::new(self.into()))
+    }
 }
 impl AsRef<ActionAssignment> for ActionAssignmentAny {
     fn as_ref(&self) -> &ActionAssignment {
@@ -3174,9 +3574,13 @@ impl AsRef<ActionAssignment> for ActionAssignmentAny {
 # [holder (field = action_directive)]
 #[holder(generate_deserialize)]
 pub struct ActionDirective {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
+    #[holder(use_place_holder)]
     pub analysis: Text,
+    #[holder(use_place_holder)]
     pub comment: Text,
     #[holder(use_place_holder)]
     pub requests: Vec<VersionedActionRequest>,
@@ -3186,9 +3590,13 @@ pub struct ActionDirective {
 # [holder (field = action_method)]
 #[holder(generate_deserialize)]
 pub struct ActionMethod {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
+    #[holder(use_place_holder)]
     pub consequence: Text,
+    #[holder(use_place_holder)]
     pub purpose: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -3252,6 +3660,7 @@ pub struct ActionRequestSolution {
 # [holder (field = action_request_status)]
 #[holder(generate_deserialize)]
 pub struct ActionRequestStatus {
+    #[holder(use_place_holder)]
     pub status: Label,
     #[holder(use_place_holder)]
     pub assigned_request: VersionedActionRequest,
@@ -3261,6 +3670,7 @@ pub struct ActionRequestStatus {
 # [holder (field = action_status)]
 #[holder(generate_deserialize)]
 pub struct ActionStatus {
+    #[holder(use_place_holder)]
     pub status: Label,
     #[holder(use_place_holder)]
     pub assigned_action: ExecutedActionAny,
@@ -3270,17 +3680,29 @@ pub struct ActionStatus {
 # [holder (field = address)]
 #[holder(generate_deserialize)]
 pub struct Address {
+    #[holder(use_place_holder)]
     pub internal_location: Option<Label>,
+    #[holder(use_place_holder)]
     pub street_number: Option<Label>,
+    #[holder(use_place_holder)]
     pub street: Option<Label>,
+    #[holder(use_place_holder)]
     pub postal_box: Option<Label>,
+    #[holder(use_place_holder)]
     pub town: Option<Label>,
+    #[holder(use_place_holder)]
     pub region: Option<Label>,
+    #[holder(use_place_holder)]
     pub postal_code: Option<Label>,
+    #[holder(use_place_holder)]
     pub country: Option<Label>,
+    #[holder(use_place_holder)]
     pub facsimile_number: Option<Label>,
+    #[holder(use_place_holder)]
     pub telephone_number: Option<Label>,
+    #[holder(use_place_holder)]
     pub electronic_mail_address: Option<Label>,
+    #[holder(use_place_holder)]
     pub telex_number: Option<Label>,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -3298,13 +3720,19 @@ pub enum AddressAny {
     PersonalAddress(Box<PersonalAddress>),
 }
 impl Into<AddressAny> for Address {
-    fn into(self) -> AddressAny { AddressAny::Address(Box::new(self)) }
+    fn into(self) -> AddressAny {
+        AddressAny::Address(Box::new(self))
+    }
 }
 impl Into<AddressAny> for OrganizationalAddress {
-    fn into(self) -> AddressAny { AddressAny::OrganizationalAddress(Box::new(self.into())) }
+    fn into(self) -> AddressAny {
+        AddressAny::OrganizationalAddress(Box::new(self.into()))
+    }
 }
 impl Into<AddressAny> for PersonalAddress {
-    fn into(self) -> AddressAny { AddressAny::PersonalAddress(Box::new(self.into())) }
+    fn into(self) -> AddressAny {
+        AddressAny::PersonalAddress(Box::new(self.into()))
+    }
 }
 impl AsRef<Address> for AddressAny {
     fn as_ref(&self) -> &Address {
@@ -3344,12 +3772,15 @@ pub struct AdvancedFace {
 # [holder (field = alternate_product_relationship)]
 #[holder(generate_deserialize)]
 pub struct AlternateProductRelationship {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub definition: Text,
     #[holder(use_place_holder)]
     pub alternate: Product,
     #[holder(use_place_holder)]
     pub base: Product,
+    #[holder(use_place_holder)]
     pub basis: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -3357,6 +3788,7 @@ pub struct AlternateProductRelationship {
 # [holder (field = application_context)]
 #[holder(generate_deserialize)]
 pub struct ApplicationContext {
+    #[holder(use_place_holder)]
     pub application: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -3364,6 +3796,7 @@ pub struct ApplicationContext {
 # [holder (field = application_context_element)]
 #[holder(generate_deserialize)]
 pub struct ApplicationContextElement {
+    #[holder(use_place_holder)]
     pub name: Label,
     #[holder(use_place_holder)]
     pub frame_of_reference: ApplicationContext,
@@ -3420,8 +3853,11 @@ impl AsRef<ApplicationContextElement> for ApplicationContextElementAny {
 # [holder (field = application_protocol_definition)]
 #[holder(generate_deserialize)]
 pub struct ApplicationProtocolDefinition {
+    #[holder(use_place_holder)]
     pub status: Label,
+    #[holder(use_place_holder)]
     pub application_interpreted_model_schema_name: Label,
+    #[holder(use_place_holder)]
     pub application_protocol_year: YearNumber,
     #[holder(use_place_holder)]
     pub application: ApplicationContext,
@@ -3433,6 +3869,7 @@ pub struct ApplicationProtocolDefinition {
 pub struct Approval {
     #[holder(use_place_holder)]
     pub status: ApprovalStatus,
+    #[holder(use_place_holder)]
     pub level: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -3499,7 +3936,9 @@ pub struct ApprovalPersonOrganization {
 # [holder (field = approval_relationship)]
 #[holder(generate_deserialize)]
 pub struct ApprovalRelationship {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub relating_approval: Approval,
@@ -3511,6 +3950,7 @@ pub struct ApprovalRelationship {
 # [holder (field = approval_role)]
 #[holder(generate_deserialize)]
 pub struct ApprovalRole {
+    #[holder(use_place_holder)]
     pub role: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -3518,6 +3958,7 @@ pub struct ApprovalRole {
 # [holder (field = approval_status)]
 #[holder(generate_deserialize)]
 pub struct ApprovalStatus {
+    #[holder(use_place_holder)]
     pub name: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -3555,6 +3996,7 @@ pub struct AssemblyComponentUsage {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub product_definition_usage: ProductDefinitionUsage,
+    #[holder(use_place_holder)]
     pub reference_designator: Option<Identifier>,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -3639,7 +4081,9 @@ impl AsRef<ProductDefinitionUsage> for AssemblyComponentUsageAny {
 # [holder (field = assembly_component_usage_substitute)]
 #[holder(generate_deserialize)]
 pub struct AssemblyComponentUsageSubstitute {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub definition: Text,
     #[holder(use_place_holder)]
     pub base: AssemblyComponentUsageAny,
@@ -3732,7 +4176,9 @@ pub enum BSplineCurveAny {
     UniformCurve(Box<UniformCurve>),
 }
 impl Into<BSplineCurveAny> for BSplineCurve {
-    fn into(self) -> BSplineCurveAny { BSplineCurveAny::BSplineCurve(Box::new(self)) }
+    fn into(self) -> BSplineCurveAny {
+        BSplineCurveAny::BSplineCurve(Box::new(self))
+    }
 }
 impl Into<BSplineCurveAny> for BSplineCurveWithKnots {
     fn into(self) -> BSplineCurveAny {
@@ -3740,10 +4186,14 @@ impl Into<BSplineCurveAny> for BSplineCurveWithKnots {
     }
 }
 impl Into<BSplineCurveAny> for BezierCurve {
-    fn into(self) -> BSplineCurveAny { BSplineCurveAny::BezierCurve(Box::new(self.into())) }
+    fn into(self) -> BSplineCurveAny {
+        BSplineCurveAny::BezierCurve(Box::new(self.into()))
+    }
 }
 impl Into<BSplineCurveAny> for QuasiUniformCurve {
-    fn into(self) -> BSplineCurveAny { BSplineCurveAny::QuasiUniformCurve(Box::new(self.into())) }
+    fn into(self) -> BSplineCurveAny {
+        BSplineCurveAny::QuasiUniformCurve(Box::new(self.into()))
+    }
 }
 impl Into<BSplineCurveAny> for RationalBSplineCurve {
     fn into(self) -> BSplineCurveAny {
@@ -3751,7 +4201,9 @@ impl Into<BSplineCurveAny> for RationalBSplineCurve {
     }
 }
 impl Into<BSplineCurveAny> for UniformCurve {
-    fn into(self) -> BSplineCurveAny { BSplineCurveAny::UniformCurve(Box::new(self.into())) }
+    fn into(self) -> BSplineCurveAny {
+        BSplineCurveAny::UniformCurve(Box::new(self.into()))
+    }
 }
 impl AsRef<BSplineCurve> for BSplineCurveAny {
     fn as_ref(&self) -> &BSplineCurve {
@@ -3795,6 +4247,7 @@ pub struct BSplineCurveWithKnots {
     #[holder(use_place_holder)]
     pub b_spline_curve: BSplineCurve,
     pub knot_multiplicities: Vec<i64>,
+    #[holder(use_place_holder)]
     pub knots: Vec<ParameterValue>,
     pub knot_spec: KnotType,
 }
@@ -3842,7 +4295,9 @@ pub enum BSplineSurfaceAny {
     UniformSurface(Box<UniformSurface>),
 }
 impl Into<BSplineSurfaceAny> for BSplineSurface {
-    fn into(self) -> BSplineSurfaceAny { BSplineSurfaceAny::BSplineSurface(Box::new(self)) }
+    fn into(self) -> BSplineSurfaceAny {
+        BSplineSurfaceAny::BSplineSurface(Box::new(self))
+    }
 }
 impl Into<BSplineSurfaceAny> for BSplineSurfaceWithKnots {
     fn into(self) -> BSplineSurfaceAny {
@@ -3850,7 +4305,9 @@ impl Into<BSplineSurfaceAny> for BSplineSurfaceWithKnots {
     }
 }
 impl Into<BSplineSurfaceAny> for BezierSurface {
-    fn into(self) -> BSplineSurfaceAny { BSplineSurfaceAny::BezierSurface(Box::new(self.into())) }
+    fn into(self) -> BSplineSurfaceAny {
+        BSplineSurfaceAny::BezierSurface(Box::new(self.into()))
+    }
 }
 impl Into<BSplineSurfaceAny> for QuasiUniformSurface {
     fn into(self) -> BSplineSurfaceAny {
@@ -3863,7 +4320,9 @@ impl Into<BSplineSurfaceAny> for RationalBSplineSurface {
     }
 }
 impl Into<BSplineSurfaceAny> for UniformSurface {
-    fn into(self) -> BSplineSurfaceAny { BSplineSurfaceAny::UniformSurface(Box::new(self.into())) }
+    fn into(self) -> BSplineSurfaceAny {
+        BSplineSurfaceAny::UniformSurface(Box::new(self.into()))
+    }
 }
 impl AsRef<BSplineSurface> for BSplineSurfaceAny {
     fn as_ref(&self) -> &BSplineSurface {
@@ -3912,7 +4371,9 @@ pub struct BSplineSurfaceWithKnots {
     pub b_spline_surface: BSplineSurface,
     pub u_multiplicities: Vec<i64>,
     pub v_multiplicities: Vec<i64>,
+    #[holder(use_place_holder)]
     pub u_knots: Vec<ParameterValue>,
+    #[holder(use_place_holder)]
     pub v_knots: Vec<ParameterValue>,
     pub knot_spec: KnotType,
 }
@@ -3964,7 +4425,9 @@ pub enum BoundaryCurveAny {
     OuterBoundaryCurve(Box<OuterBoundaryCurve>),
 }
 impl Into<BoundaryCurveAny> for BoundaryCurve {
-    fn into(self) -> BoundaryCurveAny { BoundaryCurveAny::BoundaryCurve(Box::new(self)) }
+    fn into(self) -> BoundaryCurveAny {
+        BoundaryCurveAny::BoundaryCurve(Box::new(self))
+    }
 }
 impl Into<BoundaryCurveAny> for OuterBoundaryCurve {
     fn into(self) -> BoundaryCurveAny {
@@ -4028,25 +4491,39 @@ pub enum BoundedCurveAny {
     TrimmedCurve(Box<TrimmedCurve>),
 }
 impl Into<BoundedCurveAny> for BoundedCurve {
-    fn into(self) -> BoundedCurveAny { BoundedCurveAny::BoundedCurve(Box::new(self)) }
+    fn into(self) -> BoundedCurveAny {
+        BoundedCurveAny::BoundedCurve(Box::new(self))
+    }
 }
 impl Into<BoundedCurveAny> for BSplineCurve {
-    fn into(self) -> BoundedCurveAny { BoundedCurveAny::BSplineCurve(Box::new(self.into())) }
+    fn into(self) -> BoundedCurveAny {
+        BoundedCurveAny::BSplineCurve(Box::new(self.into()))
+    }
 }
 impl Into<BoundedCurveAny> for BoundedPcurve {
-    fn into(self) -> BoundedCurveAny { BoundedCurveAny::BoundedPcurve(Box::new(self.into())) }
+    fn into(self) -> BoundedCurveAny {
+        BoundedCurveAny::BoundedPcurve(Box::new(self.into()))
+    }
 }
 impl Into<BoundedCurveAny> for BoundedSurfaceCurve {
-    fn into(self) -> BoundedCurveAny { BoundedCurveAny::BoundedSurfaceCurve(Box::new(self.into())) }
+    fn into(self) -> BoundedCurveAny {
+        BoundedCurveAny::BoundedSurfaceCurve(Box::new(self.into()))
+    }
 }
 impl Into<BoundedCurveAny> for CompositeCurve {
-    fn into(self) -> BoundedCurveAny { BoundedCurveAny::CompositeCurve(Box::new(self.into())) }
+    fn into(self) -> BoundedCurveAny {
+        BoundedCurveAny::CompositeCurve(Box::new(self.into()))
+    }
 }
 impl Into<BoundedCurveAny> for Polyline {
-    fn into(self) -> BoundedCurveAny { BoundedCurveAny::Polyline(Box::new(self.into())) }
+    fn into(self) -> BoundedCurveAny {
+        BoundedCurveAny::Polyline(Box::new(self.into()))
+    }
 }
 impl Into<BoundedCurveAny> for TrimmedCurve {
-    fn into(self) -> BoundedCurveAny { BoundedCurveAny::TrimmedCurve(Box::new(self.into())) }
+    fn into(self) -> BoundedCurveAny {
+        BoundedCurveAny::TrimmedCurve(Box::new(self.into()))
+    }
 }
 impl AsRef<BoundedCurve> for BoundedCurveAny {
     fn as_ref(&self) -> &BoundedCurve {
@@ -4125,10 +4602,14 @@ pub enum BoundedSurfaceAny {
     RectangularTrimmedSurface(Box<RectangularTrimmedSurface>),
 }
 impl Into<BoundedSurfaceAny> for BoundedSurface {
-    fn into(self) -> BoundedSurfaceAny { BoundedSurfaceAny::BoundedSurface(Box::new(self)) }
+    fn into(self) -> BoundedSurfaceAny {
+        BoundedSurfaceAny::BoundedSurface(Box::new(self))
+    }
 }
 impl Into<BoundedSurfaceAny> for BSplineSurface {
-    fn into(self) -> BoundedSurfaceAny { BoundedSurfaceAny::BSplineSurface(Box::new(self.into())) }
+    fn into(self) -> BoundedSurfaceAny {
+        BoundedSurfaceAny::BSplineSurface(Box::new(self.into()))
+    }
 }
 impl Into<BoundedSurfaceAny> for CurveBoundedSurface {
     fn into(self) -> BoundedSurfaceAny {
@@ -4214,7 +4695,9 @@ pub struct CalendarDate {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub date: Date,
+    #[holder(use_place_holder)]
     pub day_component: DayInMonthNumber,
+    #[holder(use_place_holder)]
     pub month_component: MonthInYearNumber,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -4228,6 +4711,7 @@ pub struct CartesianPoint {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub point: Point,
+    #[holder(use_place_holder)]
     pub coordinates: Vec<LengthMeasure>,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut)]
@@ -4423,7 +4907,9 @@ pub struct CcDesignSpecificationReference {
 # [holder (field = certification)]
 #[holder(generate_deserialize)]
 pub struct Certification {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub purpose: Text,
     #[holder(use_place_holder)]
     pub kind: CertificationType,
@@ -4470,6 +4956,7 @@ impl AsRef<CertificationAssignment> for CertificationAssignmentAny {
 # [holder (field = certification_type)]
 #[holder(generate_deserialize)]
 pub struct CertificationType {
+    #[holder(use_place_holder)]
     pub description: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -4511,6 +4998,7 @@ pub struct Circle {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub conic: Conic,
+    #[holder(use_place_holder)]
     pub radius: PositiveLengthMeasure,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -4537,10 +5025,14 @@ pub enum ClosedShellAny {
     OrientedClosedShell(Box<OrientedClosedShell>),
 }
 impl Into<ClosedShellAny> for ClosedShell {
-    fn into(self) -> ClosedShellAny { ClosedShellAny::ClosedShell(Box::new(self)) }
+    fn into(self) -> ClosedShellAny {
+        ClosedShellAny::ClosedShell(Box::new(self))
+    }
 }
 impl Into<ClosedShellAny> for OrientedClosedShell {
-    fn into(self) -> ClosedShellAny { ClosedShellAny::OrientedClosedShell(Box::new(self.into())) }
+    fn into(self) -> ClosedShellAny {
+        ClosedShellAny::OrientedClosedShell(Box::new(self.into()))
+    }
 }
 impl AsRef<ClosedShell> for ClosedShellAny {
     fn as_ref(&self) -> &ClosedShell {
@@ -4587,7 +5079,9 @@ pub enum CompositeCurveAny {
     CompositeCurveOnSurface(Box<CompositeCurveOnSurfaceAny>),
 }
 impl Into<CompositeCurveAny> for CompositeCurve {
-    fn into(self) -> CompositeCurveAny { CompositeCurveAny::CompositeCurve(Box::new(self)) }
+    fn into(self) -> CompositeCurveAny {
+        CompositeCurveAny::CompositeCurve(Box::new(self))
+    }
 }
 impl Into<CompositeCurveAny> for CompositeCurveOnSurface {
     fn into(self) -> CompositeCurveAny {
@@ -4751,11 +5245,15 @@ pub struct ConfigurationEffectivity {
 # [holder (field = configuration_item)]
 #[holder(generate_deserialize)]
 pub struct ConfigurationItem {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Option<Text>,
     #[holder(use_place_holder)]
     pub item_concept: ProductConcept,
+    #[holder(use_place_holder)]
     pub purpose: Option<Label>,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -4793,19 +5291,29 @@ pub enum ConicAny {
     Parabola(Box<Parabola>),
 }
 impl Into<ConicAny> for Conic {
-    fn into(self) -> ConicAny { ConicAny::Conic(Box::new(self)) }
+    fn into(self) -> ConicAny {
+        ConicAny::Conic(Box::new(self))
+    }
 }
 impl Into<ConicAny> for Circle {
-    fn into(self) -> ConicAny { ConicAny::Circle(Box::new(self.into())) }
+    fn into(self) -> ConicAny {
+        ConicAny::Circle(Box::new(self.into()))
+    }
 }
 impl Into<ConicAny> for Ellipse {
-    fn into(self) -> ConicAny { ConicAny::Ellipse(Box::new(self.into())) }
+    fn into(self) -> ConicAny {
+        ConicAny::Ellipse(Box::new(self.into()))
+    }
 }
 impl Into<ConicAny> for Hyperbola {
-    fn into(self) -> ConicAny { ConicAny::Hyperbola(Box::new(self.into())) }
+    fn into(self) -> ConicAny {
+        ConicAny::Hyperbola(Box::new(self.into()))
+    }
 }
 impl Into<ConicAny> for Parabola {
-    fn into(self) -> ConicAny { ConicAny::Parabola(Box::new(self.into())) }
+    fn into(self) -> ConicAny {
+        ConicAny::Parabola(Box::new(self.into()))
+    }
 }
 impl AsRef<Conic> for ConicAny {
     fn as_ref(&self) -> &Conic {
@@ -4840,7 +5348,9 @@ pub struct ConicalSurface {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub elementary_surface: ElementarySurface,
+    #[holder(use_place_holder)]
     pub radius: LengthMeasure,
+    #[holder(use_place_holder)]
     pub semi_angle: PlaneAngleMeasure,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -4886,13 +5396,19 @@ pub enum ConnectedFaceSetAny {
     OpenShell(Box<OpenShellAny>),
 }
 impl Into<ConnectedFaceSetAny> for ConnectedFaceSet {
-    fn into(self) -> ConnectedFaceSetAny { ConnectedFaceSetAny::ConnectedFaceSet(Box::new(self)) }
+    fn into(self) -> ConnectedFaceSetAny {
+        ConnectedFaceSetAny::ConnectedFaceSet(Box::new(self))
+    }
 }
 impl Into<ConnectedFaceSetAny> for ClosedShell {
-    fn into(self) -> ConnectedFaceSetAny { ConnectedFaceSetAny::ClosedShell(Box::new(self.into())) }
+    fn into(self) -> ConnectedFaceSetAny {
+        ConnectedFaceSetAny::ClosedShell(Box::new(self.into()))
+    }
 }
 impl Into<ConnectedFaceSetAny> for OpenShell {
-    fn into(self) -> ConnectedFaceSetAny { ConnectedFaceSetAny::OpenShell(Box::new(self.into())) }
+    fn into(self) -> ConnectedFaceSetAny {
+        ConnectedFaceSetAny::OpenShell(Box::new(self.into()))
+    }
 }
 impl AsRef<ConnectedFaceSet> for ConnectedFaceSetAny {
     fn as_ref(&self) -> &ConnectedFaceSet {
@@ -4939,6 +5455,7 @@ pub struct ContextDependentUnit {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub named_unit: NamedUnit,
+    #[holder(use_place_holder)]
     pub name: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -4946,7 +5463,9 @@ pub struct ContextDependentUnit {
 # [holder (field = contract)]
 #[holder(generate_deserialize)]
 pub struct Contract {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub purpose: Text,
     #[holder(use_place_holder)]
     pub kind: ContractType,
@@ -4993,6 +5512,7 @@ impl AsRef<ContractAssignment> for ContractAssignmentAny {
 # [holder (field = contract_type)]
 #[holder(generate_deserialize)]
 pub struct ContractType {
+    #[holder(use_place_holder)]
     pub description: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -5006,6 +5526,7 @@ pub struct ConversionBasedUnit {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub named_unit: NamedUnit,
+    #[holder(use_place_holder)]
     pub name: Label,
     #[holder(use_place_holder)]
     pub conversion_factor: MeasureWithUnitAny,
@@ -5015,7 +5536,9 @@ pub struct ConversionBasedUnit {
 # [holder (field = coordinated_universal_time_offset)]
 #[holder(generate_deserialize)]
 pub struct CoordinatedUniversalTimeOffset {
+    #[holder(use_place_holder)]
     pub hour_offset: HourInDay,
+    #[holder(use_place_holder)]
     pub minute_offset: Option<MinuteInHour>,
     pub sense: AheadOrBehind,
 }
@@ -5061,28 +5584,44 @@ pub enum CurveAny {
     SurfaceCurve(Box<SurfaceCurveAny>),
 }
 impl Into<CurveAny> for Curve {
-    fn into(self) -> CurveAny { CurveAny::Curve(Box::new(self)) }
+    fn into(self) -> CurveAny {
+        CurveAny::Curve(Box::new(self))
+    }
 }
 impl Into<CurveAny> for BoundedCurve {
-    fn into(self) -> CurveAny { CurveAny::BoundedCurve(Box::new(self.into())) }
+    fn into(self) -> CurveAny {
+        CurveAny::BoundedCurve(Box::new(self.into()))
+    }
 }
 impl Into<CurveAny> for Conic {
-    fn into(self) -> CurveAny { CurveAny::Conic(Box::new(self.into())) }
+    fn into(self) -> CurveAny {
+        CurveAny::Conic(Box::new(self.into()))
+    }
 }
 impl Into<CurveAny> for CurveReplica {
-    fn into(self) -> CurveAny { CurveAny::CurveReplica(Box::new(self.into())) }
+    fn into(self) -> CurveAny {
+        CurveAny::CurveReplica(Box::new(self.into()))
+    }
 }
 impl Into<CurveAny> for Line {
-    fn into(self) -> CurveAny { CurveAny::Line(Box::new(self.into())) }
+    fn into(self) -> CurveAny {
+        CurveAny::Line(Box::new(self.into()))
+    }
 }
 impl Into<CurveAny> for OffsetCurve3D {
-    fn into(self) -> CurveAny { CurveAny::OffsetCurve3D(Box::new(self.into())) }
+    fn into(self) -> CurveAny {
+        CurveAny::OffsetCurve3D(Box::new(self.into()))
+    }
 }
 impl Into<CurveAny> for Pcurve {
-    fn into(self) -> CurveAny { CurveAny::Pcurve(Box::new(self.into())) }
+    fn into(self) -> CurveAny {
+        CurveAny::Pcurve(Box::new(self.into()))
+    }
 }
 impl Into<CurveAny> for SurfaceCurve {
-    fn into(self) -> CurveAny { CurveAny::SurfaceCurve(Box::new(self.into())) }
+    fn into(self) -> CurveAny {
+        CurveAny::SurfaceCurve(Box::new(self.into()))
+    }
 }
 impl AsRef<Curve> for CurveAny {
     fn as_ref(&self) -> &Curve {
@@ -5156,6 +5695,7 @@ pub struct CylindricalSurface {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub elementary_surface: ElementarySurface,
+    #[holder(use_place_holder)]
     pub radius: PositiveLengthMeasure,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -5163,6 +5703,7 @@ pub struct CylindricalSurface {
 # [holder (field = date)]
 #[holder(generate_deserialize)]
 pub struct Date {
+    #[holder(use_place_holder)]
     pub year_component: YearNumber,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -5183,16 +5724,24 @@ pub enum DateAny {
     WeekOfYearAndDayDate(Box<WeekOfYearAndDayDate>),
 }
 impl Into<DateAny> for Date {
-    fn into(self) -> DateAny { DateAny::Date(Box::new(self)) }
+    fn into(self) -> DateAny {
+        DateAny::Date(Box::new(self))
+    }
 }
 impl Into<DateAny> for CalendarDate {
-    fn into(self) -> DateAny { DateAny::CalendarDate(Box::new(self.into())) }
+    fn into(self) -> DateAny {
+        DateAny::CalendarDate(Box::new(self.into()))
+    }
 }
 impl Into<DateAny> for OrdinalDate {
-    fn into(self) -> DateAny { DateAny::OrdinalDate(Box::new(self.into())) }
+    fn into(self) -> DateAny {
+        DateAny::OrdinalDate(Box::new(self.into()))
+    }
 }
 impl Into<DateAny> for WeekOfYearAndDayDate {
-    fn into(self) -> DateAny { DateAny::WeekOfYearAndDayDate(Box::new(self.into())) }
+    fn into(self) -> DateAny {
+        DateAny::WeekOfYearAndDayDate(Box::new(self.into()))
+    }
 }
 impl AsRef<Date> for DateAny {
     fn as_ref(&self) -> &Date {
@@ -5258,6 +5807,7 @@ impl AsRef<DateAndTimeAssignment> for DateAndTimeAssignmentAny {
 # [holder (field = date_time_role)]
 #[holder(generate_deserialize)]
 pub struct DateTimeRole {
+    #[holder(use_place_holder)]
     pub name: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -5316,7 +5866,9 @@ pub enum DegeneratePcurveAny {
     EvaluatedDegeneratePcurve(Box<EvaluatedDegeneratePcurve>),
 }
 impl Into<DegeneratePcurveAny> for DegeneratePcurve {
-    fn into(self) -> DegeneratePcurveAny { DegeneratePcurveAny::DegeneratePcurve(Box::new(self)) }
+    fn into(self) -> DegeneratePcurveAny {
+        DegeneratePcurveAny::DegeneratePcurve(Box::new(self))
+    }
 }
 impl Into<DegeneratePcurveAny> for EvaluatedDegeneratePcurve {
     fn into(self) -> DegeneratePcurveAny {
@@ -5425,8 +5977,11 @@ pub struct Direction {
 # [holder (field = document)]
 #[holder(generate_deserialize)]
 pub struct Document {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub kind: DocumentType,
@@ -5443,10 +5998,14 @@ pub enum DocumentAny {
     DocumentWithClass(Box<DocumentWithClass>),
 }
 impl Into<DocumentAny> for Document {
-    fn into(self) -> DocumentAny { DocumentAny::Document(Box::new(self)) }
+    fn into(self) -> DocumentAny {
+        DocumentAny::Document(Box::new(self))
+    }
 }
 impl Into<DocumentAny> for DocumentWithClass {
-    fn into(self) -> DocumentAny { DocumentAny::DocumentWithClass(Box::new(self.into())) }
+    fn into(self) -> DocumentAny {
+        DocumentAny::DocumentWithClass(Box::new(self.into()))
+    }
 }
 impl AsRef<Document> for DocumentAny {
     fn as_ref(&self) -> &Document {
@@ -5463,6 +6022,7 @@ impl AsRef<Document> for DocumentAny {
 pub struct DocumentReference {
     #[holder(use_place_holder)]
     pub assigned_document: DocumentAny,
+    #[holder(use_place_holder)]
     pub source: Label,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -5499,7 +6059,9 @@ impl AsRef<DocumentReference> for DocumentReferenceAny {
 # [holder (field = document_relationship)]
 #[holder(generate_deserialize)]
 pub struct DocumentRelationship {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub relating_document: DocumentAny,
@@ -5511,6 +6073,7 @@ pub struct DocumentRelationship {
 # [holder (field = document_type)]
 #[holder(generate_deserialize)]
 pub struct DocumentType {
+    #[holder(use_place_holder)]
     pub product_data_type: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -5520,7 +6083,9 @@ pub struct DocumentType {
 pub struct DocumentUsageConstraint {
     #[holder(use_place_holder)]
     pub source: DocumentAny,
+    #[holder(use_place_holder)]
     pub subject_element: Label,
+    #[holder(use_place_holder)]
     pub subject_element_value: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -5534,6 +6099,7 @@ pub struct DocumentWithClass {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub document: Document,
+    #[holder(use_place_holder)]
     pub class: Identifier,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -5567,13 +6133,19 @@ pub enum EdgeAny {
     OrientedEdge(Box<OrientedEdge>),
 }
 impl Into<EdgeAny> for Edge {
-    fn into(self) -> EdgeAny { EdgeAny::Edge(Box::new(self)) }
+    fn into(self) -> EdgeAny {
+        EdgeAny::Edge(Box::new(self))
+    }
 }
 impl Into<EdgeAny> for EdgeCurve {
-    fn into(self) -> EdgeAny { EdgeAny::EdgeCurve(Box::new(self.into())) }
+    fn into(self) -> EdgeAny {
+        EdgeAny::EdgeCurve(Box::new(self.into()))
+    }
 }
 impl Into<EdgeAny> for OrientedEdge {
-    fn into(self) -> EdgeAny { EdgeAny::OrientedEdge(Box::new(self.into())) }
+    fn into(self) -> EdgeAny {
+        EdgeAny::OrientedEdge(Box::new(self.into()))
+    }
 }
 impl AsRef<Edge> for EdgeAny {
     fn as_ref(&self) -> &Edge {
@@ -5655,6 +6227,7 @@ pub struct EdgeLoop {
 # [holder (field = effectivity)]
 #[holder(generate_deserialize)]
 pub struct Effectivity {
+    #[holder(use_place_holder)]
     pub id: Identifier,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -5678,13 +6251,19 @@ pub enum EffectivityAny {
     SerialNumberedEffectivity(Box<SerialNumberedEffectivity>),
 }
 impl Into<EffectivityAny> for Effectivity {
-    fn into(self) -> EffectivityAny { EffectivityAny::Effectivity(Box::new(self)) }
+    fn into(self) -> EffectivityAny {
+        EffectivityAny::Effectivity(Box::new(self))
+    }
 }
 impl Into<EffectivityAny> for DatedEffectivity {
-    fn into(self) -> EffectivityAny { EffectivityAny::DatedEffectivity(Box::new(self.into())) }
+    fn into(self) -> EffectivityAny {
+        EffectivityAny::DatedEffectivity(Box::new(self.into()))
+    }
 }
 impl Into<EffectivityAny> for LotEffectivity {
-    fn into(self) -> EffectivityAny { EffectivityAny::LotEffectivity(Box::new(self.into())) }
+    fn into(self) -> EffectivityAny {
+        EffectivityAny::LotEffectivity(Box::new(self.into()))
+    }
 }
 impl Into<EffectivityAny> for ProductDefinitionEffectivity {
     fn into(self) -> EffectivityAny {
@@ -5760,7 +6339,9 @@ impl Into<ElementarySurfaceAny> for CylindricalSurface {
     }
 }
 impl Into<ElementarySurfaceAny> for Plane {
-    fn into(self) -> ElementarySurfaceAny { ElementarySurfaceAny::Plane(Box::new(self.into())) }
+    fn into(self) -> ElementarySurfaceAny {
+        ElementarySurfaceAny::Plane(Box::new(self.into()))
+    }
 }
 impl Into<ElementarySurfaceAny> for SphericalSurface {
     fn into(self) -> ElementarySurfaceAny {
@@ -5819,7 +6400,9 @@ pub struct Ellipse {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub conic: Conic,
+    #[holder(use_place_holder)]
     pub semi_axis_1: PositiveLengthMeasure,
+    #[holder(use_place_holder)]
     pub semi_axis_2: PositiveLengthMeasure,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -5860,10 +6443,14 @@ pub enum ExecutedActionAny {
     DirectedAction(Box<DirectedAction>),
 }
 impl Into<ExecutedActionAny> for ExecutedAction {
-    fn into(self) -> ExecutedActionAny { ExecutedActionAny::ExecutedAction(Box::new(self)) }
+    fn into(self) -> ExecutedActionAny {
+        ExecutedActionAny::ExecutedAction(Box::new(self))
+    }
 }
 impl Into<ExecutedActionAny> for DirectedAction {
-    fn into(self) -> ExecutedActionAny { ExecutedActionAny::DirectedAction(Box::new(self.into())) }
+    fn into(self) -> ExecutedActionAny {
+        ExecutedActionAny::DirectedAction(Box::new(self.into()))
+    }
 }
 impl AsRef<ExecutedAction> for ExecutedActionAny {
     fn as_ref(&self) -> &ExecutedAction {
@@ -5912,13 +6499,19 @@ pub enum FaceAny {
     OrientedFace(Box<OrientedFace>),
 }
 impl Into<FaceAny> for Face {
-    fn into(self) -> FaceAny { FaceAny::Face(Box::new(self)) }
+    fn into(self) -> FaceAny {
+        FaceAny::Face(Box::new(self))
+    }
 }
 impl Into<FaceAny> for FaceSurface {
-    fn into(self) -> FaceAny { FaceAny::FaceSurface(Box::new(self.into())) }
+    fn into(self) -> FaceAny {
+        FaceAny::FaceSurface(Box::new(self.into()))
+    }
 }
 impl Into<FaceAny> for OrientedFace {
-    fn into(self) -> FaceAny { FaceAny::OrientedFace(Box::new(self.into())) }
+    fn into(self) -> FaceAny {
+        FaceAny::OrientedFace(Box::new(self.into()))
+    }
 }
 impl AsRef<Face> for FaceAny {
     fn as_ref(&self) -> &Face {
@@ -5965,10 +6558,14 @@ pub enum FaceBoundAny {
     FaceOuterBound(Box<FaceOuterBound>),
 }
 impl Into<FaceBoundAny> for FaceBound {
-    fn into(self) -> FaceBoundAny { FaceBoundAny::FaceBound(Box::new(self)) }
+    fn into(self) -> FaceBoundAny {
+        FaceBoundAny::FaceBound(Box::new(self))
+    }
 }
 impl Into<FaceBoundAny> for FaceOuterBound {
-    fn into(self) -> FaceBoundAny { FaceBoundAny::FaceOuterBound(Box::new(self.into())) }
+    fn into(self) -> FaceBoundAny {
+        FaceBoundAny::FaceOuterBound(Box::new(self.into()))
+    }
 }
 impl AsRef<FaceBound> for FaceBoundAny {
     fn as_ref(&self) -> &FaceBound {
@@ -6027,10 +6624,14 @@ pub enum FaceSurfaceAny {
     AdvancedFace(Box<AdvancedFace>),
 }
 impl Into<FaceSurfaceAny> for FaceSurface {
-    fn into(self) -> FaceSurfaceAny { FaceSurfaceAny::FaceSurface(Box::new(self)) }
+    fn into(self) -> FaceSurfaceAny {
+        FaceSurfaceAny::FaceSurface(Box::new(self))
+    }
 }
 impl Into<FaceSurfaceAny> for AdvancedFace {
-    fn into(self) -> FaceSurfaceAny { FaceSurfaceAny::AdvancedFace(Box::new(self.into())) }
+    fn into(self) -> FaceSurfaceAny {
+        FaceSurfaceAny::AdvancedFace(Box::new(self.into()))
+    }
 }
 impl AsRef<FaceSurface> for FaceSurfaceAny {
     fn as_ref(&self) -> &FaceSurface {
@@ -6100,13 +6701,19 @@ pub enum FoundedItemAny {
     SurfacePatch(Box<SurfacePatch>),
 }
 impl Into<FoundedItemAny> for FoundedItem {
-    fn into(self) -> FoundedItemAny { FoundedItemAny::FoundedItem(Box::new(self)) }
+    fn into(self) -> FoundedItemAny {
+        FoundedItemAny::FoundedItem(Box::new(self))
+    }
 }
 impl Into<FoundedItemAny> for CompositeCurveSegment {
-    fn into(self) -> FoundedItemAny { FoundedItemAny::CompositeCurveSegment(Box::new(self.into())) }
+    fn into(self) -> FoundedItemAny {
+        FoundedItemAny::CompositeCurveSegment(Box::new(self.into()))
+    }
 }
 impl Into<FoundedItemAny> for SurfacePatch {
-    fn into(self) -> FoundedItemAny { FoundedItemAny::SurfacePatch(Box::new(self.into())) }
+    fn into(self) -> FoundedItemAny {
+        FoundedItemAny::SurfacePatch(Box::new(self.into()))
+    }
 }
 impl AsRef<FoundedItem> for FoundedItemAny {
     fn as_ref(&self) -> &FoundedItem {
@@ -6122,7 +6729,9 @@ impl AsRef<FoundedItem> for FoundedItemAny {
 # [holder (field = functionally_defined_transformation)]
 #[holder(generate_deserialize)]
 pub struct FunctionallyDefinedTransformation {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -6181,6 +6790,7 @@ pub struct GeometricRepresentationContext {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub representation_context: RepresentationContext,
+    #[holder(use_place_holder)]
     pub coordinate_space_dimension: DimensionCount,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -6442,10 +7052,14 @@ pub enum GeometricSetAny {
     GeometricCurveSet(Box<GeometricCurveSet>),
 }
 impl Into<GeometricSetAny> for GeometricSet {
-    fn into(self) -> GeometricSetAny { GeometricSetAny::GeometricSet(Box::new(self)) }
+    fn into(self) -> GeometricSetAny {
+        GeometricSetAny::GeometricSet(Box::new(self))
+    }
 }
 impl Into<GeometricSetAny> for GeometricCurveSet {
-    fn into(self) -> GeometricSetAny { GeometricSetAny::GeometricCurveSet(Box::new(self.into())) }
+    fn into(self) -> GeometricSetAny {
+        GeometricSetAny::GeometricCurveSet(Box::new(self.into()))
+    }
 }
 impl AsRef<GeometricSet> for GeometricSetAny {
     fn as_ref(&self) -> &GeometricSet {
@@ -6528,7 +7142,9 @@ pub struct Hyperbola {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub conic: Conic,
+    #[holder(use_place_holder)]
     pub semi_axis: PositiveLengthMeasure,
+    #[holder(use_place_holder)]
     pub semi_imag_axis: PositiveLengthMeasure,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -6548,7 +7164,9 @@ pub struct IntersectionCurve {
 # [holder (field = item_defined_transformation)]
 #[holder(generate_deserialize)]
 pub struct ItemDefinedTransformation {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub transform_item_1: RepresentationItemAny,
@@ -6600,8 +7218,11 @@ pub struct Line {
 # [holder (field = local_time)]
 #[holder(generate_deserialize)]
 pub struct LocalTime {
+    #[holder(use_place_holder)]
     pub hour_component: HourInDay,
+    #[holder(use_place_holder)]
     pub minute_component: Option<MinuteInHour>,
+    #[holder(use_place_holder)]
     pub second_component: Option<SecondInMinute>,
     #[holder(use_place_holder)]
     pub zone: CoordinatedUniversalTimeOffset,
@@ -6636,16 +7257,24 @@ pub enum LoopAny {
     VertexLoop(Box<VertexLoop>),
 }
 impl Into<LoopAny> for Loop {
-    fn into(self) -> LoopAny { LoopAny::Loop(Box::new(self)) }
+    fn into(self) -> LoopAny {
+        LoopAny::Loop(Box::new(self))
+    }
 }
 impl Into<LoopAny> for EdgeLoop {
-    fn into(self) -> LoopAny { LoopAny::EdgeLoop(Box::new(self.into())) }
+    fn into(self) -> LoopAny {
+        LoopAny::EdgeLoop(Box::new(self.into()))
+    }
 }
 impl Into<LoopAny> for PolyLoop {
-    fn into(self) -> LoopAny { LoopAny::PolyLoop(Box::new(self.into())) }
+    fn into(self) -> LoopAny {
+        LoopAny::PolyLoop(Box::new(self.into()))
+    }
 }
 impl Into<LoopAny> for VertexLoop {
-    fn into(self) -> LoopAny { LoopAny::VertexLoop(Box::new(self.into())) }
+    fn into(self) -> LoopAny {
+        LoopAny::VertexLoop(Box::new(self.into()))
+    }
 }
 impl AsRef<Loop> for LoopAny {
     fn as_ref(&self) -> &Loop {
@@ -6678,6 +7307,7 @@ pub struct LotEffectivity {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub effectivity: Effectivity,
+    #[holder(use_place_holder)]
     pub effectivity_lot_id: Identifier,
     #[holder(use_place_holder)]
     pub effectivity_lot_size: MeasureWithUnitAny,
@@ -6841,7 +7471,9 @@ pub enum MeasureWithUnitAny {
     VolumeMeasureWithUnit(Box<VolumeMeasureWithUnit>),
 }
 impl Into<MeasureWithUnitAny> for MeasureWithUnit {
-    fn into(self) -> MeasureWithUnitAny { MeasureWithUnitAny::MeasureWithUnit(Box::new(self)) }
+    fn into(self) -> MeasureWithUnitAny {
+        MeasureWithUnitAny::MeasureWithUnit(Box::new(self))
+    }
 }
 impl Into<MeasureWithUnitAny> for AreaMeasureWithUnit {
     fn into(self) -> MeasureWithUnitAny {
@@ -6948,34 +7580,54 @@ pub enum NamedUnitAny {
     VolumeUnit(Box<VolumeUnit>),
 }
 impl Into<NamedUnitAny> for NamedUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::NamedUnit(Box::new(self)) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::NamedUnit(Box::new(self))
+    }
 }
 impl Into<NamedUnitAny> for AreaUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::AreaUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::AreaUnit(Box::new(self.into()))
+    }
 }
 impl Into<NamedUnitAny> for ContextDependentUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::ContextDependentUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::ContextDependentUnit(Box::new(self.into()))
+    }
 }
 impl Into<NamedUnitAny> for ConversionBasedUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::ConversionBasedUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::ConversionBasedUnit(Box::new(self.into()))
+    }
 }
 impl Into<NamedUnitAny> for LengthUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::LengthUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::LengthUnit(Box::new(self.into()))
+    }
 }
 impl Into<NamedUnitAny> for MassUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::MassUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::MassUnit(Box::new(self.into()))
+    }
 }
 impl Into<NamedUnitAny> for PlaneAngleUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::PlaneAngleUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::PlaneAngleUnit(Box::new(self.into()))
+    }
 }
 impl Into<NamedUnitAny> for SiUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::SiUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::SiUnit(Box::new(self.into()))
+    }
 }
 impl Into<NamedUnitAny> for SolidAngleUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::SolidAngleUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::SolidAngleUnit(Box::new(self.into()))
+    }
 }
 impl Into<NamedUnitAny> for VolumeUnit {
-    fn into(self) -> NamedUnitAny { NamedUnitAny::VolumeUnit(Box::new(self.into())) }
+    fn into(self) -> NamedUnitAny {
+        NamedUnitAny::VolumeUnit(Box::new(self.into()))
+    }
 }
 impl AsRef<NamedUnit> for NamedUnitAny {
     fn as_ref(&self) -> &NamedUnit {
@@ -7018,6 +7670,7 @@ pub struct OffsetCurve3D {
     pub curve: Curve,
     #[holder(use_place_holder)]
     pub basis_curve: CurveAny,
+    #[holder(use_place_holder)]
     pub distance: LengthMeasure,
     pub self_intersect: Logical,
     #[holder(use_place_holder)]
@@ -7036,6 +7689,7 @@ pub struct OffsetSurface {
     pub surface: Surface,
     #[holder(use_place_holder)]
     pub basis_surface: SurfaceAny,
+    #[holder(use_place_holder)]
     pub distance: LengthMeasure,
     pub self_intersect: Logical,
 }
@@ -7063,10 +7717,14 @@ pub enum OpenShellAny {
     OrientedOpenShell(Box<OrientedOpenShell>),
 }
 impl Into<OpenShellAny> for OpenShell {
-    fn into(self) -> OpenShellAny { OpenShellAny::OpenShell(Box::new(self)) }
+    fn into(self) -> OpenShellAny {
+        OpenShellAny::OpenShell(Box::new(self))
+    }
 }
 impl Into<OpenShellAny> for OrientedOpenShell {
-    fn into(self) -> OpenShellAny { OpenShellAny::OrientedOpenShell(Box::new(self.into())) }
+    fn into(self) -> OpenShellAny {
+        OpenShellAny::OrientedOpenShell(Box::new(self.into()))
+    }
 }
 impl AsRef<OpenShell> for OpenShellAny {
     fn as_ref(&self) -> &OpenShell {
@@ -7095,6 +7753,7 @@ pub struct OrdinalDate {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub date: Date,
+    #[holder(use_place_holder)]
     pub day_component: DayInYearNumber,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -7102,8 +7761,11 @@ pub struct OrdinalDate {
 # [holder (field = organization)]
 #[holder(generate_deserialize)]
 pub struct Organization {
+    #[holder(use_place_holder)]
     pub id: Option<Identifier>,
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -7111,7 +7773,9 @@ pub struct Organization {
 # [holder (field = organization_relationship)]
 #[holder(generate_deserialize)]
 pub struct OrganizationRelationship {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub relating_organization: Organization,
@@ -7131,6 +7795,7 @@ pub struct OrganizationalAddress {
     pub address: Address,
     #[holder(use_place_holder)]
     pub organizations: Vec<Organization>,
+    #[holder(use_place_holder)]
     pub description: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -7138,7 +7803,9 @@ pub struct OrganizationalAddress {
 # [holder (field = organizational_project)]
 #[holder(generate_deserialize)]
 pub struct OrganizationalProject {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub responsible_organizations: Vec<Organization>,
@@ -7241,6 +7908,7 @@ pub struct Parabola {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub conic: Conic,
+    #[holder(use_place_holder)]
     pub focal_dist: LengthMeasure,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -7284,13 +7952,19 @@ pub enum PathAny {
     OrientedPath(Box<OrientedPath>),
 }
 impl Into<PathAny> for Path {
-    fn into(self) -> PathAny { PathAny::Path(Box::new(self)) }
+    fn into(self) -> PathAny {
+        PathAny::Path(Box::new(self))
+    }
 }
 impl Into<PathAny> for EdgeLoop {
-    fn into(self) -> PathAny { PathAny::EdgeLoop(Box::new(self.into())) }
+    fn into(self) -> PathAny {
+        PathAny::EdgeLoop(Box::new(self.into()))
+    }
 }
 impl Into<PathAny> for OrientedPath {
-    fn into(self) -> PathAny { PathAny::OrientedPath(Box::new(self.into())) }
+    fn into(self) -> PathAny {
+        PathAny::OrientedPath(Box::new(self.into()))
+    }
 }
 impl AsRef<Path> for PathAny {
     fn as_ref(&self) -> &Path {
@@ -7338,10 +8012,14 @@ pub enum PcurveAny {
     BoundedPcurve(Box<BoundedPcurve>),
 }
 impl Into<PcurveAny> for Pcurve {
-    fn into(self) -> PcurveAny { PcurveAny::Pcurve(Box::new(self)) }
+    fn into(self) -> PcurveAny {
+        PcurveAny::Pcurve(Box::new(self))
+    }
 }
 impl Into<PcurveAny> for BoundedPcurve {
-    fn into(self) -> PcurveAny { PcurveAny::BoundedPcurve(Box::new(self.into())) }
+    fn into(self) -> PcurveAny {
+        PcurveAny::BoundedPcurve(Box::new(self.into()))
+    }
 }
 impl AsRef<Pcurve> for PcurveAny {
     fn as_ref(&self) -> &Pcurve {
@@ -7364,11 +8042,17 @@ impl AsRef<Curve> for PcurveAny {
 # [holder (field = person)]
 #[holder(generate_deserialize)]
 pub struct Person {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub last_name: Option<Label>,
+    #[holder(use_place_holder)]
     pub first_name: Option<Label>,
+    #[holder(use_place_holder)]
     pub middle_names: Option<Vec<Label>>,
+    #[holder(use_place_holder)]
     pub prefix_titles: Option<Vec<Label>>,
+    #[holder(use_place_holder)]
     pub suffix_titles: Option<Vec<Label>>,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -7429,6 +8113,7 @@ impl AsRef<PersonAndOrganizationAssignment> for PersonAndOrganizationAssignmentA
 # [holder (field = person_and_organization_role)]
 #[holder(generate_deserialize)]
 pub struct PersonAndOrganizationRole {
+    #[holder(use_place_holder)]
     pub name: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -7444,6 +8129,7 @@ pub struct PersonalAddress {
     pub address: Address,
     #[holder(use_place_holder)]
     pub people: Vec<Person>,
+    #[holder(use_place_holder)]
     pub description: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -7478,16 +8164,24 @@ pub enum PlacementAny {
     Axis2Placement3D(Box<Axis2Placement3D>),
 }
 impl Into<PlacementAny> for Placement {
-    fn into(self) -> PlacementAny { PlacementAny::Placement(Box::new(self)) }
+    fn into(self) -> PlacementAny {
+        PlacementAny::Placement(Box::new(self))
+    }
 }
 impl Into<PlacementAny> for Axis1Placement {
-    fn into(self) -> PlacementAny { PlacementAny::Axis1Placement(Box::new(self.into())) }
+    fn into(self) -> PlacementAny {
+        PlacementAny::Axis1Placement(Box::new(self.into()))
+    }
 }
 impl Into<PlacementAny> for Axis2Placement2D {
-    fn into(self) -> PlacementAny { PlacementAny::Axis2Placement2D(Box::new(self.into())) }
+    fn into(self) -> PlacementAny {
+        PlacementAny::Axis2Placement2D(Box::new(self.into()))
+    }
 }
 impl Into<PlacementAny> for Axis2Placement3D {
-    fn into(self) -> PlacementAny { PlacementAny::Axis2Placement3D(Box::new(self.into())) }
+    fn into(self) -> PlacementAny {
+        PlacementAny::Axis2Placement3D(Box::new(self.into()))
+    }
 }
 impl AsRef<Placement> for PlacementAny {
     fn as_ref(&self) -> &Placement {
@@ -7581,22 +8275,34 @@ pub enum PointAny {
     PointReplica(Box<PointReplica>),
 }
 impl Into<PointAny> for Point {
-    fn into(self) -> PointAny { PointAny::Point(Box::new(self)) }
+    fn into(self) -> PointAny {
+        PointAny::Point(Box::new(self))
+    }
 }
 impl Into<PointAny> for CartesianPoint {
-    fn into(self) -> PointAny { PointAny::CartesianPoint(Box::new(self.into())) }
+    fn into(self) -> PointAny {
+        PointAny::CartesianPoint(Box::new(self.into()))
+    }
 }
 impl Into<PointAny> for DegeneratePcurve {
-    fn into(self) -> PointAny { PointAny::DegeneratePcurve(Box::new(self.into())) }
+    fn into(self) -> PointAny {
+        PointAny::DegeneratePcurve(Box::new(self.into()))
+    }
 }
 impl Into<PointAny> for PointOnCurve {
-    fn into(self) -> PointAny { PointAny::PointOnCurve(Box::new(self.into())) }
+    fn into(self) -> PointAny {
+        PointAny::PointOnCurve(Box::new(self.into()))
+    }
 }
 impl Into<PointAny> for PointOnSurface {
-    fn into(self) -> PointAny { PointAny::PointOnSurface(Box::new(self.into())) }
+    fn into(self) -> PointAny {
+        PointAny::PointOnSurface(Box::new(self.into()))
+    }
 }
 impl Into<PointAny> for PointReplica {
-    fn into(self) -> PointAny { PointAny::PointReplica(Box::new(self.into())) }
+    fn into(self) -> PointAny {
+        PointAny::PointReplica(Box::new(self.into()))
+    }
 }
 impl AsRef<Point> for PointAny {
     fn as_ref(&self) -> &Point {
@@ -7635,6 +8341,7 @@ pub struct PointOnCurve {
     pub point: Point,
     #[holder(use_place_holder)]
     pub basis_curve: CurveAny,
+    #[holder(use_place_holder)]
     pub point_parameter: ParameterValue,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -7650,7 +8357,9 @@ pub struct PointOnSurface {
     pub point: Point,
     #[holder(use_place_holder)]
     pub basis_surface: SurfaceAny,
+    #[holder(use_place_holder)]
     pub point_parameter_u: ParameterValue,
+    #[holder(use_place_holder)]
     pub point_parameter_v: ParameterValue,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -7704,8 +8413,11 @@ pub struct Polyline {
 # [holder (field = product)]
 #[holder(generate_deserialize)]
 pub struct Product {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub frame_of_reference: Vec<ProductContextAny>,
@@ -7715,7 +8427,9 @@ pub struct Product {
 # [holder (field = product_category)]
 #[holder(generate_deserialize)]
 pub struct ProductCategory {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Option<Text>,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -7730,7 +8444,9 @@ pub enum ProductCategoryAny {
     ProductRelatedProductCategory(Box<ProductRelatedProductCategory>),
 }
 impl Into<ProductCategoryAny> for ProductCategory {
-    fn into(self) -> ProductCategoryAny { ProductCategoryAny::ProductCategory(Box::new(self)) }
+    fn into(self) -> ProductCategoryAny {
+        ProductCategoryAny::ProductCategory(Box::new(self))
+    }
 }
 impl Into<ProductCategoryAny> for ProductRelatedProductCategory {
     fn into(self) -> ProductCategoryAny {
@@ -7750,7 +8466,9 @@ impl AsRef<ProductCategory> for ProductCategoryAny {
 # [holder (field = product_category_relationship)]
 #[holder(generate_deserialize)]
 pub struct ProductCategoryRelationship {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub category: ProductCategoryAny,
@@ -7762,8 +8480,11 @@ pub struct ProductCategoryRelationship {
 # [holder (field = product_concept)]
 #[holder(generate_deserialize)]
 pub struct ProductConcept {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub market_context: ProductConceptContext,
@@ -7779,6 +8500,7 @@ pub struct ProductConceptContext {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub application_context_element: ApplicationContextElement,
+    #[holder(use_place_holder)]
     pub market_segment_type: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -7792,6 +8514,7 @@ pub struct ProductContext {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub application_context_element: ApplicationContextElement,
+    #[holder(use_place_holder)]
     pub discipline_type: Label,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -7806,7 +8529,9 @@ pub enum ProductContextAny {
     MechanicalContext(Box<MechanicalContext>),
 }
 impl Into<ProductContextAny> for ProductContext {
-    fn into(self) -> ProductContextAny { ProductContextAny::ProductContext(Box::new(self)) }
+    fn into(self) -> ProductContextAny {
+        ProductContextAny::ProductContext(Box::new(self))
+    }
 }
 impl Into<ProductContextAny> for MechanicalContext {
     fn into(self) -> ProductContextAny {
@@ -7836,7 +8561,9 @@ impl AsRef<ApplicationContextElement> for ProductContextAny {
 # [holder (field = product_definition)]
 #[holder(generate_deserialize)]
 pub struct ProductDefinition {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub formation: ProductDefinitionFormationAny,
@@ -7883,6 +8610,7 @@ pub struct ProductDefinitionContext {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub application_context_element: ApplicationContextElement,
+    #[holder(use_place_holder)]
     pub life_cycle_stage: Label,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -7986,7 +8714,9 @@ impl AsRef<Effectivity> for ProductDefinitionEffectivityAny {
 # [holder (field = product_definition_formation)]
 #[holder(generate_deserialize)]
 pub struct ProductDefinitionFormation {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub of_product: Product,
@@ -8044,8 +8774,11 @@ pub struct ProductDefinitionFormationWithSpecifiedSource {
 # [holder (field = product_definition_relationship)]
 #[holder(generate_deserialize)]
 pub struct ProductDefinitionRelationship {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub relating_product_definition: ProductDefinitionAny,
@@ -8209,7 +8942,9 @@ pub struct PromissoryUsageOccurrence {
 # [holder (field = property_definition)]
 #[holder(generate_deserialize)]
 pub struct PropertyDefinition {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub definition: CharacterizedDefinition,
@@ -8373,9 +9108,13 @@ pub struct RectangularTrimmedSurface {
     pub bounded_surface: BoundedSurface,
     #[holder(use_place_holder)]
     pub basis_surface: SurfaceAny,
+    #[holder(use_place_holder)]
     pub u1: ParameterValue,
+    #[holder(use_place_holder)]
     pub u2: ParameterValue,
+    #[holder(use_place_holder)]
     pub v1: ParameterValue,
+    #[holder(use_place_holder)]
     pub v2: ParameterValue,
     pub usense: bool,
     pub vsense: bool,
@@ -8391,6 +9130,7 @@ pub struct ReparametrisedCompositeCurveSegment {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub composite_curve_segment: CompositeCurveSegment,
+    #[holder(use_place_holder)]
     pub param_length: ParameterValue,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -8398,6 +9138,7 @@ pub struct ReparametrisedCompositeCurveSegment {
 # [holder (field = representation)]
 #[holder(generate_deserialize)]
 pub struct Representation {
+    #[holder(use_place_holder)]
     pub name: Label,
     #[holder(use_place_holder)]
     pub items: Vec<RepresentationItemAny>,
@@ -8419,7 +9160,9 @@ pub enum RepresentationAny {
     ShapeRepresentation(Box<ShapeRepresentationAny>),
 }
 impl Into<RepresentationAny> for Representation {
-    fn into(self) -> RepresentationAny { RepresentationAny::Representation(Box::new(self)) }
+    fn into(self) -> RepresentationAny {
+        RepresentationAny::Representation(Box::new(self))
+    }
 }
 impl Into<RepresentationAny> for DefinitionalRepresentation {
     fn into(self) -> RepresentationAny {
@@ -8445,7 +9188,9 @@ impl AsRef<Representation> for RepresentationAny {
 # [holder (field = representation_context)]
 #[holder(generate_deserialize)]
 pub struct RepresentationContext {
+    #[holder(use_place_holder)]
     pub context_identifier: Identifier,
+    #[holder(use_place_holder)]
     pub context_type: Text,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -8509,6 +9254,7 @@ impl AsRef<RepresentationContext> for RepresentationContextAny {
 # [holder (field = representation_item)]
 #[holder(generate_deserialize)]
 pub struct RepresentationItem {
+    #[holder(use_place_holder)]
     pub name: Label,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -8573,7 +9319,9 @@ pub struct RepresentationMap {
 # [holder (field = representation_relationship)]
 #[holder(generate_deserialize)]
 pub struct RepresentationRelationship {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub rep_1: RepresentationAny,
@@ -8653,7 +9401,9 @@ pub struct SeamCurve {
 # [holder (field = security_classification)]
 #[holder(generate_deserialize)]
 pub struct SecurityClassification {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub purpose: Text,
     #[holder(use_place_holder)]
     pub security_level: SecurityClassificationLevel,
@@ -8702,6 +9452,7 @@ impl AsRef<SecurityClassificationAssignment> for SecurityClassificationAssignmen
 # [holder (field = security_classification_level)]
 #[holder(generate_deserialize)]
 pub struct SecurityClassificationLevel {
+    #[holder(use_place_holder)]
     pub name: Label,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -8715,7 +9466,9 @@ pub struct SerialNumberedEffectivity {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub effectivity: Effectivity,
+    #[holder(use_place_holder)]
     pub effectivity_start_id: Identifier,
+    #[holder(use_place_holder)]
     pub effectivity_end_id: Option<Identifier>,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -8723,7 +9476,9 @@ pub struct SerialNumberedEffectivity {
 # [holder (field = shape_aspect)]
 #[holder(generate_deserialize)]
 pub struct ShapeAspect {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub of_shape: ProductDefinitionShape,
@@ -8734,7 +9489,9 @@ pub struct ShapeAspect {
 # [holder (field = shape_aspect_relationship)]
 #[holder(generate_deserialize)]
 pub struct ShapeAspectRelationship {
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
     #[holder(use_place_holder)]
     pub relating_shape_aspect: ShapeAspect,
@@ -9004,10 +9761,14 @@ pub enum SolidModelAny {
     ManifoldSolidBrep(Box<ManifoldSolidBrepAny>),
 }
 impl Into<SolidModelAny> for SolidModel {
-    fn into(self) -> SolidModelAny { SolidModelAny::SolidModel(Box::new(self)) }
+    fn into(self) -> SolidModelAny {
+        SolidModelAny::SolidModel(Box::new(self))
+    }
 }
 impl Into<SolidModelAny> for ManifoldSolidBrep {
-    fn into(self) -> SolidModelAny { SolidModelAny::ManifoldSolidBrep(Box::new(self.into())) }
+    fn into(self) -> SolidModelAny {
+        SolidModelAny::ManifoldSolidBrep(Box::new(self.into()))
+    }
 }
 impl AsRef<SolidModel> for SolidModelAny {
     fn as_ref(&self) -> &SolidModel {
@@ -9052,6 +9813,7 @@ pub struct SphericalSurface {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub elementary_surface: ElementarySurface,
+    #[holder(use_place_holder)]
     pub radius: PositiveLengthMeasure,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -9130,22 +9892,34 @@ pub enum SurfaceAny {
     SweptSurface(Box<SweptSurfaceAny>),
 }
 impl Into<SurfaceAny> for Surface {
-    fn into(self) -> SurfaceAny { SurfaceAny::Surface(Box::new(self)) }
+    fn into(self) -> SurfaceAny {
+        SurfaceAny::Surface(Box::new(self))
+    }
 }
 impl Into<SurfaceAny> for BoundedSurface {
-    fn into(self) -> SurfaceAny { SurfaceAny::BoundedSurface(Box::new(self.into())) }
+    fn into(self) -> SurfaceAny {
+        SurfaceAny::BoundedSurface(Box::new(self.into()))
+    }
 }
 impl Into<SurfaceAny> for ElementarySurface {
-    fn into(self) -> SurfaceAny { SurfaceAny::ElementarySurface(Box::new(self.into())) }
+    fn into(self) -> SurfaceAny {
+        SurfaceAny::ElementarySurface(Box::new(self.into()))
+    }
 }
 impl Into<SurfaceAny> for OffsetSurface {
-    fn into(self) -> SurfaceAny { SurfaceAny::OffsetSurface(Box::new(self.into())) }
+    fn into(self) -> SurfaceAny {
+        SurfaceAny::OffsetSurface(Box::new(self.into()))
+    }
 }
 impl Into<SurfaceAny> for SurfaceReplica {
-    fn into(self) -> SurfaceAny { SurfaceAny::SurfaceReplica(Box::new(self.into())) }
+    fn into(self) -> SurfaceAny {
+        SurfaceAny::SurfaceReplica(Box::new(self.into()))
+    }
 }
 impl Into<SurfaceAny> for SweptSurface {
-    fn into(self) -> SurfaceAny { SurfaceAny::SweptSurface(Box::new(self.into())) }
+    fn into(self) -> SurfaceAny {
+        SurfaceAny::SweptSurface(Box::new(self.into()))
+    }
 }
 impl AsRef<Surface> for SurfaceAny {
     fn as_ref(&self) -> &Surface {
@@ -9206,16 +9980,24 @@ pub enum SurfaceCurveAny {
     SeamCurve(Box<SeamCurve>),
 }
 impl Into<SurfaceCurveAny> for SurfaceCurve {
-    fn into(self) -> SurfaceCurveAny { SurfaceCurveAny::SurfaceCurve(Box::new(self)) }
+    fn into(self) -> SurfaceCurveAny {
+        SurfaceCurveAny::SurfaceCurve(Box::new(self))
+    }
 }
 impl Into<SurfaceCurveAny> for BoundedSurfaceCurve {
-    fn into(self) -> SurfaceCurveAny { SurfaceCurveAny::BoundedSurfaceCurve(Box::new(self.into())) }
+    fn into(self) -> SurfaceCurveAny {
+        SurfaceCurveAny::BoundedSurfaceCurve(Box::new(self.into()))
+    }
 }
 impl Into<SurfaceCurveAny> for IntersectionCurve {
-    fn into(self) -> SurfaceCurveAny { SurfaceCurveAny::IntersectionCurve(Box::new(self.into())) }
+    fn into(self) -> SurfaceCurveAny {
+        SurfaceCurveAny::IntersectionCurve(Box::new(self.into()))
+    }
 }
 impl Into<SurfaceCurveAny> for SeamCurve {
-    fn into(self) -> SurfaceCurveAny { SurfaceCurveAny::SeamCurve(Box::new(self.into())) }
+    fn into(self) -> SurfaceCurveAny {
+        SurfaceCurveAny::SeamCurve(Box::new(self.into()))
+    }
 }
 impl AsRef<SurfaceCurve> for SurfaceCurveAny {
     fn as_ref(&self) -> &SurfaceCurve {
@@ -9332,7 +10114,9 @@ pub enum SweptSurfaceAny {
     SurfaceOfRevolution(Box<SurfaceOfRevolution>),
 }
 impl Into<SweptSurfaceAny> for SweptSurface {
-    fn into(self) -> SweptSurfaceAny { SweptSurfaceAny::SweptSurface(Box::new(self)) }
+    fn into(self) -> SweptSurfaceAny {
+        SweptSurfaceAny::SweptSurface(Box::new(self))
+    }
 }
 impl Into<SweptSurfaceAny> for SurfaceOfLinearExtrusion {
     fn into(self) -> SweptSurfaceAny {
@@ -9340,7 +10124,9 @@ impl Into<SweptSurfaceAny> for SurfaceOfLinearExtrusion {
     }
 }
 impl Into<SweptSurfaceAny> for SurfaceOfRevolution {
-    fn into(self) -> SweptSurfaceAny { SweptSurfaceAny::SurfaceOfRevolution(Box::new(self.into())) }
+    fn into(self) -> SweptSurfaceAny {
+        SweptSurfaceAny::SurfaceOfRevolution(Box::new(self.into()))
+    }
 }
 impl AsRef<SweptSurface> for SweptSurfaceAny {
     fn as_ref(&self) -> &SweptSurface {
@@ -9536,7 +10322,9 @@ pub struct ToroidalSurface {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub elementary_surface: ElementarySurface,
+    #[holder(use_place_holder)]
     pub major_radius: PositiveLengthMeasure,
+    #[holder(use_place_holder)]
     pub minor_radius: PositiveLengthMeasure,
 }
 #[derive(Debug, Clone, PartialEq, Holder)]
@@ -9551,7 +10339,9 @@ pub enum ToroidalSurfaceAny {
     DegenerateToroidalSurface(Box<DegenerateToroidalSurface>),
 }
 impl Into<ToroidalSurfaceAny> for ToroidalSurface {
-    fn into(self) -> ToroidalSurfaceAny { ToroidalSurfaceAny::ToroidalSurface(Box::new(self)) }
+    fn into(self) -> ToroidalSurfaceAny {
+        ToroidalSurfaceAny::ToroidalSurface(Box::new(self))
+    }
 }
 impl Into<ToroidalSurfaceAny> for DegenerateToroidalSurface {
     fn into(self) -> ToroidalSurfaceAny {
@@ -9607,7 +10397,9 @@ pub struct UncertaintyMeasureWithUnit {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub measure_with_unit: MeasureWithUnit,
+    #[holder(use_place_holder)]
     pub name: Label,
+    #[holder(use_place_holder)]
     pub description: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -9647,6 +10439,7 @@ pub struct Vector {
     pub geometric_representation_item: GeometricRepresentationItem,
     #[holder(use_place_holder)]
     pub orientation: Direction,
+    #[holder(use_place_holder)]
     pub magnitude: LengthMeasure,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder)]
@@ -9654,9 +10447,13 @@ pub struct Vector {
 # [holder (field = versioned_action_request)]
 #[holder(generate_deserialize)]
 pub struct VersionedActionRequest {
+    #[holder(use_place_holder)]
     pub id: Identifier,
+    #[holder(use_place_holder)]
     pub version: Label,
+    #[holder(use_place_holder)]
     pub purpose: Text,
+    #[holder(use_place_holder)]
     pub description: Text,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
@@ -9683,10 +10480,14 @@ pub enum VertexAny {
     VertexPoint(Box<VertexPoint>),
 }
 impl Into<VertexAny> for Vertex {
-    fn into(self) -> VertexAny { VertexAny::Vertex(Box::new(self)) }
+    fn into(self) -> VertexAny {
+        VertexAny::Vertex(Box::new(self))
+    }
 }
 impl Into<VertexAny> for VertexPoint {
-    fn into(self) -> VertexAny { VertexAny::VertexPoint(Box::new(self.into())) }
+    fn into(self) -> VertexAny {
+        VertexAny::VertexPoint(Box::new(self.into()))
+    }
 }
 impl AsRef<Vertex> for VertexAny {
     fn as_ref(&self) -> &Vertex {
@@ -9783,7 +10584,9 @@ pub struct WeekOfYearAndDayDate {
     #[deref_mut]
     #[holder(use_place_holder)]
     pub date: Date,
+    #[holder(use_place_holder)]
     pub week_component: WeekInYearNumber,
+    #[holder(use_place_holder)]
     pub day_component: Option<DayInWeekNumber>,
 }
 #[derive(Debug, Clone, PartialEq, :: derive_new :: new, Holder, AsRef, AsMut, Deref, DerefMut)]
