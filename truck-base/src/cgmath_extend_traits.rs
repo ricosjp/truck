@@ -112,6 +112,8 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
     fn weight(self) -> S;
     /// Returns homogeneous coordinate.
     fn from_point(point: Self::Point) -> Self;
+    /// Returns homogeneous coordinate from point and weight.
+    fn from_point_weight(point: Self::Point, weight: S) -> Self;
     /// Returns the projection to the plane whose the last component is `1.0`.
     #[inline(always)]
     fn to_point(self) -> Self::Point { Self::Point::from_vec(self.truncate() / self.weight()) }
@@ -244,6 +246,10 @@ impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
     fn weight(self) -> S { self[1] }
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { Vector2::new(point[0], S::one()) }
+    #[inline(always)]
+    fn from_point_weight(point: Self::Point, weight: S) -> Self {
+        Vector2::new(point[0], weight)
+    }
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
@@ -255,6 +261,10 @@ impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
     fn weight(self) -> S { self[2] }
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { Vector3::new(point[0], point[1], S::one()) }
+    #[inline(always)]
+    fn from_point_weight(point: Self::Point, weight: S) -> Self {
+        Vector3::new(point[0], point[1], weight)
+    }
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
@@ -266,4 +276,8 @@ impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
     fn weight(self) -> S { self[3] }
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { point.to_homogeneous() }
+    #[inline(always)]
+    fn from_point_weight(point: Self::Point, weight: S) -> Self {
+        Vector4::new(point[0], point[1], point[2], weight)
+    }
 }
