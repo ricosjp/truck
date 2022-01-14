@@ -14,6 +14,7 @@ truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 truck-geometry = { version = "0.2.0", path = "../truck-geometry" }
 truck-polymesh = { version = "0.3.0", path = "../truck-polymesh" }
 truck-topology = { version = "0.3.0", path = "../truck-topology" }
+truck-modeling = { version = "0.3.0", path = "../truck-modeling" }
 
 [dev-dependencies]
 derive-new = "0.5.9"
