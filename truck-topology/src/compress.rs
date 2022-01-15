@@ -2,22 +2,32 @@ use crate::*;
 use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap as HashMap;
 
+/// Serialized compressed edge
 #[derive(Debug, Serialize, Deserialize)]
-struct CompressedEdge<C> {
+pub struct CompressedEdge<C> {
     vertices: (usize, usize),
     curve: C,
 }
 
 impl<C> CompressedEdge<C> {
+    #[inline(always)]
     fn create_edge<P>(self, v: &[Vertex<P>]) -> Result<Edge<P, C>> {
         let front = &v[self.vertices.0];
         let back = &v[self.vertices.1];
         Edge::try_new(front, back, self.curve)
     }
+
+    /// Returns the vertices
+    #[inline(always)]
+    pub fn vertices(&self) -> (usize, usize) { self.vertices }
+    /// Returns the reference of the curve
+    #[inline(always)]
+    pub fn curve(&self) -> &C { &self.curve }
 }
 
+/// Serialized compressed face
 #[derive(Debug, Serialize, Deserialize)]
-struct CompressedFace<S> {
+pub struct CompressedFace<S> {
     boundaries: Vec<Vec<(usize, bool)>>,
     orientation: bool,
     surface: S,
@@ -43,6 +53,21 @@ impl<S> CompressedFace<S> {
         }
         Ok(face)
     }
+
+    /// Returns the reference of the boundaries.
+    /// 
+    /// The boundary wires are represented by the vector of the tuple `(usize, bool)`.
+    /// The first `usize` value is the index of edge and second `bool` value is its orientation.
+    #[inline(always)]
+    pub fn boundaries(&self) -> &Vec<Vec<(usize, bool)>> { &self.boundaries }
+
+    /// Returns the orientation of this face.
+    #[inline(always)]
+    pub fn orientation(&self) -> bool { self.orientation }
+
+    /// Returns the reference of the surface.
+    #[inline(always)]
+    pub fn surface(&self) -> &S { &self.surface }
 }
 
 /// Serialized compressed shell
@@ -53,10 +78,28 @@ pub struct CompressedShell<P, C, S> {
     faces: Vec<CompressedFace<S>>,
 }
 
+impl<P, C, S> CompressedShell<P, C, S> {
+    /// Returns the vertices in the shell.
+    #[inline(always)]
+    pub fn vertices(&self) -> &Vec<P> { &self.vertices }
+    /// Returns the edges in the shell.
+    #[inline(always)]
+    pub fn edges(&self) -> &Vec<CompressedEdge<C>> { &self.edges }
+    /// Returns the faces in the shell.
+    #[inline(always)]
+    pub fn faces(&self) -> &Vec<CompressedFace<S>> { &self.faces }
+}
+
 /// Serialized compressed solid
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompressedSolid<P, C, S> {
     boundaries: Vec<CompressedShell<P, C, S>>,
+}
+
+impl<P, C, S> CompressedSolid<P, C, S> {
+    /// Returns the boundary shells on the solid.
+    #[inline(always)]
+    pub fn boundaries(&self) -> &Vec<CompressedShell<P, C, S>> { &self.boundaries }
 }
 
 struct CompressDirector<P, C> {

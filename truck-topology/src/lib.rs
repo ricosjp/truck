@@ -384,7 +384,7 @@ mod solid;
 mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
-pub use compress::{CompressedShell, CompressedSolid};
+pub use compress::{CompressedEdge, CompressedFace, CompressedShell, CompressedSolid};
 
 /// Display structs for debug or display topological elements
 pub mod format {
