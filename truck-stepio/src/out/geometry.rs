@@ -1,102 +1,6 @@
-use std::fmt::{Debug, Display, Formatter, Result};
+use super::{*, Result};
 use truck_geometry::*;
 use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
-
-#[derive(Clone, Debug)]
-struct SliceDisplay<'a, T>(&'a [T]);
-
-impl<'a, T: Debug + Copy> Display for SliceDisplay<'a, T> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        f.write_str("(")?;
-        self.0.iter().enumerate().try_for_each(|(i, x)| {
-            if i != 0 {
-                f.write_str(", ")?;
-            }
-            Debug::fmt(x, f)
-        })?;
-        f.write_str(")")
-    }
-}
-
-impl<'a, T: Debug + Copy> Display for SliceDisplay<'a, SliceDisplay<'a, T>> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        f.write_str("(")?;
-        self.0.iter().enumerate().try_for_each(|(i, x)| {
-            if i != 0 {
-                f.write_str(", ")?;
-            }
-            Display::fmt(x, f)
-        })?;
-        f.write_str(")")
-    }
-}
-
-#[derive(Clone, Debug)]
-struct IndexSliceDisplay<I>(I);
-
-impl<I: Clone + Iterator<Item = usize>> Display for IndexSliceDisplay<I> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        f.write_str("(")?;
-        self.0.clone().enumerate().try_for_each(|(i, idx)| {
-            if i != 0 {
-                f.write_fmt(format_args!(", #{}", idx))
-            } else {
-                f.write_fmt(format_args!("#{}", idx))
-            }
-        })?;
-        f.write_str(")")
-    }
-}
-
-impl<'a, I: Clone + Iterator<Item = usize>> Display for SliceDisplay<'a, IndexSliceDisplay<I>> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        f.write_str("(")?;
-        self.0.iter().enumerate().try_for_each(|(i, x)| {
-            if i != 0 {
-                f.write_str(", ")?;
-            }
-            Display::fmt(x, f)
-        })?;
-        f.write_str(")")
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct StepDisplay<T> {
-    entity: T,
-    idx: usize,
-}
-
-impl<'a, T> Display for SliceDisplay<'a, StepDisplay<T>>
-where
-    StepDisplay<T>: Display,
-{
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        self.0.iter().try_for_each(|x| Display::fmt(x, f))
-    }
-}
-
-impl<T> StepDisplay<T> {
-    #[inline]
-    pub fn new(entity: T, idx: usize) -> Self {
-        Self { entity, idx }
-    }
-}
-
-pub trait StepLength {
-    fn step_length(&self) -> usize;
-}
-
-macro_rules! impl_step_length {
-    ($type: ty, $len: expr) => {
-        impl<'a> StepLength for $type {
-            #[inline]
-            fn step_length(&self) -> usize {
-                $len
-            }
-        }
-    };
-}
 
 impl Display for StepDisplay<Point2> {
     fn fmt(&self, f: &mut Formatter) -> Result {
@@ -296,7 +200,11 @@ impl StepLength for Plane {
     }
 }
 
-impl<'a> Display for StepDisplay<&'a BSplineSurface<Point3>> {
+impl<'a, P> Display for StepDisplay<&'a BSplineSurface<P>>
+where
+    P: Copy,
+    StepDisplay<P>: Display,
+{
     fn fmt(&self, f: &mut Formatter) -> Result {
         let StepDisplay {
             entity: surface,
@@ -341,7 +249,12 @@ impl<P> StepLength for BSplineSurface<P> {
     }
 }
 
-impl<'a> Display for StepDisplay<&'a NURBSSurface<Vector4>> {
+impl<'a, V> Display for StepDisplay<&'a NURBSSurface<V>>
+where
+    V: Homogeneous<f64>,
+    V::Point: Copy,
+    StepDisplay<V::Point>: Display,
+{
     fn fmt(&self, f: &mut Formatter) -> Result {
         let StepDisplay {
             entity: surface,
@@ -377,14 +290,13 @@ impl<'a> Display for StepDisplay<&'a NURBSSurface<Vector4>> {
         f.write_fmt(format_args!(
             "#{idx} = (
     BOUNDED_SURFACE()
-    B_SPLINE_SURFACE()
-    B_SPLINE_SURFACE_WITH_KNOTS('', {u_degree}, {v_degree}, {control_points_list}, .UNSPECIFIED., .UNKNOWN., .UNKNOWN., .UNKNOWN., \
-{u_multiplicities}, {v_multiplicities}, {u_knots}, {v_knots}, .UNSPECIFIED.)
+    B_SPLINE_SURFACE({u_degree}, {v_degree}, {control_points_list}, .UNSPECIFIED., .UNKNOWN., .UNKNOWN., .UNKNOWN.)
+    B_SPLINE_SURFACE_WITH_KNOTS({u_multiplicities}, {v_multiplicities}, {u_knots}, {v_knots}, .UNSPECIFIED.)
     GEOMETRIC_REPRESENTATION_ITEM()
     RATIONAL_B_SPLINE_SURFACE({weights})
     REPRESENTATION_ITEM('')
     SURFACE()
-);{control_points_instances}\n",
+);\n{control_points_instances}",
             u_degree = surface.udegree(),
             v_degree = surface.vdegree(),
             control_points_list = SliceDisplay(&control_points_list),
@@ -421,9 +333,7 @@ where
         let dir_idx = location_idx + 1;
         f.write_fmt(format_args!(
             "#{idx} = SURFACE_OF_REVOLUTION('', #{curve_idx} #[axis_idx]);
-{curve}\
-#{axis_idx} = AXIS1_PLACEMENT('', #{location_idx}, #{dir_idx});
-{location}{dir}",
+{curve}#{axis_idx} = AXIS1_PLACEMENT('', #{location_idx}, #{dir_idx});\n{location}{dir}",
             curve = StepDisplay::new(curve, curve_idx),
             location = StepDisplay::new(surface.origin(), location_idx),
             dir = StepDisplay::new(VectorAsDirection(surface.axis()), dir_idx),
@@ -434,5 +344,75 @@ where
 impl<'a, C: StepLength> StepLength for RevolutedCurve<C> {
     fn step_length(&self) -> usize {
         4 + self.entity_curve().step_length()
+    }
+}
+
+#[derive(Clone, Debug)]
+struct SurfaceProcessor<'a, S>(&'a Processor<S, Matrix4>);
+
+impl<'a, S> Display for StepDisplay<SurfaceProcessor<'a, S>>
+where
+    S: StepLength,
+    StepDisplay<&'a S>: Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        let StepDisplay {
+            entity: SurfaceProcessor(processor),
+            idx,
+        } = self;
+        let surface = processor.entity();
+        let surface_idx = idx + 1;
+        let transform_idx = surface_idx + surface.step_length();
+        let axis1_idx = transform_idx + 1;
+        let axis2_idx = transform_idx + 2;
+        let local_origin_idx = transform_idx + 3;
+        let axis3_idx = transform_idx + 4;
+        let (k, a, n) = processor
+            .transform()
+            .iwasawa_decomposition()
+            .expect("Transform is not regular.");
+        assert_near!(a[0][0], a[1][1], "Transform contains non-uniform scale.");
+        assert_near!(a[1][1], a[2][2], "Transform contains non-uniform scale.");
+        f.write_fmt(format_args!(
+            "#{idx} = SURFACE_REPLICA('', #{surface_idx}, #{transform_idx});\n{surface}
+#{transform_idx} = CARTESIAN_TRANSFORMATION_OPERATOR_3D('', #{axis1_idx}, #{axis2_idx}, #{local_origin_idx}, {scale:?}, #{axis3_idx});
+{axis1}{axis2}{local_origin}{axis3}",
+            surface = StepDisplay::new(surface, surface_idx),
+            axis1 = StepDisplay::new(VectorAsDirection(k[0].truncate()), axis1_idx),
+            axis2 = StepDisplay::new(VectorAsDirection(k[1].truncate()), axis2_idx),
+            local_origin = StepDisplay::new(n[3].to_point(), local_origin_idx),
+            scale = a[0][0],
+            axis3 = StepDisplay::new(VectorAsDirection(k[2].truncate()), axis3_idx),
+        ))
+    }
+}
+
+impl<'a, S: StepLength> StepLength for SurfaceProcessor<'a, S> {
+    fn step_length(&self) -> usize {
+        6 + self.0.entity().step_length()
+    }
+}
+
+impl<'a> Display for StepDisplay<&'a ModelingSurface> {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match self.entity {
+            ModelingSurface::Plane(x) => Display::fmt(&StepDisplay::new(*x, self.idx), f),
+            ModelingSurface::BSplineSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
+            ModelingSurface::NURBSSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
+            ModelingSurface::RevolutedCurve(x) => {
+                Display::fmt(&StepDisplay::new(SurfaceProcessor(x), self.idx), f)
+            }
+        }
+    }
+}
+
+impl StepLength for ModelingSurface {
+    fn step_length(&self) -> usize {
+        match self {
+            ModelingSurface::Plane(x) => x.step_length(),
+            ModelingSurface::BSplineSurface(x) => x.step_length(),
+            ModelingSurface::NURBSSurface(x) => x.step_length(),
+            ModelingSurface::RevolutedCurve(x) => SurfaceProcessor(x).step_length(),
+        }
     }
 }
