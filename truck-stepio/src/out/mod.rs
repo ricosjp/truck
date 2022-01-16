@@ -96,4 +96,13 @@ macro_rules! impl_step_length {
     };
 }
 
-pub mod geometry;
+mod geometry;
+mod topology;
+
+#[inline]
+pub fn step_string<'a, T>(truck_data: &'a T) -> String
+where
+    StepDisplay<&'a T>: Display,
+{
+    StepDisplay::new(truck_data, 1).to_string()
+}
