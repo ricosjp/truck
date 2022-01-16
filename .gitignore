@@ -11,3 +11,5 @@ pkg/
 wasm-pack.log
 node_modules/
 dist/
+*.step
+*.stp

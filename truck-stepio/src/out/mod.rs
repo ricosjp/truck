@@ -96,13 +96,29 @@ macro_rules! impl_step_length {
     };
 }
 
+#[derive(Clone, Debug)]
+pub struct CompleteStepDisplay<T>(T);
+
+impl<T: Display> Display for CompleteStepDisplay<T> {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        f.write_fmt(format_args!(
+            "ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Shape Data from Truck'),'2;1');
+FILE_SCHEMA(('ISO-10303-042'));
+ENDSEC;
+DATA;\n{}ENDSEC;\nEND-ISO-10303-21;\n",
+            self.0,
+        ))
+    }
+}
+
+impl<T> CompleteStepDisplay<StepDisplay<T>> {
+    #[inline]
+    pub fn new(x: T) -> Self {
+        CompleteStepDisplay(StepDisplay::new(x, 1))
+    }
+}
+
 mod geometry;
 mod topology;
-
-#[inline]
-pub fn step_string<'a, T>(truck_data: &'a T) -> String
-where
-    StepDisplay<&'a T>: Display,
-{
-    StepDisplay::new(truck_data, 1).to_string()
-}

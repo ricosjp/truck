@@ -1,4 +1,4 @@
-use super::{*, Result};
+use super::{Result, *};
 use truck_geometry::*;
 use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
 
