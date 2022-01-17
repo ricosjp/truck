@@ -2,13 +2,9 @@
 name = "truck-stepio"
 version = "0.1.0"
 edition = "2018"
-# build = "build.rs"
-
-# [build-dependencies]
-# espr = "0.1.0"
-# quote = "1.0.9"
 
 [dependencies]
+chrono = "0.4.19"
 truck-base = { version = "0.2.0", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 truck-geometry = { version = "0.2.0", path = "../truck-geometry" }

@@ -28,7 +28,7 @@ where
             .iter()
             .map(|f| {
                 let res = cursor;
-                cursor += 1 + f.boundaries().len();
+                cursor += 2 + f.boundaries().iter().map(|b| 2 + b.len()).sum::<usize>();
                 res
             })
             .collect::<Vec<_>>();
@@ -85,28 +85,40 @@ where
         let vertices = entity.vertices();
         faces.iter().enumerate().try_for_each(|(i, f)| {
             let idx = face_indices[i];
+            let same_sence = if f.orientation() { ".T." } else { ".F." };
+            let mut cursor = idx + 2;
+            let face_bounds = f.boundaries().iter().map(|b| {
+                let res = cursor;
+                cursor += 2 + b.len();
+                res
+            }).collect::<Vec<_>>();
             formatter.write_fmt(format_args!(
-                "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sence});\n",
-                face_bound = IndexSliceDisplay(idx + 1..=idx + f.boundaries().len()),
+                "#{idx} = ORIENTED_FACE(*, *, #{next_idx}, {same_sence});
+#{next_idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, .T.);\n",
+                next_idx = idx + 1,
+                face_bound = IndexSliceDisplay(face_bounds.into_iter()),
                 face_geometry = surface_indices[i],
-                same_sence = if f.orientation() { ".T." } else { ".F." },
             ))?;
-            f.boundaries().iter().enumerate().try_for_each(|(i, b)| {
+            cursor = idx + 2;
+            f.boundaries().iter().try_for_each(|b| {
+                let face_bound_idx = cursor;
+                let edge_loop_idx = cursor + 1;
+                let ep_oriented_edges = cursor + 2;
+                cursor += 2 + b.len();
                 formatter.write_fmt(format_args!(
-                    "#{idx} = FACE_BOUND('', EDGE_LOOP('', (",
-                    idx = idx + i + 1
+                    "#{face_bound_idx} = FACE_BOUND('', #{edge_loop_idx}, .T.);
+#{edge_loop_idx} = EDGE_LOOP('', {oriented_edge_indices});\n",
+                    oriented_edge_indices =
+                        IndexSliceDisplay(ep_oriented_edges..ep_oriented_edges + b.len()),
                 ))?;
                 b.iter().enumerate().try_for_each(|(j, (e, ori))| {
-                    if j != 0 {
-                        formatter.write_str(", ")?;
-                    }
                     formatter.write_fmt(format_args!(
-                        "ORIENTED_EDGE('', *, *, #{edge_element}, {orientation})",
+                        "#{idx} = ORIENTED_EDGE('', *, *, #{edge_element}, {orientation});\n",
+                        idx = ep_oriented_edges + j,
                         edge_element = ep_edges + e,
                         orientation = if *ori { ".T." } else { ".F." },
                     ))
-                })?;
-                formatter.write_str(")), .T.);\n")
+                })
             })
         })?;
         edges.iter().enumerate().try_for_each(|(i, e)| {

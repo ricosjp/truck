@@ -89,7 +89,7 @@ where
             .map(|(i, p)| StepDisplay::new(*p, idx + i + 1))
             .collect::<Vec<_>>();
         f.write_fmt(format_args!(
-			"#{idx} = B_SPLINE_CURVE_WITH_KNOTS('', {degree}, {control_points_list}, .UNSPECIFIED., .UNKNOWN., .UNKNOWN., {knot_multiplicities}, {knots}, .UNSPECIFIED.);\n{control_points_instances}",
+			"#{idx} = B_SPLINE_CURVE_WITH_KNOTS('', {degree}, {control_points_list}, .UNSPECIFIED., .U., .U., {knot_multiplicities}, {knots}, .UNSPECIFIED.);\n{control_points_instances}",
             degree = curve.degree(),
             control_points_list = IndexSliceDisplay(self.idx + 1..=self.idx + curve.control_points().len()),
 			knot_multiplicities = SliceDisplay(&multi),
@@ -129,7 +129,7 @@ where
         f.write_fmt(format_args!(
             "#{idx} = (
     BOUNDED_CURVE()
-    B_SPLINE_CURVE({degree}, {control_points_list}, .UNSPECIFIED., .UNKNOWN., .UNKNOWN.)
+    B_SPLINE_CURVE({degree}, {control_points_list}, .UNSPECIFIED., .U., .U.)
     B_SPLINE_CURVE_WITH_KNOTS({knot_multiplicities}, {knots}, .UNSPECIFIED.)
     CURVE()
     GEOMETRIC_REPRESENTATION_ITEM()
@@ -229,7 +229,7 @@ where
         let (uknots, umulti) = surface.uknot_vec().to_single_multi();
         let (vknots, vmulti) = surface.vknot_vec().to_single_multi();
         f.write_fmt(format_args!(
-            "#{idx} = B_SPLINE_SURFACE_WITH_KNOTS('', {u_degree}, {v_degree}, {control_points_list}, .UNSPECIFIED., .UNKNOWN., .UNKNOWN., .UNKNOWN., \
+            "#{idx} = B_SPLINE_SURFACE_WITH_KNOTS('', {u_degree}, {v_degree}, {control_points_list}, .UNSPECIFIED., .U., .U., .U., \
 {u_multiplicities}, {v_multiplicities}, {u_knots}, {v_knots}, .UNSPECIFIED.);\n{control_points_instances}",
             u_degree = surface.udegree(),
             v_degree = surface.vdegree(),
@@ -290,7 +290,7 @@ where
         f.write_fmt(format_args!(
             "#{idx} = (
     BOUNDED_SURFACE()
-    B_SPLINE_SURFACE({u_degree}, {v_degree}, {control_points_list}, .UNSPECIFIED., .UNKNOWN., .UNKNOWN., .UNKNOWN.)
+    B_SPLINE_SURFACE({u_degree}, {v_degree}, {control_points_list}, .UNSPECIFIED., .U., .U., .U.)
     B_SPLINE_SURFACE_WITH_KNOTS({u_multiplicities}, {v_multiplicities}, {u_knots}, {v_knots}, .UNSPECIFIED.)
     GEOMETRIC_REPRESENTATION_ITEM()
     RATIONAL_B_SPLINE_SURFACE({weights})
@@ -332,11 +332,11 @@ where
         let location_idx = axis_idx + 1;
         let dir_idx = location_idx + 1;
         f.write_fmt(format_args!(
-            "#{idx} = SURFACE_OF_REVOLUTION('', #{curve_idx} #[axis_idx]);
+            "#{idx} = SURFACE_OF_REVOLUTION('', #{curve_idx} #{axis_idx});
 {curve}#{axis_idx} = AXIS1_PLACEMENT('', #{location_idx}, #{dir_idx});\n{location}{dir}",
             curve = StepDisplay::new(curve, curve_idx),
             location = StepDisplay::new(surface.origin(), location_idx),
-            dir = StepDisplay::new(VectorAsDirection(surface.axis()), dir_idx),
+            dir = StepDisplay::new(VectorAsDirection(-surface.axis()), dir_idx),
         ))
     }
 }

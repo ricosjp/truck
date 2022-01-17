@@ -1607,8 +1607,8 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     ) -> BSplineSurface<P> {
         bspcurve0.syncro_degree(&mut bspcurve1);
 
-        bspcurve0.optimize();
-        bspcurve1.optimize();
+        //bspcurve0.optimize();
+        //bspcurve1.optimize();
 
         bspcurve0.syncro_knots(&mut bspcurve1);
 
