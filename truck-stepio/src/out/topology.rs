@@ -28,7 +28,7 @@ where
             .iter()
             .map(|f| {
                 let res = cursor;
-                cursor += 2 + f.boundaries().iter().map(|b| 2 + b.len()).sum::<usize>();
+                cursor += 1 + f.boundaries().iter().map(|b| 2 + b.len()).sum::<usize>();
                 res
             })
             .collect::<Vec<_>>();
@@ -86,27 +86,25 @@ where
         faces.iter().enumerate().try_for_each(|(i, f)| {
             let idx = face_indices[i];
             let same_sence = if f.orientation() { ".T." } else { ".F." };
-            let mut cursor = idx + 2;
+            let mut cursor = idx + 1;
             let face_bounds = f.boundaries().iter().map(|b| {
                 let res = cursor;
                 cursor += 2 + b.len();
                 res
             }).collect::<Vec<_>>();
             formatter.write_fmt(format_args!(
-                "#{idx} = ORIENTED_FACE(*, *, #{next_idx}, {same_sence});
-#{next_idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, .T.);\n",
-                next_idx = idx + 1,
+                "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sence});\n",
                 face_bound = IndexSliceDisplay(face_bounds.into_iter()),
                 face_geometry = surface_indices[i],
             ))?;
-            cursor = idx + 2;
+            cursor = idx + 1;
             f.boundaries().iter().try_for_each(|b| {
                 let face_bound_idx = cursor;
                 let edge_loop_idx = cursor + 1;
                 let ep_oriented_edges = cursor + 2;
                 cursor += 2 + b.len();
                 formatter.write_fmt(format_args!(
-                    "#{face_bound_idx} = FACE_BOUND('', #{edge_loop_idx}, .T.);
+                    "#{face_bound_idx} = FACE_BOUND('', #{edge_loop_idx}, {same_sence});
 #{edge_loop_idx} = EDGE_LOOP('', {oriented_edge_indices});\n",
                     oriented_edge_indices =
                         IndexSliceDisplay(ep_oriented_edges..ep_oriented_edges + b.len()),
