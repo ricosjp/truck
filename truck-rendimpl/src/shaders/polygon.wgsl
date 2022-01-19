@@ -4,7 +4,6 @@ struct VertexInput {
     [[location(2)]] normal: vec3<f32>; 
 };
 
-[[block]]
 struct Camera {
     matrix: mat4x4<f32>;
     projection: mat4x4<f32>;
@@ -13,7 +12,6 @@ struct Camera {
 [[group(0), binding(0)]]
 var<uniform> camera: Camera;
 
-[[block]]
 struct Lights {
     lights: array<Light, 255>;
 };
@@ -21,7 +19,6 @@ struct Lights {
 [[group(0), binding(1)]]
 var<uniform> lights: Lights;
 
-[[block]]
 struct SceneInfo {
     bk_color: vec4<f32>;
     time: f32;
@@ -31,7 +28,6 @@ struct SceneInfo {
 [[group(0), binding(2)]]
 var<uniform> info: SceneInfo;
 
-[[block]]
 struct ModelMatrix {
     matrix: mat4x4<f32>;
 };
@@ -39,7 +35,6 @@ struct ModelMatrix {
 [[group(1), binding(0)]]
 var<uniform> model_matrix: ModelMatrix;
 
-[[block]]
 struct ModelMaterial {
     material: Material;
 };

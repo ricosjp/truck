@@ -1,4 +1,5 @@
 use crate::*;
+use crate::SamplerBindingType::Filtering;
 
 impl Default for Material {
     #[inline(always)]
@@ -163,10 +164,7 @@ impl PolygonState {
     pub fn sampler_bgl_entry() -> PreBindGroupLayoutEntry {
         PreBindGroupLayoutEntry {
             visibility: ShaderStages::FRAGMENT,
-            ty: BindingType::Sampler {
-                filtering: true,
-                comparison: false,
-            },
+            ty: BindingType::Sampler(Filtering),
             count: None,
         }
     }

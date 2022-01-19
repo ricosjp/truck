@@ -3,7 +3,6 @@ struct VertexOutput {
     [[location(0)]] uv: vec2<f32>;
 };
 
-[[block]]
 struct Lights {
     lights: array<Light, 255>;
 };

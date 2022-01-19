@@ -175,7 +175,6 @@ impl Rendered for PolygonInstance {
                 front_face: FrontFace::Ccw,
                 cull_mode,
                 polygon_mode: PolygonMode::Fill,
-                clamp_depth: false,
                 ..Default::default()
             },
             depth_stencil,
@@ -185,6 +184,7 @@ impl Rendered for PolygonInstance {
                 alpha_to_coverage_enabled: sample_count > 1,
             },
             label: None,
+            multiview: None,
         });
         Arc::new(pipeline)
     }

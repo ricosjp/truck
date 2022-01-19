@@ -1,4 +1,3 @@
-[[block]]
 struct Camera {
     matrix: mat4x4<f32>;
     projection: mat4x4<f32>;
@@ -10,12 +9,10 @@ struct Light {
     light_type: vec4<u32>;
 };
 
-[[block]]
 struct Lights {
     lights: array<Light, 255>;
 };
 
-[[block]]
 struct SceneInfo {
     bk_color: vec4<f32>;
     resolution: vec2<u32>;

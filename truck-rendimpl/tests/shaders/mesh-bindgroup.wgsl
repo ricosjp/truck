@@ -1,9 +1,7 @@
-[[block]]
 struct ModelMatrix {
     matrix: mat4x4<f32>;
 };
 
-[[block]]
 struct Material {
     albedo: vec4<f32>;
     roughness: f32;

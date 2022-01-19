@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Upgraded wgpu (0.12.0) and winit (0.26.0)
 - add some specified geometries for STEP I/O
 - Derive geometric traits to `Box`.
 - Add the method `swap_vertex` to `WireFrameInstance`.

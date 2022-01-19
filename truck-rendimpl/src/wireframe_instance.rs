@@ -137,6 +137,7 @@ impl Rendered for WireFrameInstance {
                 alpha_to_coverage_enabled: sample_count > 1,
             },
             label: None,
+            multiview: None,
         });
         Arc::new(pipeline)
     }

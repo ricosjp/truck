@@ -193,7 +193,6 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             front_face: FrontFace::Ccw,
                             cull_mode: Some(Face::Back),
                             polygon_mode: PolygonMode::Fill,
-                            clamp_depth: false,
                             ..Default::default()
                         },
                         depth_stencil: Some(DepthStencilState {
@@ -209,6 +208,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                             alpha_to_coverage_enabled: false,
                         },
                         label: None,
+                        multiview: None,
                     }),
             )
         }
