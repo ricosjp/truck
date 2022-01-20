@@ -57,14 +57,14 @@ struct VertexOutput {
 
 [[stage(vertex)]]
 fn vs_main(in: VertexInput) -> VertexOutput {
-    var out: VertexOutput;
     let world_position = model_matrix.matrix * vec4<f32>(in.position, 1.0);
     let world_normal = model_matrix.matrix * vec4<f32>(in.normal, 0.0);
-    out.gl_position = camera.projection * world_position;
-    out.position = world_position.xyz;
-    out.uv = in.uv;
-    out.normal = normalize(world_normal.xyz);
-    return out;
+    return VertexOutput(
+        camera.projection * world_position,
+        world_position.xyz,
+        in.uv,
+        normalize(world_normal.xyz)
+    );
 }
 
 let e: vec2<f32> = vec2<f32>(1.0, 0.0);

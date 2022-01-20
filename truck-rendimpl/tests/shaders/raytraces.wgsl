@@ -27,22 +27,24 @@ struct Ray {
 };
 
 fn test_camera() -> Camera {
-    var camera: Camera;
-    camera.position = vec3<f32>(-1.0, 2.5, 2.0);
-    camera.direction = normalize(vec3<f32>(0.25) - camera.position);
-    camera.up = vec3<f32>(0.0, 1.0, 0.0);
-    camera.fov = PI / 4.0;
-    camera.aspect = 4.0 / 3.0;
-    return camera;
+    let position = vec3<f32>(-1.0, 2.5, 2.0);
+    return Camera(
+        position,
+        normalize(vec3<f32>(0.25) - position),
+        vec3<f32>(0.0, 1.0, 0.0),
+        PI / 4.0,
+        4.0 / 3.0
+    );
 }
 
 fn nontex_material() -> Material {
-    var mat: Material;
-    mat.albedo = vec4<f32>(1.0);
-    mat.roughness = 0.5;
-    mat.reflectance = 0.25;
-    mat.ambient_ratio = 0.02;
-    return mat;
+    return Material(
+        vec4<f32>(1.0),
+        0.5,
+        0.25,
+        0.02,
+        0.0
+    );
 }
 
 fn texture_color(position: vec3<f32>, normal: vec3<f32>) -> vec3<f32> {
@@ -62,24 +64,23 @@ fn texture_color(position: vec3<f32>, normal: vec3<f32>) -> vec3<f32> {
 }
 
 fn tex_material(position: vec3<f32>, normal: vec3<f32>) -> Material {
-    var mat: Material;
-    mat.albedo = vec4<f32>(texture_color(position, normal), 1.0);
-    mat.roughness = 0.5;
-    mat.reflectance = 0.25;
-    mat.ambient_ratio = 0.02;
-    return mat;
+    return Material(
+        vec4<f32>(texture_color(position, normal), 1.0),
+        0.5,
+        0.25,
+        0.02,
+        0.0
+    );
 }
 
 fn camera_ray(camera: Camera, uv: vec2<f32>) -> Ray {
-    var ray: Ray;
-    ray.origin = camera.position;
     let camera_dir = camera.direction;
     let x_axis = normalize(cross(camera.direction, camera.up));
     let y_axis = normalize(cross(x_axis, camera.direction));
-    ray.direction = camera_dir / tan(camera.fov / 2.0);
-    ray.direction = ray.direction + uv.x * camera.aspect * x_axis + uv.y * y_axis;
-    ray.direction = normalize(ray.direction);
-    return ray;
+    var direction = camera_dir / tan(camera.fov / 2.0);
+    direction = direction + uv.x * camera.aspect * x_axis + uv.y * y_axis;
+    direction = normalize(direction);
+    return Ray(camera.position, direction);
 }
 
 struct RayTraceResult {
@@ -114,11 +115,11 @@ fn ray_tracing(ray: Ray) -> RayTraceResult {
             normal[i] = 1.0;
         }
     }
-    var res: RayTraceResult;
-    res.collide = t < 900.0;
-    res.position = position;
-    res.normal = normal;
-    return res;
+    return RayTraceResult(
+        t < 900.0,
+        position,
+        normal
+    );
 }
 
 
@@ -130,10 +131,7 @@ fn vs_main([[location(0)]] idx: u32) -> VertexOutput {
     vertex[2] = vec2<f32>(-1.0, 1.0);
     vertex[3] = vec2<f32>(1.0, 1.0);
 
-    var output: VertexOutput;
-    output.position = vec4<f32>(vertex[idx], 0.0, 1.0);
-    output.uv = vertex[idx];
-    return output;
+    return VertexOutput(vec4<f32>(vertex[idx], 0.0, 1.0), vertex[idx]);
 }
 
 [[stage(fragment)]]
@@ -147,11 +145,11 @@ fn nontex_raytracing([[location(0)]] uv: vec2<f32>) -> [[location(0)]] vec4<f32>
     }
 
     let light = lights.lights[0];
-    let mat = nontex_material();
+    let material = nontex_material();
     
-    var pre_color: vec3<f32> = microfacet_color(res.position, res.normal, light, -ray.direction, mat);
+    var pre_color: vec3<f32> = microfacet_color(res.position, res.normal, light, -ray.direction, material);
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
-    pre_color = ambient_correction(pre_color, mat);
+    pre_color = ambient_correction(pre_color, material);
     return vec4<f32>(pre_color, 1.0);
 }
 
@@ -166,10 +164,10 @@ fn tex_raytracing([[location(0)]] uv: vec2<f32>) -> [[location(0)]] vec4<f32> {
     }
 
     let light = lights.lights[0];
-    let mat = tex_material(res.position, res.normal);
+    let material = tex_material(res.position, res.normal);
     
-    var pre_color: vec3<f32> = microfacet_color(res.position, res.normal, light, -ray.direction, mat);
+    var pre_color: vec3<f32> = microfacet_color(res.position, res.normal, light, -ray.direction, material);
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
-    pre_color = ambient_correction(pre_color, mat);
+    pre_color = ambient_correction(pre_color, material);
     return vec4<f32>(pre_color, 1.0);
 }
