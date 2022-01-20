@@ -17,10 +17,7 @@ fn vs_main([[location(0)]] idx: u32) -> VertexOutput {
     vertex[2] = vec2<f32>(-1.0, 1.0);
     vertex[3] = vec2<f32>(1.0, 1.0);
 
-    var output: VertexOutput;
-    output.position = vec4<f32>(vertex[idx], 0.0, 1.0);
-    output.uv = vertex[idx];
-    return output;
+    return VertexOutput(vec4<f32>(vertex[idx], 0.0, 1.0), vertex[idx]);
 }
 
 [[stage(fragment)]]

@@ -1,4 +1,3 @@
-[[block]]
 struct Camera {
     matrix: mat4x4<f32>;
     projection: mat4x4<f32>;
@@ -10,12 +9,10 @@ struct Light {
     light_type: vec4<u32>;
 };
 
-[[block]]
 struct Lights {
     lights: array<Light, 255>;
 };
 
-[[block]]
 struct SceneInfo {
     bk_color: vec4<f32>;
     resolution: vec2<u32>;
@@ -64,37 +61,37 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
     vertex[3] = vec2<f32>(1.0, 1.0);
     if (distance(camera.matrix * e.xyyy, acm0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yxyy, acm1) > EPS) {
+    } else if (distance(camera.matrix * e.yxyy, acm1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yyxy, acm2) > EPS) {
+    } else if (distance(camera.matrix * e.yyxy, acm2) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yyyx, acm3) > EPS) {
+    } else if (distance(camera.matrix * e.yyyx, acm3) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.projection * e.xyyy, acp0) > EPS) {
+    } else if (distance(camera.projection * e.xyyy, acp0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.projection * e.yxyy, acp1) > EPS) {
+    } else if (distance(camera.projection * e.yxyy, acp1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.projection * e.yyxy, acp2) > EPS) {
+    } else if (distance(camera.projection * e.yyxy, acp2) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.projection * e.yyyx, acp3) > EPS) {
+    } else if (distance(camera.projection * e.yyyx, acp3) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(lights.lights[0].position, alp0) > EPS) {
+    } else if (distance(lights.lights[0].position, alp0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(lights.lights[0].color, alc0) > EPS) {
+    } else if (distance(lights.lights[0].color, alc0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (any(lights.lights[0].light_type != alt0)) {
+    } else if (any(lights.lights[0].light_type != alt0)) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(lights.lights[1].position, alp1) > EPS) {
+    } else if (distance(lights.lights[1].position, alp1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(lights.lights[1].color, alc1) > EPS) {
+    } else if (distance(lights.lights[1].color, alc1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (any(lights.lights[1].light_type != alt1)) {
+    } else if (any(lights.lights[1].light_type != alt1)) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (info.nlights != asnl) {
+    } else if (info.nlights != asnl) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(info.bk_color, abk) > EPS) {
+    } else if (distance(info.bk_color, abk) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (any(info.resolution != arsl)) {
+    } else if (any(info.resolution != arsl)) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } else {
         return vec4<f32>(vertex[idx], 0.0, 1.0);
@@ -105,37 +102,37 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
 fn fs_main() -> [[location(0)]] vec4<f32> {
     if (distance(camera.matrix * e.xyyy, acm0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yxyy, acm1) > EPS) {
+    } else if (distance(camera.matrix * e.yxyy, acm1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yyxy, acm2) > EPS) {
+    } else if (distance(camera.matrix * e.yyxy, acm2) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yyyx, acm3) > EPS) {
+    } else if (distance(camera.matrix * e.yyyx, acm3) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.projection * e.xyyy, acp0) > EPS) {
+    } else if (distance(camera.projection * e.xyyy, acp0) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
-    } elseif (distance(camera.projection * e.yxyy, acp1) > EPS) {
+    } else if (distance(camera.projection * e.yxyy, acp1) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
-    } elseif (distance(camera.projection * e.yyxy, acp2) > EPS) {
+    } else if (distance(camera.projection * e.yyxy, acp2) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
-    } elseif (distance(camera.projection * e.yyyx, acp3) > EPS) {
+    } else if (distance(camera.projection * e.yyyx, acp3) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
-    } elseif (distance(lights.lights[0].position, alp0) > EPS) {
+    } else if (distance(lights.lights[0].position, alp0) > EPS) {
         return vec4<f32>(0.2, 0.2, 0.2, 1.0);
-    } elseif (distance(lights.lights[0].color, alc0) > EPS) {
+    } else if (distance(lights.lights[0].color, alc0) > EPS) {
         return vec4<f32>(0.3, 0.3, 0.3, 1.0);
-    } elseif (any(lights.lights[0].light_type != alt0)) {
+    } else if (any(lights.lights[0].light_type != alt0)) {
         return vec4<f32>(0.4, 0.4, 0.4, 1.0);
-    } elseif (distance(lights.lights[1].position, alp1) > EPS) {
+    } else if (distance(lights.lights[1].position, alp1) > EPS) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
-    } elseif (distance(lights.lights[1].color, alc1) > EPS) {
+    } else if (distance(lights.lights[1].color, alc1) > EPS) {
         return vec4<f32>(0.6, 0.6, 0.6, 1.0);
-    } elseif (any(lights.lights[1].light_type != alt1)) {
+    } else if (any(lights.lights[1].light_type != alt1)) {
         return vec4<f32>(0.7, 0.7, 0.7, 1.0);
-    } elseif (info.nlights != asnl) {
+    } else if (info.nlights != asnl) {
         return vec4<f32>(0.8, 0.8, 0.8, 1.0);
-    } elseif (distance(info.bk_color, abk) > EPS) {
+    } else if (distance(info.bk_color, abk) > EPS) {
         return vec4<f32>(0.9, 0.9, 0.9, 1.0);
-    } elseif (any(info.resolution != arsl)) {
+    } else if (any(info.resolution != arsl)) {
         return vec4<f32>(0.9, 0.9, 0.9, 1.0);
     } else {
         return vec4<f32>(0.2, 0.4, 0.6, 0.8);
@@ -146,37 +143,37 @@ fn fs_main() -> [[location(0)]] vec4<f32> {
 fn fs_main_anti() -> [[location(0)]] vec4<f32> {
     if (distance(camera.matrix * e.xyyy, acm0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yxyy, acm1) > EPS) {
+    } else if (distance(camera.matrix * e.yxyy, acm1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yyxy, acm2) > EPS) {
+    } else if (distance(camera.matrix * e.yyxy, acm2) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.matrix * e.yyyx, acm3) > EPS) {
+    } else if (distance(camera.matrix * e.yyyx, acm3) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } elseif (distance(camera.projection * e.xyyy, acp0) > EPS) {
+    } else if (distance(camera.projection * e.xyyy, acp0) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
-    } elseif (distance(camera.projection * e.yxyy, acp1) > EPS) {
+    } else if (distance(camera.projection * e.yxyy, acp1) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
-    } elseif (distance(camera.projection * e.yyxy, acp2) > EPS) {
+    } else if (distance(camera.projection * e.yyxy, acp2) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
-    } elseif (distance(camera.projection * e.yyyx, acp3) > EPS) {
+    } else if (distance(camera.projection * e.yyyx, acp3) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
-    } elseif (distance(lights.lights[0].position, alp0) > EPS) {
+    } else if (distance(lights.lights[0].position, alp0) > EPS) {
         return vec4<f32>(0.2, 0.2, 0.2, 1.0);
-    } elseif (distance(lights.lights[0].color, alc0) > EPS) {
+    } else if (distance(lights.lights[0].color, alc0) > EPS) {
         return vec4<f32>(0.3, 0.3, 0.3, 1.0);
-    } elseif (any(lights.lights[0].light_type != alt0)) {
+    } else if (any(lights.lights[0].light_type != alt0)) {
         return vec4<f32>(0.4, 0.4, 0.4, 1.0);
-    } elseif (distance(lights.lights[1].position, alp1) > EPS) {
+    } else if (distance(lights.lights[1].position, alp1) > EPS) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
-    } elseif (distance(lights.lights[1].color, alc1) > EPS) {
+    } else if (distance(lights.lights[1].color, alc1) > EPS) {
         return vec4<f32>(0.6, 0.6, 0.6, 1.0);
-    } elseif (any(lights.lights[1].light_type == alt1)) {
+    } else if (any(lights.lights[1].light_type == alt1)) {
         return vec4<f32>(0.7, 0.7, 0.7, 1.0);
-    } elseif (info.nlights != asnl) {
+    } else if (info.nlights != asnl) {
         return vec4<f32>(0.8, 0.8, 0.8, 1.0);
-    } elseif (distance(info.bk_color, abk) > EPS) {
+    } else if (distance(info.bk_color, abk) > EPS) {
         return vec4<f32>(0.9, 0.9, 0.9, 1.0);
-    } elseif (any(info.resolution != arsl)) {
+    } else if (any(info.resolution != arsl)) {
         return vec4<f32>(0.9, 0.9, 0.9, 1.0);
     } else {
         return vec4<f32>(0.2, 0.4, 0.6, 0.8);

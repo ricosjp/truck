@@ -114,6 +114,7 @@ impl<'a> Rendered for Plane<'a> {
                         alpha_to_coverage_enabled: false,
                     },
                     label: None,
+                    multiview: None,
                 }),
         )
     }

@@ -97,7 +97,6 @@ impl<'a> Rendered for Plane<'a> {
                         front_face: FrontFace::Ccw,
                         cull_mode: Some(Face::Back),
                         polygon_mode: PolygonMode::Fill,
-                        clamp_depth: false,
                         ..Default::default()
                     },
                     depth_stencil: Some(DepthStencilState {
@@ -113,6 +112,7 @@ impl<'a> Rendered for Plane<'a> {
                         alpha_to_coverage_enabled: false,
                     },
                     label: None,
+                    multiview: None,
                 }),
         )
     }

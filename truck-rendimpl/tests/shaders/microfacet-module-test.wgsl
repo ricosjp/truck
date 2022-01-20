@@ -173,23 +173,23 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
 fn fs_main() -> [[location(0)]] vec4<f32> {
     if (!light_direction_test()) {
         return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-    } elseif (!irradiance_test()) {
+    } else if (!irradiance_test()) {
         return vec4<f32>(0.0, 1.0, 0.0, 1.0);
-    } elseif (!diffuse_brdf_test()) {
+    } else if (!diffuse_brdf_test()) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } elseif (!microfacet_distribution_test()) {
+    } else if (!microfacet_distribution_test()) {
         return vec4<f32>(1.0, 1.0, 0.0, 1.0);
-    } elseif (!schlick_approxy_test()) {
+    } else if (!schlick_approxy_test()) {
         return vec4<f32>(1.0, 0.0, 1.0, 1.0);
-    } elseif (!geometric_decay_test()) {
+    } else if (!geometric_decay_test()) {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
-    } elseif (!fresnel_test()) {
+    } else if (!fresnel_test()) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (!specular_brdf_test()) {
+    } else if (!specular_brdf_test()) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
-    } elseif (!microfacet_color_test()) {
+    } else if (!microfacet_color_test()) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
-    } elseif (!ambient_correction_test()) {
+    } else if (!ambient_correction_test()) {
         return vec4<f32>(1.0, 1.0, 1.0, 1.0);
     } else {
         return vec4<f32>(0.2, 0.4, 0.6, 0.8);
@@ -200,23 +200,23 @@ fn fs_main() -> [[location(0)]] vec4<f32> {
 fn fs_main_anti() -> [[location(0)]] vec4<f32> {
     if (!light_direction_test()) {
         return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-    } elseif (!irradiance_test()) {
+    } else if (!irradiance_test()) {
         return vec4<f32>(0.0, 1.0, 0.0, 1.0);
-    } elseif (!diffuse_brdf_test()) {
+    } else if (!diffuse_brdf_test()) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } elseif (!microfacet_distribution_test()) {
+    } else if (!microfacet_distribution_test()) {
         return vec4<f32>(1.0, 1.0, 0.0, 1.0);
-    } elseif (!schlick_approxy_test()) {
+    } else if (!schlick_approxy_test()) {
         return vec4<f32>(1.0, 0.0, 1.0, 1.0);
-    } elseif (!geometric_decay_test()) {
+    } else if (!geometric_decay_test()) {
         return vec4<f32>(0.0, 1.0, 1.0, 1.0);
-    } elseif (!fresnel_test()) {
+    } else if (!fresnel_test()) {
         return vec4<f32>(0.25, 0.25, 0.25, 1.0);
-    } elseif (specular_brdf_test()) {
+    } else if (specular_brdf_test()) {
         return vec4<f32>(0.5, 0.5, 0.5, 1.0);
-    } elseif (!microfacet_color_test()) {
+    } else if (!microfacet_color_test()) {
         return vec4<f32>(0.75, 0.75, 0.75, 1.0);
-    } elseif (!ambient_correction_test()) {
+    } else if (!ambient_correction_test()) {
         return vec4<f32>(1.0, 1.0, 1.0, 1.0);
     } else {
         return vec4<f32>(0.2, 0.4, 0.6, 0.8);

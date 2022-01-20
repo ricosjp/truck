@@ -1,4 +1,3 @@
-[[block]]
 struct Camera {
     matrix: mat4x4<f32>;
     projection: mat4x4<f32>;
@@ -7,7 +6,6 @@ struct Camera {
 [[group(0), binding(0)]]
 var<uniform> camera: Camera;
 
-[[block]]
 struct ModelMatrix {
     matrix: mat4x4<f32>;
 };
@@ -15,7 +13,6 @@ struct ModelMatrix {
 [[group(1), binding(0)]]
 var<uniform> model_matrix: ModelMatrix;
 
-[[block]]
 struct Color {
     color: vec4<f32>;
 };
