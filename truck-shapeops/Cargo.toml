@@ -1,24 +1,28 @@
 [package]
 name = "truck-shapeops"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
+description = "Provides boolean operations to Solid"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-derive_more = "0.99.16"
-rand = "0.8.4"
+derive_more = "0.99.17"
 rustc-hash = "1.1.0"
-serde = { version = "1.0.130", features = ["derive"] }
-thiserror = "1.0.24"
-truck-base = { version = "0.1.1", path = "../truck-base" }
-truck-geometry = { version = "0.1.1", path = "../truck-geometry" }
-truck-topology = { version = "0.2.0", path = "../truck-topology" }
+serde = { version = "1.0.131", features = ["derive"] }
+thiserror = "1.0.30"
+truck-base = { version = "0.2.0", path = "../truck-base" }
+truck-geometry = { version = "0.2.0", path = "../truck-geometry" }
+truck-topology = { version = "0.3.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.1.0", path = "../truck-meshalgo" }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.3", features = ["js"] }
-
 [dev-dependencies]
-serde_json = "1.0.68"
-truck-modeling = { version = "0.2.1", path = "../truck-modeling" }
+rand = "0.8.4"
+serde_json = "1.0.72"
+truck-modeling = { version = "0.3.0", path = "../truck-modeling" }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+getrandom = { version = "0.2.3", features = ["js"] }

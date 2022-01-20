@@ -145,7 +145,7 @@ impl<P, C, S> Solid<P, C, S> {
     pub fn is_geometric_consistent(&self) -> bool
     where
         P: Tolerance,
-        C: ParametricCurve<Point = P>,
+        C: BoundedCurve<Point = P>,
         S: IncludeCurve<C>,
     {
         self.boundaries()
@@ -232,7 +232,6 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug
 #[cfg(test)]
 pub(super) fn cube() -> Solid<(), (), ()> {
     use crate::*;
-    use std::iter::FromIterator;
     let v = Vertex::news(&[(); 8]);
     let edge = [
         Edge::new(&v[0], &v[1], ()), // 0

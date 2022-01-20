@@ -574,6 +574,18 @@ impl<P: ControlPoint<f64>> BSplineSurface<P> {
     }
 }
 
+impl<V: Homogeneous<f64>> BSplineSurface<V> {
+    /// lift up control points to homogeneous coordinate.
+    pub fn lift_up(surface: BSplineSurface<V::Point>) -> Self {
+        let control_points = surface
+            .control_points
+            .into_iter()
+            .map(|vec| vec.into_iter().map(V::from_point).collect())
+            .collect();
+        BSplineSurface::new_unchecked(surface.knot_vecs, control_points)
+    }
+}
+
 impl<P: ControlPoint<f64>> ParametricSurface for BSplineSurface<P> {
     type Point = P;
     type Vector = P::Diff;
@@ -1486,7 +1498,6 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     /// # Examples
     /// ```
     /// use truck_geometry::*;
-    /// use std::iter::FromIterator;
     ///
     /// // a parabola surface: x = 2u - 1, y = 2v - 1, z = x^2 + y^z
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
@@ -1872,7 +1883,8 @@ where
 impl<P: ControlPoint<f64>> ParameterDivision2D for BSplineSurface<P>
 where
     P: EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
-        + MetricSpace<Metric = f64>,
+        + MetricSpace<Metric = f64>
+        + HashGen<f64>,
 {
     #[inline(always)]
     fn parameter_division(
@@ -2208,7 +2220,6 @@ fn test_include_bspcurve2() {
 
 #[test]
 fn test_include_bspcurve3() {
-    use std::iter::FromIterator;
     let knot_vec = KnotVec::uniform_knot(2, 3);
     let ctrl_pts = vec![
         vec![

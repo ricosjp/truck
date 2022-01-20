@@ -4,13 +4,33 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- add some specified geometries for STEP I/O
+- Derive geometric traits to `Box`.
+- Add the method `swap_vertex` to `WireFrameInstance`.
+- In `truck-geotrait`, the trait `ParametricCurve` is decomposed into `ParametricCurve` and `BoundedCurve`.
+- In order to make meshing reproducible, we decided to implement random perturbations by means of a deterministic hash function.
+- except tags from some tests
+- describe the explicit dependency on `mio` and `mio-misc` for build `winit`.
+- runs `cargo upgrade`
+
+## v0.3
+
 - Specified surface for STEP I/O and modeling revolved sphere and cone.
   - In `truck-base`, the trait `Surface` is decomposed into `ParametricSurface`, `BoundedSurface`, `IncludeCurve` and `Invertible`.
   - In `truck-geometry`, specified surface, `Plane` and `Sphere`, and some decorators are prepared.
 - STL handling module `stl` in `truck-polymesh`.
 - In `truck-rendimpl`, wireframe for polygon.
   - Abort traits `Shape` and `Polygon`, and add new traits `IntoInstance` and `TryIntoInstance`.
-- Applied wgpu v0.8 and made all shaders WGSL, including shaders for test. Now, all dependence on cmake has been removed!
+- Applied wgpu v0.11 and made all shaders WGSL, including shaders for test. Now, all dependence on cmake has been removed!
+  - The sample code `glsl-sandbox` becomes `wgsl-sandbox`. You can easily experience WGSL shading.
+- Splitted `truck-base::geom_trait` into `truck-geotrait` and added some algorithms `algo`. Some methods in curves and surfaces were standardized.
+- Added a new crate `truck-meshalgo`. Moved the polygon processing algorithm from polymesh to meshalgo.
+- Added a new CAD meshing algorithm. Meshing trimmed surfaces. The same edge is made into the same polyline. A solid is made into a closed polygon.
+- Added some meshing algorithms, including mesh collision.
+- `ShapeInstance` has been removed. Tessellation should be done in advance by `truck-meshalgo` when drawing the modeled shape.
+- `BSplineCurve<Point3>` was made to be `ParametricCurve3D`. Conflicts related to methods `subs` have been resolved.
+- Added a new crate `truck-shapeops`, which provides solid boolean operator functions: `and` and `or`.
+- Added a new crate `truck-js`, which provides wasm bindings of CAD APIs. (not released to crates.io)
 
 ## v0.2
 

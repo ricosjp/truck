@@ -642,7 +642,6 @@ impl<P, C, S> Face<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 4]);
     /// let shared_edge = Edge::new(&v[0], &v[1], ());
     /// let another_edge = Edge::new(&v[0], &v[1], ());
@@ -932,7 +931,7 @@ impl<P, C, S: Clone + Invertible> Face<P, C, S> {
 impl<P, C, S> Face<P, C, S>
 where
     P: Tolerance,
-    C: ParametricCurve<Point = P>,
+    C: BoundedCurve<Point = P>,
     S: IncludeCurve<C>,
 {
     /// Returns the consistence of the geometry of end vertices

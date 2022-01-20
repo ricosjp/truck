@@ -521,7 +521,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
                 .splitted_boundary()
                 .to_vec()
                 .into_iter()
-                .map(|curve| NURBSCurve::new(curve))
+                .map(NURBSCurve::new)
                 .collect::<Vec<_>>(),
         )
         .unwrap()
@@ -690,7 +690,7 @@ impl ParametricSurface3D for NURBSSurface<Vector4> {
 
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D for NURBSSurface<V>
 where
-    V::Point: MetricSpace<Metric = f64>,
+    V::Point: MetricSpace<Metric = f64> + HashGen<f64>,
 {
     #[inline(always)]
     fn parameter_division(
@@ -871,7 +871,6 @@ impl SearchParameter for NURBSSurface<Vector4> {
 
 #[test]
 fn test_include2d() {
-    use std::iter::FromIterator;
     let knot_vec = KnotVec::uniform_knot(2, 3);
     let ctrl_pts = vec![
         vec![

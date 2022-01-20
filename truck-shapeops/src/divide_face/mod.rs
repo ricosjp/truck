@@ -1,3 +1,5 @@
+#![allow(clippy::many_single_char_names)]
+
 use crate::faces_classification::FacesClassification;
 use crate::loops_store::*;
 use rustc_hash::FxHashMap as HashMap;
@@ -17,7 +19,7 @@ impl PolylineBoundary for PolylineCurve<Point2> {
 		}) / 2.0
 	}
 	fn include(&self, c: Point2) -> bool {
-		let t = 2.0 * std::f64::consts::PI * rand::random::<f64>();
+		let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
 		let r = Vector2::new(f64::cos(t), f64::sin(t));
 		self.windows(2)
 			.try_fold(0_i32, |counter, p| {
@@ -50,7 +52,7 @@ fn create_parameter_boundary<P, C, S>(
 ) -> Option<PolylineCurve<Point2>>
 where
 	P: Copy,
-	C: ParametricCurve<Point = P> + ParameterDivision1D<Point = P>,
+	C: BoundedCurve<Point = P> + ParameterDivision1D<Point = P>,
 	S: Clone + SearchParameter<Point = P, Parameter = (f64, f64)>,
 {
 	let surface = face.get_surface();
@@ -92,7 +94,7 @@ fn divide_one_face<C, S>(
 	tol: f64,
 ) -> Option<Vec<FaceWithShapesOpStatus<C, S>>>
 where
-	C: ParametricCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
+	C: BoundedCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	let (mut pre_faces, mut negative_wires) = (Vec::new(), Vec::new());
@@ -142,7 +144,7 @@ pub fn divide_faces<C, S>(
 	tol: f64,
 ) -> Option<FacesClassification<Point3, C, S>>
 where
-	C: ParametricCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
+	C: BoundedCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
 	S: Clone + SearchParameter<Point = Point3, Parameter = (f64, f64)>,
 {
 	let mut res = FacesClassification::<Point3, C, S>::default();

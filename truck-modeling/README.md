@@ -29,11 +29,21 @@ Modeling a unit cube by three sweeps.
 
 Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
+### cylinder
+
+Modeling a cylinder by two sweeps.
+
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
+
 ### punched-cube
 
 Modeling a unit cube with a hole through it.
 
 Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
+
+### torus-punched-cube
+
+A cube punched by a torus.
 
 ### torus
 

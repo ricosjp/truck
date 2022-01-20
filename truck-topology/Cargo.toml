@@ -1,8 +1,8 @@
 [package]
 name = "truck-topology"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2018"
+edition = "2021"
 description = "topological structs: vertex, edge, wire, face, shell, and solid"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
@@ -14,10 +14,10 @@ categories = ["graphics"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.130", features = ["derive"] }
+serde = { version = "1.0.131", features = ["derive"] }
 rustc-hash = "1.1.0"
-truck-base = { version = "0.1.1", path = "../truck-base" }
+truck-base = { version = "0.2.0", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
-thiserror = "1.0.29"
+thiserror = "1.0.30"
 
 [dev-dependencies]

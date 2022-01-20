@@ -7,7 +7,6 @@ pub trait NormalFilters {
     /// that has irregular normals.
     /// # Examples
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_polymesh::*;
     /// use truck_meshalgo::filters::*;
     ///
@@ -41,7 +40,6 @@ pub trait NormalFilters {
     /// # Examples
     /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_meshalgo::prelude::*;
     /// let mut mesh = PolygonMesh::new(
     ///     StandardAttributes {
@@ -90,7 +88,6 @@ pub trait NormalFilters {
     /// # Examples
     /// Compare with the examples of [`add_smooth_normals`](./trait.NormalFilters.html#tymethod.add_smooth_normals).
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_meshalgo::prelude::*;
     /// let mut mesh = PolygonMesh::new(
     ///     StandardAttributes {

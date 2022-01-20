@@ -50,6 +50,10 @@ cargo run --example rotate-objects
 
 basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc...
 
+### truck-geotrait [![Crates.io](https://img.shields.io/crates/v/truck-geotrait.svg)](https://crates.io/crates/truck-geotrait) [![Docs.rs](https://docs.rs/truck-geotrait/badge.svg)](https://docs.rs/truck-geotrait)
+
+Defines geometric traits: `ParametricCurve`, `ParametricSurface`, and so on.
+
 ### truck-geometry  [![Crates.io](https://img.shields.io/crates/v/truck-geometry.svg)](https://crates.io/crates/truck-geometry) [![Docs.rs](https://docs.rs/truck-geometry/badge.svg)](https://docs.rs/truck-geometry)
 
 geometrical structs: knot vector, B-spline and NURBS
@@ -62,9 +66,17 @@ topological structs: vertex, edge, wire, face, shell, and solid
 
 defines polygon data structure and some algorithms handling mesh, including meshing the shapes
 
+### truck-meshalgo [![Crates.io](https://img.shields.io/crates/v/truck-meshalgo.svg)](https://crates.io/crates/truck-meshalgo) [![Docs.rs](https://docs.rs/truck-meshalgo/badge.svg)](https://docs.rs/truck-meshalgo)
+
+Mesh algorighms, include tessellations of the shape.
+
 ### truck-modeling  [![Crates.io](https://img.shields.io/crates/v/truck-modeling.svg)](https://crates.io/crates/truck-modeling) [![Docs.rs](https://docs.rs/truck-modeling/badge.svg)](https://docs.rs/truck-modeling)
 
 integrated modeling algorithms by geometry and topology
+
+### truck-shapeops [![Crates.io](https://img.shields.io/crates/v/truck-shapeops.svg)](https://crates.io/crates/truck-shapeops) [![Docs.rs](https://docs.rs/truck-shapeops/badge.svg)](https://docs.rs/truck-shapeops)
+
+Provides boolean operations to Solid
 
 ### truck-platform  [![Crates.io](https://img.shields.io/crates/v/truck-platform.svg)](https://crates.io/crates/truck-platform) [![Docs.rs](https://docs.rs/truck-platform/badge.svg)](https://docs.rs/truck-platform)
 
@@ -73,6 +85,10 @@ graphic utility library based on wgpu
 ### truck-rendimpl  [![Crates.io](https://img.shields.io/crates/v/truck-rendimpl.svg)](https://crates.io/crates/truck-rendimpl) [![Docs.rs](https://docs.rs/truck-rendimpl/badge.svg)](https://docs.rs/truck-rendimpl)
 
 visualization of shape and polygon mesh based on platform
+
+### truck-js
+
+Javascript wrapper of truck.
 
 ![dependencies](./dependencies.svg)
 

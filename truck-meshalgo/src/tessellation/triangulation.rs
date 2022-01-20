@@ -1,3 +1,5 @@
+#![allow(clippy::many_single_char_names)]
+
 use super::*;
 use crate::filters::NormalFilters;
 use rustc_hash::FxHashMap as HashMap;
@@ -92,7 +94,7 @@ impl Polyline {
 
     /// whether `c` is included in the domain with bounday = `self`.
     fn include(&self, c: Point2) -> bool {
-        let t = 2.0 * std::f64::consts::PI * rand::random::<f64>();
+        let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
         let r = Vector2::new(f64::cos(t), f64::sin(t));
         self.indices
             .iter()

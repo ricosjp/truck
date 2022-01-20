@@ -1,5 +1,4 @@
 use crate::*;
-use std::f64::consts::PI;
 use truck_meshalgo::prelude::*;
 use truck_geometry::IntersectionCurve;
 use truck_topology::*;
@@ -64,11 +63,7 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
 			.next()
 			.unwrap()
 			.get_point();
-		let mut dir = random_normal_3d();
-		if dir.so_small() {
-			dir = random_normal_3d();
-		}
-		dir = dir.normalize();
+		let dir = hash::take_one_unit(pt);
 		let count = poly_shell1.iter().fold(0, |count, face| {
 			let poly = face.get_surface();
 			count + poly.signed_crossing_faces(pt, dir)
@@ -86,11 +81,7 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
 			.next()
 			.unwrap()
 			.get_point();
-		let mut dir = random_normal_3d();
-		if dir.so_small() {
-			dir = random_normal_3d();
-		}
-		dir = dir.normalize();
+		let dir = hash::take_one_unit(pt);
 		let count = poly_shell0.iter().fold(0, |count, face| {
 			let poly = face.get_surface();
 			count + poly.signed_crossing_faces(pt, dir)
@@ -150,30 +141,6 @@ pub fn or<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
 	}
 	let boundaries = or_shell.connected_components();
 	Some(Solid::new(boundaries))
-}
-
-fn random_normal_3d() -> Vector3 {
-	let mut x = rand::random::<f64>();
-	if x.so_small() {
-		x = rand::random::<f64>();
-	}
-	let mut y = rand::random::<f64>();
-	if y.so_small() {
-		y = rand::random::<f64>();
-	}
-	let mut z = rand::random::<f64>();
-	if z.so_small() {
-		z = rand::random::<f64>();
-	}
-	let mut w = rand::random::<f64>();
-	if w.so_small() {
-		w = rand::random::<f64>();
-	}
-	Vector3::new(
-		f64::sqrt(-2.0 * f64::ln(x)) * f64::cos(2.0 * PI * y),
-		f64::sqrt(-2.0 * f64::ln(x)) * f64::sin(2.0 * PI * y),
-		f64::sqrt(-2.0 * f64::ln(z)) * f64::cos(2.0 * PI * w),
-	)
 }
 
 #[cfg(test)]

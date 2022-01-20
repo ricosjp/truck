@@ -68,7 +68,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// ```
     /// use truck_topology::*;
     /// use truck_topology::shell::ShellCondition;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1], ()),
@@ -140,7 +139,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// ```
     /// use truck_topology::*;
     /// use std::collections::HashSet;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 4]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[2], ()),
@@ -187,7 +185,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// ```
     /// use truck_topology::*;
     /// use truck_topology::shell::ShellCondition;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1], ()),
@@ -246,7 +243,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// ```
     /// // An example of a connected shell
     /// use truck_topology::*;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 4]);
     /// let shared_edge = Edge::new(&v[1], &v[2], ());
     /// let wire0 = Wire::from_iter(vec![
@@ -267,7 +263,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// ```
     /// // An example of a non-connected shell
     /// use truck_topology::*;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 6]);
     /// let wire0 = Wire::from_iter(vec![
     ///     Edge::new(&v[0], &v[1], ()),
@@ -310,7 +305,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// there is a pair of faces such that share vertices but not edges.
     /// ```
     /// use truck_topology::*;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 5]);
     /// let wire0 = Wire::from_iter(vec![
     ///     Edge::new(&v[0], &v[1], ()),
@@ -350,7 +344,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// // A regular manifold: Mobius bundle
     /// use truck_topology::*;
     /// use truck_topology::shell::ShellCondition;
-    /// use std::iter::FromIterator;
     ///
     /// let v = Vertex::news(&[(), (), (), ()]);
     /// let edge = [
@@ -373,7 +366,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// // A closed and connected shell which has a singular vertex.
     /// use truck_topology::*;
     /// use truck_topology::shell::*;
-    /// use std::iter::FromIterator;
     ///
     /// let v = Vertex::news(&[(); 7]);
     /// let edge = [
@@ -623,7 +615,7 @@ impl<P, C, S> Shell<P, C, S> {
     pub fn is_geometric_consistent(&self) -> bool
     where
         P: Tolerance,
-        C: ParametricCurve<Point = P>,
+        C: BoundedCurve<Point = P>,
         S: IncludeCurve<C>, {
         self.iter().all(|face| face.is_geometric_consistent())
     }
@@ -720,7 +712,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// use truck_topology::*;
     /// use truck_topology::shell::ShellCondition;
     /// use ShellDisplayFormat as SDF;
-    /// use std::iter::FromIterator;
     ///
     /// let v = Vertex::news(&[0, 1, 2, 3]);
     /// let edge = [
@@ -778,7 +769,7 @@ impl<P, C, S> From<Vec<Face<P, C, S>>> for Shell<P, C, S> {
     fn from(faces: Vec<Face<P, C, S>>) -> Shell<P, C, S> { Shell { face_list: faces } }
 }
 
-impl<P, C, S> std::iter::FromIterator<Face<P, C, S>> for Shell<P, C, S> {
+impl<P, C, S> FromIterator<Face<P, C, S>> for Shell<P, C, S> {
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = Face<P, C, S>>>(iter: I) -> Shell<P, C, S> {
         Shell {
@@ -836,7 +827,6 @@ pub enum ShellCondition {
     /// ```
     /// use truck_topology::*;
     /// use truck_topology::shell::ShellCondition;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 5]);
     /// let edge = [
     ///    Edge::new(&v[0], &v[1], ()),
@@ -862,7 +852,6 @@ pub enum ShellCondition {
     /// ```
     /// use truck_topology::*;
     /// use truck_topology::shell::ShellCondition;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1], ()),
@@ -892,7 +881,6 @@ pub enum ShellCondition {
     /// ```
     /// use truck_topology::*;
     /// use truck_topology::shell::ShellCondition;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1] ,()),
@@ -922,7 +910,6 @@ pub enum ShellCondition {
     /// ```
     /// use truck_topology::*;
     /// use truck_topology::shell::ShellCondition;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(); 8]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1] ,()),
@@ -1015,7 +1002,7 @@ impl<C> Boundaries<C> {
     }
 }
 
-impl<P, C> std::iter::FromIterator<Edge<P, C>> for Boundaries<C> {
+impl<P, C> FromIterator<Edge<P, C>> for Boundaries<C> {
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = Edge<P, C>>>(iter: I) -> Self {
         let mut boundaries = Boundaries::new();

@@ -279,6 +279,14 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     }
 }
 
+impl<V: Homogeneous<f64>> BSplineCurve<V> {
+    /// lift up control points to homogeneous coordinate.
+    pub fn lift_up(curve: BSplineCurve<V::Point>) -> Self {
+        let control_points = curve.control_points.into_iter().map(V::from_point).collect();
+        BSplineCurve::new_unchecked(curve.knot_vec, control_points)
+    }
+} 
+
 impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     type Point = P;
     type Vector = P::Diff;
@@ -377,6 +385,9 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
             * k as f64
             * (k - 1) as f64
     }
+}
+
+impl<P: ControlPoint<f64>> BoundedCurve for BSplineCurve<P> {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) {
         (self.knot_vec[0], self.knot_vec[self.knot_vec.len() - 1])
@@ -1070,7 +1081,9 @@ impl<P> ParameterDivision1D for BSplineCurve<P>
 where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
-        + MetricSpace<Metric = f64>,
+        + MetricSpace<Metric = f64>
+        + HashGen<f64>
+        ,
 {
     type Point = P;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<P>) {

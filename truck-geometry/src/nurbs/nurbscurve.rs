@@ -381,14 +381,14 @@ where V::Point: Tolerance
     /// ```
     pub fn make_locally_injective(&mut self) -> &mut Self {
         let mut iter = self.0.bezier_decomposition().into_iter();
-        while let Some(bezier) = iter.next().map(|curve| NURBSCurve(curve)) {
+        while let Some(bezier) = iter.next().map(NURBSCurve::new) {
             if !bezier.is_const() {
                 *self = bezier;
                 break;
             }
         }
         let mut x = 0.0;
-        for mut bezier in iter.map(|curve| NURBSCurve(curve)) {
+        for mut bezier in iter.map(NURBSCurve::new) {
             if bezier.is_const() {
                 x += bezier.0.knot_vec.range_length();
             } else {
@@ -407,7 +407,7 @@ where V::Point: Tolerance
 }
 
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision1D for NURBSCurve<V>
-where V::Point: MetricSpace<Metric = f64>
+where V::Point: MetricSpace<Metric = f64> + HashGen<f64>,
 {
     type Point = V::Point;
     #[inline(always)]
@@ -522,6 +522,9 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NURB
         let der2 = self.0.der2(t);
         pt.rat_der2(der, der2)
     }
+}
+
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NURBSCurve<V> {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) {
         (
@@ -561,7 +564,7 @@ impl<V: Homogeneous<f64>> From<BSplineCurve<V::Point>> for NURBSCurve<V> {
             bspcurve
                 .control_points
                 .into_iter()
-                .map(|pt| V::from_point(pt))
+                .map(V::from_point)
                 .collect(),
         ))
     }

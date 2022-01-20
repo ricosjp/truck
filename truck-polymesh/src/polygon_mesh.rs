@@ -215,7 +215,6 @@ impl<V, A: Default> Default for PolygonMesh<V, A> {
 /// # Examples
 /// ```
 /// use truck_polymesh::*;
-/// use std::iter::FromIterator;
 ///
 /// let positions = vec![
 ///     Point3::new(1.0, 0.0, 0.0),
@@ -240,7 +239,6 @@ impl<V, A: Default> Default for PolygonMesh<V, A> {
 /// ```
 /// ```should_panic
 /// use truck_polymesh::*;
-/// use std::iter::FromIterator;
 ///
 /// let positions = vec![
 ///     Point3::new(1.0, 0.0, 0.0),

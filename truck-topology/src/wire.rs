@@ -228,7 +228,6 @@ impl<P, C> Wire<P, C> {
     /// Here, "simple" means all the vertices in the wire are shared from only two edges at most.
     /// # Examples
     /// ```
-    /// use std::iter::FromIterator;
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(); 4]);
     /// let edge0 = Edge::new(&v[0], &v[1], ());
@@ -279,7 +278,6 @@ impl<P, C> Wire<P, C> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(), (), (), (), ()]);
     /// let edge0 = Edge::new(&v[0], &v[1], 0);
     /// let edge1 = Edge::new(&v[1], &v[3], 1);
@@ -302,7 +300,6 @@ impl<P, C> Wire<P, C> {
     /// Returns `false` and `self` will not be changed if the end points of `self[idx]` and the ones of `wire` is not the same.
     /// ```
     /// use truck_topology::*;
-    /// use std::iter::FromIterator;
     /// let v = Vertex::news(&[(), (), (), (), ()]);
     /// let edge0 = Edge::new(&v[0], &v[1], 0);
     /// let edge1 = Edge::new(&v[1], &v[3], 1);
@@ -462,7 +459,7 @@ impl<P, C> Wire<P, C> {
     pub fn is_geometric_consistent(&self) -> bool
     where
         P: Tolerance,
-        C: ParametricCurve<Point = P>, {
+        C: BoundedCurve<Point = P>, {
         self.iter().all(|edge| edge.is_geometric_consistent())
     }
 
@@ -514,14 +511,14 @@ where T: Into<VecDeque<Edge<P, C>>>
     }
 }
 
-impl<P, C> std::iter::FromIterator<Edge<P, C>> for Wire<P, C> {
+impl<P, C> FromIterator<Edge<P, C>> for Wire<P, C> {
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = Edge<P, C>>>(iter: I) -> Wire<P, C> {
         Wire::from(VecDeque::from_iter(iter))
     }
 }
 
-impl<'a, P, C> std::iter::FromIterator<&'a Edge<P, C>> for Wire<P, C> {
+impl<'a, P, C> FromIterator<&'a Edge<P, C>> for Wire<P, C> {
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = &'a Edge<P, C>>>(iter: I) -> Wire<P, C> {
         Wire::from(VecDeque::from_iter(iter.into_iter().map(Edge::clone)))

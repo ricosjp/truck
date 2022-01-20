@@ -29,6 +29,9 @@ impl ParametricCurve for Segment {
     fn der(&self, _: f64) -> Vector3 { (self.ends.1 - self.ends.0) / (self.range.1 - self.range.0) }
     #[inline(always)]
     fn der2(&self, _: f64) -> Vector3 { Vector3::zero() }
+}
+
+impl BoundedCurve for Segment {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.range }
 }

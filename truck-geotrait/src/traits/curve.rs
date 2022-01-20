@@ -18,6 +18,10 @@ pub trait ParametricCurve: Clone {
     fn der(&self, t: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation.
     fn der2(&self, t: f64) -> Self::Vector;
+}
+
+/// bounded parametric curves
+pub trait BoundedCurve: ParametricCurve {
     /// The range of the parameter of the curve.
     fn parameter_range(&self) -> (f64, f64);
     /// The front end point of the curve.
@@ -39,6 +43,10 @@ impl ParametricCurve for () {
     fn subs(&self, _: f64) -> Self::Point {}
     fn der(&self, _: f64) -> Self::Vector {}
     fn der2(&self, _: f64) -> Self::Vector {}
+}
+
+/// Implementation for the test of topological methods.
+impl BoundedCurve for () {
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
 }
 
@@ -54,6 +62,10 @@ impl ParametricCurve for (usize, usize) {
     }
     fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
     fn der2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
+}
+
+/// Implementation for the test of topological methods.
+impl BoundedCurve for (usize, usize) {
     fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
 }
 
@@ -65,8 +77,34 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
+}
+
+impl<'a, C: BoundedCurve> BoundedCurve for &'a C {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { (*self).parameter_range() }
+    #[inline(always)]
+    fn front(&self) -> Self::Point { (*self).front() }
+    #[inline(always)]
+    fn back(&self) -> Self::Point { (*self).back() }
+}
+
+impl<C: ParametricCurve> ParametricCurve for Box<C> {
+    type Point = C::Point;
+    type Vector = C::Vector;
+    fn subs(&self, t: f64) -> Self::Point { (**self).subs(t) }
+    #[inline(always)]
+    fn der(&self, t: f64) -> Self::Vector { (**self).der(t) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector { (**self).der2(t) }
+}
+
+impl<C: BoundedCurve> BoundedCurve for Box<C> {
+    #[inline(always)]
+    fn parameter_range(&self) -> (f64, f64) { (**self).parameter_range() }
+    #[inline(always)]
+    fn front(&self) -> Self::Point { (**self).front() }
+    #[inline(always)]
+    fn back(&self) -> Self::Point { (**self).back() }
 }
 
 /// 2D parametric curve
@@ -83,7 +121,7 @@ pub trait ParameterDivision1D {
     /// Creates the curve division (prameters, corresponding points).
     ///
     /// # Panics
-    /// 
+    ///
     /// `tol` must be more than `TOLERANCE`.
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>);
 }
@@ -95,8 +133,15 @@ impl<'a, C: ParameterDivision1D> ParameterDivision1D for &'a C {
     }
 }
 
+impl<C: ParameterDivision1D> ParameterDivision1D for Box<C> {
+    type Point = C::Point;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
+        (**self).parameter_division(range, tol)
+    }
+}
+
 /// parameter range move by affine transformation
-pub trait ParameterTransform: ParametricCurve {
+pub trait ParameterTransform: BoundedCurve {
     /// parameter range move by affine transformation
     /// # Panics
     /// Panic occurs if `scalar` is not positive.
@@ -123,12 +168,29 @@ pub trait ParameterTransform: ParametricCurve {
     }
 }
 
+impl<C: ParameterTransform> ParameterTransform for Box<C> {
+    #[inline(always)]
+    fn parameter_transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
+        (**self).parameter_transform(scalar, r#move);
+        self
+    }
+    #[inline(always)]
+    fn parameter_transformed(&self, scalar: f64, r#move: f64) -> Self {
+        Box::new((**self).parameter_transformed(scalar, r#move))
+    }
+    #[inline(always)]
+    fn parameter_normalization(&mut self) -> &mut Self {
+        (**self).parameter_normalization();
+        self
+    }
+}
+
 /// Concats two curves
-pub trait Concat<Rhs: ParametricCurve<Point = Self::Point, Vector = Self::Vector>>:
-    ParametricCurve
+pub trait Concat<Rhs: BoundedCurve<Point = Self::Point, Vector = Self::Vector>>:
+    BoundedCurve
 where Self::Point: Debug {
     /// The result of concat two curves
-    type Output: ParametricCurve<Point = Self::Point, Vector = Self::Vector>;
+    type Output: BoundedCurve<Point = Self::Point, Vector = Self::Vector>;
     /// Try concat two curves.
     /// # Failure
     /// Returns `None` if `self.parameter_range().1 != rhs.parameter_range().0`.
@@ -139,6 +201,19 @@ where Self::Point: Debug {
     fn concat(&self, rhs: &Rhs) -> Self::Output {
         self.try_concat(rhs).unwrap_or_else(|err| panic!("{}", err))
     }
+}
+
+impl<Rhs, C> Concat<Rhs> for Box<C>
+where
+    Rhs: BoundedCurve<Point = C::Point, Vector = C::Vector>,
+    C: Concat<Rhs>,
+    C::Point: Debug,
+{
+    type Output = C::Output;
+    fn try_concat(&self, rhs: &Rhs) -> Result<Self::Output, ConcatError<C::Point>> {
+        (**self).try_concat(rhs)
+    }
+    fn concat(&self, rhs: &Rhs) -> Self::Output { (**self).concat(rhs) }
 }
 
 /// Error for concat curves
@@ -180,7 +255,7 @@ impl<C> CurveCollector<C> {
     where
         C: Concat<Rhs, Output = C>,
         C::Point: Debug,
-        Rhs: ParametricCurve<Point = C::Point, Vector = C::Vector> + Into<C>, {
+        Rhs: BoundedCurve<Point = C::Point, Vector = C::Vector> + Into<C>, {
         match self {
             CurveCollector::Singleton => {
                 *self = CurveCollector::Curve(curve.clone().into());
@@ -197,7 +272,7 @@ impl<C> CurveCollector<C> {
     where
         C: Concat<Rhs, Output = C>,
         C::Point: Debug,
-        Rhs: ParametricCurve<Point = C::Point, Vector = C::Vector> + Into<C>, {
+        Rhs: BoundedCurve<Point = C::Point, Vector = C::Vector> + Into<C>, {
         self.try_concat(curve)
             .unwrap_or_else(|error| panic!("{}", error))
     }
@@ -233,7 +308,7 @@ impl<C> From<CurveCollector<C>> for Option<C> {
 }
 
 /// Cuts one curve into two curves.
-pub trait Cut: ParametricCurve {
+pub trait Cut: BoundedCurve {
     /// Cuts one curve into two curves. Assigns the former curve to `self` and returns the later curve.
     fn cut(&mut self, t: f64) -> Self;
 }
@@ -274,8 +349,8 @@ where
     C0: Concat<C1>,
     C0::Point: Debug + Tolerance,
     C0::Vector: Debug + Tolerance,
-    C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
-    C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>, {
+    C0::Output: BoundedCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
+    C1: BoundedCurve<Point = C0::Point, Vector = C0::Vector>, {
     (0..trials).for_each(move |_| exec_concat_random_test(curve0, curve1))
 }
 
@@ -284,8 +359,8 @@ where
     C0: Concat<C1>,
     C0::Point: Debug + Tolerance,
     C0::Vector: Debug + Tolerance,
-    C0::Output: ParametricCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
-    C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>, {
+    C0::Output: BoundedCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
+    C1: BoundedCurve<Point = C0::Point, Vector = C0::Vector>, {
     let concatted = curve0.try_concat(curve1).unwrap();
     let (t0, t1) = curve0.parameter_range();
     let (_, t2) = curve1.parameter_range();
