@@ -45,7 +45,7 @@ fn geometry() {
     );
     assert_eq!(
 		&StepDisplay::new(&x, 1).to_string(),
-		"#1 = B_SPLINE_CURVE_WITH_KNOTS('', 2, (#2, #3, #4), .UNSPECIFIED., .UNKNOWN., .UNKNOWN., (3, 3), (0.0, 1.0), .UNSPECIFIED.);
+		"#1 = B_SPLINE_CURVE_WITH_KNOTS('', 2, (#2, #3, #4), .UNSPECIFIED., .U., .U., (3, 3), (0.0, 1.0), .UNSPECIFIED.);
 #2 = CARTESIAN_POINT('', (0.0, 0.0));
 #3 = CARTESIAN_POINT('', (1.0, 1.0));
 #4 = CARTESIAN_POINT('', (2.0, 0.0));\n",
@@ -65,7 +65,7 @@ fn geometry() {
         &StepDisplay::new(&x, 1).to_string(),
         "#1 = (
     BOUNDED_CURVE()
-    B_SPLINE_CURVE(2, (#2, #3, #4), .UNSPECIFIED., .UNKNOWN., .UNKNOWN.)
+    B_SPLINE_CURVE(2, (#2, #3, #4), .UNSPECIFIED., .U., .U.)
     B_SPLINE_CURVE_WITH_KNOTS((3, 3), (0.0, 1.0), .UNSPECIFIED.)
     CURVE()
     GEOMETRIC_REPRESENTATION_ITEM()
@@ -121,7 +121,7 @@ fn geometry() {
     assert_eq!(
         &StepDisplay::new(&x, 1).to_string(),
         "#1 = B_SPLINE_SURFACE_WITH_KNOTS('', 2, 2, ((#2, #3, #4, #5), (#6, #7, #8, #9), (#10, #11, #12, #13)), .UNSPECIFIED., \
-.UNKNOWN., .UNKNOWN., .UNKNOWN., (3, 3), (3, 1, 3), (0.0, 1.0), (0.0, 0.5, 1.0), .UNSPECIFIED.);
+.U., .U., .U., (3, 3), (3, 1, 3), (0.0, 1.0), (0.0, 0.5, 1.0), .UNSPECIFIED.);
 #2 = CARTESIAN_POINT('', (0.0, 0.0));
 #3 = CARTESIAN_POINT('', (0.0, 1.0));
 #4 = CARTESIAN_POINT('', (0.0, 2.0));
@@ -165,7 +165,7 @@ fn geometry() {
         &StepDisplay::new(&x, 1).to_string(),
         "#1 = (
     BOUNDED_SURFACE()
-    B_SPLINE_SURFACE(2, 2, ((#2, #3, #4, #5), (#6, #7, #8, #9), (#10, #11, #12, #13)), .UNSPECIFIED., .UNKNOWN., .UNKNOWN., .UNKNOWN.)
+    B_SPLINE_SURFACE(2, 2, ((#2, #3, #4, #5), (#6, #7, #8, #9), (#10, #11, #12, #13)), .UNSPECIFIED., .U., .U., .U.)
     B_SPLINE_SURFACE_WITH_KNOTS((3, 3), (3, 1, 3), (0.0, 1.0), (0.0, 0.5, 1.0), .UNSPECIFIED.)
     GEOMETRIC_REPRESENTATION_ITEM()
     RATIONAL_B_SPLINE_SURFACE(((4.0, 2.0, 2.0, 1.0), (4.0, 4.0, 2.0, 1.0), (4.0, 4.0, 4.0, 1.0)))
