@@ -154,17 +154,26 @@ FILE_NAME('unknown', '{}', ('unknown'), (''), 'truck', 'truck', 'unknown');
 FILE_SCHEMA(('ISO-10303-042'));
 ENDSEC;
 DATA;
-#1 = ADVANCED_BREP_SHAPE_REPRESENTATION('', (#7), #2);
-#2 = (
+#1 = APPLICATION_PROTOCOL_DEFINITION('international standard', 'automotive_design', 2000, #2);
+#2 = APPLICATION_CONTEXT('core data for automotive mechanical design processes');
+#3 = SHAPE_DEFINITION_REPRESENTATION(#4, #10);
+#4 = PRODUCT_DEFINITION_SHAPE('','', #5);
+#5 = PRODUCT_DEFINITION('design','', #6, #9);
+#6 = PRODUCT_DEFINITION_FORMATION('','', #7);
+#7 = PRODUCT('','','', (#8));
+#8 = PRODUCT_CONTEXT('', #2, 'mechanical');
+#9 = PRODUCT_DEFINITION_CONTEXT('part definition', #2, 'design');
+#10 = ADVANCED_BREP_SHAPE_REPRESENTATION('', (#16), #11);
+#11 = (
     GEOMETRIC_REPRESENTATION_CONTEXT(3) 
-    GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#6))
-    GLOBAL_UNIT_ASSIGNED_CONTEXT((#3,#4,#5))
+    GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#15))
+    GLOBAL_UNIT_ASSIGNED_CONTEXT((#12,#13,#14))
     REPRESENTATION_CONTEXT('Context #1', '3D Context with UNIT and UNCERTAINTY')
 );
-#3 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
-#4 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
-#5 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
-#6 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #3, 'distance_accuracy_value','confusion accuracy');
+#12 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
+#13 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
+#14 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
+#15 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #12, 'distance_accuracy_value','confusion accuracy');
 {}ENDSEC;\nEND-ISO-10303-21;\n",
             chrono::Utc::now().naive_local(),
             self.0,
@@ -175,7 +184,7 @@ DATA;
 impl<T> SolidStepDisplay<StepDisplay<T>> {
     #[inline]
     pub fn new(x: T) -> Self {
-        SolidStepDisplay(StepDisplay::new(x, 7))
+        SolidStepDisplay(StepDisplay::new(x, 16))
     }
 }
 
