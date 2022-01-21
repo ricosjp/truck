@@ -99,6 +99,16 @@ where
     }
 }
 
+impl<P> Display for StepDisplay<BSplineCurve<P>>
+where
+    P: Copy,
+    StepDisplay<P>: Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
+    }
+}
+
 impl<P> StepLength for BSplineCurve<P> {
     fn step_length(&self) -> usize {
         self.control_points().len() + 1
@@ -147,6 +157,17 @@ where
     }
 }
 
+impl<V> Display for StepDisplay<NURBSCurve<V>>
+where
+    V: Homogeneous<f64>,
+    V::Point: Copy,
+    StepDisplay<V::Point>: Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
+    }
+}
+
 impl<'a> Display for StepDisplay<&'a ModelingCurve> {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self.entity {
@@ -154,6 +175,12 @@ impl<'a> Display for StepDisplay<&'a ModelingCurve> {
             ModelingCurve::NURBSCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::IntersectionCurve(_) => unimplemented!(),
         }
+    }
+}
+
+impl Display for StepDisplay<ModelingCurve> {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
 }
 
@@ -341,62 +368,81 @@ where
     }
 }
 
-impl<'a, C: StepLength> StepLength for RevolutedCurve<C> {
+impl<C> Display for StepDisplay<RevolutedCurve<C>>
+where
+    C: StepLength + Clone,
+    StepDisplay<C>: Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        let StepDisplay {
+            entity: surface,
+            idx,
+        } = self;
+        let curve = surface.entity_curve();
+        let curve_idx = idx + 1;
+        let axis_idx = curve_idx + curve.step_length();
+        let location_idx = axis_idx + 1;
+        let dir_idx = location_idx + 1;
+        f.write_fmt(format_args!(
+            "#{idx} = SURFACE_OF_REVOLUTION('', #{curve_idx}, #{axis_idx});
+{curve}#{axis_idx} = AXIS1_PLACEMENT('', #{location_idx}, #{dir_idx});\n{location}{dir}",
+            curve = StepDisplay::new(curve.clone(), curve_idx),
+            location = StepDisplay::new(surface.origin(), location_idx),
+            dir = StepDisplay::new(VectorAsDirection(surface.axis()), dir_idx),
+        ))
+    }
+}
+
+impl<C: StepLength> StepLength for RevolutedCurve<C> {
     fn step_length(&self) -> usize {
         4 + self.entity_curve().step_length()
     }
 }
 
-#[derive(Clone, Debug)]
-struct SurfaceProcessor<'a, S>(&'a Processor<S, Matrix4>);
-
-impl<'a, S> Display for StepDisplay<SurfaceProcessor<'a, S>>
+impl<'a, C> Display for StepDisplay<&'a Processor<RevolutedCurve<C>, Matrix4>>
 where
-    S: StepLength,
-    StepDisplay<&'a S>: Display,
+    C: StepLength + Transformed<Matrix4>,
+    StepDisplay<C>: Display,
 {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        let StepDisplay {
-            entity: SurfaceProcessor(processor),
-            idx,
-        } = self;
-        let surface = processor.entity();
-        //StepDisplay::new(surface, *idx).fmt(f)
-        let surface_idx = idx + 1;
-        let transform_idx = surface_idx + surface.step_length();
-        let axis1_idx = transform_idx + 1;
-        let axis2_idx = transform_idx + 2;
-        let local_origin_idx = transform_idx + 3;
-        let axis3_idx = transform_idx + 4;
-        let (k, a, n) = processor
-            .transform()
+        let StepDisplay { entity, idx } = self;
+        let surface = entity.entity();
+        let transform = entity.transform();
+        let (k, a, _) = transform
             .iwasawa_decomposition()
             .expect("Transform is not regular.");
         assert_near!(a[0][0], a[1][1], "Transform contains non-uniform scale.");
         assert_near!(a[1][1], a[2][2], "Transform contains non-uniform scale.");
-        f.write_fmt(format_args!(
-            "#{idx} = SURFACE_REPLICA('', #{surface_idx}, #{transform_idx});
-{surface}#{transform_idx} = (
-    CARTESIAN_TRANSFORMATION_OPERATOR(#{axis1_idx}, #{axis2_idx}, #{local_origin_idx}, {scale:?})
-    CARTESIAN_TRANSFORMATION_OPERATOR_3D(#{axis3_idx})
-    FUNCTIONALLY_DEFINED_TRANSFORMATION('', $)
-    GEOMETRIC_REPRESENTATION_ITEM()
-    REPRESENTATION_ITEM('')
-);
-{axis1}{axis2}{local_origin}{axis3}",
-            surface = StepDisplay::new(surface, surface_idx),
-            axis1 = StepDisplay::new(VectorAsDirection(k[0].truncate()), axis1_idx),
-            axis2 = StepDisplay::new(VectorAsDirection(k[1].truncate()), axis2_idx),
-            local_origin = StepDisplay::new(n[3].to_point(), local_origin_idx),
-            scale = a[0][0],
-            axis3 = StepDisplay::new(VectorAsDirection(k[2].truncate()), axis3_idx),
-        ))
-    }
-}
-
-impl<'a, S: StepLength> StepLength for SurfaceProcessor<'a, S> {
-    fn step_length(&self) -> usize {
-        6 + self.0.entity().step_length()
+        let curve = surface.entity_curve().transformed(*transform);
+        let axis = k.transform_vector(surface.axis());
+        let origin = transform.transform_point(surface.origin());
+        let surface = RevolutedCurve::by_revolution(curve, origin, axis);
+        Display::fmt(&StepDisplay::new(surface, *idx), f)
+        /*
+                let surface_idx = idx + 1;
+                let transform_idx = surface_idx + surface.step_length();
+                let axis1_idx = transform_idx + 1;
+                let axis2_idx = transform_idx + 2;
+                let local_origin_idx = transform_idx + 3;
+                let axis3_idx = transform_idx + 4;
+                f.write_fmt(format_args!(
+                    "#{idx} = SURFACE_REPLICA('', #{surface_idx}, #{transform_idx});
+        {surface}#{transform_idx} = (
+            CARTESIAN_TRANSFORMATION_OPERATOR(#{axis1_idx}, #{axis2_idx}, #{local_origin_idx}, {scale:?})
+            CARTESIAN_TRANSFORMATION_OPERATOR_3D(#{axis3_idx})
+            FUNCTIONALLY_DEFINED_TRANSFORMATION('', $)
+            GEOMETRIC_REPRESENTATION_ITEM()
+            REPRESENTATION_ITEM('')
+        );
+        {axis1}{axis2}{local_origin}{axis3}",
+                    surface = StepDisplay::new(surface, surface_idx),
+                    axis1 = StepDisplay::new(VectorAsDirection(k[0].truncate()), axis1_idx),
+                    axis2 = StepDisplay::new(VectorAsDirection(k[1].truncate()), axis2_idx),
+                    local_origin = StepDisplay::new(n[3].to_point(), local_origin_idx),
+                    scale = a[0][0],
+                    axis3 = StepDisplay::new(VectorAsDirection(k[2].truncate()), axis3_idx),
+                ))
+                */
     }
 }
 
@@ -406,9 +452,7 @@ impl<'a> Display for StepDisplay<&'a ModelingSurface> {
             ModelingSurface::Plane(x) => Display::fmt(&StepDisplay::new(*x, self.idx), f),
             ModelingSurface::BSplineSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingSurface::NURBSSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
-            ModelingSurface::RevolutedCurve(x) => {
-                Display::fmt(&StepDisplay::new(SurfaceProcessor(x), self.idx), f)
-            }
+            ModelingSurface::RevolutedCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
         }
     }
 }
@@ -419,7 +463,7 @@ impl StepLength for ModelingSurface {
             ModelingSurface::Plane(x) => x.step_length(),
             ModelingSurface::BSplineSurface(x) => x.step_length(),
             ModelingSurface::NURBSSurface(x) => x.step_length(),
-            ModelingSurface::RevolutedCurve(x) => SurfaceProcessor(x).step_length(),
+            ModelingSurface::RevolutedCurve(x) => x.entity().step_length(),
         }
     }
 }
