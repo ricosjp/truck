@@ -254,8 +254,7 @@ impl<T: Display> Display for SolidStepDisplay<T> {
 #14 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
 #15 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #12, 'distance_accuracy_value','confusion accuracy');
 {}ENDSEC;\nEND-ISO-10303-21;\n",
-            self.header,
-            self.display,
+            self.header, self.display,
         ))
     }
 }

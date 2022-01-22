@@ -87,11 +87,15 @@ where
             let idx = face_indices[i];
             let same_sence = if f.orientation() { ".T." } else { ".F." };
             let mut cursor = idx + 1;
-            let face_bounds = f.boundaries().iter().map(|b| {
-                let res = cursor;
-                cursor += 2 + b.len();
-                res
-            }).collect::<Vec<_>>();
+            let face_bounds = f
+                .boundaries()
+                .iter()
+                .map(|b| {
+                    let res = cursor;
+                    cursor += 2 + b.len();
+                    res
+                })
+                .collect::<Vec<_>>();
             formatter.write_fmt(format_args!(
                 "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sence});\n",
                 face_bound = IndexSliceDisplay(face_bounds.into_iter()),
