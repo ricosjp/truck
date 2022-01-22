@@ -9,7 +9,7 @@ fn geometry() {
         "#1 = CARTESIAN_POINT('', (0.0, 1.0));\n",
     );
     assert_eq!(x.step_length(), 1);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(x).to_string()).unwrap();
+    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
 
     let x = Point3::new(0.0, 1.0, 2.453);
     assert_eq!(
@@ -17,7 +17,7 @@ fn geometry() {
         "#2 = CARTESIAN_POINT('', (0.0, 1.0, 2.453));\n",
     );
     assert_eq!(x.step_length(), 1);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(x).to_string()).unwrap();
+    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
 
     let x = Vector2::new(3.0, 4.0);
     assert_eq!(
@@ -25,7 +25,7 @@ fn geometry() {
         "#1 = VECTOR('', #2, 5.0);\n#2 = DIRECTION('', (0.6, 0.8));\n",
     );
     assert_eq!(x.step_length(), 2);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(x).to_string()).unwrap();
+    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
 
     let x = Vector3::new(3.0, 4.0, 3.75);
     assert_eq!(
@@ -33,7 +33,7 @@ fn geometry() {
         "#1 = VECTOR('', #2, 6.25);\n#2 = DIRECTION('', (0.48, 0.64, 0.6));\n",
     );
     assert_eq!(x.step_length(), 2);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(x).to_string()).unwrap();
+    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
 
     let x = BSplineCurve::new(
         KnotVec::bezier_knot(2),
@@ -51,7 +51,7 @@ fn geometry() {
 #4 = CARTESIAN_POINT('', (2.0, 0.0));\n",
 	);
     assert_eq!(x.step_length(), 4);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(&x).to_string()).unwrap();
+    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
 
     let x = NURBSCurve::new(BSplineCurve::new(
         KnotVec::bezier_knot(2),
@@ -77,7 +77,7 @@ fn geometry() {
 #4 = CARTESIAN_POINT('', (0.5, 0.0));\n",
     );
     assert_eq!(x.step_length(), 4);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(&x).to_string()).unwrap();
+    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
 
     let x = Plane::new(
         Point3::new(1.0, 2.0, 3.0),
@@ -93,7 +93,8 @@ fn geometry() {
 #5 = DIRECTION('', (0.0, 0.0, 1.0));\n",
     );
     assert_eq!(x.step_length(), 5);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(x).to_string()).unwrap();
+    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string())
+        .unwrap();
 
     let x = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
@@ -136,7 +137,7 @@ fn geometry() {
 #13 = CARTESIAN_POINT('', (2.0, 3.0));\n",
     );
     assert_eq!(x.step_length(), 13);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(&x).to_string()).unwrap();
+    ruststep::parser::parse(&CompleteStepDisplay::new(&x, Default::default()).to_string()).unwrap();
 
     let x = NURBSSurface::new(BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
@@ -186,5 +187,5 @@ fn geometry() {
 #13 = CARTESIAN_POINT('', (2.0, 3.0));\n",
     );
     assert_eq!(x.step_length(), 13);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(&x).to_string()).unwrap();
+    ruststep::parser::parse(&CompleteStepDisplay::new(&x, Default::default()).to_string()).unwrap();
 }

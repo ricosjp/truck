@@ -418,31 +418,6 @@ where
         let origin = transform.transform_point(surface.origin());
         let surface = RevolutedCurve::by_revolution(curve, origin, axis);
         Display::fmt(&StepDisplay::new(surface, *idx), f)
-        /*
-                let surface_idx = idx + 1;
-                let transform_idx = surface_idx + surface.step_length();
-                let axis1_idx = transform_idx + 1;
-                let axis2_idx = transform_idx + 2;
-                let local_origin_idx = transform_idx + 3;
-                let axis3_idx = transform_idx + 4;
-                f.write_fmt(format_args!(
-                    "#{idx} = SURFACE_REPLICA('', #{surface_idx}, #{transform_idx});
-        {surface}#{transform_idx} = (
-            CARTESIAN_TRANSFORMATION_OPERATOR(#{axis1_idx}, #{axis2_idx}, #{local_origin_idx}, {scale:?})
-            CARTESIAN_TRANSFORMATION_OPERATOR_3D(#{axis3_idx})
-            FUNCTIONALLY_DEFINED_TRANSFORMATION('', $)
-            GEOMETRIC_REPRESENTATION_ITEM()
-            REPRESENTATION_ITEM('')
-        );
-        {axis1}{axis2}{local_origin}{axis3}",
-                    surface = StepDisplay::new(surface, surface_idx),
-                    axis1 = StepDisplay::new(VectorAsDirection(k[0].truncate()), axis1_idx),
-                    axis2 = StepDisplay::new(VectorAsDirection(k[1].truncate()), axis2_idx),
-                    local_origin = StepDisplay::new(n[3].to_point(), local_origin_idx),
-                    scale = a[0][0],
-                    axis3 = StepDisplay::new(VectorAsDirection(k[2].truncate()), axis3_idx),
-                ))
-                */
     }
 }
 
