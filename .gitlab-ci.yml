@@ -37,8 +37,8 @@ wasm-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     before_script:
+        - rustup update
         - rustup target add wasm32-unknown-unknown
-        - rustup update stable
     script:
         - deno lint
         - mkdir public

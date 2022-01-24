@@ -1,6 +1,7 @@
 pub mod alias;
 mod impl_curve;
 mod impl_surface;
+pub mod out;
 mod parse_primitives;
 
 #[doc(hidden)]

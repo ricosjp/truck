@@ -15,6 +15,10 @@ impl<E, T: One> Processor<E, T> {
     #[inline(always)]
     pub fn entity(&self) -> &E { &self.entity }
 
+    /// Returns the reference of transform
+    #[inline(always)]
+    pub fn transform(&self) -> &T { &self.transform }
+
     #[inline(always)]
     fn sign(&self) -> f64 {
         match self.orientation {

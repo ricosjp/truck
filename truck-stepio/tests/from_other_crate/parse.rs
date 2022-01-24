@@ -32,7 +32,8 @@ fn test<'a, THolder, U>(table: &ap203::Tables, idx: u64, answer: U)
 where
     THolder: Holder<Table = ap203::Tables> + Deserialize<'a> + Debug + 'a,
     U: From<THolder::Owned> + Debug + PartialEq,
-    ap203::Tables: EntityTable<THolder>, {
+    ap203::Tables: EntityTable<THolder>,
+{
     let a = EntityTable::<THolder>::get_owned(&table, idx).unwrap();
     assert_eq!(U::from(a), answer);
 }
@@ -41,7 +42,8 @@ fn try_test<'a, THolder, U>(table: &ap203::Tables, idx: u64, answer: U)
 where
     THolder: Holder<Table = ap203::Tables> + Deserialize<'a> + Debug + 'a,
     U: TryFrom<THolder::Owned, Error = ExpressParseError> + Debug + PartialEq,
-    ap203::Tables: EntityTable<THolder>, {
+    ap203::Tables: EntityTable<THolder>,
+{
     let a = EntityTable::<THolder>::get_owned(&table, idx).unwrap();
     assert_eq!(U::try_from(a).unwrap(), answer);
 }
@@ -60,7 +62,7 @@ fn primitives() {
     test::<ap203::PlacementHolder, Point2>(&table, 11, Point2::new(1.0, 2.0));
     test::<ap203::PlacementHolder, Point3>(&table, 12, Point3::new(1.0, 2.0, 3.0));
     test::<ap203::Axis2Placement2DHolder, Matrix3>(
-        &table, 
+        &table,
         13,
         Matrix3::from_translation(Vector2::new(1.0, 2.0)),
     );

@@ -18,7 +18,8 @@ pub mod control_point {
         + DivAssign<S>
         + Copy
         + Clone
-        + Debug {
+        + Debug
+    {
         /// differential vector
         type Diff: Add<Self::Diff, Output = Self::Diff>
             + Sub<Self::Diff, Output = Self::Diff>
@@ -40,38 +41,66 @@ pub mod control_point {
 
     impl<S: BaseFloat> ControlPoint<S> for Point1<S> {
         type Diff = Vector1<S>;
-        fn origin() -> Self { EuclideanSpace::origin() }
-        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+        fn origin() -> Self {
+            EuclideanSpace::origin()
+        }
+        fn to_vec(self) -> Self::Diff {
+            EuclideanSpace::to_vec(self)
+        }
     }
     impl<S: BaseFloat> ControlPoint<S> for Point2<S> {
         type Diff = Vector2<S>;
-        fn origin() -> Self { EuclideanSpace::origin() }
-        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+        fn origin() -> Self {
+            EuclideanSpace::origin()
+        }
+        fn to_vec(self) -> Self::Diff {
+            EuclideanSpace::to_vec(self)
+        }
     }
     impl<S: BaseFloat> ControlPoint<S> for Point3<S> {
         type Diff = Vector3<S>;
-        fn origin() -> Self { EuclideanSpace::origin() }
-        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
+        fn origin() -> Self {
+            EuclideanSpace::origin()
+        }
+        fn to_vec(self) -> Self::Diff {
+            EuclideanSpace::to_vec(self)
+        }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector1<S> {
         type Diff = Vector1<S>;
-        fn origin() -> Self { Zero::zero() }
-        fn to_vec(self) -> Self { self }
+        fn origin() -> Self {
+            Zero::zero()
+        }
+        fn to_vec(self) -> Self {
+            self
+        }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector2<S> {
         type Diff = Vector2<S>;
-        fn origin() -> Self { Zero::zero() }
-        fn to_vec(self) -> Self { self }
+        fn origin() -> Self {
+            Zero::zero()
+        }
+        fn to_vec(self) -> Self {
+            self
+        }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector3<S> {
         type Diff = Vector3<S>;
-        fn origin() -> Self { Zero::zero() }
-        fn to_vec(self) -> Self { self }
+        fn origin() -> Self {
+            Zero::zero()
+        }
+        fn to_vec(self) -> Self {
+            self
+        }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector4<S> {
         type Diff = Vector4<S>;
-        fn origin() -> Self { Zero::zero() }
-        fn to_vec(self) -> Self { self }
+        fn origin() -> Self {
+            Zero::zero()
+        }
+        fn to_vec(self) -> Self {
+            self
+        }
     }
 }
 
@@ -116,7 +145,9 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
     fn from_point_weight(point: Self::Point, weight: S) -> Self;
     /// Returns the projection to the plane whose the last component is `1.0`.
     #[inline(always)]
-    fn to_point(self) -> Self::Point { Self::Point::from_vec(self.truncate() / self.weight()) }
+    fn to_point(self) -> Self::Point {
+        Self::Point::from_vec(self.truncate() / self.weight())
+    }
     /// Returns the derivation of the rational curve.
     ///
     /// For a curve c(t) = (c_0(t), c_1(t), c_2(t), c_3(t)), returns the derivation
@@ -241,11 +272,17 @@ impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
     type Vector = Vector1<S>;
     type Point = Point1<S>;
     #[inline(always)]
-    fn truncate(self) -> Vector1<S> { Vector1::new(self[0]) }
+    fn truncate(self) -> Vector1<S> {
+        Vector1::new(self[0])
+    }
     #[inline(always)]
-    fn weight(self) -> S { self[1] }
+    fn weight(self) -> S {
+        self[1]
+    }
     #[inline(always)]
-    fn from_point(point: Self::Point) -> Self { Vector2::new(point[0], S::one()) }
+    fn from_point(point: Self::Point) -> Self {
+        Vector2::new(point[0], S::one())
+    }
     #[inline(always)]
     fn from_point_weight(point: Self::Point, weight: S) -> Self {
         Vector2::new(point[0], weight)
@@ -256,11 +293,17 @@ impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
     type Vector = Vector2<S>;
     type Point = Point2<S>;
     #[inline(always)]
-    fn truncate(self) -> Vector2<S> { self.truncate() }
+    fn truncate(self) -> Vector2<S> {
+        self.truncate()
+    }
     #[inline(always)]
-    fn weight(self) -> S { self[2] }
+    fn weight(self) -> S {
+        self[2]
+    }
     #[inline(always)]
-    fn from_point(point: Self::Point) -> Self { Vector3::new(point[0], point[1], S::one()) }
+    fn from_point(point: Self::Point) -> Self {
+        Vector3::new(point[0], point[1], S::one())
+    }
     #[inline(always)]
     fn from_point_weight(point: Self::Point, weight: S) -> Self {
         Vector3::new(point[0], point[1], weight)
@@ -271,13 +314,177 @@ impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
     type Vector = Vector3<S>;
     type Point = Point3<S>;
     #[inline(always)]
-    fn truncate(self) -> Vector3<S> { self.truncate() }
+    fn truncate(self) -> Vector3<S> {
+        self.truncate()
+    }
     #[inline(always)]
-    fn weight(self) -> S { self[3] }
+    fn weight(self) -> S {
+        self[3]
+    }
     #[inline(always)]
-    fn from_point(point: Self::Point) -> Self { point.to_homogeneous() }
+    fn from_point(point: Self::Point) -> Self {
+        point.to_homogeneous()
+    }
     #[inline(always)]
     fn from_point_weight(point: Self::Point, weight: S) -> Self {
         Vector4::new(point[0], point[1], point[2], weight)
     }
+}
+
+/// Trait to calculate Iwasawa decomposition on matrices.
+pub trait IwasawaDecomposition: Sized {
+    /// Iwasawa decomposition `M = NAK` where
+    /// - `N`: upper half unipotent matrix
+    /// - `A`: diagonal matrix
+    /// - `K`: orthogonal matrix
+    ///
+    /// # Failure
+    /// Returns `None` if `self` is not invertible.
+    fn iwasawa_decomposition(self) -> Option<(Self, Self, Self)>;
+}
+
+impl<S: BaseFloat> IwasawaDecomposition for Matrix2<S> {
+    fn iwasawa_decomposition(self) -> Option<(Self, Self, Self)> {
+        let v0 = self.row(0);
+        let v1 = self.row(1);
+        let mut n = Matrix2::identity();
+        let u1 = v1;
+        let a1 = u1.magnitude();
+        if a1 == S::zero() {
+            return None;
+        }
+        n[0][1] = v0.dot(u1) / (a1 * a1);
+        let u0 = v0 - u1 * n[0][1];
+        let a0 = u0.magnitude();
+        if a0 == S::zero() {
+            return None;
+        }
+
+        let k = Matrix2::from_cols(u0 / a0, u1 / a1);
+        let a = Matrix2::from_diagonal(Vector2::new(a0, a1));
+        Some((n.transpose(), a, k.transpose()))
+    }
+}
+
+impl<S: BaseFloat> IwasawaDecomposition for Matrix3<S> {
+    fn iwasawa_decomposition(self) -> Option<(Self, Self, Self)> {
+        let v0 = self.row(0);
+        let v1 = self.row(1);
+        let v2 = self.row(2);
+        let mut n = Matrix3::identity();
+        let u2 = v2;
+        let a2 = u2.magnitude();
+        if a2 == S::zero() {
+            return None;
+        }
+        n[1][2] = v1.dot(u2) / (a2 * a2);
+        let u1 = v1 - u2 * n[1][2];
+        let a1 = u1.magnitude();
+        if a1 == S::zero() {
+            return None;
+        }
+        n[0][1] = v0.dot(u1) / (a1 * a1);
+        n[0][2] = v0.dot(u2) / (a2 * a2);
+        let u0 = v0 - u1 * n[0][1] - u2 * n[0][2];
+        let a0 = u0.magnitude();
+        if a0 == S::zero() {
+            return None;
+        }
+
+        let k = Matrix3::from_cols(u0 / a0, u1 / a1, u2 / a2);
+        let a = Matrix3::from_diagonal(Vector3::new(a0, a1, a2));
+        Some((n.transpose(), a, k.transpose()))
+    }
+}
+
+impl<S: BaseFloat> IwasawaDecomposition for Matrix4<S> {
+    fn iwasawa_decomposition(self) -> Option<(Self, Self, Self)> {
+        let v0 = self.row(0);
+        let v1 = self.row(1);
+        let v2 = self.row(2);
+        let v3 = self.row(3);
+        let mut n = Matrix4::identity();
+
+        let u3 = v3;
+        let a3 = u3.magnitude();
+        if a3 == S::zero() {
+            return None;
+        }
+        n[2][3] = v2.dot(u3) / (a3 * a3);
+        let u2 = v2 - u3 * n[2][3];
+        let a2 = u2.magnitude();
+        if a2 == S::zero() {
+            return None;
+        }
+        n[1][2] = v1.dot(u2) / (a2 * a2);
+        n[1][3] = v1.dot(u3) / (a3 * a3);
+        let u1 = v1 - u2 * n[1][2] - u3 * n[1][3];
+        let a1 = u1.magnitude();
+        if a1 == S::zero() {
+            return None;
+        }
+        n[0][1] = v0.dot(u1) / (a1 * a1);
+        n[0][2] = v0.dot(u2) / (a2 * a2);
+        n[0][3] = v0.dot(u3) / (a3 * a3);
+        let u0 = v0 - u1 * n[0][1] - u2 * n[0][2] - u3 * n[0][3];
+        let a0 = u0.magnitude();
+        if a0 == S::zero() {
+            return None;
+        }
+
+        let k = Matrix4::from_cols(u0 / a0, u1 / a1, u2 / a2, u3 / a3);
+        let a = Matrix4::from_diagonal(Vector4::new(a0, a1, a2, a3));
+        Some((n.transpose(), a, k.transpose()))
+    }
+}
+
+#[test]
+fn iwasawa_matrix2() {
+    use crate::{assert_near, tolerance::Tolerance};
+    let m = Matrix2::<f64>::new(2.0, 3.0, -1.0, 4.0);
+    let (n, a, k) = m.iwasawa_decomposition().unwrap();
+    assert_near!(m, (n * a * k));
+    assert_near!(n[0][1], 0.0);
+    assert_eq!(n[0][0], 1.0);
+    assert_eq!(n[1][1], 1.0);
+    assert!(a.is_diagonal());
+    assert_near!(k * k.invert().unwrap(), Matrix2::<f64>::identity());
+}
+
+#[test]
+fn iwasawa_matrix3() {
+    use crate::{assert_near, tolerance::Tolerance};
+    let m = Matrix3::<f64>::new(2.0, 3.0, -1.0, -4.0, 6.0, 8.0, 9.0, -1.0, 2.0);
+    let (n, a, k) = m.iwasawa_decomposition().unwrap();
+    assert_near!(m, (n * a * k));
+    assert_near!(n[0][1], 0.0);
+    assert_near!(n[0][2], 0.0);
+    assert_near!(n[1][2], 0.0);
+    assert_eq!(n[0][0], 1.0);
+    assert_eq!(n[1][1], 1.0);
+    assert_eq!(n[2][2], 1.0);
+    assert!(a.is_diagonal());
+    assert_near!(k * k.invert().unwrap(), Matrix3::<f64>::identity());
+}
+
+#[test]
+fn iwasawa_matrix4() {
+    use crate::{assert_near, tolerance::Tolerance};
+    let m = Matrix4::<f64>::new(
+        2.0, 3.0, -1.0, -4.0, 6.0, 8.0, 9.0, -1.0, -2.0, 6.0, 8.0, -3.0, 1.0, -10.0, 3.0, 4.0,
+    );
+    let (n, a, k) = m.iwasawa_decomposition().unwrap();
+    assert_near!(m, (n * a * k));
+    assert_near!(n[0][1], 0.0);
+    assert_near!(n[0][2], 0.0);
+    assert_near!(n[0][3], 0.0);
+    assert_near!(n[1][2], 0.0);
+    assert_near!(n[1][3], 0.0);
+    assert_near!(n[2][3], 0.0);
+    assert_eq!(n[0][0], 1.0);
+    assert_eq!(n[1][1], 1.0);
+    assert_eq!(n[2][2], 1.0);
+    assert_eq!(n[3][3], 1.0);
+    assert!(a.is_diagonal());
+    assert_near!(k * k.invert().unwrap(), Matrix4::<f64>::identity());
 }
