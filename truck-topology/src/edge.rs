@@ -288,7 +288,7 @@ impl<P, C> Edge<P, C> {
     pub fn id(&self) -> EdgeID<C> { ID::new(Arc::as_ptr(&self.curve)) }
 
     /// Returns how many same edges.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -485,15 +485,15 @@ impl<P, C> Edge<P, C> {
     }
 
     /// Create display struct for debugging the edge.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use truck_topology::*;
     /// use EdgeDisplayFormat as EDF;
-    /// 
+    ///
     /// let vertex_format = VertexDisplayFormat::AsPoint;
     /// let edge = Edge::new(&Vertex::new(0), &Vertex::new(1), 2);
-    /// 
+    ///
     /// assert_eq!(
     ///     format!("{:?}", edge.display(EDF::Full { vertex_format })),
     ///     format!("Edge {{ id: {:?}, vertices: (0, 1), entity: 2 }}", edge.id()),

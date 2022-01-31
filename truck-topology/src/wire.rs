@@ -1,7 +1,7 @@
 use crate::*;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::collections::vec_deque;
 use std::collections::VecDeque;
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::iter::Peekable;
 
 impl<P, C> Wire<P, C> {

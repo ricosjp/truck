@@ -61,10 +61,7 @@ pub(super) fn circle_arc(
     let mut point1 = rotation * pt;
     point1[3] *= cos;
     point1 = axis_trsf * point1;
-    let mut curve = BSplineCurve::new(
-        KnotVec::bezier_knot(2),
-        vec![point, point1, rotation2 * pt],
-    );
+    let mut curve = BSplineCurve::new(KnotVec::bezier_knot(2), vec![point, point1, rotation2 * pt]);
     curve.add_knot(0.25);
     curve.add_knot(0.5);
     curve.add_knot(0.75);
@@ -78,7 +75,10 @@ fn closed_polyline_orientation(pts: &[Point3]) -> bool {
 }
 
 pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<Plane> {
-    let center = pts.iter().fold(Point3::origin(), |sum, pt| sum + pt.to_vec()) / pts.len() as f64;
+    let center = pts
+        .iter()
+        .fold(Point3::origin(), |sum, pt| sum + pt.to_vec())
+        / pts.len() as f64;
     let normal = pts.windows(2).fold(Vector3::zero(), |sum, pt| {
         sum + (pt[0] - center).cross(pt[1] - center)
     });
@@ -106,7 +106,8 @@ pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<Plane> {
         Point3::new(min[0], min[1], min[2]),
         Point3::new(max[0], min[1], min[2]),
         Point3::new(min[0], max[1], min[2]),
-    ).transformed(mat);
+    )
+    .transformed(mat);
     Some(plane)
 }
 
@@ -196,7 +197,7 @@ mod geom_impl_test {
         let pt = Point3::new(1.0, 0.0, 0.0);
         let c = Point3::new(0.0, 2.0 * random::<f64>() - 1.0, 0.0);
         let axis = Vector3::new(c[1], 1.0, 0.0).normalize();
-        
+
         let mut pts = Vec::new();
         pts.extend((0..=N).map(|i| {
             let div = i as f64 / N as f64;
@@ -211,20 +212,30 @@ mod geom_impl_test {
         }));
         let surface = attach_plane(pts.clone()).unwrap();
         let n = surface.normal();
-        assert!(n.near(&axis), "rotation axis: {:?}\nsurface normal: {:?}", axis, n);
+        assert!(
+            n.near(&axis),
+            "rotation axis: {:?}\nsurface normal: {:?}",
+            axis,
+            n
+        );
         pts.reverse();
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
-        assert!((-n).near(&axis), "inversed failed: rotation axis: {:?}\nsurface normal: {:?}", axis, n);
+        assert!(
+            (-n).near(&axis),
+            "inversed failed: rotation axis: {:?}\nsurface normal: {:?}",
+            axis,
+            n
+        );
     }
-    
+
     #[test]
     fn attach_plane_test1() {
         const N: usize = 10;
         let pt = Point3::new(1.0, 0.0, 0.0);
         let c = Point3::new(0.0, 0.0, 0.0);
         let axis = Vector3::unit_z();
-        
+
         let mut pts = Vec::new();
         pts.extend((0..=N).map(|i| {
             let div = i as f64 / N as f64;
@@ -239,20 +250,30 @@ mod geom_impl_test {
         }));
         let surface = attach_plane(pts.clone()).unwrap();
         let n = surface.normal();
-        assert!(n.near(&axis), "rotation axis: {:?}\nsurface normal: {:?}", axis, n);
+        assert!(
+            n.near(&axis),
+            "rotation axis: {:?}\nsurface normal: {:?}",
+            axis,
+            n
+        );
         pts.reverse();
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
-        assert!((-n).near(&axis), "inversed failed: rotation axis: {:?}\nsurface normal: {:?}", axis, n);
+        assert!(
+            (-n).near(&axis),
+            "inversed failed: rotation axis: {:?}\nsurface normal: {:?}",
+            axis,
+            n
+        );
     }
-    
+
     #[test]
     fn attach_plane_test2() {
         const N: usize = 10;
         let pt = Point3::new(1.0, 0.0, 0.0);
         let c = Point3::new(0.0, 0.0, 0.0);
         let axis = -Vector3::unit_z();
-        
+
         let mut pts = Vec::new();
         pts.extend((0..=N).map(|i| {
             let div = i as f64 / N as f64;
@@ -267,10 +288,20 @@ mod geom_impl_test {
         }));
         let surface = attach_plane(pts.clone()).unwrap();
         let n = surface.normal();
-        assert!(n.near(&axis), "rotation axis: {:?}\nsurface normal: {:?}", axis, n);
+        assert!(
+            n.near(&axis),
+            "rotation axis: {:?}\nsurface normal: {:?}",
+            axis,
+            n
+        );
         pts.reverse();
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
-        assert!((-n).near(&axis), "inversed failed: rotation axis: {:?}\nsurface normal: {:?}", axis, n);
+        assert!(
+            (-n).near(&axis),
+            "inversed failed: rotation axis: {:?}\nsurface normal: {:?}",
+            axis,
+            n
+        );
     }
 }

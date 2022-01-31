@@ -8,9 +8,9 @@ pub trait Topology {
     fn extract_boundaries(&self) -> Vec<Vec<usize>>;
     /// Determines the shell conditions: non-regular, regular, oriented, or closed.  
     /// The complexity increases in proportion to the number of edges.
-    /// 
+    ///
     /// Examples for each condition can be found on the page of
-    /// [`ShellCondition`](https://docs.rs/truck-topology/0.2.0/truck_topology/shell/enum.ShellCondition.html). 
+    /// [`ShellCondition`](https://docs.rs/truck-topology/0.2.0/truck_topology/shell/enum.ShellCondition.html).
     fn shell_condition(&self) -> ShellCondition;
 }
 

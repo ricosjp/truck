@@ -18,8 +18,7 @@ pub mod control_point {
         + DivAssign<S>
         + Copy
         + Clone
-        + Debug
-    {
+        + Debug {
         /// differential vector
         type Diff: Add<Self::Diff, Output = Self::Diff>
             + Sub<Self::Diff, Output = Self::Diff>
@@ -41,66 +40,38 @@ pub mod control_point {
 
     impl<S: BaseFloat> ControlPoint<S> for Point1<S> {
         type Diff = Vector1<S>;
-        fn origin() -> Self {
-            EuclideanSpace::origin()
-        }
-        fn to_vec(self) -> Self::Diff {
-            EuclideanSpace::to_vec(self)
-        }
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
     }
     impl<S: BaseFloat> ControlPoint<S> for Point2<S> {
         type Diff = Vector2<S>;
-        fn origin() -> Self {
-            EuclideanSpace::origin()
-        }
-        fn to_vec(self) -> Self::Diff {
-            EuclideanSpace::to_vec(self)
-        }
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
     }
     impl<S: BaseFloat> ControlPoint<S> for Point3<S> {
         type Diff = Vector3<S>;
-        fn origin() -> Self {
-            EuclideanSpace::origin()
-        }
-        fn to_vec(self) -> Self::Diff {
-            EuclideanSpace::to_vec(self)
-        }
+        fn origin() -> Self { EuclideanSpace::origin() }
+        fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector1<S> {
         type Diff = Vector1<S>;
-        fn origin() -> Self {
-            Zero::zero()
-        }
-        fn to_vec(self) -> Self {
-            self
-        }
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector2<S> {
         type Diff = Vector2<S>;
-        fn origin() -> Self {
-            Zero::zero()
-        }
-        fn to_vec(self) -> Self {
-            self
-        }
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector3<S> {
         type Diff = Vector3<S>;
-        fn origin() -> Self {
-            Zero::zero()
-        }
-        fn to_vec(self) -> Self {
-            self
-        }
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector4<S> {
         type Diff = Vector4<S>;
-        fn origin() -> Self {
-            Zero::zero()
-        }
-        fn to_vec(self) -> Self {
-            self
-        }
+        fn origin() -> Self { Zero::zero() }
+        fn to_vec(self) -> Self { self }
     }
 }
 
@@ -145,9 +116,7 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
     fn from_point_weight(point: Self::Point, weight: S) -> Self;
     /// Returns the projection to the plane whose the last component is `1.0`.
     #[inline(always)]
-    fn to_point(self) -> Self::Point {
-        Self::Point::from_vec(self.truncate() / self.weight())
-    }
+    fn to_point(self) -> Self::Point { Self::Point::from_vec(self.truncate() / self.weight()) }
     /// Returns the derivation of the rational curve.
     ///
     /// For a curve c(t) = (c_0(t), c_1(t), c_2(t), c_3(t)), returns the derivation
@@ -272,38 +241,24 @@ impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
     type Vector = Vector1<S>;
     type Point = Point1<S>;
     #[inline(always)]
-    fn truncate(self) -> Vector1<S> {
-        Vector1::new(self[0])
-    }
+    fn truncate(self) -> Vector1<S> { Vector1::new(self[0]) }
     #[inline(always)]
-    fn weight(self) -> S {
-        self[1]
-    }
+    fn weight(self) -> S { self[1] }
     #[inline(always)]
-    fn from_point(point: Self::Point) -> Self {
-        Vector2::new(point[0], S::one())
-    }
+    fn from_point(point: Self::Point) -> Self { Vector2::new(point[0], S::one()) }
     #[inline(always)]
-    fn from_point_weight(point: Self::Point, weight: S) -> Self {
-        Vector2::new(point[0], weight)
-    }
+    fn from_point_weight(point: Self::Point, weight: S) -> Self { Vector2::new(point[0], weight) }
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
     type Vector = Vector2<S>;
     type Point = Point2<S>;
     #[inline(always)]
-    fn truncate(self) -> Vector2<S> {
-        self.truncate()
-    }
+    fn truncate(self) -> Vector2<S> { self.truncate() }
     #[inline(always)]
-    fn weight(self) -> S {
-        self[2]
-    }
+    fn weight(self) -> S { self[2] }
     #[inline(always)]
-    fn from_point(point: Self::Point) -> Self {
-        Vector3::new(point[0], point[1], S::one())
-    }
+    fn from_point(point: Self::Point) -> Self { Vector3::new(point[0], point[1], S::one()) }
     #[inline(always)]
     fn from_point_weight(point: Self::Point, weight: S) -> Self {
         Vector3::new(point[0], point[1], weight)
@@ -314,17 +269,11 @@ impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
     type Vector = Vector3<S>;
     type Point = Point3<S>;
     #[inline(always)]
-    fn truncate(self) -> Vector3<S> {
-        self.truncate()
-    }
+    fn truncate(self) -> Vector3<S> { self.truncate() }
     #[inline(always)]
-    fn weight(self) -> S {
-        self[3]
-    }
+    fn weight(self) -> S { self[3] }
     #[inline(always)]
-    fn from_point(point: Self::Point) -> Self {
-        point.to_homogeneous()
-    }
+    fn from_point(point: Self::Point) -> Self { point.to_homogeneous() }
     #[inline(always)]
     fn from_point_weight(point: Self::Point, weight: S) -> Self {
         Vector4::new(point[0], point[1], point[2], weight)

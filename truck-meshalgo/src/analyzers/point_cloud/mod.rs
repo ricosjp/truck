@@ -48,9 +48,7 @@ impl WithPointCloud for PolygonMesh {
     #[inline(always)]
     fn is_clung_to_by(&self, point_cloud: &[Point3], tol: f64) -> bool {
         nonpositive_tolerance!(tol);
-        HashedPointCloud::from_points(point_cloud, tol * 2.0)
-            .distance2(self)
-            < tol * tol
+        HashedPointCloud::from_points(point_cloud, tol * 2.0).distance2(self) < tol * tol
     }
     #[inline(always)]
     fn collide_with_neiborhood_of(&self, point_cloud: &[Point3], tol: f64) -> bool {

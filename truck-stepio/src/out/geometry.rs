@@ -50,9 +50,7 @@ impl Display for StepDisplay<VectorAsDirection<Vector3>> {
 
 impl<V> StepLength for VectorAsDirection<V> {
     #[inline]
-    fn step_length(&self) -> usize {
-        1
-    }
+    fn step_length(&self) -> usize { 1 }
 }
 
 impl<V> Display for StepDisplay<V>
@@ -110,9 +108,7 @@ where
 }
 
 impl<P> StepLength for BSplineCurve<P> {
-    fn step_length(&self) -> usize {
-        self.control_points().len() + 1
-    }
+    fn step_length(&self) -> usize { self.control_points().len() + 1 }
 }
 
 impl<'a, V> Display for StepDisplay<&'a NURBSCurve<V>>
@@ -195,9 +191,7 @@ impl StepLength for ModelingCurve {
 }
 
 impl<P> StepLength for NURBSCurve<P> {
-    fn step_length(&self) -> usize {
-        self.control_points().len() + 1
-    }
+    fn step_length(&self) -> usize { self.control_points().len() + 1 }
 }
 
 impl Display for StepDisplay<Plane> {
@@ -222,9 +216,7 @@ impl Display for StepDisplay<Plane> {
 }
 
 impl StepLength for Plane {
-    fn step_length(&self) -> usize {
-        5
-    }
+    fn step_length(&self) -> usize { 5 }
 }
 
 impl<'a, P> Display for StepDisplay<&'a BSplineSurface<P>>
@@ -271,9 +263,7 @@ where
 }
 
 impl<P> StepLength for BSplineSurface<P> {
-    fn step_length(&self) -> usize {
-        1 + self.control_points().iter().map(Vec::len).sum::<usize>()
-    }
+    fn step_length(&self) -> usize { 1 + self.control_points().iter().map(Vec::len).sum::<usize>() }
 }
 
 impl<'a, V> Display for StepDisplay<&'a NURBSSurface<V>>
@@ -338,9 +328,7 @@ where
 }
 
 impl<V> StepLength for NURBSSurface<V> {
-    fn step_length(&self) -> usize {
-        1 + self.control_points().iter().map(Vec::len).sum::<usize>()
-    }
+    fn step_length(&self) -> usize { 1 + self.control_points().iter().map(Vec::len).sum::<usize>() }
 }
 
 impl<'a, C> Display for StepDisplay<&'a RevolutedCurve<C>>
@@ -394,9 +382,7 @@ where
 }
 
 impl<C: StepLength> StepLength for RevolutedCurve<C> {
-    fn step_length(&self) -> usize {
-        4 + self.entity_curve().step_length()
-    }
+    fn step_length(&self) -> usize { 4 + self.entity_curve().step_length() }
 }
 
 impl<'a, C> Display for StepDisplay<&'a Processor<RevolutedCurve<C>, Matrix4>>

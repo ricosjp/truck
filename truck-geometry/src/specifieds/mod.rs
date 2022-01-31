@@ -20,18 +20,18 @@ pub struct UnitHyperbola<P>(std::marker::PhantomData<P>);
 
 /// parabola whose apex is the origin.
 #[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
-pub struct UnitParabola<P> (std::marker::PhantomData<P>);
+pub struct UnitParabola<P>(std::marker::PhantomData<P>);
 
 /// plane
 /// # Example
 /// ```
 /// use truck_geometry::*;
-/// 
+///
 /// // arbitary three points
 /// let pt0 = Point3::new(0.0, 1.0, 2.0);
 /// let pt1 = Point3::new(1.0, 1.0, 3.0);
 /// let pt2 = Point3::new(0.0, 2.0, 3.0);
-/// 
+///
 /// // Creates a plane
 /// let plane: Plane = Plane::new(pt0, pt1, pt2);
 /// // The origin of the plane is pt0.
@@ -55,10 +55,10 @@ pub struct Plane {
 /// ```
 /// use truck_geometry::*;
 /// use std::f64::consts::PI;
-/// 
+///
 /// let center = Point3::new(1.0, 2.0, 3.0);
 /// let radius = 4.56;
-/// 
+///
 /// let sphere = Sphere::new(center, radius);
 /// const N: usize = 100;
 /// for i in 0..=N {
@@ -67,12 +67,12 @@ pub struct Plane {
 ///         let u = PI * i as f64 / N as f64;
 ///         // the parameter v is longitude
 ///         let v = 2.0 * PI * j as f64 / N as f64;
-/// 
+///
 ///         // simple relation between a point and its normal.
 ///         let pt = sphere.subs(u, v);
 ///         let n = sphere.normal(u, v);
 ///         assert_near!(pt - center, n * radius);
-/// 
+///
 ///         // the proof of u is latitude and v is longitude
 ///         assert!((PI / 2.0 - u) * (pt.z - center.z) >= 0.0);
 ///         assert!((PI - v) * (pt.y - center.y) >= 0.0);
@@ -87,7 +87,7 @@ pub struct Sphere {
 
 mod circle;
 mod hyperbola;
+mod line;
 mod parabola;
 mod plane;
 mod sphere;
-mod line;

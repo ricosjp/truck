@@ -48,9 +48,9 @@ pub trait MeshableShape {
     type MeshedShape: MeshedShape;
     /// Tessellates shapes. The division of curves and surfaces are by `ParameterDivision1D` and `ParameterDivision2D`,
     /// and the constrained Delauney triangulation is based on the crate [`spade`](https://crates.io/crates/spade).
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// `tol` must be more than `TOLERANCE`.
     ///
     /// # Remarks

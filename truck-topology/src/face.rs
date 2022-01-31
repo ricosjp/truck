@@ -586,7 +586,7 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[1], &v[2], ()),
     ///     Edge::new(&v[2], &v[0], ()),
     /// ]);
-    /// 
+    ///
     /// // Create one face
     /// let face0 = Face::new(vec![wire.clone()], ());
     /// assert_eq!(face0.count(), 1);

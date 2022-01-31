@@ -3506,14 +3506,10 @@ pub enum ActionAny {
     ExecutedAction(Box<ExecutedActionAny>),
 }
 impl Into<ActionAny> for Action {
-    fn into(self) -> ActionAny {
-        ActionAny::Action(Box::new(self))
-    }
+    fn into(self) -> ActionAny { ActionAny::Action(Box::new(self)) }
 }
 impl Into<ActionAny> for ExecutedAction {
-    fn into(self) -> ActionAny {
-        ActionAny::ExecutedAction(Box::new(self.into()))
-    }
+    fn into(self) -> ActionAny { ActionAny::ExecutedAction(Box::new(self.into())) }
 }
 impl AsRef<Action> for ActionAny {
     fn as_ref(&self) -> &Action {
@@ -3546,19 +3542,13 @@ pub enum ActionAssignmentAny {
     StartWork(Box<StartWork>),
 }
 impl Into<ActionAssignmentAny> for ActionAssignment {
-    fn into(self) -> ActionAssignmentAny {
-        ActionAssignmentAny::ActionAssignment(Box::new(self))
-    }
+    fn into(self) -> ActionAssignmentAny { ActionAssignmentAny::ActionAssignment(Box::new(self)) }
 }
 impl Into<ActionAssignmentAny> for Change {
-    fn into(self) -> ActionAssignmentAny {
-        ActionAssignmentAny::Change(Box::new(self.into()))
-    }
+    fn into(self) -> ActionAssignmentAny { ActionAssignmentAny::Change(Box::new(self.into())) }
 }
 impl Into<ActionAssignmentAny> for StartWork {
-    fn into(self) -> ActionAssignmentAny {
-        ActionAssignmentAny::StartWork(Box::new(self.into()))
-    }
+    fn into(self) -> ActionAssignmentAny { ActionAssignmentAny::StartWork(Box::new(self.into())) }
 }
 impl AsRef<ActionAssignment> for ActionAssignmentAny {
     fn as_ref(&self) -> &ActionAssignment {
@@ -3720,19 +3710,13 @@ pub enum AddressAny {
     PersonalAddress(Box<PersonalAddress>),
 }
 impl Into<AddressAny> for Address {
-    fn into(self) -> AddressAny {
-        AddressAny::Address(Box::new(self))
-    }
+    fn into(self) -> AddressAny { AddressAny::Address(Box::new(self)) }
 }
 impl Into<AddressAny> for OrganizationalAddress {
-    fn into(self) -> AddressAny {
-        AddressAny::OrganizationalAddress(Box::new(self.into()))
-    }
+    fn into(self) -> AddressAny { AddressAny::OrganizationalAddress(Box::new(self.into())) }
 }
 impl Into<AddressAny> for PersonalAddress {
-    fn into(self) -> AddressAny {
-        AddressAny::PersonalAddress(Box::new(self.into()))
-    }
+    fn into(self) -> AddressAny { AddressAny::PersonalAddress(Box::new(self.into())) }
 }
 impl AsRef<Address> for AddressAny {
     fn as_ref(&self) -> &Address {
@@ -4176,9 +4160,7 @@ pub enum BSplineCurveAny {
     UniformCurve(Box<UniformCurve>),
 }
 impl Into<BSplineCurveAny> for BSplineCurve {
-    fn into(self) -> BSplineCurveAny {
-        BSplineCurveAny::BSplineCurve(Box::new(self))
-    }
+    fn into(self) -> BSplineCurveAny { BSplineCurveAny::BSplineCurve(Box::new(self)) }
 }
 impl Into<BSplineCurveAny> for BSplineCurveWithKnots {
     fn into(self) -> BSplineCurveAny {
@@ -4186,14 +4168,10 @@ impl Into<BSplineCurveAny> for BSplineCurveWithKnots {
     }
 }
 impl Into<BSplineCurveAny> for BezierCurve {
-    fn into(self) -> BSplineCurveAny {
-        BSplineCurveAny::BezierCurve(Box::new(self.into()))
-    }
+    fn into(self) -> BSplineCurveAny { BSplineCurveAny::BezierCurve(Box::new(self.into())) }
 }
 impl Into<BSplineCurveAny> for QuasiUniformCurve {
-    fn into(self) -> BSplineCurveAny {
-        BSplineCurveAny::QuasiUniformCurve(Box::new(self.into()))
-    }
+    fn into(self) -> BSplineCurveAny { BSplineCurveAny::QuasiUniformCurve(Box::new(self.into())) }
 }
 impl Into<BSplineCurveAny> for RationalBSplineCurve {
     fn into(self) -> BSplineCurveAny {
@@ -4201,9 +4179,7 @@ impl Into<BSplineCurveAny> for RationalBSplineCurve {
     }
 }
 impl Into<BSplineCurveAny> for UniformCurve {
-    fn into(self) -> BSplineCurveAny {
-        BSplineCurveAny::UniformCurve(Box::new(self.into()))
-    }
+    fn into(self) -> BSplineCurveAny { BSplineCurveAny::UniformCurve(Box::new(self.into())) }
 }
 impl AsRef<BSplineCurve> for BSplineCurveAny {
     fn as_ref(&self) -> &BSplineCurve {
@@ -4295,9 +4271,7 @@ pub enum BSplineSurfaceAny {
     UniformSurface(Box<UniformSurface>),
 }
 impl Into<BSplineSurfaceAny> for BSplineSurface {
-    fn into(self) -> BSplineSurfaceAny {
-        BSplineSurfaceAny::BSplineSurface(Box::new(self))
-    }
+    fn into(self) -> BSplineSurfaceAny { BSplineSurfaceAny::BSplineSurface(Box::new(self)) }
 }
 impl Into<BSplineSurfaceAny> for BSplineSurfaceWithKnots {
     fn into(self) -> BSplineSurfaceAny {
@@ -4305,9 +4279,7 @@ impl Into<BSplineSurfaceAny> for BSplineSurfaceWithKnots {
     }
 }
 impl Into<BSplineSurfaceAny> for BezierSurface {
-    fn into(self) -> BSplineSurfaceAny {
-        BSplineSurfaceAny::BezierSurface(Box::new(self.into()))
-    }
+    fn into(self) -> BSplineSurfaceAny { BSplineSurfaceAny::BezierSurface(Box::new(self.into())) }
 }
 impl Into<BSplineSurfaceAny> for QuasiUniformSurface {
     fn into(self) -> BSplineSurfaceAny {
@@ -4320,9 +4292,7 @@ impl Into<BSplineSurfaceAny> for RationalBSplineSurface {
     }
 }
 impl Into<BSplineSurfaceAny> for UniformSurface {
-    fn into(self) -> BSplineSurfaceAny {
-        BSplineSurfaceAny::UniformSurface(Box::new(self.into()))
-    }
+    fn into(self) -> BSplineSurfaceAny { BSplineSurfaceAny::UniformSurface(Box::new(self.into())) }
 }
 impl AsRef<BSplineSurface> for BSplineSurfaceAny {
     fn as_ref(&self) -> &BSplineSurface {
@@ -4425,9 +4395,7 @@ pub enum BoundaryCurveAny {
     OuterBoundaryCurve(Box<OuterBoundaryCurve>),
 }
 impl Into<BoundaryCurveAny> for BoundaryCurve {
-    fn into(self) -> BoundaryCurveAny {
-        BoundaryCurveAny::BoundaryCurve(Box::new(self))
-    }
+    fn into(self) -> BoundaryCurveAny { BoundaryCurveAny::BoundaryCurve(Box::new(self)) }
 }
 impl Into<BoundaryCurveAny> for OuterBoundaryCurve {
     fn into(self) -> BoundaryCurveAny {
@@ -4491,39 +4459,25 @@ pub enum BoundedCurveAny {
     TrimmedCurve(Box<TrimmedCurve>),
 }
 impl Into<BoundedCurveAny> for BoundedCurve {
-    fn into(self) -> BoundedCurveAny {
-        BoundedCurveAny::BoundedCurve(Box::new(self))
-    }
+    fn into(self) -> BoundedCurveAny { BoundedCurveAny::BoundedCurve(Box::new(self)) }
 }
 impl Into<BoundedCurveAny> for BSplineCurve {
-    fn into(self) -> BoundedCurveAny {
-        BoundedCurveAny::BSplineCurve(Box::new(self.into()))
-    }
+    fn into(self) -> BoundedCurveAny { BoundedCurveAny::BSplineCurve(Box::new(self.into())) }
 }
 impl Into<BoundedCurveAny> for BoundedPcurve {
-    fn into(self) -> BoundedCurveAny {
-        BoundedCurveAny::BoundedPcurve(Box::new(self.into()))
-    }
+    fn into(self) -> BoundedCurveAny { BoundedCurveAny::BoundedPcurve(Box::new(self.into())) }
 }
 impl Into<BoundedCurveAny> for BoundedSurfaceCurve {
-    fn into(self) -> BoundedCurveAny {
-        BoundedCurveAny::BoundedSurfaceCurve(Box::new(self.into()))
-    }
+    fn into(self) -> BoundedCurveAny { BoundedCurveAny::BoundedSurfaceCurve(Box::new(self.into())) }
 }
 impl Into<BoundedCurveAny> for CompositeCurve {
-    fn into(self) -> BoundedCurveAny {
-        BoundedCurveAny::CompositeCurve(Box::new(self.into()))
-    }
+    fn into(self) -> BoundedCurveAny { BoundedCurveAny::CompositeCurve(Box::new(self.into())) }
 }
 impl Into<BoundedCurveAny> for Polyline {
-    fn into(self) -> BoundedCurveAny {
-        BoundedCurveAny::Polyline(Box::new(self.into()))
-    }
+    fn into(self) -> BoundedCurveAny { BoundedCurveAny::Polyline(Box::new(self.into())) }
 }
 impl Into<BoundedCurveAny> for TrimmedCurve {
-    fn into(self) -> BoundedCurveAny {
-        BoundedCurveAny::TrimmedCurve(Box::new(self.into()))
-    }
+    fn into(self) -> BoundedCurveAny { BoundedCurveAny::TrimmedCurve(Box::new(self.into())) }
 }
 impl AsRef<BoundedCurve> for BoundedCurveAny {
     fn as_ref(&self) -> &BoundedCurve {
@@ -4602,14 +4556,10 @@ pub enum BoundedSurfaceAny {
     RectangularTrimmedSurface(Box<RectangularTrimmedSurface>),
 }
 impl Into<BoundedSurfaceAny> for BoundedSurface {
-    fn into(self) -> BoundedSurfaceAny {
-        BoundedSurfaceAny::BoundedSurface(Box::new(self))
-    }
+    fn into(self) -> BoundedSurfaceAny { BoundedSurfaceAny::BoundedSurface(Box::new(self)) }
 }
 impl Into<BoundedSurfaceAny> for BSplineSurface {
-    fn into(self) -> BoundedSurfaceAny {
-        BoundedSurfaceAny::BSplineSurface(Box::new(self.into()))
-    }
+    fn into(self) -> BoundedSurfaceAny { BoundedSurfaceAny::BSplineSurface(Box::new(self.into())) }
 }
 impl Into<BoundedSurfaceAny> for CurveBoundedSurface {
     fn into(self) -> BoundedSurfaceAny {
@@ -5025,14 +4975,10 @@ pub enum ClosedShellAny {
     OrientedClosedShell(Box<OrientedClosedShell>),
 }
 impl Into<ClosedShellAny> for ClosedShell {
-    fn into(self) -> ClosedShellAny {
-        ClosedShellAny::ClosedShell(Box::new(self))
-    }
+    fn into(self) -> ClosedShellAny { ClosedShellAny::ClosedShell(Box::new(self)) }
 }
 impl Into<ClosedShellAny> for OrientedClosedShell {
-    fn into(self) -> ClosedShellAny {
-        ClosedShellAny::OrientedClosedShell(Box::new(self.into()))
-    }
+    fn into(self) -> ClosedShellAny { ClosedShellAny::OrientedClosedShell(Box::new(self.into())) }
 }
 impl AsRef<ClosedShell> for ClosedShellAny {
     fn as_ref(&self) -> &ClosedShell {
@@ -5079,9 +5025,7 @@ pub enum CompositeCurveAny {
     CompositeCurveOnSurface(Box<CompositeCurveOnSurfaceAny>),
 }
 impl Into<CompositeCurveAny> for CompositeCurve {
-    fn into(self) -> CompositeCurveAny {
-        CompositeCurveAny::CompositeCurve(Box::new(self))
-    }
+    fn into(self) -> CompositeCurveAny { CompositeCurveAny::CompositeCurve(Box::new(self)) }
 }
 impl Into<CompositeCurveAny> for CompositeCurveOnSurface {
     fn into(self) -> CompositeCurveAny {
@@ -5291,29 +5235,19 @@ pub enum ConicAny {
     Parabola(Box<Parabola>),
 }
 impl Into<ConicAny> for Conic {
-    fn into(self) -> ConicAny {
-        ConicAny::Conic(Box::new(self))
-    }
+    fn into(self) -> ConicAny { ConicAny::Conic(Box::new(self)) }
 }
 impl Into<ConicAny> for Circle {
-    fn into(self) -> ConicAny {
-        ConicAny::Circle(Box::new(self.into()))
-    }
+    fn into(self) -> ConicAny { ConicAny::Circle(Box::new(self.into())) }
 }
 impl Into<ConicAny> for Ellipse {
-    fn into(self) -> ConicAny {
-        ConicAny::Ellipse(Box::new(self.into()))
-    }
+    fn into(self) -> ConicAny { ConicAny::Ellipse(Box::new(self.into())) }
 }
 impl Into<ConicAny> for Hyperbola {
-    fn into(self) -> ConicAny {
-        ConicAny::Hyperbola(Box::new(self.into()))
-    }
+    fn into(self) -> ConicAny { ConicAny::Hyperbola(Box::new(self.into())) }
 }
 impl Into<ConicAny> for Parabola {
-    fn into(self) -> ConicAny {
-        ConicAny::Parabola(Box::new(self.into()))
-    }
+    fn into(self) -> ConicAny { ConicAny::Parabola(Box::new(self.into())) }
 }
 impl AsRef<Conic> for ConicAny {
     fn as_ref(&self) -> &Conic {
@@ -5396,19 +5330,13 @@ pub enum ConnectedFaceSetAny {
     OpenShell(Box<OpenShellAny>),
 }
 impl Into<ConnectedFaceSetAny> for ConnectedFaceSet {
-    fn into(self) -> ConnectedFaceSetAny {
-        ConnectedFaceSetAny::ConnectedFaceSet(Box::new(self))
-    }
+    fn into(self) -> ConnectedFaceSetAny { ConnectedFaceSetAny::ConnectedFaceSet(Box::new(self)) }
 }
 impl Into<ConnectedFaceSetAny> for ClosedShell {
-    fn into(self) -> ConnectedFaceSetAny {
-        ConnectedFaceSetAny::ClosedShell(Box::new(self.into()))
-    }
+    fn into(self) -> ConnectedFaceSetAny { ConnectedFaceSetAny::ClosedShell(Box::new(self.into())) }
 }
 impl Into<ConnectedFaceSetAny> for OpenShell {
-    fn into(self) -> ConnectedFaceSetAny {
-        ConnectedFaceSetAny::OpenShell(Box::new(self.into()))
-    }
+    fn into(self) -> ConnectedFaceSetAny { ConnectedFaceSetAny::OpenShell(Box::new(self.into())) }
 }
 impl AsRef<ConnectedFaceSet> for ConnectedFaceSetAny {
     fn as_ref(&self) -> &ConnectedFaceSet {
@@ -5584,44 +5512,28 @@ pub enum CurveAny {
     SurfaceCurve(Box<SurfaceCurveAny>),
 }
 impl Into<CurveAny> for Curve {
-    fn into(self) -> CurveAny {
-        CurveAny::Curve(Box::new(self))
-    }
+    fn into(self) -> CurveAny { CurveAny::Curve(Box::new(self)) }
 }
 impl Into<CurveAny> for BoundedCurve {
-    fn into(self) -> CurveAny {
-        CurveAny::BoundedCurve(Box::new(self.into()))
-    }
+    fn into(self) -> CurveAny { CurveAny::BoundedCurve(Box::new(self.into())) }
 }
 impl Into<CurveAny> for Conic {
-    fn into(self) -> CurveAny {
-        CurveAny::Conic(Box::new(self.into()))
-    }
+    fn into(self) -> CurveAny { CurveAny::Conic(Box::new(self.into())) }
 }
 impl Into<CurveAny> for CurveReplica {
-    fn into(self) -> CurveAny {
-        CurveAny::CurveReplica(Box::new(self.into()))
-    }
+    fn into(self) -> CurveAny { CurveAny::CurveReplica(Box::new(self.into())) }
 }
 impl Into<CurveAny> for Line {
-    fn into(self) -> CurveAny {
-        CurveAny::Line(Box::new(self.into()))
-    }
+    fn into(self) -> CurveAny { CurveAny::Line(Box::new(self.into())) }
 }
 impl Into<CurveAny> for OffsetCurve3D {
-    fn into(self) -> CurveAny {
-        CurveAny::OffsetCurve3D(Box::new(self.into()))
-    }
+    fn into(self) -> CurveAny { CurveAny::OffsetCurve3D(Box::new(self.into())) }
 }
 impl Into<CurveAny> for Pcurve {
-    fn into(self) -> CurveAny {
-        CurveAny::Pcurve(Box::new(self.into()))
-    }
+    fn into(self) -> CurveAny { CurveAny::Pcurve(Box::new(self.into())) }
 }
 impl Into<CurveAny> for SurfaceCurve {
-    fn into(self) -> CurveAny {
-        CurveAny::SurfaceCurve(Box::new(self.into()))
-    }
+    fn into(self) -> CurveAny { CurveAny::SurfaceCurve(Box::new(self.into())) }
 }
 impl AsRef<Curve> for CurveAny {
     fn as_ref(&self) -> &Curve {
@@ -5724,24 +5636,16 @@ pub enum DateAny {
     WeekOfYearAndDayDate(Box<WeekOfYearAndDayDate>),
 }
 impl Into<DateAny> for Date {
-    fn into(self) -> DateAny {
-        DateAny::Date(Box::new(self))
-    }
+    fn into(self) -> DateAny { DateAny::Date(Box::new(self)) }
 }
 impl Into<DateAny> for CalendarDate {
-    fn into(self) -> DateAny {
-        DateAny::CalendarDate(Box::new(self.into()))
-    }
+    fn into(self) -> DateAny { DateAny::CalendarDate(Box::new(self.into())) }
 }
 impl Into<DateAny> for OrdinalDate {
-    fn into(self) -> DateAny {
-        DateAny::OrdinalDate(Box::new(self.into()))
-    }
+    fn into(self) -> DateAny { DateAny::OrdinalDate(Box::new(self.into())) }
 }
 impl Into<DateAny> for WeekOfYearAndDayDate {
-    fn into(self) -> DateAny {
-        DateAny::WeekOfYearAndDayDate(Box::new(self.into()))
-    }
+    fn into(self) -> DateAny { DateAny::WeekOfYearAndDayDate(Box::new(self.into())) }
 }
 impl AsRef<Date> for DateAny {
     fn as_ref(&self) -> &Date {
@@ -5866,9 +5770,7 @@ pub enum DegeneratePcurveAny {
     EvaluatedDegeneratePcurve(Box<EvaluatedDegeneratePcurve>),
 }
 impl Into<DegeneratePcurveAny> for DegeneratePcurve {
-    fn into(self) -> DegeneratePcurveAny {
-        DegeneratePcurveAny::DegeneratePcurve(Box::new(self))
-    }
+    fn into(self) -> DegeneratePcurveAny { DegeneratePcurveAny::DegeneratePcurve(Box::new(self)) }
 }
 impl Into<DegeneratePcurveAny> for EvaluatedDegeneratePcurve {
     fn into(self) -> DegeneratePcurveAny {
@@ -5998,14 +5900,10 @@ pub enum DocumentAny {
     DocumentWithClass(Box<DocumentWithClass>),
 }
 impl Into<DocumentAny> for Document {
-    fn into(self) -> DocumentAny {
-        DocumentAny::Document(Box::new(self))
-    }
+    fn into(self) -> DocumentAny { DocumentAny::Document(Box::new(self)) }
 }
 impl Into<DocumentAny> for DocumentWithClass {
-    fn into(self) -> DocumentAny {
-        DocumentAny::DocumentWithClass(Box::new(self.into()))
-    }
+    fn into(self) -> DocumentAny { DocumentAny::DocumentWithClass(Box::new(self.into())) }
 }
 impl AsRef<Document> for DocumentAny {
     fn as_ref(&self) -> &Document {
@@ -6133,19 +6031,13 @@ pub enum EdgeAny {
     OrientedEdge(Box<OrientedEdge>),
 }
 impl Into<EdgeAny> for Edge {
-    fn into(self) -> EdgeAny {
-        EdgeAny::Edge(Box::new(self))
-    }
+    fn into(self) -> EdgeAny { EdgeAny::Edge(Box::new(self)) }
 }
 impl Into<EdgeAny> for EdgeCurve {
-    fn into(self) -> EdgeAny {
-        EdgeAny::EdgeCurve(Box::new(self.into()))
-    }
+    fn into(self) -> EdgeAny { EdgeAny::EdgeCurve(Box::new(self.into())) }
 }
 impl Into<EdgeAny> for OrientedEdge {
-    fn into(self) -> EdgeAny {
-        EdgeAny::OrientedEdge(Box::new(self.into()))
-    }
+    fn into(self) -> EdgeAny { EdgeAny::OrientedEdge(Box::new(self.into())) }
 }
 impl AsRef<Edge> for EdgeAny {
     fn as_ref(&self) -> &Edge {
@@ -6251,19 +6143,13 @@ pub enum EffectivityAny {
     SerialNumberedEffectivity(Box<SerialNumberedEffectivity>),
 }
 impl Into<EffectivityAny> for Effectivity {
-    fn into(self) -> EffectivityAny {
-        EffectivityAny::Effectivity(Box::new(self))
-    }
+    fn into(self) -> EffectivityAny { EffectivityAny::Effectivity(Box::new(self)) }
 }
 impl Into<EffectivityAny> for DatedEffectivity {
-    fn into(self) -> EffectivityAny {
-        EffectivityAny::DatedEffectivity(Box::new(self.into()))
-    }
+    fn into(self) -> EffectivityAny { EffectivityAny::DatedEffectivity(Box::new(self.into())) }
 }
 impl Into<EffectivityAny> for LotEffectivity {
-    fn into(self) -> EffectivityAny {
-        EffectivityAny::LotEffectivity(Box::new(self.into()))
-    }
+    fn into(self) -> EffectivityAny { EffectivityAny::LotEffectivity(Box::new(self.into())) }
 }
 impl Into<EffectivityAny> for ProductDefinitionEffectivity {
     fn into(self) -> EffectivityAny {
@@ -6339,9 +6225,7 @@ impl Into<ElementarySurfaceAny> for CylindricalSurface {
     }
 }
 impl Into<ElementarySurfaceAny> for Plane {
-    fn into(self) -> ElementarySurfaceAny {
-        ElementarySurfaceAny::Plane(Box::new(self.into()))
-    }
+    fn into(self) -> ElementarySurfaceAny { ElementarySurfaceAny::Plane(Box::new(self.into())) }
 }
 impl Into<ElementarySurfaceAny> for SphericalSurface {
     fn into(self) -> ElementarySurfaceAny {
@@ -6443,14 +6327,10 @@ pub enum ExecutedActionAny {
     DirectedAction(Box<DirectedAction>),
 }
 impl Into<ExecutedActionAny> for ExecutedAction {
-    fn into(self) -> ExecutedActionAny {
-        ExecutedActionAny::ExecutedAction(Box::new(self))
-    }
+    fn into(self) -> ExecutedActionAny { ExecutedActionAny::ExecutedAction(Box::new(self)) }
 }
 impl Into<ExecutedActionAny> for DirectedAction {
-    fn into(self) -> ExecutedActionAny {
-        ExecutedActionAny::DirectedAction(Box::new(self.into()))
-    }
+    fn into(self) -> ExecutedActionAny { ExecutedActionAny::DirectedAction(Box::new(self.into())) }
 }
 impl AsRef<ExecutedAction> for ExecutedActionAny {
     fn as_ref(&self) -> &ExecutedAction {
@@ -6499,19 +6379,13 @@ pub enum FaceAny {
     OrientedFace(Box<OrientedFace>),
 }
 impl Into<FaceAny> for Face {
-    fn into(self) -> FaceAny {
-        FaceAny::Face(Box::new(self))
-    }
+    fn into(self) -> FaceAny { FaceAny::Face(Box::new(self)) }
 }
 impl Into<FaceAny> for FaceSurface {
-    fn into(self) -> FaceAny {
-        FaceAny::FaceSurface(Box::new(self.into()))
-    }
+    fn into(self) -> FaceAny { FaceAny::FaceSurface(Box::new(self.into())) }
 }
 impl Into<FaceAny> for OrientedFace {
-    fn into(self) -> FaceAny {
-        FaceAny::OrientedFace(Box::new(self.into()))
-    }
+    fn into(self) -> FaceAny { FaceAny::OrientedFace(Box::new(self.into())) }
 }
 impl AsRef<Face> for FaceAny {
     fn as_ref(&self) -> &Face {
@@ -6558,14 +6432,10 @@ pub enum FaceBoundAny {
     FaceOuterBound(Box<FaceOuterBound>),
 }
 impl Into<FaceBoundAny> for FaceBound {
-    fn into(self) -> FaceBoundAny {
-        FaceBoundAny::FaceBound(Box::new(self))
-    }
+    fn into(self) -> FaceBoundAny { FaceBoundAny::FaceBound(Box::new(self)) }
 }
 impl Into<FaceBoundAny> for FaceOuterBound {
-    fn into(self) -> FaceBoundAny {
-        FaceBoundAny::FaceOuterBound(Box::new(self.into()))
-    }
+    fn into(self) -> FaceBoundAny { FaceBoundAny::FaceOuterBound(Box::new(self.into())) }
 }
 impl AsRef<FaceBound> for FaceBoundAny {
     fn as_ref(&self) -> &FaceBound {
@@ -6624,14 +6494,10 @@ pub enum FaceSurfaceAny {
     AdvancedFace(Box<AdvancedFace>),
 }
 impl Into<FaceSurfaceAny> for FaceSurface {
-    fn into(self) -> FaceSurfaceAny {
-        FaceSurfaceAny::FaceSurface(Box::new(self))
-    }
+    fn into(self) -> FaceSurfaceAny { FaceSurfaceAny::FaceSurface(Box::new(self)) }
 }
 impl Into<FaceSurfaceAny> for AdvancedFace {
-    fn into(self) -> FaceSurfaceAny {
-        FaceSurfaceAny::AdvancedFace(Box::new(self.into()))
-    }
+    fn into(self) -> FaceSurfaceAny { FaceSurfaceAny::AdvancedFace(Box::new(self.into())) }
 }
 impl AsRef<FaceSurface> for FaceSurfaceAny {
     fn as_ref(&self) -> &FaceSurface {
@@ -6701,19 +6567,13 @@ pub enum FoundedItemAny {
     SurfacePatch(Box<SurfacePatch>),
 }
 impl Into<FoundedItemAny> for FoundedItem {
-    fn into(self) -> FoundedItemAny {
-        FoundedItemAny::FoundedItem(Box::new(self))
-    }
+    fn into(self) -> FoundedItemAny { FoundedItemAny::FoundedItem(Box::new(self)) }
 }
 impl Into<FoundedItemAny> for CompositeCurveSegment {
-    fn into(self) -> FoundedItemAny {
-        FoundedItemAny::CompositeCurveSegment(Box::new(self.into()))
-    }
+    fn into(self) -> FoundedItemAny { FoundedItemAny::CompositeCurveSegment(Box::new(self.into())) }
 }
 impl Into<FoundedItemAny> for SurfacePatch {
-    fn into(self) -> FoundedItemAny {
-        FoundedItemAny::SurfacePatch(Box::new(self.into()))
-    }
+    fn into(self) -> FoundedItemAny { FoundedItemAny::SurfacePatch(Box::new(self.into())) }
 }
 impl AsRef<FoundedItem> for FoundedItemAny {
     fn as_ref(&self) -> &FoundedItem {
@@ -7052,14 +6912,10 @@ pub enum GeometricSetAny {
     GeometricCurveSet(Box<GeometricCurveSet>),
 }
 impl Into<GeometricSetAny> for GeometricSet {
-    fn into(self) -> GeometricSetAny {
-        GeometricSetAny::GeometricSet(Box::new(self))
-    }
+    fn into(self) -> GeometricSetAny { GeometricSetAny::GeometricSet(Box::new(self)) }
 }
 impl Into<GeometricSetAny> for GeometricCurveSet {
-    fn into(self) -> GeometricSetAny {
-        GeometricSetAny::GeometricCurveSet(Box::new(self.into()))
-    }
+    fn into(self) -> GeometricSetAny { GeometricSetAny::GeometricCurveSet(Box::new(self.into())) }
 }
 impl AsRef<GeometricSet> for GeometricSetAny {
     fn as_ref(&self) -> &GeometricSet {
@@ -7257,24 +7113,16 @@ pub enum LoopAny {
     VertexLoop(Box<VertexLoop>),
 }
 impl Into<LoopAny> for Loop {
-    fn into(self) -> LoopAny {
-        LoopAny::Loop(Box::new(self))
-    }
+    fn into(self) -> LoopAny { LoopAny::Loop(Box::new(self)) }
 }
 impl Into<LoopAny> for EdgeLoop {
-    fn into(self) -> LoopAny {
-        LoopAny::EdgeLoop(Box::new(self.into()))
-    }
+    fn into(self) -> LoopAny { LoopAny::EdgeLoop(Box::new(self.into())) }
 }
 impl Into<LoopAny> for PolyLoop {
-    fn into(self) -> LoopAny {
-        LoopAny::PolyLoop(Box::new(self.into()))
-    }
+    fn into(self) -> LoopAny { LoopAny::PolyLoop(Box::new(self.into())) }
 }
 impl Into<LoopAny> for VertexLoop {
-    fn into(self) -> LoopAny {
-        LoopAny::VertexLoop(Box::new(self.into()))
-    }
+    fn into(self) -> LoopAny { LoopAny::VertexLoop(Box::new(self.into())) }
 }
 impl AsRef<Loop> for LoopAny {
     fn as_ref(&self) -> &Loop {
@@ -7471,9 +7319,7 @@ pub enum MeasureWithUnitAny {
     VolumeMeasureWithUnit(Box<VolumeMeasureWithUnit>),
 }
 impl Into<MeasureWithUnitAny> for MeasureWithUnit {
-    fn into(self) -> MeasureWithUnitAny {
-        MeasureWithUnitAny::MeasureWithUnit(Box::new(self))
-    }
+    fn into(self) -> MeasureWithUnitAny { MeasureWithUnitAny::MeasureWithUnit(Box::new(self)) }
 }
 impl Into<MeasureWithUnitAny> for AreaMeasureWithUnit {
     fn into(self) -> MeasureWithUnitAny {
@@ -7580,54 +7426,34 @@ pub enum NamedUnitAny {
     VolumeUnit(Box<VolumeUnit>),
 }
 impl Into<NamedUnitAny> for NamedUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::NamedUnit(Box::new(self))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::NamedUnit(Box::new(self)) }
 }
 impl Into<NamedUnitAny> for AreaUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::AreaUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::AreaUnit(Box::new(self.into())) }
 }
 impl Into<NamedUnitAny> for ContextDependentUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::ContextDependentUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::ContextDependentUnit(Box::new(self.into())) }
 }
 impl Into<NamedUnitAny> for ConversionBasedUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::ConversionBasedUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::ConversionBasedUnit(Box::new(self.into())) }
 }
 impl Into<NamedUnitAny> for LengthUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::LengthUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::LengthUnit(Box::new(self.into())) }
 }
 impl Into<NamedUnitAny> for MassUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::MassUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::MassUnit(Box::new(self.into())) }
 }
 impl Into<NamedUnitAny> for PlaneAngleUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::PlaneAngleUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::PlaneAngleUnit(Box::new(self.into())) }
 }
 impl Into<NamedUnitAny> for SiUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::SiUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::SiUnit(Box::new(self.into())) }
 }
 impl Into<NamedUnitAny> for SolidAngleUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::SolidAngleUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::SolidAngleUnit(Box::new(self.into())) }
 }
 impl Into<NamedUnitAny> for VolumeUnit {
-    fn into(self) -> NamedUnitAny {
-        NamedUnitAny::VolumeUnit(Box::new(self.into()))
-    }
+    fn into(self) -> NamedUnitAny { NamedUnitAny::VolumeUnit(Box::new(self.into())) }
 }
 impl AsRef<NamedUnit> for NamedUnitAny {
     fn as_ref(&self) -> &NamedUnit {
@@ -7717,14 +7543,10 @@ pub enum OpenShellAny {
     OrientedOpenShell(Box<OrientedOpenShell>),
 }
 impl Into<OpenShellAny> for OpenShell {
-    fn into(self) -> OpenShellAny {
-        OpenShellAny::OpenShell(Box::new(self))
-    }
+    fn into(self) -> OpenShellAny { OpenShellAny::OpenShell(Box::new(self)) }
 }
 impl Into<OpenShellAny> for OrientedOpenShell {
-    fn into(self) -> OpenShellAny {
-        OpenShellAny::OrientedOpenShell(Box::new(self.into()))
-    }
+    fn into(self) -> OpenShellAny { OpenShellAny::OrientedOpenShell(Box::new(self.into())) }
 }
 impl AsRef<OpenShell> for OpenShellAny {
     fn as_ref(&self) -> &OpenShell {
@@ -7952,19 +7774,13 @@ pub enum PathAny {
     OrientedPath(Box<OrientedPath>),
 }
 impl Into<PathAny> for Path {
-    fn into(self) -> PathAny {
-        PathAny::Path(Box::new(self))
-    }
+    fn into(self) -> PathAny { PathAny::Path(Box::new(self)) }
 }
 impl Into<PathAny> for EdgeLoop {
-    fn into(self) -> PathAny {
-        PathAny::EdgeLoop(Box::new(self.into()))
-    }
+    fn into(self) -> PathAny { PathAny::EdgeLoop(Box::new(self.into())) }
 }
 impl Into<PathAny> for OrientedPath {
-    fn into(self) -> PathAny {
-        PathAny::OrientedPath(Box::new(self.into()))
-    }
+    fn into(self) -> PathAny { PathAny::OrientedPath(Box::new(self.into())) }
 }
 impl AsRef<Path> for PathAny {
     fn as_ref(&self) -> &Path {
@@ -8012,14 +7828,10 @@ pub enum PcurveAny {
     BoundedPcurve(Box<BoundedPcurve>),
 }
 impl Into<PcurveAny> for Pcurve {
-    fn into(self) -> PcurveAny {
-        PcurveAny::Pcurve(Box::new(self))
-    }
+    fn into(self) -> PcurveAny { PcurveAny::Pcurve(Box::new(self)) }
 }
 impl Into<PcurveAny> for BoundedPcurve {
-    fn into(self) -> PcurveAny {
-        PcurveAny::BoundedPcurve(Box::new(self.into()))
-    }
+    fn into(self) -> PcurveAny { PcurveAny::BoundedPcurve(Box::new(self.into())) }
 }
 impl AsRef<Pcurve> for PcurveAny {
     fn as_ref(&self) -> &Pcurve {
@@ -8164,24 +7976,16 @@ pub enum PlacementAny {
     Axis2Placement3D(Box<Axis2Placement3D>),
 }
 impl Into<PlacementAny> for Placement {
-    fn into(self) -> PlacementAny {
-        PlacementAny::Placement(Box::new(self))
-    }
+    fn into(self) -> PlacementAny { PlacementAny::Placement(Box::new(self)) }
 }
 impl Into<PlacementAny> for Axis1Placement {
-    fn into(self) -> PlacementAny {
-        PlacementAny::Axis1Placement(Box::new(self.into()))
-    }
+    fn into(self) -> PlacementAny { PlacementAny::Axis1Placement(Box::new(self.into())) }
 }
 impl Into<PlacementAny> for Axis2Placement2D {
-    fn into(self) -> PlacementAny {
-        PlacementAny::Axis2Placement2D(Box::new(self.into()))
-    }
+    fn into(self) -> PlacementAny { PlacementAny::Axis2Placement2D(Box::new(self.into())) }
 }
 impl Into<PlacementAny> for Axis2Placement3D {
-    fn into(self) -> PlacementAny {
-        PlacementAny::Axis2Placement3D(Box::new(self.into()))
-    }
+    fn into(self) -> PlacementAny { PlacementAny::Axis2Placement3D(Box::new(self.into())) }
 }
 impl AsRef<Placement> for PlacementAny {
     fn as_ref(&self) -> &Placement {
@@ -8275,34 +8079,22 @@ pub enum PointAny {
     PointReplica(Box<PointReplica>),
 }
 impl Into<PointAny> for Point {
-    fn into(self) -> PointAny {
-        PointAny::Point(Box::new(self))
-    }
+    fn into(self) -> PointAny { PointAny::Point(Box::new(self)) }
 }
 impl Into<PointAny> for CartesianPoint {
-    fn into(self) -> PointAny {
-        PointAny::CartesianPoint(Box::new(self.into()))
-    }
+    fn into(self) -> PointAny { PointAny::CartesianPoint(Box::new(self.into())) }
 }
 impl Into<PointAny> for DegeneratePcurve {
-    fn into(self) -> PointAny {
-        PointAny::DegeneratePcurve(Box::new(self.into()))
-    }
+    fn into(self) -> PointAny { PointAny::DegeneratePcurve(Box::new(self.into())) }
 }
 impl Into<PointAny> for PointOnCurve {
-    fn into(self) -> PointAny {
-        PointAny::PointOnCurve(Box::new(self.into()))
-    }
+    fn into(self) -> PointAny { PointAny::PointOnCurve(Box::new(self.into())) }
 }
 impl Into<PointAny> for PointOnSurface {
-    fn into(self) -> PointAny {
-        PointAny::PointOnSurface(Box::new(self.into()))
-    }
+    fn into(self) -> PointAny { PointAny::PointOnSurface(Box::new(self.into())) }
 }
 impl Into<PointAny> for PointReplica {
-    fn into(self) -> PointAny {
-        PointAny::PointReplica(Box::new(self.into()))
-    }
+    fn into(self) -> PointAny { PointAny::PointReplica(Box::new(self.into())) }
 }
 impl AsRef<Point> for PointAny {
     fn as_ref(&self) -> &Point {
@@ -8444,9 +8236,7 @@ pub enum ProductCategoryAny {
     ProductRelatedProductCategory(Box<ProductRelatedProductCategory>),
 }
 impl Into<ProductCategoryAny> for ProductCategory {
-    fn into(self) -> ProductCategoryAny {
-        ProductCategoryAny::ProductCategory(Box::new(self))
-    }
+    fn into(self) -> ProductCategoryAny { ProductCategoryAny::ProductCategory(Box::new(self)) }
 }
 impl Into<ProductCategoryAny> for ProductRelatedProductCategory {
     fn into(self) -> ProductCategoryAny {
@@ -8529,9 +8319,7 @@ pub enum ProductContextAny {
     MechanicalContext(Box<MechanicalContext>),
 }
 impl Into<ProductContextAny> for ProductContext {
-    fn into(self) -> ProductContextAny {
-        ProductContextAny::ProductContext(Box::new(self))
-    }
+    fn into(self) -> ProductContextAny { ProductContextAny::ProductContext(Box::new(self)) }
 }
 impl Into<ProductContextAny> for MechanicalContext {
     fn into(self) -> ProductContextAny {
@@ -9160,9 +8948,7 @@ pub enum RepresentationAny {
     ShapeRepresentation(Box<ShapeRepresentationAny>),
 }
 impl Into<RepresentationAny> for Representation {
-    fn into(self) -> RepresentationAny {
-        RepresentationAny::Representation(Box::new(self))
-    }
+    fn into(self) -> RepresentationAny { RepresentationAny::Representation(Box::new(self)) }
 }
 impl Into<RepresentationAny> for DefinitionalRepresentation {
     fn into(self) -> RepresentationAny {
@@ -9761,14 +9547,10 @@ pub enum SolidModelAny {
     ManifoldSolidBrep(Box<ManifoldSolidBrepAny>),
 }
 impl Into<SolidModelAny> for SolidModel {
-    fn into(self) -> SolidModelAny {
-        SolidModelAny::SolidModel(Box::new(self))
-    }
+    fn into(self) -> SolidModelAny { SolidModelAny::SolidModel(Box::new(self)) }
 }
 impl Into<SolidModelAny> for ManifoldSolidBrep {
-    fn into(self) -> SolidModelAny {
-        SolidModelAny::ManifoldSolidBrep(Box::new(self.into()))
-    }
+    fn into(self) -> SolidModelAny { SolidModelAny::ManifoldSolidBrep(Box::new(self.into())) }
 }
 impl AsRef<SolidModel> for SolidModelAny {
     fn as_ref(&self) -> &SolidModel {
@@ -9892,34 +9674,22 @@ pub enum SurfaceAny {
     SweptSurface(Box<SweptSurfaceAny>),
 }
 impl Into<SurfaceAny> for Surface {
-    fn into(self) -> SurfaceAny {
-        SurfaceAny::Surface(Box::new(self))
-    }
+    fn into(self) -> SurfaceAny { SurfaceAny::Surface(Box::new(self)) }
 }
 impl Into<SurfaceAny> for BoundedSurface {
-    fn into(self) -> SurfaceAny {
-        SurfaceAny::BoundedSurface(Box::new(self.into()))
-    }
+    fn into(self) -> SurfaceAny { SurfaceAny::BoundedSurface(Box::new(self.into())) }
 }
 impl Into<SurfaceAny> for ElementarySurface {
-    fn into(self) -> SurfaceAny {
-        SurfaceAny::ElementarySurface(Box::new(self.into()))
-    }
+    fn into(self) -> SurfaceAny { SurfaceAny::ElementarySurface(Box::new(self.into())) }
 }
 impl Into<SurfaceAny> for OffsetSurface {
-    fn into(self) -> SurfaceAny {
-        SurfaceAny::OffsetSurface(Box::new(self.into()))
-    }
+    fn into(self) -> SurfaceAny { SurfaceAny::OffsetSurface(Box::new(self.into())) }
 }
 impl Into<SurfaceAny> for SurfaceReplica {
-    fn into(self) -> SurfaceAny {
-        SurfaceAny::SurfaceReplica(Box::new(self.into()))
-    }
+    fn into(self) -> SurfaceAny { SurfaceAny::SurfaceReplica(Box::new(self.into())) }
 }
 impl Into<SurfaceAny> for SweptSurface {
-    fn into(self) -> SurfaceAny {
-        SurfaceAny::SweptSurface(Box::new(self.into()))
-    }
+    fn into(self) -> SurfaceAny { SurfaceAny::SweptSurface(Box::new(self.into())) }
 }
 impl AsRef<Surface> for SurfaceAny {
     fn as_ref(&self) -> &Surface {
@@ -9980,24 +9750,16 @@ pub enum SurfaceCurveAny {
     SeamCurve(Box<SeamCurve>),
 }
 impl Into<SurfaceCurveAny> for SurfaceCurve {
-    fn into(self) -> SurfaceCurveAny {
-        SurfaceCurveAny::SurfaceCurve(Box::new(self))
-    }
+    fn into(self) -> SurfaceCurveAny { SurfaceCurveAny::SurfaceCurve(Box::new(self)) }
 }
 impl Into<SurfaceCurveAny> for BoundedSurfaceCurve {
-    fn into(self) -> SurfaceCurveAny {
-        SurfaceCurveAny::BoundedSurfaceCurve(Box::new(self.into()))
-    }
+    fn into(self) -> SurfaceCurveAny { SurfaceCurveAny::BoundedSurfaceCurve(Box::new(self.into())) }
 }
 impl Into<SurfaceCurveAny> for IntersectionCurve {
-    fn into(self) -> SurfaceCurveAny {
-        SurfaceCurveAny::IntersectionCurve(Box::new(self.into()))
-    }
+    fn into(self) -> SurfaceCurveAny { SurfaceCurveAny::IntersectionCurve(Box::new(self.into())) }
 }
 impl Into<SurfaceCurveAny> for SeamCurve {
-    fn into(self) -> SurfaceCurveAny {
-        SurfaceCurveAny::SeamCurve(Box::new(self.into()))
-    }
+    fn into(self) -> SurfaceCurveAny { SurfaceCurveAny::SeamCurve(Box::new(self.into())) }
 }
 impl AsRef<SurfaceCurve> for SurfaceCurveAny {
     fn as_ref(&self) -> &SurfaceCurve {
@@ -10114,9 +9876,7 @@ pub enum SweptSurfaceAny {
     SurfaceOfRevolution(Box<SurfaceOfRevolution>),
 }
 impl Into<SweptSurfaceAny> for SweptSurface {
-    fn into(self) -> SweptSurfaceAny {
-        SweptSurfaceAny::SweptSurface(Box::new(self))
-    }
+    fn into(self) -> SweptSurfaceAny { SweptSurfaceAny::SweptSurface(Box::new(self)) }
 }
 impl Into<SweptSurfaceAny> for SurfaceOfLinearExtrusion {
     fn into(self) -> SweptSurfaceAny {
@@ -10124,9 +9884,7 @@ impl Into<SweptSurfaceAny> for SurfaceOfLinearExtrusion {
     }
 }
 impl Into<SweptSurfaceAny> for SurfaceOfRevolution {
-    fn into(self) -> SweptSurfaceAny {
-        SweptSurfaceAny::SurfaceOfRevolution(Box::new(self.into()))
-    }
+    fn into(self) -> SweptSurfaceAny { SweptSurfaceAny::SurfaceOfRevolution(Box::new(self.into())) }
 }
 impl AsRef<SweptSurface> for SweptSurfaceAny {
     fn as_ref(&self) -> &SweptSurface {
@@ -10339,9 +10097,7 @@ pub enum ToroidalSurfaceAny {
     DegenerateToroidalSurface(Box<DegenerateToroidalSurface>),
 }
 impl Into<ToroidalSurfaceAny> for ToroidalSurface {
-    fn into(self) -> ToroidalSurfaceAny {
-        ToroidalSurfaceAny::ToroidalSurface(Box::new(self))
-    }
+    fn into(self) -> ToroidalSurfaceAny { ToroidalSurfaceAny::ToroidalSurface(Box::new(self)) }
 }
 impl Into<ToroidalSurfaceAny> for DegenerateToroidalSurface {
     fn into(self) -> ToroidalSurfaceAny {
@@ -10480,14 +10236,10 @@ pub enum VertexAny {
     VertexPoint(Box<VertexPoint>),
 }
 impl Into<VertexAny> for Vertex {
-    fn into(self) -> VertexAny {
-        VertexAny::Vertex(Box::new(self))
-    }
+    fn into(self) -> VertexAny { VertexAny::Vertex(Box::new(self)) }
 }
 impl Into<VertexAny> for VertexPoint {
-    fn into(self) -> VertexAny {
-        VertexAny::VertexPoint(Box::new(self.into()))
-    }
+    fn into(self) -> VertexAny { VertexAny::VertexPoint(Box::new(self.into())) }
 }
 impl AsRef<Vertex> for VertexAny {
     fn as_ref(&self) -> &Vertex {

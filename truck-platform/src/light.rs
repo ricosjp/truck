@@ -11,10 +11,10 @@ impl Light {
     }
 
     /// Creates a `UNIFORM` buffer of light.
-    /// 
+    ///
     /// This method is provided only for the advanced developer utility,
     /// and not used by [`Scene`](./struct.Scene.html).
-    /// 
+    ///
     /// # Shader Example
     /// ```glsl
     /// layout(// binding info //) uniform Light {

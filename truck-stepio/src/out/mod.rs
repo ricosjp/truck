@@ -98,8 +98,7 @@ pub struct StepDisplay<T> {
 }
 
 impl<'a, T> Display for SliceDisplay<'a, StepDisplay<T>>
-where
-    StepDisplay<T>: Display,
+where StepDisplay<T>: Display
 {
     fn fmt(&self, f: &mut Formatter) -> Result {
         self.0.iter().try_for_each(|x| Display::fmt(x, f))
@@ -108,9 +107,7 @@ where
 
 impl<T> StepDisplay<T> {
     #[inline]
-    pub fn new(entity: T, idx: usize) -> Self {
-        Self { entity, idx }
-    }
+    pub fn new(entity: T, idx: usize) -> Self { Self { entity, idx } }
 }
 
 pub trait StepLength {
@@ -121,9 +118,7 @@ macro_rules! impl_step_length {
     ($type: ty, $len: expr) => {
         impl<'a> StepLength for $type {
             #[inline]
-            fn step_length(&self) -> usize {
-                $len
-            }
+            fn step_length(&self) -> usize { $len }
         }
     };
 }

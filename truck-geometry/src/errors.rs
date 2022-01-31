@@ -80,9 +80,11 @@ the front of the second knot vector: {1}")]
     ///     Err(Error::TooLargeDegree(4, 5)),
     /// );
     /// ```
-    #[error("This knot vector is too short compared to the degree.
+    #[error(
+        "This knot vector is too short compared to the degree.
 the length of knot_vec: {0}
-the degree: {1}")]
+the degree: {1}"
+    )]
     TooLargeDegree(usize, usize),
     /// The specified knot cannot be removed.
     /// # Examples
@@ -127,9 +129,11 @@ the degree: {1}")]
     ///     Err(Error::TooShortKnotVector(3, 4)),
     /// );
     /// ```
-    #[error("The knot vector must be more than the control points.
+    #[error(
+        "The knot vector must be more than the control points.
 the length of knot_vec: {0}
-the number of control points: {1}")]
+the number of control points: {1}"
+    )]
     TooShortKnotVector(usize, usize),
     /// The length of the given arrays of control points to create a B-spline surface is irregular.
     /// # Examples

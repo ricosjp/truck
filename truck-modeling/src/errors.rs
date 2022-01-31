@@ -1,4 +1,3 @@
-
 use thiserror::Error;
 
 /// Modeling errors
@@ -16,8 +15,21 @@ pub enum Error {
 #[test]
 fn print_messages() {
     use std::io::Write;
-    writeln!(&mut std::io::stderr(), "****** test of the expressions of error messages ******\n").unwrap();
-    writeln!(&mut std::io::stderr(), "{}\n", Error::FromTopology(truck_topology::errors::Error::SameVertex)).unwrap();
+    writeln!(
+        &mut std::io::stderr(),
+        "****** test of the expressions of error messages ******\n"
+    )
+    .unwrap();
+    writeln!(
+        &mut std::io::stderr(),
+        "{}\n",
+        Error::FromTopology(truck_topology::errors::Error::SameVertex)
+    )
+    .unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::WireNotInOnePlane).unwrap();
-    writeln!(&mut std::io::stderr(), "*******************************************************").unwrap();
+    writeln!(
+        &mut std::io::stderr(),
+        "*******************************************************"
+    )
+    .unwrap();
 }

@@ -76,33 +76,23 @@ impl<P> BSplineCurve<P> {
 
     /// Returns the reference of the knot vector
     #[inline(always)]
-    pub fn knot_vec(&self) -> &KnotVec {
-        &self.knot_vec
-    }
+    pub fn knot_vec(&self) -> &KnotVec { &self.knot_vec }
 
     /// Returns the `idx`th knot
     #[inline(always)]
-    pub fn knot(&self, idx: usize) -> f64 {
-        self.knot_vec[idx]
-    }
+    pub fn knot(&self, idx: usize) -> f64 { self.knot_vec[idx] }
 
     /// Returns the reference of the control points.
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<P> {
-        &self.control_points
-    }
+    pub fn control_points(&self) -> &Vec<P> { &self.control_points }
 
     /// Returns the reference of the control point corresponding to the index `idx`.
     #[inline(always)]
-    pub fn control_point(&self, idx: usize) -> &P {
-        &self.control_points[idx]
-    }
+    pub fn control_point(&self, idx: usize) -> &P { &self.control_points[idx] }
 
     /// Returns the mutable reference of the control point corresponding to index `idx`.
     #[inline(always)]
-    pub fn control_point_mut(&mut self, idx: usize) -> &mut P {
-        &mut self.control_points[idx]
-    }
+    pub fn control_point_mut(&mut self, idx: usize) -> &mut P { &mut self.control_points[idx] }
     /// Returns the iterator on all control points
     #[inline(always)]
     pub fn control_points_mut(&mut self) -> impl Iterator<Item = &mut P> {
@@ -125,9 +115,7 @@ impl<P> BSplineCurve<P> {
     /// assert_eq!(bspcurve.degree(), 2);
     /// ```
     #[inline(always)]
-    pub fn degree(&self) -> usize {
-        self.knot_vec.len() - self.control_points.len() - 1
-    }
+    pub fn degree(&self) -> usize { self.knot_vec.len() - self.control_points.len() - 1 }
     /// Inverts a curve
     /// # Examples
     /// ```
@@ -153,9 +141,7 @@ impl<P> BSplineCurve<P> {
 
     /// Returns whether the knot vector is clamped or not.
     #[inline(always)]
-    pub fn is_clamped(&self) -> bool {
-        self.knot_vec.is_clamped(self.degree())
-    }
+    pub fn is_clamped(&self) -> bool { self.knot_vec.is_clamped(self.degree()) }
 
     /// Normalizes the knot vector  
     #[inline(always)]
@@ -189,9 +175,7 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     /// res.iter().zip(&ans).for_each(|(v0, v1)| assert_near2!(v0, v1));
     /// ```
     #[inline(always)]
-    pub fn get_closure(&self) -> impl Fn(f64) -> P + '_ {
-        move |t| self.subs(t)
-    }
+    pub fn get_closure(&self) -> impl Fn(f64) -> P + '_ { move |t| self.subs(t) }
     #[inline(always)]
     fn delta_control_points(&self, i: usize) -> P::Diff {
         if i == 0 {
@@ -282,10 +266,14 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
 impl<V: Homogeneous<f64>> BSplineCurve<V> {
     /// lift up control points to homogeneous coordinate.
     pub fn lift_up(curve: BSplineCurve<V::Point>) -> Self {
-        let control_points = curve.control_points.into_iter().map(V::from_point).collect();
+        let control_points = curve
+            .control_points
+            .into_iter()
+            .map(V::from_point)
+            .collect();
         BSplineCurve::new_unchecked(curve.knot_vec, control_points)
     }
-} 
+}
 
 impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     type Point = P;
@@ -1078,12 +1066,10 @@ fn concat_negative_test() {
 }
 
 impl<P> ParameterDivision1D for BSplineCurve<P>
-where
-    P: ControlPoint<f64>
+where P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
         + MetricSpace<Metric = f64>
         + HashGen<f64>
-        ,
 {
     type Point = P;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<P>) {
@@ -1237,21 +1223,16 @@ where
 }
 
 impl<P> BSplineCurve<P>
-where
-    P: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy,
+where P: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy
 {
     /// Returns the bounding box including all control points.
     #[inline(always)]
-    pub fn roughly_bounding_box(&self) -> BoundingBox<P> {
-        self.control_points.iter().collect()
-    }
+    pub fn roughly_bounding_box(&self) -> BoundingBox<P> { self.control_points.iter().collect() }
 }
 
 impl<P: Clone> Invertible for BSplineCurve<P> {
     #[inline(always)]
-    fn invert(&mut self) {
-        self.invert();
-    }
+    fn invert(&mut self) { self.invert(); }
 }
 
 impl<M, P> Transformed<M> for BSplineCurve<P>

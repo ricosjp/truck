@@ -39,24 +39,16 @@ impl<C> RevolutedCurve<C> {
     }
     /// Returns the curve before revoluted.
     #[inline(always)]
-    pub fn entity_curve(&self) -> &C {
-        &self.curve
-    }
+    pub fn entity_curve(&self) -> &C { &self.curve }
     /// Into the curve before revoluted.
     #[inline(always)]
-    pub fn into_entity_curve(self) -> C {
-        self.curve
-    }
+    pub fn into_entity_curve(self) -> C { self.curve }
     /// Returns origin of revolution
     #[inline(always)]
-    pub fn origin(&self) -> Point3 {
-        self.origin
-    }
+    pub fn origin(&self) -> Point3 { self.origin }
     /// Returns axis of revolution
     #[inline(always)]
-    pub fn axis(&self) -> Vector3 {
-        self.axis
-    }
+    pub fn axis(&self) -> Vector3 { self.axis }
 
     #[inline(always)]
     fn proj_point(&self, pt: Point3) -> (f64, f64) {
@@ -145,9 +137,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter for RevolutedCurve<C> 
     }
 }
 
-impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter
-    for RevolutedCurve<C>
-{
+impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter for RevolutedCurve<C> {
     type Point = Point3;
     type Parameter = (f64, f64);
     fn search_nearest_parameter(
@@ -156,7 +146,8 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter
         hint: Option<(f64, f64)>,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint0 = algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION);
+        let hint0 =
+            algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION);
         let (t0, t1) = self.curve.parameter_range();
         if self.is_front_fixed() && hint0.0.near(&t0) {
             if let Some(hint) = hint {
@@ -226,9 +217,7 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
     }
 }
 
-impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D
-    for RevolutedCurve<C>
-{
+impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve<C> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         let (u0, u1) = self.curve.parameter_range();
@@ -266,9 +255,7 @@ impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {
 
 impl<C: Clone> Invertible for RevolutedCurve<C> {
     #[inline(always)]
-    fn invert(&mut self) {
-        self.axis = -self.axis;
-    }
+    fn invert(&mut self) { self.axis = -self.axis; }
     #[inline(always)]
     fn inverse(&self) -> Self {
         RevolutedCurve {
@@ -377,8 +364,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
 }
 
 impl<C> ParameterDivision2D for RevolutedCurve<C>
-where
-    C: ParametricCurve3D + ParameterDivision1D<Point = Point3>,
+where C: ParametricCurve3D + ParameterDivision1D<Point = Point3>
 {
     fn parameter_division(
         &self,
@@ -386,7 +372,8 @@ where
         tol: f64,
     ) -> (Vec<f64>, Vec<f64>) {
         let curve_division = self.curve.parameter_division(urange, tol);
-        let max = curve_division.1
+        let max = curve_division
+            .1
             .into_iter()
             .fold(0.0, |max2, pt| {
                 let h = self.proj_point(pt).1;
@@ -495,7 +482,9 @@ fn search_nearest_parameter() {
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
     let pt = surface.subs(0.4, 1.2) + 0.1 * surface.normal(0.4, 1.2);
-    let (u, v) = surface.search_nearest_parameter(pt, Some((0.4, 1.2)), 100).unwrap();
+    let (u, v) = surface
+        .search_nearest_parameter(pt, Some((0.4, 1.2)), 100)
+        .unwrap();
     assert_near!(Vector2::new(u, v), Vector2::new(0.4, 1.2));
 }
 

@@ -1,5 +1,5 @@
-use crate::*;
 use crate::SamplerBindingType::Filtering;
+use crate::*;
 
 impl Default for Material {
     #[inline(always)]
@@ -113,15 +113,11 @@ impl PolygonState {
     /// };
     /// ```
     #[inline(always)]
-    pub fn material_buffer(&self, device: &Device) -> BufferHandler {
-        self.material.buffer(device)
-    }
+    pub fn material_buffer(&self, device: &Device) -> BufferHandler { self.material.buffer(device) }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn material_bgl_entry() -> PreBindGroupLayoutEntry {
-        Material::bgl_entry()
-    }
+    pub fn material_bgl_entry() -> PreBindGroupLayoutEntry { Material::bgl_entry() }
 
     /// Creates texture view and sampler of the instance's texture image.
     ///

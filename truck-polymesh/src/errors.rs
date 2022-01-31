@@ -8,7 +8,7 @@ pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     /// ```
     /// use truck_polymesh::*;
     /// use errors::Error;
-    /// 
+    ///
     /// let positions = vec![
     ///     Point3::new(0.0, 0.0, 0.0),
     ///     Point3::new(1.0, 0.0, 0.0),
@@ -18,7 +18,7 @@ pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     ///     &[0, 1, 2],
     ///     &[1, 2, 4],
     /// ]);
-    /// 
+    ///
     /// let res = PolygonMesh::try_new(
     ///     StandardAttributes {
     ///         positions,
@@ -46,12 +46,12 @@ pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     /// ```
     /// use truck_polymesh::*;
     /// use errors::Error;
-    /// 
+    ///
     /// let positions = vec![
     ///     vec![Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0)],
     ///     vec![Point3::new(0.0, 1.0, 0.0)],
     /// ];
-    /// 
+    ///
     /// match StructuredMesh::try_from_positions(positions) {
     ///     Err(Error::IrregularArray) => {}
     ///     _ => panic!("wrong result!"),
@@ -64,20 +64,20 @@ pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     /// ```
     /// use truck_polymesh::*;
     /// use errors::Error;
-    /// 
+    ///
     /// let positions = vec![
     ///     vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0)],
     ///     vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 1.0, 0.0)],
     /// ];
-    /// 
+    ///
     /// let udiv = vec![1.0, 0.0];
     /// let vdiv = vec![0.0, 1.0];
-    /// 
+    ///
     /// match StructuredMesh::try_from_positions_and_uvs(positions, (udiv, vdiv)) {
     ///     Err(Error::UnsortedDivision) => {}
     ///     _ => panic!("wrong result!"),
     /// }
-    /// ``` 
+    /// ```
     #[error("This division vector is unsorted.")]
     UnsortedDivision,
     /// Errors caused by obj files I/O.

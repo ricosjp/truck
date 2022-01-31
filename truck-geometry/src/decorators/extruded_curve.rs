@@ -59,8 +59,15 @@ where
 
 impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
     #[inline(always)]
-    fn parameter_division(&self, (urange, vrange): ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
-        (self.curve.parameter_division(urange, tol).0, vec![vrange.0, vrange.1])
+    fn parameter_division(
+        &self,
+        (urange, vrange): ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
+        (
+            self.curve.parameter_division(urange, tol).0,
+            vec![vrange.0, vrange.1],
+        )
     }
 }
 
@@ -68,10 +75,17 @@ impl<C: ParametricCurve2D + BoundedCurve> SearchParameter for ExtrudedCurve<C, V
     type Point = Point2;
     type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(&self, point: Point2, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+    fn search_parameter(
+        &self,
+        point: Point2,
+        hint: Option<(f64, f64)>,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
         let hint = match hint {
             Some(hint) => hint,
-            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+            None => {
+                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::surface::search_parameter2d(self, point, hint, trials)
     }
@@ -81,10 +95,17 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter for ExtrudedCurve<C, V
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(&self, point: Point3, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+    fn search_parameter(
+        &self,
+        point: Point3,
+        hint: Option<(f64, f64)>,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
         let hint = match hint {
             Some(hint) => hint,
-            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+            None => {
+                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::surface::search_parameter3d(self, point, hint, trials)
     }
@@ -94,10 +115,17 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter for ExtrudedCur
     type Point = Point3;
     type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_nearest_parameter(&self, point: Point3, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)> {
+    fn search_nearest_parameter(
+        &self,
+        point: Point3,
+        hint: Option<(f64, f64)>,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
         let hint = match hint {
             Some(hint) => hint,
-            None => algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+            None => {
+                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::surface::search_nearest_parameter(self, point, hint, trials)
     }
