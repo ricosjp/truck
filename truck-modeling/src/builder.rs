@@ -595,4 +595,3 @@ fn partial_torus() {
     let torus = rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-5.0));
     assert!(torus.is_geometric_consistent());
 }
-

@@ -65,15 +65,11 @@ pub trait BoundedSurface: ParametricSurface {
 }
 
 impl<'a, S: BoundedSurface> BoundedSurface for &'a S {
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
-        (*self).parameter_range()
-    }
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { (*self).parameter_range() }
 }
 
 impl<S: BoundedSurface> BoundedSurface for Box<S> {
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
-        (**self).parameter_range()
-    }
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { (**self).parameter_range() }
 }
 
 /// Whether the surface includes the boundary curve.
@@ -87,19 +83,28 @@ pub trait ParameterDivision2D {
     /// Creates the surface division
     ///
     /// # Panics
-    /// 
+    ///
     /// `tol` must be more than `TOLERANCE`.
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>);
+    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64)
+        -> (Vec<f64>, Vec<f64>);
 }
 
 impl<'a, S: ParameterDivision2D> ParameterDivision2D for &'a S {
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
         (*self).parameter_division(range, tol)
     }
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for Box<S> {
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
         (**self).parameter_division(range, tol)
     }
 }

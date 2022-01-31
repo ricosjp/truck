@@ -329,7 +329,14 @@ fn into_components_test() {
     .collect();
     let positions = vec![Point3::origin(); 8];
     let normals = vec![Vector3::unit_x(); 8];
-    let mesh = PolygonMesh::new( StandardAttributes { positions, normals, ..Default::default() }, faces);
+    let mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            normals,
+            ..Default::default()
+        },
+        faces,
+    );
     let comp = mesh.components(true);
     assert_eq!(comp.len(), 2);
     assert_eq!(comp[0], vec![0, 1, 4]);

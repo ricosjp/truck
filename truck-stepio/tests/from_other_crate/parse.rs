@@ -32,8 +32,7 @@ fn test<'a, THolder, U>(table: &ap203::Tables, idx: u64, answer: U)
 where
     THolder: Holder<Table = ap203::Tables> + Deserialize<'a> + Debug + 'a,
     U: From<THolder::Owned> + Debug + PartialEq,
-    ap203::Tables: EntityTable<THolder>,
-{
+    ap203::Tables: EntityTable<THolder>, {
     let a = EntityTable::<THolder>::get_owned(&table, idx).unwrap();
     assert_eq!(U::from(a), answer);
 }
@@ -42,8 +41,7 @@ fn try_test<'a, THolder, U>(table: &ap203::Tables, idx: u64, answer: U)
 where
     THolder: Holder<Table = ap203::Tables> + Deserialize<'a> + Debug + 'a,
     U: TryFrom<THolder::Owned, Error = ExpressParseError> + Debug + PartialEq,
-    ap203::Tables: EntityTable<THolder>,
-{
+    ap203::Tables: EntityTable<THolder>, {
     let a = EntityTable::<THolder>::get_owned(&table, idx).unwrap();
     assert_eq!(U::try_from(a).unwrap(), answer);
 }

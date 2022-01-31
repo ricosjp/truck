@@ -42,12 +42,13 @@ fn create_readme(path: &str) {
         Ok(got) => got,
         Err(_) => return,
     };
+    let mut dir = dir.map(|file| file.unwrap().path()).collect::<Vec<_>>();
+    dir.sort();
 
     readme
         .write_fmt(format_args!("\n## Sample Codes\n"))
         .unwrap();
-    for file in dir {
-        let path = file.unwrap().path();
+    for path in dir {
         let extension = path.extension();
         if extension
             .map(|e| e.to_str().unwrap() != "rs")

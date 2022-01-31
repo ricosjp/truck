@@ -1,5 +1,5 @@
-use serde::*;
 use cgmath::*;
+use serde::*;
 use std::ops::Index;
 
 /// bounding box
@@ -86,7 +86,7 @@ impl_bounded!(Vector4, Vector4, 0, 1, 2, 3);
 impl<F, V> Default for BoundingBox<V>
 where
     F: BaseFloat,
-    V: MetricSpace<Metric = F> + Index<usize, Output = F> + Bounded<F> + Copy
+    V: MetricSpace<Metric = F> + Index<usize, Output = F> + Bounded<F> + Copy,
 {
     #[inline(always)]
     fn default() -> Self { BoundingBox(V::infinity(), V::neg_infinity()) }

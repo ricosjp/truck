@@ -17,7 +17,7 @@ impl Camera {
 
     /// Returns the eye direction of camera.
     /// the inverse of the z-axis of the camera matrix.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::f64::consts::PI;
@@ -136,10 +136,22 @@ impl Camera {
     ) -> Camera {
         let a = screen_size / 2.0;
         let projection = Matrix4::new(
-            1.0 / a, 0.0, 0.0, 0.0,
-            0.0, 1.0 / a, 0.0, 0.0,
-            0.0, 0.0, -1.0 / (far_clip - near_clip), 0.0,
-            0.0, 0.0, -near_clip / (far_clip - near_clip), 1.0,
+            1.0 / a,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0 / a,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            -1.0 / (far_clip - near_clip),
+            0.0,
+            0.0,
+            0.0,
+            -near_clip / (far_clip - near_clip),
+            1.0,
         );
         Camera {
             matrix,
@@ -157,7 +169,7 @@ impl Camera {
     /// use std::f64::consts::PI;
     /// use truck_base::{cgmath64::*, tolerance::*};
     /// use truck_platform::*;
-    /// 
+    ///
     /// let fov = PI / 4.0;
     /// let as_rat = 1.2;
     /// let matrix = Matrix4::look_at_rh(
@@ -171,7 +183,7 @@ impl Camera {
     ///     0.1,
     ///     10.0,
     /// );
-    /// 
+    ///
     /// // calculation by the ray-tracing
     /// let pt = Point3::new(-1.5, -1.4, -2.5);
     /// let vec = pt - camera.position();
@@ -183,7 +195,7 @@ impl Camera {
     /// let h = (vec - proj_length * dir) * far / proj_length;
     /// let u = h.dot(x_axis) / as_rat;
     /// let v = h.dot(y_axis);
-    /// 
+    ///
     /// // check the answer
     /// let uv = camera.projection(as_rat).transform_point(pt);
     /// assert!(f64::near(&u, &uv[0]), "{} {}", u, uv[0]);
@@ -193,7 +205,7 @@ impl Camera {
     /// // parallel camera
     /// use truck_base::{cgmath64::*, tolerance::*};
     /// use truck_platform::*;
-    /// 
+    ///
     /// let size = 3.0;
     /// let as_rat = 1.2;
     /// let matrix = Matrix4::look_at_rh(
@@ -207,7 +219,7 @@ impl Camera {
     ///     0.1,
     ///     10.0,
     /// );
-    /// 
+    ///
     /// // calculation by the ray-tracing
     /// let pt = Point3::new(-1.5, -1.4, -2.5);
     /// let vec = pt - camera.position();
@@ -217,7 +229,7 @@ impl Camera {
     /// let h = vec - vec.dot(dir) * dir;
     /// let u = h.dot(x_axis) / (size / 2.0) / as_rat;
     /// let v = h.dot(y_axis) / (size / 2.0);
-    /// 
+    ///
     /// // check the answer
     /// let uv = camera.projection(as_rat).transform_point(pt);
     /// assert!(f64::near(&u, &uv[0]), "{} {}", u, uv[0]);
@@ -238,9 +250,9 @@ impl Camera {
     }
 
     /// Creates a `UNIFORM` buffer of camera.
-    /// 
+    ///
     /// The bind group provides [`Scene`] holds this uniform buffer.
-    /// 
+    ///
     /// # Shader Example
     /// ```glsl
     /// layout(set = 0, binding = 0) uniform Camera {

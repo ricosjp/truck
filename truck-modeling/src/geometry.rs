@@ -1,11 +1,11 @@
 use super::*;
-use serde::{Deserialize, Serialize};
 use derive_more::From;
+use serde::{Deserialize, Serialize};
 #[doc(hidden)]
 pub use truck_geometry::{algo, inv_or_zero};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
-pub use truck_polymesh::PolylineCurve;
 use truck_geotrait::{Invertible, ParametricSurface};
+pub use truck_polymesh::PolylineCurve;
 
 /// 3-dimensional curve
 #[derive(Clone, Debug, Serialize, Deserialize, From)]
@@ -14,7 +14,7 @@ pub enum Curve {
     BSplineCurve(BSplineCurve<Point3>),
     /// 3-dimensional NURBS curve
     NURBSCurve(NURBSCurve<Vector4>),
-    /// intersection curve 
+    /// intersection curve
     IntersectionCurve(IntersectionCurve<PolylineCurve<Point3>, Surface>),
 }
 
@@ -80,8 +80,19 @@ impl Cut for Curve {
 impl SearchNearestParameter for Curve {
     type Point = Point3;
     type Parameter = f64;
-    fn search_nearest_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
-        derive_curve_method!(self, SearchNearestParameter::search_nearest_parameter, point, hint, trials)
+    fn search_nearest_parameter(
+        &self,
+        point: Point3,
+        hint: Option<f64>,
+        trials: usize,
+    ) -> Option<f64> {
+        derive_curve_method!(
+            self,
+            SearchNearestParameter::search_nearest_parameter,
+            point,
+            hint,
+            trials
+        )
     }
 }
 
@@ -106,7 +117,9 @@ impl Curve {
                     .collect(),
             ),
             Curve::NURBSCurve(curve) => curve.into_non_rationalized(),
-            Curve::IntersectionCurve(_) => unimplemented!("intersection curve cannot connect by homotopy"),
+            Curve::IntersectionCurve(_) => {
+                unimplemented!("intersection curve cannot connect by homotopy")
+            }
         }
     }
 }

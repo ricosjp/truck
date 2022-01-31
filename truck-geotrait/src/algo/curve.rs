@@ -70,9 +70,9 @@ where
 }
 
 /// Creates the curve division
-/// 
+///
 /// # Panics
-/// 
+///
 /// `tol` must be more than `TOLERANCE`.
 pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<C::Point>)
 where
@@ -108,11 +108,21 @@ where
     } else {
         let mid_param = (range.0 + range.1) / 2.0;
         let mid_value = curve.subs(mid_param);
-        let (mut params, mut pts) =
-            sub_parameter_division(curve, (range.0, mid_param), (ends.0, mid_value), tol, trials - 1);
+        let (mut params, mut pts) = sub_parameter_division(
+            curve,
+            (range.0, mid_param),
+            (ends.0, mid_value),
+            tol,
+            trials - 1,
+        );
         let _ = (params.pop(), pts.pop());
-        let (new_params, new_pts) =
-            sub_parameter_division(curve, (mid_param, range.1), (mid_value, ends.1), tol, trials - 1);
+        let (new_params, new_pts) = sub_parameter_division(
+            curve,
+            (mid_param, range.1),
+            (mid_value, ends.1),
+            tol,
+            trials - 1,
+        );
         params.extend(new_params);
         pts.extend(new_pts);
         (params, pts)

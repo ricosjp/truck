@@ -177,10 +177,9 @@ impl<'a, P: Debug> Debug for DebugDisplay<'a, Vertex<P>, VertexDisplayFormat> {
                 .field("id", &Arc::as_ptr(&self.entity.point))
                 .field("entity", &MutexFmt(&self.entity.point))
                 .finish(),
-            VertexDisplayFormat::IDTuple => f
-                .debug_tuple("Vertex")
-                .field(&self.entity.id())
-                .finish(),
+            VertexDisplayFormat::IDTuple => {
+                f.debug_tuple("Vertex").field(&self.entity.id()).finish()
+            }
             VertexDisplayFormat::PointTuple => f
                 .debug_tuple("Vertex")
                 .field(&MutexFmt(&self.entity.point))

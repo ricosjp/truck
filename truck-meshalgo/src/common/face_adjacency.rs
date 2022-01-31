@@ -15,7 +15,14 @@ impl FaceAdjacency for Faces {
             face.windows(2)
                 .chain(std::iter::once([face[face.len() - 1], face[0]].as_ref()))
                 .for_each(|v| {
-                    signup_adjacency(i, v[0], v[1], &mut face_adjacency, &mut edge_face_map, use_normal)
+                    signup_adjacency(
+                        i,
+                        v[0],
+                        v[1],
+                        &mut face_adjacency,
+                        &mut edge_face_map,
+                        use_normal,
+                    )
                 })
         }
         face_adjacency

@@ -1,6 +1,6 @@
 use crate::*;
-use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap as HashMap;
+use serde::{Deserialize, Serialize};
 
 /// Serialized compressed edge
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,7 +55,7 @@ impl<S> CompressedFace<S> {
     }
 
     /// Returns the reference of the boundaries.
-    /// 
+    ///
     /// The boundary wires are represented by the vector of the tuple `(usize, bool)`.
     /// The first `usize` value is the index of edge and second `bool` value is its orientation.
     #[inline(always)]
@@ -221,11 +221,8 @@ impl<P: Clone, C: Clone, S: Clone> Solid<P, C, S> {
 
     /// Extracts the serialized compressed shell into the shell.
     pub fn extract(csolid: CompressedSolid<P, C, S>) -> Result<Self> {
-        let shells: Result<Vec<Shell<P, C, S>>> = csolid
-            .boundaries
-            .into_iter()
-            .map(Shell::extract)
-            .collect();
+        let shells: Result<Vec<Shell<P, C, S>>> =
+            csolid.boundaries.into_iter().map(Shell::extract).collect();
         Solid::try_new(shells?)
     }
 }

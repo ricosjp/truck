@@ -3,11 +3,7 @@ use truck_topology::shell::ShellCondition;
 
 #[test]
 fn extract_boundaries0() {
-    let faces = Faces::from_iter(&[
-        [0, 1, 4].as_ref(),
-        &[1, 2, 3, 4],
-        &[0, 4, 5, 6, 7],
-    ]);
+    let faces = Faces::from_iter(&[[0, 1, 4].as_ref(), &[1, 2, 3, 4], &[0, 4, 5, 6, 7]]);
     let boundaries = faces.extract_boundaries();
     assert_eq!(boundaries.len(), 1);
     for a in boundaries[0].windows(2) {
@@ -46,26 +42,22 @@ fn extract_boundaries1() {
 
 #[test]
 fn shell_condition() {
-    let faces = Faces::from_iter(&[
-        [0, 1, 4].as_ref(),
-        &[1, 2, 3, 0],
-        &[0, 4, 5, 6, 1],
-    ]);
-    assert_eq!(faces.shell_condition(), ShellCondition::Irregular); 
+    let faces = Faces::from_iter(&[[0, 1, 4].as_ref(), &[1, 2, 3, 0], &[0, 4, 5, 6, 1]]);
+    assert_eq!(faces.shell_condition(), ShellCondition::Irregular);
     let faces = Faces::from_iter(&[
         [0, 1, 5, 4].as_ref(),
         &[1, 2, 6, 5],
         &[6, 7, 3, 2],
         &[3, 0, 4, 7],
     ]);
-    assert_eq!(faces.shell_condition(), ShellCondition::Regular); 
+    assert_eq!(faces.shell_condition(), ShellCondition::Regular);
     let faces = Faces::from_iter(&[
         [0, 1, 5, 4].as_ref(),
         &[1, 2, 6, 5],
         &[2, 3, 7, 6],
         &[3, 0, 4, 7],
     ]);
-    assert_eq!(faces.shell_condition(), ShellCondition::Oriented); 
+    assert_eq!(faces.shell_condition(), ShellCondition::Oriented);
     let faces = Faces::from_iter(&[
         [0, 1, 5, 4].as_ref(),
         &[1, 2, 6, 5],
@@ -76,5 +68,5 @@ fn shell_condition() {
         &[5, 6, 7],
         &[4, 5, 7],
     ]);
-    assert_eq!(faces.shell_condition(), ShellCondition::Closed); 
+    assert_eq!(faces.shell_condition(), ShellCondition::Closed);
 }

@@ -24,4 +24,3 @@ impl FaceNormal {
         FaceNormal { face_id, normal }
     }
 }
-

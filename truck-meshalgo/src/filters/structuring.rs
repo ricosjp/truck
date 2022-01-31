@@ -183,12 +183,7 @@ impl SubStructureFilter for PolygonMesh {
             if score < score_tol {
                 Some(FaceEdge {
                     faces: (face0_id, face1_id),
-                    positions: [
-                        face0[0],
-                        face0[1],
-                        face1[k],
-                        face0[2],
-                    ],
+                    positions: [face0[0], face0[1], face1[k], face0[2]],
                     score,
                 })
             } else {
@@ -199,12 +194,7 @@ impl SubStructureFilter for PolygonMesh {
             if score < score_tol {
                 Some(FaceEdge {
                     faces: (face0_id, face1_id),
-                    positions: [
-                        face0[0],
-                        face0[1],
-                        face0[2],
-                        face1[k],
-                    ],
+                    positions: [face0[0], face0[1], face0[2], face1[k]],
                     score,
                 })
             } else {
@@ -215,12 +205,7 @@ impl SubStructureFilter for PolygonMesh {
             if score < score_tol {
                 Some(FaceEdge {
                     faces: (face0_id, face1_id),
-                    positions: [
-                        face0[0],
-                        face1[k],
-                        face0[1],
-                        face0[2],
-                    ],
+                    positions: [face0[0], face1[k], face0[1], face0[2]],
                     score,
                 })
             } else {
