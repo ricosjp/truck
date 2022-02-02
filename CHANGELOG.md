@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add new mesh filter `Subdivision::loop_subdivision`.
 - Remove the `skip_children` option from `rustfmt.toml` to activate `cargo fmt`.
 - STEP Output.
 - Upgraded wgpu (0.12.0) and winit (0.26.0)

@@ -1,12 +1,33 @@
 use super::*;
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
-pub trait FaceAdjacency {
+pub trait Adjacency {
+    fn vertex_adjacency(&self, num_of_vertices: usize) -> Vec<Vec<usize>>;
     /// create the adjacency list of the faces
     fn face_adjacency(&self, use_normal: bool) -> Vec<Vec<usize>>;
 }
 
-impl FaceAdjacency for Faces {
+impl Adjacency for Faces {
+    fn vertex_adjacency(&self, num_of_vertices: usize) -> Vec<Vec<usize>> {
+        let mut already = HashSet::default();
+        let mut res = vec![Vec::new(); num_of_vertices];
+        for face in self.face_iter() {
+            face.windows(2)
+                .chain(std::iter::once([face[face.len() - 1], face[0]].as_ref()))
+                .map(|edge| [edge[0].pos, edge[1].pos])
+                .for_each(|edge| {
+                    let first = match edge[0] < edge[1] {
+                        true => already.insert((edge[0], edge[1])),
+                        false => already.insert((edge[1], edge[0])),
+                    };
+                    if first {
+                        res[edge[0]].push(edge[1]);
+                        res[edge[1]].push(edge[0]);
+                    }
+                })
+        }
+        res
+    }
     fn face_adjacency(&self, use_normal: bool) -> Vec<Vec<usize>> {
         let len = self.len();
         let mut face_adjacency = vec![Vec::<usize>::new(); len];
