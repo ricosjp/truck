@@ -22,6 +22,13 @@ the irregular normal generated from the NURBS containing the critical point.
 - Input: irregular_sphere.obj
 - Output: regular_sphere.obj
 
+### octahedron-subdivision
+
+Apply loop subdivision to regular octahedron.
+
+- Input: hardcoded octahedron
+- Output: octahedron.obj, subdivision-octahedron.obj
+
 ### requadrangulate-buddha
 
 A benchmark that reads in heavy mesh data, applies triangulation and quadrangulation, and writes it out.
