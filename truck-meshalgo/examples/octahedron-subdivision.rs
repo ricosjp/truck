@@ -1,5 +1,5 @@
 //! Apply loop subdivision to regular octahedron.
-//! 
+//!
 //! - Input: hardcoded octahedron
 //! - Output: octahedron.obj, subdivision-octahedron.obj
 
