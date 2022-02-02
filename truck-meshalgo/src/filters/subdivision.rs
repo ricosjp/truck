@@ -144,7 +144,7 @@ fn calc_new_position(
         Boundary(w0, w1) => point + ((positions[w0] - point) + (positions[w1] - point)) / 8.0,
         Inner => {
             let alpha = 3.0 / 8.0 + f64::cos(2.0 * PI / adjacency.len() as f64) / 4.0;
-            let alpha = (5.0 / 8.0 + alpha * alpha) / adjacency.len() as f64;
+            let alpha = (5.0 / 8.0 - alpha * alpha) / adjacency.len() as f64;
             point
                 + alpha
                     * adjacency
