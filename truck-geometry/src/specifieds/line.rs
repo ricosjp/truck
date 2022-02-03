@@ -55,11 +55,7 @@ impl<P: ControlPoint<f64>> ParameterDivision1D for Line<P> {
 
 impl<P: Copy> Invertible for Line<P> {
     #[inline]
-    fn invert(&mut self) {
-        let r = self.0;
-        self.0 = self.1;
-        self.1 = r;
-    }
+    fn invert(&mut self) { *self = Self(self.1, self.0); }
     #[inline]
     fn inverse(&self) -> Self { Self(self.1, self.0) }
 }

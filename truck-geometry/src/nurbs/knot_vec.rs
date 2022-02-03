@@ -426,9 +426,7 @@ impl KnotVec {
     /// ```
     #[inline(always)]
     pub fn sub_vec<I: SliceIndex<[f64], Output = [f64]>>(&self, range: I) -> KnotVec {
-        KnotVec {
-            0: Vec::from(&self.0[range]),
-        }
+        KnotVec(Vec::from(&self.0[range]))
     }
 
     /// To single-multi discription. i.e. decompose the unique vector of knots and the vector of
@@ -486,7 +484,7 @@ impl KnotVec {
                 vec.push(knots[i]);
             }
         }
-        Ok(KnotVec { 0: vec })
+        Ok(KnotVec(vec))
     }
     /// construct from `Vec<f64>`. do not sort, only check sorted.
     pub fn try_from(vec: Vec<f64>) -> Result<KnotVec> {

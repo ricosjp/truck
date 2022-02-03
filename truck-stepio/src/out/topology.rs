@@ -53,7 +53,7 @@ where
             .collect::<Vec<_>>();
         let ep_points = cursor;
         StepShell {
-            entity: &self.entity,
+            entity: self.entity,
             face_indices,
             ep_edges,
             ep_vertices,
@@ -98,7 +98,7 @@ where
                 .collect::<Vec<_>>();
             formatter.write_fmt(format_args!(
                 "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sence});\n",
-                face_bound = IndexSliceDisplay(face_bounds.into_iter()),
+                face_bound = IndexSliceDisplay(face_bounds.iter().copied()),
                 face_geometry = surface_indices[i],
             ))?;
             cursor = idx + 1;
@@ -139,18 +139,15 @@ where
                 vertex_geometry = ep_points + i,
             ))
         })?;
-        faces
-            .into_iter()
-            .zip(surface_indices)
-            .try_for_each(|(f, idx)| {
-                Display::fmt(&StepDisplay::new(f.surface(), *idx), formatter)
-            })?;
+        faces.iter().zip(surface_indices).try_for_each(|(f, idx)| {
+            Display::fmt(&StepDisplay::new(f.surface(), *idx), formatter)
+        })?;
         edges
-            .into_iter()
+            .iter()
             .zip(curve_indices)
             .try_for_each(|(e, idx)| Display::fmt(&StepDisplay::new(e.curve(), *idx), formatter))?;
         vertices
-            .into_iter()
+            .iter()
             .enumerate()
             .try_for_each(|(i, v)| Display::fmt(&StepDisplay::new(*v, ep_points + i), formatter))
     }
