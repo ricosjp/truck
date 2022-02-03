@@ -86,7 +86,7 @@ impl Subdivision for PolygonMesh {
 
 fn add_vertex_edge(
     edges: &mut HashMap<Edge, EdgeInfo>,
-    vertex_adjacency: &mut Vec<Vec<usize>>,
+    vertex_adjacency: &mut [Vec<usize>],
     v0: usize,
     v1: usize,
     v2: usize,

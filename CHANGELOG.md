@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix clippy warnings.
 - Fix the signiture in coefficient of `Subdivision::loop_subdivision`.
 - Add new mesh filter `Subdivision::loop_subdivision`.
 - Remove the `skip_children` option from `rustfmt.toml` to activate `cargo fmt`.

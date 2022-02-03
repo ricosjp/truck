@@ -474,8 +474,8 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
         std::convert::TryFrom::try_from(
             self.0
                 .splitted_boundary()
-                .to_vec()
-                .into_iter()
+                .iter()
+                .cloned()
                 .map(NURBSCurve::new)
                 .collect::<Vec<_>>(),
         )

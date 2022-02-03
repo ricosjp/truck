@@ -244,7 +244,7 @@ impl Camera {
 
     fn camera_info(&self, as_rat: f64) -> CameraInfo {
         CameraInfo {
-            camera_matrix: (&self.matrix).cast().unwrap().into(),
+            camera_matrix: self.matrix.cast().unwrap().into(),
             camera_projection: self.projection(as_rat).cast().unwrap().into(),
         }
     }

@@ -54,7 +54,7 @@ fn signup_adjacency(
     i: usize,
     v0: Vertex,
     v1: Vertex,
-    face_adjacency: &mut Vec<Vec<usize>>,
+    face_adjacency: &mut [Vec<usize>],
     edge_face_map: &mut HashMap<[(usize, Option<usize>); 2], usize>,
     use_normal: bool,
 ) {
