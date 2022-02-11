@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add WGSL utilities.
 - Remove specification of branch of `ruststep`.
 - Fix clippy warnings.
 - Fix the signiture in coefficient of `Subdivision::loop_subdivision`.
