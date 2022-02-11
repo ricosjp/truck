@@ -30,20 +30,21 @@ fn exec_math_util_test(backend: Backends, out_dir: &str) {
     let mut scene = Scene::new(common::init_device(backend), &desc);
     let plane = new_plane!("shaders/unicolor.wgsl", "vs_main", "fs_main");
     let buffer0 = common::render_one(&mut scene, &plane);
-	let shader = include_str!("../wgsl-utils/math.wgsl").to_string() + include_str!("shaders/math-util.wgsl");
+    let shader = include_str!("../wgsl-utils/math.wgsl").to_string()
+        + include_str!("shaders/math-util.wgsl");
     let plane = Plane {
-		shader: &shader,
-		vs_entpt: "vs_main",
-		fs_entpt: "fs_main",
-		id: RenderID::gen(),
-	};
+        shader: &shader,
+        vs_entpt: "vs_main",
+        fs_entpt: "fs_main",
+        id: RenderID::gen(),
+    };
     let buffer1 = common::render_one(&mut scene, &plane);
     let plane = Plane {
-		shader: &shader,
-		vs_entpt: "vs_main",
-		fs_entpt: "fs_main_anti",
-		id: RenderID::gen(),
-	};
+        shader: &shader,
+        vs_entpt: "vs_main",
+        fs_entpt: "fs_main_anti",
+        id: RenderID::gen(),
+    };
     let buffer2 = common::render_one(&mut scene, &plane);
     save_buffer(out_dir.clone() + "unicolor.png", &buffer0);
     save_buffer(out_dir.clone() + "math-util.png", &buffer1);
