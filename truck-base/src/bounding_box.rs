@@ -641,7 +641,7 @@ where
     /// ]);
     /// // bbx0 includes bbx1.
     /// assert!(bbx0 > bbx1);
-    /// 
+    ///
     /// let bbx2 = BoundingBox::from_iter(&[
     ///     Point2::new(-1.0, -1.0),
     ///     Point2::new(0.75, 0.75),
