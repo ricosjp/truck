@@ -1,5 +1,6 @@
 use cgmath::*;
 use serde::*;
+use std::cmp::Ordering;
 use std::ops::Index;
 
 /// bounding box
@@ -619,4 +620,44 @@ where
     /// ```
     #[inline(always)]
     fn bitxor(self, other: BoundingBox<V>) -> BoundingBox<V> { self ^ &other }
+}
+
+impl<F, V> PartialOrd for BoundingBox<V>
+where
+    F: BaseFloat,
+    V: MetricSpace<Metric = F> + Copy + Index<usize, Output = F> + Bounded<F> + PartialEq,
+{
+    /// Inclusion relationship
+    /// # Examples
+    /// ```
+    /// use truck_base::{cgmath64::*, bounding_box::*};
+    /// let bbx0 = BoundingBox::from_iter(&[
+    ///     Point2::new(0.0, 0.0),
+    ///     Point2::new(1.0, 1.0),
+    /// ]);
+    /// let bbx1 = BoundingBox::from_iter(&[
+    ///     Point2::new(0.25, 0.25),
+    ///     Point2::new(0.75, 0.75),
+    /// ]);
+    /// // bbx0 includes bbx1.
+    /// assert!(bbx0 > bbx1);
+    /// 
+    /// let bbx2 = BoundingBox::from_iter(&[
+    ///     Point2::new(-1.0, -1.0),
+    ///     Point2::new(0.75, 0.75),
+    /// ]);
+    /// // bbx0 does not include bbx2, and bbx2 does not include bbx0.
+    /// assert!(!(bbx0 > bbx2));
+    /// assert!(!(bbx0 < bbx2));
+    /// assert!(!(bbx0 == bbx2));
+    /// ```
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let max = self + other;
+        match (self == &max, other == &max) {
+            (true, true) => Some(Ordering::Equal),
+            (true, false) => Some(Ordering::Greater),
+            (false, true) => Some(Ordering::Less),
+            (false, false) => None,
+        }
+    }
 }
