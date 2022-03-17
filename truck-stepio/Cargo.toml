@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-chrono = "0.4.19"
+chrono = { version = "0.4.19", features = ["wasmbind"] }
 truck-base = { version = "0.2.0", path = "../truck-base" }
 truck-geotrait = { version = "0.1.0", path = "../truck-geotrait" }
 truck-geometry = { version = "0.2.0", path = "../truck-geometry" }
