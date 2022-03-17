@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add feature `wasmbind` to chrono.
 - Compare `BoundingBox` by inclusion relationship.
 - Updates `ruststep` version.
 - Add WGSL utilities.
