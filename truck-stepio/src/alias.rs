@@ -82,6 +82,13 @@ macro_rules! derive_curve {
 			type Point = $point;
 			$macro!(fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<$point>));
 		}
+		/*
+		impl SearchParameter for $type {
+			type Point = $point;
+			type Parameter = f64;
+			$macro!(fn search_parameter(&self, point: Self::Point, hint: Option<f64>, trials: usize) -> Option<f64>);
+		}
+		*/
 	};
 }
 
