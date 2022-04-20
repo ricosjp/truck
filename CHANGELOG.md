@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add dependency on `matext4cgmath`.
 - Add feature `wasmbind` to chrono.
 - Compare `BoundingBox` by inclusion relationship.
 - Updates `ruststep` version.

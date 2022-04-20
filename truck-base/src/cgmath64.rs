@@ -1,6 +1,7 @@
 pub use crate::cgmath_extend_traits::*;
 pub use cgmath::prelude::*;
 pub use cgmath::{frustum, ortho, perspective, Deg, Rad};
+pub use matext4cgmath::*;
 macro_rules! f64_type {
         ($typename: ident) => {
             /// redefinition, scalar = f64
