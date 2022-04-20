@@ -15,4 +15,5 @@ categories = ["graphics"]
 
 [dependencies]
 cgmath = { version = "0.18.0", features = ["serde"] }
+matext4cgmath = "0.1.0"
 serde = { version = "1.0.131", features = ["derive"] }
