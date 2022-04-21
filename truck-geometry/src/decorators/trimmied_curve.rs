@@ -55,3 +55,10 @@ impl<C: SearchParameter> SearchParameter for TrimmedCurve<C> {
         self.curve.search_parameter(pt, hint, trials)
     }
 }
+
+impl<C: ParameterDivision1D> ParameterDivision1D for TrimmedCurve<C> {
+    type Point = C::Point;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
+        self.curve.parameter_division(range, tol)
+    }
+}
