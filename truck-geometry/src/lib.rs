@@ -47,5 +47,3 @@ pub use specifieds::*;
 /// Declares some decorators
 pub mod decorators;
 pub use decorators::*;
-
-mod utils;

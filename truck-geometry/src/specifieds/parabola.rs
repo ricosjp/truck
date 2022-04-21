@@ -46,11 +46,17 @@ impl SearchNearestParameter for UnitParabola<Point2> {
     fn search_nearest_parameter(&self, pt: Point2, _: Option<f64>, _: usize) -> Option<f64> {
         let p = 2.0 - pt.x;
         let q = -pt.y;
-        utils::pre_solve_cubic(p, q).into_iter().min_by(|s, t| {
-            pt.distance2(self.subs(*s))
-                .partial_cmp(&pt.distance2(self.subs(*t)))
-                .unwrap()
-        })
+        solver::pre_solve_cubic(p, q)
+            .into_iter()
+            .filter_map(|x| match x.im.so_small() {
+                true => Some(x.re),
+                false => None,
+            })
+            .min_by(|s, t| {
+                pt.distance2(self.subs(*s))
+                    .partial_cmp(&pt.distance2(self.subs(*t)))
+                    .unwrap()
+            })
     }
 }
 
