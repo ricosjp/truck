@@ -4,7 +4,7 @@ pub use truck_polymesh::*;
 pub type ExpressParseError = String;
 
 pub trait Empty {
-	fn empty() -> Self;
+    fn empty() -> Self;
 }
 
 pub type Ellipse<P, M> = Processor<UnitCircle<P>, M>;
@@ -96,13 +96,13 @@ macro_rules! derive_curve {
 }
 
 derive_enum!(
-	#[derive(Clone, Copy, Debug)]
-	pub enum Conic<P, M> {
-		Ellipse(Ellipse<P, M>),
-		Hyperbola(Hyperbola<P, M>),
-		Parabola(Parabola<P, M>),
-	},
-	derive_to_conic
+    #[derive(Clone, Copy, Debug)]
+    pub enum Conic<P, M> {
+        Ellipse(Ellipse<P, M>),
+        Hyperbola(Hyperbola<P, M>),
+        Parabola(Parabola<P, M>),
+    },
+    derive_to_conic
 );
 
 derive_curve!(Conic<Point2, Matrix3>, derive_to_conic, Point2, Vector2);
@@ -110,11 +110,11 @@ derive_curve!(Conic<Point3, Matrix4>, derive_to_conic, Point3, Vector3);
 
 #[derive(Clone, Debug)]
 pub enum Curve<P, V, M> {
-	Line(Line<P>),
-	Conic(Conic<P, M>),
-	NURBSCurve(NURBSCurve<V>),
-	TrimmedCurve(TrimmedCurve<Box<Curve<P, V, M>>>),
-	Phantom(std::marker::PhantomData<V>),
+    Line(Line<P>),
+    Conic(Conic<P, M>),
+    NURBSCurve(NURBSCurve<V>),
+    TrimmedCurve(TrimmedCurve<Box<Curve<P, V, M>>>),
+    Phantom(std::marker::PhantomData<V>),
 }
 
 macro_rules! derive_to_curve {
@@ -155,34 +155,34 @@ macro_rules! derive_surface {
 }
 
 derive_enum!(
-	#[derive(Clone, Copy, Debug)]
-	pub enum ElementarySurface {
-		Plane(Plane),
-		RevolutedLine(RevolutedLine),
-		Sphere(Processor<Sphere, Matrix3>),
-		ToroidalSurface(ToroidalSurface),
-	},
-	derive_to_elementary_surface
+    #[derive(Clone, Copy, Debug)]
+    pub enum ElementarySurface {
+        Plane(Plane),
+        RevolutedLine(RevolutedLine),
+        Sphere(Processor<Sphere, Matrix3>),
+        ToroidalSurface(ToroidalSurface),
+    },
+    derive_to_elementary_surface
 );
 derive_surface!(ElementarySurface, derive_to_elementary_surface);
 
 derive_enum!(
-	#[derive(Clone, Debug)]
-	pub enum SweptCurve {
-		ExtrudedCurve(StepExtrudedCurve),
-		RevolutedCurve(StepRevolutedCurve),
-	},
-	derive_to_swept_curve
+    #[derive(Clone, Debug)]
+    pub enum SweptCurve {
+        ExtrudedCurve(StepExtrudedCurve),
+        RevolutedCurve(StepRevolutedCurve),
+    },
+    derive_to_swept_curve
 );
 derive_surface!(SweptCurve, derive_to_swept_curve);
 
 derive_enum!(
-	#[derive(Clone, Debug)]
-	pub enum Surface {
-		ElementarySurface(ElementarySurface),
-		SweptCurve(SweptCurve),
-	},
-	derive_to_surface
+    #[derive(Clone, Debug)]
+    pub enum Surface {
+        ElementarySurface(ElementarySurface),
+        SweptCurve(SweptCurve),
+    },
+    derive_to_surface
 );
 derive_surface!(Surface, derive_to_surface);
 
