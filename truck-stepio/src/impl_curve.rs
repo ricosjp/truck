@@ -8,6 +8,30 @@ macro_rules! impl_curve {
             use $crate::alias::*;
             $crate::sub_impl_curve!($mod, Point2, Vector2, Matrix3, Vector3);
             $crate::sub_impl_curve!($mod, Point3, Vector3, Matrix4, Vector4);
+            fn to_parameter<'a, C>(trim: &'a [$mod::TrimmingSelect], curve: &C) -> Option<f64>
+            where
+                C: SearchParameter<Parameter = f64>,
+                C::Point: From<&'a $mod::CartesianPoint>, {
+                match trim.len() {
+                    1 => match &trim[0] {
+                        $mod::TrimmingSelect::ParameterValue(x) => Some(x.0),
+                        $mod::TrimmingSelect::CartesianPoint(p) => {
+                            let p = C::Point::from(p);
+                            curve.search_parameter(p, None, 100)
+                        }
+                    },
+                    2 => {
+                        if let $mod::TrimmingSelect::ParameterValue(x) = &trim[0] {
+                            Some(x.0)
+                        } else if let $mod::TrimmingSelect::ParameterValue(x) = &trim[1] {
+                            Some(x.0)
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+            }
         }
     };
 }
@@ -165,6 +189,30 @@ macro_rules! sub_impl_curve {
                     }
                 }
             }
+            impl TryFrom<&$mod::TrimmedCurve> for TrimmedCurve<Box<Curve<$point, $homogeneous, $matrix>>> {
+                fn try_from(curve: &$mod::TrimmedCurve) -> Result<Self, ExpressParseError> {
+                    let basis_curve: Curve<$point, $homogeneous, $matrix> = TryFrom::try_from(&curve.basis_curve)?;
+                    let t0 = match to_parameter(&curve.trim_1, &basis_curve) {
+                        Some(t) => t,
+                        None => return Err(format!("invalid trimming select: {:?}", curve.trim_1)),
+                    };
+                    let t1 = match to_parameter(&curve.trim_2, &basis_curve) {
+                        Some(t) => t,
+                        None => return Err(format!("invalid trimming select: {:?}", curve.trim_2)),
+                    };
+                    Ok(TrimmedCurve::new(Box::new(basis_curve), (t0, t1)))
+                }
+            }
+            impl TryFrom<&$mod::BoundedCurveAny> for Curve<$point, $homogeneous, $matrix> {
+                fn try_from(curve: &$mod::BoundedCurveAny) -> Result<Self, ExpressParseError> {
+                    use $mod::BoundedCurveAny as BCA;
+                    match curve {
+                        BCA::BSplineCurve(x) => Ok(Curve::NURBSCurve(TryFrom::try_from(x.as_ref())?)),
+                        BCA::TrimmedCurve(x) => Ok(Curve::TrimmedCurve(TryFrom::try_from(x.as_ref())?)),
+                        _ => Err("unimplemented!".to_string()),
+                    }
+                }
+            }
             impl TryFrom<&$mod::CurveAny> for Curve<$point, $homogeneous, $matrix> {
                 fn try_from(curve: &$mod::CurveAny) -> Result<Self, ExpressParseError> {
                     use $mod::CurveAny::*;
@@ -172,7 +220,7 @@ macro_rules! sub_impl_curve {
                         Curve(_) => Err("not enough data!".to_string()),
                         Line(x) => Ok(Self::Line((&**x).into())),
                         Conic(x) => Ok(Self::Conic((&**x).try_into()?)),
-                        _ => unimplemented!(),
+                        _ => Err("unimplemented!".to_string()),
                     }
                 }
             }
