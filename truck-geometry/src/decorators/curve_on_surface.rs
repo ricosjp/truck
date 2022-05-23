@@ -57,12 +57,10 @@ where
 
 impl<C, S> SearchParameter for PCurve<C, S>
 where
-    Self: BoundedCurve,
-    <Self as ParametricCurve>::Point: EuclideanSpace<Scalar = f64, Diff = <Self as ParametricCurve>::Vector>
-        + MetricSpace<Metric = f64>,
-    <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,
+    C: SearchParameter<Point = Point2, Parameter = f64>,
+    S: SearchParameter<Parameter = (f64, f64)>,
 {
-    type Point = <Self as ParametricCurve>::Point;
+    type Point = S::Point;
     type Parameter = f64;
     fn search_parameter(
         &self,
@@ -70,11 +68,8 @@ where
         hint: Option<f64>,
         trials: usize,
     ) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
-        };
-        algo::curve::search_parameter(self, point, hint, trials)
+        let p = self.surface.search_parameter(point, None, trials)?;
+        self.curve.search_parameter(Point2::new(p.0, p.1), hint, trials)
     }
 }
 

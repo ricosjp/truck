@@ -14,6 +14,7 @@ pub type RevolutedLine = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type ToroidalSurface = Processor<RevolutedCurve<Ellipse<Point3, Matrix4>>, Matrix4>;
 pub type StepExtrudedCurve = ExtrudedCurve<Curve<Point3, Vector4, Matrix4>, Vector3>;
 pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve<Point3, Vector4, Matrix4>>, Matrix4>;
+pub type PCurve = truck_geometry::PCurve<Box<Curve<Point2, Vector3, Matrix3>>, Box<Surface>>;
 
 macro_rules! derive_enum {
     ($attr: meta, $typename: ident { $($member: ident ($subtype: ty),)* } $derive_macro_name: ident, $dol: tt) => {
@@ -114,6 +115,7 @@ pub enum Curve<P, V, M> {
     Conic(Conic<P, M>),
     NURBSCurve(NURBSCurve<V>),
     TrimmedCurve(TrimmedCurve<Box<Curve<P, V, M>>>),
+    //PCurve(PCurve),
     Phantom(std::marker::PhantomData<V>),
 }
 
@@ -150,6 +152,11 @@ macro_rules! derive_surface {
         }
         impl ParameterDivision2D for $type {
             $macro!(fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>));
+        }
+        impl SearchNearestParameter for $type {
+            type Point = Point3;
+            type Parameter = (f64, f64);
+            $macro!(fn search_nearest_parameter(&self, p: Point3, hint: Option<(f64, f64)>, trials: usize) -> Option<(f64, f64)>);
         }
     };
 }

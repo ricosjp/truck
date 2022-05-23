@@ -32,14 +32,42 @@ macro_rules! impl_curve {
                     _ => None,
                 }
             }
+            $crate::impl_try_from!{
+                impl TryFrom<&$mod::Pcurve> for PCurve {
+                    fn try_from(curve: &$mod::Pcurve) -> Result<Self, ExpressParseError> {
+                        let surface = Surface::try_from(&curve.basis_surface)?;
+                        let curve = if let Some($mod::RepresentationItemAny::GeometricRepresentationItem(item)) = curve.reference_to_curve.representation.items.first() {
+                            if let $mod::GeometricRepresentationItemAny::Curve(curve) = item.as_ref() {
+                                Curve::try_from(&**curve)?
+                            } else {
+                                return Err("The references curve is not a curve.".to_string());
+                            }
+                        } else {
+                            return Err("The references curve is not a curve.".to_string());
+                        };
+                        Ok(PCurve::new(Box::new(curve), Box::new(surface)))
+                    }
+                }
+            }
         }
     };
 }
 
 #[doc(hidden)]
 #[macro_export]
+macro_rules! pcurve_converting {
+    (Point2) => {
+        Err("This is not 2-dim curve.".to_string())
+    };
+    (Point3) => {
+        Ok(Self::PCurve(curve.try_from()?))
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
 macro_rules! sub_impl_curve {
-    ($mod: tt, $point: ty, $vector: ty, $matrix: ty, $homogeneous: ty) => {
+    ($mod: tt, $point: tt, $vector: tt, $matrix: tt, $homogeneous: tt) => {
         $crate::impl_from!(
             impl From<&$mod::Line> for Line<$point> {
                 fn from(line: &$mod::Line) -> Self {
@@ -207,8 +235,8 @@ macro_rules! sub_impl_curve {
                 fn try_from(curve: &$mod::BoundedCurveAny) -> Result<Self, ExpressParseError> {
                     use $mod::BoundedCurveAny as BCA;
                     match curve {
-                        BCA::BSplineCurve(x) => Ok(Curve::NURBSCurve(TryFrom::try_from(x.as_ref())?)),
-                        BCA::TrimmedCurve(x) => Ok(Curve::TrimmedCurve(TryFrom::try_from(x.as_ref())?)),
+                        BCA::BSplineCurve(x) => Ok(Curve::NURBSCurve((&**x).try_into()?)),
+                        BCA::TrimmedCurve(x) => Ok(Curve::TrimmedCurve((&**x).try_into()?)),
                         _ => Err("unimplemented!".to_string()),
                     }
                 }
@@ -220,6 +248,8 @@ macro_rules! sub_impl_curve {
                         Curve(_) => Err("not enough data!".to_string()),
                         Line(x) => Ok(Self::Line((&**x).into())),
                         Conic(x) => Ok(Self::Conic((&**x).try_into()?)),
+                        BoundedCurve(x) => (&**x).try_into(),
+                        Pcurve(x) => $crate::pcurve_converting!($point),
                         _ => Err("unimplemented!".to_string()),
                     }
                 }
