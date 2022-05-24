@@ -63,6 +63,8 @@
 //! These containers are used for creating higher-dimentional topological elements and checked the
 //! regularity (e.g. connectivity, closedness, and so on) before creating these elements.
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -152,13 +154,13 @@ pub struct Face<P, C, S> {
 ///
 /// The entity of this struct is `Vec<Face>` and almost methods are inherited from
 /// `Vec<Face>` by `Deref` and `DerefMut` traits.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Debug)]
 pub struct Shell<P, C, S> {
     face_list: Vec<Face<P, C, S>>,
 }
 
 /// Solid, attached to a closed shells.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub struct Solid<P, C, S> {
     boundaries: Vec<Shell<P, C, S>>,
 }
@@ -402,7 +404,7 @@ pub mod format {
     pub(super) struct MutexFmt<'a, T>(pub &'a Mutex<T>);
 
     impl<'a, T: Debug> Debug for MutexFmt<'a, T> {
-        fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             use std::sync::TryLockError;
             match self.0.try_lock() {
                 Ok(guard) => f.write_fmt(format_args!("{:?}", &&*guard)),

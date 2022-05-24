@@ -75,7 +75,7 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
     pub fn face_iter_mut(&mut self) -> impl Iterator<Item = &mut [V]> { self.faces.face_iter_mut() }
     /// Creates an editor that performs boundary checking on dropped.
     #[inline(always)]
-    pub fn editor(&mut self) -> PolygonMeshEditor<V, A> {
+    pub fn editor(&mut self) -> PolygonMeshEditor<'_, V, A> {
         PolygonMeshEditor {
             attributes: &mut self.attributes,
             faces: &mut self.faces,
@@ -84,7 +84,7 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
     }
     /// Creates an editor that does NOT perform boundary checking on dropped.
     #[inline(always)]
-    pub fn uncheck_editor(&mut self) -> PolygonMeshEditor<V, A> {
+    pub fn uncheck_editor(&mut self) -> PolygonMeshEditor<'_, V, A> {
         PolygonMeshEditor {
             attributes: &mut self.attributes,
             faces: &mut self.faces,
@@ -93,7 +93,7 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
     }
     /// Creates an editor that performs boundary checking on dropped ONLY in debug build.
     #[inline(always)]
-    pub fn debug_editor(&mut self) -> PolygonMeshEditor<V, A> {
+    pub fn debug_editor(&mut self) -> PolygonMeshEditor<'_, V, A> {
         PolygonMeshEditor {
             attributes: &mut self.attributes,
             faces: &mut self.faces,

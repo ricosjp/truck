@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Topological Errors
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum Error {
     /// Two same vertices cannot construct an edge.
     /// # Examples

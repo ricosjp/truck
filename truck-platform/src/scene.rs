@@ -387,7 +387,7 @@ impl Scene {
     /// When the return value is dropped, the depth buffer and sampling buffer are automatically updated.
     /// Use `studio_config_mut` if you only want to update the colors of the camera, lights, and background.
     #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> SceneDescriptorMut { SceneDescriptorMut(self) }
+    pub fn descriptor_mut(&mut self) -> SceneDescriptorMut<'_> { SceneDescriptorMut(self) }
 
     /// Returns the reference of the studio configuation.
     #[inline(always)]
@@ -655,7 +655,7 @@ impl Scene {
     #[inline(always)]
     fn depth_stencil_attachment_descriptor(
         depth_view: &TextureView,
-    ) -> RenderPassDepthStencilAttachment {
+    ) -> RenderPassDepthStencilAttachment<'_> {
         RenderPassDepthStencilAttachment {
             view: depth_view,
             depth_ops: Some(Operations {

@@ -60,7 +60,6 @@ impl ToInstance<PolygonInstance> for PolygonMesh {
 
 impl ToInstance<WireFrameInstance> for PolygonMesh {
     type State = WireFrameState;
-    #[doc(hidden)]
     fn to_instance(
         &self,
         handler: &DeviceHandler,
@@ -158,7 +157,6 @@ impl ToInstance<PolygonInstance> for StructuredMesh {
 
 impl ToInstance<WireFrameInstance> for StructuredMesh {
     type State = WireFrameState;
-    #[doc(hidden)]
     fn to_instance(
         &self,
         handler: &DeviceHandler,

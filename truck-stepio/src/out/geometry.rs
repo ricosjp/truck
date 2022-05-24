@@ -3,7 +3,7 @@ use truck_geometry::*;
 use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
 
 impl Display for StepDisplay<Point2> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "#{idx} = CARTESIAN_POINT('', {coordinates});\n",
             idx = self.idx,
@@ -13,8 +13,8 @@ impl Display for StepDisplay<Point2> {
 }
 impl_step_length!(Point2, 1);
 
-impl<'a> Display for StepDisplay<Point3> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl Display for StepDisplay<Point3> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "#{idx} = CARTESIAN_POINT('', {coordinates});\n",
             idx = self.idx,
@@ -29,7 +29,7 @@ impl_step_length!(Point3, 1);
 pub struct VectorAsDirection<V>(V);
 
 impl Display for StepDisplay<VectorAsDirection<Vector2>> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "#{idx} = DIRECTION('', {direction_ratios});\n",
             idx = self.idx,
@@ -39,7 +39,7 @@ impl Display for StepDisplay<VectorAsDirection<Vector2>> {
 }
 
 impl Display for StepDisplay<VectorAsDirection<Vector3>> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "#{idx} = DIRECTION('', {direction_ratios});\n",
             idx = self.idx,
@@ -58,7 +58,7 @@ where
     V: InnerSpace<Scalar = f64>,
     StepDisplay<VectorAsDirection<V>>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let magnitude = self.entity.magnitude();
         let direction_idx = self.idx + 1;
         f.write_fmt(format_args!(
@@ -76,7 +76,7 @@ where
     P: Copy,
     StepDisplay<P>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let curve = self.entity;
         let idx = self.idx;
         let (knots, multi) = curve.knot_vec().to_single_multi();
@@ -102,7 +102,7 @@ where
     P: Copy,
     StepDisplay<P>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
 }
@@ -117,7 +117,7 @@ where
     V::Point: Copy,
     StepDisplay<V::Point>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let curve = self.entity;
         let idx = self.idx;
         let (knots, multi) = curve.knot_vec().to_single_multi();
@@ -159,13 +159,13 @@ where
     V::Point: Copy,
     StepDisplay<V::Point>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
 }
 
 impl<'a> Display for StepDisplay<&'a ModelingCurve> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.entity {
             ModelingCurve::BSplineCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::NURBSCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
@@ -175,7 +175,7 @@ impl<'a> Display for StepDisplay<&'a ModelingCurve> {
 }
 
 impl Display for StepDisplay<ModelingCurve> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
 }
@@ -195,7 +195,7 @@ impl<P> StepLength for NURBSCurve<P> {
 }
 
 impl Display for StepDisplay<Plane> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let idx = self.idx;
         let axis2_placement_idx = idx + 1;
         let location_idx = idx + 2;
@@ -224,7 +224,7 @@ where
     P: Copy,
     StepDisplay<P>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay {
             entity: surface,
             idx,
@@ -272,7 +272,7 @@ where
     V::Point: Copy,
     StepDisplay<V::Point>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay {
             entity: surface,
             idx,
@@ -336,7 +336,7 @@ where
     C: StepLength,
     StepDisplay<&'a C>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay {
             entity: surface,
             idx,
@@ -361,7 +361,7 @@ where
     C: StepLength + Clone,
     StepDisplay<C>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay {
             entity: surface,
             idx,
@@ -390,7 +390,7 @@ where
     C: StepLength + Transformed<Matrix4>,
     StepDisplay<C>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay { entity, idx } = self;
         let surface = entity.entity();
         let transform = entity.transform();
@@ -408,7 +408,7 @@ where
 }
 
 impl<'a> Display for StepDisplay<&'a ModelingSurface> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.entity {
             ModelingSurface::Plane(x) => Display::fmt(&StepDisplay::new(*x, self.idx), f),
             ModelingSurface::BSplineSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),

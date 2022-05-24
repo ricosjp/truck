@@ -105,7 +105,7 @@ fn line() {
     assert_eq!(line.1, line_inverse.0);
 
     // cut
-    let mut line0 = line.clone();
+    let mut line0 = line;
     let line1 = line0.cut(0.4);
     assert_eq!(line.0, line0.0);
     assert_near!(line0.1, line.subs(0.4));

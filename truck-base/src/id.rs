@@ -30,7 +30,7 @@ impl<T> PartialEq for ID<T> {
 impl<T> Eq for ID<T> {}
 
 impl<T> Debug for ID<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_fmt(format_args!("{:p}", self.0))
     }
 }

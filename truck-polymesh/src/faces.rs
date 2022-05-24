@@ -306,7 +306,7 @@ impl<V: Copy> Faces<V> {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn triangle_iter(&self) -> TriangleIterator<V> {
+    pub fn triangle_iter(&self) -> TriangleIterator<'_, V> {
         let len = self.face_iter().fold(0, |sum, face| sum + face.len() - 2);
         TriangleIterator {
             tri_faces: self.tri_faces.iter(),

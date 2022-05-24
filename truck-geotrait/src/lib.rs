@@ -1,6 +1,8 @@
 //! Defines geometric traits: `ParametricCurve`, `ParametricSurface`, and so on.
 //! Implements some algorithms for traits.
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,

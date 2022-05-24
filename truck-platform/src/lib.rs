@@ -29,6 +29,8 @@
 //! [`Camera`]: ./struct.Camera.html
 //! [`Light`]: ./struct.Light.html
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -40,9 +42,7 @@
     unused_qualifications
 )]
 
-extern crate bytemuck;
-extern crate truck_base;
-pub extern crate wgpu;
+pub use wgpu;
 use bytemuck::{Pod, Zeroable};
 use derive_more::*;
 use std::sync::Arc;
@@ -369,7 +369,7 @@ pub mod bind_group_util {
         layout: &BindGroupLayout,
         resources: T,
     ) -> BindGroup {
-        let entries: &Vec<BindGroupEntry> = &resources
+        let entries: &Vec<BindGroupEntry<'_>> = &resources
             .into_iter()
             .enumerate()
             .map(move |(i, resource)| BindGroupEntry {

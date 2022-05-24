@@ -19,10 +19,10 @@ impl<P, C> Wire<P, C> {
 
     /// Returns an iterator over the edges. Practically, an alias of `iter()`.
     #[inline(always)]
-    pub fn edge_iter(&self) -> EdgeIter<P, C> { self.iter() }
+    pub fn edge_iter(&self) -> EdgeIter<'_, P, C> { self.iter() }
     /// Returns a mutable iterator over the edges. Practically, an alias of `iter_mut()`.
     #[inline(always)]
-    pub fn edge_iter_mut(&mut self) -> EdgeIterMut<P, C> { self.iter_mut() }
+    pub fn edge_iter_mut(&mut self) -> EdgeIterMut<'_, P, C> { self.iter_mut() }
 
     /// Creates a consuming iterator. Practically, an alias of `into_iter()`.
     #[inline(always)]
@@ -30,7 +30,7 @@ impl<P, C> Wire<P, C> {
 
     /// Returns an iterator over the vertices.
     #[inline(always)]
-    pub fn vertex_iter(&self) -> VertexIter<P, C> {
+    pub fn vertex_iter(&self) -> VertexIter<'_, P, C> {
         VertexIter {
             edge_iter: self.edge_iter().peekable(),
             unconti_next: None,
@@ -492,7 +492,7 @@ impl<P, C> Wire<P, C> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: WireDisplayFormat) -> DebugDisplay<Self, WireDisplayFormat> {
+    pub fn display(&self, format: WireDisplayFormat) -> DebugDisplay<'_, Self, WireDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -698,7 +698,7 @@ impl<P, C> Default for Wire<P, C> {
 }
 
 impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Wire<P, C>, WireDisplayFormat> {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             WireDisplayFormat::EdgesListTuple { edge_format } => f
                 .debug_tuple("Wire")

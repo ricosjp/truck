@@ -520,7 +520,7 @@ impl<P, C> Edge<P, C> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: EdgeDisplayFormat) -> DebugDisplay<Self, EdgeDisplayFormat> {
+    pub fn display(&self, format: EdgeDisplayFormat) -> DebugDisplay<'_, Self, EdgeDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -577,7 +577,7 @@ impl<P, C> Hash for Edge<P, C> {
 }
 
 impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Edge<P, C>, EdgeDisplayFormat> {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             EdgeDisplayFormat::Full { vertex_format } => f
                 .debug_struct("Edge")

@@ -1,5 +1,7 @@
 //! Wasm wrapper API for truck
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -10,6 +12,9 @@
     unused_import_braces,
     unused_qualifications
 )]
+
+// The code automatically generated from wasm_bindgen is caught in this lint.
+#![allow(clippy::unused_unit)]
 
 use derive_more::*;
 use wasm_bindgen::prelude::*;

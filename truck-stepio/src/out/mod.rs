@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display, Formatter, Result};
 struct SliceDisplay<'a, T>(&'a [T]);
 
 impl<'a> Display for SliceDisplay<'a, f64> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
             if i != 0 {
@@ -23,7 +23,7 @@ impl<'a> Display for SliceDisplay<'a, f64> {
 }
 
 impl<'a> Display for SliceDisplay<'a, usize> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
             if i != 0 {
@@ -36,7 +36,7 @@ impl<'a> Display for SliceDisplay<'a, usize> {
 }
 
 impl<'a> Display for SliceDisplay<'a, String> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
             if i != 0 {
@@ -49,7 +49,7 @@ impl<'a> Display for SliceDisplay<'a, String> {
 }
 
 impl<'a> Display for SliceDisplay<'a, SliceDisplay<'a, f64>> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
             if i != 0 {
@@ -65,7 +65,7 @@ impl<'a> Display for SliceDisplay<'a, SliceDisplay<'a, f64>> {
 struct IndexSliceDisplay<I>(I);
 
 impl<I: Clone + Iterator<Item = usize>> Display for IndexSliceDisplay<I> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.clone().enumerate().try_for_each(|(i, idx)| {
             if i != 0 {
@@ -79,7 +79,7 @@ impl<I: Clone + Iterator<Item = usize>> Display for IndexSliceDisplay<I> {
 }
 
 impl<'a, I: Clone + Iterator<Item = usize>> Display for SliceDisplay<'a, IndexSliceDisplay<I>> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
             if i != 0 {
@@ -91,6 +91,7 @@ impl<'a, I: Clone + Iterator<Item = usize>> Display for SliceDisplay<'a, IndexSl
     }
 }
 
+/// Display struct for outputting some objects to STEP file format.
 #[derive(Clone, Debug)]
 pub struct StepDisplay<T> {
     entity: T,
@@ -100,41 +101,51 @@ pub struct StepDisplay<T> {
 impl<'a, T> Display for SliceDisplay<'a, StepDisplay<T>>
 where StepDisplay<T>: Display
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.0.iter().try_for_each(|x| Display::fmt(x, f))
     }
 }
 
 impl<T> StepDisplay<T> {
+    /// constructor
     #[inline]
     pub fn new(entity: T, idx: usize) -> Self { Self { entity, idx } }
 }
 
+/// Calculate how many lines are used in outputting an object to a STEP file
 pub trait StepLength {
+    /// Calculate how many lines are used in outputting an object to a STEP file
     fn step_length(&self) -> usize;
 }
 
 macro_rules! impl_step_length {
     ($type: ty, $len: expr) => {
-        impl<'a> StepLength for $type {
+        impl StepLength for $type {
             #[inline]
             fn step_length(&self) -> usize { $len }
         }
     };
 }
 
+/// Describe STEP file header
 #[derive(Clone, Debug)]
 pub struct StepHeaderDescriptor {
+    /// file name
     pub file_name: String,
+    /// time stamp
     pub time_stamp: String,
+    /// authors
     pub authors: Vec<String>,
+    /// organization
     pub organization: Vec<String>,
+    /// organization system
     pub origination_system: String,
+    /// authorization
     pub authorization: String,
 }
 
 #[derive(Clone, Debug)]
-pub struct StepHeader {
+struct StepHeader {
     file_name: String,
     time_stamp: String,
     authors: Vec<String>,
@@ -158,7 +169,7 @@ impl Default for StepHeaderDescriptor {
 }
 
 impl Display for StepHeader {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let empty_string = [String::new()];
         f.write_fmt(format_args!(
             "HEADER;
@@ -185,6 +196,7 @@ ENDSEC;\n",
     }
 }
 
+/// Display struct for outputting STEP file format with header.
 #[derive(Clone, Debug)]
 pub struct CompleteStepDisplay<T> {
     display: T,
@@ -192,7 +204,7 @@ pub struct CompleteStepDisplay<T> {
 }
 
 impl<T: Display> Display for CompleteStepDisplay<T> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "ISO-10303-21;\n{}DATA;\n{}ENDSEC;\nEND-ISO-10303-21;\n",
             self.header, self.display,
@@ -201,6 +213,7 @@ impl<T: Display> Display for CompleteStepDisplay<T> {
 }
 
 impl<T> CompleteStepDisplay<StepDisplay<T>> {
+    /// constructor
     #[inline]
     pub fn new(x: T, header: StepHeaderDescriptor) -> Self {
         CompleteStepDisplay {
@@ -218,6 +231,7 @@ impl<T> CompleteStepDisplay<StepDisplay<T>> {
     }
 }
 
+/// Display struct for outputting solid to STEP file which can be read by OCCT.
 #[derive(Clone, Debug)]
 pub struct SolidStepDisplay<T> {
     display: T,
@@ -225,7 +239,7 @@ pub struct SolidStepDisplay<T> {
 }
 
 impl<T: Display> Display for SolidStepDisplay<T> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "ISO-10303-21;{}DATA;
 #1 = APPLICATION_PROTOCOL_DEFINITION('international standard', 'automotive_design', 2000, #2);
@@ -255,6 +269,7 @@ impl<T: Display> Display for SolidStepDisplay<T> {
 }
 
 impl<T> SolidStepDisplay<StepDisplay<T>> {
+    /// constructor
     #[inline]
     pub fn new(x: T, header: StepHeaderDescriptor) -> Self {
         Self {
