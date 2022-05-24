@@ -1,7 +1,15 @@
 [package]
 name = "truck-stepio"
 version = "0.1.0"
-edition = "2018"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
+edition = "2021"
+description = "Reads/writes STEP files from/to truck"
+homepage = "https://github.com/ricosjp/truck"
+repository = "https://github.com/ricosjp/truck"
+license = "Apache-2.0"
+
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["wasmbind"] }
