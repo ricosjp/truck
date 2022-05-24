@@ -175,7 +175,10 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Creates display struct for debugging the solid.
     #[inline(always)]
-    pub fn display(&self, format: SolidDisplayFormat) -> DebugDisplay<'_, Self, SolidDisplayFormat> {
+    pub fn display(
+        &self,
+        format: SolidDisplayFormat,
+    ) -> DebugDisplay<'_, Self, SolidDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -184,9 +187,7 @@ impl<P, C, S> Solid<P, C, S> {
 }
 
 impl<P, C, S> PartialEq for Solid<P, C, S> {
-    fn eq(&self, other: &Self) -> bool {
-        self.boundaries == other.boundaries
-    }
+    fn eq(&self, other: &Self) -> bool { self.boundaries == other.boundaries }
 }
 
 impl<P, C, S> Eq for Solid<P, C, S> {}

@@ -140,7 +140,10 @@ impl<P> Vertex<P> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: VertexDisplayFormat) -> DebugDisplay<'_, Self, VertexDisplayFormat> {
+    pub fn display(
+        &self,
+        format: VertexDisplayFormat,
+    ) -> DebugDisplay<'_, Self, VertexDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,

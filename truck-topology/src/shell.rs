@@ -742,7 +742,10 @@ impl<P, C, S> Shell<P, C, S> {
     ///     "[Face([[(0, 1), (1, 3), (3, 2), (2, 0)]]), Face([[(1, 2), (2, 0), (0, 3), (3, 1)]])]",
     /// );
     /// ```
-    pub fn display(&self, format: ShellDisplayFormat) -> DebugDisplay<'_, Self, ShellDisplayFormat> {
+    pub fn display(
+        &self,
+        format: ShellDisplayFormat,
+    ) -> DebugDisplay<'_, Self, ShellDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -813,9 +816,7 @@ impl<P, C, S> Default for Shell<P, C, S> {
 }
 
 impl<P, C, S> PartialEq for Shell<P, C, S> {
-    fn eq(&self, other: &Self) -> bool {
-        self.face_list == other.face_list
-    }
+    fn eq(&self, other: &Self) -> bool { self.face_list == other.face_list }
 }
 
 impl<P, C, S> Eq for Shell<P, C, S> {}

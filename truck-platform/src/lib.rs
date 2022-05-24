@@ -42,11 +42,11 @@
     unused_qualifications
 )]
 
-pub use wgpu;
 use bytemuck::{Pod, Zeroable};
 use derive_more::*;
 use std::sync::Arc;
 use truck_base::cgmath64::*;
+pub use wgpu;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 

@@ -12,7 +12,6 @@
     unused_import_braces,
     unused_qualifications
 )]
-
 // The code automatically generated from wasm_bindgen is caught in this lint.
 #![allow(clippy::unused_unit)]
 
