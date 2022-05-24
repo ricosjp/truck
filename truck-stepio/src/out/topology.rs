@@ -70,7 +70,7 @@ where
     StepDisplay<&'a C>: Display,
     StepDisplay<&'a S>: Display,
 {
-    fn fmt(&self, formatter: &mut Formatter) -> Result {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> Result {
         let StepShell {
             entity,
             face_indices,
@@ -168,10 +168,10 @@ where
     StepDisplay<&'a C>: Display,
     StepDisplay<&'a S>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay { entity: solid, idx } = self;
         if solid.boundaries().is_empty() {
-            eprintln!("empty solid!");
+            f.pad("empty solid!")?;
             Err(std::fmt::Error)
         } else if solid.boundaries().len() == 1 {
             let shell_idx = idx + 1;

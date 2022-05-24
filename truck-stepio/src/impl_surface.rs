@@ -1,3 +1,4 @@
+#[doc(hidden)]
 #[macro_export]
 macro_rules! impl_surface {
     ($mod: tt, $mod_impl_surface: ident) => {

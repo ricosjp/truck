@@ -1,5 +1,7 @@
 //! Geometrical structs: knot vector, B-spline and NURBS
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -12,9 +14,6 @@
 )]
 #![allow(clippy::many_single_char_names)]
 
-extern crate serde;
-extern crate truck_base;
-extern crate truck_geotrait;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use truck_base::bounding_box::Bounded;

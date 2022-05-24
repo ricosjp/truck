@@ -1,3 +1,4 @@
+#[doc(hidden)]
 #[macro_export]
 macro_rules! impl_curve {
     ($mod: tt, $impl_curve_mod: ident) => {

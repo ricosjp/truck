@@ -1,3 +1,16 @@
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
+#![warn(
+    //missing_docs,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications
+)]
+
 use std::io::Write;
 use std::process::Command;
 
@@ -57,7 +70,11 @@ fn main() {
             include_str!("example-index.html").replace("{example}", dir),
         )
         .unwrap_or_else(|e| panic!("{}", e));
-        sum += &format!("<li><a href=\"{}/index.html\">{0}</a></li>", dir);
+        std::fmt::Write::write_fmt(
+            &mut sum,
+            format_args!("<li><a href=\"{dir}/index.html\">{dir}</a></li>"),
+        )
+        .unwrap_or_else(|e| panic!("{}", e));
     }
     std::fs::write(
         "dist/index.html",

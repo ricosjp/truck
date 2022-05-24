@@ -22,11 +22,11 @@ impl<P, C, S> Shell<P, C, S> {
 
     /// Returns an iterator over the faces. Practically, an alias of `iter()`.
     #[inline(always)]
-    pub fn face_iter(&self) -> FaceIter<P, C, S> { self.iter() }
+    pub fn face_iter(&self) -> FaceIter<'_, P, C, S> { self.iter() }
 
     /// Returns a mutable iterator over the faces. Practically, an alias of `iter_mut()`.
     #[inline(always)]
-    pub fn face_iter_mut(&mut self) -> FaceIterMut<P, C, S> { self.iter_mut() }
+    pub fn face_iter_mut(&mut self) -> FaceIterMut<'_, P, C, S> { self.iter_mut() }
 
     /// Creates a consuming iterator. Practically, an alias of `into_iter()`.
     #[inline(always)]
@@ -210,8 +210,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(face_adjacency[&shell[2]].len(), 1);
     /// assert_eq!(face_adjacency[&shell[3]].len(), 3);
     /// ```
-    pub fn face_adjacency(&self) -> FaceAdjacencyMap<P, C, S> {
-        let mut adjacency: FaceAdjacencyMap<P, C, S> = HashMap::default();
+    pub fn face_adjacency(&self) -> FaceAdjacencyMap<'_, P, C, S> {
+        let mut adjacency: FaceAdjacencyMap<'_, P, C, S> = HashMap::default();
         let mut edge_face_map: HashMap<EdgeID<C>, Vec<&Face<P, C, S>>> = HashMap::default();
         for face in self.face_iter() {
             let edge_iter = face
@@ -742,7 +742,10 @@ impl<P, C, S> Shell<P, C, S> {
     ///     "[Face([[(0, 1), (1, 3), (3, 2), (2, 0)]]), Face([[(1, 2), (2, 0), (0, 3), (3, 1)]])]",
     /// );
     /// ```
-    pub fn display(&self, format: ShellDisplayFormat) -> DebugDisplay<Self, ShellDisplayFormat> {
+    pub fn display(
+        &self,
+        format: ShellDisplayFormat,
+    ) -> DebugDisplay<'_, Self, ShellDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -811,6 +814,12 @@ impl<P, C, S> Default for Shell<P, C, S> {
         }
     }
 }
+
+impl<P, C, S> PartialEq for Shell<P, C, S> {
+    fn eq(&self, other: &Self) -> bool { self.face_list == other.face_list }
+}
+
+impl<P, C, S> Eq for Shell<P, C, S> {}
 
 /// The reference iterator over all faces in shells
 pub type FaceIter<'a, P, C, S> = std::slice::Iter<'a, Face<P, C, S>>;
@@ -1054,7 +1063,7 @@ where T: Eq + Hash + Clone {
 impl<'a, P: Debug, C: Debug, S: Debug> Debug
     for DebugDisplay<'a, Shell<P, C, S>, ShellDisplayFormat>
 {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             ShellDisplayFormat::FacesList { face_format } => f
                 .debug_list()

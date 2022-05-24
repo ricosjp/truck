@@ -1,5 +1,7 @@
 //! Defines polyline-polygon data structure and some algorithms handling mesh.
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,

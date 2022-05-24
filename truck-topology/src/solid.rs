@@ -175,7 +175,10 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Creates display struct for debugging the solid.
     #[inline(always)]
-    pub fn display(&self, format: SolidDisplayFormat) -> DebugDisplay<Self, SolidDisplayFormat> {
+    pub fn display(
+        &self,
+        format: SolidDisplayFormat,
+    ) -> DebugDisplay<'_, Self, SolidDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -183,10 +186,16 @@ impl<P, C, S> Solid<P, C, S> {
     }
 }
 
+impl<P, C, S> PartialEq for Solid<P, C, S> {
+    fn eq(&self, other: &Self) -> bool { self.boundaries == other.boundaries }
+}
+
+impl<P, C, S> Eq for Solid<P, C, S> {}
+
 impl<'a, P: Debug, C: Debug, S: Debug> Debug
     for DebugDisplay<'a, Solid<P, C, S>, SolidDisplayFormat>
 {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             SolidDisplayFormat::ShellsList { shell_format } => f
                 .debug_list()

@@ -1,5 +1,7 @@
 //! Visualization of shape and polygon mesh based on platform
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -11,8 +13,6 @@
     unused_qualifications
 )]
 
-extern crate truck_platform;
-extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::Arc;

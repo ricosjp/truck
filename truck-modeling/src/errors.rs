@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Modeling errors
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum Error {
     /// wrapper of topological error
     #[error(transparent)]

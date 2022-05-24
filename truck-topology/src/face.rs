@@ -176,7 +176,7 @@ impl<P, C, S> Face<P, C, S> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn boundary_iters(&self) -> Vec<BoundaryIter<P, C>> {
+    pub fn boundary_iters(&self) -> Vec<BoundaryIter<'_, P, C>> {
         self.boundaries
             .iter()
             .map(|wire| BoundaryIter {
@@ -908,7 +908,7 @@ impl<P, C, S> Face<P, C, S> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: FaceDisplayFormat) -> DebugDisplay<Self, FaceDisplayFormat> {
+    pub fn display(&self, format: FaceDisplayFormat) -> DebugDisplay<'_, Self, FaceDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -1041,7 +1041,7 @@ impl<'a, P, C> std::iter::FusedIterator for BoundaryIter<'a, P, C> {}
 impl<'a, P: Debug, C: Debug, S: Debug> Debug
     for DebugDisplay<'a, Face<P, C, S>, FaceDisplayFormat>
 {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             FaceDisplayFormat::Full { wire_format } => f
                 .debug_struct("Face")

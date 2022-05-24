@@ -1,3 +1,4 @@
+#[doc(hidden)]
 #[macro_export]
 macro_rules! parse_primitives {
     ($mod: tt, $mod_parse_primitives: ident) => {
