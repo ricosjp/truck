@@ -1,7 +1,7 @@
 //! Reads/writes STEP files from/to truck.
-//! 
+//!
 //! # Current Status
-//! 
+//!
 //! It is possible to output data modeled by truck-modeling.
 //! Shapes created by set operations cannot be output yet.
 //! Input will come further down the road.
