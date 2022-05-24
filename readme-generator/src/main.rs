@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::process::Command;
 
-const WORKSPACES: [&str; 10] = [
+const WORKSPACES: [&str; 11] = [
     "truck-base",
     "truck-geometry",
     "truck-geotrait",
@@ -12,6 +12,7 @@ const WORKSPACES: [&str; 10] = [
     "truck-rendimpl",
     "truck-shapeops",
     "truck-topology",
+    "truck-stepio",
 ];
 
 fn badge_url(path: &str) -> String {

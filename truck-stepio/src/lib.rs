@@ -1,4 +1,10 @@
 //! Reads/writes STEP files from/to truck.
+//!
+//! # Current Status
+//!
+//! It is possible to output data modeled by truck-modeling.
+//! Shapes created by set operations cannot be output yet.
+//! Input will come further down the road.
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]
