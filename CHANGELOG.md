@@ -4,29 +4,21 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
-- Add new lints and comments of `truck-stepio`.
 - Converting express `trimmed_curve` to truck `TrimmedCurve`.
-- Add dependency on `matext4cgmath`.
-- Add feature `wasmbind` to chrono.
-- Compare `BoundingBox` by inclusion relationship.
-- Updates `ruststep` version.
-- Add WGSL utilities.
-- Remove specification of branch of `ruststep`.
-- Fix clippy warnings.
-- Fix the signiture in coefficient of `Subdivision::loop_subdivision`.
-- Add new mesh filter `Subdivision::loop_subdivision`.
-- Remove the `skip_children` option from `rustfmt.toml` to activate `cargo fmt`.
-- STEP Output.
-- Upgraded wgpu (0.12.0) and winit (0.26.0)
-- Fix a typo in Readme.md.
-- Add some specified geometries for STEP I/O
-- Derive geometric traits to `Box`.
-- Add the method `swap_vertex` to `WireFrameInstance`.
+
+## v0.4
+
+- The first version of `truck-stepio` has been released! One can output shapes modeled by `truck-modeling`.
+- WGSL utilitiy `math.wgsl` has been released! One can calculate invert matrices and rotation matrices.
+- The processing related to linear algebra has been isolated from `truck-base` to [`matext4cgmath`](https://crates.io/crates/matext4cgmath).
+- New mesh filter `Subdivision::loop_subdivision` was implemented in `truck-meshalgo`!
 - In `truck-geotrait`, the trait `ParametricCurve` is decomposed into `ParametricCurve` and `BoundedCurve`.
+- The method `swap_vertex` has been added to `WireFrameInstance`.
+- Geometric traits has been derived to `Box`.
+- Some specified geometries has been added for STEP I/O
+- Comparing `BoundingBox` by inclusion relationship.
 - In order to make meshing reproducible, we decided to implement random perturbations by means of a deterministic hash function.
-- except tags from some tests
-- describe the explicit dependency on `mio` and `mio-misc` for build `winit`.
-- runs `cargo upgrade`
+- Some lints has been added.
 
 ## v0.3
 

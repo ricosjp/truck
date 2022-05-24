@@ -1,6 +1,6 @@
 [package]
 name = "truck-platform"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "graphic utility library based on wgpu"
@@ -17,10 +17,10 @@ webgl = ["wgpu/webgl"]
 wgpu_trace = ["wgpu/trace"]
 
 [dependencies]
-bytemuck = { version = "1.7.2", features = ["derive"] }
+bytemuck = { version = "1.9.1", features = ["derive"] }
 derive_more = "0.99.17"
 rustc-hash = "1.1.0"
-truck-base = { version = "0.2.0", path = "../truck-base" }
+truck-base = { version = "0.3.0", path = "../truck-base" }
 wgpu = "0.12.0"
 winit = "0.26.1"
 
@@ -30,14 +30,14 @@ instant = { version = "0.1.12", features = [ "now" ] }
 instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
 
 [dev-dependencies]
-image = "0.23.14"
-rayon = "1.5.1"
+image = "0.24.2"
+rayon = "1.5.3"
 env_logger = "0.9.0"
-naga = { version = "0.7.2", features = ["wgsl-in"] }
-pollster = "0.2.4"
+naga = { version = "0.8.5", features = ["wgsl-in"] }
+pollster = "0.2.5"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures = "0.4.28"
+wasm-bindgen-futures = "0.4.30"
 console_error_panic_hook = "0.1.7"
 console_log = "0.2.0"
-web-sys = { version = "0.3.55", features = ["Location"] }
+web-sys = { version = "0.3.57", features = ["Location"] }
