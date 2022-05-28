@@ -1194,7 +1194,12 @@ where
     /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
     /// ```
     #[inline(always)]
-    fn search_nearest_parameter<H: Into<SPHint1D>>(&self, point: P, hint: H, trial: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: P,
+        hint: H,
+        trial: usize,
+    ) -> Option<f64> {
         let hint = match hint.into() {
             SPHint1D::Parameter(hint) => hint,
             SPHint1D::Range(x, y) => {

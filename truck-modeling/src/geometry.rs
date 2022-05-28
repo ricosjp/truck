@@ -291,15 +291,10 @@ impl SearchNearestParameter<D2> for Surface {
             Surface::RevolutedCurve(rotted) => {
                 let hint = match hint.into() {
                     SPHint2D::Parameter(hint0, hint1) => (hint0, hint1),
-                    SPHint2D::Range(x, y) => {
-                        algo::surface::presearch(rotted, point, (x, y), 100)
+                    SPHint2D::Range(x, y) => algo::surface::presearch(rotted, point, (x, y), 100),
+                    SPHint2D::None => {
+                        algo::surface::presearch(rotted, point, rotted.parameter_range(), 100)
                     }
-                    SPHint2D::None => algo::surface::presearch(
-                        rotted,
-                        point,
-                        rotted.parameter_range(),
-                        100,
-                    ),
                 };
                 algo::surface::search_nearest_parameter(rotted, point, hint, trials)
             }

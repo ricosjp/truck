@@ -63,7 +63,12 @@ where
     <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = <Self as ParametricCurve>::Point;
-    fn search_parameter<H: Into<SPHint1D>>(&self, point: Self::Point, hint: H, trials: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: Self::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<f64> {
         let hint = match hint.into() {
             SPHint1D::Parameter(hint) => hint,
             SPHint1D::Range(x, y) => {

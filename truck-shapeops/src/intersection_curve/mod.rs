@@ -121,7 +121,12 @@ impl<S> SearchParameter<D1> for IntersectionCurveWithParameters<S>
 where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
 {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint1D>>(&self, point: Point3, hint: H, trials: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: Point3,
+        hint: H,
+        trials: usize,
+    ) -> Option<f64> {
         self.ic.search_parameter(point, hint, trials)
     }
 }

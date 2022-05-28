@@ -61,7 +61,12 @@ where UnitCircle<P>: ParametricCurve<Point = P>
 
 impl SearchNearestParameter<D1> for UnitCircle<Point2> {
     type Point = Point2;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(&self, pt: Point2, _: H, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        pt: Point2,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let v = pt.to_vec();
         if v.magnitude2().so_small2() {
             return None;
@@ -95,7 +100,12 @@ impl SearchParameter<D1> for UnitCircle<Point2> {
 
 impl SearchNearestParameter<D1> for UnitCircle<Point3> {
     type Point = Point3;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(&self, pt: Point3, _: H, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        pt: Point3,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         UnitCircle::<Point2>::new().search_nearest_parameter(Point2::new(pt.x, pt.y), None, 0)
     }
 }

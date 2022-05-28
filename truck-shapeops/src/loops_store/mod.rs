@@ -55,8 +55,7 @@ impl ShapesOpStatus {
     fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<ShapesOpStatus>
     where
         C: ParametricCurve3D + BoundedCurve,
-        S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
-    {
+        S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>, {
         let (t0, t1) = curve.parameter_range();
         let t = (t0 + t1) / 2.0;
         let (_, pt0, pt1) = curve.search_triple(t)?;
@@ -348,8 +347,7 @@ impl<C> LoopsStore<Point3, C> {
         emap: &mut HashMap<EdgeID<C>, Edge<Point3, C>>,
     ) -> Option<()>
     where
-        C: Cut<Point = Point3, Vector = Vector3>
-            + SearchNearestParameter<D1, Point = Point3>,
+        C: Cut<Point = Point3, Vector = Vector3> + SearchNearestParameter<D1, Point = Point3>,
         S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
     {
         match kind {
