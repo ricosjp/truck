@@ -10,9 +10,9 @@ pub trait PolylineableCurve: ParametricCurve3D + BoundedCurve + Invertible + Par
 impl<C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3>> PolylineableCurve for C {}
 #[rustfmt::skip]
 /// Gathered the traits used in tessellation.
-pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<Point = Point3, Parameter = (f64, f64)> {}
+pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3> {}
 #[rustfmt::skip]
-impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<Point = Point3, Parameter = (f64, f64)>> MeshableSurface for S {}
+impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3>> MeshableSurface for S {}
 
 type PolylineCurve = truck_polymesh::PolylineCurve<Point3>;
 

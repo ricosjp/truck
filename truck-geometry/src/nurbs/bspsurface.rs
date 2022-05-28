@@ -1880,18 +1880,20 @@ impl<V: Clone> Invertible for BSplineSurface<V> {
     fn invert(&mut self) { self.swap_axes(); }
 }
 
-impl SearchParameter for BSplineSurface<Point2> {
+impl SearchParameter<D2> for BSplineSurface<Point2> {
     type Point = Point2;
-    type Parameter = (f64, f64);
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point2,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -1899,18 +1901,20 @@ impl SearchParameter for BSplineSurface<Point2> {
     }
 }
 
-impl SearchParameter for BSplineSurface<Point3> {
+impl SearchParameter<D2> for BSplineSurface<Point3> {
     type Point = Point3;
-    type Parameter = (f64, f64);
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -1918,7 +1922,7 @@ impl SearchParameter for BSplineSurface<Point3> {
     }
 }
 
-impl<P> SearchNearestParameter for BSplineSurface<P>
+impl<P> SearchNearestParameter<D2> for BSplineSurface<P>
 where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
@@ -1926,16 +1930,18 @@ where
     <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    type Parameter = (f64, f64);
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: P,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };

@@ -100,18 +100,20 @@ impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
     }
 }
 
-impl<C: ParametricCurve3D + BoundedCurve> SearchParameter for RevolutedCurve<C> {
+impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve<C> {
     type Point = Point3;
-    type Parameter = (f64, f64);
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -137,34 +139,34 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter for RevolutedCurve<C> 
     }
 }
 
-impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter for RevolutedCurve<C> {
+impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for RevolutedCurve<C> {
     type Point = Point3;
-    type Parameter = (f64, f64);
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
+        let hint = hint.into();
         let hint0 =
             algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION);
         let (t0, t1) = self.curve.parameter_range();
         if self.is_front_fixed() && hint0.0.near(&t0) {
-            if let Some(hint) = hint {
-                Some((t0, hint.1))
+            if let SPHint2D::Parameter(_, hint_1) = hint {
+                Some((t0, hint_1))
             } else {
                 Some((t0, 0.0))
             }
         } else if self.is_back_fixed() && hint0.0.near(&t1) {
-            if let Some(hint) = hint {
-                Some((t1, hint.1))
+            if let SPHint2D::Parameter(_, hint_1) = hint {
+                Some((t1, hint_1))
             } else {
                 Some((t1, 0.0))
             }
         } else {
             let hint = match hint {
-                Some(hint) => hint,
-                None => hint0,
+                SPHint2D::Parameter(hint_0, hint_1) => (hint_0, hint_1),
+                _ => hint0,
             };
             algo::surface::search_nearest_parameter(self, point, hint, trials).map(|(u, v)| {
                 let dist0 = self.subs(u, v).distance(point);

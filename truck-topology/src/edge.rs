@@ -403,7 +403,7 @@ impl<P, C> Edge<P, C> {
     pub fn cut(&self, vertex: &Vertex<P>) -> Option<(Self, Self)>
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
         let mut curve0 = self.get_curve();
         let t = curve0.search_parameter(vertex.get_point(), None, SEARCH_PARAMETER_TRIALS)?;
         let (t0, t1) = curve0.parameter_range();

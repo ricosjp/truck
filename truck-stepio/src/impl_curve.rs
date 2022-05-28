@@ -11,7 +11,7 @@ macro_rules! impl_curve {
             $crate::sub_impl_curve!($mod, Point3, Vector3, Matrix4, Vector4);
             fn to_parameter<'a, C>(trim: &'a [$mod::TrimmingSelect], curve: &C) -> Option<f64>
             where
-                C: SearchParameter<Parameter = f64>,
+                C: SearchParameter<D1>,
                 C::Point: From<&'a $mod::CartesianPoint>, {
                 match trim.len() {
                     1 => match &trim[0] {

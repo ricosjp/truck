@@ -60,29 +60,27 @@ impl<P: Copy> Invertible for Line<P> {
     fn inverse(&self) -> Self { Self(self.1, self.0) }
 }
 
-impl<P> SearchNearestParameter for Line<P>
+impl<P> SearchNearestParameter<D1> for Line<P>
 where
     P: ControlPoint<f64>,
     P::Diff: InnerSpace<Scalar = f64>,
 {
     type Point = P;
-    type Parameter = f64;
     #[inline]
-    fn search_nearest_parameter(&self, pt: P, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(&self, pt: P, _: H, _: usize) -> Option<f64> {
         let b = self.1 - self.0;
         Some((pt - self.0).dot(b) / b.dot(b))
     }
 }
 
-impl<P> SearchParameter for Line<P>
+impl<P> SearchParameter<D1> for Line<P>
 where
     P: ControlPoint<f64> + Tolerance,
     P::Diff: InnerSpace<Scalar = f64>,
 {
     type Point = P;
-    type Parameter = f64;
     #[inline]
-    fn search_parameter(&self, pt: P, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, pt: P, _: H, _: usize) -> Option<f64> {
         let b = self.1 - self.0;
         let t = (pt - self.0).dot(b) / b.dot(b);
         match self.subs(t).near(&pt) {

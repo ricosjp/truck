@@ -326,20 +326,20 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
     }
 }
 
-impl<E, T> SearchParameter for Processor<E, T>
+impl<E, D, T> SearchParameter<D> for Processor<E, T>
 where
-    E: SearchParameter,
+    D: SPDimension,
+    E: SearchParameter<D>,
     E::Point: EuclideanSpace,
     T: Transform<E::Point>,
 {
     type Point = E::Point;
-    type Parameter = E::Parameter;
-    fn search_parameter(
+    fn search_parameter<H: Into<D::Hint>>(
         &self,
         point: E::Point,
-        hint: Option<E::Parameter>,
+        hint: H,
         trials: usize,
-    ) -> Option<E::Parameter> {
+    ) -> Option<D::Parameter> {
         let inv = self.transform.inverse_transform().unwrap();
         self.entity
             .search_parameter(inv.transform_point(point), hint, trials)

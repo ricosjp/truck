@@ -28,30 +28,28 @@ impl<C: ParametricCurve> BoundedCurve for TrimmedCurve<C> {
     fn parameter_range(&self) -> (f64, f64) { self.range }
 }
 
-impl<C: SearchNearestParameter> SearchNearestParameter for TrimmedCurve<C> {
+impl<C: SearchNearestParameter<D1>> SearchNearestParameter<D1> for TrimmedCurve<C> {
     type Point = C::Point;
-    type Parameter = C::Parameter;
     #[inline(always)]
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         pt: C::Point,
-        hint: Option<C::Parameter>,
+        hint: H,
         trials: usize,
-    ) -> Option<C::Parameter> {
+    ) -> Option<f64> {
         self.curve.search_nearest_parameter(pt, hint, trials)
     }
 }
 
-impl<C: SearchParameter> SearchParameter for TrimmedCurve<C> {
+impl<C: SearchParameter<D1>> SearchParameter<D1> for TrimmedCurve<C> {
     type Point = C::Point;
-    type Parameter = C::Parameter;
     #[inline(always)]
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint1D>>(
         &self,
         pt: C::Point,
-        hint: Option<C::Parameter>,
+        hint: H,
         trials: usize,
-    ) -> Option<C::Parameter> {
+    ) -> Option<f64> {
         self.curve.search_parameter(pt, hint, trials)
     }
 }

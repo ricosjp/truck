@@ -71,19 +71,21 @@ impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
     }
 }
 
-impl<C: ParametricCurve2D + BoundedCurve> SearchParameter for ExtrudedCurve<C, Vector2> {
+impl<C: ParametricCurve2D + BoundedCurve> SearchParameter<D2> for ExtrudedCurve<C, Vector2> {
     type Point = Point2;
-    type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point2,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -91,19 +93,21 @@ impl<C: ParametricCurve2D + BoundedCurve> SearchParameter for ExtrudedCurve<C, V
     }
 }
 
-impl<C: ParametricCurve3D + BoundedCurve> SearchParameter for ExtrudedCurve<C, Vector3> {
+impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for ExtrudedCurve<C, Vector3> {
     type Point = Point3;
-    type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -111,19 +115,21 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter for ExtrudedCurve<C, V
     }
 }
 
-impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter for ExtrudedCurve<C, Vector3> {
+impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for ExtrudedCurve<C, Vector3> {
     type Point = Point3;
-    type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };

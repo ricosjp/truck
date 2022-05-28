@@ -84,10 +84,9 @@ impl Concat<Segment> for Segment {
     }
 }
 
-impl SearchParameter for Segment {
+impl SearchParameter<D1> for Segment {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_parameter(&self, point: Point3, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, point: Point3, _: H, _: usize) -> Option<f64> {
         let p = point - self.ends.0;
         let r = self.ends.1 - self.ends.0;
         let t = p.dot(r) / r.dot(r);
