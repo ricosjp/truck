@@ -628,7 +628,7 @@ impl<P, C, S> Shell<P, C, S> {
     pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
         if self.vertex_iter().any(|v| &v == vertex) {
             return false;
         }

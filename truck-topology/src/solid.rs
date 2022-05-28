@@ -149,7 +149,7 @@ impl<P, C, S> Solid<P, C, S> {
     pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
         let res = self
             .boundaries
             .iter_mut()

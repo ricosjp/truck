@@ -27,7 +27,15 @@ impl_from!((), usize);
 
 macro_rules! derive_method {
 	($method: tt, $return_type: ty, $($var: ident : $paramtype: ty),*) => {
-		fn $method(&self, $($var: $paramtype),*) -> $return_type {
+		fn $method (&self, $($var: $paramtype),*) -> $return_type {
+			match &self {
+				Alternative::FirstType(got) => got.$method($($var),*),
+				Alternative::SecondType(got) => got.$method($($var),*),
+			}
+		}
+	};
+	($method: tt <$x: ident : $y: path>, $return_type: ty, $($var: ident : $paramtype: ty),*) => {
+		fn $method<$x : $y>(&self, $($var: $paramtype),*) -> $return_type {
 			match &self {
 				Alternative::FirstType(got) => got.$method($($var),*),
 				Alternative::SecondType(got) => got.$method($($var),*),
@@ -119,34 +127,32 @@ where
     );
 }
 
-impl<T, U> SearchParameter for Alternative<T, U>
+impl<D: SPDimension, T, U> SearchParameter<D> for Alternative<T, U>
 where
-    T: SearchParameter,
-    U: SearchParameter<Point = T::Point, Parameter = T::Parameter>,
+    T: SearchParameter<D>,
+    U: SearchParameter<D, Point = T::Point>,
 {
     type Point = T::Point;
-    type Parameter = T::Parameter;
     derive_method!(
-        search_parameter,
-        Option<T::Parameter>,
+        search_parameter<H: Into<D::Hint>>,
+        Option<D::Parameter>,
         point: T::Point,
-        hint: Option<T::Parameter>,
+        hint: H,
         trials: usize
     );
 }
 
-impl<T, U> SearchNearestParameter for Alternative<T, U>
+impl<D: SPDimension, T, U> SearchNearestParameter<D> for Alternative<T, U>
 where
-    T: SearchNearestParameter,
-    U: SearchNearestParameter<Point = T::Point, Parameter = T::Parameter>,
+    T: SearchNearestParameter<D>,
+    U: SearchNearestParameter<D, Point = T::Point>,
 {
     type Point = T::Point;
-    type Parameter = T::Parameter;
     derive_method!(
-        search_nearest_parameter,
-        Option<T::Parameter>,
+        search_nearest_parameter<H: Into<D::Hint>>,
+        Option<D::Parameter>,
         point: T::Point,
-        hint: Option<T::Parameter>,
+        hint: H,
         trials: usize
     );
 }

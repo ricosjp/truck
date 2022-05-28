@@ -416,13 +416,12 @@ where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter<D1> for NURBSCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
 {
     type Point = V::Point;
-    type Parameter = f64;
     /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
@@ -462,32 +461,46 @@ where
     /// assert!(curve.search_nearest_parameter(pt, Some(hint), 100).is_none());
     /// ```
     #[inline(always)]
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         point: V::Point,
-        hint: Option<f64>,
+        hint: H,
         trial: usize,
     ) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchParameter for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchParameter<D1> for NURBSCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
 {
     type Point = V::Point;
-    type Parameter = f64;
     #[inline(always)]
-    fn search_parameter(&self, point: V::Point, hint: Option<f64>, trial: usize) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: V::Point,
+        hint: H,
+        trial: usize,
+    ) -> Option<f64> {
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_parameter(self, point, hint, trial)
     }

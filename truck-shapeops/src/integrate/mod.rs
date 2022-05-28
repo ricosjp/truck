@@ -7,14 +7,14 @@ use truck_topology::*;
 pub trait ShapeOpsSurface:
     ParametricSurface3D
     + ParameterDivision2D
-    + SearchParameter<Point = Point3, Parameter = (f64, f64)>
-    + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+    + SearchParameter<D2, Point = Point3>
+    + SearchNearestParameter<D2, Point = Point3>
     + Invertible {
 }
 impl<S> ShapeOpsSurface for S where S: ParametricSurface3D
         + ParameterDivision2D
-        + SearchParameter<Point = Point3, Parameter = (f64, f64)>
-        + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>
         + Invertible
 {
 }
@@ -26,16 +26,16 @@ pub trait ShapeOpsCurve<S: ShapeOpsSurface>:
     + Cut
     + Invertible
     + From<IntersectionCurve<PolylineCurve<Point3>, S>>
-    + SearchParameter<Point = Point3, Parameter = f64>
-    + SearchNearestParameter<Point = Point3, Parameter = f64> {
+    + SearchParameter<D1, Point = Point3>
+    + SearchNearestParameter<D1, Point = Point3> {
 }
 impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where C: ParametricCurve3D
         + ParameterDivision1D<Point = Point3>
         + Cut
         + Invertible
         + From<IntersectionCurve<PolylineCurve<Point3>, S>>
-        + SearchParameter<Point = Point3, Parameter = f64>
-        + SearchNearestParameter<Point = Point3, Parameter = f64>
+        + SearchParameter<D1, Point = Point3>
+        + SearchNearestParameter<D1, Point = Point3>
 {
 }
 

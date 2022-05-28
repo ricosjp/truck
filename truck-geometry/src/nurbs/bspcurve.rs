@@ -1141,7 +1141,7 @@ where
         Some(hint)
     }
 }
-impl<P> SearchNearestParameter for BSplineCurve<P>
+impl<P> SearchNearestParameter<D1> for BSplineCurve<P>
 where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
@@ -1150,7 +1150,6 @@ where
     <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    type Parameter = f64;
     /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
@@ -1195,15 +1194,25 @@ where
     /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
     /// ```
     #[inline(always)]
-    fn search_nearest_parameter(&self, point: P, hint: Option<f64>, trial: usize) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: P,
+        hint: H,
+        trial: usize,
+    ) -> Option<f64> {
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }
-impl<P> SearchParameter for BSplineCurve<P>
+impl<P> SearchParameter<D1> for BSplineCurve<P>
 where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
@@ -1211,12 +1220,16 @@ where
     <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    type Parameter = f64;
     #[inline(always)]
-    fn search_parameter(&self, point: P, hint: Option<f64>, trial: usize) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+    fn search_parameter<H: Into<SPHint1D>>(&self, point: P, hint: H, trial: usize) -> Option<f64> {
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_parameter(self, point, hint, trial)
     }

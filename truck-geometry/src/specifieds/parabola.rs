@@ -39,11 +39,15 @@ where
     }
 }
 
-impl SearchNearestParameter for UnitParabola<Point2> {
+impl SearchNearestParameter<D1> for UnitParabola<Point2> {
     type Point = Point2;
-    type Parameter = f64;
     #[inline]
-    fn search_nearest_parameter(&self, pt: Point2, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        pt: Point2,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let p = 2.0 - pt.x;
         let q = -pt.y;
         solver::pre_solve_cubic(p, q)
@@ -60,14 +64,13 @@ impl SearchNearestParameter for UnitParabola<Point2> {
     }
 }
 
-impl SearchNearestParameter for UnitParabola<Point3> {
+impl SearchNearestParameter<D1> for UnitParabola<Point3> {
     type Point = Point3;
-    type Parameter = f64;
     #[inline]
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         pt: Point3,
-        _hint: Option<f64>,
+        _hint: H,
         _trials: usize,
     ) -> Option<f64> {
         UnitParabola::<Point2>::new().search_nearest_parameter(
@@ -78,11 +81,10 @@ impl SearchNearestParameter for UnitParabola<Point3> {
     }
 }
 
-impl SearchParameter for UnitParabola<Point2> {
+impl SearchParameter<D1> for UnitParabola<Point2> {
     type Point = Point2;
-    type Parameter = f64;
     #[inline]
-    fn search_parameter(&self, pt: Point2, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point2, _: H, _: usize) -> Option<f64> {
         let t = pt.y / 2.0;
         let pt0 = self.subs(t);
         match pt.near(&pt0) {
@@ -92,11 +94,15 @@ impl SearchParameter for UnitParabola<Point2> {
     }
 }
 
-impl SearchParameter for UnitParabola<Point3> {
+impl SearchParameter<D1> for UnitParabola<Point3> {
     type Point = Point3;
-    type Parameter = f64;
     #[inline]
-    fn search_parameter(&self, pt: Point3, _hint: Option<f64>, _trials: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        pt: Point3,
+        _hint: H,
+        _trials: usize,
+    ) -> Option<f64> {
         match pt.z.so_small() {
             true => UnitParabola::<Point2>::new().search_parameter(
                 Point2::new(pt.x, pt.y),

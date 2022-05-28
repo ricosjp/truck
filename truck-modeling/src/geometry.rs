@@ -77,13 +77,12 @@ impl Cut for Curve {
     fn cut(&mut self, t: f64) -> Self { derive_curve_self_method!(self, Cut::cut, t) }
 }
 
-impl SearchNearestParameter for Curve {
+impl SearchNearestParameter<D1> for Curve {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         point: Point3,
-        hint: Option<f64>,
+        hint: H,
         trials: usize,
     ) -> Option<f64> {
         derive_curve_method!(
@@ -96,10 +95,14 @@ impl SearchNearestParameter for Curve {
     }
 }
 
-impl SearchParameter for Curve {
+impl SearchParameter<D1> for Curve {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: Point3,
+        hint: H,
+        trials: usize,
+    ) -> Option<f64> {
         derive_curve_method!(self, SearchParameter::search_parameter, point, hint, trials)
     }
 }
@@ -259,26 +262,24 @@ impl IncludeCurve<Curve> for Surface {
     }
 }
 
-impl SearchParameter for Surface {
+impl SearchParameter<D2> for Surface {
     type Point = Point3;
-    type Parameter = (f64, f64);
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         derive_surface_method!(self, SearchParameter::search_parameter, point, hint, trials)
     }
 }
 
-impl SearchNearestParameter for Surface {
+impl SearchNearestParameter<D2> for Surface {
     type Point = Point3;
-    type Parameter = (f64, f64);
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         match self {
@@ -288,9 +289,12 @@ impl SearchNearestParameter for Surface {
             }
             Surface::NURBSSurface(surface) => surface.search_nearest_parameter(point, hint, trials),
             Surface::RevolutedCurve(rotted) => {
-                let hint = match hint {
-                    Some(hint) => hint,
-                    None => algo::surface::presearch(rotted, point, rotted.parameter_range(), 100),
+                let hint = match hint.into() {
+                    SPHint2D::Parameter(hint0, hint1) => (hint0, hint1),
+                    SPHint2D::Range(x, y) => algo::surface::presearch(rotted, point, (x, y), 100),
+                    SPHint2D::None => {
+                        algo::surface::presearch(rotted, point, rotted.parameter_range(), 100)
+                    }
                 };
                 algo::surface::search_nearest_parameter(rotted, point, hint, trials)
             }

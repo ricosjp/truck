@@ -39,10 +39,14 @@ where
     }
 }
 
-impl SearchNearestParameter for UnitHyperbola<Point2> {
+impl SearchNearestParameter<D1> for UnitHyperbola<Point2> {
     type Point = Point2;
-    type Parameter = f64;
-    fn search_nearest_parameter(&self, p: Point2, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        p: Point2,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let a = -p.y;
         let b = (p.y * p.y - p.x * p.x) / 4.0 + 1.0;
         let c = -p.y;
@@ -62,27 +66,25 @@ impl SearchNearestParameter for UnitHyperbola<Point2> {
     }
 }
 
-impl SearchNearestParameter for UnitHyperbola<Point3> {
+impl SearchNearestParameter<D1> for UnitHyperbola<Point3> {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         p: Point3,
-        _hint: Option<f64>,
+        _: H,
         _trials: usize,
     ) -> Option<f64> {
         UnitHyperbola::<Point2>::new().search_nearest_parameter(
             Point2::new(p.x, p.y),
-            _hint,
+            None,
             _trials,
         )
     }
 }
 
-impl SearchParameter for UnitHyperbola<Point2> {
+impl SearchParameter<D1> for UnitHyperbola<Point2> {
     type Point = Point2;
-    type Parameter = f64;
-    fn search_parameter(&self, p: Point2, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, p: Point2, _: H, _: usize) -> Option<f64> {
         let t = f64::asinh(p.y);
         match p.near(&self.subs(t)) {
             true => Some(t),
@@ -91,10 +93,9 @@ impl SearchParameter for UnitHyperbola<Point2> {
     }
 }
 
-impl SearchParameter for UnitHyperbola<Point3> {
+impl SearchParameter<D1> for UnitHyperbola<Point3> {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_parameter(&self, p: Point3, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, p: Point3, _: H, _: usize) -> Option<f64> {
         let t = f64::asinh(p.y);
         match p.near(&self.subs(t)) {
             true => Some(t),

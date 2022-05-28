@@ -55,7 +55,7 @@ where
     fn parameter_range(&self) -> (f64, f64) { self.curve.parameter_range() }
 }
 
-impl<C, S> SearchParameter for PCurve<C, S>
+impl<C, S> SearchParameter<D1> for PCurve<C, S>
 where
     Self: BoundedCurve,
     <Self as ParametricCurve>::Point: EuclideanSpace<Scalar = f64, Diff = <Self as ParametricCurve>::Vector>
@@ -63,22 +63,26 @@ where
     <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = <Self as ParametricCurve>::Point;
-    type Parameter = f64;
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint1D>>(
         &self,
         point: Self::Point,
-        hint: Option<f64>,
+        hint: H,
         trials: usize,
     ) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_parameter(self, point, hint, trials)
     }
 }
 
-impl<C, S> SearchNearestParameter for PCurve<C, S>
+impl<C, S> SearchNearestParameter<D1> for PCurve<C, S>
 where
     Self: BoundedCurve,
     <Self as ParametricCurve>::Point: EuclideanSpace<Scalar = f64, Diff = <Self as ParametricCurve>::Vector>
@@ -86,16 +90,20 @@ where
     <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = <Self as ParametricCurve>::Point;
-    type Parameter = f64;
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         point: Self::Point,
-        hint: Option<f64>,
+        hint: H,
         trials: usize,
     ) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trials)
     }

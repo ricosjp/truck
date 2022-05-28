@@ -56,6 +56,14 @@ macro_rules! derive_enum {
                     }
                 }
             };
+            (fn $method: ident <$x: ident : $y: path> (&self, $dol ($field: ident : $field_type: ty),*) -> $return_type: ty) => {
+                #[inline(always)]
+                fn $method <$x: $y> (&self, $dol ($field: $field_type),*) -> $return_type {
+                    match self {
+                        $($typename::$member(x) => x.$method($dol ($field),*)),*
+                    }
+                }
+            };
         }
     };
     (
@@ -82,15 +90,13 @@ macro_rules! derive_curve {
             type Point = $point;
             $macro!(fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<$point>));
         }
-        impl SearchParameter for $type {
+        impl SearchParameter<D1> for $type {
             type Point = $point;
-            type Parameter = f64;
-            $macro!(fn search_parameter(&self, point: Self::Point, hint: Option<f64>, trials: usize) -> Option<f64>);
+            $macro!(fn search_parameter <H: Into<SPHint1D>> (&self, point: Self::Point, hint: H, trials: usize) -> Option<f64>);
         }
-        impl SearchNearestParameter for $type {
+        impl SearchNearestParameter<D1> for $type {
             type Point = $point;
-            type Parameter = f64;
-            $macro!(fn search_nearest_parameter(&self, point: Self::Point, hint: Option<f64>, trials: usize) -> Option<f64>);
+            $macro!(fn search_nearest_parameter <H: Into<SPHint1D>> (&self, point: Self::Point, hint: H, trials: usize) -> Option<f64>);
         }
     };
 }
@@ -118,9 +124,9 @@ pub enum Curve<P, V, M> {
 }
 
 macro_rules! derive_to_curve {
-    (fn $method: ident (&self, $($field: ident : $field_type: ty),*) -> $return_type: ty) => {
+    (fn $method: tt <$($x: ident : $y: path),*> (&self, $($field: ident : $field_type: ty),*) -> $return_type: ty) => {
         #[inline(always)]
-        fn $method (&self, $($field: $field_type),*) -> $return_type {
+        fn $method <$($x: $y),*> (&self, $($field: $field_type),*) -> $return_type {
             use Curve::*;
             match self {
                 Line(x) => x.$method($($field),*),
@@ -130,6 +136,9 @@ macro_rules! derive_to_curve {
                 Phantom(_) => unreachable!(),
             }
         }
+    };
+    (fn $method: tt (&self, $($field: ident : $field_type: ty),*) -> $return_type: ty) => {
+        derive_to_curve!(fn $method <> (&self, $($field: $field_type),*) -> $return_type);
     };
 }
 
