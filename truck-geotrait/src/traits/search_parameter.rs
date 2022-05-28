@@ -29,7 +29,7 @@ impl SPDimension for D2 {
 }
 
 /// hint for searching parameter for curve
-#[derive(Clone, Copy, Debug, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SPHint1D {
     /// a parameter near the answer
     Parameter(f64),
@@ -37,7 +37,6 @@ pub enum SPHint1D {
     Range(f64, f64),
     /// There are no hint. In the case of `BoundedCurve`, most of the time the parameter range is applied.
     /// Such as planes, no hinting is needed in the first place.
-    #[default]
     None,
 }
 
@@ -59,14 +58,13 @@ impl From<Option<f64>> for SPHint1D {
 }
 
 /// hint for searching parameter for surface
-#[derive(Clone, Copy, Debug, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SPHint2D {
     /// a parameter near the answer
     Parameter(f64, f64),
     /// the range of parameter including answer
     Range((f64, f64), (f64, f64)),
     /// There are no hint. If the algorithm needed a hint, it always returns None.
-    #[default]
     None,
 }
 
