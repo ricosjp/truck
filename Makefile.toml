@@ -34,6 +34,7 @@ args = [
 	"-p", "truck-modeling",
 	"-p", "truck-shapeops",
 	"-p", "truck-stepio",
+	"--feature", "from_other_crate",
 	"--", "--nocapture",
 ]
 
