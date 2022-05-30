@@ -11,6 +11,10 @@ license = "Apache-2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
+[features]
+default = []
+from_other_crate = []
+
 [dependencies]
 chrono = { version = "0.4.19", features = ["wasmbind"] }
 truck-base = { version = "0.3.0", path = "../truck-base" }
