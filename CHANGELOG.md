@@ -7,6 +7,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - Refactoring Search(Nearest)Parameter.
 - Converting express `trimmed_curve` to truck `TrimmedCurve`.
 - Use Line in modeling and simplify output shape of tsweep.
+- Set `from_other_crate` feature for `truck-stepio` to stop rls building ap203.
 
 ## v0.4
 
