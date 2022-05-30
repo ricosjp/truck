@@ -10,6 +10,8 @@ pub use truck_polymesh::PolylineCurve;
 /// 3-dimensional curve
 #[derive(Clone, Debug, Serialize, Deserialize, From)]
 pub enum Curve {
+    /// line
+    Line(Line<Point3>),
     /// 3-dimensional B-spline curve
     BSplineCurve(BSplineCurve<Point3>),
     /// 3-dimensional NURBS curve
@@ -21,6 +23,7 @@ pub enum Curve {
 macro_rules! derive_curve_method {
     ($curve: expr, $method: expr, $($ver: ident),*) => {
         match $curve {
+            Curve::Line(got) => $method(got, $($ver), *),
             Curve::BSplineCurve(got) => $method(got, $($ver), *),
             Curve::NURBSCurve(got) => $method(got, $($ver), *),
             Curve::IntersectionCurve(got) => $method(got, $($ver), *),
@@ -31,6 +34,7 @@ macro_rules! derive_curve_method {
 macro_rules! derive_curve_self_method {
     ($curve: expr, $method: expr, $($ver: ident),*) => {
         match $curve {
+            Curve::Line(got) => Curve::Line($method(got, $($ver), *)),
             Curve::BSplineCurve(got) => Curve::BSplineCurve($method(got, $($ver), *)),
             Curve::NURBSCurve(got) => Curve::NURBSCurve($method(got, $($ver), *)),
             Curve::IntersectionCurve(got) => Curve::IntersectionCurve($method(got, $($ver), *)),
@@ -111,6 +115,7 @@ impl Curve {
     /// Into non-ratinalized 4-dimensinal B-spline curve
     pub fn lift_up(self) -> BSplineCurve<Vector4> {
         match self {
+            Curve::Line(curve) => Curve::BSplineCurve(curve.to_bspline()).lift_up(),
             Curve::BSplineCurve(curve) => BSplineCurve::new(
                 curve.knot_vec().clone(),
                 curve
@@ -217,21 +222,25 @@ impl IncludeCurve<Curve> for Surface {
     fn include(&self, curve: &Curve) -> bool {
         match self {
             Surface::BSplineSurface(surface) => match curve {
+                Curve::Line(curve) => surface.include(&curve.to_bspline()),
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::NURBSSurface(surface) => match curve {
+                Curve::Line(curve) => surface.include(&curve.to_bspline()),
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::Plane(surface) => match curve {
+                Curve::Line(curve) => surface.include(&curve.to_bspline()),
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::RevolutedCurve(surface) => match surface.entity_curve() {
+                Curve::Line(curve) => self.include(&Curve::BSplineCurve(curve.to_bspline())),
                 Curve::BSplineCurve(entity_curve) => {
                     let surface = RevolutedCurve::by_revolution(
                         entity_curve,
@@ -239,6 +248,7 @@ impl IncludeCurve<Curve> for Surface {
                         surface.axis(),
                     );
                     match curve {
+                        Curve::Line(curve) => surface.include(&curve.to_bspline()),
                         Curve::BSplineCurve(curve) => surface.include(curve),
                         Curve::NURBSCurve(curve) => surface.include(curve),
                         Curve::IntersectionCurve(_) => unimplemented!(),
@@ -251,6 +261,7 @@ impl IncludeCurve<Curve> for Surface {
                         surface.axis(),
                     );
                     match curve {
+                        Curve::Line(curve) => surface.include(&curve.to_bspline()),
                         Curve::BSplineCurve(curve) => surface.include(curve),
                         Curve::NURBSCurve(curve) => surface.include(curve),
                         Curve::IntersectionCurve(_) => unimplemented!(),

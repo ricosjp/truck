@@ -34,10 +34,9 @@ pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
 /// ```
 #[inline(always)]
 pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
-    let pt0 = vertex0.get_point().to_homogeneous();
-    let pt1 = vertex1.get_point().to_homogeneous();
-    let curve = geom_impls::line(pt0, pt1);
-    Edge::new(vertex0, vertex1, Curve::NURBSCurve(NURBSCurve::new(curve)))
+    let pt0 = vertex0.get_point();
+    let pt1 = vertex1.get_point();
+    Edge::new(vertex0, vertex1, Curve::Line(Line(pt0, pt1)))
 }
 
 /// Returns a circle arc from `vertex0` to `vertex1` via `transit`.
@@ -393,12 +392,22 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
         &move |pt| trsl.transform_point(*pt),
         &move |curve| curve.transformed(trsl),
         &move |surface| surface.transformed(trsl),
-        &move |pt0, pt1| Curve::BSplineCurve(geom_impls::line(*pt0, *pt1)),
-        &move |curve0, curve1| {
-            Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::homotopy(
-                curve0.clone().lift_up(),
-                curve1.clone().lift_up(),
-            )))
+        &move |pt0, pt1| Curve::Line(Line(*pt0, *pt1)),
+        &move |curve0, curve1| match (curve0, curve1) {
+            (Curve::Line(line), Curve::Line(_)) => {
+                Surface::Plane(Plane::new(line.0, line.1, line.0 + vector))
+            }
+            (Curve::BSplineCurve(curve0), Curve::BSplineCurve(curve1)) => {
+                Surface::BSplineSurface(BSplineSurface::homotopy(curve0.clone(), curve1.clone()))
+            }
+            (Curve::NURBSCurve(curve0), Curve::NURBSCurve(curve1)) => {
+                Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::homotopy(
+                    curve0.non_rationalized().clone(),
+                    curve1.non_rationalized().clone(),
+                )))
+            }
+            (Curve::IntersectionCurve(_), Curve::IntersectionCurve(_)) => unimplemented!(),
+            _ => unreachable!(),
         },
     )
 }

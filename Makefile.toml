@@ -33,6 +33,7 @@ args = [
 	"-p", "truck-meshalgo",
 	"-p", "truck-modeling",
 	"-p", "truck-shapeops",
+	"-p", "truck-stepio",
 	"--", "--nocapture",
 ]
 

@@ -6,6 +6,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 - Refactoring Search(Nearest)Parameter.
 - Converting express `trimmed_curve` to truck `TrimmedCurve`.
+- Use Line in modeling and simplify output shape of tsweep.
 
 ## v0.4
 
