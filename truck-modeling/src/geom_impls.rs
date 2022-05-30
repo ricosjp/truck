@@ -1,11 +1,6 @@
 use crate::*;
 use std::f64::consts::PI;
 
-pub(super) fn line<T>(pt0: T, pt1: T) -> BSplineCurve<T> {
-    let knot_vec = KnotVec::bezier_knot(1);
-    BSplineCurve::debug_new(knot_vec, vec![pt0, pt1])
-}
-
 pub(super) fn circle_arc_by_three_points(
     point0: Vector4,
     point1: Vector4,

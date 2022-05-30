@@ -124,6 +124,7 @@ impl MyApp {
             .for_each(|edge| {
                 let curve = edge.oriented_curve();
                 bdd_box += match curve {
+                    Curve::Line(line) => vec![line.0, line.1].into_iter().collect(),
                     Curve::BSplineCurve(curve) => {
                         let bdb = curve.roughly_bounding_box();
                         vec![*bdb.max(), *bdb.min()].into_iter().collect()

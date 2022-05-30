@@ -90,6 +90,18 @@ where
     }
 }
 
+impl<P: EuclideanSpace, M: Transform<P>> Transformed<M> for Line<P> {
+    #[inline]
+    fn transform_by(&mut self, trans: M) {
+        self.0 = trans.transform_point(self.0);
+        self.1 = trans.transform_point(self.1);
+    }
+    #[inline]
+    fn transformed(&self, trans: M) -> Self {
+        Line(trans.transform_point(self.0), trans.transform_point(self.1))
+    }
+}
+
 #[test]
 fn line() {
     let line = Line(Point2::new(1.0, 0.0), Point2::new(0.0, 1.0));

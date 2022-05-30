@@ -71,6 +71,41 @@ where
 impl_step_length!(Vector2, 2);
 impl_step_length!(Vector3, 2);
 
+impl<'a, P> Display for StepDisplay<&'a Line<P>>
+where
+    P: EuclideanSpace + Copy,
+    StepDisplay<P>: Display,
+    StepDisplay<P::Diff>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.write_fmt(format_args!(
+            "#{idx} = LINE('', #{pnt_idx}, #{dir_idx});\n{pnt}{dir}",
+            idx = self.idx,
+            pnt_idx = self.idx + 1,
+            dir_idx = self.idx + 2,
+            pnt = StepDisplay::new(self.entity.0, self.idx + 1),
+            dir = StepDisplay::new(self.entity.1 - self.entity.0, self.idx + 2),
+        ))
+    }
+}
+
+impl<P> Display for StepDisplay<Line<P>>
+where
+    P: EuclideanSpace + Copy,
+    StepDisplay<P>: Display,
+    StepDisplay<P::Diff>: Display,
+{
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
+    }
+}
+
+impl<P> StepLength for Line<P> {
+    #[inline]
+    fn step_length(&self) -> usize { 4 }
+}
+
 impl<'a, P> Display for StepDisplay<&'a BSplineCurve<P>>
 where
     P: Copy,
@@ -102,6 +137,7 @@ where
     P: Copy,
     StepDisplay<P>: Display,
 {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
@@ -159,6 +195,7 @@ where
     V::Point: Copy,
     StepDisplay<V::Point>: Display,
 {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
@@ -167,6 +204,7 @@ where
 impl<'a> Display for StepDisplay<&'a ModelingCurve> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.entity {
+            ModelingCurve::Line(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::BSplineCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::NURBSCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::IntersectionCurve(_) => unimplemented!(),
@@ -183,6 +221,7 @@ impl Display for StepDisplay<ModelingCurve> {
 impl StepLength for ModelingCurve {
     fn step_length(&self) -> usize {
         match self {
+            ModelingCurve::Line(_) => 4,
             ModelingCurve::BSplineCurve(x) => x.step_length(),
             ModelingCurve::NURBSCurve(x) => x.step_length(),
             ModelingCurve::IntersectionCurve(_) => unimplemented!(),
