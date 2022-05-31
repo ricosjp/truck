@@ -208,15 +208,15 @@ where
         self.surface0.transform_by(trans);
         self.surface1.transform_by(trans);
         self.leader.transform_by(trans);
-        let a = trans;
-        self.tol *= a[0][0] * a[0][0]
-            + a[0][1] * a[0][1]
-            + a[0][2] * a[0][2]
-            + a[1][0] * a[1][0]
-            + a[1][1] * a[1][1]
-            + a[1][2] * a[1][2]
-            + a[2][0] * a[2][0]
-            + a[2][1] * a[2][1]
-            + a[2][2] * a[2][2];
+        self.tol *= trans.norm_l2();
+    }
+}
+
+impl<C: BoundedCurve> IntersectionCurve<C, Plane> {
+    /// Optimizes intersection curve of [`Plane`] into [`Line`].
+    #[inline]
+    pub fn optimize(&self) -> Line<C::Point> {
+        let (s, t) = self.leader.parameter_range();
+        Line(self.leader.subs(s), self.leader.subs(t))
     }
 }

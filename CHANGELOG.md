@@ -8,6 +8,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - Converting express `trimmed_curve` to truck `TrimmedCurve`.
 - Use Line in modeling and simplify output shape of tsweep.
 - Set `from_other_crate` feature for `truck-stepio` to stop rls building ap203.
+- `IntersectionCurve` between `Plane`s can now be converted to `Line`.
 
 ## v0.4
 
