@@ -173,6 +173,27 @@ impl<P, C, S> Solid<P, C, S> {
         res
     }
 
+    /// Cut a face with `face_id` by edge.
+    #[inline(always)]
+    pub fn cut_face_by_edge(&mut self, face_id: FaceID<S>, edge: Edge<P, C>) -> bool
+    where S: Clone {
+        let tuple = self.boundaries.iter_mut().find_map(|shell| {
+            let find_res = shell
+                .face_iter_mut()
+                .enumerate()
+                .find(move |(_, face)| face.id() == face_id)
+                .map(move |(i, _)| i);
+            find_res.map(move |i| (shell, i))
+        });
+        if let Some((shell, i)) = tuple {
+            if let Some(other) = shell[i].cut_by_edge(edge) {
+                shell.push(other);
+                return true;
+            }
+        }
+        false
+    }
+
     /// Creates display struct for debugging the solid.
     #[inline(always)]
     pub fn display(

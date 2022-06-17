@@ -23,7 +23,8 @@ gpu-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
-        - /root/.cargo/bin/rustup update
+        - /root/.cargo/bin/rustup toolchain uninstall stable
+        - /root/.cargo/bin/rustup toolchain install stable
         - /root/.cargo/bin/cargo make ci-gpu-test
     tags:
         - gpu
@@ -37,7 +38,8 @@ wasm-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     before_script:
-        - rustup update
+        - rustup toolchain uninstall stable
+        - rustup toolchain install stable
         - rustup target add wasm32-unknown-unknown
     script:
         - deno lint
