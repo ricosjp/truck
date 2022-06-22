@@ -1,6 +1,7 @@
 use super::{Result, *};
 use truck_geometry::*;
 use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
+use truck_polymesh::PolylineCurve;
 
 impl Display for StepDisplay<Point2> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -11,7 +12,7 @@ impl Display for StepDisplay<Point2> {
         ))
     }
 }
-impl_step_length!(Point2, 1);
+impl_const_step_length!(Point2, 1);
 
 impl Display for StepDisplay<Point3> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -22,7 +23,7 @@ impl Display for StepDisplay<Point3> {
         ))
     }
 }
-impl_step_length!(Point3, 1);
+impl_const_step_length!(Point3, 1);
 
 /// class for display `DIRECTION`.
 #[derive(Clone, Debug, Copy)]
@@ -68,30 +69,30 @@ where
         ))
     }
 }
-impl_step_length!(Vector2, 2);
-impl_step_length!(Vector3, 2);
+impl_const_step_length!(Vector2, 2);
+impl_const_step_length!(Vector3, 2);
 
 impl<'a, P> Display for StepDisplay<&'a Line<P>>
 where
-    P: EuclideanSpace + Copy,
+    P: EuclideanSpace + ConstStepLength,
     StepDisplay<P>: Display,
     StepDisplay<P::Diff>: Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let pnt_idx = self.idx + 1;
+        let dir_idx = self.idx + 1 + P::LENGTH;
         f.write_fmt(format_args!(
             "#{idx} = LINE('', #{pnt_idx}, #{dir_idx});\n{pnt}{dir}",
             idx = self.idx,
-            pnt_idx = self.idx + 1,
-            dir_idx = self.idx + 2,
-            pnt = StepDisplay::new(self.entity.0, self.idx + 1),
-            dir = StepDisplay::new(self.entity.1 - self.entity.0, self.idx + 2),
+            pnt = StepDisplay::new(self.entity.0, pnt_idx),
+            dir = StepDisplay::new(self.entity.1 - self.entity.0, dir_idx),
         ))
     }
 }
 
 impl<P> Display for StepDisplay<Line<P>>
 where
-    P: EuclideanSpace + Copy,
+    P: EuclideanSpace + ConstStepLength,
     StepDisplay<P>: Display,
     StepDisplay<P::Diff>: Display,
 {
@@ -101,14 +102,40 @@ where
     }
 }
 
-impl<P> StepLength for Line<P> {
-    #[inline]
-    fn step_length(&self) -> usize { 4 }
+impl<P> ConstStepLength for Line<P>
+where
+    P: EuclideanSpace + ConstStepLength,
+    P::Diff: ConstStepLength,
+{
+    const LENGTH: usize = 1 + P::LENGTH + P::Diff::LENGTH;
+}
+
+impl<'a, P> Display for StepDisplay<&'a PolylineCurve<P>>
+where
+    P: Copy + ConstStepLength,
+    StepDisplay<P>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let idx = self.idx;
+        f.write_fmt(format_args!(
+            "#{idx} = POLYLINE('', {range});\n",
+            range = IndexSliceDisplay(idx + 1..=idx + self.entity.0.len())
+        ))?;
+        self.entity
+            .0
+            .iter()
+            .enumerate()
+            .try_for_each(|(i, p)| Display::fmt(&StepDisplay::new(*p, idx + 1 + i * P::LENGTH), f))
+    }
+}
+
+impl<P: ConstStepLength> StepLength for PolylineCurve<P> {
+    fn step_length(&self) -> usize { 1 + self.0.len() * P::LENGTH }
 }
 
 impl<'a, P> Display for StepDisplay<&'a BSplineCurve<P>>
 where
-    P: Copy,
+    P: Copy + ConstStepLength,
     StepDisplay<P>: Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -119,12 +146,12 @@ where
             .control_points()
             .iter()
             .enumerate()
-            .map(|(i, p)| StepDisplay::new(*p, idx + i + 1))
+            .map(|(i, p)| StepDisplay::new(*p, idx + 1 + i * P::LENGTH))
             .collect::<Vec<_>>();
         f.write_fmt(format_args!(
 			"#{idx} = B_SPLINE_CURVE_WITH_KNOTS('', {degree}, {control_points_list}, .UNSPECIFIED., .U., .U., {knot_multiplicities}, {knots}, .UNSPECIFIED.);\n{control_points_instances}",
             degree = curve.degree(),
-            control_points_list = IndexSliceDisplay(self.idx + 1..=self.idx + curve.control_points().len()),
+            control_points_list = IndexSliceDisplay((self.idx + 1..=self.idx + curve.control_points().len() * P::LENGTH).step_by(P::LENGTH)),
 			knot_multiplicities = SliceDisplay(&multi),
             knots = SliceDisplay(&knots),
             control_points_instances = SliceDisplay(&control_points_instances),
@@ -134,7 +161,7 @@ where
 
 impl<P> Display for StepDisplay<BSplineCurve<P>>
 where
-    P: Copy,
+    P: Copy + ConstStepLength,
     StepDisplay<P>: Display,
 {
     #[inline]
@@ -150,7 +177,7 @@ impl<P> StepLength for BSplineCurve<P> {
 impl<'a, V> Display for StepDisplay<&'a NURBSCurve<V>>
 where
     V: Homogeneous<f64>,
-    V::Point: Copy,
+    V::Point: ConstStepLength,
     StepDisplay<V::Point>: Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -161,7 +188,7 @@ where
             .control_points()
             .iter()
             .enumerate()
-            .map(|(i, v)| StepDisplay::new(v.to_point(), idx + i + 1))
+            .map(|(i, v)| StepDisplay::new(v.to_point(), idx + 1 + i * V::Point::LENGTH))
             .collect::<Vec<_>>();
         let weights = curve
             .control_points()
@@ -179,8 +206,10 @@ where
     REPRESENTATION_ITEM('')
 );\n{control_points_instances}",
             degree = curve.degree(),
-            control_points_list =
-                IndexSliceDisplay(self.idx + 1..=self.idx + curve.control_points().len()),
+            control_points_list = IndexSliceDisplay(
+                (self.idx + 1..=self.idx + curve.control_points().len() * V::Point::LENGTH)
+                    .step_by(V::Point::LENGTH)
+            ),
             knot_multiplicities = SliceDisplay(&multi),
             knots = SliceDisplay(&knots),
             weights = SliceDisplay(&weights),
@@ -192,12 +221,45 @@ where
 impl<V> Display for StepDisplay<NURBSCurve<V>>
 where
     V: Homogeneous<f64>,
-    V::Point: Copy,
+    V::Point: ConstStepLength,
     StepDisplay<V::Point>: Display,
 {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
+    }
+}
+
+impl<'a, C, S> Display for StepDisplay<&'a IntersectionCurve<C, S>>
+where
+    C: StepLength,
+    S: StepLength,
+    StepDisplay<&'a C>: Display,
+    StepDisplay<&'a S>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let idx = self.idx;
+        let curve_idx = idx + 1;
+        let surface0_idx = curve_idx + self.entity.leader().step_length();
+        let surface1_idx = surface0_idx + self.entity.surface0().step_length();
+        f.write_fmt(format_args!(
+            "#{idx} = INTERSECTION_CURVE('', #{curve_idx}, (#{surface0_idx}, #{surface1_idx}), .CURVE_3D.);\n"
+        ))?;
+        Display::fmt(&StepDisplay::new(self.entity.leader(), curve_idx), f)?;
+        Display::fmt(&StepDisplay::new(self.entity.surface0(), surface0_idx), f)?;
+        Display::fmt(&StepDisplay::new(self.entity.surface1(), surface1_idx), f)
+    }
+}
+
+impl<C, S> StepLength for IntersectionCurve<C, S>
+where
+    C: StepLength,
+    S: StepLength,
+{
+    fn step_length(&self) -> usize {
+        1 + self.leader().step_length()
+            + self.surface0().step_length()
+            + self.surface1().step_length()
     }
 }
 
@@ -207,7 +269,7 @@ impl<'a> Display for StepDisplay<&'a ModelingCurve> {
             ModelingCurve::Line(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::BSplineCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::NURBSCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
-            ModelingCurve::IntersectionCurve(_) => unimplemented!(),
+            ModelingCurve::IntersectionCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
         }
     }
 }
@@ -221,10 +283,10 @@ impl Display for StepDisplay<ModelingCurve> {
 impl StepLength for ModelingCurve {
     fn step_length(&self) -> usize {
         match self {
-            ModelingCurve::Line(_) => 4,
+            ModelingCurve::Line(_) => Line::<Point3>::LENGTH,
             ModelingCurve::BSplineCurve(x) => x.step_length(),
             ModelingCurve::NURBSCurve(x) => x.step_length(),
-            ModelingCurve::IntersectionCurve(_) => unimplemented!(),
+            ModelingCurve::IntersectionCurve(x) => x.step_length(),
         }
     }
 }
