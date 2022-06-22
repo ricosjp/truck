@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix clippy new lint.
 - Adds `cut_face_by_edge` to `Solid`.
 - Refactoring Search(Nearest)Parameter.
 - Converting express `trimmed_curve` to truck `TrimmedCurve`.
