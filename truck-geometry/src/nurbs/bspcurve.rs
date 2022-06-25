@@ -1,6 +1,5 @@
 use super::*;
 use crate::errors::Error;
-use std::collections::BinaryHeap;
 use std::ops::*;
 
 impl<P> BSplineCurve<P> {
@@ -1338,31 +1337,6 @@ fn test_parameter_division() {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct QKnotIdx {
-    level: u32,
-    idx: u32,
-}
-
-impl QKnotIdx {
-    #[inline(always)]
-    fn into_knot(self) -> f64 { (2 * self.idx + 1) as f64 / f64::powi(2.0, self.level as i32) }
-}
-
-impl PartialOrd for QKnotIdx {
-    #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        let a = (2 * self.idx + 1) * u32::pow(2, other.level);
-        let b = (2 * other.idx + 1) * u32::pow(2, self.level);
-        a.partial_cmp(&b)
-    }
-}
-
-impl Ord for QKnotIdx {
-    #[inline(always)]
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering { self.partial_cmp(other).unwrap() }
-}
-
 impl<P> BSplineCurve<P>
 where
     P: ControlPoint<f64>
@@ -1372,22 +1346,95 @@ where
         + HashGen<f64>,
     <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
-    /// Approximate `curve` by quadratic bspline curve.
+    fn cubic_bezier_interpolation(
+        pt0: P,
+        pt1: P,
+        der0: <P as EuclideanSpace>::Diff,
+        der1: <P as EuclideanSpace>::Diff,
+        range: (f64, f64),
+    ) -> Self {
+        let width = range.1 - range.0;
+        let mut knot_vec = KnotVec::bezier_knot(3);
+        knot_vec.transform(width, range.0);
+        Self::debug_new(
+            knot_vec,
+            vec![pt0, pt0 + der0 * width / 3.0, pt1 - der1 * width / 3.0, pt1],
+        )
+    }
+
+    fn sub_cubic_approximation<C>(
+        curve: &C,
+        range: (f64, f64),
+        ends: (P, P),
+        enders: (<P as EuclideanSpace>::Diff, <P as EuclideanSpace>::Diff),
+        p_tol: f64,
+        d_tol: f64,
+        trialis: usize,
+    ) -> Option<Self>
+    where
+        C: ParametricCurve<Point = P, Vector = <P as EuclideanSpace>::Diff>,
+    {
+        let bezier = Self::cubic_bezier_interpolation(ends.0, ends.1, enders.0, enders.1, range);
+        let gen = ends.0.midpoint(ends.1);
+        let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+        let t = range.0 * (1.0 - p) + range.1 * p;
+        let pt0 = bezier.subs(t);
+        let pt1 = curve.subs(t);
+        let der0 = bezier.der(t);
+        let der1 = curve.der(t);
+        let pt_dist2 = pt0.distance2(pt1);
+        let der_dist2 = (der0 - der1).magnitude2();
+        if pt_dist2 > p_tol * p_tol || der_dist2 > d_tol * d_tol {
+            if trialis == 0 {
+                return None;
+            }
+            let t = (range.0 + range.1) / 2.0;
+            let pt = curve.subs(t);
+            let der = curve.der(t);
+            let bspcurve0 = Self::sub_cubic_approximation(
+                curve,
+                (range.0, t),
+                (ends.0, pt),
+                (enders.0, der),
+                p_tol,
+                d_tol,
+                trialis - 1,
+            );
+            let bspcurve1 = Self::sub_cubic_approximation(
+                curve,
+                (t, range.1),
+                (pt, ends.1),
+                (der, enders.1),
+                p_tol,
+                d_tol,
+                trialis - 1,
+            );
+            match (bspcurve0, bspcurve1) {
+                (Some(x), Some(y)) => x.try_concat(&y).ok(),
+                _ => None,
+            }
+        } else {
+            Some(bezier)
+        }
+    }
+
+    /// C^1-approximation for `curve` by cubic Bspline curve.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
+    /// use std::f64::consts::PI;
     /// let circle = UnitCircle::<Point2>::new();
-    /// let bspcurve = BSplineCurve::quadratic_approximation(&circle, (0.0, 1.0), 0.1, 0.1).unwrap();
+    /// let bspcurve = BSplineCurve::cubic_approximation(&circle, (-PI, PI), 0.01, 0.01, 10).unwrap();
     /// println!("{bspcurve:?}");
     ///
     /// const N: usize = 100;
     /// for i in 0..N {
     ///     let t = i as f64 / N as f64;
-    ///     assert!(circle.subs(t).distance(bspcurve.subs(t)) < 0.02, "{i} {:?} {:?}", circle.subs(t), bspcurve.subs(t));
-    ///     assert!((circle.der(t) - bspcurve.der(t)).magnitude() < 2.0, "{i} {:?} {:?}", circle.der(t), bspcurve.der(t));
+    ///     assert!(circle.subs(t).distance(bspcurve.subs(t)) < 0.02);
+    ///     assert!((circle.der(t) - bspcurve.der(t)).magnitude() < 0.02);
     /// }
     /// ```
-    pub fn quadratic_approximation<C>(
+    pub fn cubic_approximation<C>(
         curve: &C,
         range: (f64, f64),
         p_tol: f64,
@@ -1397,125 +1444,27 @@ where
     where
         C: ParametricCurve<Point = P, Vector = <P as EuclideanSpace>::Diff>,
     {
-        let mut bheap = BinaryHeap::default();
-        for level in 1..trials as u32 {
-            let bspcurve = Self::from_binaryheap(curve, range, bheap.clone());
-            let mut added = false;
-            for idx in 0..u32::pow(2, level - 1) {
-                let qkidx = QKnotIdx { idx, level };
-                let t = qkidx.into_knot();
-                let gen = bspcurve.subs((1.0 - t) * range.0 + t * range.1);
-                let pert = 1.0 / (4.0 * f64::powi(2.0, level as i32));
-                let t = t + (2.0 * HashGen::hash1(gen) - 1.0) * pert;
-                let t = (1.0 - t) * range.0 + t * range.1;
-                let pt0 = bspcurve.subs(t);
-                let pt1 = curve.subs(t);
-                let der0 = bspcurve.der(t);
-                let der1 = curve.der(t);
-                let pt_dist2 = pt0.distance2(pt1);
-                let der_dist2 = (der0 - der1).magnitude2();
-                if pt_dist2 > p_tol * p_tol || der_dist2 > d_tol * d_tol
-                {
-                    bheap.push(qkidx);
-                    added = true;
-                }
-            }
-            if !added {
-                return Some(bspcurve);
-            }
-        }
-        None
-    }
-
-    fn from_binaryheap<C>(curve: &C, range: (f64, f64), bheap: BinaryHeap<QKnotIdx>) -> Self
-    where C: ParametricCurve<Point = P, Vector = <P as EuclideanSpace>::Diff> {
-        let vec = bheap.into_sorted_vec();
-        let max_level = vec
-            .iter()
-            .copied()
-            .max_by(|x, y| x.level.cmp(&y.level))
-            .map(|x| x.level)
-            .unwrap_or(0);
-        let width = range.1 - range.0;
-        let pert = width / (3.0 * f64::powi(2.0, max_level as i32));
-
-        let pt = curve.subs(range.0);
-        let der = curve.der(range.0);
-        let fknot = match vec.is_empty() {
-            true => width,
-            false => width * vec[0].into_knot(),
-        } - pert;
-
-        let mut knot_vec = vec![range.0; 3];
-        let mut control_points = vec![pt, pt + der * fknot / 2.0];
-        let coef = pert / 2.0;
-        vec.into_iter().for_each(|t| {
-            let t = range.0 + width * t.into_knot();
-            let pt = curve.subs(t);
-            let der = curve.der(t);
-            knot_vec.extend(&[t - pert, t, t, t + pert]);
-            control_points.extend(&[pt - der * coef, pt, pt, pt + der * coef]);
-        });
-        let pt = curve.subs(range.1);
-        let der = curve.der(range.1);
-        knot_vec.extend(&[range.1 - pert, range.1, range.1, range.1]);
-        control_points.extend(&[pt - der * coef, pt]);
-        let mut bsp = Self::new_unchecked(KnotVec(knot_vec), control_points);
-        bsp.optimize();
-        bsp
+        let ends = (curve.subs(range.0), curve.subs(range.1));
+        let enders = (curve.der(range.0), curve.der(range.1));
+        Self::sub_cubic_approximation(curve, range, ends, enders, p_tol, d_tol, trials).map(
+            |mut x| {
+                x.optimize();
+                x
+            },
+        )
     }
 }
 
 #[test]
-fn from_binaryheap_test() {
-    let circle = UnitCircle::<Point2>::new();
-
-    // empty
-    let bspcurve = BSplineCurve::from_binaryheap(&circle, (1.43, 2.75), Default::default());
-    assert_eq!(bspcurve.degree(), 2);
-    assert_near!(bspcurve.subs(1.43), circle.subs(1.43));
-    assert_near!(bspcurve.der(1.43), circle.der(1.43));
-    assert_near!(bspcurve.subs(2.75), circle.subs(2.75));
-    assert_near!(bspcurve.der(2.75), circle.der(2.75));
-
-    // all level two
-    let bheap = BinaryHeap::from([
-        QKnotIdx { idx: 0, level: 1 },
-        QKnotIdx { idx: 0, level: 2 },
-        QKnotIdx { idx: 1, level: 2 },
-    ]);
-    let bspcurve = BSplineCurve::from_binaryheap(&circle, (1.43, 2.75), bheap);
-    println!("{bspcurve:?}");
-    assert_eq!(bspcurve.degree(), 2);
-    for i in 0..=4 {
-        let t = i as f64 / 4.0;
-        let t = (1.0 - t) * 1.43 + t * 2.75;
-        assert_near!(bspcurve.subs(t), circle.subs(t), "{t}");
-        assert_near!(bspcurve.der(t), circle.der(t), "{t}");
-    }
-}
-
-#[test]
-fn quadratic_approximation_test() {
-    let circle = UnitCircle::<Point2>::new();
-    let range = (0.0, std::f64::consts::PI * 3.0 / 2.0);
-    let bspcurve = BSplineCurve::quadratic_approximation(&circle, range, 0.1, 2.0, 10).unwrap();
-    println!("{bspcurve:?}");
-
-    const N: usize = 100;
-    for i in 0..=N {
-        let t = range.0 + (range.1 - range.0) * i as f64 / N as f64;
-        assert!(
-            circle.subs(t).distance(bspcurve.subs(t)) < 0.1,
-            "{i} {:?} {:?}",
-            circle.subs(t),
-            bspcurve.subs(t)
-        );
-        assert!(
-            (circle.der(t) - bspcurve.der(t)).magnitude() < 2.0,
-            "{i} {:?} {:?}",
-            circle.der(t),
-            bspcurve.der(t)
-        );
-    }
+fn cubic_bezier_interpolation_test() {
+    let pt0 = Point2::new(0.0, 0.0);
+    let pt1 = Point2::new(1.0, 0.0);
+    let der0 = Vector2::new(0.5, 1.0);
+    let der1 = Vector2::new(0.5, -1.0);
+    let bspcurve = BSplineCurve::cubic_bezier_interpolation(pt0, pt1, der0, der1, (1.23, 3.45));
+    let der = bspcurve.derivation();
+    assert_near!(bspcurve.front(), pt0);
+    assert_near!(bspcurve.back(), pt1);
+    assert_near!(der.front(), der0);
+    assert_near!(der.back(), der1);
 }
