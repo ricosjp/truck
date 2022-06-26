@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
 	"truck-base",
+	"truck-geoderive",
 	"truck-geotrait",
 	"truck-geometry",
 	"truck-modeling",

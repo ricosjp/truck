@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Derive macros for geometric traits.
 - Implement cubic B-spline approximation.
 - Fix clippy new lint.
 - Adds `cut_face_by_edge` to `Solid`.
