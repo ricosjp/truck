@@ -92,7 +92,11 @@ impl BoundedSurface for PolySurface {
 }
 
 impl ParameterDivision2D for PolySurface {
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
         algo::surface::parameter_division(self, range, tol)
     }
 }
