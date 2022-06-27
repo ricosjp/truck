@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::ops::Index;
 
 /// bounding box
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct BoundingBox<V>(V, V);
 
 /// The trait for defining the bounding box

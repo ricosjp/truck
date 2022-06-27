@@ -57,6 +57,17 @@ impl<C, S> IntersectionCurve<C, S> {
     #[doc(hidden)]
     #[inline(always)]
     pub fn leader_mut(&mut self) -> &mut C { &mut self.leader }
+    /// Change leader.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn change_leader<D>(self, f: impl FnOnce(C) -> D) -> IntersectionCurve<D, S> {
+        IntersectionCurve {
+            surface0: self.surface0,
+            surface1: self.surface1,
+            leader: f(self.leader),
+            tol: self.tol,
+        }
+    }
     /// The tolerance for generating this intersection curve.
     #[inline(always)]
     pub fn tolerance(&self) -> f64 { self.tol }

@@ -67,7 +67,7 @@ pub struct StandardVertex {
 ///
 /// To optimize for the case where the polygon mesh consists only triangles and quadrangle,
 /// there are vectors which consist by each triangles and quadrilaterals, internally.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Faces<V = StandardVertex> {
     tri_faces: Vec<[V; 3]>,
     quad_faces: Vec<[V; 4]>,
@@ -79,7 +79,7 @@ pub struct Faces<V = StandardVertex> {
 /// The polygon data is held in a method compliant with wavefront obj.
 /// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
 /// and each face vertex accesses those values by an indices triple.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PolygonMesh<V = StandardVertex, A = StandardAttributes> {
     attributes: A,
     faces: Faces<V>,
@@ -94,7 +94,7 @@ pub struct StructuredMesh {
 }
 
 /// polyline curve
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PolylineCurve<P>(pub Vec<P>);
 
 mod attributes;

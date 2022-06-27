@@ -99,7 +99,7 @@ where
     C: ParametricCurve,
     C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
 {
-    let gen = curve.subs((range.0 + range.1) / 2.0);
+    let gen = ends.0.midpoint(ends.1);
     let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
     let t = range.0 * (1.0 - p) + range.1 * p;
     let mid = ends.0 + (ends.1 - ends.0) * p;
