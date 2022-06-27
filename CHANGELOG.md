@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Intersection curve with B-spline leader.
 - Derive macros for geometric traits.
 - Implement cubic B-spline approximation.
 - Fix clippy new lint.
