@@ -1,6 +1,6 @@
 use super::{Result, *};
 use truck_geometry::*;
-use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface, Leader};
+use truck_modeling::{Curve as ModelingCurve, Leader, Surface as ModelingSurface};
 use truck_polymesh::PolylineCurve;
 
 impl Display for StepDisplay<Point2> {
@@ -291,7 +291,6 @@ impl<'a> Display for StepDisplay<&'a ModelingCurve> {
         }
     }
 }
-
 
 impl Display for StepDisplay<ModelingCurve> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
