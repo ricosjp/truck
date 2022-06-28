@@ -16,7 +16,12 @@ fn main() {
     let and = truck_shapeops::and(&cube, &cylinder, 0.05).unwrap();
     and.edge_iter().for_each(|edge| {
         let mut curve = edge.get_curve();
-        curve.to_spline_leader(0.1, 0.1, 10);
+        if let Curve::IntersectionCurve(inter) = &curve {
+            if matches! { inter.leader(), Leader::Polyline(_) } {
+                let flag = curve.to_bspline_leader(0.01, 0.1, 20);
+                println!("{flag}");
+            }
+        }
         edge.set_curve(curve);
     });
 

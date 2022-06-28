@@ -1,6 +1,6 @@
 use super::{Result, *};
 use truck_geometry::*;
-use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
+use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface, Leader};
 use truck_polymesh::PolylineCurve;
 
 impl Display for StepDisplay<Point2> {
@@ -263,6 +263,24 @@ where
     }
 }
 
+impl<'a> Display for StepDisplay<&'a Leader> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self.entity {
+            Leader::Polyline(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
+            Leader::BSpline(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
+        }
+    }
+}
+
+impl StepLength for Leader {
+    fn step_length(&self) -> usize {
+        match self {
+            Leader::Polyline(x) => x.step_length(),
+            Leader::BSpline(x) => x.step_length(),
+        }
+    }
+}
+
 impl<'a> Display for StepDisplay<&'a ModelingCurve> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.entity {
@@ -273,6 +291,7 @@ impl<'a> Display for StepDisplay<&'a ModelingCurve> {
         }
     }
 }
+
 
 impl Display for StepDisplay<ModelingCurve> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {

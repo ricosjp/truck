@@ -520,7 +520,7 @@ where
                             &surface1,
                             &mut gemap0,
                         )?;
-                        let polyline = intersection_curve.leader_mut();
+                        let polyline = intersection_curve.editor().leader;
                         *polyline.first_mut().unwrap() = gv0.get_point();
                     }
                     let idx01 =
@@ -533,7 +533,7 @@ where
                             &surface1,
                             &mut gemap1,
                         )?;
-                        let polyline = intersection_curve.leader_mut();
+                        let polyline = intersection_curve.editor().leader;
                         *polyline.last_mut().unwrap() = gv1.get_point();
                     }
                     let idx10 =
@@ -546,7 +546,7 @@ where
                             &surface0,
                             &mut gemap0,
                         )?;
-                        let polyline = intersection_curve.leader_mut();
+                        let polyline = intersection_curve.editor().leader;
                         *polyline.first_mut().unwrap() = gv0.get_point();
                     }
                     let idx11 =
@@ -559,7 +559,7 @@ where
                             &surface0,
                             &mut gemap1,
                         )?;
-                        let polyline = intersection_curve.leader_mut();
+                        let polyline = intersection_curve.editor().leader;
                         *polyline.last_mut().unwrap() = gv1.get_point();
                     }
                     let pedge = Edge::new(&pv0, &pv1, polyline);

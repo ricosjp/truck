@@ -43,6 +43,16 @@ where
     None
 }
 
+/// Mutable editor for `IntersectionCurve`.
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct IntersectionCurveEditor<'a, C, S> {
+    pub surface0: &'a mut S,
+    pub surface1: &'a mut S,
+    pub leader: &'a mut C,
+    pub tol: &'a mut f64,
+}
+
 impl<C, S> IntersectionCurve<C, S> {
     /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
     #[inline(always)]
@@ -53,10 +63,17 @@ impl<C, S> IntersectionCurve<C, S> {
     /// Returns the polyline leading this curve.
     #[inline(always)]
     pub fn leader(&self) -> &C { &self.leader }
-    /// Returns the polyline leading this curve.
+    /// Returns editor for `IntersectionCurve`. This method is only for developers, do not use.
     #[doc(hidden)]
     #[inline(always)]
-    pub fn leader_mut(&mut self) -> &mut C { &mut self.leader }
+    pub fn editor(&mut self) -> IntersectionCurveEditor<'_, C, S> {
+        IntersectionCurveEditor {
+            surface0: &mut self.surface0,
+            surface1: &mut self.surface1,
+            leader: &mut self.leader,
+            tol: &mut self.tol,
+        }
+    }
     /// Change leader.
     #[doc(hidden)]
     #[inline(always)]
@@ -88,7 +105,10 @@ where
     C: ParametricCurve3D,
     S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
-    /// search triple value
+    /// Search triple value of the point corresponding to the parameter `t`.
+    /// - the coordinate on 3D space
+    /// - the uv coordinate on `self.surface0()`
+    /// - the uv coordinate on `self.surface1()`
     #[inline(always)]
     pub fn search_triple(&self, t: f64) -> Option<(Point3, Point2, Point2)> {
         double_projection(
