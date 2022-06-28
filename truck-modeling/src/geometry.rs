@@ -126,23 +126,24 @@ impl Curve {
         }
     }
     /// Make the leaders of `IntersectionCurve`s B-spline curves.
-    pub fn to_spline_leader(&mut self, p_tol: f64, d_tol: f64, trials: usize) -> bool {
+    pub fn to_bspline_leader(&mut self, p_tol: f64, d_tol: f64, trials: usize) -> bool {
         if let Curve::IntersectionCurve(ref mut curve) = self {
-            if let Some(bspcurve) = BSplineCurve::cubic_approximation(
-                curve,
-                curve.parameter_range(),
-                p_tol,
-                d_tol,
-                trials,
-            ) {
-                *curve.leader_mut() = Leader::BSpline(bspcurve);
-                true
-            } else {
-                false
+            if matches!(curve.leader(), Leader::Polyline(_)) {
+                if let Some(bspcurve) = BSplineCurve::cubic_approximation(
+                    curve,
+                    curve.parameter_range(),
+                    p_tol,
+                    d_tol,
+                    trials,
+                ) {
+                    let editor = curve.editor();
+                    *editor.leader = Leader::BSpline(bspcurve);
+                    *editor.tol = p_tol;
+                    return true;
+                }
             }
-        } else {
-            false
         }
+        false
     }
 }
 

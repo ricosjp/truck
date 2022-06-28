@@ -95,7 +95,7 @@ pub trait SearchParameter<Dim: SPDimension> {
         &self,
         point: Self::Point,
         hint: H,
-        trial: usize,
+        trials: usize,
     ) -> Option<Dim::Parameter>;
 }
 
@@ -105,9 +105,9 @@ impl<'a, Dim: SPDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for &'a
         &self,
         point: Self::Point,
         hint: H,
-        trial: usize,
+        trials: usize,
     ) -> Option<Dim::Parameter> {
-        T::search_parameter(*self, point, hint, trial)
+        T::search_parameter(*self, point, hint, trials)
     }
 }
 
@@ -117,9 +117,9 @@ impl<Dim: SPDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for Box<T> 
         &self,
         point: Self::Point,
         hint: H,
-        trial: usize,
+        trials: usize,
     ) -> Option<Dim::Parameter> {
-        T::search_parameter(&**self, point, hint, trial)
+        T::search_parameter(&**self, point, hint, trials)
     }
 }
 

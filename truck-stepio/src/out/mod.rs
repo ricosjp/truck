@@ -112,17 +112,26 @@ impl<T> StepDisplay<T> {
     pub fn new(entity: T, idx: usize) -> Self { Self { entity, idx } }
 }
 
+/// Constant numbers of lines for outputting an object to a STEP file.
+pub trait ConstStepLength {
+    /// the number of line
+    const LENGTH: usize;
+}
+
 /// Calculate how many lines are used in outputting an object to a STEP file
 pub trait StepLength {
     /// Calculate how many lines are used in outputting an object to a STEP file
     fn step_length(&self) -> usize;
 }
 
-macro_rules! impl_step_length {
+impl<T: ConstStepLength> StepLength for T {
+    fn step_length(&self) -> usize { T::LENGTH }
+}
+
+macro_rules! impl_const_step_length {
     ($type: ty, $len: expr) => {
-        impl StepLength for $type {
-            #[inline]
-            fn step_length(&self) -> usize { $len }
+        impl ConstStepLength for $type {
+            const LENGTH: usize = $len;
         }
     };
 }
