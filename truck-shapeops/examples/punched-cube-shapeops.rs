@@ -25,6 +25,6 @@ fn main() {
         edge.set_curve(curve);
     });
 
-    let json = serde_json::to_vec_pretty(&and.compress()).unwrap();
+    let json = serde_json::to_vec_pretty(&and).unwrap();
     std::fs::write("punched-cube-shapeops.json", &json).unwrap();
 }

@@ -113,7 +113,7 @@ impl MyApp {
         creator: &InstanceCreator,
         reader: R,
     ) -> (PolygonInstance, WireFrameInstance) {
-        let solid = Solid::extract(serde_json::from_reader(reader).unwrap()).unwrap();
+        let solid: Solid = serde_json::from_reader(reader).unwrap();
         let mut bdd_box = BoundingBox::new();
         solid
             .boundaries()

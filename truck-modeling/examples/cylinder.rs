@@ -14,6 +14,6 @@ fn cylinder(height: f64, radius: f64) -> Solid {
 
 fn main() {
     let cylinder = cylinder(1.0, 0.5);
-    let json = serde_json::to_vec_pretty(&cylinder.compress()).unwrap();
+    let json = serde_json::to_vec_pretty(&cylinder).unwrap();
     std::fs::write("cylinder.json", &json).unwrap();
 }

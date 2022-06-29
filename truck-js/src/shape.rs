@@ -97,18 +97,14 @@ macro_rules! impl_shape {
             }
             /// read shape from json
             pub fn from_json(data: &[u8]) -> Option<$type> {
-                truck_modeling::$type::extract(
-                    serde_json::from_reader(data)
-                        .map_err(|e| eprintln!("{}", e))
-                        .ok()?,
-                )
-                .map_err(|e| eprintln!("{}", e))
+                serde_json::from_reader::<_, truck_modeling::$type>(data)
+                .map_err(|e| println!("{}", e))
                 .ok()
                 .map(|res| res.into_wasm())
             }
             /// write shape from json
             pub fn to_json(&self) -> Vec<u8> {
-                serde_json::to_vec_pretty(&self.0.compress())
+                serde_json::to_vec_pretty(&self.0)
                     .map_err(|e| eprintln!("{}", e))
                     .unwrap()
             }

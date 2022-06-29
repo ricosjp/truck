@@ -15,7 +15,7 @@ fn main() {
         panic!("usage: tessellate_shape <input json file> <output json file>\nThe default <output file> is output.obj.")
     }
     let file = std::fs::File::open(&args[1]).unwrap();
-    let solid = Solid::extract(serde_json::from_reader(file).unwrap()).unwrap();
+    let solid: Solid = serde_json::from_reader(file).unwrap();
     let mut poly = solid.triangulation(0.01).unwrap().to_polygon();
     poly.put_together_same_attrs().remove_unused_attrs();
     let mut string = Vec::<u8>::new();

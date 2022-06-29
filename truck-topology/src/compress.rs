@@ -1,3 +1,10 @@
+//! Serialized data format for topological data structures
+//!
+//! Topological data structures in truck is subject to editing and has complex reference relationships.
+//! They are not suitable for direct serialization and must be converted to lighter and simpler data structures.
+//! These structures, prefixed with `Compressed`, are a group of structures that are easy to serialize,
+//! but not suitable for real-time shape editing.
+
 use crate::*;
 use rustc_hash::FxHashMap as HashMap;
 use serde::{Deserialize, Serialize};
@@ -294,4 +301,95 @@ fn same_topology<P, C, S, Q, D, T>(one: &Shell<P, C, S>, other: &Shell<Q, D, T>)
         }
     }
     true
+}
+
+impl<P, C, S> Serialize for Shell<P, C, S>
+where
+    P: Clone + Serialize,
+    C: Clone + Serialize,
+    S: Clone + Serialize,
+{
+    fn serialize<Serializer>(
+        &self,
+        serializer: Serializer,
+    ) -> std::result::Result<Serializer::Ok, Serializer::Error>
+    where
+        Serializer: serde::Serializer,
+    {
+        self.compress().serialize(serializer)
+    }
+}
+
+impl<'de, P, C, S> Deserialize<'de> for Shell<P, C, S>
+where
+    P: Clone + Deserialize<'de>,
+    C: Clone + Deserialize<'de>,
+    S: Clone + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        use serde::de::Error;
+        let compressed = CompressedShell::<P, C, S>::deserialize(deserializer)?;
+        Shell::extract(compressed).map_err(D::Error::custom)
+    }
+}
+
+impl<P, C, S> Serialize for Solid<P, C, S>
+where
+    P: Clone + Serialize,
+    C: Clone + Serialize,
+    S: Clone + Serialize,
+{
+    fn serialize<Serializer>(
+        &self,
+        serializer: Serializer,
+    ) -> std::result::Result<Serializer::Ok, Serializer::Error>
+    where
+        Serializer: serde::Serializer,
+    {
+        self.compress().serialize(serializer)
+    }
+}
+
+impl<'de, P, C, S> Deserialize<'de> for Solid<P, C, S>
+where
+    P: Clone + Deserialize<'de>,
+    C: Clone + Deserialize<'de>,
+    S: Clone + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        use serde::de::Error;
+        let compressed = CompressedSolid::<P, C, S>::deserialize(deserializer)?;
+        Solid::extract(compressed).map_err(D::Error::custom)
+    }
+}
+
+impl<P, C, S> Serialize for Face<P, C, S>
+where
+    P: Clone + Serialize,
+    C: Clone + Serialize,
+    S: Clone + Serialize,
+{
+    fn serialize<Serializer>(
+        &self,
+        serializer: Serializer,
+    ) -> std::result::Result<Serializer::Ok, Serializer::Error>
+    where
+        Serializer: serde::Serializer,
+    {
+        Shell::from(vec![self.clone()]).serialize(serializer)
+    }
+}
+
+impl<'de, P, C, S> Deserialize<'de> for Face<P, C, S>
+where
+    P: Clone + Deserialize<'de>,
+    C: Clone + Deserialize<'de>,
+    S: Clone + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        Shell::deserialize(deserializer).map(|mut shell| shell.pop().unwrap())
+    }
 }

@@ -1,5 +1,5 @@
 use super::{Result, *};
-use truck_topology::*;
+use truck_topology::{compress::*, *};
 
 #[derive(Clone, Debug)]
 struct StepShell<'a, P, C, S> {
@@ -19,7 +19,7 @@ where
     S: StepLength,
 {
     fn to_step_shell(&self) -> StepShell<'a, P, C, S> {
-        let shell = &self.entity;
+        let shell = self.entity;
         let faces = shell.faces();
         let edges = shell.edges();
         let vertices = shell.vertices();
@@ -219,5 +219,32 @@ where
                 Display::fmt(step_shell, f)
             })
         }
+    }
+}
+
+impl<'a, P, C, S> Display for StepDisplay<CompressedSolid<P, C, S>>
+where
+    P: Copy,
+    C: StepLength + 'a,
+    S: StepLength + 'a,
+    StepDisplay<P>: Display,
+    StepDisplay<&'a C>: Display,
+    StepDisplay<&'a S>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { Display::fmt(&self, f) }
+}
+
+impl<'a, P, C, S> Display for StepDisplay<&'a Solid<P, C, S>>
+where
+    P: Copy,
+    C: StepLength + Clone,
+    S: StepLength + Clone,
+    StepDisplay<P>: Display,
+    StepDisplay<&'a C>: Display + 'a,
+    StepDisplay<&'a S>: Display + 'a,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let compressed = self.entity.compress();
+        Display::fmt(&StepDisplay::new(compressed, self.idx), f)
     }
 }

@@ -22,6 +22,6 @@ fn main() {
     );
     let solid = Solid::new(vec![shell]);
     assert!(solid.is_geometric_consistent());
-    let json = serde_json::to_vec_pretty(&solid.compress()).unwrap();
+    let json = serde_json::to_vec_pretty(&solid).unwrap();
     std::fs::write("tsudumi.json", &json).unwrap();
 }
