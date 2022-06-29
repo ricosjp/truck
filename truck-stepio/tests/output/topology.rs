@@ -1,6 +1,6 @@
 use truck_modeling::*;
 use truck_stepio::out::*;
-use truck_topology::*;
+use truck_topology::compress::*;
 
 macro_rules! dir ( () => { concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/shape/") });
 

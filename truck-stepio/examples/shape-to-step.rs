@@ -9,7 +9,7 @@
 use std::env;
 use truck_modeling::*;
 use truck_stepio::out;
-use truck_topology::CompressedSolid;
+use truck_topology::compress::CompressedSolid;
 
 fn main() {
     let mut args = env::args().collect::<Vec<_>>();

@@ -374,7 +374,7 @@ pub enum SolidDisplayFormat {
     },
 }
 
-mod compress;
+pub mod compress;
 mod edge;
 /// classifies the errors that can occur in this crate.
 pub mod errors;
@@ -386,7 +386,6 @@ mod solid;
 mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
-pub use compress::{CompressedEdge, CompressedFace, CompressedShell, CompressedSolid};
 
 /// Display structs for debug or display topological elements
 pub mod format {
