@@ -330,7 +330,7 @@ where
     where D: serde::Deserializer<'de> {
         use serde::de::Error;
         let compressed = CompressedShell::<P, C, S>::deserialize(deserializer)?;
-        Shell::extract(compressed).map_err(|err| D::Error::custom(err))
+        Shell::extract(compressed).map_err(D::Error::custom)
     }
 }
 
@@ -361,7 +361,7 @@ where
     where D: serde::Deserializer<'de> {
         use serde::de::Error;
         let compressed = CompressedSolid::<P, C, S>::deserialize(deserializer)?;
-        Solid::extract(compressed).map_err(|err| D::Error::custom(err))
+        Solid::extract(compressed).map_err(D::Error::custom)
     }
 }
 

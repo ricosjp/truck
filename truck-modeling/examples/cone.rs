@@ -10,6 +10,6 @@ fn main() {
     let shell = builder::cone(&wire, Vector3::unit_y(), Rad(7.0));
     let cone = Solid::new(vec![shell]);
     assert!(cone.is_geometric_consistent());
-    let json = serde_json::to_vec_pretty(&cone.compress()).unwrap();
+    let json = serde_json::to_vec_pretty(&cone).unwrap();
     std::fs::write("cone.json", &json).unwrap();
 }
