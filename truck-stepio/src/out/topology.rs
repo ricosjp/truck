@@ -1,5 +1,5 @@
 use super::{Result, *};
-use truck_topology::{*, compress::*};
+use truck_topology::{compress::*, *};
 
 #[derive(Clone, Debug)]
 struct StepShell<'a, P, C, S> {
@@ -231,9 +231,7 @@ where
     StepDisplay<&'a C>: Display,
     StepDisplay<&'a S>: Display,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        Display::fmt(&self, f)
-    }
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { Display::fmt(&self, f) }
 }
 
 impl<'a, P, C, S> Display for StepDisplay<&'a Solid<P, C, S>>
