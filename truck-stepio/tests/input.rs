@@ -1,5 +1,6 @@
 use ruststep::{
     ast::{DataSection, Name},
+    primitive::Logical,
     tables::PlaceHolder,
 };
 use std::{collections::HashMap, str::FromStr};
@@ -21,6 +22,14 @@ fn read() {
 #10 = AXIS2_PLACEMENT_3D('Axis2Placement3d_1', #1, #2, $);
 #11 = AXIS2_PLACEMENT_3D('Axis2Placement3d_2', #1, $, #2);
 #12 = AXIS2_PLACEMENT_3D('Axis2Placement3d_3', #1, #2, #2);
+
+#13 = LINE('Line', #1, #3);
+#14 = POLYLINE('Polyline', (#1, #1, #1, #1, #1, #1));
+#15 = B_SPLINE_CURVE_WITH_KNOTS('BSplineCurveWithKnots', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED.,
+    .U., .U., (3, 1, 3), (0.0, 0.5, 1.0), .UNSPECIFIED.);
+#16 = BEZIER_CURVE('BezierCurve', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.);
+#17 = QUASI_UNIFORM_CURVE('QuasiUniformCurve', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.);
+#18 = UNIFORM_CURVE('UniformCurve', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.);
 ENDSEC;
 ",
     )
@@ -130,6 +139,99 @@ ENDSEC;
                 },
             ),
         ]),
+        line: HashMap::from_iter(vec![(
+            13,
+            LineHolder {
+                label: "Line".to_string(),
+                pnt: PlaceHolder::Ref(Name::Entity(1)),
+                dir: PlaceHolder::Ref(Name::Entity(3)),
+            },
+        )]),
+        polyline: HashMap::from_iter(vec![(
+            14,
+            PolylineHolder {
+                label: "Polyline".to_string(),
+                points: vec![
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                ],
+            },
+        )]),
+        b_spline_curve_with_knots: HashMap::from_iter(vec![(
+            15,
+            BSplineCurveWithKnotsHolder {
+                label: "BSplineCurveWithKnots".to_string(),
+                degree: 2,
+                control_points_list: vec![
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                ],
+                curve_form: BSplineCurveForm::Unspecified,
+                closed_curve: Logical::Unknown,
+                self_intersect: Logical::Unknown,
+                knot_multiplicities: vec![3, 1, 3],
+                knots: vec![0.0, 0.5, 1.0],
+                knot_spec: KnotType::Unspecified,
+            },
+        )]),
+        bezier_curve: HashMap::from_iter(vec![(
+            16,
+            BezierCurveHolder {
+                label: "BezierCurve".to_string(),
+                degree: 2,
+                control_points_list: vec![
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                ],
+                curve_form: BSplineCurveForm::Unspecified,
+                closed_curve: Logical::Unknown,
+                self_intersect: Logical::Unknown,
+            },
+        )]),
+        quasi_uniform_curve: HashMap::from_iter(vec![(
+            17,
+            QuasiUniformCurveHolder {
+                label: "QuasiUniformCurve".to_string(),
+                degree: 2,
+                control_points_list: vec![
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                ],
+                curve_form: BSplineCurveForm::Unspecified,
+                closed_curve: Logical::Unknown,
+                self_intersect: Logical::Unknown,
+            },
+        )]),
+        uniform_curve: HashMap::from_iter(vec![(
+            18,
+            UniformCurveHolder {
+                label: "UniformCurve".to_string(),
+                degree: 2,
+                control_points_list: vec![
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                    PlaceHolder::Ref(Name::Entity(1)),
+                ],
+                curve_form: BSplineCurveForm::Unspecified,
+                closed_curve: Logical::Unknown,
+                self_intersect: Logical::Unknown,
+            },
+        )]),
         ..Default::default()
     };
     assert_eq!(table, ans_table);

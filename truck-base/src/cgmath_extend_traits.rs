@@ -247,7 +247,7 @@ impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { Vector2::new(point[0], S::one()) }
     #[inline(always)]
-    fn from_point_weight(point: Self::Point, weight: S) -> Self { Vector2::new(point[0], weight) }
+    fn from_point_weight(point: Self::Point, weight: S) -> Self { Self::from_point(point) * weight }
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
@@ -260,9 +260,7 @@ impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { Vector3::new(point[0], point[1], S::one()) }
     #[inline(always)]
-    fn from_point_weight(point: Self::Point, weight: S) -> Self {
-        Vector3::new(point[0], point[1], weight)
-    }
+    fn from_point_weight(point: Self::Point, weight: S) -> Self { Self::from_point(point) * weight }
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
@@ -275,7 +273,5 @@ impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { point.to_homogeneous() }
     #[inline(always)]
-    fn from_point_weight(point: Self::Point, weight: S) -> Self {
-        Vector4::new(point[0], point[1], point[2], weight)
-    }
+    fn from_point_weight(point: Self::Point, weight: S) -> Self { Self::from_point(point) * weight }
 }

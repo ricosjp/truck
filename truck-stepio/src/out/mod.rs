@@ -110,6 +110,12 @@ impl<T> StepDisplay<T> {
     /// constructor
     #[inline]
     pub fn new(entity: T, idx: usize) -> Self { Self { entity, idx } }
+    /// return entity
+    #[inline]
+    pub fn entity(&self) -> &T { &self.entity }
+    /// return index
+    #[inline]
+    pub fn index(&self) -> usize { self.idx }
 }
 
 /// Constant numbers of lines for outputting an object to a STEP file.

@@ -86,9 +86,33 @@ impl<V> NURBSCurve<V> {
     }
 }
 
+impl<V: Homogeneous<f64>> NURBSCurve<V> {
+    /// Constructs a rationalization curve from the curves and weights.
+    /// # Failures
+    /// the length of `curve.control_points()` and `weights` must be the same.
+    #[inline(always)]
+    pub fn try_from_bspline_and_weights(
+        curve: BSplineCurve<V::Point>,
+        weights: Vec<f64>,
+    ) -> Result<Self> {
+        let BSplineCurve {
+            knot_vec,
+            control_points,
+        } = curve;
+        if control_points.len() != weights.len() {
+            return Err(Error::DifferentLength);
+        }
+        let control_points = control_points
+            .into_iter()
+            .zip(weights)
+            .map(|(pt, w)| V::from_point_weight(pt, w))
+            .collect();
+        Ok(Self(BSplineCurve::new_unchecked(knot_vec, control_points)))
+    }
+}
+
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSCurve<V> {
     /// Returns the closure of substitution.
-    ///
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
