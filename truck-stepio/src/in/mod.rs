@@ -37,251 +37,398 @@ pub struct Table {
     pub uniform_curve: HashMap<u64, UniformCurveHolder>,
     pub rational_b_spline_curve: HashMap<u64, RationalBSplineCurveHolder>,
     pub circle: HashMap<u64, CircleHolder>,
+
+    // surface
+    pub plane: HashMap<u64, PlaneHolder>,
+    pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
 }
 
 impl Table {
-    pub fn from_data_section(data_section: &DataSection) -> Result<Table> {
-        let mut table = Table::default();
-        for instance in &data_section.entities {
-            match instance {
-                EntityInstance::Simple { id, record } => match record.name.as_str() {
-                    "CARTESIAN_POINT" => {
-                        table
-                            .cartesian_point
-                            .insert(*id, Deserialize::deserialize(record)?);
-                    }
-                    "DIRECTION" => {
-                        table
-                            .direction
-                            .insert(*id, Deserialize::deserialize(record)?);
-                    }
-                    "VECTOR" => {
-                        table.vector.insert(*id, Deserialize::deserialize(record)?);
-                    }
-                    "PLACEMENT" => {
-                        table
-                            .placement
-                            .insert(*id, Deserialize::deserialize(record)?);
-                    }
-                    "AXIS1_PLACEMENT" => {
-                        if let Parameter::List(params) = &record.parameter {
-                            if params.len() != 3 {
-                                Axis1PlacementHolder::deserialize(record)?;
-                            }
-                            table.axis1_placement.insert(
-                                *id,
-                                Axis1PlacementHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    location: Deserialize::deserialize(&params[1])?,
-                                    direction: deserialize_option(&params[2])?,
-                                },
-                            );
-                        } else {
+    pub fn push_instance(&mut self, instance: &EntityInstance) -> Result<()> {
+        match instance {
+            EntityInstance::Simple { id, record } => match record.name.as_str() {
+                "CARTESIAN_POINT" => {
+                    self.cartesian_point
+                        .insert(*id, Deserialize::deserialize(record)?);
+                }
+                "DIRECTION" => {
+                    self.direction
+                        .insert(*id, Deserialize::deserialize(record)?);
+                }
+                "VECTOR" => {
+                    self.vector.insert(*id, Deserialize::deserialize(record)?);
+                }
+                "PLACEMENT" => {
+                    self.placement
+                        .insert(*id, Deserialize::deserialize(record)?);
+                }
+                "AXIS1_PLACEMENT" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() != 3 {
                             Axis1PlacementHolder::deserialize(record)?;
                         }
+                        self.axis1_placement.insert(
+                            *id,
+                            Axis1PlacementHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                location: Deserialize::deserialize(&params[1])?,
+                                direction: deserialize_option(&params[2])?,
+                            },
+                        );
+                    } else {
+                        Axis1PlacementHolder::deserialize(record)?;
                     }
-                    "AXIS2_PLACEMENT_2D" => {
-                        if let Parameter::List(params) = &record.parameter {
-                            if params.len() != 3 {
-                                Axis2Placement2dHolder::deserialize(record)?;
-                            }
-                            table.axis2_placement_2d.insert(
-                                *id,
-                                Axis2Placement2dHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    location: Deserialize::deserialize(&params[1])?,
-                                    ref_direction: deserialize_option(&params[2])?,
-                                },
-                            );
-                        } else {
+                }
+                "AXIS2_PLACEMENT_2D" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() != 3 {
                             Axis2Placement2dHolder::deserialize(record)?;
                         }
+                        self.axis2_placement_2d.insert(
+                            *id,
+                            Axis2Placement2dHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                location: Deserialize::deserialize(&params[1])?,
+                                ref_direction: deserialize_option(&params[2])?,
+                            },
+                        );
+                    } else {
+                        Axis2Placement2dHolder::deserialize(record)?;
                     }
-                    "AXIS2_PLACEMENT_3D" => {
-                        if let Parameter::List(params) = &record.parameter {
-                            if params.len() != 4 {
-                                Axis2Placement2dHolder::deserialize(record)?;
-                            }
-                            table.axis2_placement_3d.insert(
-                                *id,
-                                Axis2Placement3dHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    location: Deserialize::deserialize(&params[1])?,
-                                    axis: deserialize_option(&params[2])?,
-                                    ref_direction: deserialize_option(&params[3])?,
-                                },
-                            );
-                        } else {
-                            Axis2Placement3dHolder::deserialize(record)?;
+                }
+                "AXIS2_PLACEMENT_3D" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() != 4 {
+                            Axis2Placement2dHolder::deserialize(record)?;
                         }
+                        self.axis2_placement_3d.insert(
+                            *id,
+                            Axis2Placement3dHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                location: Deserialize::deserialize(&params[1])?,
+                                axis: deserialize_option(&params[2])?,
+                                ref_direction: deserialize_option(&params[3])?,
+                            },
+                        );
+                    } else {
+                        Axis2Placement3dHolder::deserialize(record)?;
                     }
-                    "LINE" => {
-                        table.line.insert(*id, Deserialize::deserialize(record)?);
-                    }
-                    "POLYLINE" => {
-                        table
-                            .polyline
-                            .insert(*id, Deserialize::deserialize(record)?);
-                    }
-                    "B_SPLINE_CURVE_WITH_KNOTS" => {
-                        if let Parameter::List(params) = &record.parameter {
-                            if params.len() != 9 {
-                                BSplineCurveWithKnotsHolder::deserialize(record)?;
-                            }
-                            table.b_spline_curve_with_knots.insert(
-                                *id,
-                                BSplineCurveWithKnotsHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    degree: Deserialize::deserialize(&params[1])?,
-                                    control_points_list: Deserialize::deserialize(&params[2])?,
-                                    curve_form: Deserialize::deserialize(&params[3])?,
-                                    closed_curve: deserialize_logical(&params[4])?,
-                                    self_intersect: deserialize_logical(&params[5])?,
-                                    knot_multiplicities: Deserialize::deserialize(&params[6])?,
-                                    knots: Deserialize::deserialize(&params[7])?,
-                                    knot_spec: Deserialize::deserialize(&params[8])?,
-                                },
-                            );
-                        } else {
+                }
+                "LINE" => {
+                    self.line.insert(*id, Deserialize::deserialize(record)?);
+                }
+                "POLYLINE" => {
+                    self.polyline.insert(*id, Deserialize::deserialize(record)?);
+                }
+                "B_SPLINE_CURVE_WITH_KNOTS" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() != 9 {
                             BSplineCurveWithKnotsHolder::deserialize(record)?;
                         }
+                        self.b_spline_curve_with_knots.insert(
+                            *id,
+                            BSplineCurveWithKnotsHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                degree: Deserialize::deserialize(&params[1])?,
+                                control_points_list: Deserialize::deserialize(&params[2])?,
+                                curve_form: Deserialize::deserialize(&params[3])?,
+                                closed_curve: deserialize_logical(&params[4])?,
+                                self_intersect: deserialize_logical(&params[5])?,
+                                knot_multiplicities: Deserialize::deserialize(&params[6])?,
+                                knots: Deserialize::deserialize(&params[7])?,
+                                knot_spec: Deserialize::deserialize(&params[8])?,
+                            },
+                        );
+                    } else {
+                        BSplineCurveWithKnotsHolder::deserialize(record)?;
                     }
-                    "BEZIER_CURVE" => {
-                        if let Parameter::List(params) = &record.parameter {
-                            if params.len() != 6 {
-                                BezierCurveHolder::deserialize(record)?;
-                            }
-                            table.bezier_curve.insert(
-                                *id,
-                                BezierCurveHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    degree: Deserialize::deserialize(&params[1])?,
-                                    control_points_list: Deserialize::deserialize(&params[2])?,
-                                    curve_form: Deserialize::deserialize(&params[3])?,
-                                    closed_curve: deserialize_logical(&params[4])?,
-                                    self_intersect: deserialize_logical(&params[5])?,
-                                },
-                            );
-                        } else {
+                }
+                "BEZIER_CURVE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() != 6 {
                             BezierCurveHolder::deserialize(record)?;
                         }
+                        self.bezier_curve.insert(
+                            *id,
+                            BezierCurveHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                degree: Deserialize::deserialize(&params[1])?,
+                                control_points_list: Deserialize::deserialize(&params[2])?,
+                                curve_form: Deserialize::deserialize(&params[3])?,
+                                closed_curve: deserialize_logical(&params[4])?,
+                                self_intersect: deserialize_logical(&params[5])?,
+                            },
+                        );
+                    } else {
+                        BezierCurveHolder::deserialize(record)?;
                     }
-                    "QUASI_UNIFORM_CURVE" => {
-                        if let Parameter::List(params) = &record.parameter {
-                            if params.len() != 6 {
-                                QuasiUniformCurveHolder::deserialize(record)?;
-                            }
-                            table.quasi_uniform_curve.insert(
-                                *id,
-                                QuasiUniformCurveHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    degree: Deserialize::deserialize(&params[1])?,
-                                    control_points_list: Deserialize::deserialize(&params[2])?,
-                                    curve_form: Deserialize::deserialize(&params[3])?,
-                                    closed_curve: deserialize_logical(&params[4])?,
-                                    self_intersect: deserialize_logical(&params[5])?,
-                                },
-                            );
-                        } else {
+                }
+                "QUASI_UNIFORM_CURVE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() != 6 {
                             QuasiUniformCurveHolder::deserialize(record)?;
                         }
+                        self.quasi_uniform_curve.insert(
+                            *id,
+                            QuasiUniformCurveHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                degree: Deserialize::deserialize(&params[1])?,
+                                control_points_list: Deserialize::deserialize(&params[2])?,
+                                curve_form: Deserialize::deserialize(&params[3])?,
+                                closed_curve: deserialize_logical(&params[4])?,
+                                self_intersect: deserialize_logical(&params[5])?,
+                            },
+                        );
+                    } else {
+                        QuasiUniformCurveHolder::deserialize(record)?;
                     }
-                    "UNIFORM_CURVE" => {
-                        if let Parameter::List(params) = &record.parameter {
-                            if params.len() != 6 {
-                                UniformCurveHolder::deserialize(record)?;
-                            }
-                            table.uniform_curve.insert(
-                                *id,
-                                UniformCurveHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    degree: Deserialize::deserialize(&params[1])?,
-                                    control_points_list: Deserialize::deserialize(&params[2])?,
-                                    curve_form: Deserialize::deserialize(&params[3])?,
-                                    closed_curve: deserialize_logical(&params[4])?,
-                                    self_intersect: deserialize_logical(&params[5])?,
-                                },
-                            );
-                        } else {
+                }
+                "UNIFORM_CURVE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() != 6 {
                             UniformCurveHolder::deserialize(record)?;
                         }
+                        self.uniform_curve.insert(
+                            *id,
+                            UniformCurveHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                degree: Deserialize::deserialize(&params[1])?,
+                                control_points_list: Deserialize::deserialize(&params[2])?,
+                                curve_form: Deserialize::deserialize(&params[3])?,
+                                closed_curve: deserialize_logical(&params[4])?,
+                                self_intersect: deserialize_logical(&params[5])?,
+                            },
+                        );
+                    } else {
+                        UniformCurveHolder::deserialize(record)?;
                     }
-                    _ => {}
-                },
-                EntityInstance::Complex {
-                    id,
-                    subsuper: SubSuperRecord(records),
-                } => {
-                    use NonRationalBSplineCurveHolder as NRBC;
-                    if records.len() == 7 {
-                        match (
-                            records[0].name.as_str(),
-                            records[1].name.as_str(),
-                            &records[1].parameter,
-                            records[2].name.as_str(),
-                            &records[2].parameter,
-                            records[3].name.as_str(),
-                            records[4].name.as_str(),
-                            records[5].name.as_str(),
-                            &records[5].parameter,
-                            records[6].name.as_str(),
-                            &records[6].parameter,
-                        ) {
-                            (
-                                "BOUNDED_CURVE",
-                                "B_SPLINE_CURVE",
-                                Parameter::List(bsp_params),
-                                "B_SPLINE_CURVE_WITH_KNOTS",
-                                Parameter::List(knots_params),
-                                "CURVE",
-                                "GEOMETRIC_REPRESENTATION_ITEM",
-                                "RATIONAL_B_SPLINE_CURVE",
-                                Parameter::List(weights),
-                                "REPRESENTATION_ITEM",
-                                Parameter::List(label),
-                            ) => {
-                                let mut params = vec![label[0].clone()];
-                                params.extend(bsp_params.iter().cloned());
-                                params.extend(knots_params.iter().cloned());
-                                table.rational_b_spline_curve.insert(
-                                    *id,
-                                    RationalBSplineCurveHolder {
-                                        non_rational_b_spline_curve: PlaceHolder::Owned(
-                                            NRBC::BSplineCurveWithKnots(
-                                                BSplineCurveWithKnotsHolder {
-                                                    label: Deserialize::deserialize(&params[0])?,
-                                                    degree: Deserialize::deserialize(&params[1])?,
-                                                    control_points_list: Deserialize::deserialize(
-                                                        &params[2],
-                                                    )?,
-                                                    curve_form: Deserialize::deserialize(
-                                                        &params[3],
-                                                    )?,
-                                                    closed_curve: deserialize_logical(&params[4])?,
-                                                    self_intersect: deserialize_logical(
-                                                        &params[5],
-                                                    )?,
-                                                    knot_multiplicities: Deserialize::deserialize(
-                                                        &params[6],
-                                                    )?,
-                                                    knots: Deserialize::deserialize(&params[7])?,
-                                                    knot_spec: Deserialize::deserialize(
-                                                        &params[8],
-                                                    )?,
-                                                },
-                                            ),
-                                        ),
-                                        weights_data: Deserialize::deserialize(&weights[0])?,
-                                    },
-                                );
-                            }
-                            _ => {}
+                }
+                "CIRCLE" => {
+                    self.circle.insert(*id, CircleHolder::deserialize(record)?);
+                }
+                "PLANE" => {
+                    self.plane.insert(*id, PlaneHolder::deserialize(record)?);
+                }
+                "B_SPLINE_SURFACE_WITH_KNOTS" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 13 {
+                            self.b_spline_surface_with_knots.insert(
+                                *id,
+                                BSplineSurfaceWithKnotsHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    u_degree: Deserialize::deserialize(&params[1])?,
+                                    v_degree: Deserialize::deserialize(&params[2])?,
+                                    control_points_list: Deserialize::deserialize(&params[3])?,
+                                    surface_form: Deserialize::deserialize(&params[4])?,
+                                    u_closed: deserialize_logical(&params[5])?,
+                                    v_closed: deserialize_logical(&params[6])?,
+                                    self_intersect: deserialize_logical(&params[7])?,
+                                    u_multiplicities: Deserialize::deserialize(&params[8])?,
+                                    v_multiplicities: Deserialize::deserialize(&params[9])?,
+                                    u_knots: Deserialize::deserialize(&params[10])?,
+                                    v_knots: Deserialize::deserialize(&params[11])?,
+                                    knot_spec: Deserialize::deserialize(&params[12])?,
+                                },
+                            );
                         }
+                    }
+                }
+                _ => {}
+            },
+            EntityInstance::Complex {
+                id,
+                subsuper: SubSuperRecord(records),
+            } => {
+                use NonRationalBSplineCurveHolder as NRBC;
+                if records.len() == 7 {
+                    match (
+                        records[0].name.as_str(),
+                        &records[0].parameter,
+                        records[1].name.as_str(),
+                        &records[1].parameter,
+                        records[2].name.as_str(),
+                        &records[2].parameter,
+                        records[3].name.as_str(),
+                        &records[3].parameter,
+                        records[4].name.as_str(),
+                        &records[4].parameter,
+                        records[5].name.as_str(),
+                        &records[5].parameter,
+                        records[6].name.as_str(),
+                        &records[6].parameter,
+                    ) {
+                        (
+                            "BOUNDED_CURVE",
+                            _,
+                            "B_SPLINE_CURVE",
+                            Parameter::List(bsp_params),
+                            "B_SPLINE_CURVE_WITH_KNOTS",
+                            Parameter::List(knots_params),
+                            "CURVE",
+                            _,
+                            "GEOMETRIC_REPRESENTATION_ITEM",
+                            _,
+                            "RATIONAL_B_SPLINE_CURVE",
+                            Parameter::List(weights),
+                            "REPRESENTATION_ITEM",
+                            Parameter::List(label),
+                        ) => {
+                            self.rational_b_spline_curve.insert(
+                                *id,
+                                RationalBSplineCurveHolder {
+                                    non_rational_b_spline_curve: PlaceHolder::Owned(
+                                        NRBC::BSplineCurveWithKnots(BSplineCurveWithKnotsHolder {
+                                            label: Deserialize::deserialize(&label[0])?,
+                                            degree: Deserialize::deserialize(&bsp_params[0])?,
+                                            control_points_list: Deserialize::deserialize(
+                                                &bsp_params[1],
+                                            )?,
+                                            curve_form: Deserialize::deserialize(&bsp_params[2])?,
+                                            closed_curve: deserialize_logical(&bsp_params[3])?,
+                                            self_intersect: deserialize_logical(&bsp_params[4])?,
+                                            knot_multiplicities: Deserialize::deserialize(
+                                                &knots_params[0],
+                                            )?,
+                                            knots: Deserialize::deserialize(&knots_params[1])?,
+                                            knot_spec: Deserialize::deserialize(&knots_params[2])?,
+                                        }),
+                                    ),
+                                    weights_data: Deserialize::deserialize(&weights[0])?,
+                                },
+                            );
+                        }
+                        (
+                            "BEZIER_CURVE",
+                            _,
+                            "BOUNDED_CURVE",
+                            _,
+                            "B_SPLINE_CURVE",
+                            Parameter::List(bsp_params),
+                            "CURVE",
+                            _,
+                            "GEOMETRIC_REPRESENTATION_ITEM",
+                            _,
+                            "RATIONAL_B_SPLINE_CURVE",
+                            Parameter::List(weights),
+                            "REPRESENTATION_ITEM",
+                            Parameter::List(label),
+                        ) => {
+                            let mut params = vec![label[0].clone()];
+                            params.extend(bsp_params.iter().cloned());
+                            self.rational_b_spline_curve.insert(
+                                *id,
+                                RationalBSplineCurveHolder {
+                                    non_rational_b_spline_curve: PlaceHolder::Owned(
+                                        NRBC::BezierCurve(BezierCurveHolder {
+                                            label: Deserialize::deserialize(&params[0])?,
+                                            degree: Deserialize::deserialize(&params[1])?,
+                                            control_points_list: Deserialize::deserialize(
+                                                &params[2],
+                                            )?,
+                                            curve_form: Deserialize::deserialize(&params[3])?,
+                                            closed_curve: deserialize_logical(&params[4])?,
+                                            self_intersect: deserialize_logical(&params[5])?,
+                                        }),
+                                    ),
+                                    weights_data: Deserialize::deserialize(&weights[0])?,
+                                },
+                            );
+                        }
+                        (
+                            "BOUNDED_CURVE",
+                            _,
+                            "B_SPLINE_CURVE",
+                            Parameter::List(bsp_params),
+                            "CURVE",
+                            _,
+                            "GEOMETRIC_REPRESENTATION_ITEM",
+                            _,
+                            "QUASI_UNIFORM_CURVE",
+                            _,
+                            "RATIONAL_B_SPLINE_CURVE",
+                            Parameter::List(weights),
+                            "REPRESENTATION_ITEM",
+                            Parameter::List(label),
+                        ) => {
+                            let mut params = vec![label[0].clone()];
+                            params.extend(bsp_params.iter().cloned());
+                            self.rational_b_spline_curve.insert(
+                                *id,
+                                RationalBSplineCurveHolder {
+                                    non_rational_b_spline_curve: PlaceHolder::Owned(
+                                        NRBC::QuasiUniformCurve(QuasiUniformCurveHolder {
+                                            label: Deserialize::deserialize(&params[0])?,
+                                            degree: Deserialize::deserialize(&params[1])?,
+                                            control_points_list: Deserialize::deserialize(
+                                                &params[2],
+                                            )?,
+                                            curve_form: Deserialize::deserialize(&params[3])?,
+                                            closed_curve: deserialize_logical(&params[4])?,
+                                            self_intersect: deserialize_logical(&params[5])?,
+                                        }),
+                                    ),
+                                    weights_data: Deserialize::deserialize(&weights[0])?,
+                                },
+                            );
+                        }
+                        (
+                            "BOUNDED_CURVE",
+                            _,
+                            "B_SPLINE_CURVE",
+                            Parameter::List(bsp_params),
+                            "CURVE",
+                            _,
+                            "GEOMETRIC_REPRESENTATION_ITEM",
+                            _,
+                            "RATIONAL_B_SPLINE_CURVE",
+                            Parameter::List(weights),
+                            "REPRESENTATION_ITEM",
+                            Parameter::List(label),
+                            "UNIFORM_CURVE",
+                            _,
+                        ) => {
+                            let mut params = vec![label[0].clone()];
+                            params.extend(bsp_params.iter().cloned());
+                            self.rational_b_spline_curve.insert(
+                                *id,
+                                RationalBSplineCurveHolder {
+                                    non_rational_b_spline_curve: PlaceHolder::Owned(
+                                        NRBC::UniformCurve(UniformCurveHolder {
+                                            label: Deserialize::deserialize(&params[0])?,
+                                            degree: Deserialize::deserialize(&params[1])?,
+                                            control_points_list: Deserialize::deserialize(
+                                                &params[2],
+                                            )?,
+                                            curve_form: Deserialize::deserialize(&params[3])?,
+                                            closed_curve: deserialize_logical(&params[4])?,
+                                            self_intersect: deserialize_logical(&params[5])?,
+                                        }),
+                                    ),
+                                    weights_data: Deserialize::deserialize(&weights[0])?,
+                                },
+                            );
+                        }
+                        _ => {}
                     }
                 }
             }
         }
-        Ok(table)
+        Ok(())
+    }
+    #[inline(always)]
+    pub fn from_data_section(data_section: &DataSection) -> Table {
+        Table::from_iter(&data_section.entities)
+    }
+}
+
+impl<'a> FromIterator<&'a EntityInstance> for Table {
+    fn from_iter<I: IntoIterator<Item = &'a EntityInstance>>(iter: I) -> Table {
+        let mut res = Table::default();
+        iter.into_iter().for_each(|instance| {
+            res.push_instance(instance)
+                .unwrap_or_else(|e| eprintln!("{e}"))
+        });
+        res
     }
 }
 
@@ -422,6 +569,37 @@ pub struct Axis1Placement {
     pub location: CartesianPoint,
     #[holder(use_place_holder)]
     pub direction: Option<Direction>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum Axis2Placement {
+    #[holder(use_place_holder)]
+    Axis2Placement2d(Axis2Placement2d),
+    #[holder(use_place_holder)]
+    Axis2Placement3d(Axis2Placement3d),
+}
+
+impl TryFrom<&Axis2Placement> for Matrix3 {
+    type Error = ExpressParseError;
+    fn try_from(axis: &Axis2Placement) -> std::result::Result<Self, ExpressParseError> {
+        use Axis2Placement::*;
+        match axis {
+            Axis2Placement2d(axis) => Ok(Matrix3::from(axis)),
+            Axis2Placement3d(_) => Err("This is not a 2D axis placement.".to_string()),
+        }
+    }
+}
+impl TryFrom<&Axis2Placement> for Matrix4 {
+    type Error = ExpressParseError;
+    fn try_from(axis: &Axis2Placement) -> std::result::Result<Self, ExpressParseError> {
+        use Axis2Placement::*;
+        match axis {
+            Axis2Placement2d(_) => Err("This is not a 3D axis placement.".to_string()),
+            Axis2Placement3d(axis) => Ok(Matrix4::from(axis)),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
@@ -718,6 +896,106 @@ pub enum BSplineCurveAny {
 pub struct Circle {
     pub label: String,
     #[holder(use_place_holder)]
-    pub position: Axis1Placement,
+    pub position: Axis2Placement,
     pub radius: f64,
+}
+
+impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
+    type Error = ExpressParseError;
+    fn try_from(circle: &Circle) -> std::result::Result<Self, ExpressParseError> {
+        let radius: f64 = circle.radius;
+        let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(radius);
+        Ok(Processor::new(UnitCircle::new()).transformed(transform))
+    }
+}
+
+impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
+    type Error = ExpressParseError;
+    fn try_from(circle: &Circle) -> std::result::Result<Self, ExpressParseError> {
+        let radius: f64 = circle.radius;
+        let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
+        Ok(Processor::new(UnitCircle::new()).transformed(transform))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = plane)]
+#[holder(generate_deserialize)]
+pub struct Plane {
+    label: String,
+    #[holder(use_place_holder)]
+    position: Axis2Placement3d,
+}
+
+impl From<&Plane> for truck_geometry::Plane {
+    fn from(plane: &Plane) -> Self {
+        let mat = Matrix4::from(&plane.position);
+        let o = Point3::from_homogeneous(mat[3]);
+        let p = o + mat[0].truncate();
+        let q = o + mat[1].truncate();
+        Self::new(o, p, q)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum BSplineSurfaceForm {
+    PlaneSurf,
+    CylindricalSurf,
+    ConicalSurf,
+    SphericalSurf,
+    ToroidalSurf,
+    SurfOfRevolution,
+    RuledSurf,
+    GeneralisedCone,
+    QuadricSurf,
+    SurfOfLinearExtrusion,
+    Unspecified,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = b_spline_surface_with_knots)]
+#[holder(generate_deserialize)]
+pub struct BSplineSurfaceWithKnots {
+    label: String,
+    u_degree: i64,
+    v_degree: i64,
+    #[holder(use_place_holder)]
+    control_points_list: Vec<Vec<CartesianPoint>>,
+    surface_form: BSplineSurfaceForm,
+    u_closed: Logical,
+    v_closed: Logical,
+    self_intersect: Logical,
+    u_multiplicities: Vec<i64>,
+    v_multiplicities: Vec<i64>,
+    u_knots: Vec<f64>,
+    v_knots: Vec<f64>,
+    knot_spec: KnotType,
+}
+
+impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
+    type Error = ExpressParseError;
+    fn try_from(surface: &BSplineSurfaceWithKnots) -> std::result::Result<Self, ExpressParseError> {
+        let uknots = surface.u_knots.iter().copied().collect();
+        let umulti = surface
+            .u_multiplicities
+            .iter()
+            .map(|n| *n as usize)
+            .collect();
+        let uknots = KnotVec::from_single_multi(uknots, umulti).unwrap();
+        let vknots = surface.v_knots.iter().copied().collect();
+        let vmulti = surface
+            .v_multiplicities
+            .iter()
+            .map(|n| *n as usize)
+            .collect();
+        let vknots = KnotVec::from_single_multi(vknots, vmulti).unwrap();
+        let ctrls = surface
+            .control_points_list
+            .iter()
+            .map(|vec| vec.iter().map(|pt| Point3::from(pt)).collect())
+            .collect();
+        Self::try_new((uknots, vknots), ctrls).map_err(|x| x.to_string())
+    }
 }

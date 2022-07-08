@@ -102,18 +102,17 @@ impl<S: BaseFloat> TangentSpace<S> for Vector3<S> {
 /// assert_eq!(Vector4::from_point(Point3::new(4.0, 3.0, 2.0)), Vector4::new(4.0, 3.0, 2.0, 1.0));
 /// ```
 pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
-    /// The tangent vector of `Self::Point`
-    type Vector: VectorSpace<Scalar = S>;
     /// The point expressed by homogeneous coordinate
-    type Point: EuclideanSpace<Scalar = S, Diff = Self::Vector>;
+    type Point: EuclideanSpace<Scalar = S>;
     /// Returns the first dim - 1 components.
-    fn truncate(self) -> Self::Vector;
+    fn truncate(self) -> <Self::Point as EuclideanSpace>::Diff;
     /// Returns the last component.
     fn weight(self) -> S;
     /// Returns homogeneous coordinate.
     fn from_point(point: Self::Point) -> Self;
     /// Returns homogeneous coordinate from point and weight.
-    fn from_point_weight(point: Self::Point, weight: S) -> Self;
+    #[inline(always)]
+    fn from_point_weight(point: Self::Point, weight: S) -> Self { Self::from_point(point) * weight }
     /// Returns the projection to the plane whose the last component is `1.0`.
     #[inline(always)]
     fn to_point(self) -> Self::Point { Self::Point::from_vec(self.truncate() / self.weight()) }
@@ -225,7 +224,12 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
     /// assert_eq!(pt.rat_cross_der(uder, vder, uvder), ans);
     /// ```
     #[inline(always)]
-    fn rat_cross_der(&self, uder: Self, vder: Self, uvder: Self) -> Self::Vector {
+    fn rat_cross_der(
+        &self,
+        uder: Self,
+        vder: Self,
+        uvder: Self,
+    ) -> <Self::Point as EuclideanSpace>::Diff {
         let self_weight2 = self.weight() * self.weight();
         let coef1 = vder.weight() / self_weight2;
         let coef2 = uder.weight() / self_weight2;
@@ -238,7 +242,6 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
-    type Vector = Vector1<S>;
     type Point = Point1<S>;
     #[inline(always)]
     fn truncate(self) -> Vector1<S> { Vector1::new(self[0]) }
@@ -246,12 +249,9 @@ impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
     fn weight(self) -> S { self[1] }
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { Vector2::new(point[0], S::one()) }
-    #[inline(always)]
-    fn from_point_weight(point: Self::Point, weight: S) -> Self { Self::from_point(point) * weight }
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
-    type Vector = Vector2<S>;
     type Point = Point2<S>;
     #[inline(always)]
     fn truncate(self) -> Vector2<S> { self.truncate() }
@@ -259,12 +259,9 @@ impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
     fn weight(self) -> S { self[2] }
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { Vector3::new(point[0], point[1], S::one()) }
-    #[inline(always)]
-    fn from_point_weight(point: Self::Point, weight: S) -> Self { Self::from_point(point) * weight }
 }
 
 impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
-    type Vector = Vector3<S>;
     type Point = Point3<S>;
     #[inline(always)]
     fn truncate(self) -> Vector3<S> { self.truncate() }
@@ -272,6 +269,4 @@ impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
     fn weight(self) -> S { self[3] }
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { point.to_homogeneous() }
-    #[inline(always)]
-    fn from_point_weight(point: Self::Point, weight: S) -> Self { Self::from_point(point) * weight }
 }

@@ -352,6 +352,12 @@ impl Display for StepDisplay<Plane> {
     }
 }
 
+impl<'a> Display for StepDisplay<&'a Plane> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
+    }
+}
+
 impl StepLength for Plane {
     fn step_length(&self) -> usize { 5 }
 }

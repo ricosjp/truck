@@ -25,7 +25,8 @@ where
 fn oitest_tryfrom<Truck, StepHolder>(t: Truck)
 where
     StepHolder: Holder<Table = Table>,
-    Truck: for<'a> TryFrom<&'a StepHolder::Owned, Error = String> + Debug + PartialEq,
+    Truck: for<'a> TryFrom<&'a StepHolder::Owned> + Debug + PartialEq,
+    for<'a> <Truck as TryFrom<&'a StepHolder::Owned>>::Error: Debug,
     for<'a> StepDisplay<&'a Truck>: Display,
     Table: EntityTable<StepHolder>, {
     let step_display = StepDisplay::new(&t, 1);
@@ -40,7 +41,7 @@ where
     StepHolder: Holder<Table = Table>,
     Table: EntityTable<StepHolder>, {
     let data_section = DataSection::from_str(&step).unwrap();
-    let table = Table::from_data_section(&data_section).unwrap();
+    let table = Table::from_data_section(&data_section);
     let step_data: StepHolder::Owned = EntityTable::get_owned(&table, 1).unwrap();
     let got = Truck::from(&step_data);
     assert_eq!(t, got);
@@ -48,11 +49,12 @@ where
 
 fn itest_tryfrom<Truck, StepHolder>(t: Truck, step: &str)
 where
-    Truck: for<'a> TryFrom<&'a StepHolder::Owned, Error = String> + Debug + PartialEq,
+    Truck: for<'a> TryFrom<&'a StepHolder::Owned> + Debug + PartialEq,
+    for<'a> <Truck as TryFrom<&'a StepHolder::Owned>>::Error: Debug,
     StepHolder: Holder<Table = Table>,
     Table: EntityTable<StepHolder>, {
     let data_section = DataSection::from_str(&step).unwrap();
-    let table = Table::from_data_section(&data_section).unwrap();
+    let table = Table::from_data_section(&data_section);
     let step_data: StepHolder::Owned = EntityTable::get_owned(&table, 1).unwrap();
     let got = Truck::try_from(&step_data).unwrap();
     assert_eq!(t, got);
@@ -99,14 +101,33 @@ fn oi() {
 #2 = CARTESIAN_POINT('', (0.0, 1.0)); #3 = CARTESIAN_POINT('', (2.0, 3.0));
 #4 = CARTESIAN_POINT('', (4.0, 5.0)); ENDSEC;",
     );
-    oitest_tryfrom::<NURBSCurve<Vector3>, RationalBSplineCurveHolder>(
-        NURBSCurve::new(BSplineCurve::new(
+    oitest_tryfrom::<NURBSCurve<Vector3>, RationalBSplineCurveHolder>(NURBSCurve::new(
+        BSplineCurve::new(
             KnotVec::bezier_knot(3),
             vec![
                 Vector3::new(0.0, 1.0, 2.0),
                 Vector3::new(3.0, 4.0, 5.0),
                 Vector3::new(6.0, 7.0, 8.0),
             ],
-        ))
+        ),
+    ));
+    oitest::<truck_geometry::Plane, PlaneHolder>(truck_geometry::Plane::new(
+        Point3::new(1.0, 2.0, 3.0),
+        // The ISO regulations require that the coordinate axes of the Plane must be vertical;
+        // on the truck side, the axes do not have to be vertical,
+        // so the results will not necessarily match.
+        Point3::new(2.0, 2.0, 3.0),
+        Point3::new(1.0, 3.0, 3.0),
+    ));
+    oitest_tryfrom::<BSplineSurface<Point3>, BSplineSurfaceWithKnotsHolder>(
+        BSplineSurface::new(
+            (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2)),
+            vec![
+                vec![Point3::new(0.0, 1.0, 2.0), Point3::new(3.0, 4.0, 5.0), Point3::new(6.0, 7.0, 8.0)],
+                vec![Point3::new(0.0, 1.0, 2.0), Point3::new(3.0, 4.0, 5.0), Point3::new(6.0, 7.0, 8.0)],
+                vec![Point3::new(0.0, 1.0, 2.0), Point3::new(3.0, 4.0, 5.0), Point3::new(6.0, 7.0, 8.0)],
+                vec![Point3::new(0.0, 1.0, 2.0), Point3::new(3.0, 4.0, 5.0), Point3::new(6.0, 7.0, 8.0)],
+            ]
+        )
     );
 }

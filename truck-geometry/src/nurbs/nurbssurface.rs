@@ -489,9 +489,9 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
 
 impl<V: Homogeneous<f64>> SearchNearestParameter<D2> for NURBSSurface<V>
 where
-    Self: ParametricSurface<Point = V::Point, Vector = V::Vector>,
+    Self: ParametricSurface<Point = V::Point, Vector = <V::Point as EuclideanSpace>::Diff>,
     V::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    V::Vector: InnerSpace<Scalar = f64> + Tolerance,
+    <V::Point as EuclideanSpace>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = V::Point;
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
@@ -606,7 +606,7 @@ impl<V: Clone> Invertible for NURBSSurface<V> {
 
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for NURBSSurface<V> {
     type Point = V::Point;
-    type Vector = V::Vector;
+    type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point { self.subs(u, v) }
     #[inline(always)]
