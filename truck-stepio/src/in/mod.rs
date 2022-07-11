@@ -984,7 +984,7 @@ impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
             .map(|n| *n as usize)
             .collect();
         let uknots = KnotVec::from_single_multi(uknots, umulti).unwrap();
-        let vknots = surface.v_knots.iter().copied().collect();
+        let vknots = surface.v_knots.to_vec();
         let vmulti = surface
             .v_multiplicities
             .iter()
@@ -994,7 +994,7 @@ impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
         let ctrls = surface
             .control_points_list
             .iter()
-            .map(|vec| vec.iter().map(|pt| Point3::from(pt)).collect())
+            .map(|vec| vec.iter().map(Point3::from).collect())
             .collect();
         Self::try_new((uknots, vknots), ctrls).map_err(|x| x.to_string())
     }

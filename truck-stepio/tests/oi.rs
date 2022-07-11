@@ -119,15 +119,29 @@ fn oi() {
         Point3::new(2.0, 2.0, 3.0),
         Point3::new(1.0, 3.0, 3.0),
     ));
-    oitest_tryfrom::<BSplineSurface<Point3>, BSplineSurfaceWithKnotsHolder>(
-        BSplineSurface::new(
-            (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2)),
+    oitest_tryfrom::<BSplineSurface<Point3>, BSplineSurfaceWithKnotsHolder>(BSplineSurface::new(
+        (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2)),
+        vec![
             vec![
-                vec![Point3::new(0.0, 1.0, 2.0), Point3::new(3.0, 4.0, 5.0), Point3::new(6.0, 7.0, 8.0)],
-                vec![Point3::new(0.0, 1.0, 2.0), Point3::new(3.0, 4.0, 5.0), Point3::new(6.0, 7.0, 8.0)],
-                vec![Point3::new(0.0, 1.0, 2.0), Point3::new(3.0, 4.0, 5.0), Point3::new(6.0, 7.0, 8.0)],
-                vec![Point3::new(0.0, 1.0, 2.0), Point3::new(3.0, 4.0, 5.0), Point3::new(6.0, 7.0, 8.0)],
-            ]
-        )
-    );
+                Point3::new(0.0, 1.0, 2.0),
+                Point3::new(3.0, 4.0, 5.0),
+                Point3::new(6.0, 7.0, 8.0),
+            ],
+            vec![
+                Point3::new(0.0, 1.0, 2.0),
+                Point3::new(3.0, 4.0, 5.0),
+                Point3::new(6.0, 7.0, 8.0),
+            ],
+            vec![
+                Point3::new(0.0, 1.0, 2.0),
+                Point3::new(3.0, 4.0, 5.0),
+                Point3::new(6.0, 7.0, 8.0),
+            ],
+            vec![
+                Point3::new(0.0, 1.0, 2.0),
+                Point3::new(3.0, 4.0, 5.0),
+                Point3::new(6.0, 7.0, 8.0),
+            ],
+        ],
+    ));
 }
