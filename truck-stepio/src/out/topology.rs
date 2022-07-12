@@ -20,15 +20,15 @@ where
 {
     fn to_step_shell(&self) -> StepShell<'a, P, C, S> {
         let shell = self.entity;
-        let faces = shell.faces();
-        let edges = shell.edges();
-        let vertices = shell.vertices();
+        let faces = &shell.faces;
+        let edges = &shell.edges;
+        let vertices = &shell.vertices;
         let mut cursor = self.idx + 1;
         let face_indices = faces
             .iter()
             .map(|f| {
                 let res = cursor;
-                cursor += 1 + f.boundaries().iter().map(|b| 2 + b.len()).sum::<usize>();
+                cursor += 1 + f.boundaries.iter().map(|b| 2 + b.len()).sum::<usize>();
                 res
             })
             .collect::<Vec<_>>();
@@ -39,7 +39,7 @@ where
             .iter()
             .map(|f| {
                 let res = cursor;
-                cursor += f.surface().step_length();
+                cursor += f.surface.step_length();
                 res
             })
             .collect::<Vec<_>>();
@@ -47,7 +47,7 @@ where
             .iter()
             .map(|e| {
                 let res = cursor;
-                cursor += e.curve().step_length();
+                cursor += e.curve.step_length();
                 res
             })
             .collect::<Vec<_>>();
@@ -80,15 +80,15 @@ where
             curve_indices,
             ep_points,
         } = self;
-        let faces = entity.faces();
-        let edges = entity.edges();
-        let vertices = entity.vertices();
+        let faces = &entity.faces;
+        let edges = &entity.edges;
+        let vertices = &entity.vertices;
         faces.iter().enumerate().try_for_each(|(i, f)| {
             let idx = face_indices[i];
-            let same_sence = if f.orientation() { ".T." } else { ".F." };
+            let same_sence = if f.orientation { ".T." } else { ".F." };
             let mut cursor = idx + 1;
             let face_bounds = f
-                .boundaries()
+                .boundaries
                 .iter()
                 .map(|b| {
                     let res = cursor;
@@ -102,7 +102,7 @@ where
                 face_geometry = surface_indices[i],
             ))?;
             cursor = idx + 1;
-            f.boundaries().iter().try_for_each(|b| {
+            f.boundaries.iter().try_for_each(|b| {
                 let face_bound_idx = cursor;
                 let edge_loop_idx = cursor + 1;
                 let ep_oriented_edges = cursor + 2;
@@ -113,12 +113,12 @@ where
                     oriented_edge_indices =
                         IndexSliceDisplay(ep_oriented_edges..ep_oriented_edges + b.len()),
                 ))?;
-                b.iter().enumerate().try_for_each(|(j, (e, ori))| {
+                b.iter().enumerate().try_for_each(|(j, ce)| {
                     formatter.write_fmt(format_args!(
                         "#{idx} = ORIENTED_EDGE('', *, *, #{edge_element}, {orientation});\n",
                         idx = ep_oriented_edges + j,
-                        edge_element = ep_edges + e,
-                        orientation = if *ori { ".T." } else { ".F." },
+                        edge_element = ep_edges + ce.index,
+                        orientation = if ce.orientation { ".T." } else { ".F." },
                     ))
                 })
             })
@@ -127,8 +127,8 @@ where
             formatter.write_fmt(format_args!(
                 "#{idx} = EDGE_CURVE('', #{edge_start}, #{edge_end}, #{edge_geometry}, .T.);\n",
                 idx = ep_edges + i,
-                edge_start = ep_vertices + e.vertices().0,
-                edge_end = ep_vertices + e.vertices().1,
+                edge_start = ep_vertices + e.vertices.0,
+                edge_end = ep_vertices + e.vertices.1,
                 edge_geometry = curve_indices[i],
             ))
         })?;
@@ -140,12 +140,12 @@ where
             ))
         })?;
         faces.iter().zip(surface_indices).try_for_each(|(f, idx)| {
-            Display::fmt(&StepDisplay::new(f.surface(), *idx), formatter)
+            Display::fmt(&StepDisplay::new(&f.surface, *idx), formatter)
         })?;
         edges
             .iter()
             .zip(curve_indices)
-            .try_for_each(|(e, idx)| Display::fmt(&StepDisplay::new(e.curve(), *idx), formatter))?;
+            .try_for_each(|(e, idx)| Display::fmt(&StepDisplay::new(&e.curve, *idx), formatter))?;
         vertices
             .iter()
             .enumerate()
@@ -155,7 +155,7 @@ where
 
 impl<'a, P, C, S> StepLength for StepShell<'a, P, C, S> {
     fn step_length(&self) -> usize {
-        self.ep_points + self.entity.vertices().len() - self.face_indices[0]
+        self.ep_points + self.entity.vertices.len() - self.face_indices[0]
     }
 }
 
@@ -170,15 +170,15 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay { entity: solid, idx } = self;
-        if solid.boundaries().is_empty() {
+        if solid.boundaries.is_empty() {
             f.pad("empty solid!")?;
             Err(std::fmt::Error)
-        } else if solid.boundaries().len() == 1 {
+        } else if solid.boundaries.len() == 1 {
             let shell_idx = idx + 1;
             f.write_fmt(format_args!(
                 "#{idx} = MANIFOLD_SOLID_BREP('', #{shell_idx});\n"
             ))?;
-            let shell = &solid.boundaries()[0];
+            let shell = &solid.boundaries[0];
             let step_shell = StepDisplay::new(shell, shell_idx).to_step_shell();
             f.write_fmt(format_args!(
                 "#{shell_idx} = CLOSED_SHELL('', {face_indices});\n",
@@ -188,7 +188,7 @@ where
         } else {
             let mut cursor = self.idx + 1;
             let step_shells = solid
-                .boundaries()
+                .boundaries
                 .iter()
                 .map(|shell| {
                     let res = StepDisplay::new(shell, cursor).to_step_shell();
