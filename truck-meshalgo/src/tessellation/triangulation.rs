@@ -6,12 +6,17 @@ use rustc_hash::FxHashMap as HashMap;
 
 type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
 type MeshedShell = Shell<Point3, PolylineCurve, PolygonMesh>;
+//type MeshedCShell = CompressedShell<Point3, PolylineCurve, PolygonMesh>;
 
 /// Tessellates faces
-pub(super) fn tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> Option<MeshedShell>
+pub(super) fn shell_tessellation<'a, C, S>(
+    shell: &Shell<Point3, C, S>,
+    tol: f64,
+) -> Option<MeshedShell>
 where
     C: PolylineableCurve + 'a,
-    S: MeshableSurface + 'a, {
+    S: MeshableSurface + 'a,
+{
     let mut vmap = HashMap::default();
     let mut edge_map = HashMap::default();
     shell
@@ -49,7 +54,9 @@ where
                 .collect();
             let surface = face.get_surface();
             let mut polyline = Polyline::default();
-            let polygon = match wires.iter().all(|wire| polyline.add_wire(&surface, wire)) {
+            let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
+                polyline.add_wire(&surface, wire.iter().map(|edge| edge.oriented_curve()))
+            }) {
                 true => Some(trimming_tessellation(&surface, &polyline, tol)),
                 false => None,
             }?;
@@ -71,12 +78,11 @@ struct Polyline {
 
 impl Polyline {
     /// add an wire into polyline
-    fn add_wire<S>(&mut self, surface: &S, wire: &Wire<Point3, PolylineCurve>) -> bool
+    fn add_wire<S>(&mut self, surface: &S, mut wire: impl Iterator<Item = PolylineCurve>) -> bool
     where S: MeshableSurface {
         let mut counter = 0;
         let len = self.positions.len();
-        let res = wire.into_iter().all(|edge| {
-            let mut poly_edge = edge.oriented_curve();
+        let res = wire.all(|mut poly_edge| {
             poly_edge.pop();
             counter += poly_edge.len();
             let mut hint = None;

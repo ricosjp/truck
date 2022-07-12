@@ -1,7 +1,7 @@
 use crate::*;
 use spade::delaunay::*;
 use spade::kernels::*;
-use truck_topology::*;
+use truck_topology::{compress::*, *};
 
 /// Gathered the traits used in tessellation.
 #[rustfmt::skip]
@@ -36,6 +36,27 @@ impl MeshedShape for Solid<Point3, PolylineCurve, PolygonMesh> {
     fn to_polygon(&self) -> PolygonMesh {
         let mut polygon = PolygonMesh::default();
         self.boundaries().iter().for_each(|shell| {
+            polygon.merge(shell.to_polygon());
+        });
+        polygon
+    }
+}
+
+impl MeshedShape for CompressedShell<Point3, PolylineCurve, PolygonMesh> {
+    fn to_polygon(&self) -> PolygonMesh {
+        let mut polygon = PolygonMesh::default();
+        self.faces.iter().for_each(|face| match face.orientation {
+            true => polygon.merge(face.surface.clone()),
+            false => polygon.merge(face.surface.inverse()),
+        });
+        polygon
+    }
+}
+
+impl MeshedShape for CompressedSolid<Point3, PolylineCurve, PolygonMesh> {
+    fn to_polygon(&self) -> PolygonMesh {
+        let mut polygon = PolygonMesh::default();
+        self.boundaries.iter().for_each(|shell| {
             polygon.merge(shell.to_polygon());
         });
         polygon
@@ -83,7 +104,7 @@ impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C
     type MeshedShape = Shell<Point3, PolylineCurve, PolygonMesh>;
     fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
         nonpositive_tolerance!(tol);
-        triangulation::tessellation(self, tol)
+        triangulation::shell_tessellation(self, tol)
     }
 }
 
