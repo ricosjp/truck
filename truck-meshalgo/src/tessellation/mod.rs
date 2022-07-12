@@ -120,4 +120,24 @@ impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C
     }
 }
 
+impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedShell<Point3, C, S> {
+    type MeshedShape = CompressedShell<Point3, PolylineCurve, PolygonMesh>;
+    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+        nonpositive_tolerance!(tol);
+        triangulation::cshell_tessellation(self, tol)
+    }
+}
+
+impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedSolid<Point3, C, S> {
+    type MeshedShape = CompressedSolid<Point3, PolylineCurve, PolygonMesh>;
+    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+        let boundaries = self
+            .boundaries
+            .iter()
+            .map(|shell| shell.triangulation(tol))
+            .collect::<Option<Vec<_>>>()?;
+        Some(CompressedSolid { boundaries })
+    }
+}
+
 mod triangulation;

@@ -6,7 +6,7 @@ use rustc_hash::FxHashMap as HashMap;
 
 type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
 type MeshedShell = Shell<Point3, PolylineCurve, PolygonMesh>;
-//type MeshedCShell = CompressedShell<Point3, PolylineCurve, PolygonMesh>;
+type MeshedCShell = CompressedShell<Point3, PolylineCurve, PolygonMesh>;
 
 /// Tessellates faces
 pub(super) fn shell_tessellation<'a, C, S>(
@@ -67,6 +67,58 @@ where
             Some(new_face)
         })
         .collect()
+}
+
+/// Tessellates faces
+pub(super) fn cshell_tessellation<'a, C, S>(
+    shell: &CompressedShell<Point3, C, S>,
+    tol: f64,
+) -> Option<MeshedCShell>
+where
+    C: PolylineableCurve + 'a,
+    S: MeshableSurface + 'a,
+{
+    let vertices = shell.vertices.clone();
+    let edges: Vec<_> = shell
+        .edges
+        .iter()
+        .map(|edge| {
+            let curve = &edge.curve;
+            CompressedEdge {
+                vertices: edge.vertices,
+                curve: PolylineCurve::from_curve(curve, curve.parameter_range(), tol),
+            }
+        })
+        .collect();
+    let faces = shell
+        .faces
+        .iter()
+        .map(|face| {
+            let boundaries = face.boundaries.clone();
+            let surface = &face.surface;
+            let mut polyline = Polyline::default();
+            let polygon = match boundaries.iter().all(|wire| {
+                let wire_iter = wire.iter().map(|edge_idx| match edge_idx.orientation {
+                    true => edges[edge_idx.index].curve.clone(),
+                    false => edges[edge_idx.index].curve.inverse(),
+                });
+                polyline.add_wire(surface, wire_iter)
+            }) {
+                true => Some(trimming_tessellation(surface, &polyline, tol)),
+                false => None,
+            }?;
+            Some(CompressedFace {
+                boundaries,
+                orientation: face.orientation,
+                surface: polygon,
+            })
+        })
+        .collect::<Option<Vec<_>>>()?;
+    Some(MeshedCShell {
+        vertices,
+        edges,
+        faces,
+    })
 }
 
 /// polyline, not always connected

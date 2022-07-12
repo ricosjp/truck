@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Direct `CompressedShell` tessellation.
 - Direct serialize API for topological data structures.
 - Update resources.
 - Step output of `IntersectionCurve`.
