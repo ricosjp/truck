@@ -12,6 +12,11 @@ impl Display for StepDisplay<Point2> {
         ))
     }
 }
+impl Display for StepDisplay<&Point2> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
+    }
+}
 impl_const_step_length!(Point2, 1);
 
 impl Display for StepDisplay<Point3> {
@@ -21,6 +26,11 @@ impl Display for StepDisplay<Point3> {
             idx = self.idx,
             coordinates = SliceDisplay(AsRef::<[f64; 3]>::as_ref(&self.entity)),
         ))
+    }
+}
+impl Display for StepDisplay<&Point3> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
     }
 }
 impl_const_step_length!(Point3, 1);
@@ -49,9 +59,8 @@ impl Display for StepDisplay<VectorAsDirection<Vector3>> {
     }
 }
 
-impl<V> StepLength for VectorAsDirection<V> {
-    #[inline]
-    fn step_length(&self) -> usize { 1 }
+impl<V> ConstStepLength for VectorAsDirection<V> {
+    const LENGTH: usize = 1;
 }
 
 impl<V> Display for StepDisplay<V>
@@ -67,6 +76,15 @@ where
             idx = self.idx,
             direction = StepDisplay::new(VectorAsDirection(self.entity / magnitude), direction_idx),
         ))
+    }
+}
+impl<V> Display for StepDisplay<&V>
+where
+    V: InnerSpace<Scalar = f64>,
+    StepDisplay<VectorAsDirection<V>>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
     }
 }
 impl_const_step_length!(Vector2, 2);
@@ -149,7 +167,7 @@ where
             .map(|(i, p)| StepDisplay::new(*p, idx + 1 + i * P::LENGTH))
             .collect::<Vec<_>>();
         f.write_fmt(format_args!(
-			"#{idx} = B_SPLINE_CURVE_WITH_KNOTS('', {degree}, {control_points_list}, .UNSPECIFIED., .U., .U., {knot_multiplicities}, {knots}, .UNSPECIFIED.);\n{control_points_instances}",
+            "#{idx} = B_SPLINE_CURVE_WITH_KNOTS('', {degree}, {control_points_list}, .UNSPECIFIED., .U., .U., {knot_multiplicities}, {knots}, .UNSPECIFIED.);\n{control_points_instances}",
             degree = curve.degree(),
             control_points_list = IndexSliceDisplay((self.idx + 1..=self.idx + curve.control_points().len() * P::LENGTH).step_by(P::LENGTH)),
 			knot_multiplicities = SliceDisplay(&multi),
@@ -331,6 +349,12 @@ impl Display for StepDisplay<Plane> {
                 x_axis_idx
             )
         ))
+    }
+}
+
+impl<'a> Display for StepDisplay<&'a Plane> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
     }
 }
 

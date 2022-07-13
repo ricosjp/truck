@@ -64,7 +64,7 @@ lint-check:
         - cargo fmt -- --check
 
 change-log:
-    image: debian:latest
+    image: ubuntu:latest
     stage: test
     variables:
         GIT_STRATEGY: clone

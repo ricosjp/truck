@@ -19,13 +19,10 @@
     unused_qualifications
 )]
 
-#[doc(hidden)]
-pub mod alias;
-mod impl_curve;
-mod impl_surface;
+/// STEP input module
+pub mod r#in;
 /// STEP output module
 pub mod out;
-mod parse_primitives;
 
 #[doc(hidden)]
 #[macro_export]
