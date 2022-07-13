@@ -64,12 +64,11 @@ lint-check:
         - cargo fmt -- --check
 
 change-log:
-    image: debian:latest
+    image: ubuntu:latest
     stage: test
     variables:
         GIT_STRATEGY: clone
     before_script:
-        - sed -i 's/bullseye\/updates/bullseye-security/g' /etc/apt/sources.list
         - apt-get update && apt-get install git -y
         - git fetch
     script:
