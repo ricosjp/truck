@@ -781,7 +781,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&QuasiUniformCurve> for BSplin
     fn try_from(curve: &QuasiUniformCurve) -> std::result::Result<Self, ExpressParseError> {
         let num_ctrl = curve.control_points_list.len();
         let degree = curve.degree as usize;
-        let division = num_ctrl + 2 - degree;
+        let division = num_ctrl - degree;
         let mut knots = KnotVec::uniform_knot(degree, division);
         knots.transform(division as f64, 0.0);
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();

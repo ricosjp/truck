@@ -101,6 +101,20 @@ fn oi() {
 #2 = CARTESIAN_POINT('', (0.0, 1.0)); #3 = CARTESIAN_POINT('', (2.0, 3.0));
 #4 = CARTESIAN_POINT('', (4.0, 5.0)); ENDSEC;",
     );
+    itest_tryfrom::<BSplineCurve<Point2>, QuasiUniformCurveHolder>(
+        BSplineCurve::new(
+            KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]),
+            vec![
+                Point2::new(0.0, 1.0),
+                Point2::new(2.0, 3.0),
+                Point2::new(4.0, 5.0),
+                Point2::new(6.0, 7.0),
+            ],
+        ),
+        "DATA; #1 = QUASI_UNIFORM_CURVE('', 2, (#2, #3, #4, #5), .UNSPECIFIED., .U., .U.);
+#2 = CARTESIAN_POINT('', (0.0, 1.0)); #3 = CARTESIAN_POINT('', (2.0, 3.0));
+#4 = CARTESIAN_POINT('', (4.0, 5.0)); #5 = CARTESIAN_POINT('', (6.0, 7.0)); ENDSEC;",
+    );
     oitest_tryfrom::<NURBSCurve<Vector3>, RationalBSplineCurveHolder>(NURBSCurve::new(
         BSplineCurve::new(
             KnotVec::bezier_knot(3),

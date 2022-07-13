@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- The parsing of the STEP geometry was implemented up to BSplineSurfaceWithKnots.
 - Direct `CompressedShell` tessellation.
 - Direct serialize API for topological data structures.
 - Update resources.

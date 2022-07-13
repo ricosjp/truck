@@ -30,6 +30,21 @@ fn read() {
 #16 = BEZIER_CURVE('BezierCurve', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.);
 #17 = QUASI_UNIFORM_CURVE('QuasiUniformCurve', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.);
 #18 = UNIFORM_CURVE('UniformCurve', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.);
+#19 = (
+    BOUNDED_CURVE()
+    B_SPLINE_CURVE(2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.)
+    B_SPLINE_CURVE_WITH_KNOTS((3, 1, 3), (0.0, 0.5, 1.0), .UNSPECIFIED.)
+    CURVE()
+    GEOMETRIC_REPRESENTATION_ITEM()
+    RATIONAL_B_SPLINE_CURVE((1.0, 2.0, 3.0, 4.0, 5.0))
+    REPRESENTATION_ITEM('RationalBSplineCurve')
+);
+#20 = CIRCLE('Circle', #7, 10.0);
+#21 = PLANE('Plane', #9);
+#22 = B_SPLINE_SURFACE_WITH_KNOTS(
+    'BSplineSurfaceWithKnots', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.,
+    (3, 3), (3, 3), (0.0, 1.0), (0.0, 1.0), .UNSPECIFIED.
+);
 ENDSEC;
 ",
     )
@@ -231,6 +246,84 @@ ENDSEC;
                 closed_curve: Logical::Unknown,
                 self_intersect: Logical::Unknown,
             },
+        )]),
+        rational_b_spline_curve: HashMap::from_iter(vec![(
+            19,
+            RationalBSplineCurveHolder {
+                non_rational_b_spline_curve: PlaceHolder::Owned(
+                    NonRationalBSplineCurveHolder::BSplineCurveWithKnots(
+                        BSplineCurveWithKnotsHolder {
+                            label: "RationalBSplineCurve".to_string(),
+                            degree: 2,
+                            control_points_list: vec![
+                                PlaceHolder::Ref(Name::Entity(1)),
+                                PlaceHolder::Ref(Name::Entity(1)),
+                                PlaceHolder::Ref(Name::Entity(1)),
+                                PlaceHolder::Ref(Name::Entity(1)),
+                                PlaceHolder::Ref(Name::Entity(1)),
+                            ],
+                            curve_form: BSplineCurveForm::Unspecified,
+                            closed_curve: Logical::Unknown,
+                            self_intersect: Logical::Unknown,
+                            knot_multiplicities: vec![3, 1, 3],
+                            knots: vec![0.0, 0.5, 1.0],
+                            knot_spec: KnotType::Unspecified,
+                        },
+                    ),
+                ),
+                weights_data: vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+        )]),
+        circle: HashMap::from_iter(vec![(
+            20,
+            CircleHolder {
+                label: "Circle".to_string(),
+                position: PlaceHolder::Ref(Name::Entity(7)),
+                radius: 10.0,
+            },
+        )]),
+        plane: HashMap::from_iter(vec![
+            (
+                21,
+                PlaneHolder {
+                    label: "Plane".to_string(),
+                    position: PlaceHolder::Ref(Name::Entity(9)),
+                }
+            )
+        ]),
+        b_spline_surface_with_knots: HashMap::from_iter(vec![(
+            22,
+            BSplineSurfaceWithKnotsHolder {
+                label: "BSplineSurfaceWithKnots".to_string(),
+                u_degree: 2,
+                v_degree: 2,
+                control_points_list: vec![
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                ],
+                surface_form: BSplineSurfaceForm::Unspecified,
+                u_closed: Logical::Unknown,
+                v_closed: Logical::Unknown,
+                self_intersect: Logical::Unknown,
+                u_multiplicities: vec![3, 3],
+                v_multiplicities: vec![3, 3],
+                u_knots: vec![0.0, 1.0],
+                v_knots: vec![0.0, 1.0],
+                knot_spec: KnotType::Unspecified,
+            }
         )]),
         ..Default::default()
     };
