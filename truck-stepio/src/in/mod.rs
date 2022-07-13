@@ -691,7 +691,7 @@ impl<'a, P: From<&'a CartesianPoint>> From<&'a Polyline> for PolylineCurve<P> {
     fn from(poly: &'a Polyline) -> Self { Self(poly.points.iter().map(|pt| P::from(pt)).collect()) }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BSplineCurveForm {
     PolylineForm,
     CircularArc,
@@ -701,7 +701,7 @@ pub enum BSplineCurveForm {
     Unspecified,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KnotType {
     UniformKnots,
     Unspecified,
@@ -728,7 +728,7 @@ pub struct BSplineCurveWithKnots {
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BSplineCurveWithKnots> for BSplineCurve<P> {
     type Error = ExpressParseError;
     fn try_from(curve: &BSplineCurveWithKnots) -> std::result::Result<Self, ExpressParseError> {
-        let knots = curve.knots.iter().map(|a| *a).collect();
+        let knots = curve.knots.clone();
         let multi = curve
             .knot_multiplicities
             .iter()
@@ -936,7 +936,7 @@ impl From<&Plane> for truck_geometry::Plane {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BSplineSurfaceForm {
     PlaneSurf,
     CylindricalSurf,
@@ -975,7 +975,7 @@ pub struct BSplineSurfaceWithKnots {
 impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
     fn try_from(surface: &BSplineSurfaceWithKnots) -> std::result::Result<Self, ExpressParseError> {
-        let uknots = surface.u_knots.iter().copied().collect();
+        let uknots = surface.u_knots.to_vec();
         let umulti = surface
             .u_multiplicities
             .iter()

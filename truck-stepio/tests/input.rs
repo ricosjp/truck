@@ -282,15 +282,13 @@ ENDSEC;
                 radius: 10.0,
             },
         )]),
-        plane: HashMap::from_iter(vec![
-            (
-                21,
-                PlaneHolder {
-                    label: "Plane".to_string(),
-                    position: PlaceHolder::Ref(Name::Entity(9)),
-                }
-            )
-        ]),
+        plane: HashMap::from_iter(vec![(
+            21,
+            PlaneHolder {
+                label: "Plane".to_string(),
+                position: PlaceHolder::Ref(Name::Entity(9)),
+            },
+        )]),
         b_spline_surface_with_knots: HashMap::from_iter(vec![(
             22,
             BSplineSurfaceWithKnotsHolder {
@@ -323,7 +321,7 @@ ENDSEC;
                 u_knots: vec![0.0, 1.0],
                 v_knots: vec![0.0, 1.0],
                 knot_spec: KnotType::Unspecified,
-            }
+            },
         )]),
         ..Default::default()
     };
