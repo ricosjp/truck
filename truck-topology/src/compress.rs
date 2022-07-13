@@ -1,19 +1,24 @@
-//! Serialized data format for topological data structures
+//! Serialized topological data exchange format
 //!
 //! Topological data structures in truck is subject to editing and has complex reference relationships.
 //! They are not suitable for direct serialization and must be converted to lighter and simpler data structures.
 //! These structures, prefixed with `Compressed`, are a group of structures that are easy to serialize,
 //! but not suitable for real-time shape editing.
+//!
+//! They directly reflect the results of parsing data from json or STEP, and all member variables are public.
+//! Boundary connectivity and closure are checked when converting to proprietary data structures, `Vertex`, `Edge`, and so on.
 
 use crate::*;
 use rustc_hash::FxHashMap as HashMap;
 use serde::{Deserialize, Serialize};
 
 /// Serialized compressed edge
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CompressedEdge<C> {
-    vertices: (usize, usize),
-    curve: C,
+    /// vertices of the edge
+    pub vertices: (usize, usize),
+    /// curve geometry of the edge
+    pub curve: C,
 }
 
 impl<C> CompressedEdge<C> {
@@ -23,21 +28,44 @@ impl<C> CompressedEdge<C> {
         let back = &v[self.vertices.1];
         Edge::try_new(front, back, self.curve)
     }
+}
 
-    /// Returns the vertices
-    #[inline(always)]
-    pub fn vertices(&self) -> (usize, usize) { self.vertices }
-    /// Returns the reference of the curve
-    #[inline(always)]
-    pub fn curve(&self) -> &C { &self.curve }
+/// The index of an edge in `CompressedShell`.
+#[derive(Clone, Copy, Debug)]
+pub struct CompressedEdgeIndex {
+    /// the index of the edge
+    pub index: usize,
+    /// the orientation of the edge
+    pub orientation: bool,
+}
+
+impl Serialize for CompressedEdgeIndex {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where S: serde::Serializer {
+        (self.index, self.orientation).serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for CompressedEdgeIndex {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        Ok(<(usize, bool)>::deserialize(deserializer)?.into())
+    }
+}
+
+impl From<(usize, bool)> for CompressedEdgeIndex {
+    fn from((index, orientation): (usize, bool)) -> Self { Self { index, orientation } }
 }
 
 /// Serialized compressed face
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompressedFace<S> {
-    boundaries: Vec<Vec<(usize, bool)>>,
-    orientation: bool,
-    surface: S,
+    /// Boundaries of the face
+    pub boundaries: Vec<Vec<CompressedEdgeIndex>>,
+    /// orientation of the face
+    pub orientation: bool,
+    /// surface geometry of the face
+    pub surface: S,
 }
 
 impl<S> CompressedFace<S> {
@@ -47,10 +75,12 @@ impl<S> CompressedFace<S> {
             .into_iter()
             .map(|wire| {
                 wire.into_iter()
-                    .map(|(idx, ori)| match ori {
-                        true => edges[idx].clone(),
-                        false => edges[idx].inverse(),
-                    })
+                    .map(
+                        |CompressedEdgeIndex { index, orientation }| match orientation {
+                            true => edges[index].clone(),
+                            false => edges[index].inverse(),
+                        },
+                    )
                     .collect()
             })
             .collect();
@@ -60,53 +90,24 @@ impl<S> CompressedFace<S> {
         }
         Ok(face)
     }
-
-    /// Returns the reference of the boundaries.
-    ///
-    /// The boundary wires are represented by the vector of the tuple `(usize, bool)`.
-    /// The first `usize` value is the index of edge and second `bool` value is its orientation.
-    #[inline(always)]
-    pub fn boundaries(&self) -> &Vec<Vec<(usize, bool)>> { &self.boundaries }
-
-    /// Returns the orientation of this face.
-    #[inline(always)]
-    pub fn orientation(&self) -> bool { self.orientation }
-
-    /// Returns the reference of the surface.
-    #[inline(always)]
-    pub fn surface(&self) -> &S { &self.surface }
 }
 
 /// Serialized compressed shell
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompressedShell<P, C, S> {
-    vertices: Vec<P>,
-    edges: Vec<CompressedEdge<C>>,
-    faces: Vec<CompressedFace<S>>,
-}
-
-impl<P, C, S> CompressedShell<P, C, S> {
-    /// Returns the vertices in the shell.
-    #[inline(always)]
-    pub fn vertices(&self) -> &Vec<P> { &self.vertices }
-    /// Returns the edges in the shell.
-    #[inline(always)]
-    pub fn edges(&self) -> &Vec<CompressedEdge<C>> { &self.edges }
-    /// Returns the faces in the shell.
-    #[inline(always)]
-    pub fn faces(&self) -> &Vec<CompressedFace<S>> { &self.faces }
+    /// all geometries of vertices
+    pub vertices: Vec<P>,
+    /// all geometries and end vertices of edges
+    pub edges: Vec<CompressedEdge<C>>,
+    /// all geometries and boundaries of faces
+    pub faces: Vec<CompressedFace<S>>,
 }
 
 /// Serialized compressed solid
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompressedSolid<P, C, S> {
-    boundaries: Vec<CompressedShell<P, C, S>>,
-}
-
-impl<P, C, S> CompressedSolid<P, C, S> {
-    /// Returns the boundary shells on the solid.
-    #[inline(always)]
-    pub fn boundaries(&self) -> &Vec<CompressedShell<P, C, S>> { &self.boundaries }
+    /// all boundaries of solid
+    pub boundaries: Vec<CompressedShell<P, C, S>>,
 }
 
 struct CompressDirector<P, C> {
@@ -132,9 +133,9 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
     }
 
     #[inline(always)]
-    fn get_eid(&mut self, edge: &Edge<P, C>) -> (usize, bool) {
+    fn get_eid(&mut self, edge: &Edge<P, C>) -> CompressedEdgeIndex {
         match self.emap.get(&edge.id()) {
-            Some(got) => (got.0, edge.orientation()),
+            Some(got) => (got.0, edge.orientation()).into(),
             None => {
                 let id = self.emap.len();
                 let front_id = self.get_vid(edge.absolute_front());
@@ -145,13 +146,13 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
                     curve,
                 };
                 self.emap.insert(edge.id(), (id, cedge));
-                (id, edge.orientation())
+                (id, edge.orientation()).into()
             }
         }
     }
 
     #[inline(always)]
-    fn create_boundary(&mut self, boundary: &Wire<P, C>) -> Vec<(usize, bool)> {
+    fn create_boundary(&mut self, boundary: &Wire<P, C>) -> Vec<CompressedEdgeIndex> {
         boundary.iter().map(|edge| self.get_eid(edge)).collect()
     }
 
