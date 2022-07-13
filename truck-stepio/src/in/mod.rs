@@ -11,8 +11,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use truck_geometry::*;
 
-use crate::alias::ExpressParseError;
-
 /// type alias
 pub mod alias;
 use alias::*;
