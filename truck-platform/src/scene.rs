@@ -689,14 +689,14 @@ impl Scene {
                 None => (view, None),
             };
             let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
-                color_attachments: &[RenderPassColorAttachment {
+                color_attachments: &[Some(RenderPassColorAttachment {
                     view: attachment,
                     resolve_target,
                     ops: Operations {
                         load: LoadOp::Clear(self.scene_desc.studio.background),
                         store: true,
                     },
-                }],
+                })],
                 depth_stencil_attachment: depth_view
                     .as_ref()
                     .map(Self::depth_stencil_attachment_descriptor),
@@ -766,11 +766,13 @@ impl Scene {
         );
         queue.submit(Some(encoder.finish()));
         let buffer_slice = buffer.slice(..);
-        let buffer_future = buffer_slice.map_async(MapMode::Read);
+        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(MapMode::Read, move |v| sender.send(v).unwrap());
         device.poll(Maintain::Wait);
-        match buffer_future.await {
-            Ok(_) => buffer_slice.get_mapped_range().iter().copied().collect(),
-            Err(e) => panic!("{}", e),
+        match receiver.receive().await {
+            Some(Ok(_)) => buffer_slice.get_mapped_range().iter().copied().collect(),
+            Some(Err(e)) => panic!("{}", e),
+            None => panic!("Asynchronous processing fails"),
         }
     }
 }
@@ -784,9 +786,7 @@ impl WindowScene {
         let (device, surface) = (&device_handler.device, &window_handler.surface);
         let render_texture = RenderTextureConfig {
             canvas_size: size.into(),
-            format: surface
-                .get_preferred_format(&device_handler.adapter)
-                .expect("Failed to get preferred texture."),
+            format: surface.get_supported_formats(&device_handler.adapter)[0],
         };
         let config = render_texture.compatible_surface_config();
         surface.configure(device, &config);

@@ -182,11 +182,11 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                         fragment: Some(FragmentState {
                             module: &self.module,
                             entry_point: "fs_main",
-                            targets: &[ColorTargetState {
+                            targets: &[Some(ColorTargetState {
                                 format: render_texture.format,
                                 blend: Some(BlendState::REPLACE),
                                 write_mask: ColorWrites::ALL,
-                            }],
+                            })],
                         }),
                         primitive: PrimitiveState {
                             topology: PrimitiveTopology::TriangleList,
@@ -251,7 +251,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
             .map_err(|error| println!("WGSL Validation Error: {}", error))
             .ok()?;
 
-        Some(device.create_shader_module(&ShaderModuleDescriptor {
+        Some(device.create_shader_module(ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(source.into()),
             label: None,
         }))
