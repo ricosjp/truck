@@ -3,6 +3,7 @@
 // Copyright © 2021 RICOS
 // Apache license 2.0
 
+pub use async_trait::async_trait;
 use instant::Instant;
 use std::sync::Arc;
 use std::time::Duration;
@@ -13,12 +14,14 @@ use winit::window::Window;
 
 /// The framework of applications with `winit`.
 /// The main function of this file is the smallest usecase of this trait.
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait App: Sized + 'static {
     /// Initialize application
     /// # Arguments
     /// - handler: `DeviceHandler` provided by `wgpu`
     /// - info: informations of device and backend
-    fn init(window: Arc<Window>) -> Self;
+    async fn init(window: Arc<Window>) -> Self;
     /// By overriding this function, you can change the display of the title bar.
     /// It is not possible to change the window while it is running.
     fn app_title<'a>() -> Option<&'a str> { None }
@@ -88,63 +91,58 @@ pub trait App: Sized + 'static {
         }
 
         let window = Arc::new(window);
-        let mut app = Self::init(Arc::clone(&window));
+        block_on(async move {
+            let mut app = Self::init(Arc::clone(&window)).await;
 
-        event_loop.run(move |ev, _, control_flow| {
-            *control_flow = match ev {
-                Event::MainEventsCleared => {
-                    window.request_redraw();
-                    Self::default_control_flow()
-                }
-                Event::RedrawRequested(_) => {
-                    app.render();
-                    Self::default_control_flow()
-                }
-                Event::WindowEvent { event, .. } => match event {
-                    WindowEvent::Resized(size) => {
-                        app.resized(size);
+            event_loop.run(move |ev, _, control_flow| {
+                *control_flow = match ev {
+                    Event::MainEventsCleared => {
+                        window.request_redraw();
                         Self::default_control_flow()
                     }
-                    WindowEvent::Moved(position) => app.moved(position),
-                    WindowEvent::CloseRequested => app.closed_requested(),
-                    WindowEvent::Destroyed => app.destroyed(),
-                    WindowEvent::DroppedFile(path) => app.dropped_file(path),
-                    WindowEvent::HoveredFile(path) => app.hovered_file(path),
-                    WindowEvent::KeyboardInput {
-                        input,
-                        is_synthetic,
-                        ..
-                    } => app.keyboard_input(input, is_synthetic),
-                    WindowEvent::MouseInput { state, button, .. } => app.mouse_input(state, button),
-                    WindowEvent::MouseWheel { delta, phase, .. } => app.mouse_wheel(delta, phase),
-                    WindowEvent::CursorMoved { position, .. } => app.cursor_moved(position),
+                    Event::RedrawRequested(_) => {
+                        app.render();
+                        Self::default_control_flow()
+                    }
+                    Event::WindowEvent { event, .. } => match event {
+                        WindowEvent::Resized(size) => {
+                            app.resized(size);
+                            Self::default_control_flow()
+                        }
+                        WindowEvent::Moved(position) => app.moved(position),
+                        WindowEvent::CloseRequested => app.closed_requested(),
+                        WindowEvent::Destroyed => app.destroyed(),
+                        WindowEvent::DroppedFile(path) => app.dropped_file(path),
+                        WindowEvent::HoveredFile(path) => app.hovered_file(path),
+                        WindowEvent::KeyboardInput {
+                            input,
+                            is_synthetic,
+                            ..
+                        } => app.keyboard_input(input, is_synthetic),
+                        WindowEvent::MouseInput { state, button, .. } => {
+                            app.mouse_input(state, button)
+                        }
+                        WindowEvent::MouseWheel { delta, phase, .. } => {
+                            app.mouse_wheel(delta, phase)
+                        }
+                        WindowEvent::CursorMoved { position, .. } => app.cursor_moved(position),
+                        _ => Self::default_control_flow(),
+                    },
                     _ => Self::default_control_flow(),
-                },
-                _ => Self::default_control_flow(),
-            };
+                };
+            })
         })
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
-pub fn block_on<T: 'static, F: core::future::Future<Output = T> + 'static>(f: F) -> T {
-    pollster::block_on(f)
-}
+pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) { pollster::block_on(f); }
 
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)]
-pub fn block_on<T: 'static, F: core::future::Future<Output = T> + 'static>(f: F) -> T {
-    use std::sync::Mutex;
-    let a: Arc<Mutex<Option<T>>> = Arc::new(Mutex::new(None));
-    let b = Arc::clone(&a);
-    wasm_bindgen_futures::spawn_local(async move {
-        let val = f.await;
-        *a.lock().unwrap() = Some(val);
-    });
-    while b.lock().unwrap().is_some() {}
-    let x = b.lock().unwrap().take().unwrap();
-    x
+pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) {
+    wasm_bindgen_futures::spawn_local(f);
 }
 
 /// The smallest example of the trait `App`.
@@ -152,8 +150,10 @@ pub fn block_on<T: 'static, F: core::future::Future<Output = T> + 'static>(f: F)
 #[allow(dead_code)]
 fn main() {
     struct MyApp;
+    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl App for MyApp {
-        fn init(_: Arc<Window>) -> MyApp { MyApp }
+        async fn init(_: Arc<Window>) -> Self { MyApp }
     }
     MyApp::run()
 }
