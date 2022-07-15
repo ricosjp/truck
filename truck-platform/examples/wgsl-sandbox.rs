@@ -45,35 +45,35 @@ mod plane {
         id: RenderID,
     }
 
-    const BASE_PREFIX: &str = "[[block]]
-struct SceneInfo {
-    background_color: vec4<f32>;
-    resolution: vec2<u32>;
-    time: f32;
-    nlights: u32;
-};
+    const BASE_PREFIX: &str = "struct SceneInfo {
+    background_color: vec4<f32>,
+    resolution: vec2<u32>,
+    time: f32,
+    nlights: u32,
+}
 
-[[block]]
 struct Mouse {
-    mouse: vec4<f32>;
-};
+    mouse: vec4<f32>,
+}
 
-[[group(0), binding(2)]]
+@group(0)
+@binding(2)
 var<uniform> info__: SceneInfo;
 
-[[group(1), binding(0)]]
+@group(1)
+@binding(0)
 var<uniform> mouse__: Mouse;
 
 struct Environment {
-    resolution: vec2<f32>;
-    mouse: vec4<f32>;
-    time: f32;
-};
+    resolution: vec2<f32>,
+    mouse: vec4<f32>,
+    time: f32,
+}
 
 ";
 
-    const BASE_SHADER: &str = "[[stage(vertex)]]
-fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
+    const BASE_SHADER: &str = "@vertex
+fn vs_main(@location(0) idx: u32) -> @builtin(position) vec4<f32> {
     var vertex: array<vec2<f32>, 4>;
     vertex[0] = vec2<f32>(-1.0, -1.0);
     vertex[1] = vec2<f32>(1.0, -1.0);
@@ -82,8 +82,8 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
     return vec4<f32>(vertex[idx], 0.0, 1.0);
 }
 
-[[stage(fragment)]]
-fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f32> {
+@fragment
+fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     var env: Environment;
     env.resolution = vec2<f32>(info__.resolution);
     env.mouse = mouse__.mouse;
@@ -182,11 +182,11 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
                         fragment: Some(FragmentState {
                             module: &self.module,
                             entry_point: "fs_main",
-                            targets: &[ColorTargetState {
+                            targets: &[Some(ColorTargetState {
                                 format: render_texture.format,
                                 blend: Some(BlendState::REPLACE),
                                 write_mask: ColorWrites::ALL,
-                            }],
+                            })],
                         }),
                         primitive: PrimitiveState {
                             topology: PrimitiveTopology::TriangleList,
@@ -251,7 +251,7 @@ fn fs_main([[builtin(position)]] position: vec4<f32>) -> [[location(0)]] vec4<f3
             .map_err(|error| println!("WGSL Validation Error: {}", error))
             .ok()?;
 
-        Some(device.create_shader_module(&ShaderModuleDescriptor {
+        Some(device.create_shader_module(ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(source.into()),
             label: None,
         }))

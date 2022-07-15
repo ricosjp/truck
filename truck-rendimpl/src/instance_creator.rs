@@ -33,7 +33,7 @@ impl PolygonShaders {
     pub fn default(device: &Device) -> Self {
         let source = include_str!("shaders/microfacet-module.wgsl").to_string()
             + include_str!("shaders/polygon.wgsl");
-        let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
+        let shader_module = Arc::new(device.create_shader_module(ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(source.into()),
             label: None,
         }));
@@ -73,7 +73,7 @@ impl WireShaders {
     /// Creates default wireframe shaders
     #[inline(always)]
     fn default(device: &Device) -> Self {
-        let shader_module = Arc::new(device.create_shader_module(&ShaderModuleDescriptor {
+        let shader_module = Arc::new(device.create_shader_module(ShaderModuleDescriptor {
             source: ShaderSource::Wgsl(include_str!("shaders/line.wgsl").into()),
             label: None,
         }));

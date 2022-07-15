@@ -164,11 +164,11 @@ impl Rendered for PolygonInstance {
             fragment: Some(FragmentState {
                 module: fragment_module,
                 entry_point: fragment_entry,
-                targets: &[ColorTargetState {
+                targets: &[Some(ColorTargetState {
                     format: scene_desc.render_texture.format,
                     blend,
                     write_mask: ColorWrites::ALL,
-                }],
+                })],
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,

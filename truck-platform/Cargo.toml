@@ -17,11 +17,12 @@ webgl = ["wgpu/webgl"]
 wgpu_trace = ["wgpu/trace"]
 
 [dependencies]
-bytemuck = { version = "1.9.1", features = ["derive"] }
+bytemuck = { version = "1.10.0", features = ["derive"] }
 derive_more = "0.99.17"
+futures-intrusive = "0.4.0"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.3.0", path = "../truck-base" }
-wgpu = "0.12.0"
+wgpu = "0.13.1"
 winit = "0.26.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -33,11 +34,11 @@ instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
 image = "0.24.2"
 rayon = "1.5.3"
 env_logger = "0.9.0"
-naga = { version = "0.8.5", features = ["wgsl-in"] }
+naga = { version = "0.9.0", features = ["wgsl-in"] }
 pollster = "0.2.5"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures = "0.4.30"
+wasm-bindgen-futures = "0.4.31"
 console_error_panic_hook = "0.1.7"
 console_log = "0.2.0"
-web-sys = { version = "0.3.57", features = ["Location"] }
+web-sys = { version = "0.3.58", features = ["Location"] }

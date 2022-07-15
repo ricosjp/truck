@@ -1,42 +1,46 @@
 struct ModelMatrix {
-    matrix: mat4x4<f32>;
-};
+    model_matrix: mat4x4<f32>,
+}
 
 struct Material {
-    albedo: vec4<f32>;
-    roughness: f32;
-    reflectance: f32;
-    ambient_ratio: f32;
-    background_ratio: f32;
-};
+    albedo: vec4<f32>,
+    roughness: f32,
+    reflectance: f32,
+    ambient_ratio: f32,
+    background_ratio: f32,
+}
 
-[[group(1), binding(0)]]
+@group(1)
+@binding(0)
 var<uniform> model_matrix: ModelMatrix;
 
-[[group(1), binding(1)]]
+@group(1)
+@binding(1)
 var<uniform> material: Material;
 
-[[group(1), binding(2)]]
+@group(1)
+@binding(2)
 var r_color: texture_2d<f32>;
 
-[[group(1), binding(3)]]
+@group(1)
+@binding(3)
 var r_sampler: sampler;
 
 struct VertexInput {
-    [[location(0)]] position: vec3<f32>;
-    [[location(1)]] uv: vec2<f32>;
-    [[location(2)]] normal: vec3<f32>;
-};
+    @location(0) position: vec3<f32>,
+    @location(1) uv: vec2<f32>,
+    @location(2) normal: vec3<f32>,
+}
 
 struct VertexOutput {
-    [[builtin(position)]] position: vec4<f32>;
-    [[location(0)]] uv: vec2<f32>;
-};
+    @builtin(position) position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+}
 
 let EPS: f32 = 1.0e-6;
 let e: vec2<f32> = vec2<f32>(1.0, 0.0);
 
-[[stage(vertex)]]
+@vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.uv = vec2<f32>(0.1);
@@ -44,13 +48,13 @@ fn vs_main(in: VertexInput) -> VertexOutput {
         out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } else if (distance(in.normal, vec3<f32>(in.uv.y, 0.2, in.uv.x)) > EPS) {
         out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
         out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
         out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
         out.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);  
     } else {
         out.position = vec4<f32>(in.uv, 0.0, 1.0);
@@ -59,15 +63,15 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     return out;
 }
 
-[[stage(fragment)]]
-fn nontex_main() -> [[location(0)]] vec4<f32> {
-    if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
+@fragment
+fn nontex_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    if (distance(model_matrix.model_matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0); 
     } else if (distance(material.albedo, vec4<f32>(0.2, 0.4, 0.6, 1.0)) > EPS) {
         return vec4<f32>(1.0, 1.0, 0.0, 1.0);
@@ -84,15 +88,15 @@ fn nontex_main() -> [[location(0)]] vec4<f32> {
     }
 }
 
-[[stage(fragment)]]
-fn nontex_main_anti() -> [[location(0)]] vec4<f32> {
-    if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
+@fragment
+fn nontex_main_anti(in: VertexOutput) -> @location(0) vec4<f32> {
+    if (distance(model_matrix.model_matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0); 
     } else if (distance(material.albedo, vec4<f32>(0.2, 0.4, 0.6, 1.0)) > EPS) {
         return vec4<f32>(1.0, 1.0, 0.0, 1.0);
@@ -109,15 +113,15 @@ fn nontex_main_anti() -> [[location(0)]] vec4<f32> {
     }
 }
 
-[[stage(fragment)]]
-fn tex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
+@fragment
+fn tex_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    if (distance(model_matrix.model_matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0); 
     } else if (distance(material.albedo, vec4<f32>(0.2, 0.4, 0.6, 1.0)) > EPS) {
         return vec4<f32>(1.0, 1.0, 0.0, 1.0);
@@ -135,15 +139,15 @@ fn tex_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     }
 }
 
-[[stage(fragment)]]
-fn tex_main_anti(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    if (distance(model_matrix.matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
+@fragment
+fn tex_main_anti(in: VertexOutput) -> @location(0) vec4<f32> {
+    if (distance(model_matrix.model_matrix * e.xyyy, vec4<f32>(1.0, 2.0, 3.0, 4.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yxyy, vec4<f32>(5.0, 6.0, 7.0, 8.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyxy, vec4<f32>(9.0, 10.0, 11.0, 12.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else if (distance(model_matrix.matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
+    } else if (distance(model_matrix.model_matrix * e.yyyx, vec4<f32>(13.0, 14.0, 15.0, 16.0)) > EPS) {
         return vec4<f32>(0.0, 0.0, 1.0, 1.0); 
     } else if (distance(material.albedo, vec4<f32>(0.2, 0.4, 0.6, 1.0)) > EPS) {
         return vec4<f32>(1.0, 1.0, 0.0, 1.0);

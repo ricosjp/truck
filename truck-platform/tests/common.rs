@@ -61,7 +61,7 @@ impl<'a> Rendered for Plane<'a> {
         writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
         let device = handler.device();
         let source = ShaderSource::Wgsl(self.shader.into());
-        let module = device.create_shader_module(&ShaderModuleDescriptor {
+        let module = device.create_shader_module(ShaderModuleDescriptor {
             label: None,
             source,
         });
@@ -86,11 +86,11 @@ impl<'a> Rendered for Plane<'a> {
                     fragment: Some(FragmentState {
                         module: &module,
                         entry_point: self.fs_entpt,
-                        targets: &[ColorTargetState {
+                        targets: &[Some(ColorTargetState {
                             format: scene_desc.render_texture.format,
                             blend: Some(BlendState::REPLACE),
                             write_mask: ColorWrites::ALL,
-                        }],
+                        })],
                     }),
                     primitive: PrimitiveState {
                         topology: PrimitiveTopology::TriangleList,

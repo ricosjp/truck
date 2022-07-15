@@ -114,11 +114,11 @@ impl Rendered for WireFrameInstance {
             fragment: Some(FragmentState {
                 module: &self.shaders.fragment_module,
                 entry_point: self.shaders.fragment_entry,
-                targets: &[ColorTargetState {
+                targets: &[Some(ColorTargetState {
                     format: scene_desc.render_texture.format,
                     blend: Some(BlendState::REPLACE),
                     write_mask: ColorWrites::ALL,
-                }],
+                })],
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::LineList,
