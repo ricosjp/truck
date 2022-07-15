@@ -155,8 +155,9 @@ impl MyApp {
     }
 }
 
+#[async_trait(?Send)]
 impl App for MyApp {
-    fn init(window: Arc<winit::window::Window>) -> MyApp {
+    async fn init(window: Arc<winit::window::Window>) -> MyApp {
         let sample_count = 4;
         let scene_desc = WindowSceneDescriptor {
             studio: StudioConfig {
@@ -173,8 +174,7 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene =
-            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
+        let mut scene = WindowScene::from_window(window, &scene_desc).await;
         let creator = scene.instance_creator();
         let (instance, wireframe) = Self::load_shape(&creator, PUNCHED_CUBE_BYTES);
         scene.add_object(&instance);

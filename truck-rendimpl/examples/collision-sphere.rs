@@ -1,5 +1,5 @@
 mod app;
-use app::App;
+use app::*;
 use std::f64::consts::PI;
 use std::sync::Arc;
 use truck_meshalgo::prelude::*;
@@ -27,8 +27,9 @@ enum RenderMode {
     InterferenceOnly,
 }
 
+#[async_trait(?Send)]
 impl App for MyApp {
-    fn init(window: Arc<winit::window::Window>) -> MyApp {
+    async fn init(window: Arc<winit::window::Window>) -> MyApp {
         let sample_count = 4;
         let matrix = Matrix4::look_at_rh(
             Point3::new(2.0, 2.0, 2.0),
@@ -56,8 +57,7 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene =
-            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
+        let mut scene = WindowScene::from_window(window, &scene_desc).await;
         let sphere0 = sphere(Point3::new(0.0, 0.0, 0.7), 1.0, 50, 50);
         let sphere1 = sphere(Point3::new(0.0, 0.0, -0.7), 1.0, 50, 50);
         let intersect = sphere0.extract_interference(&sphere1);

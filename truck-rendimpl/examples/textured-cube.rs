@@ -48,8 +48,9 @@ impl MyApp {
     }
 }
 
+#[async_trait(?Send)]
 impl App for MyApp {
-    fn init(window: Arc<winit::window::Window>) -> MyApp {
+    async fn init(window: Arc<winit::window::Window>) -> MyApp {
         let sample_count = 4;
         let desc = WindowSceneDescriptor {
             studio: StudioConfig {
@@ -66,7 +67,7 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene = app::block_on(async move { WindowScene::from_window(window, &desc).await });
+        let mut scene = WindowScene::from_window(window, &desc).await;
         let texture = image::load_from_memory(TEXTURE_BYTES).unwrap();
         let texture = image2texture::image2texture(scene.device_handler(), &texture);
         let state = PolygonState {

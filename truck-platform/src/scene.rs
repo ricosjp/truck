@@ -127,7 +127,7 @@ impl RenderTextureConfig {
             format: self.format,
             width: self.canvas_size.0,
             height: self.canvas_size.1,
-            present_mode: PresentMode::Mailbox,
+            present_mode: PresentMode::Fifo,
         }
     }
 }
@@ -662,10 +662,7 @@ impl Scene {
                 load: LoadOp::Clear(1.0),
                 store: true,
             }),
-            stencil_ops: Some(Operations {
-                load: LoadOp::Clear(0),
-                store: true,
-            }),
+            stencil_ops: None,
         }
     }
 
