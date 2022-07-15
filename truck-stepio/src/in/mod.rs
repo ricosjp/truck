@@ -39,6 +39,17 @@ pub struct Table {
     // surface
     pub plane: HashMap<u64, PlaneHolder>,
     pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
+
+    // topology
+    pub vertex_point: HashMap<u64, VertexPointHolder>,
+    pub edge_curve: HashMap<u64, EdgeCurveHolder>,
+    pub oriented_edge: HashMap<u64, OrientedEdgeHolder>,
+    pub edge_loop: HashMap<u64, EdgeLoopHolder>,
+    pub face_bound: HashMap<u64, FaceBoundHolder>,
+    pub face_surface: HashMap<u64, FaceSurfaceHolder>,
+    pub oriented_face: HashMap<u64, OrientedFaceHolder>,
+    pub shell: HashMap<u64, ShellHolder>,
+    pub oriented_shell: HashMap<u64, OrientedShellHolder>,
 }
 
 impl Table {
@@ -113,7 +124,8 @@ impl Table {
                     }
                 }
                 "LINE" => {
-                    self.line.insert(*id, Deserialize::deserialize(record)?);
+                    self.line
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "POLYLINE" => {
                     self.polyline.insert(*id, Deserialize::deserialize(record)?);
@@ -226,6 +238,153 @@ impl Table {
                                     u_knots: Deserialize::deserialize(&params[10])?,
                                     v_knots: Deserialize::deserialize(&params[11])?,
                                     knot_spec: Deserialize::deserialize(&params[12])?,
+                                },
+                            );
+                        }
+                    }
+                }
+
+                "VERTEX_POINT" => {
+                    self.vertex_point
+                        .insert(*id, VertexPointHolder::deserialize(record)?);
+                }
+                "EDGE_CURVE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 5 {
+                            self.edge_curve.insert(
+                                *id,
+                                EdgeCurveHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    edge_start: Deserialize::deserialize(&params[1])?,
+                                    edge_end: Deserialize::deserialize(&params[2])?,
+                                    edge_geometry: Deserialize::deserialize(&params[3])?,
+                                    same_sense: deserialize_bool(&params[4])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "ORIENTED_EDGE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 5 {
+                            self.oriented_edge.insert(
+                                *id,
+                                OrientedEdgeHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    edge_element: Deserialize::deserialize(&params[3])?,
+                                    orientation: deserialize_bool(&params[4])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "EDGE_LOOP" => {
+                    self.edge_loop
+                        .insert(*id, Deserialize::deserialize(record)?);
+                }
+                "FACE_BOUND" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 3 {
+                            self.face_bound.insert(
+                                *id,
+                                FaceBoundHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    bound: Deserialize::deserialize(&params[1])?,
+                                    orientation: deserialize_bool(&params[2])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "FACE_OUTER_BOUND" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 3 {
+                            self.face_bound.insert(
+                                *id,
+                                FaceBoundHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    bound: Deserialize::deserialize(&params[1])?,
+                                    orientation: deserialize_bool(&params[2])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "FACE_SURFACE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.face_surface.insert(
+                                *id,
+                                FaceSurfaceHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    bounds: Deserialize::deserialize(&params[1])?,
+                                    face_geometry: Deserialize::deserialize(&params[2])?,
+                                    same_sense: deserialize_bool(&params[3])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "ADVANCED_FACE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.face_surface.insert(
+                                *id,
+                                FaceSurfaceHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    bounds: Deserialize::deserialize(&params[1])?,
+                                    face_geometry: Deserialize::deserialize(&params[2])?,
+                                    same_sense: deserialize_bool(&params[3])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "ORIENTED_FACE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.oriented_face.insert(
+                                *id,
+                                OrientedFaceHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    face_element: Deserialize::deserialize(&params[2])?,
+                                    orientation: deserialize_bool(&params[3])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "OPEN_SHELL" => {
+                    self.shell
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "CLOSED_SHELL" => {
+                    self.shell
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "ORIENTED_OPEN_SHELL" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.oriented_shell.insert(
+                                *id,
+                                OrientedShellHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    shell_element: Deserialize::deserialize(&params[2])?,
+                                    orientation: deserialize_bool(&params[3])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "ORIENTED_CLOSED_SHELL" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.oriented_shell.insert(
+                                *id,
+                                OrientedShellHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    shell_element: Deserialize::deserialize(&params[2])?,
+                                    orientation: deserialize_bool(&params[3])?,
                                 },
                             );
                         }
@@ -458,8 +617,29 @@ fn deserialize_logical(parameter: &Parameter) -> Result<Logical> {
     Logical::deserialize(parameter).or_else(|_| CharLogical::deserialize(parameter).map(Into::into))
 }
 
+fn deserialize_bool(parameter: &Parameter) -> Result<bool> {
+    #[derive(Deserialize)]
+    enum CharBool {
+        F,
+        T,
+    }
+    impl From<CharBool> for bool {
+        fn from(x: CharBool) -> bool { matches!(x, CharBool::T) }
+    }
+
+    CharBool::deserialize(parameter).map(Into::into)
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum PointAny {
+    #[holder(use_place_holder)]
+    CartesianPoint(CartesianPoint),
+}
+
 /// `cartesian_point`
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = cartesian_point)]
 #[holder(generate_deserialize)]
@@ -490,7 +670,7 @@ impl From<&CartesianPoint> for Point3 {
 }
 
 /// `direction`
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = direction)]
 #[holder(generate_deserialize)]
@@ -521,7 +701,7 @@ impl From<&Direction> for Vector3 {
 }
 
 /// `vector`
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = vector)]
 #[holder(generate_deserialize)]
@@ -541,7 +721,7 @@ impl From<&Vector> for Vector3 {
 }
 
 /// `placement`
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = placement)]
 #[holder(generate_deserialize)]
@@ -557,7 +737,7 @@ impl From<&Placement> for Point3 {
     fn from(p: &Placement) -> Self { Self::from(&p.location) }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = axis1_placement)]
 #[holder(generate_deserialize)]
@@ -569,7 +749,7 @@ pub struct Axis1Placement {
     pub direction: Option<Direction>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum Axis2Placement {
@@ -600,7 +780,7 @@ impl TryFrom<&Axis2Placement> for Matrix4 {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = axis2_placement_2d)]
 #[holder(generate_deserialize)]
@@ -623,7 +803,7 @@ impl From<&Axis2Placement2d> for Matrix3 {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = axis2_placement_3d)]
 #[holder(generate_deserialize)]
@@ -655,7 +835,42 @@ impl From<&Axis2Placement3d> for Matrix4 {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum CurveAny {
+    #[holder(use_place_holder)]
+    Line(Line),
+    #[holder(use_place_holder)]
+    Polyline(Polyline),
+    #[holder(use_place_holder)]
+    BSplineCurve(BSplineCurveAny),
+    #[holder(use_place_holder)]
+    Circle(Circle),
+}
+
+impl TryFrom<&CurveAny> for Curve<Point2, Vector3, Matrix3> {
+    type Error = ExpressParseError;
+    fn try_from(
+        x: &CurveAny,
+    ) -> std::result::Result<Curve<Point2, Vector3, Matrix3>, ExpressParseError> {
+        use CurveAny::*;
+        match x {
+            Line(x) => Ok(Curve::Line(x.into())),
+            Polyline(x) => Ok(Curve::Polyline(x.into())),
+            BSplineCurve(x) => match x {
+                BSplineCurveAny::BSplineCurveWithKnots(x) => Ok(Curve::BSplineCurve(x.try_into()?)),
+                BSplineCurveAny::BezierCurve(x) => Ok(Curve::BSplineCurve(x.try_into()?)),
+                BSplineCurveAny::QuasiUniformCurve(x) => Ok(Curve::BSplineCurve(x.try_into()?)),
+                BSplineCurveAny::UniformCurve(x) => Ok(Curve::BSplineCurve(x.try_into()?)),
+                BSplineCurveAny::RationalBSplineCurve(x) => Ok(Curve::NURBSCurve(x.try_into()?)),
+            },
+            Circle(x) => Ok(Curve::Conic(Conic::Ellipse(x.try_into()?))),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = line)]
 #[holder(generate_deserialize)]
@@ -678,7 +893,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = polyline)]
 #[holder(generate_deserialize)]
@@ -709,7 +924,7 @@ pub enum KnotType {
     PiecewiseBezierKnots,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = b_spline_curve_with_knots)]
 #[holder(generate_deserialize)]
@@ -740,7 +955,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BSplineCurveWithKnots> for BS
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = bezier_curve)]
 #[holder(generate_deserialize)]
@@ -763,7 +978,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BezierCurve> for BSplineCurve
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = quasi_uniform_curve)]
 #[holder(generate_deserialize)]
@@ -789,7 +1004,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&QuasiUniformCurve> for BSplin
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = uniform_curve)]
 #[holder(generate_deserialize)]
@@ -817,7 +1032,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BSplineCurv
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum NonRationalBSplineCurve {
@@ -847,7 +1062,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&NonRationalBSplineCurve> for 
 /// This struct is an ad hoc implementation that differs from the definition by EXPRESS:
 /// in AP042, rationalized curves are defined as complex entities,
 /// but here the curves before rationalization are held as internal variables.
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = rational_b_spline_curve)]
 #[holder(generate_deserialize)]
@@ -871,7 +1086,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum BSplineCurveAny {
@@ -887,7 +1102,7 @@ pub enum BSplineCurveAny {
     RationalBSplineCurve(RationalBSplineCurve),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = circle)]
 #[holder(generate_deserialize)]
@@ -916,7 +1131,17 @@ impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum SurfaceAny {
+    #[holder(use_place_holder)]
+    Plane(Plane),
+    #[holder(use_place_holder)]
+    BSplineSurfaceWithKnots(BSplineCurveWithKnots),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = plane)]
 #[holder(generate_deserialize)]
@@ -951,7 +1176,7 @@ pub enum BSplineSurfaceForm {
     Unspecified,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = b_spline_surface_with_knots)]
 #[holder(generate_deserialize)]
@@ -996,4 +1221,137 @@ impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
             .collect();
         Self::try_new((uknots, vknots), ctrls).map_err(|x| x.to_string())
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = vertex_point)]
+#[holder(generate_deserialize)]
+pub struct VertexPoint {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub vertex_geometry: PointAny,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum EdgeAny {
+    #[holder(use_place_holder)]
+    EdgeCurve(EdgeCurve),
+    #[holder(use_place_holder)]
+    OrientedEdge(OrientedEdge),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = edge_curve)]
+#[holder(generate_deserialize)]
+pub struct EdgeCurve {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub edge_start: VertexPoint,
+    #[holder(use_place_holder)]
+    pub edge_end: VertexPoint,
+    #[holder(use_place_holder)]
+    pub edge_geometry: CurveAny,
+    pub same_sense: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = oriented_edge)]
+#[holder(generate_deserialize)]
+/// `ORIENTED_EDGE` has duplicated information.
+/// These are not included here because they are essentially omitted.
+pub struct OrientedEdge {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub edge_element: EdgeCurve,
+    pub orientation: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = edge_loop)]
+#[holder(generate_deserialize)]
+pub struct EdgeLoop {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub edge_list: Vec<EdgeAny>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = face_bound)]
+#[holder(generate_deserialize)]
+/// `FACE_OUTER_BOUNDS` is also parsed to this struct.
+pub struct FaceBound {
+    pub label: String,
+    // For now, we are going with the policy of accepting nothing but edgeloop.
+    #[holder(use_place_holder)]
+    pub bound: EdgeLoop,
+    pub orientation: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum FaceAny {
+    #[holder(use_place_holder)]
+    FaceSurface(FaceSurface),
+    #[holder(use_place_holder)]
+    OrientedFace(OrientedFace),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = face_surface)]
+#[holder(generate_deserialize)]
+/// `ADVANCED_FACE` is also parsed to this struct.
+pub struct FaceSurface {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub bounds: Vec<FaceBound>,
+    #[holder(use_place_holder)]
+    pub face_geometry: SurfaceAny,
+    pub same_sense: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = oriented_face)]
+#[holder(generate_deserialize)]
+/// `ORIENTED_EDGE` has duplicated information.
+/// These are not included here because they are essentially omitted.
+pub struct OrientedFace {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub face_element: FaceSurface,
+    pub orientation: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = shell)]
+#[holder(generate_deserialize)]
+/// Includes `OPEN_SHELL` and `CLOSED_SHELL`.
+/// Since these differences are only informal propositions, the data structure does not distinguish between the two.
+pub struct Shell {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub cfs_faces: Vec<FaceAny>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = oriented_shell)]
+#[holder(generate_deserialize)]
+/// Includes `ORIENTED_OPEN_SHELL` and `ORIENTED_CLOSED_SHELL`.
+/// Since these differences are only informal propositions, the data structure does not distinguish between the two.
+pub struct OrientedShell {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub shell_element: Shell,
+    pub orientation: bool,
 }

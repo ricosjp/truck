@@ -117,7 +117,9 @@ derive_curve!(Conic<Point3, Matrix4>, derive_to_conic, Point3, Vector3);
 #[derive(Clone, Debug)]
 pub enum Curve<P, V, M> {
     Line(Line<P>),
+    Polyline(PolylineCurve<P>),
     Conic(Conic<P, M>),
+    BSplineCurve(BSplineCurve<P>),
     NURBSCurve(NURBSCurve<V>),
     TrimmedCurve(TrimmedCurve<Box<Curve<P, V, M>>>),
     Phantom(std::marker::PhantomData<V>),
@@ -130,7 +132,9 @@ macro_rules! derive_to_curve {
             use Curve::*;
             match self {
                 Line(x) => x.$method($($field),*),
+                Polyline(x) => x.$method($($field),*),
                 Conic(x) => x.$method($($field),*),
+                BSplineCurve(x) => x.$method($($field),*),
 				NURBSCurve(x) => x.$method($($field),*),
 				TrimmedCurve(x) => x.$method($($field),*),
                 Phantom(_) => unreachable!(),
