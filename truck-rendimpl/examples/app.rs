@@ -14,8 +14,7 @@ use winit::window::Window;
 
 /// The framework of applications with `winit`.
 /// The main function of this file is the smallest usecase of this trait.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[async_trait(?Send)]
 pub trait App: Sized + 'static {
     /// Initialize application
     /// # Arguments
@@ -150,8 +149,7 @@ pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) {
 #[allow(dead_code)]
 fn main() {
     struct MyApp;
-    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+    #[async_trait(?Send)]
     impl App for MyApp {
         async fn init(_: Arc<Window>) -> Self { MyApp }
     }

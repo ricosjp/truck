@@ -25,8 +25,7 @@ struct MyApp {
     matrices: Vec<Matrix4>,
 }
 
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[async_trait(?Send)]
 impl App for MyApp {
     async fn init(window: Arc<winit::window::Window>) -> MyApp {
         let side_length = (N + 1) as f64 * 1.5;

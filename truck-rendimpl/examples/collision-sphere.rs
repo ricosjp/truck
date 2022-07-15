@@ -27,8 +27,7 @@ enum RenderMode {
     InterferenceOnly,
 }
 
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[async_trait(?Send)]
 impl App for MyApp {
     async fn init(window: Arc<winit::window::Window>) -> MyApp {
         let sample_count = 4;

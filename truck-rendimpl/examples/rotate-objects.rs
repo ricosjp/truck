@@ -117,8 +117,7 @@ impl MyRender {
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[async_trait(?Send)]
 impl App for MyRender {
     async fn init(window: Arc<winit::window::Window>) -> MyRender {
         let sample_count = 4;
