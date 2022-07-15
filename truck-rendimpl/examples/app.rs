@@ -132,11 +132,9 @@ pub trait App: Sized + 'static {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) { pollster::block_on(f); }
 
 #[cfg(target_arch = "wasm32")]
-#[allow(dead_code)]
 pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) {
     wasm_bindgen_futures::spawn_local(f);
 }
