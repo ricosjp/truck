@@ -65,8 +65,8 @@ pub trait App: Sized + 'static {
     fn cursor_moved(&mut self, _position: PhysicalPosition<f64>) -> ControlFlow {
         Self::default_control_flow()
     }
-    /// Run the application.
-    fn run() {
+    /// Run the application in the future.
+    async fn async_run() {
         let event_loop = winit::event_loop::EventLoop::new();
         let mut wb = winit::window::WindowBuilder::new();
         if let Some(title) = Self::app_title() {
@@ -90,48 +90,45 @@ pub trait App: Sized + 'static {
         }
 
         let window = Arc::new(window);
-        block_on(async move {
-            let mut app = Self::init(Arc::clone(&window)).await;
+        let mut app = Self::init(Arc::clone(&window)).await;
 
-            event_loop.run(move |ev, _, control_flow| {
-                *control_flow = match ev {
-                    Event::MainEventsCleared => {
-                        window.request_redraw();
+        event_loop.run(move |ev, _, control_flow| {
+            *control_flow = match ev {
+                Event::MainEventsCleared => {
+                    window.request_redraw();
+                    Self::default_control_flow()
+                }
+                Event::RedrawRequested(_) => {
+                    app.render();
+                    Self::default_control_flow()
+                }
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::Resized(size) => {
+                        app.resized(size);
                         Self::default_control_flow()
                     }
-                    Event::RedrawRequested(_) => {
-                        app.render();
-                        Self::default_control_flow()
-                    }
-                    Event::WindowEvent { event, .. } => match event {
-                        WindowEvent::Resized(size) => {
-                            app.resized(size);
-                            Self::default_control_flow()
-                        }
-                        WindowEvent::Moved(position) => app.moved(position),
-                        WindowEvent::CloseRequested => app.closed_requested(),
-                        WindowEvent::Destroyed => app.destroyed(),
-                        WindowEvent::DroppedFile(path) => app.dropped_file(path),
-                        WindowEvent::HoveredFile(path) => app.hovered_file(path),
-                        WindowEvent::KeyboardInput {
-                            input,
-                            is_synthetic,
-                            ..
-                        } => app.keyboard_input(input, is_synthetic),
-                        WindowEvent::MouseInput { state, button, .. } => {
-                            app.mouse_input(state, button)
-                        }
-                        WindowEvent::MouseWheel { delta, phase, .. } => {
-                            app.mouse_wheel(delta, phase)
-                        }
-                        WindowEvent::CursorMoved { position, .. } => app.cursor_moved(position),
-                        _ => Self::default_control_flow(),
-                    },
+                    WindowEvent::Moved(position) => app.moved(position),
+                    WindowEvent::CloseRequested => app.closed_requested(),
+                    WindowEvent::Destroyed => app.destroyed(),
+                    WindowEvent::DroppedFile(path) => app.dropped_file(path),
+                    WindowEvent::HoveredFile(path) => app.hovered_file(path),
+                    WindowEvent::KeyboardInput {
+                        input,
+                        is_synthetic,
+                        ..
+                    } => app.keyboard_input(input, is_synthetic),
+                    WindowEvent::MouseInput { state, button, .. } => app.mouse_input(state, button),
+                    WindowEvent::MouseWheel { delta, phase, .. } => app.mouse_wheel(delta, phase),
+                    WindowEvent::CursorMoved { position, .. } => app.cursor_moved(position),
                     _ => Self::default_control_flow(),
-                };
-            })
+                },
+                _ => Self::default_control_flow(),
+            };
         })
     }
+    /// Run the application.
+    #[inline]
+    fn run() { block_on(Self::async_run()) }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
