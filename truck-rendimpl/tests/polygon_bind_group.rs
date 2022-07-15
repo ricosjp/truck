@@ -13,7 +13,7 @@ fn bgcheck_shaders(handler: &DeviceHandler) -> PolygonShaders {
     let module = Arc::new(
         handler
             .device()
-            .create_shader_module(&ShaderModuleDescriptor {
+            .create_shader_module(ShaderModuleDescriptor {
                 source: ShaderSource::Wgsl(source.into()),
                 label: None,
             }),
@@ -33,7 +33,7 @@ fn bgcheck_anti_shaders(handler: &DeviceHandler) -> PolygonShaders {
     let module = Arc::new(
         handler
             .device()
-            .create_shader_module(&ShaderModuleDescriptor {
+            .create_shader_module(ShaderModuleDescriptor {
                 source: ShaderSource::Wgsl(source.into()),
                 label: None,
             }),

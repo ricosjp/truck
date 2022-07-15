@@ -2,18 +2,18 @@
 // cf: https://qiita.com/mebiusbox2/items/e7063c5dfe1424e0d01a
 
 struct Light {
-    position: vec4<f32>;
-    color: vec4<f32>;
-    light_type: vec4<u32>;
-};
+    position: vec4<f32>,
+    color: vec4<f32>,
+    light_type: vec4<u32>,
+}
 
 struct Material {
-    albedo: vec4<f32>;
-    roughness: f32;
-    reflectance: f32;
-    ambient_ratio: f32;
-    background_ratio: f32;
-};
+    albedo: vec4<f32>,
+    roughness: f32,
+    reflectance: f32,
+    ambient_ratio: f32,
+    background_ratio: f32,
+}
 
 fn light_direction(light: Light, position: vec3<f32>) -> vec3<f32> {
     var res: vec3<f32>;
@@ -41,8 +41,8 @@ fn microfacet_distribution(middle: vec3<f32>, normal: vec3<f32>, alpha: f32) -> 
     return alpha2 / (sqrt_denom * sqrt_denom);
 }
 
-fn schlick_approxy(vector: vec3<f32>, normal: vec3<f32>, k: f32) -> f32 {
-    let dotNV = dot(normal, vector);
+fn schlick_approxy(v: vec3<f32>, normal: vec3<f32>, k: f32) -> f32 {
+    let dotNV = dot(normal, v);
     return dotNV / (dotNV * (1.0 - k) + k);
 }
 
