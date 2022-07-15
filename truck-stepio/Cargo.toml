@@ -35,3 +35,4 @@ serde_json = "1.0.81"
 itertools = "0.10.3"
 nom = "7.1.1"
 espr-derive = "0.2.0"
+truck-meshalgo = { version = "0.2.0", path = "../truck-meshalgo" }

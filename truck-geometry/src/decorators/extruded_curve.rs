@@ -137,6 +137,18 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Extrude
     }
 }
 
+impl<C: Invertible> Invertible for ExtrudedCurve<C, Vector3> {
+    #[inline(always)]
+    fn invert(&mut self) { self.curve.invert() }
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        Self {
+            curve: self.curve.inverse(),
+            vector: self.vector,
+        }
+    }
+}
+
 #[test]
 fn extruded_curve_test() {
     let cpts = vec![

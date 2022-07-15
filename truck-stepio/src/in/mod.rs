@@ -1,15 +1,16 @@
 #![allow(missing_docs)]
 
 use ruststep::{
-    ast::{DataSection, EntityInstance, Parameter, SubSuperRecord},
+    ast::{DataSection, EntityInstance, Name, Parameter, SubSuperRecord},
     error::Result,
     primitive::Logical,
-    tables::PlaceHolder,
+    tables::{EntityTable, IntoOwned, PlaceHolder},
     Holder,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use truck_geometry::*;
+use truck_topology::compress::*;
 
 /// type alias
 pub mod alias;
@@ -630,14 +631,6 @@ fn deserialize_bool(parameter: &Parameter) -> Result<bool> {
     CharBool::deserialize(parameter).map(Into::into)
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
-#[holder(table = Table)]
-#[holder(generate_deserialize)]
-pub enum PointAny {
-    #[holder(use_place_holder)]
-    CartesianPoint(CartesianPoint),
-}
-
 /// `cartesian_point`
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
@@ -840,34 +833,16 @@ impl From<&Axis2Placement3d> for Matrix4 {
 #[holder(generate_deserialize)]
 pub enum CurveAny {
     #[holder(use_place_holder)]
+    #[holder(field = line)]
     Line(Line),
     #[holder(use_place_holder)]
+    #[holder(field = polyline)]
     Polyline(Polyline),
     #[holder(use_place_holder)]
     BSplineCurve(BSplineCurveAny),
     #[holder(use_place_holder)]
+    #[holder(field = circle)]
     Circle(Circle),
-}
-
-impl TryFrom<&CurveAny> for Curve<Point2, Vector3, Matrix3> {
-    type Error = ExpressParseError;
-    fn try_from(
-        x: &CurveAny,
-    ) -> std::result::Result<Curve<Point2, Vector3, Matrix3>, ExpressParseError> {
-        use CurveAny::*;
-        match x {
-            Line(x) => Ok(Curve::Line(x.into())),
-            Polyline(x) => Ok(Curve::Polyline(x.into())),
-            BSplineCurve(x) => match x {
-                BSplineCurveAny::BSplineCurveWithKnots(x) => Ok(Curve::BSplineCurve(x.try_into()?)),
-                BSplineCurveAny::BezierCurve(x) => Ok(Curve::BSplineCurve(x.try_into()?)),
-                BSplineCurveAny::QuasiUniformCurve(x) => Ok(Curve::BSplineCurve(x.try_into()?)),
-                BSplineCurveAny::UniformCurve(x) => Ok(Curve::BSplineCurve(x.try_into()?)),
-                BSplineCurveAny::RationalBSplineCurve(x) => Ok(Curve::NURBSCurve(x.try_into()?)),
-            },
-            Circle(x) => Ok(Curve::Conic(Conic::Ellipse(x.try_into()?))),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
@@ -1091,14 +1066,19 @@ where
 #[holder(generate_deserialize)]
 pub enum BSplineCurveAny {
     #[holder(use_place_holder)]
+    #[holder(field = b_spline_curve_with_knots)]
     BSplineCurveWithKnots(BSplineCurveWithKnots),
     #[holder(use_place_holder)]
+    #[holder(field = bezier_curve)]
     BezierCurve(BezierCurve),
     #[holder(use_place_holder)]
+    #[holder(field = quasi_uniform_curve)]
     QuasiUniformCurve(QuasiUniformCurve),
     #[holder(use_place_holder)]
+    #[holder(field = uniform_curve)]
     UniformCurve(UniformCurve),
     #[holder(use_place_holder)]
+    #[holder(field = rational_b_spline_curve)]
     RationalBSplineCurve(RationalBSplineCurve),
 }
 
@@ -1113,32 +1093,29 @@ pub struct Circle {
     pub radius: f64,
 }
 
-impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
-    type Error = ExpressParseError;
-    fn try_from(circle: &Circle) -> std::result::Result<Self, ExpressParseError> {
-        let radius: f64 = circle.radius;
-        let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(radius);
-        Ok(Processor::new(UnitCircle::new()).transformed(transform))
-    }
-}
-
-impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
-    type Error = ExpressParseError;
-    fn try_from(circle: &Circle) -> std::result::Result<Self, ExpressParseError> {
-        let radius: f64 = circle.radius;
-        let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
-        Ok(Processor::new(UnitCircle::new()).transformed(transform))
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum SurfaceAny {
     #[holder(use_place_holder)]
+    #[holder(field = plane)]
     Plane(Plane),
     #[holder(use_place_holder)]
-    BSplineSurfaceWithKnots(BSplineCurveWithKnots),
+    #[holder(field = b_spline_surface_with_knots)]
+    BSplineSurfaceWithKnots(BSplineSurfaceWithKnots),
+}
+
+impl TryFrom<&SurfaceAny> for Surface {
+    type Error = ExpressParseError;
+    fn try_from(x: &SurfaceAny) -> std::result::Result<Self, Self::Error> {
+        use SurfaceAny::*;
+        match x {
+            Plane(plane) => Ok(Self::ElementarySurface(ElementarySurface::Plane(
+                plane.into(),
+            ))),
+            BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
@@ -1230,7 +1207,7 @@ impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
 pub struct VertexPoint {
     pub label: String,
     #[holder(use_place_holder)]
-    pub vertex_geometry: PointAny,
+    pub vertex_geometry: CartesianPoint,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
@@ -1256,6 +1233,111 @@ pub struct EdgeCurve {
     #[holder(use_place_holder)]
     pub edge_geometry: CurveAny,
     pub same_sense: bool,
+}
+
+impl EdgeCurve {
+    pub fn parse_curve2d(&self) -> std::result::Result<Curve2D, ExpressParseError> {
+        use CurveAny::*;
+        let p = Point2::from(&self.edge_start.vertex_geometry);
+        let q = Point2::from(&self.edge_end.vertex_geometry);
+        let (p, q) = match self.same_sense {
+            true => (p, q),
+            false => (q, p),
+        };
+        let mut curve = match &self.edge_geometry {
+            Line(_) => Curve2D::Line(truck_geometry::Line(p, q)),
+            Polyline(poly) => Curve2D::Polyline(PolylineCurve::from(poly)),
+            BSplineCurve(bspcurve) => match bspcurve {
+                BSplineCurveAny::BSplineCurveWithKnots(bsp) => {
+                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::BezierCurve(bsp) => {
+                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::QuasiUniformCurve(bsp) => {
+                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::UniformCurve(bsp) => {
+                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::RationalBSplineCurve(bsp) => {
+                    Curve2D::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
+                }
+            },
+            Circle(circle) => {
+                let mat = Matrix3::try_from(&circle.position)?;
+                let inv_mat = mat.invert().ok_or("Failed to convert Circle".to_string())?;
+                let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                let (u, v) = (
+                    UnitCircle::<Point2>::new()
+                        .search_parameter(p, None, 0)
+                        .ok_or("the point is not on circle".to_string())?,
+                    UnitCircle::<Point2>::new()
+                        .search_parameter(q, None, 0)
+                        .ok_or("the point is not on circle".to_string())?,
+                );
+                let circle = TrimmedCurve::new(UnitCircle::<Point2>::new(), (u, v));
+                let mut ellipse = Processor::new(circle);
+                ellipse.transform_by(mat);
+                Curve2D::Conic(Conic2D::Ellipse(ellipse))
+            }
+        };
+        if !self.same_sense {
+            curve.invert();
+        }
+        Ok(curve)
+    }
+    pub fn parse_curve3d(&self) -> std::result::Result<Curve3D, ExpressParseError> {
+        use CurveAny::*;
+        let p = Point3::from(&self.edge_start.vertex_geometry);
+        let q = Point3::from(&self.edge_end.vertex_geometry);
+        let (p, q) = match self.same_sense {
+            true => (p, q),
+            false => (q, p),
+        };
+        let mut curve = match &self.edge_geometry {
+            Line(_) => Curve3D::Line(truck_geometry::Line(p, q)),
+            Polyline(poly) => Curve3D::Polyline(PolylineCurve::from(poly)),
+            BSplineCurve(bspcurve) => match bspcurve {
+                BSplineCurveAny::BSplineCurveWithKnots(bsp) => {
+                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::BezierCurve(bsp) => {
+                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::QuasiUniformCurve(bsp) => {
+                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::UniformCurve(bsp) => {
+                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::RationalBSplineCurve(bsp) => {
+                    Curve3D::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
+                }
+            },
+            Circle(circle) => {
+                let mat = Matrix4::try_from(&circle.position)?;
+                let inv_mat = mat.invert().ok_or("Failed to convert Circle".to_string())?;
+                let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                let (u, v) = (
+                    UnitCircle::<Point3>::new()
+                        .search_parameter(p, None, 0)
+                        .ok_or("the point is not on circle".to_string())?,
+                    UnitCircle::<Point3>::new()
+                        .search_parameter(q, None, 0)
+                        .ok_or("the point is not on circle".to_string())?,
+                );
+                let circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (u, v));
+                let mut ellipse = Processor::new(circle);
+                ellipse.transform_by(mat);
+                Curve3D::Conic(Conic3D::Ellipse(ellipse))
+            }
+        };
+        if !self.same_sense {
+            curve.invert();
+        }
+        Ok(curve)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
@@ -1354,4 +1436,254 @@ pub struct OrientedShell {
     #[holder(use_place_holder)]
     pub shell_element: Shell,
     pub orientation: bool,
+}
+
+impl Table {
+    pub fn to_compressed_shell(
+        &self,
+        shell: &ShellHolder,
+    ) -> std::result::Result<CompressedShell<Point3, Curve3D, Surface>, ExpressParseError> {
+        let mut vidx_map = HashMap::<u64, usize>::new();
+        let mut eidx_map = HashMap::<u64, usize>::new();
+
+        let vertices: Vec<Point3> = shell
+            .cfs_faces
+            .iter()
+            .filter_map(|face| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = face {
+                    if let Some(face) = self.face_surface.get(&idx) {
+                        Some(face)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .flat_map(|face| &face.bounds)
+            .filter_map(|bound| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = bound {
+                    self.face_bound.get(&idx)
+                } else {
+                    None
+                }
+            })
+            .filter_map(|bound| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = bound.bound {
+                    self.edge_loop.get(&idx)
+                } else {
+                    None
+                }
+            })
+            .flat_map(|edge_loop| &edge_loop.edge_list)
+            .filter_map(|edge| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = edge {
+                    let idx = if let Some(oriented_edge) = self.oriented_edge.get(&idx) {
+                        if let PlaceHolder::Ref(Name::Entity(idx)) = oriented_edge.edge_element {
+                            idx
+                        } else {
+                            *idx
+                        }
+                    } else {
+                        *idx
+                    };
+                    self.edge_curve.get(&idx)
+                } else {
+                    None
+                }
+            })
+            .flat_map(|edge| vec![&edge.edge_start, &edge.edge_end])
+            .filter_map(|v| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = v {
+                    if vidx_map.get(&idx).is_none() {
+                        let len = vidx_map.len();
+                        vidx_map.insert(*idx, len);
+                        let p = EntityTable::<VertexPointHolder>::get_owned(self, *idx).ok()?;
+                        Some(Point3::from(&p.vertex_geometry))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let edges: Vec<CompressedEdge<Curve3D>> = shell
+            .cfs_faces
+            .iter()
+            .filter_map(|face| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = face {
+                    if let Some(face) = self.face_surface.get(&idx) {
+                        Some(face)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .flat_map(|face| &face.bounds)
+            .filter_map(|bound| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = bound {
+                    self.face_bound.get(&idx)
+                } else {
+                    None
+                }
+            })
+            .filter_map(|bound| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = bound.bound {
+                    self.edge_loop.get(&idx)
+                } else {
+                    None
+                }
+            })
+            .flat_map(|edge_loop| &edge_loop.edge_list)
+            .filter_map(|edge| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = edge {
+                    let idx = if let Some(oriented_edge) = self.oriented_edge.get(&idx) {
+                        if let PlaceHolder::Ref(Name::Entity(idx)) = oriented_edge.edge_element {
+                            idx
+                        } else {
+                            *idx
+                        }
+                    } else {
+                        *idx
+                    };
+                    Some((idx, self.edge_curve.get(&idx)?))
+                } else {
+                    None
+                }
+            })
+            .filter_map(|(idx, edge)| {
+                if eidx_map.get(&idx).is_some() {
+                    return None;
+                }
+                let len = eidx_map.len();
+                eidx_map.insert(idx, len);
+                let edge_curve = edge.clone().into_owned(self).ok()?;
+                let curve = edge_curve.parse_curve3d().ok()?;
+                let front = if let PlaceHolder::Ref(Name::Entity(idx)) = edge.edge_start {
+                    *vidx_map.get(&idx)?
+                } else {
+                    return None;
+                };
+                let back = if let PlaceHolder::Ref(Name::Entity(idx)) = edge.edge_end {
+                    *vidx_map.get(&idx)?
+                } else {
+                    return None;
+                };
+                Some(CompressedEdge {
+                    vertices: (front, back),
+                    curve,
+                })
+            })
+            .collect();
+
+        let faces = shell
+            .cfs_faces
+            .iter()
+            .filter_map(|face| {
+                if let PlaceHolder::Ref(Name::Entity(idx)) = face {
+                    let (flag, idx) = if let Some(face) = self.oriented_face.get(&idx) {
+                        if let PlaceHolder::Ref(Name::Entity(idx)) = face.face_element {
+                            (face.orientation, idx)
+                        } else {
+                            (true, *idx)
+                        }
+                    } else {
+                        (true, *idx)
+                    };
+                    if let Some(face) = self.face_surface.get(&idx) {
+                        let mut face = face.clone();
+                        face.same_sense = face.same_sense == flag;
+                        Some(face)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .filter_map(|face| {
+                let step_surface: SurfaceAny = face.face_geometry.clone().into_owned(self).ok()?;
+                let mut surface = Surface::try_from(&step_surface).ok()?;
+                if !face.same_sense {
+                    surface.invert()
+                }
+                let boundaries: Vec<_> = face
+                    .bounds
+                    .iter()
+                    .filter_map(|bound| {
+                        if let PlaceHolder::Ref(Name::Entity(idx)) = bound {
+                            if let Some(bound) = self.face_bound.get(&idx) {
+                                let ori = bound.orientation;
+                                if let PlaceHolder::Ref(Name::Entity(idx)) = bound.bound {
+                                    if let Some(edge_list) = self.edge_loop.get(&idx) {
+                                        let edges = edge_list.edge_list.iter().filter_map(|edge| {
+                                            if let PlaceHolder::Ref(Name::Entity(idx)) = edge {
+                                                if let Some(oriented_edge) =
+                                                    self.oriented_edge.get(&idx)
+                                                {
+                                                    if let PlaceHolder::Ref(Name::Entity(idx)) =
+                                                        oriented_edge.edge_element
+                                                    {
+                                                        let edge_idx = *eidx_map.get(&idx)?;
+                                                        return Some(CompressedEdgeIndex {
+                                                            index: edge_idx,
+                                                            orientation: oriented_edge.orientation,
+                                                        });
+                                                    } else {
+                                                        return None;
+                                                    }
+                                                }
+                                                let edge_idx = *vidx_map.get(&idx)?;
+                                                Some(CompressedEdgeIndex {
+                                                    index: edge_idx,
+                                                    orientation: true,
+                                                })
+                                            } else {
+                                                None
+                                            }
+                                        });
+                                        Some((ori, edges.collect::<Vec<_>>()))
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                let boundaries = boundaries
+                    .into_iter()
+                    .map(|(ori, mut boundary)| {
+                        if !ori {
+                            boundary.reverse();
+                            boundary.iter_mut().for_each(|edge| {
+                                edge.orientation = !edge.orientation;
+                            });
+                        }
+                        boundary
+                    })
+                    .collect();
+                Some(CompressedFace {
+                    surface,
+                    boundaries,
+                    orientation: true,
+                })
+            })
+            .collect();
+        Ok(CompressedShell {
+            vertices,
+            edges,
+            faces,
+        })
+    }
 }

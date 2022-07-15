@@ -407,6 +407,33 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_error]
+#[proc_macro_derive(ParametricSurface3D)]
+pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let trait_name = quote! { ParametricSurface3D };
+    let ty = input.ident;
+    let gen = input.generics;
+    match input.data {
+        Data::Enum(DataEnum { ref variants, .. }) => {
+            let methods = methods!(
+                variants,
+                trait_name,
+                fn normal(&self, u: f64, v: f64) -> Vector3,
+            );
+            quote! {
+                #[automatically_derived]
+                impl #gen truck_geotrait::#trait_name for #ty {
+                    #(#methods)*
+                }
+            }
+        }
+        _ => unimplemented!(),
+    }
+    .into()
+}
+
+
+#[proc_macro_error]
 #[proc_macro_derive(SearchNearestParameterD1)]
 pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
