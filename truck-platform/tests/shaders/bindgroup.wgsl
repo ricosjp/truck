@@ -1,32 +1,35 @@
 struct Camera {
-    matrix: mat4x4<f32>;
-    projection: mat4x4<f32>;
-};
+    camera_matrix: mat4x4<f32>,
+    projection: mat4x4<f32>,
+}
 
 struct Light {
-    position: vec4<f32>;
-    color: vec4<f32>;
-    light_type: vec4<u32>;
-};
+    position: vec4<f32>,
+    color: vec4<f32>,
+    light_type: vec4<u32>,
+}
 
 struct Lights {
-    lights: array<Light, 255>;
-};
+    lights: array<Light, 255>,
+}
 
 struct SceneInfo {
-    bk_color: vec4<f32>;
-    resolution: vec2<u32>;
-    time: f32;
-    nlights: u32;
-};
+    bk_color: vec4<f32>,
+    resolution: vec2<u32>,
+    time: f32,
+    nlights: u32,
+}
 
-[[group(0), binding(0)]]
+@group(0)
+@binding(0)
 var<uniform> camera: Camera;
 
-[[group(0), binding(1)]]
+@group(0)
+@binding(1)
 var<uniform> lights: Lights;
 
-[[group(0), binding(2)]]
+@group(0)
+@binding(2)
 var<uniform> info: SceneInfo;
 
 let acm0: vec4<f32> = vec4<f32>(1.0, 2.1, 3.2, 4.3);
@@ -52,20 +55,20 @@ let arsl: vec2<u32> = vec2<u32>(256u, 256u);
 let EPS: f32 = 1.0e-5;
 let e: vec2<f32> = vec2<f32>(1.0, 0.0);
 
-[[stage(vertex)]]
-fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
+@vertex
+fn vs_main(@location(0) idx: u32) -> @builtin(position) vec4<f32> {
     var vertex: array<vec2<f32>, 4>;
     vertex[0] = vec2<f32>(-1.0, -1.0);
     vertex[1] = vec2<f32>(1.0, -1.0);
     vertex[2] = vec2<f32>(-1.0, 1.0);
     vertex[3] = vec2<f32>(1.0, 1.0);
-    if (distance(camera.matrix * e.xyyy, acm0) > EPS) {
+    if (distance(camera.camera_matrix * e.xyyy, acm0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yxyy, acm1) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yxyy, acm1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yyxy, acm2) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yyxy, acm2) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yyyx, acm3) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yyyx, acm3) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } else if (distance(camera.projection * e.xyyy, acp0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
@@ -98,15 +101,15 @@ fn vs_main([[location(0)]] idx: u32) -> [[builtin(position)]] vec4<f32> {
     }
 }
 
-[[stage(fragment)]]
-fn fs_main() -> [[location(0)]] vec4<f32> {
-    if (distance(camera.matrix * e.xyyy, acm0) > EPS) {
+@fragment
+fn fs_main() -> @location(0) vec4<f32> {
+    if (distance(camera.camera_matrix * e.xyyy, acm0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yxyy, acm1) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yxyy, acm1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yyxy, acm2) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yyxy, acm2) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yyyx, acm3) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yyyx, acm3) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } else if (distance(camera.projection * e.xyyy, acp0) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
@@ -139,15 +142,15 @@ fn fs_main() -> [[location(0)]] vec4<f32> {
     }
 }
 
-[[stage(fragment)]]
-fn fs_main_anti() -> [[location(0)]] vec4<f32> {
-    if (distance(camera.matrix * e.xyyy, acm0) > EPS) {
+@fragment
+fn fs_main_anti() -> @location(0) vec4<f32> {
+    if (distance(camera.camera_matrix * e.xyyy, acm0) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yxyy, acm1) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yxyy, acm1) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yyxy, acm2) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yyxy, acm2) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    } else if (distance(camera.matrix * e.yyyx, acm3) > EPS) {
+    } else if (distance(camera.camera_matrix * e.yyyx, acm3) > EPS) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } else if (distance(camera.projection * e.xyyy, acp0) > EPS) {
         return vec4<f32>(0.1, 0.1, 0.1, 1.0);
