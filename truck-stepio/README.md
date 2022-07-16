@@ -15,3 +15,7 @@ convert from truck shape json to step file.
 ```bash
 shape-to-step <input shape file> [output shape file]
 ```
+
+### step-to-obj
+
+Parse STEP data, extract shape, and meshing.

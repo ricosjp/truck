@@ -1,10 +1,12 @@
+//! Parse STEP data, extract shape, and meshing.
+
 use truck_stepio::r#in::{alias::*, *};
 
 fn main() {
     use truck_meshalgo::tessellation::*;
     let mut args = std::env::args().collect::<Vec<_>>();
     if args.len() < 2 {
-        eprintln!("usage: shape-to-step <input shape file> [output shape file]");
+        eprintln!("usage: step-to-obj <input step file> [output obj file]");
         return;
     } else if args.len() == 2 {
         args.push("output.stp".to_string());

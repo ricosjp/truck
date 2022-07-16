@@ -67,14 +67,7 @@ pub enum Curve3D {
 }
 
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    ParametricSurface,
-    ParametricSurface3D,
-    ParameterDivision2D,
-    SearchParameterD2,
-    Invertible,
+    Clone, Copy, Debug, ParametricSurface3D, ParameterDivision2D, SearchParameterD2, Invertible,
 )]
 pub enum ElementarySurface {
     Plane(Plane),
@@ -82,28 +75,12 @@ pub enum ElementarySurface {
     Sphere(Processor<Sphere, Matrix3>),
     ToroidalSurface(ToroidalSurface),
 }
-#[derive(
-    Clone,
-    Debug,
-    ParametricSurface,
-    ParametricSurface3D,
-    ParameterDivision2D,
-    SearchParameterD2,
-    Invertible,
-)]
+#[derive(Clone, Debug, ParametricSurface3D, ParameterDivision2D, SearchParameterD2, Invertible)]
 pub enum SweptCurve {
     ExtrudedCurve(StepExtrudedCurve),
     RevolutedCurve(StepRevolutedCurve),
 }
-#[derive(
-    Clone,
-    Debug,
-    ParametricSurface,
-    ParametricSurface3D,
-    ParameterDivision2D,
-    SearchParameterD2,
-    Invertible,
-)]
+#[derive(Clone, Debug, ParametricSurface3D, ParameterDivision2D, SearchParameterD2, Invertible)]
 pub enum Surface {
     ElementarySurface(ElementarySurface),
     SweptCurve(SweptCurve),

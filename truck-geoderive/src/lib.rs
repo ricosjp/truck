@@ -410,20 +410,38 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(ParametricSurface3D)]
 pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let trait_name = quote! { ParametricSurface3D };
+    let trait_name0 = quote! { ParametricSurface };
+    let trait_name1 = quote! { ParametricSurface3D };
     let ty = input.ident;
     let gen = input.generics;
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
-            let methods = methods!(
+            let methods0 = methods!(
                 variants,
-                trait_name,
+                trait_name0,
+                fn subs(&self, s: f64, t: f64) -> Self::Point,
+                fn uder(&self, s: f64, t: f64) -> Self::Vector,
+                fn vder(&self, s: f64, t: f64) -> Self::Vector,
+                fn uuder(&self, s: f64, t: f64) -> Self::Vector,
+                fn uvder(&self, s: f64, t: f64) -> Self::Vector,
+                fn vvder(&self, s: f64, t: f64) -> Self::Vector,
+            );
+            let methods1 = methods!(
+                variants,
+                trait_name1,
                 fn normal(&self, u: f64, v: f64) -> Vector3,
             );
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
-                    #(#methods)*
+                impl #gen truck_geotrait::#trait_name0 for #ty {
+                    type Point = Point3;
+                    type Vector = Vector3;
+                    #(#methods0)*
+                }
+
+                #[automatically_derived]
+                impl #gen truck_geotrait::#trait_name1 for #ty {
+                    #(#methods1)*
                 }
             }
         }
@@ -431,7 +449,6 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
     }
     .into()
 }
-
 
 #[proc_macro_error]
 #[proc_macro_derive(SearchNearestParameterD1)]
