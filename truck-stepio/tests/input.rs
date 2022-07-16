@@ -45,6 +45,20 @@ fn read() {
     'BSplineSurfaceWithKnots', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.,
     (3, 3), (3, 3), (0.0, 1.0), (0.0, 1.0), .UNSPECIFIED.
 );
+
+#100 = VERTEX_POINT('VertexPoint', #1);
+#101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
+#102 = ORIENTED_EDGE('OrientedEdge', *, *, #101, .F.);
+#103 = EDGE_LOOP('EdgeLoop', (#101, #102));
+#104 = FACE_BOUND('FaceBound', #103, .T.);
+#105 = FACE_OUTER_BOUND('FaceOuterBound', #103, .F.);
+#106 = FACE_SURFACE('FaceSurface', (#104, #105), #21, .T.);
+#107 = ADVANCED_FACE('AdvancedFace', (#104, #105), #21, .T.);
+#108 = ORIENTED_FACE('OrientedFace', *, #106, .F.);
+#109 = OPEN_SHELL('OpenShell', (#107, #108));
+#110 = CLOSED_SHELL('ClosedShell', (#107, #108));
+#111 = ORIENTED_OPEN_SHELL('OrientedOpenShell', *, #109, .F.);
+#112 = ORIENTED_CLOSED_SHELL('OrientedClosedShell', *, #110, .T.);
 ENDSEC;
 ",
     )
@@ -323,6 +337,134 @@ ENDSEC;
                 knot_spec: KnotType::Unspecified,
             },
         )]),
+
+        vertex_point: HashMap::from_iter(vec![(
+            100,
+            VertexPointHolder {
+                label: "VertexPoint".to_string(),
+                vertex_geometry: PlaceHolder::Ref(Name::Entity(1)),
+            },
+        )]),
+        edge_curve: HashMap::from_iter(vec![(
+            101,
+            EdgeCurveHolder {
+                label: "EdgeCurve".to_string(),
+                edge_start: PlaceHolder::Ref(Name::Entity(100)),
+                edge_end: PlaceHolder::Ref(Name::Entity(100)),
+                edge_geometry: PlaceHolder::Ref(Name::Entity(13)),
+                same_sense: true,
+            },
+        )]),
+        oriented_edge: HashMap::from_iter(vec![(
+            102,
+            OrientedEdgeHolder {
+                label: "OrientedEdge".to_string(),
+                edge_element: PlaceHolder::Ref(Name::Entity(101)),
+                orientation: false,
+            },
+        )]),
+        edge_loop: HashMap::from_iter(vec![(
+            103,
+            EdgeLoopHolder {
+                label: "EdgeLoop".to_string(),
+                edge_list: vec![
+                    PlaceHolder::Ref(Name::Entity(101)),
+                    PlaceHolder::Ref(Name::Entity(102)),
+                ],
+            },
+        )]),
+        face_bound: HashMap::from_iter(vec![
+            (
+                104,
+                FaceBoundHolder {
+                    label: "FaceBound".to_string(),
+                    bound: PlaceHolder::Ref(Name::Entity(103)),
+                    orientation: true,
+                },
+            ),
+            (
+                105,
+                FaceBoundHolder {
+                    label: "FaceOuterBound".to_string(),
+                    bound: PlaceHolder::Ref(Name::Entity(103)),
+                    orientation: false,
+                },
+            ),
+        ]),
+        face_surface: HashMap::from_iter(vec![
+            (
+                106,
+                FaceSurfaceHolder {
+                    label: "FaceSurface".to_string(),
+                    bounds: vec![
+                        PlaceHolder::Ref(Name::Entity(104)),
+                        PlaceHolder::Ref(Name::Entity(105)),
+                    ],
+                    face_geometry: PlaceHolder::Ref(Name::Entity(21)),
+                    same_sense: true,
+                },
+            ),
+            (
+                107,
+                FaceSurfaceHolder {
+                    label: "AdvancedFace".to_string(),
+                    bounds: vec![
+                        PlaceHolder::Ref(Name::Entity(104)),
+                        PlaceHolder::Ref(Name::Entity(105)),
+                    ],
+                    face_geometry: PlaceHolder::Ref(Name::Entity(21)),
+                    same_sense: true,
+                },
+            ),
+        ]),
+        oriented_face: HashMap::from_iter(vec![(
+            108,
+            OrientedFaceHolder {
+                label: "OrientedFace".to_string(),
+                face_element: PlaceHolder::Ref(Name::Entity(106)),
+                orientation: false,
+            },
+        )]),
+        shell: HashMap::from_iter(vec![
+            (
+                109,
+                ShellHolder {
+                    label: "OpenShell".to_string(),
+                    cfs_faces: vec![
+                        PlaceHolder::Ref(Name::Entity(107)),
+                        PlaceHolder::Ref(Name::Entity(108)),
+                    ],
+                },
+            ),
+            (
+                110,
+                ShellHolder {
+                    label: "ClosedShell".to_string(),
+                    cfs_faces: vec![
+                        PlaceHolder::Ref(Name::Entity(107)),
+                        PlaceHolder::Ref(Name::Entity(108)),
+                    ],
+                },
+            ),
+        ]),
+        oriented_shell: HashMap::from_iter(vec![
+            (
+                111,
+                OrientedShellHolder {
+                    label: "OrientedOpenShell".to_string(),
+                    shell_element: PlaceHolder::Ref(Name::Entity(109)),
+                    orientation: false,
+                },
+            ),
+            (
+                112,
+                OrientedShellHolder {
+                    label: "OrientedClosedShell".to_string(),
+                    shell_element: PlaceHolder::Ref(Name::Entity(110)),
+                    orientation: true,
+                },
+            ),
+        ]),
         ..Default::default()
     };
     assert_eq!(table, ans_table);

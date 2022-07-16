@@ -1,15 +1,16 @@
 #![allow(missing_docs)]
 
 use ruststep::{
-    ast::{DataSection, EntityInstance, Parameter, SubSuperRecord},
+    ast::{DataSection, EntityInstance, Name, Parameter, SubSuperRecord},
     error::Result,
     primitive::Logical,
-    tables::PlaceHolder,
+    tables::{EntityTable, IntoOwned, PlaceHolder},
     Holder,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use truck_geometry::*;
+use truck_topology::compress::*;
 
 /// type alias
 pub mod alias;
@@ -39,6 +40,17 @@ pub struct Table {
     // surface
     pub plane: HashMap<u64, PlaneHolder>,
     pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
+
+    // topology
+    pub vertex_point: HashMap<u64, VertexPointHolder>,
+    pub edge_curve: HashMap<u64, EdgeCurveHolder>,
+    pub oriented_edge: HashMap<u64, OrientedEdgeHolder>,
+    pub edge_loop: HashMap<u64, EdgeLoopHolder>,
+    pub face_bound: HashMap<u64, FaceBoundHolder>,
+    pub face_surface: HashMap<u64, FaceSurfaceHolder>,
+    pub oriented_face: HashMap<u64, OrientedFaceHolder>,
+    pub shell: HashMap<u64, ShellHolder>,
+    pub oriented_shell: HashMap<u64, OrientedShellHolder>,
 }
 
 impl Table {
@@ -113,7 +125,8 @@ impl Table {
                     }
                 }
                 "LINE" => {
-                    self.line.insert(*id, Deserialize::deserialize(record)?);
+                    self.line
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "POLYLINE" => {
                     self.polyline.insert(*id, Deserialize::deserialize(record)?);
@@ -226,6 +239,153 @@ impl Table {
                                     u_knots: Deserialize::deserialize(&params[10])?,
                                     v_knots: Deserialize::deserialize(&params[11])?,
                                     knot_spec: Deserialize::deserialize(&params[12])?,
+                                },
+                            );
+                        }
+                    }
+                }
+
+                "VERTEX_POINT" => {
+                    self.vertex_point
+                        .insert(*id, VertexPointHolder::deserialize(record)?);
+                }
+                "EDGE_CURVE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 5 {
+                            self.edge_curve.insert(
+                                *id,
+                                EdgeCurveHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    edge_start: Deserialize::deserialize(&params[1])?,
+                                    edge_end: Deserialize::deserialize(&params[2])?,
+                                    edge_geometry: Deserialize::deserialize(&params[3])?,
+                                    same_sense: deserialize_bool(&params[4])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "ORIENTED_EDGE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 5 {
+                            self.oriented_edge.insert(
+                                *id,
+                                OrientedEdgeHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    edge_element: Deserialize::deserialize(&params[3])?,
+                                    orientation: deserialize_bool(&params[4])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "EDGE_LOOP" => {
+                    self.edge_loop
+                        .insert(*id, Deserialize::deserialize(record)?);
+                }
+                "FACE_BOUND" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 3 {
+                            self.face_bound.insert(
+                                *id,
+                                FaceBoundHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    bound: Deserialize::deserialize(&params[1])?,
+                                    orientation: deserialize_bool(&params[2])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "FACE_OUTER_BOUND" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 3 {
+                            self.face_bound.insert(
+                                *id,
+                                FaceBoundHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    bound: Deserialize::deserialize(&params[1])?,
+                                    orientation: deserialize_bool(&params[2])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "FACE_SURFACE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.face_surface.insert(
+                                *id,
+                                FaceSurfaceHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    bounds: Deserialize::deserialize(&params[1])?,
+                                    face_geometry: Deserialize::deserialize(&params[2])?,
+                                    same_sense: deserialize_bool(&params[3])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "ADVANCED_FACE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.face_surface.insert(
+                                *id,
+                                FaceSurfaceHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    bounds: Deserialize::deserialize(&params[1])?,
+                                    face_geometry: Deserialize::deserialize(&params[2])?,
+                                    same_sense: deserialize_bool(&params[3])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "ORIENTED_FACE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.oriented_face.insert(
+                                *id,
+                                OrientedFaceHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    face_element: Deserialize::deserialize(&params[2])?,
+                                    orientation: deserialize_bool(&params[3])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "OPEN_SHELL" => {
+                    self.shell
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "CLOSED_SHELL" => {
+                    self.shell
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "ORIENTED_OPEN_SHELL" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.oriented_shell.insert(
+                                *id,
+                                OrientedShellHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    shell_element: Deserialize::deserialize(&params[2])?,
+                                    orientation: deserialize_bool(&params[3])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "ORIENTED_CLOSED_SHELL" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 4 {
+                            self.oriented_shell.insert(
+                                *id,
+                                OrientedShellHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    shell_element: Deserialize::deserialize(&params[2])?,
+                                    orientation: deserialize_bool(&params[3])?,
                                 },
                             );
                         }
@@ -458,8 +618,21 @@ fn deserialize_logical(parameter: &Parameter) -> Result<Logical> {
     Logical::deserialize(parameter).or_else(|_| CharLogical::deserialize(parameter).map(Into::into))
 }
 
+fn deserialize_bool(parameter: &Parameter) -> Result<bool> {
+    #[derive(Deserialize)]
+    enum CharBool {
+        F,
+        T,
+    }
+    impl From<CharBool> for bool {
+        fn from(x: CharBool) -> bool { matches!(x, CharBool::T) }
+    }
+
+    CharBool::deserialize(parameter).map(Into::into)
+}
+
 /// `cartesian_point`
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = cartesian_point)]
 #[holder(generate_deserialize)]
@@ -490,7 +663,7 @@ impl From<&CartesianPoint> for Point3 {
 }
 
 /// `direction`
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = direction)]
 #[holder(generate_deserialize)]
@@ -521,7 +694,7 @@ impl From<&Direction> for Vector3 {
 }
 
 /// `vector`
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = vector)]
 #[holder(generate_deserialize)]
@@ -541,7 +714,7 @@ impl From<&Vector> for Vector3 {
 }
 
 /// `placement`
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = placement)]
 #[holder(generate_deserialize)]
@@ -557,7 +730,7 @@ impl From<&Placement> for Point3 {
     fn from(p: &Placement) -> Self { Self::from(&p.location) }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = axis1_placement)]
 #[holder(generate_deserialize)]
@@ -569,7 +742,7 @@ pub struct Axis1Placement {
     pub direction: Option<Direction>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum Axis2Placement {
@@ -600,7 +773,7 @@ impl TryFrom<&Axis2Placement> for Matrix4 {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = axis2_placement_2d)]
 #[holder(generate_deserialize)]
@@ -623,7 +796,7 @@ impl From<&Axis2Placement2d> for Matrix3 {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = axis2_placement_3d)]
 #[holder(generate_deserialize)]
@@ -655,7 +828,24 @@ impl From<&Axis2Placement3d> for Matrix4 {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum CurveAny {
+    #[holder(use_place_holder)]
+    #[holder(field = line)]
+    Line(Line),
+    #[holder(use_place_holder)]
+    #[holder(field = polyline)]
+    Polyline(Polyline),
+    #[holder(use_place_holder)]
+    BSplineCurve(BSplineCurveAny),
+    #[holder(use_place_holder)]
+    #[holder(field = circle)]
+    Circle(Circle),
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = line)]
 #[holder(generate_deserialize)]
@@ -678,7 +868,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = polyline)]
 #[holder(generate_deserialize)]
@@ -709,7 +899,7 @@ pub enum KnotType {
     PiecewiseBezierKnots,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = b_spline_curve_with_knots)]
 #[holder(generate_deserialize)]
@@ -740,7 +930,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BSplineCurveWithKnots> for BS
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = bezier_curve)]
 #[holder(generate_deserialize)]
@@ -763,7 +953,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BezierCurve> for BSplineCurve
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = quasi_uniform_curve)]
 #[holder(generate_deserialize)]
@@ -789,7 +979,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&QuasiUniformCurve> for BSplin
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = uniform_curve)]
 #[holder(generate_deserialize)]
@@ -817,7 +1007,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BSplineCurv
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum NonRationalBSplineCurve {
@@ -847,7 +1037,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&NonRationalBSplineCurve> for 
 /// This struct is an ad hoc implementation that differs from the definition by EXPRESS:
 /// in AP042, rationalized curves are defined as complex entities,
 /// but here the curves before rationalization are held as internal variables.
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = rational_b_spline_curve)]
 #[holder(generate_deserialize)]
@@ -871,23 +1061,28 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum BSplineCurveAny {
     #[holder(use_place_holder)]
+    #[holder(field = b_spline_curve_with_knots)]
     BSplineCurveWithKnots(BSplineCurveWithKnots),
     #[holder(use_place_holder)]
+    #[holder(field = bezier_curve)]
     BezierCurve(BezierCurve),
     #[holder(use_place_holder)]
+    #[holder(field = quasi_uniform_curve)]
     QuasiUniformCurve(QuasiUniformCurve),
     #[holder(use_place_holder)]
+    #[holder(field = uniform_curve)]
     UniformCurve(UniformCurve),
     #[holder(use_place_holder)]
+    #[holder(field = rational_b_spline_curve)]
     RationalBSplineCurve(RationalBSplineCurve),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = circle)]
 #[holder(generate_deserialize)]
@@ -898,25 +1093,32 @@ pub struct Circle {
     pub radius: f64,
 }
 
-impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum SurfaceAny {
+    #[holder(use_place_holder)]
+    #[holder(field = plane)]
+    Plane(Plane),
+    #[holder(use_place_holder)]
+    #[holder(field = b_spline_surface_with_knots)]
+    BSplineSurfaceWithKnots(BSplineSurfaceWithKnots),
+}
+
+impl TryFrom<&SurfaceAny> for Surface {
     type Error = ExpressParseError;
-    fn try_from(circle: &Circle) -> std::result::Result<Self, ExpressParseError> {
-        let radius: f64 = circle.radius;
-        let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(radius);
-        Ok(Processor::new(UnitCircle::new()).transformed(transform))
+    fn try_from(x: &SurfaceAny) -> std::result::Result<Self, Self::Error> {
+        use SurfaceAny::*;
+        match x {
+            Plane(plane) => Ok(Self::ElementarySurface(ElementarySurface::Plane(
+                plane.into(),
+            ))),
+            BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
+        }
     }
 }
 
-impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
-    type Error = ExpressParseError;
-    fn try_from(circle: &Circle) -> std::result::Result<Self, ExpressParseError> {
-        let radius: f64 = circle.radius;
-        let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
-        Ok(Processor::new(UnitCircle::new()).transformed(transform))
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = plane)]
 #[holder(generate_deserialize)]
@@ -951,7 +1153,7 @@ pub enum BSplineSurfaceForm {
     Unspecified,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Holder)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = b_spline_surface_with_knots)]
 #[holder(generate_deserialize)]
@@ -995,5 +1197,514 @@ impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
             .map(|vec| vec.iter().map(Point3::from).collect())
             .collect();
         Self::try_new((uknots, vknots), ctrls).map_err(|x| x.to_string())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = vertex_point)]
+#[holder(generate_deserialize)]
+pub struct VertexPoint {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub vertex_geometry: CartesianPoint,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum EdgeAny {
+    #[holder(use_place_holder)]
+    EdgeCurve(EdgeCurve),
+    #[holder(use_place_holder)]
+    OrientedEdge(OrientedEdge),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = edge_curve)]
+#[holder(generate_deserialize)]
+pub struct EdgeCurve {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub edge_start: VertexPoint,
+    #[holder(use_place_holder)]
+    pub edge_end: VertexPoint,
+    #[holder(use_place_holder)]
+    pub edge_geometry: CurveAny,
+    pub same_sense: bool,
+}
+
+impl EdgeCurve {
+    pub fn parse_curve2d(&self) -> std::result::Result<Curve2D, ExpressParseError> {
+        use CurveAny::*;
+        let p = Point2::from(&self.edge_start.vertex_geometry);
+        let q = Point2::from(&self.edge_end.vertex_geometry);
+        let (p, q) = match self.same_sense {
+            true => (p, q),
+            false => (q, p),
+        };
+        let mut curve = match &self.edge_geometry {
+            Line(_) => Curve2D::Line(truck_geometry::Line(p, q)),
+            Polyline(poly) => Curve2D::Polyline(PolylineCurve::from(poly)),
+            BSplineCurve(bspcurve) => match bspcurve {
+                BSplineCurveAny::BSplineCurveWithKnots(bsp) => {
+                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::BezierCurve(bsp) => {
+                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::QuasiUniformCurve(bsp) => {
+                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::UniformCurve(bsp) => {
+                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::RationalBSplineCurve(bsp) => {
+                    Curve2D::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
+                }
+            },
+            Circle(circle) => {
+                let mat = Matrix3::try_from(&circle.position)?;
+                let inv_mat = mat
+                    .invert()
+                    .ok_or_else(|| "Failed to convert Circle".to_string())?;
+                let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                let (u, v) = (
+                    UnitCircle::<Point2>::new()
+                        .search_parameter(p, None, 0)
+                        .ok_or_else(|| "the point is not on circle".to_string())?,
+                    UnitCircle::<Point2>::new()
+                        .search_parameter(q, None, 0)
+                        .ok_or_else(|| "the point is not on circle".to_string())?,
+                );
+                let circle = TrimmedCurve::new(UnitCircle::<Point2>::new(), (u, v));
+                let mut ellipse = Processor::new(circle);
+                ellipse.transform_by(mat);
+                Curve2D::Conic(Conic2D::Ellipse(ellipse))
+            }
+        };
+        if !self.same_sense {
+            curve.invert();
+        }
+        Ok(curve)
+    }
+    pub fn parse_curve3d(&self) -> std::result::Result<Curve3D, ExpressParseError> {
+        use CurveAny::*;
+        let p = Point3::from(&self.edge_start.vertex_geometry);
+        let q = Point3::from(&self.edge_end.vertex_geometry);
+        let (p, q) = match self.same_sense {
+            true => (p, q),
+            false => (q, p),
+        };
+        let mut curve = match &self.edge_geometry {
+            Line(_) => Curve3D::Line(truck_geometry::Line(p, q)),
+            Polyline(poly) => Curve3D::Polyline(PolylineCurve::from(poly)),
+            BSplineCurve(bspcurve) => match bspcurve {
+                BSplineCurveAny::BSplineCurveWithKnots(bsp) => {
+                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::BezierCurve(bsp) => {
+                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::QuasiUniformCurve(bsp) => {
+                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::UniformCurve(bsp) => {
+                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+                }
+                BSplineCurveAny::RationalBSplineCurve(bsp) => {
+                    Curve3D::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
+                }
+            },
+            Circle(circle) => {
+                let mat = Matrix4::try_from(&circle.position)?;
+                let inv_mat = mat
+                    .invert()
+                    .ok_or_else(|| "Failed to convert Circle".to_string())?;
+                let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                let (u, v) = (
+                    UnitCircle::<Point3>::new()
+                        .search_parameter(p, None, 0)
+                        .ok_or_else(|| "the point is not on circle".to_string())?,
+                    UnitCircle::<Point3>::new()
+                        .search_parameter(q, None, 0)
+                        .ok_or_else(|| "the point is not on circle".to_string())?,
+                );
+                let circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (u, v));
+                let mut ellipse = Processor::new(circle);
+                ellipse.transform_by(mat);
+                Curve3D::Conic(Conic3D::Ellipse(ellipse))
+            }
+        };
+        if !self.same_sense {
+            curve.invert();
+        }
+        Ok(curve)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = oriented_edge)]
+#[holder(generate_deserialize)]
+/// `ORIENTED_EDGE` has duplicated information.
+/// These are not included here because they are essentially omitted.
+pub struct OrientedEdge {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub edge_element: EdgeCurve,
+    pub orientation: bool,
+}
+
+impl OrientedEdgeHolder {
+    fn edge_element_holder(&self, table: &Table) -> Option<EdgeCurveHolder> {
+        match &self.edge_element {
+            PlaceHolder::Owned(holder) => Some(holder.clone()),
+            PlaceHolder::Ref(Name::Entity(idx)) => table.edge_curve.get(idx).cloned(),
+            _ => None,
+        }
+    }
+    fn edge_element_idx(&self) -> Option<u64> {
+        if let PlaceHolder::Ref(Name::Entity(idx)) = self.edge_element {
+            Some(idx)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = edge_loop)]
+#[holder(generate_deserialize)]
+pub struct EdgeLoop {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub edge_list: Vec<EdgeAny>,
+}
+
+impl EdgeLoopHolder {
+    fn edge_list_holder(&self, table: &Table) -> Vec<Option<EdgeAnyHolder>> {
+        self.edge_list
+            .iter()
+            .map(|edge| match edge {
+                PlaceHolder::Owned(holder) => Some(holder.clone()),
+                PlaceHolder::Ref(Name::Entity(idx)) => table
+                    .oriented_edge
+                    .get(idx)
+                    .map(|oriented_edge| EdgeAnyHolder::OrientedEdge(oriented_edge.clone()))
+                    .or_else(|| {
+                        table
+                            .edge_curve
+                            .get(idx)
+                            .map(|edge_curve| EdgeAnyHolder::EdgeCurve(edge_curve.clone()))
+                    }),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = face_bound)]
+#[holder(generate_deserialize)]
+/// `FACE_OUTER_BOUNDS` is also parsed to this struct.
+pub struct FaceBound {
+    pub label: String,
+    // For now, we are going with the policy of accepting nothing but edgeloop.
+    #[holder(use_place_holder)]
+    pub bound: EdgeLoop,
+    pub orientation: bool,
+}
+
+impl FaceBoundHolder {
+    fn bound_holder(&self, table: &Table) -> Option<EdgeLoopHolder> {
+        match &self.bound {
+            PlaceHolder::Owned(holder) => Some(holder.clone()),
+            PlaceHolder::Ref(Name::Entity(idx)) => table.edge_loop.get(idx).cloned(),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum FaceAny {
+    #[holder(use_place_holder)]
+    FaceSurface(FaceSurface),
+    #[holder(use_place_holder)]
+    OrientedFace(OrientedFace),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = face_surface)]
+#[holder(generate_deserialize)]
+/// `ADVANCED_FACE` is also parsed to this struct.
+pub struct FaceSurface {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub bounds: Vec<FaceBound>,
+    #[holder(use_place_holder)]
+    pub face_geometry: SurfaceAny,
+    pub same_sense: bool,
+}
+
+impl FaceSurfaceHolder {
+    fn bounds_holder<'a>(&'a self, table: &'a Table) -> Vec<Option<FaceBoundHolder>> {
+        self.bounds
+            .iter()
+            .map(|bound| match bound {
+                PlaceHolder::Owned(bound) => Some(bound.clone()),
+                PlaceHolder::Ref(Name::Entity(idx)) => table.face_bound.get(idx).cloned(),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = oriented_face)]
+#[holder(generate_deserialize)]
+/// `ORIENTED_EDGE` has duplicated information.
+/// These are not included here because they are essentially omitted.
+pub struct OrientedFace {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub face_element: FaceSurface,
+    pub orientation: bool,
+}
+
+impl OrientedFaceHolder {
+    fn face_element_holder(&self, table: &Table) -> Option<FaceSurfaceHolder> {
+        match &self.face_element {
+            PlaceHolder::Ref(Name::Entity(idx)) => table.face_surface.get(idx).cloned(),
+            PlaceHolder::Owned(x) => Some(x.clone()),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = shell)]
+#[holder(generate_deserialize)]
+/// Includes `OPEN_SHELL` and `CLOSED_SHELL`.
+/// Since these differences are only informal propositions, the data structure does not distinguish between the two.
+pub struct Shell {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub cfs_faces: Vec<FaceAny>,
+}
+
+impl ShellHolder {
+    fn cfs_faces_holder<'a>(
+        &'a self,
+        table: &'a Table,
+    ) -> impl Iterator<Item = Option<FaceAnyHolder>> + 'a {
+        self.cfs_faces.iter().map(|face| match face {
+            PlaceHolder::Owned(holder) => Some(holder.clone()),
+            PlaceHolder::Ref(Name::Entity(idx)) => table
+                .oriented_face
+                .get(idx)
+                .cloned()
+                .map(FaceAnyHolder::OrientedFace)
+                .or_else(|| {
+                    table
+                        .face_surface
+                        .get(idx)
+                        .cloned()
+                        .map(FaceAnyHolder::FaceSurface)
+                }),
+            _ => None,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = oriented_shell)]
+#[holder(generate_deserialize)]
+/// Includes `ORIENTED_OPEN_SHELL` and `ORIENTED_CLOSED_SHELL`.
+/// Since these differences are only informal propositions, the data structure does not distinguish between the two.
+pub struct OrientedShell {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub shell_element: Shell,
+    pub orientation: bool,
+}
+
+impl Table {
+    pub fn to_compressed_shell(
+        &self,
+        shell: &ShellHolder,
+    ) -> std::result::Result<CompressedShell<Point3, Curve3D, Surface>, ExpressParseError> {
+        use PlaceHolder::Ref;
+        let mut vidx_map = HashMap::<u64, usize>::new();
+        let mut eidx_map = HashMap::<u64, usize>::new();
+
+        let vertices: Vec<Point3> = shell
+            .cfs_faces_holder(self)
+            .filter_map(|face| match face? {
+                FaceAnyHolder::FaceSurface(face) => Some(face),
+                FaceAnyHolder::OrientedFace(face) => face.face_element_holder(self),
+            })
+            .flat_map(|face| face.bounds_holder(self))
+            .filter_map(|bound| bound?.bound_holder(self))
+            .flat_map(|bound| bound.edge_list_holder(self))
+            .filter_map(|edge| match edge? {
+                EdgeAnyHolder::EdgeCurve(holder) => Some(holder),
+                EdgeAnyHolder::OrientedEdge(oriented_edge) => {
+                    oriented_edge.edge_element_holder(self)
+                }
+            })
+            .flat_map(|edge| vec![edge.edge_start, edge.edge_end])
+            .filter_map(|v| {
+                if let Ref(Name::Entity(idx)) = v {
+                    if vidx_map.get(&idx).is_none() {
+                        let len = vidx_map.len();
+                        vidx_map.insert(idx, len);
+                        let p = EntityTable::<VertexPointHolder>::get_owned(self, idx).ok()?;
+                        Some(Point3::from(&p.vertex_geometry))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let edges: Vec<CompressedEdge<Curve3D>> = shell
+            .cfs_faces_holder(self)
+            .filter_map(|face| match face? {
+                FaceAnyHolder::FaceSurface(face) => Some(face),
+                FaceAnyHolder::OrientedFace(face) => face.face_element_holder(self),
+            })
+            .flat_map(|face| face.bounds_holder(self))
+            .filter_map(|bound| bound?.bound_holder(self))
+            .flat_map(|bound| {
+                bound
+                    .edge_list
+                    .iter()
+                    .filter_map(|edge| match edge {
+                        Ref(Name::Entity(idx)) => self
+                            .oriented_edge
+                            .get(idx)
+                            .and_then(|oriented_edge| {
+                                Some((
+                                    oriented_edge.edge_element_idx()?,
+                                    oriented_edge.edge_element_holder(self)?,
+                                ))
+                            })
+                            .or_else(|| {
+                                self.edge_curve
+                                    .get(idx)
+                                    .map(|edge_curve| (*idx, edge_curve.clone()))
+                            }),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .filter_map(|(idx, edge)| {
+                if eidx_map.get(&idx).is_some() {
+                    return None;
+                }
+                let len = eidx_map.len();
+                eidx_map.insert(idx, len);
+                let edge_curve = edge.clone().into_owned(self).ok()?;
+                let curve = edge_curve.parse_curve3d().ok()?;
+                let front = if let Ref(Name::Entity(idx)) = edge.edge_start {
+                    *vidx_map.get(&idx)?
+                } else {
+                    return None;
+                };
+                let back = if let Ref(Name::Entity(idx)) = edge.edge_end {
+                    *vidx_map.get(&idx)?
+                } else {
+                    return None;
+                };
+                Some(CompressedEdge {
+                    vertices: (front, back),
+                    curve,
+                })
+            })
+            .collect();
+
+        let faces = shell
+            .cfs_faces_holder(self)
+            .filter_map(|face| match face? {
+                FaceAnyHolder::FaceSurface(face_surface) => Some((true, face_surface)),
+                FaceAnyHolder::OrientedFace(oriented_face) => {
+                    let face_element = oriented_face.face_element_holder(self)?;
+                    Some((oriented_face.orientation, face_element))
+                }
+            })
+            .filter_map(|(orientation, face)| {
+                let step_surface: SurfaceAny = face.face_geometry.clone().into_owned(self).ok()?;
+                let mut surface = Surface::try_from(&step_surface).ok()?;
+                if !face.same_sense {
+                    surface.invert()
+                }
+                let boundaries: Vec<_> = face
+                    .bounds_holder(self)
+                    .into_iter()
+                    .filter_map(|bound| {
+                        let bound = bound?;
+                        let ori = bound.orientation;
+                        let bound = bound.bound_holder(self)?;
+                        let edges: Vec<CompressedEdgeIndex> = bound
+                            .edge_list
+                            .iter()
+                            .filter_map(|edge| match edge {
+                                Ref(Name::Entity(idx)) => self
+                                    .oriented_edge
+                                    .get(idx)
+                                    .and_then(|oriented_edge| {
+                                        let idx = oriented_edge.edge_element_idx()?;
+                                        let index = *eidx_map.get(&idx)?;
+                                        Some(CompressedEdgeIndex {
+                                            index,
+                                            orientation: oriented_edge.orientation,
+                                        })
+                                    })
+                                    .or_else(|| match self.edge_curve.get(idx).is_some() {
+                                        true => Some(CompressedEdgeIndex {
+                                            index: *eidx_map.get(idx)?,
+                                            orientation: true,
+                                        }),
+                                        false => None,
+                                    }),
+                                _ => None,
+                            })
+                            .collect();
+                        Some((ori, edges))
+                    })
+                    .map(|(ori, mut boundary)| {
+                        if !ori {
+                            boundary.reverse();
+                            boundary.iter_mut().for_each(|edge| {
+                                edge.orientation = !edge.orientation;
+                            });
+                        }
+                        boundary
+                    })
+                    .collect();
+                Some(CompressedFace {
+                    surface,
+                    boundaries,
+                    orientation,
+                })
+            })
+            .collect();
+        Ok(CompressedShell {
+            vertices,
+            edges,
+            faces,
+        })
     }
 }

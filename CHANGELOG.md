@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Parse STEP topology.
 - Fix example pages.
 - Updates wgpu to v0.13.
 - The parsing of the STEP geometry was implemented up to BSplineSurfaceWithKnots.
