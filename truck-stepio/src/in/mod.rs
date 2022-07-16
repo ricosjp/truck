@@ -1266,15 +1266,17 @@ impl EdgeCurve {
             },
             Circle(circle) => {
                 let mat = Matrix3::try_from(&circle.position)?;
-                let inv_mat = mat.invert().ok_or("Failed to convert Circle".to_string())?;
+                let inv_mat = mat
+                    .invert()
+                    .ok_or_else(|| "Failed to convert Circle".to_string())?;
                 let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
                 let (u, v) = (
                     UnitCircle::<Point2>::new()
                         .search_parameter(p, None, 0)
-                        .ok_or("the point is not on circle".to_string())?,
+                        .ok_or_else(|| "the point is not on circle".to_string())?,
                     UnitCircle::<Point2>::new()
                         .search_parameter(q, None, 0)
-                        .ok_or("the point is not on circle".to_string())?,
+                        .ok_or_else(|| "the point is not on circle".to_string())?,
                 );
                 let circle = TrimmedCurve::new(UnitCircle::<Point2>::new(), (u, v));
                 let mut ellipse = Processor::new(circle);
@@ -1317,15 +1319,17 @@ impl EdgeCurve {
             },
             Circle(circle) => {
                 let mat = Matrix4::try_from(&circle.position)?;
-                let inv_mat = mat.invert().ok_or("Failed to convert Circle".to_string())?;
+                let inv_mat = mat
+                    .invert()
+                    .ok_or_else(|| "Failed to convert Circle".to_string())?;
                 let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
                 let (u, v) = (
                     UnitCircle::<Point3>::new()
                         .search_parameter(p, None, 0)
-                        .ok_or("the point is not on circle".to_string())?,
+                        .ok_or_else(|| "the point is not on circle".to_string())?,
                     UnitCircle::<Point3>::new()
                         .search_parameter(q, None, 0)
-                        .ok_or("the point is not on circle".to_string())?,
+                        .ok_or_else(|| "the point is not on circle".to_string())?,
                 );
                 let circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (u, v));
                 let mut ellipse = Processor::new(circle);
@@ -1353,6 +1357,23 @@ pub struct OrientedEdge {
     pub orientation: bool,
 }
 
+impl OrientedEdgeHolder {
+    fn edge_element_holder(&self, table: &Table) -> Option<EdgeCurveHolder> {
+        match &self.edge_element {
+            PlaceHolder::Owned(holder) => Some(holder.clone()),
+            PlaceHolder::Ref(Name::Entity(idx)) => table.edge_curve.get(idx).cloned(),
+            _ => None,
+        }
+    }
+    fn edge_element_idx(&self) -> Option<u64> {
+        if let PlaceHolder::Ref(Name::Entity(idx)) = self.edge_element {
+            Some(idx)
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = edge_loop)]
@@ -1361,6 +1382,28 @@ pub struct EdgeLoop {
     pub label: String,
     #[holder(use_place_holder)]
     pub edge_list: Vec<EdgeAny>,
+}
+
+impl EdgeLoopHolder {
+    fn edge_list_holder(&self, table: &Table) -> Vec<Option<EdgeAnyHolder>> {
+        self.edge_list
+            .iter()
+            .map(|edge| match edge {
+                PlaceHolder::Owned(holder) => Some(holder.clone()),
+                PlaceHolder::Ref(Name::Entity(idx)) => table
+                    .oriented_edge
+                    .get(idx)
+                    .map(|oriented_edge| EdgeAnyHolder::OrientedEdge(oriented_edge.clone()))
+                    .or_else(|| {
+                        table
+                            .edge_curve
+                            .get(idx)
+                            .map(|edge_curve| EdgeAnyHolder::EdgeCurve(edge_curve.clone()))
+                    }),
+                _ => None,
+            })
+            .collect()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
@@ -1374,6 +1417,16 @@ pub struct FaceBound {
     #[holder(use_place_holder)]
     pub bound: EdgeLoop,
     pub orientation: bool,
+}
+
+impl FaceBoundHolder {
+    fn bound_holder(&self, table: &Table) -> Option<EdgeLoopHolder> {
+        match &self.bound {
+            PlaceHolder::Owned(holder) => Some(holder.clone()),
+            PlaceHolder::Ref(Name::Entity(idx)) => table.edge_loop.get(idx).cloned(),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
@@ -1400,6 +1453,19 @@ pub struct FaceSurface {
     pub same_sense: bool,
 }
 
+impl FaceSurfaceHolder {
+    fn bounds_holder<'a>(&'a self, table: &'a Table) -> Vec<Option<FaceBoundHolder>> {
+        self.bounds
+            .iter()
+            .map(|bound| match bound {
+                PlaceHolder::Owned(bound) => Some(bound.clone()),
+                PlaceHolder::Ref(Name::Entity(idx)) => table.face_bound.get(idx).cloned(),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = oriented_face)]
@@ -1413,6 +1479,16 @@ pub struct OrientedFace {
     pub orientation: bool,
 }
 
+impl OrientedFaceHolder {
+    fn face_element_holder(&self, table: &Table) -> Option<FaceSurfaceHolder> {
+        match &self.face_element {
+            PlaceHolder::Ref(Name::Entity(idx)) => table.face_surface.get(idx).cloned(),
+            PlaceHolder::Owned(x) => Some(x.clone()),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = shell)]
@@ -1423,6 +1499,30 @@ pub struct Shell {
     pub label: String,
     #[holder(use_place_holder)]
     pub cfs_faces: Vec<FaceAny>,
+}
+
+impl ShellHolder {
+    fn cfs_faces_holder<'a>(
+        &'a self,
+        table: &'a Table,
+    ) -> impl Iterator<Item = Option<FaceAnyHolder>> + 'a {
+        self.cfs_faces.iter().map(|face| match face {
+            PlaceHolder::Owned(holder) => Some(holder.clone()),
+            PlaceHolder::Ref(Name::Entity(idx)) => table
+                .oriented_face
+                .get(idx)
+                .cloned()
+                .map(FaceAnyHolder::OrientedFace)
+                .or_else(|| {
+                    table
+                        .face_surface
+                        .get(idx)
+                        .cloned()
+                        .map(FaceAnyHolder::FaceSurface)
+                }),
+            _ => None,
+        })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
@@ -1443,62 +1543,32 @@ impl Table {
         &self,
         shell: &ShellHolder,
     ) -> std::result::Result<CompressedShell<Point3, Curve3D, Surface>, ExpressParseError> {
+        use PlaceHolder::Ref;
         let mut vidx_map = HashMap::<u64, usize>::new();
         let mut eidx_map = HashMap::<u64, usize>::new();
 
         let vertices: Vec<Point3> = shell
-            .cfs_faces
-            .iter()
-            .filter_map(|face| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = face {
-                    if let Some(face) = self.face_surface.get(&idx) {
-                        Some(face)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
+            .cfs_faces_holder(self)
+            .filter_map(|face| match face? {
+                FaceAnyHolder::FaceSurface(face) => Some(face),
+                FaceAnyHolder::OrientedFace(face) => face.face_element_holder(self),
+            })
+            .flat_map(|face| face.bounds_holder(self))
+            .filter_map(|bound| bound?.bound_holder(self))
+            .flat_map(|bound| bound.edge_list_holder(self))
+            .filter_map(|edge| match edge? {
+                EdgeAnyHolder::EdgeCurve(holder) => Some(holder),
+                EdgeAnyHolder::OrientedEdge(oriented_edge) => {
+                    oriented_edge.edge_element_holder(self)
                 }
             })
-            .flat_map(|face| &face.bounds)
-            .filter_map(|bound| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = bound {
-                    self.face_bound.get(&idx)
-                } else {
-                    None
-                }
-            })
-            .filter_map(|bound| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = bound.bound {
-                    self.edge_loop.get(&idx)
-                } else {
-                    None
-                }
-            })
-            .flat_map(|edge_loop| &edge_loop.edge_list)
-            .filter_map(|edge| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = edge {
-                    let idx = if let Some(oriented_edge) = self.oriented_edge.get(&idx) {
-                        if let PlaceHolder::Ref(Name::Entity(idx)) = oriented_edge.edge_element {
-                            idx
-                        } else {
-                            *idx
-                        }
-                    } else {
-                        *idx
-                    };
-                    self.edge_curve.get(&idx)
-                } else {
-                    None
-                }
-            })
-            .flat_map(|edge| vec![&edge.edge_start, &edge.edge_end])
+            .flat_map(|edge| vec![edge.edge_start, edge.edge_end])
             .filter_map(|v| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = v {
+                if let Ref(Name::Entity(idx)) = v {
                     if vidx_map.get(&idx).is_none() {
                         let len = vidx_map.len();
-                        vidx_map.insert(*idx, len);
-                        let p = EntityTable::<VertexPointHolder>::get_owned(self, *idx).ok()?;
+                        vidx_map.insert(idx, len);
+                        let p = EntityTable::<VertexPointHolder>::get_owned(self, idx).ok()?;
                         Some(Point3::from(&p.vertex_geometry))
                     } else {
                         None
@@ -1510,50 +1580,35 @@ impl Table {
             .collect();
 
         let edges: Vec<CompressedEdge<Curve3D>> = shell
-            .cfs_faces
-            .iter()
-            .filter_map(|face| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = face {
-                    if let Some(face) = self.face_surface.get(&idx) {
-                        Some(face)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
+            .cfs_faces_holder(self)
+            .filter_map(|face| match face? {
+                FaceAnyHolder::FaceSurface(face) => Some(face),
+                FaceAnyHolder::OrientedFace(face) => face.face_element_holder(self),
             })
-            .flat_map(|face| &face.bounds)
-            .filter_map(|bound| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = bound {
-                    self.face_bound.get(&idx)
-                } else {
-                    None
-                }
-            })
-            .filter_map(|bound| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = bound.bound {
-                    self.edge_loop.get(&idx)
-                } else {
-                    None
-                }
-            })
-            .flat_map(|edge_loop| &edge_loop.edge_list)
-            .filter_map(|edge| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = edge {
-                    let idx = if let Some(oriented_edge) = self.oriented_edge.get(&idx) {
-                        if let PlaceHolder::Ref(Name::Entity(idx)) = oriented_edge.edge_element {
-                            idx
-                        } else {
-                            *idx
-                        }
-                    } else {
-                        *idx
-                    };
-                    Some((idx, self.edge_curve.get(&idx)?))
-                } else {
-                    None
-                }
+            .flat_map(|face| face.bounds_holder(self))
+            .filter_map(|bound| bound?.bound_holder(self))
+            .flat_map(|bound| {
+                bound
+                    .edge_list
+                    .iter()
+                    .filter_map(|edge| match edge {
+                        Ref(Name::Entity(idx)) => self
+                            .oriented_edge
+                            .get(idx)
+                            .and_then(|oriented_edge| {
+                                Some((
+                                    oriented_edge.edge_element_idx()?,
+                                    oriented_edge.edge_element_holder(self)?,
+                                ))
+                            })
+                            .or_else(|| {
+                                self.edge_curve
+                                    .get(idx)
+                                    .map(|edge_curve| (*idx, edge_curve.clone()))
+                            }),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
             })
             .filter_map(|(idx, edge)| {
                 if eidx_map.get(&idx).is_some() {
@@ -1563,12 +1618,12 @@ impl Table {
                 eidx_map.insert(idx, len);
                 let edge_curve = edge.clone().into_owned(self).ok()?;
                 let curve = edge_curve.parse_curve3d().ok()?;
-                let front = if let PlaceHolder::Ref(Name::Entity(idx)) = edge.edge_start {
+                let front = if let Ref(Name::Entity(idx)) = edge.edge_start {
                     *vidx_map.get(&idx)?
                 } else {
                     return None;
                 };
-                let back = if let PlaceHolder::Ref(Name::Entity(idx)) = edge.edge_end {
+                let back = if let Ref(Name::Entity(idx)) = edge.edge_end {
                     *vidx_map.get(&idx)?
                 } else {
                     return None;
@@ -1581,88 +1636,54 @@ impl Table {
             .collect();
 
         let faces = shell
-            .cfs_faces
-            .iter()
-            .filter_map(|face| {
-                if let PlaceHolder::Ref(Name::Entity(idx)) = face {
-                    let (flag, idx) = if let Some(face) = self.oriented_face.get(&idx) {
-                        if let PlaceHolder::Ref(Name::Entity(idx)) = face.face_element {
-                            (face.orientation, idx)
-                        } else {
-                            (true, *idx)
-                        }
-                    } else {
-                        (true, *idx)
-                    };
-                    if let Some(face) = self.face_surface.get(&idx) {
-                        let mut face = face.clone();
-                        face.same_sense = face.same_sense == flag;
-                        Some(face)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
+            .cfs_faces_holder(self)
+            .filter_map(|face| match face? {
+                FaceAnyHolder::FaceSurface(face_surface) => Some((true, face_surface)),
+                FaceAnyHolder::OrientedFace(oriented_face) => {
+                    let face_element = oriented_face.face_element_holder(self)?;
+                    Some((oriented_face.orientation, face_element))
                 }
             })
-            .filter_map(|face| {
+            .filter_map(|(orientation, face)| {
                 let step_surface: SurfaceAny = face.face_geometry.clone().into_owned(self).ok()?;
                 let mut surface = Surface::try_from(&step_surface).ok()?;
                 if !face.same_sense {
                     surface.invert()
                 }
                 let boundaries: Vec<_> = face
-                    .bounds
-                    .iter()
-                    .filter_map(|bound| {
-                        if let PlaceHolder::Ref(Name::Entity(idx)) = bound {
-                            if let Some(bound) = self.face_bound.get(&idx) {
-                                let ori = bound.orientation;
-                                if let PlaceHolder::Ref(Name::Entity(idx)) = bound.bound {
-                                    if let Some(edge_list) = self.edge_loop.get(&idx) {
-                                        let edges = edge_list.edge_list.iter().filter_map(|edge| {
-                                            if let PlaceHolder::Ref(Name::Entity(idx)) = edge {
-                                                if let Some(oriented_edge) =
-                                                    self.oriented_edge.get(&idx)
-                                                {
-                                                    if let PlaceHolder::Ref(Name::Entity(idx)) =
-                                                        oriented_edge.edge_element
-                                                    {
-                                                        let edge_idx = *eidx_map.get(&idx)?;
-                                                        return Some(CompressedEdgeIndex {
-                                                            index: edge_idx,
-                                                            orientation: oriented_edge.orientation,
-                                                        });
-                                                    } else {
-                                                        return None;
-                                                    }
-                                                }
-                                                let edge_idx = *vidx_map.get(&idx)?;
-                                                Some(CompressedEdgeIndex {
-                                                    index: edge_idx,
-                                                    orientation: true,
-                                                })
-                                            } else {
-                                                None
-                                            }
-                                        });
-                                        Some((ori, edges.collect::<Vec<_>>()))
-                                    } else {
-                                        None
-                                    }
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-                let boundaries = boundaries
+                    .bounds_holder(self)
                     .into_iter()
+                    .filter_map(|bound| {
+                        let bound = bound?;
+                        let ori = bound.orientation;
+                        let bound = bound.bound_holder(self)?;
+                        let edges: Vec<CompressedEdgeIndex> = bound
+                            .edge_list
+                            .iter()
+                            .filter_map(|edge| match edge {
+                                Ref(Name::Entity(idx)) => self
+                                    .oriented_edge
+                                    .get(idx)
+                                    .and_then(|oriented_edge| {
+                                        let idx = oriented_edge.edge_element_idx()?;
+                                        let index = *eidx_map.get(&idx)?;
+                                        Some(CompressedEdgeIndex {
+                                            index,
+                                            orientation: oriented_edge.orientation,
+                                        })
+                                    })
+                                    .or_else(|| match self.edge_curve.get(idx).is_some() {
+                                        true => Some(CompressedEdgeIndex {
+                                            index: *eidx_map.get(idx)?,
+                                            orientation: true,
+                                        }),
+                                        false => None,
+                                    }),
+                                _ => None,
+                            })
+                            .collect();
+                        Some((ori, edges))
+                    })
                     .map(|(ori, mut boundary)| {
                         if !ori {
                             boundary.reverse();
@@ -1676,7 +1697,7 @@ impl Table {
                 Some(CompressedFace {
                     surface,
                     boundaries,
-                    orientation: true,
+                    orientation,
                 })
             })
             .collect();
