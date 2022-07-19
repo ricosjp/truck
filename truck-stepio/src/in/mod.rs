@@ -1390,7 +1390,7 @@ impl EdgeLoopHolder {
             .iter()
             .map(|edge| match edge {
                 PlaceHolder::Owned(holder) => Some(holder.clone()),
-                PlaceHolder::Ref(Name::Entity(idx)) => table
+                PlaceHolder::Ref(Name::Entity(ref idx)) => table
                     .oriented_edge
                     .get(idx)
                     .map(|oriented_edge| EdgeAnyHolder::OrientedEdge(oriented_edge.clone()))
@@ -1423,7 +1423,7 @@ impl FaceBoundHolder {
     fn bound_holder(&self, table: &Table) -> Option<EdgeLoopHolder> {
         match &self.bound {
             PlaceHolder::Owned(holder) => Some(holder.clone()),
-            PlaceHolder::Ref(Name::Entity(idx)) => table.edge_loop.get(idx).cloned(),
+            PlaceHolder::Ref(Name::Entity(ref idx)) => table.edge_loop.get(idx).cloned(),
             _ => None,
         }
     }
@@ -1459,7 +1459,7 @@ impl FaceSurfaceHolder {
             .iter()
             .map(|bound| match bound {
                 PlaceHolder::Owned(bound) => Some(bound.clone()),
-                PlaceHolder::Ref(Name::Entity(idx)) => table.face_bound.get(idx).cloned(),
+                PlaceHolder::Ref(Name::Entity(ref idx)) => table.face_bound.get(idx).cloned(),
                 _ => None,
             })
             .collect()
@@ -1482,7 +1482,7 @@ pub struct OrientedFace {
 impl OrientedFaceHolder {
     fn face_element_holder(&self, table: &Table) -> Option<FaceSurfaceHolder> {
         match &self.face_element {
-            PlaceHolder::Ref(Name::Entity(idx)) => table.face_surface.get(idx).cloned(),
+            PlaceHolder::Ref(Name::Entity(ref idx)) => table.face_surface.get(idx).cloned(),
             PlaceHolder::Owned(x) => Some(x.clone()),
             _ => None,
         }
@@ -1508,7 +1508,7 @@ impl ShellHolder {
     ) -> impl Iterator<Item = Option<FaceAnyHolder>> + 'a {
         self.cfs_faces.iter().map(|face| match face {
             PlaceHolder::Owned(holder) => Some(holder.clone()),
-            PlaceHolder::Ref(Name::Entity(idx)) => table
+            PlaceHolder::Ref(Name::Entity(ref idx)) => table
                 .oriented_face
                 .get(idx)
                 .cloned()
@@ -1564,11 +1564,11 @@ impl Table {
             })
             .flat_map(|edge| vec![edge.edge_start, edge.edge_end])
             .filter_map(|v| {
-                if let Ref(Name::Entity(idx)) = v {
-                    if vidx_map.get(&idx).is_none() {
+                if let Ref(Name::Entity(ref idx)) = v {
+                    if vidx_map.get(idx).is_none() {
                         let len = vidx_map.len();
-                        vidx_map.insert(idx, len);
-                        let p = EntityTable::<VertexPointHolder>::get_owned(self, idx).ok()?;
+                        vidx_map.insert(*idx, len);
+                        let p = EntityTable::<VertexPointHolder>::get_owned(self, *idx).ok()?;
                         Some(Point3::from(&p.vertex_geometry))
                     } else {
                         None
@@ -1592,7 +1592,7 @@ impl Table {
                     .edge_list
                     .iter()
                     .filter_map(|edge| match edge {
-                        Ref(Name::Entity(idx)) => self
+                        Ref(Name::Entity(ref idx)) => self
                             .oriented_edge
                             .get(idx)
                             .and_then(|oriented_edge| {
@@ -1661,7 +1661,7 @@ impl Table {
                             .edge_list
                             .iter()
                             .filter_map(|edge| match edge {
-                                Ref(Name::Entity(idx)) => self
+                                Ref(Name::Entity(ref idx)) => self
                                     .oriented_edge
                                     .get(idx)
                                     .and_then(|oriented_edge| {
