@@ -135,7 +135,7 @@ impl MyApp {
             });
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
-        let mesh_solid = solid.triangulation(size * 0.005).unwrap();
+        let mesh_solid = solid.triangulation(size * 0.005);
         let curves = mesh_solid
             .edge_iter()
             .map(|edge| edge.get_curve())
