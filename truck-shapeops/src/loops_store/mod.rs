@@ -446,9 +446,9 @@ pub struct LoopsStoreQuadruple<C> {
 
 pub fn create_loops_stores<C, S>(
     geom_shell0: &Shell<Point3, C, S>,
-    poly_shell0: &Shell<Point3, PolylineCurve, PolygonMesh>,
+    poly_shell0: &Shell<Point3, PolylineCurve, Option<PolygonMesh>>,
     geom_shell1: &Shell<Point3, C, S>,
-    poly_shell1: &Shell<Point3, PolylineCurve, PolygonMesh>,
+    poly_shell1: &Shell<Point3, PolylineCurve, Option<PolygonMesh>>,
     tol: f64,
 ) -> Option<LoopsStoreQuadruple<C>>
 where
@@ -471,8 +471,8 @@ where
             let ori1 = geom_shell1[face_index1].orientation();
             let surface0 = geom_shell0[face_index0].get_surface();
             let surface1 = geom_shell1[face_index1].get_surface();
-            let polygon0 = poly_shell0[face_index0].get_surface();
-            let polygon1 = poly_shell1[face_index1].get_surface();
+            let polygon0 = poly_shell0[face_index0].get_surface()?;
+            let polygon1 = poly_shell1[face_index1].get_surface()?;
             intersection_curve::intersection_curves(
                 surface0.clone(),
                 &polygon0,

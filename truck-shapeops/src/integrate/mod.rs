@@ -45,8 +45,8 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     tol: f64,
 ) -> Option<[Shell<Point3, C, S>; 2]> {
     nonpositive_tolerance!(tol);
-    let poly_shell0 = shell0.triangulation(tol)?;
-    let poly_shell1 = shell1.triangulation(tol)?;
+    let poly_shell0 = shell0.triangulation(tol);
+    let poly_shell1 = shell1.triangulation(tol);
     let loops_store::LoopsStoreQuadruple {
         geom_loops_store0: loops_store0,
         geom_loops_store1: loops_store1,
@@ -57,41 +57,43 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     let mut cls1 = divide_face::divide_faces(shell1, &loops_store1, tol)?;
     cls1.integrate_by_component();
     let [mut and0, mut or0, unknown0] = cls0.and_or_unknown();
-    unknown0.into_iter().for_each(|face| {
+    unknown0.into_iter().try_for_each(|face| {
         let pt = face.boundaries()[0]
             .vertex_iter()
             .next()
             .unwrap()
             .get_point();
         let dir = hash::take_one_unit(pt);
-        let count = poly_shell1.iter().fold(0, |count, face| {
-            let poly = face.get_surface();
-            count + poly.signed_crossing_faces(pt, dir)
-        });
+        let count = poly_shell1.iter().try_fold(0, |count, face| {
+            let poly = face.get_surface()?;
+            Some(count + poly.signed_crossing_faces(pt, dir))
+        })?;
         if count >= 1 {
             and0.push(face);
         } else {
             or0.push(face);
         }
-    });
+        Some(())
+    })?;
     let [mut and1, mut or1, unknown1] = cls1.and_or_unknown();
-    unknown1.into_iter().for_each(|face| {
+    unknown1.into_iter().try_for_each(|face| {
         let pt = face.boundaries()[0]
             .vertex_iter()
             .next()
             .unwrap()
             .get_point();
         let dir = hash::take_one_unit(pt);
-        let count = poly_shell0.iter().fold(0, |count, face| {
-            let poly = face.get_surface();
-            count + poly.signed_crossing_faces(pt, dir)
-        });
+        let count = poly_shell0.iter().try_fold(0, |count, face| {
+            let poly = face.get_surface()?;
+            Some(count + poly.signed_crossing_faces(pt, dir))
+        })?;
         if count >= 1 {
             and1.push(face);
         } else {
             or1.push(face);
         }
-    });
+        Some(())
+    })?;
     and0.append(&mut and1);
     or0.append(&mut or1);
     Some([and0, or0])

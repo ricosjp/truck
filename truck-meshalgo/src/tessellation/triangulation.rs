@@ -5,18 +5,14 @@ use crate::filters::NormalFilters;
 use rustc_hash::FxHashMap as HashMap;
 
 type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
-type MeshedShell = Shell<Point3, PolylineCurve, PolygonMesh>;
-type MeshedCShell = CompressedShell<Point3, PolylineCurve, PolygonMesh>;
+type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
+type MeshedCShell = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
 
 /// Tessellates faces
-pub(super) fn shell_tessellation<'a, C, S>(
-    shell: &Shell<Point3, C, S>,
-    tol: f64,
-) -> Option<MeshedShell>
+pub(super) fn shell_tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
-    S: MeshableSurface + 'a,
-{
+    S: MeshableSurface + 'a, {
     let mut vmap = HashMap::default();
     let mut edge_map = HashMap::default();
     shell
@@ -59,12 +55,12 @@ where
             }) {
                 true => Some(trimming_tessellation(&surface, &polyline, tol)),
                 false => None,
-            }?;
+            };
             let mut new_face = Face::debug_new(wires, polygon);
             if !face.orientation() {
                 new_face.invert();
             }
-            Some(new_face)
+            new_face
         })
         .collect()
 }
@@ -73,7 +69,7 @@ where
 pub(super) fn cshell_tessellation<'a, C, S>(
     shell: &CompressedShell<Point3, C, S>,
     tol: f64,
-) -> Option<MeshedCShell>
+) -> MeshedCShell
 where
     C: PolylineableCurve + 'a,
     S: MeshableSurface + 'a,
@@ -106,19 +102,19 @@ where
             }) {
                 true => Some(trimming_tessellation(surface, &polyline, tol)),
                 false => None,
-            }?;
-            Some(CompressedFace {
+            };
+            CompressedFace {
                 boundaries,
                 orientation: face.orientation,
                 surface: polygon,
-            })
+            }
         })
-        .collect::<Option<Vec<_>>>()?;
-    Some(MeshedCShell {
+        .collect::<Vec<_>>();
+    MeshedCShell {
         vertices,
         edges,
         faces,
-    })
+    }
 }
 
 /// polyline, not always connected
