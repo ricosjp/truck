@@ -90,6 +90,9 @@ where
             }
         })
         .collect();
+    if edges.is_empty() {
+        return None;
+    }
     let faces = shell
         .faces
         .iter()
