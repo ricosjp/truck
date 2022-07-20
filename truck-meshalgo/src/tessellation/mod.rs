@@ -32,7 +32,24 @@ impl MeshedShape for Shell<Point3, PolylineCurve, PolygonMesh> {
     }
 }
 
-impl MeshedShape for Solid<Point3, PolylineCurve, PolygonMesh> {
+impl MeshedShape for Shell<Point3, PolylineCurve, Option<PolygonMesh>> {
+    fn to_polygon(&self) -> PolygonMesh {
+        let mut polygon = PolygonMesh::default();
+        self.face_iter().for_each(|face| {
+            if let Some(mut poly) = face.get_surface() {
+                if !face.orientation() {
+                    poly.invert();
+                }
+                polygon.merge(poly);
+            }
+        });
+        polygon
+    }
+}
+
+impl<P, C, S> MeshedShape for Solid<P, C, S>
+where Shell<P, C, S>: MeshedShape
+{
     fn to_polygon(&self) -> PolygonMesh {
         let mut polygon = PolygonMesh::default();
         self.boundaries().iter().for_each(|shell| {
@@ -53,7 +70,24 @@ impl MeshedShape for CompressedShell<Point3, PolylineCurve, PolygonMesh> {
     }
 }
 
-impl MeshedShape for CompressedSolid<Point3, PolylineCurve, PolygonMesh> {
+impl MeshedShape for CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>> {
+    fn to_polygon(&self) -> PolygonMesh {
+        let mut polygon = PolygonMesh::default();
+        self.faces.iter().for_each(|face| {
+            if let Some(surface) = &face.surface {
+                match face.orientation {
+                    true => polygon.merge(surface.clone()),
+                    false => polygon.merge(surface.inverse()),
+                }
+            }
+        });
+        polygon
+    }
+}
+
+impl<P, C, S> MeshedShape for CompressedSolid<P, C, S>
+where CompressedShell<P, C, S>: MeshedShape
+{
     fn to_polygon(&self) -> PolygonMesh {
         let mut polygon = PolygonMesh::default();
         self.boundaries.iter().for_each(|shell| {
@@ -90,53 +124,53 @@ pub trait MeshableShape {
     /// let cube = builder::tsweep(&f, Vector3::unit_z());
     ///
     /// // cube is Solid, however, the tessellated mesh is not closed.
-    /// let mut mesh = cube.triangulation(0.01).unwrap().to_polygon();
+    /// let mut mesh = cube.triangulation(0.01).to_polygon();
     /// assert!(mesh.shell_condition() != ShellCondition::Closed);
     ///
     /// // use optimization filters!
     /// mesh.put_together_same_attrs();
     /// assert!(mesh.shell_condition() == ShellCondition::Closed);
     /// ```
-    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape>;
+    fn triangulation(&self, tol: f64) -> Self::MeshedShape;
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C, S> {
-    type MeshedShape = Shell<Point3, PolylineCurve, PolygonMesh>;
-    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+    type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
+    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
         nonpositive_tolerance!(tol);
         triangulation::shell_tessellation(self, tol)
     }
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C, S> {
-    type MeshedShape = Solid<Point3, PolylineCurve, PolygonMesh>;
-    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+    type MeshedShape = Solid<Point3, PolylineCurve, Option<PolygonMesh>>;
+    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
         let boundaries = self
             .boundaries()
             .iter()
             .map(|shell| shell.triangulation(tol))
-            .collect::<Option<Vec<_>>>()?;
-        Solid::try_new(boundaries).ok()
+            .collect::<Vec<_>>();
+        Solid::new(boundaries)
     }
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedShell<Point3, C, S> {
-    type MeshedShape = CompressedShell<Point3, PolylineCurve, PolygonMesh>;
-    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+    type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
+    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
         nonpositive_tolerance!(tol);
         triangulation::cshell_tessellation(self, tol)
     }
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedSolid<Point3, C, S> {
-    type MeshedShape = CompressedSolid<Point3, PolylineCurve, PolygonMesh>;
-    fn triangulation(&self, tol: f64) -> Option<Self::MeshedShape> {
+    type MeshedShape = CompressedSolid<Point3, PolylineCurve, Option<PolygonMesh>>;
+    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
         let boundaries = self
             .boundaries
             .iter()
             .map(|shell| shell.triangulation(tol))
-            .collect::<Option<Vec<_>>>()?;
-        Some(CompressedSolid { boundaries })
+            .collect::<Vec<_>>();
+        CompressedSolid { boundaries }
     }
 }
 

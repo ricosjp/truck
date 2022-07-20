@@ -85,7 +85,6 @@ impl App for MyApp {
         };
         let mesh = Self::create_cube()
             .triangulation(0.05)
-            .unwrap()
             .to_polygon();
         let shape: PolygonInstance = scene.instance_creator().create_instance(&mesh, &state);
         scene.add_object(&shape);
