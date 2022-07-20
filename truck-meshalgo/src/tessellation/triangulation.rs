@@ -9,14 +9,10 @@ type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
 type MeshedCShell = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
 
 /// Tessellates faces
-pub(super) fn shell_tessellation<'a, C, S>(
-    shell: &Shell<Point3, C, S>,
-    tol: f64,
-) -> MeshedShell
+pub(super) fn shell_tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
-    S: MeshableSurface + 'a,
-{
+    S: MeshableSurface + 'a, {
     let mut vmap = HashMap::default();
     let mut edge_map = HashMap::default();
     shell
