@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Make the output of tessellation face-wise `Option`.
 - Parse STEP topology.
 - Fix example pages.
 - Updates wgpu to v0.13.

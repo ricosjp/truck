@@ -102,8 +102,8 @@ fn independent_intersection() {
     ]
     .into();
     assert_eq!(shell1.shell_condition(), ShellCondition::Closed);
-    let poly_shell0 = shell0.triangulation(TOL).unwrap();
-    let poly_shell1 = shell1.triangulation(TOL).unwrap();
+    let poly_shell0 = shell0.triangulation(TOL);
+    let poly_shell1 = shell1.triangulation(TOL);
 
     let crate::loops_store::LoopsStoreQuadruple {
         geom_loops_store0: loops_store0,

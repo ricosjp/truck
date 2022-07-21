@@ -92,8 +92,8 @@ macro_rules! impl_shape {
         #[wasm_bindgen]
         impl $type {
             /// meshing shape
-            pub fn to_polygon(&self, tol: f64) -> Option<PolygonMesh> {
-                Some(self.triangulation(tol)?.to_polygon().into_wasm())
+            pub fn to_polygon(&self, tol: f64) -> PolygonMesh {
+                self.triangulation(tol).to_polygon().into_wasm()
             }
             /// read shape from json
             pub fn from_json(data: &[u8]) -> Option<$type> {

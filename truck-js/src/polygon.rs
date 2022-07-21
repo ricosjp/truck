@@ -113,10 +113,10 @@ impl PolygonMesh {
     }
     /// meshing shell
     #[inline(always)]
-    pub fn from_shell(shell: Shell, tol: f64) -> Option<PolygonMesh> { shell.to_polygon(tol) }
+    pub fn from_shell(shell: Shell, tol: f64) -> PolygonMesh { shell.to_polygon(tol) }
     /// meshing solid
     #[inline(always)]
-    pub fn from_solid(solid: Solid, tol: f64) -> Option<PolygonMesh> { solid.to_polygon(tol) }
+    pub fn from_solid(solid: Solid, tol: f64) -> PolygonMesh { solid.to_polygon(tol) }
     /// Returns the bonding box
     #[inline(always)]
     pub fn bounding_box(&self) -> Vec<f64> {

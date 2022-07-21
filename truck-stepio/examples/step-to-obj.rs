@@ -19,7 +19,7 @@ fn main() {
     let mut polymesh = PolygonMesh::default();
     table.shell.iter().for_each(|shell| {
         let shell = table.to_compressed_shell(&shell.1).unwrap();
-        let new_poly = shell.triangulation(0.05).unwrap().to_polygon();
+        let new_poly = shell.triangulation(0.05).to_polygon();
         polymesh.merge(new_poly);
     });
 

@@ -17,7 +17,7 @@ fn main() {
     }
     let file = std::fs::File::open(&args[1]).unwrap();
     let solid: CompressedSolid<Point3, Curve, Surface> = serde_json::from_reader(file).unwrap();
-    let mut poly = solid.triangulation(0.01).unwrap().to_polygon();
+    let mut poly = solid.triangulation(0.01).to_polygon();
     poly.put_together_same_attrs().remove_unused_attrs();
     println!("polygon shell condition: {:?}", poly.shell_condition());
     let mut string = Vec::<u8>::new();
