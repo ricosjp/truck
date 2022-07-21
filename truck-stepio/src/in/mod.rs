@@ -768,8 +768,10 @@ impl Axis1Placement {
 #[holder(generate_deserialize)]
 pub enum Axis2Placement {
     #[holder(use_place_holder)]
+    #[holder(field = axis2_placement_2d)]
     Axis2Placement2d(Axis2Placement2d),
     #[holder(use_place_holder)]
+    #[holder(field = axis2_placement_3d)]
     Axis2Placement3d(Axis2Placement3d),
 }
 

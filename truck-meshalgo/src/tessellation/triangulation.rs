@@ -86,9 +86,6 @@ where
             }
         })
         .collect();
-    if edges.is_empty() {
-        return None;
-    }
     let faces = shell
         .faces
         .iter()
@@ -97,9 +94,9 @@ where
             let surface = &face.surface;
             let mut polyline = Polyline::default();
             let polygon = match boundaries.iter().all(|wire| {
-                let wire_iter = wire.iter().map(|edge_idx| match edge_idx.orientation {
-                    true => edges[edge_idx.index].curve.clone(),
-                    false => edges[edge_idx.index].curve.inverse(),
+                let wire_iter = wire.iter().filter_map(|edge_idx| match edge_idx.orientation {
+                    true => Some(edges.get(edge_idx.index)?.curve.clone()),
+                    false => Some(edges.get(edge_idx.index)?.curve.inverse()),
                 });
                 polyline.add_wire(surface, wire_iter)
             }) {
