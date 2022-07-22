@@ -1660,13 +1660,14 @@ impl Table {
                         let edges: Vec<CompressedEdgeIndex> = bound
                             .edge_list
                             .iter()
-                            .filter_map(|edge| match edge {
+                            .enumerate()
+                            .filter_map(|(index, edge)| match edge {
                                 Ref(Name::Entity(idx)) => self
                                     .oriented_edge
                                     .get(idx)
                                     .and_then(|oriented_edge| {
-                                        let idx = oriented_edge.edge_element_idx()?;
-                                        let index = *eidx_map.get(&idx)?;
+                                        //let idx = oriented_edge.edge_element_idx()?;
+                                        //let index = *eidx_map.get(&idx)?;
                                         Some(CompressedEdgeIndex {
                                             index,
                                             orientation: oriented_edge.orientation,
