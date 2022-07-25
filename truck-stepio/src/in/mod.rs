@@ -1615,7 +1615,6 @@ impl Table {
                     return None;
                 }
                 let len = eidx_map.len();
-                eidx_map.insert(idx, len);
                 let edge_curve = edge.clone().into_owned(self).ok()?;
                 let curve = edge_curve.parse_curve3d().ok()?;
                 let front = if let Ref(Name::Entity(idx)) = edge.edge_start {
@@ -1628,6 +1627,7 @@ impl Table {
                 } else {
                     return None;
                 };
+                eidx_map.insert(idx, len);
                 Some(CompressedEdge {
                     vertices: (front, back),
                     curve,
@@ -1660,14 +1660,13 @@ impl Table {
                         let edges: Vec<CompressedEdgeIndex> = bound
                             .edge_list
                             .iter()
-                            .enumerate()
-                            .filter_map(|(index, edge)| match edge {
+                            .filter_map(|edge| match edge {
                                 Ref(Name::Entity(idx)) => self
                                     .oriented_edge
                                     .get(idx)
                                     .and_then(|oriented_edge| {
-                                        //let idx = oriented_edge.edge_element_idx()?;
-                                        //let index = *eidx_map.get(&idx)?;
+                                        let idx = oriented_edge.edge_element_idx()?;
+                                        let index = *eidx_map.get(&idx)?;
                                         Some(CompressedEdgeIndex {
                                             index,
                                             orientation: oriented_edge.orientation,
