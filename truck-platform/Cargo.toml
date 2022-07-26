@@ -22,6 +22,7 @@ derive_more = "0.99.17"
 futures-intrusive = "0.4.0"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.3.0", path = "../truck-base" }
+web-sys = { version = "0.3.58", features = ["Location"] }
 wgpu = "0.13.1"
 winit = "0.26.1"
 
@@ -41,4 +42,3 @@ pollster = "0.2.5"
 wasm-bindgen-futures = "0.4.31"
 console_error_panic_hook = "0.1.7"
 console_log = "0.2.0"
-web-sys = { version = "0.3.58", features = ["Location"] }

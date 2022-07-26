@@ -42,4 +42,4 @@ instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
 wasm-bindgen-futures = "0.4.31"
 console_error_panic_hook = "0.1.7"
 console_log = "0.2.0"
-web-sys = { version = "0.3.57", features = ["Location"] }
+web-sys = { version = "0.3.58", features = ["Location"] }
