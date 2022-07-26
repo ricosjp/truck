@@ -40,6 +40,7 @@ pub struct Table {
     // surface
     pub plane: HashMap<u64, PlaneHolder>,
     pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
+    pub cylindrical_surface: HashMap<u64, CylindricalSurfaceHolder>,
 
     // topology
     pub vertex_point: HashMap<u64, VertexPointHolder>,
@@ -219,6 +220,9 @@ impl Table {
                 }
                 "PLANE" => {
                     self.plane.insert(*id, PlaneHolder::deserialize(record)?);
+                }
+                "CYLINDRICAL_SURFACE" => {
+                    self.cylindrical_surface.insert(*id, CylindricalSurfaceHolder::deserialize(record)?);
                 }
                 "B_SPLINE_SURFACE_WITH_KNOTS" => {
                     if let Parameter::List(params) = &record.parameter {
@@ -1095,6 +1099,25 @@ pub struct Circle {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
+#[holder(field = cylindrical_surface)]
+#[holder(generate_deserialize)]
+pub struct CylindricalSurface {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub position: Axis2Placement3d,
+    pub radius: f64, 
+}
+
+impl TryFrom<&CylindricalSurface> for alias::CylindricalSurface {
+    type Error = ExpressParseError;
+    fn try_from(surface: &CylindricalSurface) -> std::result::Result<Self, ExpressParseError> {
+        //Self::try_new()
+        Ok(Processor::new(*Self::new(ExtrudedCurve::by_extrusion( UnitCircle::new(), Vector3::new(1.0, 1.0, 1.0)))))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum SurfaceAny {
     #[holder(use_place_holder)]
@@ -1103,6 +1126,9 @@ pub enum SurfaceAny {
     #[holder(use_place_holder)]
     #[holder(field = b_spline_surface_with_knots)]
     BSplineSurfaceWithKnots(BSplineSurfaceWithKnots),
+    #[holder(use_place_holder)]
+    #[holder(field = cylindrical_surface)]
+    CylindricalSurface(CylindricalSurface),
 }
 
 impl TryFrom<&SurfaceAny> for Surface {
@@ -1114,6 +1140,7 @@ impl TryFrom<&SurfaceAny> for Surface {
                 plane.into(),
             ))),
             BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
+            CylindricalSurface(cs) => Ok(Self::ElementarySurface(ElementarySurface::CylindricalSurface(cs.try_into()?))),
         }
     }
 }
