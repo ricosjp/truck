@@ -1615,7 +1615,6 @@ impl Table {
                     return None;
                 }
                 let len = eidx_map.len();
-                eidx_map.insert(idx, len);
                 let edge_curve = edge.clone().into_owned(self).ok()?;
                 let curve = edge_curve.parse_curve3d().ok()?;
                 let front = if let Ref(Name::Entity(idx)) = edge.edge_start {
@@ -1628,6 +1627,7 @@ impl Table {
                 } else {
                     return None;
                 };
+                eidx_map.insert(idx, len);
                 Some(CompressedEdge {
                     vertices: (front, back),
                     curve,

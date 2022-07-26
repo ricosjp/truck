@@ -29,6 +29,7 @@ winit = "0.26.1"
 instant = { version = "0.1.12", features = [ "now" ] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
+web-sys = ">=0.3.58,<0.3.59"
 
 [dev-dependencies]
 image = "0.24.2"
