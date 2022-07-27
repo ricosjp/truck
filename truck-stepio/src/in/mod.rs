@@ -1112,7 +1112,9 @@ impl TryFrom<&CylindricalSurface> for alias::CylindricalSurface {
     type Error = ExpressParseError;
     fn try_from(surface: &CylindricalSurface) -> std::result::Result<Self, ExpressParseError> {
         //Self::try_new()
-        Ok(Processor::new(*Self::new(ExtrudedCurve::by_extrusion( UnitCircle::new(), Vector3::new(1.0, 1.0, 1.0)))))
+        let position: Point3 = Point3::try_from(&surface.position.location).unwrap();
+        let direction = Vector3::try_from(surface.position.axis.as_ref().unwrap()).unwrap();
+        Ok(Self::new(position, direction, surface.radius))
     }
 }
 

@@ -14,7 +14,7 @@ pub type RevolutedLine = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type ToroidalSurface = Processor<RevolutedCurve<Ellipse<Point3, Matrix4>>, Matrix4>;
 pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
 pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;
-pub type CylindricalSurface = Processor<ExtrudedCurve<UnitCircle<Point3>, Vector3>, Matrix4>;
+pub type CylindricalSurface = Cylinder;
 
 #[derive(
     Clone,

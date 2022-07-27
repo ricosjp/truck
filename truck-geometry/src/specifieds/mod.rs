@@ -85,12 +85,21 @@ pub struct Sphere {
     radius: f64,
 }
 
+/// Cylinder
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Cylinder {
+    position: Point3,
+    direction: Vector3,
+    radius: f64,
+}
+
 mod circle;
 mod hyperbola;
 mod line;
 mod parabola;
 mod plane;
 mod sphere;
+mod cylinder;
 
 macro_rules! always_true {
     ($ty: tt) => {
