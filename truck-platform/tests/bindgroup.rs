@@ -60,7 +60,7 @@ fn exec_bind_group_test(backend: Backends, out_dir: &str) {
         },
         render_texture: RenderTextureConfig {
             canvas_size: (PICTURE_WIDTH, PICTURE_HEIGHT),
-            format: TextureFormat::Rgba8UnormSrgb,
+            format: TextureFormat::Rgba8Unorm,
         },
         ..Default::default()
     };

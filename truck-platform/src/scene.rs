@@ -783,7 +783,7 @@ impl WindowScene {
         let (device, surface) = (&device_handler.device, &window_handler.surface);
         let render_texture = RenderTextureConfig {
             canvas_size: size.into(),
-            format: surface.get_supported_formats(&device_handler.adapter)[0],
+            format: TextureFormat::Bgra8Unorm,
         };
         let config = render_texture.compatible_surface_config();
         surface.configure(device, &config);

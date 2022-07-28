@@ -94,13 +94,14 @@ fn nontex_main(in: VertexInput) -> @location(0) vec4<f32> {
     pre_color = background_correction(pre_color, info.bk_color.xyz, material.material);
     pre_color = ambient_correction(pre_color, material.material);
 
-    return vec4<f32>(pre_color, material.material.albedo.a);
+    return vec4<f32>(pow(pre_color, vec3<f32>(0.4545)), material.material.albedo.a);
 }
 
 @fragment
 fn tex_main(in: VertexInput) -> @location(0) vec4<f32> {
     var matr: Material = material.material;
     matr.albedo = textureSample(r_color, r_sampler, in.uv);
+    matr.albedo = vec4<f32>(pow(matr.albedo.rgb, vec3<f32>(2.2)), matr.albedo.a);
     let camera_dir = normalize((camera.camera_matrix * e.yyyx).xyz - in.position);
     let normal = normalize(in.normal);
     var pre_color: vec3<f32> = vec3<f32>(0.0);
@@ -117,5 +118,5 @@ fn tex_main(in: VertexInput) -> @location(0) vec4<f32> {
     pre_color = background_correction(pre_color, info.bk_color.xyz, material.material);
     pre_color = ambient_correction(pre_color, matr);
 
-    return vec4<f32>(pre_color, matr.albedo.a);
+    return vec4<f32>(pow(pre_color, vec3<f32>(0.4545)), matr.albedo.a);
 }
