@@ -250,7 +250,7 @@ pub struct BackendBufferConfig {
 pub struct RenderTextureConfig {
     /// canvas size `(width, height)`. Default is `(1024, 768)`.
     pub canvas_size: (u32, u32),
-    /// texture format. Default is `TextureFormat::Rgba8UnormSrgb`.
+    /// texture format. Default is `TextureFormat::Rgba8Unorm`.
     pub format: TextureFormat,
 }
 

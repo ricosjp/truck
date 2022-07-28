@@ -151,7 +151,7 @@ fn nontex_raytracing(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
     var pre_color: vec3<f32> = microfacet_color(res.position, res.normal, light, -ray.direction, material);
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
     pre_color = ambient_correction(pre_color, material);
-    return vec4<f32>(pre_color, 1.0);
+    return vec4<f32>(pow(pre_color, vec3<f32>(.4545)), 1.0);
 }
 
 @fragment
@@ -165,10 +165,11 @@ fn tex_raytracing(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
     }
 
     let light = lights.lights[0];
-    let material = tex_material(res.position, res.normal);
+    var material = tex_material(res.position, res.normal);
+    material.albedo = vec4<f32>(pow(material.albedo.rgb, vec3<f32>(2.2)), material.albedo.a);
     
     var pre_color: vec3<f32> = microfacet_color(res.position, res.normal, light, -ray.direction, material);
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
     pre_color = ambient_correction(pre_color, material);
-    return vec4<f32>(pre_color, 1.0);
+    return vec4<f32>(pow(pre_color, vec3<f32>(.4545)), 1.0);
 }

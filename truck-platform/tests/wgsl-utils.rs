@@ -23,7 +23,7 @@ fn exec_math_util_test(backend: Backends, out_dir: &str) {
     let desc = SceneDescriptor {
         render_texture: RenderTextureConfig {
             canvas_size: (PICTURE_WIDTH, PICTURE_HEIGHT),
-            format: TextureFormat::Rgba8UnormSrgb,
+            format: TextureFormat::Rgba8Unorm,
         },
         ..Default::default()
     };
