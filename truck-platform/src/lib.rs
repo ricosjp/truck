@@ -163,6 +163,13 @@ pub struct Camera {
     projection_type: ProjectionType,
 }
 
+/// Rays corresponding to a point on the screen, defined by the camera.
+#[derive(Clone, Copy, Debug)]
+pub struct Ray {
+    origin: Point3,
+    direction: Vector3,
+}
+
 /// the kinds of light sources: point or uniform
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LightType {
