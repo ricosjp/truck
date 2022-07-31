@@ -281,8 +281,8 @@ impl Camera {
     /// use std::f64::consts::PI;
     /// use truck_base::{assert_near, cgmath64::*, tolerance::Tolerance};
     /// use truck_platform::*;
-    /// 
-    /// 
+    ///
+    ///
     /// let matrix = Matrix4::look_at_rh(
     ///     Point3::new(1.0, 1.0, 1.0),
     ///     Point3::origin(),
@@ -296,14 +296,14 @@ impl Camera {
     ///     0.1,
     ///     1.0,
     /// );
-    /// 
+    ///
     /// // take a point in the 3D space
     /// let point = Point3::new(0.1, 0.15, 0.0);
     /// // project to the normalized view volume
     /// let uvz = camera.projection(1.0).transform_point(point);
     /// // coordinate on the screen
     /// let uv = Point2::new(uvz.x, uvz.y);
-    /// 
+    ///
     /// let ray = camera.ray(uv);
     /// // the origin of the ray is camera position
     /// assert_near!(ray.origin(), camera.position());
@@ -326,7 +326,7 @@ impl Camera {
     ///     0.1,
     ///     10.0,
     /// );
-    /// 
+    ///
     /// // take a point in the 3D space
     /// let point = Point3::new(0.1, 0.15, 0.0);
     /// // the projection of the point to the screen
@@ -336,7 +336,7 @@ impl Camera {
     /// let uvz = camera.projection(1.0).transform_point(point);
     /// // coordinate on the screen
     /// let uv = Point2::new(uvz.x, uvz.y);
-    /// 
+    ///
     /// let ray = camera.ray(uv);
     /// // the origin of the ray is the projection of the point.
     /// assert_near!(ray.origin(), projed);
