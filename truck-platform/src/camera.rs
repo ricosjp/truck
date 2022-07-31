@@ -1,5 +1,14 @@
 use crate::*;
 
+impl Ray {
+    /// Returns the origin of the ray
+    #[inline(always)]
+    pub fn origin(&self) -> Point3 { self.origin }
+    /// Returns the (normalized) direction of the ray
+    #[inline(always)]
+    pub fn direction(&self) -> Vector3 { self.direction }
+}
+
 impl Camera {
     /// Returns the position of camera,
     /// the forth column of the camera matrix.
@@ -167,7 +176,7 @@ impl Camera {
     /// ```
     /// // perspective camera
     /// use std::f64::consts::PI;
-    /// use truck_base::{cgmath64::*, tolerance::*};
+    /// use truck_base::{assert_near, cgmath64::*, tolerance::*};
     /// use truck_platform::*;
     ///
     /// let fov = PI / 4.0;
@@ -198,12 +207,12 @@ impl Camera {
     ///
     /// // check the answer
     /// let uv = camera.projection(as_rat).transform_point(pt);
-    /// assert!(f64::near(&u, &uv[0]), "{} {}", u, uv[0]);
-    /// assert!(f64::near(&v, &uv[1]));
+    /// assert_near!(u, uv[0]);
+    /// assert_near!(v, uv[1]);
     /// ```
     /// ```
     /// // parallel camera
-    /// use truck_base::{cgmath64::*, tolerance::*};
+    /// use truck_base::{assert_near, cgmath64::*, tolerance::*};
     /// use truck_platform::*;
     ///
     /// let size = 3.0;
@@ -232,8 +241,8 @@ impl Camera {
     ///
     /// // check the answer
     /// let uv = camera.projection(as_rat).transform_point(pt);
-    /// assert!(f64::near(&u, &uv[0]), "{} {}", u, uv[0]);
-    /// assert!(f64::near(&v, &uv[1]));
+    /// assert_near!(u, uv[0]);
+    /// assert_near!(v, uv[1]);
     /// ```
     #[inline(always)]
     pub fn projection(&self, as_rat: f64) -> Matrix4 {
@@ -262,6 +271,102 @@ impl Camera {
     /// ```
     pub fn buffer(&self, as_rat: f64, device: &Device) -> BufferHandler {
         BufferHandler::from_slice(&[self.camera_info(as_rat)], device, BufferUsages::UNIFORM)
+    }
+
+    /// Returns the ray from camera with aspect-ratio = 1.0.
+    ///
+    /// # Examples
+    /// ```
+    /// // Perspective case
+    /// use std::f64::consts::PI;
+    /// use truck_base::{assert_near, cgmath64::*, tolerance::Tolerance};
+    /// use truck_platform::*;
+    /// 
+    /// 
+    /// let matrix = Matrix4::look_at_rh(
+    ///     Point3::new(1.0, 1.0, 1.0),
+    ///     Point3::origin(),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    /// );
+    /// let camera = Camera::perspective_camera(
+    ///     // depends on the difference of the style with cgmath,
+    ///     // the matrix must be inverted
+    ///     matrix.invert().unwrap(),
+    ///     Rad(PI / 4.0),
+    ///     0.1,
+    ///     1.0,
+    /// );
+    /// 
+    /// // take a point in the 3D space
+    /// let point = Point3::new(0.1, 0.15, 0.0);
+    /// // project to the normalized view volume
+    /// let uvz = camera.projection(1.0).transform_point(point);
+    /// // coordinate on the screen
+    /// let uv = Point2::new(uvz.x, uvz.y);
+    /// 
+    /// let ray = camera.ray(uv);
+    /// // the origin of the ray is camera position
+    /// assert_near!(ray.origin(), camera.position());
+    /// // the direction of the ray is the normalized vector of point - camera.position().
+    /// assert_near!(ray.direction(), (point - camera.position()).normalize());
+    /// ```
+    /// ```
+    /// // Parallel case
+    /// use truck_base::{assert_near, cgmath64::*, tolerance::*};
+    /// use truck_platform::*;
+    ///
+    /// let matrix = Matrix4::look_at_rh(
+    ///     Point3::new(1.0, 1.0, 1.0),
+    ///     Point3::origin(),
+    ///     Vector3::new(0.0, 1.0, 0.0),
+    /// );
+    /// let camera = Camera::parallel_camera(
+    ///     matrix.invert().unwrap(),
+    ///     3.0,
+    ///     0.1,
+    ///     10.0,
+    /// );
+    /// 
+    /// // take a point in the 3D space
+    /// let point = Point3::new(0.1, 0.15, 0.0);
+    /// // the projection of the point to the screen
+    /// let projed = point
+    ///     - camera.eye_direction() * camera.eye_direction().dot(point - camera.position());
+    /// // project to the normalized view volume
+    /// let uvz = camera.projection(1.0).transform_point(point);
+    /// // coordinate on the screen
+    /// let uv = Point2::new(uvz.x, uvz.y);
+    /// 
+    /// let ray = camera.ray(uv);
+    /// // the origin of the ray is the projection of the point.
+    /// assert_near!(ray.origin(), projed);
+    /// // the direction of the ray is eye direction.
+    /// assert_near!(ray.direction(), camera.eye_direction());
+    /// ```
+    pub fn ray(&self, coord: Point2) -> Ray {
+        match self.projection_type {
+            ProjectionType::Perspective => {
+                let mat = self
+                    .projection(1.0)
+                    .invert()
+                    .expect("non-invertible projection");
+                let x = mat.transform_point(Point3::new(coord.x, coord.y, 0.5));
+                let y = mat.transform_point(Point3::new(coord.x, coord.y, 1.0));
+                Ray {
+                    origin: self.position(),
+                    direction: (y - x).normalize(),
+                }
+            }
+            ProjectionType::Parallel => {
+                let a = self.projection[0][0];
+                let axis_x = self.matrix[0].truncate() / a;
+                let axis_y = self.matrix[1].truncate() / a;
+                Ray {
+                    origin: self.position() + coord.x * axis_x + coord.y * axis_y,
+                    direction: self.eye_direction(),
+                }
+            }
+        }
     }
 }
 

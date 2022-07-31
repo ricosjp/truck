@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Get the ray of camera from uv-coordinate.
 - Make `TextureFormat` of surfaces `BrgaU8norm`.
 - Fix some bugs in `step-to-obj`.
 - Make the output of tessellation face-wise `Option`.
