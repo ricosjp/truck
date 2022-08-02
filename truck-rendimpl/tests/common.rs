@@ -156,7 +156,7 @@ pub fn init_device(instance: &Instance) -> DeviceHandler {
     pollster::block_on(async {
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
+                power_preference: PowerPreference::LowPower,
                 compatible_surface: None,
                 force_fallback_adapter: false,
             })
