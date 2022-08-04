@@ -1,4 +1,4 @@
-FROM nvidia/vulkan:1.3-470 AS rust-vulkan
+FROM nvidia/vulkan:1.2.133-450 AS rust-vulkan
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
 RUN apt-get update && apt-get install -y apt-utils tzdata && apt-get -y dist-upgrade
 RUN apt-get install -y curl git gcc g++ libssl-dev pkg-config

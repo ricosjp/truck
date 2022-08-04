@@ -123,7 +123,7 @@ pub fn init_device(backends: Backends) -> DeviceHandler {
         let instance = Instance::new(backends);
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::LowPower,
+                power_preference: PowerPreference::HighPerformance,
                 compatible_surface: None,
                 force_fallback_adapter: false,
             })
