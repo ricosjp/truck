@@ -8,7 +8,7 @@ use ruststep::{
     Holder,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, f64::consts::PI};
 use truck_geometry::*;
 use truck_topology::compress::*;
 
@@ -39,7 +39,9 @@ pub struct Table {
 
     // surface
     pub plane: HashMap<u64, PlaneHolder>,
+    pub spherical_surface: HashMap<u64, SphericalSurfaceHolder>,
     pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
+    pub surface_of_revolution: HashMap<u64, SurfaceOfRevolutionHolder>,
 
     // topology
     pub vertex_point: HashMap<u64, VertexPointHolder>,
@@ -220,6 +222,10 @@ impl Table {
                 "PLANE" => {
                     self.plane.insert(*id, PlaneHolder::deserialize(record)?);
                 }
+                "SPHERICAL_SURFACE" => {
+                    self.spherical_surface
+                        .insert(*id, SphericalSurfaceHolder::deserialize(record)?);
+                }
                 "B_SPLINE_SURFACE_WITH_KNOTS" => {
                     if let Parameter::List(params) = &record.parameter {
                         if params.len() == 13 {
@@ -243,6 +249,10 @@ impl Table {
                             );
                         }
                     }
+                }
+                "SURFACE_OF_REVOLUTION" => {
+                    self.surface_of_revolution
+                        .insert(*id, Deserialize::deserialize(record)?);
                 }
 
                 "VERTEX_POINT" => {
@@ -391,7 +401,9 @@ impl Table {
                         }
                     }
                 }
-                _ => {}
+                _ => {
+                    println!("unimplemented: {}", record.name);
+                }
             },
             EntityInstance::Complex {
                 id,
@@ -742,13 +754,24 @@ pub struct Axis1Placement {
     pub direction: Option<Direction>,
 }
 
+impl Axis1Placement {
+    pub fn direction(&self) -> Vector3 {
+        match &self.direction {
+            Some(direction) => Vector3::from(direction),
+            None => Vector3::unit_z(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum Axis2Placement {
     #[holder(use_place_holder)]
+    #[holder(field = axis2_placement_2d)]
     Axis2Placement2d(Axis2Placement2d),
     #[holder(use_place_holder)]
+    #[holder(field = axis2_placement_3d)]
     Axis2Placement3d(Axis2Placement3d),
 }
 
@@ -839,10 +862,83 @@ pub enum CurveAny {
     #[holder(field = polyline)]
     Polyline(Polyline),
     #[holder(use_place_holder)]
-    BSplineCurve(BSplineCurveAny),
+    #[holder(field = b_spline_curve_with_knots)]
+    BSplineCurveWithKnots(BSplineCurveWithKnots),
+    #[holder(use_place_holder)]
+    #[holder(field = bezier_curve)]
+    BezierCurve(BezierCurve),
+    #[holder(use_place_holder)]
+    #[holder(field = quasi_uniform_curve)]
+    QuasiUniformCurve(QuasiUniformCurve),
+    #[holder(use_place_holder)]
+    #[holder(field = uniform_curve)]
+    UniformCurve(UniformCurve),
+    #[holder(use_place_holder)]
+    #[holder(field = rational_b_spline_curve)]
+    RationalBSplineCurve(RationalBSplineCurve),
     #[holder(use_place_holder)]
     #[holder(field = circle)]
     Circle(Circle),
+}
+
+impl TryFrom<&CurveAny> for Curve2D {
+    type Error = ExpressParseError;
+    fn try_from(curve: &CurveAny) -> std::result::Result<Self, Self::Error> {
+        use CurveAny::*;
+        Ok(match curve {
+            Line(line) => Self::Line(line.into()),
+            Polyline(poly) => Self::Polyline(PolylineCurve::from(poly)),
+            BSplineCurveWithKnots(bsp) => {
+                Self::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            BezierCurve(bsp) => Self::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?),
+            QuasiUniformCurve(bsp) => {
+                Self::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            UniformCurve(bsp) => Self::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?),
+            RationalBSplineCurve(bsp) => {
+                Self::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
+            }
+            Circle(circle) => {
+                let mut ellipse = Processor::new(TrimmedCurve::new(
+                    UnitCircle::<Point2>::new(),
+                    (0.0, 2.0 * PI),
+                ));
+                ellipse.transform_by(Matrix3::try_from(&circle.position)?);
+                Self::Conic(Conic2D::Ellipse(ellipse))
+            }
+        })
+    }
+}
+
+impl TryFrom<&CurveAny> for Curve3D {
+    type Error = ExpressParseError;
+    fn try_from(curve: &CurveAny) -> std::result::Result<Self, Self::Error> {
+        use CurveAny::*;
+        Ok(match curve {
+            Line(line) => Self::Line(line.into()),
+            Polyline(poly) => Self::Polyline(PolylineCurve::from(poly)),
+            BSplineCurveWithKnots(bsp) => {
+                Self::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            BezierCurve(bsp) => Self::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?),
+            QuasiUniformCurve(bsp) => {
+                Self::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            UniformCurve(bsp) => Self::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?),
+            RationalBSplineCurve(bsp) => {
+                Self::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
+            }
+            Circle(circle) => {
+                let mut ellipse = Processor::new(TrimmedCurve::new(
+                    UnitCircle::<Point3>::new(),
+                    (0.0, 2.0 * PI),
+                ));
+                ellipse.transform_by(Matrix4::try_from(&circle.position)?);
+                Self::Conic(Conic3D::Ellipse(ellipse))
+            }
+        })
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Holder)]
@@ -1093,6 +1189,32 @@ pub struct Circle {
     pub radius: f64,
 }
 
+impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
+    type Error = ExpressParseError;
+    fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
+        let radius: f64 = circle.radius;
+        let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(radius);
+        Ok(Processor::new(truck_geometry::TrimmedCurve::new(
+            UnitCircle::new(),
+            (0.0, 2.0 * PI),
+        ))
+        .transformed(transform))
+    }
+}
+
+impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
+    type Error = ExpressParseError;
+    fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
+        let radius: f64 = circle.radius;
+        let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
+        Ok(Processor::new(truck_geometry::TrimmedCurve::new(
+            UnitCircle::new(),
+            (0.0, 2.0 * PI),
+        ))
+        .transformed(transform))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
@@ -1101,8 +1223,14 @@ pub enum SurfaceAny {
     #[holder(field = plane)]
     Plane(Plane),
     #[holder(use_place_holder)]
+    #[holder(field = spherical_surface)]
+    SphericalSurface(SphericalSurface),
+    #[holder(use_place_holder)]
     #[holder(field = b_spline_surface_with_knots)]
     BSplineSurfaceWithKnots(BSplineSurfaceWithKnots),
+    #[holder(use_place_holder)]
+    #[holder(field = surface_of_revolution)]
+    SurfaceOfRevolution(SurfaceOfRevolution),
 }
 
 impl TryFrom<&SurfaceAny> for Surface {
@@ -1113,7 +1241,13 @@ impl TryFrom<&SurfaceAny> for Surface {
             Plane(plane) => Ok(Self::ElementarySurface(ElementarySurface::Plane(
                 plane.into(),
             ))),
+            SphericalSurface(sphere) => Ok(Self::ElementarySurface(ElementarySurface::Sphere(
+                sphere.into(),
+            ))),
             BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
+            SurfaceOfRevolution(sr) => {
+                Ok(Self::SweptCurve(SweptCurve::RevolutedCurve(sr.try_into()?)))
+            }
         }
     }
 }
@@ -1135,6 +1269,27 @@ impl From<&Plane> for truck_geometry::Plane {
         let p = o + mat[0].truncate();
         let q = o + mat[1].truncate();
         Self::new(o, p, q)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = spherical_surface)]
+#[holder(generate_deserialize)]
+pub struct SphericalSurface {
+    label: String,
+    #[holder(use_place_holder)]
+    position: Axis2Placement3d,
+    radius: f64,
+}
+
+impl From<&SphericalSurface> for Processor<Sphere, Matrix3> {
+    fn from(ss: &SphericalSurface) -> Self {
+        let mat = Matrix4::from(&ss.position);
+        let center = Point3::from_homogeneous(mat[3]);
+        let radius = ss.radius;
+        let mat = Matrix3::from_cols(mat[0].truncate(), mat[1].truncate(), mat[2].truncate());
+        Processor::new(Sphere::new(center, radius)).transformed(mat)
     }
 }
 
@@ -1202,6 +1357,30 @@ impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
+#[holder(field = surface_of_revolution)]
+#[holder(generate_deserialize)]
+pub struct SurfaceOfRevolution {
+    label: String,
+    #[holder(use_place_holder)]
+    swept_curve: CurveAny,
+    #[holder(use_place_holder)]
+    axis_position: Axis1Placement,
+}
+
+impl TryFrom<&SurfaceOfRevolution> for StepRevolutedCurve {
+    type Error = ExpressParseError;
+    fn try_from(sr: &SurfaceOfRevolution) -> std::result::Result<Self, Self::Error> {
+        let curve = Curve3D::try_from(&sr.swept_curve)?;
+        let origin = Point3::from(&sr.axis_position.location);
+        let axis = sr.axis_position.direction().normalize();
+        Ok(Processor::new(RevolutedCurve::by_revolution(
+            curve, origin, axis,
+        )))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
 #[holder(field = vertex_point)]
 #[holder(generate_deserialize)]
 pub struct VertexPoint {
@@ -1215,8 +1394,10 @@ pub struct VertexPoint {
 #[holder(generate_deserialize)]
 pub enum EdgeAny {
     #[holder(use_place_holder)]
+    #[holder(field = edge_curve)]
     EdgeCurve(EdgeCurve),
     #[holder(use_place_holder)]
+    #[holder(field = oriented_edge)]
     OrientedEdge(OrientedEdge),
 }
 
@@ -1247,23 +1428,19 @@ impl EdgeCurve {
         let mut curve = match &self.edge_geometry {
             Line(_) => Curve2D::Line(truck_geometry::Line(p, q)),
             Polyline(poly) => Curve2D::Polyline(PolylineCurve::from(poly)),
-            BSplineCurve(bspcurve) => match bspcurve {
-                BSplineCurveAny::BSplineCurveWithKnots(bsp) => {
-                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
-                }
-                BSplineCurveAny::BezierCurve(bsp) => {
-                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
-                }
-                BSplineCurveAny::QuasiUniformCurve(bsp) => {
-                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
-                }
-                BSplineCurveAny::UniformCurve(bsp) => {
-                    Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
-                }
-                BSplineCurveAny::RationalBSplineCurve(bsp) => {
-                    Curve2D::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
-                }
-            },
+            BSplineCurveWithKnots(bsp) => {
+                Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            BezierCurve(bsp) => Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?),
+            QuasiUniformCurve(bsp) => {
+                Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            UniformCurve(bsp) => {
+                Curve2D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            RationalBSplineCurve(bsp) => {
+                Curve2D::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
+            }
             Circle(circle) => {
                 let mat = Matrix3::try_from(&circle.position)?;
                 let inv_mat = mat
@@ -1300,23 +1477,19 @@ impl EdgeCurve {
         let mut curve = match &self.edge_geometry {
             Line(_) => Curve3D::Line(truck_geometry::Line(p, q)),
             Polyline(poly) => Curve3D::Polyline(PolylineCurve::from(poly)),
-            BSplineCurve(bspcurve) => match bspcurve {
-                BSplineCurveAny::BSplineCurveWithKnots(bsp) => {
-                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
-                }
-                BSplineCurveAny::BezierCurve(bsp) => {
-                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
-                }
-                BSplineCurveAny::QuasiUniformCurve(bsp) => {
-                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
-                }
-                BSplineCurveAny::UniformCurve(bsp) => {
-                    Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
-                }
-                BSplineCurveAny::RationalBSplineCurve(bsp) => {
-                    Curve3D::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
-                }
-            },
+            BSplineCurveWithKnots(bsp) => {
+                Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            BezierCurve(bsp) => Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?),
+            QuasiUniformCurve(bsp) => {
+                Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            UniformCurve(bsp) => {
+                Curve3D::BSplineCurve(truck_geometry::BSplineCurve::try_from(bsp)?)
+            }
+            RationalBSplineCurve(bsp) => {
+                Curve3D::NURBSCurve(truck_geometry::NURBSCurve::try_from(bsp)?)
+            }
             Circle(circle) => {
                 let mat = Matrix4::try_from(&circle.position)?;
                 let inv_mat = mat
@@ -1390,7 +1563,7 @@ impl EdgeLoopHolder {
             .iter()
             .map(|edge| match edge {
                 PlaceHolder::Owned(holder) => Some(holder.clone()),
-                PlaceHolder::Ref(Name::Entity(idx)) => table
+                PlaceHolder::Ref(Name::Entity(ref idx)) => table
                     .oriented_edge
                     .get(idx)
                     .map(|oriented_edge| EdgeAnyHolder::OrientedEdge(oriented_edge.clone()))
@@ -1423,7 +1596,7 @@ impl FaceBoundHolder {
     fn bound_holder(&self, table: &Table) -> Option<EdgeLoopHolder> {
         match &self.bound {
             PlaceHolder::Owned(holder) => Some(holder.clone()),
-            PlaceHolder::Ref(Name::Entity(idx)) => table.edge_loop.get(idx).cloned(),
+            PlaceHolder::Ref(Name::Entity(ref idx)) => table.edge_loop.get(idx).cloned(),
             _ => None,
         }
     }
@@ -1459,7 +1632,7 @@ impl FaceSurfaceHolder {
             .iter()
             .map(|bound| match bound {
                 PlaceHolder::Owned(bound) => Some(bound.clone()),
-                PlaceHolder::Ref(Name::Entity(idx)) => table.face_bound.get(idx).cloned(),
+                PlaceHolder::Ref(Name::Entity(ref idx)) => table.face_bound.get(idx).cloned(),
                 _ => None,
             })
             .collect()
@@ -1482,7 +1655,7 @@ pub struct OrientedFace {
 impl OrientedFaceHolder {
     fn face_element_holder(&self, table: &Table) -> Option<FaceSurfaceHolder> {
         match &self.face_element {
-            PlaceHolder::Ref(Name::Entity(idx)) => table.face_surface.get(idx).cloned(),
+            PlaceHolder::Ref(Name::Entity(ref idx)) => table.face_surface.get(idx).cloned(),
             PlaceHolder::Owned(x) => Some(x.clone()),
             _ => None,
         }
@@ -1508,7 +1681,7 @@ impl ShellHolder {
     ) -> impl Iterator<Item = Option<FaceAnyHolder>> + 'a {
         self.cfs_faces.iter().map(|face| match face {
             PlaceHolder::Owned(holder) => Some(holder.clone()),
-            PlaceHolder::Ref(Name::Entity(idx)) => table
+            PlaceHolder::Ref(Name::Entity(ref idx)) => table
                 .oriented_face
                 .get(idx)
                 .cloned()
@@ -1564,11 +1737,11 @@ impl Table {
             })
             .flat_map(|edge| vec![edge.edge_start, edge.edge_end])
             .filter_map(|v| {
-                if let Ref(Name::Entity(idx)) = v {
-                    if vidx_map.get(&idx).is_none() {
+                if let Ref(Name::Entity(ref idx)) = v {
+                    if vidx_map.get(idx).is_none() {
                         let len = vidx_map.len();
-                        vidx_map.insert(idx, len);
-                        let p = EntityTable::<VertexPointHolder>::get_owned(self, idx).ok()?;
+                        vidx_map.insert(*idx, len);
+                        let p = EntityTable::<VertexPointHolder>::get_owned(self, *idx).ok()?;
                         Some(Point3::from(&p.vertex_geometry))
                     } else {
                         None
@@ -1592,7 +1765,7 @@ impl Table {
                     .edge_list
                     .iter()
                     .filter_map(|edge| match edge {
-                        Ref(Name::Entity(idx)) => self
+                        Ref(Name::Entity(ref idx)) => self
                             .oriented_edge
                             .get(idx)
                             .and_then(|oriented_edge| {
@@ -1615,7 +1788,11 @@ impl Table {
                     return None;
                 }
                 let len = eidx_map.len();
-                let edge_curve = edge.clone().into_owned(self).ok()?;
+                let edge_curve = edge
+                    .clone()
+                    .into_owned(self)
+                    .map_err(|e| eprintln!("{e}"))
+                    .ok()?;
                 let curve = edge_curve.parse_curve3d().ok()?;
                 let front = if let Ref(Name::Entity(idx)) = edge.edge_start {
                     *vidx_map.get(&idx)?
@@ -1661,7 +1838,7 @@ impl Table {
                             .edge_list
                             .iter()
                             .filter_map(|edge| match edge {
-                                Ref(Name::Entity(idx)) => self
+                                Ref(Name::Entity(ref idx)) => self
                                     .oriented_edge
                                     .get(idx)
                                     .and_then(|oriented_edge| {
