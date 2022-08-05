@@ -1788,7 +1788,6 @@ impl Table {
                     return None;
                 }
                 let len = eidx_map.len();
-                eidx_map.insert(idx, len);
                 let edge_curve = edge
                     .clone()
                     .into_owned(self)
@@ -1805,6 +1804,7 @@ impl Table {
                 } else {
                     return None;
                 };
+                eidx_map.insert(idx, len);
                 Some(CompressedEdge {
                     vertices: (front, back),
                     curve,

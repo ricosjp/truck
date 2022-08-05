@@ -9,14 +9,13 @@ fn main() {
         eprintln!("usage: step-to-obj <input step file> [output obj file]");
         return;
     } else if args.len() == 2 {
-        args.push("output.stp".to_string());
+        args.push("output.obj".to_string());
     }
 
     println!("reading file...");
     let step_file = std::fs::read_to_string(&args[1]).unwrap();
     let exchange = ruststep::parser::parse(&step_file).unwrap();
     let table = Table::from_data_section(&exchange.data[0]);
-
     println!("meshing...");
     let mut polymesh = PolygonMesh::default();
     table.shell.iter().for_each(|shell| {
