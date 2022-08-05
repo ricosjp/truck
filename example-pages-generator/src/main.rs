@@ -38,10 +38,7 @@ fn main() {
         .unwrap_or_else(|e| panic!("{}", e));
     std::io::stdout().write_all(&output.stdout).unwrap();
     std::io::stderr().write_all(&output.stderr).unwrap();
-    if !output.status.success() {
-        println!("build failed");
-        return;
-    }
+    assert!(output.status.success(), "build failed");
     let mut sum = String::new();
     for dir in EXAMPLES {
         let output_dir = format!("dist/{}", dir);
@@ -61,10 +58,7 @@ fn main() {
             .unwrap_or_else(|e| panic!("{}", e));
         std::io::stdout().write_all(&output.stdout).unwrap();
         std::io::stderr().write_all(&output.stderr).unwrap();
-        if !output.status.success() {
-            println!("wasm-bindgen failed");
-            return;
-        }
+        assert!(output.status.success(), "wasm-bindgen failed");
         std::fs::write(
             format!("{}/index.html", output_dir),
             include_str!("example-index.html").replace("{example}", dir),
