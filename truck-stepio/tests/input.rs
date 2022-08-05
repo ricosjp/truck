@@ -45,6 +45,8 @@ fn read() {
     'BSplineSurfaceWithKnots', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.,
     (3, 3), (3, 3), (0.0, 1.0), (0.0, 1.0), .UNSPECIFIED.
 );
+#23 = SURFACE_OF_REVOLUTION('SurfaceOfRevolution', #20, #5);
+#24 = SPHERICAL_SURFACE('SphericalSurface', #9, 5.0);
 
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
@@ -335,6 +337,22 @@ ENDSEC;
                 u_knots: vec![0.0, 1.0],
                 v_knots: vec![0.0, 1.0],
                 knot_spec: KnotType::Unspecified,
+            },
+        )]),
+        surface_of_revolution: HashMap::from_iter(vec![(
+            23,
+            SurfaceOfRevolutionHolder {
+                label: "SurfaceOfRevolution".to_string(),
+                swept_curve: PlaceHolder::Ref(Name::Entity(20)),
+                axis_position: PlaceHolder::Ref(Name::Entity(5)),
+            },
+        )]),
+        spherical_surface: HashMap::from_iter(vec![(
+            24,
+            SphericalSurfaceHolder {
+                label: "SphericalSurface".to_string(),
+                position: PlaceHolder::Ref(Name::Entity(9)),
+                radius: 5.0,
             },
         )]),
 

@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Adds `SURFACE_OF_REVOLUTION` and `SPHERICAL_SURFACE` to step input.
 - Panic occurs if `example-pages-generator` is failed.
 - Updates container and docker file.
 - Get the ray of camera from uv-coordinate.
