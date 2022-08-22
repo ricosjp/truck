@@ -47,7 +47,7 @@ fn main() {
     large_torus();
     let end_time = instant.elapsed();
     println!(
-        "excute time: {}.{:03} sec",
+        "execute time: {}.{:03} sec",
         end_time.as_secs(),
         end_time.subsec_millis(),
     );
