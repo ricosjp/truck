@@ -29,7 +29,7 @@ fn main() {
     obj::write(&mesh, file).unwrap();
     let writing_time = instant.elapsed();
 
-    println!("--- Excuting Status ---");
+    println!("--- Executing Status ---");
     println!("happy-buddha");
     println!("quadrangle:   {}\n", first_quads);
     println!("requadranglated-buddha");

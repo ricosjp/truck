@@ -59,7 +59,7 @@ pub trait OptimizingFilter {
     /// Gives the same indices to the same positions, texture coordinate, and normal vectors, respectively.
     /// # Remarks
     /// No longer needed attributes are NOT autoremoved.
-    /// One can remove such attributes by running [`remove_unused_attrs`] mannually.
+    /// One can remove such attributes by running [`remove_unused_attrs`] manually.
     ///
     /// [`remove_unused_attrs`]: ./trait.WasteEliminatingFilter.html#tymethod.remove_unused_attrs
     ///

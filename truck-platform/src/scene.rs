@@ -119,7 +119,7 @@ impl Default for RenderTextureConfig {
 }
 
 impl RenderTextureConfig {
-    /// Returns compatible `SurfaceConfiguation`.
+    /// Returns compatible `SurfaceConfiguration`.
     #[inline(always)]
     pub fn compatible_surface_config(self) -> SurfaceConfiguration {
         SurfaceConfiguration {
@@ -314,7 +314,7 @@ impl Scene {
 
     /// constructor
     // About `scene_desc`, entity is better than reference for the performance.
-    // This is referece because only for as wgpu is.
+    // This is reference because only for as wgpu is.
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
         let device = device_handler.device();
@@ -389,11 +389,11 @@ impl Scene {
     #[inline(always)]
     pub fn descriptor_mut(&mut self) -> SceneDescriptorMut<'_> { SceneDescriptorMut(self) }
 
-    /// Returns the reference of the studio configuation.
+    /// Returns the reference of the studio configuration.
     #[inline(always)]
     pub fn studio_config(&self) -> &StudioConfig { &self.scene_desc.studio }
 
-    /// Returns the mutable reference of the studio configuation.
+    /// Returns the mutable reference of the studio configuration.
     #[inline(always)]
     pub fn studio_config_mut(&mut self) -> &mut StudioConfig { &mut self.scene_desc.studio }
 
@@ -556,7 +556,7 @@ impl Scene {
     #[inline(always)]
     pub fn number_of_objects(&self) -> usize { self.objects.len() }
 
-    /// Syncronizes the information of vertices of `object` in the CPU memory
+    /// Synchronizes the information of vertices of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there does not exist the render object in the scene, does nothing and returns false.
@@ -574,7 +574,7 @@ impl Scene {
         }
     }
 
-    /// Syncronizes the information of vertices of `objects` in the CPU memory
+    /// Synchronizes the information of vertices of `objects` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there exists a render object which does not exist in the scene, returns false.
@@ -587,7 +587,7 @@ impl Scene {
         objects.into_iter().fold(true, closure)
     }
 
-    /// Syncronizes the information of bind group of `object` in the CPU memory
+    /// Synchronizes the information of bind group of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there does not exist the render object in the scene, does nothing and returns false.
@@ -603,7 +603,7 @@ impl Scene {
             _ => false,
         }
     }
-    /// Syncronizes the information of bind group of `object` in the CPU memory
+    /// Synchronizes the information of bind group of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there exists a render object which does not exist in the scene, returns false.
@@ -615,7 +615,7 @@ impl Scene {
         let closure = move |flag, object: &R| flag && self.update_bind_group(object);
         objects.into_iter().fold(true, closure)
     }
-    /// Syncronizes the information of pipeline of `object` in the CPU memory
+    /// Synchronizes the information of pipeline of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there does not exist the render object in the scene, does nothing and returns false.
@@ -640,7 +640,7 @@ impl Scene {
             _ => false,
         }
     }
-    /// Syncronizes the information of pipeline of `object` in the CPU memory
+    /// Synchronizes the information of pipeline of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there exists a render object which does not exist in the scene, returns false.

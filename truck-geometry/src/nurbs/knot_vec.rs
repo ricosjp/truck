@@ -429,7 +429,7 @@ impl KnotVec {
         KnotVec(Vec::from(&self.0[range]))
     }
 
-    /// To single-multi discription. i.e. decompose the unique vector of knots and the vector of
+    /// To single-multi description. i.e. decompose the unique vector of knots and the vector of
     /// multiplicity of knots.
     /// # Examples
     /// ```

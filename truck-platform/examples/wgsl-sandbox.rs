@@ -218,7 +218,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
         /// constructor
         /// # Arguments
         /// - device: Device, provided by wgpu.
-        /// - shader: the inputed fragment shader
+        /// - shader: the inputted fragment shader
         pub fn new(device: &Device, shader: &str) -> Plane {
             let module = create_module(device, shader).expect("Default shader is invalid");
             Plane {

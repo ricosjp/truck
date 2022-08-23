@@ -554,7 +554,7 @@ where
 
 impl SearchParameter<D2> for NURBSSurface<Vector3> {
     type Point = Point2;
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
+    /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
     /// # Examples
     /// ```
@@ -771,7 +771,7 @@ where M: Copy + std::ops::Mul<V, Output = V>
 
 impl SearchParameter<D2> for NURBSSurface<Vector4> {
     type Point = Point3;
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
+    /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
     /// # Examples
     /// ```
