@@ -148,7 +148,7 @@ impl<P, C, S> Face<P, C, S> {
     /// let boundaries = face.boundaries();
     /// face.invert();
     ///
-    /// // The result of face.boudnary() is already inversed.
+    /// // The result of face.boundary() is already inversed.
     /// assert_eq!(face.boundaries()[0], boundaries[0].inverse());
     ///
     /// // The absolute boundaries does never change.
@@ -214,7 +214,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_eq!(face0.boundaries(), face1.boundaries());
     /// ```
     /// # Remarks
-    /// 1. If the face is inverted, then the added wire is inverted as absolute bounday.
+    /// 1. If the face is inverted, then the added wire is inverted as absolute boundary.
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), (), (), (), ()]);
@@ -235,7 +235,7 @@ impl<P, C, S> Face<P, C, S> {
     /// // The boundary is added in compatible with the face orientation.
     /// assert_eq!(face.boundaries()[1], wire1);
     ///
-    /// // The absolute bounday is inverted!
+    /// // The absolute boundary is inverted!
     /// let iter0 = face.absolute_boundaries()[1].edge_iter();
     /// let iter1 = wire1.edge_iter().rev();
     /// for (edge0, edge1) in iter0.zip(iter1) {
@@ -306,7 +306,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_eq!(face0.boundaries(), face1.boundaries());
     /// ```
     /// # Remarks
-    /// 1. If the face is inverted, then the added wire is inverted as absolute bounday.
+    /// 1. If the face is inverted, then the added wire is inverted as absolute boundary.
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), (), (), (), ()]);
@@ -327,7 +327,7 @@ impl<P, C, S> Face<P, C, S> {
     /// // The boundary is added in compatible with the face orientation.
     /// assert_eq!(face.boundaries()[1], wire1);
     ///
-    /// // The absolute bounday is inverted!
+    /// // The absolute boundary is inverted!
     /// let iter0 = face.absolute_boundaries()[1].edge_iter();
     /// let iter1 = wire1.edge_iter().rev();
     /// for (edge0, edge1) in iter0.zip(iter1) {

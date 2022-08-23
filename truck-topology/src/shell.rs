@@ -135,7 +135,7 @@ impl<P, C, S> Shell<P, C, S> {
     ///
     /// For the returned hashmap `map` and each vertex `v`,
     /// the vector `map[&v]` cosists all vertices which is adjacent to `v`.
-    /// # Exmaples
+    /// # Examples
     /// ```
     /// use truck_topology::*;
     /// use std::collections::HashSet;
