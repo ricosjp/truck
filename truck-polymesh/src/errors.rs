@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-/// Errors occured by polygon mesh handling
+/// Errors occurred by polygon mesh handling
 #[derive(Debug, Error)]
 pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     /// There is an index in out of range.
@@ -39,7 +39,7 @@ pub enum Error<V: std::fmt::Debug = crate::StandardVertex> {
     #[error("This mesh has no normal vectors.")]
     NoNormal,
     /// The length of arrays of `StructuredMesh` is incorrect.
-    #[error("The lengthes of point vector, uvdivisions, normal vector are incompatible.")]
+    #[error("The lengths of point vector, uvdivisions, normal vector are incompatible.")]
     DifferentLengthArrays,
     /// The length of arrays of `StructuredMesh` is incorrect.
     /// # Examples

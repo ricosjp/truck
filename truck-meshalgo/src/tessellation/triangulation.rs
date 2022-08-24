@@ -148,7 +148,7 @@ impl Polyline {
         res
     }
 
-    /// whether `c` is included in the domain with bounday = `self`.
+    /// whether `c` is included in the domain with boundary = `self`.
     fn include(&self, c: Point2) -> bool {
         let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
         let r = Vector2::new(f64::cos(t), f64::sin(t));

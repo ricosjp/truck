@@ -1,4 +1,4 @@
-//! Tesellate a shape and output an obj file.
+//! Tessellate a shape and output an obj file.
 //!
 //! ```bash
 //! usage: tessellate_shape <input json file> <output json file>

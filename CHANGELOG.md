@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix typos.
 - Fix typos in truck-topology.
 - Adds `SURFACE_OF_REVOLUTION` and `SPHERICAL_SURFACE` to step input.
 - Panic occurs if `example-pages-generator` is failed.
@@ -34,7 +35,7 @@ The version is of the bottom crate `truck-rendimpl`.
 ## v0.4
 
 - The first version of `truck-stepio` has been released! One can output shapes modeled by `truck-modeling`.
-- WGSL utilitiy `math.wgsl` has been released! One can calculate invert matrices and rotation matrices.
+- WGSL utility `math.wgsl` has been released! One can calculate invert matrices and rotation matrices.
 - The processing related to linear algebra has been isolated from `truck-base` to [`matext4cgmath`](https://crates.io/crates/matext4cgmath).
 - New mesh filter `Subdivision::loop_subdivision` was implemented in `truck-meshalgo`!
 - In `truck-geotrait`, the trait `ParametricCurve` is decomposed into `ParametricCurve` and `BoundedCurve`.
@@ -55,7 +56,7 @@ The version is of the bottom crate `truck-rendimpl`.
   - Abort traits `Shape` and `Polygon`, and add new traits `IntoInstance` and `TryIntoInstance`.
 - Applied wgpu v0.11 and made all shaders WGSL, including shaders for test. Now, all dependence on cmake has been removed!
   - The sample code `glsl-sandbox` becomes `wgsl-sandbox`. You can easily experience WGSL shading.
-- Splitted `truck-base::geom_trait` into `truck-geotrait` and added some algorithms `algo`. Some methods in curves and surfaces were standardized.
+- Split `truck-base::geom_trait` into `truck-geotrait` and added some algorithms `algo`. Some methods in curves and surfaces were standardized.
 - Added a new crate `truck-meshalgo`. Moved the polygon processing algorithm from polymesh to meshalgo.
 - Added a new CAD meshing algorithm. Meshing trimmed surfaces. The same edge is made into the same polyline. A solid is made into a closed polygon.
 - Added some meshing algorithms, including mesh collision.

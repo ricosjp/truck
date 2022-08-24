@@ -232,7 +232,7 @@ struct WindowHandler {
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct RenderID(usize);
 
-/// Configuation for studio to shoot the scene.
+/// Configuration for studio to shoot the scene.
 #[derive(Debug, Clone)]
 pub struct StudioConfig {
     /// camera of the scene. Default is `Camera::default()`.
@@ -243,7 +243,7 @@ pub struct StudioConfig {
     pub background: Color,
 }
 
-/// Configuation for buffer preparation
+/// Configuration for buffer preparation
 #[derive(Clone, Debug, Copy)]
 pub struct BackendBufferConfig {
     /// depth test flag. Default is `true`.
@@ -252,7 +252,7 @@ pub struct BackendBufferConfig {
     pub sample_count: u32,
 }
 
-/// Configuation for rendering texture
+/// Configuration for rendering texture
 #[derive(Clone, Debug, Copy)]
 pub struct RenderTextureConfig {
     /// canvas size `(width, height)`. Default is `(1024, 768)`.
@@ -268,7 +268,7 @@ pub struct SceneDescriptor {
     pub studio: StudioConfig,
     /// Configures buffer preparation, depth and MSAA.
     pub backend_buffer: BackendBufferConfig,
-    /// Configuation for rendering texture
+    /// Configuration for rendering texture
     pub render_texture: RenderTextureConfig,
 }
 
@@ -298,7 +298,7 @@ pub struct Scene {
     clock: instant::Instant,
 }
 
-/// Utility for wrapp
+/// Utility for wrapper
 #[derive(Debug, Deref, DerefMut)]
 pub struct WindowScene {
     #[deref]

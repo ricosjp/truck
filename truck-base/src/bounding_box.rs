@@ -98,10 +98,10 @@ where
     F: BaseFloat,
     V: MetricSpace<Metric = F> + Index<usize, Output = F> + Bounded<F> + Copy,
 {
-    /// Creats an empty bounding box
+    /// Creates an empty bounding box
     #[inline(always)]
     pub fn new() -> Self { Self::default() }
-    /// Adds a point to the bouding box.
+    /// Adds a point to the bounding box.
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
@@ -205,7 +205,7 @@ where
     /// assert_eq!(bdd_box.diameter(), 5.0);
     /// ```
     /// # Remarks
-    /// If the bounding box is empty, returnes `f64::NEG_INFINITY`.
+    /// If the bounding box is empty, returns `f64::NEG_INFINITY`.
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector3>::new();
@@ -230,7 +230,7 @@ where
     /// assert_eq!(bdd_box.size(), 8.0);
     /// ```
     /// # Remarks
-    /// If the bounding box is empty, returnes `f64::NEG_INFINITY`.
+    /// If the bounding box is empty, returns `f64::NEG_INFINITY`.
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector3>::new();
