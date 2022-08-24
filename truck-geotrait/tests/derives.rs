@@ -21,3 +21,11 @@ enum DeriveSurface {
     SurfaceA(PolySurface),
     SurfaceB { polysurface: PolySurface },
 }
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, ParametricCurve, BoundedCurve, ParameterDivision1D)]
+struct TupledCurve(PolyCurve<Point2>);
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, ParametricSurface, BoundedSurface, ParameterDivision2D)]
+struct TupledSurface(PolySurface);
