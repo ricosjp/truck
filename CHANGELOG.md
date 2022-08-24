@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix typos.
 - Fix typos in truck-topology.
 - Adds `SURFACE_OF_REVOLUTION` and `SPHERICAL_SURFACE` to step input.
 - Panic occurs if `example-pages-generator` is failed.
