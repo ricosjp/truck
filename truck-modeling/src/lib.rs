@@ -35,7 +35,7 @@ pub mod topology {
     pub type Edge = truck_topology::Edge<Point3, Curve>;
     /// Wire, a path or cycle which consists some edges.
     pub type Wire = truck_topology::Wire<Point3, Curve>;
-    /// Face, attatched to a simple and closed wire.
+    /// Face, attached to a simple and closed wire.
     pub type Face = truck_topology::Face<Point3, Curve, Surface>;
     /// Shell, a connected compounded faces.
     pub type Shell = truck_topology::Shell<Point3, Curve, Surface>;

@@ -139,7 +139,7 @@ pub trait CreateBuffers {
 
 /// The trait for generating `Instance` from `Self`.
 pub trait ToInstance<I: Instance> {
-    /// Configuation deacriptor for instance.
+    /// Configuration descriptor for instance.
     type State;
     /// Creates `Instance` from `self`.
     fn to_instance(&self, handler: &DeviceHandler, shaders: &I::Shaders, desc: &Self::State) -> I;

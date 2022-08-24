@@ -14,7 +14,7 @@ A GUI framework module providing MFC-like API.
 
 Benchmark Animation
 
-In each frame, the NURBS surface is devided into mesh.
+In each frame, the NURBS surface is divided into mesh.
 
 ### collision-sphere
 

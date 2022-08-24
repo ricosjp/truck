@@ -281,7 +281,7 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 /// wires[0].pop_back();
 /// wires[0].pop_back();
 /// wires[0].push_back(builder::line(&v2, &v0));
-/// // sucess in attaching plane!
+/// // success in attaching plane!
 /// assert!(builder::try_attach_plane(&wires).is_ok());
 /// ```
 #[inline(always)]

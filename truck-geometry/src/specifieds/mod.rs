@@ -27,7 +27,7 @@ pub struct UnitParabola<P>(std::marker::PhantomData<P>);
 /// ```
 /// use truck_geometry::*;
 ///
-/// // arbitary three points
+/// // arbitrary three points
 /// let pt0 = Point3::new(0.0, 1.0, 2.0);
 /// let pt1 = Point3::new(1.0, 1.0, 3.0);
 /// let pt2 = Point3::new(0.0, 2.0, 3.0);

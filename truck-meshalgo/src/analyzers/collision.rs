@@ -15,7 +15,7 @@ use super::*;
 /// Therefore, polygon meshes included in one plane are not interfering.
 pub trait Collision {
     /// If `self` and `other` collide, then returns only one interference line.
-    /// Otherewise, returns `None`.
+    /// Otherwise, returns `None`.
     fn collide_with(&self, other: &PolygonMesh) -> Option<(Point3, Point3)>;
     /// Extract all interference lines between `self` and `other`.
     /// # Remarks

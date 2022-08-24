@@ -23,7 +23,7 @@ use truck_polymesh::{polygon_mesh::PolygonMeshEditor, StandardVertex as Vertex, 
 
 /// polygon mesh analizers, including
 ///
-/// - determines topological properties: connectivity, boundary extraction, or shell conditions (colsed or oriented)
+/// - determines topological properties: connectivity, boundary extraction, or shell conditions (closed or oriented)
 /// - detects collisions between two meshes and extracts interference lines
 /// - investigates positional relations between mesh and point clouds.
 pub mod analyzers;

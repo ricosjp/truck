@@ -118,7 +118,7 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> ParametricCurve3D for
 pub trait ParameterDivision1D {
     /// The curve is in the space of `Self::Point`.
     type Point;
-    /// Creates the curve division (prameters, corresponding points).
+    /// Creates the curve division (parameters, corresponding points).
     ///
     /// # Panics
     ///

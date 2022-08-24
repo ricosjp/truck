@@ -1595,7 +1595,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
     }
 
-    /// Creats a surface by its boundary.
+    /// Creates a surface by its boundary.
     /// # Examples
     /// ```
     /// use truck_geometry::*;

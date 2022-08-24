@@ -19,7 +19,7 @@ pub trait App: Sized + 'static {
     /// Initialize application
     /// # Arguments
     /// - handler: `DeviceHandler` provided by `wgpu`
-    /// - info: informations of device and backend
+    /// - info: information of device and backend
     async fn init(window: Arc<Window>) -> Self;
     /// By overriding this function, you can change the display of the title bar.
     /// It is not possible to change the window while it is running.
