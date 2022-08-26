@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 pub use truck_geometry::*;
 pub use truck_polymesh::*;
 
@@ -19,6 +20,8 @@ pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;
     Clone,
     Copy,
     Debug,
+    Serialize,
+    Deserialize,
     ParametricCurve,
     BoundedCurve,
     Invertible,
@@ -31,7 +34,15 @@ pub enum Conic2D {
     Parabola(Parabola<Point2, Matrix3>),
 }
 #[derive(
-    Clone, Debug, ParametricCurve, BoundedCurve, Invertible, ParameterDivision1D, SearchParameterD1,
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    ParametricCurve,
+    BoundedCurve,
+    Invertible,
+    ParameterDivision1D,
+    SearchParameterD1,
 )]
 pub enum Curve2D {
     Line(Line<Point2>),
@@ -44,6 +55,8 @@ pub enum Curve2D {
     Clone,
     Copy,
     Debug,
+    Serialize,
+    Deserialize,
     ParametricCurve,
     BoundedCurve,
     Invertible,
@@ -56,7 +69,15 @@ pub enum Conic3D {
     Parabola(Parabola<Point3, Matrix4>),
 }
 #[derive(
-    Clone, Debug, ParametricCurve, BoundedCurve, Invertible, ParameterDivision1D, SearchParameterD1,
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    ParametricCurve,
+    BoundedCurve,
+    Invertible,
+    ParameterDivision1D,
+    SearchParameterD1,
 )]
 pub enum Curve3D {
     Line(Line<Point3>),
@@ -67,7 +88,15 @@ pub enum Curve3D {
 }
 
 #[derive(
-    Clone, Copy, Debug, ParametricSurface3D, ParameterDivision2D, SearchParameterD2, Invertible,
+    Clone,
+    Copy,
+    Debug,
+    Serialize,
+    Deserialize,
+    ParametricSurface3D,
+    ParameterDivision2D,
+    SearchParameterD2,
+    Invertible,
 )]
 pub enum ElementarySurface {
     Plane(Plane),
@@ -75,12 +104,30 @@ pub enum ElementarySurface {
     Sphere(Processor<Sphere, Matrix3>),
     ToroidalSurface(ToroidalSurface),
 }
-#[derive(Clone, Debug, ParametricSurface3D, ParameterDivision2D, SearchParameterD2, Invertible)]
+#[derive(
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    ParametricSurface3D,
+    ParameterDivision2D,
+    SearchParameterD2,
+    Invertible,
+)]
 pub enum SweptCurve {
     ExtrudedCurve(StepExtrudedCurve),
     RevolutedCurve(StepRevolutedCurve),
 }
-#[derive(Clone, Debug, ParametricSurface3D, ParameterDivision2D, SearchParameterD2, Invertible)]
+#[derive(
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    ParametricSurface3D,
+    ParameterDivision2D,
+    SearchParameterD2,
+    Invertible,
+)]
 pub enum Surface {
     ElementarySurface(ElementarySurface),
     SweptCurve(SweptCurve),

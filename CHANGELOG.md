@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implement `Serialize` and `Deserialize` for `stepio::r#in::alias::*`.
 - Add derive macros for tuple structs.
 - Fix typos.
 - Fix typos in truck-topology.
