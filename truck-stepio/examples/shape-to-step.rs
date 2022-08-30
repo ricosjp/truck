@@ -23,8 +23,8 @@ fn main() {
     let shape_file = std::fs::File::open(&args[1]).unwrap();
     let compressed: CompressedSolid<Point3, Curve, Surface> =
         serde_json::from_reader(shape_file).unwrap();
-    let step_string = out::SolidStepDisplay::new(
-        &compressed,
+    let step_string = out::CompleteStepDisplay::new(
+        out::StepModel::new(&compressed),
         out::StepHeaderDescriptor {
             origination_system: "shape-to-step".to_owned(),
             ..Default::default()

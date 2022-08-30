@@ -1,5 +1,7 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
+use truck_topology::compress::CompressedSolid;
+
 #[derive(Clone, Debug)]
 struct SliceDisplay<'a, T>(&'a [T]);
 
@@ -211,53 +213,43 @@ ENDSEC;\n",
     }
 }
 
-/// Display struct for outputting STEP file format with header.
+/// Display model with configuations
 #[derive(Clone, Debug)]
-pub struct CompleteStepDisplay<T> {
-    display: T,
-    header: StepHeader,
+pub struct StepModel<T> {
+    shape_display: StepDisplay<T>,
 }
 
-impl<T: Display> Display for CompleteStepDisplay<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_fmt(format_args!(
-            "ISO-10303-21;\n{}DATA;\n{}ENDSEC;\nEND-ISO-10303-21;\n",
-            self.header, self.display,
-        ))
+/// Model shapes corresponding to Geometric Shape Models in AP042.
+pub trait ModelShape {}
+#[rustfmt::skip]
+impl<'a, P, C, S> ModelShape for &'a CompressedSolid<P, C, S>
+where
+    P: Copy,
+    C: StepLength,
+    S: StepLength,
+    StepDisplay<P>: Display,
+    StepDisplay<&'a C>: Display,
+    StepDisplay<&'a S>: Display,
+    {
+
     }
-}
 
-impl<T> CompleteStepDisplay<StepDisplay<T>> {
+impl<T: ModelShape> StepModel<T> {
     /// constructor
-    #[inline]
-    pub fn new(x: T, header: StepHeaderDescriptor) -> Self {
-        CompleteStepDisplay {
-            display: StepDisplay::new(x, 1),
-            header: StepHeader {
-                file_name: header.file_name,
-                time_stamp: header.time_stamp,
-                authors: header.authors,
-                organization: header.organization,
-                origination_system: header.origination_system,
-                authorization: header.authorization,
-                schema: "ISO-10303-042".to_string(),
-            },
+    #[inline(always)]
+    pub fn new(shape: T) -> Self {
+        Self {
+            shape_display: StepDisplay::new(shape, 16),
         }
     }
 }
 
-/// Display struct for outputting solid to STEP file which can be read by OCCT.
-#[derive(Clone, Debug)]
-pub struct SolidStepDisplay<T> {
-    display: T,
-    header: StepHeader,
-}
-
-impl<T: Display> Display for SolidStepDisplay<T> {
+impl<T> Display for StepModel<T>
+where StepDisplay<T>: Display
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
-            "ISO-10303-21;{}DATA;
-#1 = APPLICATION_PROTOCOL_DEFINITION('international standard', 'automotive_design', 2000, #2);
+"#1 = APPLICATION_PROTOCOL_DEFINITION('international standard', 'automotive_design', 2000, #2);
 #2 = APPLICATION_CONTEXT('core data for automotive mechanical design processes');
 #3 = SHAPE_DEFINITION_REPRESENTATION(#4, #10);
 #4 = PRODUCT_DEFINITION_SHAPE('','', #5);
@@ -277,18 +269,34 @@ impl<T: Display> Display for SolidStepDisplay<T> {
 #13 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
 #14 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
 #15 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #12, 'distance_accuracy_value','confusion accuracy');
-{}ENDSEC;\nEND-ISO-10303-21;\n",
+{}",
+            self.shape_display,
+        ))
+    }
+}
+
+/// Display struct for outputting STEP file format with header.
+#[derive(Clone, Debug)]
+pub struct CompleteStepDisplay<T> {
+    display: T,
+    header: StepHeader,
+}
+
+impl<T: Display> Display for CompleteStepDisplay<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.write_fmt(format_args!(
+            "ISO-10303-21;\n{}DATA;\n{}ENDSEC;\nEND-ISO-10303-21;\n",
             self.header, self.display,
         ))
     }
 }
 
-impl<T> SolidStepDisplay<StepDisplay<T>> {
+impl<T> CompleteStepDisplay<T> {
     /// constructor
     #[inline]
-    pub fn new(x: T, header: StepHeaderDescriptor) -> Self {
-        Self {
-            display: StepDisplay::new(x, 16),
+    pub fn new(display: T, header: StepHeaderDescriptor) -> Self {
+        CompleteStepDisplay {
+            display,
             header: StepHeader {
                 file_name: header.file_name,
                 time_stamp: header.time_stamp,
@@ -296,7 +304,7 @@ impl<T> SolidStepDisplay<StepDisplay<T>> {
                 organization: header.organization,
                 origination_system: header.origination_system,
                 authorization: header.authorization,
-                schema: "ISO-10303-203".to_string(),
+                schema: "ISO-10303-042".to_string(),
             },
         }
     }
