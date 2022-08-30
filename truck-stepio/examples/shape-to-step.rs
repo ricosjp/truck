@@ -20,9 +20,9 @@ fn main() {
         args.push("output.stp".to_string());
     }
 
-    let shape_file = std::fs::File::open(&args[1]).unwrap();
+    let shape_file = std::fs::read(&args[1]).unwrap();
     let compressed: CompressedSolid<Point3, Curve, Surface> =
-        serde_json::from_reader(shape_file).unwrap();
+        serde_json::from_reader(shape_file.as_slice()).unwrap();
     let step_string = out::CompleteStepDisplay::new(
         out::StepModel::new(&compressed),
         out::StepHeaderDescriptor {

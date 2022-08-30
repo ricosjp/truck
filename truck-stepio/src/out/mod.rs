@@ -1,6 +1,9 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use truck_topology::compress::CompressedSolid;
+use truck_topology::{
+    compress::{CompressedShell, CompressedSolid},
+    Shell, Solid,
+};
 
 #[derive(Clone, Debug)]
 struct SliceDisplay<'a, T>(&'a [T]);
@@ -222,17 +225,21 @@ pub struct StepModel<T> {
 /// Model shapes corresponding to Geometric Shape Models in AP042.
 pub trait ModelShape {}
 #[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for &'a CompressedSolid<P, C, S>
-where
-    P: Copy,
-    C: StepLength,
-    S: StepLength,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display,
-    StepDisplay<&'a S>: Display,
-    {
-
-    }
+impl<'a, P, C, S> ModelShape for Shell<P, C, S> {}
+#[rustfmt::skip]
+impl<'a, P, C, S> ModelShape for CompressedShell<P, C, S> {}
+#[rustfmt::skip]
+impl<'a, P, C, S> ModelShape for Solid<P, C, S> {}
+#[rustfmt::skip]
+impl<'a, P, C, S> ModelShape for CompressedSolid<P, C, S> {}
+#[rustfmt::skip]
+impl<'a, P, C, S> ModelShape for &'a Shell<P, C, S> {}
+#[rustfmt::skip]
+impl<'a, P, C, S> ModelShape for &'a CompressedShell<P, C, S> {}
+#[rustfmt::skip]
+impl<'a, P, C, S> ModelShape for &'a Solid<P, C, S> {}
+#[rustfmt::skip]
+impl<'a, P, C, S> ModelShape for &'a CompressedSolid<P, C, S> {}
 
 impl<T: ModelShape> StepModel<T> {
     /// constructor
