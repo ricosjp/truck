@@ -1,5 +1,4 @@
 use super::{Result, *};
-use truck_topology::{compress::*, *};
 
 #[derive(Clone, Debug)]
 struct StepShell<'a, P, C, S> {
@@ -156,6 +155,57 @@ where
 impl<'a, P, C, S> StepLength for StepShell<'a, P, C, S> {
     fn step_length(&self) -> usize {
         self.ep_points + self.entity.vertices.len() - self.face_indices[0]
+    }
+}
+
+impl<'a, P, C, S> Display for StepDisplay<&'a CompressedShell<P, C, S>>
+where
+    P: Copy,
+    C: StepLength,
+    S: StepLength,
+    StepDisplay<P>: Display,
+    StepDisplay<&'a C>: Display,
+    StepDisplay<&'a S>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let StepDisplay { entity: shell, idx } = self;
+        let shell_idx = idx + 1;
+        f.write_fmt(format_args!(
+            "#{idx} = SHELL_BASED_SURFACE_MODEL('', (#{shell_idx}));\n"
+        ))?;
+        let step_shell = StepDisplay::new(*shell, shell_idx).to_step_shell();
+        f.write_fmt(format_args!(
+            "#{shell_idx} = OPEN_SHELL('', {face_indices});\n",
+            face_indices = IndexSliceDisplay(step_shell.face_indices.iter().copied()),
+        ))?;
+        Display::fmt(&step_shell, f)
+    }
+}
+
+impl<'a, P, C, S> Display for StepDisplay<CompressedShell<P, C, S>>
+where
+    P: Copy,
+    C: StepLength + 'a,
+    S: StepLength + 'a,
+    StepDisplay<P>: Display,
+    StepDisplay<&'a C>: Display,
+    StepDisplay<&'a S>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { Display::fmt(&self, f) }
+}
+
+impl<'a, P, C, S> Display for StepDisplay<&'a Shell<P, C, S>>
+where
+    P: Copy,
+    C: StepLength + Clone,
+    S: StepLength + Clone,
+    StepDisplay<P>: Display,
+    StepDisplay<&'a C>: Display + 'a,
+    StepDisplay<&'a S>: Display + 'a,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let compressed = self.entity.compress();
+        Display::fmt(&StepDisplay::new(compressed, self.idx), f)
     }
 }
 

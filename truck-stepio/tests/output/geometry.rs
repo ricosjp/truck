@@ -1,69 +1,64 @@
 use truck_geometry::*;
 use truck_stepio::out::*;
 
+fn step_test<T: StepLength>(x: T, ans: &str, length: usize)
+where for<'a> StepDisplay<&'a T>: std::fmt::Display {
+    let display = StepDisplay::new(&x, 1);
+    assert_eq!(&display.to_string(), ans);
+    assert_eq!(x.step_length(), length);
+    let step = CompleteStepDisplay::new(display, Default::default()).to_string();
+    ruststep::parser::parse(&step).unwrap();
+}
+
 #[test]
 fn geometry() {
-    let x = Point2::new(0.0, 1.0);
-    assert_eq!(
-        &StepDisplay::new(x, 1).to_string(),
+    step_test::<Point2>(
+        Point2::new(0.0, 1.0),
         "#1 = CARTESIAN_POINT('', (0.0, 1.0));\n",
+        1,
     );
-    assert_eq!(x.step_length(), 1);
-    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
-
-    let x = Point3::new(0.0, 1.0, 2.453);
-    assert_eq!(
-        &StepDisplay::new(x, 2).to_string(),
-        "#2 = CARTESIAN_POINT('', (0.0, 1.0, 2.453));\n",
+    step_test::<Point3>(
+        Point3::new(0.0, 1.0, 2.453),
+        "#1 = CARTESIAN_POINT('', (0.0, 1.0, 2.453));\n",
+        1,
     );
-    assert_eq!(x.step_length(), 1);
-    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
-
-    let x = Vector2::new(3.0, 4.0);
-    assert_eq!(
-        &StepDisplay::new(x, 1).to_string(),
+    step_test::<Vector2>(
+        Vector2::new(3.0, 4.0),
         "#1 = VECTOR('', #2, 5.0);\n#2 = DIRECTION('', (0.6, 0.8));\n",
+        2,
     );
-    assert_eq!(x.step_length(), 2);
-    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
-
-    let x = Vector3::new(3.0, 4.0, 3.75);
-    assert_eq!(
-        &StepDisplay::new(x, 1).to_string(),
+    step_test::<Vector3>(
+        Vector3::new(3.0, 4.0, 3.75),
         "#1 = VECTOR('', #2, 6.25);\n#2 = DIRECTION('', (0.48, 0.64, 0.6));\n",
+        2,
     );
-    assert_eq!(x.step_length(), 2);
-    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
-
-    let x = BSplineCurve::new(
-        KnotVec::bezier_knot(2),
-        vec![
-            Point2::new(0.0, 0.0),
-            Point2::new(1.0, 1.0),
-            Point2::new(2.0, 0.0),
-        ],
-    );
-    assert_eq!(
-		&StepDisplay::new(&x, 1).to_string(),
-		"#1 = B_SPLINE_CURVE_WITH_KNOTS('', 2, (#2, #3, #4), .UNSPECIFIED., .U., .U., (3, 3), (0.0, 1.0), .UNSPECIFIED.);
+    step_test::<BSplineCurve<Point2>>(
+        BSplineCurve::new(
+            KnotVec::bezier_knot(2),
+            vec![
+                Point2::new(0.0, 0.0),
+                Point2::new(1.0, 1.0),
+                Point2::new(2.0, 0.0),
+            ],
+        ),
+            "\
+#1 = B_SPLINE_CURVE_WITH_KNOTS('', 2, (#2, #3, #4), .UNSPECIFIED., .U., .U., (3, 3), (0.0, 1.0), .UNSPECIFIED.);
 #2 = CARTESIAN_POINT('', (0.0, 0.0));
 #3 = CARTESIAN_POINT('', (1.0, 1.0));
 #4 = CARTESIAN_POINT('', (2.0, 0.0));\n",
-	);
-    assert_eq!(x.step_length(), 4);
-    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
-
-    let x = NURBSCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
-        vec![
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(1.0, 1.0, 2.0),
-            Vector3::new(2.0, 0.0, 4.0),
-        ],
-    ));
-    assert_eq!(
-        &StepDisplay::new(&x, 1).to_string(),
-        "#1 = (
+    4,
+    );
+    step_test::<NURBSCurve<Vector3>>(
+        NURBSCurve::new(BSplineCurve::new(
+            KnotVec::bezier_knot(2),
+            vec![
+                Vector3::new(0.0, 0.0, 1.0),
+                Vector3::new(1.0, 1.0, 2.0),
+                Vector3::new(2.0, 0.0, 4.0),
+            ],
+        )),
+        "\
+#1 = (
     BOUNDED_CURVE()
     B_SPLINE_CURVE(2, (#2, #3, #4), .UNSPECIFIED., .U., .U.)
     B_SPLINE_CURVE_WITH_KNOTS((3, 3), (0.0, 1.0), .UNSPECIFIED.)
@@ -75,53 +70,48 @@ fn geometry() {
 #2 = CARTESIAN_POINT('', (0.0, 0.0));
 #3 = CARTESIAN_POINT('', (0.5, 0.5));
 #4 = CARTESIAN_POINT('', (0.5, 0.0));\n",
+        4,
     );
-    assert_eq!(x.step_length(), 4);
-    ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string()).unwrap();
-
-    let x = Plane::new(
-        Point3::new(1.0, 2.0, 3.0),
-        Point3::new(1.0, 2.0, 4.0),
-        Point3::new(2.0, 2.0, 3.0),
-    );
-    assert_eq!(
-        &StepDisplay::new(x, 1).to_string(),
-        "#1 = PLANE('', #2);
+    step_test::<Plane>(
+        Plane::new(
+            Point3::new(1.0, 2.0, 3.0),
+            Point3::new(1.0, 2.0, 4.0),
+            Point3::new(2.0, 2.0, 3.0),
+        ),
+        "\
+#1 = PLANE('', #2);
 #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
 #3 = CARTESIAN_POINT('', (1.0, 2.0, 3.0));
 #4 = DIRECTION('', (0.0, 1.0, 0.0));
 #5 = DIRECTION('', (0.0, 0.0, 1.0));\n",
+        5,
     );
-    assert_eq!(x.step_length(), 5);
-    let _ = ruststep::parser::parse(&CompleteStepDisplay::new(x, Default::default()).to_string())
-        .unwrap();
-
-    let x = BSplineSurface::new(
-        (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
-        vec![
+    step_test::<BSplineSurface<Point2>>(
+        BSplineSurface::new(
+            (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
             vec![
-                Point2::new(0.0, 0.0),
-                Point2::new(0.0, 1.0),
-                Point2::new(0.0, 2.0),
-                Point2::new(0.0, 3.0),
+                vec![
+                    Point2::new(0.0, 0.0),
+                    Point2::new(0.0, 1.0),
+                    Point2::new(0.0, 2.0),
+                    Point2::new(0.0, 3.0),
+                ],
+                vec![
+                    Point2::new(1.0, 0.0),
+                    Point2::new(1.0, 1.0),
+                    Point2::new(1.0, 2.0),
+                    Point2::new(1.0, 3.0),
+                ],
+                vec![
+                    Point2::new(2.0, 0.0),
+                    Point2::new(2.0, 1.0),
+                    Point2::new(2.0, 2.0),
+                    Point2::new(2.0, 3.0),
+                ],
             ],
-            vec![
-                Point2::new(1.0, 0.0),
-                Point2::new(1.0, 1.0),
-                Point2::new(1.0, 2.0),
-                Point2::new(1.0, 3.0),
-            ],
-            vec![
-                Point2::new(2.0, 0.0),
-                Point2::new(2.0, 1.0),
-                Point2::new(2.0, 2.0),
-                Point2::new(2.0, 3.0),
-            ],
-        ],
-    );
-    assert_eq!(
-        &StepDisplay::new(&x, 1).to_string(),
-        "#1 = B_SPLINE_SURFACE_WITH_KNOTS('', 2, 2, ((#2, #3, #4, #5), (#6, #7, #8, #9), (#10, #11, #12, #13)), .UNSPECIFIED., \
+        ),
+            "\
+#1 = B_SPLINE_SURFACE_WITH_KNOTS('', 2, 2, ((#2, #3, #4, #5), (#6, #7, #8, #9), (#10, #11, #12, #13)), .UNSPECIFIED., \
 .U., .U., .U., (3, 3), (3, 1, 3), (0.0, 1.0), (0.0, 0.5, 1.0), .UNSPECIFIED.);
 #2 = CARTESIAN_POINT('', (0.0, 0.0));
 #3 = CARTESIAN_POINT('', (0.0, 1.0));
@@ -135,36 +125,35 @@ fn geometry() {
 #11 = CARTESIAN_POINT('', (2.0, 1.0));
 #12 = CARTESIAN_POINT('', (2.0, 2.0));
 #13 = CARTESIAN_POINT('', (2.0, 3.0));\n",
+    13
     );
-    assert_eq!(x.step_length(), 13);
-    ruststep::parser::parse(&CompleteStepDisplay::new(&x, Default::default()).to_string()).unwrap();
 
-    let x = NURBSSurface::new(BSplineSurface::new(
-        (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
-        vec![
+    step_test::<NURBSSurface<Vector3>>(
+        NURBSSurface::new(BSplineSurface::new(
+            (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
             vec![
-                Vector3::new(0.0, 0.0, 4.0),
-                Vector3::new(0.0, 1.0, 2.0),
-                Vector3::new(0.0, 2.0, 2.0),
-                Vector3::new(0.0, 3.0, 1.0),
+                vec![
+                    Vector3::new(0.0, 0.0, 4.0),
+                    Vector3::new(0.0, 1.0, 2.0),
+                    Vector3::new(0.0, 2.0, 2.0),
+                    Vector3::new(0.0, 3.0, 1.0),
+                ],
+                vec![
+                    Vector3::new(1.0, 0.0, 4.0),
+                    Vector3::new(1.0, 1.0, 4.0),
+                    Vector3::new(1.0, 2.0, 2.0),
+                    Vector3::new(1.0, 3.0, 1.0),
+                ],
+                vec![
+                    Vector3::new(2.0, 0.0, 4.0),
+                    Vector3::new(2.0, 1.0, 4.0),
+                    Vector3::new(2.0, 2.0, 4.0),
+                    Vector3::new(2.0, 3.0, 1.0),
+                ],
             ],
-            vec![
-                Vector3::new(1.0, 0.0, 4.0),
-                Vector3::new(1.0, 1.0, 4.0),
-                Vector3::new(1.0, 2.0, 2.0),
-                Vector3::new(1.0, 3.0, 1.0),
-            ],
-            vec![
-                Vector3::new(2.0, 0.0, 4.0),
-                Vector3::new(2.0, 1.0, 4.0),
-                Vector3::new(2.0, 2.0, 4.0),
-                Vector3::new(2.0, 3.0, 1.0),
-            ],
-        ],
-    ));
-    assert_eq!(
-        &StepDisplay::new(&x, 1).to_string(),
-        "#1 = (
+        )),
+            "\
+#1 = (
     BOUNDED_SURFACE()
     B_SPLINE_SURFACE(2, 2, ((#2, #3, #4, #5), (#6, #7, #8, #9), (#10, #11, #12, #13)), .UNSPECIFIED., .U., .U., .U.)
     B_SPLINE_SURFACE_WITH_KNOTS((3, 3), (3, 1, 3), (0.0, 1.0), (0.0, 0.5, 1.0), .UNSPECIFIED.)
@@ -185,7 +174,6 @@ fn geometry() {
 #11 = CARTESIAN_POINT('', (0.5, 0.25));
 #12 = CARTESIAN_POINT('', (0.5, 0.5));
 #13 = CARTESIAN_POINT('', (2.0, 3.0));\n",
+    13
     );
-    assert_eq!(x.step_length(), 13);
-    ruststep::parser::parse(&CompleteStepDisplay::new(&x, Default::default()).to_string()).unwrap();
 }
