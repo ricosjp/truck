@@ -171,7 +171,7 @@ where
         let StepDisplay { entity: shell, idx } = self;
         let shell_idx = idx + 1;
         f.write_fmt(format_args!(
-            "#{idx} = SHELL_BASED_SURFACE_MODEL('', #{shell_idx})"
+            "#{idx} = SHELL_BASED_SURFACE_MODEL('', (#{shell_idx}));\n"
         ))?;
         let step_shell = StepDisplay::new(*shell, shell_idx).to_step_shell();
         f.write_fmt(format_args!(
