@@ -225,13 +225,13 @@ pub struct StepModel<T> {
 /// Model shapes corresponding to Geometric Shape Models in AP042.
 pub trait ModelShape {}
 #[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for Shell<P, C, S> {}
+impl<P, C, S> ModelShape for Shell<P, C, S> {}
 #[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for CompressedShell<P, C, S> {}
+impl<P, C, S> ModelShape for CompressedShell<P, C, S> {}
 #[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for Solid<P, C, S> {}
+impl<P, C, S> ModelShape for Solid<P, C, S> {}
 #[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for CompressedSolid<P, C, S> {}
+impl<P, C, S> ModelShape for CompressedSolid<P, C, S> {}
 #[rustfmt::skip]
 impl<'a, P, C, S> ModelShape for &'a Shell<P, C, S> {}
 #[rustfmt::skip]
