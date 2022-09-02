@@ -3,16 +3,37 @@ use spade::delaunay::*;
 use spade::kernels::*;
 use truck_topology::{compress::*, *};
 
-/// Gathered the traits used in tessellation.
-#[rustfmt::skip]
-pub trait PolylineableCurve: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> {}
-#[rustfmt::skip]
-impl<C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3>> PolylineableCurve for C {}
-#[rustfmt::skip]
-/// Gathered the traits used in tessellation.
-pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3> {}
-#[rustfmt::skip]
-impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3>> MeshableSurface for S {}
+#[cfg(not(target_arch = "wasm32"))]
+mod meshables_traits {
+    use super::*;
+    /// Gathered the traits used in tessellation.
+    #[rustfmt::skip]
+    pub trait PolylineableCurve: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> + Send {}
+    #[rustfmt::skip]
+    impl<C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> + Send> PolylineableCurve for C {}
+    /// Gathered the traits used in tessellation.
+    #[rustfmt::skip]
+    pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3> + Send {}
+    #[rustfmt::skip]
+    impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3> + Send> MeshableSurface for S {}
+}
+
+#[cfg(target_arch = "wasm32")]
+mod meshable_traits {
+    use super::*;
+    /// Gathered the traits used in tessellation.
+    #[rustfmt::skip]
+    pub trait PolylineableCurve: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> {}
+    #[rustfmt::skip]
+    impl<C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3>> PolylineableCurve for C {}
+    /// Gathered the traits used in tessellation.
+    #[rustfmt::skip]
+    pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3> {}
+    #[rustfmt::skip]
+    impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3>> MeshableSurface for S {}
+}
+
+pub use meshables_traits::*;
 
 type PolylineCurve = truck_polymesh::PolylineCurve<Point3>;
 

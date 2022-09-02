@@ -1,4 +1,5 @@
 use crate::*;
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::vec::Vec;
 
@@ -32,10 +33,50 @@ impl<P, C, S> Shell<P, C, S> {
     #[inline(always)]
     pub fn face_into_iter(self) -> FaceIntoIter<P, C, S> { self.face_list.into_iter() }
 
+    /// Returns an iterator over the faces. Practically, an alias of `par_iter()`.
+    #[inline(always)]
+    pub fn face_par_iter(&self) -> FaceParallelIter<'_, P, C, S>
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.par_iter()
+    }
+
+    /// Returns a mutable iterator over the faces. Practically, an alias of `par_iter_mut()`.
+    #[inline(always)]
+    pub fn face_par_iter_mut(&mut self) -> FaceParallelIterMut<'_, P, C, S>
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.par_iter_mut()
+    }
+
+    /// Creates a consuming iterator. Practically, an alias of `into_par_iter()`.
+    #[inline(always)]
+    pub fn face_into_par_iter(self) -> FaceParallelIntoIter<P, C, S>
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.into_par_iter()
+    }
+
     /// Returns an iterator over the edges.
     #[inline(always)]
     pub fn edge_iter(&self) -> impl Iterator<Item = Edge<P, C>> + '_ {
         self.face_iter().flat_map(Face::boundaries).flatten()
+    }
+
+    /// Returns a parallel iterator over the edges.
+    #[inline(always)]
+    pub fn edge_par_iter(&self) -> impl ParallelIterator<Item = Edge<P, C>> + '_
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.face_par_iter().flat_map(Face::boundaries).flatten()
     }
 
     /// Returns an iterator over the vertices.
@@ -827,6 +868,13 @@ pub type FaceIter<'a, P, C, S> = std::slice::Iter<'a, Face<P, C, S>>;
 pub type FaceIterMut<'a, P, C, S> = std::slice::IterMut<'a, Face<P, C, S>>;
 /// The into iterator over all faces in shells
 pub type FaceIntoIter<P, C, S> = std::vec::IntoIter<Face<P, C, S>>;
+/// The reference parallel iterator over all faces in shells
+pub type FaceParallelIter<'a, P, C, S> = <Vec<Face<P, C, S>> as IntoParallelRefIterator<'a>>::Iter;
+/// The mutable reference parallel iterator over all faces in shells
+pub type FaceParallelIterMut<'a, P, C, S> =
+    <Vec<Face<P, C, S>> as IntoParallelRefMutIterator<'a>>::Iter;
+/// The into parallel iterator over all faces in shells
+pub type FaceParallelIntoIter<P, C, S> = <Vec<Face<P, C, S>> as IntoParallelIterator>::Iter;
 
 /// The shell conditions being determined by the half-edge model.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -1081,5 +1129,39 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug
                 })
                 .finish(),
         }
+    }
+}
+
+impl<P: Send, C: Send, S: Send> FromParallelIterator<Face<P, C, S>> for Shell<P, C, S> {
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where I: IntoParallelIterator<Item = Face<P, C, S>> {
+        Self::from(Vec::from_par_iter(par_iter))
+    }
+}
+
+impl<P: Send, C: Send, S: Send> IntoParallelIterator for Shell<P, C, S> {
+    type Item = Face<P, C, S>;
+    type Iter = FaceParallelIntoIter<P, C, S>;
+    fn into_par_iter(self) -> Self::Iter { self.face_list.into_par_iter() }
+}
+
+impl<'a, P: Send + 'a, C: Send + 'a, S: Send + 'a> IntoParallelRefIterator<'a> for Shell<P, C, S> {
+    type Item = &'a Face<P, C, S>;
+    type Iter = FaceParallelIter<'a, P, C, S>;
+    fn par_iter(&'a self) -> Self::Iter { self.face_list.par_iter() }
+}
+
+impl<'a, P: Send + 'a, C: Send + 'a, S: Send + 'a> IntoParallelRefMutIterator<'a>
+    for Shell<P, C, S>
+{
+    type Item = &'a mut Face<P, C, S>;
+    type Iter = FaceParallelIterMut<'a, P, C, S>;
+    fn par_iter_mut(&'a mut self) -> Self::Iter { self.face_list.par_iter_mut() }
+}
+
+impl<P: Send, C: Send, S: Send> ParallelExtend<Face<P, C, S>> for Shell<P, C, S> {
+    fn par_extend<I>(&mut self, par_iter: I)
+    where I: IntoParallelIterator<Item = Face<P, C, S>> {
+        self.face_list.par_extend(par_iter)
     }
 }

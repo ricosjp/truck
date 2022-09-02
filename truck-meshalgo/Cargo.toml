@@ -18,6 +18,9 @@ truck-polymesh = { version = "0.4.0", path = "../truck-polymesh" }
 truck-geotrait = { version = "0.2.0", path = "../truck-geotrait" }
 truck-topology = { version = "0.4.0", path = "../truck-topology" }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rayon = "1.5.3"
+
 [dev-dependencies]
 rand = "0.8.5"
 serde_json = "1.0.81"

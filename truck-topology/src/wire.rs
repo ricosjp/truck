@@ -1,4 +1,5 @@
 use crate::*;
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::collections::vec_deque;
 use std::collections::VecDeque;
@@ -23,10 +24,33 @@ impl<P, C> Wire<P, C> {
     /// Returns a mutable iterator over the edges. Practically, an alias of `iter_mut()`.
     #[inline(always)]
     pub fn edge_iter_mut(&mut self) -> EdgeIterMut<'_, P, C> { self.iter_mut() }
-
     /// Creates a consuming iterator. Practically, an alias of `into_iter()`.
     #[inline(always)]
     pub fn edge_into_iter(self) -> EdgeIntoIter<P, C> { self.into_iter() }
+    /// Returns an parallel iterator over the edges. Practically, an alias of `par_iter()`.
+    #[inline(always)]
+    pub fn edge_par_iter(&self) -> EdgeParallelIter<'_, P, C>
+    where
+        P: Send,
+        C: Send, {
+        self.par_iter()
+    }
+    /// Returns a mutable parallel iterator over the edges. Practically, an alias of `par_iter_mut()`.
+    #[inline(always)]
+    pub fn edge_par_iter_mut(&mut self) -> EdgeParallelIterMut<'_, P, C>
+    where
+        P: Send,
+        C: Send, {
+        self.par_iter_mut()
+    }
+    /// Creates a consuming iterator. Practically, an alias of `into_par_iter()`.
+    #[inline(always)]
+    pub fn edge_into_par_iter(self) -> EdgeParallelIntoIter<P, C>
+    where
+        P: Send,
+        C: Send, {
+        self.into_par_iter()
+    }
 
     /// Returns an iterator over the vertices.
     #[inline(always)]
@@ -527,14 +551,14 @@ impl<'a, P, C> FromIterator<&'a Edge<P, C>> for Wire<P, C> {
 
 impl<P, C> IntoIterator for Wire<P, C> {
     type Item = Edge<P, C>;
-    type IntoIter = std::collections::vec_deque::IntoIter<Edge<P, C>>;
+    type IntoIter = EdgeIntoIter<P, C>;
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter { self.edge_list.into_iter() }
 }
 
 impl<'a, P, C> IntoIterator for &'a Wire<P, C> {
     type Item = &'a Edge<P, C>;
-    type IntoIter = std::collections::vec_deque::Iter<'a, Edge<P, C>>;
+    type IntoIter = EdgeIter<'a, P, C>;
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter { self.edge_list.iter() }
 }
@@ -545,6 +569,13 @@ pub type EdgeIter<'a, P, C> = vec_deque::Iter<'a, Edge<P, C>>;
 pub type EdgeIterMut<'a, P, C> = vec_deque::IterMut<'a, Edge<P, C>>;
 /// The into iterator over all edges in a wire.
 pub type EdgeIntoIter<P, C> = vec_deque::IntoIter<Edge<P, C>>;
+/// The reference parallel iterator over all edges in a wire.
+pub type EdgeParallelIter<'a, P, C> = <VecDeque<Edge<P, C>> as IntoParallelRefIterator<'a>>::Iter;
+/// The mutable reference parallel iterator over all edges in a wire.
+pub type EdgeParallelIterMut<'a, P, C> =
+    <VecDeque<Edge<P, C>> as IntoParallelRefMutIterator<'a>>::Iter;
+/// the parallel iterator over all edges in a wire.
+pub type EdgeParallelIntoIter<P, C> = <VecDeque<Edge<P, C>> as IntoParallelIterator>::Iter;
 
 /// The iterator over all the vertices included in a wire.
 /// # Details
@@ -722,5 +753,37 @@ impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Wire<P, C>, WireDisplayF
                     .finish()
             }
         }
+    }
+}
+
+impl<P: Send, C: Send> FromParallelIterator<Edge<P, C>> for Wire<P, C> {
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where I: IntoParallelIterator<Item = Edge<P, C>> {
+        Self::from(VecDeque::from_par_iter(par_iter))
+    }
+}
+
+impl<P: Send, C: Send> IntoParallelIterator for Wire<P, C> {
+    type Item = Edge<P, C>;
+    type Iter = EdgeParallelIntoIter<P, C>;
+    fn into_par_iter(self) -> Self::Iter { self.edge_list.into_par_iter() }
+}
+
+impl<'a, P: Send + 'a, C: Send + 'a> IntoParallelRefIterator<'a> for Wire<P, C> {
+    type Item = &'a Edge<P, C>;
+    type Iter = EdgeParallelIter<'a, P, C>;
+    fn par_iter(&'a self) -> Self::Iter { self.edge_list.par_iter() }
+}
+
+impl<'a, P: Send + 'a, C: Send + 'a> IntoParallelRefMutIterator<'a> for Wire<P, C> {
+    type Item = &'a mut Edge<P, C>;
+    type Iter = EdgeParallelIterMut<'a, P, C>;
+    fn par_iter_mut(&'a mut self) -> Self::Iter { self.edge_list.par_iter_mut() }
+}
+
+impl<P: Send, C: Send> ParallelExtend<Edge<P, C>> for Wire<P, C> {
+    fn par_extend<I>(&mut self, par_iter: I)
+    where I: IntoParallelIterator<Item = Edge<P, C>> {
+        self.edge_list.par_extend(par_iter)
     }
 }
