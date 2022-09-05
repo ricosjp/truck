@@ -85,6 +85,16 @@ impl<P, C, S> Shell<P, C, S> {
         self.edge_iter().map(|edge| edge.front().clone())
     }
 
+    /// Returns a parallel iterator over the vertices.
+    #[inline(always)]
+    pub fn vertex_par_iter(&self) -> impl ParallelIterator<Item = Vertex<P>> + '_
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.edge_par_iter().map(|edge| edge.front().clone())
+    }
+
     /// Moves all the faces of `other` into `self`, leaving `other` empty.
     #[inline(always)]
     pub fn append(&mut self, other: &mut Shell<P, C, S>) {
