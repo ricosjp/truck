@@ -41,6 +41,7 @@ wasm-test:
         - rustup toolchain uninstall stable
         - rustup toolchain install stable
         - rustup target add wasm32-unknown-unknown
+        - cargo install -f wasm-bindgen-cli
     script:
         - deno lint
         - mkdir public
