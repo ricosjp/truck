@@ -40,6 +40,7 @@ pub struct Table {
     // surface
     pub plane: HashMap<u64, PlaneHolder>,
     pub spherical_surface: HashMap<u64, SphericalSurfaceHolder>,
+    pub cylindrical_surface: HashMap<u64, CylindricalSurfaceHolder>,
     pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
     pub surface_of_revolution: HashMap<u64, SurfaceOfRevolutionHolder>,
 
@@ -225,6 +226,10 @@ impl Table {
                 "SPHERICAL_SURFACE" => {
                     self.spherical_surface
                         .insert(*id, SphericalSurfaceHolder::deserialize(record)?);
+                }
+                "CYLINDRICAL_SURFACE" => {
+                    self.cylindrical_surface
+                        .insert(*id, CylindricalSurfaceHolder::deserialize(record)?);
                 }
                 "B_SPLINE_SURFACE_WITH_KNOTS" => {
                     if let Parameter::List(params) = &record.parameter {
@@ -1226,6 +1231,9 @@ pub enum SurfaceAny {
     #[holder(field = spherical_surface)]
     SphericalSurface(SphericalSurface),
     #[holder(use_place_holder)]
+    #[holder(field = cylindrical_surface)]
+    CylindricalSurface(CylindricalSurface),
+    #[holder(use_place_holder)]
     #[holder(field = b_spline_surface_with_knots)]
     BSplineSurfaceWithKnots(BSplineSurfaceWithKnots),
     #[holder(use_place_holder)]
@@ -1244,6 +1252,9 @@ impl TryFrom<&SurfaceAny> for Surface {
             SphericalSurface(sphere) => Ok(Self::ElementarySurface(ElementarySurface::Sphere(
                 sphere.into(),
             ))),
+            CylindricalSurface(cs) => Ok(Self::ElementarySurface(
+                ElementarySurface::CylindricalSurface(cs.into()),
+            )),
             BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
             SurfaceOfRevolution(sr) => {
                 Ok(Self::SweptCurve(SweptCurve::RevolutedCurve(sr.try_into()?)))
@@ -1290,6 +1301,29 @@ impl From<&SphericalSurface> for Processor<Sphere, Matrix3> {
         let radius = ss.radius;
         let mat = Matrix3::from_cols(mat[0].truncate(), mat[1].truncate(), mat[2].truncate());
         Processor::new(Sphere::new(center, radius)).transformed(mat)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = cylindrical_surface)]
+#[holder(generate_deserialize)]
+pub struct CylindricalSurface {
+    label: String,
+    #[holder(use_place_holder)]
+    position: Axis2Placement3d,
+    radius: f64,
+}
+
+impl From<&CylindricalSurface> for RevolutedCurve<truck_geometry::Line<Point3>> {
+    fn from(cs: &CylindricalSurface) -> Self {
+        let mat = Matrix4::from(&cs.position);
+        let x = mat[0].truncate();
+        let z = mat[2].truncate();
+        let center = Point3::from_homogeneous(mat[3]);
+        let radius = cs.radius;
+        let p = center + x * radius;
+        RevolutedCurve::by_revolution(Line(p, p + z), center, z)
     }
 }
 

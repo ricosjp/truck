@@ -102,6 +102,7 @@ pub enum ElementarySurface {
     Plane(Plane),
     RevolutedLine(RevolutedLine),
     Sphere(Processor<Sphere, Matrix3>),
+    CylindricalSurface(RevolutedCurve<Line<Point3>>),
     ToroidalSurface(ToroidalSurface),
 }
 #[derive(
