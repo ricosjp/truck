@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Remove recursive loop method.
 - Parse STEP cylindrical surface.
 - Output STEP open shell.
 - Implement `Serialize` and `Deserialize` for `stepio::r#in::alias::*`.
