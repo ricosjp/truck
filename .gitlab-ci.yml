@@ -44,8 +44,19 @@ wasm-test:
         - cargo install -f wasm-bindgen-cli
     script:
         - deno lint
-        - mkdir public
         - cargo make wasm-test
+
+page-build:
+    image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
+    stage: test
+    before_script:
+        - rustup toolchain uninstall stable
+        - rustup toolchain install stable
+        - rustup target add wasm32-unknown-unknown
+        - cargo install -f wasm-bindgen-cli
+    script:
+        - mkdir public
+        - cargo make page-build
         - mv truck-js/pkg public/adhoc-viewer
         - mv dist public/webgpu-examples
     artifacts:

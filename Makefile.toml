@@ -102,4 +102,7 @@ script = [
 ]
 
 [tasks.wasm-test]
-dependencies = ["wasm-build", "js-test", "adhoc-viewer", "build-wgpu-examples"]
+dependencies = ["wasm-build", "js-test"]
+
+[tasks.page-build]
+dependencies = ["adhoc-viewer", "build-wgpu-examples"]
