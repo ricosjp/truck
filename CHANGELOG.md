@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Change the profile of `truck-js` and remove dependencies to `wee_alloc`.
 - Remove recursive loop method.
 - Parse STEP cylindrical surface.
 - Output STEP open shell.
