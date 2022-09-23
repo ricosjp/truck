@@ -17,3 +17,7 @@ members = [
 	"readme-generator",
 	"example-pages-generator",
 ]
+
+[profile.release.package.truck-js]
+opt-level = "s"
+codegen-units = 1
