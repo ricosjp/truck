@@ -49,6 +49,8 @@ wasm-test:
 page-build:
     image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
     stage: test
+    variables:
+        GIT_SUBMODULE_STRATEGY: recursive
     before_script:
         - rustup toolchain uninstall stable
         - rustup toolchain install stable
