@@ -700,7 +700,7 @@ impl<P, C, S> Shell<P, C, S> {
             })
             .collect();
         if vec.len() > 2 || vec.is_empty() {
-            return None;
+            None
         } else if vec.len() == 1 {
             let (wire, idx) = vec.pop().unwrap();
             let edge = wire[idx].concat(&wire[(idx + 1) % wire.len()]).ok()?;
