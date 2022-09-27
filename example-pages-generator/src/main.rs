@@ -11,7 +11,7 @@
     unused_qualifications
 )]
 
-use std::io::Write;
+use std::io::{BufRead, BufReader};
 use std::process::Command;
 
 const EXAMPLES: &[&str] = &[
@@ -26,7 +26,7 @@ const EXAMPLES: &[&str] = &[
 ];
 
 fn main() {
-    let output = Command::new("cargo")
+    let mut child = Command::new("cargo")
         .args(&[
             "build",
             "--target",
@@ -34,16 +34,30 @@ fn main() {
             "--examples",
             "--release",
         ])
-        .output()
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
         .unwrap_or_else(|e| panic!("{}", e));
-    std::io::stdout().write_all(&output.stdout).unwrap();
-    std::io::stderr().write_all(&output.stderr).unwrap();
-    assert!(output.status.success(), "build failed");
+    let stdout = BufReader::new(child.stdout.take().expect("no stdout"));
+    let stderr = BufReader::new(child.stderr.take().expect("no stderr"));
+    let _thread0 = std::thread::spawn(|| {
+        stdout
+            .lines()
+            .filter_map(|line| line.ok())
+            .for_each(|line| println!("{line}"))
+    });
+    let _thread1 = std::thread::spawn(|| {
+        stderr
+            .lines()
+            .filter_map(|line| line.ok())
+            .for_each(|line| println!("{line}"))
+    });
+    child.wait().unwrap_or_else(|e| panic!("{}", e));
     let mut sum = String::new();
     for dir in EXAMPLES {
         let output_dir = format!("dist/{}", dir);
         std::fs::create_dir_all(&output_dir).unwrap_or_else(|e| panic!("{}", e));
-        let output = Command::new("wasm-bindgen")
+        let mut child = Command::new("wasm-bindgen")
             .args(&[
                 "--target",
                 "web",
@@ -54,11 +68,25 @@ fn main() {
                     dir
                 ),
             ])
-            .output()
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
             .unwrap_or_else(|e| panic!("{}", e));
-        std::io::stdout().write_all(&output.stdout).unwrap();
-        std::io::stderr().write_all(&output.stderr).unwrap();
-        assert!(output.status.success(), "wasm-bindgen failed");
+        let stdout = BufReader::new(child.stdout.take().expect("no stdout"));
+        let stderr = BufReader::new(child.stderr.take().expect("no stderr"));
+        let _thread0 = std::thread::spawn(|| {
+            stdout
+                .lines()
+                .filter_map(|line| line.ok())
+                .for_each(|line| println!("{line}"))
+        });
+        let _thread1 = std::thread::spawn(|| {
+            stderr
+                .lines()
+                .filter_map(|line| line.ok())
+                .for_each(|line| println!("{line}"))
+        });
+        child.wait().unwrap_or_else(|e| panic!("{}", e));
         std::fs::write(
             format!("{}/index.html", output_dir),
             include_str!("example-index.html").replace("{example}", dir),
