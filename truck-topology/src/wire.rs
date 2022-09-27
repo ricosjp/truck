@@ -46,7 +46,7 @@ impl<P, C> Wire<P, C> {
     /// Returns the front vertex. If `self` is empty wire, returns None.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
     /// let mut wire = Wire::new();
     /// assert_eq!(wire.front_vertex(), None);
@@ -65,7 +65,7 @@ impl<P, C> Wire<P, C> {
     /// Returns the back edge. If `self` is empty wire, returns None.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
     /// let mut wire = Wire::new();
     /// assert_eq!(wire.back_vertex(), None);
@@ -272,9 +272,11 @@ impl<P, C> Wire<P, C> {
     }
 
     /// Swap one edge into two edges.
+    ///
     /// # Arguments
     /// - `idx`: Index of edge in wire
     /// - `edges`: Inserted edges
+    ///
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -294,10 +296,12 @@ impl<P, C> Wire<P, C> {
     /// wire0.swap_edge_into_wire(1, Wire::from(vec![edge3, edge4]));
     /// assert_eq!(wire0, wire1);
     /// ```
+    ///
     /// # Panics
     /// Panic occars if `idx >= self.len()`.
+    ///
     /// # Failure
-    /// Returns `false` and `self` will not be changed if the end points of `self[idx]` and the ones of `wire` is not the same.
+    /// Returns `false` and `self` will not be changed if the end vertices of `self[idx]` and the ones of `wire` is not the same.
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), (), (), ()]);
@@ -310,6 +314,9 @@ impl<P, C> Wire<P, C> {
     ///     edge0.clone(), edge1, edge2.clone()
     /// ]);
     /// let backup = wire0.clone();
+    /// // The end vertices of wire[1] == edge1 is (v[1], v[3]).
+    /// // The end points of new wire [edge3, edge4] is (v[1], v[1]).
+    /// // Since the back vertices are different, returns false and do nothing.
     /// assert!(!wire0.swap_edge_into_wire(1, Wire::from(vec![edge3, edge4])));
     /// assert_eq!(wire0, backup);
     /// ```

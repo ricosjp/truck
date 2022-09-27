@@ -179,7 +179,7 @@ fn solid_cut_edge() {
     ]
     .into();
     let mut tri = Solid::new(vec![shell]);
-    assert!(tri.cut_edge(edge[1].id(), &v[4]));
+    assert!(tri.cut_edge(edge[1].id(), &v[4]).is_some());
     let count = tri.edge_iter().count();
     assert_eq!(count, 14);
 
@@ -195,7 +195,7 @@ fn solid_cut_edge() {
         .collect();
     Solid::new(new_shells);
 
-    assert!(tri.remove_vertex_by_concat_edges(v[4].id()));
+    assert!(tri.remove_vertex_by_concat_edges(v[4].id()).is_some());
     let count = tri.edge_iter().count();
     assert_eq!(count, 12);
 }

@@ -146,28 +146,33 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Cuts one edge into two edges at vertex.
     #[inline(always)]
-    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
+    pub fn cut_edge(
+        &mut self,
+        edge_id: EdgeID<C>,
+        vertex: &Vertex<P>,
+    ) -> Option<(Edge<P, C>, Edge<P, C>)>
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>,
+    {
         let res = self
             .boundaries
             .iter_mut()
-            .all(|shell| shell.cut_edge(edge_id, vertex));
+            .find_map(|shell| shell.cut_edge(edge_id, vertex));
         #[cfg(debug_assertions)]
         Solid::new(self.boundaries.clone());
         res
     }
     /// Removes `vertex` from `self` by concat two edges on both sides.
     #[inline(always)]
-    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> Option<Edge<P, C>>
     where
         P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
         let res = self
             .boundaries
             .iter_mut()
-            .all(|shell| shell.remove_vertex_by_concat_edges(vertex_id));
+            .find_map(|shell| shell.remove_vertex_by_concat_edges(vertex_id));
         #[cfg(debug_assertions)]
         Solid::new(self.boundaries.clone());
         res

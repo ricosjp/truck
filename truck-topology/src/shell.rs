@@ -621,16 +621,26 @@ impl<P, C, S> Shell<P, C, S> {
     }
 
     /// Cuts one edge into two edges at vertex.
+    ///
+    /// # Returns
+    /// Returns the tuple of new edges created by cutting the edge.
+    ///
     /// # Failures
-    /// Returns `false` and not edit `self` if:
-    /// - `vertex` is already included in `self`, or
+    /// Returns `None` and not edit `self` if:
+    /// - there is no edge corresponding to `edge_id` in the shell,
+    /// - `vertex` is already included in the shell, or
     /// - cutting of edge fails.
-    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
+    pub fn cut_edge(
+        &mut self,
+        edge_id: EdgeID<C>,
+        vertex: &Vertex<P>,
+    ) -> Option<(Edge<P, C>, Edge<P, C>)>
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>,
+    {
         if self.vertex_iter().any(|v| &v == vertex) {
-            return false;
+            return None;
         }
         let mut edges = None;
         self.iter_mut()
@@ -659,11 +669,21 @@ impl<P, C, S> Shell<P, C, S> {
                 let flag = wire.swap_edge_into_wire(idx, new_wire);
                 debug_assert!(flag);
                 Some(())
-            })
-            .is_some()
+            });
+        edges
     }
     /// Removes `vertex` from `self` by concat two edges on both sides.
-    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
+    ///
+    /// # Returns
+    /// Returns the new created edge.
+    ///
+    /// # Failures
+    /// Returns `None` if:
+    /// - there are no vertex corresponding to `vertex_id` in the shell,
+    /// - the vertex is included more than 2 face boundaries,
+    /// - the vertex is included more than 2 edges, or
+    /// - concating edges is failed.
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> Option<Edge<P, C>>
     where
         P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
@@ -680,30 +700,25 @@ impl<P, C, S> Shell<P, C, S> {
             })
             .collect();
         if vec.len() > 2 || vec.is_empty() {
-            return false;
+            None
         } else if vec.len() == 1 {
             let (wire, idx) = vec.pop().unwrap();
-            let edge = match wire[idx].concat(&wire[(idx + 1) % wire.len()]) {
-                Ok(got) => got,
-                Err(_) => return false,
-            };
-            wire.swap_subwire_into_edges(idx, edge);
+            let edge = wire[idx].concat(&wire[(idx + 1) % wire.len()]).ok()?;
+            wire.swap_subwire_into_edges(idx, edge.clone());
+            Some(edge)
         } else {
             let (wire0, idx0) = vec.pop().unwrap();
             let (wire1, idx1) = vec.pop().unwrap();
             if !wire0[idx0].is_same(&wire1[(idx1 + 1) % wire1.len()])
                 || !wire0[(idx0 + 1) % wire0.len()].is_same(&wire1[idx1])
             {
-                return false;
+                return None;
             }
-            let edge = match wire0[idx0].concat(&wire0[(idx0 + 1) % wire0.len()]) {
-                Ok(got) => got,
-                Err(_) => return false,
-            };
+            let edge = wire0[idx0].concat(&wire0[(idx0 + 1) % wire0.len()]).ok()?;
             wire1.swap_subwire_into_edges(idx1, edge.inverse());
-            wire0.swap_subwire_into_edges(idx0, edge);
+            wire0.swap_subwire_into_edges(idx0, edge.clone());
+            Some(edge)
         }
-        true
     }
 
     /// Creates display struct for debugging the shell.
