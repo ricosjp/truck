@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Real time standard outputs for `example-pages-generator`.
 - Changed the return value of the Euler operation to the newly inserted phase element and improved the method comments.
 - Divide `wasm-test` to `wasm-test` and `page-build`.
 - Change the profile of `truck-js` and remove dependencies to `wee_alloc`.
