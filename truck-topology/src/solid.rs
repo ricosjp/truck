@@ -146,10 +146,15 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Cuts one edge into two edges at vertex.
     #[inline(always)]
-    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> Option<(Edge<P, C>, Edge<P, C>)>
+    pub fn cut_edge(
+        &mut self,
+        edge_id: EdgeID<C>,
+        vertex: &Vertex<P>,
+    ) -> Option<(Edge<P, C>, Edge<P, C>)>
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>,
+    {
         let res = self
             .boundaries
             .iter_mut()

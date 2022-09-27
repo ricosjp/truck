@@ -624,16 +624,21 @@ impl<P, C, S> Shell<P, C, S> {
     ///
     /// # Returns
     /// Returns the tuple of new edges created by cutting the edge.
-    /// 
+    ///
     /// # Failures
     /// Returns `None` and not edit `self` if:
     /// - there is no edge corresponding to `edge_id` in the shell,
     /// - `vertex` is already included in the shell, or
     /// - cutting of edge fails.
-    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> Option<(Edge<P, C>, Edge<P, C>)>
+    pub fn cut_edge(
+        &mut self,
+        edge_id: EdgeID<C>,
+        vertex: &Vertex<P>,
+    ) -> Option<(Edge<P, C>, Edge<P, C>)>
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>,
+    {
         if self.vertex_iter().any(|v| &v == vertex) {
             return None;
         }
@@ -668,7 +673,7 @@ impl<P, C, S> Shell<P, C, S> {
         edges
     }
     /// Removes `vertex` from `self` by concat two edges on both sides.
-    /// 
+    ///
     /// # Returns
     /// Returns the new created edge.
     ///

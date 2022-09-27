@@ -293,7 +293,7 @@ impl<P, C> Wire<P, C> {
     ///     edge0, edge3.clone(), edge4.clone(), edge2
     /// ]);
     /// assert_ne!(wire0, wire1);
-    /// wire0.swap_edge_into_wire(1, Wire::from(vec![edge3, edge4]);
+    /// wire0.swap_edge_into_wire(1, Wire::from(vec![edge3, edge4]));
     /// assert_eq!(wire0, wire1);
     /// ```
     ///
