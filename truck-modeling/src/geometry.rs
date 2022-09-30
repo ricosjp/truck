@@ -1,5 +1,5 @@
 use super::*;
-use derive_more::From;
+use derive_more::*;
 use serde::{Deserialize, Serialize};
 #[doc(hidden)]
 pub use truck_geometry::{algo, inv_or_zero};
@@ -13,6 +13,7 @@ pub use truck_polymesh::PolylineCurve;
     Serialize,
     Deserialize,
     From,
+    TryInto,
     ParametricCurve,
     BoundedCurve,
     ParameterDivision1D,
@@ -35,6 +36,7 @@ pub enum Leader {
     Serialize,
     Deserialize,
     From,
+    TryInto,
     ParametricCurve,
     BoundedCurve,
     ParameterDivision1D,
@@ -154,6 +156,7 @@ impl Curve {
     Serialize,
     Deserialize,
     From,
+    TryInto,
     ParametricSurface,
     ParameterDivision2D,
     Invertible,
