@@ -266,11 +266,11 @@ impl<'a> ExactSizeIterator for PolygonMeshSTLFaceIterator<'a> {}
 impl<'a> IntoSTLIterator for &'a PolygonMesh {
     type IntoIter = PolygonMeshSTLFaceIterator<'a>;
     fn into_iter(self) -> Self::IntoIter {
-        let len = self.face_iter().fold(0, |len, face| len + face.len());
+        let iter = self.faces().triangle_iter();
         Self::IntoIter {
             positions: self.positions(),
-            faces: self.faces().triangle_iter(),
-            len,
+            len: iter.len(),
+            faces: iter,
         }
     }
 }

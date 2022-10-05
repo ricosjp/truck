@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix binary STL output of `PolygonMesh`.
 - Implement TryInto for `Curve` or `Surface` in `truck-geometry`.
 - Real time standard outputs for `example-pages-generator`.
 - Changed the return value of the Euler operation to the newly inserted phase element and improved the method comments.
