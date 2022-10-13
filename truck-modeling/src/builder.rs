@@ -88,16 +88,12 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
 pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>) -> Edge {
     let pt0 = vertex0.get_point();
     let pt1 = vertex1.get_point();
-    let mut pre_ctrl_pts = vec![pt0];
-    pre_ctrl_pts.append(&mut inter_points);
-    pre_ctrl_pts.push(pt1);
-    let ctrl_pts: Vec<_> = pre_ctrl_pts
-        .into_iter()
-        .map(|pt| pt.to_homogeneous())
-        .collect();
+    let mut ctrl_pts = vec![pt0];
+    ctrl_pts.append(&mut inter_points);
+    ctrl_pts.push(pt1);
     let knot_vec = KnotVec::bezier_knot(ctrl_pts.len() - 1);
     let curve = BSplineCurve::new(knot_vec, ctrl_pts);
-    Edge::new(vertex0, vertex1, Curve::NURBSCurve(NURBSCurve::new(curve)))
+    Edge::new(vertex0, vertex1, Curve::BSplineCurve(curve))
 }
 
 /// Returns a homotopic face from `edge0` to `edge1`.

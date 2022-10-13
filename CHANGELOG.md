@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Make the return value `builder::bezier` `Curve::BSplineCurve`.
 - Fix binary STL output of `PolygonMesh`.
 - Implement TryInto for `Curve` or `Surface` in `truck-geometry`.
 - Real time standard outputs for `example-pages-generator`.
