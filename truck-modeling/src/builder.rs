@@ -143,7 +143,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// ```
 /// // connecting two squares.
 /// use truck_modeling::*;
-/// 
+///
 /// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
 /// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let v02 = builder::vertex(Point3::new(2.0, 0.0, 0.0));
@@ -170,7 +170,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// ```
 /// // a triangular tube
 /// use truck_modeling::*;
-/// 
+///
 /// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
 /// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let v02 = builder::vertex(Point3::new(0.5, 0.5, 0.0));
@@ -201,7 +201,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
 /// If the wires have different numbers of edges, then return `Error::NotSameNumberOfEdges`.
 /// ```
 /// use truck_modeling::{*, errors::Error};
-/// 
+///
 /// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
 /// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let v02 = builder::vertex(Point3::new(0.5, 0.5, 0.0));
