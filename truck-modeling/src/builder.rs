@@ -138,6 +138,126 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     )
 }
 
+/// Returns a homotopic shell from `wire0` to `wire1`.
+/// # Examples
+/// ```
+/// // connecting two squares.
+/// use truck_modeling::*;
+///
+/// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v02 = builder::vertex(Point3::new(2.0, 0.0, 0.0));
+/// let v10 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
+/// let v11 = builder::vertex(Point3::new(1.0, 1.0, 0.0));
+/// let v12 = builder::vertex(Point3::new(2.0, 1.0, 0.0));
+/// let wire0: Wire = vec![
+///     builder::line(&v00, &v01),
+///     builder::line(&v01, &v02),
+/// ]
+/// .into();
+/// let wire1: Wire = vec![
+///     builder::line(&v10, &v11),
+///     builder::line(&v11, &v12),
+/// ]
+/// .into();
+///
+/// let shell = builder::try_wire_homotopy(&wire0, &wire1).unwrap();
+/// assert_eq!(shell.len(), 2);
+/// let boundary = shell.extract_boundaries();
+/// assert_eq!(boundary.len(), 1);
+/// assert_eq!(boundary[0].len(), 6);
+/// ```
+/// ```
+/// // a triangular tube
+/// use truck_modeling::*;
+///
+/// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v02 = builder::vertex(Point3::new(0.5, 0.5, 0.0));
+/// let v10 = builder::vertex(Point3::new(0.0, 0.0, 1.0));
+/// let v11 = builder::vertex(Point3::new(1.0, 0.0, 1.0));
+/// let v12 = builder::vertex(Point3::new(0.5, 0.5, 1.0));
+/// let wire0: Wire = vec![
+///     builder::line(&v00, &v01),
+///     builder::line(&v01, &v02),
+///     builder::line(&v02, &v00),
+/// ]
+/// .into();
+/// let wire1: Wire = vec![
+///     builder::line(&v10, &v11),
+///     builder::line(&v11, &v12),
+///     builder::line(&v12, &v10),
+/// ]
+/// .into();
+///
+/// let shell = builder::try_wire_homotopy(&wire0, &wire1).unwrap();
+/// assert_eq!(shell.len(), 3);
+/// let boundary = shell.extract_boundaries();
+/// assert_eq!(boundary.len(), 2);
+/// assert_eq!(boundary[0].len(), 3);
+/// assert_eq!(boundary[1].len(), 3);
+/// ```
+/// # Failures
+/// If the wires have different numbers of edges, then return `Error::NotSameNumberOfEdges`.
+/// ```
+/// use truck_modeling::{*, errors::Error};
+///
+/// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v02 = builder::vertex(Point3::new(0.5, 0.5, 0.0));
+/// let v10 = builder::vertex(Point3::new(0.0, 0.0, 1.0));
+/// let v11 = builder::vertex(Point3::new(1.0, 0.0, 1.0));
+/// let v12 = builder::vertex(Point3::new(0.5, 0.5, 1.0));
+/// let wire0: Wire = vec![
+///     builder::line(&v00, &v01),
+///     builder::line(&v01, &v02),
+/// ]
+/// .into();
+/// let wire1: Wire = vec![
+///     builder::line(&v10, &v11),
+///     builder::line(&v11, &v12),
+///     builder::line(&v12, &v10),
+/// ]
+/// .into();
+///
+/// assert!(matches!(
+///     builder::try_wire_homotopy(&wire0, &wire1),
+///     Err(Error::NotSameNumberOfEdges),
+/// ));
+/// ```
+#[inline(always)]
+pub fn try_wire_homotopy(wire0: &Wire, wire1: &Wire) -> Result<Shell> {
+    if wire0.len() != wire1.len() {
+        return Err(Error::NotSameNumberOfEdges);
+    }
+    let mut vemap = rustc_hash::FxHashMap::default();
+    let shell = wire0
+        .edge_iter()
+        .zip(wire1.edge_iter())
+        .map(|(edge0, edge1)| {
+            let (v0, v1) = (edge0.front(), edge1.front());
+            let edge2 = vemap
+                .entry((v0.id(), v1.id()))
+                .or_insert_with(|| line(v0, v1))
+                .inverse();
+            let (v0, v1) = (edge0.back(), edge1.back());
+            let edge3 = vemap
+                .entry((v0.id(), v1.id()))
+                .or_insert_with(|| line(v0, v1))
+                .clone();
+            let wire: Wire = vec![edge0.clone(), edge3, edge1.inverse(), edge2].into();
+            let curve0 = edge0.oriented_curve().lift_up();
+            let curve1 = edge1.oriented_curve().lift_up();
+            let surface = BSplineSurface::homotopy(curve0, curve1);
+            Face::new(
+                vec![wire],
+                Surface::NURBSSurface(NURBSSurface::new(surface)),
+            )
+        })
+        .collect();
+    Ok(shell)
+}
+
 /// Creates a cone by R-sweeping.
 /// # Examples
 /// ```
@@ -246,8 +366,8 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 /// # let normal = surface.normal(0.5, 0.5);
 /// # assert!(normal.near(&Vector3::unit_y()));
 /// ```
-/// # Remarks
-/// If wires are not closed or not in one plane, then return `None`.
+/// # Failures
+/// If wires are not closed or not in one plane, then return `Error::WireNotInOnePlane`.
 /// ```
 /// use truck_modeling::{*, errors::Error};
 /// let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
