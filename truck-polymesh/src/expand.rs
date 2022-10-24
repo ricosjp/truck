@@ -1,7 +1,7 @@
 use crate::*;
-use rustc_hash::FxHashMap as HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
+use truck_base::entry_map::FxEntryMap as EntryMap;
 
 impl<V: Copy + Hash + Debug + Eq, A: Attributes<V>> PolygonMesh<V, A> {
     /// Contract attributes and expand polygon.
@@ -49,19 +49,20 @@ impl<V: Copy + Hash + Debug + Eq, A: Attributes<V>> PolygonMesh<V, A> {
         contraction: impl Fn(A::Output) -> T,
     ) -> PolygonMesh<usize, Vec<T>> {
         let mut vec = Vec::<T>::new();
-        let mut vertex_map = HashMap::<V, usize>::default();
+        let mut vertex_map = EntryMap::new(
+            |x| x,
+            |vertex| {
+                let idx = vec.len();
+                vec.push(contraction(self.attributes.get(vertex).unwrap()));
+                idx
+            },
+        );
         let faces: Faces<usize> = self
             .face_iter()
             .map(|face| {
                 face.iter()
                     .cloned()
-                    .map(|vertex| {
-                        *vertex_map.entry(vertex).or_insert_with(|| {
-                            let idx = vec.len();
-                            vec.push(contraction(self.attributes.get(vertex).unwrap()));
-                            idx
-                        })
-                    })
+                    .map(|vertex| *vertex_map.entry_or_insert(vertex))
                     .collect::<Vec<_>>()
             })
             .collect();

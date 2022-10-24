@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Some refactoring by `EntryMap`.
 - Adds new function `builder::try_wire_homotopy`.
 - Make the return value `builder::bezier` `Curve::BSplineCurve`.
 - Fix binary STL output of `PolygonMesh`.
