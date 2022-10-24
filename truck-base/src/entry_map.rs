@@ -11,11 +11,11 @@ use std::marker::PhantomData;
 ///
 /// let mut id_generator = 0;
 /// let mut map = EntryMap::new(
-/// 	|x: f64| x.floor() as i32,
-/// 	|_| {
-/// 		id_generator += 1;
-/// 		id_generator
-/// 	},
+///     |x: f64| x.floor() as i32,
+///     |_| {
+///         id_generator += 1;
+///         id_generator
+///     },
 /// );
 ///
 /// assert_eq!(*map.entry_or_insert(3.5), 1);
@@ -62,12 +62,14 @@ where
     }
 }
 
-impl<K, V, KF, VF, P, S> Into<HashMap<K, V, S>> for EntryMap<K, V, KF, VF, P, S> {
-    fn into(self) -> HashMap<K, V, S> { self.hashmap }
+impl<K, V, KF, VF, P, S> From<EntryMap<K, V, KF, VF, P, S>> for HashMap<K, V, S> {
+    #[inline]
+    fn from(x: EntryMap<K, V, KF, VF, P, S>) -> Self { x.hashmap }
 }
 
 impl<K, V, KF, VF, P, S> IntoIterator for EntryMap<K, V, KF, VF, P, S> {
     type Item = (K, V);
     type IntoIter = <HashMap<K, V, S> as IntoIterator>::IntoIter;
+    #[inline]
     fn into_iter(self) -> Self::IntoIter { self.hashmap.into_iter() }
 }

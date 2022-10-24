@@ -361,7 +361,7 @@ impl<P, C> Wire<P, C> {
 
     pub(super) fn sub_try_mapped<'a, Q, D, KF, KV>(
         &'a self,
-        edge_map: &mut EntryMap<EdgeID<C>, Option<Edge<Q, D>>, KF, KV, &'a Edge<P, C>>,
+        edge_map: &mut EdgeEntryMapForTryMapping<'a, P, C, Q, D, KF, KV>,
     ) -> Option<Wire<Q, D>>
     where
         KF: FnMut(&'a Edge<P, C>) -> EdgeID<C>,
@@ -399,7 +399,7 @@ impl<P, C> Wire<P, C> {
 
     pub(super) fn sub_mapped<'a, Q, D, KF, KV>(
         &'a self,
-        edge_map: &mut EntryMap<EdgeID<C>, Edge<Q, D>, KF, KV, &'a Edge<P, C>>,
+        edge_map: &mut EdgeEntryMapForMapping<'a, P, C, Q, D, KF, KV>,
     ) -> Wire<Q, D>
     where
         KF: FnMut(&'a Edge<P, C>) -> EdgeID<C>,
@@ -516,6 +516,11 @@ impl<P, C> Wire<P, C> {
         }
     }
 }
+
+type EdgeEntryMapForTryMapping<'a, P, C, Q, D, KF, KV> =
+    EntryMap<EdgeID<C>, Option<Edge<Q, D>>, KF, KV, &'a Edge<P, C>>;
+type EdgeEntryMapForMapping<'a, P, C, Q, D, KF, KV> =
+    EntryMap<EdgeID<C>, Edge<Q, D>, KF, KV, &'a Edge<P, C>>;
 
 pub(super) fn edge_entry_map_try_closure<'a, P, C, Q, D, KF, VF>(
     vertex_map: &'a mut EntryMap<VertexID<P>, Option<Vertex<Q>>, KF, VF, &'a Vertex<P>>,

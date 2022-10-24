@@ -399,7 +399,7 @@ impl<P, C, S> Shell<P, C, S> {
                 let adjacency = vert_wise_adjacency.entry_or_insert(edge.back());
                 let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
                 adjacency.entry_or_insert(edge).push(next_edge.id());
-                adjacency.entry_or_insert(&next_edge).push(edge.id());
+                adjacency.entry_or_insert(next_edge).push(edge.id());
             }
         });
         vert_wise_adjacency
