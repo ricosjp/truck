@@ -230,21 +230,18 @@ pub fn try_wire_homotopy(wire0: &Wire, wire1: &Wire) -> Result<Shell> {
     if wire0.len() != wire1.len() {
         return Err(Error::NotSameNumberOfEdges);
     }
-    let mut vemap = rustc_hash::FxHashMap::default();
+    let mut vemap = truck_base::entry_map::FxEntryMap::new(
+        |(v0, v1): (&Vertex, &Vertex)| (v0.id(), v1.id()),
+        |(v0, v1)| line(v0, v1),
+    );
     let shell = wire0
         .edge_iter()
         .zip(wire1.edge_iter())
         .map(|(edge0, edge1)| {
             let (v0, v1) = (edge0.front(), edge1.front());
-            let edge2 = vemap
-                .entry((v0.id(), v1.id()))
-                .or_insert_with(|| line(v0, v1))
-                .inverse();
+            let edge2 = vemap.entry_or_insert((v0, v1)).inverse();
             let (v0, v1) = (edge0.back(), edge1.back());
-            let edge3 = vemap
-                .entry((v0.id(), v1.id()))
-                .or_insert_with(|| line(v0, v1))
-                .clone();
+            let edge3 = vemap.entry_or_insert((v0, v1)).clone();
             let wire: Wire = vec![edge0.clone(), edge3, edge1.inverse(), edge2].into();
             let curve0 = edge0.oriented_curve().lift_up();
             let curve1 = edge1.oriented_curve().lift_up();

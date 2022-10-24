@@ -3,6 +3,8 @@
 use super::*;
 use crate::filters::NormalFilters;
 use rustc_hash::FxHashMap as HashMap;
+use truck_base::entry_map::FxEntryMap as EntryMap;
+use truck_topology::Vertex as TVertex;
 
 type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
 type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
@@ -13,8 +15,22 @@ pub(super) fn shell_tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64
 where
     C: PolylineableCurve + 'a,
     S: MeshableSurface + 'a, {
-    let mut vmap = HashMap::default();
-    let mut edge_map = HashMap::default();
+    let mut vmap = EntryMap::new(
+        move |v: &TVertex<Point3>| v.id(),
+        move |v| v.mapped(Point3::clone),
+    );
+    let mut edge_map = EntryMap::new(
+        move |edge: &Edge<Point3, C>| edge.id(),
+        move |edge| {
+            let vf = edge.absolute_front();
+            let v0 = vmap.entry_or_insert(vf).clone();
+            let vb = edge.absolute_back();
+            let v1 = vmap.entry_or_insert(vb).clone();
+            let curve = edge.get_curve();
+            let poly = PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
+            Edge::debug_new(&v0, &v1, poly)
+        },
+    );
     shell
         .face_iter()
         .map(|face| {
@@ -24,22 +40,7 @@ where
                 .map(|wire| {
                     wire.edge_iter()
                         .map(|edge| {
-                            let new_edge = edge_map.entry(edge.id()).or_insert_with(|| {
-                                let vf = edge.absolute_front();
-                                let v0 = vmap
-                                    .entry(vf.id())
-                                    .or_insert_with(|| vf.mapped(Point3::clone))
-                                    .clone();
-                                let vb = edge.absolute_back();
-                                let v1 = vmap
-                                    .entry(vb.id())
-                                    .or_insert_with(|| vb.mapped(Point3::clone))
-                                    .clone();
-                                let curve = edge.get_curve();
-                                let poly =
-                                    PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
-                                Edge::debug_new(&v0, &v1, poly)
-                            });
+                            let new_edge = edge_map.entry_or_insert(edge);
                             match edge.orientation() {
                                 true => new_edge.clone(),
                                 false => new_edge.inverse(),
