@@ -388,20 +388,18 @@ impl<P, C, S> Shell<P, C, S> {
     pub fn singular_vertices(&self) -> Vec<Vertex<P>> {
         let mut vert_wise_adjacency =
             EntryMap::new(Vertex::clone, |_| EntryMap::new(Edge::id, |_| Vec::new()));
-        self.face_iter().for_each(|face| {
-            let first_edge = &face.absolute_boundaries()[0][0];
-            let mut edge_iter = face
-                .absolute_boundaries()
-                .iter()
-                .flat_map(Wire::edge_iter)
-                .peekable();
-            while let Some(edge) = edge_iter.next() {
-                let adjacency = vert_wise_adjacency.entry_or_insert(edge.back());
-                let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
-                adjacency.entry_or_insert(edge).push(next_edge.id());
-                adjacency.entry_or_insert(next_edge).push(edge.id());
-            }
-        });
+        self.face_iter()
+            .flat_map(|face| face.absolute_boundaries())
+            .for_each(|wire| {
+                let first_edge = &wire[0];
+                let mut edge_iter = wire.iter().peekable();
+                while let Some(edge) = edge_iter.next() {
+                    let adjacency = vert_wise_adjacency.entry_or_insert(edge.back());
+                    let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
+                    adjacency.entry_or_insert(edge).push(next_edge.id());
+                    adjacency.entry_or_insert(next_edge).push(edge.id());
+                }
+            });
         vert_wise_adjacency
             .into_iter()
             .filter_map(|(vertex, adjacency)| {

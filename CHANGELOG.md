@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix `Shell::singular_vertices()`.
 - Some refactoring by `EntryMap`.
 - Adds new function `builder::try_wire_homotopy`.
 - Make the return value `builder::bezier` `Curve::BSplineCurve`.
