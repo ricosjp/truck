@@ -678,9 +678,8 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[2], &v[3], ()),
     ///     Edge::new(&v[3], &v[0], ()),
     /// ]);
-    /// let mut face0 = Face::new(vec![wire], ());
-    ///
-    /// let face1 = face0.cut_by_edge(Edge::new(&v[1], &v[3], ())).unwrap();
+    /// let face = Face::new(vec![wire], ());
+    /// let (face0, face1) = face.cut_by_edge(Edge::new(&v[1], &v[3], ())).unwrap();
     ///
     /// // The front vertex of face0's boundary becomes the back of cutting edge.
     /// let v0: Vec<Vertex<()>> = face0.boundaries()[0].vertex_iter().collect();
@@ -706,7 +705,7 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[4], &v[5], ()),
     ///     Edge::new(&v[5], &v[3], ()),
     /// ]);
-    /// let mut face = Face::new(vec![wire0, wire1], ());
+    /// let face = Face::new(vec![wire0, wire1], ());
     /// assert!(face.cut_by_edge(Edge::new(&v[1], &v[2], ())).is_none());
     /// ```
     /// ```
@@ -718,14 +717,19 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[2], &v[3], ()),
     ///     Edge::new(&v[3], &v[0], ()),
     /// ]);
-    /// let mut face0 = Face::new(vec![wire], ());
-    /// assert!(face0.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none());
-    pub fn cut_by_edge(&mut self, edge: Edge<P, C>) -> Option<Self>
+    /// let face = Face::new(vec![wire], ());
+    /// assert!(face.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none());
+    pub fn cut_by_edge(&self, edge: Edge<P, C>) -> Option<(Self, Self)>
     where S: Clone {
         if self.boundaries.len() != 1 {
             return None;
         }
-        let wire = &mut self.boundaries[0];
+        let mut face0 = Face {
+            boundaries: self.boundaries.clone(),
+            orientation: self.orientation,
+            surface: Arc::new(Mutex::new(self.get_surface())),
+        };
+        let wire = &mut face0.boundaries[0];
         let i = wire
             .edge_iter()
             .enumerate()
@@ -741,14 +745,14 @@ impl<P, C, S> Face<P, C, S> {
         let mut new_wire = wire.split_off(j + 1);
         wire.push_back(edge.clone());
         new_wire.push_back(edge.inverse());
-        self.renew_pointer();
         debug_assert!(Face::try_new(self.boundaries.clone(), ()).is_ok());
         debug_assert!(Face::try_new(vec![new_wire.clone()], ()).is_ok());
-        Some(Face {
+        let face1 = Face {
             boundaries: vec![new_wire],
             orientation: self.orientation,
             surface: Arc::new(Mutex::new(self.get_surface())),
-        })
+        };
+        Some((face0, face1))
     }
 
     /// Glue two faces at boundaries.
