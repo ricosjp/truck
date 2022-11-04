@@ -119,7 +119,7 @@ impl CreateBuffers for StructuredMesh {
         let mut indices = Vec::<u32>::new();
         for i in 1..m {
             for j in 1..n {
-                indices.extend(&[
+                indices.extend([
                     ((i - 1) * n + j - 1) as u32,
                     (i * n + j - 1) as u32,
                     ((i - 1) * n + j) as u32,

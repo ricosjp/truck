@@ -5,6 +5,7 @@ The version is of the bottom crate `truck-rendimpl`.
 ## Unreleased
 
 - Renew `Face::cut_by_edge()`.
+- Fix new clippy error.
 - Fix `Shell::singular_vertices()`.
 - Some refactoring by `EntryMap`.
 - Adds new function `builder::try_wire_homotopy`.
