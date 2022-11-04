@@ -27,7 +27,7 @@ const EXAMPLES: &[&str] = &[
 
 fn main() {
     let mut child = Command::new("cargo")
-        .args(&[
+        .args([
             "build",
             "--target",
             "wasm32-unknown-unknown",
@@ -58,7 +58,7 @@ fn main() {
         let output_dir = format!("dist/{}", dir);
         std::fs::create_dir_all(&output_dir).unwrap_or_else(|e| panic!("{}", e));
         let mut child = Command::new("wasm-bindgen")
-            .args(&[
+            .args([
                 "--target",
                 "web",
                 "--out-dir",
