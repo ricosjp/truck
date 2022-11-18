@@ -193,6 +193,18 @@ impl<P, C, S> Face<P, C, S> {
         self.surface = Arc::new(Mutex::new(surface));
     }
 
+    /// Returns an iterator over the edges.
+    #[inline(always)]
+    pub fn edge_iter(&self) -> impl Iterator<Item = Edge<P, C>> + '_ {
+        self.boundary_iters().into_iter().flatten()
+    }
+
+    /// Returns an iterator over the vertices.
+    #[inline(always)]
+    pub fn vertex_iter(&self) -> impl Iterator<Item = Vertex<P>> + '_ {
+        self.edge_iter().map(|e| e.front().clone())
+    }
+
     /// Adds a boundary to the face.
     /// # Examples
     /// ```
