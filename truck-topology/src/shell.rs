@@ -36,7 +36,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// Returns an iterator over the edges.
     #[inline(always)]
     pub fn edge_iter(&self) -> impl Iterator<Item = Edge<P, C>> + '_ {
-        self.face_iter().flat_map(Face::boundary_iters).flatten()
+        self.face_iter().flat_map(Face::edge_iter)
     }
 
     /// Returns an iterator over the vertices.
@@ -57,11 +57,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// Examples for each condition can be found on the page of
     /// [`ShellCondition`](./shell/enum.ShellCondition.html).
     pub fn shell_condition(&self) -> ShellCondition {
-        self.face_iter()
-            .flat_map(Face::boundary_iters)
-            .flatten()
-            .collect::<Boundaries<C>>()
-            .condition()
+        self.edge_iter().collect::<Boundaries<C>>().condition()
     }
 
     /// Returns a vector of all boundaries as wires.
@@ -389,7 +385,7 @@ impl<P, C, S> Shell<P, C, S> {
         let mut vert_wise_adjacency =
             EntryMap::new(Vertex::clone, |_| EntryMap::new(Edge::id, |_| Vec::new()));
         self.face_iter()
-            .flat_map(|face| face.absolute_boundaries())
+            .flat_map(Face::absolute_boundaries)
             .for_each(|wire| {
                 let first_edge = &wire[0];
                 let mut edge_iter = wire.iter().peekable();
