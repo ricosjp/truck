@@ -15,6 +15,7 @@ script = [
 	"cargo run -p truck-modeling --example cylinder",
 	"cargo run -p truck-modeling --example punched-cube",
 	"cargo run -p truck-modeling --example torus-punched-cube",
+	"cargo run -p truck-modeling --example cube-in-cube",
 	"cargo run -p truck-modeling --example torus",
 	"cargo run -p truck-modeling --example torus -- 500 100 large-torus.json",
 	"cargo run -p truck-shapeops --example punched-cube-shapeops",
