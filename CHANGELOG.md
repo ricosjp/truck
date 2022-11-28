@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add an example with several boundaries.
 - Add `Face::edge_iter` and `Face::vertex_iter`.
 - Renew `Face::cut_by_edge()`.
 - Fix new clippy error.

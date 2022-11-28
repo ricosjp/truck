@@ -31,26 +31,12 @@ impl<C> CompressedEdge<C> {
 }
 
 /// The index of an edge in `CompressedShell`.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct CompressedEdgeIndex {
     /// the index of the edge
     pub index: usize,
     /// the orientation of the edge
     pub orientation: bool,
-}
-
-impl Serialize for CompressedEdgeIndex {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where S: serde::Serializer {
-        (self.index, self.orientation).serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for CompressedEdgeIndex {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where D: serde::Deserializer<'de> {
-        Ok(<(usize, bool)>::deserialize(deserializer)?.into())
-    }
 }
 
 impl From<(usize, bool)> for CompressedEdgeIndex {
