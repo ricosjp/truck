@@ -1,3 +1,5 @@
+//! An example of the solid with several boundaries
+
 use truck_modeling::*;
 
 fn main() {
