@@ -215,7 +215,7 @@ where
                 .iter()
                 .map(|shell| {
                     let res = StepDisplay::new(shell, cursor).to_step_shell();
-                    cursor += 1 + res.step_length();
+                    cursor += 2 + res.step_length();
                     res
                 })
                 .collect::<Vec<_>>();
@@ -225,7 +225,7 @@ where
                 other_shells = IndexSliceDisplay(
                     step_shells[1..]
                         .iter()
-                        .map(|step_shell| step_shell.face_indices[0] - 1)
+                        .map(|step_shell| step_shell.face_indices[0] - 2)
                 ),
             ))?;
             f.write_fmt(format_args!(
@@ -234,9 +234,13 @@ where
             ))?;
             Display::fmt(&step_shells[0], f)?;
             step_shells[1..].iter().try_for_each(|step_shell| {
+                let oriented_shell_idx = step_shell.face_indices[0] - 2;
+                let shell_idx = step_shell.face_indices[0] - 1;
                 f.write_fmt(format_args!(
-                    "#{shell_idx} = ORIENTED_CLOSED_SHELL('', {face_indices}, .T.);\n",
-                    shell_idx = step_shell.face_indices[0] - 1,
+                    "#{oriented_shell_idx} = ORIENTED_CLOSED_SHELL('', *, #{shell_idx}, .T.);\n",
+                ))?;
+                f.write_fmt(format_args!(
+                    "#{shell_idx} = CLOSED_SHELL('', {face_indices});\n",
                     face_indices = IndexSliceDisplay(step_shell.face_indices.iter().copied()),
                 ))?;
                 Display::fmt(step_shell, f)
