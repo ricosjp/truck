@@ -4,10 +4,11 @@ use truck_topology::compress::*;
 
 macro_rules! dir ( () => { concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/shape/") });
 
-const SOLID_JSONS: [&str; 3] = [
+const SOLID_JSONS: &[&str] = &[
     concat!(dir!(), "bottle.json"),
     concat!(dir!(), "punched-cube.json"),
     concat!(dir!(), "torus-punched-cube.json"),
+    concat!(dir!(), "cube-in-cube.json"),
 ];
 
 #[test]
