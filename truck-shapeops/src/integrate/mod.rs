@@ -9,7 +9,7 @@ pub trait ShapeOpsSurface:
     + ParameterDivision2D
     + SearchParameter<D2, Point = Point3>
     + SearchNearestParameter<D2, Point = Point3>
-    + Invertible 
+    + Invertible
     + Send {
 }
 impl<S> ShapeOpsSurface for S where S: ParametricSurface3D
