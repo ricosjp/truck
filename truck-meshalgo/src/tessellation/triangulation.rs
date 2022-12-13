@@ -350,6 +350,7 @@ fn triangulation_into_polymesh<'a>(
 
 #[test]
 #[ignore]
+#[cfg(not(target_arch = "wasm32"))]
 fn par_bench() {
     use std::time::Instant;
     use truck_modeling::*;
