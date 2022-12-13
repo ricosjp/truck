@@ -6,15 +6,78 @@ use rustc_hash::FxHashMap as HashMap;
 use truck_base::entry_map::FxEntryMap as EntryMap;
 use truck_topology::Vertex as TVertex;
 
+#[cfg(not(target_arch = "wasm32"))]
+use rayon::prelude::*;
+
 type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
 type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
 type MeshedCShell = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
 
 /// Tessellates faces
+#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn shell_tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
     S: MeshableSurface + 'a, {
+    let vmap: HashMap<_, _> = shell
+        .vertex_par_iter()
+        .map(|v| (v.id(), v.mapped(Point3::clone)))
+        .collect();
+    let eset: HashMap<_, _> = shell.edge_par_iter().map(move |e| (e.id(), e)).collect();
+    let edge_map: HashMap<_, _> = eset
+        .into_par_iter()
+        .map(move |(id, edge)| {
+            let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
+            let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
+            let curve = edge.get_curve();
+            let poly = PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
+            (id, Edge::debug_new(v0, v1, poly))
+        })
+        .collect();
+    let create_edge = |edge: &Edge<Point3, C>| -> Edge<_, _> {
+        let new_edge = edge_map.get(&edge.id()).unwrap();
+        match edge.orientation() {
+            true => new_edge.clone(),
+            false => new_edge.inverse(),
+        }
+    };
+    let create_boundary =
+        |wire: &Wire<Point3, C>| -> Wire<_, _> { wire.edge_iter().map(create_edge).collect() };
+    shell
+        .face_par_iter()
+        .map(move |face| {
+            let wires: Vec<_> = face
+                .absolute_boundaries()
+                .iter()
+                .map(create_boundary)
+                .collect();
+            let surface = face.get_surface();
+            let mut polyline = Polyline::default();
+            let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
+                polyline.add_wire(&surface, wire.iter().map(Edge::oriented_curve))
+            }) {
+                true => Some(trimming_tessellation(&surface, &polyline, tol)),
+                false => None,
+            };
+            let mut new_face = Face::debug_new(wires, polygon);
+            if !face.orientation() {
+                new_face.invert();
+            }
+            new_face
+        })
+        .collect()
+}
+
+/// Tessellates faces
+#[allow(dead_code)]
+pub(super) fn shell_tessellation_single_thread<'a, C, S>(
+    shell: &Shell<Point3, C, S>,
+    tol: f64,
+) -> MeshedShell
+where
+    C: PolylineableCurve + 'a,
+    S: MeshableSurface + 'a,
+{
     let mut vmap = EntryMap::new(
         move |v: &TVertex<Point3>| v.id(),
         move |v| v.mapped(Point3::clone),
@@ -76,43 +139,43 @@ where
     S: MeshableSurface + 'a,
 {
     let vertices = shell.vertices.clone();
-    let edges: Vec<_> = shell
-        .edges
-        .iter()
-        .map(|edge| {
-            let curve = &edge.curve;
-            CompressedEdge {
-                vertices: edge.vertices,
-                curve: PolylineCurve::from_curve(curve, curve.parameter_range(), tol),
-            }
-        })
-        .collect();
-    let faces = shell
-        .faces
-        .iter()
-        .map(|face| {
-            let boundaries = face.boundaries.clone();
-            let surface = &face.surface;
-            let mut polyline = Polyline::default();
-            let polygon = match boundaries.iter().all(|wire| {
-                let wire_iter = wire
-                    .iter()
-                    .filter_map(|edge_idx| match edge_idx.orientation {
-                        true => Some(edges.get(edge_idx.index)?.curve.clone()),
-                        false => Some(edges.get(edge_idx.index)?.curve.inverse()),
-                    });
-                polyline.add_wire(surface, wire_iter)
-            }) {
-                true => Some(trimming_tessellation(surface, &polyline, tol)),
-                false => None,
-            };
-            CompressedFace {
-                boundaries,
-                orientation: face.orientation,
-                surface: polygon,
-            }
-        })
-        .collect::<Vec<_>>();
+    let tessellate_edge = |edge: &CompressedEdge<C>| {
+        let curve = &edge.curve;
+        CompressedEdge {
+            vertices: edge.vertices,
+            curve: PolylineCurve::from_curve(curve, curve.parameter_range(), tol),
+        }
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    let edges: Vec<_> = shell.edges.par_iter().map(tessellate_edge).collect();
+    #[cfg(target_arch = "wasm32")]
+    let edges: Vec<_> = shell.edges.iter().map(tessellate_edge).collect();
+    let tessellate_face = |face: &CompressedFace<S>| {
+        let boundaries = face.boundaries.clone();
+        let surface = &face.surface;
+        let mut polyline = Polyline::default();
+        let polygon = match boundaries.iter().all(|wire| {
+            let wire_iter = wire
+                .iter()
+                .filter_map(|edge_idx| match edge_idx.orientation {
+                    true => Some(edges.get(edge_idx.index)?.curve.clone()),
+                    false => Some(edges.get(edge_idx.index)?.curve.inverse()),
+                });
+            polyline.add_wire(surface, wire_iter)
+        }) {
+            true => Some(trimming_tessellation(surface, &polyline, tol)),
+            false => None,
+        };
+        CompressedFace {
+            boundaries,
+            orientation: face.orientation,
+            surface: polygon,
+        }
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    let faces = shell.faces.par_iter().map(tessellate_face).collect();
+    #[cfg(target_arch = "wasm32")]
+    let faces = shell.faces.iter().map(tessellate_face).collect();
     MeshedCShell {
         vertices,
         edges,
@@ -283,4 +346,30 @@ fn triangulation_into_polymesh<'a>(
         },
         Faces::from_tri_and_quad_faces(tri_faces, Vec::new()),
     )
+}
+
+#[test]
+#[ignore]
+#[cfg(not(target_arch = "wasm32"))]
+fn par_bench() {
+    use std::time::Instant;
+    use truck_modeling::*;
+    const JSON: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../resources/shape/bottle.json"
+    ));
+    let solid: Solid = serde_json::from_str(JSON).unwrap();
+    let shell = solid.into_boundaries().pop().unwrap();
+
+    let instant = Instant::now();
+    (0..100).for_each(|_| {
+        let _shell = shell_tessellation(&shell, 0.01);
+    });
+    println!("{}ms", instant.elapsed().as_millis());
+
+    let instant = Instant::now();
+    (0..100).for_each(|_| {
+        let _shell = shell_tessellation_single_thread(&shell, 0.01);
+    });
+    println!("{}ms", instant.elapsed().as_millis());
 }

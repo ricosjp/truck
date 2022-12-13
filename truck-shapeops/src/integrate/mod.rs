@@ -9,13 +9,17 @@ pub trait ShapeOpsSurface:
     + ParameterDivision2D
     + SearchParameter<D2, Point = Point3>
     + SearchNearestParameter<D2, Point = Point3>
-    + Invertible {
+    + Invertible
+    + Send
+    + Sync {
 }
 impl<S> ShapeOpsSurface for S where S: ParametricSurface3D
         + ParameterDivision2D
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>
         + Invertible
+        + Send
+        + Sync
 {
 }
 
@@ -27,7 +31,9 @@ pub trait ShapeOpsCurve<S: ShapeOpsSurface>:
     + Invertible
     + From<IntersectionCurve<PolylineCurve<Point3>, S>>
     + SearchParameter<D1, Point = Point3>
-    + SearchNearestParameter<D1, Point = Point3> {
+    + SearchNearestParameter<D1, Point = Point3>
+    + Send
+    + Sync {
 }
 impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where C: ParametricCurve3D
         + ParameterDivision1D<Point = Point3>
@@ -36,6 +42,8 @@ impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where C: ParametricCurve3D
         + From<IntersectionCurve<PolylineCurve<Point3>, S>>
         + SearchParameter<D1, Point = Point3>
         + SearchNearestParameter<D1, Point = Point3>
+        + Send
+        + Sync
 {
 }
 
