@@ -32,6 +32,15 @@ impl<T> Eq for ID<T> {}
 
 impl<T> Debug for ID<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        f.write_fmt(format_args!("{:x}", self.0))
+        f.write_fmt(format_args!("0x{:x}", self.0))
     }
+}
+
+#[test]
+fn debug_backward_compatibility() {
+    let x: f64 = 3.0;
+    let id = ID::new(&x);
+    let a = format!("{:?}", id);
+    let b = format!("{:p}", &x);
+    assert_eq!(a, b);
 }
