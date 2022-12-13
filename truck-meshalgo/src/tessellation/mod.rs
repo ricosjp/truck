@@ -4,27 +4,73 @@ use spade::kernels::*;
 use truck_topology::{compress::*, *};
 
 #[cfg(not(target_arch = "wasm32"))]
-#[rustfmt::skip]
 mod meshables_traits {
     use super::*;
     /// Gathered the traits used in tessellation.
-    pub trait PolylineableCurve: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> + Send {}
-    impl<C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> + Send> PolylineableCurve for C {}
+    pub trait PolylineableCurve:
+        ParametricCurve3D
+        + BoundedCurve
+        + Invertible
+        + ParameterDivision1D<Point = Point3>
+        + Send
+        + Sync {
+    }
+    impl<
+            C: ParametricCurve3D
+                + BoundedCurve
+                + Invertible
+                + ParameterDivision1D<Point = Point3>
+                + Send
+                + Sync,
+        > PolylineableCurve for C
+    {
+    }
     /// Gathered the traits used in tessellation.
-    pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3> + Send {}
-    impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3> + Send> MeshableSurface for S {}
+    pub trait MeshableSurface:
+        ParametricSurface3D
+        + Invertible
+        + ParameterDivision2D
+        + SearchParameter<D2, Point = Point3>
+        + Send
+        + Sync {
+    }
+    impl<
+            S: ParametricSurface3D
+                + Invertible
+                + ParameterDivision2D
+                + SearchParameter<D2, Point = Point3>
+                + Send
+                + Sync,
+        > MeshableSurface for S
+    {
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
-#[rustfmt::skip]
 mod meshables_traits {
     use super::*;
     /// Gathered the traits used in tessellation.
-    pub trait PolylineableCurve: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> {}
-    impl<C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3>> PolylineableCurve for C {}
+    pub trait PolylineableCurve:
+        ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> {
+    }
+    impl<
+            C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3>,
+        > PolylineableCurve for C
+    {
+    }
     /// Gathered the traits used in tessellation.
-    pub trait MeshableSurface: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3> {}
-    impl<S: ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3>> MeshableSurface for S {}
+    pub trait MeshableSurface:
+        ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3>
+    {
+    }
+    impl<
+            S: ParametricSurface3D
+                + Invertible
+                + ParameterDivision2D
+                + SearchParameter<D2, Point = Point3>,
+        > MeshableSurface for S
+    {
+    }
 }
 
 pub use meshables_traits::*;
@@ -153,7 +199,11 @@ impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C
     type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
     fn triangulation(&self, tol: f64) -> Self::MeshedShape {
         nonpositive_tolerance!(tol);
-        triangulation::shell_tessellation(self, tol)
+        #[cfg(not(target_arch = "wasm32"))]
+        let res = triangulation::shell_tessellation(self, tol);
+        #[cfg(target_arch = "wasm32")]
+        let res = triangulation::shell_tessellation_single_thread(self, tol);
+        res
     }
 }
 
