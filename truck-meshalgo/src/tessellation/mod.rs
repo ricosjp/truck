@@ -19,7 +19,7 @@ mod meshables_traits {
 }
 
 #[cfg(target_arch = "wasm32")]
-mod meshable_traits {
+mod meshables_traits {
     use super::*;
     /// Gathered the traits used in tessellation.
     #[rustfmt::skip]
