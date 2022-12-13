@@ -182,33 +182,6 @@ where
     }
 }
 
-impl<'a, P, C, S> Display for StepDisplay<CompressedShell<P, C, S>>
-where
-    P: Copy,
-    C: StepLength + 'a,
-    S: StepLength + 'a,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display,
-    StepDisplay<&'a S>: Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result { Display::fmt(&self, f) }
-}
-
-impl<'a, P, C, S> Display for StepDisplay<&'a Shell<P, C, S>>
-where
-    P: Copy,
-    C: StepLength + Clone,
-    S: StepLength + Clone,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display + 'a,
-    StepDisplay<&'a S>: Display + 'a,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        let compressed = self.entity.compress();
-        Display::fmt(&StepDisplay::new(compressed, self.idx), f)
-    }
-}
-
 impl<'a, P, C, S> Display for StepDisplay<&'a CompressedSolid<P, C, S>>
 where
     P: Copy,
@@ -242,7 +215,7 @@ where
                 .iter()
                 .map(|shell| {
                     let res = StepDisplay::new(shell, cursor).to_step_shell();
-                    cursor += 1 + res.step_length();
+                    cursor += 2 + res.step_length();
                     res
                 })
                 .collect::<Vec<_>>();
@@ -252,7 +225,7 @@ where
                 other_shells = IndexSliceDisplay(
                     step_shells[1..]
                         .iter()
-                        .map(|step_shell| step_shell.face_indices[0] - 1)
+                        .map(|step_shell| step_shell.face_indices[0] - 2)
                 ),
             ))?;
             f.write_fmt(format_args!(
@@ -261,40 +234,17 @@ where
             ))?;
             Display::fmt(&step_shells[0], f)?;
             step_shells[1..].iter().try_for_each(|step_shell| {
+                let oriented_shell_idx = step_shell.face_indices[0] - 2;
+                let shell_idx = step_shell.face_indices[0] - 1;
                 f.write_fmt(format_args!(
-                    "#{shell_idx} = ORIENTED_CLOSED_SHELL('', {face_indices}, .T.);\n",
-                    shell_idx = step_shell.face_indices[0] - 1,
+                    "#{oriented_shell_idx} = ORIENTED_CLOSED_SHELL('', *, #{shell_idx}, .T.);\n",
+                ))?;
+                f.write_fmt(format_args!(
+                    "#{shell_idx} = CLOSED_SHELL('', {face_indices});\n",
                     face_indices = IndexSliceDisplay(step_shell.face_indices.iter().copied()),
                 ))?;
                 Display::fmt(step_shell, f)
             })
         }
-    }
-}
-
-impl<'a, P, C, S> Display for StepDisplay<CompressedSolid<P, C, S>>
-where
-    P: Copy,
-    C: StepLength + 'a,
-    S: StepLength + 'a,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display,
-    StepDisplay<&'a S>: Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result { Display::fmt(&self, f) }
-}
-
-impl<'a, P, C, S> Display for StepDisplay<&'a Solid<P, C, S>>
-where
-    P: Copy,
-    C: StepLength + Clone,
-    S: StepLength + Clone,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display + 'a,
-    StepDisplay<&'a S>: Display + 'a,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        let compressed = self.entity.compress();
-        Display::fmt(&StepDisplay::new(compressed, self.idx), f)
     }
 }

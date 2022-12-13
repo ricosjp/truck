@@ -4,6 +4,23 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix the step output of solids with several boundaries.
+- Add an example with several boundaries.
+- Add `Face::edge_iter` and `Face::vertex_iter`.
+- Renew `Face::cut_by_edge()`.
+- Fix new clippy error.
+- Fix `Shell::singular_vertices()`.
+- Some refactoring by `EntryMap`.
+- Adds new function `builder::try_wire_homotopy`.
+- Make the return value `builder::bezier` `Curve::BSplineCurve`.
+- Fix binary STL output of `PolygonMesh`.
+- Implement TryInto for `Curve` or `Surface` in `truck-geometry`.
+- Real time standard outputs for `example-pages-generator`.
+- Changed the return value of the Euler operation to the newly inserted phase element and improved the method comments.
+- Divide `wasm-test` to `wasm-test` and `page-build`.
+- Change the profile of `truck-js` and remove dependencies to `wee_alloc`.
+- Remove recursive loop method.
+- Parse STEP cylindrical surface.
 - Output STEP open shell.
 - Implement `Serialize` and `Deserialize` for `stepio::r#in::alias::*`.
 - Add derive macros for tuple structs.

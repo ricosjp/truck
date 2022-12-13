@@ -47,6 +47,7 @@ fn read() {
 );
 #23 = SURFACE_OF_REVOLUTION('SurfaceOfRevolution', #20, #5);
 #24 = SPHERICAL_SURFACE('SphericalSurface', #9, 5.0);
+#25 = CYLINDRICAL_SURFACE('CylindricalSurface', #9, 5.0);
 
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
@@ -351,6 +352,14 @@ ENDSEC;
             24,
             SphericalSurfaceHolder {
                 label: "SphericalSurface".to_string(),
+                position: PlaceHolder::Ref(Name::Entity(9)),
+                radius: 5.0,
+            },
+        )]),
+        cylindrical_surface: HashMap::from_iter(vec![(
+            25,
+            CylindricalSurfaceHolder {
+                label: "CylindricalSurface".to_string(),
                 position: PlaceHolder::Ref(Name::Entity(9)),
                 radius: 5.0,
             },

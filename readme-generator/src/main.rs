@@ -27,7 +27,7 @@ fn badge_url(path: &str) -> String {
 
 fn create_readme(path: &str) {
     let mut readme = std::fs::File::create("README.md").unwrap();
-    let output = Command::new("cargo").args(&["readme"]).output().unwrap();
+    let output = Command::new("cargo").args(["readme"]).output().unwrap();
     let output = String::from_utf8(output.stdout).unwrap();
     println!("{}", output);
     let lines: Vec<_> = output.split('\n').collect();
@@ -62,9 +62,9 @@ fn create_readme(path: &str) {
             .write_fmt(format_args!("\n### {}\n\n", filestem))
             .unwrap();
         let output = Command::new("cargo")
-            .args(&["readme", "--no-license", "--no-title"])
+            .args(["readme", "--no-license", "--no-title"])
             .arg("-i")
-            .arg(&path.to_str().unwrap())
+            .arg(path.to_str().unwrap())
             .output()
             .unwrap();
         readme.write_all(&output.stdout).unwrap();

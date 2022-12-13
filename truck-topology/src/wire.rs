@@ -1,9 +1,10 @@
 use crate::*;
 use rayon::prelude::*;
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use rustc_hash::FxHashSet as HashSet;
 use std::collections::vec_deque;
 use std::collections::VecDeque;
 use std::iter::Peekable;
+use truck_base::entry_map::FxEntryMap as EntryMap;
 
 impl<P, C> Wire<P, C> {
     /// Creates the empty wire.
@@ -70,7 +71,7 @@ impl<P, C> Wire<P, C> {
     /// Returns the front vertex. If `self` is empty wire, returns None.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
     /// let mut wire = Wire::new();
     /// assert_eq!(wire.front_vertex(), None);
@@ -89,7 +90,7 @@ impl<P, C> Wire<P, C> {
     /// Returns the back edge. If `self` is empty wire, returns None.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
     /// let mut wire = Wire::new();
     /// assert_eq!(wire.back_vertex(), None);
@@ -273,32 +274,47 @@ impl<P, C> Wire<P, C> {
     /// ```
     pub fn is_simple(&self) -> bool {
         let mut set = HashSet::default();
-        for vertex in self.vertex_iter() {
-            if !set.insert(vertex.id()) {
-                return false;
-            }
-        }
-        true
+        self.vertex_iter()
+            .all(move |vertex| set.insert(vertex.id()))
     }
 
     /// Determines whether all the wires in `wires` has no same vertices.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    ///
+    /// let v = Vertex::news(&[(), (), (), (), ()]);
+    /// let edge0 = Edge::new(&v[0], &v[1], ());
+    /// let edge1 = Edge::new(&v[1], &v[2], ());
+    /// let edge2 = Edge::new(&v[2], &v[3], ());
+    /// let edge3 = Edge::new(&v[3], &v[4], ());
+    ///
+    /// let wire0 = Wire::from(vec![edge0, edge1]);
+    /// let wire1 = Wire::from(vec![edge2]);
+    /// let wire2 = Wire::from(vec![edge3]);
+    ///
+    /// assert!(Wire::disjoint_wires(&[wire0.clone(), wire2]));
+    /// assert!(!Wire::disjoint_wires(&[wire0, wire1]));
+    /// ```
     pub fn disjoint_wires(wires: &[Wire<P, C>]) -> bool {
         let mut set = HashSet::default();
-        for vertex in wires.iter().flat_map(|wire| wire.vertex_iter()) {
-            if set.get(&vertex.id()).is_some() {
-                return false;
-            }
-        }
-        for vertex in wires.iter().flat_map(|wire| wire.vertex_iter()) {
-            set.insert(vertex.id());
-        }
-        true
+        wires.iter().all(move |wire| {
+            let mut vec = Vec::new();
+            let res = wire.vertex_iter().all(|v| {
+                vec.push(v.id());
+                !set.contains(&v.id())
+            });
+            set.extend(vec);
+            res
+        })
     }
 
     /// Swap one edge into two edges.
+    ///
     /// # Arguments
     /// - `idx`: Index of edge in wire
     /// - `edges`: Inserted edges
+    ///
     /// # Examples
     /// ```
     /// use truck_topology::*;
@@ -318,10 +334,12 @@ impl<P, C> Wire<P, C> {
     /// wire0.swap_edge_into_wire(1, Wire::from(vec![edge3, edge4]));
     /// assert_eq!(wire0, wire1);
     /// ```
+    ///
     /// # Panics
     /// Panic occars if `idx >= self.len()`.
+    ///
     /// # Failure
-    /// Returns `false` and `self` will not be changed if the end points of `self[idx]` and the ones of `wire` is not the same.
+    /// Returns `false` and `self` will not be changed if the end vertices of `self[idx]` and the ones of `wire` is not the same.
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), (), (), ()]);
@@ -334,6 +352,9 @@ impl<P, C> Wire<P, C> {
     ///     edge0.clone(), edge1, edge2.clone()
     /// ]);
     /// let backup = wire0.clone();
+    /// // The end vertices of wire[1] == edge1 is (v[1], v[3]).
+    /// // The end points of new wire [edge3, edge4] is (v[1], v[1]).
+    /// // Since the back vertices are different, returns false and do nothing.
     /// assert!(!wire0.swap_edge_into_wire(1, Wire::from(vec![edge3, edge4])));
     /// assert_eq!(wire0, backup);
     /// ```
@@ -362,6 +383,25 @@ impl<P, C> Wire<P, C> {
         *self = new_wire.into();
     }
 
+    pub(super) fn sub_try_mapped<'a, Q, D, KF, KV>(
+        &'a self,
+        edge_map: &mut EdgeEntryMapForTryMapping<'a, P, C, Q, D, KF, KV>,
+    ) -> Option<Wire<Q, D>>
+    where
+        KF: FnMut(&'a Edge<P, C>) -> EdgeID<C>,
+        KV: FnMut(&'a Edge<P, C>) -> Option<Edge<Q, D>>,
+    {
+        self.edge_iter()
+            .map(|edge| {
+                let new_edge = edge_map.entry_or_insert(edge).as_ref()?;
+                match edge.orientation() {
+                    true => Some(new_edge.clone()),
+                    false => Some(new_edge.inverse()),
+                }
+            })
+            .collect()
+    }
+
     /// Returns a new wire whose curves are mapped by `curve_mapping` and
     /// whose points are mapped by `point_mapping`.
     /// # Remarks
@@ -373,37 +413,32 @@ impl<P, C> Wire<P, C> {
         mut point_mapping: impl FnMut(&P) -> Option<Q>,
         mut curve_mapping: impl FnMut(&C) -> Option<D>,
     ) -> Option<Wire<Q, D>> {
-        let mut vertex_map: HashMap<VertexID<P>, Option<Vertex<Q>>> = HashMap::default();
-        let mut edge_map: HashMap<EdgeID<C>, Option<Edge<Q, D>>> = HashMap::default();
+        let mut vertex_map = EntryMap::new(Vertex::id, move |v| v.try_mapped(&mut point_mapping));
+        let mut edge_map = EntryMap::new(
+            Edge::id,
+            edge_entry_map_try_closure(&mut vertex_map, &mut curve_mapping),
+        );
+        self.sub_try_mapped(&mut edge_map)
+    }
+
+    pub(super) fn sub_mapped<'a, Q, D, KF, KV>(
+        &'a self,
+        edge_map: &mut EdgeEntryMapForMapping<'a, P, C, Q, D, KF, KV>,
+    ) -> Wire<Q, D>
+    where
+        KF: FnMut(&'a Edge<P, C>) -> EdgeID<C>,
+        KV: FnMut(&'a Edge<P, C>) -> Edge<Q, D>,
+    {
         self.edge_iter()
             .map(|edge| {
-                let new_edge = edge_map
-                    .entry(edge.id())
-                    .or_insert_with(|| {
-                        let vf = edge.absolute_front();
-                        let vertex0 = vertex_map
-                            .entry(vf.id())
-                            .or_insert_with(|| vf.try_mapped(&mut point_mapping))
-                            .as_ref()?
-                            .clone();
-                        let vb = edge.absolute_back();
-                        let vertex1 = vertex_map
-                            .entry(vb.id())
-                            .or_insert_with(|| vb.try_mapped(&mut point_mapping))
-                            .as_ref()?
-                            .clone();
-                        let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
-                        Some(Edge::debug_new(&vertex0, &vertex1, curve))
-                    })
-                    .as_ref()?;
+                let new_edge = edge_map.entry_or_insert(edge);
                 match edge.orientation() {
-                    true => Some(new_edge.clone()),
-                    false => Some(new_edge.inverse()),
+                    true => new_edge.clone(),
+                    false => new_edge.inverse(),
                 }
             })
             .collect()
     }
-
     /// Returns a new wire whose curves are mapped by `curve_mapping` and
     /// whose points are mapped by `point_mapping`.
     /// # Examples
@@ -451,30 +486,12 @@ impl<P, C> Wire<P, C> {
         mut point_mapping: impl FnMut(&P) -> Q,
         mut curve_mapping: impl FnMut(&C) -> D,
     ) -> Wire<Q, D> {
-        let mut vertex_map: HashMap<VertexID<P>, Vertex<Q>> = HashMap::default();
-        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::default();
-        self.edge_iter()
-            .map(|edge| {
-                let new_edge = edge_map.entry(edge.id()).or_insert_with(|| {
-                    let vf = edge.absolute_front();
-                    let vertex0 = vertex_map
-                        .entry(vf.id())
-                        .or_insert_with(|| vf.mapped(&mut point_mapping))
-                        .clone();
-                    let vb = edge.absolute_back();
-                    let vertex1 = vertex_map
-                        .entry(vb.id())
-                        .or_insert_with(|| vb.mapped(&mut point_mapping))
-                        .clone();
-                    let curve = curve_mapping(&*edge.curve.lock().unwrap());
-                    Edge::debug_new(&vertex0, &vertex1, curve)
-                });
-                match edge.orientation() {
-                    true => new_edge.clone(),
-                    false => new_edge.inverse(),
-                }
-            })
-            .collect()
+        let mut vertex_map = EntryMap::new(Vertex::id, move |v| v.mapped(&mut point_mapping));
+        let mut edge_map = EntryMap::new(
+            Edge::id,
+            edge_entry_map_closure(&mut vertex_map, &mut curve_mapping),
+        );
+        self.sub_mapped(&mut edge_map)
     }
 
     /// Returns the consistence of the geometry of end vertices
@@ -521,6 +538,47 @@ impl<P, C> Wire<P, C> {
             entity: self,
             format,
         }
+    }
+}
+
+type EdgeEntryMapForTryMapping<'a, P, C, Q, D, KF, KV> =
+    EntryMap<EdgeID<C>, Option<Edge<Q, D>>, KF, KV, &'a Edge<P, C>>;
+type EdgeEntryMapForMapping<'a, P, C, Q, D, KF, KV> =
+    EntryMap<EdgeID<C>, Edge<Q, D>, KF, KV, &'a Edge<P, C>>;
+
+pub(super) fn edge_entry_map_try_closure<'a, P, C, Q, D, KF, VF>(
+    vertex_map: &'a mut EntryMap<VertexID<P>, Option<Vertex<Q>>, KF, VF, &'a Vertex<P>>,
+    curve_mapping: &'a mut impl FnMut(&C) -> Option<D>,
+) -> impl FnMut(&'a Edge<P, C>) -> Option<Edge<Q, D>> + 'a
+where
+    KF: FnMut(&'a Vertex<P>) -> VertexID<P>,
+    VF: FnMut(&'a Vertex<P>) -> Option<Vertex<Q>>,
+{
+    move |edge| {
+        let vf = edge.absolute_front();
+        let vertex0 = vertex_map.entry_or_insert(vf).clone()?;
+        let vb = edge.absolute_back();
+        let vertex1 = vertex_map.entry_or_insert(vb).clone()?;
+        let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
+        Some(Edge::debug_new(&vertex0, &vertex1, curve))
+    }
+}
+
+pub(super) fn edge_entry_map_closure<'a, P, C, Q, D, KF, VF>(
+    vertex_map: &'a mut EntryMap<VertexID<P>, Vertex<Q>, KF, VF, &'a Vertex<P>>,
+    curve_mapping: &'a mut impl FnMut(&C) -> D,
+) -> impl FnMut(&'a Edge<P, C>) -> Edge<Q, D> + 'a
+where
+    KF: FnMut(&'a Vertex<P>) -> VertexID<P>,
+    VF: FnMut(&'a Vertex<P>) -> Vertex<Q>,
+{
+    move |edge| {
+        let vf = edge.absolute_front();
+        let vertex0 = vertex_map.entry_or_insert(vf).clone();
+        let vb = edge.absolute_back();
+        let vertex1 = vertex_map.entry_or_insert(vb).clone();
+        let curve = curve_mapping(&*edge.curve.lock().unwrap());
+        Edge::debug_new(&vertex0, &vertex1, curve)
     }
 }
 
