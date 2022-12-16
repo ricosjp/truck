@@ -1,9 +1,8 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use truck_topology::{
-    compress::{CompressedShell, CompressedSolid},
-    Shell, Solid,
-};
+use truck_topology::compress::{CompressedShell, CompressedSolid};
+
+use self::topology::PreStepModel;
 
 #[derive(Clone, Debug)]
 struct SliceDisplay<'a, T>(&'a [T]);
@@ -218,68 +217,13 @@ ENDSEC;\n",
 
 /// Display model with configuations
 #[derive(Clone, Debug)]
-pub struct StepModel<T> {
-    shape_display: StepDisplay<T>,
-}
+pub struct StepModel<'a, P, C, S>(PreStepModel<'a, P, C, S>);
 
-/// Model shapes corresponding to Geometric Shape Models in AP042.
-pub trait ModelShape {}
-#[rustfmt::skip]
-impl<P, C, S> ModelShape for Shell<P, C, S> {}
-#[rustfmt::skip]
-impl<P, C, S> ModelShape for CompressedShell<P, C, S> {}
-#[rustfmt::skip]
-impl<P, C, S> ModelShape for Solid<P, C, S> {}
-#[rustfmt::skip]
-impl<P, C, S> ModelShape for CompressedSolid<P, C, S> {}
-#[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for &'a Shell<P, C, S> {}
-#[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for &'a CompressedShell<P, C, S> {}
-#[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for &'a Solid<P, C, S> {}
-#[rustfmt::skip]
-impl<'a, P, C, S> ModelShape for &'a CompressedSolid<P, C, S> {}
-
-impl<T: ModelShape> StepModel<T> {
-    /// constructor
-    #[inline(always)]
-    pub fn new(shape: T) -> Self {
-        Self {
-            shape_display: StepDisplay::new(shape, 16),
-        }
-    }
-}
-
-impl<T> Display for StepModel<T>
-where StepDisplay<T>: Display
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_fmt(format_args!(
-"#1 = APPLICATION_PROTOCOL_DEFINITION('international standard', 'automotive_design', 2000, #2);
-#2 = APPLICATION_CONTEXT('core data for automotive mechanical design processes');
-#3 = SHAPE_DEFINITION_REPRESENTATION(#4, #10);
-#4 = PRODUCT_DEFINITION_SHAPE('','', #5);
-#5 = PRODUCT_DEFINITION('design','', #6, #9);
-#6 = PRODUCT_DEFINITION_FORMATION('','', #7);
-#7 = PRODUCT('','','', (#8));
-#8 = PRODUCT_CONTEXT('', #2, 'mechanical');
-#9 = PRODUCT_DEFINITION_CONTEXT('part definition', #2, 'design');
-#10 = ADVANCED_BREP_SHAPE_REPRESENTATION('', (#16), #11);
-#11 = (
-    GEOMETRIC_REPRESENTATION_CONTEXT(3) 
-    GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#15))
-    GLOBAL_UNIT_ASSIGNED_CONTEXT((#12, #13, #14))
-    REPRESENTATION_CONTEXT('Context #1', '3D Context with UNIT and UNCERTAINTY')
-);
-#12 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
-#13 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
-#14 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
-#15 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #12, 'distance_accuracy_value','confusion accuracy');
-{}",
-            self.shape_display,
-        ))
-    }
+/// Display models with configuations
+#[derive(Clone, Debug)]
+pub struct StepModels<'a, P, C, S> {
+    models: Vec<PreStepModel<'a, P, C, S>>,
+    next_idx: usize,
 }
 
 /// Display struct for outputting STEP file format with header.

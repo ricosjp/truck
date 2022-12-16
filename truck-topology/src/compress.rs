@@ -44,7 +44,7 @@ impl From<(usize, bool)> for CompressedEdgeIndex {
 }
 
 /// Serialized compressed face
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CompressedFace<S> {
     /// Boundaries of the face
     pub boundaries: Vec<Vec<CompressedEdgeIndex>>,
@@ -79,7 +79,7 @@ impl<S> CompressedFace<S> {
 }
 
 /// Serialized compressed shell
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CompressedShell<P, C, S> {
     /// all geometries of vertices
     pub vertices: Vec<P>,
@@ -90,7 +90,7 @@ pub struct CompressedShell<P, C, S> {
 }
 
 /// Serialized compressed solid
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CompressedSolid<P, C, S> {
     /// all boundaries of solid
     pub boundaries: Vec<CompressedShell<P, C, S>>,
