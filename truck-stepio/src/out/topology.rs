@@ -396,21 +396,14 @@ where
 {
     /// push a shell to step models
     pub fn push_shell(&mut self, shell: &'a CompressedShell<P, C, S>) {
-        let model = PreStepModel::Shell(
-            StepDisplay::new(shell, self.next_idx + 1)
-                .to_step_shell(true)
-                .into(),
-        );
+        let model =
+            PreStepModel::Shell(StepDisplay::new(shell, self.next_idx + 1).to_step_shell(true));
         self.next_idx += model.step_length();
         self.models.push(model)
     }
     /// push a solid to step models
     pub fn push_solid(&mut self, solid: &'a CompressedSolid<P, C, S>) {
-        let model = PreStepModel::Solid(
-            StepDisplay::new(solid, self.next_idx)
-                .to_step_solid()
-                .into(),
-        );
+        let model = PreStepModel::Solid(StepDisplay::new(solid, self.next_idx).to_step_solid());
         self.next_idx += model.step_length();
         self.models.push(model)
     }
@@ -427,11 +420,8 @@ where
         let models = iter
             .into_iter()
             .map(|shell| {
-                let model = PreStepModel::Shell(
-                    StepDisplay::new(shell, next_idx + 1)
-                        .to_step_shell(true)
-                        .into(),
-                );
+                let model =
+                    PreStepModel::Shell(StepDisplay::new(shell, next_idx + 1).to_step_shell(true));
                 next_idx += model.step_length();
                 model
             })
@@ -451,8 +441,7 @@ where
         let models = iter
             .into_iter()
             .map(|solid| {
-                let model =
-                    PreStepModel::Solid(StepDisplay::new(solid, next_idx).to_step_solid().into());
+                let model = PreStepModel::Solid(StepDisplay::new(solid, next_idx).to_step_solid());
                 next_idx += model.step_length();
                 model
             })
