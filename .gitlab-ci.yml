@@ -22,6 +22,8 @@ gpu-test:
     stage: test
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
+    before_script:
+        - apt-get install -y cmake
     script:
         - /root/.cargo/bin/rustup toolchain uninstall stable
         - /root/.cargo/bin/rustup toolchain install stable
