@@ -127,6 +127,7 @@ impl RenderTextureConfig {
             format: self.format,
             width: self.canvas_size.0,
             height: self.canvas_size.1,
+            alpha_mode: CompositeAlphaMode::Auto,
             present_mode: PresentMode::Fifo,
         }
     }

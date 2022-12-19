@@ -185,6 +185,7 @@ pub fn swap_chain_descriptor(size: (u32, u32)) -> SurfaceConfiguration {
         width: size.0,
         height: size.1,
         present_mode: PresentMode::Mailbox,
+        alpha_mode: CompositeAlphaMode::Auto,
     }
 }
 

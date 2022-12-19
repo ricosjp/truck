@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Updates wgpu to v0.14
 - Step output for several models.
 - Add parallel iterators for topological structures and implement parallelized meshing algorithm.
 - Fix the step output of solids with several boundaries.
