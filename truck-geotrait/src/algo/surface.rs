@@ -115,15 +115,13 @@ impl<'a, S: ParametricSurface3D> ProjectedSurface<'a, S> {
     fn new(surface: &'a S, (u, v): (f64, f64)) -> Self {
         let origin = surface.subs(u, v);
         let normal = surface.normal(u, v);
-        let tmp = if normal[0].abs() > normal[1].abs() {
-            0
-        } else {
-            1
-        };
-        let max = if normal[tmp].abs() > normal[2].abs() {
-            tmp
-        } else {
-            2
+        let tmp = normal.map(f64::abs);
+        let max = match (tmp[0] < tmp[1], tmp[1] < tmp[2], tmp[2] < tmp[0]) {
+            (false, _, true) => 0,
+            (true, false, _) => 1,
+            (_, true, false) => 2,
+            (false, false, false) => 0, // all componets have same values
+            (true, true, true) => unreachable!(),
         };
         let mut u_axis = Vector3::zero();
         u_axis[max] = -normal[(max + 1) % 3];
