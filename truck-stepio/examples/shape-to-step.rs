@@ -24,7 +24,7 @@ fn main() {
     let compressed: CompressedSolid<Point3, Curve, Surface> =
         serde_json::from_reader(shape_file.as_slice()).unwrap();
     let step_string = out::CompleteStepDisplay::new(
-        out::StepModel::new(&compressed),
+        out::StepModel::from(&compressed),
         out::StepHeaderDescriptor {
             origination_system: "shape-to-step".to_owned(),
             ..Default::default()
