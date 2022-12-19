@@ -22,14 +22,14 @@ derive_more = "0.99.17"
 futures-intrusive = "0.4.0"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.3.0", path = "../truck-base" }
-wgpu = "0.13.1"
-winit = "0.26.1"
+wgpu = "0.14.2"
+winit = "0.27.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 instant = { version = "0.1.12", features = [ "now" ] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
-web-sys = ">=0.3.58,<0.3.59"
+web-sys = "0.3.60"
 
 [dev-dependencies]
 image = "0.24.2"
@@ -42,4 +42,4 @@ pollster = "0.2.5"
 wasm-bindgen-futures = "0.4.31"
 console_error_panic_hook = "0.1.7"
 console_log = "0.2.0"
-web-sys = { version = "0.3.58", features = ["Location"] }
+web-sys = { version = "0.3.60", features = ["Location"] }
