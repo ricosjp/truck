@@ -157,7 +157,34 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     pub const fn absolute_boundaries(&self) -> &Vec<Wire<P, C>> { &self.boundaries }
 
+    /// Returns a clone of the face without inversion.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let face0 = Face::new(vec![wire], ());
+    /// let face1 = face0.inverse();
+    /// let face2 = face1.absolute_clone();
+    /// assert_eq!(face0, face2);
+    /// assert_ne!(face1, face2);
+    /// assert!(face1.is_same(&face2));
+    /// ```
+    #[inline(always)]
+    pub fn absolute_clone(&self) -> Self {
+        Self {
+            boundaries: self.boundaries.clone(),
+            surface: Arc::clone(&self.surface),
+            orientation: true,
+        }
+    }
+
     /// Returns an iterator over all edges in the boundaries.
+    /// # Examples
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
