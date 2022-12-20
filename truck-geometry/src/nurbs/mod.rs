@@ -2,7 +2,7 @@ use crate::*;
 use truck_base::cgmath64::control_point::ControlPoint;
 
 /// knot vector
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize)]
 pub struct KnotVec(Vec<f64>);
 
 /// B-spline curve
@@ -40,7 +40,7 @@ pub struct KnotVec(Vec<f64>);
 ///     assert_near2!(c, 1.0);
 /// }
 /// ```
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize)]
 pub struct BSplineCurve<P> {
     knot_vec: KnotVec,      // the knot vector
     control_points: Vec<P>, // the indices of control points
@@ -104,10 +104,10 @@ pub struct BSplineCurve<P> {
 ///     }
 /// }
 /// ```
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct BSplineSurface<V> {
+#[derive(Clone, PartialEq, Debug, Serialize)]
+pub struct BSplineSurface<P> {
     knot_vecs: (KnotVec, KnotVec),
-    control_points: Vec<Vec<V>>,
+    control_points: Vec<Vec<P>>,
 }
 
 /// NURBS curve

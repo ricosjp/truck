@@ -232,6 +232,30 @@ impl StructuredMesh {
     }
 }
 
+impl<'de> Deserialize<'de> for StructuredMesh {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        #[derive(Deserialize)]
+        pub struct StructuredMesh_ {
+            positions: Vec<Vec<Point3>>,
+            uv_division: Option<(Vec<f64>, Vec<f64>)>,
+            normals: Option<Vec<Vec<Vector3>>>,
+        }
+        let StructuredMesh_ {
+            positions,
+            uv_division,
+            normals,
+        } = StructuredMesh_::deserialize(deserializer)?;
+        match (uv_division, normals) {
+            (Some(uv_division), Some(normals)) => Self::try_new(positions, uv_division, normals),
+            (Some(uv_division), None) => Self::try_from_positions_and_uvs(positions, uv_division),
+            (None, Some(normals)) => Self::try_from_positions_and_normals(positions, normals),
+            (None, None) => Self::try_from_positions(positions),
+        }
+        .map_err(serde::de::Error::custom)
+    }
+}
+
 #[inline(always)]
 fn check_matrix_regularity<T>(matrix: &[Vec<T>]) -> Result<()> {
     for arr in matrix {
