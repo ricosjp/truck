@@ -13,7 +13,7 @@ impl PolygonInstance {
     }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
-    pub fn instance_state(&self) -> &PolygonState { &self.state }
+    pub const fn instance_state(&self) -> &PolygonState { &self.state }
     /// Returns the mutable reference to instance descriptor.
     #[inline(always)]
     pub fn instance_state_mut(&mut self) -> &mut PolygonState { &mut self.state }

@@ -7,7 +7,7 @@ impl<V> NURBSCurve<V> {
 
     /// Returns the BSpline curve before rationalized.
     #[inline(always)]
-    pub fn non_rationalized(&self) -> &BSplineCurve<V> { &self.0 }
+    pub const fn non_rationalized(&self) -> &BSplineCurve<V> { &self.0 }
 
     /// Returns the BSpline curve before rationalized.
     #[inline(always)]
@@ -16,7 +16,7 @@ impl<V> NURBSCurve<V> {
     /// Returns the reference of the knot vector.  
     /// cf.[`BSplineCurve::knot_vec`](./struct.BSplineCurve.html#method.knot_vec)
     #[inline(always)]
-    pub fn knot_vec(&self) -> &KnotVec { &self.0.knot_vec }
+    pub const fn knot_vec(&self) -> &KnotVec { &self.0.knot_vec }
 
     /// Returns the `idx`th knot.  
     /// cf.[`BSplineCurve::knot`](./struct.BSplineCurve.html#method.knot)
@@ -26,7 +26,7 @@ impl<V> NURBSCurve<V> {
     /// Returns the reference of the control points.  
     /// cf.[`BSplineCurve::control_points`](./struct.BSplineCurve.html#method.control_points)
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<V> { &self.0.control_points }
+    pub const fn control_points(&self) -> &Vec<V> { &self.0.control_points }
 
     /// Returns the reference of the control point corresponding to the index `idx`.  
     /// cf.[`BSplineCurve::control_point`](./struct.BSplineCurve.html#method.control_point)

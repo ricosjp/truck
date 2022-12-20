@@ -3,15 +3,15 @@ use crate::*;
 impl<C, S> PCurve<C, S> {
     /// Creates composited
     #[inline(always)]
-    pub fn new(curve: C, surface: S) -> PCurve<C, S> { PCurve { curve, surface } }
+    pub const fn new(curve: C, surface: S) -> PCurve<C, S> { PCurve { curve, surface } }
 
     /// Returns the reference to the previous map
     #[inline(always)]
-    pub fn curve(&self) -> &C { &self.curve }
+    pub const fn curve(&self) -> &C { &self.curve }
 
     /// Returns the reference to the previous map
     #[inline(always)]
-    pub fn surface(&self) -> &S { &self.surface }
+    pub const fn surface(&self) -> &S { &self.surface }
 }
 
 impl<C, S> ParametricCurve for PCurve<C, S>

@@ -10,7 +10,7 @@ impl PolygonShaders {
     /// - `tex_fragment_module`: fragment shader module with texture
     /// - `tex_fragment_entry`: entry point of fragment shader module with texture
     #[inline(always)]
-    pub fn new(
+    pub const fn new(
         vertex_module: Arc<ShaderModule>,
         vertex_entry: &'static str,
         fragment_module: Arc<ShaderModule>,
@@ -56,7 +56,7 @@ impl WireShaders {
     /// - `fragment_module`: fragment shader module without texture
     /// - `fragment_entry`: entry point of fragment shader module without texture
     #[inline(always)]
-    pub fn new(
+    pub const fn new(
         vertex_module: Arc<ShaderModule>,
         vertex_entry: &'static str,
         fragment_module: Arc<ShaderModule>,

@@ -4,13 +4,13 @@ use std::f64::consts::PI;
 impl Sphere {
     /// Creates a sphere
     #[inline(always)]
-    pub fn new(center: Point3, radius: f64) -> Sphere { Sphere { center, radius } }
+    pub const fn new(center: Point3, radius: f64) -> Sphere { Sphere { center, radius } }
     /// Returns the center
     #[inline(always)]
-    pub fn center(&self) -> Point3 { self.center }
+    pub const fn center(&self) -> Point3 { self.center }
     /// Returns the radius
     #[inline(always)]
-    pub fn radius(&self) -> f64 { self.radius }
+    pub const fn radius(&self) -> f64 { self.radius }
     /// Returns whether the point `pt` is on sphere
     #[inline(always)]
     pub fn include(&self, pt: Point3) -> bool { self.center.distance(pt).near(&self.radius) }

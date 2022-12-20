@@ -3,7 +3,7 @@ use super::*;
 impl Plane {
     /// Creates a new plane from three points.
     #[inline(always)]
-    pub fn new(origin: Point3, one: Point3, another: Point3) -> Plane {
+    pub const fn new(origin: Point3, one: Point3, another: Point3) -> Plane {
         Plane {
             o: origin,
             p: one,
@@ -12,7 +12,7 @@ impl Plane {
     }
     /// Returns the origin
     #[inline(always)]
-    pub fn origin(&self) -> Point3 { self.o }
+    pub const fn origin(&self) -> Point3 { self.o }
     /// Returns the u-axis
     #[inline(always)]
     pub fn u_axis(&self) -> Vector3 { self.p - self.o }

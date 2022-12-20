@@ -155,7 +155,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_eq!(face.absolute_boundaries(), &boundaries);
     /// ```
     #[inline(always)]
-    pub fn absolute_boundaries(&self) -> &Vec<Wire<P, C>> { &self.boundaries }
+    pub const fn absolute_boundaries(&self) -> &Vec<Wire<P, C>> { &self.boundaries }
 
     /// Returns an iterator over all edges in the boundaries.
     /// ```

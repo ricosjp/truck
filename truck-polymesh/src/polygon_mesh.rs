@@ -28,7 +28,9 @@ impl<V: Copy + Debug, A: Attributes<V>> PolygonMesh<V, A> {
 
     /// constructor without boundary check
     #[inline(always)]
-    pub fn new_unchecked(attributes: A, faces: Faces<V>) -> Self { Self { attributes, faces } }
+    pub const fn new_unchecked(attributes: A, faces: Faces<V>) -> Self {
+        Self { attributes, faces }
+    }
 
     /// constructor, boundary check is acrivated only in debug mode.
     #[inline(always)]
@@ -41,23 +43,23 @@ impl<V: Copy + Debug, A: Attributes<V>> PolygonMesh<V, A> {
 
     /// Returns attributes
     #[inline(always)]
-    pub fn attributes(&self) -> &A { &self.attributes }
+    pub const fn attributes(&self) -> &A { &self.attributes }
 
     /// Returns the faces of the polygon.
     #[inline(always)]
-    pub fn faces(&self) -> &Faces<V> { &self.faces }
+    pub const fn faces(&self) -> &Faces<V> { &self.faces }
 
     /// Returns the vector of all triangles of the polygon.
     #[inline(always)]
-    pub fn tri_faces(&self) -> &Vec<[V; 3]> { &self.faces.tri_faces }
+    pub const fn tri_faces(&self) -> &Vec<[V; 3]> { &self.faces.tri_faces }
 
     /// Returns the vector of all quadrangles.
     #[inline(always)]
-    pub fn quad_faces(&self) -> &Vec<[V; 4]> { &self.faces.quad_faces }
+    pub const fn quad_faces(&self) -> &Vec<[V; 4]> { &self.faces.quad_faces }
 
     /// Returns the vector of n-gons (n > 4).
     #[inline(always)]
-    pub fn other_faces(&self) -> &[Vec<V>] { &self.faces.other_faces }
+    pub const fn other_faces(&self) -> &Vec<Vec<V>> { &self.faces.other_faces }
 
     /// Returns the iterator of the slice.
     ///
@@ -148,7 +150,7 @@ impl Invertible for PolygonMesh {
 impl PolygonMesh {
     /// Returns the vector of all positions.
     #[inline(always)]
-    pub fn positions(&self) -> &Vec<Point3> { &self.attributes.positions }
+    pub const fn positions(&self) -> &Vec<Point3> { &self.attributes.positions }
 
     /// Returns the mutable slice of all positions.
     #[inline(always)]
@@ -166,7 +168,7 @@ impl PolygonMesh {
 
     /// Returns the vector of all uv (texture) coordinates.
     #[inline(always)]
-    pub fn uv_coords(&self) -> &Vec<Vector2> { &self.attributes.uv_coords }
+    pub const fn uv_coords(&self) -> &Vec<Vector2> { &self.attributes.uv_coords }
 
     /// Returns the mutable slice of all uv (texture) coordinates.
     #[inline(always)]
@@ -184,7 +186,7 @@ impl PolygonMesh {
 
     /// Returns the vector of all normals.
     #[inline(always)]
-    pub fn normals(&self) -> &Vec<Vector3> { &self.attributes.normals }
+    pub const fn normals(&self) -> &Vec<Vector3> { &self.attributes.normals }
 
     /// Returns the mutable slice of all normals.
     #[inline(always)]

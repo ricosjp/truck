@@ -3,18 +3,18 @@ use crate::*;
 impl<C, V: Copy> ExtrudedCurve<C, V> {
     /// Creates a linear extruded curve by extrusion.
     #[inline(always)]
-    pub fn by_extrusion(curve: C, vector: V) -> Self { Self { curve, vector } }
+    pub const fn by_extrusion(curve: C, vector: V) -> Self { Self { curve, vector } }
 
     /// Returns the curve before extruded.
     #[inline(always)]
-    pub fn entity_curve(&self) -> &C { &self.curve }
+    pub const fn entity_curve(&self) -> &C { &self.curve }
     /// Into the curve before revoluted.
     #[inline(always)]
     pub fn into_entity_curve(self) -> C { self.curve }
 
     /// Returns the vector of extruded curve.
     #[inline(always)]
-    pub fn extruding_vector(&self) -> V { self.vector }
+    pub const fn extruding_vector(&self) -> V { self.vector }
 }
 
 impl<C> ParametricSurface for ExtrudedCurve<C, C::Vector>

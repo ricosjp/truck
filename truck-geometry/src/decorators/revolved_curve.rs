@@ -39,16 +39,16 @@ impl<C> RevolutedCurve<C> {
     }
     /// Returns the curve before revoluted.
     #[inline(always)]
-    pub fn entity_curve(&self) -> &C { &self.curve }
+    pub const fn entity_curve(&self) -> &C { &self.curve }
     /// Into the curve before revoluted.
     #[inline(always)]
     pub fn into_entity_curve(self) -> C { self.curve }
     /// Returns origin of revolution
     #[inline(always)]
-    pub fn origin(&self) -> Point3 { self.origin }
+    pub const fn origin(&self) -> Point3 { self.origin }
     /// Returns axis of revolution
     #[inline(always)]
-    pub fn axis(&self) -> Vector3 { self.axis }
+    pub const fn axis(&self) -> Vector3 { self.axis }
 
     #[inline(always)]
     fn proj_point(&self, pt: Point3) -> (f64, f64) {
