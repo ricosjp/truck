@@ -195,7 +195,9 @@ impl<P, C> Edge<P, C> {
     /// assert_eq!(edge.absolute_ends(), (&v[0], &v[1]));
     /// ```
     #[inline(always)]
-    pub const fn absolute_ends(&self) -> (&Vertex<P>, &Vertex<P>) { (&self.vertices.0, &self.vertices.1) }
+    pub const fn absolute_ends(&self) -> (&Vertex<P>, &Vertex<P>) {
+        (&self.vertices.0, &self.vertices.1)
+    }
 
     /// Returns a clone of the edge without inversion.
     /// # Examples

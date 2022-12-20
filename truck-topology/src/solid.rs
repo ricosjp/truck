@@ -35,7 +35,9 @@ impl<P, C, S> Solid<P, C, S> {
     /// This method does NOT check whether all boundary is non-empty, connected, and closed.
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
-    pub const fn new_unchecked(boundaries: Vec<Shell<P, C, S>>) -> Solid<P, C, S> { Solid { boundaries } }
+    pub const fn new_unchecked(boundaries: Vec<Shell<P, C, S>>) -> Solid<P, C, S> {
+        Solid { boundaries }
+    }
 
     /// create the shell whose boundaries is boundary.
     /// # Remarks
