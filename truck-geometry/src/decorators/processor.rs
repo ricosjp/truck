@@ -13,11 +13,11 @@ impl<E, T: One> Processor<E, T> {
 
     /// Returns the reference of entity
     #[inline(always)]
-    pub fn entity(&self) -> &E { &self.entity }
+    pub const fn entity(&self) -> &E { &self.entity }
 
     /// Returns the reference of transform
     #[inline(always)]
-    pub fn transform(&self) -> &T { &self.transform }
+    pub const fn transform(&self) -> &T { &self.transform }
 
     #[inline(always)]
     fn sign(&self) -> f64 {

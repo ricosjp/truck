@@ -24,7 +24,7 @@ impl WireFrameInstance {
     }
     /// Returns the wireframe state
     #[inline(always)]
-    pub fn instance_state(&self) -> &WireFrameState { &self.state }
+    pub const fn instance_state(&self) -> &WireFrameState { &self.state }
     /// Returns the mutable reference to wireframe state
     #[inline(always)]
     pub fn instance_state_mut(&mut self) -> &mut WireFrameState { &mut self.state }

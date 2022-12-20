@@ -76,7 +76,7 @@ impl<P> BSplineCurve<P> {
 
     /// Returns the reference of the knot vector
     #[inline(always)]
-    pub fn knot_vec(&self) -> &KnotVec { &self.knot_vec }
+    pub const fn knot_vec(&self) -> &KnotVec { &self.knot_vec }
 
     /// Returns the `idx`th knot
     #[inline(always)]
@@ -84,7 +84,7 @@ impl<P> BSplineCurve<P> {
 
     /// Returns the reference of the control points.
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<P> { &self.control_points }
+    pub const fn control_points(&self) -> &Vec<P> { &self.control_points }
 
     /// Returns the reference of the control point corresponding to the index `idx`.
     #[inline(always)]

@@ -3,10 +3,10 @@ use crate::*;
 impl Ray {
     /// Returns the origin of the ray
     #[inline(always)]
-    pub fn origin(&self) -> Point3 { self.origin }
+    pub const fn origin(&self) -> Point3 { self.origin }
     /// Returns the (normalized) direction of the ray
     #[inline(always)]
-    pub fn direction(&self) -> Vector3 { self.direction }
+    pub const fn direction(&self) -> Vector3 { self.direction }
 }
 
 impl Camera {
@@ -66,7 +66,7 @@ impl Camera {
     /// assert_eq!(Camera::default().projection_type(), ProjectionType::Perspective);
     /// ```
     #[inline(always)]
-    pub fn projection_type(&self) -> ProjectionType { self.projection_type }
+    pub const fn projection_type(&self) -> ProjectionType { self.projection_type }
 
     /// Creates a perspective camera.
     /// # Arguments

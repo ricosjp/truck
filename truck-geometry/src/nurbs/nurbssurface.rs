@@ -7,7 +7,7 @@ impl<V> NURBSSurface<V> {
 
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
-    pub fn non_rationalized(&self) -> &BSplineSurface<V> { &self.0 }
+    pub const fn non_rationalized(&self) -> &BSplineSurface<V> { &self.0 }
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
     pub fn non_rationalized_mut(&mut self) -> &mut BSplineSurface<V> { &mut self.0 }
@@ -18,14 +18,14 @@ impl<V> NURBSSurface<V> {
 
     /// Returns the reference of the knot vectors
     #[inline(always)]
-    pub fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.0.knot_vecs }
+    pub const fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.0.knot_vecs }
 
     /// Returns the u knot vector.
     #[inline(always)]
-    pub fn uknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.0 }
+    pub const fn uknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.0 }
     /// Returns the v knot vector.
     #[inline(always)]
-    pub fn vknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.1 }
+    pub const fn vknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.1 }
 
     /// Returns the `idx`th u knot.
     #[inline(always)]
@@ -36,7 +36,7 @@ impl<V> NURBSSurface<V> {
 
     /// Returns the reference of the vector of the control points
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<Vec<V>> { &self.0.control_points }
+    pub const fn control_points(&self) -> &Vec<Vec<V>> { &self.0.control_points }
 
     /// Returns the reference of the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]

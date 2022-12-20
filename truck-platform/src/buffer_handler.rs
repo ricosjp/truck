@@ -23,15 +23,15 @@ impl BufferHandler {
     }
     /// Returns the reference of the buffer.
     #[inline(always)]
-    pub fn buffer(&self) -> &Buffer { &self.buffer }
+    pub const fn buffer(&self) -> &Buffer { &self.buffer }
 
     /// Returns the size of the buffer.
     #[inline(always)]
-    pub fn size(&self) -> u64 { self.size }
+    pub const fn size(&self) -> u64 { self.size }
 
     /// Creates a binding resource from buffer slice.
     #[inline(always)]
-    pub fn binding_resource(&self) -> BindingResource<'_> {
+    pub const fn binding_resource(&self) -> BindingResource<'_> {
         BindingResource::Buffer(BufferBinding {
             buffer: &self.buffer,
             offset: 0,

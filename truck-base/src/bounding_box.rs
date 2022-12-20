@@ -157,7 +157,7 @@ where
     /// assert_eq!(bdd_box.max(), &Vector2::from([f64::NEG_INFINITY; 2]));
     /// ```
     #[inline(always)]
-    pub fn max(&self) -> &V { &self.1 }
+    pub const fn max(&self) -> &V { &self.1 }
     /// Returns the reference to the minimal point.
     /// # Examples
     /// ```
@@ -175,7 +175,7 @@ where
     /// assert_eq!(bdd_box.min(), &Vector2::from([f64::INFINITY; 2]));
     /// ```
     #[inline(always)]
-    pub fn min(&self) -> &V { &self.0 }
+    pub const fn min(&self) -> &V { &self.0 }
     /// Returns the diagonal vector.
     /// # Examples
     /// ```

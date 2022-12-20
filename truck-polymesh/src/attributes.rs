@@ -25,7 +25,7 @@ impl Attributes<StandardVertex> for StandardAttributes {
 impl StandardAttributes {
     /// Returns the vector of all positions.
     #[inline(always)]
-    pub fn positions(&self) -> &Vec<Point3> { &self.positions }
+    pub const fn positions(&self) -> &Vec<Point3> { &self.positions }
 
     /// Returns the mutable slice of all positions.
     #[inline(always)]
@@ -43,7 +43,7 @@ impl StandardAttributes {
 
     /// Returns the vector of all uv (texture) coordinates.
     #[inline(always)]
-    pub fn uv_coords(&self) -> &Vec<Vector2> { &self.uv_coords }
+    pub const fn uv_coords(&self) -> &Vec<Vector2> { &self.uv_coords }
 
     /// Returns the mutable slice of all uv (texture) coordinates.
     #[inline(always)]
@@ -61,7 +61,7 @@ impl StandardAttributes {
 
     /// Returns the vector of all normals.
     #[inline(always)]
-    pub fn normals(&self) -> &Vec<Vector3> { &self.normals }
+    pub const fn normals(&self) -> &Vec<Vector3> { &self.normals }
 
     /// Returns the mutable slice of all normals.
     #[inline(always)]

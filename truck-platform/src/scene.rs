@@ -66,7 +66,11 @@ async fn init_default_device(
 impl DeviceHandler {
     /// constructor
     #[inline(always)]
-    pub fn new(adapter: Arc<Adapter>, device: Arc<Device>, queue: Arc<Queue>) -> DeviceHandler {
+    pub const fn new(
+        adapter: Arc<Adapter>,
+        device: Arc<Device>,
+        queue: Arc<Queue>,
+    ) -> DeviceHandler {
         DeviceHandler {
             adapter,
             device,
@@ -75,13 +79,13 @@ impl DeviceHandler {
     }
     /// Returns the reference of the adapter.
     #[inline(always)]
-    pub fn adapter(&self) -> &Arc<Adapter> { &self.adapter }
+    pub const fn adapter(&self) -> &Arc<Adapter> { &self.adapter }
     /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Arc<Device> { &self.device }
+    pub const fn device(&self) -> &Arc<Device> { &self.device }
     /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Arc<Queue> { &self.queue }
+    pub const fn queue(&self) -> &Arc<Queue> { &self.queue }
 
     /// Creates default device handler.
     pub async fn default_device() -> Self { init_default_device(None).await.0 }
@@ -363,15 +367,15 @@ impl Scene {
 
     /// Returns the reference of its own `DeviceHandler`.
     #[inline(always)]
-    pub fn device_handler(&self) -> &DeviceHandler { &self.device_handler }
+    pub const fn device_handler(&self) -> &DeviceHandler { &self.device_handler }
 
     /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Arc<Device> { &self.device_handler.device }
+    pub const fn device(&self) -> &Arc<Device> { &self.device_handler.device }
 
     /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Arc<Queue> { &self.device_handler.queue }
+    pub const fn queue(&self) -> &Arc<Queue> { &self.device_handler.queue }
 
     /// Returns the elapsed time since the scene was created.
     #[inline(always)]
@@ -379,7 +383,7 @@ impl Scene {
 
     /// Returns the reference of the descriptor.
     #[inline(always)]
-    pub fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
+    pub const fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
 
     /// Returns the mutable reference of the descriptor.
     ///
@@ -392,7 +396,7 @@ impl Scene {
 
     /// Returns the reference of the studio configuration.
     #[inline(always)]
-    pub fn studio_config(&self) -> &StudioConfig { &self.scene_desc.studio }
+    pub const fn studio_config(&self) -> &StudioConfig { &self.scene_desc.studio }
 
     /// Returns the mutable reference of the studio configuration.
     #[inline(always)]
@@ -400,7 +404,7 @@ impl Scene {
 
     /// Returns the bind group layout in the scene.
     #[inline(always)]
-    pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
+    pub const fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
 
     /// Creates a `UNIFORM` buffer of the camera.
     ///
