@@ -595,3 +595,11 @@ impl AsRef<[f64]> for KnotVec {
     #[inline(always)]
     fn as_ref(&self) -> &[f64] { &self.0 }
 }
+
+impl<'de> Deserialize<'de> for KnotVec {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        let vec = Vec::<f64>::deserialize(deserializer)?;
+        Self::try_from(vec).map_err(serde::de::Error::custom)
+    }
+}

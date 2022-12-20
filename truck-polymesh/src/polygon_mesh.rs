@@ -1,7 +1,8 @@
 use crate::errors::Error;
 use crate::*;
+use std::fmt::Debug;
 
-impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
+impl<V: Copy + Debug, A: Attributes<V>> PolygonMesh<V, A> {
     /// complete constructor
     /// # Panics
     /// Panic occurs if there is an index is out of range.
@@ -205,6 +206,23 @@ impl<V, A: Default> Default for PolygonMesh<V, A> {
     }
 }
 
+impl<'de, V, A> Deserialize<'de> for PolygonMesh<V, A>
+where
+    V: Copy + Debug + Deserialize<'de>,
+    A: Attributes<V> + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        #[derive(Deserialize)]
+        struct PolygonMesh_<V, A> {
+            attributes: A,
+            faces: Faces<V>,
+        }
+        let PolygonMesh_ { attributes, faces } = PolygonMesh_::<V, A>::deserialize(deserializer)?;
+        Self::try_new(attributes, faces).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Editor of polygon mesh
 ///
 /// It has mutable references to all member variables of the polygon mesh as public variables,
@@ -263,7 +281,7 @@ impl<V, A: Default> Default for PolygonMesh<V, A> {
 /// // Panic occurs since no uv coord is added.
 /// ```
 #[derive(Debug)]
-pub struct PolygonMeshEditor<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> {
+pub struct PolygonMeshEditor<'a, V: Copy + Debug, A: Attributes<V>> {
     /// attributions
     pub attributes: &'a mut A,
     /// mutable reference to the faces of the polygon mesh
@@ -271,7 +289,7 @@ pub struct PolygonMeshEditor<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> {
     bound_check: bool,
 }
 
-impl<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMeshEditor<'a, V, A> {
+impl<'a, V: Copy + Debug, A: Attributes<V>> PolygonMeshEditor<'a, V, A> {
     #[inline(always)]
     fn is_compatible(&self) -> Result<(), Error<V>> { self.faces.is_compatible(&*self.attributes) }
 
@@ -283,7 +301,7 @@ impl<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMeshEditor<'a, V, A
     }
 }
 
-impl<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> Drop for PolygonMeshEditor<'a, V, A> {
+impl<'a, V: Copy + Debug, A: Attributes<V>> Drop for PolygonMeshEditor<'a, V, A> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.bound_check {

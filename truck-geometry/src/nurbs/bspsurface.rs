@@ -2113,6 +2113,24 @@ where M: Transform<P>
     }
 }
 
+impl<'de, P> Deserialize<'de> for BSplineSurface<P>
+where P: Deserialize<'de>
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        #[derive(Deserialize)]
+        struct BSplineSurface_<P> {
+            knot_vecs: (KnotVec, KnotVec),
+            control_points: Vec<Vec<P>>,
+        }
+        let BSplineSurface_ {
+            knot_vecs,
+            control_points,
+        } = BSplineSurface_::<P>::deserialize(deserializer)?;
+        Self::try_new(knot_vecs, control_points).map_err(serde::de::Error::custom)
+    }
+}
+
 fn combinatorial(n: usize) -> Vec<usize> {
     let mut res = vec![1];
     for i in 1..=n {

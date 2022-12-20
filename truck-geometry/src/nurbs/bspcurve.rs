@@ -1261,6 +1261,24 @@ where
     }
 }
 
+impl<'de, P> Deserialize<'de> for BSplineCurve<P>
+where P: Deserialize<'de>
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        #[derive(Deserialize)]
+        struct BSplineCurve_<P> {
+            knot_vec: KnotVec,
+            control_points: Vec<P>,
+        }
+        let BSplineCurve_ {
+            knot_vec,
+            control_points,
+        } = BSplineCurve_::<P>::deserialize(deserializer)?;
+        Self::try_new(knot_vec, control_points).map_err(serde::de::Error::custom)
+    }
+}
+
 #[test]
 fn test_near_as_curve() {
     let knot_vec = KnotVec::from(vec![
