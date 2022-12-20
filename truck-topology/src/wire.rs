@@ -392,13 +392,7 @@ impl<P, C> Wire<P, C> {
         KV: FnMut(&'a Edge<P, C>) -> Option<Edge<Q, D>>,
     {
         self.edge_iter()
-            .map(|edge| {
-                let new_edge = edge_map.entry_or_insert(edge).as_ref()?;
-                match edge.orientation() {
-                    true => Some(new_edge.clone()),
-                    false => Some(new_edge.inverse()),
-                }
-            })
+            .map(|edge| Some(edge_map.entry_or_insert(edge).as_ref()?.absolute_clone()))
             .collect()
     }
 

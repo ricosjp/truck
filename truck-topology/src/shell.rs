@@ -629,11 +629,7 @@ impl<P, C, S> Shell<P, C, S> {
                     None => return Some(()),
                 };
                 if edges.is_none() {
-                    let absedge = match edge.orientation() {
-                        true => edge.clone(),
-                        false => edge.inverse(),
-                    };
-                    edges = Some(absedge.cut(vertex)?);
+                    edges = Some(edge.absolute_clone().cut(vertex)?);
                 }
                 let edges = edges.as_ref().unwrap();
                 let new_wire = match edge.orientation() {

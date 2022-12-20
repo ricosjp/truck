@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Using `absolute_clone`.
 - Add `const` for many functions.
 - Deserialize by `try_new`.
 - Updates wgpu to v0.14
