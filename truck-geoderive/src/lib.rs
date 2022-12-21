@@ -1,4 +1,4 @@
-#![doc = "../README.md"]
+#![doc = include_str!("../README.md")]
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]
