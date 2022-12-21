@@ -20,6 +20,7 @@
 )]
 
 /// STEP input module
+#[doc(hidden)]
 pub mod r#in;
 /// STEP output module
 pub mod out;

@@ -11,10 +11,6 @@ license = "Apache-2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
-[features]
-default = []
-from_other_crate = []
-
 [dependencies]
 derive_more = "0.99.17"
 chrono = { version = "0.4.23", features = ["wasmbind"] }
