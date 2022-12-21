@@ -1,6 +1,6 @@
 [package]
 name = "truck-base"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "Basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc..."
@@ -16,5 +16,5 @@ categories = ["graphics"]
 [dependencies]
 cgmath = { version = "0.18.0", features = ["serde"] }
 matext4cgmath = "0.1.0"
-serde = { version = "1.0.137", features = ["derive"] }
+serde = { version = "1.0.151", features = ["derive"] }
 rustc-hash = "1.1.0"

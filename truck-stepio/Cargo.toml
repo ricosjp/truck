@@ -1,6 +1,6 @@
 [package]
 name = "truck-stepio"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "Reads/writes STEP files from/to truck"
@@ -11,28 +11,24 @@ license = "Apache-2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
-[features]
-default = []
-from_other_crate = []
-
 [dependencies]
-derive_more = "*"
-chrono = { version = "0.4.19", features = ["wasmbind"] }
+derive_more = "0.99.17"
+chrono = { version = "0.4.23", features = ["wasmbind"] }
 rustc-hash = "1.1.0"
 ruststep = "0.3.0"
 ruststep-derive = "0.3.0"
-serde = { version = "1.0.137", features = ["derive"] }
-truck-base = { version = "0.3.0", path = "../truck-base" }
-truck-geotrait = { version = "0.2.0", path = "../truck-geotrait" }
-truck-geometry = { version = "0.3.0", path = "../truck-geometry" }
-truck-polymesh = { version = "0.4.0", path = "../truck-polymesh" }
-truck-topology = { version = "0.4.0", path = "../truck-topology" }
-truck-modeling = { version = "0.4.0", path = "../truck-modeling" }
+serde = { version = "1.0.151", features = ["derive"] }
+truck-base = { version = "0.4.0", path = "../truck-base" }
+truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
+truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
+truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
+truck-topology = { version = "0.5.0", path = "../truck-topology" }
+truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
 
 [dev-dependencies]
 derive-new = "0.5.9"
-serde_json = "1.0.81"
-itertools = "0.10.3"
+serde_json = "1.0.91"
+itertools = "0.10.5"
 nom = "7.1.1"
-espr-derive = "0.2.0"
-truck-meshalgo = { version = "0.2.0", path = "../truck-meshalgo" }
+espr-derive = "0.3.0"
+truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }

@@ -4,60 +4,60 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
-- Upgrade `spade` to `v2.0.0`.
-- Using `absolute_clone`.
-- Add `const` for many functions.
-- Deserialize by `try_new`.
-- Updates wgpu to v0.14
-- Step output for several models.
-- Add parallel iterators for topological structures and implement parallelized meshing algorithm.
-- Fix the step output of solids with several boundaries.
-- Add an example with several boundaries.
-- Add `Face::edge_iter` and `Face::vertex_iter`.
-- Renew `Face::cut_by_edge()`.
-- Fix new clippy error.
-- Fix `Shell::singular_vertices()`.
-- Some refactoring by `EntryMap`.
-- Adds new function `builder::try_wire_homotopy`.
-- Make the return value `builder::bezier` `Curve::BSplineCurve`.
-- Fix binary STL output of `PolygonMesh`.
-- Implement TryInto for `Curve` or `Surface` in `truck-geometry`.
-- Real time standard outputs for `example-pages-generator`.
-- Changed the return value of the Euler operation to the newly inserted phase element and improved the method comments.
-- Divide `wasm-test` to `wasm-test` and `page-build`.
-- Change the profile of `truck-js` and remove dependencies to `wee_alloc`.
+Step input API is W.I.P. and hidden.
+
 - Remove recursive loop method.
 - Parse STEP cylindrical surface.
-- Output STEP open shell.
 - Implement `Serialize` and `Deserialize` for `stepio::r#in::alias::*`.
-- Add derive macros for tuple structs.
-- Fix typos.
-- Fix typos in truck-topology.
 - Adds `SURFACE_OF_REVOLUTION` and `SPHERICAL_SURFACE` to step input.
-- Panic occurs if `example-pages-generator` is failed.
-- Updates container and docker file.
-- Get the ray of camera from uv-coordinate.
-- Make `TextureFormat` of surfaces `BrgaU8norm`.
 - Fix some bugs in `step-to-obj`.
-- Make the output of tessellation face-wise `Option`.
 - Parse STEP topology.
-- Fix example pages.
-- Updates wgpu to v0.13.
-- The parsing of the STEP geometry was implemented up to BSplineSurfaceWithKnots.
-- Direct `CompressedShell` tessellation.
-- Direct serialize API for topological data structures.
-- Update resources.
-- Step output of `IntersectionCurve`.
-- Intersection curve with B-spline leader.
-- Derive macros for geometric traits.
-- Implement cubic B-spline approximation.
-- Fix clippy new lint.
-- Adds `cut_face_by_edge` to `Solid`.
-- Refactoring Search(Nearest)Parameter.
-- Converting express `trimmed_curve` to truck `TrimmedCurve`.
-- Use Line in modeling and simplify output shape of tsweep.
-- Set `from_other_crate` feature for `truck-stepio` to stop rls building ap203.
+- The parsing of the STEP geometry was implemented up to `BSplineSurfaceWithKnots`.
+
+## v0.5
+
+### Additional APIs
+
+- derive macros for geometric traits [`truck-geoderive`](truck-geoderive)
+- step output of open shell, worlds including several models, and `IntersectionCurve`
+- parallel iterators for topological structures
+- direct tessellation of `CompressedShell` and `CompressedSolid`
+- direct serialization for topological data structures.
+- cubic B-spline approximation
+- `builder::try_wire_homotopy`
+- `Solid::cut_face_by_edge`
+- `Face::edge_iter` and `Face::vertex_iter`
 - `IntersectionCurve` between `Plane`s can now be converted to `Line`.
+- `Camera::ray`
+- `EntryMap`
+
+### Updated APIs
+  
+- `MeshableShape::triangulation`
+- the Euler operations
+- `Face::cut_by_edge`
+- Refactoring `Search(Nearest)Parameter`.
+
+### Bug fix
+  
+- `Shell::singular_vertices`
+- binary STL output of `PolygonMesh`
+
+### Internal Improvements
+
+- Data integrity check during deserialization of `KnotVec`, `BSplineCurve`, and all structs constructed by `try_new`.
+- Improve meshing algorithm by parallelization.
+- Intersection curve with B-spline leader.
+- Implement some geometric traits for `TrimmedCurve`, `UnitHyperbola` and `UnitParabola`.
+- Use Line in modeling and simplify output shape of tsweep.
+
+### Misc
+
+- Make `TextureFormat` of surfaces `BrgaU8norm`.
+- Add an example with several boundaries.
+- Updates `wgpu` to `v0.14`
+- Updates `spade` to `v2`.
+- Change the profile of `truck-js` and remove dependencies to `wee_alloc`.
 
 ## v0.4
 

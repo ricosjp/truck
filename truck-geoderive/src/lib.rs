@@ -1,4 +1,16 @@
-//! Define some derive macros for implements geotraits.
+#![doc = include_str!("../README.md")]
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications
+)]
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
@@ -188,6 +200,7 @@ where I: IntoIterator<Item = &'a Variant> + 'a + Copy
     }
 }
 
+/// Derive macro generating an impl of the trait `BoundedCurve` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(BoundedCurve)]
 pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
@@ -226,6 +239,7 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `BoundedSurface` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(BoundedSurface)]
 pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
@@ -266,6 +280,7 @@ pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `Cut` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(Cut)]
 pub fn derive_cut(input: TokenStream) -> TokenStream {
@@ -304,6 +319,7 @@ pub fn derive_cut(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `Invertible` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(Invertible)]
 pub fn derive_invertible(input: TokenStream) -> TokenStream {
@@ -345,6 +361,7 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `ParameterDivision1D` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(ParameterDivision1D)]
 pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
@@ -389,6 +406,7 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `ParameterDivision2D` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(ParameterDivision2D)]
 pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
@@ -429,6 +447,7 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `ParametricCurve` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(ParametricCurve)]
 pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
@@ -480,6 +499,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `ParametricSurface` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(ParametricSurface)]
 pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
@@ -540,6 +560,7 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `ParametricSurface3D` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(ParametricSurface3D)]
 pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
@@ -614,6 +635,7 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `SearchNearestParameter<D1>` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(SearchNearestParameterD1)]
 pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
@@ -669,6 +691,7 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `SearchNearestParameter<D2>` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(SearchNearestParameterD2)]
 pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
@@ -724,6 +747,7 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `SearchParameter<D1>` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(SearchParameterD1)]
 pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
@@ -779,6 +803,7 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `SearchParameter<D2>` for Enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(SearchParameterD2)]
 pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
