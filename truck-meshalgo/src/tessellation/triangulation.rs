@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::filters::NormalFilters;
+use crate::Point2;
 use rustc_hash::FxHashMap as HashMap;
 use truck_base::entry_map::FxEntryMap as EntryMap;
 use truck_topology::Vertex as TVertex;
@@ -9,7 +10,8 @@ use truck_topology::Vertex as TVertex;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
 
-type Cdt<V, K> = ConstrainedDelaunayTriangulation<V, K>;
+type SPoint2 = spade::Point2<f64>;
+type Cdt = ConstrainedDelaunayTriangulation<SPoint2>;
 type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
 type MeshedCShell = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
 
@@ -240,11 +242,11 @@ impl Polyline {
     }
 
     /// Inserts points and adds constraint into triangulation.
-    fn insert_to(&self, triangulation: &mut Cdt<[f64; 2], impl DelaunayKernel<f64>>) {
-        let poly2tri: Vec<usize> = self
+    fn insert_to(&self, triangulation: &mut Cdt) {
+        let poly2tri: Vec<_> = self
             .positions
             .iter()
-            .map(|pt| triangulation.insert((*pt).into()))
+            .filter_map(|pt| triangulation.insert(SPoint2::from([pt.x, pt.y])).ok())
             .collect();
         let mut prev: Option<usize> = None;
         self.indices.iter().for_each(|a| {
@@ -265,12 +267,12 @@ impl Polyline {
 /// Tessellates one surface trimmed by polyline.
 fn trimming_tessellation<S>(surface: &S, polyline: &Polyline, tol: f64) -> PolygonMesh
 where S: MeshableSurface {
-    let mut triangulation = Cdt::<[f64; 2], FloatKernel>::new();
+    let mut triangulation = Cdt::new();
     polyline.insert_to(&mut triangulation);
     insert_surface(&mut triangulation, surface, polyline, tol);
     let mut mesh = triangulation_into_polymesh(
         triangulation.vertices(),
-        triangulation.triangles(),
+        triangulation.inner_faces(),
         surface,
         polyline,
     );
@@ -280,7 +282,7 @@ where S: MeshableSurface {
 
 /// Inserts parameter divisions into triangulation.
 fn insert_surface(
-    triangulation: &mut Cdt<[f64; 2], impl DelaunayKernel<f64>>,
+    triangulation: &mut Cdt,
     surface: &impl MeshableSurface,
     polyline: &Polyline,
     tol: f64,
@@ -292,24 +294,25 @@ fn insert_surface(
         .flat_map(|u| vdiv.iter().map(move |v| Point2::new(u, *v)))
         .filter(|pt| polyline.include(*pt))
         .for_each(|pt| {
-            triangulation.insert(pt.into());
+            let _ = triangulation.insert(SPoint2::from([pt.x, pt.y]));
         });
 }
 
 /// Converts triangulation into `PolygonMesh`.
 fn triangulation_into_polymesh<'a>(
-    vertices: impl Iterator<Item = VertexHandle<'a, [f64; 2], CdtEdge>>,
-    triangles: impl Iterator<Item = FaceHandle<'a, [f64; 2], CdtEdge>>,
+    vertices: VertexIterator<'a, SPoint2, (), CdtEdge<()>, ()>,
+    triangles: InnerFaceIterator<'a, SPoint2, (), CdtEdge<()>, ()>,
     surface: &impl ParametricSurface3D,
     polyline: &Polyline,
 ) -> PolygonMesh {
     let mut positions = Vec::<Point3>::new();
     let mut uv_coords = Vec::<Vector2>::new();
     let mut normals = Vec::<Vector3>::new();
-    let vmap: HashMap<usize, usize> = vertices
+    let vmap: HashMap<_, _> = vertices
         .enumerate()
         .map(|(i, v)| {
-            let uv = Vector2::from(*v);
+            let p = *v.as_ref();
+            let uv = Vector2::new(p.x, p.y);
             positions.push(surface.subs(uv[0], uv[1]));
             uv_coords.push(uv);
             normals.push(surface.normal(uv[0], uv[1]));
@@ -317,11 +320,12 @@ fn triangulation_into_polymesh<'a>(
         })
         .collect();
     let tri_faces: Vec<[StandardVertex; 3]> = triangles
-        .map(|tri| tri.as_triangle())
+        .map(|tri| tri.vertices())
         .filter(|tri| {
+            let tri = [*tri[0].as_ref(), *tri[1].as_ref(), *tri[2].as_ref()];
             let c = Point2::new(
-                (tri[0][0] + tri[1][0] + tri[2][0]) / 3.0,
-                (tri[0][1] + tri[1][1] + tri[2][1]) / 3.0,
+                (tri[0].x + tri[1].x + tri[2].x) / 3.0,
+                (tri[0].y + tri[1].y + tri[2].y) / 3.0,
             );
             polyline.include(c)
         })
