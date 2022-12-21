@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Upgrade `spade` to `v2.0.0`.
 - Using `absolute_clone`.
 - Add `const` for many functions.
 - Deserialize by `try_new`.

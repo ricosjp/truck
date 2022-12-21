@@ -1,6 +1,5 @@
 use crate::*;
-use spade::delaunay::*;
-use spade::kernels::*;
+use spade::{iterators::*, *};
 use truck_topology::{compress::*, *};
 
 #[cfg(not(target_arch = "wasm32"))]

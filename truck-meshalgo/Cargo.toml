@@ -12,7 +12,7 @@ license = "Apache-2.0"
 [dependencies]
 derive_more = "0.99.17"
 rustc-hash = "1.1.0"
-spade = "1.8.2"
+spade = "2.0.0"
 truck-base = { version = "0.3.0", path = "../truck-base" }
 truck-polymesh = { version = "0.4.0", path = "../truck-polymesh" }
 truck-geotrait = { version = "0.2.0", path = "../truck-geotrait" }
