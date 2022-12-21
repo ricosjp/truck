@@ -1,6 +1,6 @@
 [package]
 name = "truck-polymesh"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "defines polygon data structure and some algorithms handling mesh, including meshing the shapes"
@@ -18,6 +18,6 @@ exclude = ["examples/**/*.obj"]
 bytemuck = { version = "1.9.1", features = ["derive"] }
 rustc-hash = "1.1.0"
 serde = { version = "1.0.137", features = ["derive"] }
-truck-base = { version = "0.3.0", path = "../truck-base" }
-truck-geotrait = { version = "0.2.0", path = "../truck-geotrait" }
+truck-base = { version = "0.4.0", path = "../truck-base" }
+truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
 thiserror = "1.0.31"

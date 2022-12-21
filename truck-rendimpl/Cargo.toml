@@ -1,6 +1,6 @@
 [package]
 name = "truck-rendimpl"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "visualization of shape and polygon mesh based on platform"
@@ -20,9 +20,9 @@ webgl = ["truck-platform/webgl"]
 bytemuck = { version = "1.10.0", features = ["derive"] }
 image = "0.24.2"
 rustc-hash = "1.1.0"
-truck-base = { version = "0.3.0", path = "../truck-base" }
-truck-polymesh = { version = "0.4.0", path = "../truck-polymesh" }
-truck-platform = { version = "0.4.0", path = "../truck-platform" }
+truck-base = { version = "0.4.0", path = "../truck-base" }
+truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
+truck-platform = { version = "0.5.0", path = "../truck-platform" }
 
 [dev-dependencies]
 async-trait = "0.1.56"
@@ -30,8 +30,8 @@ env_logger = "0.9.0"
 pollster = "0.2.5"
 rayon = "1.5.3"
 serde_json = "1.0.82"
-truck-modeling = { version = "0.4.0", path = "../truck-modeling" }
-truck-meshalgo = { version = "0.2.0", path = "../truck-meshalgo" }
+truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
+truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }
 winit = "0.27.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

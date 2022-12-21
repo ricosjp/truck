@@ -1,6 +1,6 @@
 [package]
 name = "truck-platform"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "graphic utility library based on wgpu"
@@ -21,7 +21,7 @@ bytemuck = { version = "1.10.0", features = ["derive"] }
 derive_more = "0.99.17"
 futures-intrusive = "0.4.0"
 rustc-hash = "1.1.0"
-truck-base = { version = "0.3.0", path = "../truck-base" }
+truck-base = { version = "0.4.0", path = "../truck-base" }
 wgpu = "0.14.2"
 winit = "0.27.5"
 
