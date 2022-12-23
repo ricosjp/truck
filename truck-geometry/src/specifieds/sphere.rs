@@ -77,6 +77,8 @@ fn sphere_derivation_test() {
 impl BoundedSurface for Sphere {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, PI), (0.0, 2.0 * PI)) }
+    #[inline(always)]
+    fn is_v_periodic(&self) -> bool { true }
 }
 
 impl IncludeCurve<BSplineCurve<Point3>> for Sphere {

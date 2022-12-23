@@ -55,6 +55,8 @@ where
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
         (self.curve.parameter_range(), (0.0, 1.0))
     }
+    #[inline(always)]
+    fn is_u_periodic(&self) -> bool { self.curve.is_periodic() }
 }
 
 impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {

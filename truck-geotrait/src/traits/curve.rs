@@ -25,15 +25,14 @@ pub trait BoundedCurve: ParametricCurve {
     /// The range of the parameter of the curve.
     fn parameter_range(&self) -> (f64, f64);
     /// The front end point of the curve.
-    fn front(&self) -> Self::Point {
-        let (t, _) = self.parameter_range();
-        self.subs(t)
-    }
+    #[inline(always)]
+    fn front(&self) -> Self::Point { self.subs(self.parameter_range().0) }
     /// The back end point of the curve.
-    fn back(&self) -> Self::Point {
-        let (_, t) = self.parameter_range();
-        self.subs(t)
-    }
+    #[inline(always)]
+    fn back(&self) -> Self::Point { self.subs(self.parameter_range().1) }
+    /// False in default implementation; true if periodic.
+    #[inline(always)]
+    fn is_periodic(&self) -> bool { false }
 }
 
 /// Implementation for the test of topological methods.
@@ -86,6 +85,8 @@ impl<'a, C: BoundedCurve> BoundedCurve for &'a C {
     fn front(&self) -> Self::Point { (*self).front() }
     #[inline(always)]
     fn back(&self) -> Self::Point { (*self).back() }
+    #[inline(always)]
+    fn is_periodic(&self) -> bool { (*self).is_periodic() }
 }
 
 impl<C: ParametricCurve> ParametricCurve for Box<C> {
@@ -105,6 +106,8 @@ impl<C: BoundedCurve> BoundedCurve for Box<C> {
     fn front(&self) -> Self::Point { (**self).front() }
     #[inline(always)]
     fn back(&self) -> Self::Point { (**self).back() }
+    #[inline(always)]
+    fn is_periodic(&self) -> bool { (**self).is_periodic() }
 }
 
 /// 2D parametric curve

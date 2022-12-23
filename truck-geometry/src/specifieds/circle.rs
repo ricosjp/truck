@@ -37,6 +37,8 @@ impl ParametricCurve for UnitCircle<Point3> {
 impl BoundedCurve for UnitCircle<Point3> {
     #[inline]
     fn parameter_range(&self) -> (f64, f64) { (0.0, 2.0 * PI) }
+    #[inline]
+    fn is_periodic(&self) -> bool { true }
 }
 
 impl<P> ParameterDivision1D for UnitCircle<P>

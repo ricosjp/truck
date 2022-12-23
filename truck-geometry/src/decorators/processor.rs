@@ -19,6 +19,10 @@ impl<E, T: One> Processor<E, T> {
     #[inline(always)]
     pub const fn transform(&self) -> &T { &self.transform }
 
+    /// Returns the orientation of surface
+    #[inline(always)]
+    pub const fn orientation(&self) -> bool { self.orientation }
+
     #[inline(always)]
     fn sign(&self) -> f64 {
         match self.orientation {
@@ -119,6 +123,8 @@ where
 {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.entity.parameter_range() }
+    #[inline(always)]
+    fn is_periodic(&self) -> bool { self.entity.is_periodic() }
 }
 
 impl<S, T> ParametricSurface for Processor<S, T>
@@ -197,7 +203,22 @@ where
     S: BoundedSurface<Point = Point3, Vector = Vector3>,
     T: Transform<S::Point> + SquareMatrix<Scalar = f64> + Clone,
 {
+    #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
+    #[inline(always)]
+    fn is_u_periodic(&self) -> bool {
+        match self.orientation {
+            true => self.entity.is_u_periodic(),
+            false => self.entity.is_v_periodic(),
+        }
+    }
+    #[inline(always)]
+    fn is_v_periodic(&self) -> bool {
+        match self.orientation {
+            true => self.entity.is_v_periodic(),
+            false => self.entity.is_u_periodic(),
+        }
+    }
 }
 
 impl<E, T> Deref for Processor<E, T> {
