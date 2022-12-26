@@ -18,6 +18,12 @@ pub trait ParametricSurface: Clone {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation by `v`.
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
+    /// `None` in default; `Some(period)` if periodic w.r.t. parameter u.
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> { None }
+    /// `None` in default; `Some(period)` if periodic w.r.t. parameter v.
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { None }
 }
 
 impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
@@ -35,6 +41,10 @@ impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> { (*self).u_period() }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { (*self).v_period() }
 }
 
 impl<S: ParametricSurface> ParametricSurface for Box<S> {
@@ -52,6 +62,10 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector { (**self).uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> { (**self).u_period() }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { (**self).v_period() }
 }
 
 /// 2D parametric surface
@@ -76,30 +90,16 @@ impl<'a, S: ParametricSurface3D> ParametricSurface3D for &'a S {
 pub trait BoundedSurface: ParametricSurface {
     /// The range of the parameter of the surface.
     fn parameter_range(&self) -> ((f64, f64), (f64, f64));
-    /// False in default implementation; true if periodic w.r.t. parameter u.
-    #[inline(always)]
-    fn is_u_periodic(&self) -> bool { false }
-    /// False in default implementation; true if periodic w.r.t. parameter v.
-    #[inline(always)]
-    fn is_v_periodic(&self) -> bool { false }
 }
 
 impl<'a, S: BoundedSurface> BoundedSurface for &'a S {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { (*self).parameter_range() }
-    #[inline(always)]
-    fn is_u_periodic(&self) -> bool { (*self).is_u_periodic() }
-    #[inline(always)]
-    fn is_v_periodic(&self) -> bool { (*self).is_v_periodic() }
 }
 
 impl<S: BoundedSurface> BoundedSurface for Box<S> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { (**self).parameter_range() }
-    #[inline(always)]
-    fn is_u_periodic(&self) -> bool { (**self).is_u_periodic() }
-    #[inline(always)]
-    fn is_v_periodic(&self) -> bool { (**self).is_v_periodic() }
 }
 
 /// Whether the surface includes the boundary curve.

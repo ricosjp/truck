@@ -18,6 +18,9 @@ pub trait ParametricCurve: Clone {
     fn der(&self, t: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation.
     fn der2(&self, t: f64) -> Self::Vector;
+    /// `None` in default implementation; `Some(period)` if periodic.
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { None }
 }
 
 /// bounded parametric curves
@@ -30,9 +33,6 @@ pub trait BoundedCurve: ParametricCurve {
     /// The back end point of the curve.
     #[inline(always)]
     fn back(&self) -> Self::Point { self.subs(self.parameter_range().1) }
-    /// False in default implementation; true if periodic.
-    #[inline(always)]
-    fn is_periodic(&self) -> bool { false }
 }
 
 /// Implementation for the test of topological methods.
@@ -76,6 +76,8 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { (*self).period() }
 }
 
 impl<'a, C: BoundedCurve> BoundedCurve for &'a C {
@@ -85,8 +87,6 @@ impl<'a, C: BoundedCurve> BoundedCurve for &'a C {
     fn front(&self) -> Self::Point { (*self).front() }
     #[inline(always)]
     fn back(&self) -> Self::Point { (*self).back() }
-    #[inline(always)]
-    fn is_periodic(&self) -> bool { (*self).is_periodic() }
 }
 
 impl<C: ParametricCurve> ParametricCurve for Box<C> {
@@ -97,6 +97,8 @@ impl<C: ParametricCurve> ParametricCurve for Box<C> {
     fn der(&self, t: f64) -> Self::Vector { (**self).der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (**self).der2(t) }
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { (**self).period() }
 }
 
 impl<C: BoundedCurve> BoundedCurve for Box<C> {
@@ -106,8 +108,6 @@ impl<C: BoundedCurve> BoundedCurve for Box<C> {
     fn front(&self) -> Self::Point { (**self).front() }
     #[inline(always)]
     fn back(&self) -> Self::Point { (**self).back() }
-    #[inline(always)]
-    fn is_periodic(&self) -> bool { (**self).is_periodic() }
 }
 
 /// 2D parametric curve

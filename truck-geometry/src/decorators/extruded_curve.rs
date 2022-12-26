@@ -37,6 +37,8 @@ where
     fn uvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
     #[inline(always)]
     fn vvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> { self.curve.period() }
 }
 
 impl<C: ParametricCurve3D> ParametricSurface3D for ExtrudedCurve<C, Vector3> {
@@ -55,8 +57,6 @@ where
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
         (self.curve.parameter_range(), (0.0, 1.0))
     }
-    #[inline(always)]
-    fn is_u_periodic(&self) -> bool { self.curve.is_periodic() }
 }
 
 impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {

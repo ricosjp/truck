@@ -217,6 +217,10 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
         self.derivation_rotation_matrix(v)
             .transform_vector(self.curve.der(u))
     }
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> { self.curve.period() }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
 }
 
 impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve<C> {
@@ -253,10 +257,6 @@ impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
         (self.curve.parameter_range(), (0.0, 2.0 * PI))
     }
-    #[inline(always)]
-    fn is_u_periodic(&self) -> bool { self.curve.is_periodic() }
-    #[inline(always)]
-    fn is_v_periodic(&self) -> bool { true }
 }
 
 impl<C: Clone> Invertible for RevolutedCurve<C> {

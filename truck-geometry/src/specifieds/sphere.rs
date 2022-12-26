@@ -44,6 +44,8 @@ impl ParametricSurface for Sphere {
     fn vvder(&self, u: f64, v: f64) -> Vector3 {
         -self.radius * f64::sin(u) * Vector3::new(f64::cos(v), f64::sin(v), 0.0)
     }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
 }
 
 impl ParametricSurface3D for Sphere {
@@ -77,8 +79,6 @@ fn sphere_derivation_test() {
 impl BoundedSurface for Sphere {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, PI), (0.0, 2.0 * PI)) }
-    #[inline(always)]
-    fn is_v_periodic(&self) -> bool { true }
 }
 
 impl IncludeCurve<BSplineCurve<Point3>> for Sphere {
