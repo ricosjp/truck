@@ -217,6 +217,10 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
         self.derivation_rotation_matrix(v)
             .transform_vector(self.curve.der(u))
     }
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> { self.curve.period() }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
 }
 
 impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve<C> {

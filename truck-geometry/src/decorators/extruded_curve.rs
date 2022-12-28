@@ -37,6 +37,8 @@ where
     fn uvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
     #[inline(always)]
     fn vvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> { self.curve.period() }
 }
 
 impl<C: ParametricCurve3D> ParametricSurface3D for ExtrudedCurve<C, Vector3> {

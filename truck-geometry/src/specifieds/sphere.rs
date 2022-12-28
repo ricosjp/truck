@@ -44,6 +44,8 @@ impl ParametricSurface for Sphere {
     fn vvder(&self, u: f64, v: f64) -> Vector3 {
         -self.radius * f64::sin(u) * Vector3::new(f64::cos(v), f64::sin(v), 0.0)
     }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
 }
 
 impl ParametricSurface3D for Sphere {

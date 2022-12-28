@@ -464,6 +464,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                 fn subs(&self, t: f64) -> Self::Point,
                 fn der(&self, t: f64) -> Self::Vector,
                 fn der2(&self, t: f64) -> Self::Vector,
+                fn period(&self,) -> Option<f64>,
             );
             quote! {
                 #[automatically_derived]
@@ -491,6 +492,8 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                     fn der(&self, t: f64) -> Self::Vector { self.0.der(t) }
                     #[inline(always)]
                     fn der2(&self, t: f64) -> Self::Vector { self.0.der2(t) }
+                    #[inline(always)]
+                    fn period(&self) -> Option<f64> { self.0.period() }
                 }
             }
         }
@@ -519,6 +522,8 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                 fn uuder(&self, s: f64, t: f64) -> Self::Vector,
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
+                fn u_period(&self,) -> Option<f64>,
+                fn v_period(&self,) -> Option<f64>,
             );
             quote! {
                 #[automatically_derived]
@@ -552,6 +557,10 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
                     #[inline(always)]
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
+                    #[inline(always)]
+                    fn u_period(&self) -> Option<f64> { self.0.u_period() }
+                    #[inline(always)]
+                    fn v_period(&self) -> Option<f64> { self.0.v_period() }
                 }
             }
         }
