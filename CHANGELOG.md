@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Remove invertible from tessellating traits.
 - Add "periodic" identifer to `ParametricCurve` and `ParametricSurface`.
 
 Step input API is W.I.P. and hidden.

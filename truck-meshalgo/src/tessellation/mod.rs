@@ -7,27 +7,16 @@ mod meshables_traits {
     use super::*;
     /// Gathered the traits used in tessellation.
     pub trait PolylineableCurve:
-        ParametricCurve3D
-        + BoundedCurve
-        + Invertible
-        + ParameterDivision1D<Point = Point3>
-        + Send
-        + Sync {
+        ParametricCurve3D + BoundedCurve + ParameterDivision1D<Point = Point3> + Send + Sync {
     }
     impl<
-            C: ParametricCurve3D
-                + BoundedCurve
-                + Invertible
-                + ParameterDivision1D<Point = Point3>
-                + Send
-                + Sync,
+            C: ParametricCurve3D + BoundedCurve + ParameterDivision1D<Point = Point3> + Send + Sync,
         > PolylineableCurve for C
     {
     }
     /// Gathered the traits used in tessellation.
     pub trait MeshableSurface:
         ParametricSurface3D
-        + Invertible
         + ParameterDivision2D
         + SearchParameter<D2, Point = Point3>
         + Send
@@ -35,7 +24,6 @@ mod meshables_traits {
     }
     impl<
             S: ParametricSurface3D
-                + Invertible
                 + ParameterDivision2D
                 + SearchParameter<D2, Point = Point3>
                 + Send
@@ -50,24 +38,18 @@ mod meshables_traits {
     use super::*;
     /// Gathered the traits used in tessellation.
     pub trait PolylineableCurve:
-        ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3> {
+        ParametricCurve3D + BoundedCurve + ParameterDivision1D<Point = Point3> {
     }
-    impl<
-            C: ParametricCurve3D + BoundedCurve + Invertible + ParameterDivision1D<Point = Point3>,
-        > PolylineableCurve for C
+    impl<C: ParametricCurve3D + BoundedCurve + ParameterDivision1D<Point = Point3>>
+        PolylineableCurve for C
     {
     }
     /// Gathered the traits used in tessellation.
     pub trait MeshableSurface:
-        ParametricSurface3D + Invertible + ParameterDivision2D + SearchParameter<D2, Point = Point3>
-    {
+        ParametricSurface3D + ParameterDivision2D + SearchParameter<D2, Point = Point3> {
     }
-    impl<
-            S: ParametricSurface3D
-                + Invertible
-                + ParameterDivision2D
-                + SearchParameter<D2, Point = Point3>,
-        > MeshableSurface for S
+    impl<S: ParametricSurface3D + ParameterDivision2D + SearchParameter<D2, Point = Point3>>
+        MeshableSurface for S
     {
     }
 }
