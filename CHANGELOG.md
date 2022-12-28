@@ -4,6 +4,8 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add "periodic" identifer to `ParametricCurve` and `ParametricSurface`.
+
 Step input API is W.I.P. and hidden.
 
 - Remove recursive loop method.

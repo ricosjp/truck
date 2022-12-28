@@ -197,7 +197,10 @@ impl Polyline {
     fn add_wire<S>(&mut self, surface: &S, mut wire: impl Iterator<Item = PolylineCurve>) -> bool
     where S: MeshableSurface {
         let mut counter = 0;
+        let mut previous: Option<(f64, f64)> = None;
         let len = self.positions.len();
+        let up = surface.u_period();
+        let vp = surface.v_period();
         let res = wire.all(|mut poly_edge| {
             poly_edge.pop();
             counter += poly_edge.len();
@@ -206,6 +209,35 @@ impl Polyline {
                 hint = surface
                     .search_parameter(pt, hint, 100)
                     .or_else(|| surface.search_parameter(pt, None, 100));
+                if let (Some((ref mut hint, _)), Some(up), Some((previous, _))) =
+                    (&mut hint, up, previous)
+                {
+                    let d0 = f64::abs(*hint - previous);
+                    let d1 = f64::abs(*hint - up - previous);
+                    let d2 = f64::abs(*hint + up - previous);
+                    *hint = match (d0 < d1, d1 < d2, d2 < d0) {
+                        (false, true, _) => *hint - up,
+                        (_, false, true) => *hint + up,
+                        (true, _, false) => *hint,
+                        (false, false, false) => *hint,
+                        (true, true, true) => unreachable!(),
+                    }
+                }
+                if let (Some((_, ref mut hint)), Some(vp), Some((_, previous))) =
+                    (&mut hint, vp, previous)
+                {
+                    let d0 = f64::abs(*hint - previous);
+                    let d1 = f64::abs(*hint - vp - previous);
+                    let d2 = f64::abs(*hint + vp - previous);
+                    *hint = match (d0 < d1, d1 < d2, d2 < d0) {
+                        (false, true, _) => *hint - vp,
+                        (_, false, true) => *hint + vp,
+                        (true, _, false) => *hint,
+                        (false, false, false) => *hint,
+                        (true, true, true) => unreachable!(),
+                    }
+                }
+                previous = hint;
                 hint.map(|hint| self.positions.push(hint.into())).is_some()
             })
         });
