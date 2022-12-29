@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implement robust meshing by `SearchNearestParameter`.
 - Remove invertible from tessellating traits.
 - Add "periodic" identifer to `ParametricCurve` and `ParametricSurface`.
 
@@ -35,7 +36,7 @@ Step input API is W.I.P. and hidden.
 - `EntryMap`
 
 ### Updated APIs
-  
+
 - `MeshableShape::triangulation`
 - the Euler operations
 - `Face::cut_by_edge`

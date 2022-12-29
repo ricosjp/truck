@@ -15,12 +15,44 @@ type Cdt = ConstrainedDelaunayTriangulation<SPoint2>;
 type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
 type MeshedCShell = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
 
+pub(super) fn by_search_parameter<S>(
+    surface: &S,
+    point: Point3,
+    hint: Option<(f64, f64)>,
+) -> Option<(f64, f64)>
+where
+    S: MeshableSurface,
+{
+    surface
+        .search_parameter(point, hint, 100)
+        .or_else(|| surface.search_parameter(point, None, 100))
+}
+
+pub(super) fn by_search_nearest_parameter<S>(
+    surface: &S,
+    point: Point3,
+    hint: Option<(f64, f64)>,
+) -> Option<(f64, f64)>
+where
+    S: RobustMeshableSurface,
+{
+    surface
+        .search_nearest_parameter(point, hint, 100)
+        .or_else(|| surface.search_nearest_parameter(point, None, 100))
+}
+
 /// Tessellates faces
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn shell_tessellation<'a, C, S>(shell: &Shell<Point3, C, S>, tol: f64) -> MeshedShell
+pub(super) fn shell_tessellation<'a, C, S, F>(
+    shell: &Shell<Point3, C, S>,
+    tol: f64,
+    sp: F,
+) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
-    S: MeshableSurface + 'a, {
+    S: PreMeshableSurface + 'a,
+    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Sync + Send,
+{
     let vmap: HashMap<_, _> = shell
         .vertex_par_iter()
         .map(|v| (v.id(), v.mapped(Point3::clone)))
@@ -56,7 +88,7 @@ where
             let surface = face.get_surface();
             let mut polyline = Polyline::default();
             let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
-                polyline.add_wire(&surface, wire.iter().map(Edge::oriented_curve))
+                polyline.add_wire(&surface, wire.iter().map(Edge::oriented_curve), &sp)
             }) {
                 true => Some(trimming_tessellation(&surface, &polyline, tol)),
                 false => None,
@@ -72,13 +104,15 @@ where
 
 /// Tessellates faces
 #[allow(dead_code)]
-pub(super) fn shell_tessellation_single_thread<'a, C, S>(
+pub(super) fn shell_tessellation_single_thread<'a, C, S, F>(
     shell: &Shell<Point3, C, S>,
     tol: f64,
+    sp: F,
 ) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
-    S: MeshableSurface + 'a,
+    S: PreMeshableSurface + 'a,
+    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
 {
     let mut vmap = EntryMap::new(
         move |v: &TVertex<Point3>| v.id(),
@@ -117,7 +151,7 @@ where
             let surface = face.get_surface();
             let mut polyline = Polyline::default();
             let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
-                polyline.add_wire(&surface, wire.iter().map(|edge| edge.oriented_curve()))
+                polyline.add_wire(&surface, wire.iter().map(|edge| edge.oriented_curve()), &sp)
             }) {
                 true => Some(trimming_tessellation(&surface, &polyline, tol)),
                 false => None,
@@ -132,13 +166,15 @@ where
 }
 
 /// Tessellates faces
-pub(super) fn cshell_tessellation<'a, C, S>(
+pub(super) fn cshell_tessellation<'a, C, S, F>(
     shell: &CompressedShell<Point3, C, S>,
     tol: f64,
+    sp: F,
 ) -> MeshedCShell
 where
     C: PolylineableCurve + 'a,
-    S: MeshableSurface + 'a,
+    S: PreMeshableSurface + 'a,
+    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Sync + Send,
 {
     let vertices = shell.vertices.clone();
     let tessellate_edge = |edge: &CompressedEdge<C>| {
@@ -163,7 +199,7 @@ where
                     true => Some(edges.get(edge_idx.index)?.curve.clone()),
                     false => Some(edges.get(edge_idx.index)?.curve.inverse()),
                 });
-            polyline.add_wire(surface, wire_iter)
+            polyline.add_wire(surface, wire_iter, &sp)
         }) {
             true => Some(trimming_tessellation(surface, &polyline, tol)),
             false => None,
@@ -194,8 +230,15 @@ struct Polyline {
 
 impl Polyline {
     /// add an wire into polyline
-    fn add_wire<S>(&mut self, surface: &S, mut wire: impl Iterator<Item = PolylineCurve>) -> bool
-    where S: MeshableSurface {
+    fn add_wire<S>(
+        &mut self,
+        surface: &S,
+        mut wire: impl Iterator<Item = PolylineCurve>,
+        sp: impl Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
+    ) -> bool
+    where
+        S: PreMeshableSurface,
+    {
         let mut counter = 0;
         let mut previous: Option<(f64, f64)> = None;
         let len = self.positions.len();
@@ -206,9 +249,7 @@ impl Polyline {
             counter += poly_edge.len();
             let mut hint = None;
             Vec::from(poly_edge).into_iter().all(|pt| {
-                hint = surface
-                    .search_parameter(pt, hint, 100)
-                    .or_else(|| surface.search_parameter(pt, None, 100));
+                hint = sp(surface, pt, hint);
                 if let (Some((ref mut hint, _)), Some(up), Some((previous, _))) =
                     (&mut hint, up, previous)
                 {
@@ -298,7 +339,7 @@ impl Polyline {
 
 /// Tessellates one surface trimmed by polyline.
 fn trimming_tessellation<S>(surface: &S, polyline: &Polyline, tol: f64) -> PolygonMesh
-where S: MeshableSurface {
+where S: PreMeshableSurface {
     let mut triangulation = Cdt::new();
     polyline.insert_to(&mut triangulation);
     insert_surface(&mut triangulation, surface, polyline, tol);
@@ -315,7 +356,7 @@ where S: MeshableSurface {
 /// Inserts parameter divisions into triangulation.
 fn insert_surface(
     triangulation: &mut Cdt,
-    surface: &impl MeshableSurface,
+    surface: &impl PreMeshableSurface,
     polyline: &Polyline,
     tol: f64,
 ) {
@@ -399,13 +440,13 @@ fn par_bench() {
 
     let instant = Instant::now();
     (0..100).for_each(|_| {
-        let _shell = shell_tessellation(&shell, 0.01);
+        let _shell = shell_tessellation(&shell, 0.01, by_search_parameter);
     });
     println!("{}ms", instant.elapsed().as_millis());
 
     let instant = Instant::now();
     (0..100).for_each(|_| {
-        let _shell = shell_tessellation_single_thread(&shell, 0.01);
+        let _shell = shell_tessellation_single_thread(&shell, 0.01, by_search_parameter);
     });
     println!("{}ms", instant.elapsed().as_millis());
 }
