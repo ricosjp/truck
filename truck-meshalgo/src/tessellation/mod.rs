@@ -14,7 +14,7 @@ mod meshables_traits {
         > PolylineableCurve for C
     {
     }
-    /// Gathered the traits used in tessellation.
+    /// Gathered the traits used in tessellation by [`MeshableShape`].
     pub trait MeshableSurface:
         ParametricSurface3D
         + ParameterDivision2D
@@ -31,6 +31,28 @@ mod meshables_traits {
         > MeshableSurface for S
     {
     }
+    /// Gathered the traits used in robust tessellation by [`RobustMeshableShape`].
+    pub trait RobustMeshableSurface:
+        ParametricSurface3D
+        + ParameterDivision2D
+        + SearchNearestParameter<D2, Point = Point3>
+        + Send
+        + Sync {
+    }
+    impl<
+            S: ParametricSurface3D
+                + ParameterDivision2D
+                + SearchNearestParameter<D2, Point = Point3>
+                + Send
+                + Sync,
+        > RobustMeshableSurface for S
+    {
+    }
+
+    pub(super) trait PreMeshableSurface:
+        ParametricSurface3D + ParameterDivision2D + Send + Sync {
+    }
+    impl<S: ParametricSurface3D + ParameterDivision2D + Send + Sync> PreMeshableSurface for S {}
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -44,7 +66,7 @@ mod meshables_traits {
         PolylineableCurve for C
     {
     }
-    /// Gathered the traits used in tessellation.
+    /// Gathered the traits used in tessellation by [`MeshableShape`].
     pub trait MeshableSurface:
         ParametricSurface3D + ParameterDivision2D + SearchParameter<D2, Point = Point3> {
     }
@@ -52,6 +74,18 @@ mod meshables_traits {
         MeshableSurface for S
     {
     }
+    /// Gathered the traits used in tessellation by [`RobustMeshableShape`].
+    pub trait RobustMeshableSurface:
+        ParametricSurface3D + ParameterDivision2D + SearchNearestParameter<D2, Point = Point3> {
+    }
+    impl<
+            S: ParametricSurface3D + ParameterDivision2D + SearchNearestParameter<D2, Point = Point3>,
+        > RobustMeshableSurface for S
+    {
+    }
+
+    pub(super) trait PreMeshableSurface: ParametricSurface3D + ParameterDivision2D {}
+    impl<S: ParametricSurface3D + ParameterDivision2D> PreMeshableSurface for S {}
 }
 
 pub use meshables_traits::*;
@@ -139,7 +173,7 @@ where CompressedShell<P, C, S>: MeshedShape
     }
 }
 
-/// Trait for tessellating `Shell` and `Solid` in `truck-modeling`.
+/// Trait for tessellating `Shell` and `Solid`.
 pub trait MeshableShape {
     /// Shape whose edges are made polylines and faces polygon surface.
     type MeshedShape: MeshedShape;
@@ -152,8 +186,13 @@ pub trait MeshableShape {
     ///
     /// # Remarks
     ///
-    /// The tessellated mesh is not necessarily closed even if `self` is `Solid`.
-    /// If you want to get closed mesh, use `OptimizationFilter::put_together_same_attrs`.
+    /// - The tessellated mesh is not necessarily closed even if `self` is `Solid`.
+    /// If you want to get closed mesh, use [`OptimizingFilter::put_together_same_attrs`].
+    /// - This method requires that the curve ride strictly on a surface. If not, try [`RobustMeshableShape`].
+    ///
+    /// [`OptimizingFilter::put_together_same_attrs`]: crate::filters::OptimizingFilter::put_together_same_attrs
+    ///
+    /// # Examples
     /// ```
     /// use truck_meshalgo::prelude::*;
     /// use truck_modeling::builder;
@@ -176,14 +215,124 @@ pub trait MeshableShape {
     fn triangulation(&self, tol: f64) -> Self::MeshedShape;
 }
 
+/// Trait for tessellating `Shell` and `Solid` in `truck-modeling`.
+pub trait RobustMeshableShape {
+    /// Shape whose edges are made polylines and faces polygon surface.
+    type MeshedShape: MeshedShape;
+    /// Tessellates shapes. The division of curves and surfaces are by `ParameterDivision1D` and `ParameterDivision2D`,
+    /// and the constrained Delauney triangulation is based on the crate [`spade`](https://crates.io/crates/spade).
+    ///
+    /// # Panics
+    ///
+    /// `tol` must be more than `TOLERANCE`.
+    ///
+    /// # Remarks
+    ///
+    /// Since polyline vertices are projected onto the surface, processing speed is often slower than with [`MeshableShape::triangulation`].
+    /// It also does not close the mesh of a solid even if one uses [`OptimizingFilter::put_together_same_attrs`].
+    ///
+    /// [`OptimizingFilter::put_together_same_attrs`]: crate::filters::OptimizingFilter::put_together_same_attrs
+    ///
+    /// # Examples
+    /// ```
+    /// use truck_meshalgo::prelude::*;
+    /// use truck_modeling::*;
+    /// use truck_topology::shell::ShellCondition;
+    ///
+    /// // manual modeling an open half cylinder
+    ///
+    /// // points
+    /// let p = [
+    ///     Point3::new(1.0, 0.0, 0.0),
+    ///     Point3::new(-1.0, 0.0, 0.0),
+    ///     Point3::new(1.0, 0.0, 1.0),
+    ///     Point3::new(-1.0, 0.0, 1.0),
+    /// ];
+    /// // vertices
+    /// let v = Vertex::news(&p);
+    /// // Curves that do not ride on a cylinder
+    /// let bsp0: Curve = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(3),
+    ///     vec![
+    ///         p[0],
+    ///         Point3::new(1.0, 4.0 / 3.0, 0.0),
+    ///         Point3::new(-1.0, 4.0 / 3.0, 0.0),
+    ///         p[1],
+    ///     ],
+    /// )
+    /// .into();
+    /// let bsp1: Curve = BSplineCurve::new(
+    ///     KnotVec::bezier_knot(3),
+    ///     vec![
+    ///         p[3],
+    ///         Point3::new(-1.0, 4.0 / 3.0, 1.0),
+    ///         Point3::new(1.0, 4.0 / 3.0, 1.0),
+    ///         p[2],
+    ///     ],
+    /// )
+    /// .into();
+    /// // wire
+    /// let w: Wire = vec![
+    ///     builder::line(&v[2], &v[0]),
+    ///     Edge::new(&v[0], &v[1], bsp0),
+    ///     builder::line(&v[1], &v[3]),
+    ///     Edge::new(&v[3], &v[2], bsp1),
+    /// ]
+    /// .into();
+    /// // revoluted curve
+    /// let surface_raw = RevolutedCurve::by_revolution(
+    ///     Curve::Line(Line(p[2], p[0])),
+    ///     Point3::origin(),
+    ///     Vector3::unit_z(),
+    /// );
+    /// let surface: Surface = Processor::new(surface_raw).into();
+    /// // shell
+    /// let shell: Shell = vec![Face::new(vec![w], surface)].into();
+    ///
+    /// // Simple triangulation fails since some edges do not ride on a cylinder
+    /// let poly_shell = shell.triangulation(0.01);
+    /// assert!(poly_shell[0].get_surface().is_none());
+    ///
+    /// // Robust triangulation!
+    /// let poly_shell = shell.robust_triangulation(0.01);
+    /// let poly = poly_shell[0].get_surface().unwrap();
+    /// assert!(!poly.positions().is_empty());
+    /// ```
+    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape;
+}
+
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C, S> {
     type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
     fn triangulation(&self, tol: f64) -> Self::MeshedShape {
         nonpositive_tolerance!(tol);
         #[cfg(not(target_arch = "wasm32"))]
-        let res = triangulation::shell_tessellation(self, tol);
+        let res = triangulation::shell_tessellation(self, tol, triangulation::by_search_parameter);
         #[cfg(target_arch = "wasm32")]
-        let res = triangulation::shell_tessellation_single_thread(self, tol);
+        let res = triangulation::shell_tessellation_single_thread(
+            self,
+            tol,
+            triangulation::by_search_parameter,
+        );
+        res
+    }
+}
+
+impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Shell<Point3, C, S> {
+    type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
+    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
+        nonpositive_tolerance!(tol);
+        #[cfg(not(target_arch = "wasm32"))]
+        let res = triangulation::shell_tessellation(
+            self,
+            tol,
+            triangulation::by_search_nearest_parameter,
+        );
+        #[cfg(target_arch = "wasm32")]
+        let res = triangulation::shell_tessellation_single_thread(
+            self,
+            tol,
+            triangulation::by_search_nearest_parameter,
+        );
         res
     }
 }
@@ -200,11 +349,33 @@ impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C
     }
 }
 
+impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Solid<Point3, C, S> {
+    type MeshedShape = Solid<Point3, PolylineCurve, Option<PolygonMesh>>;
+    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
+        let boundaries = self
+            .boundaries()
+            .iter()
+            .map(|shell| shell.robust_triangulation(tol))
+            .collect::<Vec<_>>();
+        Solid::new(boundaries)
+    }
+}
+
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedShell<Point3, C, S> {
     type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
     fn triangulation(&self, tol: f64) -> Self::MeshedShape {
         nonpositive_tolerance!(tol);
-        triangulation::cshell_tessellation(self, tol)
+        triangulation::cshell_tessellation(self, tol, triangulation::by_search_parameter)
+    }
+}
+
+impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape
+    for CompressedShell<Point3, C, S>
+{
+    type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
+    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
+        nonpositive_tolerance!(tol);
+        triangulation::cshell_tessellation(self, tol, triangulation::by_search_nearest_parameter)
     }
 }
 
@@ -215,6 +386,20 @@ impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedSolid
             .boundaries
             .iter()
             .map(|shell| shell.triangulation(tol))
+            .collect::<Vec<_>>();
+        CompressedSolid { boundaries }
+    }
+}
+
+impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape
+    for CompressedSolid<Point3, C, S>
+{
+    type MeshedShape = CompressedSolid<Point3, PolylineCurve, Option<PolygonMesh>>;
+    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
+        let boundaries = self
+            .boundaries
+            .iter()
+            .map(|shell| shell.robust_triangulation(tol))
             .collect::<Vec<_>>();
         CompressedSolid { boundaries }
     }
