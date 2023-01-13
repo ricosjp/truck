@@ -83,7 +83,7 @@ change-log:
     variables:
         GIT_STRATEGY: clone
     before_script:
-        - sudo sed -i.bak -e "s%http://us.archive.ubuntu.com/ubuntu/%http://ftp.jaist.ac.jp/pub/Linux/ubuntu/%g" /etc/apt/sources.list
+        - sed -i.bak -e "s%http://us.archive.ubuntu.com/ubuntu/%http://ftp.jaist.ac.jp/pub/Linux/ubuntu/%g" /etc/apt/sources.list
         - apt-get update && apt-get install git -y
         - git fetch
     script:
