@@ -401,22 +401,24 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 pub fn try_attach_plane(wires: &[Wire]) -> Result<Face> {
     let pts = wires
         .iter()
-        .flatten()
-        .flat_map(|edge| {
-            edge.oriented_curve()
-                .lift_up()
-                .control_points()
-                .clone()
-                .into_iter()
-                .map(|pt| pt.to_point())
+        .map(|wire| {
+            wire.edge_iter()
+                .flat_map(|edge| {
+                    edge.oriented_curve()
+                        .lift_up()
+                        .control_points()
+                        .clone()
+                        .into_iter()
+                        .map(|pt| pt.to_point())
+                })
+                .collect()
         })
         .collect::<Vec<_>>();
     let plane = match geom_impls::attach_plane(pts) {
         Some(got) => got,
         None => return Err(Error::WireNotInOnePlane),
     };
-    let surface = Surface::Plane(plane);
-    Ok(Face::try_new(wires.to_owned(), surface)?)
+    Ok(Face::try_new(wires.to_owned(), plane.into())?)
 }
 
 /// Returns another topology whose points, curves, and surfaces are cloned.

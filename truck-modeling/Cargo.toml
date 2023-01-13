@@ -1,6 +1,6 @@
 [package]
 name = "truck-modeling"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "integrated modeling algorithms by geometry and topology"
