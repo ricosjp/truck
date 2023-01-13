@@ -66,7 +66,9 @@ pub(super) fn circle_arc(
 fn closed_polyline_orientation<'a>(pts: impl IntoIterator<Item = &'a Vec<Point3>>) -> bool {
     pts.into_iter()
         .flat_map(|vec| vec.windows(2))
-        .fold(0.0, |sum, p| sum + (p[1][0] + p[0][0]) * (p[1][1] - p[0][1]))
+        .fold(0.0, |sum, p| {
+            sum + (p[1][0] + p[0][0]) * (p[1][1] - p[0][1])
+        })
         >= 0.0
 }
 
