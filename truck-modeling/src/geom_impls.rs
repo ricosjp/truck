@@ -63,20 +63,25 @@ pub(super) fn circle_arc(
     curve
 }
 
-fn closed_polyline_orientation(pts: &[Point3]) -> bool {
-    pts.windows(2).fold(0.0, |sum, pt| {
-        sum + (pt[1][0] + pt[0][0]) * (pt[1][1] - pt[0][1])
-    }) >= 0.0
+fn closed_polyline_orientation<'a>(pts: impl IntoIterator<Item = &'a Vec<Point3>>) -> bool {
+    pts.into_iter()
+        .flat_map(|vec| vec.windows(2))
+        .fold(0.0, |sum, p| sum + (p[1][0] + p[0][0]) * (p[1][1] - p[0][1]))
+        >= 0.0
 }
 
-pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<Plane> {
+pub(super) fn attach_plane(mut pts: Vec<Vec<Point3>>) -> Option<Plane> {
     let center = pts
         .iter()
+        .flatten()
         .fold(Point3::origin(), |sum, pt| sum + pt.to_vec())
         / pts.len() as f64;
-    let normal = pts.windows(2).fold(Vector3::zero(), |sum, pt| {
-        sum + (pt[0] - center).cross(pt[1] - center)
-    });
+    let normal = pts
+        .iter()
+        .flat_map(|vec| vec.windows(2))
+        .fold(Vector3::zero(), |sum, p| {
+            sum + (p[0] - center).cross(p[1] - center)
+        });
     let n = match normal.so_small() {
         true => return None,
         false => normal.normalize(),
@@ -87,8 +92,9 @@ pub(super) fn attach_plane(mut pts: Vec<Point3>) -> Option<Plane> {
     };
     let mat: Matrix4 = Matrix3::from_cols(a, n.cross(a), n).into();
     pts.iter_mut()
+        .flatten()
         .for_each(|pt| *pt = mat.invert().unwrap().transform_point(*pt));
-    let bnd_box: BoundingBox<Point3> = pts.iter().collect();
+    let bnd_box: BoundingBox<Point3> = pts.iter().flatten().collect();
     let diag = bnd_box.diagonal();
     if !diag[2].so_small() {
         return None;
@@ -193,18 +199,22 @@ mod geom_impl_test {
         let c = Point3::new(0.0, 2.0 * random::<f64>() - 1.0, 0.0);
         let axis = Vector3::new(c[1], 1.0, 0.0).normalize();
 
-        let mut pts = Vec::new();
-        pts.extend((0..=N).map(|i| {
-            let div = i as f64 / N as f64;
-            let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
-            pt + rot * (pt - c)
-        }));
-        let mid = c - 0.5 * (pt - c);
-        pts.extend((0..=N).map(|i| {
-            let div = (N - i) as f64 / N as f64;
-            let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
-            mid + rot * (mid - c)
-        }));
+        let pts0 = (0..=N)
+            .map(|i| {
+                let angle = Rad(2.0 * PI * i as f64 / N as f64);
+                let rot = Matrix3::from_axis_angle(axis, angle);
+                pt + rot * (pt - c)
+            })
+            .collect();
+        let mid = pt.midpoint(c);
+        let pts1 = (0..=N)
+            .map(|i| {
+                let angle = Rad(2.0 * PI * (N * 3 / 2 - i) as f64 / N as f64);
+                let rot = Matrix3::from_axis_angle(axis, angle);
+                pt + rot * (mid - c)
+            })
+            .collect();
+        let mut pts = vec![pts0, pts1];
         let surface = attach_plane(pts.clone()).unwrap();
         let n = surface.normal();
         assert!(
@@ -213,7 +223,7 @@ mod geom_impl_test {
             axis,
             n
         );
-        pts.reverse();
+        pts.iter_mut().for_each(|vec| vec.reverse());
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
         assert!(
@@ -231,18 +241,22 @@ mod geom_impl_test {
         let c = Point3::new(0.0, 0.0, 0.0);
         let axis = Vector3::unit_z();
 
-        let mut pts = Vec::new();
-        pts.extend((0..=N).map(|i| {
-            let div = i as f64 / N as f64;
-            let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
-            pt + rot * (pt - c)
-        }));
-        let mid = c - 0.5 * (pt - c);
-        pts.extend((0..=N).map(|i| {
-            let div = (N - i) as f64 / N as f64;
-            let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
-            mid + rot * (mid - c)
-        }));
+        let pts0 = (0..=N)
+            .map(|i| {
+                let angle = Rad(2.0 * PI * i as f64 / N as f64);
+                let rot = Matrix3::from_axis_angle(axis, angle);
+                pt + rot * (pt - c)
+            })
+            .collect();
+        let mid = pt.midpoint(c);
+        let pts1 = (0..=N)
+            .map(|i| {
+                let angle = Rad(2.0 * PI * (N * 3 / 2 - i) as f64 / N as f64);
+                let rot = Matrix3::from_axis_angle(axis, angle);
+                mid + rot * (mid - c)
+            })
+            .collect();
+        let mut pts = vec![pts0, pts1];
         let surface = attach_plane(pts.clone()).unwrap();
         let n = surface.normal();
         assert!(
@@ -251,7 +265,7 @@ mod geom_impl_test {
             axis,
             n
         );
-        pts.reverse();
+        pts.iter_mut().for_each(|vec| vec.reverse());
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
         assert!(
@@ -269,18 +283,22 @@ mod geom_impl_test {
         let c = Point3::new(0.0, 0.0, 0.0);
         let axis = -Vector3::unit_z();
 
-        let mut pts = Vec::new();
-        pts.extend((0..=N).map(|i| {
-            let div = i as f64 / N as f64;
-            let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
-            pt + rot * (pt - c)
-        }));
-        let mid = c - 0.5 * (pt - c);
-        pts.extend((0..=N).map(|i| {
-            let div = (N - i) as f64 / N as f64;
-            let rot = Matrix3::from_axis_angle(axis, Rad(2.0 * PI * div));
-            mid + rot * (mid - c)
-        }));
+        let pts0 = (0..=N)
+            .map(|i| {
+                let angle = Rad(2.0 * PI * i as f64 / N as f64);
+                let rot = Matrix3::from_axis_angle(axis, angle);
+                pt + rot * (pt - c)
+            })
+            .collect();
+        let mid = pt.midpoint(c);
+        let pts1 = (0..=N)
+            .map(|i| {
+                let angle = Rad(2.0 * PI * (N * 3 / 2 - i) as f64 / N as f64);
+                let rot = Matrix3::from_axis_angle(axis, angle);
+                mid + rot * (mid - c)
+            })
+            .collect();
+        let mut pts = vec![pts0, pts1];
         let surface = attach_plane(pts.clone()).unwrap();
         let n = surface.normal();
         assert!(
@@ -289,7 +307,7 @@ mod geom_impl_test {
             axis,
             n
         );
-        pts.reverse();
+        pts.iter_mut().for_each(|vec| vec.reverse());
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
         assert!(

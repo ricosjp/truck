@@ -39,7 +39,8 @@ Step input API is W.I.P. and hidden.
 - Refactoring `Search(Nearest)Parameter`.
 
 ### Bug fix
-  
+
+- The orientation of the normal of `builder::try_attach_plane`.
 - `Shell::singular_vertices`
 - binary STL output of `PolygonMesh`
 
