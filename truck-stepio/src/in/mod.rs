@@ -44,6 +44,7 @@ pub struct Table {
     pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
     pub uniform_surface: HashMap<u64, UniformSurfaceHolder>,
     pub quasi_uniform_surface: HashMap<u64, QuasiUniformSurfaceHolder>,
+    pub bezier_surface: HashMap<u64, BezierSurfaceHolder>,
     pub surface_of_revolution: HashMap<u64, SurfaceOfRevolutionHolder>,
 
     // topology
@@ -282,6 +283,25 @@ impl Table {
                             self.quasi_uniform_surface.insert(
                                 *id,
                                 QuasiUniformSurfaceHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    u_degree: Deserialize::deserialize(&params[1])?,
+                                    v_degree: Deserialize::deserialize(&params[2])?,
+                                    control_points_list: Deserialize::deserialize(&params[3])?,
+                                    surface_form: Deserialize::deserialize(&params[4])?,
+                                    u_closed: deserialize_logical(&params[5])?,
+                                    v_closed: deserialize_logical(&params[6])?,
+                                    self_intersect: deserialize_logical(&params[7])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "BEZIER_SURFACE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 8 {
+                            self.bezier_surface.insert(
+                                *id,
+                                BezierSurfaceHolder {
                                     label: Deserialize::deserialize(&params[0])?,
                                     u_degree: Deserialize::deserialize(&params[1])?,
                                     v_degree: Deserialize::deserialize(&params[2])?,
@@ -1287,6 +1307,9 @@ pub enum SurfaceAny {
     #[holder(field = quasi_uniform_surface)]
     QuasiUniformSurface(QuasiUniformSurface),
     #[holder(use_place_holder)]
+    #[holder(field = bezier_surface)]
+    BezierSurface(BezierSurface),
+    #[holder(use_place_holder)]
     #[holder(field = surface_of_revolution)]
     SurfaceOfRevolution(SurfaceOfRevolution),
 }
@@ -1308,6 +1331,7 @@ impl TryFrom<&SurfaceAny> for Surface {
             BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
             UniformSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
             QuasiUniformSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
+            BezierSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
             SurfaceOfRevolution(sr) => {
                 Ok(Self::SweptCurve(SweptCurve::RevolutedCurve(sr.try_into()?)))
             }
@@ -1494,7 +1518,8 @@ pub struct QuasiUniformSurface {
 impl TryFrom<&QuasiUniformSurface> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
     fn try_from(surface: &QuasiUniformSurface) -> std::result::Result<Self, ExpressParseError> {
-        let uknots = quasi_uniform_knots(surface.control_points_list.len(), surface.u_degree as usize);
+        let uknots =
+            quasi_uniform_knots(surface.control_points_list.len(), surface.u_degree as usize);
         let first = surface
             .control_points_list
             .first()
@@ -1506,6 +1531,35 @@ impl TryFrom<&QuasiUniformSurface> for BSplineSurface<Point3> {
             .map(|vec| vec.iter().map(Point3::from).collect())
             .collect();
         Ok(Self::try_new((uknots, vknots), ctrls)?)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = bezier_surface)]
+#[holder(generate_deserialize)]
+pub struct BezierSurface {
+    label: String,
+    u_degree: i64,
+    v_degree: i64,
+    #[holder(use_place_holder)]
+    control_points_list: Vec<Vec<CartesianPoint>>,
+    surface_form: BSplineSurfaceForm,
+    u_closed: Logical,
+    v_closed: Logical,
+    self_intersect: Logical,
+}
+
+impl From<&BezierSurface> for BSplineSurface<Point3> {
+    fn from(value: &BezierSurface) -> Self {
+        let uknots = KnotVec::bezier_knot(value.u_degree as usize);
+        let vknots = KnotVec::bezier_knot(value.v_degree as usize);
+        let ctrls = value
+            .control_points_list
+            .iter()
+            .map(|vec| vec.iter().map(Point3::from).collect())
+            .collect();
+        Self::new((uknots, vknots), ctrls)
     }
 }
 
