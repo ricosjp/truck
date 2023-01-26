@@ -49,6 +49,7 @@ fn read() {
 #24 = SPHERICAL_SURFACE('SphericalSurface', #9, 5.0);
 #25 = CYLINDRICAL_SURFACE('CylindricalSurface', #9, 5.0);
 #26 = UNIFORM_SURFACE('UniformSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
+#27 = QUASI_UNIFORM_SURFACE('QuasiUniformSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
 
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
@@ -369,6 +370,35 @@ ENDSEC;
             26,
             UniformSurfaceHolder {
                 label: "UniformSurface".to_string(),
+                u_degree: 2,
+                v_degree: 2,
+                control_points_list: vec![
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                ],
+                surface_form: BSplineSurfaceForm::Unspecified,
+                u_closed: Logical::Unknown,
+                v_closed: Logical::Unknown,
+                self_intersect: Logical::Unknown,
+            },
+        )]),
+        quasi_uniform_surface: HashMap::from_iter(vec![(
+            27,
+            QuasiUniformSurfaceHolder {
+                label: "QuasiUniformSurface".to_string(),
                 u_degree: 2,
                 v_degree: 2,
                 control_points_list: vec![
