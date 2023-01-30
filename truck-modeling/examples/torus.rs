@@ -34,5 +34,5 @@ fn main() {
     };
     let torus = modeling(radius0, radius1);
     let json = serde_json::to_vec_pretty(&torus).unwrap();
-    std::fs::write(filename, &json).unwrap();
+    std::fs::write(filename, json).unwrap();
 }

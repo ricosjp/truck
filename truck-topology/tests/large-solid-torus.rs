@@ -9,7 +9,7 @@ type Solid = truck_topology::Solid<(), (), ()>;
 fn large_torus() -> Solid {
     const N: usize = 1_000;
 
-    let v = Vertex::news(&[(); N * N]);
+    let v = Vertex::news([(); N * N]);
     let row_edge: Vec<Vec<Edge>> = (0..N)
         .map(|i| {
             (0..N)

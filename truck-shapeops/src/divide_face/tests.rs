@@ -26,7 +26,7 @@ fn parabola(
 
 #[test]
 fn divide_plane_test() {
-    let v = Vertex::news(&[
+    let v = Vertex::news([
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(0.0, 4.0, 0.0),
         Point3::new(-1.0, 1.0, 0.0),

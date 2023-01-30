@@ -1155,7 +1155,7 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug
 
 #[test]
 fn invert_mapped_face() {
-    let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
+    let v = Vertex::news([0, 1, 2, 3, 4, 5, 6]);
     let wire0 = Wire::from(vec![
         Edge::new(&v[0], &v[1], 100),
         Edge::new(&v[1], &v[2], 200),

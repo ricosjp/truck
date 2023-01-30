@@ -76,7 +76,7 @@ impl StructuredMesh {
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh {
         StructuredMesh::try_from_positions_and_normals(positions, normals)
-            .unwrap_or_else(|e| panic!("{:?}", e))
+            .unwrap_or_else(|e| panic!("{e:?}"))
     }
     /// Creates a structured polygon without uv divisions.
     #[inline(always)]
@@ -112,7 +112,7 @@ impl StructuredMesh {
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh {
         StructuredMesh::try_new(positions, uv_division, normals)
-            .unwrap_or_else(|e| panic!("{:?}", e))
+            .unwrap_or_else(|e| panic!("{e:?}"))
     }
     /// Creates new structured mesh.
     /// Checks whether the size of vectors are compatible before creation.

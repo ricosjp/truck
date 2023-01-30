@@ -26,5 +26,5 @@ fn main() {
     });
 
     let json = serde_json::to_vec_pretty(&and).unwrap();
-    std::fs::write("punched-cube-shapeops.json", &json).unwrap();
+    std::fs::write("punched-cube-shapeops.json", json).unwrap();
 }

@@ -21,7 +21,7 @@ fn extract_boundaries1() {
     ]);
     let boundaries = faces.extract_boundaries();
     assert_eq!(boundaries.len(), 2);
-    println!("{:?}", boundaries);
+    println!("{boundaries:?}");
     for a in boundaries[0].windows(2) {
         if a[0] < 4 {
             assert!(a[0] + 1 == a[1] || a[1] + 3 == a[0]);

@@ -63,5 +63,5 @@ fn bottle(height: f64, width: f64, thickness: f64) -> Solid {
 fn main() {
     let bottle = bottle(1.4, 1.0, 0.6);
     let json = serde_json::to_vec_pretty(&bottle).unwrap();
-    std::fs::write("bottle.json", &json).unwrap();
+    std::fs::write("bottle.json", json).unwrap();
 }

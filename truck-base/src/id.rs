@@ -40,7 +40,7 @@ impl<T> Debug for ID<T> {
 fn debug_backward_compatibility() {
     let x: f64 = 3.0;
     let id = ID::new(&x);
-    let a = format!("{:?}", id);
+    let a = format!("{id:?}");
     let b = format!("{:p}", &x);
     assert_eq!(a, b);
 }

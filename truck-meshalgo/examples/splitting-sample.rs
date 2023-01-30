@@ -25,12 +25,12 @@ fn main() {
         .unwrap();
     for (i, faces) in planes_parts.into_iter().enumerate() {
         let mesh = planes.create_mesh_by_face_indices(&faces);
-        let file = std::fs::File::create(&format!("output/planes_parts_{}.obj", i)).unwrap();
+        let file = std::fs::File::create(&format!("output/planes_parts_{i}.obj")).unwrap();
         obj::write(&mesh, file).unwrap();
     }
     for (i, faces) in others_parts.into_iter().enumerate() {
         let mesh = others.create_mesh_by_face_indices(&faces);
-        let file = std::fs::File::create(&format!("output/others_parts_{}.obj", i)).unwrap();
+        let file = std::fs::File::create(&format!("output/others_parts_{i}.obj")).unwrap();
         obj::write(&mesh, file).unwrap();
     }
 }

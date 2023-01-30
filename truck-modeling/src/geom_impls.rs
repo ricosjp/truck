@@ -143,11 +143,7 @@ mod geom_impl_test {
             let vec = pt - origin;
             assert!(
                 Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
-                "origin: {:?}\naxis: {:?}\nangle: {:?}\npt0: {:?}",
-                origin,
-                axis,
-                angle,
-                pt0
+                "origin: {origin:?}\naxis: {axis:?}\nangle: {angle:?}\npt0: {pt0:?}"
             );
         }
     }
@@ -167,11 +163,7 @@ mod geom_impl_test {
             let vec = pt - origin;
             assert!(
                 Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
-                "origin: {:?}\naxis: {:?}\nangle: {:?}\npt0: {:?}",
-                origin,
-                axis,
-                angle,
-                pt0
+                "origin: {origin:?}\naxis: {axis:?}\nangle: {angle:?}\npt0: {pt0:?}"
             );
         }
     }
@@ -190,7 +182,7 @@ mod geom_impl_test {
             let pt = Point3::from_homogeneous(curve.subs(t));
             let vec = pt - origin;
             assert_near2!(vec.dot(axis), vec0.dot(axis));
-            assert!(pt[1] >= 0.0, "angle: {:?}", angle);
+            assert!(pt[1] >= 0.0, "angle: {angle:?}");
         }
     }
 
@@ -221,18 +213,14 @@ mod geom_impl_test {
         let n = surface.normal();
         assert!(
             n.near(&axis),
-            "rotation axis: {:?}\nsurface normal: {:?}",
-            axis,
-            n
+            "rotation axis: {axis:?}\nsurface normal: {n:?}"
         );
         pts.iter_mut().for_each(|vec| vec.reverse());
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
         assert!(
             (-n).near(&axis),
-            "inversed failed: rotation axis: {:?}\nsurface normal: {:?}",
-            axis,
-            n
+            "inversed failed: rotation axis: {axis:?}\nsurface normal: {n:?}"
         );
     }
 
@@ -263,18 +251,14 @@ mod geom_impl_test {
         let n = surface.normal();
         assert!(
             n.near(&axis),
-            "rotation axis: {:?}\nsurface normal: {:?}",
-            axis,
-            n
+            "rotation axis: {axis:?}\nsurface normal: {n:?}"
         );
         pts.iter_mut().for_each(|vec| vec.reverse());
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
         assert!(
             (-n).near(&axis),
-            "inversed failed: rotation axis: {:?}\nsurface normal: {:?}",
-            axis,
-            n
+            "inversed failed: rotation axis: {axis:?}\nsurface normal: {n:?}"
         );
     }
 
@@ -305,18 +289,14 @@ mod geom_impl_test {
         let n = surface.normal();
         assert!(
             n.near(&axis),
-            "rotation axis: {:?}\nsurface normal: {:?}",
-            axis,
-            n
+            "rotation axis: {axis:?}\nsurface normal: {n:?}"
         );
         pts.iter_mut().for_each(|vec| vec.reverse());
         let surface = attach_plane(pts).unwrap();
         let n = surface.normal();
         assert!(
             (-n).near(&axis),
-            "inversed failed: rotation axis: {:?}\nsurface normal: {:?}",
-            axis,
-            n
+            "inversed failed: rotation axis: {axis:?}\nsurface normal: {n:?}"
         );
     }
 }

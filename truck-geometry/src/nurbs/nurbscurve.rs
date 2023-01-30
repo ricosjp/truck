@@ -631,6 +631,6 @@ fn test_parameter_division() {
         let value_middle = pt0.midpoint(pt1);
         let param_middle = curve.subs((div[i - 1] + div[i]) / 2.0);
         let dist = value_middle.distance(param_middle);
-        assert!(dist < tol, "large distance: {}", dist);
+        assert!(dist < tol, "large distance: {dist}");
     }
 }

@@ -31,10 +31,10 @@ fn main() {
 
     println!("--- Executing Status ---");
     println!("happy-buddha");
-    println!("quadrangle:   {}\n", first_quads);
+    println!("quadrangle:   {first_quads}\n");
     println!("requadranglated-buddha");
-    println!("triangle:     {}", tris);
-    println!("quadrangle:   {}\n", quads);
+    println!("triangle:     {tris}");
+    println!("quadrangle:   {quads}\n");
     println!(
         "file reading: {}.{:03} sec",
         read_time.as_secs(),

@@ -3,7 +3,7 @@ use truck_topology::{shell::ShellCondition, *};
 // Cases where truck version <= 0.4.0 fails
 #[test]
 fn singular_vertices_in_certain_boundaries() {
-    let v = Vertex::news(&[(); 12]);
+    let v = Vertex::news([(); 12]);
     let edge = [
         Edge::new(&v[0], &v[1], ()),
         Edge::new(&v[1], &v[2], ()),

@@ -55,5 +55,5 @@ fn main() {
     shell.extend(torus);
     let solid = Solid::new(vec![shell]);
     let json = serde_json::to_vec_pretty(&solid).unwrap();
-    std::fs::write("torus-punched-cube.json", &json).unwrap();
+    std::fs::write("torus-punched-cube.json", json).unwrap();
 }
