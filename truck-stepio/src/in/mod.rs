@@ -41,6 +41,7 @@ pub struct Table {
     pub plane: HashMap<u64, PlaneHolder>,
     pub spherical_surface: HashMap<u64, SphericalSurfaceHolder>,
     pub cylindrical_surface: HashMap<u64, CylindricalSurfaceHolder>,
+    pub toroidal_surface: HashMap<u64, ToroidalSurfaceHolder>,
     pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
     pub uniform_surface: HashMap<u64, UniformSurfaceHolder>,
     pub quasi_uniform_surface: HashMap<u64, QuasiUniformSurfaceHolder>,
@@ -233,6 +234,10 @@ impl Table {
                 "CYLINDRICAL_SURFACE" => {
                     self.cylindrical_surface
                         .insert(*id, CylindricalSurfaceHolder::deserialize(record)?);
+                }
+                "TOROIDAL_SURFACE" => {
+                    self.toroidal_surface
+                        .insert(*id, ToroidalSurfaceHolder::deserialize(record)?);
                 }
                 "B_SPLINE_SURFACE_WITH_KNOTS" => {
                     if let Parameter::List(params) = &record.parameter {
@@ -1298,6 +1303,9 @@ pub enum SurfaceAny {
     #[holder(field = cylindrical_surface)]
     CylindricalSurface(CylindricalSurface),
     #[holder(use_place_holder)]
+    #[holder(field = toroidal_surface)]
+    ToroidalSurface(ToroidalSurface),
+    #[holder(use_place_holder)]
     #[holder(field = b_spline_surface_with_knots)]
     BSplineSurfaceWithKnots(BSplineSurfaceWithKnots),
     #[holder(use_place_holder)]
@@ -1328,6 +1336,9 @@ impl TryFrom<&SurfaceAny> for Surface {
             CylindricalSurface(cs) => Ok(Self::ElementarySurface(
                 ElementarySurface::CylindricalSurface(cs.into()),
             )),
+            ToroidalSurface(ts) => Ok(Self::ElementarySurface(ElementarySurface::ToroidalSurface(
+                ts.into(),
+            ))),
             BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
             UniformSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
             QuasiUniformSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
@@ -1400,6 +1411,43 @@ impl From<&CylindricalSurface> for RevolutedCurve<truck_geometry::Line<Point3>> 
         let radius = cs.radius;
         let p = center + x * radius;
         RevolutedCurve::by_revolution(Line(p, p + z), center, z)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = toroidal_surface)]
+#[holder(generate_deserialize)]
+pub struct ToroidalSurface {
+    label: String,
+    #[holder(use_place_holder)]
+    position: Axis2Placement3d,
+    major_radius: f64,
+    minor_radius: f64,
+}
+
+impl From<&ToroidalSurface> for alias::ToroidalSurface {
+    fn from(
+        ToroidalSurface {
+            position,
+            major_radius,
+            minor_radius,
+            ..
+        }: &ToroidalSurface,
+    ) -> Self {
+        let mat = Matrix4::from(position);
+        let mat0 = Matrix4::from_translation(Vector3::unit_x() * *major_radius)
+            * Matrix4::from_scale(*minor_radius);
+        let mut minor_circle =
+            Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)));
+        minor_circle.transform_by(mat0);
+        let mut res = Processor::new(RevolutedCurve::by_revolution(
+            minor_circle,
+            Point3::origin(),
+            Vector3::unit_z(),
+        ));
+        res.transform_by(mat);
+        res
     }
 }
 

@@ -51,6 +51,7 @@ fn read() {
 #26 = UNIFORM_SURFACE('UniformSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
 #27 = QUASI_UNIFORM_SURFACE('QuasiUniformSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
 #28 = BEZIER_SURFACE('BezierSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
+#29 = TOROIDAL_SURFACE('ToroidalSurface', #9, 5.0, 2.0);
 
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
@@ -452,6 +453,15 @@ ENDSEC;
                 u_closed: Logical::Unknown,
                 v_closed: Logical::Unknown,
                 self_intersect: Logical::Unknown,
+            },
+        )]),
+        toroidal_surface: HashMap::from_iter(vec![(
+            29,
+            ToroidalSurfaceHolder {
+                label: "ToroidalSurface".to_string(),
+                position: PlaceHolder::Ref(Name::Entity(9)),
+                major_radius: 5.0,
+                minor_radius: 2.0,
             },
         )]),
 
