@@ -111,8 +111,7 @@ impl StructuredMesh {
         uv_division: (Vec<f64>, Vec<f64>),
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh {
-        StructuredMesh::try_new(positions, uv_division, normals)
-            .unwrap_or_else(|e| panic!("{e:?}"))
+        StructuredMesh::try_new(positions, uv_division, normals).unwrap_or_else(|e| panic!("{e:?}"))
     }
     /// Creates new structured mesh.
     /// Checks whether the size of vectors are compatible before creation.

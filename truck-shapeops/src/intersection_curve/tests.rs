@@ -47,9 +47,7 @@ mod double_projection_tests {
             let t = i as f64;
             let p = Point3::origin() + t * n;
             let (q, p0, p1) = double_projection(&plane0, None, &plane1, None, p, n, 100)
-                .unwrap_or_else(|| {
-                    panic!("plane0: {plane0:?}\nplane1: {plane1:?}\n p: {p:?}")
-                });
+                .unwrap_or_else(|| panic!("plane0: {plane0:?}\nplane1: {plane1:?}\n p: {p:?}"));
             assert_near!(q, plane0.subs(p0.x, p0.y));
             assert_near!(q, plane1.subs(p1.x, p1.y));
             if let Some(o) = o {

@@ -63,9 +63,7 @@ fn main() {
                 "web",
                 "--out-dir",
                 &output_dir,
-                &format!(
-                    "target/wasm32-unknown-unknown/release/examples/{dir}.wasm",
-                ),
+                &format!("target/wasm32-unknown-unknown/release/examples/{dir}.wasm",),
             ])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())

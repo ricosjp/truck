@@ -56,8 +56,6 @@ fn parse_solids() {
     let step_string =
         CompleteStepDisplay::new(StepModels::from_iter(&solids), Default::default()).to_string();
     ruststep::parser::parse(&step_string).unwrap_or_else(|e| {
-        panic!(
-            "failed to parse step\n[Error Message]\n{e}[STEP file]\n{step_string}"
-        )
+        panic!("failed to parse step\n[Error Message]\n{e}[STEP file]\n{step_string}")
     });
 }

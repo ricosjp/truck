@@ -63,9 +63,7 @@ fn exec_polycurve_snp_on_curve() -> bool {
             }
         },
         None => {
-            eprintln!(
-                "not converge\npolynomial: {poly:?}\nt: {t:?}\nhint: {hint:?}"
-            );
+            eprintln!("not converge\npolynomial: {poly:?}\nt: {t:?}\nhint: {hint:?}");
             false
         }
     }
