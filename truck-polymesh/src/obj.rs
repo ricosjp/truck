@@ -57,7 +57,7 @@ pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<()> {
 pub fn write_vec<W: Write>(mesh: &[PolygonMesh], writer: W) -> Result<()> {
     let mut writer = BufWriter::new(writer);
     for (i, mesh) in mesh.iter().enumerate() {
-        writer.write_fmt(format_args!("g {}\n", i))?;
+        writer.write_fmt(format_args!("g {i}\n"))?;
         sub_write(mesh, &mut writer)?;
     }
     Ok(())

@@ -16,7 +16,7 @@ impl StructuredMesh {
     /// Creates a structured polygon without `uv_division` and `normal`.
     #[inline(always)]
     pub fn from_positions(positions: Vec<Vec<Point3>>) -> StructuredMesh {
-        StructuredMesh::try_from_positions(positions).unwrap_or_else(|e| panic!("{:?}", e))
+        StructuredMesh::try_from_positions(positions).unwrap_or_else(|e| panic!("{e:?}"))
     }
     /// Creates a structured polygon without `uv_division` and `normal`.
     #[inline(always)]
@@ -41,7 +41,7 @@ impl StructuredMesh {
         (u_div, v_div): (Vec<f64>, Vec<f64>),
     ) -> StructuredMesh {
         StructuredMesh::try_from_positions_and_uvs(positions, (u_div, v_div))
-            .unwrap_or_else(|e| panic!("{:?}", e))
+            .unwrap_or_else(|e| panic!("{e:?}"))
     }
 
     /// Creates a structured polygon without normals.

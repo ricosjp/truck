@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Parse of `B_SPLINE_SURFACE`s in STEP.
 - Implement robust meshing by `SearchNearestParameter`.
 - Remove invertible from tessellating traits.
 - Add "periodic" identifer to `ParametricCurve` and `ParametricSurface`.

@@ -9,7 +9,7 @@ impl<V: Copy + Debug, A: Attributes<V>> PolygonMesh<V, A> {
     /// # Remarks
     /// This method does not check whether the normal is normalized or not.
     pub fn new(attributes: A, faces: Faces<V>) -> Self {
-        Self::try_new(attributes, faces).unwrap_or_else(|e| panic!("{:?}", e))
+        Self::try_new(attributes, faces).unwrap_or_else(|e| panic!("{e:?}"))
     }
 
     /// complete constructor
@@ -307,7 +307,7 @@ impl<'a, V: Copy + Debug, A: Attributes<V>> Drop for PolygonMeshEditor<'a, V, A>
     #[inline(always)]
     fn drop(&mut self) {
         if self.bound_check {
-            self.is_compatible().unwrap_or_else(|e| panic!("{:?}", e));
+            self.is_compatible().unwrap_or_else(|e| panic!("{e:?}"));
         }
     }
 }
