@@ -52,6 +52,7 @@ fn read() {
 #27 = QUASI_UNIFORM_SURFACE('QuasiUniformSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
 #28 = BEZIER_SURFACE('BezierSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
 #29 = TOROIDAL_SURFACE('ToroidalSurface', #9, 5.0, 2.0);
+#30 = SURFACE_OF_LINEAR_EXTRUSION('SurfaceOfLinearExtrusion', #20, #3);
 
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
@@ -462,6 +463,14 @@ ENDSEC;
                 position: PlaceHolder::Ref(Name::Entity(9)),
                 major_radius: 5.0,
                 minor_radius: 2.0,
+            },
+        )]),
+        surface_of_linear_extrusion: HashMap::from_iter(vec![(
+            30,
+            SurfaceOfLinearExtrusionHolder {
+                label: "SurfaceOfLinearExtrusion".to_string(),
+                swept_curve: PlaceHolder::Ref(Name::Entity(20)),
+                extrusion_axis: PlaceHolder::Ref(Name::Entity(3)),
             },
         )]),
 

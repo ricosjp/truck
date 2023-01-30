@@ -46,6 +46,7 @@ pub struct Table {
     pub uniform_surface: HashMap<u64, UniformSurfaceHolder>,
     pub quasi_uniform_surface: HashMap<u64, QuasiUniformSurfaceHolder>,
     pub bezier_surface: HashMap<u64, BezierSurfaceHolder>,
+    pub surface_of_linear_extrusion: HashMap<u64, SurfaceOfLinearExtrusionHolder>,
     pub surface_of_revolution: HashMap<u64, SurfaceOfRevolutionHolder>,
 
     // topology
@@ -319,6 +320,10 @@ impl Table {
                             );
                         }
                     }
+                }
+                "SURFACE_OF_LINEAR_EXTRUSION" => {
+                    self.surface_of_linear_extrusion
+                        .insert(*id, Deserialize::deserialize(record)?);
                 }
                 "SURFACE_OF_REVOLUTION" => {
                     self.surface_of_revolution
@@ -1320,6 +1325,9 @@ pub enum SurfaceAny {
     #[holder(use_place_holder)]
     #[holder(field = surface_of_revolution)]
     SurfaceOfRevolution(SurfaceOfRevolution),
+    #[holder(use_place_holder)]
+    #[holder(field = surface_of_linear_extrusion)]
+    SurfaceOfLinearExtrusion(SurfaceOfLinearExtrusion),
 }
 
 impl TryFrom<&SurfaceAny> for Surface {
@@ -1345,6 +1353,9 @@ impl TryFrom<&SurfaceAny> for Surface {
             BezierSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
             SurfaceOfRevolution(sr) => {
                 Ok(Self::SweptCurve(SweptCurve::RevolutedCurve(sr.try_into()?)))
+            }
+            SurfaceOfLinearExtrusion(sr) => {
+                Ok(Self::SweptCurve(SweptCurve::ExtrudedCurve(sr.try_into()?)))
             }
         }
     }
@@ -1613,6 +1624,27 @@ impl From<&BezierSurface> for BSplineSurface<Point3> {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
+#[holder(field = surface_of_linear_extrusion)]
+#[holder(generate_deserialize)]
+pub struct SurfaceOfLinearExtrusion {
+    label: String,
+    #[holder(use_place_holder)]
+    swept_curve: CurveAny,
+    #[holder(use_place_holder)]
+    extrusion_axis: Vector,
+}
+
+impl TryFrom<&SurfaceOfLinearExtrusion> for StepExtrudedCurve {
+    type Error = ExpressParseError;
+    fn try_from(sr: &SurfaceOfLinearExtrusion) -> std::result::Result<Self, Self::Error> {
+        let curve = Curve3D::try_from(&sr.swept_curve)?;
+        let vector = Vector3::from(&sr.extrusion_axis);
+        Ok(ExtrudedCurve::by_extrusion(curve, vector))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
 #[holder(field = surface_of_revolution)]
 #[holder(generate_deserialize)]
 pub struct SurfaceOfRevolution {
@@ -1629,9 +1661,7 @@ impl TryFrom<&SurfaceOfRevolution> for StepRevolutedCurve {
         let curve = Curve3D::try_from(&sr.swept_curve)?;
         let origin = Point3::from(&sr.axis_position.location);
         let axis = sr.axis_position.direction().normalize();
-        Ok(Processor::new(RevolutedCurve::by_revolution(
-            curve, origin, axis,
-        )))
+        Ok(RevolutedCurve::by_revolution(curve, origin, axis))
     }
 }
 

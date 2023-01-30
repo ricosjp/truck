@@ -14,7 +14,7 @@ pub type Parabola<P, M> = Processor<TrimmedCurve<UnitParabola<P>>, M>;
 pub type RevolutedLine = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type ToroidalSurface = Processor<RevolutedCurve<Ellipse<Point3, Matrix4>>, Matrix4>;
 pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
-pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;
+pub type StepRevolutedCurve = RevolutedCurve<Curve3D>;
 
 #[derive(
     Clone,
