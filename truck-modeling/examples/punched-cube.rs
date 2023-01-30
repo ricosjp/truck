@@ -37,5 +37,5 @@ fn main() {
     face.add_boundary(wire);
     let shape = builder::tsweep(&face, Vector3::unit_z());
     let json = serde_json::to_vec_pretty(&shape).unwrap();
-    std::fs::write("punched-cube.json", &json).unwrap();
+    std::fs::write("punched-cube.json", json).unwrap();
 }

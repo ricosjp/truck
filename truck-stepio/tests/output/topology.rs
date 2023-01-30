@@ -21,8 +21,7 @@ fn parse_solid() {
             CompleteStepDisplay::new(StepModel::from(&solid), Default::default()).to_string();
         ruststep::parser::parse(&step_string).unwrap_or_else(|e| {
             panic!(
-                "failed to parse step from {}\n[Error Message]\n{}[STEP file]\n{}",
-                json_file, e, step_string
+                "failed to parse step from {json_file}\n[Error Message]\n{e}[STEP file]\n{step_string}"
             )
         });
     }
@@ -39,8 +38,7 @@ fn parse_shell() {
             CompleteStepDisplay::new(StepModel::from(&shell), Default::default()).to_string();
         ruststep::parser::parse(&step_string).unwrap_or_else(|e| {
             panic!(
-                "failed to parse step from {}\n[Error Message]\n{}[STEP file]\n{}",
-                json_file, e, step_string
+                "failed to parse step from {json_file}\n[Error Message]\n{e}[STEP file]\n{step_string}"
             )
         });
     }
@@ -58,9 +56,6 @@ fn parse_solids() {
     let step_string =
         CompleteStepDisplay::new(StepModels::from_iter(&solids), Default::default()).to_string();
     ruststep::parser::parse(&step_string).unwrap_or_else(|e| {
-        panic!(
-            "failed to parse step\n[Error Message]\n{}[STEP file]\n{}",
-            e, step_string
-        )
+        panic!("failed to parse step\n[Error Message]\n{e}[STEP file]\n{step_string}")
     });
 }

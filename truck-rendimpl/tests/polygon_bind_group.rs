@@ -92,7 +92,7 @@ fn exec_polygon_bgtest(
     out_dir: String,
 ) -> bool {
     let buffer = common::render_one(scene, instance);
-    let path = format!("{}polygon-bgtest-{}.png", out_dir, id);
+    let path = format!("{out_dir}polygon-bgtest-{id}.png");
     common::save_buffer(path, &buffer, PICTURE_SIZE);
     common::same_buffer(answer, &buffer)
 }

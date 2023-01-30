@@ -92,7 +92,7 @@ fn exec_nontex_render_test(backend: Backends, out_dir: &str) {
     let filename = out_dir + "nontex-polygon.png";
     common::save_buffer(filename, &buffer1, PICTURE_SIZE);
     let diff = common::count_difference(&buffer0, &buffer1);
-    println!("{} pixel difference: ray-tracing and polymesh", diff);
+    println!("{diff} pixel difference: ray-tracing and polymesh");
     assert!(diff < 10);
 }
 
@@ -158,7 +158,7 @@ fn exec_tex_render_test(backend: Backends, out_dir: &str) {
     common::save_buffer(filename, &buffer1, PICTURE_SIZE);
     let diff = common::count_difference(&buffer0, &buffer1);
     let anti_diff = common::count_difference(&anti_buffer, &buffer0);
-    println!("{} pixel difference: ray-tracing and polymesh", diff);
+    println!("{diff} pixel difference: ray-tracing and polymesh");
     assert!(diff < 10);
     assert!(anti_diff > 1000);
 }

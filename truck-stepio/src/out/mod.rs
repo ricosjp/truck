@@ -17,9 +17,9 @@ impl<'a> Display for SliceDisplay<'a, f64> {
             if f64::abs(*x) < 1.0e-6 {
                 f.write_str("0.0")
             } else if f64::abs(*x) < 1.0e-2 && *x != 0.0 {
-                f.write_fmt(format_args!("{:.7E}", x))
+                f.write_fmt(format_args!("{x:.7E}"))
             } else {
-                f.write_fmt(format_args!("{:?}", x))
+                f.write_fmt(format_args!("{x:?}"))
             }
         })?;
         f.write_str(")")
@@ -46,7 +46,7 @@ impl<'a> Display for SliceDisplay<'a, String> {
             if i != 0 {
                 f.write_str(", ")?;
             }
-            f.write_fmt(format_args!("'{}'", x))
+            f.write_fmt(format_args!("'{x}'"))
         })?;
         f.write_str(")")
     }
@@ -73,9 +73,9 @@ impl<I: Clone + Iterator<Item = usize>> Display for IndexSliceDisplay<I> {
         f.write_str("(")?;
         self.0.clone().enumerate().try_for_each(|(i, idx)| {
             if i != 0 {
-                f.write_fmt(format_args!(", #{}", idx))
+                f.write_fmt(format_args!(", #{idx}"))
             } else {
-                f.write_fmt(format_args!("#{}", idx))
+                f.write_fmt(format_args!("#{idx}"))
             }
         })?;
         f.write_str(")")

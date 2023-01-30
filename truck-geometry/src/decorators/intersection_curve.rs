@@ -38,7 +38,7 @@ where
     #[cfg(all(test, debug_assertions))]
     {
         eprintln!("Newton method is not converges");
-        log.into_iter().for_each(|t| eprintln!("{:?}", t));
+        log.into_iter().for_each(|t| eprintln!("{t:?}"));
     }
     None
 }

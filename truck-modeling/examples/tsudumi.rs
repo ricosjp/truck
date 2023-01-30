@@ -22,5 +22,5 @@ fn main() {
     );
     let solid = Solid::new(vec![shell]);
     let json = serde_json::to_vec_pretty(&solid).unwrap();
-    std::fs::write("tsudumi.json", &json).unwrap();
+    std::fs::write("tsudumi.json", json).unwrap();
 }

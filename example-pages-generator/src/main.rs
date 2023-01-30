@@ -55,7 +55,7 @@ fn main() {
     child.wait().unwrap_or_else(|e| panic!("{}", e));
     let mut sum = String::new();
     for dir in EXAMPLES {
-        let output_dir = format!("dist/{}", dir);
+        let output_dir = format!("dist/{dir}");
         std::fs::create_dir_all(&output_dir).unwrap_or_else(|e| panic!("{}", e));
         let mut child = Command::new("wasm-bindgen")
             .args([
@@ -63,10 +63,7 @@ fn main() {
                 "web",
                 "--out-dir",
                 &output_dir,
-                &format!(
-                    "target/wasm32-unknown-unknown/release/examples/{}.wasm",
-                    dir
-                ),
+                &format!("target/wasm32-unknown-unknown/release/examples/{dir}.wasm",),
             ])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
@@ -88,7 +85,7 @@ fn main() {
         });
         child.wait().unwrap_or_else(|e| panic!("{}", e));
         std::fs::write(
-            format!("{}/index.html", output_dir),
+            format!("{output_dir}/index.html"),
             include_str!("example-index.html").replace("{example}", dir),
         )
         .unwrap_or_else(|e| panic!("{}", e));

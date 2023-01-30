@@ -25,8 +25,7 @@ fn solid_is_closed() {
         assert_eq!(
             poly.shell_condition(),
             ShellCondition::Closed,
-            "not closed: file no. {}",
-            i
+            "not closed: file no. {i}"
         );
     }
 }
@@ -79,7 +78,7 @@ fn special_cylinder() {
         surface.clone(),
     );
     let face3 = Face::new(
-        vec![vec![edge3, edge0.clone(), edge5.inverse(), edge1.inverse()].into()],
+        vec![vec![edge3, edge0, edge5.inverse(), edge1.inverse()].into()],
         surface,
     );
 

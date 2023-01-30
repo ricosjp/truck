@@ -19,13 +19,11 @@ fn hash11_test() {
         }) / S::from_usize(N).unwrap();
         assert!(
             S::abs(mean - S::from_f64(0.5).unwrap()) < S::from_f64(0.05 * 0.5).unwrap(),
-            "mean: {:?}",
-            mean
+            "mean: {mean:?}"
         );
         assert!(
             S::abs(var - S::from_f64(1.0 / 12.0).unwrap()) < S::from_f64(0.05 / 12.0).unwrap(),
-            "var: {:?}",
-            var
+            "var: {var:?}"
         );
     }
 
@@ -86,13 +84,11 @@ fn hash12_test() {
         }) / S::from_usize(N * N).unwrap();
         assert!(
             S::abs(mean - S::from_f64(0.5).unwrap()) < S::from_f64(0.05 * 0.5).unwrap(),
-            "mean: {:?}",
-            mean
+            "mean: {mean:?}"
         );
         assert!(
             S::abs(var - S::from_f64(1.0 / 12.0).unwrap()) < S::from_f64(0.05 / 12.0).unwrap(),
-            "var: {:?}",
-            var
+            "var: {var:?}"
         );
     }
 
@@ -162,13 +158,11 @@ fn hash13_test() {
         }) / S::from_usize(N * N * N).unwrap();
         assert!(
             S::abs(mean - S::from_f64(0.5).unwrap()) < S::from_f64(0.05 * 0.5).unwrap(),
-            "mean: {:?}",
-            mean
+            "mean: {mean:?}"
         );
         assert!(
             S::abs(var - S::from_f64(1.0 / 12.0).unwrap()) < S::from_f64(0.05 / 12.0).unwrap(),
-            "var: {:?}",
-            var
+            "var: {var:?}"
         );
     }
 
@@ -249,13 +243,11 @@ fn hash14_test() {
         }) / S::from_usize(N * N * N * N).unwrap();
         assert!(
             S::abs(mean - S::from_f64(0.5).unwrap()) < S::from_f64(0.05 * 0.5).unwrap(),
-            "mean: {:?}",
-            mean
+            "mean: {mean:?}"
         );
         assert!(
             S::abs(var - S::from_f64(1.0 / 12.0).unwrap()) < S::from_f64(0.05 / 12.0).unwrap(),
-            "var: {:?}",
-            var
+            "var: {var:?}"
         );
     }
 

@@ -392,7 +392,7 @@ mod tests {
             4.0 * rand::random::<f64>() - 2.0,
         );
         if mat.determinant().so_small() {
-            println!("omitted: {:?}", mat);
+            println!("omitted: {mat:?}");
             return;
         }
         curve.transform_by(mat);
@@ -447,7 +447,7 @@ mod tests {
             4.0 * rand::random::<f64>() - 2.0,
         );
         if mat.determinant().so_small() {
-            println!("omitted: {:?}", mat);
+            println!("omitted: {mat:?}");
             return;
         }
         surface.transform_by(mat);

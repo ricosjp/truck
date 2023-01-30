@@ -11,5 +11,5 @@ fn main() {
     let cone = Solid::new(vec![shell]);
     assert!(cone.is_geometric_consistent());
     let json = serde_json::to_vec_pretty(&cone).unwrap();
-    std::fs::write("cone.json", &json).unwrap();
+    std::fs::write("cone.json", json).unwrap();
 }

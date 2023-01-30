@@ -115,25 +115,25 @@ fn put_together_same_attrs_test() {
     let mut faces = Faces::default();
     for i in 0..N_NOR {
         match i % 4 {
-            0 => faces.push(&[
+            0 => faces.push([
                 [i % N_POS, (i + 15) % N_UV, (i * 24) % N_NOR],
                 [(i + 1) % N_POS, (i + 16) % N_UV, (i * 24 + 1) % N_NOR],
                 [(i + 2) % N_POS, (i + 17) % N_UV, (i * 24 + 2) % N_NOR],
             ]),
-            1 => faces.push(&[
+            1 => faces.push([
                 [i % N_POS, (i + 15) % N_UV, (i * 24) % N_NOR],
                 [(i + 1) % N_POS, (i + 16) % N_UV, (i * 24 + 1) % N_NOR],
                 [(i + 2) % N_POS, (i + 17) % N_UV, (i * 24 + 2) % N_NOR],
                 [(i + 3) % N_POS, (i + 18) % N_UV, (i * 24 + 3) % N_NOR],
             ]),
-            2 => faces.push(&[
+            2 => faces.push([
                 [i % N_POS, (i + 15) % N_UV, (i * 24) % N_NOR],
                 [(i + 1) % N_POS, (i + 16) % N_UV, (i * 24 + 1) % N_NOR],
                 [(i + 2) % N_POS, (i + 17) % N_UV, (i * 24 + 2) % N_NOR],
                 [(i + 3) % N_POS, (i + 18) % N_UV, (i * 24 + 3) % N_NOR],
                 [(i + 4) % N_POS, (i + 19) % N_UV, (i * 24 + 4) % N_NOR],
             ]),
-            3 => faces.push(&[
+            3 => faces.push([
                 [i % N_POS, (i + 15) % N_UV, (i * 24) % N_NOR],
                 [(i + 1) % N_POS, (i + 16) % N_UV, (i * 24 + 1) % N_NOR],
                 [(i + 2) % N_POS, (i + 17) % N_UV, (i * 24 + 2) % N_NOR],

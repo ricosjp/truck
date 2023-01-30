@@ -245,10 +245,10 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
             .validate(
                 &Parser::new()
                     .parse(&source)
-                    .map_err(|error| println!("WGSL Parse Error: {}", error))
+                    .map_err(|error| println!("WGSL Parse Error: {error}"))
                     .ok()?,
             )
-            .map_err(|error| println!("WGSL Validation Error: {}", error))
+            .map_err(|error| println!("WGSL Validation Error: {error}"))
             .ok()?;
 
         Some(device.create_shader_module(ShaderModuleDescriptor {
@@ -267,7 +267,7 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
         match std::fs::read_to_string(&args[1]) {
             Ok(code) => code,
             Err(error) => {
-                println!("{:?}", error);
+                println!("{error:?}");
                 DEFAULT_SHADER.to_string()
             }
         }
@@ -304,7 +304,7 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
                             plane.set_shader(scene.device(), &code);
                             scene.update_pipeline(&plane);
                         }
-                        Err(error) => println!("{:?}", error),
+                        Err(error) => println!("{error:?}"),
                     }
                     ControlFlow::Poll
                 }

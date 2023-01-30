@@ -40,7 +40,7 @@ where
     Truck: for<'a> From<&'a StepHolder::Owned> + Debug + PartialEq,
     StepHolder: Holder<Table = Table>,
     Table: EntityTable<StepHolder>, {
-    let data_section = DataSection::from_str(&step).unwrap();
+    let data_section = DataSection::from_str(step).unwrap();
     let table = Table::from_data_section(&data_section);
     let step_data: StepHolder::Owned = EntityTable::get_owned(&table, 1).unwrap();
     let got = Truck::from(&step_data);
@@ -53,7 +53,7 @@ where
     for<'a> <Truck as TryFrom<&'a StepHolder::Owned>>::Error: Debug,
     StepHolder: Holder<Table = Table>,
     Table: EntityTable<StepHolder>, {
-    let data_section = DataSection::from_str(&step).unwrap();
+    let data_section = DataSection::from_str(step).unwrap();
     let table = Table::from_data_section(&data_section);
     let step_data: StepHolder::Owned = EntityTable::get_owned(&table, 1).unwrap();
     let got = Truck::try_from(&step_data).unwrap();

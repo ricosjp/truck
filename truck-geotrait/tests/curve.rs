@@ -57,17 +57,13 @@ fn exec_polycurve_snp_on_curve() -> bool {
             true => true,
             false => {
                 eprintln!(
-                    "wrong answer\npolynomial: {:?}\nt: {:?}\nhint: {:?}\nresult: {:?}",
-                    poly, t, hint, res,
+                    "wrong answer\npolynomial: {poly:?}\nt: {t:?}\nhint: {hint:?}\nresult: {res:?}",
                 );
                 false
             }
         },
         None => {
-            eprintln!(
-                "not converge\npolynomial: {:?}\nt: {:?}\nhint: {:?}",
-                poly, t, hint
-            );
+            eprintln!("not converge\npolynomial: {poly:?}\nt: {t:?}\nhint: {hint:?}");
             false
         }
     }

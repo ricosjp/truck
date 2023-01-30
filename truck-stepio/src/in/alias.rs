@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 pub use truck_geometry::*;
 pub use truck_polymesh::*;
 
-pub type ExpressParseError = String;
+pub type ExpressParseError = Box<dyn std::error::Error>;
 
 pub trait Empty {
     fn empty() -> Self;

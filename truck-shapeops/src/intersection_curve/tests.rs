@@ -47,9 +47,7 @@ mod double_projection_tests {
             let t = i as f64;
             let p = Point3::origin() + t * n;
             let (q, p0, p1) = double_projection(&plane0, None, &plane1, None, p, n, 100)
-                .unwrap_or_else(|| {
-                    panic!("plane0: {:?}\nplane1: {:?}\n p: {:?}", plane0, plane1, p)
-                });
+                .unwrap_or_else(|| panic!("plane0: {plane0:?}\nplane1: {plane1:?}\n p: {p:?}"));
             assert_near!(q, plane0.subs(p0.x, p0.y));
             assert_near!(q, plane1.subs(p1.x, p1.y));
             if let Some(o) = o {
@@ -73,7 +71,7 @@ mod double_projection_tests {
             let p = Point3::new(r * f64::cos(t), r * f64::sin(t), 0.0);
             let n = Vector3::new(-f64::sin(t), f64::cos(t), 0.0);
             let (q, p0, p1) = double_projection(&sphere0, None, &sphere1, None, p, n, 100)
-                .unwrap_or_else(|| panic!("p: {:?}", p));
+                .unwrap_or_else(|| panic!("p: {p:?}"));
             assert_near!(q, sphere0.subs(p0.x, p0.y));
             assert_near!(q, sphere1.subs(p1.x, p1.y));
             assert_near!(q, Point3::new(f64::cos(t), f64::sin(t), 0.0));
@@ -105,7 +103,7 @@ fn intersection_curve_sphere_case() {
         let pt = curve.subs(t);
         assert_near!(pt.distance(Point3::origin()), 1.0);
         let vec = curve.der(t);
-        assert!(pt.dot(vec).so_small(), "{} {} {:?}", i, t, vec);
+        assert!(pt.dot(vec).so_small(), "{i} {t} {vec:?}");
         assert!(vec[2].so_small());
         sum += vec.magnitude() * (t1 - t0) / N as f64;
     }
