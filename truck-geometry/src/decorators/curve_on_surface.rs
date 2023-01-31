@@ -57,26 +57,38 @@ where
 
 impl<C, S> SearchParameter<D1> for PCurve<C, S>
 where
-    C: SearchParameter<Point = Point2, Parameter = f64>,
-    S: SearchParameter<Parameter = (f64, f64)>,
+    C: ParametricCurve2D + SearchParameter<D1, Point = Point2>,
+    S: SearchParameter<D2>,
 {
-    type Point = <Self as ParametricCurve>::Point;
+    type Point = <S as SearchParameter<D2>>::Point;
     fn search_parameter<H: Into<SPHint1D>>(
         &self,
         point: Self::Point,
         hint: H,
         trials: usize,
     ) -> Option<f64> {
-        let hint = match hint.into() {
-            SPHint1D::Parameter(hint) => hint,
+        let hint = hint.into();
+        let shint = match hint {
+            SPHint1D::Parameter(hint) => {
+                let p = self.curve.subs(hint);
+                SPHint2D::Parameter(p.x, p.y)
+            }
             SPHint1D::Range(x, y) => {
-                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+                let p = self.curve.subs(y);
+                let ranges = (0..PRESEARCH_DIVISION).fold(((p.x, p.x), (p.y, p.y)), |((x0, x1), (y0, y1)), i| {
+                    let t = x + (y - x) * i as f64 / PRESEARCH_DIVISION as f64;
+                    let p = self.curve.subs(t);
+                    (
+                        (f64::min(x0, p.x), f64::max(x1, p.x)),
+                        (f64::min(y0, p.y), f64::max(y1, p.y))
+                    )
+                });
+                SPHint2D::Range(ranges.0, ranges.1)
             }
-            SPHint1D::None => {
-                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
-            }
+            SPHint1D::None => SPHint2D::None,
         };
-        algo::curve::search_parameter(self, point, hint, trials)
+        let (x, y) = self.surface.search_parameter(point, shint, trials)?;
+        self.curve.search_parameter(Point2::new(x, y), hint, trials)
     }
 }
 
