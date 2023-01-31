@@ -34,10 +34,9 @@ pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
 /// ```
 #[inline(always)]
 pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
-    let pt0 = vertex0.get_point().to_homogeneous();
-    let pt1 = vertex1.get_point().to_homogeneous();
-    let curve = geom_impls::line(pt0, pt1);
-    Edge::new(vertex0, vertex1, Curve::NURBSCurve(NURBSCurve::new(curve)))
+    let pt0 = vertex0.get_point();
+    let pt1 = vertex1.get_point();
+    Edge::new(vertex0, vertex1, Curve::Line(Line(pt0, pt1)))
 }
 
 /// Returns a circle arc from `vertex0` to `vertex1` via `transit`.
@@ -89,16 +88,12 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
 pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>) -> Edge {
     let pt0 = vertex0.get_point();
     let pt1 = vertex1.get_point();
-    let mut pre_ctrl_pts = vec![pt0];
-    pre_ctrl_pts.append(&mut inter_points);
-    pre_ctrl_pts.push(pt1);
-    let ctrl_pts: Vec<_> = pre_ctrl_pts
-        .into_iter()
-        .map(|pt| pt.to_homogeneous())
-        .collect();
+    let mut ctrl_pts = vec![pt0];
+    ctrl_pts.append(&mut inter_points);
+    ctrl_pts.push(pt1);
     let knot_vec = KnotVec::bezier_knot(ctrl_pts.len() - 1);
     let curve = BSplineCurve::new(knot_vec, ctrl_pts);
-    Edge::new(vertex0, vertex1, Curve::NURBSCurve(NURBSCurve::new(curve)))
+    Edge::new(vertex0, vertex1, Curve::BSplineCurve(curve))
 }
 
 /// Returns a homotopic face from `edge0` to `edge1`.
@@ -141,6 +136,123 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
         vec![wire],
         Surface::NURBSSurface(NURBSSurface::new(surface)),
     )
+}
+
+/// Returns a homotopic shell from `wire0` to `wire1`.
+/// # Examples
+/// ```
+/// // connecting two squares.
+/// use truck_modeling::*;
+///
+/// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v02 = builder::vertex(Point3::new(2.0, 0.0, 0.0));
+/// let v10 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
+/// let v11 = builder::vertex(Point3::new(1.0, 1.0, 0.0));
+/// let v12 = builder::vertex(Point3::new(2.0, 1.0, 0.0));
+/// let wire0: Wire = vec![
+///     builder::line(&v00, &v01),
+///     builder::line(&v01, &v02),
+/// ]
+/// .into();
+/// let wire1: Wire = vec![
+///     builder::line(&v10, &v11),
+///     builder::line(&v11, &v12),
+/// ]
+/// .into();
+///
+/// let shell = builder::try_wire_homotopy(&wire0, &wire1).unwrap();
+/// assert_eq!(shell.len(), 2);
+/// let boundary = shell.extract_boundaries();
+/// assert_eq!(boundary.len(), 1);
+/// assert_eq!(boundary[0].len(), 6);
+/// ```
+/// ```
+/// // a triangular tube
+/// use truck_modeling::*;
+///
+/// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v02 = builder::vertex(Point3::new(0.5, 0.5, 0.0));
+/// let v10 = builder::vertex(Point3::new(0.0, 0.0, 1.0));
+/// let v11 = builder::vertex(Point3::new(1.0, 0.0, 1.0));
+/// let v12 = builder::vertex(Point3::new(0.5, 0.5, 1.0));
+/// let wire0: Wire = vec![
+///     builder::line(&v00, &v01),
+///     builder::line(&v01, &v02),
+///     builder::line(&v02, &v00),
+/// ]
+/// .into();
+/// let wire1: Wire = vec![
+///     builder::line(&v10, &v11),
+///     builder::line(&v11, &v12),
+///     builder::line(&v12, &v10),
+/// ]
+/// .into();
+///
+/// let shell = builder::try_wire_homotopy(&wire0, &wire1).unwrap();
+/// assert_eq!(shell.len(), 3);
+/// let boundary = shell.extract_boundaries();
+/// assert_eq!(boundary.len(), 2);
+/// assert_eq!(boundary[0].len(), 3);
+/// assert_eq!(boundary[1].len(), 3);
+/// ```
+/// # Failures
+/// If the wires have different numbers of edges, then return `Error::NotSameNumberOfEdges`.
+/// ```
+/// use truck_modeling::{*, errors::Error};
+///
+/// let v00 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v01 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v02 = builder::vertex(Point3::new(0.5, 0.5, 0.0));
+/// let v10 = builder::vertex(Point3::new(0.0, 0.0, 1.0));
+/// let v11 = builder::vertex(Point3::new(1.0, 0.0, 1.0));
+/// let v12 = builder::vertex(Point3::new(0.5, 0.5, 1.0));
+/// let wire0: Wire = vec![
+///     builder::line(&v00, &v01),
+///     builder::line(&v01, &v02),
+/// ]
+/// .into();
+/// let wire1: Wire = vec![
+///     builder::line(&v10, &v11),
+///     builder::line(&v11, &v12),
+///     builder::line(&v12, &v10),
+/// ]
+/// .into();
+///
+/// assert!(matches!(
+///     builder::try_wire_homotopy(&wire0, &wire1),
+///     Err(Error::NotSameNumberOfEdges),
+/// ));
+/// ```
+#[inline(always)]
+pub fn try_wire_homotopy(wire0: &Wire, wire1: &Wire) -> Result<Shell> {
+    if wire0.len() != wire1.len() {
+        return Err(Error::NotSameNumberOfEdges);
+    }
+    let mut vemap = truck_base::entry_map::FxEntryMap::new(
+        |(v0, v1): (&Vertex, &Vertex)| (v0.id(), v1.id()),
+        |(v0, v1)| line(v0, v1),
+    );
+    let shell = wire0
+        .edge_iter()
+        .zip(wire1.edge_iter())
+        .map(|(edge0, edge1)| {
+            let (v0, v1) = (edge0.front(), edge1.front());
+            let edge2 = vemap.entry_or_insert((v0, v1)).inverse();
+            let (v0, v1) = (edge0.back(), edge1.back());
+            let edge3 = vemap.entry_or_insert((v0, v1)).clone();
+            let wire: Wire = vec![edge0.clone(), edge3, edge1.inverse(), edge2].into();
+            let curve0 = edge0.oriented_curve().lift_up();
+            let curve1 = edge1.oriented_curve().lift_up();
+            let surface = BSplineSurface::homotopy(curve0, curve1);
+            Face::new(
+                vec![wire],
+                Surface::NURBSSurface(NURBSSurface::new(surface)),
+            )
+        })
+        .collect();
+    Ok(shell)
 }
 
 /// Creates a cone by R-sweeping.
@@ -251,8 +363,8 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 /// # let normal = surface.normal(0.5, 0.5);
 /// # assert!(normal.near(&Vector3::unit_y()));
 /// ```
-/// # Remarks
-/// If wires are not closed or not in one plane, then return `None`.
+/// # Failures
+/// If wires are not closed or not in one plane, then return `Error::WireNotInOnePlane`.
 /// ```
 /// use truck_modeling::{*, errors::Error};
 /// let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
@@ -282,29 +394,31 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
 /// wires[0].pop_back();
 /// wires[0].pop_back();
 /// wires[0].push_back(builder::line(&v2, &v0));
-/// // sucess in attaching plane!
+/// // success in attaching plane!
 /// assert!(builder::try_attach_plane(&wires).is_ok());
 /// ```
 #[inline(always)]
 pub fn try_attach_plane(wires: &[Wire]) -> Result<Face> {
     let pts = wires
         .iter()
-        .flatten()
-        .flat_map(|edge| {
-            edge.oriented_curve()
-                .lift_up()
-                .control_points()
-                .clone()
-                .into_iter()
-                .map(|pt| pt.to_point())
+        .map(|wire| {
+            wire.edge_iter()
+                .flat_map(|edge| {
+                    edge.oriented_curve()
+                        .lift_up()
+                        .control_points()
+                        .clone()
+                        .into_iter()
+                        .map(|pt| pt.to_point())
+                })
+                .collect()
         })
         .collect::<Vec<_>>();
     let plane = match geom_impls::attach_plane(pts) {
         Some(got) => got,
         None => return Err(Error::WireNotInOnePlane),
     };
-    let surface = Surface::Plane(plane);
-    Ok(Face::try_new(wires.to_owned(), surface)?)
+    Ok(Face::try_new(wires.to_owned(), plane.into())?)
 }
 
 /// Returns another topology whose points, curves, and surfaces are cloned.
@@ -393,12 +507,22 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
         &move |pt| trsl.transform_point(*pt),
         &move |curve| curve.transformed(trsl),
         &move |surface| surface.transformed(trsl),
-        &move |pt0, pt1| Curve::BSplineCurve(geom_impls::line(*pt0, *pt1)),
-        &move |curve0, curve1| {
-            Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::homotopy(
-                curve0.clone().lift_up(),
-                curve1.clone().lift_up(),
-            )))
+        &move |pt0, pt1| Curve::Line(Line(*pt0, *pt1)),
+        &move |curve0, curve1| match (curve0, curve1) {
+            (Curve::Line(line), Curve::Line(_)) => {
+                Surface::Plane(Plane::new(line.0, line.1, line.0 + vector))
+            }
+            (Curve::BSplineCurve(curve0), Curve::BSplineCurve(curve1)) => {
+                Surface::BSplineSurface(BSplineSurface::homotopy(curve0.clone(), curve1.clone()))
+            }
+            (Curve::NURBSCurve(curve0), Curve::NURBSCurve(curve1)) => {
+                Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::homotopy(
+                    curve0.non_rationalized().clone(),
+                    curve1.non_rationalized().clone(),
+                )))
+            }
+            (Curve::IntersectionCurve(_), Curve::IntersectionCurve(_)) => unimplemented!(),
+            _ => unreachable!(),
         },
     )
 }

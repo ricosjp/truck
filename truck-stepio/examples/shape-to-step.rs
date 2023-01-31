@@ -1,7 +1,15 @@
+//! convert from truck shape json to step file.
+//!
+//! ### usage
+//!
+//! ```bash
+//! shape-to-step <input shape file> [output shape file]
+//! ```
+
 use std::env;
 use truck_modeling::*;
 use truck_stepio::out;
-use truck_topology::CompressedSolid;
+use truck_topology::compress::CompressedSolid;
 
 fn main() {
     let mut args = env::args().collect::<Vec<_>>();
@@ -12,11 +20,11 @@ fn main() {
         args.push("output.stp".to_string());
     }
 
-    let shape_file = std::fs::File::open(&args[1]).unwrap();
+    let shape_file = std::fs::read(&args[1]).unwrap();
     let compressed: CompressedSolid<Point3, Curve, Surface> =
-        serde_json::from_reader(shape_file).unwrap();
-    let step_string = out::SolidStepDisplay::new(
-        &compressed,
+        serde_json::from_reader(shape_file.as_slice()).unwrap();
+    let step_string = out::CompleteStepDisplay::new(
+        out::StepModel::from(&compressed),
         out::StepHeaderDescriptor {
             origination_system: "shape-to-step".to_owned(),
             ..Default::default()

@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Modeling errors
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum Error {
     /// wrapper of topological error
     #[error(transparent)]
@@ -10,6 +10,10 @@ pub enum Error {
     /// cf. [`builder::try_attach_plane`](../builder/fn.try_attach_plane.html)
     #[error("cannot attach a plane to a wire that is not on one plane.")]
     WireNotInOnePlane,
+    /// tried to create homotopy for two wires with different numbers of edges.
+    /// cf. [`builder::try_wire_homotopy`](../builder/fn.try_wire_homotopy.html)
+    #[error("The wires must contain the same number of edges to create a homotopy.")]
+    NotSameNumberOfEdges,
 }
 
 #[test]

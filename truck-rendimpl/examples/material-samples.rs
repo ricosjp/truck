@@ -25,8 +25,9 @@ struct MyApp {
     matrices: Vec<Matrix4>,
 }
 
+#[async_trait(?Send)]
 impl App for MyApp {
-    fn init(window: Arc<winit::window::Window>) -> MyApp {
+    async fn init(window: Arc<winit::window::Window>) -> MyApp {
         let side_length = (N + 1) as f64 * 1.5;
         let camera_dist = side_length / 2.0 / (PI / 8.0).tan();
         let a = side_length / 2.0;
@@ -74,13 +75,12 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene =
-            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
+        let mut scene = WindowScene::from_window(window, &scene_desc).await;
         let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
         let e = builder::tsweep(&v, Vector3::unit_x());
         let f = builder::tsweep(&e, Vector3::unit_y());
         let cube = builder::tsweep(&f, Vector3::unit_z());
-        let mesh = cube.triangulation(0.01).unwrap().to_polygon();
+        let mesh = cube.triangulation(0.01).to_polygon();
         let instance: PolygonInstance = scene
             .instance_creator()
             .create_instance(&mesh, &Default::default());

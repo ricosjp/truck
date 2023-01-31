@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Topological Errors
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum Error {
     /// Two same vertices cannot construct an edge.
     /// # Examples
@@ -13,7 +13,7 @@ pub enum Error {
     /// ```
     #[error("Two same vertices cannot construct an edge.")]
     SameVertex,
-    /// The empty wire cannot contruct a face.
+    /// The empty wire cannot construct a face.
     /// # Examples
     /// ```
     /// use truck_topology::*;

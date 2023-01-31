@@ -140,7 +140,10 @@ impl<P> Vertex<P> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: VertexDisplayFormat) -> DebugDisplay<Self, VertexDisplayFormat> {
+    pub fn display(
+        &self,
+        format: VertexDisplayFormat,
+    ) -> DebugDisplay<'_, Self, VertexDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -170,7 +173,7 @@ impl<P> Hash for Vertex<P> {
 }
 
 impl<'a, P: Debug> Debug for DebugDisplay<'a, Vertex<P>, VertexDisplayFormat> {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             VertexDisplayFormat::Full => f
                 .debug_struct("Vertex")

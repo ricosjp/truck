@@ -1,6 +1,6 @@
 [package]
 name = "truck-platform"
-version = "0.3.0"
+version = "0.5.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "graphic utility library based on wgpu"
@@ -17,27 +17,29 @@ webgl = ["wgpu/webgl"]
 wgpu_trace = ["wgpu/trace"]
 
 [dependencies]
-bytemuck = { version = "1.7.2", features = ["derive"] }
+bytemuck = { version = "1.12.3", features = ["derive"] }
 derive_more = "0.99.17"
+futures-intrusive = "0.5.0"
 rustc-hash = "1.1.0"
-truck-base = { version = "0.2.0", path = "../truck-base" }
-wgpu = "0.12.0"
-winit = "0.26.1"
+truck-base = { version = "0.4.0", path = "../truck-base" }
+wgpu = "0.14.2"
+winit = "0.27.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 instant = { version = "0.1.12", features = [ "now" ] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
+web-sys = "0.3.60"
 
 [dev-dependencies]
-image = "0.23.14"
-rayon = "1.5.1"
-env_logger = "0.9.0"
-naga = { version = "0.7.2", features = ["wgsl-in"] }
-pollster = "0.2.4"
+image = "0.24.5"
+rayon = "1.6.1"
+env_logger = "0.10.0"
+naga = { version = "0.10.0", features = ["wgsl-in"] }
+pollster = "0.2.5"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures = "0.4.28"
+wasm-bindgen-futures = "0.4.33"
 console_error_panic_hook = "0.1.7"
 console_log = "0.2.0"
-web-sys = { version = "0.3.55", features = ["Location"] }
+web-sys = { version = "0.3.60", features = ["Location"] }

@@ -1,5 +1,7 @@
 //! Wasm wrapper API for truck
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -13,11 +15,6 @@
 
 use derive_more::*;
 use wasm_bindgen::prelude::*;
-
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 /// truck struct wrapped by wasm
 pub trait IntoWasm: Sized {

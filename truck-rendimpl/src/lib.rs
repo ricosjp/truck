@@ -1,5 +1,7 @@
 //! Visualization of shape and polygon mesh based on platform
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -11,8 +13,6 @@
     unused_qualifications
 )]
 
-extern crate truck_platform;
-extern crate truck_polymesh;
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
 use std::sync::Arc;
@@ -139,7 +139,7 @@ pub trait CreateBuffers {
 
 /// The trait for generating `Instance` from `Self`.
 pub trait ToInstance<I: Instance> {
-    /// Configuation deacriptor for instance.
+    /// Configuration descriptor for instance.
     type State;
     /// Creates `Instance` from `self`.
     fn to_instance(&self, handler: &DeviceHandler, shaders: &I::Shaders, desc: &Self::State) -> I;

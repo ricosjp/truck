@@ -3,7 +3,7 @@ use super::*;
 impl Plane {
     /// Creates a new plane from three points.
     #[inline(always)]
-    pub fn new(origin: Point3, one: Point3, another: Point3) -> Plane {
+    pub const fn new(origin: Point3, one: Point3, another: Point3) -> Plane {
         Plane {
             o: origin,
             p: one,
@@ -12,7 +12,7 @@ impl Plane {
     }
     /// Returns the origin
     #[inline(always)]
-    pub fn origin(&self) -> Point3 { self.o }
+    pub const fn origin(&self) -> Point3 { self.o }
     /// Returns the u-axis
     #[inline(always)]
     pub fn u_axis(&self) -> Vector3 { self.p - self.o }
@@ -221,14 +221,13 @@ impl<T: Transform3<Scalar = f64>> Transformed<T> for Plane {
     }
 }
 
-impl SearchParameter for Plane {
+impl SearchParameter<D2> for Plane {
     type Point = Point3;
-    type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        _: Option<(f64, f64)>,
+        _: H,
         _: usize,
     ) -> Option<(f64, f64)> {
         let v = self.get_parameter(point);
@@ -239,14 +238,13 @@ impl SearchParameter for Plane {
     }
 }
 
-impl SearchNearestParameter for Plane {
+impl SearchNearestParameter<D2> for Plane {
     type Point = Point3;
-    type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        _: Option<(f64, f64)>,
+        _: H,
         _: usize,
     ) -> Option<(f64, f64)> {
         let v = self.get_parameter(point);

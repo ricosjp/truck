@@ -113,7 +113,7 @@ impl MyApp {
         creator: &InstanceCreator,
         reader: R,
     ) -> (PolygonInstance, WireFrameInstance) {
-        let solid = Solid::extract(serde_json::from_reader(reader).unwrap()).unwrap();
+        let solid: Solid = serde_json::from_reader(reader).unwrap();
         let mut bdd_box = BoundingBox::new();
         solid
             .boundaries()
@@ -124,6 +124,7 @@ impl MyApp {
             .for_each(|edge| {
                 let curve = edge.oriented_curve();
                 bdd_box += match curve {
+                    Curve::Line(line) => vec![line.0, line.1].into_iter().collect(),
                     Curve::BSplineCurve(curve) => {
                         let bdb = curve.roughly_bounding_box();
                         vec![*bdb.max(), *bdb.min()].into_iter().collect()
@@ -134,7 +135,7 @@ impl MyApp {
             });
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
-        let mesh_solid = solid.triangulation(size * 0.005).unwrap();
+        let mesh_solid = solid.triangulation(size * 0.005);
         let curves = mesh_solid
             .edge_iter()
             .map(|edge| edge.get_curve())
@@ -154,8 +155,9 @@ impl MyApp {
     }
 }
 
+#[async_trait(?Send)]
 impl App for MyApp {
-    fn init(window: Arc<winit::window::Window>) -> MyApp {
+    async fn init(window: Arc<winit::window::Window>) -> MyApp {
         let sample_count = 4;
         let scene_desc = WindowSceneDescriptor {
             studio: StudioConfig {
@@ -172,8 +174,7 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene =
-            app::block_on(async move { WindowScene::from_window(window, &scene_desc).await });
+        let mut scene = WindowScene::from_window(window, &scene_desc).await;
         let creator = scene.instance_creator();
         let (instance, wireframe) = Self::load_shape(&creator, PUNCHED_CUBE_BYTES);
         scene.add_object(&instance);

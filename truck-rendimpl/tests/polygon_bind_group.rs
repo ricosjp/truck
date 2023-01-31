@@ -13,7 +13,7 @@ fn bgcheck_shaders(handler: &DeviceHandler) -> PolygonShaders {
     let module = Arc::new(
         handler
             .device()
-            .create_shader_module(&ShaderModuleDescriptor {
+            .create_shader_module(ShaderModuleDescriptor {
                 source: ShaderSource::Wgsl(source.into()),
                 label: None,
             }),
@@ -33,7 +33,7 @@ fn bgcheck_anti_shaders(handler: &DeviceHandler) -> PolygonShaders {
     let module = Arc::new(
         handler
             .device()
-            .create_shader_module(&ShaderModuleDescriptor {
+            .create_shader_module(ShaderModuleDescriptor {
                 source: ShaderSource::Wgsl(source.into()),
                 label: None,
             }),
@@ -92,7 +92,7 @@ fn exec_polygon_bgtest(
     out_dir: String,
 ) -> bool {
     let buffer = common::render_one(scene, instance);
-    let path = format!("{}polygon-bgtest-{}.png", out_dir, id);
+    let path = format!("{out_dir}polygon-bgtest-{id}.png");
     common::save_buffer(path, &buffer, PICTURE_SIZE);
     common::same_buffer(answer, &buffer)
 }

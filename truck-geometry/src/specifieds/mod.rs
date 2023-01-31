@@ -7,19 +7,19 @@ use crate::*;
 /// let line = Line(Point2::new(0.0, 0.0), Point2::new(1.0, 1.0));
 /// assert_near!(line.subs(0.5), Point2::new(0.5, 0.5));
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Line<P>(pub P, pub P);
 
 /// unit circle
-#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct UnitCircle<P>(std::marker::PhantomData<P>);
 
 /// unit hyperbola
-#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct UnitHyperbola<P>(std::marker::PhantomData<P>);
 
 /// parabola whose apex is the origin.
-#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct UnitParabola<P>(std::marker::PhantomData<P>);
 
 /// plane
@@ -27,7 +27,7 @@ pub struct UnitParabola<P>(std::marker::PhantomData<P>);
 /// ```
 /// use truck_geometry::*;
 ///
-/// // arbitary three points
+/// // arbitrary three points
 /// let pt0 = Point3::new(0.0, 1.0, 2.0);
 /// let pt1 = Point3::new(1.0, 1.0, 3.0);
 /// let pt2 = Point3::new(0.0, 2.0, 3.0);
@@ -91,3 +91,16 @@ mod line;
 mod parabola;
 mod plane;
 mod sphere;
+
+macro_rules! always_true {
+    ($ty: tt) => {
+        impl<P> PartialEq for $ty<P> {
+            fn eq(&self, _: &Self) -> bool { true }
+        }
+        impl<P> Eq for $ty<P> {}
+    };
+}
+
+always_true!(UnitCircle);
+always_true!(UnitParabola);
+always_true!(UnitHyperbola);

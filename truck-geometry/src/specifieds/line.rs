@@ -60,35 +60,45 @@ impl<P: Copy> Invertible for Line<P> {
     fn inverse(&self) -> Self { Self(self.1, self.0) }
 }
 
-impl<P> SearchNearestParameter for Line<P>
+impl<P> SearchNearestParameter<D1> for Line<P>
 where
     P: ControlPoint<f64>,
     P::Diff: InnerSpace<Scalar = f64>,
 {
     type Point = P;
-    type Parameter = f64;
     #[inline]
-    fn search_nearest_parameter(&self, pt: P, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(&self, pt: P, _: H, _: usize) -> Option<f64> {
         let b = self.1 - self.0;
         Some((pt - self.0).dot(b) / b.dot(b))
     }
 }
 
-impl<P> SearchParameter for Line<P>
+impl<P> SearchParameter<D1> for Line<P>
 where
     P: ControlPoint<f64> + Tolerance,
     P::Diff: InnerSpace<Scalar = f64>,
 {
     type Point = P;
-    type Parameter = f64;
     #[inline]
-    fn search_parameter(&self, pt: P, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, pt: P, _: H, _: usize) -> Option<f64> {
         let b = self.1 - self.0;
         let t = (pt - self.0).dot(b) / b.dot(b);
         match self.subs(t).near(&pt) {
             true => Some(t),
             false => None,
         }
+    }
+}
+
+impl<P: EuclideanSpace, M: Transform<P>> Transformed<M> for Line<P> {
+    #[inline]
+    fn transform_by(&mut self, trans: M) {
+        self.0 = trans.transform_point(self.0);
+        self.1 = trans.transform_point(self.1);
+    }
+    #[inline]
+    fn transformed(&self, trans: M) -> Self {
+        Line(trans.transform_point(self.0), trans.transform_point(self.1))
     }
 }
 
@@ -105,7 +115,7 @@ fn line() {
     assert_eq!(line.1, line_inverse.0);
 
     // cut
-    let mut line0 = line.clone();
+    let mut line0 = line;
     let line1 = line0.cut(0.4);
     assert_eq!(line.0, line0.0);
     assert_near!(line0.1, line.subs(0.4));

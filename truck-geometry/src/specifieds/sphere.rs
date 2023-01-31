@@ -4,13 +4,13 @@ use std::f64::consts::PI;
 impl Sphere {
     /// Creates a sphere
     #[inline(always)]
-    pub fn new(center: Point3, radius: f64) -> Sphere { Sphere { center, radius } }
+    pub const fn new(center: Point3, radius: f64) -> Sphere { Sphere { center, radius } }
     /// Returns the center
     #[inline(always)]
-    pub fn center(&self) -> Point3 { self.center }
+    pub const fn center(&self) -> Point3 { self.center }
     /// Returns the radius
     #[inline(always)]
-    pub fn radius(&self) -> f64 { self.radius }
+    pub const fn radius(&self) -> f64 { self.radius }
     /// Returns whether the point `pt` is on sphere
     #[inline(always)]
     pub fn include(&self, pt: Point3) -> bool { self.center.distance(pt).near(&self.radius) }
@@ -44,6 +44,8 @@ impl ParametricSurface for Sphere {
     fn vvder(&self, u: f64, v: f64) -> Vector3 {
         -self.radius * f64::sin(u) * Vector3::new(f64::cos(v), f64::sin(v), 0.0)
     }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
 }
 
 impl ParametricSurface3D for Sphere {
@@ -127,14 +129,13 @@ impl ParameterDivision2D for Sphere {
     }
 }
 
-impl SearchParameter for Sphere {
+impl SearchParameter<D2> for Sphere {
     type Point = Point3;
-    type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         _: usize,
     ) -> Option<(f64, f64)> {
         let radius = point - self.center;
@@ -144,9 +145,9 @@ impl SearchParameter for Sphere {
             let sinu = f64::sqrt(1.0 - radius[2] * radius[2]);
             let cosv = f64::clamp(radius[0] / sinu, -1.0, 1.0);
             let v = if sinu.so_small() {
-                match hint {
-                    Some(hint) => hint.1,
-                    None => 0.0,
+                match hint.into() {
+                    SPHint2D::Parameter(_, hint) => hint,
+                    _ => 0.0,
                 }
             } else if radius[1] > 0.0 {
                 f64::acos(cosv)
@@ -160,14 +161,13 @@ impl SearchParameter for Sphere {
     }
 }
 
-impl SearchNearestParameter for Sphere {
+impl SearchNearestParameter<D2> for Sphere {
     type Point = Point3;
-    type Parameter = (f64, f64);
     #[inline(always)]
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        _: Option<(f64, f64)>,
+        _: H,
         _: usize,
     ) -> Option<(f64, f64)> {
         let radius = (point - self.center).normalize();

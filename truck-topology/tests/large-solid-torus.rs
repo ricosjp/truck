@@ -9,7 +9,7 @@ type Solid = truck_topology::Solid<(), (), ()>;
 fn large_torus() -> Solid {
     const N: usize = 1_000;
 
-    let v = Vertex::news(&[(); N * N]);
+    let v = Vertex::news([(); N * N]);
     let row_edge: Vec<Vec<Edge>> = (0..N)
         .map(|i| {
             (0..N)
@@ -47,7 +47,7 @@ fn main() {
     large_torus();
     let end_time = instant.elapsed();
     println!(
-        "excute time: {}.{:03} sec",
+        "execute time: {}.{:03} sec",
         end_time.as_secs(),
         end_time.subsec_millis(),
     );

@@ -63,7 +63,7 @@ impl<'a> Rendered for Plane<'a> {
         writeln!(&mut std::io::stderr(), "create pipeline").unwrap();
         let device = handler.device();
         let source = ShaderSource::Wgsl(self.shader.into());
-        let module = device.create_shader_module(&ShaderModuleDescriptor {
+        let module = device.create_shader_module(ShaderModuleDescriptor {
             source,
             label: None,
         });
@@ -88,11 +88,11 @@ impl<'a> Rendered for Plane<'a> {
                     fragment: Some(FragmentState {
                         module: &module,
                         entry_point: self.fs_entpt,
-                        targets: &[ColorTargetState {
+                        targets: &[Some(ColorTargetState {
                             format: scene_desc.render_texture.format,
                             blend: Some(BlendState::REPLACE),
                             write_mask: ColorWrites::ALL,
-                        }],
+                        })],
                     }),
                     primitive: PrimitiveState {
                         topology: PrimitiveTopology::TriangleList,
@@ -185,6 +185,7 @@ pub fn swap_chain_descriptor(size: (u32, u32)) -> SurfaceConfiguration {
         width: size.0,
         height: size.1,
         present_mode: PresentMode::Mailbox,
+        alpha_mode: CompositeAlphaMode::Auto,
     }
 }
 

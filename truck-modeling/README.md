@@ -23,6 +23,10 @@ Generated json file can be visualized by `simple-shape-viewer`, an example of `t
 
 Modeling a unit cube by three sweeps.
 
+### cube-in-cube
+
+An example of the solid with several boundaries
+
 ### cube
 
 Modeling a unit cube by three sweeps.

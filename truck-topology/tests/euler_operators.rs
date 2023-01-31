@@ -84,10 +84,9 @@ impl Concat<Segment> for Segment {
     }
 }
 
-impl SearchParameter for Segment {
+impl SearchParameter<D1> for Segment {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_parameter(&self, point: Point3, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, point: Point3, _: H, _: usize) -> Option<f64> {
         let p = point - self.ends.0;
         let r = self.ends.1 - self.ends.0;
         let t = p.dot(r) / r.dot(r);
@@ -180,7 +179,7 @@ fn solid_cut_edge() {
     ]
     .into();
     let mut tri = Solid::new(vec![shell]);
-    assert!(tri.cut_edge(edge[1].id(), &v[4]));
+    assert!(tri.cut_edge(edge[1].id(), &v[4]).is_some());
     let count = tri.edge_iter().count();
     assert_eq!(count, 14);
 
@@ -196,7 +195,7 @@ fn solid_cut_edge() {
         .collect();
     Solid::new(new_shells);
 
-    assert!(tri.remove_vertex_by_concat_edges(v[4].id()));
+    assert!(tri.remove_vertex_by_concat_edges(v[4].id()).is_some());
     let count = tri.edge_iter().count();
     assert_eq!(count, 12);
 }

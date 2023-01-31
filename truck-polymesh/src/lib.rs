@@ -1,5 +1,7 @@
 //! Defines polyline-polygon data structure and some algorithms handling mesh.
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -65,7 +67,7 @@ pub struct StandardVertex {
 ///
 /// To optimize for the case where the polygon mesh consists only triangles and quadrangle,
 /// there are vectors which consist by each triangles and quadrilaterals, internally.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Faces<V = StandardVertex> {
     tri_faces: Vec<[V; 3]>,
     quad_faces: Vec<[V; 4]>,
@@ -77,14 +79,14 @@ pub struct Faces<V = StandardVertex> {
 /// The polygon data is held in a method compliant with wavefront obj.
 /// Position, uv (texture) coordinates, and normal vectors are held in separate arrays,
 /// and each face vertex accesses those values by an indices triple.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct PolygonMesh<V = StandardVertex, A = StandardAttributes> {
     attributes: A,
     faces: Faces<V>,
 }
 
 /// structured quadrangle mesh
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct StructuredMesh {
     positions: Vec<Vec<Point3>>,
     uv_division: Option<(Vec<f64>, Vec<f64>)>,
@@ -92,7 +94,7 @@ pub struct StructuredMesh {
 }
 
 /// polyline curve
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PolylineCurve<P>(pub Vec<P>);
 
 mod attributes;

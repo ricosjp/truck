@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
 	"truck-base",
+	"truck-geoderive",
 	"truck-geotrait",
 	"truck-geometry",
 	"truck-modeling",
@@ -16,3 +17,7 @@ members = [
 	"readme-generator",
 	"example-pages-generator",
 ]
+
+[profile.release.package.truck-js]
+opt-level = "s"
+codegen-units = 1

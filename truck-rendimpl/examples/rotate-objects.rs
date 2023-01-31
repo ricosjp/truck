@@ -117,8 +117,9 @@ impl MyRender {
     }
 }
 
+#[async_trait(?Send)]
 impl App for MyRender {
-    fn init(window: Arc<winit::window::Window>) -> MyRender {
+    async fn init(window: Arc<winit::window::Window>) -> MyRender {
         let sample_count = 4;
         let scene_desc = WindowSceneDescriptor {
             studio: StudioConfig {
@@ -136,9 +137,7 @@ impl App for MyRender {
             },
         };
         let mut app = MyRender {
-            scene: app::block_on(
-                async move { WindowScene::from_window(window, &scene_desc).await },
-            ),
+            scene: WindowScene::from_window(window, &scene_desc).await,
             instances: Vec::new(),
             rotate_flag: false,
             prev_cursor: None,

@@ -1,64 +1,71 @@
 struct VertexInput {
-    [[location(0)]] position: vec3<f32>;
-    [[location(1)]] uv: vec2<f32>;
-    [[location(2)]] normal: vec3<f32>; 
-};
+    @location(0) position: vec3<f32>,
+    @location(1) uv: vec2<f32>,
+    @location(2) normal: vec3<f32>, 
+}
 
 struct Camera {
-    matrix: mat4x4<f32>;
-    projection: mat4x4<f32>;
-};
+    camera_matrix: mat4x4<f32>,
+    projection: mat4x4<f32>,
+}
 
-[[group(0), binding(0)]]
+@group(0)
+@binding(0)
 var<uniform> camera: Camera;
 
 struct Lights {
-    lights: array<Light, 255>;
-};
+    lights: array<Light, 255>,
+}
 
-[[group(0), binding(1)]]
+@group(0)
+@binding(1)
 var<uniform> lights: Lights;
 
 struct SceneInfo {
-    bk_color: vec4<f32>;
-    time: f32;
-    nlights: u32;
-};
+    bk_color: vec4<f32>,
+    time: f32,
+    nlights: u32,
+}
 
-[[group(0), binding(2)]]
+@group(0)
+@binding(2)
 var<uniform> info: SceneInfo;
 
 struct ModelMatrix {
-    matrix: mat4x4<f32>;
-};
+    model_matrix: mat4x4<f32>,
+}
 
-[[group(1), binding(0)]]
+@group(1)
+@binding(0)
 var<uniform> model_matrix: ModelMatrix;
 
 struct ModelMaterial {
-    material: Material;
-};
+    material: Material,
+}
 
-[[group(1), binding(1)]]
+@group(1)
+@binding(1)
 var<uniform> material: ModelMaterial;
 
-[[group(1), binding(2)]]
+@group(1)
+@binding(2)
 var r_color: texture_2d<f32>;
 
-[[group(1), binding(3)]]
+@group(1)
+@binding(3)
 var r_sampler: sampler;
 
 struct VertexOutput {
-    [[builtin(position)]] gl_position: vec4<f32>;
-    [[location(0)]] position: vec3<f32>;
-    [[location(1)]] uv: vec2<f32>;
-    [[location(2)]] normal: vec3<f32>; 
-};
+    @builtin(position) gl_position: vec4<f32>,
+    @location(0) position: vec3<f32>,
+    @location(1) uv: vec2<f32>,
+    @location(2) normal: vec3<f32>, 
+}
 
-[[stage(vertex)]]
+@vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
-    let world_position = model_matrix.matrix * vec4<f32>(in.position, 1.0);
-    let world_normal = model_matrix.matrix * vec4<f32>(in.normal, 0.0);
+    let world_position = model_matrix.model_matrix * vec4<f32>(in.position, 1.0);
+    let world_normal = model_matrix.model_matrix * vec4<f32>(in.normal, 0.0);
     return VertexOutput(
         camera.projection * world_position,
         world_position.xyz,
@@ -69,9 +76,9 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
 let e: vec2<f32> = vec2<f32>(1.0, 0.0);
 
-[[stage(fragment)]]
-fn nontex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
-    let camera_dir = normalize((camera.matrix * e.yyyx).xyz - in.position);
+@fragment
+fn nontex_main(in: VertexInput) -> @location(0) vec4<f32> {
+    let camera_dir = normalize((camera.camera_matrix * e.yyyx).xyz - in.position);
     let normal = normalize(in.normal);
     var pre_color: vec3<f32> = vec3<f32>(0.0);
     for (var i: u32 = 0u; i < info.nlights; i = i + 1u) {
@@ -87,14 +94,15 @@ fn nontex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
     pre_color = background_correction(pre_color, info.bk_color.xyz, material.material);
     pre_color = ambient_correction(pre_color, material.material);
 
-    return vec4<f32>(pre_color, material.material.albedo.a);
+    return vec4<f32>(pow(pre_color, vec3<f32>(0.4545)), material.material.albedo.a);
 }
 
-[[stage(fragment)]]
-fn tex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
+@fragment
+fn tex_main(in: VertexInput) -> @location(0) vec4<f32> {
     var matr: Material = material.material;
     matr.albedo = textureSample(r_color, r_sampler, in.uv);
-    let camera_dir = normalize((camera.matrix * e.yyyx).xyz - in.position);
+    matr.albedo = vec4<f32>(pow(matr.albedo.rgb, vec3<f32>(2.2)), matr.albedo.a);
+    let camera_dir = normalize((camera.camera_matrix * e.yyyx).xyz - in.position);
     let normal = normalize(in.normal);
     var pre_color: vec3<f32> = vec3<f32>(0.0);
     for (var i: u32 = 0u; i < info.nlights; i = i + 1u) {
@@ -110,5 +118,5 @@ fn tex_main(in: VertexInput) -> [[location(0)]] vec4<f32> {
     pre_color = background_correction(pre_color, info.bk_color.xyz, material.material);
     pre_color = ambient_correction(pre_color, matr);
 
-    return vec4<f32>(pre_color, matr.albedo.a);
+    return vec4<f32>(pow(pre_color, vec3<f32>(0.4545)), matr.albedo.a);
 }

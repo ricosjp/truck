@@ -41,6 +41,15 @@ impl<P: EuclideanSpace<Scalar = f64>> BoundedCurve for PolyCurve<P> {
     fn parameter_range(&self) -> (f64, f64) { (-100.0, 100.0) }
 }
 
+impl<P> ParameterDivision1D for PolyCurve<P>
+where P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + truck_base::hash::HashGen<f64>
+{
+    type Point = P;
+    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
+        algo::curve::parameter_division(self, range, tol)
+    }
+}
+
 // surface by tensor product of polynomials e.g. `(2u^2 + 3u + 1)(4v^2 - 6v + 2)`
 #[derive(Clone, Debug)]
 pub struct PolySurface(pub PolyCurve<Point3>, pub PolyCurve<Point3>);
@@ -74,5 +83,20 @@ impl ParametricSurface3D for PolySurface {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         self.uder(u, v).cross(self.vder(u, v)).normalize()
+    }
+}
+
+impl BoundedSurface for PolySurface {
+    #[inline(always)]
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((-100.0, 100.0), (-50.0, 50.0)) }
+}
+
+impl ParameterDivision2D for PolySurface {
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, range, tol)
     }
 }

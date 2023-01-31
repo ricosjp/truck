@@ -1,6 +1,6 @@
 //! Benchmark Animation
 //!
-//! In each frame, the NURBS surface is devided into mesh.
+//! In each frame, the NURBS surface is divided into mesh.
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -99,8 +99,9 @@ impl MyApp {
     }
 }
 
+#[async_trait(?Send)]
 impl App for MyApp {
-    fn init(window: Arc<Window>) -> MyApp {
+    async fn init(window: Arc<Window>) -> Self {
         let desc = WindowSceneDescriptor {
             studio: StudioConfig {
                 camera: MyApp::init_camera(),
@@ -116,7 +117,7 @@ impl App for MyApp {
                 ..Default::default()
             },
         };
-        let mut scene = app::block_on(async move { WindowScene::from_window(window, &desc).await });
+        let mut scene = WindowScene::from_window(window, &desc).await;
         let creator = scene.instance_creator();
         let surface = Self::init_surface(3, 4);
         let object = creator.create_instance(
@@ -142,7 +143,6 @@ impl App for MyApp {
             thread,
         }
     }
-
     fn app_title<'a>() -> Option<&'a str> { Some("BSpline Benchmark Animation") }
 
     fn render(&mut self) {

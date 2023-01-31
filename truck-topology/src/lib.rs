@@ -63,6 +63,8 @@
 //! These containers are used for creating higher-dimentional topological elements and checked the
 //! regularity (e.g. connectivity, closedness, and so on) before creating these elements.
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -126,7 +128,7 @@ pub struct Wire<P, C> {
     edge_list: VecDeque<Edge<P, C>>,
 }
 
-/// Face, attatched to a simple and closed wire.
+/// Face, attached to a simple and closed wire.
 ///
 /// The constructors `Face::new()`, `Face::try_new()`, and `Face::new_unchecked()`
 /// create a different faces each time, even if the boundary wires are the same one.
@@ -152,13 +154,13 @@ pub struct Face<P, C, S> {
 ///
 /// The entity of this struct is `Vec<Face>` and almost methods are inherited from
 /// `Vec<Face>` by `Deref` and `DerefMut` traits.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Debug)]
 pub struct Shell<P, C, S> {
     face_list: Vec<Face<P, C, S>>,
 }
 
 /// Solid, attached to a closed shells.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub struct Solid<P, C, S> {
     boundaries: Vec<Shell<P, C, S>>,
 }
@@ -240,7 +242,7 @@ pub type EdgeID<C> = ID<Mutex<C>>;
 /// ```
 pub type FaceID<S> = ID<Mutex<S>>;
 
-/// configuation for vertex display format.
+/// configuration for vertex display format.
 #[derive(Clone, Copy, Debug)]
 pub enum VertexDisplayFormat {
     /// Display all data like `Vertex { id: 0x123456789ab, entity: [0.0, 1.0] }`.
@@ -253,7 +255,7 @@ pub enum VertexDisplayFormat {
     AsPoint,
 }
 
-/// Configuation for edge display format.
+/// Configuration for edge display format.
 #[derive(Clone, Copy, Debug)]
 pub enum EdgeDisplayFormat {
     /// Display all data like `Edge { id: 0x123456789ab, vertices: (0, 1), entity: BSplineCurve {..} }`.
@@ -285,7 +287,7 @@ pub enum EdgeDisplayFormat {
     AsCurve,
 }
 
-/// Configuation for wire display format.
+/// Configuration for wire display format.
 #[derive(Clone, Copy, Debug)]
 pub enum WireDisplayFormat {
     /// Display tuple struct of edge list like `Wire([Edge {..}, Edge {..}, ..])`.
@@ -305,7 +307,7 @@ pub enum WireDisplayFormat {
     },
 }
 
-/// Configuation for face display format
+/// Configuration for face display format
 #[derive(Clone, Copy, Debug)]
 pub enum FaceDisplayFormat {
     /// Display all data like `Face { id: 0x123456789ab, boundaries: [Wire(..), Wire(..)], entity: BSplineSurface {..} }`.
@@ -337,7 +339,7 @@ pub enum FaceDisplayFormat {
     AsSurface,
 }
 
-/// Configuation for shell display format
+/// Configuration for shell display format
 #[derive(Clone, Copy, Debug)]
 pub enum ShellDisplayFormat {
     /// Display as faces list tuple struct like `Shell([Face {..}, Face {..}, ..])`.
@@ -352,7 +354,7 @@ pub enum ShellDisplayFormat {
     },
 }
 
-/// Configuation for solid display format
+/// Configuration for solid display format
 #[derive(Clone, Copy, Debug)]
 pub enum SolidDisplayFormat {
     /// Display solid struct like `Solid { boundaries: [Shell(..), Shell(..), ..] }`.
@@ -372,7 +374,7 @@ pub enum SolidDisplayFormat {
     },
 }
 
-mod compress;
+pub mod compress;
 mod edge;
 /// classifies the errors that can occur in this crate.
 pub mod errors;
@@ -384,7 +386,6 @@ mod solid;
 mod vertex;
 /// define the edge iterators and the vertex iterator.
 pub mod wire;
-pub use compress::{CompressedEdge, CompressedFace, CompressedShell, CompressedSolid};
 
 /// Display structs for debug or display topological elements
 pub mod format {
@@ -402,7 +403,7 @@ pub mod format {
     pub(super) struct MutexFmt<'a, T>(pub &'a Mutex<T>);
 
     impl<'a, T: Debug> Debug for MutexFmt<'a, T> {
-        fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             use std::sync::TryLockError;
             match self.0.try_lock() {
                 Ok(guard) => f.write_fmt(format_args!("{:?}", &&*guard)),

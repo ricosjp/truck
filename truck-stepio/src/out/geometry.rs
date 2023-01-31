@@ -1,9 +1,10 @@
 use super::{Result, *};
 use truck_geometry::*;
-use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
+use truck_modeling::{Curve as ModelingCurve, Leader, Surface as ModelingSurface};
+use truck_polymesh::PolylineCurve;
 
 impl Display for StepDisplay<Point2> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "#{idx} = CARTESIAN_POINT('', {coordinates});\n",
             idx = self.idx,
@@ -11,10 +12,15 @@ impl Display for StepDisplay<Point2> {
         ))
     }
 }
-impl_step_length!(Point2, 1);
+impl Display for StepDisplay<&Point2> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
+    }
+}
+impl_const_step_length!(Point2, 1);
 
-impl<'a> Display for StepDisplay<Point3> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl Display for StepDisplay<Point3> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "#{idx} = CARTESIAN_POINT('', {coordinates});\n",
             idx = self.idx,
@@ -22,14 +28,19 @@ impl<'a> Display for StepDisplay<Point3> {
         ))
     }
 }
-impl_step_length!(Point3, 1);
+impl Display for StepDisplay<&Point3> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
+    }
+}
+impl_const_step_length!(Point3, 1);
 
 /// class for display `DIRECTION`.
 #[derive(Clone, Debug, Copy)]
 pub struct VectorAsDirection<V>(V);
 
 impl Display for StepDisplay<VectorAsDirection<Vector2>> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "#{idx} = DIRECTION('', {direction_ratios});\n",
             idx = self.idx,
@@ -39,7 +50,7 @@ impl Display for StepDisplay<VectorAsDirection<Vector2>> {
 }
 
 impl Display for StepDisplay<VectorAsDirection<Vector3>> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "#{idx} = DIRECTION('', {direction_ratios});\n",
             idx = self.idx,
@@ -48,9 +59,8 @@ impl Display for StepDisplay<VectorAsDirection<Vector3>> {
     }
 }
 
-impl<V> StepLength for VectorAsDirection<V> {
-    #[inline]
-    fn step_length(&self) -> usize { 1 }
+impl<V> ConstStepLength for VectorAsDirection<V> {
+    const LENGTH: usize = 1;
 }
 
 impl<V> Display for StepDisplay<V>
@@ -58,7 +68,7 @@ where
     V: InnerSpace<Scalar = f64>,
     StepDisplay<VectorAsDirection<V>>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let magnitude = self.entity.magnitude();
         let direction_idx = self.idx + 1;
         f.write_fmt(format_args!(
@@ -68,15 +78,85 @@ where
         ))
     }
 }
-impl_step_length!(Vector2, 2);
-impl_step_length!(Vector3, 2);
+impl<V> Display for StepDisplay<&V>
+where
+    V: InnerSpace<Scalar = f64>,
+    StepDisplay<VectorAsDirection<V>>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
+    }
+}
+impl_const_step_length!(Vector2, 2);
+impl_const_step_length!(Vector3, 2);
+
+impl<'a, P> Display for StepDisplay<&'a Line<P>>
+where
+    P: EuclideanSpace + ConstStepLength,
+    StepDisplay<P>: Display,
+    StepDisplay<P::Diff>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let pnt_idx = self.idx + 1;
+        let dir_idx = self.idx + 1 + P::LENGTH;
+        f.write_fmt(format_args!(
+            "#{idx} = LINE('', #{pnt_idx}, #{dir_idx});\n{pnt}{dir}",
+            idx = self.idx,
+            pnt = StepDisplay::new(self.entity.0, pnt_idx),
+            dir = StepDisplay::new(self.entity.1 - self.entity.0, dir_idx),
+        ))
+    }
+}
+
+impl<P> Display for StepDisplay<Line<P>>
+where
+    P: EuclideanSpace + ConstStepLength,
+    StepDisplay<P>: Display,
+    StepDisplay<P::Diff>: Display,
+{
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
+    }
+}
+
+impl<P> ConstStepLength for Line<P>
+where
+    P: EuclideanSpace + ConstStepLength,
+    P::Diff: ConstStepLength,
+{
+    const LENGTH: usize = 1 + P::LENGTH + P::Diff::LENGTH;
+}
+
+impl<'a, P> Display for StepDisplay<&'a PolylineCurve<P>>
+where
+    P: Copy + ConstStepLength,
+    StepDisplay<P>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let idx = self.idx;
+        f.write_fmt(format_args!(
+            "#{idx} = POLYLINE('', {range});\n",
+            range = IndexSliceDisplay(idx + 1..=idx + self.entity.0.len())
+        ))?;
+        self.entity
+            .0
+            .iter()
+            .enumerate()
+            .try_for_each(|(i, p)| Display::fmt(&StepDisplay::new(*p, idx + 1 + i * P::LENGTH), f))
+    }
+}
+
+impl<P: ConstStepLength> StepLength for PolylineCurve<P> {
+    fn step_length(&self) -> usize { 1 + self.0.len() * P::LENGTH }
+}
 
 impl<'a, P> Display for StepDisplay<&'a BSplineCurve<P>>
 where
-    P: Copy,
+    P: Copy + ConstStepLength,
     StepDisplay<P>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let curve = self.entity;
         let idx = self.idx;
         let (knots, multi) = curve.knot_vec().to_single_multi();
@@ -84,12 +164,12 @@ where
             .control_points()
             .iter()
             .enumerate()
-            .map(|(i, p)| StepDisplay::new(*p, idx + i + 1))
+            .map(|(i, p)| StepDisplay::new(*p, idx + 1 + i * P::LENGTH))
             .collect::<Vec<_>>();
         f.write_fmt(format_args!(
-			"#{idx} = B_SPLINE_CURVE_WITH_KNOTS('', {degree}, {control_points_list}, .UNSPECIFIED., .U., .U., {knot_multiplicities}, {knots}, .UNSPECIFIED.);\n{control_points_instances}",
+            "#{idx} = B_SPLINE_CURVE_WITH_KNOTS('', {degree}, {control_points_list}, .UNSPECIFIED., .U., .U., {knot_multiplicities}, {knots}, .UNSPECIFIED.);\n{control_points_instances}",
             degree = curve.degree(),
-            control_points_list = IndexSliceDisplay(self.idx + 1..=self.idx + curve.control_points().len()),
+            control_points_list = IndexSliceDisplay((self.idx + 1..=self.idx + curve.control_points().len() * P::LENGTH).step_by(P::LENGTH)),
 			knot_multiplicities = SliceDisplay(&multi),
             knots = SliceDisplay(&knots),
             control_points_instances = SliceDisplay(&control_points_instances),
@@ -99,10 +179,11 @@ where
 
 impl<P> Display for StepDisplay<BSplineCurve<P>>
 where
-    P: Copy,
+    P: Copy + ConstStepLength,
     StepDisplay<P>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
 }
@@ -114,10 +195,10 @@ impl<P> StepLength for BSplineCurve<P> {
 impl<'a, V> Display for StepDisplay<&'a NURBSCurve<V>>
 where
     V: Homogeneous<f64>,
-    V::Point: Copy,
+    V::Point: ConstStepLength,
     StepDisplay<V::Point>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let curve = self.entity;
         let idx = self.idx;
         let (knots, multi) = curve.knot_vec().to_single_multi();
@@ -125,7 +206,7 @@ where
             .control_points()
             .iter()
             .enumerate()
-            .map(|(i, v)| StepDisplay::new(v.to_point(), idx + i + 1))
+            .map(|(i, v)| StepDisplay::new(v.to_point(), idx + 1 + i * V::Point::LENGTH))
             .collect::<Vec<_>>();
         let weights = curve
             .control_points()
@@ -143,8 +224,10 @@ where
     REPRESENTATION_ITEM('')
 );\n{control_points_instances}",
             degree = curve.degree(),
-            control_points_list =
-                IndexSliceDisplay(self.idx + 1..=self.idx + curve.control_points().len()),
+            control_points_list = IndexSliceDisplay(
+                (self.idx + 1..=self.idx + curve.control_points().len() * V::Point::LENGTH)
+                    .step_by(V::Point::LENGTH)
+            ),
             knot_multiplicities = SliceDisplay(&multi),
             knots = SliceDisplay(&knots),
             weights = SliceDisplay(&weights),
@@ -156,26 +239,79 @@ where
 impl<V> Display for StepDisplay<NURBSCurve<V>>
 where
     V: Homogeneous<f64>,
-    V::Point: Copy,
+    V::Point: ConstStepLength,
     StepDisplay<V::Point>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
 }
 
-impl<'a> Display for StepDisplay<&'a ModelingCurve> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl<'a, C, S> Display for StepDisplay<&'a IntersectionCurve<C, S>>
+where
+    C: StepLength,
+    S: StepLength,
+    StepDisplay<&'a C>: Display,
+    StepDisplay<&'a S>: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let idx = self.idx;
+        let curve_idx = idx + 1;
+        let surface0_idx = curve_idx + self.entity.leader().step_length();
+        let surface1_idx = surface0_idx + self.entity.surface0().step_length();
+        f.write_fmt(format_args!(
+            "#{idx} = INTERSECTION_CURVE('', #{curve_idx}, (#{surface0_idx}, #{surface1_idx}), .CURVE_3D.);\n"
+        ))?;
+        Display::fmt(&StepDisplay::new(self.entity.leader(), curve_idx), f)?;
+        Display::fmt(&StepDisplay::new(self.entity.surface0(), surface0_idx), f)?;
+        Display::fmt(&StepDisplay::new(self.entity.surface1(), surface1_idx), f)
+    }
+}
+
+impl<C, S> StepLength for IntersectionCurve<C, S>
+where
+    C: StepLength,
+    S: StepLength,
+{
+    fn step_length(&self) -> usize {
+        1 + self.leader().step_length()
+            + self.surface0().step_length()
+            + self.surface1().step_length()
+    }
+}
+
+impl<'a> Display for StepDisplay<&'a Leader> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.entity {
+            Leader::Polyline(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
+            Leader::BSpline(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
+        }
+    }
+}
+
+impl StepLength for Leader {
+    fn step_length(&self) -> usize {
+        match self {
+            Leader::Polyline(x) => x.step_length(),
+            Leader::BSpline(x) => x.step_length(),
+        }
+    }
+}
+
+impl<'a> Display for StepDisplay<&'a ModelingCurve> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self.entity {
+            ModelingCurve::Line(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::BSplineCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::NURBSCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
-            ModelingCurve::IntersectionCurve(_) => unimplemented!(),
+            ModelingCurve::IntersectionCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
         }
     }
 }
 
 impl Display for StepDisplay<ModelingCurve> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&StepDisplay::new(&self.entity, self.idx), f)
     }
 }
@@ -183,9 +319,10 @@ impl Display for StepDisplay<ModelingCurve> {
 impl StepLength for ModelingCurve {
     fn step_length(&self) -> usize {
         match self {
+            ModelingCurve::Line(_) => Line::<Point3>::LENGTH,
             ModelingCurve::BSplineCurve(x) => x.step_length(),
             ModelingCurve::NURBSCurve(x) => x.step_length(),
-            ModelingCurve::IntersectionCurve(_) => unimplemented!(),
+            ModelingCurve::IntersectionCurve(x) => x.step_length(),
         }
     }
 }
@@ -195,7 +332,7 @@ impl<P> StepLength for NURBSCurve<P> {
 }
 
 impl Display for StepDisplay<Plane> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let idx = self.idx;
         let axis2_placement_idx = idx + 1;
         let location_idx = idx + 2;
@@ -215,6 +352,12 @@ impl Display for StepDisplay<Plane> {
     }
 }
 
+impl<'a> Display for StepDisplay<&'a Plane> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        Display::fmt(&StepDisplay::new(*self.entity, self.idx), f)
+    }
+}
+
 impl StepLength for Plane {
     fn step_length(&self) -> usize { 5 }
 }
@@ -224,7 +367,7 @@ where
     P: Copy,
     StepDisplay<P>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay {
             entity: surface,
             idx,
@@ -272,7 +415,7 @@ where
     V::Point: Copy,
     StepDisplay<V::Point>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay {
             entity: surface,
             idx,
@@ -336,7 +479,7 @@ where
     C: StepLength,
     StepDisplay<&'a C>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay {
             entity: surface,
             idx,
@@ -361,7 +504,7 @@ where
     C: StepLength + Clone,
     StepDisplay<C>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay {
             entity: surface,
             idx,
@@ -390,7 +533,7 @@ where
     C: StepLength + Transformed<Matrix4>,
     StepDisplay<C>: Display,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepDisplay { entity, idx } = self;
         let surface = entity.entity();
         let transform = entity.transform();
@@ -408,7 +551,7 @@ where
 }
 
 impl<'a> Display for StepDisplay<&'a ModelingSurface> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.entity {
             ModelingSurface::Plane(x) => Display::fmt(&StepDisplay::new(*x, self.idx), f),
             ModelingSurface::BSplineSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),

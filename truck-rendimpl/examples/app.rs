@@ -3,6 +3,7 @@
 // Copyright © 2021 RICOS
 // Apache license 2.0
 
+pub use async_trait::async_trait;
 use instant::Instant;
 use std::sync::Arc;
 use std::time::Duration;
@@ -13,12 +14,13 @@ use winit::window::Window;
 
 /// The framework of applications with `winit`.
 /// The main function of this file is the smallest usecase of this trait.
+#[async_trait(?Send)]
 pub trait App: Sized + 'static {
     /// Initialize application
     /// # Arguments
     /// - handler: `DeviceHandler` provided by `wgpu`
-    /// - info: informations of device and backend
-    fn init(window: Arc<Window>) -> Self;
+    /// - info: information of device and backend
+    async fn init(window: Arc<Window>) -> Self;
     /// By overriding this function, you can change the display of the title bar.
     /// It is not possible to change the window while it is running.
     fn app_title<'a>() -> Option<&'a str> { None }
@@ -63,8 +65,8 @@ pub trait App: Sized + 'static {
     fn cursor_moved(&mut self, _position: PhysicalPosition<f64>) -> ControlFlow {
         Self::default_control_flow()
     }
-    /// Run the application.
-    fn run() {
+    /// Run the application in the future.
+    async fn async_run() {
         let event_loop = winit::event_loop::EventLoop::new();
         let mut wb = winit::window::WindowBuilder::new();
         if let Some(title) = Self::app_title() {
@@ -88,7 +90,7 @@ pub trait App: Sized + 'static {
         }
 
         let window = Arc::new(window);
-        let mut app = Self::init(Arc::clone(&window));
+        let mut app = Self::init(Arc::clone(&window)).await;
 
         event_loop.run(move |ev, _, control_flow| {
             *control_flow = match ev {
@@ -124,27 +126,17 @@ pub trait App: Sized + 'static {
             };
         })
     }
+    /// Run the application.
+    #[inline]
+    fn run() { block_on(Self::async_run()) }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
-pub fn block_on<T: 'static, F: core::future::Future<Output = T> + 'static>(f: F) -> T {
-    pollster::block_on(f)
-}
+pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) { pollster::block_on(f); }
 
 #[cfg(target_arch = "wasm32")]
-#[allow(dead_code)]
-pub fn block_on<T: 'static, F: core::future::Future<Output = T> + 'static>(f: F) -> T {
-    use std::sync::Mutex;
-    let a: Arc<Mutex<Option<T>>> = Arc::new(Mutex::new(None));
-    let b = Arc::clone(&a);
-    wasm_bindgen_futures::spawn_local(async move {
-        let val = f.await;
-        *a.lock().unwrap() = Some(val);
-    });
-    while b.lock().unwrap().is_some() {}
-    let x = b.lock().unwrap().take().unwrap();
-    x
+pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) {
+    wasm_bindgen_futures::spawn_local(f);
 }
 
 /// The smallest example of the trait `App`.
@@ -152,8 +144,9 @@ pub fn block_on<T: 'static, F: core::future::Future<Output = T> + 'static>(f: F)
 #[allow(dead_code)]
 fn main() {
     struct MyApp;
+    #[async_trait(?Send)]
     impl App for MyApp {
-        fn init(_: Arc<Window>) -> MyApp { MyApp }
+        async fn init(_: Arc<Window>) -> Self { MyApp }
     }
     MyApp::run()
 }

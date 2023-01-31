@@ -4,28 +4,82 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
-- Converting express `trimmed_curve` to truck `TrimmedCurve`.
-- Add dependency on `matext4cgmath`.
-- Add feature `wasmbind` to chrono.
-- Compare `BoundingBox` by inclusion relationship.
-- Updates `ruststep` version.
-- Add WGSL utilities.
-- Remove specification of branch of `ruststep`.
-- Fix clippy warnings.
-- Fix the signiture in coefficient of `Subdivision::loop_subdivision`.
-- Add new mesh filter `Subdivision::loop_subdivision`.
-- Remove the `skip_children` option from `rustfmt.toml` to activate `cargo fmt`.
-- STEP Output.
-- Upgraded wgpu (0.12.0) and winit (0.26.0)
-- Fix a typo in Readme.md.
-- Add some specified geometries for STEP I/O
-- Derive geometric traits to `Box`.
-- Add the method `swap_vertex` to `WireFrameInstance`.
+- Parse of `SURFACE_OF_LINEAR_EXTRUSION` in STEP.
+- Parse of `TOROIDAL_SURFACE` in STEP.
+- Parse of `B_SPLINE_SURFACE`s in STEP.
+- Implement robust meshing by `SearchNearestParameter`.
+- Remove invertible from tessellating traits.
+- Add "periodic" identifer to `ParametricCurve` and `ParametricSurface`.
+
+Step input API is W.I.P. and hidden.
+
+- Remove recursive loop method.
+- Parse STEP cylindrical surface.
+- Implement `Serialize` and `Deserialize` for `stepio::r#in::alias::*`.
+- Adds `SURFACE_OF_REVOLUTION` and `SPHERICAL_SURFACE` to step input.
+- Fix some bugs in `step-to-obj`.
+- Parse STEP topology.
+- The parsing of the STEP geometry was implemented up to `BSplineSurfaceWithKnots`.
+
+## v0.5
+
+### Additional APIs
+
+- derive macros for geometric traits [`truck-geoderive`](truck-geoderive)
+- step output of open shell, worlds including several models, and `IntersectionCurve`
+- parallel iterators for topological structures
+- direct tessellation of `CompressedShell` and `CompressedSolid`
+- direct serialization for topological data structures.
+- cubic B-spline approximation
+- `builder::try_wire_homotopy`
+- `Solid::cut_face_by_edge`
+- `Face::edge_iter` and `Face::vertex_iter`
+- `IntersectionCurve` between `Plane`s can now be converted to `Line`.
+- `Camera::ray`
+- `EntryMap`
+
+### Updated APIs
+
+- `MeshableShape::triangulation`
+- the Euler operations
+- `Face::cut_by_edge`
+- Refactoring `Search(Nearest)Parameter`.
+
+### Bug fix
+
+- The orientation of the normal of `builder::try_attach_plane`.
+- `Shell::singular_vertices`
+- binary STL output of `PolygonMesh`
+
+### Internal Improvements
+
+- Data integrity check during deserialization of `KnotVec`, `BSplineCurve`, and all structs constructed by `try_new`.
+- Improve meshing algorithm by parallelization.
+- Intersection curve with B-spline leader.
+- Implement some geometric traits for `TrimmedCurve`, `UnitHyperbola` and `UnitParabola`.
+- Use Line in modeling and simplify output shape of tsweep.
+
+### Misc
+
+- Make `TextureFormat` of surfaces `BrgaU8norm`.
+- Add an example with several boundaries.
+- Updates `wgpu` to `v0.14`
+- Updates `spade` to `v2`.
+- Change the profile of `truck-js` and remove dependencies to `wee_alloc`.
+
+## v0.4
+
+- The first version of `truck-stepio` has been released! One can output shapes modeled by `truck-modeling`.
+- WGSL utility `math.wgsl` has been released! One can calculate invert matrices and rotation matrices.
+- The processing related to linear algebra has been isolated from `truck-base` to [`matext4cgmath`](https://crates.io/crates/matext4cgmath).
+- New mesh filter `Subdivision::loop_subdivision` was implemented in `truck-meshalgo`!
 - In `truck-geotrait`, the trait `ParametricCurve` is decomposed into `ParametricCurve` and `BoundedCurve`.
+- The method `swap_vertex` has been added to `WireFrameInstance`.
+- Geometric traits has been derived to `Box`.
+- Some specified geometries has been added for STEP I/O
+- Comparing `BoundingBox` by inclusion relationship.
 - In order to make meshing reproducible, we decided to implement random perturbations by means of a deterministic hash function.
-- except tags from some tests
-- describe the explicit dependency on `mio` and `mio-misc` for build `winit`.
-- runs `cargo upgrade`
+- Some lints has been added.
 
 ## v0.3
 
@@ -37,7 +91,7 @@ The version is of the bottom crate `truck-rendimpl`.
   - Abort traits `Shape` and `Polygon`, and add new traits `IntoInstance` and `TryIntoInstance`.
 - Applied wgpu v0.11 and made all shaders WGSL, including shaders for test. Now, all dependence on cmake has been removed!
   - The sample code `glsl-sandbox` becomes `wgsl-sandbox`. You can easily experience WGSL shading.
-- Splitted `truck-base::geom_trait` into `truck-geotrait` and added some algorithms `algo`. Some methods in curves and surfaces were standardized.
+- Split `truck-base::geom_trait` into `truck-geotrait` and added some algorithms `algo`. Some methods in curves and surfaces were standardized.
 - Added a new crate `truck-meshalgo`. Moved the polygon processing algorithm from polymesh to meshalgo.
 - Added a new CAD meshing algorithm. Meshing trimmed surfaces. The same edge is made into the same polyline. A solid is made into a closed polygon.
 - Added some meshing algorithms, including mesh collision.

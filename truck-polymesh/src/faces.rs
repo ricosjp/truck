@@ -136,7 +136,7 @@ impl<V: Copy> Faces<V> {
     /// let faces = Faces::from_tri_and_quad_faces(tri_faces, Vec::new());
     /// ```
     #[inline(always)]
-    pub fn from_tri_and_quad_faces(tri_faces: Vec<[V; 3]>, quad_faces: Vec<[V; 4]>) -> Self {
+    pub const fn from_tri_and_quad_faces(tri_faces: Vec<[V; 3]>, quad_faces: Vec<[V; 4]>) -> Self {
         Faces {
             tri_faces,
             quad_faces,
@@ -180,7 +180,7 @@ impl<V: Copy> Faces<V> {
 
     /// Returns the vector of triangles.
     #[inline(always)]
-    pub fn tri_faces(&self) -> &Vec<[V; 3]> { &self.tri_faces }
+    pub const fn tri_faces(&self) -> &Vec<[V; 3]> { &self.tri_faces }
 
     /// Returns the mutable slice of triangles.
     #[inline(always)]
@@ -188,7 +188,7 @@ impl<V: Copy> Faces<V> {
 
     /// Returns the vector of quadrangles.
     #[inline(always)]
-    pub fn quad_faces(&self) -> &Vec<[V; 4]> { &self.quad_faces }
+    pub const fn quad_faces(&self) -> &Vec<[V; 4]> { &self.quad_faces }
 
     /// Returns the mutable slice of quadrangles.
     #[inline(always)]
@@ -196,7 +196,7 @@ impl<V: Copy> Faces<V> {
 
     /// Returns the vector of n-gons (n > 4).
     #[inline(always)]
-    pub fn other_faces(&self) -> &Vec<Vec<V>> { &self.other_faces }
+    pub const fn other_faces(&self) -> &Vec<Vec<V>> { &self.other_faces }
 
     /// Returns the mutable iterator of n-gons (n > 4).
     #[inline(always)]
@@ -306,7 +306,7 @@ impl<V: Copy> Faces<V> {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn triangle_iter(&self) -> TriangleIterator<V> {
+    pub fn triangle_iter(&self) -> TriangleIterator<'_, V> {
         let len = self.face_iter().fold(0, |sum, face| sum + face.len() - 2);
         TriangleIterator {
             tri_faces: self.tri_faces.iter(),

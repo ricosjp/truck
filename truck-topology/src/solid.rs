@@ -35,7 +35,9 @@ impl<P, C, S> Solid<P, C, S> {
     /// This method does NOT check whether all boundary is non-empty, connected, and closed.
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
-    pub fn new_unchecked(boundaries: Vec<Shell<P, C, S>>) -> Solid<P, C, S> { Solid { boundaries } }
+    pub const fn new_unchecked(boundaries: Vec<Shell<P, C, S>>) -> Solid<P, C, S> {
+        Solid { boundaries }
+    }
 
     /// create the shell whose boundaries is boundary.
     /// # Remarks
@@ -51,7 +53,7 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Returns the reference of boundary shells
     #[inline(always)]
-    pub fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
+    pub const fn boundaries(&self) -> &Vec<Shell<P, C, S>> { &self.boundaries }
     /// Returns the boundary shells
     #[inline(always)]
     pub fn into_boundaries(self) -> Vec<Shell<P, C, S>> { self.boundaries }
@@ -146,36 +148,66 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Cuts one edge into two edges at vertex.
     #[inline(always)]
-    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
+    pub fn cut_edge(
+        &mut self,
+        edge_id: EdgeID<C>,
+        vertex: &Vertex<P>,
+    ) -> Option<(Edge<P, C>, Edge<P, C>)>
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>,
+    {
         let res = self
             .boundaries
             .iter_mut()
-            .all(|shell| shell.cut_edge(edge_id, vertex));
+            .find_map(|shell| shell.cut_edge(edge_id, vertex));
         #[cfg(debug_assertions)]
         Solid::new(self.boundaries.clone());
         res
     }
     /// Removes `vertex` from `self` by concat two edges on both sides.
     #[inline(always)]
-    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> Option<Edge<P, C>>
     where
         P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
         let res = self
             .boundaries
             .iter_mut()
-            .all(|shell| shell.remove_vertex_by_concat_edges(vertex_id));
+            .find_map(|shell| shell.remove_vertex_by_concat_edges(vertex_id));
         #[cfg(debug_assertions)]
         Solid::new(self.boundaries.clone());
         res
     }
 
+    /// Cut a face with `face_id` by edge.
+    #[inline(always)]
+    pub fn cut_face_by_edge(&mut self, face_id: FaceID<S>, edge: Edge<P, C>) -> bool
+    where S: Clone {
+        let tuple = self.boundaries.iter_mut().find_map(|shell| {
+            let find_res = shell
+                .face_iter_mut()
+                .enumerate()
+                .find(move |(_, face)| face.id() == face_id)
+                .map(move |(i, _)| i);
+            find_res.map(move |i| (shell, i))
+        });
+        if let Some((shell, i)) = tuple {
+            if let Some((face0, face1)) = shell[i].cut_by_edge(edge) {
+                shell[i] = face0;
+                shell.push(face1);
+                return true;
+            }
+        }
+        false
+    }
+
     /// Creates display struct for debugging the solid.
     #[inline(always)]
-    pub fn display(&self, format: SolidDisplayFormat) -> DebugDisplay<Self, SolidDisplayFormat> {
+    pub fn display(
+        &self,
+        format: SolidDisplayFormat,
+    ) -> DebugDisplay<'_, Self, SolidDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -183,10 +215,16 @@ impl<P, C, S> Solid<P, C, S> {
     }
 }
 
+impl<P, C, S> PartialEq for Solid<P, C, S> {
+    fn eq(&self, other: &Self) -> bool { self.boundaries == other.boundaries }
+}
+
+impl<P, C, S> Eq for Solid<P, C, S> {}
+
 impl<'a, P: Debug, C: Debug, S: Debug> Debug
     for DebugDisplay<'a, Solid<P, C, S>, SolidDisplayFormat>
 {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             SolidDisplayFormat::ShellsList { shell_format } => f
                 .debug_list()
@@ -221,7 +259,7 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug
 #[cfg(test)]
 pub(super) fn cube() -> Solid<(), (), ()> {
     use crate::*;
-    let v = Vertex::news(&[(); 8]);
+    let v = Vertex::news([(); 8]);
     let edge = [
         Edge::new(&v[0], &v[1], ()), // 0
         Edge::new(&v[1], &v[2], ()), // 1

@@ -11,7 +11,7 @@ pub fn double_projection<S>(
     trials: usize,
 ) -> Option<(Point3, Point2, Point2)>
 where
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     #[cfg(all(test, debug_assertions))]
     let mut log = Vec::new();
@@ -38,9 +38,19 @@ where
     #[cfg(all(test, debug_assertions))]
     {
         eprintln!("Newton method is not converges");
-        log.into_iter().for_each(|t| eprintln!("{:?}", t));
+        log.into_iter().for_each(|t| eprintln!("{t:?}"));
     }
     None
+}
+
+/// Mutable editor for `IntersectionCurve`.
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct IntersectionCurveEditor<'a, C, S> {
+    pub surface0: &'a mut S,
+    pub surface1: &'a mut S,
+    pub leader: &'a mut C,
+    pub tol: &'a mut f64,
 }
 
 impl<C, S> IntersectionCurve<C, S> {
@@ -53,10 +63,28 @@ impl<C, S> IntersectionCurve<C, S> {
     /// Returns the polyline leading this curve.
     #[inline(always)]
     pub fn leader(&self) -> &C { &self.leader }
-    /// Returns the polyline leading this curve.
+    /// Returns editor for `IntersectionCurve`. This method is only for developers, do not use.
     #[doc(hidden)]
     #[inline(always)]
-    pub fn leader_mut(&mut self) -> &mut C { &mut self.leader }
+    pub fn editor(&mut self) -> IntersectionCurveEditor<'_, C, S> {
+        IntersectionCurveEditor {
+            surface0: &mut self.surface0,
+            surface1: &mut self.surface1,
+            leader: &mut self.leader,
+            tol: &mut self.tol,
+        }
+    }
+    /// Change leader.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn change_leader<D>(self, f: impl FnOnce(C) -> D) -> IntersectionCurve<D, S> {
+        IntersectionCurve {
+            surface0: self.surface0,
+            surface1: self.surface1,
+            leader: f(self.leader),
+            tol: self.tol,
+        }
+    }
     /// The tolerance for generating this intersection curve.
     #[inline(always)]
     pub fn tolerance(&self) -> f64 { self.tol }
@@ -75,9 +103,12 @@ impl<C, S> IntersectionCurve<C, S> {
 impl<C, S> IntersectionCurve<C, S>
 where
     C: ParametricCurve3D,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
-    /// search triple value
+    /// Search triple value of the point corresponding to the parameter `t`.
+    /// - the coordinate on 3D space
+    /// - the uv coordinate on `self.surface0()`
+    /// - the uv coordinate on `self.surface1()`
     #[inline(always)]
     pub fn search_triple(&self, t: f64) -> Option<(Point3, Point2, Point2)> {
         double_projection(
@@ -95,7 +126,7 @@ where
 impl<C, S> ParametricCurve for IntersectionCurve<C, S>
 where
     C: ParametricCurve3D,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
     type Vector = Vector3;
@@ -120,7 +151,7 @@ where
 impl<C, S> BoundedCurve for IntersectionCurve<C, S>
 where
     C: ParametricCurve3D + BoundedCurve,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) { self.leader.parameter_range() }
@@ -129,7 +160,7 @@ where
 impl<C, S> ParameterDivision1D for IntersectionCurve<C, S>
 where
     C: ParametricCurve3D,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
     #[inline(always)]
@@ -141,7 +172,7 @@ where
 impl<C, S> Cut for IntersectionCurve<C, S>
 where
     C: Cut<Point = Point3, Vector = Vector3>,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     #[inline(always)]
     fn cut(&mut self, t: f64) -> Self {
@@ -158,14 +189,18 @@ impl<C: Invertible, S: Clone> Invertible for IntersectionCurve<C, S> {
     fn invert(&mut self) { self.leader.invert(); }
 }
 
-impl<C, S> SearchParameter for IntersectionCurve<C, S>
+impl<C, S> SearchParameter<D1> for IntersectionCurve<C, S>
 where
-    C: ParametricCurve3D + SearchNearestParameter<Point = Point3, Parameter = f64>,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: Point3,
+        hint: H,
+        trials: usize,
+    ) -> Option<f64> {
         let t = self
             .leader()
             .search_nearest_parameter(point, hint, trials)
@@ -179,17 +214,16 @@ where
 }
 
 /// Only derive from leading curve. Not precise.
-impl<C, S> SearchNearestParameter for IntersectionCurve<C, S>
+impl<C, S> SearchNearestParameter<D1> for IntersectionCurve<C, S>
 where
-    C: ParametricCurve3D + SearchNearestParameter<Point = Point3, Parameter = f64>,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         point: Point3,
-        hint: Option<f64>,
+        hint: H,
         trials: usize,
     ) -> Option<f64> {
         self.leader().search_nearest_parameter(point, hint, trials)
@@ -205,15 +239,15 @@ where
         self.surface0.transform_by(trans);
         self.surface1.transform_by(trans);
         self.leader.transform_by(trans);
-        let a = trans;
-        self.tol *= a[0][0] * a[0][0]
-            + a[0][1] * a[0][1]
-            + a[0][2] * a[0][2]
-            + a[1][0] * a[1][0]
-            + a[1][1] * a[1][1]
-            + a[1][2] * a[1][2]
-            + a[2][0] * a[2][0]
-            + a[2][1] * a[2][1]
-            + a[2][2] * a[2][2];
+        self.tol *= trans.norm_l2();
+    }
+}
+
+impl<C: BoundedCurve> IntersectionCurve<C, Plane> {
+    /// Optimizes intersection curve of [`Plane`] into [`Line`].
+    #[inline]
+    pub fn optimize(&self) -> Line<C::Point> {
+        let (s, t) = self.leader.parameter_range();
+        Line(self.leader.subs(s), self.leader.subs(t))
     }
 }

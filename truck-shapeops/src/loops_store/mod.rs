@@ -55,8 +55,7 @@ impl ShapesOpStatus {
     fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<ShapesOpStatus>
     where
         C: ParametricCurve3D + BoundedCurve,
-        S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
-    {
+        S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>, {
         let (t0, t1) = curve.parameter_range();
         let t = (t0 + t1) / 2.0;
         let (_, pt0, pt1) = curve.search_triple(t)?;
@@ -160,7 +159,7 @@ impl ParameterKind {
 
 impl<P: Copy, C: Clone> Loops<P, C> {
     fn search_parameter(&self, pt: P) -> Option<(usize, usize, ParameterKind)>
-    where C: BoundedCurve<Point = P> + SearchParameter<Point = P, Parameter = f64> {
+    where C: BoundedCurve<Point = P> + SearchParameter<D1, Point = P> {
         self.iter()
             .enumerate()
             .flat_map(move |(i, wire)| wire.iter().enumerate().map(move |(j, edge)| (i, j, edge)))
@@ -309,7 +308,7 @@ impl<P: Copy + Tolerance, C: Clone> LoopsStore<P, C> {
         emap: &mut HashMap<EdgeID<C>, Edge<P, C>>,
     ) -> Option<(usize, usize, ParameterKind)>
     where
-        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>,
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>,
     {
         let pt = v.get_point();
         let (wire_index, edge_index, kind) = self[loops_index].search_parameter(pt)?;
@@ -348,9 +347,8 @@ impl<C> LoopsStore<Point3, C> {
         emap: &mut HashMap<EdgeID<C>, Edge<Point3, C>>,
     ) -> Option<()>
     where
-        C: Cut<Point = Point3, Vector = Vector3>
-            + SearchNearestParameter<Point = Point3, Parameter = f64>,
-        S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+        C: Cut<Point = Point3, Vector = Vector3> + SearchNearestParameter<D1, Point = Point3>,
+        S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
     {
         match kind {
             ParameterKind::Front => {
@@ -398,8 +396,8 @@ fn curve_surface_projection<C, S>(
     trials: usize,
 ) -> Option<(Point3, f64, Point2)>
 where
-    C: ParametricCurve3D + SearchNearestParameter<Point = Point3, Parameter = f64>,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     if trials == 0 {
         return None;
@@ -448,17 +446,17 @@ pub struct LoopsStoreQuadruple<C> {
 
 pub fn create_loops_stores<C, S>(
     geom_shell0: &Shell<Point3, C, S>,
-    poly_shell0: &Shell<Point3, PolylineCurve, PolygonMesh>,
+    poly_shell0: &Shell<Point3, PolylineCurve, Option<PolygonMesh>>,
     geom_shell1: &Shell<Point3, C, S>,
-    poly_shell1: &Shell<Point3, PolylineCurve, PolygonMesh>,
+    poly_shell1: &Shell<Point3, PolylineCurve, Option<PolygonMesh>>,
     tol: f64,
 ) -> Option<LoopsStoreQuadruple<C>>
 where
-    C: SearchNearestParameter<Point = Point3, Parameter = f64>
-        + SearchParameter<Point = Point3, Parameter = f64>
+    C: SearchNearestParameter<D1, Point = Point3>
+        + SearchParameter<D1, Point = Point3>
         + Cut<Point = Point3, Vector = Vector3>
         + From<IntersectionCurve<PolylineCurve, S>>,
-    S: ParametricSurface3D + SearchNearestParameter<Point = Point3, Parameter = (f64, f64)>,
+    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     let mut geom_loops_store0: LoopsStore<_, _> = geom_shell0.face_iter().collect();
     let mut poly_loops_store0: LoopsStore<_, _> = poly_shell0.face_iter().collect();
@@ -473,8 +471,8 @@ where
             let ori1 = geom_shell1[face_index1].orientation();
             let surface0 = geom_shell0[face_index0].get_surface();
             let surface1 = geom_shell1[face_index1].get_surface();
-            let polygon0 = poly_shell0[face_index0].get_surface();
-            let polygon1 = poly_shell1[face_index1].get_surface();
+            let polygon0 = poly_shell0[face_index0].get_surface()?;
+            let polygon1 = poly_shell1[face_index1].get_surface()?;
             intersection_curve::intersection_curves(
                 surface0.clone(),
                 &polygon0,
@@ -522,7 +520,7 @@ where
                             &surface1,
                             &mut gemap0,
                         )?;
-                        let polyline = intersection_curve.leader_mut();
+                        let polyline = intersection_curve.editor().leader;
                         *polyline.first_mut().unwrap() = gv0.get_point();
                     }
                     let idx01 =
@@ -535,7 +533,7 @@ where
                             &surface1,
                             &mut gemap1,
                         )?;
-                        let polyline = intersection_curve.leader_mut();
+                        let polyline = intersection_curve.editor().leader;
                         *polyline.last_mut().unwrap() = gv1.get_point();
                     }
                     let idx10 =
@@ -548,7 +546,7 @@ where
                             &surface0,
                             &mut gemap0,
                         )?;
-                        let polyline = intersection_curve.leader_mut();
+                        let polyline = intersection_curve.editor().leader;
                         *polyline.first_mut().unwrap() = gv0.get_point();
                     }
                     let idx11 =
@@ -561,7 +559,7 @@ where
                             &surface0,
                             &mut gemap1,
                         )?;
-                        let polyline = intersection_curve.leader_mut();
+                        let polyline = intersection_curve.editor().leader;
                         *polyline.last_mut().unwrap() = gv1.get_point();
                     }
                     let pedge = Edge::new(&pv0, &pv1, polyline);

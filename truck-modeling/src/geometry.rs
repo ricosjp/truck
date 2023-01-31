@@ -1,26 +1,65 @@
 use super::*;
-use derive_more::From;
+use derive_more::*;
 use serde::{Deserialize, Serialize};
 #[doc(hidden)]
 pub use truck_geometry::{algo, inv_or_zero};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
-use truck_geotrait::{Invertible, ParametricSurface};
 pub use truck_polymesh::PolylineCurve;
 
+/// Leading curve for intersection
+#[derive(
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    From,
+    TryInto,
+    ParametricCurve,
+    BoundedCurve,
+    ParameterDivision1D,
+    Cut,
+    Invertible,
+    SearchNearestParameterD1,
+    SearchParameterD1,
+)]
+pub enum Leader {
+    /// polyline curve
+    Polyline(PolylineCurve<Point3>),
+    /// bspline curve
+    BSpline(BSplineCurve<Point3>),
+}
+
 /// 3-dimensional curve
-#[derive(Clone, Debug, Serialize, Deserialize, From)]
+#[derive(
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    From,
+    TryInto,
+    ParametricCurve,
+    BoundedCurve,
+    ParameterDivision1D,
+    Cut,
+    Invertible,
+    SearchNearestParameterD1,
+    SearchParameterD1,
+)]
 pub enum Curve {
+    /// line
+    Line(Line<Point3>),
     /// 3-dimensional B-spline curve
     BSplineCurve(BSplineCurve<Point3>),
     /// 3-dimensional NURBS curve
     NURBSCurve(NURBSCurve<Vector4>),
     /// intersection curve
-    IntersectionCurve(IntersectionCurve<PolylineCurve<Point3>, Surface>),
+    IntersectionCurve(IntersectionCurve<Leader, Surface>),
 }
 
 macro_rules! derive_curve_method {
     ($curve: expr, $method: expr, $($ver: ident),*) => {
         match $curve {
+            Curve::Line(got) => $method(got, $($ver), *),
             Curve::BSplineCurve(got) => $method(got, $($ver), *),
             Curve::NURBSCurve(got) => $method(got, $($ver), *),
             Curve::IntersectionCurve(got) => $method(got, $($ver), *),
@@ -31,6 +70,7 @@ macro_rules! derive_curve_method {
 macro_rules! derive_curve_self_method {
     ($curve: expr, $method: expr, $($ver: ident),*) => {
         match $curve {
+            Curve::Line(got) => Curve::Line($method(got, $($ver), *)),
             Curve::BSplineCurve(got) => Curve::BSplineCurve($method(got, $($ver), *)),
             Curve::NURBSCurve(got) => Curve::NURBSCurve($method(got, $($ver), *)),
             Curve::IntersectionCurve(got) => Curve::IntersectionCurve($method(got, $($ver), *)),
@@ -38,23 +78,19 @@ macro_rules! derive_curve_self_method {
     };
 }
 
-impl ParametricCurve for Curve {
-    type Point = Point3;
-    type Vector = Vector3;
-    fn subs(&self, t: f64) -> Self::Point { derive_curve_method!(self, ParametricCurve::subs, t) }
-    fn der(&self, t: f64) -> Self::Vector { derive_curve_method!(self, ParametricCurve::der, t) }
-    fn der2(&self, t: f64) -> Self::Vector { derive_curve_method!(self, ParametricCurve::der2, t) }
-}
-
-impl BoundedCurve for Curve {
-    fn parameter_range(&self) -> (f64, f64) {
-        derive_curve_method!(self, BoundedCurve::parameter_range,)
+impl Transformed<Matrix4> for Leader {
+    fn transform_by(&mut self, trans: Matrix4) {
+        match self {
+            Leader::Polyline(x) => Transformed::transform_by(x, trans),
+            Leader::BSpline(x) => Transformed::transform_by(x, trans),
+        }
     }
-}
-
-impl Invertible for Curve {
-    fn invert(&mut self) { derive_curve_method!(self, Invertible::invert,) }
-    fn inverse(&self) -> Self { derive_curve_self_method!(self, Invertible::inverse,) }
+    fn transformed(&self, trans: Matrix4) -> Leader {
+        match self {
+            Leader::Polyline(x) => Leader::Polyline(Transformed::transformed(x, trans)),
+            Leader::BSpline(x) => Leader::BSpline(Transformed::transformed(x, trans)),
+        }
+    }
 }
 
 impl Transformed<Matrix4> for Curve {
@@ -66,41 +102,9 @@ impl Transformed<Matrix4> for Curve {
     }
 }
 
-impl ParameterDivision1D for Curve {
-    type Point = Point3;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Point3>) {
-        derive_curve_method!(self, ParameterDivision1D::parameter_division, range, tol)
-    }
-}
-
-impl Cut for Curve {
-    fn cut(&mut self, t: f64) -> Self { derive_curve_self_method!(self, Cut::cut, t) }
-}
-
-impl SearchNearestParameter for Curve {
-    type Point = Point3;
-    type Parameter = f64;
-    fn search_nearest_parameter(
-        &self,
-        point: Point3,
-        hint: Option<f64>,
-        trials: usize,
-    ) -> Option<f64> {
-        derive_curve_method!(
-            self,
-            SearchNearestParameter::search_nearest_parameter,
-            point,
-            hint,
-            trials
-        )
-    }
-}
-
-impl SearchParameter for Curve {
-    type Point = Point3;
-    type Parameter = f64;
-    fn search_parameter(&self, point: Point3, hint: Option<f64>, trials: usize) -> Option<f64> {
-        derive_curve_method!(self, SearchParameter::search_parameter, point, hint, trials)
+impl From<IntersectionCurve<PolylineCurve<Point3>, Surface>> for Curve {
+    fn from(x: IntersectionCurve<PolylineCurve<Point3>, Surface>) -> Curve {
+        Curve::IntersectionCurve(x.change_leader(Leader::Polyline))
     }
 }
 
@@ -108,6 +112,7 @@ impl Curve {
     /// Into non-ratinalized 4-dimensinal B-spline curve
     pub fn lift_up(self) -> BSplineCurve<Vector4> {
         match self {
+            Curve::Line(curve) => Curve::BSplineCurve(curve.to_bspline()).lift_up(),
             Curve::BSplineCurve(curve) => BSplineCurve::new(
                 curve.knot_vec().clone(),
                 curve
@@ -122,10 +127,41 @@ impl Curve {
             }
         }
     }
+    /// Make the leaders of `IntersectionCurve`s B-spline curves.
+    pub fn to_bspline_leader(&mut self, p_tol: f64, d_tol: f64, trials: usize) -> bool {
+        if let Curve::IntersectionCurve(ref mut curve) = self {
+            if matches!(curve.leader(), Leader::Polyline(_)) {
+                if let Some(bspcurve) = BSplineCurve::cubic_approximation(
+                    curve,
+                    curve.parameter_range(),
+                    p_tol,
+                    d_tol,
+                    trials,
+                ) {
+                    let editor = curve.editor();
+                    *editor.leader = Leader::BSpline(bspcurve);
+                    *editor.tol = p_tol;
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 /// 3-dimensional surfaces
-#[derive(Clone, Debug, Serialize, Deserialize, From)]
+#[derive(
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    From,
+    TryInto,
+    ParametricSurface,
+    ParameterDivision2D,
+    Invertible,
+    SearchParameterD2,
+)]
 pub enum Surface {
     /// Plane
     Plane(Plane),
@@ -159,45 +195,11 @@ macro_rules! derive_surface_self_method {
     };
 }
 
-impl ParametricSurface for Surface {
-    type Point = Point3;
-    type Vector = Vector3;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 {
-        derive_surface_method!(self, ParametricSurface::subs, u, v)
-    }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector3 {
-        derive_surface_method!(self, ParametricSurface::uder, u, v)
-    }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector3 {
-        derive_surface_method!(self, ParametricSurface::vder, u, v)
-    }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 {
-        derive_surface_method!(self, ParametricSurface::uuder, u, v)
-    }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 {
-        derive_surface_method!(self, ParametricSurface::uvder, u, v)
-    }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 {
-        derive_surface_method!(self, ParametricSurface::vvder, u, v)
-    }
-}
-
 impl ParametricSurface3D for Surface {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         derive_surface_method!(self, ParametricSurface3D::normal, u, v)
     }
-}
-
-impl Invertible for Surface {
-    fn invert(&mut self) { derive_surface_method!(self, Invertible::invert,) }
-    fn inverse(&self) -> Self { derive_surface_self_method!(self, Invertible::inverse,) }
 }
 
 impl Transformed<Matrix4> for Surface {
@@ -214,21 +216,25 @@ impl IncludeCurve<Curve> for Surface {
     fn include(&self, curve: &Curve) -> bool {
         match self {
             Surface::BSplineSurface(surface) => match curve {
+                Curve::Line(curve) => surface.include(&curve.to_bspline()),
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::NURBSSurface(surface) => match curve {
+                Curve::Line(curve) => surface.include(&curve.to_bspline()),
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::Plane(surface) => match curve {
+                Curve::Line(curve) => surface.include(&curve.to_bspline()),
                 Curve::BSplineCurve(curve) => surface.include(curve),
                 Curve::NURBSCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::RevolutedCurve(surface) => match surface.entity_curve() {
+                Curve::Line(curve) => self.include(&Curve::BSplineCurve(curve.to_bspline())),
                 Curve::BSplineCurve(entity_curve) => {
                     let surface = RevolutedCurve::by_revolution(
                         entity_curve,
@@ -236,6 +242,7 @@ impl IncludeCurve<Curve> for Surface {
                         surface.axis(),
                     );
                     match curve {
+                        Curve::Line(curve) => surface.include(&curve.to_bspline()),
                         Curve::BSplineCurve(curve) => surface.include(curve),
                         Curve::NURBSCurve(curve) => surface.include(curve),
                         Curve::IntersectionCurve(_) => unimplemented!(),
@@ -248,6 +255,7 @@ impl IncludeCurve<Curve> for Surface {
                         surface.axis(),
                     );
                     match curve {
+                        Curve::Line(curve) => surface.include(&curve.to_bspline()),
                         Curve::BSplineCurve(curve) => surface.include(curve),
                         Curve::NURBSCurve(curve) => surface.include(curve),
                         Curve::IntersectionCurve(_) => unimplemented!(),
@@ -259,26 +267,12 @@ impl IncludeCurve<Curve> for Surface {
     }
 }
 
-impl SearchParameter for Surface {
+impl SearchNearestParameter<D2> for Surface {
     type Point = Point3;
-    type Parameter = (f64, f64);
-    fn search_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
-        trials: usize,
-    ) -> Option<(f64, f64)> {
-        derive_surface_method!(self, SearchParameter::search_parameter, point, hint, trials)
-    }
-}
-
-impl SearchNearestParameter for Surface {
-    type Point = Point3;
-    type Parameter = (f64, f64);
-    fn search_nearest_parameter(
-        &self,
-        point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         match self {
@@ -288,23 +282,15 @@ impl SearchNearestParameter for Surface {
             }
             Surface::NURBSSurface(surface) => surface.search_nearest_parameter(point, hint, trials),
             Surface::RevolutedCurve(rotted) => {
-                let hint = match hint {
-                    Some(hint) => hint,
-                    None => algo::surface::presearch(rotted, point, rotted.parameter_range(), 100),
+                let hint = match hint.into() {
+                    SPHint2D::Parameter(hint0, hint1) => (hint0, hint1),
+                    SPHint2D::Range(x, y) => algo::surface::presearch(rotted, point, (x, y), 100),
+                    SPHint2D::None => {
+                        algo::surface::presearch(rotted, point, rotted.parameter_range(), 100)
+                    }
                 };
                 algo::surface::search_nearest_parameter(rotted, point, hint, trials)
             }
         }
-    }
-}
-
-impl ParameterDivision2D for Surface {
-    #[inline(always)]
-    fn parameter_division(
-        &self,
-        range: ((f64, f64), (f64, f64)),
-        tol: f64,
-    ) -> (Vec<f64>, Vec<f64>) {
-        derive_surface_method!(self, ParameterDivision2D::parameter_division, range, tol)
     }
 }

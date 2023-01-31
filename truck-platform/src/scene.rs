@@ -66,7 +66,11 @@ async fn init_default_device(
 impl DeviceHandler {
     /// constructor
     #[inline(always)]
-    pub fn new(adapter: Arc<Adapter>, device: Arc<Device>, queue: Arc<Queue>) -> DeviceHandler {
+    pub const fn new(
+        adapter: Arc<Adapter>,
+        device: Arc<Device>,
+        queue: Arc<Queue>,
+    ) -> DeviceHandler {
         DeviceHandler {
             adapter,
             device,
@@ -75,13 +79,13 @@ impl DeviceHandler {
     }
     /// Returns the reference of the adapter.
     #[inline(always)]
-    pub fn adapter(&self) -> &Arc<Adapter> { &self.adapter }
+    pub const fn adapter(&self) -> &Arc<Adapter> { &self.adapter }
     /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Arc<Device> { &self.device }
+    pub const fn device(&self) -> &Arc<Device> { &self.device }
     /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Arc<Queue> { &self.queue }
+    pub const fn queue(&self) -> &Arc<Queue> { &self.queue }
 
     /// Creates default device handler.
     pub async fn default_device() -> Self { init_default_device(None).await.0 }
@@ -119,7 +123,7 @@ impl Default for RenderTextureConfig {
 }
 
 impl RenderTextureConfig {
-    /// Returns compatible `SurfaceConfiguation`.
+    /// Returns compatible `SurfaceConfiguration`.
     #[inline(always)]
     pub fn compatible_surface_config(self) -> SurfaceConfiguration {
         SurfaceConfiguration {
@@ -127,7 +131,8 @@ impl RenderTextureConfig {
             format: self.format,
             width: self.canvas_size.0,
             height: self.canvas_size.1,
-            present_mode: PresentMode::Mailbox,
+            alpha_mode: CompositeAlphaMode::Auto,
+            present_mode: PresentMode::Fifo,
         }
     }
 }
@@ -314,7 +319,7 @@ impl Scene {
 
     /// constructor
     // About `scene_desc`, entity is better than reference for the performance.
-    // This is referece because only for as wgpu is.
+    // This is reference because only for as wgpu is.
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
         let device = device_handler.device();
@@ -362,15 +367,15 @@ impl Scene {
 
     /// Returns the reference of its own `DeviceHandler`.
     #[inline(always)]
-    pub fn device_handler(&self) -> &DeviceHandler { &self.device_handler }
+    pub const fn device_handler(&self) -> &DeviceHandler { &self.device_handler }
 
     /// Returns the reference of the device.
     #[inline(always)]
-    pub fn device(&self) -> &Arc<Device> { &self.device_handler.device }
+    pub const fn device(&self) -> &Arc<Device> { &self.device_handler.device }
 
     /// Returns the reference of the queue.
     #[inline(always)]
-    pub fn queue(&self) -> &Arc<Queue> { &self.device_handler.queue }
+    pub const fn queue(&self) -> &Arc<Queue> { &self.device_handler.queue }
 
     /// Returns the elapsed time since the scene was created.
     #[inline(always)]
@@ -378,7 +383,7 @@ impl Scene {
 
     /// Returns the reference of the descriptor.
     #[inline(always)]
-    pub fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
+    pub const fn descriptor(&self) -> &SceneDescriptor { &self.scene_desc }
 
     /// Returns the mutable reference of the descriptor.
     ///
@@ -387,19 +392,19 @@ impl Scene {
     /// When the return value is dropped, the depth buffer and sampling buffer are automatically updated.
     /// Use `studio_config_mut` if you only want to update the colors of the camera, lights, and background.
     #[inline(always)]
-    pub fn descriptor_mut(&mut self) -> SceneDescriptorMut { SceneDescriptorMut(self) }
+    pub fn descriptor_mut(&mut self) -> SceneDescriptorMut<'_> { SceneDescriptorMut(self) }
 
-    /// Returns the reference of the studio configuation.
+    /// Returns the reference of the studio configuration.
     #[inline(always)]
-    pub fn studio_config(&self) -> &StudioConfig { &self.scene_desc.studio }
+    pub const fn studio_config(&self) -> &StudioConfig { &self.scene_desc.studio }
 
-    /// Returns the mutable reference of the studio configuation.
+    /// Returns the mutable reference of the studio configuration.
     #[inline(always)]
     pub fn studio_config_mut(&mut self) -> &mut StudioConfig { &mut self.scene_desc.studio }
 
     /// Returns the bind group layout in the scene.
     #[inline(always)]
-    pub fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
+    pub const fn bind_group_layout(&self) -> &BindGroupLayout { &self.bind_group_layout }
 
     /// Creates a `UNIFORM` buffer of the camera.
     ///
@@ -556,7 +561,7 @@ impl Scene {
     #[inline(always)]
     pub fn number_of_objects(&self) -> usize { self.objects.len() }
 
-    /// Syncronizes the information of vertices of `object` in the CPU memory
+    /// Synchronizes the information of vertices of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there does not exist the render object in the scene, does nothing and returns false.
@@ -574,7 +579,7 @@ impl Scene {
         }
     }
 
-    /// Syncronizes the information of vertices of `objects` in the CPU memory
+    /// Synchronizes the information of vertices of `objects` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there exists a render object which does not exist in the scene, returns false.
@@ -587,7 +592,7 @@ impl Scene {
         objects.into_iter().fold(true, closure)
     }
 
-    /// Syncronizes the information of bind group of `object` in the CPU memory
+    /// Synchronizes the information of bind group of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there does not exist the render object in the scene, does nothing and returns false.
@@ -603,7 +608,7 @@ impl Scene {
             _ => false,
         }
     }
-    /// Syncronizes the information of bind group of `object` in the CPU memory
+    /// Synchronizes the information of bind group of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there exists a render object which does not exist in the scene, returns false.
@@ -615,7 +620,7 @@ impl Scene {
         let closure = move |flag, object: &R| flag && self.update_bind_group(object);
         objects.into_iter().fold(true, closure)
     }
-    /// Syncronizes the information of pipeline of `object` in the CPU memory
+    /// Synchronizes the information of pipeline of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there does not exist the render object in the scene, does nothing and returns false.
@@ -640,7 +645,7 @@ impl Scene {
             _ => false,
         }
     }
-    /// Syncronizes the information of pipeline of `object` in the CPU memory
+    /// Synchronizes the information of pipeline of `object` in the CPU memory
     /// and that in the GPU memory.
     ///
     /// If there exists a render object which does not exist in the scene, returns false.
@@ -655,17 +660,14 @@ impl Scene {
     #[inline(always)]
     fn depth_stencil_attachment_descriptor(
         depth_view: &TextureView,
-    ) -> RenderPassDepthStencilAttachment {
+    ) -> RenderPassDepthStencilAttachment<'_> {
         RenderPassDepthStencilAttachment {
             view: depth_view,
             depth_ops: Some(Operations {
                 load: LoadOp::Clear(1.0),
                 store: true,
             }),
-            stencil_ops: Some(Operations {
-                load: LoadOp::Clear(0),
-                store: true,
-            }),
+            stencil_ops: None,
         }
     }
 
@@ -689,14 +691,14 @@ impl Scene {
                 None => (view, None),
             };
             let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
-                color_attachments: &[RenderPassColorAttachment {
+                color_attachments: &[Some(RenderPassColorAttachment {
                     view: attachment,
                     resolve_target,
                     ops: Operations {
                         load: LoadOp::Clear(self.scene_desc.studio.background),
                         store: true,
                     },
-                }],
+                })],
                 depth_stencil_attachment: depth_view
                     .as_ref()
                     .map(Self::depth_stencil_attachment_descriptor),
@@ -766,11 +768,13 @@ impl Scene {
         );
         queue.submit(Some(encoder.finish()));
         let buffer_slice = buffer.slice(..);
-        let buffer_future = buffer_slice.map_async(MapMode::Read);
+        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(MapMode::Read, move |v| sender.send(v).unwrap());
         device.poll(Maintain::Wait);
-        match buffer_future.await {
-            Ok(_) => buffer_slice.get_mapped_range().iter().copied().collect(),
-            Err(e) => panic!("{}", e),
+        match receiver.receive().await {
+            Some(Ok(_)) => buffer_slice.get_mapped_range().iter().copied().collect(),
+            Some(Err(e)) => panic!("{}", e),
+            None => panic!("Asynchronous processing fails"),
         }
     }
 }
@@ -784,9 +788,7 @@ impl WindowScene {
         let (device, surface) = (&device_handler.device, &window_handler.surface);
         let render_texture = RenderTextureConfig {
             canvas_size: size.into(),
-            format: surface
-                .get_preferred_format(&device_handler.adapter)
-                .expect("Failed to get preferred texture."),
+            format: TextureFormat::Bgra8Unorm,
         };
         let config = render_texture.compatible_surface_config();
         surface.configure(device, &config);

@@ -7,7 +7,7 @@ impl<V> NURBSCurve<V> {
 
     /// Returns the BSpline curve before rationalized.
     #[inline(always)]
-    pub fn non_rationalized(&self) -> &BSplineCurve<V> { &self.0 }
+    pub const fn non_rationalized(&self) -> &BSplineCurve<V> { &self.0 }
 
     /// Returns the BSpline curve before rationalized.
     #[inline(always)]
@@ -16,7 +16,7 @@ impl<V> NURBSCurve<V> {
     /// Returns the reference of the knot vector.  
     /// cf.[`BSplineCurve::knot_vec`](./struct.BSplineCurve.html#method.knot_vec)
     #[inline(always)]
-    pub fn knot_vec(&self) -> &KnotVec { &self.0.knot_vec }
+    pub const fn knot_vec(&self) -> &KnotVec { &self.0.knot_vec }
 
     /// Returns the `idx`th knot.  
     /// cf.[`BSplineCurve::knot`](./struct.BSplineCurve.html#method.knot)
@@ -26,7 +26,7 @@ impl<V> NURBSCurve<V> {
     /// Returns the reference of the control points.  
     /// cf.[`BSplineCurve::control_points`](./struct.BSplineCurve.html#method.control_points)
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<V> { &self.0.control_points }
+    pub const fn control_points(&self) -> &Vec<V> { &self.0.control_points }
 
     /// Returns the reference of the control point corresponding to the index `idx`.  
     /// cf.[`BSplineCurve::control_point`](./struct.BSplineCurve.html#method.control_point)
@@ -86,9 +86,33 @@ impl<V> NURBSCurve<V> {
     }
 }
 
+impl<V: Homogeneous<f64>> NURBSCurve<V> {
+    /// Constructs a rationalization curve from the curves and weights.
+    /// # Failures
+    /// the length of `curve.control_points()` and `weights` must be the same.
+    #[inline(always)]
+    pub fn try_from_bspline_and_weights(
+        curve: BSplineCurve<V::Point>,
+        weights: Vec<f64>,
+    ) -> Result<Self> {
+        let BSplineCurve {
+            knot_vec,
+            control_points,
+        } = curve;
+        if control_points.len() != weights.len() {
+            return Err(Error::DifferentLength);
+        }
+        let control_points = control_points
+            .into_iter()
+            .zip(weights)
+            .map(|(pt, w)| V::from_point_weight(pt, w))
+            .collect();
+        Ok(Self(BSplineCurve::new_unchecked(knot_vec, control_points)))
+    }
+}
+
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSCurve<V> {
     /// Returns the closure of substitution.
-    ///
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
@@ -416,13 +440,12 @@ where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter<D1> for NURBSCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
 {
     type Point = V::Point;
-    type Parameter = f64;
     /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
@@ -462,32 +485,46 @@ where
     /// assert!(curve.search_nearest_parameter(pt, Some(hint), 100).is_none());
     /// ```
     #[inline(always)]
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         point: V::Point,
-        hint: Option<f64>,
+        hint: H,
         trial: usize,
     ) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchParameter for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchParameter<D1> for NURBSCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
 {
     type Point = V::Point;
-    type Parameter = f64;
     #[inline(always)]
-    fn search_parameter(&self, point: V::Point, hint: Option<f64>, trial: usize) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: V::Point,
+        hint: H,
+        trial: usize,
+    ) -> Option<f64> {
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_parameter(self, point, hint, trial)
     }
@@ -594,6 +631,6 @@ fn test_parameter_division() {
         let value_middle = pt0.midpoint(pt1);
         let param_middle = curve.subs((div[i - 1] + div[i]) / 2.0);
         let dist = value_middle.distance(param_middle);
-        assert!(dist < tol, "large distance: {}", dist);
+        assert!(dist < tol, "large distance: {dist}");
     }
 }

@@ -94,14 +94,14 @@ impl<P> BSplineSurface<P> {
     }
     /// Returns the reference of the knot vectors
     #[inline(always)]
-    pub fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.knot_vecs }
+    pub const fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.knot_vecs }
 
     /// Returns the u knot vector.
     #[inline(always)]
-    pub fn uknot_vec(&self) -> &KnotVec { &self.knot_vecs.0 }
+    pub const fn uknot_vec(&self) -> &KnotVec { &self.knot_vecs.0 }
     /// Returns the v knot vector.
     #[inline(always)]
-    pub fn vknot_vec(&self) -> &KnotVec { &self.knot_vecs.1 }
+    pub const fn vknot_vec(&self) -> &KnotVec { &self.knot_vecs.1 }
 
     /// Returns the `idx`th u knot.
     #[inline(always)]
@@ -112,7 +112,7 @@ impl<P> BSplineSurface<P> {
 
     /// Returns the reference of the vector of the control points
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<Vec<P>> { &self.control_points }
+    pub const fn control_points(&self) -> &Vec<Vec<P>> { &self.control_points }
 
     /// Returns the reference of the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]
@@ -1595,7 +1595,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
     }
 
-    /// Creats a surface by its boundary.
+    /// Creates a surface by its boundary.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -1880,18 +1880,20 @@ impl<V: Clone> Invertible for BSplineSurface<V> {
     fn invert(&mut self) { self.swap_axes(); }
 }
 
-impl SearchParameter for BSplineSurface<Point2> {
+impl SearchParameter<D2> for BSplineSurface<Point2> {
     type Point = Point2;
-    type Parameter = (f64, f64);
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point2,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -1899,18 +1901,20 @@ impl SearchParameter for BSplineSurface<Point2> {
     }
 }
 
-impl SearchParameter for BSplineSurface<Point3> {
+impl SearchParameter<D2> for BSplineSurface<Point3> {
     type Point = Point3;
-    type Parameter = (f64, f64);
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -1918,7 +1922,7 @@ impl SearchParameter for BSplineSurface<Point3> {
     }
 }
 
-impl<P> SearchNearestParameter for BSplineSurface<P>
+impl<P> SearchNearestParameter<D2> for BSplineSurface<P>
 where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
@@ -1926,16 +1930,18 @@ where
     <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    type Parameter = (f64, f64);
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: P,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -2104,6 +2110,24 @@ where M: Transform<P>
             .iter_mut()
             .flatten()
             .for_each(|p| *p = trans.transform_point(*p))
+    }
+}
+
+impl<'de, P> Deserialize<'de> for BSplineSurface<P>
+where P: Deserialize<'de>
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        #[derive(Deserialize)]
+        struct BSplineSurface_<P> {
+            knot_vecs: (KnotVec, KnotVec),
+            control_points: Vec<Vec<P>>,
+        }
+        let BSplineSurface_ {
+            knot_vecs,
+            control_points,
+        } = BSplineSurface_::<P>::deserialize(deserializer)?;
+        Self::try_new(knot_vecs, control_points).map_err(serde::de::Error::custom)
     }
 }
 

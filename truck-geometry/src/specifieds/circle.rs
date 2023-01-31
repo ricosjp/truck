@@ -32,6 +32,8 @@ impl ParametricCurve for UnitCircle<Point3> {
     fn der(&self, t: f64) -> Self::Vector { Vector3::new(-f64::sin(t), f64::cos(t), 0.0) }
     #[inline]
     fn der2(&self, t: f64) -> Self::Vector { Vector3::new(-f64::cos(t), -f64::sin(t), 0.0) }
+    #[inline]
+    fn period(&self) -> Option<f64> { Some(2.0 * PI) }
 }
 
 impl BoundedCurve for UnitCircle<Point3> {
@@ -59,10 +61,14 @@ where UnitCircle<P>: ParametricCurve<Point = P>
     }
 }
 
-impl SearchNearestParameter for UnitCircle<Point2> {
+impl SearchNearestParameter<D1> for UnitCircle<Point2> {
     type Point = Point2;
-    type Parameter = f64;
-    fn search_nearest_parameter(&self, pt: Point2, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        pt: Point2,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let v = pt.to_vec();
         if v.magnitude2().so_small2() {
             return None;
@@ -77,10 +83,9 @@ impl SearchNearestParameter for UnitCircle<Point2> {
     }
 }
 
-impl SearchParameter for UnitCircle<Point2> {
+impl SearchParameter<D1> for UnitCircle<Point2> {
     type Point = Point2;
-    type Parameter = f64;
-    fn search_parameter(&self, pt: Point2, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point2, _: H, _: usize) -> Option<f64> {
         let v = pt.to_vec();
         if !v.magnitude2().near2(&1.0) {
             return None;
@@ -95,18 +100,21 @@ impl SearchParameter for UnitCircle<Point2> {
     }
 }
 
-impl SearchNearestParameter for UnitCircle<Point3> {
+impl SearchNearestParameter<D1> for UnitCircle<Point3> {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_nearest_parameter(&self, pt: Point3, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        pt: Point3,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         UnitCircle::<Point2>::new().search_nearest_parameter(Point2::new(pt.x, pt.y), None, 0)
     }
 }
 
-impl SearchParameter for UnitCircle<Point3> {
+impl SearchParameter<D1> for UnitCircle<Point3> {
     type Point = Point3;
-    type Parameter = f64;
-    fn search_parameter(&self, pt: Point3, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point3, _: H, _: usize) -> Option<f64> {
         if !f64::abs(pt.z).so_small() {
             return None;
         }

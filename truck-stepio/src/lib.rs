@@ -1,8 +1,29 @@
-pub mod alias;
-mod impl_curve;
-mod impl_surface;
+//! Reads/writes STEP files from/to truck.
+//!
+//! # Current Status
+//!
+//! It is possible to output data modeled by truck-modeling.
+//! Shapes created by set operations cannot be output yet.
+//! Input will come further down the road.
+
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications
+)]
+
+/// STEP input module
+#[doc(hidden)]
+pub mod r#in;
+/// STEP output module
 pub mod out;
-mod parse_primitives;
 
 #[doc(hidden)]
 #[macro_export]

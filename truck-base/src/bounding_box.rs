@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::ops::Index;
 
 /// bounding box
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct BoundingBox<V>(V, V);
 
 /// The trait for defining the bounding box
@@ -98,10 +98,10 @@ where
     F: BaseFloat,
     V: MetricSpace<Metric = F> + Index<usize, Output = F> + Bounded<F> + Copy,
 {
-    /// Creats an empty bounding box
+    /// Creates an empty bounding box
     #[inline(always)]
     pub fn new() -> Self { Self::default() }
-    /// Adds a point to the bouding box.
+    /// Adds a point to the bounding box.
     /// # Examples
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
@@ -157,7 +157,7 @@ where
     /// assert_eq!(bdd_box.max(), &Vector2::from([f64::NEG_INFINITY; 2]));
     /// ```
     #[inline(always)]
-    pub fn max(&self) -> &V { &self.1 }
+    pub const fn max(&self) -> &V { &self.1 }
     /// Returns the reference to the minimal point.
     /// # Examples
     /// ```
@@ -175,7 +175,7 @@ where
     /// assert_eq!(bdd_box.min(), &Vector2::from([f64::INFINITY; 2]));
     /// ```
     #[inline(always)]
-    pub fn min(&self) -> &V { &self.0 }
+    pub const fn min(&self) -> &V { &self.0 }
     /// Returns the diagonal vector.
     /// # Examples
     /// ```
@@ -205,7 +205,7 @@ where
     /// assert_eq!(bdd_box.diameter(), 5.0);
     /// ```
     /// # Remarks
-    /// If the bounding box is empty, returnes `f64::NEG_INFINITY`.
+    /// If the bounding box is empty, returns `f64::NEG_INFINITY`.
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector3>::new();
@@ -230,7 +230,7 @@ where
     /// assert_eq!(bdd_box.size(), 8.0);
     /// ```
     /// # Remarks
-    /// If the bounding box is empty, returnes `f64::NEG_INFINITY`.
+    /// If the bounding box is empty, returns `f64::NEG_INFINITY`.
     /// ```
     /// use truck_base::{cgmath64::*, bounding_box::*, tolerance::*};
     /// let bdd_box = BoundingBox::<Vector3>::new();

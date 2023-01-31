@@ -1,30 +1,31 @@
 struct VertexOutput {
-    [[builtin(position)]] position: vec4<f32>;
-    [[location(0)]] uv: vec2<f32>;
-};
+    @builtin(position) position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+}
 
 struct Lights {
-    lights: array<Light, 255>;
-};
+    lights: array<Light, 255>,
+}
 
-[[group(0), binding(1)]]
+@group(0)
+@binding(1)
 var<uniform> lights: Lights;
 
 let PI: f32 = 3.141592653;
 let EPS: f32 = 1.0e-6;
 
 struct Camera {
-    position: vec3<f32>;
-    direction: vec3<f32>;
-    up: vec3<f32>;
-    fov: f32;
-    aspect: f32;
-};
+    position: vec3<f32>,
+    direction: vec3<f32>,
+    up: vec3<f32>,
+    fov: f32,
+    aspect: f32,
+}
 
 struct Ray {
-    origin: vec3<f32>;
-    direction: vec3<f32>;
-};
+    origin: vec3<f32>,
+    direction: vec3<f32>,
+}
 
 fn test_camera() -> Camera {
     let position = vec3<f32>(-1.0, 2.5, 2.0);
@@ -84,10 +85,10 @@ fn camera_ray(camera: Camera, uv: vec2<f32>) -> Ray {
 }
 
 struct RayTraceResult {
-    collide: bool;
-    position: vec3<f32>;
-    normal: vec3<f32>;
-};
+    collide: bool,
+    position: vec3<f32>,
+    normal: vec3<f32>,
+}
 
 fn ray_tracing(ray: Ray) -> RayTraceResult {
     var t: f32 = 1000.0;
@@ -123,8 +124,8 @@ fn ray_tracing(ray: Ray) -> RayTraceResult {
 }
 
 
-[[stage(vertex)]]
-fn vs_main([[location(0)]] idx: u32) -> VertexOutput {
+@vertex
+fn vs_main(@location(0) idx: u32) -> VertexOutput {
     var vertex: array<vec2<f32>, 4>;
     vertex[0] = vec2<f32>(-1.0, -1.0);
     vertex[1] = vec2<f32>(1.0, -1.0);
@@ -134,8 +135,8 @@ fn vs_main([[location(0)]] idx: u32) -> VertexOutput {
     return VertexOutput(vec4<f32>(vertex[idx], 0.0, 1.0), vertex[idx]);
 }
 
-[[stage(fragment)]]
-fn nontex_raytracing([[location(0)]] uv: vec2<f32>) -> [[location(0)]] vec4<f32> {
+@fragment
+fn nontex_raytracing(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
     let camera = test_camera();
     let ray = camera_ray(camera, uv);
     let res = ray_tracing(ray);
@@ -150,11 +151,11 @@ fn nontex_raytracing([[location(0)]] uv: vec2<f32>) -> [[location(0)]] vec4<f32>
     var pre_color: vec3<f32> = microfacet_color(res.position, res.normal, light, -ray.direction, material);
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
     pre_color = ambient_correction(pre_color, material);
-    return vec4<f32>(pre_color, 1.0);
+    return vec4<f32>(pow(pre_color, vec3<f32>(.4545)), 1.0);
 }
 
-[[stage(fragment)]]
-fn tex_raytracing([[location(0)]] uv: vec2<f32>) -> [[location(0)]] vec4<f32> {
+@fragment
+fn tex_raytracing(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
     let camera = test_camera();
     let ray = camera_ray(camera, uv);
     let res = ray_tracing(ray);
@@ -164,10 +165,11 @@ fn tex_raytracing([[location(0)]] uv: vec2<f32>) -> [[location(0)]] vec4<f32> {
     }
 
     let light = lights.lights[0];
-    let material = tex_material(res.position, res.normal);
+    var material = tex_material(res.position, res.normal);
+    material.albedo = vec4<f32>(pow(material.albedo.rgb, vec3<f32>(2.2)), material.albedo.a);
     
     var pre_color: vec3<f32> = microfacet_color(res.position, res.normal, light, -ray.direction, material);
     pre_color = clamp(pre_color, vec3<f32>(0.0), vec3<f32>(1.0));
     pre_color = ambient_correction(pre_color, material);
-    return vec4<f32>(pre_color, 1.0);
+    return vec4<f32>(pow(pre_color, vec3<f32>(.4545)), 1.0);
 }

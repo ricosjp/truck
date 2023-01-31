@@ -53,7 +53,7 @@ impl PolygonMesh {
     #[inline(always)]
     pub fn from_obj(data: &[u8]) -> Option<PolygonMesh> {
         obj::read::<&[u8]>(data)
-            .map_err(|e| eprintln!("{}", e))
+            .map_err(|e| eprintln!("{e}"))
             .ok()
             .map(|mesh| mesh.into_wasm())
     }
@@ -61,7 +61,7 @@ impl PolygonMesh {
     #[inline(always)]
     pub fn from_stl(data: &[u8], stl_type: STLType) -> Option<PolygonMesh> {
         stl::read::<&[u8]>(data, stl_type.into())
-            .map_err(|e| eprintln!("{}", e))
+            .map_err(|e| eprintln!("{e}"))
             .ok()
             .map(|mesh| mesh.into_wasm())
     }
@@ -70,7 +70,7 @@ impl PolygonMesh {
     pub fn to_obj(&self) -> Option<Vec<u8>> {
         let mut res = Vec::new();
         obj::write(&self.0, &mut res)
-            .map_err(|e| eprintln!("{}", e))
+            .map_err(|e| eprintln!("{e}"))
             .ok()?;
         Some(res)
     }
@@ -79,7 +79,7 @@ impl PolygonMesh {
     pub fn to_stl(&self, stl_type: STLType) -> Option<Vec<u8>> {
         let mut res = Vec::new();
         stl::write(&self.0, &mut res, stl_type.into())
-            .map_err(|e| eprintln!("{}", e))
+            .map_err(|e| eprintln!("{e}"))
             .ok()?;
         Some(res)
     }
@@ -113,10 +113,10 @@ impl PolygonMesh {
     }
     /// meshing shell
     #[inline(always)]
-    pub fn from_shell(shell: Shell, tol: f64) -> Option<PolygonMesh> { shell.to_polygon(tol) }
+    pub fn from_shell(shell: Shell, tol: f64) -> PolygonMesh { shell.to_polygon(tol) }
     /// meshing solid
     #[inline(always)]
-    pub fn from_solid(solid: Solid, tol: f64) -> Option<PolygonMesh> { solid.to_polygon(tol) }
+    pub fn from_solid(solid: Solid, tol: f64) -> PolygonMesh { solid.to_polygon(tol) }
     /// Returns the bonding box
     #[inline(always)]
     pub fn bounding_box(&self) -> Vec<f64> {

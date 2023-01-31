@@ -18,6 +18,9 @@ pub trait ParametricCurve: Clone {
     fn der(&self, t: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation.
     fn der2(&self, t: f64) -> Self::Vector;
+    /// `None` in default implementation; `Some(period)` if periodic.
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { None }
 }
 
 /// bounded parametric curves
@@ -25,15 +28,11 @@ pub trait BoundedCurve: ParametricCurve {
     /// The range of the parameter of the curve.
     fn parameter_range(&self) -> (f64, f64);
     /// The front end point of the curve.
-    fn front(&self) -> Self::Point {
-        let (t, _) = self.parameter_range();
-        self.subs(t)
-    }
+    #[inline(always)]
+    fn front(&self) -> Self::Point { self.subs(self.parameter_range().0) }
     /// The back end point of the curve.
-    fn back(&self) -> Self::Point {
-        let (_, t) = self.parameter_range();
-        self.subs(t)
-    }
+    #[inline(always)]
+    fn back(&self) -> Self::Point { self.subs(self.parameter_range().1) }
 }
 
 /// Implementation for the test of topological methods.
@@ -77,6 +76,8 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { (*self).period() }
 }
 
 impl<'a, C: BoundedCurve> BoundedCurve for &'a C {
@@ -96,6 +97,8 @@ impl<C: ParametricCurve> ParametricCurve for Box<C> {
     fn der(&self, t: f64) -> Self::Vector { (**self).der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (**self).der2(t) }
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { (**self).period() }
 }
 
 impl<C: BoundedCurve> BoundedCurve for Box<C> {
@@ -118,7 +121,7 @@ impl<C: ParametricCurve<Point = Point3, Vector = Vector3>> ParametricCurve3D for
 pub trait ParameterDivision1D {
     /// The curve is in the space of `Self::Point`.
     type Point;
-    /// Creates the curve division (prameters, corresponding points).
+    /// Creates the curve division (parameters, corresponding points).
     ///
     /// # Panics
     ///

@@ -13,11 +13,15 @@ impl<E, T: One> Processor<E, T> {
 
     /// Returns the reference of entity
     #[inline(always)]
-    pub fn entity(&self) -> &E { &self.entity }
+    pub const fn entity(&self) -> &E { &self.entity }
 
     /// Returns the reference of transform
     #[inline(always)]
-    pub fn transform(&self) -> &T { &self.transform }
+    pub const fn transform(&self) -> &T { &self.transform }
+
+    /// Returns the orientation of surface
+    #[inline(always)]
+    pub const fn orientation(&self) -> bool { self.orientation }
 
     #[inline(always)]
     fn sign(&self) -> f64 {
@@ -108,6 +112,8 @@ where
         let t = self.get_curve_parameter(t);
         self.transform.transform_vector(self.entity.der2(t))
     }
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { self.entity.period() }
 }
 
 impl<C, T> BoundedCurve for Processor<C, T>
@@ -171,6 +177,20 @@ where
             false => self.transform.transform_vector(self.entity.uuder(v, u)),
         }
     }
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> {
+        match self.orientation {
+            true => self.entity.u_period(),
+            false => self.entity.v_period(),
+        }
+    }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> {
+        match self.orientation {
+            true => self.entity.v_period(),
+            false => self.entity.u_period(),
+        }
+    }
 }
 
 impl<S, T> ParametricSurface3D for Processor<S, T>
@@ -197,6 +217,7 @@ where
     S: BoundedSurface<Point = Point3, Vector = Vector3>,
     T: Transform<S::Point> + SquareMatrix<Scalar = f64> + Clone,
 {
+    #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
 }
 
@@ -326,20 +347,20 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
     }
 }
 
-impl<E, T> SearchParameter for Processor<E, T>
+impl<E, D, T> SearchParameter<D> for Processor<E, T>
 where
-    E: SearchParameter,
+    D: SPDimension,
+    E: SearchParameter<D>,
     E::Point: EuclideanSpace,
     T: Transform<E::Point>,
 {
     type Point = E::Point;
-    type Parameter = E::Parameter;
-    fn search_parameter(
+    fn search_parameter<H: Into<D::Hint>>(
         &self,
         point: E::Point,
-        hint: Option<E::Parameter>,
+        hint: H,
         trials: usize,
-    ) -> Option<E::Parameter> {
+    ) -> Option<D::Parameter> {
         let inv = self.transform.inverse_transform().unwrap();
         self.entity
             .search_parameter(inv.transform_point(point), hint, trials)
@@ -371,7 +392,7 @@ mod tests {
             4.0 * rand::random::<f64>() - 2.0,
         );
         if mat.determinant().so_small() {
-            println!("ommited: {:?}", mat);
+            println!("omitted: {mat:?}");
             return;
         }
         curve.transform_by(mat);
@@ -426,7 +447,7 @@ mod tests {
             4.0 * rand::random::<f64>() - 2.0,
         );
         if mat.determinant().so_small() {
-            println!("ommited: {:?}", mat);
+            println!("omitted: {mat:?}");
             return;
         }
         surface.transform_by(mat);

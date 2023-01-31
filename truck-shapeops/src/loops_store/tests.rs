@@ -18,7 +18,7 @@ struct DebugDisplay<'a, T, Format> {
 }
 
 impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Loops<P, C>, WireDisplayFormat> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Loops")
             .field(
                 &self
@@ -33,7 +33,7 @@ impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Loops<P, C>, WireDisplay
 }
 
 impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, LoopsStore<P, C>, WireDisplayFormat> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_list()
             .entries(self.entity.0.iter().map(|loops| DebugDisplay {
                 entity: loops,
@@ -44,7 +44,7 @@ impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, LoopsStore<P, C>, WireDi
 }
 
 impl<P: Debug, C: Debug> LoopsStore<P, C> {
-    fn display(&self, format: WireDisplayFormat) -> DebugDisplay<Self, WireDisplayFormat> {
+    fn display(&self, format: WireDisplayFormat) -> DebugDisplay<'_, Self, WireDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -122,8 +122,8 @@ fn independent_intersection() {
     let wire1: Wire<_, _> = vec![Edge::new(&v10, &v11, arc10), Edge::new(&v11, &v10, arc11)].into();
     let geom_shell0: Shell<_, _, _> = vec![Face::new(vec![wire0], surface0).inverse()].into();
     let geom_shell1: Shell<_, _, _> = vec![Face::new(vec![wire1], surface1)].into();
-    let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
-    let poly_shell1 = geom_shell1.triangulation(TOL).unwrap();
+    let poly_shell0 = geom_shell0.triangulation(TOL);
+    let poly_shell1 = geom_shell1.triangulation(TOL);
 
     // exec create loops stores!
     let LoopsStoreQuadruple {
@@ -353,8 +353,8 @@ fn rotated_intersection() {
     let face11 = Face::new(vec![wire11], surface1);
     let geom_shell1: Shell<_, _, _> = vec![face10, face11].into();
 
-    let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
-    let poly_shell1 = geom_shell1.triangulation(TOL).unwrap();
+    let poly_shell0 = geom_shell0.triangulation(TOL);
+    let poly_shell1 = geom_shell1.triangulation(TOL);
     let file = std::fs::File::create("polyshell0.obj").unwrap();
     obj::write(&poly_shell0.to_polygon(), file).unwrap();
     let file = std::fs::File::create("polyshell1.obj").unwrap();
@@ -606,8 +606,8 @@ fn crossing_edges() {
     let face11 = Face::new(vec![wire11], surface1);
     let geom_shell1: Shell<_, _, _> = vec![face10, face11].into();
 
-    let poly_shell0 = geom_shell0.triangulation(TOL).unwrap();
-    let poly_shell1 = geom_shell1.triangulation(TOL).unwrap();
+    let poly_shell0 = geom_shell0.triangulation(TOL);
+    let poly_shell1 = geom_shell1.triangulation(TOL);
     let LoopsStoreQuadruple {
         geom_loops_store0,
         geom_loops_store1,

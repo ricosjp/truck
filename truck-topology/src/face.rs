@@ -148,16 +148,43 @@ impl<P, C, S> Face<P, C, S> {
     /// let boundaries = face.boundaries();
     /// face.invert();
     ///
-    /// // The result of face.boudnary() is already inversed.
+    /// // The result of face.boundary() is already inversed.
     /// assert_eq!(face.boundaries()[0], boundaries[0].inverse());
     ///
     /// // The absolute boundaries does never change.
     /// assert_eq!(face.absolute_boundaries(), &boundaries);
     /// ```
     #[inline(always)]
-    pub fn absolute_boundaries(&self) -> &Vec<Wire<P, C>> { &self.boundaries }
+    pub const fn absolute_boundaries(&self) -> &Vec<Wire<P, C>> { &self.boundaries }
+
+    /// Returns a clone of the face without inversion.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news(&[(), (), ()]);
+    /// let wire = Wire::from(vec![
+    ///      Edge::new(&v[0], &v[1], ()),
+    ///      Edge::new(&v[1], &v[2], ()),
+    ///      Edge::new(&v[2], &v[0], ()),
+    /// ]);
+    /// let face0 = Face::new(vec![wire], ());
+    /// let face1 = face0.inverse();
+    /// let face2 = face1.absolute_clone();
+    /// assert_eq!(face0, face2);
+    /// assert_ne!(face1, face2);
+    /// assert!(face1.is_same(&face2));
+    /// ```
+    #[inline(always)]
+    pub fn absolute_clone(&self) -> Self {
+        Self {
+            boundaries: self.boundaries.clone(),
+            surface: Arc::clone(&self.surface),
+            orientation: true,
+        }
+    }
 
     /// Returns an iterator over all edges in the boundaries.
+    /// # Examples
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
@@ -176,7 +203,7 @@ impl<P, C, S> Face<P, C, S> {
     /// }
     /// ```
     #[inline(always)]
-    pub fn boundary_iters(&self) -> Vec<BoundaryIter<P, C>> {
+    pub fn boundary_iters(&self) -> Vec<BoundaryIter<'_, P, C>> {
         self.boundaries
             .iter()
             .map(|wire| BoundaryIter {
@@ -191,6 +218,18 @@ impl<P, C, S> Face<P, C, S> {
     where S: Clone {
         let surface = self.get_surface();
         self.surface = Arc::new(Mutex::new(surface));
+    }
+
+    /// Returns an iterator over the edges.
+    #[inline(always)]
+    pub fn edge_iter(&self) -> impl Iterator<Item = Edge<P, C>> + '_ {
+        self.boundary_iters().into_iter().flatten()
+    }
+
+    /// Returns an iterator over the vertices.
+    #[inline(always)]
+    pub fn vertex_iter(&self) -> impl Iterator<Item = Vertex<P>> + '_ {
+        self.edge_iter().map(|e| e.front().clone())
     }
 
     /// Adds a boundary to the face.
@@ -214,7 +253,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_eq!(face0.boundaries(), face1.boundaries());
     /// ```
     /// # Remarks
-    /// 1. If the face is inverted, then the added wire is inverted as absolute bounday.
+    /// 1. If the face is inverted, then the added wire is inverted as absolute boundary.
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), (), (), (), ()]);
@@ -235,7 +274,7 @@ impl<P, C, S> Face<P, C, S> {
     /// // The boundary is added in compatible with the face orientation.
     /// assert_eq!(face.boundaries()[1], wire1);
     ///
-    /// // The absolute bounday is inverted!
+    /// // The absolute boundary is inverted!
     /// let iter0 = face.absolute_boundaries()[1].edge_iter();
     /// let iter1 = wire1.edge_iter().rev();
     /// for (edge0, edge1) in iter0.zip(iter1) {
@@ -306,7 +345,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_eq!(face0.boundaries(), face1.boundaries());
     /// ```
     /// # Remarks
-    /// 1. If the face is inverted, then the added wire is inverted as absolute bounday.
+    /// 1. If the face is inverted, then the added wire is inverted as absolute boundary.
     /// ```
     /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), (), (), (), ()]);
@@ -327,7 +366,7 @@ impl<P, C, S> Face<P, C, S> {
     /// // The boundary is added in compatible with the face orientation.
     /// assert_eq!(face.boundaries()[1], wire1);
     ///
-    /// // The absolute bounday is inverted!
+    /// // The absolute boundary is inverted!
     /// let iter0 = face.absolute_boundaries()[1].edge_iter();
     /// let iter1 = wire1.edge_iter().rev();
     /// for (edge0, edge1) in iter0.zip(iter1) {
@@ -678,9 +717,8 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[2], &v[3], ()),
     ///     Edge::new(&v[3], &v[0], ()),
     /// ]);
-    /// let mut face0 = Face::new(vec![wire], ());
-    ///
-    /// let face1 = face0.cut_by_edge(Edge::new(&v[1], &v[3], ())).unwrap();
+    /// let face = Face::new(vec![wire], ());
+    /// let (face0, face1) = face.cut_by_edge(Edge::new(&v[1], &v[3], ())).unwrap();
     ///
     /// // The front vertex of face0's boundary becomes the back of cutting edge.
     /// let v0: Vec<Vertex<()>> = face0.boundaries()[0].vertex_iter().collect();
@@ -706,7 +744,7 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[4], &v[5], ()),
     ///     Edge::new(&v[5], &v[3], ()),
     /// ]);
-    /// let mut face = Face::new(vec![wire0, wire1], ());
+    /// let face = Face::new(vec![wire0, wire1], ());
     /// assert!(face.cut_by_edge(Edge::new(&v[1], &v[2], ())).is_none());
     /// ```
     /// ```
@@ -718,14 +756,19 @@ impl<P, C, S> Face<P, C, S> {
     ///     Edge::new(&v[2], &v[3], ()),
     ///     Edge::new(&v[3], &v[0], ()),
     /// ]);
-    /// let mut face0 = Face::new(vec![wire], ());
-    /// assert!(face0.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none());
-    pub fn cut_by_edge(&mut self, edge: Edge<P, C>) -> Option<Self>
+    /// let face = Face::new(vec![wire], ());
+    /// assert!(face.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none());
+    pub fn cut_by_edge(&self, edge: Edge<P, C>) -> Option<(Self, Self)>
     where S: Clone {
         if self.boundaries.len() != 1 {
             return None;
         }
-        let wire = &mut self.boundaries[0];
+        let mut face0 = Face {
+            boundaries: self.boundaries.clone(),
+            orientation: self.orientation,
+            surface: Arc::new(Mutex::new(self.get_surface())),
+        };
+        let wire = &mut face0.boundaries[0];
         let i = wire
             .edge_iter()
             .enumerate()
@@ -741,14 +784,14 @@ impl<P, C, S> Face<P, C, S> {
         let mut new_wire = wire.split_off(j + 1);
         wire.push_back(edge.clone());
         new_wire.push_back(edge.inverse());
-        self.renew_pointer();
         debug_assert!(Face::try_new(self.boundaries.clone(), ()).is_ok());
         debug_assert!(Face::try_new(vec![new_wire.clone()], ()).is_ok());
-        Some(Face {
+        let face1 = Face {
             boundaries: vec![new_wire],
             orientation: self.orientation,
             surface: Arc::new(Mutex::new(self.get_surface())),
-        })
+        };
+        Some((face0, face1))
     }
 
     /// Glue two faces at boundaries.
@@ -908,7 +951,7 @@ impl<P, C, S> Face<P, C, S> {
     /// );
     /// ```
     #[inline(always)]
-    pub fn display(&self, format: FaceDisplayFormat) -> DebugDisplay<Self, FaceDisplayFormat> {
+    pub fn display(&self, format: FaceDisplayFormat) -> DebugDisplay<'_, Self, FaceDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -1041,7 +1084,7 @@ impl<'a, P, C> std::iter::FusedIterator for BoundaryIter<'a, P, C> {}
 impl<'a, P: Debug, C: Debug, S: Debug> Debug
     for DebugDisplay<'a, Face<P, C, S>, FaceDisplayFormat>
 {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             FaceDisplayFormat::Full { wire_format } => f
                 .debug_struct("Face")
@@ -1112,7 +1155,7 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug
 
 #[test]
 fn invert_mapped_face() {
-    let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
+    let v = Vertex::news([0, 1, 2, 3, 4, 5, 6]);
     let wire0 = Wire::from(vec![
         Edge::new(&v[0], &v[1], 100),
         Edge::new(&v[1], &v[2], 200),

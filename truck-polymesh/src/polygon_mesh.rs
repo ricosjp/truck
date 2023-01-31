@@ -1,14 +1,15 @@
 use crate::errors::Error;
 use crate::*;
+use std::fmt::Debug;
 
-impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
+impl<V: Copy + Debug, A: Attributes<V>> PolygonMesh<V, A> {
     /// complete constructor
     /// # Panics
     /// Panic occurs if there is an index is out of range.
     /// # Remarks
     /// This method does not check whether the normal is normalized or not.
     pub fn new(attributes: A, faces: Faces<V>) -> Self {
-        Self::try_new(attributes, faces).unwrap_or_else(|e| panic!("{:?}", e))
+        Self::try_new(attributes, faces).unwrap_or_else(|e| panic!("{e:?}"))
     }
 
     /// complete constructor
@@ -27,7 +28,9 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
 
     /// constructor without boundary check
     #[inline(always)]
-    pub fn new_unchecked(attributes: A, faces: Faces<V>) -> Self { Self { attributes, faces } }
+    pub const fn new_unchecked(attributes: A, faces: Faces<V>) -> Self {
+        Self { attributes, faces }
+    }
 
     /// constructor, boundary check is acrivated only in debug mode.
     #[inline(always)]
@@ -40,23 +43,23 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
 
     /// Returns attributes
     #[inline(always)]
-    pub fn attributes(&self) -> &A { &self.attributes }
+    pub const fn attributes(&self) -> &A { &self.attributes }
 
     /// Returns the faces of the polygon.
     #[inline(always)]
-    pub fn faces(&self) -> &Faces<V> { &self.faces }
+    pub const fn faces(&self) -> &Faces<V> { &self.faces }
 
     /// Returns the vector of all triangles of the polygon.
     #[inline(always)]
-    pub fn tri_faces(&self) -> &Vec<[V; 3]> { &self.faces.tri_faces }
+    pub const fn tri_faces(&self) -> &Vec<[V; 3]> { &self.faces.tri_faces }
 
     /// Returns the vector of all quadrangles.
     #[inline(always)]
-    pub fn quad_faces(&self) -> &Vec<[V; 4]> { &self.faces.quad_faces }
+    pub const fn quad_faces(&self) -> &Vec<[V; 4]> { &self.faces.quad_faces }
 
     /// Returns the vector of n-gons (n > 4).
     #[inline(always)]
-    pub fn other_faces(&self) -> &[Vec<V>] { &self.faces.other_faces }
+    pub const fn other_faces(&self) -> &Vec<Vec<V>> { &self.faces.other_faces }
 
     /// Returns the iterator of the slice.
     ///
@@ -75,7 +78,7 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
     pub fn face_iter_mut(&mut self) -> impl Iterator<Item = &mut [V]> { self.faces.face_iter_mut() }
     /// Creates an editor that performs boundary checking on dropped.
     #[inline(always)]
-    pub fn editor(&mut self) -> PolygonMeshEditor<V, A> {
+    pub fn editor(&mut self) -> PolygonMeshEditor<'_, V, A> {
         PolygonMeshEditor {
             attributes: &mut self.attributes,
             faces: &mut self.faces,
@@ -84,7 +87,7 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
     }
     /// Creates an editor that does NOT perform boundary checking on dropped.
     #[inline(always)]
-    pub fn uncheck_editor(&mut self) -> PolygonMeshEditor<V, A> {
+    pub fn uncheck_editor(&mut self) -> PolygonMeshEditor<'_, V, A> {
         PolygonMeshEditor {
             attributes: &mut self.attributes,
             faces: &mut self.faces,
@@ -93,7 +96,7 @@ impl<V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMesh<V, A> {
     }
     /// Creates an editor that performs boundary checking on dropped ONLY in debug build.
     #[inline(always)]
-    pub fn debug_editor(&mut self) -> PolygonMeshEditor<V, A> {
+    pub fn debug_editor(&mut self) -> PolygonMeshEditor<'_, V, A> {
         PolygonMeshEditor {
             attributes: &mut self.attributes,
             faces: &mut self.faces,
@@ -147,7 +150,7 @@ impl Invertible for PolygonMesh {
 impl PolygonMesh {
     /// Returns the vector of all positions.
     #[inline(always)]
-    pub fn positions(&self) -> &Vec<Point3> { &self.attributes.positions }
+    pub const fn positions(&self) -> &Vec<Point3> { &self.attributes.positions }
 
     /// Returns the mutable slice of all positions.
     #[inline(always)]
@@ -165,7 +168,7 @@ impl PolygonMesh {
 
     /// Returns the vector of all uv (texture) coordinates.
     #[inline(always)]
-    pub fn uv_coords(&self) -> &Vec<Vector2> { &self.attributes.uv_coords }
+    pub const fn uv_coords(&self) -> &Vec<Vector2> { &self.attributes.uv_coords }
 
     /// Returns the mutable slice of all uv (texture) coordinates.
     #[inline(always)]
@@ -183,7 +186,7 @@ impl PolygonMesh {
 
     /// Returns the vector of all normals.
     #[inline(always)]
-    pub fn normals(&self) -> &Vec<Vector3> { &self.attributes.normals }
+    pub const fn normals(&self) -> &Vec<Vector3> { &self.attributes.normals }
 
     /// Returns the mutable slice of all normals.
     #[inline(always)]
@@ -202,6 +205,23 @@ impl<V, A: Default> Default for PolygonMesh<V, A> {
             attributes: A::default(),
             faces: Faces::default(),
         }
+    }
+}
+
+impl<'de, V, A> Deserialize<'de> for PolygonMesh<V, A>
+where
+    V: Copy + Debug + Deserialize<'de>,
+    A: Attributes<V> + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        #[derive(Deserialize)]
+        struct PolygonMesh_<V, A> {
+            attributes: A,
+            faces: Faces<V>,
+        }
+        let PolygonMesh_ { attributes, faces } = PolygonMesh_::<V, A>::deserialize(deserializer)?;
+        Self::try_new(attributes, faces).map_err(serde::de::Error::custom)
     }
 }
 
@@ -263,7 +283,7 @@ impl<V, A: Default> Default for PolygonMesh<V, A> {
 /// // Panic occurs since no uv coord is added.
 /// ```
 #[derive(Debug)]
-pub struct PolygonMeshEditor<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> {
+pub struct PolygonMeshEditor<'a, V: Copy + Debug, A: Attributes<V>> {
     /// attributions
     pub attributes: &'a mut A,
     /// mutable reference to the faces of the polygon mesh
@@ -271,7 +291,7 @@ pub struct PolygonMeshEditor<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> {
     bound_check: bool,
 }
 
-impl<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMeshEditor<'a, V, A> {
+impl<'a, V: Copy + Debug, A: Attributes<V>> PolygonMeshEditor<'a, V, A> {
     #[inline(always)]
     fn is_compatible(&self) -> Result<(), Error<V>> { self.faces.is_compatible(&*self.attributes) }
 
@@ -283,11 +303,11 @@ impl<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> PolygonMeshEditor<'a, V, A
     }
 }
 
-impl<'a, V: Copy + std::fmt::Debug, A: Attributes<V>> Drop for PolygonMeshEditor<'a, V, A> {
+impl<'a, V: Copy + Debug, A: Attributes<V>> Drop for PolygonMeshEditor<'a, V, A> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.bound_check {
-            self.is_compatible().unwrap_or_else(|e| panic!("{:?}", e));
+            self.is_compatible().unwrap_or_else(|e| panic!("{e:?}"));
         }
     }
 }

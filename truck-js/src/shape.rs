@@ -92,23 +92,19 @@ macro_rules! impl_shape {
         #[wasm_bindgen]
         impl $type {
             /// meshing shape
-            pub fn to_polygon(&self, tol: f64) -> Option<PolygonMesh> {
-                Some(self.triangulation(tol)?.to_polygon().into_wasm())
+            pub fn to_polygon(&self, tol: f64) -> PolygonMesh {
+                self.triangulation(tol).to_polygon().into_wasm()
             }
             /// read shape from json
             pub fn from_json(data: &[u8]) -> Option<$type> {
-                truck_modeling::$type::extract(
-                    serde_json::from_reader(data)
-                        .map_err(|e| eprintln!("{}", e))
-                        .ok()?,
-                )
-                .map_err(|e| eprintln!("{}", e))
+                serde_json::from_reader::<_, truck_modeling::$type>(data)
+                .map_err(|e| println!("{}", e))
                 .ok()
                 .map(|res| res.into_wasm())
             }
             /// write shape from json
             pub fn to_json(&self) -> Vec<u8> {
-                serde_json::to_vec_pretty(&self.0.compress())
+                serde_json::to_vec_pretty(&self.0)
                     .map_err(|e| eprintln!("{}", e))
                     .unwrap()
             }
@@ -124,7 +120,7 @@ impl Shell {
     /// Creates Solid if `self` is a closed shell.
     pub fn into_solid(self) -> Option<Solid> {
         truck_modeling::Solid::try_new(vec![self.0])
-            .map_err(|e| eprintln!("{}", e))
+            .map_err(|e| eprintln!("{e}"))
             .ok()
             .map(IntoWasm::into_wasm)
     }

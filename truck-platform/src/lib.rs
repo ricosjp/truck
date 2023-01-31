@@ -29,6 +29,8 @@
 //! [`Camera`]: ./struct.Camera.html
 //! [`Light`]: ./struct.Light.html
 
+#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(clippy::all, rust_2018_idioms)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -40,13 +42,11 @@
     unused_qualifications
 )]
 
-extern crate bytemuck;
-extern crate truck_base;
-pub extern crate wgpu;
 use bytemuck::{Pod, Zeroable};
 use derive_more::*;
 use std::sync::Arc;
 use truck_base::cgmath64::*;
+pub use wgpu;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
@@ -163,6 +163,13 @@ pub struct Camera {
     projection_type: ProjectionType,
 }
 
+/// Rays corresponding to a point on the screen, defined by the camera.
+#[derive(Clone, Copy, Debug)]
+pub struct Ray {
+    origin: Point3,
+    direction: Vector3,
+}
+
 /// the kinds of light sources: point or uniform
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LightType {
@@ -225,7 +232,7 @@ struct WindowHandler {
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct RenderID(usize);
 
-/// Configuation for studio to shoot the scene.
+/// Configuration for studio to shoot the scene.
 #[derive(Debug, Clone)]
 pub struct StudioConfig {
     /// camera of the scene. Default is `Camera::default()`.
@@ -236,7 +243,7 @@ pub struct StudioConfig {
     pub background: Color,
 }
 
-/// Configuation for buffer preparation
+/// Configuration for buffer preparation
 #[derive(Clone, Debug, Copy)]
 pub struct BackendBufferConfig {
     /// depth test flag. Default is `true`.
@@ -245,12 +252,12 @@ pub struct BackendBufferConfig {
     pub sample_count: u32,
 }
 
-/// Configuation for rendering texture
+/// Configuration for rendering texture
 #[derive(Clone, Debug, Copy)]
 pub struct RenderTextureConfig {
     /// canvas size `(width, height)`. Default is `(1024, 768)`.
     pub canvas_size: (u32, u32),
-    /// texture format. Default is `TextureFormat::Rgba8UnormSrgb`.
+    /// texture format. Default is `TextureFormat::Rgba8Unorm`.
     pub format: TextureFormat,
 }
 
@@ -261,7 +268,7 @@ pub struct SceneDescriptor {
     pub studio: StudioConfig,
     /// Configures buffer preparation, depth and MSAA.
     pub backend_buffer: BackendBufferConfig,
-    /// Configuation for rendering texture
+    /// Configuration for rendering texture
     pub render_texture: RenderTextureConfig,
 }
 
@@ -291,7 +298,7 @@ pub struct Scene {
     clock: instant::Instant,
 }
 
-/// Utility for wrapp
+/// Utility for wrapper
 #[derive(Debug, Deref, DerefMut)]
 pub struct WindowScene {
     #[deref]
@@ -369,7 +376,7 @@ pub mod bind_group_util {
         layout: &BindGroupLayout,
         resources: T,
     ) -> BindGroup {
-        let entries: &Vec<BindGroupEntry> = &resources
+        let entries: &Vec<BindGroupEntry<'_>> = &resources
             .into_iter()
             .enumerate()
             .map(move |(i, resource)| BindGroupEntry {

@@ -76,7 +76,7 @@ impl<P> BSplineCurve<P> {
 
     /// Returns the reference of the knot vector
     #[inline(always)]
-    pub fn knot_vec(&self) -> &KnotVec { &self.knot_vec }
+    pub const fn knot_vec(&self) -> &KnotVec { &self.knot_vec }
 
     /// Returns the `idx`th knot
     #[inline(always)]
@@ -84,7 +84,7 @@ impl<P> BSplineCurve<P> {
 
     /// Returns the reference of the control points.
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<P> { &self.control_points }
+    pub const fn control_points(&self) -> &Vec<P> { &self.control_points }
 
     /// Returns the reference of the control point corresponding to the index `idx`.
     #[inline(always)]
@@ -1141,7 +1141,7 @@ where
         Some(hint)
     }
 }
-impl<P> SearchNearestParameter for BSplineCurve<P>
+impl<P> SearchNearestParameter<D1> for BSplineCurve<P>
 where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
@@ -1150,7 +1150,6 @@ where
     <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    type Parameter = f64;
     /// Searches the parameter `t` which minimize |self(t) - point| by Newton's method with initial guess `hint`.
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
@@ -1195,15 +1194,25 @@ where
     /// assert!((pt0 - pt).magnitude() > (pt1 - pt).magnitude());
     /// ```
     #[inline(always)]
-    fn search_nearest_parameter(&self, point: P, hint: Option<f64>, trial: usize) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: P,
+        hint: H,
+        trial: usize,
+    ) -> Option<f64> {
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trial)
     }
 }
-impl<P> SearchParameter for BSplineCurve<P>
+impl<P> SearchParameter<D1> for BSplineCurve<P>
 where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
@@ -1211,12 +1220,16 @@ where
     <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    type Parameter = f64;
     #[inline(always)]
-    fn search_parameter(&self, point: P, hint: Option<f64>, trial: usize) -> Option<f64> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION),
+    fn search_parameter<H: Into<SPHint1D>>(&self, point: P, hint: H, trial: usize) -> Option<f64> {
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_parameter(self, point, hint, trial)
     }
@@ -1245,6 +1258,24 @@ where
         self.control_points
             .iter_mut()
             .for_each(|pt| *pt = trans.transform_point(*pt))
+    }
+}
+
+impl<'de, P> Deserialize<'de> for BSplineCurve<P>
+where P: Deserialize<'de>
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        #[derive(Deserialize)]
+        struct BSplineCurve_<P> {
+            knot_vec: KnotVec,
+            control_points: Vec<P>,
+        }
+        let BSplineCurve_ {
+            knot_vec,
+            control_points,
+        } = BSplineCurve_::<P>::deserialize(deserializer)?;
+        Self::try_new(knot_vec, control_points).map_err(serde::de::Error::custom)
     }
 }
 
@@ -1322,4 +1353,136 @@ fn test_parameter_division() {
         let param_middle = bspcurve.subs((div[i - 1] + div[i]) / 2.0);
         assert!(value_middle.distance(param_middle) < tol);
     }
+}
+
+impl<P> BSplineCurve<P>
+where
+    P: ControlPoint<f64>
+        + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
+        + MetricSpace<Metric = f64>
+        + Tolerance
+        + HashGen<f64>,
+    <P as ControlPoint<f64>>::Diff: InnerSpace<Scalar = f64> + Tolerance,
+{
+    fn cubic_bezier_interpolation(
+        pt0: P,
+        pt1: P,
+        der0: <P as EuclideanSpace>::Diff,
+        der1: <P as EuclideanSpace>::Diff,
+        range: (f64, f64),
+    ) -> Self {
+        let width = range.1 - range.0;
+        let mut knot_vec = KnotVec::bezier_knot(3);
+        knot_vec.transform(width, range.0);
+        Self::debug_new(
+            knot_vec,
+            vec![pt0, pt0 + der0 * width / 3.0, pt1 - der1 * width / 3.0, pt1],
+        )
+    }
+
+    fn sub_cubic_approximation<C>(
+        curve: &C,
+        range: (f64, f64),
+        ends: (P, P),
+        enders: (<P as EuclideanSpace>::Diff, <P as EuclideanSpace>::Diff),
+        p_tol: f64,
+        d_tol: f64,
+        trialis: usize,
+    ) -> Option<Self>
+    where
+        C: ParametricCurve<Point = P, Vector = <P as EuclideanSpace>::Diff>,
+    {
+        let bezier = Self::cubic_bezier_interpolation(ends.0, ends.1, enders.0, enders.1, range);
+        let gen = ends.0.midpoint(ends.1);
+        let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+        let t = range.0 * (1.0 - p) + range.1 * p;
+        let pt0 = bezier.subs(t);
+        let pt1 = curve.subs(t);
+        let der0 = bezier.der(t);
+        let der1 = curve.der(t);
+        let pt_dist2 = pt0.distance2(pt1);
+        let der_dist2 = (der0 - der1).magnitude2();
+        if pt_dist2 > p_tol * p_tol || der_dist2 > d_tol * d_tol {
+            if trialis == 0 {
+                return None;
+            }
+            let t = (range.0 + range.1) / 2.0;
+            let pt = curve.subs(t);
+            let der = curve.der(t);
+            let bspcurve0 = Self::sub_cubic_approximation(
+                curve,
+                (range.0, t),
+                (ends.0, pt),
+                (enders.0, der),
+                p_tol,
+                d_tol,
+                trialis - 1,
+            );
+            let bspcurve1 = Self::sub_cubic_approximation(
+                curve,
+                (t, range.1),
+                (pt, ends.1),
+                (der, enders.1),
+                p_tol,
+                d_tol,
+                trialis - 1,
+            );
+            match (bspcurve0, bspcurve1) {
+                (Some(x), Some(y)) => x.try_concat(&y).ok(),
+                _ => None,
+            }
+        } else {
+            Some(bezier)
+        }
+    }
+
+    /// C^1-approximation for `curve` by cubic Bspline curve.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::*;
+    /// use std::f64::consts::PI;
+    /// let circle = UnitCircle::<Point2>::new();
+    /// let bspcurve = BSplineCurve::cubic_approximation(&circle, (-PI, PI), 0.01, 0.01, 10).unwrap();
+    /// println!("{bspcurve:?}");
+    ///
+    /// const N: usize = 100;
+    /// for i in 0..N {
+    ///     let t = i as f64 / N as f64;
+    ///     assert!(circle.subs(t).distance(bspcurve.subs(t)) < 0.02);
+    ///     assert!((circle.der(t) - bspcurve.der(t)).magnitude() < 0.02);
+    /// }
+    /// ```
+    pub fn cubic_approximation<C>(
+        curve: &C,
+        range: (f64, f64),
+        p_tol: f64,
+        d_tol: f64,
+        trials: usize,
+    ) -> Option<Self>
+    where
+        C: ParametricCurve<Point = P, Vector = <P as EuclideanSpace>::Diff>,
+    {
+        let ends = (curve.subs(range.0), curve.subs(range.1));
+        let enders = (curve.der(range.0), curve.der(range.1));
+        Self::sub_cubic_approximation(curve, range, ends, enders, p_tol, d_tol, trials).map(
+            |mut x| {
+                x.optimize();
+                x
+            },
+        )
+    }
+}
+
+#[test]
+fn cubic_bezier_interpolation_test() {
+    let pt0 = Point2::new(0.0, 0.0);
+    let pt1 = Point2::new(1.0, 0.0);
+    let der0 = Vector2::new(0.5, 1.0);
+    let der1 = Vector2::new(0.5, -1.0);
+    let bspcurve = BSplineCurve::cubic_bezier_interpolation(pt0, pt1, der0, der1, (1.23, 3.45));
+    let der = bspcurve.derivation();
+    assert_near!(bspcurve.front(), pt0);
+    assert_near!(bspcurve.back(), pt1);
+    assert_near!(der.front(), der0);
+    assert_near!(der.back(), der1);
 }

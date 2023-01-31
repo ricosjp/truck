@@ -33,6 +33,6 @@ fn main() {
         _ => panic!("the number of arguments must be 1, 3 or 4"),
     };
     let torus = modeling(radius0, radius1);
-    let json = serde_json::to_vec_pretty(&torus.compress()).unwrap();
-    std::fs::write(filename, &json).unwrap();
+    let json = serde_json::to_vec_pretty(&torus).unwrap();
+    std::fs::write(filename, json).unwrap();
 }

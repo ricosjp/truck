@@ -24,7 +24,7 @@ impl WireFrameInstance {
     }
     /// Returns the wireframe state
     #[inline(always)]
-    pub fn instance_state(&self) -> &WireFrameState { &self.state }
+    pub const fn instance_state(&self) -> &WireFrameState { &self.state }
     /// Returns the mutable reference to wireframe state
     #[inline(always)]
     pub fn instance_state_mut(&mut self) -> &mut WireFrameState { &mut self.state }
@@ -114,11 +114,11 @@ impl Rendered for WireFrameInstance {
             fragment: Some(FragmentState {
                 module: &self.shaders.fragment_module,
                 entry_point: self.shaders.fragment_entry,
-                targets: &[ColorTargetState {
+                targets: &[Some(ColorTargetState {
                     format: scene_desc.render_texture.format,
                     blend: Some(BlendState::REPLACE),
                     write_mask: ColorWrites::ALL,
-                }],
+                })],
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::LineList,

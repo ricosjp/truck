@@ -7,7 +7,7 @@ impl<V> NURBSSurface<V> {
 
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
-    pub fn non_rationalized(&self) -> &BSplineSurface<V> { &self.0 }
+    pub const fn non_rationalized(&self) -> &BSplineSurface<V> { &self.0 }
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
     pub fn non_rationalized_mut(&mut self) -> &mut BSplineSurface<V> { &mut self.0 }
@@ -18,14 +18,14 @@ impl<V> NURBSSurface<V> {
 
     /// Returns the reference of the knot vectors
     #[inline(always)]
-    pub fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.0.knot_vecs }
+    pub const fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.0.knot_vecs }
 
     /// Returns the u knot vector.
     #[inline(always)]
-    pub fn uknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.0 }
+    pub const fn uknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.0 }
     /// Returns the v knot vector.
     #[inline(always)]
-    pub fn vknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.1 }
+    pub const fn vknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.1 }
 
     /// Returns the `idx`th u knot.
     #[inline(always)]
@@ -36,7 +36,7 @@ impl<V> NURBSSurface<V> {
 
     /// Returns the reference of the vector of the control points
     #[inline(always)]
-    pub fn control_points(&self) -> &Vec<Vec<V>> { &self.0.control_points }
+    pub const fn control_points(&self) -> &Vec<Vec<V>> { &self.0.control_points }
 
     /// Returns the reference of the control point corresponding to the index `(idx0, idx1)`.
     #[inline(always)]
@@ -487,14 +487,13 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
     pub fn boundary(&self) -> NURBSCurve<V> { NURBSCurve::new(self.0.boundary()) }
 }
 
-impl<V: Homogeneous<f64>> SearchNearestParameter for NURBSSurface<V>
+impl<V: Homogeneous<f64>> SearchNearestParameter<D2> for NURBSSurface<V>
 where
-    Self: ParametricSurface<Point = V::Point, Vector = V::Vector>,
+    Self: ParametricSurface<Point = V::Point, Vector = <V::Point as EuclideanSpace>::Diff>,
     V::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    V::Vector: InnerSpace<Scalar = f64> + Tolerance,
+    <V::Point as EuclideanSpace>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = V::Point;
-    type Parameter = (f64, f64);
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
     /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
     /// # Examples
@@ -516,15 +515,18 @@ where
     /// It may converge to a local solution depending on the hint.
     /// cf. [`BSplineCurve::search_rational_nearest_parameter`](struct.BSplineCurve.html#method.search_rational_nearest_parameter)
     #[inline(always)]
-    fn search_nearest_parameter(
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: V::Point,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -550,10 +552,9 @@ where
     }
 }
 
-impl SearchParameter for NURBSSurface<Vector3> {
+impl SearchParameter<D2> for NURBSSurface<Vector3> {
     type Point = Point2;
-    type Parameter = (f64, f64);
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
+    /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
     /// # Examples
     /// ```
@@ -573,15 +574,18 @@ impl SearchParameter for NURBSSurface<Vector3> {
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
     #[inline(always)]
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point2,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
@@ -602,7 +606,7 @@ impl<V: Clone> Invertible for NURBSSurface<V> {
 
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for NURBSSurface<V> {
     type Point = V::Point;
-    type Vector = V::Vector;
+    type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point { self.subs(u, v) }
     #[inline(always)]
@@ -765,10 +769,9 @@ where M: Copy + std::ops::Mul<V, Output = V>
     }
 }
 
-impl SearchParameter for NURBSSurface<Vector4> {
+impl SearchParameter<D2> for NURBSSurface<Vector4> {
     type Point = Point3;
-    type Parameter = (f64, f64);
-    /// Serach the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
+    /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
     /// # Examples
     /// ```
@@ -787,15 +790,18 @@ impl SearchParameter for NURBSSurface<Vector4> {
     /// let (u, v) = surface.search_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
-    fn search_parameter(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        hint: Option<(f64, f64)>,
+        hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
-        let hint = match hint {
-            Some(hint) => hint,
-            None => {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };

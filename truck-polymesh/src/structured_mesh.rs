@@ -16,7 +16,7 @@ impl StructuredMesh {
     /// Creates a structured polygon without `uv_division` and `normal`.
     #[inline(always)]
     pub fn from_positions(positions: Vec<Vec<Point3>>) -> StructuredMesh {
-        StructuredMesh::try_from_positions(positions).unwrap_or_else(|e| panic!("{:?}", e))
+        StructuredMesh::try_from_positions(positions).unwrap_or_else(|e| panic!("{e:?}"))
     }
     /// Creates a structured polygon without `uv_division` and `normal`.
     #[inline(always)]
@@ -27,7 +27,7 @@ impl StructuredMesh {
 
     /// Creates a structured polygon without `uv_division` and `normal`.
     #[inline(always)]
-    pub fn from_positions_unchecked(positions: Vec<Vec<Point3>>) -> StructuredMesh {
+    pub const fn from_positions_unchecked(positions: Vec<Vec<Point3>>) -> StructuredMesh {
         StructuredMesh {
             positions,
             uv_division: None,
@@ -41,7 +41,7 @@ impl StructuredMesh {
         (u_div, v_div): (Vec<f64>, Vec<f64>),
     ) -> StructuredMesh {
         StructuredMesh::try_from_positions_and_uvs(positions, (u_div, v_div))
-            .unwrap_or_else(|e| panic!("{:?}", e))
+            .unwrap_or_else(|e| panic!("{e:?}"))
     }
 
     /// Creates a structured polygon without normals.
@@ -59,7 +59,7 @@ impl StructuredMesh {
     }
     /// Creates a structured polygon without normals.
     #[inline(always)]
-    pub fn from_positions_and_uvs_unchecked(
+    pub const fn from_positions_and_uvs_unchecked(
         positions: Vec<Vec<Point3>>,
         uv_divisions: (Vec<f64>, Vec<f64>),
     ) -> StructuredMesh {
@@ -76,7 +76,7 @@ impl StructuredMesh {
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh {
         StructuredMesh::try_from_positions_and_normals(positions, normals)
-            .unwrap_or_else(|e| panic!("{:?}", e))
+            .unwrap_or_else(|e| panic!("{e:?}"))
     }
     /// Creates a structured polygon without uv divisions.
     #[inline(always)]
@@ -92,7 +92,7 @@ impl StructuredMesh {
     }
     /// Creates a structured polygon without uv divisions.
     #[inline(always)]
-    pub fn from_positions_and_normals_unchecked(
+    pub const fn from_positions_and_normals_unchecked(
         positions: Vec<Vec<Point3>>,
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh {
@@ -111,8 +111,7 @@ impl StructuredMesh {
         uv_division: (Vec<f64>, Vec<f64>),
         normals: Vec<Vec<Vector3>>,
     ) -> StructuredMesh {
-        StructuredMesh::try_new(positions, uv_division, normals)
-            .unwrap_or_else(|e| panic!("{:?}", e))
+        StructuredMesh::try_new(positions, uv_division, normals).unwrap_or_else(|e| panic!("{e:?}"))
     }
     /// Creates new structured mesh.
     /// Checks whether the size of vectors are compatible before creation.
@@ -135,7 +134,7 @@ impl StructuredMesh {
     /// Creates new structured mesh.
     /// Does not check whether the size of vectors are compatible before creation.
     #[inline(always)]
-    pub fn new_unchecked(
+    pub const fn new_unchecked(
         positions: Vec<Vec<Point3>>,
         uv_division: (Vec<f64>, Vec<f64>),
         normals: Vec<Vec<Vector3>>,
@@ -149,7 +148,7 @@ impl StructuredMesh {
 
     /// Returns the matrix of all positions.
     #[inline(always)]
-    pub fn positions(&self) -> &Vec<Vec<Point3>> { &self.positions }
+    pub const fn positions(&self) -> &Vec<Vec<Point3>> { &self.positions }
 
     /// Returns the vector of the mutable references to the rows of the positions matrix.
     #[inline(always)]
@@ -173,7 +172,7 @@ impl StructuredMesh {
 
     /// Returns the matrix of all normals.
     #[inline(always)]
-    pub fn normals(&self) -> Option<&Vec<Vec<Vector3>>> { self.normals.as_ref() }
+    pub const fn normals(&self) -> Option<&Vec<Vec<Vector3>>> { self.normals.as_ref() }
 
     /// Returns the vector of the mutable references to the rows of the normals matrix.
     #[inline(always)]
@@ -229,6 +228,30 @@ impl StructuredMesh {
             },
             faces,
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for StructuredMesh {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        #[derive(Deserialize)]
+        pub struct StructuredMesh_ {
+            positions: Vec<Vec<Point3>>,
+            uv_division: Option<(Vec<f64>, Vec<f64>)>,
+            normals: Option<Vec<Vec<Vector3>>>,
+        }
+        let StructuredMesh_ {
+            positions,
+            uv_division,
+            normals,
+        } = StructuredMesh_::deserialize(deserializer)?;
+        match (uv_division, normals) {
+            (Some(uv_division), Some(normals)) => Self::try_new(positions, uv_division, normals),
+            (Some(uv_division), None) => Self::try_from_positions_and_uvs(positions, uv_division),
+            (None, Some(normals)) => Self::try_from_positions_and_normals(positions, normals),
+            (None, None) => Self::try_from_positions(positions),
+        }
+        .map_err(serde::de::Error::custom)
     }
 }
 

@@ -20,14 +20,12 @@ macro_rules! intopt {
 pub fn vertex(x: f64, y: f64, z: f64) -> Vertex { builder::vertex(Point3::new(x, y, z)).into() }
 /// Returns a line from `vertex0` to `vertex1`.
 #[wasm_bindgen]
-pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
-    builder::line(&*vertex0, &*vertex1).into()
-}
+pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge { builder::line(vertex0, vertex1).into() }
 /// Returns a circle arc from `vertex0` to `vertex1` via `transit`.
 #[wasm_bindgen]
 pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: &[f64]) -> Edge {
     intopt!(Point3, transit);
-    builder::circle_arc(&*vertex0, &*vertex1, transit).into()
+    builder::circle_arc(vertex0, vertex1, transit).into()
 }
 /// Returns a Bezier curve from `vertex0` to `vertex1` with inter control points `inter_points`.
 #[wasm_bindgen]
@@ -40,17 +38,17 @@ pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, inter_points: &[f64]) -> Edge 
         .chunks(3)
         .map(|p| Point3::new(p[0], p[1], p[2]))
         .collect();
-    builder::bezier(&*vertex0, &*vertex1, inter_points).into()
+    builder::bezier(vertex0, vertex1, inter_points).into()
 }
 /// Returns a homotopic face from `edge0` to `edge1`.
 #[wasm_bindgen]
-pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face { builder::homotopy(&*edge0, &*edge1).into() }
+pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face { builder::homotopy(edge0, edge1).into() }
 /// Try attatiching a plane whose boundary is `wire`.
 #[wasm_bindgen]
 pub fn try_attach_plane(wire: &Wire) -> Option<Face> {
     builder::try_attach_plane(&[wire.as_ref().clone()])
         .map(|face| face.into())
-        .map_err(|e| eprintln!("{}", e))
+        .map_err(|e| eprintln!("{e}"))
         .ok()
 }
 

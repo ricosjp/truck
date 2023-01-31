@@ -13,7 +13,7 @@ impl PolygonInstance {
     }
     /// Returns a reference to the instance descriptor.
     #[inline(always)]
-    pub fn instance_state(&self) -> &PolygonState { &self.state }
+    pub const fn instance_state(&self) -> &PolygonState { &self.state }
     /// Returns the mutable reference to instance descriptor.
     #[inline(always)]
     pub fn instance_state_mut(&mut self) -> &mut PolygonState { &mut self.state }
@@ -164,11 +164,11 @@ impl Rendered for PolygonInstance {
             fragment: Some(FragmentState {
                 module: fragment_module,
                 entry_point: fragment_entry,
-                targets: &[ColorTargetState {
+                targets: &[Some(ColorTargetState {
                     format: scene_desc.render_texture.format,
                     blend,
                     write_mask: ColorWrites::ALL,
-                }],
+                })],
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,

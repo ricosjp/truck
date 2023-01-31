@@ -1,6 +1,8 @@
 use crate::*;
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::vec::Vec;
+use truck_base::entry_map::FxEntryMap as EntryMap;
 
 type FaceAdjacencyMap<'a, P, C, S> = HashMap<&'a Face<P, C, S>, Vec<&'a Face<P, C, S>>>;
 impl<P, C, S> Shell<P, C, S> {
@@ -22,26 +24,76 @@ impl<P, C, S> Shell<P, C, S> {
 
     /// Returns an iterator over the faces. Practically, an alias of `iter()`.
     #[inline(always)]
-    pub fn face_iter(&self) -> FaceIter<P, C, S> { self.iter() }
+    pub fn face_iter(&self) -> FaceIter<'_, P, C, S> { self.iter() }
 
     /// Returns a mutable iterator over the faces. Practically, an alias of `iter_mut()`.
     #[inline(always)]
-    pub fn face_iter_mut(&mut self) -> FaceIterMut<P, C, S> { self.iter_mut() }
+    pub fn face_iter_mut(&mut self) -> FaceIterMut<'_, P, C, S> { self.iter_mut() }
 
     /// Creates a consuming iterator. Practically, an alias of `into_iter()`.
     #[inline(always)]
     pub fn face_into_iter(self) -> FaceIntoIter<P, C, S> { self.face_list.into_iter() }
 
+    /// Returns an iterator over the faces. Practically, an alias of `par_iter()`.
+    #[inline(always)]
+    pub fn face_par_iter(&self) -> FaceParallelIter<'_, P, C, S>
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.par_iter()
+    }
+
+    /// Returns a mutable iterator over the faces. Practically, an alias of `par_iter_mut()`.
+    #[inline(always)]
+    pub fn face_par_iter_mut(&mut self) -> FaceParallelIterMut<'_, P, C, S>
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.par_iter_mut()
+    }
+
+    /// Creates a consuming iterator. Practically, an alias of `into_par_iter()`.
+    #[inline(always)]
+    pub fn face_into_par_iter(self) -> FaceParallelIntoIter<P, C, S>
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.into_par_iter()
+    }
+
     /// Returns an iterator over the edges.
     #[inline(always)]
     pub fn edge_iter(&self) -> impl Iterator<Item = Edge<P, C>> + '_ {
-        self.face_iter().flat_map(Face::boundaries).flatten()
+        self.face_iter().flat_map(Face::edge_iter)
+    }
+
+    /// Returns a parallel iterator over the edges.
+    #[inline(always)]
+    pub fn edge_par_iter(&self) -> impl ParallelIterator<Item = Edge<P, C>> + '_
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.face_par_iter().flat_map(Face::boundaries).flatten()
     }
 
     /// Returns an iterator over the vertices.
     #[inline(always)]
     pub fn vertex_iter(&self) -> impl Iterator<Item = Vertex<P>> + '_ {
         self.edge_iter().map(|edge| edge.front().clone())
+    }
+
+    /// Returns a parallel iterator over the vertices.
+    #[inline(always)]
+    pub fn vertex_par_iter(&self) -> impl ParallelIterator<Item = Vertex<P>> + '_
+    where
+        P: Send,
+        C: Send,
+        S: Send, {
+        self.edge_par_iter().map(|edge| edge.front().clone())
     }
 
     /// Moves all the faces of `other` into `self`, leaving `other` empty.
@@ -56,11 +108,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// Examples for each condition can be found on the page of
     /// [`ShellCondition`](./shell/enum.ShellCondition.html).
     pub fn shell_condition(&self) -> ShellCondition {
-        self.face_iter()
-            .flat_map(Face::boundary_iters)
-            .flatten()
-            .collect::<Boundaries<C>>()
-            .condition()
+        self.edge_iter().collect::<Boundaries<C>>().condition()
     }
 
     /// Returns a vector of all boundaries as wires.
@@ -98,26 +146,22 @@ impl<P, C, S> Shell<P, C, S> {
     /// Even if the shell is not oriented, all the edges of the boundary are extracted.
     /// However, the connected components of the boundary are split into several wires.
     pub fn extract_boundaries(&self) -> Vec<Wire<P, C>> {
-        let boundaries: Boundaries<C> = self
-            .face_iter()
-            .flat_map(Face::boundary_iters)
-            .flatten()
+        let boundaries: Boundaries<C> = self.edge_iter().collect();
+        let mut vemap: HashMap<_, _> = self
+            .edge_iter()
+            .filter_map(|edge| {
+                boundaries
+                    .boundaries
+                    .get(&edge.id())
+                    .map(|_| (edge.front().id(), edge.clone()))
+            })
             .collect();
-        let mut boundary_edges = Vec::new();
-        let mut vemap: HashMap<Vertex<P>, Edge<P, C>> = HashMap::default();
-        let edge_iter = self.face_iter().flat_map(Face::boundary_iters).flatten();
-        for edge in edge_iter {
-            if boundaries.boundaries.get(&edge.id()).is_some() {
-                boundary_edges.push(edge.clone());
-                vemap.insert(edge.front().clone(), edge.clone());
-            }
-        }
         let mut res = Vec::new();
-        for edge in boundary_edges {
-            if let Some(mut cursor) = vemap.remove(edge.front()) {
+        while let Some(edge) = vemap.values().next() {
+            if let Some(mut cursor) = vemap.remove(&edge.front().id()) {
                 let mut wire = Wire::from(vec![cursor.clone()]);
                 loop {
-                    cursor = match vemap.remove(cursor.back()) {
+                    cursor = match vemap.remove(&cursor.back().id()) {
                         None => break,
                         Some(got) => {
                             wire.push_back(got.clone());
@@ -135,7 +179,7 @@ impl<P, C, S> Shell<P, C, S> {
     ///
     /// For the returned hashmap `map` and each vertex `v`,
     /// the vector `map[&v]` cosists all vertices which is adjacent to `v`.
-    /// # Exmaples
+    /// # Examples
     /// ```
     /// use truck_topology::*;
     /// use std::collections::HashSet;
@@ -158,23 +202,17 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(v0_ads, HashSet::from_iter(vec![&v[2].id(), &v[3].id()]));
     /// ```
     pub fn vertex_adjacency(&self) -> HashMap<VertexID<P>, Vec<VertexID<P>>> {
-        let mut adjacency: HashMap<VertexID<P>, Vec<VertexID<P>>> = HashMap::default();
+        let mut adjacency = EntryMap::new(|x| x, |_| Vec::new());
         let mut done_edge: HashSet<EdgeID<C>> = HashSet::default();
-        let edge_iter = self.face_iter().flat_map(|face| {
-            face.absolute_boundaries()
-                .iter()
-                .flat_map(|wire| wire.edge_iter())
-        });
-        for edge in edge_iter {
-            if !done_edge.insert(edge.id()) {
-                continue;
+        self.edge_iter().for_each(|edge| {
+            if done_edge.insert(edge.id()) {
+                let v0 = edge.front().id();
+                let v1 = edge.back().id();
+                adjacency.entry_or_insert(v0).push(v1);
+                adjacency.entry_or_insert(v1).push(v0);
             }
-            let v0 = edge.front().id();
-            let v1 = edge.back().id();
-            adjacency.entry(v0).or_insert_with(Vec::new).push(v1);
-            adjacency.entry(v1).or_insert_with(Vec::new).push(v0);
-        }
-        adjacency
+        });
+        adjacency.into()
     }
 
     /// Returns the adjacency matrix of faces in the shell.
@@ -210,27 +248,23 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(face_adjacency[&shell[2]].len(), 1);
     /// assert_eq!(face_adjacency[&shell[3]].len(), 3);
     /// ```
-    pub fn face_adjacency(&self) -> FaceAdjacencyMap<P, C, S> {
-        let mut adjacency: FaceAdjacencyMap<P, C, S> = HashMap::default();
-        let mut edge_face_map: HashMap<EdgeID<C>, Vec<&Face<P, C, S>>> = HashMap::default();
-        for face in self.face_iter() {
-            let edge_iter = face
-                .absolute_boundaries()
+    pub fn face_adjacency(&self) -> FaceAdjacencyMap<'_, P, C, S> {
+        let mut adjacency = EntryMap::new(|x| x, |_| Vec::new());
+        let mut edge_face_map = EntryMap::new(|x| x, |_| Vec::new());
+        self.face_iter().for_each(|face| {
+            face.absolute_boundaries()
                 .iter()
-                .flat_map(|wire| wire.edge_iter());
-            for edge in edge_iter {
-                if let Some(vec) = edge_face_map.get_mut(&edge.id()) {
-                    for tmp in vec {
-                        adjacency.entry(face).or_insert_with(Vec::new).push(tmp);
-                        adjacency.entry(tmp).or_insert_with(Vec::new).push(face);
-                    }
-                } else {
-                    adjacency.entry(face).or_insert_with(Vec::new);
-                    edge_face_map.insert(edge.id(), vec![face]);
-                }
-            }
-        }
-        adjacency
+                .flatten()
+                .for_each(|edge| {
+                    let vec = edge_face_map.entry_or_insert(edge.id());
+                    adjacency.entry_or_insert(face).extend(vec.iter().copied());
+                    vec.iter().for_each(|tmp| {
+                        adjacency.entry_or_insert(*tmp).push(face);
+                    });
+                    vec.push(face);
+                });
+        });
+        adjacency.into()
     }
 
     /// Returns whether the shell is connected or not.
@@ -281,6 +315,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// ```
     pub fn is_connected(&self) -> bool {
         let mut adjacency = self.vertex_adjacency();
+        // Connecting another boundary of the same face with an edge
         for face in self {
             for wire in face.boundaries.windows(2) {
                 let v0 = wire[0].front_vertex().unwrap();
@@ -398,33 +433,24 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(shell.singular_vertices(), vec![v[0].clone()]);
     /// ```
     pub fn singular_vertices(&self) -> Vec<Vertex<P>> {
-        let mut vert_wise_adjacency = HashMap::default();
-        for face in self.face_iter() {
-            let first_edge = &face.absolute_boundaries()[0][0];
-            let mut edge_iter = face
-                .absolute_boundaries()
-                .iter()
-                .flat_map(|wire| wire.edge_iter())
-                .peekable();
-            while let Some(edge) = edge_iter.next() {
-                let adjacency = vert_wise_adjacency
-                    .entry(edge.back().clone())
-                    .or_insert_with(HashMap::default);
-                let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
-                adjacency
-                    .entry(edge.id())
-                    .or_insert_with(Vec::new)
-                    .push(next_edge.id());
-                adjacency
-                    .entry(next_edge.id())
-                    .or_insert_with(Vec::new)
-                    .push(edge.id());
-            }
-        }
+        let mut vert_wise_adjacency =
+            EntryMap::new(Vertex::clone, |_| EntryMap::new(Edge::id, |_| Vec::new()));
+        self.face_iter()
+            .flat_map(Face::absolute_boundaries)
+            .for_each(|wire| {
+                let first_edge = &wire[0];
+                let mut edge_iter = wire.iter().peekable();
+                while let Some(edge) = edge_iter.next() {
+                    let adjacency = vert_wise_adjacency.entry_or_insert(edge.back());
+                    let next_edge = *edge_iter.peek().unwrap_or(&first_edge);
+                    adjacency.entry_or_insert(edge).push(next_edge.id());
+                    adjacency.entry_or_insert(next_edge).push(edge.id());
+                }
+            });
         vert_wise_adjacency
             .into_iter()
-            .filter_map(|(vertex, mut adjacency)| {
-                Some(vertex).filter(|_| !check_connectivity(&mut adjacency))
+            .filter_map(|(vertex, adjacency)| {
+                Some(vertex).filter(|_| !check_connectivity(&mut adjacency.into()))
             })
             .collect()
     }
@@ -441,42 +467,17 @@ impl<P, C, S> Shell<P, C, S> {
         mut curve_mapping: impl FnMut(&C) -> Option<D>,
         mut surface_mapping: impl FnMut(&S) -> Option<T>,
     ) -> Option<Shell<Q, D, T>> {
-        let mut vmap: HashMap<VertexID<P>, Option<Vertex<Q>>> = HashMap::default();
-        let mut edge_map: HashMap<EdgeID<C>, Option<Edge<Q, D>>> = HashMap::default();
+        let mut vertex_map = EntryMap::new(Vertex::id, move |v| v.try_mapped(&mut point_mapping));
+        let mut edge_map = EntryMap::new(
+            Edge::id,
+            wire::edge_entry_map_try_closure(&mut vertex_map, &mut curve_mapping),
+        );
         self.face_iter()
             .map(|face| {
                 let wires = face
                     .absolute_boundaries()
                     .iter()
-                    .map(|wire| {
-                        wire.edge_iter()
-                            .map(|edge| {
-                                let new_edge = edge_map
-                                    .entry(edge.id())
-                                    .or_insert_with(|| {
-                                        let vf = edge.absolute_front();
-                                        let v0 = vmap
-                                            .entry(vf.id())
-                                            .or_insert_with(|| vf.try_mapped(&mut point_mapping))
-                                            .as_ref()?
-                                            .clone();
-                                        let vb = edge.absolute_back();
-                                        let v1 = vmap
-                                            .entry(vb.id())
-                                            .or_insert_with(|| vb.try_mapped(&mut point_mapping))
-                                            .as_ref()?
-                                            .clone();
-                                        let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
-                                        Some(Edge::debug_new(&v0, &v1, curve))
-                                    })
-                                    .as_ref()?;
-                                match edge.orientation() {
-                                    true => Some(new_edge.clone()),
-                                    false => Some(new_edge.inverse()),
-                                }
-                            })
-                            .collect()
-                    })
+                    .map(|wire| wire.sub_try_mapped(&mut edge_map))
                     .collect::<Option<Vec<_>>>()?;
                 let surface = surface_mapping(&*face.surface.lock().unwrap())?;
                 let mut new_face = Face::debug_new(wires, surface);
@@ -560,44 +561,17 @@ impl<P, C, S> Shell<P, C, S> {
         mut curve_mapping: impl FnMut(&C) -> D,
         mut surface_mapping: impl FnMut(&S) -> T,
     ) -> Shell<Q, D, T> {
-        let mut vmap: HashMap<VertexID<P>, Vertex<Q>> = HashMap::default();
-        self.iter()
-            .flat_map(Face::absolute_boundaries)
-            .flat_map(Wire::vertex_iter)
-            .for_each(|vertex| {
-                vmap.entry(vertex.id())
-                    .or_insert_with(|| vertex.mapped(&mut point_mapping));
-            });
-        let mut edge_map: HashMap<EdgeID<C>, Edge<Q, D>> = HashMap::default();
+        let mut vertex_map = EntryMap::new(Vertex::id, |v| v.mapped(&mut point_mapping));
+        let mut edge_map = EntryMap::new(
+            Edge::id,
+            wire::edge_entry_map_closure(&mut vertex_map, &mut curve_mapping),
+        );
         self.face_iter()
             .map(|face| {
                 let wires: Vec<Wire<_, _>> = face
                     .absolute_boundaries()
                     .iter()
-                    .map(|wire| {
-                        wire.edge_iter()
-                            .map(|edge| {
-                                let new_edge = edge_map.entry(edge.id()).or_insert_with(|| {
-                                    let vf = edge.absolute_front();
-                                    let v0 = vmap
-                                        .entry(vf.id())
-                                        .or_insert_with(|| vf.mapped(&mut point_mapping))
-                                        .clone();
-                                    let vb = edge.absolute_back();
-                                    let v1 = vmap
-                                        .entry(vb.id())
-                                        .or_insert_with(|| vb.mapped(&mut point_mapping))
-                                        .clone();
-                                    let curve = curve_mapping(&*edge.curve.lock().unwrap());
-                                    Edge::debug_new(&v0, &v1, curve)
-                                });
-                                match edge.absolute_front() == edge.front() {
-                                    true => new_edge.clone(),
-                                    false => new_edge.inverse(),
-                                }
-                            })
-                            .collect()
-                    })
+                    .map(|wire| wire.sub_mapped(&mut edge_map))
                     .collect();
                 let surface = surface_mapping(&*face.surface.lock().unwrap());
                 let mut new_face = Face::debug_new(wires, surface);
@@ -621,16 +595,26 @@ impl<P, C, S> Shell<P, C, S> {
     }
 
     /// Cuts one edge into two edges at vertex.
+    ///
+    /// # Returns
+    /// Returns the tuple of new edges created by cutting the edge.
+    ///
     /// # Failures
-    /// Returns `false` and not edit `self` if:
-    /// - `vertex` is already included in `self`, or
+    /// Returns `None` and not edit `self` if:
+    /// - there is no edge corresponding to `edge_id` in the shell,
+    /// - `vertex` is already included in the shell, or
     /// - cutting of edge fails.
-    pub fn cut_edge(&mut self, edge_id: EdgeID<C>, vertex: &Vertex<P>) -> bool
+    pub fn cut_edge(
+        &mut self,
+        edge_id: EdgeID<C>,
+        vertex: &Vertex<P>,
+    ) -> Option<(Edge<P, C>, Edge<P, C>)>
     where
         P: Clone,
-        C: Cut<Point = P> + SearchParameter<Point = P, Parameter = f64>, {
+        C: Cut<Point = P> + SearchParameter<D1, Point = P>,
+    {
         if self.vertex_iter().any(|v| &v == vertex) {
-            return false;
+            return None;
         }
         let mut edges = None;
         self.iter_mut()
@@ -645,11 +629,7 @@ impl<P, C, S> Shell<P, C, S> {
                     None => return Some(()),
                 };
                 if edges.is_none() {
-                    let absedge = match edge.orientation() {
-                        true => edge.clone(),
-                        false => edge.inverse(),
-                    };
-                    edges = Some(absedge.cut(vertex)?);
+                    edges = Some(edge.absolute_clone().cut(vertex)?);
                 }
                 let edges = edges.as_ref().unwrap();
                 let new_wire = match edge.orientation() {
@@ -659,11 +639,21 @@ impl<P, C, S> Shell<P, C, S> {
                 let flag = wire.swap_edge_into_wire(idx, new_wire);
                 debug_assert!(flag);
                 Some(())
-            })
-            .is_some()
+            });
+        edges
     }
     /// Removes `vertex` from `self` by concat two edges on both sides.
-    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> bool
+    ///
+    /// # Returns
+    /// Returns the new created edge.
+    ///
+    /// # Failures
+    /// Returns `None` if:
+    /// - there are no vertex corresponding to `vertex_id` in the shell,
+    /// - the vertex is included more than 2 face boundaries,
+    /// - the vertex is included more than 2 edges, or
+    /// - concating edges is failed.
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> Option<Edge<P, C>>
     where
         P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
@@ -680,30 +670,25 @@ impl<P, C, S> Shell<P, C, S> {
             })
             .collect();
         if vec.len() > 2 || vec.is_empty() {
-            return false;
+            None
         } else if vec.len() == 1 {
             let (wire, idx) = vec.pop().unwrap();
-            let edge = match wire[idx].concat(&wire[(idx + 1) % wire.len()]) {
-                Ok(got) => got,
-                Err(_) => return false,
-            };
-            wire.swap_subwire_into_edges(idx, edge);
+            let edge = wire[idx].concat(&wire[(idx + 1) % wire.len()]).ok()?;
+            wire.swap_subwire_into_edges(idx, edge.clone());
+            Some(edge)
         } else {
             let (wire0, idx0) = vec.pop().unwrap();
             let (wire1, idx1) = vec.pop().unwrap();
             if !wire0[idx0].is_same(&wire1[(idx1 + 1) % wire1.len()])
                 || !wire0[(idx0 + 1) % wire0.len()].is_same(&wire1[idx1])
             {
-                return false;
+                return None;
             }
-            let edge = match wire0[idx0].concat(&wire0[(idx0 + 1) % wire0.len()]) {
-                Ok(got) => got,
-                Err(_) => return false,
-            };
+            let edge = wire0[idx0].concat(&wire0[(idx0 + 1) % wire0.len()]).ok()?;
             wire1.swap_subwire_into_edges(idx1, edge.inverse());
-            wire0.swap_subwire_into_edges(idx0, edge);
+            wire0.swap_subwire_into_edges(idx0, edge.clone());
+            Some(edge)
         }
-        true
     }
 
     /// Creates display struct for debugging the shell.
@@ -742,7 +727,10 @@ impl<P, C, S> Shell<P, C, S> {
     ///     "[Face([[(0, 1), (1, 3), (3, 2), (2, 0)]]), Face([[(1, 2), (2, 0), (0, 3), (3, 1)]])]",
     /// );
     /// ```
-    pub fn display(&self, format: ShellDisplayFormat) -> DebugDisplay<Self, ShellDisplayFormat> {
+    pub fn display(
+        &self,
+        format: ShellDisplayFormat,
+    ) -> DebugDisplay<'_, Self, ShellDisplayFormat> {
         DebugDisplay {
             entity: self,
             format,
@@ -812,12 +800,25 @@ impl<P, C, S> Default for Shell<P, C, S> {
     }
 }
 
+impl<P, C, S> PartialEq for Shell<P, C, S> {
+    fn eq(&self, other: &Self) -> bool { self.face_list == other.face_list }
+}
+
+impl<P, C, S> Eq for Shell<P, C, S> {}
+
 /// The reference iterator over all faces in shells
 pub type FaceIter<'a, P, C, S> = std::slice::Iter<'a, Face<P, C, S>>;
 /// The mutable reference iterator over all faces in shells
 pub type FaceIterMut<'a, P, C, S> = std::slice::IterMut<'a, Face<P, C, S>>;
 /// The into iterator over all faces in shells
 pub type FaceIntoIter<P, C, S> = std::vec::IntoIter<Face<P, C, S>>;
+/// The reference parallel iterator over all faces in shells
+pub type FaceParallelIter<'a, P, C, S> = <Vec<Face<P, C, S>> as IntoParallelRefIterator<'a>>::Iter;
+/// The mutable reference parallel iterator over all faces in shells
+pub type FaceParallelIterMut<'a, P, C, S> =
+    <Vec<Face<P, C, S>> as IntoParallelRefMutIterator<'a>>::Iter;
+/// The into parallel iterator over all faces in shells
+pub type FaceParallelIntoIter<P, C, S> = <Vec<Face<P, C, S>> as IntoParallelIterator>::Iter;
 
 /// The shell conditions being determined by the half-edge model.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -1054,7 +1055,7 @@ where T: Eq + Hash + Clone {
 impl<'a, P: Debug, C: Debug, S: Debug> Debug
     for DebugDisplay<'a, Shell<P, C, S>, ShellDisplayFormat>
 {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             ShellDisplayFormat::FacesList { face_format } => f
                 .debug_list()
@@ -1072,5 +1073,39 @@ impl<'a, P: Debug, C: Debug, S: Debug> Debug
                 })
                 .finish(),
         }
+    }
+}
+
+impl<P: Send, C: Send, S: Send> FromParallelIterator<Face<P, C, S>> for Shell<P, C, S> {
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where I: IntoParallelIterator<Item = Face<P, C, S>> {
+        Self::from(Vec::from_par_iter(par_iter))
+    }
+}
+
+impl<P: Send, C: Send, S: Send> IntoParallelIterator for Shell<P, C, S> {
+    type Item = Face<P, C, S>;
+    type Iter = FaceParallelIntoIter<P, C, S>;
+    fn into_par_iter(self) -> Self::Iter { self.face_list.into_par_iter() }
+}
+
+impl<'a, P: Send + 'a, C: Send + 'a, S: Send + 'a> IntoParallelRefIterator<'a> for Shell<P, C, S> {
+    type Item = &'a Face<P, C, S>;
+    type Iter = FaceParallelIter<'a, P, C, S>;
+    fn par_iter(&'a self) -> Self::Iter { self.face_list.par_iter() }
+}
+
+impl<'a, P: Send + 'a, C: Send + 'a, S: Send + 'a> IntoParallelRefMutIterator<'a>
+    for Shell<P, C, S>
+{
+    type Item = &'a mut Face<P, C, S>;
+    type Iter = FaceParallelIterMut<'a, P, C, S>;
+    fn par_iter_mut(&'a mut self) -> Self::Iter { self.face_list.par_iter_mut() }
+}
+
+impl<P: Send, C: Send, S: Send> ParallelExtend<Face<P, C, S>> for Shell<P, C, S> {
+    fn par_extend<I>(&mut self, par_iter: I)
+    where I: IntoParallelIterator<Item = Face<P, C, S>> {
+        self.face_list.par_extend(par_iter)
     }
 }

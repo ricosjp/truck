@@ -96,14 +96,13 @@ impl<P: ControlPoint<f64>> Cut for PolylineCurve<P> {
     }
 }
 
-impl<P> SearchParameter for PolylineCurve<P>
+impl<P> SearchParameter<D1> for PolylineCurve<P>
 where
     P: ControlPoint<f64>,
     P::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    type Parameter = f64;
-    fn search_parameter(&self, point: P, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, point: P, _: H, _: usize) -> Option<f64> {
         for (i, p) in self.0.windows(2).enumerate() {
             let a = point - p[0];
             let b = p[1] - p[0];
@@ -117,14 +116,13 @@ where
     }
 }
 
-impl<P> SearchNearestParameter for PolylineCurve<P>
+impl<P> SearchNearestParameter<D1> for PolylineCurve<P>
 where
     P: ControlPoint<f64>,
     P::Diff: InnerSpace<Scalar = f64>,
 {
     type Point = P;
-    type Parameter = f64;
-    fn search_nearest_parameter(&self, point: P, _: Option<f64>, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SPHint1D>>(&self, point: P, _: H, _: usize) -> Option<f64> {
         let (mut t0, mut dist2) = (0.0, f64::INFINITY);
         for (i, p) in self.0.windows(2).enumerate() {
             let a = point - p[0];
