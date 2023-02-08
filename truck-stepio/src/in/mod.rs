@@ -59,6 +59,9 @@ pub struct Table {
     pub oriented_face: HashMap<u64, OrientedFaceHolder>,
     pub shell: HashMap<u64, ShellHolder>,
     pub oriented_shell: HashMap<u64, OrientedShellHolder>,
+
+    // dummy
+    pub dummy: HashMap<u64, DummyHolder>,
 }
 
 impl Table {
@@ -477,7 +480,13 @@ impl Table {
                     }
                 }
                 _ => {
-                    println!("unimplemented: {}", record.name);
+                    self.dummy.insert(
+                        *id,
+                        DummyHolder {
+                            record: format!("{record:?}"),
+                            is_simple: true,
+                        },
+                    );
                 }
             },
             EntityInstance::Complex {
@@ -653,7 +662,15 @@ impl Table {
                                 },
                             );
                         }
-                        _ => {}
+                        _ => {
+                            self.dummy.insert(
+                                *id,
+                                DummyHolder {
+                                    record: format!("{records:?}"),
+                                    is_simple: false,
+                                },
+                            );
+                        }
                     }
                 }
             }
@@ -716,6 +733,15 @@ fn deserialize_bool(parameter: &Parameter) -> Result<bool> {
     }
 
     CharBool::deserialize(parameter).map(Into::into)
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = dummy)]
+#[holder(generate_deserialize)]
+pub struct Dummy {
+    pub record: String,
+    pub is_simple: bool,
 }
 
 /// `cartesian_point`

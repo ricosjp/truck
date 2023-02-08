@@ -67,6 +67,8 @@ fn read() {
 #110 = CLOSED_SHELL('ClosedShell', (#107, #108));
 #111 = ORIENTED_OPEN_SHELL('OrientedOpenShell', *, #109, .F.);
 #112 = ORIENTED_CLOSED_SHELL('OrientedClosedShell', *, #110, .T.);
+
+#999 = HOGE('Dummy', #110, 3);
 ENDSEC;
 ",
     )
@@ -600,6 +602,15 @@ ENDSEC;
                     orientation: true,
                 },
             ),
+        ]),
+        dummy: HashMap::from_iter(vec![
+            (
+                999,
+                DummyHolder {
+                    record: "Record { name: \"HOGE\", parameter: List([String(\"Dummy\"), Ref(Entity(110)), Integer(3)]) }".to_string(),
+                    is_simple: true,
+                }
+            )
         ]),
         ..Default::default()
     };
