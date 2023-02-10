@@ -75,14 +75,17 @@ where
             }
             SPHint1D::Range(x, y) => {
                 let p = self.curve.subs(y);
-                let ranges = (0..PRESEARCH_DIVISION).fold(((p.x, p.x), (p.y, p.y)), |((x0, x1), (y0, y1)), i| {
-                    let t = x + (y - x) * i as f64 / PRESEARCH_DIVISION as f64;
-                    let p = self.curve.subs(t);
-                    (
-                        (f64::min(x0, p.x), f64::max(x1, p.x)),
-                        (f64::min(y0, p.y), f64::max(y1, p.y))
-                    )
-                });
+                let ranges = (0..PRESEARCH_DIVISION).fold(
+                    ((p.x, p.x), (p.y, p.y)),
+                    |((x0, x1), (y0, y1)), i| {
+                        let t = x + (y - x) * i as f64 / PRESEARCH_DIVISION as f64;
+                        let p = self.curve.subs(t);
+                        (
+                            (f64::min(x0, p.x), f64::max(x1, p.x)),
+                            (f64::min(y0, p.y), f64::max(y1, p.y)),
+                        )
+                    },
+                );
                 SPHint2D::Range(ranges.0, ranges.1)
             }
             SPHint1D::None => SPHint2D::None,
@@ -130,6 +133,14 @@ where
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<S::Point>) {
         algo::curve::parameter_division(self, range, tol)
     }
+}
+
+impl<C, S> Invertible for PCurve<C, S>
+where
+    C: Invertible,
+    S: Clone,
+{
+    fn invert(&mut self) { self.curve.invert() }
 }
 
 #[test]
