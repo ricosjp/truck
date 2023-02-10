@@ -36,6 +36,7 @@ pub struct Table {
     pub uniform_curve: HashMap<u64, UniformCurveHolder>,
     pub rational_b_spline_curve: HashMap<u64, RationalBSplineCurveHolder>,
     pub circle: HashMap<u64, CircleHolder>,
+    pub pcurve: HashMap<u64, PcurveHolder>,
 
     // surface
     pub plane: HashMap<u64, PlaneHolder>,
@@ -59,6 +60,9 @@ pub struct Table {
     pub oriented_face: HashMap<u64, OrientedFaceHolder>,
     pub shell: HashMap<u64, ShellHolder>,
     pub oriented_shell: HashMap<u64, OrientedShellHolder>,
+
+    // others
+    pub definitional_representation: HashMap<u64, DefinitionalRepresentationHolder>,
 
     // dummy
     pub dummy: HashMap<u64, DummyHolder>,
@@ -227,6 +231,9 @@ impl Table {
                 }
                 "CIRCLE" => {
                     self.circle.insert(*id, CircleHolder::deserialize(record)?);
+                }
+                "PCURVE" => {
+                    self.pcurve.insert(*id, PcurveHolder::deserialize(record)?);
                 }
                 "PLANE" => {
                     self.plane.insert(*id, PlaneHolder::deserialize(record)?);
@@ -479,6 +486,26 @@ impl Table {
                         }
                     }
                 }
+                "DEFINITIONAL_REPRESENTATION" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 3 {
+                            self.definitional_representation.insert(
+                                *id,
+                                DefinitionalRepresentationHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    representation_item: Deserialize::deserialize(&params[1])?,
+                                    contex_of_items: match &params[2] {
+                                        Parameter::Ref(x) => PlaceHolder::Ref(x.clone()),
+                                        _ => PlaceHolder::Owned(DummyHolder {
+                                            record: format!("{:?}", params[2]),
+                                            is_simple: true,
+                                        }),
+                                    },
+                                },
+                            );
+                        }
+                    }
+                }
                 _ => {
                     self.dummy.insert(
                         *id,
@@ -672,6 +699,14 @@ impl Table {
                             );
                         }
                     }
+                } else {
+                    self.dummy.insert(
+                        *id,
+                        DummyHolder {
+                            record: format!("{records:?}"),
+                            is_simple: false,
+                        },
+                    );
                 }
             }
         }
@@ -980,6 +1015,9 @@ pub enum CurveAny {
     #[holder(use_place_holder)]
     #[holder(field = circle)]
     Circle(Circle),
+    #[holder(use_place_holder)]
+    #[holder(field = pcurve)]
+    Pcurve(Pcurve),
 }
 
 impl TryFrom<&CurveAny> for Curve2D {
@@ -1008,6 +1046,7 @@ impl TryFrom<&CurveAny> for Curve2D {
                 ellipse.transform_by(Matrix3::try_from(&circle.position)?);
                 Self::Conic(Conic2D::Ellipse(ellipse))
             }
+            Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
         })
     }
 }
@@ -1038,6 +1077,7 @@ impl TryFrom<&CurveAny> for Curve3D {
                 ellipse.transform_by(Matrix4::try_from(&circle.position)?);
                 Self::Conic(Conic3D::Ellipse(ellipse))
             }
+            Pcurve(c) => Self::PCurve(c.try_into()?),
         })
     }
 }
@@ -1322,38 +1362,76 @@ impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
+#[holder(field = definitional_representation)]
+#[holder(generate_deserialize)]
+pub struct DefinitionalRepresentation {
+    label: String,
+    #[holder(use_place_holder)]
+    representation_item: Vec<CurveAny>,
+    #[holder(use_place_holder)]
+    contex_of_items: Dummy,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = pcurve)]
+#[holder(generate_deserialize)]
+pub struct Pcurve {
+    label: String,
+    #[holder(use_place_holder)]
+    basis_surface: SurfaceAny,
+    #[holder(use_place_holder)]
+    reference_to_curve: DefinitionalRepresentation,
+}
+
+impl TryFrom<&Pcurve> for alias::PCurve {
+    type Error = ExpressParseError;
+    fn try_from(value: &Pcurve) -> std::result::Result<Self, Self::Error> {
+        let surface: Surface = (&value.basis_surface).try_into()?;
+        let curve: Curve2D = value
+            .reference_to_curve
+            .representation_item
+            .get(0)
+            .ok_or("no representation item")?
+            .try_into()?;
+        Ok(alias::PCurve::new(Box::new(curve), Box::new(surface)))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
 #[holder(generate_deserialize)]
 pub enum SurfaceAny {
     #[holder(use_place_holder)]
     #[holder(field = plane)]
-    Plane(Plane),
+    Plane(Box<Plane>),
     #[holder(use_place_holder)]
     #[holder(field = spherical_surface)]
-    SphericalSurface(SphericalSurface),
+    SphericalSurface(Box<SphericalSurface>),
     #[holder(use_place_holder)]
     #[holder(field = cylindrical_surface)]
-    CylindricalSurface(CylindricalSurface),
+    CylindricalSurface(Box<CylindricalSurface>),
     #[holder(use_place_holder)]
     #[holder(field = toroidal_surface)]
-    ToroidalSurface(ToroidalSurface),
+    ToroidalSurface(Box<ToroidalSurface>),
     #[holder(use_place_holder)]
     #[holder(field = b_spline_surface_with_knots)]
-    BSplineSurfaceWithKnots(BSplineSurfaceWithKnots),
+    BSplineSurfaceWithKnots(Box<BSplineSurfaceWithKnots>),
     #[holder(use_place_holder)]
     #[holder(field = uniform_surface)]
-    UniformSurface(UniformSurface),
+    UniformSurface(Box<UniformSurface>),
     #[holder(use_place_holder)]
     #[holder(field = quasi_uniform_surface)]
-    QuasiUniformSurface(QuasiUniformSurface),
+    QuasiUniformSurface(Box<QuasiUniformSurface>),
     #[holder(use_place_holder)]
     #[holder(field = bezier_surface)]
-    BezierSurface(BezierSurface),
+    BezierSurface(Box<BezierSurface>),
     #[holder(use_place_holder)]
     #[holder(field = surface_of_revolution)]
-    SurfaceOfRevolution(SurfaceOfRevolution),
+    SurfaceOfRevolution(Box<SurfaceOfRevolution>),
     #[holder(use_place_holder)]
     #[holder(field = surface_of_linear_extrusion)]
-    SurfaceOfLinearExtrusion(SurfaceOfLinearExtrusion),
+    SurfaceOfLinearExtrusion(Box<SurfaceOfLinearExtrusion>),
 }
 
 impl TryFrom<&SurfaceAny> for Surface {
@@ -1362,27 +1440,27 @@ impl TryFrom<&SurfaceAny> for Surface {
         use SurfaceAny::*;
         match x {
             Plane(plane) => Ok(Self::ElementarySurface(ElementarySurface::Plane(
-                plane.into(),
+                plane.as_ref().into(),
             ))),
             SphericalSurface(sphere) => Ok(Self::ElementarySurface(ElementarySurface::Sphere(
-                sphere.into(),
+                sphere.as_ref().into(),
             ))),
             CylindricalSurface(cs) => Ok(Self::ElementarySurface(
-                ElementarySurface::CylindricalSurface(cs.into()),
+                ElementarySurface::CylindricalSurface(cs.as_ref().into()),
             )),
             ToroidalSurface(ts) => Ok(Self::ElementarySurface(ElementarySurface::ToroidalSurface(
-                ts.into(),
+                ts.as_ref().into(),
             ))),
-            BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
-            UniformSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
-            QuasiUniformSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
-            BezierSurface(bsp) => Ok(Self::BSplineSurface(bsp.try_into()?)),
-            SurfaceOfRevolution(sr) => {
-                Ok(Self::SweptCurve(SweptCurve::RevolutedCurve(sr.try_into()?)))
-            }
-            SurfaceOfLinearExtrusion(sr) => {
-                Ok(Self::SweptCurve(SweptCurve::ExtrudedCurve(sr.try_into()?)))
-            }
+            BSplineSurfaceWithKnots(bsp) => Ok(Self::BSplineSurface(bsp.as_ref().try_into()?)),
+            UniformSurface(bsp) => Ok(Self::BSplineSurface(bsp.as_ref().try_into()?)),
+            QuasiUniformSurface(bsp) => Ok(Self::BSplineSurface(bsp.as_ref().try_into()?)),
+            BezierSurface(bsp) => Ok(Self::BSplineSurface(bsp.as_ref().try_into()?)),
+            SurfaceOfRevolution(sr) => Ok(Self::SweptCurve(SweptCurve::RevolutedCurve(
+                sr.as_ref().try_into()?,
+            ))),
+            SurfaceOfLinearExtrusion(sr) => Ok(Self::SweptCurve(SweptCurve::ExtrudedCurve(
+                sr.as_ref().try_into()?,
+            ))),
         }
     }
 }
@@ -1477,14 +1555,12 @@ impl From<&ToroidalSurface> for alias::ToroidalSurface {
             * Matrix4::from_scale(*minor_radius);
         let mut minor_circle =
             Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)));
-        minor_circle.transform_by(mat0);
-        let mut res = Processor::new(RevolutedCurve::by_revolution(
+        minor_circle.transform_by(mat * mat0);
+        RevolutedCurve::by_revolution(
             minor_circle,
-            Point3::origin(),
-            Vector3::unit_z(),
-        ));
-        res.transform_by(mat);
-        res
+            mat.transform_point(Point3::origin()),
+            mat.transform_vector(Vector3::unit_z()),
+        )
     }
 }
 
@@ -1772,6 +1848,7 @@ impl EdgeCurve {
                 ellipse.transform_by(mat);
                 Curve2D::Conic(Conic2D::Ellipse(ellipse))
             }
+            Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
         };
         if !self.same_sense {
             curve.invert();
@@ -1821,6 +1898,7 @@ impl EdgeCurve {
                 ellipse.transform_by(mat);
                 Curve3D::Conic(Conic3D::Ellipse(ellipse))
             }
+            Pcurve(c) => Curve3D::PCurve(alias::PCurve::try_from(c)?),
         };
         if !self.same_sense {
             curve.invert();

@@ -54,6 +54,10 @@ fn read() {
 #29 = TOROIDAL_SURFACE('ToroidalSurface', #9, 5.0, 2.0);
 #30 = SURFACE_OF_LINEAR_EXTRUSION('SurfaceOfLinearExtrusion', #20, #3);
 
+#32 = ( GEOMETRIC_REPRESENTATION_CONTEXT(2) PARAMETRIC_REPRESENTATION_CONTEXT() REPRESENTATION_CONTEXT('2D SPACE','') );
+#33 = DEFINITIONAL_REPRESENTATION('DefinitionalRepresentation', (#13), #32);
+#34 = PCURVE('Pcurve', #24, #33);
+
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
 #102 = ORIENTED_EDGE('OrientedEdge', *, *, #101, .F.);
@@ -305,6 +309,22 @@ ENDSEC;
                 position: PlaceHolder::Ref(Name::Entity(7)),
                 radius: 10.0,
             },
+        )]),
+        definitional_representation: HashMap::from_iter(vec![(
+            33,
+            DefinitionalRepresentationHolder {
+                label: "DefinitionalRepresentation".to_string(),
+                representation_item: vec![PlaceHolder::Ref(Name::Entity(13))],
+                contex_of_items: PlaceHolder::Ref(Name::Entity(32)),
+            }
+        )]),
+        pcurve: HashMap::from_iter(vec![(
+            34,
+            PcurveHolder {
+                label: "Pcurve".to_string(),
+                basis_surface: PlaceHolder::Ref(Name::Entity(24)),
+                reference_to_curve: PlaceHolder::Ref(Name::Entity(33)),
+            }
         )]),
         plane: HashMap::from_iter(vec![(
             21,
@@ -609,6 +629,15 @@ ENDSEC;
                 DummyHolder {
                     record: "Record { name: \"HOGE\", parameter: List([String(\"Dummy\"), Ref(Entity(110)), Integer(3)]) }".to_string(),
                     is_simple: true,
+                }
+            ),
+            (
+                32,
+                DummyHolder {
+                    record: "[Record { name: \"GEOMETRIC_REPRESENTATION_CONTEXT\", parameter: List([Integer(2)]) }, \
+Record { name: \"PARAMETRIC_REPRESENTATION_CONTEXT\", parameter: List([]) }, \
+Record { name: \"REPRESENTATION_CONTEXT\", parameter: List([String(\"2D SPACE\"), String(\"\")]) }]".to_string(),
+                    is_simple: false,
                 }
             )
         ]),
