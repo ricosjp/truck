@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Refactoring for `ruststep` updating.
 - Parse of `PCURVE` in STEP.
 - Dummy struct for STEP parse failure.
 - Parse of `SURFACE_OF_LINEAR_EXTRUSION` in STEP.

@@ -15,8 +15,8 @@ categories = ["graphics"]
 derive_more = "0.99.17"
 chrono = { version = "0.4.23", features = ["wasmbind"] }
 rustc-hash = "1.1.0"
-ruststep = "0.3.0"
-ruststep-derive = "0.3.0"
+ruststep = { git = "https://github.com/ricosjp/ruststep.git" }
+ruststep-derive = { git = "https://github.com/ricosjp/ruststep.git" }
 serde = { version = "1.0.151", features = ["derive"] }
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
