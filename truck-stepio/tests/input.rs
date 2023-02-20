@@ -58,6 +58,8 @@ fn read() {
 #33 = DEFINITIONAL_REPRESENTATION('DefinitionalRepresentation', (#13), #32);
 #34 = PCURVE('Pcurve', #24, #33);
 
+#35 = SURFACE_CURVE('SurfaceCurve', #20, (#21, #29), .CURVE_3D.);
+
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
 #102 = ORIENTED_EDGE('OrientedEdge', *, *, #101, .F.);
@@ -324,6 +326,18 @@ ENDSEC;
                 label: "Pcurve".to_string(),
                 basis_surface: PlaceHolder::Ref(Name::Entity(24)),
                 reference_to_curve: PlaceHolder::Ref(Name::Entity(33)),
+            }
+        )]),
+        surface_curve: HashMap::from_iter(vec![(
+            35,
+            SurfaceCurveHolder {
+                label: "SurfaceCurve".to_string(),
+                curve_3d: PlaceHolder::Ref(Name::Entity(20)),
+                associated_geometry: vec![
+                    PlaceHolder::Ref(Name::Entity(21)),
+                    PlaceHolder::Ref(Name::Entity(29)),
+                ],
+                master_representation: PreferredSurfaceCurveRepresentation::Curve3D
             }
         )]),
         plane: HashMap::from_iter(vec![(

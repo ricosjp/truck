@@ -69,6 +69,7 @@ pub enum Conic3D {
     Hyperbola(Hyperbola<Point3, Matrix4>),
     Parabola(Parabola<Point3, Matrix4>),
 }
+
 #[derive(
     Clone,
     Debug,
@@ -87,36 +88,6 @@ pub enum Curve3D {
     BSplineCurve(BSplineCurve<Point3>),
     PCurve(PCurve),
     NURBSCurve(NURBSCurve<Vector4>),
-}
-
-fn proj_mat(m: Matrix4) -> Matrix3 {
-    Matrix3::new(
-        m[0][0], m[0][1], m[0][3], m[1][0], m[1][1], m[1][3], m[3][0], m[3][1], m[3][3],
-    )
-}
-
-macro_rules! impl_conic_projection {
-    ($self: tt, $(($kind: tt, $curve: tt)),*) => {
-        match $self { $(Conic3D::$kind(c) => {
-            let mat = proj_mat(*c.transform());
-            let c = c.entity();
-            let range = c.parameter_range();
-            Conic2D::$kind(
-                Processor::new(TrimmedCurve::new($curve::<Point2>::new(), range)).transformed(mat),
-            )
-        })* }
-    };
-}
-
-impl Conic3D {
-    pub fn projection(self) -> Conic2D {
-        impl_conic_projection!(
-            self,
-            (Ellipse, UnitCircle),
-            (Hyperbola, UnitHyperbola),
-            (Parabola, UnitParabola)
-        )
-    }
 }
 
 #[derive(

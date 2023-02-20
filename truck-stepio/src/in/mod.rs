@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use ruststep::{
-    ast::{DataSection, EntityInstance, Name, Parameter, Record, SubSuperRecord},
+    ast::{DataSection, EntityInstance, Name, Parameter, SubSuperRecord},
     error::Result,
     primitive::Logical,
     tables::{EntityTable, IntoOwned, PlaceHolder},
@@ -37,6 +37,7 @@ pub struct Table {
     pub rational_b_spline_curve: HashMap<u64, RationalBSplineCurveHolder>,
     pub circle: HashMap<u64, CircleHolder>,
     pub pcurve: HashMap<u64, PcurveHolder>,
+    pub surface_curve: HashMap<u64, SurfaceCurveHolder>,
 
     // surface
     pub plane: HashMap<u64, PlaneHolder>,
@@ -88,31 +89,16 @@ impl Table {
                         .insert(*id, Deserialize::deserialize(record)?);
                 }
                 "AXIS1_PLACEMENT" => {
-                    self.axis1_placement.insert(
-                        *id,
-                        Deserialize::deserialize(&Record {
-                            name: "AXIS_1_PLACEMENT".to_string(),
-                            parameter: record.parameter.clone(),
-                        })?,
-                    );
+                    self.axis1_placement
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "AXIS2_PLACEMENT_2D" => {
-                    self.axis2_placement_2d.insert(
-                        *id,
-                        Deserialize::deserialize(&Record {
-                            name: "AXIS_2_PLACEMENT_2D".to_string(),
-                            parameter: record.parameter.clone(),
-                        })?,
-                    );
+                    self.axis2_placement_2d
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "AXIS2_PLACEMENT_3D" => {
-                    self.axis2_placement_3d.insert(
-                        *id,
-                        Deserialize::deserialize(&Record {
-                            name: "AXIS_2_PLACEMENT_3D".to_string(),
-                            parameter: record.parameter.clone(),
-                        })?,
-                    );
+                    self.axis2_placement_3d
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "LINE" => {
                     self.line
@@ -142,6 +128,14 @@ impl Table {
                 }
                 "PCURVE" => {
                     self.pcurve.insert(*id, Deserialize::deserialize(record)?);
+                }
+                "SURFACE_CURVE" => {
+                    self.surface_curve
+                        .insert(*id, Deserialize::deserialize(record)?);
+                }
+                "SEAM_CURVE" => {
+                    self.surface_curve
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "PLANE" => {
                     self.plane.insert(*id, Deserialize::deserialize(record)?);
@@ -214,26 +208,16 @@ impl Table {
                         .insert(*id, Deserialize::deserialize(record)?);
                 }
                 "FACE_OUTER_BOUND" => {
-                    self.face_bound.insert(
-                        *id,
-                        Deserialize::deserialize(&Record {
-                            name: "FACE_BOUND".to_string(),
-                            parameter: record.parameter.clone(),
-                        })?,
-                    );
+                    self.face_bound
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "FACE_SURFACE" => {
                     self.face_surface
                         .insert(*id, Deserialize::deserialize(record)?);
                 }
                 "ADVANCED_FACE" => {
-                    self.face_surface.insert(
-                        *id,
-                        Deserialize::deserialize(&Record {
-                            name: "FACE_SURFACE".to_string(),
-                            parameter: record.parameter.clone(),
-                        })?,
-                    );
+                    self.face_surface
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "ORIENTED_FACE" => {
                     if let Parameter::List(params) = &record.parameter {
@@ -757,6 +741,8 @@ pub enum CurveAny {
     Circle(Box<Circle>),
     #[holder(use_place_holder)]
     Pcurve(Box<Pcurve>),
+    #[holder(use_place_holder)]
+    SurfaceCurve(Box<SurfaceCurve>),
 }
 
 impl TryFrom<&CurveAny> for Curve2D {
@@ -775,6 +761,7 @@ impl TryFrom<&CurveAny> for Curve2D {
                 Self::Conic(Conic2D::Ellipse(ellipse))
             }
             Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
+            SurfaceCurve(_) => return Err("Surface curves cannot be parsed to 2D curves.".into()),
         })
     }
 }
@@ -795,6 +782,7 @@ impl TryFrom<&CurveAny> for Curve3D {
                 Self::Conic(Conic3D::Ellipse(ellipse))
             }
             Pcurve(c) => Self::PCurve(c.as_ref().try_into()?),
+            SurfaceCurve(c) => c.as_ref().try_into()?,
         })
     }
 }
@@ -1167,6 +1155,70 @@ impl TryFrom<&Pcurve> for alias::PCurve {
             .ok_or("no representation item")?
             .try_into()?;
         Ok(alias::PCurve::new(Box::new(curve), Box::new(surface)))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum PcurveOrSurface {
+    #[holder(use_place_holder)]
+    Pcurve(Box<Pcurve>),
+    #[holder(use_place_holder)]
+    Surface(Box<SurfaceAny>),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub enum PreferredSurfaceCurveRepresentation {
+    Curve3D,
+    PcurveS1,
+    PcurveS2,
+}
+
+#[test]
+fn deserialize_pscr() {
+    let (_, p) = ruststep::parser::exchange::parameter(".PCURVE_S1.").unwrap();
+    let x = PreferredSurfaceCurveRepresentation::deserialize(&p).unwrap();
+    assert!(matches!(x, PreferredSurfaceCurveRepresentation::PcurveS1));
+    let (_, p) = ruststep::parser::exchange::parameter(".PCURVE_S2.").unwrap();
+    let x = PreferredSurfaceCurveRepresentation::deserialize(&p).unwrap();
+    assert!(matches!(x, PreferredSurfaceCurveRepresentation::PcurveS2));
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = surface_curve)]
+#[holder(generate_deserialize)]
+pub struct SurfaceCurve {
+    label: String,
+    #[holder(use_place_holder)]
+    curve_3d: CurveAny,
+    #[holder(use_place_holder)]
+    associated_geometry: Vec<PcurveOrSurface>,
+    master_representation: PreferredSurfaceCurveRepresentation,
+}
+
+impl TryFrom<&SurfaceCurve> for Curve3D {
+    type Error = ExpressParseError;
+    fn try_from(value: &SurfaceCurve) -> std::result::Result<Self, Self::Error> {
+        use PreferredSurfaceCurveRepresentation as PSCR;
+        match &value.master_representation {
+            PSCR::Curve3D => Ok((&value.curve_3d).try_into()?),
+            PSCR::PcurveS1 => {
+                if let Some(PcurveOrSurface::Pcurve(x)) = value.associated_geometry.get(0) {
+                    Ok(Self::PCurve(x.as_ref().try_into()?))
+                } else {
+                    Err("The 0-indexed associated geometry is nothing or not PCURVE.".into())
+                }
+            }
+            PSCR::PcurveS2 => {
+                if let Some(PcurveOrSurface::Pcurve(x)) = value.associated_geometry.get(1) {
+                    Ok(Self::PCurve(x.as_ref().try_into()?))
+                } else {
+                    Err("The 1-indexed associated geometry is nothing or not PCURVE.".into())
+                }
+            }
+        }
     }
 }
 
@@ -1607,14 +1659,22 @@ pub struct EdgeCurve {
 
 impl EdgeCurve {
     pub fn parse_curve2d(&self) -> std::result::Result<Curve2D, ExpressParseError> {
-        use CurveAny::*;
         let p = Point2::from(&self.edge_start.vertex_geometry);
         let q = Point2::from(&self.edge_end.vertex_geometry);
         let (p, q) = match self.same_sense {
             true => (p, q),
             false => (q, p),
         };
-        let mut curve = match &self.edge_geometry {
+        Self::sub_parse_2d(&self.edge_geometry, p, q, self.same_sense)
+    }
+    fn sub_parse_2d(
+        curve: &CurveAny,
+        p: Point2,
+        q: Point2,
+        same_sense: bool,
+    ) -> std::result::Result<Curve2D, ExpressParseError> {
+        use CurveAny::*;
+        let mut curve = match curve {
             Line(_) => Curve2D::Line(truck_geometry::Line(p, q)),
             BoundedCurve(b) => b.as_ref().try_into()?,
             Circle(circle) => {
@@ -1637,21 +1697,30 @@ impl EdgeCurve {
                 Curve2D::Conic(Conic2D::Ellipse(ellipse))
             }
             Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
+            SurfaceCurve(_) => return Err("Surface curves cannot be parsed to 2D curves.".into()),
         };
-        if !self.same_sense {
+        if !same_sense {
             curve.invert();
         }
         Ok(curve)
     }
     pub fn parse_curve3d(&self) -> std::result::Result<Curve3D, ExpressParseError> {
-        use CurveAny::*;
         let p = Point3::from(&self.edge_start.vertex_geometry);
         let q = Point3::from(&self.edge_end.vertex_geometry);
         let (p, q) = match self.same_sense {
             true => (p, q),
             false => (q, p),
         };
-        let mut curve = match &self.edge_geometry {
+        Self::sub_parse_curve3d(&self.edge_geometry, p, q, self.same_sense)
+    }
+    fn sub_parse_curve3d(
+        curve: &CurveAny,
+        p: Point3,
+        q: Point3,
+        same_sense: bool,
+    ) -> std::result::Result<Curve3D, ExpressParseError> {
+        use CurveAny::*;
+        let mut curve = match curve {
             Line(_) => Curve3D::Line(truck_geometry::Line(p, q)),
             BoundedCurve(b) => b.as_ref().try_into()?,
             Circle(circle) => {
@@ -1673,9 +1742,58 @@ impl EdgeCurve {
                 ellipse.transform_by(mat);
                 Curve3D::Conic(Conic3D::Ellipse(ellipse))
             }
-            Pcurve(c) => Curve3D::PCurve(c.as_ref().try_into()?),
+            Pcurve(c) => {
+                let surface: Surface = (&c.basis_surface).try_into()?;
+                let u = surface
+                    .search_parameter(p, None, 100)
+                    .ok_or_else(|| "the point is not on surface".to_string())?;
+                let v = surface
+                    .search_parameter(q, None, 100)
+                    .ok_or_else(|| "the point is not on surface".to_string())?;
+                let curve2d = c
+                    .reference_to_curve
+                    .representation_item
+                    .get(0)
+                    .ok_or("no representation item")?;
+                let curve2d = Self::sub_parse_2d(
+                    curve2d,
+                    Point2::new(u.0, u.1),
+                    Point2::new(v.0, v.1),
+                    true,
+                )?;
+                Curve3D::PCurve(truck_geometry::PCurve::new(
+                    Box::new(curve2d),
+                    Box::new(surface),
+                ))
+            }
+            SurfaceCurve(c) => {
+                use PreferredSurfaceCurveRepresentation::*;
+                match c.master_representation {
+                    Curve3D => Self::sub_parse_curve3d(&c.curve_3d, p, q, same_sense)?,
+                    PcurveS1 => {
+                        if let Some(PcurveOrSurface::Pcurve(c)) = c.associated_geometry.get(0) {
+                            Self::sub_parse_curve3d(&Pcurve(c.clone()), p, q, true)?
+                        } else {
+                            return Err(
+                                "The 0-indexed associated geometry is nothing or not PCURVE."
+                                    .into(),
+                            );
+                        }
+                    }
+                    PcurveS2 => {
+                        if let Some(PcurveOrSurface::Pcurve(c)) = c.associated_geometry.get(1) {
+                            Self::sub_parse_curve3d(&Pcurve(c.clone()), p, q, true)?
+                        } else {
+                            return Err(
+                                "The 1-indexed associated geometry is nothing or not PCURVE."
+                                    .into(),
+                            );
+                        }
+                    }
+                }
+            }
         };
-        if !self.same_sense {
+        if !same_sense {
             curve.invert();
         }
         Ok(curve)
