@@ -86,6 +86,11 @@ impl<'a, S: ParametricSurface3D> ParametricSurface3D for &'a S {
     fn normal(&self, u: f64, v: f64) -> Vector3 { (*self).normal(u, v) }
 }
 
+impl<'a, S: ParametricSurface3D> ParametricSurface3D for Box<S> {
+    #[inline(always)]
+    fn normal(&self, u: f64, v: f64) -> Vector3 { (**self).normal(u, v) }
+}
+
 /// Bounded surface with parametric range
 pub trait BoundedSurface: ParametricSurface {
     /// The range of the parameter of the surface.
