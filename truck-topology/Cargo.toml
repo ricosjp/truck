@@ -14,7 +14,7 @@ categories = ["graphics"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.151", features = ["derive"] }
+serde = { version = "1.0.152", features = ["derive"] }
 rayon = "1.6.1"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.4.0", path = "../truck-base" }
