@@ -19,10 +19,8 @@ webgl = ["truck-platform/webgl"]
 [dependencies]
 bytemuck = { version = "1.13.0", features = ["derive"] }
 image = "0.24.5"
-rustc-hash = "1.1.0"
-truck-base = { version = "0.4.0", path = "../truck-base" }
-truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
 truck-platform = { version = "0.5.0", path = "../truck-platform" }
+truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
 
 [dev-dependencies]
 async-trait = "0.1.64"
@@ -30,8 +28,8 @@ env_logger = "0.10.0"
 pollster = "0.3.0"
 rayon = "1.6.1"
 serde_json = "1.0.93"
-truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
 truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }
+truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
 winit = "0.28.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

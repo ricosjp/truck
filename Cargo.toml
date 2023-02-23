@@ -1,21 +1,21 @@
 [workspace]
 resolver = "2"
 members = [
+	"example-pages-generator",
+	"readme-generator",
 	"truck-base",
 	"truck-geoderive",
-	"truck-geotrait",
 	"truck-geometry",
-	"truck-modeling",
+	"truck-geotrait",
+	"truck-js",
 	"truck-meshalgo",
+	"truck-modeling",
 	"truck-platform",
 	"truck-polymesh",
 	"truck-rendimpl",
 	"truck-shapeops",
-	"truck-topology",
-	"truck-js",
 	"truck-stepio",
-	"readme-generator",
-	"example-pages-generator",
+	"truck-topology",
 ]
 
 [profile.release.package.truck-js]

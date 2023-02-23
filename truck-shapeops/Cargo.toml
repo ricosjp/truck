@@ -6,18 +6,15 @@ description = "Provides boolean operations to Solid"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
 license = "Apache-2.0"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 derive_more = "0.99.17"
 rustc-hash = "1.1.0"
-serde = { version = "1.0.152", features = ["derive"] }
-thiserror = "1.0.38"
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
-truck-topology = { version = "0.5.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }
+truck-topology = { version = "0.5.0", path = "../truck-topology" }
 
 [dev-dependencies]
 rand = "0.8.5"

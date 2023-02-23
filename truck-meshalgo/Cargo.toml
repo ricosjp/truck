@@ -6,7 +6,6 @@ description = "Mesh algorighms, include tessellations of the shape."
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
 license = "Apache-2.0"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -15,7 +14,6 @@ rustc-hash = "1.1.0"
 spade = "2.1.0"
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
-truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
 truck-topology = { version = "0.5.0", path = "../truck-topology" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
