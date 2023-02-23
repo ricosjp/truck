@@ -94,13 +94,13 @@ fn divide_plane_test() {
 }
 
 type AlternativeIntersection = crate::alternative::Alternative<
-    NURBSCurve<Vector4>,
+    NurbsCurve<Vector4>,
     IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface>,
 >;
 type AlternativeSurface = crate::alternative::Alternative<BSplineSurface<Point3>, Plane>;
 
 crate::impl_from!(
-    NURBSCurve<Vector4>,
+    NurbsCurve<Vector4>,
     IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface>
 );
 crate::impl_from!(BSplineSurface<Point3>, Plane);
@@ -128,7 +128,7 @@ fn parabola_surfaces() -> (AlternativeSurface, AlternativeSurface) {
 #[test]
 fn independent_intersection() {
     // prepare geoetries
-    let arc00: AlternativeIntersection = NURBSCurve::new(BSplineCurve::new(
+    let arc00: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, 1.0, 1.0),
@@ -137,7 +137,7 @@ fn independent_intersection() {
         ],
     ))
     .into();
-    let arc01: AlternativeIntersection = NURBSCurve::new(BSplineCurve::new(
+    let arc01: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![
             Vector4::new(-1.0, 0.0, 1.0, 1.0),
@@ -146,7 +146,7 @@ fn independent_intersection() {
         ],
     ))
     .into();
-    let arc10: AlternativeIntersection = NURBSCurve::new(BSplineCurve::new(
+    let arc10: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, -1.0, 1.0),
@@ -155,7 +155,7 @@ fn independent_intersection() {
         ],
     ))
     .into();
-    let arc11: AlternativeIntersection = NURBSCurve::new(BSplineCurve::new(
+    let arc11: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
         KnotVec::bezier_knot(2),
         vec![
             Vector4::new(-1.0, 0.0, -1.0, 1.0),

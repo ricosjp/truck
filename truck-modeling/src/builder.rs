@@ -49,7 +49,7 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
 /// let vertex1 = builder::vertex(Point3::new(-1.0, 0.0, 0.0));
 /// let semi_circle = builder::circle_arc(&vertex0, &vertex1, Point3::new(0.0, 1.0, 0.0));
 /// # let curve = match semi_circle.oriented_curve() {
-/// #       Curve::NURBSCurve(curve) => curve,
+/// #       Curve::NurbsCurve(curve) => curve,
 /// #       _ => unreachable!(),
 /// # };
 /// # const N: usize = 10;
@@ -63,7 +63,7 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
     let pt0 = vertex0.get_point().to_homogeneous();
     let pt1 = vertex1.get_point().to_homogeneous();
     let curve = geom_impls::circle_arc_by_three_points(pt0, pt1, transit);
-    Edge::new(vertex0, vertex1, Curve::NURBSCurve(NURBSCurve::new(curve)))
+    Edge::new(vertex0, vertex1, Curve::NurbsCurve(NurbsCurve::new(curve)))
 }
 
 /// Returns a Bezier curve from `vertex0` to `vertex1` with inter control points `inter_points`.
@@ -134,7 +134,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face {
     let surface = BSplineSurface::homotopy(curve0, curve1);
     Face::new(
         vec![wire],
-        Surface::NURBSSurface(NURBSSurface::new(surface)),
+        Surface::NurbsSurface(NurbsSurface::new(surface)),
     )
 }
 
@@ -248,7 +248,7 @@ pub fn try_wire_homotopy(wire0: &Wire, wire1: &Wire) -> Result<Shell> {
             let surface = BSplineSurface::homotopy(curve0, curve1);
             Face::new(
                 vec![wire],
-                Surface::NURBSSurface(NURBSSurface::new(surface)),
+                Surface::NurbsSurface(NurbsSurface::new(surface)),
             )
         })
         .collect();
@@ -515,8 +515,8 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
             (Curve::BSplineCurve(curve0), Curve::BSplineCurve(curve1)) => {
                 Surface::BSplineSurface(BSplineSurface::homotopy(curve0.clone(), curve1.clone()))
             }
-            (Curve::NURBSCurve(curve0), Curve::NURBSCurve(curve1)) => {
-                Surface::NURBSSurface(NURBSSurface::new(BSplineSurface::homotopy(
+            (Curve::NurbsCurve(curve0), Curve::NurbsCurve(curve1)) => {
+                Surface::NurbsSurface(NurbsSurface::new(BSplineSurface::homotopy(
                     curve0.non_rationalized().clone(),
                     curve1.non_rationalized().clone(),
                 )))
@@ -655,7 +655,7 @@ fn partial_rsweep<T: MultiSweep<Point3, Curve, Surface>>(
         &move |curve| curve.transformed(trsl),
         &move |surface| surface.transformed(trsl),
         &move |pt, _| {
-            Curve::NURBSCurve(NURBSCurve::new(geom_impls::circle_arc(
+            Curve::NurbsCurve(NurbsCurve::new(geom_impls::circle_arc(
                 pt.to_homogeneous(),
                 origin,
                 axis,
@@ -687,7 +687,7 @@ fn whole_rsweep<T: ClosedSweep<Point3, Curve, Surface>>(
         &move |curve| curve.transformed(trsl),
         &move |surface| surface.transformed(trsl),
         &move |pt, _| {
-            Curve::NURBSCurve(NURBSCurve::new(geom_impls::circle_arc(
+            Curve::NurbsCurve(NurbsCurve::new(geom_impls::circle_arc(
                 pt.to_homogeneous(),
                 origin,
                 axis,

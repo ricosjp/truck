@@ -1025,7 +1025,7 @@ pub struct RationalBSplineCurve {
     pub non_rational_b_spline_curve: NonRationalBSplineCurve,
     pub weights_data: Vec<f64>,
 }
-impl<V> TryFrom<&RationalBSplineCurve> for NURBSCurve<V>
+impl<V> TryFrom<&RationalBSplineCurve> for NurbsCurve<V>
 where
     V: Homogeneous<f64>,
     V::Point: for<'a> From<&'a CartesianPoint>,
@@ -1064,7 +1064,7 @@ impl TryFrom<&BSplineCurveAny> for Curve2D {
             BezierCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
             QuasiUniformCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
             UniformCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            RationalBSplineCurve(bsp) => Self::NURBSCurve(bsp.as_ref().try_into()?),
+            RationalBSplineCurve(bsp) => Self::NurbsCurve(bsp.as_ref().try_into()?),
         })
     }
 }
@@ -1078,7 +1078,7 @@ impl TryFrom<&BSplineCurveAny> for Curve3D {
             BezierCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
             QuasiUniformCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
             UniformCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            RationalBSplineCurve(bsp) => Self::NURBSCurve(bsp.as_ref().try_into()?),
+            RationalBSplineCurve(bsp) => Self::NurbsCurve(bsp.as_ref().try_into()?),
         })
     }
 }

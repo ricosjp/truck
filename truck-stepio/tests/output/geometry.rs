@@ -48,8 +48,8 @@ fn geometry() {
 #4 = CARTESIAN_POINT('', (2.0, 0.0));\n",
     4,
     );
-    step_test::<NURBSCurve<Vector3>>(
-        NURBSCurve::new(BSplineCurve::new(
+    step_test::<NurbsCurve<Vector3>>(
+        NurbsCurve::new(BSplineCurve::new(
             KnotVec::bezier_knot(2),
             vec![
                 Vector3::new(0.0, 0.0, 1.0),
@@ -128,8 +128,8 @@ fn geometry() {
     13
     );
 
-    step_test::<NURBSSurface<Vector3>>(
-        NURBSSurface::new(BSplineSurface::new(
+    step_test::<NurbsSurface<Vector3>>(
+        NurbsSurface::new(BSplineSurface::new(
             (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
             vec![
                 vec![

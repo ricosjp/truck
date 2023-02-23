@@ -61,9 +61,9 @@ impl<P> BSplineSurface<P> {
     /// * `knot_vecs` - the knot vectors
     /// * `control_points` - the vector of the control points
     /// # Failures
-    /// This method is prepared only for performance-critical development and is not recommended.  
-    /// This method does NOT check the 3 rules for constructing B-spline surface.  
-    /// The programmer must guarantee these conditions before using this method.  
+    /// This method is prepared only for performance-critical development and is not recommended.
+    /// This method does NOT check the 3 rules for constructing B-spline surface.
+    /// The programmer must guarantee these conditions before using this method.
     #[inline(always)]
     pub const fn new_unchecked(
         knot_vecs: (KnotVec, KnotVec),
@@ -80,8 +80,8 @@ impl<P> BSplineSurface<P> {
     /// * `knot_vecs` - the knot vectors
     /// * `control_points` - the vector of the control points
     /// # Failures
-    /// This method checks the 3 rules for constructing B-spline surface in the debug mode.  
-    /// The programmer must guarantee these conditions before using this method.  
+    /// This method checks the 3 rules for constructing B-spline surface in the debug mode.
+    /// The programmer must guarantee these conditions before using this method.
     #[inline(always)]
     pub fn debug_new(
         knot_vecs: (KnotVec, KnotVec),
@@ -892,7 +892,7 @@ impl<V: Tolerance> BSplineSurface<V> {
 }
 
 impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
-    /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.  
+    /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.
     /// # Examples
     /// ```
     /// use truck_geometry::*;
@@ -940,7 +940,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         self
     }
 
-    /// add a knot `x` for the second parameter, and do not change `self` as a surface.  
+    /// add a knot `x` for the second parameter, and do not change `self` as a surface.
     /// Return `false` if cannot add the knot, i.e.
     /// * the index of `x` will be lower than the degree, or
     /// * the index of `x` will be higher than the number of control points.
@@ -996,7 +996,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         self
     }
 
-    /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.  
+    /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.
     /// If the knot cannot be removed, returns
     /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).
     /// # Examples
@@ -1095,7 +1095,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         self
     }
 
-    /// Removes a vknot corresponding to the indice `idx`, and do not change `self` as a curve.  
+    /// Removes a vknot corresponding to the indice `idx`, and do not change `self` as a curve.
     /// If the knot cannot be removed, returns
     /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).
     /// # Examples
@@ -1787,7 +1787,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
             .concat(bspline2.invert().knot_translate(range0 + range1))
             .concat(bspline3.invert().knot_translate(range0 * 2.0 + range1))
     }
-    /// Determines whether `self` and `other` is near as the B-spline surfaces or not.  
+    /// Determines whether `self` and `other` is near as the B-spline surfaces or not.
     ///
     /// Divides each knot domain into the number of degree equal parts,
     /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
@@ -1812,7 +1812,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     pub fn near_as_surface(&self, other: &BSplineSurface<P>) -> bool {
         self.sub_near_as_surface(other, 1, |x, y| x.near(y))
     }
-    /// Determines whether `self` and `other` is near in square order as the B-spline surfaces or not.  
+    /// Determines whether `self` and `other` is near in square order as the B-spline surfaces or not.
     ///
     /// Divides each knot domain into the number of degree equal parts,
     /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
@@ -2023,8 +2023,8 @@ impl IncludeCurve<BSplineCurve<Point3>> for BSplineSurface<Point3> {
     }
 }
 
-impl IncludeCurve<NURBSCurve<Vector4>> for BSplineSurface<Point3> {
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+impl IncludeCurve<NurbsCurve<Vector4>> for BSplineSurface<Point3> {
+    fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
         let mut hint =
             algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);

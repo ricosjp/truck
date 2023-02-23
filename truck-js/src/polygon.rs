@@ -10,12 +10,12 @@ impl IntoWasm for truck_meshalgo::prelude::PolygonMesh {
     type WasmWrapper = PolygonMesh;
 }
 
-/// STL Type
+/// STL type.
 #[wasm_bindgen]
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub enum STLType {
-    /// Determine stl type automatically.
+#[derive(Copy, Clone, Debug)]
+pub enum StlType {
+    /// Determine STL type automatically.
     ///
     /// **Reading**: if the first 5 bytes are..
     /// - "solid" => ascii format
@@ -23,18 +23,18 @@ pub enum STLType {
     ///
     /// **Writing**: always binary format.
     Automatic,
-    /// ascii format
-    ASCII,
-    /// binary format
+    /// ASCII format.
+    Ascii,
+    /// Binary format.
     Binary,
 }
 
-impl From<STLType> for stl::STLType {
-    fn from(stl_type: STLType) -> stl::STLType {
+impl From<StlType> for stl::StlType {
+    fn from(stl_type: StlType) -> stl::StlType {
         match stl_type {
-            STLType::Automatic => stl::STLType::Automatic,
-            STLType::ASCII => stl::STLType::ASCII,
-            STLType::Binary => stl::STLType::Binary,
+            StlType::Automatic => stl::StlType::Automatic,
+            StlType::Ascii => stl::StlType::Ascii,
+            StlType::Binary => stl::StlType::Binary,
         }
     }
 }
@@ -59,7 +59,7 @@ impl PolygonMesh {
     }
     /// input from STL format
     #[inline(always)]
-    pub fn from_stl(data: &[u8], stl_type: STLType) -> Option<PolygonMesh> {
+    pub fn from_stl(data: &[u8], stl_type: StlType) -> Option<PolygonMesh> {
         stl::read::<&[u8]>(data, stl_type.into())
             .map_err(|e| eprintln!("{e}"))
             .ok()
@@ -76,7 +76,7 @@ impl PolygonMesh {
     }
     /// output stl format
     #[inline(always)]
-    pub fn to_stl(&self, stl_type: STLType) -> Option<Vec<u8>> {
+    pub fn to_stl(&self, stl_type: StlType) -> Option<Vec<u8>> {
         let mut res = Vec::new();
         stl::write(&self.0, &mut res, stl_type.into())
             .map_err(|e| eprintln!("{e}"))

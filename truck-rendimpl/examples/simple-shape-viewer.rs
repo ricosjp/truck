@@ -129,7 +129,7 @@ impl MyApp {
                         let bdb = curve.roughly_bounding_box();
                         vec![*bdb.max(), *bdb.min()].into_iter().collect()
                     }
-                    Curve::NURBSCurve(curve) => curve.roughly_bounding_box(),
+                    Curve::NurbsCurve(curve) => curve.roughly_bounding_box(),
                     Curve::IntersectionCurve(_) => BoundingBox::new(),
                 };
             });

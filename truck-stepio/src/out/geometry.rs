@@ -192,7 +192,7 @@ impl<P> StepLength for BSplineCurve<P> {
     fn step_length(&self) -> usize { self.control_points().len() + 1 }
 }
 
-impl<'a, V> Display for StepDisplay<&'a NURBSCurve<V>>
+impl<'a, V> Display for StepDisplay<&'a NurbsCurve<V>>
 where
     V: Homogeneous<f64>,
     V::Point: ConstStepLength,
@@ -236,7 +236,7 @@ where
     }
 }
 
-impl<V> Display for StepDisplay<NURBSCurve<V>>
+impl<V> Display for StepDisplay<NurbsCurve<V>>
 where
     V: Homogeneous<f64>,
     V::Point: ConstStepLength,
@@ -304,7 +304,7 @@ impl<'a> Display for StepDisplay<&'a ModelingCurve> {
         match self.entity {
             ModelingCurve::Line(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::BSplineCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
-            ModelingCurve::NURBSCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
+            ModelingCurve::NurbsCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingCurve::IntersectionCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
         }
     }
@@ -321,13 +321,13 @@ impl StepLength for ModelingCurve {
         match self {
             ModelingCurve::Line(_) => Line::<Point3>::LENGTH,
             ModelingCurve::BSplineCurve(x) => x.step_length(),
-            ModelingCurve::NURBSCurve(x) => x.step_length(),
+            ModelingCurve::NurbsCurve(x) => x.step_length(),
             ModelingCurve::IntersectionCurve(x) => x.step_length(),
         }
     }
 }
 
-impl<P> StepLength for NURBSCurve<P> {
+impl<P> StepLength for NurbsCurve<P> {
     fn step_length(&self) -> usize { self.control_points().len() + 1 }
 }
 
@@ -409,7 +409,7 @@ impl<P> StepLength for BSplineSurface<P> {
     fn step_length(&self) -> usize { 1 + self.control_points().iter().map(Vec::len).sum::<usize>() }
 }
 
-impl<'a, V> Display for StepDisplay<&'a NURBSSurface<V>>
+impl<'a, V> Display for StepDisplay<&'a NurbsSurface<V>>
 where
     V: Homogeneous<f64>,
     V::Point: Copy,
@@ -470,7 +470,7 @@ where
     }
 }
 
-impl<V> StepLength for NURBSSurface<V> {
+impl<V> StepLength for NurbsSurface<V> {
     fn step_length(&self) -> usize { 1 + self.control_points().iter().map(Vec::len).sum::<usize>() }
 }
 
@@ -555,7 +555,7 @@ impl<'a> Display for StepDisplay<&'a ModelingSurface> {
         match self.entity {
             ModelingSurface::Plane(x) => Display::fmt(&StepDisplay::new(*x, self.idx), f),
             ModelingSurface::BSplineSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
-            ModelingSurface::NURBSSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
+            ModelingSurface::NurbsSurface(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
             ModelingSurface::RevolutedCurve(x) => Display::fmt(&StepDisplay::new(x, self.idx), f),
         }
     }
@@ -566,7 +566,7 @@ impl StepLength for ModelingSurface {
         match self {
             ModelingSurface::Plane(x) => x.step_length(),
             ModelingSurface::BSplineSurface(x) => x.step_length(),
-            ModelingSurface::NURBSSurface(x) => x.step_length(),
+            ModelingSurface::NurbsSurface(x) => x.step_length(),
             ModelingSurface::RevolutedCurve(x) => x.entity().step_length(),
         }
     }
