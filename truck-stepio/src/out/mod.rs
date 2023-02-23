@@ -158,7 +158,7 @@ pub struct StepHeaderDescriptor {
     /// organization
     pub organization: Vec<String>,
     /// organization system
-    pub origination_system: String,
+    pub organization_system: String,
     /// authorization
     pub authorization: String,
 }
@@ -181,7 +181,7 @@ impl Default for StepHeaderDescriptor {
             time_stamp: chrono::Utc::now().naive_local().to_string(),
             authors: Default::default(),
             organization: Default::default(),
-            origination_system: Default::default(),
+            organization_system: Default::default(),
             authorization: Default::default(),
         }
     }
@@ -253,7 +253,7 @@ impl<T> CompleteStepDisplay<T> {
                 time_stamp: header.time_stamp,
                 authors: header.authors,
                 organization: header.organization,
-                origination_system: header.origination_system,
+                origination_system: header.organization_system,
                 authorization: header.authorization,
                 schema: "ISO-10303-042".to_string(),
             },
