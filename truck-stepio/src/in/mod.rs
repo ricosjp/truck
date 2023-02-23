@@ -501,6 +501,11 @@ impl Table {
     pub fn from_data_section(data_section: &DataSection) -> Table {
         Table::from_iter(&data_section.entities)
     }
+    #[inline(always)]
+    pub fn from_step(step_str: &str) -> Option<Table> {
+        let exchange = ruststep::parser::parse(step_str).ok()?;
+        Some(Table::from_data_section(&exchange.data[0]))
+    }
 }
 
 impl<'a> FromIterator<&'a EntityInstance> for Table {

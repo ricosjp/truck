@@ -33,13 +33,13 @@ let indexLength = object.index_buffer_size() / 4;
 
 let loaded = true;
 
-if (document.readyState !== 'loading') {
+if (document.readyState !== "loading") {
   onLoad();
 } else {
-  addEventListener('load', onLoad, false);
+  addEventListener("load", onLoad, false);
 }
 
-function onLoad () {
+function onLoad() {
   c = document.getElementById("canvas");
   c.width = cw;
   c.height = ch;
@@ -49,7 +49,10 @@ function onLoad () {
   c.addEventListener("mouseup", mouseUp);
 
   document.querySelector("input").addEventListener("change", fileRead);
-  document.getElementById("download-mesh").addEventListener("click", downloadObj);
+  document.getElementById("download-mesh").addEventListener(
+    "click",
+    downloadObj,
+  );
 
   gl = c.getContext("webgl2") || c.getContext("experimental-webgl");
 
@@ -213,32 +216,50 @@ function fileRead(e) {
     return;
   }
   console.log(file0.name);
+  const file_ext = file0.name.split(".").pop();
 
   const reader = new FileReader();
   reader.readAsArrayBuffer(file0);
   reader.onload = function () {
     const result = new Uint8Array(reader.result);
-    const solid = Truck.Solid.from_json(result);
-    if (typeof solid === "undefined") {
-      console.warn("invalid json");
-      return;
+
+    let shape;
+    if (file_ext === "json") {
+      shape = Truck.Solid.from_json(result);
+      if (typeof shape === "undefined") {
+        console.warn("invalid json");
+        return;
+      }
+    } else if (file_ext === "step" || file_ext === "stp") {
+      const step_str = String.fromCharCode(...result);
+      const table = Truck.Table.from_step(step_str);
+      const indices = table.shell_indices();
+      shape = table.get_shape(indices[0]);
+      if (typeof shape === "undefined") {
+        console.warn("invalid step");
+        return;
+      }
     }
-    polygon = solid.to_polygon(0.01);
+    polygon = shape.to_polygon(0.01);
     if (typeof polygon === "undefined") {
       console.warn("meshing failed");
       return;
     }
     const box = polygon.bounding_box();
+    const scale = Math.max(
+      box[3] - box[0],
+      box[4] - box[1],
+      box[5] - box[2],
+    ) * 2.0;
     const boxCenter = [
       (box[0] + box[3]) / 2.0,
       (box[1] + box[4]) / 2.0,
       (box[2] + box[5]) / 2.0,
     ];
-    cameraPosition = [
-      cameraPosition[0] - cameraGaze[0] + boxCenter[0],
-      cameraPosition[1] - cameraGaze[1] + boxCenter[1],
-      cameraPosition[2] - cameraGaze[2] + boxCenter[2],
-    ];
+    cameraPosition = [boxCenter[0], boxCenter[1], scale + boxCenter[2]];
+    cameraDirection = [0.0, 0.0, -1.0];
+    cameraUpdirection = [0.0, 1.0, 0.0];
+    cameraGaze = boxCenter;
     cameraGaze = boxCenter;
     const object = polygon.to_buffer();
     vBuffer = object.vertex_buffer();
@@ -252,10 +273,12 @@ function downloadObj(e) {
   e.preventDefault();
   const obj = polygon.to_obj();
   if (typeof obj === "undefined") {
-    console.warn("Failed to generate obj.")
+    console.warn("Failed to generate obj.");
     return;
   }
-  const blob = new Blob([(new TextDecoder()).decode(obj)], {type: "text/plain"});
+  const blob = new Blob([(new TextDecoder()).decode(obj)], {
+    type: "text/plain",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   document.body.appendChild(a);

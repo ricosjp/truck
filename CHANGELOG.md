@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- JS wrapper of STEP API.
 - Parse `SURFACE_CURVE` (not translate to `IntersectionCurve`.
 - Refactoring for `ruststep` updating.
 - Parse of `PCURVE` in STEP.
