@@ -26,7 +26,7 @@ fn main() {
     let step_string = out::CompleteStepDisplay::new(
         out::StepModel::from(&compressed),
         out::StepHeaderDescriptor {
-            origination_system: "shape-to-step".to_owned(),
+            organization_system: "shape-to-step".to_owned(),
             ..Default::default()
         },
     )

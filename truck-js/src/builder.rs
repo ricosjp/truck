@@ -48,7 +48,7 @@ pub fn homotopy(edge0: &Edge, edge1: &Edge) -> Face { builder::homotopy(edge0, e
 pub fn try_attach_plane(wire: &Wire) -> Option<Face> {
     builder::try_attach_plane(&[wire.as_ref().clone()])
         .map(|face| face.into())
-        .map_err(|e| eprintln!("{e}"))
+        .map_err(|e| gloo::console::error!(format!("{e}")))
         .ok()
 }
 

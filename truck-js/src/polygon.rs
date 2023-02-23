@@ -53,7 +53,7 @@ impl PolygonMesh {
     #[inline(always)]
     pub fn from_obj(data: &[u8]) -> Option<PolygonMesh> {
         obj::read::<&[u8]>(data)
-            .map_err(|e| eprintln!("{e}"))
+            .map_err(|e| gloo::console::error!(format!("{e}")))
             .ok()
             .map(|mesh| mesh.into_wasm())
     }
@@ -61,7 +61,7 @@ impl PolygonMesh {
     #[inline(always)]
     pub fn from_stl(data: &[u8], stl_type: StlType) -> Option<PolygonMesh> {
         stl::read::<&[u8]>(data, stl_type.into())
-            .map_err(|e| eprintln!("{e}"))
+            .map_err(|e| gloo::console::error!(format!("{e}")))
             .ok()
             .map(|mesh| mesh.into_wasm())
     }
@@ -70,7 +70,7 @@ impl PolygonMesh {
     pub fn to_obj(&self) -> Option<Vec<u8>> {
         let mut res = Vec::new();
         obj::write(&self.0, &mut res)
-            .map_err(|e| eprintln!("{e}"))
+            .map_err(|e| gloo::console::error!(format!("{e}")))
             .ok()?;
         Some(res)
     }
@@ -79,7 +79,7 @@ impl PolygonMesh {
     pub fn to_stl(&self, stl_type: StlType) -> Option<Vec<u8>> {
         let mut res = Vec::new();
         stl::write(&self.0, &mut res, stl_type.into())
-            .map_err(|e| eprintln!("{e}"))
+            .map_err(|e| gloo::console::error!(format!("{e}")))
             .ok()?;
         Some(res)
     }

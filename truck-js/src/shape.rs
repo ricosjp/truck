@@ -1,4 +1,5 @@
 use crate::*;
+use js_sys::JsString;
 use truck_meshalgo::tessellation::*;
 
 macro_rules! toporedef {
@@ -87,6 +88,64 @@ enum SubAbstractShape {
     Solid(Solid),
 }
 
+/// Describe STEP file header
+#[derive(Clone, Debug, AsRef, Deref, DerefMut, From, Into)]
+#[wasm_bindgen]
+pub struct StepHeaderDescriptor(truck_stepio::out::StepHeaderDescriptor);
+
+#[wasm_bindgen]
+impl StepHeaderDescriptor {
+    #[wasm_bindgen(getter)]
+    pub fn filename(&self) -> JsString { self.file_name.as_str().into() }
+    #[wasm_bindgen(setter)]
+    pub fn set_filename(&mut self, filename: JsString) {
+        self.file_name = filename.as_string().unwrap_or(String::new());
+    }
+    #[wasm_bindgen(getter)]
+    pub fn time_stamp(&self) -> JsString { self.time_stamp.as_str().into() }
+    #[wasm_bindgen(setter)]
+    pub fn set_time_stamp(&mut self, time_stamp: JsString) {
+        self.time_stamp = time_stamp.as_string().unwrap_or(String::new());
+    }
+    #[wasm_bindgen(getter)]
+    pub fn authors(&self) -> Vec<JsString> {
+        self.authors.iter().map(|s| s.as_str().into()).collect()
+    }
+    #[wasm_bindgen(setter)]
+    pub fn set_authors(&mut self, authors: Vec<JsString>) {
+        self.authors = authors
+            .iter()
+            .map(|s| s.as_string().unwrap_or(String::new()))
+            .collect();
+    }
+    #[wasm_bindgen(getter)]
+    pub fn organization(&self) -> Vec<JsString> {
+        self.organization
+            .iter()
+            .map(|s| s.as_str().into())
+            .collect()
+    }
+    #[wasm_bindgen(setter)]
+    pub fn set_organization(&mut self, organization: Vec<JsString>) {
+        self.organization = organization
+            .iter()
+            .map(|s| s.as_string().unwrap_or(String::new()))
+            .collect();
+    }
+    #[wasm_bindgen(getter)]
+    pub fn organization_system(&self) -> JsString { self.organization_system.as_str().into() }
+    #[wasm_bindgen(setter)]
+    pub fn set_organization_system(&mut self, organization_system: JsString) {
+        self.organization_system = organization_system.as_string().unwrap_or(String::new());
+    }
+    #[wasm_bindgen(getter)]
+    pub fn authorization(&self) -> JsString { self.authorization.as_str().into() }
+    #[wasm_bindgen(setter)]
+    pub fn set_authorization(&mut self, authorization: JsString) {
+        self.authorization = authorization.as_string().unwrap_or(String::new());
+    }
+}
+
 macro_rules! impl_shape {
     ($type: ident) => {
         #[wasm_bindgen]
@@ -98,15 +157,24 @@ macro_rules! impl_shape {
             /// read shape from json
             pub fn from_json(data: &[u8]) -> Option<$type> {
                 serde_json::from_reader::<_, truck_modeling::$type>(data)
-                .map_err(|e| println!("{}", e))
+                .map_err(|e| println!("{e}"))
                 .ok()
                 .map(|res| res.into_wasm())
             }
-            /// write shape from json
+            /// write shape to json
             pub fn to_json(&self) -> Vec<u8> {
                 serde_json::to_vec_pretty(&self.0)
-                    .map_err(|e| eprintln!("{}", e))
+                    .map_err(|e| gloo::console::error!(format!("{e}")))
                     .unwrap()
+            }
+            /// write shape to STEP
+            pub fn to_step(&self, header: StepHeaderDescriptor) -> String {
+                use truck_stepio::out;
+                let compressed = self.0.compress();
+                out::CompleteStepDisplay::new(
+                    out::StepModel::from(&compressed),
+                    header.into(),
+                ).to_string()
             }
         }
     };
@@ -120,7 +188,7 @@ impl Shell {
     /// Creates Solid if `self` is a closed shell.
     pub fn into_solid(self) -> Option<Solid> {
         truck_modeling::Solid::try_new(vec![self.0])
-            .map_err(|e| eprintln!("{e}"))
+            .map_err(|e| gloo::console::error!(format!("{e}")))
             .ok()
             .map(IntoWasm::into_wasm)
     }
