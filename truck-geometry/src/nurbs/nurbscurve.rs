@@ -13,18 +13,15 @@ impl<V> NurbsCurve<V> {
     #[inline(always)]
     pub fn into_non_rationalized(self) -> BSplineCurve<V> { self.0 }
 
-    /// Returns the reference of the knot vector.
-    /// cf.[`BSplineCurve::knot_vec`]
+    /// Returns the reference of the knot vector. cf.[`BSplineCurve::knot_vec`]
     #[inline(always)]
     pub const fn knot_vec(&self) -> &KnotVec { &self.0.knot_vec }
 
-    /// Returns the `idx`th knot.
-    /// cf.[`BSplineCurve::knot`]
+    /// Returns the `idx`th knot. cf.[`BSplineCurve::knot`]
     #[inline(always)]
     pub fn knot(&self, idx: usize) -> f64 { self.0.knot_vec[idx] }
 
-    /// Returns the reference of the control points.
-    /// cf.[`BSplineCurve::control_points`]
+    /// Returns the reference of the control points. cf.[`BSplineCurve::control_points`]
     #[inline(always)]
     pub const fn control_points(&self) -> &Vec<V> { &self.0.control_points }
 
@@ -37,48 +34,42 @@ impl<V> NurbsCurve<V> {
     /// cf.[`BSplineCurve::control_point_mut`]
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx: usize) -> &mut V { &mut self.0.control_points[idx] }
-    /// Returns the iterator on all control points
-    /// cf.[`BSplineCurve::control_points_mut`]
+
+    /// Returns the iterator on all control points. cf.[`BSplineCurve::control_points_mut`]
     #[inline(always)]
     pub fn control_points_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.0.control_points.iter_mut()
     }
 
-    /// Applies the given transformation to all control points.
-    /// cf.[`BSplineCurve::transform_control_points`]
+    /// Applies the given transformation to all control points. cf.[`BSplineCurve::transform_control_points`]
     #[inline(always)]
     pub fn transform_control_points<F: FnMut(&mut V)>(&mut self, f: F) {
         self.0.transform_control_points(f)
     }
 
-    /// Returns the degree of NURBS curve.
-    /// cf.[`BSplineCurve::degree`]
+    /// Returns the degree of NURBS curve. cf.[`BSplineCurve::degree`]
     #[inline(always)]
     pub fn degree(&self) -> usize { self.0.degree() }
 
-    /// Inverts a curve.
-    /// cf.[`BSplineCurve::invert`]
+    /// Inverts a curve. cf.[`BSplineCurve::invert`]
     #[inline(always)]
     pub fn invert(&mut self) -> &mut Self {
         self.0.invert();
         self
     }
 
-    /// Returns whether the knot vector is clamped or not.
-    /// cf.[`BSplineCurve::is_clamped`]
+    /// Returns whether the knot vector is clamped or not. cf.[`BSplineCurve::is_clamped`]
     #[inline(always)]
     pub fn is_clamped(&self) -> bool { self.0.knot_vec.is_clamped(self.0.degree()) }
 
-    /// Normalizes the knot vector.
-    /// cf.[`BSplineCurve::knot_normalize`]
+    /// Normalizes the knot vector. cf.[`BSplineCurve::knot_normalize`]
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
         self.0.knot_vec.try_normalize().unwrap();
         self
     }
 
-    /// Translates the knot vector.
-    /// cf.[`BSplineCurve::knot_translate`]
+    /// Translates the knot vector. cf.[`BSplineCurve::knot_translate`]
     #[inline(always)]
     pub fn knot_translate(&mut self, x: f64) -> &mut Self {
         self.0.knot_vec.translate(x);
@@ -224,8 +215,7 @@ where V::Point: Tolerance
 }
 
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V> {
-    /// Adds a knot `x`, and do not change `self` as a curve.
-    /// cf.[`BSplineCurve::add_knot`]
+    /// Adds a knot `x`, and do not change `self` as a curve. cf.[`BSplineCurve::add_knot`]
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
         self.0.add_knot(x);
         self
@@ -278,8 +268,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V
         }
     }
 
-    /// Makes two splines having the same normalized knot vectors.
-    /// cf.[`BSplineCurve::syncro_knots`]
+    /// Makes two splines having the same normalized knot vectors. cf.[`BSplineCurve::syncro_knots`]
     pub fn syncro_knots(&mut self, other: &mut Self) { self.0.syncro_knots(&mut other.0) }
 }
 
