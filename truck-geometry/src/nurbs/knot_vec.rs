@@ -453,7 +453,7 @@ impl KnotVec {
         (knots, mults)
     }
 
-    /// construct from single-multi description.
+    /// Constructs from single-multi description.
     /// # Examples
     /// ```
     /// use truck_geometry::KnotVec;
@@ -477,7 +477,7 @@ impl KnotVec {
         }
         Ok(KnotVec(vec))
     }
-    /// construct from `Vec<f64>`. do not sort, only check sorted.
+    /// Constructs from `Vec<f64>`. do not sort, only check sorted.
     pub fn try_from(vec: Vec<f64>) -> Result<KnotVec> {
         for i in 1..vec.len() {
             if vec[i - 1] > vec[i] {
@@ -520,7 +520,7 @@ impl KnotVec {
 }
 
 impl From<Vec<f64>> for KnotVec {
-    /// construct from `Vec<f64>`. The vector will sorted by the order.
+    /// constructs from `Vec<f64>`. The vector will sorted by the order.
     /// ```
     /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(vec![1.0, 0.0, 3.0, 2.0]);
@@ -534,7 +534,7 @@ impl From<Vec<f64>> for KnotVec {
 }
 
 impl From<&Vec<f64>> for KnotVec {
-    /// construct by the reference of vector. The clone of vector is sorted by the order.
+    /// Constructs by the reference of vector. The clone of vector is sorted by the order.
     /// ```
     /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(&vec![1.0, 0.0, 3.0, 2.0]);
@@ -550,7 +550,7 @@ impl From<&Vec<f64>> for KnotVec {
 }
 
 impl From<KnotVec> for Vec<f64> {
-    /// KnotVec into Vec<f64>
+    /// `KnotVec` into `Vec<f64>`
     /// ```
     /// use truck_geometry::KnotVec;
     /// let vec = vec![0.0, 1.0, 2.0, 3.0];
