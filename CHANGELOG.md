@@ -15,6 +15,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - Implement robust meshing by `SearchNearestParameter`.
 - Remove invertible from tessellating traits.
 - Add "periodic" identifer to `ParametricCurve` and `ParametricSurface`.
+- Make struct naming canonical, resolve bump deps, remove unused deps
 
 Step input API is W.I.P. and hidden.
 

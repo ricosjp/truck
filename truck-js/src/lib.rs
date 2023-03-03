@@ -34,4 +34,3 @@ pub mod shapeops;
 pub use polygon::{PolygonBuffer, PolygonMesh, StlType};
 /// STEP IO
 pub mod step_in;
-
