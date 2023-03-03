@@ -4,17 +4,14 @@ use std::slice::SliceIndex;
 use std::vec::Vec;
 
 impl KnotVec {
-    /// Creates an empty knot vector.
+    /// empty constructor
     pub const fn new() -> KnotVec { KnotVec(Vec::new()) }
 
     /// Returns the length of range.
-    ///
-    /// # Example
-    ///
+    /// # Examples
     /// ```
-    /// # use truck_geometry::*;
+    /// use truck_geometry::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 6.0]);
-    ///
     /// assert_eq!(knot_vec.range_length(), 6.0);
     /// ```
     #[inline(always)]
@@ -26,16 +23,13 @@ impl KnotVec {
     }
 
     /// Returns whether two knot vectors have the same range.
-    ///
-    /// # Example
-    ///
+    /// # Examples
     /// ```
-    /// # use truck_geometry::*;
+    /// use truck_geometry::*;
     /// let knot_vec0 = KnotVec::new(); // empty knot vector
     /// let knot_vec1 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// let knot_vec2 = KnotVec::from(vec![0.0, 0.5, 1.0]);
     /// let knot_vec3 = KnotVec::from(vec![0.0, 0.0, 2.0, 2.0]);
-    ///
     /// assert!(knot_vec0.same_range(&KnotVec::new())); // both empty knot vector
     /// assert!(!knot_vec0.same_range(&knot_vec1));
     /// assert!(knot_vec1.same_range(&knot_vec2)); // the range of both knot vector is [0, 1].
@@ -56,30 +50,23 @@ impl KnotVec {
     #[inline(always)]
     pub fn remove(&mut self, idx: usize) -> f64 { self.0.remove(idx) }
 
-    /// Returns the maximum index `i` of `self[i] <= x`.
-    ///
-    /// Returns `None` if `x < self[0] or self.len() == 0`.
-    ///
-    /// # Example
-    ///
+    /// Returns the maximum index `i` of `self[i] <= x`
+    /// Return `None` if `x < self[0] or self.len() == 0`.
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 2.0, 3.0, 3.0]);
     /// let idx = knot_vec.floor(1.5).unwrap();
-    ///
     /// assert_eq!(idx, 2);
     /// ```
     #[inline(always)]
     pub fn floor(&self, x: f64) -> Option<usize> { self.iter().rposition(|t| *t <= x) }
 
-    /// The multiplicity of the `i`th knot.
-    ///
-    /// # Example
-    ///
+    /// Returns the multiplicity of the `i`th knot
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0]);
-    ///
     /// assert_eq!(knot_vec.multiplicity(5), 3);
     /// ```
     #[inline(always)]
@@ -87,20 +74,15 @@ impl KnotVec {
         self.iter().filter(|u| self[i].near(u)).count()
     }
 
-    /// Add a knot and return the index of the added knot.
-    ///
-    /// # Example
-    ///
+    /// Adds a knot and return the index of the added knot.
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 2.0, 3.0, 3.0]);
-    ///
     /// let idx0 = knot_vec.add_knot(1.5);
     /// assert_eq!(idx0, 3);
-    ///
     /// let idx1 = knot_vec.add_knot(-1.0);
     /// assert_eq!(idx1, 0);
-    ///
     /// let ansvec = KnotVec::from(vec![-1.0, 0.0, 0.0, 1.0, 1.5, 2.0, 3.0, 3.0]);
     /// assert_eq!(knot_vec, ansvec);
     /// ```
@@ -118,28 +100,21 @@ impl KnotVec {
         }
     }
 
-    /// Calculate B-spline basis functions at `t` with degree `degree`.
-    ///
+    /// Calculates B-spline basis functions at `t` with degree `degree`.
     /// # Panics
-    ///
-    /// Panics if the length of `self` is not more than `degree`.
-    ///
+    /// If the length of `self` is not more than `degree`, panic occurs.
     /// # Remarks
-    ///
     /// In this package, the B-spline basis function is based on the characteristic function of
     /// the right-open intervals [s, t). So, the value corresponding to the end point t = t_n is always 0.0.
-    ///
     /// # Examples
-    ///
     /// ```
-    /// # use truck_geometry::*;
+    /// use truck_geometry::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // B-spline basis functions is a partition of unity in (t_k, t_{n - k}).
     /// let vec = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     /// let knot_vec = KnotVec::from(vec);
     /// let degree = 2;
-    ///
     /// for i in 0..N {
     ///     let t = 2.0 + 4.0 / (N as f64) * (i as f64);
     ///     let res = knot_vec.bspline_basis_functions(degree, t);
@@ -147,16 +122,14 @@ impl KnotVec {
     ///     assert_near2!(sum, 1.0);
     /// }
     /// ```
-    ///
     /// ```
-    /// # use truck_geometry::*;
+    /// use truck_geometry::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // In some case, B-spline basis functions coincide with Bernstein polynomials.
     /// let vec = vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0];
     /// let knot_vec = KnotVec::from(vec);
     /// let degree = 3;
-    ///
     /// for i in 0..=N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
     ///     let res = knot_vec.bspline_basis_functions(degree, t);
@@ -166,7 +139,6 @@ impl KnotVec {
     ///         3.0 * t * t * (1.0 - t),
     ///         1.0 * t * t * t,
     ///     ];
-    ///
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     /// }
     /// ```
@@ -177,29 +149,22 @@ impl KnotVec {
         }
     }
 
-    /// Calculate B-spline basis functions at `t` with degree `degree`.
-    ///
+    /// Calculates B-spline basis functions at `t` with degree `degree`.
     /// # Failures
-    ///
-    /// * If the range of the knot vector is zero, returns [`Error::ZeroRange`].
-    /// * If the length of `self` is not more than `degree`, returns [`Error::TooLargeDegree(length, degree)`](Error::TooLargeDegree).
-    ///
+    /// - If the range of the knot vector is zero, returns [`Error::ZeroRange`].
+    /// - If the length of `self` is not more than `degree`, returns [`Error::TooLargeDegree`].
     /// # Remarks
-    ///
     /// In this package, the B-spline basis function is based on the characteristic function of
-    /// the right-open intervals [s, t). I.e. the value corresponding to the end point t = t_n is always 0.0.
-    ///
+    /// the right-open intervals [s, t). So, the value corresponding to the end point t = t_n is always 0.0.
     /// # Examples
-    ///
     /// ```
-    /// # use truck_geometry::*;
-    /// const N: usize = 100; // sample size in tests
+    /// use truck_geometry::*;
+    /// const N : usize = 100; // sample size in tests
     ///
-    /// // B-spline basis function is a partition of unity in (t_k, t_{n - k}).
+    /// // B-spline basis functions is a partition of unity in (t_k, t_{n - k}).
     /// let vec = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     /// let knot_vec = KnotVec::from(vec);
     /// let degree = 2;
-    ///
     /// for i in 0..N {
     ///     let t = 2.0 + 4.0 / (N as f64) * (i as f64);
     ///     let res = knot_vec.try_bspline_basis_functions(degree, t).unwrap();
@@ -207,16 +172,14 @@ impl KnotVec {
     ///     assert_near2!(sum, 1.0);
     /// }
     /// ```
-    ///
     /// ```
-    /// # use truck_geometry::*;
+    /// use truck_geometry::*;
     /// const N : usize = 100; // sample size in tests
     ///
-    /// // In some cases, B-spline basis functions coincide with Bernstein polynomials.
+    /// // In some case, B-spline basis functions coincide with Bernstein polynomials.
     /// let vec = vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0];
     /// let knot_vec = KnotVec::from(vec);
     /// let degree = 3;
-    ///
     /// for i in 0..=N {
     ///     let t = i as f64 / N as f64;
     ///     let res = knot_vec.try_bspline_basis_functions(degree, t).unwrap();
@@ -226,7 +189,6 @@ impl KnotVec {
     ///         3.0 * t * t * (1.0 - t),
     ///         1.0 * t * t * t,
     ///     ];
-    ///
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     /// }
     /// ```
@@ -291,24 +253,18 @@ impl KnotVec {
         res
     }
 
-    /// Transforms the knot vector.
-    ///
-    /// # Example
-    ///
+    /// Transforms the knot vector
+    /// # Examples
     /// ```
-    /// # use std::vec::Vec;
-    /// # use truck_geometry::KnotVec;
+    /// use std::vec::Vec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
-    ///
     /// knot_vec.transform(2.0, 3.0);
-    /// let res: Vec<f64> = knot_vec.into();
-    ///
+    /// let res : Vec<f64> = knot_vec.into();
     /// assert_eq!(res, vec![5.0, 5.0, 7.0, 9.0, 11.0, 13.0, 13.0]);
     /// ```
-    ///
     /// # Panics
-    ///
-    /// Panics if `scalar` is negative.
+    /// Panic occurs if `scalar` is not positive.
     pub fn transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
         assert!(scalar > 0.0, "The scalar {scalar} is not positive.");
         self.0
@@ -318,20 +274,14 @@ impl KnotVec {
     }
 
     /// Normalizes the knot vector i.e. makes the first value 0 and the last value 1.
-    ///
     /// # Failures
-    ///
     /// Returns [`Error::ZeroRange`] if the range of the knot vector is so small.
-    ///
-    /// # Example
-    ///
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
-    ///
     /// knot_vec.try_normalize().unwrap();
-    /// let res: Vec<f64> = knot_vec.into();
-    ///
+    /// let res : Vec<f64> = knot_vec.into();
     /// assert_eq!(res, vec![0.0, 0.0, 0.25, 0.5, 0.75, 1.0, 1.0]);
     /// ```
     pub fn try_normalize(&mut self) -> Result<&mut Self> {
@@ -343,20 +293,14 @@ impl KnotVec {
     }
 
     /// Normalizes the knot vector i.e. makes the first value 0 and the last value 1.
-    ///
     /// # Panics
-    ///
-    /// Panics if the range of the knot vector is too small.
-    ///
-    /// # Example
-    ///
+    /// Panic occurs if the range of the knot vector is so small.
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
-    ///
     /// knot_vec.normalize();
-    /// let res: Vec<f64> = knot_vec.into();
-    ///
+    /// let res : Vec<f64> = knot_vec.into();
     /// assert_eq!(res, vec![0.0, 0.0, 0.25, 0.5, 0.75, 1.0, 1.0]);
     /// ```
     #[inline(always)]
@@ -365,34 +309,28 @@ impl KnotVec {
             .unwrap_or_else(|error| panic!("{}", error))
     }
 
-    /// Translate the knot vector.
-    ///
+    /// Translates the knot vector
     /// # Example
-    ///
     /// ```
-    /// # use std::vec::Vec;
-    /// # use truck_geometry::KnotVec;
+    /// use std::vec::Vec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
-    ///
     /// knot_vec.translate(3.0);
-    /// let res: Vec<f64> = knot_vec.into();
-    ///
+    /// let res : Vec<f64> = knot_vec.into();
     /// assert_eq!(res, vec![4.0, 4.0, 5.0, 6.0, 7.0, 8.0, 8.0]);
     /// ```
     pub fn translate(&mut self, x: f64) -> &mut Self { self.transform(1.0, x) }
 
-    /// Inverts the knot vector.
-    ///
+    /// Inverts the knot vector
     /// # Example
     /// ```
-    /// # use std::vec::Vec;
-    /// # use truck_geometry::KnotVec;
+    /// use std::vec::Vec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 1.0, 3.0, 5.0, 6.0]);
-    ///
     /// knot_vec.invert();
-    /// let res: Vec<f64> = knot_vec.into();
-    ///
+    /// let res : Vec<f64> = knot_vec.into();
     /// assert_eq!(res, vec![1.0, 2.0, 4.0, 6.0, 6.0, 6.0]);
+    ///
     /// ```
     pub fn invert(&mut self) -> &mut Self {
         let n = self.len();
@@ -407,14 +345,11 @@ impl KnotVec {
         self
     }
 
-    /// determine the knot vector is clamped for the given degree.
-    ///
-    /// # Example
-    ///
+    /// Determines the knot vector is clamped for the given degree.
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 0.25, 0.5, 0.75, 1.0, 1.0, 1.0]);
-    ///
     /// assert!(knot_vec.is_clamped(2));
     /// assert!(!knot_vec.is_clamped(3));
     /// ```
@@ -424,23 +359,17 @@ impl KnotVec {
     }
 
     /// Concats two knot vectors.
-    /// # Example
-    ///
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vec1 = KnotVec::from(vec![1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
-    ///
     /// knot_vec0.try_concat(&knot_vec1, 2).unwrap();
-    ///
     /// assert_eq!(knot_vec0.as_slice(), &[0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
     /// ```
-    ///
     /// # Failures
-    ///
-    /// * If at least one of `self` or `other` is not clamped, returns [`Error::NotClampedKnotVector`]
-    /// * If the last knot of `self` and the first knot of `other` are different, returns
-    /// [`Error::DifferentBackFront(self.last, other.first)`](Error::DifferentBackFront).
+    /// - If at least one of `self` or `other` is not clamped, returns [`Error::NotClampedKnotVector`]
+    /// - If the last knot of `self` and the first knot of `other` are different, returns [`Error::DifferentBackFront`].
     pub fn try_concat(&mut self, other: &KnotVec, degree: usize) -> Result<&mut Self> {
         if !self.is_clamped(degree) || !other.is_clamped(degree) {
             return Err(Error::NotClampedKnotVector);
@@ -460,24 +389,18 @@ impl KnotVec {
     }
 
     /// Concats two knot vectors.
-    ///
-    /// # Example
-    ///
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vec1 = KnotVec::from(vec![1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
     /// knot_vec0.concat(&knot_vec1, 2);
-    ///
     /// assert_eq!(knot_vec0.as_slice(), &[0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
     /// ```
-    ///
     /// # Panics
-    ///
-    /// Panics if:
-    ///
-    /// * at least one of `self` or `other` is not clamped.
-    /// * the last knot of `self` and the first knot of `other` are different.
+    /// Panic occurs if:
+    /// - at least one of `self` or `other` is not clamped.
+    /// - the last knot of `self` and the first knot of `other` are different.
     #[inline(always)]
     pub fn concat(&mut self, other: &KnotVec, degree: usize) -> &mut Self {
         self.try_concat(other, degree)
@@ -485,11 +408,9 @@ impl KnotVec {
     }
 
     /// Returns trimmed vector by the specified range.
-    ///
-    /// # Example
-    ///
+    /// # Examples
     /// ```
-    /// # use truck_geometry::*;
+    /// use truck_geometry::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
     /// let sub_vec = knot_vec.sub_vec(1..3);
     /// assert_eq!(sub_vec, KnotVec::from(vec![1.0, 2.0]));
@@ -501,14 +422,11 @@ impl KnotVec {
 
     /// To single-multi description. i.e. decompose the unique vector of knots and the vector of
     /// multiplicity of knots.
-    ///
-    /// # Example
-    ///
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0]);
     /// let (knots, mults) = knot_vec.to_single_multi();
-    ///
     /// assert_eq!(knots, vec![0.0, 1.0, 2.0, 3.0]);
     /// assert_eq!(mults, vec![3, 1, 4, 2]);
     /// ```
@@ -535,20 +453,16 @@ impl KnotVec {
         (knots, mults)
     }
 
-    /// Construct from single-multi description.
-    ///
-    /// # Example
-    ///
+    /// construct from single-multi description.
+    /// # Examples
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let knots = vec![0.0, 1.0, 2.0, 3.0];
     /// let mults = vec![3, 1, 4, 2];
     /// let knot_vec = KnotVec::from_single_multi(knots, mults).unwrap();
-    ///
     /// assert_eq!(knot_vec, KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0]));
     /// ```
     pub fn from_single_multi(knots: Vec<f64>, mults: Vec<usize>) -> Result<KnotVec> {
-        // TODO: replace with std::slice::is_sorted once that hits stable.
         for i in 1..knots.len() {
             if knots[i - 1] > knots[i] {
                 return Err(Error::NotSortedVector);
@@ -563,9 +477,8 @@ impl KnotVec {
         }
         Ok(KnotVec(vec))
     }
-    /// Construct from `Vec<f64>`. do not sort, only check sorted.
+    /// construct from `Vec<f64>`. do not sort, only check sorted.
     pub fn try_from(vec: Vec<f64>) -> Result<KnotVec> {
-        // TODO: replace with std::slice::is_sorted once that hits stable.
         for i in 1..vec.len() {
             if vec[i - 1] > vec[i] {
                 return Err(Error::NotSortedVector);
@@ -574,12 +487,10 @@ impl KnotVec {
         Ok(KnotVec(vec))
     }
 
-    /// Construct a knot vector for a Bezier spline.
-    ///
-    /// # Example
-    ///
+    /// Constructs the knot vector for the bezier spline.
+    /// # Examples
     /// ```
-    /// # use truck_geometry::*;
+    /// use truck_geometry::*;
     /// assert_eq!(
     ///     *KnotVec::bezier_knot(3),
     ///     vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0],
@@ -591,12 +502,10 @@ impl KnotVec {
         KnotVec(vec)
     }
 
-    /// Construct a uniform knot vector.
-    ///
-    /// # Example
-    ///
+    /// Constructs the uniform knot vector
+    /// # Examples
     /// ```
-    /// # use truck_geometry::*;
+    /// use truck_geometry::*;
     /// assert_eq!(
     ///     *KnotVec::uniform_knot(2, 5),
     ///     vec![0.0, 0.0, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.0, 1.0],
@@ -611,15 +520,11 @@ impl KnotVec {
 }
 
 impl From<Vec<f64>> for KnotVec {
-    /// Construct from `Vec<f64>`. The vector will be sorted by the order.
-    ///
-    /// # Example
-    ///
+    /// construct from `Vec<f64>`. The vector will sorted by the order.
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(vec![1.0, 0.0, 3.0, 2.0]);
     /// let arr : Vec<f64> = knot_vec.into();
-    ///
     /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
     /// ```
     fn from(mut vec: Vec<f64>) -> KnotVec {
@@ -629,15 +534,11 @@ impl From<Vec<f64>> for KnotVec {
 }
 
 impl From<&Vec<f64>> for KnotVec {
-    /// Construct from a `Vec`. The resulting `KnotVec` is sorted by the order.
-    ///
-    /// # Example
-    ///
+    /// construct by the reference of vector. The clone of vector is sorted by the order.
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(&vec![1.0, 0.0, 3.0, 2.0]);
     /// let arr : Vec<f64> = knot_vec.into();
-    ///
     /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
     /// ```
     #[inline(always)]
@@ -649,17 +550,12 @@ impl From<&Vec<f64>> for KnotVec {
 }
 
 impl From<KnotVec> for Vec<f64> {
-    /// `KnotVec` into `Vec<f64>`.
-    ///
-    /// # Example
-    ///
+    /// KnotVec into Vec<f64>
     /// ```
-    /// # use truck_geometry::KnotVec;
+    /// use truck_geometry::KnotVec;
     /// let vec = vec![0.0, 1.0, 2.0, 3.0];
-    ///
     /// let knot_vec = KnotVec::from(&vec);
     /// let vec0 : Vec<f64> = knot_vec.into();
-    ///
     /// assert_eq!(vec, vec0);
     /// ```
     #[inline(always)]
