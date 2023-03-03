@@ -88,8 +88,8 @@ impl IncludeCurve<BSplineCurve<Point3>> for Sphere {
     }
 }
 
-impl IncludeCurve<NURBSCurve<Vector4>> for Sphere {
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+impl IncludeCurve<NurbsCurve<Vector4>> for Sphere {
+    fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let (knots, _) = curve.knot_vec().to_single_multi();
         let degree = curve.degree() * 2;
         knots

@@ -1,9 +1,9 @@
 use super::*;
 
-impl<V> NURBSCurve<V> {
+impl<V> NurbsCurve<V> {
     /// Constructs the rationalized B-spline curve.
     #[inline(always)]
-    pub const fn new(curve: BSplineCurve<V>) -> Self { NURBSCurve(curve) }
+    pub const fn new(curve: BSplineCurve<V>) -> Self { NurbsCurve(curve) }
 
     /// Returns the BSpline curve before rationalized.
     #[inline(always)]
@@ -13,72 +13,63 @@ impl<V> NURBSCurve<V> {
     #[inline(always)]
     pub fn into_non_rationalized(self) -> BSplineCurve<V> { self.0 }
 
-    /// Returns the reference of the knot vector.  
-    /// cf.[`BSplineCurve::knot_vec`](./struct.BSplineCurve.html#method.knot_vec)
+    /// Returns the reference of the knot vector. cf.[`BSplineCurve::knot_vec`]
     #[inline(always)]
     pub const fn knot_vec(&self) -> &KnotVec { &self.0.knot_vec }
 
-    /// Returns the `idx`th knot.  
-    /// cf.[`BSplineCurve::knot`](./struct.BSplineCurve.html#method.knot)
+    /// Returns the `idx`th knot. cf.[`BSplineCurve::knot`]
     #[inline(always)]
     pub fn knot(&self, idx: usize) -> f64 { self.0.knot_vec[idx] }
 
-    /// Returns the reference of the control points.  
-    /// cf.[`BSplineCurve::control_points`](./struct.BSplineCurve.html#method.control_points)
+    /// Returns the reference of the control points. cf.[`BSplineCurve::control_points`]
     #[inline(always)]
     pub const fn control_points(&self) -> &Vec<V> { &self.0.control_points }
 
-    /// Returns the reference of the control point corresponding to the index `idx`.  
-    /// cf.[`BSplineCurve::control_point`](./struct.BSplineCurve.html#method.control_point)
+    /// Returns the reference of the control point corresponding to the index `idx`.
+    /// cf.[`BSplineCurve::control_point`]
     #[inline(always)]
     pub fn control_point(&self, idx: usize) -> &V { &self.0.control_points[idx] }
 
-    /// Returns the mutable reference of the control point corresponding to index `idx`.  
-    /// cf.[`BSplineCurve::control_point_mut`](./struct.BSplineCurve.html#method.control_point_mut)
+    /// Returns the mutable reference of the control point corresponding to index `idx`.
+    /// cf.[`BSplineCurve::control_point_mut`]
     #[inline(always)]
     pub fn control_point_mut(&mut self, idx: usize) -> &mut V { &mut self.0.control_points[idx] }
-    /// Returns the iterator on all control points  
-    /// cf.[`BSplineCurve::control_points_mut`](./struct.BSplineCurve.html#method.control_points_mut)
+
+    /// Returns the iterator on all control points. cf.[`BSplineCurve::control_points_mut`]
     #[inline(always)]
     pub fn control_points_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.0.control_points.iter_mut()
     }
 
-    /// Apply the given transformation to all control points.  
-    /// cf.[`BSplineCurve::transform_control_points`](./struct.BSplineCurve.html#method.transform_control_points)
+    /// Applies the given transformation to all control points. cf.[`BSplineCurve::transform_control_points`]
     #[inline(always)]
     pub fn transform_control_points<F: FnMut(&mut V)>(&mut self, f: F) {
         self.0.transform_control_points(f)
     }
 
-    /// Returns the degree of NURBS curve.  
-    /// cf.[`BSplineCurve::degree`](./struct.BSplineCurve.html#method.degree)
+    /// Returns the degree of NURBS curve. cf.[`BSplineCurve::degree`]
     #[inline(always)]
     pub fn degree(&self) -> usize { self.0.degree() }
 
-    /// Inverts a curve.  
-    /// cf.[`BSplineCurve::invert`](./struct.BSplineCurve.html#method.invert)
+    /// Inverts a curve. cf.[`BSplineCurve::invert`]
     #[inline(always)]
     pub fn invert(&mut self) -> &mut Self {
         self.0.invert();
         self
     }
 
-    /// Returns whether the knot vector is clamped or not.  
-    /// cf.[`BSplineCurve::is_clamped`](./struct.BSplineCurve.html#method.is_clamped)
+    /// Returns whether the knot vector is clamped or not. cf.[`BSplineCurve::is_clamped`]
     #[inline(always)]
     pub fn is_clamped(&self) -> bool { self.0.knot_vec.is_clamped(self.0.degree()) }
 
-    /// Normalizes the knot vector.  
-    /// cf.[`BSplineCurve::knot_normalize`](./struct.BSplineCurve.html#method.knot_normalize)
+    /// Normalizes the knot vector. cf.[`BSplineCurve::knot_normalize`]
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
         self.0.knot_vec.try_normalize().unwrap();
         self
     }
 
-    /// Translates the knot vector.  
-    /// cf.[`BSplineCurve::knot_translate`](./struct.BSplineCurve.html#method.knot_translate)
+    /// Translates the knot vector. cf.[`BSplineCurve::knot_translate`]
     #[inline(always)]
     pub fn knot_translate(&mut self, x: f64) -> &mut Self {
         self.0.knot_vec.translate(x);
@@ -86,7 +77,7 @@ impl<V> NURBSCurve<V> {
     }
 }
 
-impl<V: Homogeneous<f64>> NURBSCurve<V> {
+impl<V: Homogeneous<f64>> NurbsCurve<V> {
     /// Constructs a rationalization curve from the curves and weights.
     /// # Failures
     /// the length of `curve.control_points()` and `weights` must be the same.
@@ -111,13 +102,13 @@ impl<V: Homogeneous<f64>> NURBSCurve<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSCurve<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsCurve<V> {
     /// Returns the closure of substitution.
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsCurve<V>
 where V::Point: Tolerance
 {
     /// Returns whether all control points are the same or not.
@@ -132,11 +123,11 @@ where V::Point: Tolerance
     /// let mut ctrl_pts = vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0];
     /// let bspcurve = BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone());
     /// assert!(!bspcurve.is_const());
-    /// let const_curve = NURBSCurve::new(bspcurve);
+    /// let const_curve = NurbsCurve::new(bspcurve);
     /// assert!(const_curve.is_const());
     ///
     /// ctrl_pts.push(Vector3::new(2.0, 3.0, 1.0));
-    /// let curve = NURBSCurve::new(BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone()));
+    /// let curve = NurbsCurve::new(BSplineCurve::new(knot_vec.clone(), ctrl_pts.clone()));
     /// assert!(!curve.is_const());
     /// ```
     /// # Remarks
@@ -162,7 +153,7 @@ where V::Point: Tolerance
             .iter()
             .all(move |vec| vec.to_point().near(&pt))
     }
-    /// Determine whether `self` and `other` is near as the B-spline curves or not.  
+    /// Determines whether `self` and `other` is near as the B-spline curves or not.
     ///
     /// Divides each knot interval into the number of degree equal parts,
     /// and check `|self(t) - other(t)| < TOLERANCE` for each end points `t`.
@@ -180,7 +171,7 @@ where V::Point: Tolerance
     ///     Vector3::new(5.0, 4.0, 1.0),
     ///     Vector3::new(1.0, 1.0, 2.0),
     /// ];
-    /// let curve0 = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let curve0 = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     /// let mut curve1 = curve0.clone();
     /// assert!(curve0.near_as_curve(&curve1));
     /// *curve1.control_point_mut(1) += Vector3::new(0.01, 0.0002, 0.0);
@@ -192,7 +183,7 @@ where V::Point: Tolerance
             .sub_near_as_curve(&other.0, 2, move |x, y| x.to_point().near(&y.to_point()))
     }
 
-    /// Determines `self` and `other` is near in square order as the B-spline curves or not.  
+    /// Determines `self` and `other` is near in square order as the B-spline curves or not.
     ///
     /// Divide each knot interval into the number of degree equal parts,
     /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
@@ -210,7 +201,7 @@ where V::Point: Tolerance
     ///     Vector3::new(5.0, 4.0, 1.0),
     ///     Vector3::new(1.0, 1.0, 2.0),
     /// ];
-    /// let curve0 = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let curve0 = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     /// let mut curve1 = curve0.clone();
     /// assert!(curve0.near_as_curve(&curve1));
     /// *curve1.control_point_mut(1) += Vector3::new(0.01, TOLERANCE, 0.0);
@@ -223,55 +214,50 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSCurve<V> {
-    /// Adds a knot `x`, and do not change `self` as a curve.  
-    /// cf.[`BSplineCurve::add_knot`](./struct.BSplineCurve.html#method.add_knot)
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V> {
+    /// Adds a knot `x`, and do not change `self` as a curve. cf.[`BSplineCurve::add_knot`]
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
         self.0.add_knot(x);
         self
     }
 
     /// Removes a knot corresponding to the indices `idx`, and do not change `self` as a curve.
-    /// If cannot remove the knot, do not change `self` and return `self`.  
-    /// cf.[`BSplineCurve::remove_knot`](./struct.BSplineCurve.html#method.remove_knot)
+    /// If cannot remove the knot, do not change `self` and return `self`.
+    /// cf.[`BSplineCurve::remove_knot`]
     pub fn remove_knot(&mut self, idx: usize) -> &mut Self {
         let _ = self.try_remove_knot(idx);
         self
     }
 
-    /// Removes a knot corresponding to the indice `idx`, and do not change `self` as a curve.  
-    /// If the knot cannot be removed, returns
-    /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).  
-    /// cf.[`BSplineCurve::try_remove_knot`](./struct.BSplineCurve.html#method.try_remove_knot)
+    /// Removes a knot corresponding to the indice `idx`, and do not change `self` as a curve.
+    /// If the knot cannot be removed, returns [`Error::CannotRemoveKnot`].
+    /// cf.[`BSplineCurve::try_remove_knot`]
     pub fn try_remove_knot(&mut self, idx: usize) -> Result<&mut Self> {
         self.0.try_remove_knot(idx)?;
         Ok(self)
     }
 
-    /// Elevates 1 degree.  
-    /// cf.[`BSplineCurve::elevate_degree`](./struct.BSplineCurve.html#method.elevate_degree)
+    /// Elevates 1 degree. cf.[`BSplineCurve::elevate_degree`]
     pub fn elevate_degree(&mut self) -> &mut Self {
         self.0.elevate_degree();
         self
     }
 
-    /// Makes the NURBS curve clamped  
-    /// cf.[`BSplineCurve::clamp`](./struct.BSplineCurve.html#method.clamp)
+    /// Makes the NURBS curve clamped. cf.[`BSplineCurve::clamp`]
     #[inline(always)]
     pub fn clamp(&mut self) -> &mut Self {
         self.0.clamp();
         self
     }
 
-    /// Repeats `Self::try_remove_knot()` from the back knot in turn until the knot cannot be removed.  
-    /// cf.[`BSplineCurve::optimize`](./struct.BSplineCurve.html#method.optimize)
+    /// Repeats `Self::try_remove_knot()` from the back knot in turn until the knot cannot be removed.
+    /// cf.[`BSplineCurve::optimize`]
     pub fn optimize(&mut self) -> &mut Self {
         self.0.optimize();
         self
     }
 
-    /// Makes two splines having the same degrees.  
-    /// cf.[`BSplineCurve::syncro_degree`](./struct.BSplineCurve.html#method.syncro_degree)
+    /// Makes two splines having the same degrees. cf.[`BSplineCurve::syncro_degree`]
     pub fn syncro_degree(&mut self, other: &mut Self) {
         let (degree0, degree1) = (self.degree(), other.degree());
         for _ in degree0..degree1 {
@@ -282,13 +268,12 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSCurve<V
         }
     }
 
-    /// Makes two splines having the same normalized knot vectors.  
-    /// cf.[`BSplineCurve::syncro_knots`](./struct.BSplineCurve.html#method.syncro_knots)
+    /// Makes two splines having the same normalized knot vectors. cf.[`BSplineCurve::syncro_knots`]
     pub fn syncro_knots(&mut self, other: &mut Self) { self.0.syncro_knots(&mut other.0) }
 }
 
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> ParameterTransform
-    for NURBSCurve<V>
+    for NurbsCurve<V>
 {
     #[inline(always)]
     fn parameter_transform(&mut self, scalar: f64, r#move: f64) -> &mut Self {
@@ -297,16 +282,16 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> ParameterTra
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> Cut for NURBSCurve<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> Cut for NurbsCurve<V> {
     #[inline(always)]
-    fn cut(&mut self, t: f64) -> Self { NURBSCurve(self.0.cut(t)) }
+    fn cut(&mut self, t: f64) -> Self { NurbsCurve(self.0.cut(t)) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> Concat<NURBSCurve<V>>
-    for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> Concat<NurbsCurve<V>>
+    for NurbsCurve<V>
 where <V as Homogeneous<f64>>::Point: Debug
 {
-    type Output = NURBSCurve<V>;
+    type Output = NurbsCurve<V>;
     fn try_concat(
         &self,
         other: &Self,
@@ -317,7 +302,7 @@ where <V as Homogeneous<f64>>::Point: Debug
         let w1 = curve1.0.control_points[0].weight();
         curve1.transform_control_points(|pt| *pt *= w0 / w1);
         match curve0.0.try_concat(&curve1.0) {
-            Ok(curve) => Ok(NURBSCurve::new(curve)),
+            Ok(curve) => Ok(NurbsCurve::new(curve)),
             Err(err) => Err(err.point_map(|v| v.to_point())),
         }
     }
@@ -325,7 +310,7 @@ where <V as Homogeneous<f64>>::Point: Debug
 
 #[test]
 fn concat_positive_test() {
-    let mut part0 = NURBSCurve::new(BSplineCurve::new(
+    let mut part0 = NurbsCurve::new(BSplineCurve::new(
         KnotVec::uniform_knot(4, 4),
         (0..8)
             .map(|_| {
@@ -345,7 +330,7 @@ fn concat_positive_test() {
     concat_random_test(&part0, &part1, 10);
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V>
 where V::Point: Tolerance
 {
     /// Makes the rational curve locally injective.
@@ -365,7 +350,7 @@ where V::Point: Tolerance
     ///     Vector4::new(0.0, 0.0, 3.0, 3.0),
     /// ];
     ///
-    /// let mut curve = NURBSCurve::new(BSplineCurve::new(knot_vec, control_points));
+    /// let mut curve = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
     /// let mut flag = false;
     /// for i in 0..N {
     ///     let t = 4.0 * (i as f64) / (N as f64);
@@ -398,21 +383,21 @@ where V::Point: Tolerance
     ///     Vector3::new(3.0, 3.0, 3.0),
     ///     Vector3::new(4.0, 4.0, 4.0),
     /// ];
-    /// let mut curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let mut curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     /// let org_curve = curve.clone();
     /// curve.make_locally_injective();
     /// assert_eq!(curve, org_curve);
     /// ```
     pub fn make_locally_injective(&mut self) -> &mut Self {
         let mut iter = self.0.bezier_decomposition().into_iter();
-        while let Some(bezier) = iter.next().map(NURBSCurve::new) {
+        while let Some(bezier) = iter.next().map(NurbsCurve::new) {
             if !bezier.is_const() {
                 *self = bezier;
                 break;
             }
         }
         let mut x = 0.0;
-        for mut bezier in iter.map(NURBSCurve::new) {
+        for mut bezier in iter.map(NurbsCurve::new) {
             if bezier.is_const() {
                 x += bezier.0.knot_vec.range_length();
             } else {
@@ -430,7 +415,7 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision1D for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision1D for NurbsCurve<V>
 where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
 {
     type Point = V::Point;
@@ -440,7 +425,7 @@ where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter<D1> for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter<D1> for NurbsCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
@@ -455,7 +440,7 @@ where
     /// // Defines the half unit circle in x > 0.
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector3::new(0.0, -1.0, 1.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 1.0)];
-    /// let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     ///
     /// // search rational nearest parameter
     /// let pt = Point2::new(1.0, 2.0);
@@ -475,7 +460,7 @@ where
     /// // Same curve and point as above example
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector3::new(0.0, -1.0, 1.0), Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 1.0)];
-    /// let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    /// let curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     /// let pt = Point2::new(1.0, 2.0);
     ///
     /// // another hint
@@ -504,7 +489,7 @@ where
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchParameter<D1> for NURBSCurve<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchParameter<D1> for NurbsCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
@@ -530,7 +515,7 @@ where
     }
 }
 
-impl<V: Homogeneous<f64>> NURBSCurve<V>
+impl<V: Homogeneous<f64>> NurbsCurve<V>
 where V::Point:
         MetricSpace<Metric = f64> + std::ops::Index<usize, Output = f64> + Bounded<f64> + Copy
 {
@@ -541,7 +526,7 @@ where V::Point:
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NURBSCurve<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NurbsCurve<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
@@ -561,7 +546,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NURB
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NURBSCurve<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCurve<V> {
     #[inline(always)]
     fn parameter_range(&self) -> (f64, f64) {
         (
@@ -571,18 +556,18 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NURBSCu
     }
 }
 
-impl<V: Clone> Invertible for NURBSCurve<V> {
+impl<V: Clone> Invertible for NurbsCurve<V> {
     #[inline(always)]
     fn invert(&mut self) { self.invert(); }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.0.clone();
         curve.invert();
-        NURBSCurve(curve)
+        NurbsCurve(curve)
     }
 }
 
-impl<M, V: Copy> Transformed<M> for NURBSCurve<V>
+impl<M, V: Copy> Transformed<M> for NurbsCurve<V>
 where M: Copy + std::ops::Mul<V, Output = V>
 {
     #[inline(always)]
@@ -594,9 +579,9 @@ where M: Copy + std::ops::Mul<V, Output = V>
     }
 }
 
-impl<V: Homogeneous<f64>> From<BSplineCurve<V::Point>> for NURBSCurve<V> {
-    fn from(bspcurve: BSplineCurve<V::Point>) -> NURBSCurve<V> {
-        NURBSCurve::new(BSplineCurve::new_unchecked(
+impl<V: Homogeneous<f64>> From<BSplineCurve<V::Point>> for NurbsCurve<V> {
+    fn from(bspcurve: BSplineCurve<V::Point>) -> NurbsCurve<V> {
+        NurbsCurve::new(BSplineCurve::new_unchecked(
             bspcurve.knot_vec,
             bspcurve
                 .control_points
@@ -617,7 +602,7 @@ fn test_parameter_division() {
         Vector4::new(0.0, 0.0, 2.0, 2.0),
         Vector4::new(1.0, 1.0, 1.0, 1.0),
     ];
-    let curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    let curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     let tol = 0.01;
     let (div, pts) = curve.parameter_division(curve.parameter_range(), tol * 0.5);
     let knot_vec = curve.knot_vec();

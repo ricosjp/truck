@@ -1,4 +1,4 @@
-use stl::{IntoSTLIterator, STLFace, STLReader, STLType};
+use stl::{IntoStlIterator, StlFace, StlReader, StlType};
 use truck_base::assert_near;
 use truck_polymesh::*;
 type Result<T> = std::result::Result<T, errors::Error>;
@@ -16,28 +16,28 @@ const BINARY_BUNNY: &[u8] = include_bytes!(concat!(
 #[test]
 fn stl_oi_test() {
     let mesh = vec![
-        STLFace {
+        StlFace {
             normal: [0.0, 0.0, 1.0],
             vertices: [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
         },
-        STLFace {
+        StlFace {
             normal: [0.0, 1.0, 1.0],
             vertices: [[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]],
         },
-        STLFace {
+        StlFace {
             normal: [1.0, 0.0, 1.0],
             vertices: [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
         },
     ];
     let mut ascii = Vec::new();
-    stl::write(mesh.iter().cloned(), &mut ascii, STLType::ASCII).unwrap();
+    stl::write(mesh.iter().cloned(), &mut ascii, StlType::Ascii).unwrap();
     let mut binary = Vec::new();
-    stl::write(mesh.iter().cloned(), &mut binary, STLType::Binary).unwrap();
-    let amesh = STLReader::<&[u8]>::new(&ascii, STLType::Automatic)
+    stl::write(mesh.iter().cloned(), &mut binary, StlType::Binary).unwrap();
+    let amesh = StlReader::<&[u8]>::new(&ascii, StlType::Automatic)
         .unwrap()
         .collect::<Result<Vec<_>>>()
         .unwrap();
-    let bmesh = STLReader::<&[u8]>::new(&binary, STLType::Automatic)
+    let bmesh = StlReader::<&[u8]>::new(&binary, StlType::Automatic)
         .unwrap()
         .collect::<Result<Vec<_>>>()
         .unwrap();
@@ -47,27 +47,27 @@ fn stl_oi_test() {
 
 #[test]
 fn stl_io_test() {
-    let amesh = STLReader::new(ASCII_BUNNY, STLType::Automatic)
+    let amesh = StlReader::new(ASCII_BUNNY, StlType::Automatic)
         .unwrap()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
-    let bmesh = STLReader::new(BINARY_BUNNY, STLType::Automatic)
+    let bmesh = StlReader::new(BINARY_BUNNY, StlType::Automatic)
         .unwrap()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
     assert_eq!(amesh, bmesh);
     let mut bytes = Vec::<u8>::new();
-    stl::write(bmesh.iter().cloned(), &mut bytes, STLType::Binary).unwrap();
+    stl::write(bmesh.iter().cloned(), &mut bytes, StlType::Binary).unwrap();
     // Binary data is free from notational distortions except for the headers.
     assert_eq!(&bytes[80..], &BINARY_BUNNY[80..]);
 }
 
 #[test]
 fn through_polymesh() {
-    let iter = STLReader::<&[u8]>::new(BINARY_BUNNY, STLType::Automatic).unwrap();
+    let iter = StlReader::<&[u8]>::new(BINARY_BUNNY, StlType::Automatic).unwrap();
     let polymesh: PolygonMesh = iter.map(|face| face.unwrap()).collect();
-    let mesh: Vec<STLFace> = polymesh.into_iter().collect();
-    let iter = STLReader::<&[u8]>::new(BINARY_BUNNY, STLType::Automatic).unwrap();
+    let mesh: Vec<StlFace> = polymesh.into_iter().collect();
+    let iter = StlReader::<&[u8]>::new(BINARY_BUNNY, StlType::Automatic).unwrap();
     for (face0, face1) in mesh.iter().zip(iter) {
         let face1 = face1.unwrap();
         assert_near!(face0.vertices[0][0] as f64, face1.vertices[0][0] as f64);

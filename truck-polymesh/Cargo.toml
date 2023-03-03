@@ -12,12 +12,10 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 exclude = ["examples/**/*.obj"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-bytemuck = { version = "1.12.3", features = ["derive"] }
+bytemuck = { version = "1.13.0", features = ["derive"] }
 rustc-hash = "1.1.0"
-serde = { version = "1.0.151", features = ["derive"] }
+serde = { version = "1.0.152", features = ["derive"] }
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
 thiserror = "1.0.38"

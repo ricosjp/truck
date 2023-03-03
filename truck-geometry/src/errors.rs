@@ -164,7 +164,7 @@ the number of control points: {1}"
     /// let weights = vec![1.0, 2.0]; // less than control points
     ///
     /// assert!(matches!(
-    ///     NURBSCurve::<Vector3>::try_from_bspline_and_weights(bspcurve, weights),
+    ///     NurbsCurve::<Vector3>::try_from_bspline_and_weights(bspcurve, weights),
     ///     Err(Error::DifferentLength),
     /// ));
     /// ```

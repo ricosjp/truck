@@ -321,7 +321,7 @@ impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<BSplineCurve<Point3>>
     }
 }
 
-impl<'a> IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
+impl<'a> IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&'a NurbsCurve<Vector4>> {
     fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
@@ -329,7 +329,7 @@ impl<'a> IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&'a NURBSCurve<Ve
     }
 }
 
-impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<NURBSCurve<Vector4>> {
+impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<NurbsCurve<Vector4>> {
     fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
@@ -337,32 +337,32 @@ impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<NURBSCurve<Vector4>> 
     }
 }
 
-impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Point3>> {
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+impl<'a> IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Point3>> {
+    fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<BSplineCurve<Point3>> {
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<BSplineCurve<Point3>> {
+    fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl<'a> IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<&'a NURBSCurve<Vector4>> {
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+impl<'a> IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&'a NurbsCurve<Vector4>> {
+    fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl IncludeCurve<NURBSCurve<Vector4>> for RevolutedCurve<NURBSCurve<Vector4>> {
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<NurbsCurve<Vector4>> {
+    fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
         sub_include(self, curve, &knots, degree)
@@ -555,7 +555,7 @@ fn include_curve_abnormal0() {
 
 #[test]
 fn include_curve_abnormal1() {
-    let curve = NURBSCurve::new(BSplineCurve::new(
+    let curve = NurbsCurve::new(BSplineCurve::new(
         KnotVec::bezier_knot(3),
         vec![
             Vector4::new(0.0, 3.0, 0.0, 1.0),

@@ -1,9 +1,9 @@
 use super::*;
 
-impl<V> NURBSSurface<V> {
+impl<V> NurbsSurface<V> {
     /// constructor
     #[inline(always)]
-    pub const fn new(bspsurface: BSplineSurface<V>) -> Self { NURBSSurface(bspsurface) }
+    pub const fn new(bspsurface: BSplineSurface<V>) -> Self { NurbsSurface(bspsurface) }
 
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
@@ -173,19 +173,19 @@ impl<V> NURBSSurface<V> {
     pub fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.0.parameter_range() }
     /// Creates the curve whose control points are the `idx`th column control points of `self`.
     #[inline(always)]
-    pub fn column_curve(&self, row_idx: usize) -> NURBSCurve<V>
+    pub fn column_curve(&self, row_idx: usize) -> NurbsCurve<V>
     where V: Clone {
-        NURBSCurve(self.0.column_curve(row_idx))
+        NurbsCurve(self.0.column_curve(row_idx))
     }
     /// Creates the column sectional curve.
     #[inline(always)]
-    pub fn row_curve(&self, column_idx: usize) -> NURBSCurve<V>
+    pub fn row_curve(&self, column_idx: usize) -> NurbsCurve<V>
     where V: Clone {
-        NURBSCurve(self.0.row_curve(column_idx))
+        NurbsCurve(self.0.row_curve(column_idx))
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsSurface<V> {
     /// Substitutes to a NURBS surface.
     #[inline(always)]
     pub fn subs(&self, u: f64, v: f64) -> V::Point { self.0.subs(u, v).to_point() }
@@ -233,7 +233,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSSurface<V> {
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> V::Point + '_ { move |u, v| self.subs(u, v) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NURBSSurface<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsSurface<V>
 where V::Point: Tolerance
 {
     /// Returns whether constant curve or not, i.e. all control points are same or not.
@@ -248,7 +248,7 @@ where V::Point: Tolerance
     ///     vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0],
     ///     vec![pt.clone() * 0.5, pt.clone() * 0.25, pt.clone() * 0.125],
     /// ];
-    /// let mut surface = NURBSSurface::new(BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts));
+    /// let mut surface = NurbsSurface::new(BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts));
     /// assert!(surface.is_const());
     ///
     /// *surface.control_point_mut(1, 2) = Vector3::new(2.0, 3.0, 1.0);
@@ -264,7 +264,7 @@ where V::Point: Tolerance
         }
         true
     }
-    /// Determines whether `self` and `other` is near as the B-spline rational surfaces or not.  
+    /// Determines whether `self` and `other` is near as the B-spline rational surfaces or not.
     ///
     /// Divides each knot domain into the number of degree equal parts,
     /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
@@ -278,7 +278,7 @@ where V::Point: Tolerance
     ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
     ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
-    /// let surface0 = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let surface0 = NurbsSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
     /// let mut surface1 = surface0.clone();
     /// assert!(surface0.near_as_surface(&surface1));
     ///
@@ -291,7 +291,7 @@ where V::Point: Tolerance
             .sub_near_as_surface(&other.0, 2, move |x, y| x.to_point().near(&y.to_point()))
     }
     /// Determines whether `self` and `other` is near in square order as the B-spline rational
-    /// surfaces or not.  
+    /// surfaces or not.
     ///
     /// Divides each knot domain into the number of degree equal parts,
     /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
@@ -306,7 +306,7 @@ where V::Point: Tolerance
     ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
     ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
-    /// let surface0 = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let surface0 = NurbsSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
     /// let mut surface1 = surface0.clone();
     /// assert!(surface0.near_as_surface(&surface1));
     ///
@@ -321,22 +321,21 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface<V> {
-    /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.  
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface<V> {
+    /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.
     #[inline(always)]
     pub fn add_uknot(&mut self, x: f64) -> &mut Self {
         self.0.add_uknot(x);
         self
     }
-    /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.  
+    /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.
     #[inline(always)]
     pub fn add_vknot(&mut self, x: f64) -> &mut Self {
         self.0.add_vknot(x);
         self
     }
-    /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.  
-    /// If the knot cannot be removed, returns
-    /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).
+    /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.
+    /// If the knot cannot be removed, returns [`Error::CannotRemoveKnot`].
     #[inline(always)]
     pub fn try_remove_uknot(&mut self, idx: usize) -> Result<&mut Self> {
         match self.0.try_remove_uknot(idx) {
@@ -351,9 +350,8 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
         self.0.remove_uknot(idx);
         self
     }
-    /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.  
-    /// If the knot cannot be removed, returns
-    /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).
+    /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.
+    /// If the knot cannot be removed, returns [`Error::CannotRemoveKnot`].
     #[inline(always)]
     pub fn try_remove_vknot(&mut self, idx: usize) -> Result<&mut Self> {
         match self.0.try_remove_vknot(idx) {
@@ -432,7 +430,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
     ///     vec![Vector3::new(0.0, 2.0, 2.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 2.0)],
     ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
-    /// let bspsurface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let bspsurface = NurbsSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
     /// let curves = bspsurface.splitted_boundary();
     /// assert_eq!(
     ///     curves[0].control_points(),
@@ -470,13 +468,13 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
     /// );
     /// ```
     #[inline(always)]
-    pub fn splitted_boundary(&self) -> [NURBSCurve<V>; 4] {
+    pub fn splitted_boundary(&self) -> [NurbsCurve<V>; 4] {
         std::convert::TryFrom::try_from(
             self.0
                 .splitted_boundary()
                 .iter()
                 .cloned()
-                .map(NURBSCurve::new)
+                .map(NurbsCurve::new)
                 .collect::<Vec<_>>(),
         )
         .unwrap()
@@ -484,10 +482,10 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NURBSSurface
 
     /// Extracts the boundary of surface
     #[inline(always)]
-    pub fn boundary(&self) -> NURBSCurve<V> { NURBSCurve::new(self.0.boundary()) }
+    pub fn boundary(&self) -> NurbsCurve<V> { NurbsCurve::new(self.0.boundary()) }
 }
 
-impl<V: Homogeneous<f64>> SearchNearestParameter<D2> for NURBSSurface<V>
+impl<V: Homogeneous<f64>> SearchNearestParameter<D2> for NurbsSurface<V>
 where
     Self: ParametricSurface<Point = V::Point, Vector = <V::Point as EuclideanSpace>::Diff>,
     V::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
@@ -506,7 +504,7 @@ where
     ///     vec![Vector3::new(0.0, 4.0, 2.0), Vector3::new(2.0, 8.0, 4.0), Vector3::new(2.0, 4.0, 2.0)],
     ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(1.0, 7.0, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
-    /// let surface = NURBSSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let surface = NurbsSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
     /// let pt = surface.subs(0.3, 0.7);
     /// let (u, v) = surface.search_nearest_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
     /// assert!(u.near(&0.3) && v.near(&0.7));
@@ -534,7 +532,7 @@ where
     }
 }
 
-impl<V> NURBSSurface<V>
+impl<V> NurbsSurface<V>
 where
     V: Homogeneous<f64>,
     V::Point:
@@ -552,7 +550,7 @@ where
     }
 }
 
-impl SearchParameter<D2> for NURBSSurface<Vector3> {
+impl SearchParameter<D2> for NurbsSurface<Vector3> {
     type Point = Point2;
     /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
@@ -567,7 +565,7 @@ impl SearchParameter<D2> for NURBSSurface<Vector3> {
     ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
     /// ];
     /// let bspsurface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    /// let surface = NURBSSurface::new(bspsurface);
+    /// let surface = NurbsSurface::new(bspsurface);
     ///
     /// let pt = surface.subs(0.3, 0.7);
     /// let (u, v) = surface.search_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
@@ -593,7 +591,7 @@ impl SearchParameter<D2> for NURBSSurface<Vector3> {
     }
 }
 
-impl<V: Clone> Invertible for NURBSSurface<V> {
+impl<V: Clone> Invertible for NurbsSurface<V> {
     #[inline(always)]
     fn invert(&mut self) { self.swap_axes(); }
     #[inline(always)]
@@ -604,7 +602,7 @@ impl<V: Clone> Invertible for NURBSSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for NURBSSurface<V> {
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for NurbsSurface<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
@@ -621,7 +619,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for NU
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
 }
 
-impl ParametricSurface3D for NURBSSurface<Vector4> {
+impl ParametricSurface3D for NurbsSurface<Vector4> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         let pt = self.0.subs(u, v);
@@ -631,7 +629,7 @@ impl ParametricSurface3D for NURBSSurface<Vector4> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D for NURBSSurface<V>
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D for NurbsSurface<V>
 where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
 {
     #[inline(always)]
@@ -644,16 +642,16 @@ where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
     }
 }
 
-impl<V> BoundedSurface for NURBSSurface<V>
+impl<V> BoundedSurface for NurbsSurface<V>
 where Self: ParametricSurface
 {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
 }
 
-impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
+impl IncludeCurve<NurbsCurve<Vector3>> for NurbsSurface<Vector3> {
     #[inline(always)]
-    fn include(&self, curve: &NURBSCurve<Vector3>) -> bool {
+    fn include(&self, curve: &NurbsCurve<Vector3>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
         let mut hint = match self.search_parameter(pt, None, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
@@ -686,7 +684,7 @@ impl IncludeCurve<NURBSCurve<Vector3>> for NURBSSurface<Vector3> {
     }
 }
 
-impl IncludeCurve<BSplineCurve<Point3>> for NURBSSurface<Vector4> {
+impl IncludeCurve<BSplineCurve<Point3>> for NurbsSurface<Vector4> {
     #[inline(always)]
     fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let pt = curve.front();
@@ -721,9 +719,9 @@ impl IncludeCurve<BSplineCurve<Point3>> for NURBSSurface<Vector4> {
     }
 }
 
-impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
+impl IncludeCurve<NurbsCurve<Vector4>> for NurbsSurface<Vector4> {
     #[inline(always)]
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+    fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let pt = curve.front();
         let mut hint = match self.search_parameter(pt, None, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
@@ -756,7 +754,7 @@ impl IncludeCurve<NURBSCurve<Vector4>> for NURBSSurface<Vector4> {
     }
 }
 
-impl<M, V: Copy> Transformed<M> for NURBSSurface<V>
+impl<M, V: Copy> Transformed<M> for NurbsSurface<V>
 where M: Copy + std::ops::Mul<V, Output = V>
 {
     #[inline(always)]
@@ -769,7 +767,7 @@ where M: Copy + std::ops::Mul<V, Output = V>
     }
 }
 
-impl SearchParameter<D2> for NURBSSurface<Vector4> {
+impl SearchParameter<D2> for NurbsSurface<Vector4> {
     type Point = Point3;
     /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
@@ -784,7 +782,7 @@ impl SearchParameter<D2> for NURBSSurface<Vector4> {
     ///     vec![Vector4::new(0.0, 1.0, 1.0, 1.0), Vector4::new(0.2, 2.0, 2.0, 2.0), Vector4::new(0.85, 1.7, 0.85, 1.7), Vector4::new(1.0, 1.0, 0.3, 1.0)],
     /// ];
     /// let bspsurface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    /// let surface = NURBSSurface::new(bspsurface);
+    /// let surface = NurbsSurface::new(bspsurface);
     ///
     /// let pt = surface.subs(0.3, 0.7);
     /// let (u, v) = surface.search_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
@@ -842,8 +840,8 @@ fn test_include2d() {
     let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
     let mut curve = surface.sectional_curve(bnd_box);
     curve.control_points_mut().for_each(|pt| *pt *= 3.0);
-    let surface = NURBSSurface::new(surface);
-    let curve = NURBSCurve::new(curve);
+    let surface = NurbsSurface::new(surface);
+    let curve = NurbsCurve::new(curve);
     assert!(surface.include(&curve));
 }
 
@@ -867,7 +865,7 @@ fn test_include3d() {
             Vector4::new(1.0, 1.0, 2.0, 1.0),
         ],
     ];
-    let surface = NURBSSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts));
+    let surface = NurbsSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts));
 
     let knot_vec = KnotVec::from(vec![
         0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0,
@@ -884,7 +882,7 @@ fn test_include3d() {
         Vector4::new(-1.0, -1.0, 1.0, 1.0),
         Vector4::new(0.0, -2.0, 2.0, 2.0),
     ];
-    let mut curve = NURBSCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    let mut curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     assert!(surface.include(&curve));
     *curve.control_point_mut(1) += Vector4::new(0.0, 0.0, 0.00001, 0.0);
     assert!(!surface.include(&curve));

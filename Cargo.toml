@@ -3,19 +3,19 @@ resolver = "2"
 members = [
 	"truck-base",
 	"truck-geoderive",
-	"truck-geotrait",
 	"truck-geometry",
-	"truck-modeling",
+	"truck-geotrait",
+	"truck-js",
 	"truck-meshalgo",
+	"truck-modeling",
 	"truck-platform",
 	"truck-polymesh",
 	"truck-rendimpl",
 	"truck-shapeops",
-	"truck-topology",
-	"truck-js",
 	"truck-stepio",
-	"readme-generator",
+	"truck-topology",
 	"example-pages-generator",
+	"readme-generator",
 ]
 
 [profile.release.package.truck-js]

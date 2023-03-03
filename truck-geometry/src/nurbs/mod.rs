@@ -112,11 +112,11 @@ pub struct BSplineSurface<P> {
 
 /// NURBS curve
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct NURBSCurve<V>(BSplineCurve<V>);
+pub struct NurbsCurve<V>(BSplineCurve<V>);
 
 /// NURBS surface
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct NURBSSurface<V>(BSplineSurface<V>);
+pub struct NurbsSurface<V>(BSplineSurface<V>);
 
 mod bspcurve;
 mod bspsurface;

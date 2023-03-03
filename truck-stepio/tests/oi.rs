@@ -115,7 +115,7 @@ fn oi() {
 #2 = CARTESIAN_POINT('', (0.0, 1.0)); #3 = CARTESIAN_POINT('', (2.0, 3.0));
 #4 = CARTESIAN_POINT('', (4.0, 5.0)); #5 = CARTESIAN_POINT('', (6.0, 7.0)); ENDSEC;",
     );
-    oitest_tryfrom::<NURBSCurve<Vector3>, RationalBSplineCurveHolder>(NURBSCurve::new(
+    oitest_tryfrom::<NurbsCurve<Vector3>, RationalBSplineCurveHolder>(NurbsCurve::new(
         BSplineCurve::new(
             KnotVec::bezier_knot(3),
             vec![

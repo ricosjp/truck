@@ -31,6 +31,6 @@ pub mod builder;
 mod polygon;
 /// the boolean operators: `and`, `or`, `not`.
 pub mod shapeops;
-pub use polygon::{PolygonBuffer, PolygonMesh, STLType};
+pub use polygon::{PolygonBuffer, PolygonMesh, StlType};
 /// STEP IO
 pub mod step_in;

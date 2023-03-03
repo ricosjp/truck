@@ -12,7 +12,6 @@
     unused_import_braces,
     unused_qualifications
 )]
-#![allow(clippy::many_single_char_names)]
 
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

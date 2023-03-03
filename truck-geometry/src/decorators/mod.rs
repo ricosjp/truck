@@ -14,7 +14,7 @@ use std::ops::{Deref, DerefMut, Mul};
 ///     Vector4::new(-1.0, 0.0, 0.0, 1.0),
 /// ];
 /// // upper half circle on xy-plane
-/// let uhcircle = NURBSCurve::new(BSplineCurve::new(knot_vec, control_points));
+/// let uhcircle = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
 /// // sphere constructed by revolute circle
 /// let sphere = RevolutedCurve::by_revolution(
 ///     uhcircle, Point3::origin(), Vector3::unit_x(),

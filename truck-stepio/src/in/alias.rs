@@ -50,7 +50,7 @@ pub enum Curve2D {
     Polyline(PolylineCurve<Point2>),
     Conic(Conic2D),
     BSplineCurve(BSplineCurve<Point2>),
-    NURBSCurve(NURBSCurve<Vector3>),
+    NurbsCurve(NurbsCurve<Vector3>),
 }
 #[derive(
     Clone,
@@ -87,7 +87,7 @@ pub enum Curve3D {
     Conic(Conic3D),
     BSplineCurve(BSplineCurve<Point3>),
     PCurve(PCurve),
-    NURBSCurve(NURBSCurve<Vector4>),
+    NurbsCurve(NurbsCurve<Vector4>),
 }
 
 #[derive(
@@ -136,5 +136,5 @@ pub enum Surface {
     ElementarySurface(ElementarySurface),
     SweptCurve(SweptCurve),
     BSplineSurface(BSplineSurface<Point3>),
-    NURBSSurface(NURBSSurface<Vector4>),
+    NurbsSurface(NurbsSurface<Vector4>),
 }

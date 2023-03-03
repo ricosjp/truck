@@ -98,7 +98,7 @@ impl Plane {
     /// let pt1 = Point3::new(1.0, 1.0, 3.0);
     /// let pt2 = Point3::new(0.0, 2.0, 3.0);
     /// let plane: Plane = Plane::new(pt0, pt1, pt2);
-    /// let surface: NURBSSurface<Vector4> = plane.into_nurbs();
+    /// let surface: NurbsSurface<Vector4> = plane.into_nurbs();
     /// assert_eq!(surface.parameter_range(), ((0.0, 1.0), (0.0, 1.0)));
     ///
     /// const N: usize = 100;
@@ -113,11 +113,11 @@ impl Plane {
     /// }
     /// ```
     #[inline(always)]
-    pub fn into_nurbs(&self) -> NURBSSurface<Vector4> {
+    pub fn into_nurbs(&self) -> NurbsSurface<Vector4> {
         let o = self.o.to_homogeneous();
         let p = self.p.to_homogeneous();
         let q = self.q.to_homogeneous();
-        NURBSSurface::new(BSplineSurface::debug_new(
+        NurbsSurface::new(BSplineSurface::debug_new(
             (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
             vec![vec![o, q], vec![p, p + q - o]],
         ))
@@ -178,8 +178,8 @@ impl IncludeCurve<BSplineCurve<Point3>> for Plane {
     }
 }
 
-impl IncludeCurve<NURBSCurve<Vector4>> for Plane {
-    fn include(&self, curve: &NURBSCurve<Vector4>) -> bool {
+impl IncludeCurve<NurbsCurve<Vector4>> for Plane {
+    fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let origin = self.origin();
         let normal = self.normal();
         let (s, e) = (curve.front(), curve.back());

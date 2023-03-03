@@ -62,7 +62,7 @@ impl KnotVec {
     #[inline(always)]
     pub fn floor(&self, x: f64) -> Option<usize> { self.iter().rposition(|t| *t <= x) }
 
-    /// the multiplicity of the `i`th knot
+    /// Returns the multiplicity of the `i`th knot
     /// # Examples
     /// ```
     /// use truck_geometry::KnotVec;
@@ -74,7 +74,7 @@ impl KnotVec {
         self.iter().filter(|u| self[i].near(u)).count()
     }
 
-    /// add a knot and return the index of the added knot.
+    /// Adds a knot and return the index of the added knot.
     /// # Examples
     /// ```
     /// use truck_geometry::KnotVec;
@@ -100,7 +100,7 @@ impl KnotVec {
         }
     }
 
-    /// Calculate B-spline basis functions at `t` with degree `degree`.
+    /// Calculates B-spline basis functions at `t` with degree `degree`.
     /// # Panics
     /// If the length of `self` is not more than `degree`, panic occurs.
     /// # Remarks
@@ -149,13 +149,10 @@ impl KnotVec {
         }
     }
 
-    /// Calculate B-spline basis functions at `t` with degree `degree`.
+    /// Calculates B-spline basis functions at `t` with degree `degree`.
     /// # Failures
     /// - If the range of the knot vector is zero, returns [`Error::ZeroRange`].
-    /// - If the length of `self` is not more than `degree`, returns [`Error::TooLargeDegree(length, degree)`].
-    ///
-    /// [`Error::ZeroRange`]: errors/enum.Error.html#variant.ZeroRange
-    /// [`Error::TooLargeDegree(length, degree)`]: errors/enum.Error.html#variant.TooLargeDegree
+    /// - If the length of `self` is not more than `degree`, returns [`Error::TooLargeDegree`].
     /// # Remarks
     /// In this package, the B-spline basis function is based on the characteristic function of
     /// the right-open intervals [s, t). So, the value corresponding to the end point t = t_n is always 0.0.
@@ -256,7 +253,7 @@ impl KnotVec {
         res
     }
 
-    /// transform the knot vector
+    /// Transforms the knot vector
     /// # Examples
     /// ```
     /// use std::vec::Vec;
@@ -279,8 +276,6 @@ impl KnotVec {
     /// Normalizes the knot vector i.e. makes the first value 0 and the last value 1.
     /// # Failures
     /// Returns [`Error::ZeroRange`] if the range of the knot vector is so small.
-    ///
-    /// [`Error::ZeroRange`]: errors/enum.Error.html#variant.ZeroRange
     /// # Examples
     /// ```
     /// use truck_geometry::KnotVec;
@@ -314,7 +309,7 @@ impl KnotVec {
             .unwrap_or_else(|error| panic!("{}", error))
     }
 
-    /// translate the knot vector
+    /// Translates the knot vector
     /// # Example
     /// ```
     /// use std::vec::Vec;
@@ -350,7 +345,7 @@ impl KnotVec {
         self
     }
 
-    /// determine the knot vector is clamped for the given degree.
+    /// Determines the knot vector is clamped for the given degree.
     /// # Examples
     /// ```
     /// use truck_geometry::KnotVec;
@@ -373,12 +368,8 @@ impl KnotVec {
     /// assert_eq!(knot_vec0.as_slice(), &[0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
     /// ```
     /// # Failures
-    /// * If at least one of `self` or `other` is not clamped, returns [`Error::NotClampedKnotVector`]
-    /// * If the last knot of `self` and the first knot of `other` are different, returns
-    /// [`Error::DifferentBackFront(self.last, other.first)`].
-    ///
-    /// [`Error::NotClampedKnotVector`]: errors/enum.Error.html#variant.NotClampedKnotVector
-    /// [`Error::DifferentBackFront(self.last, other.first)`]: errors/enum.Error.html#variant.DifferentBackFront
+    /// - If at least one of `self` or `other` is not clamped, returns [`Error::NotClampedKnotVector`]
+    /// - If the last knot of `self` and the first knot of `other` are different, returns [`Error::DifferentBackFront`].
     pub fn try_concat(&mut self, other: &KnotVec, degree: usize) -> Result<&mut Self> {
         if !self.is_clamped(degree) || !other.is_clamped(degree) {
             return Err(Error::NotClampedKnotVector);
@@ -408,8 +399,8 @@ impl KnotVec {
     /// ```
     /// # Panics
     /// Panic occurs if:
-    /// * At least one of `self` or `other` is not clamped.
-    /// * The last knot of `self` and the first knot of `other` are different.
+    /// - at least one of `self` or `other` is not clamped.
+    /// - the last knot of `self` and the first knot of `other` are different.
     #[inline(always)]
     pub fn concat(&mut self, other: &KnotVec, degree: usize) -> &mut Self {
         self.try_concat(other, degree)
@@ -462,7 +453,7 @@ impl KnotVec {
         (knots, mults)
     }
 
-    /// construct from single-multi description.
+    /// Constructs from single-multi description.
     /// # Examples
     /// ```
     /// use truck_geometry::KnotVec;
@@ -486,7 +477,7 @@ impl KnotVec {
         }
         Ok(KnotVec(vec))
     }
-    /// construct from `Vec<f64>`. do not sort, only check sorted.
+    /// Constructs from `Vec<f64>`. do not sort, only check sorted.
     pub fn try_from(vec: Vec<f64>) -> Result<KnotVec> {
         for i in 1..vec.len() {
             if vec[i - 1] > vec[i] {
@@ -529,7 +520,7 @@ impl KnotVec {
 }
 
 impl From<Vec<f64>> for KnotVec {
-    /// construct from `Vec<f64>`. The vector will sorted by the order.
+    /// constructs from `Vec<f64>`. The vector will sorted by the order.
     /// ```
     /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(vec![1.0, 0.0, 3.0, 2.0]);
@@ -543,7 +534,7 @@ impl From<Vec<f64>> for KnotVec {
 }
 
 impl From<&Vec<f64>> for KnotVec {
-    /// construct by the reference of vector. The clone of vector is sorted by the order.
+    /// Constructs by the reference of vector. The clone of vector is sorted by the order.
     /// ```
     /// use truck_geometry::KnotVec;
     /// let knot_vec = KnotVec::from(&vec![1.0, 0.0, 3.0, 2.0]);
@@ -559,7 +550,7 @@ impl From<&Vec<f64>> for KnotVec {
 }
 
 impl From<KnotVec> for Vec<f64> {
-    /// KnotVec into Vec<f64>
+    /// `KnotVec` into `Vec<f64>`
     /// ```
     /// use truck_geometry::KnotVec;
     /// let vec = vec![0.0, 1.0, 2.0, 3.0];

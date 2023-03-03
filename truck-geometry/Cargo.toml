@@ -11,12 +11,8 @@ license = "Apache-2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-derive_more = "0.99.17"
-num = "0.4.0"
-serde = { version = "1.0.151", features = ["derive"] }
+serde = { version = "1.0.152", features = ["derive"] }
 thiserror = "1.0.38"
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }

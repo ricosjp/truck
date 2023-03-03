@@ -36,10 +36,10 @@ fn main() {
             .unwrap();
         outpath += ".stl";
         let mut file = std::fs::File::create(&outpath).unwrap();
-        stl::write(&polymesh, &mut file, STLType::Binary).unwrap();
+        stl::write(&polymesh, &mut file, StlType::Binary).unwrap();
     } else if ext == "stl" {
         let file = std::fs::File::open(path).unwrap();
-        let polymesh = stl::read(file, STLType::Automatic).unwrap();
+        let polymesh = stl::read(file, StlType::Automatic).unwrap();
         let mut outpath: String = path
             .file_stem()
             .unwrap()
