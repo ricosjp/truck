@@ -940,7 +940,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         self
     }
 
-    /// add a knot `x` for the second parameter, and do not change `self` as a surface.
+    /// Adds a knot `x` for the second parameter, and do not change `self` as a surface.
     /// Return `false` if cannot add the knot, i.e.
     /// * the index of `x` will be lower than the degree, or
     /// * the index of `x` will be higher than the number of control points.
@@ -1728,7 +1728,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         self
     }
 
-    /// Get the boundary by four splitted curves.
+    /// Gets the boundary by four splitted curves.
     /// # Examples
     /// ```
     /// use truck_geometry::*;

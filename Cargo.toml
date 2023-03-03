@@ -1,8 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-	"example-pages-generator",
-	"readme-generator",
 	"truck-base",
 	"truck-geoderive",
 	"truck-geometry",
@@ -16,6 +14,8 @@ members = [
 	"truck-shapeops",
 	"truck-stepio",
 	"truck-topology",
+	"example-pages-generator",
+	"readme-generator",
 ]
 
 [profile.release.package.truck-js]

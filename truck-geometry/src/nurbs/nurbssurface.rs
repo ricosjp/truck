@@ -335,8 +335,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface
         self
     }
     /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.
-    /// If the knot cannot be removed, returns
-    /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).
+    /// If the knot cannot be removed, returns [`Error::CannotRemoveKnot`].
     #[inline(always)]
     pub fn try_remove_uknot(&mut self, idx: usize) -> Result<&mut Self> {
         match self.0.try_remove_uknot(idx) {
@@ -352,8 +351,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface
         self
     }
     /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.
-    /// If the knot cannot be removed, returns
-    /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).
+    /// If the knot cannot be removed, returns [`Error::CannotRemoveKnot`].
     #[inline(always)]
     pub fn try_remove_vknot(&mut self, idx: usize) -> Result<&mut Self> {
         match self.0.try_remove_vknot(idx) {

@@ -12,8 +12,6 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 exclude = ["examples/**/*.obj"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 bytemuck = { version = "1.13.0", features = ["derive"] }
 rustc-hash = "1.1.0"

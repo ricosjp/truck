@@ -17,11 +17,13 @@ impl IntoWasm for truck_meshalgo::prelude::PolygonMesh {
 pub enum StlType {
     /// Determine STL type automatically.
     ///
-    /// **Reading**: if the first 5 bytes are..
+    /// # Reading
+    /// If the first 5 bytes are..
     /// - "solid" => ascii format
     /// - otherwise => binary format
     ///
-    /// **Writing**: always binary format.
+    /// # Writing
+    /// Always binary format.
     Automatic,
     /// ASCII format.
     Ascii,

@@ -42,11 +42,13 @@ pub enum StlReader<R: Read> {
 pub enum StlType {
     /// Determine STL type automatically.
     ///
-    /// **Reading**: if the first 5 bytes are..
+    /// # Reading
+    /// If the first 5 bytes are..
     /// - "solid" => ascii format
     /// - otherwise => binary format
     ///
-    /// **Writing**: always binary format.
+    /// # Writing
+    /// Always binary format.
     #[default]
     Automatic,
     /// ASCII format.
