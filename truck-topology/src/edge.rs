@@ -3,7 +3,7 @@ use crate::*;
 use thiserror::Error;
 
 impl<P, C> Edge<P, C> {
-    /// Generates the edge from `front` to `back`.  
+    /// Generates the edge from `front` to `back`.
     /// # Failures
     /// If `front == back`, then returns `Error::SameVertex`.
     /// ```
@@ -25,7 +25,7 @@ impl<P, C> Edge<P, C> {
     /// # Panic
     /// The condition `front == back` is not allowed.
     /// ```should_panic
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::new(());
     /// Edge::new(&v, &v, ()); // panic occurs
     /// ```
@@ -35,8 +35,8 @@ impl<P, C> Edge<P, C> {
     }
     /// Generates the edge from `front` to `back`.
     /// # Remarks
-    /// This method is prepared only for performance-critical development and is not recommended.  
-    /// This method does NOT check the condition `front == back`.  
+    /// This method is prepared only for performance-critical development and is not recommended.
+    /// This method does NOT check the condition `front == back`.
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
     pub fn new_unchecked(front: &Vertex<P>, back: &Vertex<P>, curve: C) -> Edge<P, C> {
@@ -49,7 +49,7 @@ impl<P, C> Edge<P, C> {
 
     /// Generates the edge from `front` to `back`.
     /// # Remarks
-    /// This method check the condition `front == back` in the debug mode.  
+    /// This method check the condition `front == back` in the debug mode.
     /// The programmer must guarantee this condition before using this method.
     #[inline(always)]
     pub fn debug_new(front: &Vertex<P>, back: &Vertex<P>, curve: C) -> Edge<P, C> {
@@ -62,7 +62,7 @@ impl<P, C> Edge<P, C> {
     /// Returns the orientation of the curve.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[(), ()]);
     /// let edge0 = Edge::new(&v[0], &v[1], ());
     /// let edge1 = edge0.inverse();
@@ -74,7 +74,7 @@ impl<P, C> Edge<P, C> {
 
     /// Inverts the direction of edge.
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[(), ()]);
     /// let edge = Edge::new(&v[0], &v[1], ());
     /// let mut inv_edge = edge.clone();
@@ -202,7 +202,7 @@ impl<P, C> Edge<P, C> {
     /// Returns a clone of the edge without inversion.
     /// # Examples
     /// ```
-    /// use truck_topology::{Vertex, Edge};
+    /// # use truck_topology::{Vertex, Edge};
     /// let v = Vertex::news(&[(), ()]);
     /// let edge0 = Edge::new(&v[0], &v[1], ());
     /// let edge1 = edge0.inverse();
@@ -222,7 +222,7 @@ impl<P, C> Edge<P, C> {
 
     /// Returns whether two edges are the same. Returns `true` even if the orientaions are different.
     /// ```
-    /// use truck_topology::{Vertex, Edge};
+    /// # use truck_topology::{Vertex, Edge};
     /// let v = Vertex::news(&[(), ()]);
     /// let edge0 = Edge::new(&v[0], &v[1], ());
     /// let edge1 = Edge::new(&v[0], &v[1], ());
@@ -240,18 +240,18 @@ impl<P, C> Edge<P, C> {
     /// This method returns absolute curve i.e. does not consider the orientation of curve.
     /// If you want to get a curve compatible with edge's orientation, use `Edge::oriented_curve`.
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[0, 1]);
     /// let mut edge = Edge::new(&v[0], &v[1], (0, 1));
     /// edge.invert();
     ///
     /// // absolute curve
-    /// assert_eq!(edge.get_curve(), (0, 1));
+    /// assert_eq!(edge.curve(), (0, 1));
     /// // oriented curve
     /// assert_eq!(edge.oriented_curve(), (1, 0));
     /// ```
     #[inline(always)]
-    pub fn get_curve(&self) -> C
+    pub fn curve(&self) -> C
     where C: Clone {
         self.curve.lock().unwrap().clone()
     }
@@ -259,21 +259,21 @@ impl<P, C> Edge<P, C> {
     /// Set the curve.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[(), ()]);
     /// let edge0 = Edge::new(&v[0], &v[1], 0);
     /// let edge1 = edge0.clone();
     ///
     /// // Two edges have the same content.
-    /// assert_eq!(edge0.get_curve(), 0);
-    /// assert_eq!(edge1.get_curve(), 0);
+    /// assert_eq!(edge0.curve(), 0);
+    /// assert_eq!(edge1.curve(), 0);
     ///
     /// // set the content
     /// edge0.set_curve(1);
     ///
     /// // The contents of two edges are synchronized.
-    /// assert_eq!(edge0.get_curve(), 1);
-    /// assert_eq!(edge1.get_curve(), 1);
+    /// assert_eq!(edge0.curve(), 1);
+    /// assert_eq!(edge1.curve(), 1);
     /// ```
     #[inline(always)]
     pub fn set_curve(&self, curve: C) { *self.curve.lock().unwrap() = curve; }
@@ -281,7 +281,7 @@ impl<P, C> Edge<P, C> {
     /// Returns the id that does not depend on the direction of the edge.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[(), ()]);
     /// let edge0 = Edge::new(&v[0], &v[1], ());
     /// let edge1 = edge0.inverse();
@@ -295,7 +295,7 @@ impl<P, C> Edge<P, C> {
     ///
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// // Create one edge
     /// let v = Vertex::news(&[(), ()]);
     /// let e0 = Edge::new(&v[0], &v[1], ());
@@ -351,7 +351,7 @@ impl<P, C> Edge<P, C> {
     /// whose end points are mapped by `point_mapping`.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v0 = Vertex::new(0);
     /// let v1 = Vertex::new(1);
     /// let edge0 = Edge::new(&v0, &v1, 2);
@@ -360,9 +360,9 @@ impl<P, C> Edge<P, C> {
     ///     &move |j: &usize| *j as f64 + 0.5,
     /// );
     ///
-    /// assert_eq!(edge1.front().get_point(), 0.5);
-    /// assert_eq!(edge1.back().get_point(), 1.5);
-    /// assert_eq!(edge1.get_curve(), 2.5);
+    /// assert_eq!(edge1.front().point(), 0.5);
+    /// assert_eq!(edge1.back().point(), 1.5);
+    /// assert_eq!(edge1.curve(), 2.5);
     /// ```
     /// # Remarks
     /// Accessing geometry elements directly in the closure will result in a deadlock.
@@ -402,14 +402,14 @@ impl<P, C> Edge<P, C> {
     /// Cuts the edge at `vertex`.
     /// # Failure
     /// Returns `None` if:
-    /// - cannot find the parameter `t` such that `edge.get_curve().subs(t) == vertex.get_point()`, or
+    /// - cannot find the parameter `t` such that `edge.curve().subs(t) == vertex.point()`, or
     /// - the found parameter is not in the parameter range without end points.
     pub fn cut(&self, vertex: &Vertex<P>) -> Option<(Self, Self)>
     where
         P: Clone,
         C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
-        let mut curve0 = self.get_curve();
-        let t = curve0.search_parameter(vertex.get_point(), None, SEARCH_PARAMETER_TRIALS)?;
+        let mut curve0 = self.curve();
+        let t = curve0.search_parameter(vertex.point(), None, SEARCH_PARAMETER_TRIALS)?;
         let (t0, t1) = curve0.parameter_range();
         if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
             return None;
@@ -434,13 +434,13 @@ impl<P, C> Edge<P, C> {
 
     /// Cuts the edge at `vertex` with parameter `t`.
     /// # Failure
-    /// Returns `None` if `!edge.get_curve().subs(t).near(&vertex.get_point())`.
+    /// Returns `None` if `!edge.curve().subs(t).near(&vertex.point())`.
     pub fn cut_with_parameter(&self, vertex: &Vertex<P>, t: f64) -> Option<(Self, Self)>
     where
         P: Clone + Tolerance,
         C: Cut<Point = P>, {
-        let mut curve0 = self.get_curve();
-        if !curve0.subs(t).near(&vertex.get_point()) {
+        let mut curve0 = self.curve();
+        if !curve0.subs(t).near(&vertex.point()) {
             return None;
         }
         let (t0, t1) = curve0.parameter_range();
@@ -492,34 +492,34 @@ impl<P, C> Edge<P, C> {
     ///
     /// # Examples
     /// ```
-    /// use truck_topology::*;
-    /// use EdgeDisplayFormat as EDF;
+    /// # use truck_topology::*;
+    /// use EdgeDisplayFormat as Edf;
     ///
     /// let vertex_format = VertexDisplayFormat::AsPoint;
     /// let edge = Edge::new(&Vertex::new(0), &Vertex::new(1), 2);
     ///
     /// assert_eq!(
-    ///     format!("{:?}", edge.display(EDF::Full { vertex_format })),
+    ///     format!("{:?}", edge.display(Edf::Full { vertex_format })),
     ///     format!("Edge {{ id: {:?}, vertices: (0, 1), entity: 2 }}", edge.id()),
     /// );
     /// assert_eq!(
-    ///     format!("{:?}", edge.display(EDF::VerticesTupleAndID { vertex_format })),
+    ///     format!("{:?}", edge.display(Edf::VerticesTupleAndID { vertex_format })),
     ///     format!("Edge {{ id: {:?}, vertices: (0, 1) }}", edge.id()),
     /// );
     /// assert_eq!(
-    ///     &format!("{:?}", edge.display(EDF::VerticesTupleAndCurve { vertex_format })),
+    ///     &format!("{:?}", edge.display(Edf::VerticesTupleAndCurve { vertex_format })),
     ///     "Edge { vertices: (0, 1), entity: 2 }",
     /// );
     /// assert_eq!(
-    ///     &format!("{:?}", edge.display(EDF::VerticesTupleStruct { vertex_format })),
+    ///     &format!("{:?}", edge.display(Edf::VerticesTupleStruct { vertex_format })),
     ///     "Edge(0, 1)",
     /// );
     /// assert_eq!(
-    ///     &format!("{:?}", edge.display(EDF::VerticesTuple { vertex_format })),
+    ///     &format!("{:?}", edge.display(Edf::VerticesTuple { vertex_format })),
     ///     "(0, 1)",
     /// );
     /// assert_eq!(
-    ///     &format!("{:?}", edge.display(EDF::AsCurve)),
+    ///     &format!("{:?}", edge.display(Edf::AsCurve)),
     ///     "2",
     /// );
     /// ```

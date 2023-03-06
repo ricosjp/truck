@@ -63,7 +63,7 @@ impl<P, C> Wire<P, C> {
         }
     }
 
-    /// Returns the front edge. If `self` is empty wire, returns None.  
+    /// Returns the front edge. If `self` is empty wire, returns None.
     /// Practically, an alias of the inherited method `VecDeque::front()`.
     #[inline(always)]
     pub fn front_edge(&self) -> Option<&Edge<P, C>> { self.front() }
@@ -82,7 +82,7 @@ impl<P, C> Wire<P, C> {
     #[inline(always)]
     pub fn front_vertex(&self) -> Option<&Vertex<P>> { self.front().map(|edge| edge.front()) }
 
-    /// Returns the back edge. If `self` is empty wire, returns None.  
+    /// Returns the back edge. If `self` is empty wire, returns None.
     /// Practically, an alias of the inherited method `VecDeque::back()`
     #[inline(always)]
     pub fn back_edge(&self) -> Option<&Edge<P, C>> { self.back() }
@@ -437,7 +437,7 @@ impl<P, C> Wire<P, C> {
     /// whose points are mapped by `point_mapping`.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4]);
     /// let wire0: Wire<usize, usize> = vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -452,15 +452,15 @@ impl<P, C> Wire<P, C> {
     ///
     /// // Check the points
     /// for (v0, v1) in wire0.vertex_iter().zip(wire1.vertex_iter()) {
-    ///     let i = v0.get_point();
-    ///     let j = v1.get_point();
+    ///     let i = v0.point();
+    ///     let j = v1.point();
     ///     assert_eq!(i as f64 + 0.5, j);
     /// }
     ///
     /// // Check the curves and orientation
     /// for (edge0, edge1) in wire0.edge_iter().zip(wire1.edge_iter()) {
-    ///     let i = edge0.get_curve();
-    ///     let j = edge1.get_curve();
+    ///     let i = edge0.curve();
+    ///     let j = edge1.curve();
     ///     assert_eq!(i as f64 + 1000.5, j);
     ///     assert_eq!(edge0.orientation(), edge1.orientation());
     /// }

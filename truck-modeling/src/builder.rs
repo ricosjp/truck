@@ -9,7 +9,7 @@ const PI: Rad<f64> = Rad(std::f64::consts::PI);
 ///
 /// // put a vertex
 /// let vertex = builder::vertex(Point3::new(1.0, 2.0, 3.0));
-/// # assert_eq!(vertex.get_point(), Point3::new(1.0, 2.0, 3.0));
+/// # assert_eq!(vertex.point(), Point3::new(1.0, 2.0, 3.0));
 /// ```
 #[inline(always)]
 pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
@@ -34,8 +34,8 @@ pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
 /// ```
 #[inline(always)]
 pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
-    let pt0 = vertex0.get_point();
-    let pt1 = vertex1.get_point();
+    let pt0 = vertex0.point();
+    let pt1 = vertex1.point();
     Edge::new(vertex0, vertex1, Curve::Line(Line(pt0, pt1)))
 }
 
@@ -60,8 +60,8 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
 /// ```
 #[inline(always)]
 pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
-    let pt0 = vertex0.get_point().to_homogeneous();
-    let pt1 = vertex1.get_point().to_homogeneous();
+    let pt0 = vertex0.point().to_homogeneous();
+    let pt1 = vertex1.point().to_homogeneous();
     let curve = geom_impls::circle_arc_by_three_points(pt0, pt1, transit);
     Edge::new(vertex0, vertex1, Curve::NurbsCurve(NurbsCurve::new(curve)))
 }
@@ -86,8 +86,8 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
 /// ```
 #[inline(always)]
 pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>) -> Edge {
-    let pt0 = vertex0.get_point();
-    let pt1 = vertex1.get_point();
+    let pt0 = vertex0.point();
+    let pt1 = vertex1.point();
     let mut ctrl_pts = vec![pt0];
     ctrl_pts.append(&mut inter_points);
     ctrl_pts.push(pt1);
@@ -291,14 +291,14 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
     if wire.is_empty() {
         return Shell::new();
     }
-    let pt0 = wire.front_vertex().unwrap().get_point();
-    let pt1 = wire.back_vertex().unwrap().get_point();
+    let pt0 = wire.front_vertex().unwrap().point();
+    let pt1 = wire.back_vertex().unwrap().point();
     let pt1_on_axis = (pt1 - pt0).cross(axis).so_small();
     if wire.len() == 1 && pt1_on_axis {
         let edge = wire.pop_back().unwrap();
         let v0 = edge.front().clone();
         let v2 = edge.back().clone();
-        let mut curve = edge.get_curve();
+        let mut curve = edge.curve();
         let (t0, t1) = curve.parameter_range();
         let t = (t0 + t1) * 0.5;
         let v1 = Vertex::new(curve.subs(t));
@@ -479,26 +479,26 @@ pub fn scaled<T: Mapped<Point3, Curve, Surface>>(elem: &T, origin: Point3, scala
 /// #
 /// # let b_loop = &b_shell[0].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(0.0, 0.0, 0.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(0.0, 1.0, 0.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(1.0, 1.0, 0.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(1.0, 0.0, 0.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(0.0, 0.0, 0.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(0.0, 1.0, 0.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(1.0, 1.0, 0.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(1.0, 0.0, 0.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// #
 /// # let b_loop = &b_shell[3].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(1.0, 1.0, 0.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(0.0, 1.0, 0.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(0.0, 1.0, 1.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(1.0, 1.0, 1.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(1.0, 1.0, 0.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(0.0, 1.0, 0.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(0.0, 1.0, 1.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(1.0, 1.0, 1.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// #
 /// # let b_loop = &b_shell[5].boundaries()[0];
 /// # let mut loop_iter = b_loop.vertex_iter();
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(0.0, 0.0, 1.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(1.0, 0.0, 1.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(1.0, 1.0, 1.0));
-/// # assert_eq!(loop_iter.next().unwrap().get_point(), Point3::new(0.0, 1.0, 1.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(0.0, 0.0, 1.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(1.0, 0.0, 1.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(1.0, 1.0, 1.0));
+/// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// ```
 pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T::Swept {
@@ -549,7 +549,7 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
 /// # const N: usize = 100;
 /// # let shell = &solid.boundaries()[0];
 /// # for face in shell.iter() {
-/// #   let surface = face.get_surface();
+/// #   let surface = face.surface();
 /// #   for i in 0..=N {
 /// #       for j in 0..=N {
 /// #           let u = i as f64 / N as f64;
@@ -591,7 +591,7 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
 ///     Vector3::unit_y(),
 ///     PI / 2.0,
 /// );
-/// # let surface = bend_part[0].get_surface();
+/// # let surface = bend_part[0].surface();
 /// pipe.append(&mut bend_part);
 ///
 /// // Get the new wire

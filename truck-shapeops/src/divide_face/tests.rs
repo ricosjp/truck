@@ -7,7 +7,7 @@ const TOL: f64 = 0.05;
 fn line(v0: &Vertex<Point3>, v1: &Vertex<Point3>) -> Edge<Point3, BSplineCurve<Point3>> {
     let curve = BSplineCurve::new(
         KnotVec::bezier_knot(1),
-        vec![v0.get_point(), v1.get_point()],
+        vec![v0.point(), v1.point()],
     );
     Edge::new(v0, v1, curve)
 }
@@ -19,7 +19,7 @@ fn parabola(
 ) -> Edge<Point3, BSplineCurve<Point3>> {
     let curve = BSplineCurve::new(
         KnotVec::bezier_knot(2),
-        vec![v0.get_point(), pt, v1.get_point()],
+        vec![v0.point(), pt, v1.point()],
     );
     Edge::new(v0, v1, curve)
 }
@@ -218,11 +218,11 @@ fn independent_intersection() {
     assert_eq!(or1.len(), 1);
     assert_eq!(unknown1.len(), 1);
 
-    match unknown0[0].get_surface() {
+    match unknown0[0].surface() {
         AlternativeSurface::FirstType(_) => panic!("This face must plane!"),
         AlternativeSurface::SecondType(_) => {}
     }
-    match unknown1[0].get_surface() {
+    match unknown1[0].surface() {
         AlternativeSurface::FirstType(_) => panic!("This face must plane!"),
         AlternativeSurface::SecondType(_) => {}
     }

@@ -27,7 +27,7 @@ fn main() {
     )
     .pop_back()
     .unwrap();
-    let edge3 = Edge::new(edge3.front(), edge0.front(), edge3.get_curve());
+    let edge3 = Edge::new(edge3.front(), edge0.front(), edge3.curve());
     let wire = Wire::from(vec![
         edge3.inverse(),
         edge2.inverse(),

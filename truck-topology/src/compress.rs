@@ -114,7 +114,7 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
         let id = self.vmap.len();
         self.vmap
             .entry(vertex.id())
-            .or_insert_with(|| (id, vertex.get_point()))
+            .or_insert_with(|| (id, vertex.point()))
             .0
     }
 
@@ -126,7 +126,7 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
                 let id = self.emap.len();
                 let front_id = self.get_vid(edge.absolute_front());
                 let back_id = self.get_vid(edge.absolute_back());
-                let curve = edge.get_curve();
+                let curve = edge.curve();
                 let cedge = CompressedEdge {
                     vertices: (front_id, back_id),
                     curve,
@@ -151,7 +151,7 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
                 .map(|wire| self.create_boundary(wire))
                 .collect(),
             orientation: face.orientation(),
-            surface: face.get_surface(),
+            surface: face.surface(),
         }
     }
 

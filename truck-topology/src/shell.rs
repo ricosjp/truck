@@ -102,7 +102,7 @@ impl<P, C, S> Shell<P, C, S> {
         self.face_list.append(&mut other.face_list);
     }
 
-    /// Determines the shell conditions: non-regular, regular, oriented, or closed.  
+    /// Determines the shell conditions: non-regular, regular, oriented, or closed.
     /// The complexity increases in proportion to the number of edges.
     ///
     /// Examples for each condition can be found on the page of
@@ -114,8 +114,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// Returns a vector of all boundaries as wires.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1], ()),
@@ -181,7 +181,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// the vector `map[&v]` cosists all vertices which is adjacent to `v`.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// use std::collections::HashSet;
     /// let v = Vertex::news(&[(); 4]);
     /// let edge = [
@@ -221,8 +221,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// the vector `map[&face]` consists all faces adjacent to `face`.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1], ()),
@@ -271,12 +271,12 @@ impl<P, C, S> Shell<P, C, S> {
     /// # Examples
     /// ```
     /// // The empty shell is connected.
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// assert!(Shell::<(), (), ()>::new().is_connected());
     /// ```
     /// ```
     /// // An example of a connected shell
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[(); 4]);
     /// let shared_edge = Edge::new(&v[1], &v[2], ());
     /// let wire0 = Wire::from_iter(vec![
@@ -296,7 +296,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// ```
     /// ```
     /// // An example of a non-connected shell
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[(); 6]);
     /// let wire0 = Wire::from_iter(vec![
     ///     Edge::new(&v[0], &v[1], ()),
@@ -330,7 +330,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// Returns a vector consisting of shells of each connected components.
     /// # Examples
     /// ```
-    /// use truck_topology::Shell;
+    /// # use truck_topology::Shell;
     /// // The empty shell has no connected component.
     /// assert!(Shell::<(), (), ()>::new().connected_components().is_empty());
     /// ```
@@ -339,7 +339,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// are perhaps generated even if the shell is connected. In that case,
     /// there is a pair of faces such that share vertices but not edges.
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[(); 5]);
     /// let wire0 = Wire::from_iter(vec![
     ///     Edge::new(&v[0], &v[1], ()),
@@ -377,8 +377,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// # Examples
     /// ```
     /// // A regular manifold: Mobius bundle
-    /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
     ///
     /// let v = Vertex::news(&[(), (), (), ()]);
     /// let edge = [
@@ -399,8 +399,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// ```
     /// ```
     /// // A closed and connected shell which has a singular vertex.
-    /// use truck_topology::*;
-    /// use truck_topology::shell::*;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::*;
     ///
     /// let v = Vertex::news(&[(); 7]);
     /// let edge = [
@@ -493,7 +493,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// # use truck_topology::*;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4, 5, 6]);
     /// let wire0 = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -527,8 +527,8 @@ impl<P, C, S> Shell<P, C, S> {
     ///
     /// for (face0, face1) in shell0.face_iter().zip(shell1.face_iter()) {
     ///     assert_eq!(
-    ///         face0.get_surface() + 500000,
-    ///         face1.get_surface(),
+    ///         face0.surface() + 500000,
+    ///         face1.surface(),
     ///     );
     ///     assert_eq!(face0.orientation(), face1.orientation());
     ///     let biters0 = face0.boundary_iters();
@@ -536,16 +536,16 @@ impl<P, C, S> Shell<P, C, S> {
     ///     for (biter0, biter1) in biters0.into_iter().zip(biters1) {
     ///         for (edge0, edge1) in biter0.zip(biter1) {
     ///             assert_eq!(
-    ///                 edge0.front().get_point() + 50,
-    ///                 edge1.front().get_point(),
+    ///                 edge0.front().point() + 50,
+    ///                 edge1.front().point(),
     ///             );
     ///             assert_eq!(
-    ///                 edge0.back().get_point() + 50,
-    ///                 edge1.back().get_point(),
+    ///                 edge0.back().point() + 50,
+    ///                 edge1.back().point(),
     ///             );
     ///             assert_eq!(
-    ///                 edge0.get_curve() + 5000,
-    ///                 edge1.get_curve(),
+    ///                 edge0.curve() + 5000,
+    ///                 edge1.curve(),
     ///             );
     ///         }
     ///     }
@@ -694,8 +694,8 @@ impl<P, C, S> Shell<P, C, S> {
     /// Creates display struct for debugging the shell.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
     /// use ShellDisplayFormat as SDF;
     ///
     /// let v = Vertex::news(&[0, 1, 2, 3]);
@@ -826,8 +826,8 @@ pub enum ShellCondition {
     /// This shell is not regular.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
     /// let v = Vertex::news(&[(); 5]);
     /// let edge = [
     ///    Edge::new(&v[0], &v[1], ()),
@@ -851,8 +851,8 @@ pub enum ShellCondition {
     /// All edges are shared by at most two faces.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1], ()),
@@ -880,8 +880,8 @@ pub enum ShellCondition {
     /// The orientations of faces are compatible.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1] ,()),
@@ -909,8 +909,8 @@ pub enum ShellCondition {
     /// All edges are shared by two faces.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
+    /// # use truck_topology::*;
+    /// # use truck_topology::shell::ShellCondition;
     /// let v = Vertex::news(&[(); 8]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1] ,()),

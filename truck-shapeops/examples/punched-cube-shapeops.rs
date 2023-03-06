@@ -15,7 +15,7 @@ fn main() {
     cylinder.not();
     let and = truck_shapeops::and(&cube, &cylinder, 0.05).unwrap();
     and.edge_iter().for_each(|edge| {
-        let mut curve = edge.get_curve();
+        let mut curve = edge.curve();
         if let Curve::IntersectionCurve(inter) = &curve {
             if matches! { inter.leader(), Leader::Polyline(_) } {
                 let flag = curve.to_bspline_leader(0.01, 0.1, 20);

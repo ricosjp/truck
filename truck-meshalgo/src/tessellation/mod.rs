@@ -112,7 +112,7 @@ impl MeshedShape for Shell<Point3, PolylineCurve, Option<PolygonMesh>> {
     fn to_polygon(&self) -> PolygonMesh {
         let mut polygon = PolygonMesh::default();
         self.face_iter().for_each(|face| {
-            if let Some(mut poly) = face.get_surface() {
+            if let Some(mut poly) = face.surface() {
                 if !face.orientation() {
                     poly.invert();
                 }
@@ -291,11 +291,11 @@ pub trait RobustMeshableShape {
     ///
     /// // Simple triangulation fails since some edges do not ride on a cylinder
     /// let poly_shell = shell.triangulation(0.01);
-    /// assert!(poly_shell[0].get_surface().is_none());
+    /// assert!(poly_shell[0].surface().is_none());
     ///
     /// // Robust triangulation!
     /// let poly_shell = shell.robust_triangulation(0.01);
-    /// let poly = poly_shell[0].get_surface().unwrap();
+    /// let poly = poly_shell[0].surface().unwrap();
     /// assert!(!poly.positions().is_empty());
     /// ```
     fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape;

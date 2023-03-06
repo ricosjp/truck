@@ -4,7 +4,7 @@
 //! The following sample code is a description of a topological tetrahedron as a solid model
 //! by this package.
 //! ```
-//! use truck_topology::*;
+//! # use truck_topology::*;
 //!
 //! // Create vertices. A tetrahedron has four vertices.
 //! let v = Vertex::news(&[(), (), (), ()]);
@@ -134,7 +134,7 @@ pub struct Wire<P, C> {
 /// create a different faces each time, even if the boundary wires are the same one.
 /// A face is uniquely identified by their `id`.
 /// ```
-/// use truck_topology::*;
+/// # use truck_topology::*;
 /// let v = Vertex::news(&[(), ()]);
 /// let edge0 = Edge::new(&v[0], &v[1], ());
 /// let edge1 = Edge::new(&v[1], &v[0], ());
@@ -182,7 +182,7 @@ impl<T> RemoveTry<T> for Result<T> {
 /// Since this struct is implemented `Copy` trait,
 /// it is useful to use as a key of hashmaps.
 /// ```
-/// use truck_topology::*;
+/// # use truck_topology::*;
 /// use std::collections::HashMap;
 ///
 /// let v = Vertex::new(0);
@@ -196,16 +196,16 @@ impl<T> RemoveTry<T> for Result<T> {
 /// ```
 /// The id does not changed even if the value of point changes.
 /// ```
-/// use truck_topology::*;
+/// # use truck_topology::*;
 /// let v = Vertex::new(0);
 ///
-/// let entity = v.get_point();
+/// let entity = v.point();
 /// let v_id: VertexID<usize> = v.id();
 ///
 /// // Change the point!
 /// v.set_point(1);
 ///
-/// assert_ne!(entity, v.get_point());
+/// assert_ne!(entity, v.point());
 /// assert_eq!(v_id, v.id());
 /// ```
 pub type VertexID<P> = ID<Mutex<P>>;
@@ -213,7 +213,7 @@ pub type VertexID<P> = ID<Mutex<P>>;
 /// The id that does not depend on the direction of the edge.
 /// # Examples
 /// ```
-/// use truck_topology::*;
+/// # use truck_topology::*;
 /// let v = Vertex::news(&[(), ()]);
 /// let edge0 = Edge::new(&v[0], &v[1], ());
 /// let edge1 = edge0.inverse();
@@ -225,7 +225,7 @@ pub type EdgeID<C> = ID<Mutex<C>>;
 /// The id that does not depend on the direction of the face.
 /// # Examples
 /// ```
-/// use truck_topology::*;
+/// # use truck_topology::*;
 /// let v = Vertex::news(&[(); 3]);
 /// let wire = Wire::from(vec![
 ///     Edge::new(&v[0], &v[1], ()),
