@@ -1,5 +1,4 @@
-use crate::errors::Error;
-use crate::*;
+use crate::{errors::Error, *};
 use thiserror::Error;
 
 impl<P, C> Edge<P, C> {
@@ -253,7 +252,7 @@ impl<P, C> Edge<P, C> {
     #[inline(always)]
     pub fn curve(&self) -> C
     where C: Clone {
-        self.curve.lock().unwrap().clone()
+        self.curve.lock().clone()
     }
 
     /// Set the curve.
@@ -276,7 +275,7 @@ impl<P, C> Edge<P, C> {
     /// assert_eq!(edge1.curve(), 1);
     /// ```
     #[inline(always)]
-    pub fn set_curve(&self, curve: C) { *self.curve.lock().unwrap() = curve; }
+    pub fn set_curve(&self, curve: C) { *self.curve.lock() = curve; }
 
     /// Returns the id that does not depend on the direction of the edge.
     /// # Examples
@@ -320,8 +319,8 @@ impl<P, C> Edge<P, C> {
     pub fn oriented_curve(&self) -> C
     where C: Clone + Invertible {
         match self.orientation {
-            true => self.curve.lock().unwrap().clone(),
-            false => self.curve.lock().unwrap().inverse(),
+            true => self.curve.lock().clone(),
+            false => self.curve.lock().inverse(),
         }
     }
 
@@ -339,7 +338,7 @@ impl<P, C> Edge<P, C> {
     ) -> Option<Edge<Q, D>> {
         let v0 = self.absolute_front().try_mapped(&mut point_mapping)?;
         let v1 = self.absolute_back().try_mapped(&mut point_mapping)?;
-        let curve = curve_mapping(&*self.curve.lock().unwrap())?;
+        let curve = curve_mapping(&*self.curve.lock())?;
         let mut edge = Edge::debug_new(&v0, &v1, curve);
         if !self.orientation() {
             edge.invert();
@@ -376,7 +375,7 @@ impl<P, C> Edge<P, C> {
     ) -> Edge<Q, D> {
         let v0 = self.absolute_front().mapped(&mut point_mapping);
         let v1 = self.absolute_back().mapped(&mut point_mapping);
-        let curve = curve_mapping(&*self.curve.lock().unwrap());
+        let curve = curve_mapping(&*self.curve.lock());
         let mut edge = Edge::debug_new(&v0, &v1, curve);
         if edge.orientation() != self.orientation() {
             edge.invert();
@@ -391,11 +390,11 @@ impl<P, C> Edge<P, C> {
     where
         P: Tolerance,
         C: BoundedCurve<Point = P>, {
-        let curve = self.curve.lock().unwrap();
+        let curve = self.curve.lock();
         let geom_front = curve.front();
         let geom_back = curve.back();
-        let top_front = self.absolute_front().point.lock().unwrap();
-        let top_back = self.absolute_back().point.lock().unwrap();
+        let top_front = self.absolute_front().point.lock();
+        let top_back = self.absolute_back().point.lock();
         geom_front.near(&*top_front) && geom_back.near(&*top_back)
     }
 

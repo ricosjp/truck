@@ -36,7 +36,7 @@ impl<P> Vertex<P> {
     #[inline(always)]
     pub fn point(&self) -> P
     where P: Clone {
-        self.point.lock().unwrap().clone()
+        self.point.lock().clone()
     }
 
     /// Sets the point of vertex.
@@ -58,7 +58,7 @@ impl<P> Vertex<P> {
     /// assert_eq!(v1.point(), 1);
     /// ```
     #[inline(always)]
-    pub fn set_point(&self, point: P) { *self.point.lock().unwrap() = point; }
+    pub fn set_point(&self, point: P) { *self.point.lock() = point; }
 
     /// Returns vertex whose point is converted by `point_mapping`.
     /// # Remarks
@@ -70,7 +70,7 @@ impl<P> Vertex<P> {
         &self,
         mut point_mapping: impl FnMut(&P) -> Option<Q>,
     ) -> Option<Vertex<Q>> {
-        Some(Vertex::new(point_mapping(&*self.point.lock().unwrap())?))
+        Some(Vertex::new(point_mapping(&*self.point.lock())?))
     }
 
     /// Returns vertex whose point is converted by `point_mapping`.
@@ -87,7 +87,7 @@ impl<P> Vertex<P> {
     #[doc(hidden)]
     #[inline(always)]
     pub fn mapped<Q>(&self, mut point_mapping: impl FnMut(&P) -> Q) -> Vertex<Q> {
-        Vertex::new(point_mapping(&*self.point.lock().unwrap()))
+        Vertex::new(point_mapping(&*self.point.lock()))
     }
 
     /// Returns the id of the vertex.

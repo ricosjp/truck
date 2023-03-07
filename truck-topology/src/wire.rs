@@ -1,9 +1,10 @@
 use crate::*;
 use rayon::prelude::*;
 use rustc_hash::FxHashSet as HashSet;
-use std::collections::vec_deque;
-use std::collections::VecDeque;
-use std::iter::Peekable;
+use std::{
+    collections::{vec_deque, VecDeque},
+    iter::Peekable,
+};
 use truck_base::entry_map::FxEntryMap as EntryMap;
 
 impl<P, C> Wire<P, C> {
@@ -553,7 +554,7 @@ where
         let vertex0 = vertex_map.entry_or_insert(vf).clone()?;
         let vb = edge.absolute_back();
         let vertex1 = vertex_map.entry_or_insert(vb).clone()?;
-        let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
+        let curve = curve_mapping(&*edge.curve.lock())?;
         Some(Edge::debug_new(&vertex0, &vertex1, curve))
     }
 }
@@ -571,7 +572,7 @@ where
         let vertex0 = vertex_map.entry_or_insert(vf).clone();
         let vb = edge.absolute_back();
         let vertex1 = vertex_map.entry_or_insert(vb).clone();
-        let curve = curve_mapping(&*edge.curve.lock().unwrap());
+        let curve = curve_mapping(&*edge.curve.lock());
         Edge::debug_new(&vertex0, &vertex1, curve)
     }
 }

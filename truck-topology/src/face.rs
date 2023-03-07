@@ -1,6 +1,4 @@
-use crate::errors::Error;
-use crate::wire::EdgeIter;
-use crate::*;
+use crate::{errors::Error, wire::EdgeIter, *};
 use rustc_hash::FxHashMap as HashMap;
 
 impl<P, C, S> Face<P, C, S> {
@@ -417,7 +415,7 @@ impl<P, C, S> Face<P, C, S> {
             .iter()
             .map(|wire| wire.try_mapped(&mut point_mapping, &mut curve_mapping))
             .collect::<Option<Vec<_>>>()?;
-        let surface = surface_mapping(&*self.surface.lock().unwrap())?;
+        let surface = surface_mapping(&*self.surface.lock())?;
         let mut face = Face::debug_new(wires, surface);
         if !self.orientation() {
             face.invert();
@@ -492,7 +490,7 @@ impl<P, C, S> Face<P, C, S> {
             .iter()
             .map(|wire| wire.mapped(&mut point_mapping, &mut curve_mapping))
             .collect();
-        let surface = surface_mapping(&*self.surface.lock().unwrap());
+        let surface = surface_mapping(&*self.surface.lock());
         let mut face = Face::debug_new(wires, surface);
         if !self.orientation() {
             face.invert();
@@ -511,7 +509,7 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     pub fn surface(&self) -> S
     where S: Clone {
-        self.surface.lock().unwrap().clone()
+        self.surface.lock().clone()
     }
 
     /// Sets the surface of face.
@@ -539,7 +537,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_eq!(face1.surface(), 1);
     /// ```
     #[inline(always)]
-    pub fn set_surface(&self, surface: S) { *self.surface.lock().unwrap() = surface; }
+    pub fn set_surface(&self, surface: S) { *self.surface.lock() = surface; }
 
     /// Inverts the direction of the face.
     /// # Examples
@@ -965,8 +963,8 @@ impl<P, C, S: Clone + Invertible> Face<P, C, S> {
     #[inline(always)]
     pub fn oriented_surface(&self) -> S {
         match self.orientation {
-            true => self.surface.lock().unwrap().clone(),
-            false => self.surface.lock().unwrap().inverse(),
+            true => self.surface.lock().clone(),
+            false => self.surface.lock().inverse(),
         }
     }
 }
@@ -981,10 +979,10 @@ where
     /// and the geometry of edge.
     #[inline(always)]
     pub fn is_geometric_consistent(&self) -> bool {
-        let surface = &*self.surface.lock().unwrap();
+        let surface = &*self.surface.lock();
         self.boundary_iters().into_iter().flatten().all(|edge| {
             let edge_consist = edge.is_geometric_consistent();
-            let curve = &*edge.curve.lock().unwrap();
+            let curve = &*edge.curve.lock();
             let curve_consist = surface.include(curve);
             edge_consist && curve_consist
         })

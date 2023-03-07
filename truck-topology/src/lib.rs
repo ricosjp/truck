@@ -1,8 +1,8 @@
 //! Topological structs: vertex, edge, wire, face, shell, and solid
 //!
 //! ## Examples
-//! The following sample code is a description of a topological tetrahedron as a solid model
-//! by this package.
+//! The following sample code is a description of a topological tetrahedron as
+//! a solid model by this package.
 //! ```
 //! # use truck_topology::*;
 //!
@@ -40,9 +40,10 @@
 //! // The boundaries of a solid must be closed and oriented.
 //! let solid = Solid::new(vec![shell]);
 //! ```
-//! ## Elements and containers
-//! Main structures in `truck_topology` consist 4 topological elements and 2 topological containers.
-//! ### topological elements
+//! ## Elements And Containers
+//! Main structures in `truck_topology` consist four topological elements and
+//! two topological containers.
+//! ### Topological Elements
 //! The following structures are topological elements.
 //!
 //! * [`Vertex`](./struct.Vertex.html)
@@ -50,18 +51,26 @@
 //! * [`Face`](./struct.Face.html)
 //! * [`Solid`](./struct.Solid.html)
 //!
-//! Except `Solid`, each topological element has a unique `id` for each instance.
-//! In higher-level packages, by mapping this `id` to geometric information, you can draw a solid shape.
-//! ### topological containers
+//! Except `Solid`, each topological element has a unique `id` for each
+//! instance. In higher-level packages, by mapping this `id` to geometric
+//! information, you can draw a solid shape.
+//! ### Topological Containers
 //! The following structures are topological container.
 //!
 //! * [`Wire`](./struct.Wire.html)
 //! * [`Shell`](./struct.Shell.html)
 //!
-//! The entities of `Wire` and `Shell` are `std::collections::VecDeque<Edge>` and `std::vec::Vec<Face>`,
-//! respectively, and many methods inherited by `Deref` and `DerefMut`.
-//! These containers are used for creating higher-dimentional topological elements and checked the
-//! regularity (e.g. connectivity, closedness, and so on) before creating these elements.
+//! The entities of `Wire` and `Shell` are `std::collections::VecDeque<Edge>`
+//! and `std::vec::Vec<Face>`, respectively, and many methods inherited by
+//! `Deref` and `DerefMut`. These containers are used for creating
+//! higher-dimentional topological elements and checked the regularity (e.g.
+//! connectivity, closedness, and so on) before creating these elements.
+//!
+//! ## Features
+//!
+//! * `nightly` – Use features available only in a `nightly` toolchain.
+//! * `rclite` – Use of `rclite::Arc` instead of `std::syn::Arc`. The latter
+//!   uses more memory and is potentially slower than the former. On by default.
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]
@@ -76,12 +85,19 @@
     unused_qualifications
 )]
 
-use std::collections::VecDeque;
-use std::fmt::{Debug, Formatter};
-use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex};
+use parking_lot::Mutex;
+use std::{
+    collections::VecDeque,
+    fmt::{Debug, Formatter},
+    hash::{Hash, Hasher},
+};
 use truck_base::{id::ID, tolerance::*};
 use truck_geotrait::*;
+
+#[cfg(feature = "rclite")]
+use rclite::Arc;
+#[cfg(not(feature = "rclite"))]
+use std::sync::Arc;
 
 const SEARCH_PARAMETER_TRIALS: usize = 100;
 
@@ -121,8 +137,8 @@ pub struct Edge<P, C> {
 
 /// Wire, a path or cycle which consists some edges.
 ///
-/// The entity of this struct is `VecDeque<Edge>` and almost methods are inherited from
-/// `VecDeque<Edge>` by `Deref` and `DerefMut` traits.
+/// The entity of this struct is `VecDeque<Edge>` and almost methods are
+/// inherited from `VecDeque<Edge>` by `Deref` and `DerefMut` traits.
 #[derive(Debug)]
 pub struct Wire<P, C> {
     edge_list: VecDeque<Edge<P, C>>,
@@ -404,14 +420,7 @@ pub mod format {
 
     impl<'a, T: Debug> Debug for MutexFmt<'a, T> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            use std::sync::TryLockError;
-            match self.0.try_lock() {
-                Ok(guard) => f.write_fmt(format_args!("{:?}", &&*guard)),
-                Err(TryLockError::Poisoned(err)) => {
-                    f.write_fmt(format_args!("{:?}", &&**err.get_ref()))
-                }
-                Err(TryLockError::WouldBlock) => f.pad("<locked>"),
-            }
+            f.write_fmt(format_args!("{:?}", self.0.lock()))
         }
     }
 }

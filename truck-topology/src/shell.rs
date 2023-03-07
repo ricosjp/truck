@@ -479,7 +479,7 @@ impl<P, C, S> Shell<P, C, S> {
                     .iter()
                     .map(|wire| wire.sub_try_mapped(&mut edge_map))
                     .collect::<Option<Vec<_>>>()?;
-                let surface = surface_mapping(&*face.surface.lock().unwrap())?;
+                let surface = surface_mapping(&*face.surface.lock())?;
                 let mut new_face = Face::debug_new(wires, surface);
                 if !face.orientation() {
                     new_face.invert();
@@ -573,7 +573,7 @@ impl<P, C, S> Shell<P, C, S> {
                     .iter()
                     .map(|wire| wire.sub_mapped(&mut edge_map))
                     .collect();
-                let surface = surface_mapping(&*face.surface.lock().unwrap());
+                let surface = surface_mapping(&*face.surface.lock());
                 let mut new_face = Face::debug_new(wires, surface);
                 if !face.orientation() {
                     new_face.invert();
