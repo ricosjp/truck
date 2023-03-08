@@ -1,10 +1,10 @@
 //! Topological structs: vertex, edge, wire, face, shell, and solid
 //!
 //! ## Examples
-//! The following sample code is a description of a topological tetrahedron as
-//! a solid model by this package.
+//! The following sample code is a description of a topological tetrahedron as a solid model
+//! by this package.
 //! ```
-//! # use truck_topology::*;
+//! use truck_topology::*;
 //!
 //! // Create vertices. A tetrahedron has four vertices.
 //! let v = Vertex::news(&[(), (), (), ()]);
@@ -40,10 +40,9 @@
 //! // The boundaries of a solid must be closed and oriented.
 //! let solid = Solid::new(vec![shell]);
 //! ```
-//! ## Elements And Containers
-//! Main structures in `truck_topology` consist four topological elements and
-//! two topological containers.
-//! ### Topological Elements
+//! ## Elements and containers
+//! Main structures in `truck_topology` consist 4 topological elements and 2 topological containers.
+//! ### Topological elements
 //! The following structures are topological elements.
 //!
 //! * [`Vertex`](./struct.Vertex.html)
@@ -51,23 +50,19 @@
 //! * [`Face`](./struct.Face.html)
 //! * [`Solid`](./struct.Solid.html)
 //!
-//! Except `Solid`, each topological element has a unique `id` for each
-//! instance. In higher-level packages, by mapping this `id` to geometric
-//! information, you can draw a solid shape.
-//! ### Topological Containers
+//! Except `Solid`, each topological element has a unique `id` for each instance.
+//! In higher-level packages, by mapping this `id` to geometric information, you can draw a solid shape.
+//! ### Topological containers
 //! The following structures are topological container.
 //!
 //! * [`Wire`](./struct.Wire.html)
 //! * [`Shell`](./struct.Shell.html)
 //!
-//! The entities of `Wire` and `Shell` are `std::collections::VecDeque<Edge>`
-//! and `std::vec::Vec<Face>`, respectively, and many methods inherited by
-//! `Deref` and `DerefMut`. These containers are used for creating
-//! higher-dimentional topological elements and checked the regularity (e.g.
-//! connectivity, closedness, and so on) before creating these elements.
-//!
+//! The entities of `Wire` and `Shell` are `std::collections::VecDeque<Edge>` and `std::vec::Vec<Face>`,
+//! respectively, and many methods inherited by `Deref` and `DerefMut`.
+//! These containers are used for creating higher-dimentional topological elements and checked the
+//! regularity (e.g. connectivity, closedness, and so on) before creating these elements.
 //! ## Features
-//!
 //! * `nightly` – Use features available only in a `nightly` toolchain.
 //! * `rclite` – Use of `rclite::Arc` instead of `std::syn::Arc`. The latter
 //!   uses more memory and is potentially slower than the former. On by default.
@@ -86,11 +81,9 @@
 )]
 
 use parking_lot::Mutex;
-use std::{
-    collections::VecDeque,
-    fmt::{Debug, Formatter},
-    hash::{Hash, Hasher},
-};
+use std::collections::VecDeque;
+use std::fmt::{Debug, Formatter};
+use std::hash::{Hash, Hasher};
 use truck_base::{id::ID, tolerance::*};
 use truck_geotrait::*;
 
@@ -106,7 +99,7 @@ const SEARCH_PARAMETER_TRIALS: usize = 100;
 /// The constructor `Vertex::new()` creates a different vertex each time.
 /// These vertices are uniquely identified by their `id`.
 /// ```
-/// # use truck_topology::Vertex;
+/// use truck_topology::Vertex;
 /// let v0 = Vertex::new(()); // one vertex
 /// let v1 = Vertex::new(()); // another vertex
 /// assert_ne!(v0, v1); // two vertices are different
@@ -122,7 +115,7 @@ pub struct Vertex<P> {
 /// create a different edge each time, even if the end vertices are the same one.
 /// An edge is uniquely identified by their `id`.
 /// ```
-/// # use truck_topology::*;
+/// use truck_topology::*;
 /// let v = Vertex::news(&[(), ()]);
 /// let edge0 = Edge::new(&v[0], &v[1], ());
 /// let edge1 = Edge::new(&v[0], &v[1], ());
@@ -137,8 +130,8 @@ pub struct Edge<P, C> {
 
 /// Wire, a path or cycle which consists some edges.
 ///
-/// The entity of this struct is `VecDeque<Edge>` and almost methods are
-/// inherited from `VecDeque<Edge>` by `Deref` and `DerefMut` traits.
+/// The entity of this struct is `VecDeque<Edge>` and almost methods are inherited from
+/// `VecDeque<Edge>` by `Deref` and `DerefMut` traits.
 #[derive(Debug)]
 pub struct Wire<P, C> {
     edge_list: VecDeque<Edge<P, C>>,
@@ -150,7 +143,7 @@ pub struct Wire<P, C> {
 /// create a different faces each time, even if the boundary wires are the same one.
 /// A face is uniquely identified by their `id`.
 /// ```
-/// # use truck_topology::*;
+/// use truck_topology::*;
 /// let v = Vertex::news(&[(), ()]);
 /// let edge0 = Edge::new(&v[0], &v[1], ());
 /// let edge1 = Edge::new(&v[1], &v[0], ());
@@ -198,7 +191,7 @@ impl<T> RemoveTry<T> for Result<T> {
 /// Since this struct is implemented `Copy` trait,
 /// it is useful to use as a key of hashmaps.
 /// ```
-/// # use truck_topology::*;
+/// use truck_topology::*;
 /// use std::collections::HashMap;
 ///
 /// let v = Vertex::new(0);
@@ -212,7 +205,7 @@ impl<T> RemoveTry<T> for Result<T> {
 /// ```
 /// The id does not changed even if the value of point changes.
 /// ```
-/// # use truck_topology::*;
+/// use truck_topology::*;
 /// let v = Vertex::new(0);
 ///
 /// let entity = v.point();
@@ -229,7 +222,7 @@ pub type VertexID<P> = ID<Mutex<P>>;
 /// The id that does not depend on the direction of the edge.
 /// # Examples
 /// ```
-/// # use truck_topology::*;
+/// use truck_topology::*;
 /// let v = Vertex::news(&[(), ()]);
 /// let edge0 = Edge::new(&v[0], &v[1], ());
 /// let edge1 = edge0.inverse();
@@ -241,7 +234,7 @@ pub type EdgeID<C> = ID<Mutex<C>>;
 /// The id that does not depend on the direction of the face.
 /// # Examples
 /// ```
-/// # use truck_topology::*;
+/// use truck_topology::*;
 /// let v = Vertex::news(&[(); 3]);
 /// let wire = Wire::from(vec![
 ///     Edge::new(&v[0], &v[1], ()),

@@ -1,10 +1,8 @@
 use crate::*;
 use rayon::prelude::*;
 use rustc_hash::FxHashSet as HashSet;
-use std::{
-    collections::{vec_deque, VecDeque},
-    iter::Peekable,
-};
+use std::collections::{vec_deque, VecDeque};
+use std::iter::Peekable;
 use truck_base::entry_map::FxEntryMap as EntryMap;
 
 impl<P, C> Wire<P, C> {
@@ -64,7 +62,7 @@ impl<P, C> Wire<P, C> {
         }
     }
 
-    /// Returns the front edge. If `self` is empty wire, returns None.
+    /// Returns the front edge. If `self` is empty wire, returns `None`.  
     /// Practically, an alias of the inherited method `VecDeque::front()`.
     #[inline(always)]
     pub fn front_edge(&self) -> Option<&Edge<P, C>> { self.front() }
@@ -83,7 +81,7 @@ impl<P, C> Wire<P, C> {
     #[inline(always)]
     pub fn front_vertex(&self) -> Option<&Vertex<P>> { self.front().map(|edge| edge.front()) }
 
-    /// Returns the back edge. If `self` is empty wire, returns None.
+    /// Returns the back edge. If `self` is empty wire, returns `None`.
     /// Practically, an alias of the inherited method `VecDeque::back()`
     #[inline(always)]
     pub fn back_edge(&self) -> Option<&Edge<P, C>> { self.back() }
@@ -438,7 +436,7 @@ impl<P, C> Wire<P, C> {
     /// whose points are mapped by `point_mapping`.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v = Vertex::news(&[0, 1, 2, 3, 4]);
     /// let wire0: Wire<usize, usize> = vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -672,7 +670,7 @@ pub type EdgeParallelIntoIter<P, C> = <VecDeque<Edge<P, C>> as IntoParallelItera
 /// ```
 /// If the wire is cyclic, the iterator does not arrive at the last vertex.
 /// ```
-/// # use truck_topology::*;
+/// use truck_topology::*;
 /// let v = Vertex::news(&[(); 5]);
 /// let wire = Wire::from(vec![
 ///     Edge::new(&v[0], &v[1], ()),

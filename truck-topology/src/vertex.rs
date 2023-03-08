@@ -4,7 +4,7 @@ impl<P> Vertex<P> {
     /// constructor
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v0 = Vertex::new(()); // a vertex whose geometry is the empty tuple.
     /// let v1 = Vertex::new(()); // another vertex
     /// let v2 = v0.clone(); // a cloned vertex
@@ -21,7 +21,7 @@ impl<P> Vertex<P> {
     /// Creates `len` distinct vertices and return them by vector.
     /// # Examples
     /// ```
-    /// # use truck_topology::Vertex;
+    /// use truck_topology::Vertex;
     /// let v = Vertex::news(&[(), (), ()]);
     /// assert_eq!(v.len(), 3);
     /// assert_ne!(v[0], v[2]);
@@ -42,7 +42,7 @@ impl<P> Vertex<P> {
     /// Sets the point of vertex.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v0 = Vertex::new(0);
     /// let v1 = v0.clone();
     ///
@@ -76,7 +76,7 @@ impl<P> Vertex<P> {
     /// Returns vertex whose point is converted by `point_mapping`.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v0 = Vertex::new(2);
     /// let v1 = v0.mapped(|a| *a as f64 + 0.5);
     /// assert_eq!(v1.point(), 2.5);
@@ -98,7 +98,7 @@ impl<P> Vertex<P> {
     ///
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// // Create one vertex
     /// let v0 = Vertex::new(());
     /// assert_eq!(v0.count(), 1);
@@ -119,7 +119,7 @@ impl<P> Vertex<P> {
     /// Create display struct for debugging the vertex.
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// use VertexDisplayFormat as VDF;
     /// let v = Vertex::new([0, 2]);
     /// assert_eq!(

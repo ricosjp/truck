@@ -12,7 +12,6 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-
 serde = { version = "1.0.152", features = ["derive"] }
 rayon = "1.6.1"
 rustc-hash = "1.1.0"
