@@ -55,12 +55,12 @@ where
     C: BoundedCurve<Point = P> + ParameterDivision1D<Point = P>,
     S: Clone + SearchParameter<D2, Point = P>,
 {
-    let surface = face.get_surface();
-    let pt = wire.front_vertex().unwrap().get_point();
+    let surface = face.surface();
+    let pt = wire.front_vertex().unwrap().point();
     let p: Point2 = surface.search_parameter(pt, None, 100)?.into();
     let vec = wire.edge_iter().try_fold(vec![p], |mut vec, edge| {
         let poly = polys.entry(edge.id()).or_insert_with(|| {
-            let curve = edge.get_curve();
+            let curve = edge.curve();
             let div = curve.parameter_division(curve.parameter_range(), tol).1;
             PolylineCurve(div)
         });
@@ -114,7 +114,7 @@ where
     let vec: Vec<_> = pre_faces
         .into_iter()
         .map(|pre_face| {
-            let surface = face.get_surface();
+            let surface = face.surface();
             let op = pre_face
                 .iter()
                 .find(|chunk| chunk.wire.status() != ShapesOpStatus::Unknown);

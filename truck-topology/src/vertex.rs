@@ -34,9 +34,9 @@ impl<P> Vertex<P> {
 
     /// Returns the point of vertex.
     #[inline(always)]
-    pub fn get_point(&self) -> P
+    pub fn point(&self) -> P
     where P: Clone {
-        self.point.lock().unwrap().clone()
+        self.point.lock().clone()
     }
 
     /// Sets the point of vertex.
@@ -47,18 +47,18 @@ impl<P> Vertex<P> {
     /// let v1 = v0.clone();
     ///
     /// // Two vertices have the same content.
-    /// assert_eq!(v0.get_point(), 0);
-    /// assert_eq!(v1.get_point(), 0);
+    /// assert_eq!(v0.point(), 0);
+    /// assert_eq!(v1.point(), 0);
     ///
     /// // set point
     /// v0.set_point(1);
     ///
     /// // The contents of two vertices are synchronized.
-    /// assert_eq!(v0.get_point(), 1);
-    /// assert_eq!(v1.get_point(), 1);
+    /// assert_eq!(v0.point(), 1);
+    /// assert_eq!(v1.point(), 1);
     /// ```
     #[inline(always)]
-    pub fn set_point(&self, point: P) { *self.point.lock().unwrap() = point; }
+    pub fn set_point(&self, point: P) { *self.point.lock() = point; }
 
     /// Returns vertex whose point is converted by `point_mapping`.
     /// # Remarks
@@ -70,7 +70,7 @@ impl<P> Vertex<P> {
         &self,
         mut point_mapping: impl FnMut(&P) -> Option<Q>,
     ) -> Option<Vertex<Q>> {
-        Some(Vertex::new(point_mapping(&*self.point.lock().unwrap())?))
+        Some(Vertex::new(point_mapping(&*self.point.lock())?))
     }
 
     /// Returns vertex whose point is converted by `point_mapping`.
@@ -79,7 +79,7 @@ impl<P> Vertex<P> {
     /// use truck_topology::*;
     /// let v0 = Vertex::new(2);
     /// let v1 = v0.mapped(|a| *a as f64 + 0.5);
-    /// assert_eq!(v1.get_point(), 2.5);
+    /// assert_eq!(v1.point(), 2.5);
     /// ```
     /// # Remarks
     /// Accessing geometry elements directly in the closure will result in a deadlock.
@@ -87,7 +87,7 @@ impl<P> Vertex<P> {
     #[doc(hidden)]
     #[inline(always)]
     pub fn mapped<Q>(&self, mut point_mapping: impl FnMut(&P) -> Q) -> Vertex<Q> {
-        Vertex::new(point_mapping(&*self.point.lock().unwrap()))
+        Vertex::new(point_mapping(&*self.point.lock()))
     }
 
     /// Returns the id of the vertex.

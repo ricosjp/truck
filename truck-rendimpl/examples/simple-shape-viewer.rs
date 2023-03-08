@@ -138,7 +138,7 @@ impl MyApp {
         let mesh_solid = solid.triangulation(size * 0.005);
         let curves = mesh_solid
             .edge_iter()
-            .map(|edge| edge.get_curve())
+            .map(|edge| edge.curve())
             .collect::<Vec<_>>();
         let polygon_state = PolygonState {
             matrix: mat.invert().unwrap(),

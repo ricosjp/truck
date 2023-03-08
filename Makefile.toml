@@ -39,6 +39,27 @@ args = [
 	"--", "--nocapture",
 ]
 
+[tasks.cpu-nightly-test]
+description = "Tests using only CPU"
+command = "rustup"
+args = [
+	"run",
+	"nightly",
+	"cargo",
+	"test",
+	"-p", "truck-base",
+	"-p", "truck-geotrait",
+	"-p", "truck-geometry",
+	"-p", "truck-topology",
+	"-p", "truck-polymesh",
+	"-p", "truck-meshalgo",
+	"-p", "truck-modeling",
+	"-p", "truck-shapeops",
+	"-p", "truck-stepio",
+	"--features", "derive",
+	"--", "--nocapture",
+]
+
 [tasks.gpu-test]
 description = "Tests using GPU"
 command = "cargo"
@@ -69,6 +90,9 @@ script = [
 
 [tasks.ci-cpu-test]
 dependencies = ["clean", "cpu-test"]
+
+[tasks.ci-cpu-nightly-test]
+dependencies = ["clean", "cpu-nightly-test"]
 
 [tasks.ci-gpu-test]
 dependencies = ["clean", "gpu-release-build-test", "collect-gpu-artifacts"]

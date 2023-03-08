@@ -63,7 +63,7 @@ where
         .map(move |(id, edge)| {
             let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
             let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
-            let curve = edge.get_curve();
+            let curve = edge.curve();
             let poly = PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
             (id, Edge::debug_new(v0, v1, poly))
         })
@@ -85,7 +85,7 @@ where
                 .iter()
                 .map(create_boundary)
                 .collect();
-            let surface = face.get_surface();
+            let surface = face.surface();
             let mut polyline = Polyline::default();
             let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
                 polyline.add_wire(&surface, wire.iter().map(Edge::oriented_curve), &sp)
@@ -125,7 +125,7 @@ where
             let v0 = vmap.entry_or_insert(vf).clone();
             let vb = edge.absolute_back();
             let v1 = vmap.entry_or_insert(vb).clone();
-            let curve = edge.get_curve();
+            let curve = edge.curve();
             let poly = PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
             Edge::debug_new(&v0, &v1, poly)
         },
@@ -148,7 +148,7 @@ where
                         .collect()
                 })
                 .collect();
-            let surface = face.get_surface();
+            let surface = face.surface();
             let mut polyline = Polyline::default();
             let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
                 polyline.add_wire(&surface, wire.iter().map(|edge| edge.oriented_curve()), &sp)

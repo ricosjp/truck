@@ -164,7 +164,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
             .enumerate()
             .flat_map(move |(i, wire)| wire.iter().enumerate().map(move |(j, edge)| (i, j, edge)))
             .find_map(|(i, j, edge)| {
-                let curve = edge.get_curve();
+                let curve = edge.curve();
                 curve.search_parameter(pt, None, 1).and_then(|t| {
                     let kind = ParameterKind::try_new(t, curve.parameter_range())?;
                     Some((i, j, kind))
@@ -183,11 +183,11 @@ impl<P: Copy, C: Clone> Loops<P, C> {
             .for_each(|edge| {
                 let mut new_edge = if edge.absolute_front() == old_vertex {
                     emap.entry(edge.id()).or_insert_with(|| {
-                        Edge::new(new_vertex, edge.absolute_back(), edge.get_curve())
+                        Edge::new(new_vertex, edge.absolute_back(), edge.curve())
                     })
                 } else if edge.absolute_back() == old_vertex {
                     emap.entry(edge.id()).or_insert_with(|| {
-                        Edge::new(edge.absolute_front(), new_vertex, edge.get_curve())
+                        Edge::new(edge.absolute_front(), new_vertex, edge.curve())
                     })
                 } else {
                     return;
@@ -310,7 +310,7 @@ impl<P: Copy + Tolerance, C: Clone> LoopsStore<P, C> {
     where
         C: Cut<Point = P> + SearchParameter<D1, Point = P>,
     {
-        let pt = v.get_point();
+        let pt = v.point();
         let (wire_index, edge_index, kind) = self[loops_index].search_parameter(pt)?;
         match kind {
             ParameterKind::Front => {
@@ -355,26 +355,20 @@ impl<C> LoopsStore<Point3, C> {
                 let old_vertex = self[loops_index][wire_index][edge_index]
                     .absolute_front()
                     .clone();
-                v.set_point(old_vertex.get_point());
+                v.set_point(old_vertex.point());
                 self.change_vertex(&old_vertex, v, emap);
             }
             ParameterKind::Back => {
                 let old_vertex = self[loops_index][wire_index][edge_index]
                     .absolute_back()
                     .clone();
-                v.set_point(old_vertex.get_point());
+                v.set_point(old_vertex.point());
                 self.change_vertex(&old_vertex, v, emap);
             }
             ParameterKind::Inner(_) => {
-                let curve = self[loops_index][wire_index][edge_index].get_curve();
-                let (pt, t, _) = curve_surface_projection(
-                    &curve,
-                    None,
-                    another_surface,
-                    None,
-                    v.get_point(),
-                    100,
-                )?;
+                let curve = self[loops_index][wire_index][edge_index].curve();
+                let (pt, t, _) =
+                    curve_surface_projection(&curve, None, another_surface, None, v.point(), 100)?;
                 v.set_point(pt);
                 let edge = self[loops_index][wire_index][edge_index].absolute_clone();
                 let edge_id = edge.id();
@@ -469,10 +463,10 @@ where
         .try_for_each(|(face_index0, face_index1)| {
             let ori0 = geom_shell0[face_index0].orientation();
             let ori1 = geom_shell1[face_index1].orientation();
-            let surface0 = geom_shell0[face_index0].get_surface();
-            let surface1 = geom_shell1[face_index1].get_surface();
-            let polygon0 = poly_shell0[face_index0].get_surface()?;
-            let polygon1 = poly_shell1[face_index1].get_surface()?;
+            let surface0 = geom_shell0[face_index0].surface();
+            let surface1 = geom_shell1[face_index1].surface();
+            let polygon0 = poly_shell0[face_index0].surface()?;
+            let polygon1 = poly_shell1[face_index1].surface()?;
             intersection_curve::intersection_curves(
                 surface0.clone(),
                 &polygon0,
@@ -521,7 +515,7 @@ where
                             &mut gemap0,
                         )?;
                         let polyline = intersection_curve.editor().leader;
-                        *polyline.first_mut().unwrap() = gv0.get_point();
+                        *polyline.first_mut().unwrap() = gv0.point();
                     }
                     let idx01 =
                         poly_loops_store0.add_polygon_vertex(face_index0, &pv1, &mut pemap1);
@@ -534,7 +528,7 @@ where
                             &mut gemap1,
                         )?;
                         let polyline = intersection_curve.editor().leader;
-                        *polyline.last_mut().unwrap() = gv1.get_point();
+                        *polyline.last_mut().unwrap() = gv1.point();
                     }
                     let idx10 =
                         poly_loops_store1.add_polygon_vertex(face_index1, &pv0, &mut pemap0);
@@ -547,7 +541,7 @@ where
                             &mut gemap0,
                         )?;
                         let polyline = intersection_curve.editor().leader;
-                        *polyline.first_mut().unwrap() = gv0.get_point();
+                        *polyline.first_mut().unwrap() = gv0.point();
                     }
                     let idx11 =
                         poly_loops_store1.add_polygon_vertex(face_index1, &pv1, &mut pemap1);
@@ -560,7 +554,7 @@ where
                             &mut gemap1,
                         )?;
                         let polyline = intersection_curve.editor().leader;
-                        *polyline.last_mut().unwrap() = gv1.get_point();
+                        *polyline.last_mut().unwrap() = gv1.point();
                     }
                     let pedge = Edge::new(&pv0, &pv1, polyline);
                     let gedge = Edge::new(&gv0, &gv1, intersection_curve.into());

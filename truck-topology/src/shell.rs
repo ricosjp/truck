@@ -479,7 +479,7 @@ impl<P, C, S> Shell<P, C, S> {
                     .iter()
                     .map(|wire| wire.sub_try_mapped(&mut edge_map))
                     .collect::<Option<Vec<_>>>()?;
-                let surface = surface_mapping(&*face.surface.lock().unwrap())?;
+                let surface = surface_mapping(&*face.surface.lock())?;
                 let mut new_face = Face::debug_new(wires, surface);
                 if !face.orientation() {
                     new_face.invert();
@@ -527,8 +527,8 @@ impl<P, C, S> Shell<P, C, S> {
     ///
     /// for (face0, face1) in shell0.face_iter().zip(shell1.face_iter()) {
     ///     assert_eq!(
-    ///         face0.get_surface() + 500000,
-    ///         face1.get_surface(),
+    ///         face0.surface() + 500000,
+    ///         face1.surface(),
     ///     );
     ///     assert_eq!(face0.orientation(), face1.orientation());
     ///     let biters0 = face0.boundary_iters();
@@ -536,16 +536,16 @@ impl<P, C, S> Shell<P, C, S> {
     ///     for (biter0, biter1) in biters0.into_iter().zip(biters1) {
     ///         for (edge0, edge1) in biter0.zip(biter1) {
     ///             assert_eq!(
-    ///                 edge0.front().get_point() + 50,
-    ///                 edge1.front().get_point(),
+    ///                 edge0.front().point() + 50,
+    ///                 edge1.front().point(),
     ///             );
     ///             assert_eq!(
-    ///                 edge0.back().get_point() + 50,
-    ///                 edge1.back().get_point(),
+    ///                 edge0.back().point() + 50,
+    ///                 edge1.back().point(),
     ///             );
     ///             assert_eq!(
-    ///                 edge0.get_curve() + 5000,
-    ///                 edge1.get_curve(),
+    ///                 edge0.curve() + 5000,
+    ///                 edge1.curve(),
     ///             );
     ///         }
     ///     }
@@ -573,7 +573,7 @@ impl<P, C, S> Shell<P, C, S> {
                     .iter()
                     .map(|wire| wire.sub_mapped(&mut edge_map))
                     .collect();
-                let surface = surface_mapping(&*face.surface.lock().unwrap());
+                let surface = surface_mapping(&*face.surface.lock());
                 let mut new_face = Face::debug_new(wires, surface);
                 if !face.orientation() {
                     new_face.invert();

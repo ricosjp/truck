@@ -1,8 +1,7 @@
 use crate::*;
 use rayon::prelude::*;
 use rustc_hash::FxHashSet as HashSet;
-use std::collections::vec_deque;
-use std::collections::VecDeque;
+use std::collections::{vec_deque, VecDeque};
 use std::iter::Peekable;
 use truck_base::entry_map::FxEntryMap as EntryMap;
 
@@ -63,7 +62,7 @@ impl<P, C> Wire<P, C> {
         }
     }
 
-    /// Returns the front edge. If `self` is empty wire, returns None.  
+    /// Returns the front edge. If `self` is empty wire, returns `None`.  
     /// Practically, an alias of the inherited method `VecDeque::front()`.
     #[inline(always)]
     pub fn front_edge(&self) -> Option<&Edge<P, C>> { self.front() }
@@ -82,7 +81,7 @@ impl<P, C> Wire<P, C> {
     #[inline(always)]
     pub fn front_vertex(&self) -> Option<&Vertex<P>> { self.front().map(|edge| edge.front()) }
 
-    /// Returns the back edge. If `self` is empty wire, returns None.  
+    /// Returns the back edge. If `self` is empty wire, returns `None`.
     /// Practically, an alias of the inherited method `VecDeque::back()`
     #[inline(always)]
     pub fn back_edge(&self) -> Option<&Edge<P, C>> { self.back() }
@@ -452,15 +451,15 @@ impl<P, C> Wire<P, C> {
     ///
     /// // Check the points
     /// for (v0, v1) in wire0.vertex_iter().zip(wire1.vertex_iter()) {
-    ///     let i = v0.get_point();
-    ///     let j = v1.get_point();
+    ///     let i = v0.point();
+    ///     let j = v1.point();
     ///     assert_eq!(i as f64 + 0.5, j);
     /// }
     ///
     /// // Check the curves and orientation
     /// for (edge0, edge1) in wire0.edge_iter().zip(wire1.edge_iter()) {
-    ///     let i = edge0.get_curve();
-    ///     let j = edge1.get_curve();
+    ///     let i = edge0.curve();
+    ///     let j = edge1.curve();
     ///     assert_eq!(i as f64 + 1000.5, j);
     ///     assert_eq!(edge0.orientation(), edge1.orientation());
     /// }
@@ -553,7 +552,7 @@ where
         let vertex0 = vertex_map.entry_or_insert(vf).clone()?;
         let vb = edge.absolute_back();
         let vertex1 = vertex_map.entry_or_insert(vb).clone()?;
-        let curve = curve_mapping(&*edge.curve.lock().unwrap())?;
+        let curve = curve_mapping(&*edge.curve.lock())?;
         Some(Edge::debug_new(&vertex0, &vertex1, curve))
     }
 }
@@ -571,7 +570,7 @@ where
         let vertex0 = vertex_map.entry_or_insert(vf).clone();
         let vb = edge.absolute_back();
         let vertex1 = vertex_map.entry_or_insert(vb).clone();
-        let curve = curve_mapping(&*edge.curve.lock().unwrap());
+        let curve = curve_mapping(&*edge.curve.lock());
         Edge::debug_new(&vertex0, &vertex1, curve)
     }
 }
@@ -671,7 +670,7 @@ pub type EdgeParallelIntoIter<P, C> = <VecDeque<Edge<P, C>> as IntoParallelItera
 /// ```
 /// If the wire is cyclic, the iterator does not arrive at the last vertex.
 /// ```
-/// # use truck_topology::*;
+/// use truck_topology::*;
 /// let v = Vertex::news(&[(); 5]);
 /// let wire = Wire::from(vec![
 ///     Edge::new(&v[0], &v[1], ()),

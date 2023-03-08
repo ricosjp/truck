@@ -7,15 +7,21 @@ cpu-test:
     stage: test
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
-        CARGO_HOME: $CI_PROJECT_DIR/cargo
     before_script:
         - cargo install cargo-make
     script:
         - cargo make ci-cpu-test
-    cache:
-        key: cpu-test
-        paths:
-          - cargo/
+
+cpu-nightly-test:
+    image: rust:latest
+    stage: test
+    variables:
+        GIT_SUBMODULE_STRATEGY: recursive
+    before_script:
+        - rustup toolchain install nightly
+        - cargo install cargo-make
+    script:
+        - cargo make ci-cpu-nightly-test
 
 gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch

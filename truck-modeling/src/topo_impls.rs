@@ -6,7 +6,7 @@ pub(super) fn create_edge<P: Clone, C: Clone, CP: Fn(&P, &P) -> C>(
     v1: &Vertex<P>,
     connect_points: &CP,
 ) -> C {
-    connect_points(&v0.get_point(), &v1.get_point())
+    connect_points(&v0.point(), &v1.point())
 }
 
 pub(super) fn connect_vertices<P: Clone, C: Clone, CP: Fn(&P, &P) -> C>(
@@ -22,7 +22,7 @@ pub(super) fn create_surface<P: Clone, C: Clone, S: Clone, CC: Fn(&C, &C) -> S>(
     edge1: &Edge<P, C>,
     connect_curves: &CC,
 ) -> S {
-    connect_curves(&edge0.get_curve(), &edge1.get_curve())
+    connect_curves(&edge0.curve(), &edge1.curve())
 }
 
 pub(super) fn connect_edges<

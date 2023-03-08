@@ -1,6 +1,4 @@
-use crate::errors::Error;
-use crate::wire::EdgeIter;
-use crate::*;
+use crate::{errors::Error, wire::EdgeIter, *};
 use rustc_hash::FxHashMap as HashMap;
 
 impl<P, C, S> Face<P, C, S> {
@@ -16,8 +14,8 @@ impl<P, C, S> Face<P, C, S> {
     /// [`Error::NotSimpleWire`]: errors/enum.Error.html#variant.NotSimpleWire
     /// # Examples
     /// ```
-    /// # use truck_topology::*;
-    /// # use errors::Error;
+    /// use truck_topology::*;
+    /// use errors::Error;
     /// let v = Vertex::news(&[(); 4]);
     /// let mut wire = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], ()),
@@ -109,7 +107,7 @@ impl<P, C, S> Face<P, C, S> {
 
     /// Consumes `self` and returns the entity of its boundaries.
     /// ```
-    /// # use truck_topology::*;
+    /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
     /// let wire = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], ()),
@@ -216,7 +214,7 @@ impl<P, C, S> Face<P, C, S> {
     #[inline(always)]
     fn renew_pointer(&mut self)
     where S: Clone {
-        let surface = self.get_surface();
+        let surface = self.surface();
         self.surface = Arc::new(Mutex::new(surface));
     }
 
@@ -417,7 +415,7 @@ impl<P, C, S> Face<P, C, S> {
             .iter()
             .map(|wire| wire.try_mapped(&mut point_mapping, &mut curve_mapping))
             .collect::<Option<Vec<_>>>()?;
-        let surface = surface_mapping(&*self.surface.lock().unwrap())?;
+        let surface = surface_mapping(&*self.surface.lock())?;
         let mut face = Face::debug_new(wires, surface);
         if !self.orientation() {
             face.invert();
@@ -453,26 +451,23 @@ impl<P, C, S> Face<P, C, S> {
     /// #    assert!(wire.is_simple());
     /// # }
     ///
-    /// assert_eq!(
-    ///     face0.get_surface() + 100000,
-    ///     face1.get_surface(),
-    /// );
+    /// assert_eq!(face0.surface() + 100000, face1.surface());
     /// let biters0 = face0.boundary_iters();
     /// let biters1 = face1.boundary_iters();
     /// for (biter0, biter1) in biters0.into_iter().zip(biters1) {
     ///     for (edge0, edge1) in biter0.zip(biter1) {
     ///         assert_eq!(
-    ///             edge0.front().get_point() + 10,
-    ///             edge1.front().get_point(),
+    ///             edge0.front().point() + 10,
+    ///             edge1.front().point(),
     ///         );
     ///         assert_eq!(
-    ///             edge0.back().get_point() + 10,
-    ///             edge1.back().get_point(),
+    ///             edge0.back().point() + 10,
+    ///             edge1.back().point(),
     ///         );
     ///         assert_eq!(edge0.orientation(), edge1.orientation());
     ///         assert_eq!(
-    ///             edge0.get_curve() + 1000,
-    ///             edge1.get_curve(),
+    ///             edge0.curve() + 1000,
+    ///             edge1.curve(),
     ///         );
     ///     }
     /// }
@@ -492,7 +487,7 @@ impl<P, C, S> Face<P, C, S> {
             .iter()
             .map(|wire| wire.mapped(&mut point_mapping, &mut curve_mapping))
             .collect();
-        let surface = surface_mapping(&*self.surface.lock().unwrap());
+        let surface = surface_mapping(&*self.surface.lock());
         let mut face = Face::debug_new(wires, surface);
         if !self.orientation() {
             face.invert();
@@ -509,9 +504,9 @@ impl<P, C, S> Face<P, C, S> {
 
     /// Returns the clone of surface of face.
     #[inline(always)]
-    pub fn get_surface(&self) -> S
+    pub fn surface(&self) -> S
     where S: Clone {
-        self.surface.lock().unwrap().clone()
+        self.surface.lock().clone()
     }
 
     /// Sets the surface of face.
@@ -528,18 +523,18 @@ impl<P, C, S> Face<P, C, S> {
     /// let face1 = face0.clone();
     ///
     /// // Two faces have the same content.
-    /// assert_eq!(face0.get_surface(), 0);
-    /// assert_eq!(face1.get_surface(), 0);
+    /// assert_eq!(face0.surface(), 0);
+    /// assert_eq!(face1.surface(), 0);
     ///
     /// // Set surface
     /// face0.set_surface(1);
     ///
     /// // The contents of two vertices are synchronized.
-    /// assert_eq!(face0.get_surface(), 1);
-    /// assert_eq!(face1.get_surface(), 1);
+    /// assert_eq!(face0.surface(), 1);
+    /// assert_eq!(face1.surface(), 1);
     /// ```
     #[inline(always)]
-    pub fn set_surface(&self, surface: S) { *self.surface.lock().unwrap() = surface; }
+    pub fn set_surface(&self, surface: S) { *self.surface.lock() = surface; }
 
     /// Inverts the direction of the face.
     /// # Examples
@@ -766,7 +761,7 @@ impl<P, C, S> Face<P, C, S> {
         let mut face0 = Face {
             boundaries: self.boundaries.clone(),
             orientation: self.orientation,
-            surface: Arc::new(Mutex::new(self.get_surface())),
+            surface: Arc::new(Mutex::new(self.surface())),
         };
         let wire = &mut face0.boundaries[0];
         let i = wire
@@ -789,7 +784,7 @@ impl<P, C, S> Face<P, C, S> {
         let face1 = Face {
             boundaries: vec![new_wire],
             orientation: self.orientation,
-            surface: Arc::new(Mutex::new(self.get_surface())),
+            surface: Arc::new(Mutex::new(self.surface())),
         };
         Some((face0, face1))
     }
@@ -843,8 +838,8 @@ impl<P, C, S> Face<P, C, S> {
     where
         S: Clone + PartialEq,
         Wire<P, C>: Debug, {
-        let surface = self.get_surface();
-        if surface != other.get_surface() || self.orientation() != other.orientation() {
+        let surface = self.surface();
+        if surface != other.surface() || self.orientation() != other.orientation() {
             return None;
         }
         let mut vemap: HashMap<VertexID<P>, &Edge<P, C>> = self
@@ -965,8 +960,8 @@ impl<P, C, S: Clone + Invertible> Face<P, C, S> {
     #[inline(always)]
     pub fn oriented_surface(&self) -> S {
         match self.orientation {
-            true => self.surface.lock().unwrap().clone(),
-            false => self.surface.lock().unwrap().inverse(),
+            true => self.surface.lock().clone(),
+            false => self.surface.lock().inverse(),
         }
     }
 }
@@ -981,10 +976,10 @@ where
     /// and the geometry of edge.
     #[inline(always)]
     pub fn is_geometric_consistent(&self) -> bool {
-        let surface = &*self.surface.lock().unwrap();
+        let surface = &*self.surface.lock();
         self.boundary_iters().into_iter().flatten().all(|edge| {
             let edge_consist = edge.is_geometric_consistent();
-            let curve = &*edge.curve.lock().unwrap();
+            let curve = &*edge.curve.lock();
             let curve_consist = surface.include(curve);
             edge_consist && curve_consist
         })
@@ -1174,15 +1169,15 @@ fn invert_mapped_face() {
         &move |k: &usize| *k + 100000,
     );
 
-    assert_eq!(face0.get_surface() + 100000, face1.get_surface(),);
+    assert_eq!(face0.surface() + 100000, face1.surface(),);
     assert_eq!(face0.orientation(), face1.orientation());
     let biters0 = face0.boundary_iters();
     let biters1 = face1.boundary_iters();
     for (biter0, biter1) in biters0.into_iter().zip(biters1) {
         for (edge0, edge1) in biter0.zip(biter1) {
-            assert_eq!(edge0.front().get_point() + 10, edge1.front().get_point(),);
-            assert_eq!(edge0.back().get_point() + 10, edge1.back().get_point(),);
-            assert_eq!(edge0.get_curve() + 1000, edge1.get_curve(),);
+            assert_eq!(edge0.front().point() + 10, edge1.front().point(),);
+            assert_eq!(edge0.back().point() + 10, edge1.back().point(),);
+            assert_eq!(edge0.curve() + 1000, edge1.curve(),);
         }
     }
 }
