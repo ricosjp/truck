@@ -367,14 +367,8 @@ impl<C> LoopsStore<Point3, C> {
             }
             ParameterKind::Inner(_) => {
                 let curve = self[loops_index][wire_index][edge_index].curve();
-                let (pt, t, _) = curve_surface_projection(
-                    &curve,
-                    None,
-                    another_surface,
-                    None,
-                    v.point(),
-                    100,
-                )?;
+                let (pt, t, _) =
+                    curve_surface_projection(&curve, None, another_surface, None, v.point(), 100)?;
                 v.set_point(pt);
                 let edge = self[loops_index][wire_index][edge_index].absolute_clone();
                 let edge_id = edge.id();

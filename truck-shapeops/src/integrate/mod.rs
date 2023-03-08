@@ -66,11 +66,7 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     cls1.integrate_by_component();
     let [mut and0, mut or0, unknown0] = cls0.and_or_unknown();
     unknown0.into_iter().try_for_each(|face| {
-        let pt = face.boundaries()[0]
-            .vertex_iter()
-            .next()
-            .unwrap()
-            .point();
+        let pt = face.boundaries()[0].vertex_iter().next().unwrap().point();
         let dir = hash::take_one_unit(pt);
         let count = poly_shell1.iter().try_fold(0, |count, face| {
             let poly = face.surface()?;
@@ -85,11 +81,7 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     })?;
     let [mut and1, mut or1, unknown1] = cls1.and_or_unknown();
     unknown1.into_iter().try_for_each(|face| {
-        let pt = face.boundaries()[0]
-            .vertex_iter()
-            .next()
-            .unwrap()
-            .point();
+        let pt = face.boundaries()[0].vertex_iter().next().unwrap().point();
         let dir = hash::take_one_unit(pt);
         let count = poly_shell0.iter().try_fold(0, |count, face| {
             let poly = face.surface()?;

@@ -24,6 +24,7 @@ cpu-nightly-test:
         GIT_SUBMODULE_STRATEGY: recursive
         CARGO_HOME: $CI_PROJECT_DIR/cargo
     before_script:
+        - rustup toolchain install nightly
         - cargo install cargo-make
     script:
         - cargo make ci-cpu-nightly-test

@@ -5,10 +5,7 @@ use truck_topology::Vertex;
 const TOL: f64 = 0.05;
 
 fn line(v0: &Vertex<Point3>, v1: &Vertex<Point3>) -> Edge<Point3, BSplineCurve<Point3>> {
-    let curve = BSplineCurve::new(
-        KnotVec::bezier_knot(1),
-        vec![v0.point(), v1.point()],
-    );
+    let curve = BSplineCurve::new(KnotVec::bezier_knot(1), vec![v0.point(), v1.point()]);
     Edge::new(v0, v1, curve)
 }
 
@@ -17,10 +14,7 @@ fn parabola(
     v1: &Vertex<Point3>,
     pt: Point3,
 ) -> Edge<Point3, BSplineCurve<Point3>> {
-    let curve = BSplineCurve::new(
-        KnotVec::bezier_knot(2),
-        vec![v0.point(), pt, v1.point()],
-    );
+    let curve = BSplineCurve::new(KnotVec::bezier_knot(2), vec![v0.point(), pt, v1.point()]);
     Edge::new(v0, v1, curve)
 }
 
