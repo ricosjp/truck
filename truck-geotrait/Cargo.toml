@@ -17,7 +17,7 @@ derive = ["truck-geoderive"]
 [dependencies]
 truck-base = { version = "0.4.0", path = "../truck-base" }
 rand = "0.8.5"
-thiserror = "1.0.38"
+thiserror = "1.0.40"
 truck-geoderive = { version = "0.1.0", path = "../truck-geoderive", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

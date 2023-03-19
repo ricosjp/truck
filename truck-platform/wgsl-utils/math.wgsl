@@ -1,5 +1,5 @@
-let PI: f32 = 3.141592653;
-let TAU: f32 = 6.283185307;
+const PI: f32 = 3.141592653;
+const TAU: f32 = 6.283185307;
 
 fn inverse2(m: mat2x2<f32>) -> mat2x2<f32> {
     let det = determinant(m);

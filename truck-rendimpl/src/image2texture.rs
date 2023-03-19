@@ -31,6 +31,7 @@ where
         sample_count: 1,
         dimension: TextureDimension::D2,
         format,
+        view_formats: &[],
         usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
     });
     queue.write_texture(
