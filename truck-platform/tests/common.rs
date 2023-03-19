@@ -120,7 +120,10 @@ impl<'a> Rendered for Plane<'a> {
 
 pub fn init_device(backends: Backends) -> DeviceHandler {
     pollster::block_on(async {
-        let instance = Instance::new(backends);
+        let instance = Instance::new(InstanceDescriptor {
+            backends: backends,
+            dx12_shader_compiler: Default::default(),
+        });
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,
