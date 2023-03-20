@@ -30,9 +30,9 @@ meshalgo-features-buildcheck:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
         - cd truck-meshalgo
-        - cargo check --no-default-features --feature analyzers
-        - cargo check --no-default-features --feature filters
-        - cargo check --no-default-features --feature tessellation
+        - cargo check --no-default-features --features analyzers
+        - cargo check --no-default-features --features filters
+        - cargo check --no-default-features --features tessellation
 
 gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
