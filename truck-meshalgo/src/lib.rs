@@ -19,24 +19,30 @@ use common::*;
 pub mod rexport_polymesh {
     pub use truck_polymesh::*;
 }
-use truck_polymesh::{polygon_mesh::PolygonMeshEditor, StandardVertex as Vertex, *};
+use truck_polymesh::{StandardVertex as Vertex, *};
 
 /// polygon mesh analizers, including
 ///
 /// - determines topological properties: connectivity, boundary extraction, or shell conditions (closed or oriented)
 /// - detects collisions between two meshes and extracts interference lines
 /// - investigates positional relations between mesh and point clouds.
+#[cfg(feature = "analyzers")]
 pub mod analyzers;
 mod common;
 /// Edits meshes. Add normals, optimizing data, and so on.
+#[cfg(feature = "filters")]
 pub mod filters;
 /// Tessellates shapes.
+#[cfg(feature = "tessellation")]
 pub mod tessellation;
 
 /// This module contains all traits and re-exports `truck_polymesh`.
 pub mod prelude {
+    #[cfg(feature = "analyzers")]
     pub use crate::analyzers::*;
+    #[cfg(feature = "filters")]
     pub use crate::filters::*;
     pub use crate::rexport_polymesh::*;
+    #[cfg(feature = "tessellation")]
     pub use crate::tessellation::*;
 }
