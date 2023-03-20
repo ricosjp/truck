@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Separate features for meshalgo.
 - cargo upgrade
 - Remove `get_` prefix and replace `Mutex` and `Arc` more faster and compact mem.
 - JS wrapper of STEP API.

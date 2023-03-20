@@ -23,6 +23,17 @@ cpu-nightly-test:
     script:
         - cargo make ci-cpu-nightly-test
 
+meshalgo-features-buildcheck:
+    image: rust:latest
+    stage: test
+    variables:
+        GIT_SUBMODULE_STRATEGY: recursive
+    script:
+        - cd truck-meshalgo
+        - cargo check --no-default-features --features analyzers
+        - cargo check --no-default-features --features filters
+        - cargo check --no-default-features --features tessellation
+
 gpu-test:
     image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
     stage: test

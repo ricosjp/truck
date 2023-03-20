@@ -8,7 +8,7 @@ homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
 license = "Apache-2.0"
 
-keywords = ["truck", "graphics"]
+keywords = ["truck", "graphics", "mesh", "obj", "stl"]
 categories = ["graphics"]
 exclude = ["examples/**/*.obj"]
 
