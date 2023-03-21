@@ -36,6 +36,10 @@ pub mod filters;
 #[cfg(feature = "tessellation")]
 pub mod tessellation;
 
+/// VTK Output
+#[cfg(feature = "vtk")]
+pub mod vtk;
+
 /// This module contains all traits and re-exports `truck_polymesh`.
 pub mod prelude {
     #[cfg(feature = "analyzers")]
@@ -45,4 +49,6 @@ pub mod prelude {
     pub use crate::rexport_polymesh::*;
     #[cfg(feature = "tessellation")]
     pub use crate::tessellation::*;
+    #[cfg(feature = "vtk")]
+    pub use crate::vtk::*;
 }
