@@ -10,36 +10,37 @@ pub trait ToDataSet {
     fn to_data_set(&self) -> DataSet;
 }
 
+fn to_vertex_numbers(faces: &Faces<usize>) -> VertexNumbers {
+    let connectivity = faces
+        .face_iter()
+        .flat_map(|face| face.iter().map(|idx| *idx as u64))
+        .collect::<Vec<_>>();
+    let mut offset: u64 = 0;
+    let offsets = faces
+        .face_iter()
+        .map(|face| {
+            offset += face.len() as u64;
+            offset
+        })
+        .collect::<Vec<_>>();
+    VertexNumbers::XML {
+        connectivity,
+        offsets,
+    }
+}
+
 impl ToDataSet for PolygonMesh<usize, Vec<Point3>> {
     fn to_data_set(&self) -> DataSet {
         let flatten_points = self
             .attributes()
             .iter()
-            .flat_map(|p| AsRef::<[f64; 3]>::as_ref(p))
-            .copied()
+            .flat_map(|p| Into::<[f64; 3]>::into(*p))
             .collect::<Vec<_>>();
-        let points = IOBuffer::F64(flatten_points);
-        let connectivity = self
-            .face_iter()
-            .flat_map(|face| face.iter().map(|idx| *idx as u64))
-            .collect::<Vec<_>>();
-        let mut offset: u64 = 0;
-        let offsets = self
-            .face_iter()
-            .map(|face| {
-                offset += face.len() as u64;
-                offset
-            })
-            .collect::<Vec<_>>();
-        let polys = Some(VertexNumbers::XML {
-            connectivity,
-            offsets,
-        });
         DataSet::PolyData {
             meta: None,
             pieces: vec![Piece::Inline(Box::new(PolyDataPiece {
-                points,
-                polys,
+                points: IOBuffer::F64(flatten_points),
+                polys: Some(to_vertex_numbers(self.faces())),
                 ..Default::default()
             }))],
         }
@@ -51,42 +52,23 @@ impl ToDataSet for PolygonMesh<usize, Vec<(Point3, Vector2)>> {
         let flatten_points = self
             .attributes()
             .iter()
-            .flat_map(|(p, _)| AsRef::<[f64; 3]>::as_ref(p))
-            .copied()
+            .flat_map(|(p, _)| Into::<[f64; 3]>::into(*p))
             .collect::<Vec<_>>();
-        let points = IOBuffer::F64(flatten_points);
         let flatten_uvs = self
             .attributes()
             .iter()
-            .flat_map(|(_, uv)| AsRef::<[f64; 2]>::as_ref(uv))
-            .copied()
+            .flat_map(|(_, uv)| Into::<[f64; 2]>::into(*uv))
             .collect::<Vec<_>>();
         let uvs = Attribute::DataArray(DataArray {
             name: "TCoords".to_owned(),
             elem: ElementType::TCoords(2),
             data: IOBuffer::F64(flatten_uvs),
         });
-        let connectivity = self
-            .face_iter()
-            .flat_map(|face| face.iter().map(|idx| *idx as u64))
-            .collect::<Vec<_>>();
-        let mut offset: u64 = 0;
-        let offsets = self
-            .face_iter()
-            .map(|face| {
-                offset += face.len() as u64;
-                offset
-            })
-            .collect::<Vec<_>>();
-        let polys = Some(VertexNumbers::XML {
-            connectivity,
-            offsets,
-        });
         DataSet::PolyData {
             meta: None,
             pieces: vec![Piece::Inline(Box::new(PolyDataPiece {
-                points,
-                polys,
+                points: IOBuffer::F64(flatten_points),
+                polys: Some(to_vertex_numbers(self.faces())),
                 data: Attributes {
                     point: vec![uvs],
                     ..Default::default()
@@ -102,42 +84,23 @@ impl ToDataSet for PolygonMesh<usize, Vec<(Point3, Vector3)>> {
         let flatten_points = self
             .attributes()
             .iter()
-            .flat_map(|(p, _)| AsRef::<[f64; 3]>::as_ref(p))
-            .copied()
+            .flat_map(|(p, _)| Into::<[f64; 3]>::into(*p))
             .collect::<Vec<_>>();
-        let points = IOBuffer::F64(flatten_points);
         let flatten_normals = self
             .attributes()
             .iter()
-            .flat_map(|(_, n)| AsRef::<[f64; 3]>::as_ref(n))
-            .copied()
+            .flat_map(|(_, n)| Into::<[f64; 3]>::into(*n))
             .collect::<Vec<_>>();
         let normals = Attribute::DataArray(DataArray {
             name: "Normals".to_owned(),
             elem: ElementType::Normals,
             data: IOBuffer::F64(flatten_normals),
         });
-        let connectivity = self
-            .face_iter()
-            .flat_map(|face| face.iter().map(|idx| *idx as u64))
-            .collect::<Vec<_>>();
-        let mut offset: u64 = 0;
-        let offsets = self
-            .face_iter()
-            .map(|face| {
-                offset += face.len() as u64;
-                offset
-            })
-            .collect::<Vec<_>>();
-        let polys = Some(VertexNumbers::XML {
-            connectivity,
-            offsets,
-        });
         DataSet::PolyData {
             meta: None,
             pieces: vec![Piece::Inline(Box::new(PolyDataPiece {
-                points,
-                polys,
+                points: IOBuffer::F64(flatten_points),
+                polys: Some(to_vertex_numbers(self.faces())),
                 data: Attributes {
                     point: vec![normals],
                     ..Default::default()
@@ -150,23 +113,18 @@ impl ToDataSet for PolygonMesh<usize, Vec<(Point3, Vector3)>> {
 
 impl ToDataSet for PolygonMesh<usize, Vec<StandardAttribute>> {
     fn to_data_set(&self) -> DataSet {
-        const NAN2: [f64; 2] = [f64::NAN; 2];
-        const NAN3: [f64; 3] = [f64::NAN; 3];
         let flatten_points = self
             .attributes()
             .iter()
-            .flat_map(|attr| AsRef::<[f64; 3]>::as_ref(&attr.position))
-            .copied()
+            .flat_map(|attr| Into::<[f64; 3]>::into(attr.position))
             .collect::<Vec<_>>();
-        let points = IOBuffer::F64(flatten_points);
         let flatten_uvs = self
             .attributes()
             .iter()
-            .flat_map(|attr| match &attr.uv_coord {
-                Some(uv) => AsRef::<[f64; 2]>::as_ref(uv),
-                None => &NAN2,
+            .flat_map(|attr| match attr.uv_coord {
+                Some(uv) => Into::<[f64; 2]>::into(uv),
+                None => [f64::NAN; 2],
             })
-            .copied()
             .collect::<Vec<_>>();
         let uvs = Attribute::DataArray(DataArray {
             name: "TCoords".to_owned(),
@@ -176,38 +134,21 @@ impl ToDataSet for PolygonMesh<usize, Vec<StandardAttribute>> {
         let flatten_normals = self
             .attributes()
             .iter()
-            .flat_map(|attr| match &attr.normal {
-                Some(normal) => AsRef::<[f64; 3]>::as_ref(normal),
-                None => &NAN3,
+            .flat_map(|attr| match attr.normal {
+                Some(normal) => Into::<[f64; 3]>::into(normal),
+                None => [f64::NAN; 3],
             })
-            .copied()
             .collect::<Vec<_>>();
         let normals = Attribute::DataArray(DataArray {
             name: "Normals".to_owned(),
             elem: ElementType::Normals,
             data: IOBuffer::F64(flatten_normals),
         });
-        let connectivity = self
-            .face_iter()
-            .flat_map(|face| face.iter().map(|idx| *idx as u64))
-            .collect::<Vec<_>>();
-        let mut offset: u64 = 0;
-        let offsets = self
-            .face_iter()
-            .map(|face| {
-                offset += face.len() as u64;
-                offset
-            })
-            .collect::<Vec<_>>();
-        let polys = Some(VertexNumbers::XML {
-            connectivity,
-            offsets,
-        });
         DataSet::PolyData {
             meta: None,
             pieces: vec![Piece::Inline(Box::new(PolyDataPiece {
-                points,
-                polys,
+                points: IOBuffer::F64(flatten_points),
+                polys: Some(to_vertex_numbers(self.faces())),
                 data: Attributes {
                     point: vec![uvs, normals],
                     ..Default::default()
