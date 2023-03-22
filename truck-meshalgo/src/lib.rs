@@ -38,6 +38,7 @@ pub mod tessellation;
 
 /// VTK Output
 #[cfg(feature = "vtk")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod vtk;
 
 /// This module contains all traits and re-exports `truck_polymesh`.
@@ -50,5 +51,6 @@ pub mod prelude {
     #[cfg(feature = "tessellation")]
     pub use crate::tessellation::*;
     #[cfg(feature = "vtk")]
+    #[cfg(not(target_arch = "wasm32"))]
     pub use crate::vtk::*;
 }
