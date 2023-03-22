@@ -14,7 +14,8 @@ categories = ["graphics"]
 analyzers = []
 filters = []
 tessellation = ["spade", "filters"]
-default = ["analyzers", "filters", "tessellation"]
+vtk = ["vtkio"]
+default = ["analyzers", "filters", "tessellation", "vtk"]
 
 [dependencies]
 derive_more = "0.99.17"
@@ -26,6 +27,7 @@ truck-topology = { version = "0.5.0", path = "../truck-topology" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = "1.7.0"
+vtkio = { version = "0.6.3", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"

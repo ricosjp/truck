@@ -106,7 +106,7 @@ impl<V: Copy + Debug, A: Attributes<V>> PolygonMesh<V, A> {
 }
 
 impl PolygonMesh {
-    /// Returns polygonmesh merged `self` and `mesh`.
+    /// Returns a polygon mesh merged `self` and `mesh`.
     pub fn merge(&mut self, mut mesh: PolygonMesh) {
         let n_pos = self.positions().len();
         let n_uv = self.uv_coords().len();
@@ -126,6 +126,34 @@ impl PolygonMesh {
     /// Creates the bounding box of the polygon mesh.
     #[inline(always)]
     pub fn bounding_box(&self) -> BoundingBox<Point3> { self.positions().iter().collect() }
+    /// Returns a polygon mesh with only positions information.
+    #[inline(always)]
+    pub fn to_positions_mesh(&self) -> PolygonMesh<usize, Vec<Point3>> {
+        let faces = self.faces();
+        let tri_faces = faces
+            .tri_faces()
+            .iter()
+            .map(|face| [face[0].pos, face[1].pos, face[2].pos])
+            .collect::<Vec<_>>();
+        let quad_faces = faces
+            .quad_faces()
+            .iter()
+            .map(|face| [face[0].pos, face[1].pos, face[2].pos, face[3].pos])
+            .collect::<Vec<_>>();
+        let other_faces = faces
+            .other_faces()
+            .iter()
+            .map(|face| face.iter().map(|x| x.pos).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+        PolygonMesh {
+            attributes: self.positions().clone(),
+            faces: Faces {
+                tri_faces,
+                quad_faces,
+                other_faces,
+            },
+        }
+    }
 }
 
 impl Invertible for PolygonMesh {
