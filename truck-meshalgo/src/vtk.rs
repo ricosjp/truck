@@ -1,4 +1,7 @@
 use crate::*;
+use rustc_hash::FxHashMap as HashMap;
+use truck_base::tolerance::TOLERANCE;
+use truck_topology::*;
 pub use vtkio;
 use vtkio::model::{Attributes, *};
 
@@ -184,5 +187,112 @@ impl ToDataSet for PolygonMesh {
                 .to_data_set(),
             (false, false) => self.expands(std::convert::identity).to_data_set(),
         }
+    }
+}
+
+fn hash_point(p: Point3) -> Option<[i64; 3]> {
+    (p / (TOLERANCE * 2.0) - Vector3::new(0.5, 0.5, 0.5))
+        .cast()
+        .map(Into::into)
+}
+
+impl ToDataSet for Shell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>> {
+    fn to_data_set(&self) -> DataSet {
+        let pieces = self
+            .face_iter()
+            .filter_map(|face| {
+                let polygon = match face.orientation() {
+                    true => face.surface()?,
+                    false => face.surface()?.inverse(),
+                }
+                .expands(std::convert::identity);
+                let mut length = 0;
+                let map: HashMap<Option<[i64; 3]>, usize> = polygon
+                    .attributes()
+                    .iter()
+                    .map(move |attr| {
+                        length += 1;
+                        (hash_point(attr.position), length - 1)
+                    })
+                    .collect();
+                let flatten_points = polygon
+                    .attributes()
+                    .iter()
+                    .flat_map(|attr| Into::<[f64; 3]>::into(attr.position))
+                    .collect::<Vec<_>>();
+                let flatten_uvs = polygon
+                    .attributes()
+                    .iter()
+                    .flat_map(|attr| match attr.uv_coord {
+                        Some(uv) => Into::<[f64; 2]>::into(uv),
+                        None => [f64::NAN; 2],
+                    })
+                    .collect::<Vec<_>>();
+                let uvs = Attribute::DataArray(DataArray {
+                    name: "TCoords".to_owned(),
+                    elem: ElementType::TCoords(2),
+                    data: IOBuffer::F64(flatten_uvs),
+                });
+                let flatten_normals = polygon
+                    .attributes()
+                    .iter()
+                    .flat_map(|attr| match attr.normal {
+                        Some(normal) => Into::<[f64; 3]>::into(normal),
+                        None => [f64::NAN; 3],
+                    })
+                    .collect::<Vec<_>>();
+                let normals = Attribute::DataArray(DataArray {
+                    name: "Normals".to_owned(),
+                    elem: ElementType::Normals,
+                    data: IOBuffer::F64(flatten_normals),
+                });
+                let mut cell_verts = to_vertex_numbers(polygon.faces());
+                let mut types = vec![CellType::Polygon; cell_verts.num_cells()];
+                face.boundaries().into_iter().try_for_each(|wire| {
+                    types.push(CellType::PolyLine);
+                    let mut polyline = wire
+                        .into_iter()
+                        .flat_map(|edge| {
+                            let mut curve = edge.oriented_curve().0;
+                            curve.pop();
+                            curve
+                                .into_iter()
+                                .map(|p| map.get(&hash_point(p)).map(|i| *i as u64))
+                        })
+                        .collect::<Option<Vec<_>>>()?;
+                    polyline.push(polyline[0]);
+                    if let VertexNumbers::XML {
+                        connectivity,
+                        offsets,
+                    } = &mut cell_verts
+                    {
+                        connectivity.extend(polyline);
+                        offsets.push(connectivity.len() as u64);
+                    }
+                    Some(())
+                });
+                face.vertex_iter().try_for_each(|v| {
+                    let idx = map.get(&hash_point(v.point())).map(|i| *i as u64)?;
+                    if let VertexNumbers::XML {
+                        connectivity,
+                        offsets,
+                    } = &mut cell_verts
+                    {
+                        connectivity.push(idx);
+                        offsets.push(connectivity.len() as u64)
+                    }
+                    Some(())
+                });
+                Some(Piece::Inline(Box::new(UnstructuredGridPiece {
+                    points: IOBuffer::F64(flatten_points),
+                    cells: Cells { cell_verts, types },
+                    data: Attributes {
+                        point: vec![uvs, normals],
+                        ..Default::default()
+                    },
+                })))
+            })
+            .collect::<Vec<_>>();
+        DataSet::UnstructuredGrid { meta: None, pieces }
     }
 }

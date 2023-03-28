@@ -75,3 +75,12 @@ fn simple_cube() {
     let dataset = mesh.to_data_set();
     assert_eq!(dataset, vtk_simple_cube());
 }
+
+#[test]
+fn bottle() {
+    const BOTTLE: &[u8] = include_bytes!("../../resources/shape/bottle.json");
+    let solid: truck_modeling::Solid = serde_json::from_slice(BOTTLE).unwrap();
+    let shell = solid.into_boundaries().pop().unwrap();
+    let mesh = shell.triangulation(0.01);
+    let _vtk = mesh.to_data_set();
+}
