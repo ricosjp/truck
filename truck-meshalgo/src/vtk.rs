@@ -196,14 +196,14 @@ fn hash_point(p: Point3) -> Option<[i64; 3]> {
         .map(Into::into)
 }
 
-impl ToDataSet for Shell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>> {
+impl ToDataSet for Shell<Point3, PolylineCurve<Point3>, PolygonMesh> {
     fn to_data_set(&self) -> DataSet {
         let pieces = self
             .face_iter()
-            .filter_map(|face| {
+            .map(|face| {
                 let polygon = match face.orientation() {
-                    true => face.surface()?,
-                    false => face.surface()?.inverse(),
+                    true => face.surface(),
+                    false => face.surface().inverse(),
                 }
                 .expands(std::convert::identity);
                 let mut length = 0;
@@ -248,19 +248,12 @@ impl ToDataSet for Shell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>> {
                 });
                 let mut cell_verts = to_vertex_numbers(polygon.faces());
                 let mut types = vec![CellType::Polygon; cell_verts.num_cells()];
-                face.boundaries().into_iter().try_for_each(|wire| {
+                face.boundaries().into_iter().flatten().for_each(|edge| {
                     types.push(CellType::PolyLine);
-                    let mut polyline = wire
+                    let curve = edge.oriented_curve().0;
+                    let polyline = curve
                         .into_iter()
-                        .flat_map(|edge| {
-                            let mut curve = edge.oriented_curve().0;
-                            curve.pop();
-                            curve
-                                .into_iter()
-                                .map(|p| map.get(&hash_point(p)).map(|i| *i as u64))
-                        })
-                        .collect::<Option<Vec<_>>>()?;
-                    polyline.push(polyline[0]);
+                        .filter_map(|p| map.get(&hash_point(p)).map(|i| *i as u64));
                     if let VertexNumbers::XML {
                         connectivity,
                         offsets,
@@ -269,9 +262,9 @@ impl ToDataSet for Shell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>> {
                         connectivity.extend(polyline);
                         offsets.push(connectivity.len() as u64);
                     }
-                    Some(())
                 });
                 face.vertex_iter().try_for_each(|v| {
+                    types.push(CellType::Vertex);
                     let idx = map.get(&hash_point(v.point())).map(|i| *i as u64)?;
                     if let VertexNumbers::XML {
                         connectivity,
@@ -283,14 +276,14 @@ impl ToDataSet for Shell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>> {
                     }
                     Some(())
                 });
-                Some(Piece::Inline(Box::new(UnstructuredGridPiece {
+                Piece::Inline(Box::new(UnstructuredGridPiece {
                     points: IOBuffer::F64(flatten_points),
                     cells: Cells { cell_verts, types },
                     data: Attributes {
                         point: vec![uvs, normals],
                         ..Default::default()
                     },
-                })))
+                }))
             })
             .collect::<Vec<_>>();
         DataSet::UnstructuredGrid { meta: None, pieces }
