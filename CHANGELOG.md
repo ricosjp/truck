@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Refactor and renew test for `truck_modeling::geom_impl` by `proptest`.
 - Output `PolygonMesh` to `vtp` files.
 - Separate features for meshalgo.
 - cargo upgrade
