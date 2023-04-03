@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Output `Shell<Point3, PolylineCurve, PolygonMesh>` to `vtu` files.
 - Output `PolygonMesh` to `vtp` files.
 - Separate features for meshalgo.
 - cargo upgrade
