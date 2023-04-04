@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Refactor and renew test for `truck_modeling::geom_impl` by `proptest`.
 - Output `Shell<Point3, PolylineCurve, PolygonMesh>` to `vtu` files.
 - Output `PolygonMesh` to `vtp` files.
 - Separate features for meshalgo.

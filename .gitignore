@@ -16,3 +16,4 @@ dist/
 *.stp
 *.vtp
 *.vtu
+proptest-regressions/
