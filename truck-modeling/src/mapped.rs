@@ -1,8 +1,6 @@
 use crate::topo_traits::*;
 use truck_topology::*;
 
-/// A trait for a unified definition of the function `mapped`.
-
 impl<P: Clone, C: Clone, S: Clone> Mapped<P, C, S> for Vertex<P> {
     #[inline(always)]
     fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
