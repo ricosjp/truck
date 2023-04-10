@@ -33,6 +33,17 @@ fn sweep<T: Sweep<Point3, Line, Surface>>(elem: &T) -> T::Swept {
     )
 }
 
+fn multi_sweep<T: MultiSweep<Point3, Line, Surface>>(elem: &T) -> T::Swept {
+    elem.multi_sweep(
+        &point_mapping,
+        &curve_mapping,
+        &surface_mapping,
+        &connect_points,
+        &connect_curves,
+        2,
+    )
+}
+
 fn consistent_line(edge: &Edge<Point3, Line>) -> bool {
     let p = edge.front().point();
     let q = edge.back().point();
@@ -51,80 +62,7 @@ fn face_top_normal(face: &Face<Point3, Line, Surface>) -> Vector3 {
         / 2.0
 }
 
-#[test]
-fn vertex_sweep() {
-    let p = Point3::new(0.0, 0.0, 0.0);
-    let q = point_mapping(&p);
-    let edge = sweep(&Vertex::new(p));
-    assert_near!(edge.front().point(), p);
-    assert_near!(edge.back().point(), q);
-    assert!(consistent_line(&edge));
-}
-
-#[test]
-fn edge_sweep() {
-    let p = Point3::new(0.0, 0.0, 0.0);
-    let q = Point3::new(1.0, 0.0, 0.0);
-    let edge = Edge::new(&Vertex::new(p), &Vertex::new(q), Line(p, q));
-
-    let face = sweep(&edge);
-    let boundaries = face.boundaries();
-    assert_eq!(boundaries.len(), 1);
-    let wire = &boundaries[0];
-    assert_near!(face_top_normal(&face), Vector3::unit_z());
-    wire.iter().for_each(|edge| assert!(consistent_line(edge)));
-    let surface = face.oriented_surface();
-    let normal = surface.normal(0.5, 0.5);
-    assert_near!(normal, Vector3::unit_z());
-
-    let face = sweep(&edge.inverse());
-    let boundaries = face.boundaries();
-    assert_eq!(boundaries.len(), 1);
-    let wire = &boundaries[0];
-    assert_near!(face_top_normal(&face), -Vector3::unit_z());
-    wire.iter().for_each(|edge| assert!(consistent_line(edge)));
-    let surface = face.oriented_surface();
-    let normal = surface.normal(0.5, 0.5);
-    assert_near!(normal, -Vector3::unit_z());
-}
-
-#[test]
-fn wire_sweep() {
-    let p = Point3::new(0.0, 0.0, 0.0);
-    let q = Point3::new(1.0, 0.0, 0.0);
-    let r = Point3::new(2.0, 0.0, 0.0);
-
-    let v = Vertex::news([p, q, r]);
-    let wire: Wire<_, _> = vec![
-        Edge::new(&v[0], &v[1], Line(p, q)),
-        Edge::new(&v[2], &v[1], Line(r, q)).inverse(),
-    ]
-    .into();
-    let shell = sweep(&wire);
-
-    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
-    assert_eq!(eset.len(), 7);
-
-    let boundaries = shell[0].boundaries();
-    assert_eq!(boundaries.len(), 1);
-    let wire = &boundaries[0];
-    assert_near!(face_top_normal(&shell[0]), Vector3::unit_z());
-    wire.iter().for_each(|edge| assert!(consistent_line(edge)));
-    let surface = shell[0].oriented_surface();
-    let normal = surface.normal(0.5, 0.5);
-    assert_near!(normal, Vector3::unit_z());
-    let boundaries = shell[1].boundaries();
-    assert_eq!(boundaries.len(), 1);
-    let wire = &boundaries[0];
-    assert_near!(face_top_normal(&shell[1]), Vector3::unit_z());
-    wire.iter().for_each(|edge| assert!(consistent_line(edge)));
-    let surface = shell[0].oriented_surface();
-    let normal = surface.normal(0.5, 0.5);
-    assert_near!(normal, Vector3::unit_z());
-}
-
-#[test]
-fn face_sweep() {
+fn test_face() -> Face<Point3, Line, Surface> {
     let p = [
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(0.0, 0.0, 1.0),
@@ -152,72 +90,10 @@ fn face_sweep() {
         ]
         .into(),
     ];
-    let face = Face::new(wire, Plane::new(p[0], p[1], p[3]).into_bspline());
-
-    let solid = sweep(&face);
-    assert_eq!(solid.boundaries().len(), 1);
-    let shell = &solid.boundaries()[0];
-    assert_eq!(shell.len(), 10);
-    let o = Point3::new(0.5, 0.5, 0.5);
-    shell.face_iter().for_each(|face| {
-        let surface = face.oriented_surface();
-        let vec = surface.subs(0.5, 0.5) - o;
-        let normal = surface.normal(0.5, 0.5);
-        let boundaries = face.boundaries();
-
-        let is_side_plane = vec.y.so_small();
-        let is_inner_side_plane = vec.magnitude() < 0.3 && is_side_plane;
-
-        let expected_normal = vec * if is_inner_side_plane { -4.0 } else { 2.0 };
-        assert_near!(expected_normal, normal);
-        let expected_num_boundaries = if is_side_plane { 1 } else { 2 };
-        assert_eq!(boundaries.len(), expected_num_boundaries);
-        let expected_area = normal
-            * match (is_side_plane, is_inner_side_plane) {
-                (true, true) => 0.5,
-                (true, false) => 1.0,
-                (false, false) => 0.75,
-                (false, true) => unreachable!(),
-            };
-        assert_near!(face_top_normal(face), expected_area);
-        face.edge_iter()
-            .for_each(|edge| assert!(consistent_line(&edge)));
-    });
-
-    let solid = sweep(&face.inverse());
-    assert_eq!(solid.boundaries().len(), 1);
-    let shell = &solid.boundaries()[0];
-    assert_eq!(shell.len(), 10);
-    shell
-        .edge_iter()
-        .for_each(|edge| assert!(consistent_line(&edge)));
-    let o = Point3::new(0.5, 0.5, 0.5);
-    shell.face_iter().for_each(|face| {
-        let surface = face.oriented_surface();
-        let vec = surface.subs(0.5, 0.5) - o;
-        let normal = surface.normal(0.5, 0.5);
-        let boundaries = face.boundaries();
-
-        let is_side_plane = vec.y.so_small();
-        let is_inner_side_plane = vec.magnitude() < 0.3 && is_side_plane;
-
-        let expected_normal = vec * if is_inner_side_plane { 4.0 } else { -2.0 };
-        assert_near!(expected_normal, normal);
-        let expected_num_boundaries = if is_side_plane { 1 } else { 2 };
-        assert_eq!(boundaries.len(), expected_num_boundaries);
-        let expected_area = normal
-            * match (is_side_plane, is_inner_side_plane) {
-                (true, true) => 0.5,
-                (true, false) => 1.0,
-                (false, false) => 0.75,
-                (false, true) => unreachable!(),
-            };
-        assert_near!(face_top_normal(face), expected_area);
-    });
+    Face::new(wire, Plane::new(p[0], p[1], p[3]).into_bspline())
 }
 
-#[test]
-fn shell_test() {
+fn test_shell() -> Shell<Point3, Line, Surface> {
     let p = [
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(0.0, 0.0, 1.0),
@@ -253,12 +129,132 @@ fn shell_test() {
         .into(),
         vec![e[5].clone(), e[2].clone(), e[1].inverse()].into(),
     ];
-    let shell: Shell<_, _, _> = vec![
+    vec![
         Face::new(w[..2].to_vec(), Plane::new(p[0], p[1], p[4]).into_bspline()),
         Face::new(w[2..].to_vec(), Plane::new(p[1], p[3], p[2]).into_bspline()).inverse(),
     ]
-    .into();
+    .into()
+}
 
+#[test]
+fn vertex_sweep() {
+    let p = Point3::new(0.0, 0.0, 0.0);
+    let q = point_mapping(&p);
+    let edge = sweep(&Vertex::new(p));
+    assert_near!(edge.front().point(), p);
+    assert_near!(edge.back().point(), q);
+    assert!(consistent_line(&edge));
+}
+
+#[test]
+fn edge_sweep() {
+    let p = Point3::new(0.0, 0.0, 0.0);
+    let q = Point3::new(1.0, 0.0, 0.0);
+    let edge = Edge::new(&Vertex::new(p), &Vertex::new(q), Line(p, q));
+
+    let face = sweep(&edge);
+    let surface = face.oriented_surface();
+    assert_eq!(face.boundaries().len(), 1);
+    assert_near!(face_top_normal(&face), Vector3::unit_z());
+    assert_near!(surface.normal(0.5, 0.5), Vector3::unit_z());
+    assert!(face.edge_iter().all(|edge| consistent_line(&edge)));
+
+    let face = sweep(&edge.inverse());
+    let surface = face.oriented_surface();
+    assert_eq!(face.boundaries().len(), 1);
+    assert_near!(face_top_normal(&face), -Vector3::unit_z());
+    assert_near!(surface.normal(0.5, 0.5), -Vector3::unit_z());
+    assert!(face.edge_iter().all(|edge| consistent_line(&edge)));
+}
+
+#[test]
+fn wire_sweep() {
+    let p = Point3::new(0.0, 0.0, 0.0);
+    let q = Point3::new(1.0, 0.0, 0.0);
+    let r = Point3::new(2.0, 0.0, 0.0);
+
+    let v = Vertex::news([p, q, r]);
+    let wire: Wire<_, _> = vec![
+        Edge::new(&v[0], &v[1], Line(p, q)),
+        Edge::new(&v[2], &v[1], Line(r, q)).inverse(),
+    ]
+    .into();
+    let shell = sweep(&wire);
+    assert_eq!(shell.len(), 2);
+    assert!(shell.edge_iter().all(|edge| consistent_line(&edge)));
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 7);
+
+    shell.face_iter().for_each(|face| {
+        assert_eq!(face.boundaries().len(), 1);
+        assert_near!(face_top_normal(face), Vector3::unit_z());
+        let surface = face.oriented_surface();
+        let normal = surface.normal(0.5, 0.5);
+        assert_near!(normal, Vector3::unit_z());
+    });
+}
+
+#[test]
+fn face_sweep() {
+    let face = test_face();
+    let solid = sweep(&face);
+    assert_eq!(solid.boundaries().len(), 1);
+    let shell = &solid.boundaries()[0];
+    assert_eq!(shell.len(), 10);
+    assert!(shell.edge_iter().all(|edge| consistent_line(&edge)));
+    let o = Point3::new(0.5, 0.5, 0.5);
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let vec = surface.subs(0.5, 0.5) - o;
+        let normal = surface.normal(0.5, 0.5);
+
+        let is_side_plane = vec.y.so_small();
+        let is_inner_side_plane = vec.magnitude() < 0.3 && is_side_plane;
+
+        let expected_num_boundaries = if is_side_plane { 1 } else { 2 };
+        let expected_normal = vec * if is_inner_side_plane { -4.0 } else { 2.0 };
+        let expected_area = match (is_side_plane, is_inner_side_plane) {
+            (true, true) => 0.5,
+            (true, false) => 1.0,
+            (false, false) => 0.75,
+            (false, true) => unreachable!(),
+        };
+        assert_eq!(face.boundaries().len(), expected_num_boundaries);
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_area * expected_normal);
+    });
+
+    let solid = sweep(&face.inverse());
+    assert_eq!(solid.boundaries().len(), 1);
+    let shell = &solid.boundaries()[0];
+    assert_eq!(shell.len(), 10);
+    assert!(shell.edge_iter().all(|edge| consistent_line(&edge)));
+    let o = Point3::new(0.5, 0.5, 0.5);
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let vec = surface.subs(0.5, 0.5) - o;
+        let normal = surface.normal(0.5, 0.5);
+
+        let is_side_plane = vec.y.so_small();
+        let is_inner_side_plane = vec.magnitude() < 0.3 && is_side_plane;
+
+        let expected_num_boundaries = if is_side_plane { 1 } else { 2 };
+        let expected_normal = vec * if is_inner_side_plane { 4.0 } else { -2.0 };
+        let expected_area = match (is_side_plane, is_inner_side_plane) {
+            (true, true) => 0.5,
+            (true, false) => 1.0,
+            (false, false) => 0.75,
+            (false, true) => unreachable!(),
+        };
+        assert_eq!(face.boundaries().len(), expected_num_boundaries);
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_area * expected_normal);
+    });
+}
+
+#[test]
+fn shell_sweep() {
+    let shell = test_shell();
     let res_sweep = sweep(&shell);
     assert_eq!(res_sweep.len(), 1);
     let solid = res_sweep[0].as_ref().unwrap();
@@ -266,9 +262,7 @@ fn shell_test() {
     let shell = &solid.boundaries()[0];
     assert_eq!(shell.len(), 13);
 
-    shell
-        .edge_iter()
-        .for_each(|edge| assert!(consistent_line(&edge)));
+    assert!(shell.edge_iter().all(|edge| consistent_line(&edge)));
     shell.face_iter().for_each(|face| {
         let surface = face.oriented_surface();
         let p = surface.subs(0.5, 0.5);
@@ -277,7 +271,7 @@ fn shell_test() {
         let is_left_side = p.z < 1.0;
         let is_side_plane = p.y.near(&0.5);
         let is_inner_plane =
-            is_left_side && is_side_plane && (p - Point3::new(0.5, 0.5, 0.5)).magnitude() < 0.3;
+            is_left_side && is_side_plane && Vector2::new(p.z - 0.5, p.x - 0.5).magnitude() < 0.3;
         let is_diagonal_plane = p.near(&Point3::new(0.5, 0.5, 1.5));
 
         let expected_normal = match (
@@ -292,6 +286,198 @@ fn shell_test() {
             (_, false, false, _) => Vector3::new(0.0, p.y - 0.5, 0.0) * 2.0,
             (true, true, false, false) => (p - Point3::new(0.5, 0.5, 0.5)) * 2.0,
             (true, true, true, false) => -(p - Point3::new(0.5, 0.5, 0.5)) * 4.0,
+            (false, true, false, true) => Vector3::new(1.0, 0.0, 1.0).normalize(),
+            (false, true, false, false) => Vector3::new(-1.0, 0.0, 0.0),
+        };
+        let expected_area = match (
+            is_left_side,
+            is_side_plane,
+            is_inner_plane,
+            is_diagonal_plane,
+        ) {
+            (_, false, true, _) => unreachable!(),
+            (true, _, _, true) => unreachable!(),
+            (false, _, true, _) => unreachable!(),
+            (true, false, false, _) => 0.75,
+            (false, false, false, _) => 0.5,
+            (_, true, false, false) => 1.0,
+            (true, true, true, false) => 0.5,
+            (false, true, false, true) => f64::sqrt(2.0),
+        };
+        let expected_num_boundaries = if is_left_side && !is_side_plane { 2 } else { 1 };
+
+        assert_eq!(face.boundaries().len(), expected_num_boundaries);
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_area * expected_normal);
+    });
+}
+
+#[test]
+fn vertex_multi_sweep() {
+    let p = [
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+        Point3::new(0.0, 2.0, 0.0),
+    ];
+    let wire = multi_sweep(&Vertex::new(p[0]));
+    assert_eq!(wire.len(), 2);
+    assert!(wire.vertex_iter().zip(p).all(|(v, p)| v.point().near(&p)));
+    assert_eq!(wire[0].back(), wire[1].front());
+    assert!(wire.edge_iter().all(consistent_line));
+}
+
+#[test]
+fn edge_multi_sweep() {
+    let p = Point3::new(0.0, 0.0, 0.0);
+    let q = Point3::new(1.0, 0.0, 0.0);
+    let edge = Edge::new(&Vertex::new(p), &Vertex::new(q), Line(p, q));
+
+    let shell = multi_sweep(&edge);
+    assert_eq!(shell.len(), 2);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 7);
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        assert_eq!(face.boundaries().len(), 1);
+        assert_near!(face_top_normal(&face), Vector3::unit_z());
+        assert_near!(surface.normal(0.5, 0.5), Vector3::unit_z());
+    });
+
+    let shell = multi_sweep(&edge.inverse());
+    assert_eq!(shell.len(), 2);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 7);
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        assert_eq!(face.boundaries().len(), 1);
+        assert_near!(face_top_normal(&face), -Vector3::unit_z());
+        assert_near!(surface.normal(0.5, 0.5), -Vector3::unit_z());
+    });
+}
+
+#[test]
+fn wire_multi_sweep() {
+    let p = Point3::new(0.0, 0.0, 0.0);
+    let q = Point3::new(1.0, 0.0, 0.0);
+    let r = Point3::new(2.0, 0.0, 0.0);
+
+    let v = Vertex::news([p, q, r]);
+    let wire: Wire<_, _> = vec![
+        Edge::new(&v[0], &v[1], Line(p, q)),
+        Edge::new(&v[2], &v[1], Line(r, q)).inverse(),
+    ]
+    .into();
+    let shell = multi_sweep(&wire);
+    assert_eq!(shell.len(), 4);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 12);
+
+    shell.face_iter().for_each(|face| {
+        assert_eq!(face.boundaries().len(), 1);
+        assert_near!(face_top_normal(face), Vector3::unit_z());
+        let surface = face.oriented_surface();
+        let normal = surface.normal(0.5, 0.5);
+        assert_near!(normal, Vector3::unit_z());
+    });
+}
+
+#[test]
+fn face_multi_sweep() {
+    let face = test_face();
+    let solid = multi_sweep(&face);
+    assert_eq!(solid.boundaries().len(), 1);
+    let shell = &solid.boundaries()[0];
+    assert_eq!(shell.len(), 18);
+    assert!(shell.edge_iter().all(|edge| consistent_line(&edge)));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let y = if p.y < 1.0 { 0.5 } else { 1.5 };
+        let vec = p - Point3::new(0.5, y, 0.5);
+        let normal = surface.normal(0.5, 0.5);
+
+        let is_side_plane = vec.y.so_small();
+        let is_inner_side_plane = vec.magnitude() < 0.3 && is_side_plane;
+
+        let expected_num_boundaries = if is_side_plane { 1 } else { 2 };
+        let expected_normal = vec * if is_inner_side_plane { -4.0 } else { 2.0 };
+        let expected_area = match (is_side_plane, is_inner_side_plane) {
+            (true, true) => 0.5,
+            (true, false) => 1.0,
+            (false, false) => 0.75,
+            (false, true) => unreachable!(),
+        };
+        assert_eq!(face.boundaries().len(), expected_num_boundaries);
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_area * expected_normal);
+    });
+
+    let solid = multi_sweep(&face.inverse());
+    assert_eq!(solid.boundaries().len(), 1);
+    let shell = &solid.boundaries()[0];
+    assert_eq!(shell.len(), 18);
+    assert!(shell.edge_iter().all(|edge| consistent_line(&edge)));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let y = if p.y < 1.0 { 0.5 } else { 1.5 };
+        let vec = p - Point3::new(0.5, y, 0.5);
+        let normal = surface.normal(0.5, 0.5);
+
+        let is_side_plane = vec.y.so_small();
+        let is_inner_side_plane = vec.magnitude() < 0.3 && is_side_plane;
+
+        let expected_num_boundaries = if is_side_plane { 1 } else { 2 };
+        let expected_normal = vec * if is_inner_side_plane { 4.0 } else { -2.0 };
+        let expected_area = match (is_side_plane, is_inner_side_plane) {
+            (true, true) => 0.5,
+            (true, false) => 1.0,
+            (false, false) => 0.75,
+            (false, true) => unreachable!(),
+        };
+        assert_eq!(face.boundaries().len(), expected_num_boundaries);
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_area * expected_normal);
+    });
+}
+
+#[test]
+fn shell_multi_sweep() {
+    let shell = test_shell();
+    let res_sweep = multi_sweep(&shell);
+    assert_eq!(res_sweep.len(), 1);
+    let solid = res_sweep[0].as_ref().unwrap();
+    assert_eq!(solid.boundaries().len(), 1);
+    let shell = &solid.boundaries()[0];
+    assert_eq!(shell.len(), 22);
+
+    assert!(shell.edge_iter().all(|edge| consistent_line(&edge)));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let normal = surface.normal(0.5, 0.5);
+
+        let is_left_side = p.z < 1.0;
+        let is_side_plane = p.y.near(&0.5) || p.y.near(&1.5);
+        let is_inner_plane =
+            is_left_side && is_side_plane && Vector2::new(p.z - 0.5, p.x - 0.5).magnitude() < 0.3;
+        let is_diagonal_plane = is_side_plane && Point2::new(p.z, p.x).near(&Point2::new(1.5, 0.5));
+
+        let expected_normal = match (
+            is_left_side,
+            is_side_plane,
+            is_inner_plane,
+            is_diagonal_plane,
+        ) {
+            (_, false, true, _) => unreachable!(),
+            (true, _, _, true) => unreachable!(),
+            (false, _, true, _) => unreachable!(),
+            (_, false, false, _) => Vector3::new(0.0, p.y - 1.0, 0.0),
+            (true, true, false, false) => Vector3::new(p.x - 0.5, 0.0, p.z - 0.5) * 2.0,
+            (true, true, true, false) => -Vector3::new(p.x - 0.5, 0.0, p.z - 0.5) * 4.0,
             (false, true, false, true) => Vector3::new(1.0, 0.0, 1.0).normalize(),
             (false, true, false, false) => Vector3::new(-1.0, 0.0, 0.0),
         };
