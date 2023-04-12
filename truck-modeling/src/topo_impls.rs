@@ -40,8 +40,15 @@ pub(super) fn connect_edges<
     let edge2 = connect_vertices(edge0.front(), edge1.front(), connect_points);
     let edge3 = connect_vertices(edge0.back(), edge1.back(), connect_points);
     let surface = create_surface(edge0, edge1, connect_curves);
-    let wire: Wire<P, C> = vec![edge0.clone(), edge3, edge1.inverse(), edge2.inverse()].into();
-    Face::debug_new(vec![wire], surface)
+    let wire: Wire<P, C> = match edge0.orientation() {
+        true => vec![edge0.clone(), edge3, edge1.inverse(), edge2.inverse()].into(),
+        false => vec![edge0.inverse(), edge2, edge1.clone(), edge3.inverse()].into(),
+    };
+    let mut face = Face::debug_new(vec![wire], surface);
+    if !edge0.orientation() {
+        face.invert();
+    }
+    face
 }
 
 fn sub_connect_wires<P: Clone, C: Clone, S: Clone, CP: Fn(&P, &P) -> C, CC: Fn(&C, &C) -> S>(

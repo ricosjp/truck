@@ -510,16 +510,17 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
         &move |pt0, pt1| Curve::Line(Line(*pt0, *pt1)),
         &move |curve0, curve1| match (curve0, curve1) {
             (Curve::Line(line), Curve::Line(_)) => {
-                Surface::Plane(Plane::new(line.0, line.1, line.0 + vector))
+                Plane::new(line.0, line.1, line.0 + vector).into()
             }
             (Curve::BSplineCurve(curve0), Curve::BSplineCurve(curve1)) => {
-                Surface::BSplineSurface(BSplineSurface::homotopy(curve0.clone(), curve1.clone()))
+                BSplineSurface::homotopy(curve0.clone(), curve1.clone()).into()
             }
             (Curve::NurbsCurve(curve0), Curve::NurbsCurve(curve1)) => {
-                Surface::NurbsSurface(NurbsSurface::new(BSplineSurface::homotopy(
+                NurbsSurface::new(BSplineSurface::homotopy(
                     curve0.non_rationalized().clone(),
                     curve1.non_rationalized().clone(),
-                )))
+                ))
+                .into()
             }
             (Curve::IntersectionCurve(_), Curve::IntersectionCurve(_)) => unimplemented!(),
             _ => unreachable!(),

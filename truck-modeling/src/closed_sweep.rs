@@ -18,13 +18,15 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Vertex<P> {
         _: &CE,
         division: usize,
     ) -> Self::Swept {
-        let mut wire = Wire::new();
         let mut vertex = self.clone();
-        for _ in 1..division {
-            let new_vertex = vertex.mapped(point_mapping);
-            wire.push_back(connect_vertices(&vertex, &new_vertex, connect_points));
-            vertex = new_vertex;
-        }
+        let mut wire: Wire<P, C> = (1..division)
+            .map(|_| {
+                let new_vertex = vertex.mapped(point_mapping);
+                let edge = connect_vertices(&vertex, &new_vertex, connect_points);
+                vertex = new_vertex;
+                edge
+            })
+            .collect();
         wire.push_back(connect_vertices(&vertex, self, connect_points));
         wire
     }
@@ -46,18 +48,15 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Edge<P, C> {
         connect_curves: &CE,
         division: usize,
     ) -> Self::Swept {
-        let mut shell = Shell::new();
         let mut edge = self.clone();
-        for _ in 1..division {
-            let new_edge = edge.mapped(point_mapping, curve_mapping);
-            shell.push(connect_edges(
-                &edge,
-                &new_edge,
-                connect_points,
-                connect_curves,
-            ));
-            edge = new_edge;
-        }
+        let mut shell: Shell<P, C, S> = (1..division)
+            .map(|_| {
+                let new_edge = edge.mapped(point_mapping, curve_mapping);
+                let face = connect_edges(&edge, &new_edge, connect_points, connect_curves);
+                edge = new_edge;
+                face
+            })
+            .collect();
         shell.push(connect_edges(&edge, self, connect_points, connect_curves));
         shell
     }
@@ -79,18 +78,16 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Wire<P, C> {
         connect_curves: &CE,
         division: usize,
     ) -> Self::Swept {
-        let mut shell = Shell::new();
         let mut wire = self.clone();
-        for _ in 1..division {
-            let new_wire = wire.mapped(point_mapping, curve_mapping);
-            shell.extend(connect_wires(
-                &wire,
-                &new_wire,
-                connect_points,
-                connect_curves,
-            ));
-            wire = new_wire;
-        }
+        let mut shell: Shell<P, C, S> = (1..division)
+            .flat_map(|_| {
+                let new_wire = wire.mapped(point_mapping, curve_mapping);
+                let vec: Vec<_> =
+                    connect_wires(&wire, &new_wire, connect_points, connect_curves).collect();
+                wire = new_wire;
+                vec
+            })
+            .collect();
         shell.extend(connect_wires(&wire, self, connect_points, connect_curves));
         shell
     }
@@ -112,27 +109,21 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Face<P, C, S> {
         connect_curves: &CE,
         division: usize,
     ) -> Self::Swept {
-        let boundaries: Vec<_> = self
-            .boundaries()
-            .iter()
-            .map(move |wire| {
-                let mut shell = wire.closed_sweep(
-                    point_mapping,
-                    curve_mapping,
-                    surface_mapping,
-                    connect_points,
-                    connect_curves,
-                    division,
-                );
-                if !self.orientation() {
-                    shell.iter_mut().for_each(|face| {
-                        face.invert();
-                    });
-                }
-                shell
-            })
-            .collect();
-        Solid::debug_new(boundaries)
+        Solid::debug_new(
+            self.boundaries()
+                .iter()
+                .map(move |wire| {
+                    wire.closed_sweep(
+                        point_mapping,
+                        curve_mapping,
+                        surface_mapping,
+                        connect_points,
+                        connect_curves,
+                        division,
+                    )
+                })
+                .collect(),
+        )
     }
 }
 
@@ -155,21 +146,22 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Shell<P, C, S> {
         self.connected_components()
             .into_iter()
             .map(move |shell| {
-                let bdry = shell
-                    .extract_boundaries()
-                    .iter()
-                    .map(|wire| {
-                        wire.closed_sweep(
-                            point_mapping,
-                            curve_mapping,
-                            surface_mapping,
-                            connect_points,
-                            connect_curves,
-                            division,
-                        )
-                    })
-                    .collect();
-                Solid::try_new(bdry)
+                Solid::try_new(
+                    shell
+                        .extract_boundaries()
+                        .iter()
+                        .map(|wire| {
+                            wire.closed_sweep(
+                                point_mapping,
+                                curve_mapping,
+                                surface_mapping,
+                                connect_points,
+                                connect_curves,
+                                division,
+                            )
+                        })
+                        .collect(),
+                )
             })
             .collect()
     }
