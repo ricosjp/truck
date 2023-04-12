@@ -228,8 +228,7 @@ impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Face<P, C, S> {
         connect_points: &CP,
         connect_curves: &CC,
     ) -> Self::Swept {
-        let mut shell = Shell::new();
-        shell.push(self.inverse());
+        let mut shell = vec![self.inverse()];
         let seiling = self.mapped(point_mapping, curve_mapping, surface_mapping);
         let biter0 = self.boundary_iters().into_iter().flatten();
         let biter1 = seiling.boundary_iters().into_iter().flatten();
@@ -240,7 +239,7 @@ impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Face<P, C, S> {
             connect_curves,
         ));
         shell.push(seiling);
-        Solid::debug_new(vec![shell])
+        Solid::debug_new(vec![shell.into()])
     }
 }
 

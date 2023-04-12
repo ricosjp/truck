@@ -1,7 +1,8 @@
 use std::collections::HashSet;
+use std::f64::consts::PI;
 use truck_geometry::*;
 use truck_modeling::topo_traits::*;
-use truck_topology::*;
+use truck_topology::{shell::ShellCondition, *};
 
 type Line = truck_geometry::Line<Point3>;
 type Surface = BSplineSurface<Point3>;
@@ -499,6 +500,328 @@ fn shell_multi_sweep() {
         let expected_num_boundaries = if is_left_side && !is_side_plane { 2 } else { 1 };
 
         assert_eq!(face.boundaries().len(), expected_num_boundaries);
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_area * expected_normal);
+    });
+}
+
+fn circle_point_mapping(p: &Point3) -> Point3 {
+    Matrix4::from_angle_y(Rad(PI / 2.0)).transform_point(*p)
+}
+
+fn circle_curve_mapping(line: &Line) -> Line {
+    Line(circle_point_mapping(&line.0), circle_point_mapping(&line.1))
+}
+
+fn circle_surface_mapping(surface: &Surface) -> Surface {
+    surface.transformed(Matrix4::from_angle_y(Rad(PI / 2.0)))
+}
+
+fn closed_sweep<T: ClosedSweep<Point3, Line, Surface>>(elem: &T) -> T::Swept {
+    elem.closed_sweep(
+        &circle_point_mapping,
+        &circle_curve_mapping,
+        &circle_surface_mapping,
+        &connect_points,
+        &connect_curves,
+        4,
+    )
+}
+
+#[test]
+fn vertex_closed_sweep() {
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(0.0, 0.0, -1.0),
+        Point3::new(-1.0, 0.0, 0.0),
+    ];
+    let wire = closed_sweep(&Vertex::new(p[0]));
+    assert_eq!(wire.len(), 4);
+    assert!(wire.is_closed() && wire.is_simple());
+    assert!(wire.edge_iter().all(|e| consistent_line(e)));
+    assert_eq!(wire.vertex_iter().count(), 4);
+    assert!(wire.vertex_iter().zip(p).all(|(v, p)| v.point().near(&p)));
+}
+
+#[test]
+fn edge_closed_sweep() {
+    let p = [Point3::new(0.0, 1.0, 1.0), Point3::new(0.0, 0.0, 1.0)];
+    let edge = Edge::new(&Vertex::new(p[0]), &Vertex::new(p[1]), Line(p[0], p[1]));
+
+    let shell = closed_sweep(&edge);
+    assert_eq!(shell.len(), 4);
+    let vset: HashSet<_> = shell.vertex_iter().map(|v| v.id()).collect();
+    assert_eq!(vset.len(), 8);
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 12);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    assert_eq!(shell.extract_boundaries().len(), 2);
+    assert!(matches!(shell.shell_condition(), ShellCondition::Oriented));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let vec = Vector3::new(p.x, 0.0, p.z);
+        let normal = surface.normal(0.5, 0.5);
+        assert_near!(vec * f64::sqrt(2.0), normal);
+        assert_near!(face_top_normal(face), f64::sqrt(2.0) * normal);
+    });
+
+    let shell = closed_sweep(&edge.inverse());
+    assert_eq!(shell.len(), 4);
+    let vset: HashSet<_> = shell.vertex_iter().map(|v| v.id()).collect();
+    assert_eq!(vset.len(), 8);
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 12);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    assert_eq!(shell.extract_boundaries().len(), 2);
+    assert!(matches!(shell.shell_condition(), ShellCondition::Oriented));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let vec = Vector3::new(p.x, 0.0, p.z);
+        let normal = surface.normal(0.5, 0.5);
+        assert_near!(-vec * f64::sqrt(2.0), normal);
+        assert_near!(face_top_normal(face), f64::sqrt(2.0) * normal);
+    });
+}
+
+#[test]
+fn wire_closed_sweep() {
+    let p = [
+        Point3::new(0.0, 2.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 0.0, 1.0),
+    ];
+    let v = Vertex::news(p);
+    let wire: Wire<_, _> = vec![
+        Edge::new(&v[0], &v[1], Line(p[0], p[1])),
+        Edge::new(&v[2], &v[1], Line(p[2], p[1])).inverse(),
+    ]
+    .into();
+
+    let shell = closed_sweep(&wire);
+    assert_eq!(shell.len(), 8);
+    let vset: HashSet<_> = shell.vertex_iter().map(|v| v.id()).collect();
+    assert_eq!(vset.len(), 12);
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 20);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    assert_eq!(shell.extract_boundaries().len(), 2);
+    assert!(matches!(shell.shell_condition(), ShellCondition::Oriented));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let vec = Vector3::new(p.x, 0.0, p.z);
+        let normal = surface.normal(0.5, 0.5);
+        assert_near!(vec * f64::sqrt(2.0), normal);
+        assert_near!(face_top_normal(face), f64::sqrt(2.0) * normal);
+    });
+}
+
+#[test]
+fn face_closed_sweep() {
+    let p = [
+        Point3::new(0.0, 0.0, 2.0),
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 2.0),
+        Point3::new(0.0, 0.25, 1.75),
+        Point3::new(0.0, 0.25, 1.25),
+        Point3::new(0.0, 0.75, 1.25),
+        Point3::new(0.0, 0.75, 1.75),
+    ];
+    let v = Vertex::news(p);
+    let face = Face::new(
+        vec![
+            vec![
+                Edge::new(&v[0], &v[1], Line(p[0], p[1])),
+                Edge::new(&v[2], &v[1], Line(p[2], p[1])).inverse(),
+                Edge::new(&v[2], &v[3], Line(p[2], p[3])),
+                Edge::new(&v[3], &v[0], Line(p[3], p[0])),
+            ]
+            .into(),
+            vec![
+                Edge::new(&v[7], &v[6], Line(p[7], p[6])),
+                Edge::new(&v[6], &v[5], Line(p[6], p[5])),
+                Edge::new(&v[4], &v[5], Line(p[4], p[5])).inverse(),
+                Edge::new(&v[4], &v[7], Line(p[4], p[7])),
+            ]
+            .into(),
+        ],
+        Plane::new(p[0], p[1], p[3]).into_bspline(),
+    );
+
+    let solid = closed_sweep(&face);
+    assert_eq!(solid.boundaries().len(), 2);
+    let shell = &solid.boundaries()[0];
+    assert_eq!(shell.len(), 16);
+    let vset: HashSet<_> = shell.vertex_iter().map(|v| v.id()).collect();
+    assert_eq!(vset.len(), 16);
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 32);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let normal = surface.normal(0.5, 0.5);
+        let vec = Vector3::new(p.x, 0.0, p.z);
+        let (expected_normal, expected_area) = match (p.y.near(&0.5), vec.magnitude() > 1.0) {
+            (true, true) => (vec / f64::sqrt(2.0), 2.0 * f64::sqrt(2.0)),
+            (true, false) => (-vec * f64::sqrt(2.0), f64::sqrt(2.0)),
+            (false, _) => (Vector3::unit_y() * (p.y - 0.5) * 2.0, 1.5),
+        };
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_normal * expected_area);
+    });
+    let shell = &solid.boundaries()[1];
+    assert_eq!(shell.len(), 16);
+    let vset: HashSet<_> = shell.vertex_iter().map(|v| v.id()).collect();
+    assert_eq!(vset.len(), 16);
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 32);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let normal = surface.normal(0.5, 0.5);
+        let vec = Vector3::new(p.x, 0.0, p.z);
+        let (expected_normal, expected_area) = match (p.y.near(&0.5), vec.magnitude() > 1.0) {
+            (true, true) => (
+                -vec / (f64::sqrt(2.0) * 7.0 / 8.0),
+                f64::sqrt(2.0) * 7.0 / 8.0,
+            ),
+            (true, false) => (
+                vec / (f64::sqrt(2.0) * 5.0 / 8.0),
+                f64::sqrt(2.0) * 5.0 / 8.0,
+            ),
+            (false, _) => (Vector3::unit_y() * (0.5 - p.y) * 4.0, 0.75),
+        };
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_normal * expected_area);
+    });
+
+    let solid = closed_sweep(&face.inverse());
+    assert_eq!(solid.boundaries().len(), 2);
+    let shell = &solid.boundaries()[0];
+    assert_eq!(shell.len(), 16);
+    let vset: HashSet<_> = shell.vertex_iter().map(|v| v.id()).collect();
+    assert_eq!(vset.len(), 16);
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 32);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let normal = surface.normal(0.5, 0.5);
+        let vec = Vector3::new(p.x, 0.0, p.z);
+        let (expected_normal, expected_area) = match (p.y.near(&0.5), vec.magnitude() > 1.0) {
+            (true, true) => (-vec / f64::sqrt(2.0), 2.0 * f64::sqrt(2.0)),
+            (true, false) => (vec * f64::sqrt(2.0), f64::sqrt(2.0)),
+            (false, _) => (Vector3::unit_y() * (0.5 - p.y) * 2.0, 1.5),
+        };
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_normal * expected_area);
+    });
+    let shell = &solid.boundaries()[1];
+    assert_eq!(shell.len(), 16);
+    let vset: HashSet<_> = shell.vertex_iter().map(|v| v.id()).collect();
+    assert_eq!(vset.len(), 16);
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 32);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let normal = surface.normal(0.5, 0.5);
+        let vec = Vector3::new(p.x, 0.0, p.z);
+        let (expected_normal, expected_area) = match (p.y.near(&0.5), vec.magnitude() > 1.0) {
+            (true, true) => (
+                vec / (f64::sqrt(2.0) * 7.0 / 8.0),
+                f64::sqrt(2.0) * 7.0 / 8.0,
+            ),
+            (true, false) => (
+                -vec / (f64::sqrt(2.0) * 5.0 / 8.0),
+                f64::sqrt(2.0) * 5.0 / 8.0,
+            ),
+            (false, _) => (Vector3::unit_y() * (p.y - 0.5) * 4.0, 0.75),
+        };
+        assert_near!(normal, expected_normal);
+        assert_near!(face_top_normal(face), expected_normal * expected_area);
+    });
+}
+
+#[test]
+fn shell_closed_sweep() {
+    let p = [
+        Point3::new(0.0, 0.0, 3.0),
+        Point3::new(0.0, 0.0, 2.0),
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 2.0),
+        Point3::new(0.0, 0.25, 1.75),
+        Point3::new(0.0, 0.25, 1.25),
+        Point3::new(0.0, 0.75, 1.25),
+        Point3::new(0.0, 0.75, 1.75),
+    ];
+    let v = Vertex::news(p);
+    let e = [
+        Edge::new(&v[0], &v[1], Line(p[0], p[1])),
+        Edge::new(&v[1], &v[2], Line(p[1], p[2])),
+        Edge::new(&v[3], &v[2], Line(p[3], p[2])).inverse(),
+        Edge::new(&v[3], &v[4], Line(p[3], p[4])),
+        Edge::new(&v[0], &v[4], Line(p[0], p[4])).inverse(),
+        Edge::new(&v[1], &v[4], Line(p[1], p[4])),
+        Edge::new(&v[8], &v[7], Line(p[8], p[7])),
+        Edge::new(&v[7], &v[6], Line(p[7], p[6])),
+        Edge::new(&v[6], &v[5], Line(p[6], p[5])),
+        Edge::new(&v[8], &v[5], Line(p[8], p[5])).inverse(),
+    ];
+    let shell: Shell<_, _, _> = vec![
+        Face::new(
+            vec![
+                vec![e[1].clone(), e[2].clone(), e[3].clone(), e[5].inverse()].into(),
+                vec![e[6].clone(), e[7].clone(), e[8].clone(), e[9].clone()].into(),
+            ],
+            Plane::new(p[1], p[2], p[4]).into_bspline(),
+        ),
+        Face::new(
+            vec![vec![e[4].inverse(), e[5].inverse(), e[0].inverse()].into()],
+            Plane::new(p[1], p[0], p[4]).into_bspline(),
+        )
+        .inverse(),
+    ]
+    .into();
+    let solids = closed_sweep(&shell);
+    assert_eq!(solids.len(), 1);
+    let solid = solids[0].as_ref().unwrap();
+    assert_eq!(solid.boundaries().len(), 2);
+    let shell = &solid.boundaries()[0];
+    assert_eq!(shell.len(), 20);
+    let vset: HashSet<_> = shell.vertex_iter().map(|v| v.id()).collect();
+    assert_eq!(vset.len(), 20);
+    let eset: HashSet<_> = shell.edge_iter().map(|e| e.id()).collect();
+    assert_eq!(eset.len(), 40);
+    assert!(shell.edge_iter().all(|e| consistent_line(&e)));
+    shell.face_iter().for_each(|face| {
+        let surface = face.oriented_surface();
+        let p = surface.subs(0.5, 0.5);
+        let normal = surface.normal(0.5, 0.5);
+
+        let vec = Vector3::new(p.x, 0.0, p.z);
+        let (expected_normal, expected_area) =
+            match (p.y.near(&0.5), vec.magnitude() < f64::sqrt(2.0)) {
+                (true, true) => (-vec * f64::sqrt(2.0), f64::sqrt(2.0)),
+                (true, false) => {
+                    let unit_r = vec / 2.5 * f64::sqrt(2.0);
+                    let normal = (unit_r * f64::sqrt(2.0) + Vector3::unit_y()) / f64::sqrt(3.0);
+                    (normal, 2.5 * f64::sqrt(3.0))
+                }
+                (false, _) => (
+                    Vector3::new(0.0, (p.y - 0.5) * 2.0, 0.0),
+                    vec.magnitude() * f64::sqrt(2.0),
+                ),
+            };
         assert_near!(normal, expected_normal);
         assert_near!(face_top_normal(face), expected_area * expected_normal);
     });

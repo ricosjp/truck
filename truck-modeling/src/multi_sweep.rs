@@ -19,14 +19,15 @@ impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Vertex<P> {
         _: &CE,
         division: usize,
     ) -> Self::Swept {
-        let mut wire = Wire::new();
         let mut vertex = self.clone();
-        for _ in 0..division {
-            let new_vertex = vertex.mapped(point_mapping);
-            wire.push_back(connect_vertices(&vertex, &new_vertex, connect_points));
-            vertex = new_vertex;
-        }
-        wire
+        (0..division)
+            .map(move |_| {
+                let new_vertex = vertex.mapped(point_mapping);
+                let edge = connect_vertices(&vertex, &new_vertex, connect_points);
+                vertex = new_vertex;
+                edge
+            })
+            .collect()
     }
 }
 
@@ -47,19 +48,15 @@ impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Edge<P, C> {
         connect_curves: &CE,
         division: usize,
     ) -> Self::Swept {
-        let mut shell = Shell::new();
         let mut edge = self.clone();
-        for _ in 0..division {
-            let new_edge = edge.mapped(point_mapping, curve_mapping);
-            shell.push(connect_edges(
-                &edge,
-                &new_edge,
-                connect_points,
-                connect_curves,
-            ));
-            edge = new_edge;
-        }
-        shell
+        (0..division)
+            .map(move |_| {
+                let new_edge = edge.mapped(point_mapping, curve_mapping);
+                let face = connect_edges(&edge, &new_edge, connect_points, connect_curves);
+                edge = new_edge;
+                face
+            })
+            .collect()
     }
 }
 
@@ -80,19 +77,16 @@ impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Wire<P, C> {
         connect_curves: &CE,
         division: usize,
     ) -> Self::Swept {
-        let mut shell = Shell::new();
         let mut wire = self.clone();
-        for _ in 0..division {
-            let new_wire = wire.mapped(point_mapping, curve_mapping);
-            shell.extend(connect_wires(
-                &wire,
-                &new_wire,
-                connect_points,
-                connect_curves,
-            ));
-            wire = new_wire;
-        }
-        shell
+        (0..division)
+            .flat_map(move |_| {
+                let new_wire = wire.mapped(point_mapping, curve_mapping);
+                let shell: Vec<_> =
+                    connect_wires(&wire, &new_wire, connect_points, connect_curves).collect();
+                wire = new_wire;
+                shell
+            })
+            .collect()
     }
 }
 
@@ -113,21 +107,17 @@ impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Face<P, C, S> {
         connect_curves: &CE,
         division: usize,
     ) -> Self::Swept {
-        let mut shell = Shell::new();
-        shell.push(self.inverse());
+        let mut shell = Shell::from(vec![self.inverse()]);
         let mut face_cursor = self.clone();
-        for _ in 0..division {
+        shell.extend((0..division).flat_map(|_| {
             let seiling = face_cursor.mapped(point_mapping, curve_mapping, surface_mapping);
             let biter0 = face_cursor.boundary_iters().into_iter().flatten();
             let biter1 = seiling.boundary_iters().into_iter().flatten();
-            shell.extend(connect_raw_wires(
-                biter0,
-                biter1,
-                connect_points,
-                connect_curves,
-            ));
+            let vec: Vec<_> =
+                connect_raw_wires(biter0, biter1, connect_points, connect_curves).collect();
             face_cursor = seiling;
-        }
+            vec
+        }));
         shell.push(face_cursor);
         Solid::debug_new(vec![shell])
     }
@@ -153,24 +143,20 @@ impl<P: Clone, C: Clone, S: Clone> MultiSweep<P, C, S> for Shell<P, C, S> {
         self.connected_components()
             .into_iter()
             .map(move |shell| {
-                let mut bdry = Shell::new();
-                bdry.extend(shell.face_iter().map(|face| face.inverse()));
+                let mut bdry: Shell<P, C, S> = shell.face_iter().map(Face::inverse).collect();
                 let mut shell_cursor = shell;
-                for _ in 0..division {
+                bdry.extend((0..division).flat_map(|_| {
                     let seiling =
                         shell_cursor.mapped(point_mapping, curve_mapping, surface_mapping);
                     let bdries0 = shell_cursor.extract_boundaries();
                     let bdries1 = seiling.extract_boundaries();
                     let biter0 = bdries0.iter().flat_map(Wire::edge_iter);
                     let biter1 = bdries1.iter().flat_map(Wire::edge_iter);
-                    bdry.extend(connect_wires(
-                        biter0,
-                        biter1,
-                        connect_points,
-                        connect_curves,
-                    ));
+                    let vec: Vec<_> =
+                        connect_wires(biter0, biter1, connect_points, connect_curves).collect();
                     shell_cursor = seiling;
-                }
+                    vec
+                }));
                 bdry.append(&mut shell_cursor);
                 Solid::try_new(vec![bdry])
             })
