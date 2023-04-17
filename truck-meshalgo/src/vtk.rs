@@ -223,7 +223,7 @@ impl ToDataSet for Edge<Point3, PolylineCurve<Point3>> {
             .0
             .iter()
             .copied()
-            .flat_map(|p| Into::<[f64; 3]>::into(p))
+            .flat_map(Into::<[f64; 3]>::into)
             .collect::<Vec<_>>();
         let len = curve.0.len() as u64;
         let connectivity = (0..len).chain(vec![0, len - 1]).collect();

@@ -341,14 +341,10 @@ fn shell_topology() -> Shell<Point3, PolylineCurve<Point3>, PolygonMesh> {
             polygon0,
         ),
         Face::new(
-            vec![vec![
-                e[0].clone(),
-                e[6].inverse(),
-                e[5].inverse(),
-                e[4].inverse(),
-                ].into()],
+            vec![vec![e[0].clone(), e[6].inverse(), e[5].inverse(), e[4].inverse()].into()],
             polygon1,
-        ).inverse(),
+        )
+        .inverse(),
     ]
     .into()
 }
@@ -559,7 +555,10 @@ fn shell_unstructured_grid() -> DataSet {
 fn face() {
     let data = shell_topology()[0].to_data_set();
     let DataSet::UnstructuredGrid { pieces, .. } = shell_unstructured_grid() else { unreachable!() };
-    let ans_data = DataSet::UnstructuredGrid { meta: None, pieces: vec![pieces[0].clone()] };
+    let ans_data = DataSet::UnstructuredGrid {
+        meta: None,
+        pieces: vec![pieces[0].clone()],
+    };
     assert_eq!(data, ans_data);
 }
 
