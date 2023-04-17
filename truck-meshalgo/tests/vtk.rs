@@ -71,11 +71,128 @@ fn vtk_simple_cube() -> DataSet {
 }
 
 #[test]
-fn simple_cube() {
+fn polygon() {
     assert_eq!(truck_simple_cube().to_data_set(), vtk_simple_cube());
 }
 
-fn simple_shell_topology() -> Shell<Point3, PolylineCurve<Point3>, PolygonMesh> {
+#[test]
+fn vertex() {
+    let v = Vertex::new(Point3::new(0.0, 0.0, 0.0));
+    let data = v.to_data_set();
+    let ans_data = DataSet::UnstructuredGrid {
+        meta: None,
+        pieces: vec![Piece::Inline(Box::new(UnstructuredGridPiece {
+            points: IOBuffer::F64(vec![0.0, 0.0, 0.0]),
+            cells: Cells {
+                cell_verts: VertexNumbers::XML {
+                    connectivity: vec![0],
+                    offsets: vec![1],
+                },
+                types: vec![CellType::Vertex],
+            },
+            data: Default::default(),
+        }))],
+    };
+    assert_eq!(data, ans_data);
+}
+
+#[test]
+fn edge() {
+    let edge = Edge::new(
+        &Vertex::new(Point3::new(0.0, 0.0, 0.0)),
+        &Vertex::new(Point3::new(0.0, 1.0, 0.0)),
+        PolylineCurve(vec![
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(1.0, 1.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+        ]),
+    );
+    let data = edge.to_data_set();
+    let ans_data = DataSet::UnstructuredGrid {
+        meta: None,
+        pieces: vec![Piece::Inline(Box::new(UnstructuredGridPiece {
+            points: IOBuffer::F64(vec![
+                0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0,
+            ]),
+            cells: Cells {
+                cell_verts: VertexNumbers::XML {
+                    connectivity: vec![0, 1, 2, 3, 0, 3],
+                    offsets: vec![4, 5, 6],
+                },
+                types: vec![CellType::PolyLine, CellType::Vertex, CellType::Vertex],
+            },
+            data: Default::default(),
+        }))],
+    };
+    assert_eq!(data, ans_data);
+
+    // inverse case
+    let data = edge.inverse().to_data_set();
+    let ans_data = DataSet::UnstructuredGrid {
+        meta: None,
+        pieces: vec![Piece::Inline(Box::new(UnstructuredGridPiece {
+            points: IOBuffer::F64(vec![
+                0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ]),
+            cells: Cells {
+                cell_verts: VertexNumbers::XML {
+                    connectivity: vec![0, 1, 2, 3, 0, 3],
+                    offsets: vec![4, 5, 6],
+                },
+                types: vec![CellType::PolyLine, CellType::Vertex, CellType::Vertex],
+            },
+            data: Default::default(),
+        }))],
+    };
+    assert_eq!(data, ans_data);
+}
+
+#[test]
+fn wire() {
+    let p = [
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+    ];
+    let v = Vertex::news(p);
+    let q = Point3::new(2.0, 0.0, 0.0);
+    let wire: Wire<Point3, PolylineCurve<Point3>> = vec![
+        Edge::new(&v[0], &v[1], PolylineCurve(vec![p[0], p[1]])),
+        Edge::new(&v[2], &v[1], PolylineCurve(vec![p[2], q, p[1]])).inverse(),
+        Edge::new(&v[3], &v[0], PolylineCurve(vec![p[3], p[0]])),
+    ]
+    .into();
+    let data = wire.to_data_set();
+    let ans_data = DataSet::UnstructuredGrid {
+        meta: None,
+        pieces: vec![Piece::Inline(Box::new(UnstructuredGridPiece {
+            points: IOBuffer::F64(vec![
+                0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 0.0,
+            ]),
+            cells: Cells {
+                cell_verts: VertexNumbers::XML {
+                    connectivity: vec![0, 1, 1, 4, 2, 3, 0, 0, 1, 2, 3],
+                    offsets: vec![2, 5, 7, 8, 9, 10, 11],
+                },
+                types: vec![
+                    CellType::PolyLine,
+                    CellType::PolyLine,
+                    CellType::PolyLine,
+                    CellType::Vertex,
+                    CellType::Vertex,
+                    CellType::Vertex,
+                    CellType::Vertex,
+                ],
+            },
+            data: Default::default(),
+        }))],
+    };
+    assert_eq!(data, ans_data);
+}
+
+fn shell_topology() -> Shell<Point3, PolylineCurve<Point3>, PolygonMesh> {
     let p = [
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(1.0, 0.0, 0.0),
@@ -199,13 +316,13 @@ fn simple_shell_topology() -> Shell<Point3, PolylineCurve<Point3>, PolygonMesh> 
                 Vector2::new(0.0, 1.0),
                 Vector2::new(1.0, 1.0),
             ],
-            normals: vec![Vector3::new(0.0, -1.0, 0.0)],
+            normals: vec![Vector3::new(0.0, 1.0, 0.0)],
         },
         Faces::from_iter([[
-            (0, Some(2), Some(0)),
-            (2, Some(0), Some(0)),
-            (3, Some(1), Some(0)),
             (1, Some(3), Some(0)),
+            (3, Some(1), Some(0)),
+            (2, Some(0), Some(0)),
+            (0, Some(2), Some(0)),
         ]]),
     );
 
@@ -224,14 +341,15 @@ fn simple_shell_topology() -> Shell<Point3, PolylineCurve<Point3>, PolygonMesh> 
             polygon0,
         ),
         Face::new(
-            vec![vec![e[4].clone(), e[5].clone(), e[6].clone(), e[0].inverse()].into()],
+            vec![vec![e[0].clone(), e[6].inverse(), e[5].inverse(), e[4].inverse()].into()],
             polygon1,
-        ),
+        )
+        .inverse(),
     ]
     .into()
 }
 
-fn simple_unstructured_grid() -> DataSet {
+fn shell_unstructured_grid() -> DataSet {
     #[rustfmt::skip]
     let points: Vec<f64> = vec![
         0.0, 0.0, 0.0,
@@ -434,41 +552,17 @@ fn simple_unstructured_grid() -> DataSet {
 }
 
 #[test]
-fn simple_shell() {
-    assert_eq!(
-        simple_shell_topology().to_data_set(),
-        simple_unstructured_grid()
-    );
+fn face() {
+    let data = shell_topology()[0].to_data_set();
+    let DataSet::UnstructuredGrid { pieces, .. } = shell_unstructured_grid() else { unreachable!() };
+    let ans_data = DataSet::UnstructuredGrid {
+        meta: None,
+        pieces: vec![pieces[0].clone()],
+    };
+    assert_eq!(data, ans_data);
 }
 
 #[test]
-fn bottle() {
-    const BOTTLE: &[u8] = include_bytes!("../../resources/shape/bottle.json");
-    let solid: truck_modeling::Solid = serde_json::from_slice(BOTTLE).unwrap();
-    let shell = solid.into_boundaries().pop().unwrap();
-    let mesh: truck_topology::Shell<_, _, _> = shell
-        .triangulation(0.01)
-        .into_iter()
-        .filter_map(|face| {
-            let boundaries = face.absolute_boundaries().clone();
-            let surface = face.surface()?;
-            let orientation = face.orientation();
-            let mut face = truck_topology::Face::try_new(boundaries, surface).ok()?;
-            if !orientation {
-                face.invert();
-            }
-            Some(face)
-        })
-        .collect();
-    let _data_set = mesh.to_data_set();
-    let vtk = Vtk {
-        version: Version { major: 1, minor: 0 },
-        title: "bottle".to_string(),
-        byte_order: ByteOrder::LittleEndian,
-        data: _data_set,
-        file_path: None,
-    };
-    let mut buf = Vec::<u8>::new();
-    vtk.write_xml(&mut buf).unwrap();
-    std::fs::write("bolle.vtu", &buf).unwrap();
+fn shell() {
+    assert_eq!(shell_topology().to_data_set(), shell_unstructured_grid());
 }
