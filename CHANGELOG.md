@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- `cargo upgrade`
 - Updates wgpu to v0.16.
 - Updates CI containers.
 - Output `Vertex`, `Edge`, `Wire`, and `Face` to `vtu` files.
