@@ -8,6 +8,6 @@ ENV CARGO_HOME ${RUST_HOME}/cargo
 RUN mkdir /usr/local/lib/rust && chmod 0755 $RUST_HOME
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > ${RUST_HOME}/rustup.sh \
     && chmod +x ${RUST_HOME}/rustup.sh \
-    && ${RUST_HOME}/rustup.sh -y --default-toolchain nightly --no-modify-path
+    && ${RUST_HOME}/rustup.sh -y --no-modify-path
 ENV PATH $PATH:$CARGO_HOME/bin
 RUN cargo install cargo-make

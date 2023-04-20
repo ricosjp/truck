@@ -12,6 +12,8 @@ cpu-test:
         - cargo make ci-cpu-test
     except:
         - schedules
+    only:
+        - master
 
 cpu-nightly-test:
     image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
@@ -22,6 +24,8 @@ cpu-nightly-test:
         - cargo make ci-cpu-nightly-test
     except:
         - schedules
+    only:
+        - master
 
 meshalgo-features-buildcheck:
     image: rust:latest
@@ -35,6 +39,8 @@ meshalgo-features-buildcheck:
         - cargo check --no-default-features --features tessellation
     except:
         - schedules
+    only:
+        - master
 
 gpu-test:
     image: $CI_REGISTRY/ricos/truck/truck/gpu-test:latest
@@ -50,6 +56,8 @@ gpu-test:
             - images
     except:
         - schedules
+    only:
+        - master
 
 wasm-test:
     image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
@@ -61,6 +69,8 @@ wasm-test:
         - cargo make wasm-test
     except:
         - schedules
+    only:
+        - master
 
 page-build:
     image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
@@ -77,6 +87,8 @@ page-build:
             - public
     except:
         - schedules
+    only:
+        - master
 
 lint-check:
     image: rust:latest
@@ -91,6 +103,8 @@ lint-check:
         - cargo fmt -- --check
     except:
         - schedules
+    only:
+        - master
 
 change-log:
     image: ubuntu:latest
@@ -108,6 +122,8 @@ change-log:
         - master
         - tags
         - schedules
+    only:
+        - master
 
 readme-generator:
     image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
@@ -118,6 +134,8 @@ readme-generator:
     except:
         - tags
         - schedules
+    only:
+        - master
 
 pages:
     image: rust:latest
@@ -158,8 +176,6 @@ update-gpu-test-container:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
         - docker build -t $MY_REGISTRY/gpu-test:latest -f docker/gpu-test.Dockerfile .
         - docker push $MY_REGISTRY/gpu-test:latest
-    only:
-        - schedules
 
 update-wasm-test-container:
     image: docker:latest
