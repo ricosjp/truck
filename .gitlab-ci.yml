@@ -1,27 +1,31 @@
 stages:
     - test
     - pages
+    - deploy
 
 cpu-test:
-    image: rust:latest
+    image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
     stage: test
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
-    before_script:
-        - cargo install cargo-make
     script:
         - cargo make ci-cpu-test
+    except:
+        - schedules
+    only:
+        - master
 
 cpu-nightly-test:
-    image: rust:latest
+    image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
     stage: test
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
-    before_script:
-        - rustup toolchain install nightly
-        - cargo install cargo-make
     script:
         - cargo make ci-cpu-nightly-test
+    except:
+        - schedules
+    only:
+        - master
 
 meshalgo-features-buildcheck:
     image: rust:latest
@@ -33,46 +37,46 @@ meshalgo-features-buildcheck:
         - cargo check --no-default-features --features analyzers
         - cargo check --no-default-features --features filters
         - cargo check --no-default-features --features tessellation
+    except:
+        - schedules
+    only:
+        - master
 
 gpu-test:
-    image: registry.ritc.jp/ricos/truck/truck/rust-vulkan:_no_branch
+    image: $CI_REGISTRY/ricos/truck/truck/gpu-test:latest
     stage: test
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
-        - /root/.cargo/bin/rustup toolchain uninstall stable
-        - /root/.cargo/bin/rustup toolchain install stable
-        - /root/.cargo/bin/cargo make ci-gpu-test
+        - cargo make ci-gpu-test
     tags:
         - gpu
     artifacts:
         paths:
             - images
+    except:
+        - schedules
+    only:
+        - master
 
 wasm-test:
-    image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
+    image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
     stage: test
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
-    before_script:
-        - rustup toolchain uninstall stable
-        - rustup toolchain install stable
-        - rustup target add wasm32-unknown-unknown
-        - cargo install -f wasm-bindgen-cli
     script:
         - deno lint
         - cargo make wasm-test
+    except:
+        - schedules
+    only:
+        - master
 
 page-build:
-    image: registry.ritc.jp/ricos/truck/truck/rust-webtools:_no_branch
+    image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
     stage: test
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
-    before_script:
-        - rustup toolchain uninstall stable
-        - rustup toolchain install stable
-        - rustup target add wasm32-unknown-unknown
-        - cargo install -f wasm-bindgen-cli
     script:
         - mkdir public
         - cargo make page-build
@@ -81,6 +85,10 @@ page-build:
     artifacts:
         paths:
             - public
+    except:
+        - schedules
+    only:
+        - master
 
 lint-check:
     image: rust:latest
@@ -93,6 +101,10 @@ lint-check:
         - rustup default nightly
         - rustup component add rustfmt
         - cargo fmt -- --check
+    except:
+        - schedules
+    only:
+        - master
 
 change-log:
     image: ubuntu:latest
@@ -109,17 +121,21 @@ change-log:
     except:
         - master
         - tags
+        - schedules
+    only:
+        - master
 
 readme-generator:
-    image: rust:latest
+    image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
     stage: test
-    before_script:
-        - cargo install cargo-readme
     script:
         - cargo run --bin readme-generator
         - git diff --exit-code
     except:
         - tags
+        - schedules
+    only:
+        - master
 
 pages:
     image: rust:latest
@@ -132,3 +148,41 @@ pages:
             - public
     only:
         - master
+    except:
+        - schedules
+
+update-cpu-test-container:
+    image: docker:latest
+    stage: deploy
+    services:
+        - docker
+    variables:
+        MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
+    script:
+        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
+        - docker build -t $MY_REGISTRY/cpu-test:latest -f docker/cpu-test.Dockerfile .
+        - docker push $MY_REGISTRY/cpu-test:latest
+
+update-gpu-test-container:
+    image: docker:latest
+    stage: deploy
+    services:
+        - docker
+    variables:
+        MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
+    script:
+        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
+        - docker build -t $MY_REGISTRY/gpu-test:latest -f docker/gpu-test.Dockerfile .
+        - docker push $MY_REGISTRY/gpu-test:latest
+
+update-wasm-test-container:
+    image: docker:latest
+    stage: deploy
+    services:
+        - docker
+    variables:
+        MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
+    script:
+        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
+        - docker build -t $MY_REGISTRY/wasm-test:latest -f docker/wasm-test.Dockerfile .
+        - docker push $MY_REGISTRY/wasm-test:latest
