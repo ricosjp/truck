@@ -21,4 +21,4 @@ thiserror = "1.0.40"
 truck-geoderive = { version = "0.1.0", path = "../truck-geoderive", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.8", features = ["js"] }
+getrandom = { version = "0.2.9", features = ["js"] }
