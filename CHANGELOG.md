@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Updates CI containers.
 - Output `Vertex`, `Edge`, `Wire`, and `Face` to `vtu` files.
 - Add tests for traits in `truck_modeling::topo_traits`.
 - Refactor and renew test for `truck_modeling::geom_impl` by `proptest`.
