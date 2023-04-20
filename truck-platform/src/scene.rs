@@ -767,8 +767,8 @@ impl Scene {
                 buffer: &buffer,
                 layout: ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: (width * 4).try_into().ok(),
-                    rows_per_image: height.try_into().ok(),
+                    bytes_per_row: Some(width * 4),
+                    rows_per_image: Some(height),
                 },
             },
             Extent3d {
