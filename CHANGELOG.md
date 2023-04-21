@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add dependency check.
 - Remove test build from `wasm-test`.
 - `cargo upgrade`
 - Updates wgpu to v0.16.

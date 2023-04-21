@@ -112,6 +112,8 @@ change-log:
 readme-generator:
     image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
     stage: test
+    variables:
+        GIT_STRATEGY: clone
     script:
         - cargo run --bin readme-generator
         - git diff --exit-code
@@ -174,3 +176,15 @@ update-wasm-test-container:
         - docker push $MY_REGISTRY/wasm-test:latest
     only:
         - schedules
+
+check-dependent:
+    image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
+    stage: test
+    variables:
+        GIT_STRATEGY: clone
+    script:
+        - cargo upgrade --workspace
+        - git diff --exit-code
+    only:
+        - schedules
+    allow_failure: true
