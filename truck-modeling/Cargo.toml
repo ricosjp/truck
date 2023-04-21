@@ -13,6 +13,7 @@ categories = ["graphics"]
 
 [dependencies]
 derive_more = "0.99.17"
+proptest = "1.1.0"
 rustc-hash = "1.1.0"
 serde = { version = "1.0.160", features = ["derive"] }
 thiserror = "1.0.40"
@@ -24,6 +25,3 @@ truck-topology = { version = "0.5.0", path = "../truck-topology" }
 
 [dev-dependencies]
 serde_json = "1.0.96"
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-proptest = "1.1.0"
