@@ -101,7 +101,7 @@ dependencies = ["clean", "gpu-release-build-test", "collect-gpu-artifacts"]
 description = "Build to wasm-target"
 env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
 command = "cargo"
-args = ["build", "--target=wasm32-unknown-unknown", "--tests", "--examples"]
+args = ["build", "--target=wasm32-unknown-unknown"]
 
 [tasks.build-wgpu-examples]
 description = "Build wasms"
