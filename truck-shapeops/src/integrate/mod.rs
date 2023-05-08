@@ -1,5 +1,5 @@
 use crate::*;
-use truck_geometry::IntersectionCurve;
+use truck_geometry::prelude::IntersectionCurve;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 

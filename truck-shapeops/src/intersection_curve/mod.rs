@@ -1,5 +1,5 @@
 use truck_base::cgmath64::*;
-use truck_geometry::IntersectionCurve;
+use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
 
 /// polyline base ntersection curve with parameter
@@ -30,8 +30,7 @@ where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
         let mut params1 = PolylineCurve(Vec::new());
         for p in poly.windows(2) {
             let n = (p[1] - p[0]).normalize();
-            let (q, p0, p1) =
-                truck_geometry::double_projection(&surface0, None, &surface1, None, p[0], n, 100)?;
+            let (q, p0, p1) = double_projection(&surface0, None, &surface1, None, p[0], n, 100)?;
             polyline.push(q);
             params0.push(p0);
             params1.push(p1);
@@ -40,7 +39,7 @@ where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
             (polyline[0], params0[0], params1[0])
         } else {
             let n = (poly[poly.len() - 1] - poly[poly.len() - 2]).normalize();
-            truck_geometry::double_projection(
+            double_projection(
                 &surface0,
                 None,
                 &surface1,

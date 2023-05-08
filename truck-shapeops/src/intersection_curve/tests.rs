@@ -1,6 +1,5 @@
 use super::*;
 use std::f64::consts::PI;
-use truck_geometry::*;
 
 mod double_projection_tests {
     use super::*;

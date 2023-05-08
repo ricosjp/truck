@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 use std::f64::consts::PI;
-use truck_geometry::*;
+use truck_geometry::prelude::*;
 use truck_modeling::topo_traits::*;
 use truck_topology::{shell::ShellCondition, *};
 
-type Line = truck_geometry::Line<Point3>;
+type Line = truck_geometry::prelude::Line<Point3>;
 type Surface = BSplineSurface<Point3>;
 
 fn point_mapping(p: &Point3) -> Point3 { p + Vector3::new(0.0, 1.0, 0.0) }

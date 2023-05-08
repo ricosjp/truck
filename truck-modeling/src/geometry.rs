@@ -2,7 +2,7 @@ use super::*;
 use derive_more::*;
 use serde::{Deserialize, Serialize};
 #[doc(hidden)]
-pub use truck_geometry::{algo, inv_or_zero};
+pub use truck_geometry::prelude::{algo, inv_or_zero};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
 pub use truck_polymesh::PolylineCurve;
 

@@ -1,5 +1,5 @@
 use super::*;
-use truck_geometry::*;
+use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
 use truck_topology::{shell::ShellCondition, Vertex};
 const TOL: f64 = 0.05;

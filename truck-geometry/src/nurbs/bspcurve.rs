@@ -108,7 +108,7 @@ impl<P> BSplineCurve<P> {
     /// Returns the degree of B-spline curve
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -119,7 +119,7 @@ impl<P> BSplineCurve<P> {
     /// Inverts a curve
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::uniform_knot(2, 2);
     /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0), Vector2::new(4.0, 5.0)];
     /// let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -163,7 +163,7 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     /// # Examples
     /// The following test code is the same test with the one of `BSplineCurve::subs()`.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(vec![-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -205,7 +205,7 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     /// Returns the derived B-spline curve.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, 0.0), Vector2::new(1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -281,7 +281,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     /// Substitutes to B-spline curve.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(vec![-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -307,7 +307,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     /// Substitutes to the derived B-spline curve.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, 0.0), Vector2::new(1.0, 1.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -337,7 +337,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     /// Substitutes to the 2nd-ord derived B-spline curve.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::bezier_knot(3);
     /// let ctrl_pts = vec![
     ///     Vector2::new(0.0, 0.0),
@@ -387,7 +387,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// If the knot vector is clamped, it means whether the curve is constant or not.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let pt = Vector2::new(1.0, 2.0);
@@ -403,7 +403,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// If the knot vector is not clamped and the BSpline basis function is not partition of unity,
     /// then perhaps returns true even if the curve is not constant.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::uniform_knot(1, 5);
     /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(1.0, 2.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -424,7 +424,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Adds a knot `x`, and do not change `self` as a curve.  
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -439,7 +439,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// # Remarks
     /// If the added knot `x` is out of the range of the knot vector, then the knot vector will extended.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -487,7 +487,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// If cannot remove the knot, do not change `self` and return `self`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -509,8 +509,8 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// [`Error::CannotRemoveKnot`](./errors/enum.Error.html#variant.CannotRemoveKnot).
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
-    /// use errors::Error;
+    /// use truck_geometry::prelude::*;
+    /// use truck_geometry::errors::Error;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -574,7 +574,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// elevate 1 degree.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::bezier_knot(1);
     /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -595,7 +595,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Makes the B-spline curve clamped
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
     /// let ctrl_pts = vec![Vector2::new(0.0, 1.0), Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -624,7 +624,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Repeats `Self::try_remove_knot()` from the back knot in turn until the knot cannot be removed.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
@@ -654,7 +654,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Makes two splines having the same degrees.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     ///
     /// let knot_vec0 = KnotVec::bezier_knot(1);
     /// let ctrl_pts0 = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0)];
@@ -684,7 +684,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Makes two splines having the same normalized knot vectors.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     ///
     /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0]);
     /// let ctrl_pts0 = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0), Vector2::new(2.0, 2.0), Vector2::new(3.0, 3.0)];
@@ -743,7 +743,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Separates `self` into Bezier curves by each knots.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     ///
     /// let knot_vec = KnotVec::uniform_knot(2, 2);
     /// let ctrl_pts = vec![Vector2::new(0.0, 1.0), Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0)];
@@ -778,7 +778,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Makes the curve locally injective.
     /// # Example
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// const N : usize = 100; // sample size for test
     ///
     /// let knot_vec = KnotVec::from(
@@ -813,7 +813,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// # Remarks
     /// If `self` is a constant curve, then does nothing.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]);
     /// let ctrl_pts = vec![Vector2::new(1.0, 1.0); 4];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -845,7 +845,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// and check `|self(t) - other(t)| < TOLERANCE` for each end points `t`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
     /// );
@@ -874,7 +874,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let eps = TOLERANCE;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
@@ -983,12 +983,12 @@ impl<P: ControlPoint<f64> + Tolerance> Concat<BSplineCurve<P>> for BSplineCurve<
     /// Concats two B-spline curves.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// ```
     /// # Failure
     /// If the back of the knot vector of `self` does not coincides with the front of the one of `other`,
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use truck_geotrait::traits::ConcatError;
     ///
     /// let knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
@@ -1093,7 +1093,7 @@ where
     /// the back point of `self`. Otherwise, returns `None`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
     /// );
@@ -1154,7 +1154,7 @@ where
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
     /// );
@@ -1173,7 +1173,7 @@ where
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0]
     /// );
@@ -1439,7 +1439,7 @@ where
     /// C^1-approximation for `curve` by cubic Bspline curve.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use std::f64::consts::PI;
     /// let circle = UnitCircle::<Point2>::new();
     /// let bspcurve = BSplineCurve::cubic_approximation(&circle, (-PI, PI), 0.01, 0.01, 10).unwrap();
