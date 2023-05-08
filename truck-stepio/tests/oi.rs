@@ -6,8 +6,8 @@ use std::{
     fmt::{Debug, Display},
     str::FromStr,
 };
-use truck_geometry::prelude as truck;
 use truck::*;
+use truck_geometry::prelude as truck;
 use truck_polymesh::PolylineCurve;
 use truck_stepio::{out::*, r#in::*};
 

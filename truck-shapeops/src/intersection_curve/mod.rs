@@ -30,8 +30,7 @@ where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
         let mut params1 = PolylineCurve(Vec::new());
         for p in poly.windows(2) {
             let n = (p[1] - p[0]).normalize();
-            let (q, p0, p1) =
-                double_projection(&surface0, None, &surface1, None, p[0], n, 100)?;
+            let (q, p0, p1) = double_projection(&surface0, None, &surface1, None, p[0], n, 100)?;
             polyline.push(q);
             params0.push(p0);
             params1.push(p1);

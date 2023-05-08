@@ -1,4 +1,4 @@
-use crate::{*, prelude::*};
+use crate::{prelude::*, *};
 use truck_base::cgmath64::control_point::ControlPoint;
 
 /// knot vector

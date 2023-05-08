@@ -510,7 +510,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// use errors::Error;
+    /// use truck_geometry::errors::Error;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
     /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);

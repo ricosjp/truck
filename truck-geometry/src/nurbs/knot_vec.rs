@@ -54,7 +54,7 @@ impl KnotVec {
     /// Return `None` if `x < self[0] or self.len() == 0`.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 2.0, 3.0, 3.0]);
     /// let idx = knot_vec.floor(1.5).unwrap();
     /// assert_eq!(idx, 2);
@@ -65,7 +65,7 @@ impl KnotVec {
     /// Returns the multiplicity of the `i`th knot
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0]);
     /// assert_eq!(knot_vec.multiplicity(5), 3);
     /// ```
@@ -77,7 +77,7 @@ impl KnotVec {
     /// Adds a knot and return the index of the added knot.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 2.0, 3.0, 3.0]);
     /// let idx0 = knot_vec.add_knot(1.5);
     /// assert_eq!(idx0, 3);
@@ -257,7 +257,7 @@ impl KnotVec {
     /// # Examples
     /// ```
     /// use std::vec::Vec;
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
     /// knot_vec.transform(2.0, 3.0);
     /// let res : Vec<f64> = knot_vec.into();
@@ -278,7 +278,7 @@ impl KnotVec {
     /// Returns [`Error::ZeroRange`] if the range of the knot vector is so small.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
     /// knot_vec.try_normalize().unwrap();
     /// let res : Vec<f64> = knot_vec.into();
@@ -297,7 +297,7 @@ impl KnotVec {
     /// Panic occurs if the range of the knot vector is so small.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
     /// knot_vec.normalize();
     /// let res : Vec<f64> = knot_vec.into();
@@ -313,7 +313,7 @@ impl KnotVec {
     /// # Example
     /// ```
     /// use std::vec::Vec;
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]);
     /// knot_vec.translate(3.0);
     /// let res : Vec<f64> = knot_vec.into();
@@ -325,7 +325,7 @@ impl KnotVec {
     /// # Example
     /// ```
     /// use std::vec::Vec;
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec = KnotVec::from(vec![1.0, 1.0, 1.0, 3.0, 5.0, 6.0]);
     /// knot_vec.invert();
     /// let res : Vec<f64> = knot_vec.into();
@@ -348,7 +348,7 @@ impl KnotVec {
     /// Determines the knot vector is clamped for the given degree.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 0.25, 0.5, 0.75, 1.0, 1.0, 1.0]);
     /// assert!(knot_vec.is_clamped(2));
     /// assert!(!knot_vec.is_clamped(3));
@@ -361,7 +361,7 @@ impl KnotVec {
     /// Concats two knot vectors.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vec1 = KnotVec::from(vec![1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
     /// knot_vec0.try_concat(&knot_vec1, 2).unwrap();
@@ -391,7 +391,7 @@ impl KnotVec {
     /// Concats two knot vectors.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vec1 = KnotVec::from(vec![1.0, 1.0, 1.0, 2.0, 2.0, 2.0]);
     /// knot_vec0.concat(&knot_vec1, 2);
@@ -424,7 +424,7 @@ impl KnotVec {
     /// multiplicity of knots.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0]);
     /// let (knots, mults) = knot_vec.to_single_multi();
     /// assert_eq!(knots, vec![0.0, 1.0, 2.0, 3.0]);
@@ -456,7 +456,7 @@ impl KnotVec {
     /// Constructs from single-multi description.
     /// # Examples
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let knots = vec![0.0, 1.0, 2.0, 3.0];
     /// let mults = vec![3, 1, 4, 2];
     /// let knot_vec = KnotVec::from_single_multi(knots, mults).unwrap();
@@ -522,7 +522,7 @@ impl KnotVec {
 impl From<Vec<f64>> for KnotVec {
     /// constructs from `Vec<f64>`. The vector will sorted by the order.
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let knot_vec = KnotVec::from(vec![1.0, 0.0, 3.0, 2.0]);
     /// let arr : Vec<f64> = knot_vec.into();
     /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
@@ -536,7 +536,7 @@ impl From<Vec<f64>> for KnotVec {
 impl From<&Vec<f64>> for KnotVec {
     /// Constructs by the reference of vector. The clone of vector is sorted by the order.
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let knot_vec = KnotVec::from(&vec![1.0, 0.0, 3.0, 2.0]);
     /// let arr : Vec<f64> = knot_vec.into();
     /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
@@ -552,7 +552,7 @@ impl From<&Vec<f64>> for KnotVec {
 impl From<KnotVec> for Vec<f64> {
     /// `KnotVec` into `Vec<f64>`
     /// ```
-    /// use truck_geometry::KnotVec;
+    /// use truck_geometry::prelude::KnotVec;
     /// let vec = vec![0.0, 1.0, 2.0, 3.0];
     /// let knot_vec = KnotVec::from(&vec);
     /// let vec0 : Vec<f64> = knot_vec.into();

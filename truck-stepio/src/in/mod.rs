@@ -10,7 +10,6 @@ use ruststep::{
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, f64::consts::PI};
 use truck_geometry::prelude as truck;
-use truck::*;
 use truck_topology::compress::*;
 
 /// type alias
@@ -1105,11 +1104,10 @@ impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
     fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
         let radius: f64 = circle.radius;
         let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(radius);
-        Ok(Processor::new(truck::TrimmedCurve::new(
-            UnitCircle::new(),
-            (0.0, 2.0 * PI),
-        ))
-        .transformed(transform))
+        Ok(
+            Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+                .transformed(transform),
+        )
     }
 }
 
@@ -1118,11 +1116,10 @@ impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
     fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
         let radius: f64 = circle.radius;
         let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
-        Ok(Processor::new(truck::TrimmedCurve::new(
-            UnitCircle::new(),
-            (0.0, 2.0 * PI),
-        ))
-        .transformed(transform))
+        Ok(
+            Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+                .transformed(transform),
+        )
     }
 }
 
@@ -1150,7 +1147,7 @@ pub struct Pcurve {
     reference_to_curve: DefinitionalRepresentation,
 }
 
-impl TryFrom<&Pcurve> for alias::PCurve {
+impl TryFrom<&Pcurve> for PCurve {
     type Error = ExpressParseError;
     fn try_from(value: &Pcurve) -> std::result::Result<Self, Self::Error> {
         let surface: Surface = (&value.basis_surface).try_into()?;
@@ -1767,10 +1764,7 @@ impl EdgeCurve {
                     Point2::new(v.0, v.1),
                     true,
                 )?;
-                Curve3D::PCurve(truck::PCurve::new(
-                    Box::new(curve2d),
-                    Box::new(surface),
-                ))
+                Curve3D::PCurve(truck::PCurve::new(Box::new(curve2d), Box::new(surface)))
             }
             SurfaceCurve(c) => {
                 use PreferredSurfaceCurveRepresentation::*;

@@ -17,7 +17,9 @@ use serde::{Deserialize, Serialize};
 
 /// re-export `truck_base`.
 pub mod base {
-    pub use truck_base::{bounding_box::BoundingBox, cgmath64::*, hash, hash::HashGen, tolerance::*};
+    pub use truck_base::{
+        bounding_box::BoundingBox, cgmath64::*, hash, hash::HashGen, tolerance::*,
+    };
     pub use truck_geotrait::*;
 }
 pub use base::*;

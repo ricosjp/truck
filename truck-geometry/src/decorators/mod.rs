@@ -1,4 +1,4 @@
-use crate::{*, prelude::*};
+use crate::{prelude::*, *};
 use std::ops::{Deref, DerefMut, Mul};
 
 /// surface constructed by revoluting a curve

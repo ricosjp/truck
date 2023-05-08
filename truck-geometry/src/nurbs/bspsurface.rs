@@ -1002,7 +1002,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// use errors::Error;
+    /// use truck_geometry::errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
     ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
@@ -1073,7 +1073,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// use errors::Error;
+    /// use truck_geometry::errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
     ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
@@ -1101,7 +1101,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// use errors::Error;
+    /// use truck_geometry::errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
     ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
@@ -1172,7 +1172,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// use errors::Error;
+    /// use truck_geometry::errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
     ///     vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, -1.0), Vector2::new(1.0, 0.0)],
