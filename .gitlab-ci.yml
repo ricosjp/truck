@@ -182,6 +182,8 @@ check-dependent:
     stage: test
     variables:
         GIT_STRATEGY: clone
+    before_script:
+        - cargo install cargo-edit
     script:
         - cargo upgrade --workspace
         - git diff --exit-code
