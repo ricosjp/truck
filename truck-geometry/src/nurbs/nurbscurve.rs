@@ -115,7 +115,7 @@ where V::Point: Tolerance
     /// If the knot vector is clamped, it means whether the curve is constant or not.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let pt = Vector3::new(1.0, 2.0, 1.0);
@@ -134,7 +134,7 @@ where V::Point: Tolerance
     /// If the knot vector is not clamped and the BSpline basis function is not partition of unity,
     /// then perhaps returns true even if the curve is not constant.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::uniform_knot(1, 5);
     /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(1.0, 2.0)];
     /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
@@ -159,7 +159,7 @@ where V::Point: Tolerance
     /// and check `|self(t) - other(t)| < TOLERANCE` for each end points `t`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
     /// );
@@ -189,7 +189,7 @@ where V::Point: Tolerance
     /// and check `|self(t) - other(t)| < TOLERANCE`for each end points `t`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(
     ///     vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0]
     /// );
@@ -336,7 +336,7 @@ where V::Point: Tolerance
     /// Makes the rational curve locally injective.
     /// # Example
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// const N : usize = 100; // sample size for test
     ///
     /// let knot_vec = KnotVec::from(
@@ -375,7 +375,7 @@ where V::Point: Tolerance
     /// # Remarks
     /// If `self` is a constant curve, then does nothing.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]);
     /// let ctrl_pts = vec![
     ///     Vector3::new(1.0, 1.0, 1.0),
@@ -435,7 +435,7 @@ where
     /// Returns `None` if the number of attempts exceeds `trial` i.e. if `trial == 0`, then the trial is only one time.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     ///
     /// // Defines the half unit circle in x > 0.
     /// let knot_vec = KnotVec::bezier_knot(2);
@@ -455,7 +455,7 @@ where
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     ///
     /// // Same curve and point as above example
     /// let knot_vec = KnotVec::bezier_knot(2);

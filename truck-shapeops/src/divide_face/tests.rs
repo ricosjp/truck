@@ -1,6 +1,6 @@
 use super::*;
 use shell::ShellCondition;
-use truck_geometry::*;
+use truck_geometry::prelude::*;
 use truck_topology::Vertex;
 const TOL: f64 = 0.05;
 

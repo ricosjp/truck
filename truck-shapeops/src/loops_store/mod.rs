@@ -3,7 +3,7 @@
 use crate::*;
 use rustc_hash::FxHashMap as HashMap;
 use truck_base::cgmath64::*;
-use truck_geometry::IntersectionCurve;
+use truck_geometry::prelude::IntersectionCurve;
 use truck_meshalgo::prelude::*;
 use truck_topology::{Vertex, *};
 

@@ -22,26 +22,31 @@ const PRESEARCH_DIVISION: usize = 50;
 
 /// re-export `truck_base`
 pub mod base {
-    pub use truck_base::bounding_box::*;
+    pub use truck_base::bounding_box::BoundingBox;
     pub use truck_base::cgmath64::*;
     pub use truck_base::tolerance::*;
     pub use truck_base::{assert_near, assert_near2};
     pub use truck_base::{hash, hash::HashGen};
     pub use truck_geotrait::*;
 }
-pub use base::*;
 /// Declares the nurbs
 pub mod nurbs;
-pub use nurbs::*;
 
 /// Enumerats `Error`.
 pub mod errors;
-pub use errors::*;
 
 /// Declares the specified gememetric items: Plane, Sphere, and so on.
 pub mod specifieds;
-pub use specifieds::*;
 
 /// Declares some decorators
 pub mod decorators;
-pub use decorators::*;
+
+/// re-export all modules.
+pub mod prelude {
+    use crate::*;
+    pub use base::*;
+    pub use decorators::*;
+    pub use errors::*;
+    pub use nurbs::*;
+    pub use specifieds::*;
+}

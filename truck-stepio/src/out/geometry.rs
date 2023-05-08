@@ -1,5 +1,5 @@
 use super::{Result, *};
-use truck_geometry::*;
+use truck_geometry::prelude::*;
 use truck_modeling::{Curve as ModelingCurve, Leader, Surface as ModelingSurface};
 use truck_polymesh::PolylineCurve;
 

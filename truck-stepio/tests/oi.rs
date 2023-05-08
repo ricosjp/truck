@@ -6,7 +6,8 @@ use std::{
     fmt::{Debug, Display},
     str::FromStr,
 };
-use truck_geometry::*;
+use truck_geometry::prelude as truck;
+use truck::*;
 use truck_polymesh::PolylineCurve;
 use truck_stepio::{out::*, r#in::*};
 
@@ -66,7 +67,7 @@ fn oi() {
     oitest::<Point3, CartesianPointHolder>(Point3::new(1.0, 2.0, 3.0));
     oitest::<Vector2, VectorHolder>(Vector2::new(1.0, 2.0));
     oitest::<Vector3, VectorHolder>(Vector3::new(1.0, 2.0, 3.0));
-    oitest::<truck_geometry::Line<Point2>, LineHolder>(truck_geometry::Line(
+    oitest::<truck::Line<Point2>, LineHolder>(truck::Line(
         Point2::new(0.0, 1.0),
         Point2::new(2.0, 3.0),
     ));
@@ -125,7 +126,7 @@ fn oi() {
             ],
         ),
     ));
-    oitest::<truck_geometry::Plane, PlaneHolder>(truck_geometry::Plane::new(
+    oitest::<truck::Plane, PlaneHolder>(truck::Plane::new(
         Point3::new(1.0, 2.0, 3.0),
         // The ISO regulations require that the coordinate axes of the Plane must be vertical;
         // on the truck side, the axes do not have to be vertical,

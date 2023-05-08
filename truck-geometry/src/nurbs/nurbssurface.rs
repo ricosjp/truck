@@ -53,7 +53,7 @@ impl<V> NurbsSurface<V> {
     /// Returns the iterator over the control points in the `column_idx`th row.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let uknot_vec = KnotVec::bezier_knot(1);
     /// let vknot_vec = KnotVec::bezier_knot(2);
     /// let knot_vecs = (uknot_vec, vknot_vec);
@@ -78,7 +78,7 @@ impl<V> NurbsSurface<V> {
     /// Returns the iterator over the control points in the `row_idx`th row.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let uknot_vec = KnotVec::bezier_knot(1);
     /// let vknot_vec = KnotVec::bezier_knot(2);
     /// let knot_vecs = (uknot_vec, vknot_vec);
@@ -112,7 +112,7 @@ impl<V> NurbsSurface<V> {
     /// Returns the degrees of B-spline surface
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let uknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vecs = (uknot_vec, vknot_vec);
@@ -129,7 +129,7 @@ impl<V> NurbsSurface<V> {
     /// Returns the degrees of B-spline surface
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let uknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vecs = (uknot_vec, vknot_vec);
@@ -146,7 +146,7 @@ impl<V> NurbsSurface<V> {
     /// Returns the degrees of B-spline surface
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let uknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
     /// let knot_vecs = (uknot_vec, vknot_vec);
@@ -239,7 +239,7 @@ where V::Point: Tolerance
     /// Returns whether constant curve or not, i.e. all control points are same or not.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let uknot_vec = KnotVec::bezier_knot(1);
     /// let vknot_vec = KnotVec::bezier_knot(2);
     /// let pt = Vector3::new(1.0, 2.0, 1.0);
@@ -270,7 +270,7 @@ where V::Point: Tolerance
     /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
     ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
@@ -297,7 +297,7 @@ where V::Point: Tolerance
     /// and check `|self(u, v) - other(u, v)| < TOLERANCE` for each end points `(u, v)`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let eps = TOLERANCE;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
@@ -422,7 +422,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface
     /// Get the boundary by four splitted curves.
     /// # Example
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
     ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
@@ -496,7 +496,7 @@ where
     /// with initial guess `(u0, v0)`. If the repeated trial does not converge, then returns `None`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
     ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(1.0, -2.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
@@ -556,7 +556,7 @@ impl SearchParameter<D2> for NurbsSurface<Vector3> {
     /// If cannot find, then return `None`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::uniform_knot(2, 2);
     /// let ctrl_pts = vec![
     ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.1, 0.0, 0.5), Vector3::new(0.5, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
@@ -773,7 +773,7 @@ impl SearchParameter<D2> for NurbsSurface<Vector4> {
     /// If cannot find, then return `None`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::uniform_knot(2, 2);
     /// let ctrl_pts = vec![
     ///     vec![Vector4::new(0.0, 0.0, 0.0, 1.0), Vector4::new(0.1, 0.0, 0.5, 0.4), Vector4::new(1.0, 0.0, 0.6, 2.0), Vector4::new(0.4, 0.0, 0.4, 0.4)],

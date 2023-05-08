@@ -1,4 +1,4 @@
-use truck_geometry::*;
+use truck_geometry::prelude::*;
 use truck_stepio::out::*;
 
 fn step_test<T: StepLength>(x: T, ans: &str, length: usize)

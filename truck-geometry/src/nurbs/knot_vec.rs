@@ -10,7 +10,7 @@ impl KnotVec {
     /// Returns the length of range.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 6.0]);
     /// assert_eq!(knot_vec.range_length(), 6.0);
     /// ```
@@ -25,7 +25,7 @@ impl KnotVec {
     /// Returns whether two knot vectors have the same range.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec0 = KnotVec::new(); // empty knot vector
     /// let knot_vec1 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// let knot_vec2 = KnotVec::from(vec![0.0, 0.5, 1.0]);
@@ -108,7 +108,7 @@ impl KnotVec {
     /// the right-open intervals [s, t). So, the value corresponding to the end point t = t_n is always 0.0.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // B-spline basis functions is a partition of unity in (t_k, t_{n - k}).
@@ -123,7 +123,7 @@ impl KnotVec {
     /// }
     /// ```
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // In some case, B-spline basis functions coincide with Bernstein polynomials.
@@ -158,7 +158,7 @@ impl KnotVec {
     /// the right-open intervals [s, t). So, the value corresponding to the end point t = t_n is always 0.0.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // B-spline basis functions is a partition of unity in (t_k, t_{n - k}).
@@ -173,7 +173,7 @@ impl KnotVec {
     /// }
     /// ```
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// const N : usize = 100; // sample size in tests
     ///
     /// // In some case, B-spline basis functions coincide with Bernstein polynomials.
@@ -410,7 +410,7 @@ impl KnotVec {
     /// Returns trimmed vector by the specified range.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
     /// let sub_vec = knot_vec.sub_vec(1..3);
     /// assert_eq!(sub_vec, KnotVec::from(vec![1.0, 2.0]));
@@ -490,7 +490,7 @@ impl KnotVec {
     /// Constructs the knot vector for the bezier spline.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// assert_eq!(
     ///     *KnotVec::bezier_knot(3),
     ///     vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0],
@@ -505,7 +505,7 @@ impl KnotVec {
     /// Constructs the uniform knot vector
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// assert_eq!(
     ///     *KnotVec::uniform_knot(2, 5),
     ///     vec![0.0, 0.0, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.0, 1.0],

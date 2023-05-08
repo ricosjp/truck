@@ -1,4 +1,3 @@
-use crate::*;
 use thiserror::Error;
 
 /// Error handler for [`Error`](./errors/enum.Error.html)
@@ -13,7 +12,7 @@ pub enum Error {
     /// * Normalizing the knot vector.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     /// let mut knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 0.0]);
     /// assert_eq!(knot_vec.try_normalize(), Err(Error::ZeroRange));
@@ -28,7 +27,7 @@ pub enum Error {
     /// the former knot vector and the front knot of the latter knot vector.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
@@ -41,7 +40,7 @@ the front of the second knot vector: {1}")]
     /// If the knot vector is not clamped, then one cannot concat the vector with another knot vector.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
@@ -55,7 +54,7 @@ the front of the second knot vector: {1}")]
     /// `<KnotVec as From<Vec<f64>>>::from()`.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     /// use std::convert::*;
     ///
@@ -70,7 +69,7 @@ the front of the second knot vector: {1}")]
     /// The given degree is too large to calculate bspline basis functions.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     ///
     /// // a knot vector with length = 4.
@@ -89,7 +88,7 @@ the degree: {1}"
     /// The specified knot cannot be removed.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     /// let knot_vec = KnotVec::bezier_knot(2);
     /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
@@ -104,7 +103,7 @@ the degree: {1}"
     /// Empty vector of points cannot construct B-spline.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     ///
     /// let knot_vec = KnotVec::bezier_knot(2);
@@ -120,7 +119,7 @@ the degree: {1}"
     /// array of control points.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0]);
     /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)];
@@ -138,7 +137,7 @@ the number of control points: {1}"
     /// The length of the given arrays of control points to create a B-spline surface is irregular.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
     /// let ctrl_pts = vec![
@@ -155,7 +154,7 @@ the number of control points: {1}"
     /// The vector of control points and the one of weights have different length.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// use errors::Error;
     /// let bspcurve = BSplineCurve::new(
     ///     KnotVec::bezier_knot(2),

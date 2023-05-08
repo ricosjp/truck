@@ -1,11 +1,11 @@
-use crate::*;
+use crate::{*, prelude::*};
 use std::ops::{Deref, DerefMut, Mul};
 
 /// surface constructed by revoluting a curve
 /// # Examples
 /// Revoluted sphere
 /// ```
-/// use truck_geometry::*;
+/// use truck_geometry::prelude::*;
 /// use std::f64::consts::PI;
 /// let knot_vec = KnotVec::bezier_knot(2);
 /// let control_points = vec![
@@ -48,7 +48,7 @@ pub struct ExtrudedCurve<C, V> {
 /// # Examples
 /// Curve processing example
 /// ```
-/// use truck_geometry::*;
+/// use truck_geometry::prelude::*;
 /// let curve: BSplineCurve<Point3> = BSplineCurve::new(
 ///     KnotVec::bezier_knot(2),
 ///     vec![
@@ -75,7 +75,7 @@ pub struct ExtrudedCurve<C, V> {
 /// ```
 /// Surface processing example
 /// ```
-/// use truck_geometry::*;
+/// use truck_geometry::prelude::*;
 /// use std::f64::consts::PI;
 ///
 /// let sphere = Sphere::new(Point3::new(1.0, 2.0, 3.0), 2.45);

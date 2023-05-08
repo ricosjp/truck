@@ -9,7 +9,8 @@ use ruststep::{
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, f64::consts::PI};
-use truck_geometry::*;
+use truck_geometry::prelude as truck;
+use truck::*;
 use truck_topology::compress::*;
 
 /// type alias
@@ -803,7 +804,7 @@ pub struct Line {
     #[holder(use_place_holder)]
     pub dir: Vector,
 }
-impl<'a, P> From<&'a Line> for truck_geometry::Line<P>
+impl<'a, P> From<&'a Line> for truck::Line<P>
 where
     P: EuclideanSpace + From<&'a CartesianPoint>,
     P::Diff: From<&'a Vector>,
@@ -983,7 +984,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BSplineCurv
     }
 }
 
-fn uniform_knots(num_ctrl: usize, degree: usize) -> truck_geometry::Result<KnotVec> {
+fn uniform_knots(num_ctrl: usize, degree: usize) -> truck::Result<KnotVec> {
     KnotVec::try_from(
         (0..degree + num_ctrl + 1)
             .map(|i| i as f64 - degree as f64)
@@ -1104,7 +1105,7 @@ impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
     fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
         let radius: f64 = circle.radius;
         let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(radius);
-        Ok(Processor::new(truck_geometry::TrimmedCurve::new(
+        Ok(Processor::new(truck::TrimmedCurve::new(
             UnitCircle::new(),
             (0.0, 2.0 * PI),
         ))
@@ -1117,7 +1118,7 @@ impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
     fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
         let radius: f64 = circle.radius;
         let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
-        Ok(Processor::new(truck_geometry::TrimmedCurve::new(
+        Ok(Processor::new(truck::TrimmedCurve::new(
             UnitCircle::new(),
             (0.0, 2.0 * PI),
         ))
@@ -1287,7 +1288,7 @@ pub struct Plane {
     position: Axis2Placement3d,
 }
 
-impl From<&Plane> for truck_geometry::Plane {
+impl From<&Plane> for truck::Plane {
     fn from(plane: &Plane) -> Self {
         let mat = Matrix4::from(&plane.position);
         let o = Point3::from_homogeneous(mat[3]);
@@ -1329,7 +1330,7 @@ pub struct CylindricalSurface {
     radius: f64,
 }
 
-impl From<&CylindricalSurface> for RevolutedCurve<truck_geometry::Line<Point3>> {
+impl From<&CylindricalSurface> for RevolutedCurve<truck::Line<Point3>> {
     fn from(cs: &CylindricalSurface) -> Self {
         let mat = Matrix4::from(&cs.position);
         let x = mat[0].truncate();
@@ -1680,7 +1681,7 @@ impl EdgeCurve {
     ) -> std::result::Result<Curve2D, ExpressParseError> {
         use CurveAny::*;
         let mut curve = match curve {
-            Line(_) => Curve2D::Line(truck_geometry::Line(p, q)),
+            Line(_) => Curve2D::Line(truck::Line(p, q)),
             BoundedCurve(b) => b.as_ref().try_into()?,
             Circle(circle) => {
                 let mat = Matrix3::try_from(&circle.position)?;
@@ -1726,7 +1727,7 @@ impl EdgeCurve {
     ) -> std::result::Result<Curve3D, ExpressParseError> {
         use CurveAny::*;
         let mut curve = match curve {
-            Line(_) => Curve3D::Line(truck_geometry::Line(p, q)),
+            Line(_) => Curve3D::Line(truck::Line(p, q)),
             BoundedCurve(b) => b.as_ref().try_into()?,
             Circle(circle) => {
                 let mat = Matrix4::try_from(&circle.position)?;
@@ -1766,7 +1767,7 @@ impl EdgeCurve {
                     Point2::new(v.0, v.1),
                     true,
                 )?;
-                Curve3D::PCurve(truck_geometry::PCurve::new(
+                Curve3D::PCurve(truck::PCurve::new(
                     Box::new(curve2d),
                     Box::new(surface),
                 ))

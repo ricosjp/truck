@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{*, prelude::*};
 use truck_base::cgmath64::control_point::ControlPoint;
 
 /// knot vector
@@ -8,7 +8,7 @@ pub struct KnotVec(Vec<f64>);
 /// B-spline curve
 /// # Examples
 /// ```
-/// use truck_geometry::*;
+/// use truck_geometry::prelude::*;
 ///
 /// // the knot vector
 /// let knot_vec = KnotVec::from(
@@ -49,7 +49,7 @@ pub struct BSplineCurve<P> {
 /// B-spline surface
 /// # Examples
 /// ```
-/// use truck_geometry::*;
+/// use truck_geometry::prelude::*;
 /// const N : usize = 100; // sample size in test
 ///
 /// // the knot vectors

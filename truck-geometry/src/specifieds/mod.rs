@@ -1,9 +1,9 @@
-use crate::*;
+use crate::{*, prelude::*};
 
 /// line
 /// # Example
 /// ```
-/// use truck_geometry::*;
+/// use truck_geometry::prelude::*;
 /// let line = Line(Point2::new(0.0, 0.0), Point2::new(1.0, 1.0));
 /// assert_near!(line.subs(0.5), Point2::new(0.5, 0.5));
 /// ```
@@ -25,7 +25,7 @@ pub struct UnitParabola<P>(std::marker::PhantomData<P>);
 /// plane
 /// # Example
 /// ```
-/// use truck_geometry::*;
+/// use truck_geometry::prelude::*;
 ///
 /// // arbitrary three points
 /// let pt0 = Point3::new(0.0, 1.0, 2.0);
@@ -53,7 +53,7 @@ pub struct Plane {
 /// sphere
 /// # Examples
 /// ```
-/// use truck_geometry::*;
+/// use truck_geometry::prelude::*;
 /// use std::f64::consts::PI;
 ///
 /// let center = Point3::new(1.0, 2.0, 3.0);

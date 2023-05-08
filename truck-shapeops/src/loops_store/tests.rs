@@ -1,6 +1,6 @@
 use super::*;
 use std::fmt::Debug;
-use truck_geometry::*;
+use truck_geometry::prelude::*;
 const TOL: f64 = 0.01;
 
 crate::impl_from!(
