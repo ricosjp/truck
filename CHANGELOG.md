@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Put `truck_geometry::prelude` for resolve multiple re-export.
 - Fix dependency check.
 - Add dependency check.
 - Remove test build from `wasm-test`.
