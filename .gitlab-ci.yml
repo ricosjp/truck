@@ -188,3 +188,5 @@ check-dependent:
         - cargo upgrade
         - git diff --exit-code
     allow_failure: true
+    only:
+        - schedules
