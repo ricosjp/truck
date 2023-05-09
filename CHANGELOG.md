@@ -4,7 +4,8 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
-- FIx dependency check.
+- `cargo upgrade`
+- Fix dependency check.
 - Put `truck_geometry::prelude` for resolve multiple re-export.
 - Fix dependency check.
 - Add dependency check.
