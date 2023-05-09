@@ -183,10 +183,10 @@ check-dependent:
     variables:
         GIT_STRATEGY: clone
     before_script:
-        - cargo install cargo-edit
+        - cargo install cargo-edit cargo-upgrades
     script:
-        - cargo upgrade --workspace
+        - cargo upgrade
         - git diff --exit-code
+    allow_failure: true
     only:
         - schedules
-    allow_failure: true
