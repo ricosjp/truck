@@ -4,9 +4,6 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
-- `cargo upgrade` 2023-05-23
-- `cargo upgrade` 2023-05-11
-- `cargo upgrade` 2023-05-10
 - Fix dependency check.
 - Put `truck_geometry::prelude` for resolve multiple re-export.
 - Fix dependency check.
@@ -45,6 +42,12 @@ Step input API is W.I.P. and hidden.
 - Fix some bugs in `step-to-obj`.
 - Parse STEP topology.
 - The parsing of the STEP geometry was implemented up to `BSplineSurfaceWithKnots`.
+
+### Upgrade
+
+- `cargo upgrade` 2023-05-23
+- `cargo upgrade` 2023-05-11
+- `cargo upgrade` 2023-05-10
 
 ## v0.5
 
