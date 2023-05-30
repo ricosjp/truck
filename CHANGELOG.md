@@ -45,6 +45,7 @@ Step input API is W.I.P. and hidden.
 
 ### Upgrade
 
+- `cargo upgrade` 2023-05-30
 - `cargo upgrade` 2023-05-23
 - `cargo upgrade` 2023-05-11
 - `cargo upgrade` 2023-05-10
