@@ -43,13 +43,9 @@ Step input API is W.I.P. and hidden.
 - Parse STEP topology.
 - The parsing of the STEP geometry was implemented up to `BSplineSurfaceWithKnots`.
 
-### Upgrade
+### Latest `cargo upgrade`
 
-- `cargo upgrade` 2023-06-31
-- `cargo upgrade` 2023-05-30
-- `cargo upgrade` 2023-05-23
-- `cargo upgrade` 2023-05-11
-- `cargo upgrade` 2023-05-10
+2023-06-06
 
 ## v0.5
 
