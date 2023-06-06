@@ -43,13 +43,13 @@ fn main() {
     let _thread0 = std::thread::spawn(|| {
         stdout
             .lines()
-            .filter_map(|line| line.ok())
+            .map_while(|line| line.ok())
             .for_each(|line| println!("{line}"))
     });
     let _thread1 = std::thread::spawn(|| {
         stderr
             .lines()
-            .filter_map(|line| line.ok())
+            .map_while(|line| line.ok())
             .for_each(|line| println!("{line}"))
     });
     child.wait().unwrap_or_else(|e| panic!("{}", e));
@@ -74,13 +74,13 @@ fn main() {
         let _thread0 = std::thread::spawn(|| {
             stdout
                 .lines()
-                .filter_map(|line| line.ok())
+                .map_while(|line| line.ok())
                 .for_each(|line| println!("{line}"))
         });
         let _thread1 = std::thread::spawn(|| {
             stderr
                 .lines()
-                .filter_map(|line| line.ok())
+                .map_while(|line| line.ok())
                 .for_each(|line| println!("{line}"))
         });
         child.wait().unwrap_or_else(|e| panic!("{}", e));
