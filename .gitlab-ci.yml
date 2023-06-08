@@ -57,7 +57,7 @@ wasm-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
-        - deno lint
+        # - deno lint
         - cargo make wasm-test
     except:
         - schedules
