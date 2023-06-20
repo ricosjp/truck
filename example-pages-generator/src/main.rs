@@ -33,6 +33,10 @@ fn main() {
             "wasm32-unknown-unknown",
             "--examples",
             "--release",
+            "-p",
+            "truck-platform",
+            "-p",
+            "truck-rendimpl",
         ])
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
