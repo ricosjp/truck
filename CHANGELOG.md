@@ -5,6 +5,8 @@ The version is of the bottom crate `truck-rendimpl`.
 ## Unreleased
 
 - Fix building webgpu examples.
+- Set `--no-cache` option to build CI images.
+- Fix wasm-test container build.
 - Fix dependency check.
 - Put `truck_geometry::prelude` for resolve multiple re-export.
 - Fix dependency check.
@@ -46,7 +48,7 @@ Step input API is W.I.P. and hidden.
 
 ### Latest `cargo upgrade`
 
-2023-06-20
+2023-06-28
 
 ## v0.5
 
