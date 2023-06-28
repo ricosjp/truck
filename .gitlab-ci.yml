@@ -42,6 +42,7 @@ gpu-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
+        - rustup update
         - cargo make ci-gpu-test
     tags:
         - gpu
