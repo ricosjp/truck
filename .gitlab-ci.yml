@@ -163,7 +163,7 @@ update-cpu-test-container:
         MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
     script:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
-        - docker build -t --no-cache $MY_REGISTRY/cpu-test:latest -f docker/cpu-test.Dockerfile .
+        - docker build -t $MY_REGISTRY/cpu-test:latest -f docker/cpu-test.Dockerfile --no-cache .
         - docker push $MY_REGISTRY/cpu-test:latest
     only:
         - schedules
@@ -177,7 +177,7 @@ update-gpu-test-container:
         MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
     script:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
-        - docker build -t --no-cache $MY_REGISTRY/gpu-test:latest -f docker/gpu-test.Dockerfile .
+        - docker build -t $MY_REGISTRY/gpu-test:latest -f docker/gpu-test.Dockerfile --no-cache .
         - docker push $MY_REGISTRY/gpu-test:latest
 #    only:
 #        - schedules
@@ -191,7 +191,7 @@ update-wasm-test-container:
         MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
     script:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
-        - docker build -t --no-cache $MY_REGISTRY/wasm-test:latest -f docker/wasm-test.Dockerfile .
+        - docker build -t $MY_REGISTRY/wasm-test:latest -f docker/wasm-test.Dockerfile --no-cache .
         - docker push $MY_REGISTRY/wasm-test:latest
     only:
         - schedules
