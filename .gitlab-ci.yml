@@ -170,12 +170,13 @@ update-wasm-test-container:
         - docker
     variables:
         MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
+        RUSTFLAGS: --cfg tokio_unstable
     script:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
         - docker build -t $MY_REGISTRY/wasm-test:latest -f docker/wasm-test.Dockerfile .
         - docker push $MY_REGISTRY/wasm-test:latest
-    only:
-        - schedules
+#    only:
+#        - schedules
 
 check-dependent:
     image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
