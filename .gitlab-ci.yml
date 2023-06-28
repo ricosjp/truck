@@ -42,6 +42,7 @@ gpu-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
+        - rustup update
         - cargo make ci-gpu-test
     tags:
         - gpu
@@ -57,7 +58,7 @@ wasm-test:
     variables:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
-        # - deno lint
+        - deno lint
         - cargo make wasm-test
     except:
         - schedules
