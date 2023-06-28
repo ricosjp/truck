@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Set `--no-cache` option to build CI images.
 - Fix wasm-test container build.
 - Fix dependency check.
 - Put `truck_geometry::prelude` for resolve multiple re-export.
