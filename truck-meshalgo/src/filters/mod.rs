@@ -1,4 +1,5 @@
 use crate::*;
+use polygon_mesh::PolygonMeshEditor;
 
 mod normal_filters;
 mod optimizing;

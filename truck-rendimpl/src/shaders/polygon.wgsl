@@ -74,7 +74,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     );
 }
 
-let e: vec2<f32> = vec2<f32>(1.0, 0.0);
+const e: vec2<f32> = vec2<f32>(1.0, 0.0);
 
 @fragment
 fn nontex_main(in: VertexInput) -> @location(0) vec4<f32> {

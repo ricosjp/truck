@@ -399,7 +399,7 @@ impl<P, C> Edge<P, C> {
     }
 
     /// Cuts the edge at `vertex`.
-    /// # Failure
+    /// # Failures
     /// Returns `None` if:
     /// - cannot find the parameter `t` such that `edge.curve().subs(t) == vertex.point()`, or
     /// - the found parameter is not in the parameter range without end points.
@@ -424,10 +424,9 @@ impl<P, C> Edge<P, C> {
             orientation: self.orientation,
             curve: Arc::new(Mutex::new(curve1)),
         };
-        if self.orientation {
-            Some((edge0, edge1))
-        } else {
-            Some((edge1, edge0))
+        match self.orientation {
+            true => Some((edge0, edge1)),
+            false => Some((edge1, edge0)),
         }
     }
 
@@ -457,10 +456,9 @@ impl<P, C> Edge<P, C> {
             orientation: self.orientation,
             curve: Arc::new(Mutex::new(curve1)),
         };
-        if self.orientation {
-            Some((edge0, edge1))
-        } else {
-            Some((edge1, edge0))
+        match self.orientation {
+            true => Some((edge0, edge1)),
+            false => Some((edge1, edge0)),
         }
     }
 
@@ -496,14 +494,15 @@ impl<P, C> Edge<P, C> {
     ///
     /// let vertex_format = VertexDisplayFormat::AsPoint;
     /// let edge = Edge::new(&Vertex::new(0), &Vertex::new(1), 2);
+    /// let id = edge.id();
     ///
     /// assert_eq!(
     ///     format!("{:?}", edge.display(Edf::Full { vertex_format })),
-    ///     format!("Edge {{ id: {:?}, vertices: (0, 1), entity: 2 }}", edge.id()),
+    ///     format!("Edge {{ id: {id:?}, vertices: (0, 1), entity: 2 }}"),
     /// );
     /// assert_eq!(
     ///     format!("{:?}", edge.display(Edf::VerticesTupleAndID { vertex_format })),
-    ///     format!("Edge {{ id: {:?}, vertices: (0, 1) }}", edge.id()),
+    ///     format!("Edge {{ id: {id:?}, vertices: (0, 1) }}"),
     /// );
     /// assert_eq!(
     ///     &format!("{:?}", edge.display(Edf::VerticesTupleAndCurve { vertex_format })),

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-pub use truck_geometry::*;
+pub use truck_geometry::prelude::*;
 pub use truck_polymesh::*;
 
 pub type ExpressParseError = Box<dyn std::error::Error>;
@@ -15,7 +15,7 @@ pub type RevolutedLine = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type ToroidalSurface = RevolutedCurve<Ellipse<Point3, Matrix4>>;
 pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
 pub type StepRevolutedCurve = RevolutedCurve<Curve3D>;
-pub type PCurve = truck_geometry::PCurve<Box<Curve2D>, Box<Surface>>;
+pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
 
 #[derive(
     Clone,

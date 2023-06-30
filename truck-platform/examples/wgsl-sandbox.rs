@@ -236,15 +236,14 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     }
 
     fn create_module(device: &Device, shader: &str) -> Option<ShaderModule> {
-        use naga::{front::wgsl::Parser, valid::*};
+        use naga::{front::wgsl, valid::*};
         let mut source = BASE_PREFIX.to_string();
         source += shader;
         source += BASE_SHADER;
 
         Validator::new(ValidationFlags::all(), Capabilities::empty())
             .validate(
-                &Parser::new()
-                    .parse(&source)
+                &wgsl::parse_str(&source)
                     .map_err(|error| println!("WGSL Parse Error: {error}"))
                     .ok()?,
             )

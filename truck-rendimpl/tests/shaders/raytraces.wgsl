@@ -11,8 +11,8 @@ struct Lights {
 @binding(1)
 var<uniform> lights: Lights;
 
-let PI: f32 = 3.141592653;
-let EPS: f32 = 1.0e-6;
+const PI: f32 = 3.141592653;
+const EPS: f32 = 1.0e-6;
 
 struct Camera {
     position: vec3<f32>,

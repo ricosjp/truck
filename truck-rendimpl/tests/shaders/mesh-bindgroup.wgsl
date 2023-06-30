@@ -37,8 +37,8 @@ struct VertexOutput {
     @location(0) uv: vec2<f32>,
 }
 
-let EPS: f32 = 1.0e-6;
-let e: vec2<f32> = vec2<f32>(1.0, 0.0);
+const EPS: f32 = 1.0e-6;
+const e: vec2<f32> = vec2<f32>(1.0, 0.0);
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {

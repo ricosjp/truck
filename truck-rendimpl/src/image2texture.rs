@@ -31,6 +31,7 @@ where
         sample_count: 1,
         dimension: TextureDimension::D2,
         format,
+        view_formats: &[],
         usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
     });
     queue.write_texture(
@@ -43,10 +44,8 @@ where
         bytemuck::cast_slice(image_buffer),
         ImageDataLayout {
             offset: 0,
-            bytes_per_row: (size.width * std::mem::size_of::<P>() as u32)
-                .try_into()
-                .ok(),
-            rows_per_image: size.height.try_into().ok(),
+            bytes_per_row: Some(size.width * std::mem::size_of::<P>() as u32),
+            rows_per_image: Some(size.height),
         },
         size,
     );

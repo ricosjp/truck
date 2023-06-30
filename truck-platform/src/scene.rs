@@ -14,7 +14,10 @@ async fn init_default_device(
     window: Option<Arc<Window>>,
 ) -> (DeviceHandler, Option<WindowHandler>) {
     #[cfg(not(feature = "webgl"))]
-    let instance = Instance::new(Backends::PRIMARY);
+    let instance = Instance::new(InstanceDescriptor {
+        backends: Backends::PRIMARY,
+        dx12_shader_compiler: Default::default(),
+    });
     #[cfg(feature = "webgl")]
     let instance = Instance::new(Backends::all());
 
@@ -22,7 +25,11 @@ async fn init_default_device(
     #[allow(unsafe_code)]
     let surface = unsafe {
         let window = window.as_ref();
-        window.map(|window| instance.create_surface(window.as_ref()))
+        window.map(|window| {
+            instance
+                .create_surface(window.as_ref())
+                .expect("Failed to create `Surface`")
+        })
     };
 
     let adapter = instance
@@ -133,6 +140,7 @@ impl RenderTextureConfig {
             height: self.canvas_size.1,
             alpha_mode: CompositeAlphaMode::Auto,
             present_mode: PresentMode::Fifo,
+            view_formats: Vec::new(),
         }
     }
 }
@@ -196,6 +204,7 @@ impl SceneDescriptor {
             dimension: TextureDimension::D2,
             format: render_texture.format,
             usage: TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
             label: None,
         })
     }
@@ -213,6 +222,7 @@ impl SceneDescriptor {
             dimension: TextureDimension::D2,
             format: TextureFormat::Depth32Float,
             usage: TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
             label: None,
         })
     }
@@ -361,6 +371,7 @@ impl Scene {
             sample_count: 1,
             dimension: TextureDimension::D2,
             format: config.format,
+            view_formats: &[],
             usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC,
         })
     }
@@ -756,8 +767,8 @@ impl Scene {
                 buffer: &buffer,
                 layout: ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: (width * 4).try_into().ok(),
-                    rows_per_image: height.try_into().ok(),
+                    bytes_per_row: Some(width * 4),
+                    rows_per_image: Some(height),
                 },
             },
             Extent3d {

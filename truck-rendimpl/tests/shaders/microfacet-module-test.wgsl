@@ -1,4 +1,4 @@
-let EPS: f32 = 1.0e-5;
+const EPS: f32 = 1.0e-5;
 
 fn light_direction_test() -> bool {
     let position = vec3<f32>(1.0, 0.0, 0.0);

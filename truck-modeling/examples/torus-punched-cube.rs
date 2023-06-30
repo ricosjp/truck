@@ -23,7 +23,7 @@ fn main() {
         .find(|face| {
             let surface = face.oriented_surface();
             let normal = surface.normal(0.5, 0.5);
-            normal == -Vector3::unit_y()
+            normal.near(&-Vector3::unit_y())
         })
         .unwrap();
     let bdd = bdds
@@ -31,7 +31,7 @@ fn main() {
         .find(|wire| {
             let curve = wire[0].oriented_curve();
             let pt = curve.front();
-            pt[1] == 0.0
+            pt[1].near(&0.0)
         })
         .unwrap();
     face.add_boundary(bdd.inverse());
@@ -40,7 +40,7 @@ fn main() {
         .find(|face| {
             let surface = face.oriented_surface();
             let normal = surface.normal(0.5, 0.5);
-            normal == -Vector3::unit_x()
+            normal.near(&-Vector3::unit_x())
         })
         .unwrap();
     let bdd = bdds
@@ -48,7 +48,7 @@ fn main() {
         .find(|wire| {
             let curve = wire[0].oriented_curve();
             let pt = curve.front();
-            pt[0] == 0.0
+            pt[0].near(&0.0)
         })
         .unwrap();
     face.add_boundary(bdd.inverse());

@@ -1,4 +1,4 @@
-use crate::*;
+use super::*;
 
 impl<C, V: Copy> ExtrudedCurve<C, V> {
     /// Creates a linear extruded curve by extrusion.

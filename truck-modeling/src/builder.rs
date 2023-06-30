@@ -60,10 +60,10 @@ pub fn line(vertex0: &Vertex, vertex1: &Vertex) -> Edge {
 /// ```
 #[inline(always)]
 pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge {
-    let pt0 = vertex0.point().to_homogeneous();
-    let pt1 = vertex1.point().to_homogeneous();
+    let pt0 = vertex0.point();
+    let pt1 = vertex1.point();
     let curve = geom_impls::circle_arc_by_three_points(pt0, pt1, transit);
-    Edge::new(vertex0, vertex1, Curve::NurbsCurve(NurbsCurve::new(curve)))
+    Edge::new(vertex0, vertex1, curve.into())
 }
 
 /// Returns a Bezier curve from `vertex0` to `vertex1` with inter control points `inter_points`.
@@ -510,16 +510,17 @@ pub fn tsweep<T: Sweep<Point3, Curve, Surface>>(elem: &T, vector: Vector3) -> T:
         &move |pt0, pt1| Curve::Line(Line(*pt0, *pt1)),
         &move |curve0, curve1| match (curve0, curve1) {
             (Curve::Line(line), Curve::Line(_)) => {
-                Surface::Plane(Plane::new(line.0, line.1, line.0 + vector))
+                Plane::new(line.0, line.1, line.0 + vector).into()
             }
             (Curve::BSplineCurve(curve0), Curve::BSplineCurve(curve1)) => {
-                Surface::BSplineSurface(BSplineSurface::homotopy(curve0.clone(), curve1.clone()))
+                BSplineSurface::homotopy(curve0.clone(), curve1.clone()).into()
             }
             (Curve::NurbsCurve(curve0), Curve::NurbsCurve(curve1)) => {
-                Surface::NurbsSurface(NurbsSurface::new(BSplineSurface::homotopy(
+                NurbsSurface::new(BSplineSurface::homotopy(
                     curve0.non_rationalized().clone(),
                     curve1.non_rationalized().clone(),
-                )))
+                ))
+                .into()
             }
             (Curve::IntersectionCurve(_), Curve::IntersectionCurve(_)) => unimplemented!(),
             _ => unreachable!(),
@@ -654,14 +655,7 @@ fn partial_rsweep<T: MultiSweep<Point3, Curve, Surface>>(
         &move |pt| trsl.transform_point(*pt),
         &move |curve| curve.transformed(trsl),
         &move |surface| surface.transformed(trsl),
-        &move |pt, _| {
-            Curve::NurbsCurve(NurbsCurve::new(geom_impls::circle_arc(
-                pt.to_homogeneous(),
-                origin,
-                axis,
-                angle / division as f64,
-            )))
-        },
+        &move |pt, _| geom_impls::circle_arc(*pt, origin, axis, angle / division as f64).into(),
         &move |curve, _| {
             Surface::RevolutedCurve(Processor::new(RevolutedCurve::by_revolution(
                 curve.clone(),
@@ -686,14 +680,7 @@ fn whole_rsweep<T: ClosedSweep<Point3, Curve, Surface>>(
         &move |pt| trsl.transform_point(*pt),
         &move |curve| curve.transformed(trsl),
         &move |surface| surface.transformed(trsl),
-        &move |pt, _| {
-            Curve::NurbsCurve(NurbsCurve::new(geom_impls::circle_arc(
-                pt.to_homogeneous(),
-                origin,
-                axis,
-                PI,
-            )))
-        },
+        &move |pt, _| geom_impls::circle_arc(*pt, origin, axis, PI).into(),
         &move |curve, _| {
             Surface::RevolutedCurve(Processor::new(RevolutedCurve::by_revolution(
                 curve.clone(),

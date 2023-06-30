@@ -185,6 +185,7 @@ pub fn swap_chain_descriptor(size: (u32, u32)) -> SurfaceConfiguration {
         width: size.0,
         height: size.1,
         present_mode: PresentMode::Mailbox,
+        view_formats: Vec::new(),
         alpha_mode: CompositeAlphaMode::Auto,
     }
 }
@@ -201,6 +202,7 @@ pub fn texture_descriptor(config: &RenderTextureConfig) -> TextureDescriptor<'st
         sample_count: 1,
         dimension: TextureDimension::D2,
         format: config.format,
+        view_formats: &[],
         usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC,
     }
 }

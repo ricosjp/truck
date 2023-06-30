@@ -22,7 +22,7 @@ impl Plane {
     /// Returns the normal
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let plane = Plane::new(
     ///     Point3::new(0.0, 0.0, 0.0),
     ///     Point3::new(1.0, 0.0, 0.0),
@@ -35,7 +35,7 @@ impl Plane {
     /// Gets the parameter of `pt` in plane's matrix.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let plane = Plane::new(
     ///     Point3::new(1.0, 2.0, 3.0),
     ///     Point3::new(2.0, 1.0, 3.0),
@@ -61,7 +61,7 @@ impl Plane {
     /// into B-spline surface
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let pt0 = Point3::new(0.0, 1.0, 2.0);
     /// let pt1 = Point3::new(1.0, 1.0, 3.0);
     /// let pt2 = Point3::new(0.0, 2.0, 3.0);
@@ -93,7 +93,7 @@ impl Plane {
     /// into NURBS surface
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let pt0 = Point3::new(0.0, 1.0, 2.0);
     /// let pt1 = Point3::new(1.0, 1.0, 3.0);
     /// let pt2 = Point3::new(0.0, 2.0, 3.0);

@@ -2,74 +2,74 @@ use crate::*;
 use std::f64::consts::PI;
 
 pub(super) fn circle_arc_by_three_points(
-    point0: Vector4,
-    point1: Vector4,
+    point0: Point3,
+    point1: Point3,
     transit: Point3,
-) -> BSplineCurve<Vector4> {
-    let pt0 = Point3::from_homogeneous(point0);
-    let pt1 = Point3::from_homogeneous(point1);
-    let origin = circum_center(pt0, pt1, transit);
-    let vec0 = pt0 - transit;
-    let vec1 = pt1 - transit;
+) -> NurbsCurve<Vector4> {
+    let origin = circum_center(point0, point1, transit);
+    let (vec0, vec1) = (point0 - transit, point1 - transit);
+    let axis = vec1.cross(vec0).normalize();
     let angle = Rad(PI) - vec0.angle(vec1);
-    let mut axis = vec1.cross(vec0);
-    axis /= axis.magnitude();
     circle_arc(point0, origin, axis, angle * 2.0)
 }
 
 fn circum_center(pt0: Point3, pt1: Point3, pt2: Point3) -> Point3 {
-    let vec0 = pt1 - pt0;
-    let vec1 = pt2 - pt0;
-    let a2 = vec0.dot(vec0);
-    let ab = vec0.dot(vec1);
-    let b2 = vec1.dot(vec1);
-    let det = a2 * b2 - ab * ab;
-    let u = (b2 * a2 - ab * b2) / (2.0 * det);
-    let v = (-ab * a2 + b2 * a2) / (2.0 * det);
-    pt0 + u * vec0 + v * vec1
+    let (vec0, vec1) = (pt1 - pt0, pt2 - pt0);
+    let (a2, ab, b2) = (vec0.dot(vec0), vec0.dot(vec1), vec1.dot(vec1));
+    let (det, u, v) = (a2 * b2 - ab * ab, a2 * b2 - ab * b2, a2 * b2 - ab * a2);
+    pt0 + u / (2.0 * det) * vec0 + v / (2.0 * det) * vec1
 }
 
-pub(super) fn circle_arc(
-    point: Vector4,
-    origin: Point3,
-    axis: Vector3,
-    angle: Rad<f64>,
-) -> BSplineCurve<Vector4> {
-    let tmp = Point3::from_homogeneous(point);
-    let origin = origin + (axis.dot(tmp - origin)) * axis;
-    let axis_trsf = if !Tolerance::near(&(axis[2] * axis[2]), &1.0) {
-        let axis_angle = Rad(axis[2].acos());
-        let mut axis_axis = Vector3::new(-axis[1], axis[0], 0.0);
-        axis_axis /= axis_axis.magnitude();
-        Matrix4::from_translation(origin.to_vec()) * Matrix4::from_axis_angle(axis_axis, axis_angle)
-    } else if axis[2] > 0.0 {
-        Matrix4::from_translation(origin.to_vec())
-    } else {
-        Matrix4::from_translation(origin.to_vec())
-            * Matrix4::from_axis_angle(Vector3::unit_y(), Rad(PI))
-    };
-    let trsf_inverse = axis_trsf.invert().unwrap();
-    let rotation = Matrix4::from_angle_z(angle / 2.0);
-    let rotation2 = axis_trsf * rotation * rotation;
-    let cos = (angle / 2.0).cos();
-    let pt = trsf_inverse * point;
-    let mut point1 = rotation * pt;
-    point1[3] *= cos;
-    point1 = axis_trsf * point1;
-    let mut curve = BSplineCurve::new(KnotVec::bezier_knot(2), vec![point, point1, rotation2 * pt]);
+fn unit_circle_arc(angle: Rad<f64>) -> NurbsCurve<Vector4> {
+    let (cos2, sin2) = (Rad::cos(angle / 2.0), Rad::sin(angle / 2.0));
+    let mut curve = NurbsCurve::new(BSplineCurve::new(
+        KnotVec::bezier_knot(2),
+        vec![
+            Vector4::new(1.0, 0.0, 0.0, 1.0),
+            Vector4::new(cos2, sin2, 0.0, cos2),
+            Vector4::new(Rad::cos(angle), Rad::sin(angle), 0.0, 1.0),
+        ],
+    ));
     curve.add_knot(0.25);
     curve.add_knot(0.5);
     curve.add_knot(0.75);
     curve
 }
 
+pub(super) fn circle_arc(
+    point: Point3,
+    origin: Point3,
+    axis: Vector3,
+    angle: Rad<f64>,
+) -> NurbsCurve<Vector4> {
+    let origin = origin + (axis.dot(point - origin)) * axis;
+    let diag = point - origin;
+    let axis_trsf = Matrix4::from_cols(
+        diag.extend(0.0),
+        axis.cross(diag).extend(0.0),
+        axis.extend(0.0),
+        origin.to_homogeneous(),
+    );
+    let mut unit_curve = unit_circle_arc(angle);
+    unit_curve.transform_by(axis_trsf);
+    unit_curve
+}
+
 fn closed_polyline_orientation<'a>(pts: impl IntoIterator<Item = &'a Vec<Point3>>) -> bool {
     pts.into_iter()
         .flat_map(|vec| vec.windows(2))
-        .fold(0.0, |sum, p| {
-            sum + (p[1][0] + p[0][0]) * (p[1][1] - p[0][1])
-        })
+        .map(|p| (p[1][0] + p[0][0]) * (p[1][1] - p[0][1]))
+        .sum::<f64>()
         >= 0.0
+}
+
+fn take_one_axis_by_normal(n: Vector3) -> Vector3 {
+    let a = n.map(f64::abs);
+    if a.x > a.z || a.y > a.z {
+        Vector3::new(-n.y, n.x, 0.0).normalize()
+    } else {
+        Vector3::new(-n.z, 0.0, n.x).normalize()
+    }
 }
 
 pub(super) fn attach_plane(mut pts: Vec<Vec<Point3>>) -> Option<Plane> {
@@ -88,10 +88,7 @@ pub(super) fn attach_plane(mut pts: Vec<Vec<Point3>>) -> Option<Plane> {
         true => return None,
         false => normal.normalize(),
     };
-    let a = match (n[2].abs() - 1.0).so_small() {
-        true => Vector3::new(0.0, n[2], -n[1]).normalize(),
-        false => Vector3::new(n[1], -n[0], 0.0).normalize(),
-    };
+    let a = take_one_axis_by_normal(n);
     let mat: Matrix4 = Matrix3::from_cols(a, n.cross(a), n).into();
     pts.iter_mut()
         .flatten()
@@ -115,188 +112,207 @@ pub(super) fn attach_plane(mut pts: Vec<Vec<Point3>>) -> Option<Plane> {
 }
 
 #[cfg(test)]
-mod geom_impl_test {
+mod test_geom_impl {
     use super::*;
-    use rand::random;
+    use proptest::*;
 
-    fn random_array<T: Default + AsMut<[f64]>>(inf: f64, sup: f64) -> T {
-        let mut a = T::default();
-        for s in a.as_mut() {
-            *s = inf + (sup - inf) * random::<f64>();
-        }
-        a
+    fn pole_to_normal(pole: [f64; 2]) -> Vector3 {
+        let theta = PI * pole[0];
+        let z = pole[1];
+        let zi = f64::sqrt(f64::max(1.0 - z * z, 0.0));
+        Vector3::new(f64::cos(theta) * zi, f64::sin(theta) * zi, z)
     }
 
-    #[test]
-    fn circle_arc_test0() {
-        use rand::random;
-        let origin = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
-        let axis = Vector3::from(random_array::<[f64; 3]>(-1.0, 1.0)).normalize();
-        let angle = Rad(random::<f64>() * 1.5 * PI);
-        let pt0 = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
-        let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-        const N: usize = 100;
-        let vec0 = pt0 - origin;
-        for i in 0..=N {
-            let t = i as f64 / N as f64;
-            let pt = Point3::from_homogeneous(curve.subs(t));
-            let vec = pt - origin;
-            assert!(
-                Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
-                "origin: {origin:?}\naxis: {axis:?}\nangle: {angle:?}\npt0: {pt0:?}"
+    fn complex_boundary(angles: [f64; 10]) -> Vec<Point3> {
+        let mut angle_store = 0.0;
+        angles
+            .into_iter()
+            .enumerate()
+            .flat_map(move |(i, angle)| {
+                let prev_angle = angle_store;
+                angle_store = angle;
+                let r = 10.0 - i as f64;
+                let min_theta = f64::acos(1.0 - 0.01 / r);
+                let divs = 1 + (f64::abs(angle - prev_angle) / min_theta) as usize;
+                (0..=divs).map(move |i| {
+                    let t = i as f64 / divs as f64;
+                    let theta = (1.0 - t) * prev_angle + t * angle;
+                    Point3::new(r * f64::cos(theta), r * f64::sin(theta), 0.0)
+                })
+            })
+            .chain([Point3::origin(), Point3::new(10.0, 0.0, 0.0)])
+            .collect()
+    }
+
+    fn dist_square(p: Point3, a: f64, b: f64) -> f64 {
+        let absp = p.map(f64::abs);
+        f64::min(a - absp.x, b - absp.y)
+    }
+
+    fn multiple_boundary(points: [Point3; 4], radius_ratios: [f64; 4]) -> Vec<Vec<Point3>> {
+        let mut res = vec![vec![
+            Point3::new(10.0, 10.0, 0.0),
+            Point3::new(-10.0, 10.0, 0.0),
+            Point3::new(-10.0, -10.0, 0.0),
+            Point3::new(10.0, -10.0, 0.0),
+            Point3::new(10.0, 10.0, 0.0),
+        ]];
+        let mut radii = Vec::<f64>::new();
+        res.extend((0..4).map(|i| {
+            let mut dist = dist_square(points[i], 10.0, 10.0);
+            (0..i).for_each(|j| {
+                dist = f64::min(dist, points[i].distance(points[j]) - radii[j]);
+            });
+            (i + 1..4).for_each(|j| {
+                dist = f64::min(dist, points[i].distance(points[j]));
+            });
+            radii.push(radius_ratios[i] * dist);
+            (0..=10)
+                .map(|j| {
+                    let theta = j as f64 / 10.0 * 2.0 * PI;
+                    Point3::new(f64::sin(theta), f64::cos(theta), 0.0)
+                })
+                .collect()
+        }));
+        res
+    }
+
+    proptest! {
+        #[test]
+        fn test_circum_center(
+            p0 in array::uniform3(-10.0f64..10.0),
+            p1 in array::uniform3(-10.0f64..10.0),
+            p2 in array::uniform3(-10.0f64..10.0),
+        ) {
+            let p0 = Point3::from(p0);
+            let p1 = Point3::from(p1);
+            let p2 = Point3::from(p2);
+            let c = circum_center(p0, p1, p2);
+
+            // The point `c` exists at the same distance from the three points.
+            let d0 = c.distance2(p0);
+            let d1 = c.distance2(p1);
+            let d2 = c.distance2(p2);
+            assert!(d0.near(&d1) && d1.near(&d2) && d2.near(&d0));
+        }
+
+        #[test]
+        fn test_circle_arc_three_point(
+            p0 in array::uniform3(-10.0f64..10.0),
+            p1 in array::uniform3(-10.0f64..10.0),
+            p2 in array::uniform3(-10.0f64..10.0),
+            t in TOLERANCE..(1.0 - TOLERANCE),
+        ) {
+            let p0 = Point3::from(p0);
+            let p1 = Point3::from(p1);
+            let p2 = Point3::from(p2);
+            let curve = circle_arc_by_three_points(p0, p1, p2);
+
+            // The curve `curve` is from `p0` to `p1`.
+            assert_near!(curve.front(), p0);
+            assert_near!(curve.back(), p1);
+
+            // Any point on the curve is on the same side as point `p2`.
+            // Check by the circular angle theorem.
+            let p3 = curve.subs(t);
+            let angle2 = (p2 - p1).angle(p2 - p0);
+            let angle3 = (p3 - p1).angle(p3 - p0);
+            assert_near!(angle2, angle3);
+        }
+
+        #[test]
+        fn test_circle_arc(
+            origin in array::uniform3(-10.0f64..10.0),
+            axis_pole in array::uniform2(-1.0f64..1.0),
+            angle in 0.0f64..(1.5 * PI),
+            pt0 in array::uniform3(-10.0f64..10.0),
+            t in TOLERANCE..(1.0 - TOLERANCE),
+        ) {
+            let origin = Point3::from(origin);
+            let axis = pole_to_normal(axis_pole);
+            let angle = Rad(angle);
+            let pt0 = Point3::from(pt0);
+            let curve = circle_arc(pt0, origin, axis, angle);
+
+            // front point and back point
+            let trans = Matrix4::from_translation(origin.to_vec())
+                * Matrix4::from_axis_angle(axis, angle)
+                * Matrix4::from_translation(-origin.to_vec());
+            let pt1 = trans.transform_point(pt0);
+            assert_near!(curve.front(), pt0);
+            assert_near!(curve.back(), pt1);
+
+            // Any point on the curve lies in the same plane perpendicular to the axis.
+            let pt2 = curve.subs(t);
+            let vec0 = pt0 - origin;
+            let vec2 = pt2 - origin;
+            assert_near!(vec0.dot(axis), vec2.dot(axis));
+
+            // Any point on the curve lies in the circle arc from `p0` to `p1`.
+            // Check by the circular angle theorem.
+            let angle0 = (pt2 - pt1).angle(pt2 - pt0);
+            assert_near!(angle0 * 2.0, Rad(2.0 * PI) - angle);
+        }
+
+        #[test]
+        fn test_take_one_axis_by_normal(normal in array::uniform3(-100.0f64..100.0)) {
+            let normal = Vector3::from(normal);
+            let axis = take_one_axis_by_normal(normal);
+            assert!(normal.so_small() || (!axis.so_small() && axis.dot(normal).so_small()));
+        }
+
+        #[test]
+        fn test_attach_plane_with_single_boundary(
+            axis_pole in array::uniform2(-1.0f64..1.0),
+            origin in array::uniform3(-10.0f64..10.0),
+            angles in array::uniform10(0.01f64..(2.0 * PI - 0.01)),
+        ) {
+            let axis = pole_to_normal(axis_pole);
+            let origin = Point3::from(origin);
+            let diag = take_one_axis_by_normal(axis);
+            let trsf = Matrix4::from_cols(
+                diag.extend(0.0),
+                axis.cross(diag).extend(0.0),
+                axis.extend(0.0),
+                origin.to_homogeneous(),
             );
+            let boundary: Vec<_> = complex_boundary(angles)
+                .into_iter()
+                .map(|p| trsf.transform_point(p))
+                .collect();
+            let plane = attach_plane(vec![boundary]).unwrap();
+            assert_near!(plane.normal(), axis);
         }
-    }
 
-    #[test]
-    fn circle_arc_test1() {
-        let origin = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
-        let axis = Vector3::unit_z();
-        let angle = Rad(random::<f64>() * 1.5 * PI);
-        let pt0 = Point3::from(random_array::<[f64; 3]>(-1.0, 1.0));
-        let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-        const N: usize = 100;
-        let vec0 = pt0 - origin;
-        for i in 0..=N {
-            let t = i as f64 / N as f64;
-            let pt = Point3::from_homogeneous(curve.subs(t));
-            let vec = pt - origin;
-            assert!(
-                Tolerance::near2(&vec.dot(axis), &vec0.dot(axis)),
-                "origin: {origin:?}\naxis: {axis:?}\nangle: {angle:?}\npt0: {pt0:?}"
+        #[test]
+        fn test_attach_plane_with_multiple_boundary(
+            axis_pole in array::uniform2(-1.0f64..1.0),
+            origin in array::uniform3(-10.0f64..10.0),
+            points in array::uniform8(1.0f64..9.0),
+            radius_ratios in array::uniform4(0.1f64..0.9),
+        ) {
+            let axis = pole_to_normal(axis_pole);
+            let origin = Point3::from(origin);
+            let diag = take_one_axis_by_normal(axis);
+            let trsf = Matrix4::from_cols(
+                diag.extend(0.0),
+                axis.cross(diag).extend(0.0),
+                axis.extend(0.0),
+                origin.to_homogeneous(),
             );
+            let points = [
+                Point3::new(points[0], points[1], 0.0),
+                Point3::new(points[2] - 10.0, points[3], 0.0),
+                Point3::new(points[4] - 10.0, points[5] - 10.0, 0.0),
+                Point3::new(points[6], points[7] - 10.0, 0.0),
+            ];
+            let mut multiple_boundary = multiple_boundary(points, radius_ratios);
+            multiple_boundary
+                .iter_mut()
+                .flatten()
+                .for_each(|p| *p = trsf.transform_point(*p));
+            let plane = attach_plane(multiple_boundary).unwrap();
+            assert_near!(plane.normal(), axis);
         }
-    }
-
-    #[test]
-    fn circle_arc_test2() {
-        let origin = Point3::origin();
-        let axis = Vector3::unit_z();
-        let angle = Rad(random::<f64>() * PI);
-        let pt0 = Point3::new(1.4, 0.0, 0.0);
-        let curve = circle_arc(pt0.to_homogeneous(), origin, axis, angle);
-        const N: usize = 100;
-        let vec0 = pt0 - origin;
-        for i in 0..=N {
-            let t = i as f64 / N as f64;
-            let pt = Point3::from_homogeneous(curve.subs(t));
-            let vec = pt - origin;
-            assert_near2!(vec.dot(axis), vec0.dot(axis));
-            assert!(pt[1] >= 0.0, "angle: {angle:?}");
-        }
-    }
-
-    #[test]
-    fn attach_plane_test0() {
-        const N: usize = 10;
-        let pt = Point3::new(1.0, 0.0, 0.0);
-        let c = Point3::new(0.0, 2.0 * random::<f64>() - 1.0, 0.0);
-        let axis = Vector3::new(c[1], 1.0, 0.0).normalize();
-
-        let pts0 = (0..=N)
-            .map(|i| {
-                let angle = Rad(2.0 * PI * i as f64 / N as f64);
-                let rot = Matrix3::from_axis_angle(axis, angle);
-                pt + rot * (pt - c)
-            })
-            .collect();
-        let mid = pt.midpoint(c);
-        let pts1 = (0..=N)
-            .map(|i| {
-                let angle = Rad(2.0 * PI * (N * 3 / 2 - i) as f64 / N as f64);
-                let rot = Matrix3::from_axis_angle(axis, angle);
-                pt + rot * (mid - c)
-            })
-            .collect();
-        let mut pts = vec![pts0, pts1];
-        let surface = attach_plane(pts.clone()).unwrap();
-        let n = surface.normal();
-        assert!(
-            n.near(&axis),
-            "rotation axis: {axis:?}\nsurface normal: {n:?}"
-        );
-        pts.iter_mut().for_each(|vec| vec.reverse());
-        let surface = attach_plane(pts).unwrap();
-        let n = surface.normal();
-        assert!(
-            (-n).near(&axis),
-            "inversed failed: rotation axis: {axis:?}\nsurface normal: {n:?}"
-        );
-    }
-
-    #[test]
-    fn attach_plane_test1() {
-        const N: usize = 10;
-        let pt = Point3::new(1.0, 0.0, 0.0);
-        let c = Point3::new(0.0, 0.0, 0.0);
-        let axis = Vector3::unit_z();
-
-        let pts0 = (0..=N)
-            .map(|i| {
-                let angle = Rad(2.0 * PI * i as f64 / N as f64);
-                let rot = Matrix3::from_axis_angle(axis, angle);
-                pt + rot * (pt - c)
-            })
-            .collect();
-        let mid = pt.midpoint(c);
-        let pts1 = (0..=N)
-            .map(|i| {
-                let angle = Rad(2.0 * PI * (N * 3 / 2 - i) as f64 / N as f64);
-                let rot = Matrix3::from_axis_angle(axis, angle);
-                mid + rot * (mid - c)
-            })
-            .collect();
-        let mut pts = vec![pts0, pts1];
-        let surface = attach_plane(pts.clone()).unwrap();
-        let n = surface.normal();
-        assert!(
-            n.near(&axis),
-            "rotation axis: {axis:?}\nsurface normal: {n:?}"
-        );
-        pts.iter_mut().for_each(|vec| vec.reverse());
-        let surface = attach_plane(pts).unwrap();
-        let n = surface.normal();
-        assert!(
-            (-n).near(&axis),
-            "inversed failed: rotation axis: {axis:?}\nsurface normal: {n:?}"
-        );
-    }
-
-    #[test]
-    fn attach_plane_test2() {
-        const N: usize = 10;
-        let pt = Point3::new(1.0, 0.0, 0.0);
-        let c = Point3::new(0.0, 0.0, 0.0);
-        let axis = -Vector3::unit_z();
-
-        let pts0 = (0..=N)
-            .map(|i| {
-                let angle = Rad(2.0 * PI * i as f64 / N as f64);
-                let rot = Matrix3::from_axis_angle(axis, angle);
-                pt + rot * (pt - c)
-            })
-            .collect();
-        let mid = pt.midpoint(c);
-        let pts1 = (0..=N)
-            .map(|i| {
-                let angle = Rad(2.0 * PI * (N * 3 / 2 - i) as f64 / N as f64);
-                let rot = Matrix3::from_axis_angle(axis, angle);
-                mid + rot * (mid - c)
-            })
-            .collect();
-        let mut pts = vec![pts0, pts1];
-        let surface = attach_plane(pts.clone()).unwrap();
-        let n = surface.normal();
-        assert!(
-            n.near(&axis),
-            "rotation axis: {axis:?}\nsurface normal: {n:?}"
-        );
-        pts.iter_mut().for_each(|vec| vec.reverse());
-        let surface = attach_plane(pts).unwrap();
-        let n = surface.normal();
-        assert!(
-            (-n).near(&axis),
-            "inversed failed: rotation axis: {axis:?}\nsurface normal: {n:?}"
-        );
     }
 }

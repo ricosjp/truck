@@ -17,7 +17,9 @@
 
 /// re-export `truck_base`.
 pub mod base {
-    pub use truck_base::{assert_near, assert_near2, bounding_box::*, cgmath64::*, tolerance::*};
+    pub use truck_base::{
+        assert_near, assert_near2, bounding_box::BoundingBox, cgmath64::*, tolerance::*,
+    };
     pub use truck_geotrait::*;
 }
 pub use base::*;

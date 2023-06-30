@@ -8,14 +8,14 @@ homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
 license = "Apache-2.0"
 
-keywords = ["truck", "graphics"]
+keywords = ["truck", "graphics", "mesh", "obj", "stl"]
 categories = ["graphics"]
 exclude = ["examples/**/*.obj"]
 
 [dependencies]
-bytemuck = { version = "1.13.0", features = ["derive"] }
+bytemuck = { version = "1.13.1", features = ["derive"] }
 rustc-hash = "1.1.0"
-serde = { version = "1.0.152", features = ["derive"] }
+serde = { version = "1.0.164", features = ["derive"] }
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
-thiserror = "1.0.38"
+thiserror = "1.0.40"

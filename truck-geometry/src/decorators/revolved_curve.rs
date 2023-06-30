@@ -63,7 +63,7 @@ impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
     /// Returns true if the front point of the curve is on the axis of rotation.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let line = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
     ///     vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 1.0)],
@@ -82,7 +82,7 @@ impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
     /// Returns true if the back point of the curve is on the axis of rotation.
     /// # Examples
     /// ```
-    /// use truck_geometry::*;
+    /// use truck_geometry::prelude::*;
     /// let line = BSplineCurve::new(
     ///     KnotVec::bezier_knot(1),
     ///     vec![Point3::new(0.0, 0.0, 1.0), Point3::new(0.0, 0.0, 0.0)],

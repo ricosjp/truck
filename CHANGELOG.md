@@ -4,6 +4,24 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix building webgpu examples.
+- Set `--no-cache` option to build CI images.
+- Fix wasm-test container build.
+- Fix dependency check.
+- Put `truck_geometry::prelude` for resolve multiple re-export.
+- Fix dependency check.
+- Add dependency check.
+- Remove test build from `wasm-test`.
+- `cargo upgrade`
+- Updates wgpu to v0.16.
+- Updates CI containers.
+- Output `Vertex`, `Edge`, `Wire`, and `Face` to `vtu` files.
+- Add tests for traits in `truck_modeling::topo_traits`.
+- Refactor and renew test for `truck_modeling::geom_impl` by `proptest`.
+- Output `Shell<Point3, PolylineCurve, PolygonMesh>` to `vtu` files.
+- Output `PolygonMesh` to `vtp` files.
+- Separate features for meshalgo.
+- cargo upgrade
 - Remove `get_` prefix and replace `Mutex` and `Arc` more faster and compact mem.
 - JS wrapper of STEP API.
 - Parse `SURFACE_CURVE` (not translate to `IntersectionCurve`.
@@ -27,6 +45,10 @@ Step input API is W.I.P. and hidden.
 - Fix some bugs in `step-to-obj`.
 - Parse STEP topology.
 - The parsing of the STEP geometry was implemented up to `BSplineSurfaceWithKnots`.
+
+### Latest `cargo upgrade`
+
+2023-06-30
 
 ## v0.5
 
