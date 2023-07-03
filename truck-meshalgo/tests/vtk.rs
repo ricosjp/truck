@@ -554,7 +554,9 @@ fn shell_unstructured_grid() -> DataSet {
 #[test]
 fn face() {
     let data = shell_topology()[0].to_data_set();
-    let DataSet::UnstructuredGrid { pieces, .. } = shell_unstructured_grid() else { unreachable!() };
+    let DataSet::UnstructuredGrid { pieces, .. } = shell_unstructured_grid() else {
+        unreachable!()
+    };
     let ans_data = DataSet::UnstructuredGrid {
         meta: None,
         pieces: vec![pieces[0].clone()],
