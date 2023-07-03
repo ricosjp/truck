@@ -263,3 +263,4 @@ impl<T> CompleteStepDisplay<T> {
 
 mod geometry;
 mod topology;
+pub use geometry::VectorAsDirection;

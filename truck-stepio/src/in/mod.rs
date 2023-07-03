@@ -641,10 +641,10 @@ pub struct Axis1Placement {
 
 impl Axis1Placement {
     pub fn direction(&self) -> Vector3 {
-        match &self.direction {
-            Some(direction) => Vector3::from(direction),
-            None => Vector3::unit_z(),
-        }
+        self.direction
+            .as_ref()
+            .map(Vector3::from)
+            .unwrap_or_else(Vector3::unit_z)
     }
 }
 
