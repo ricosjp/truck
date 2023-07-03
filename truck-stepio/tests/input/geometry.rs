@@ -140,6 +140,56 @@ fn exec_axis1_placement(arg: [f64; 6]) {
     assert_near!(dir, placement.direction());
 }
 
+fn exec_axis2_placement2d(arg: [f64; 4]) {
+    let p = Point2::new(arg[0], arg[1]);
+    let v = Vector2::new(arg[2], arg[3]);
+    let dir = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let step_str = format!(
+        "DATA;#1 = AXIS2_PLACEMENT_2D('', #2, #3);{}{}ENDSEC;",
+        StepDisplay::new(p, 2),
+        StepDisplay::new(VectorAsDirection(dir), 3),
+    );
+    let placement = step_to_entity::<Axis2Placement2dHolder>(&step_str);
+    let res: Matrix3 = (&placement).into();
+    let n = Vector2::new(-dir.y, dir.x);
+    let ans = Matrix3::from_cols(dir.extend(0.0), n.extend(0.0), p.to_vec().extend(1.0));
+    assert_near!(res, ans);
+}
+
+fn exec_axis2_placement3d(arg: [f64; 9]) {
+    let p = Point3::new(arg[0], arg[1], arg[2]);
+    let v = Vector3::new(arg[3], arg[4], arg[5]);
+    let z = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let ref_dir = Vector3::new(arg[6], arg[7], arg[8]);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let step_str = format!(
+        "DATA;#1 = AXIS2_PLACEMENT_3D('', #2, #3, #4);{}{}{}ENDSEC;",
+        StepDisplay::new(p, 2),
+        StepDisplay::new(VectorAsDirection(z), 3),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 4),
+    );
+    let placement = step_to_entity::<Axis2Placement3dHolder>(&step_str);
+    let res: Matrix4 = (&placement).into();
+    let ans = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        p.to_vec().extend(1.0),
+    );
+    assert_near!(res, ans);
+}
+
 proptest! {
     #[test]
     fn cartesian_point(arg in array::uniform3(-100.0f64..100.0f64)) {
@@ -160,5 +210,13 @@ proptest! {
     #[test]
     fn axis1_placement(arg in array::uniform6(-100.0f64..100.0f64)) {
         exec_axis1_placement(arg)
+    }
+    #[test]
+    fn axis2_placement_2d(arg in array::uniform4(-100.0f64..100.0f64)) {
+        exec_axis2_placement2d(arg)
+    }
+    #[test]
+    fn axis2_placement_3d(arg in array::uniform9(-100.0f64..100.0f64)) {
+        exec_axis2_placement3d(arg)
     }
 }
