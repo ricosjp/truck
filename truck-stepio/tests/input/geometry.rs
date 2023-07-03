@@ -1,6 +1,7 @@
 use proptest::*;
 use ruststep::{ast::DataSection, tables::*};
 use std::str::FromStr;
+use truck_geometry::prelude as truck;
 use truck_stepio::{
     out::{StepDisplay, VectorAsDirection},
     r#in::{alias::*, *},
@@ -190,6 +191,22 @@ fn exec_axis2_placement3d(arg: [f64; 9]) {
     assert_near!(res, ans);
 }
 
+fn exec_line(arg: [f64; 6]) {
+    let p = Point3::new(arg[0], arg[1], arg[2]);
+    let v = Vector3::new(arg[3], arg[4], arg[5]);
+    let q = p + v;
+    let step_str = format!(
+        "DATA;#1 = LINE('', #2, #3);{}{}ENDSEC;",
+        StepDisplay::new(p, 2),
+        StepDisplay::new(v, 3),
+    );
+    let line = step_to_entity::<LineHolder>(&step_str);
+    let res: truck::Line<Point3> = (&line).into();
+    let ans = truck::Line(p, q);
+    assert_near!(res.0, ans.0);
+    assert_near!(res.1, ans.1);
+}
+
 proptest! {
     #[test]
     fn cartesian_point(arg in array::uniform3(-100.0f64..100.0f64)) {
@@ -218,5 +235,9 @@ proptest! {
     #[test]
     fn axis2_placement_3d(arg in array::uniform9(-100.0f64..100.0f64)) {
         exec_axis2_placement3d(arg)
+    }
+    #[test]
+    fn line(arg in array::uniform6(-100.0f64..100.0f64)) {
+        exec_line(arg)
     }
 }
