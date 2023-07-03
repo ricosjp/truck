@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- `cargo fmt`
 - Fix building webgpu examples.
 - Set `--no-cache` option to build CI images.
 - Fix wasm-test container build.
