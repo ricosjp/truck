@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- `cargo fmt`
 - Fix building webgpu examples.
 - Set `--no-cache` option to build CI images.
 - Fix wasm-test container build.
@@ -48,7 +49,7 @@ Step input API is W.I.P. and hidden.
 
 ### Latest `cargo upgrade`
 
-2023-06-30
+2023-07-04
 
 ## v0.5
 
