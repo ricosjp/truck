@@ -207,6 +207,28 @@ fn exec_line(arg: [f64; 6]) {
     assert_near!(res.1, ans.1);
 }
 
+fn exec_polyline(arg: [f64; 12]) {
+    let p = arg
+        .chunks(3)
+        .map(|x| Point3::new(x[0], x[1], x[2]))
+        .collect::<Vec<_>>();
+    let step_str = format!(
+        "DATA;#1 = POLYLINE('', (#2, #3, #4, #5));{}{}{}{}ENDSEC;",
+        StepDisplay::new(p[0], 2),
+        StepDisplay::new(p[1], 3),
+        StepDisplay::new(p[2], 4),
+        StepDisplay::new(p[3], 5),
+    );
+    let polyline = step_to_entity::<PolylineHolder>(&step_str);
+    let tpoly: PolylineCurve<Point3> = (&polyline).into();
+    let res = tpoly.0;
+    let ans = p;
+    assert_eq!(res.len(), ans.len());
+    res.into_iter()
+        .zip(ans)
+        .for_each(|(p, q)| assert_near!(p, q));
+}
+
 proptest! {
     #[test]
     fn cartesian_point(arg in array::uniform3(-100.0f64..100.0f64)) {
@@ -239,5 +261,9 @@ proptest! {
     #[test]
     fn line(arg in array::uniform6(-100.0f64..100.0f64)) {
         exec_line(arg)
+    }
+    #[test]
+    fn polyline(arg in array::uniform12(-100.0f64..100.0f64)) {
+        exec_polyline(arg)
     }
 }
