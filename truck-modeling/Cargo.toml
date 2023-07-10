@@ -14,8 +14,8 @@ categories = ["graphics"]
 [dependencies]
 derive_more = "0.99.17"
 rustc-hash = "1.1.0"
-serde = { version = "1.0.166", features = ["derive"] }
-thiserror = "1.0.41"
+serde = { version = "1.0.171", features = ["derive"] }
+thiserror = "1.0.43"
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait", features = ["derive"] }
 truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
