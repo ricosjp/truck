@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- STEP input test for primitives and curves.
 - `cargo fmt`
 - Fix building webgpu examples.
 - Set `--no-cache` option to build CI images.
