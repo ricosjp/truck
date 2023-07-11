@@ -641,10 +641,10 @@ pub struct Axis1Placement {
 
 impl Axis1Placement {
     pub fn direction(&self) -> Vector3 {
-        match &self.direction {
-            Some(direction) => Vector3::from(direction),
-            None => Vector3::unit_z(),
-        }
+        self.direction
+            .as_ref()
+            .map(Vector3::from)
+            .unwrap_or_else(Vector3::unit_z)
     }
 }
 
@@ -698,7 +698,8 @@ impl From<&Axis2Placement2d> for Matrix3 {
             Some(axis) => Vector2::from(axis),
             None => Vector2::unit_x(),
         };
-        Matrix3::new(x.x, x.y, 0.0, -x.y, x.x, 0.0, z.x, z.y, 1.0)
+        let y = Vector2::new(-x.y, x.x);
+        Matrix3::from_cols(x.extend(0.0), y.extend(0.0), z.to_vec().extend(1.0))
     }
 }
 
@@ -715,6 +716,7 @@ pub struct Axis2Placement3d {
     #[holder(use_place_holder)]
     pub ref_direction: Option<Direction>,
 }
+
 impl From<&Axis2Placement3d> for Matrix4 {
     fn from(axis: &Axis2Placement3d) -> Matrix4 {
         let w = Point3::from(&axis.location);
@@ -728,8 +730,11 @@ impl From<&Axis2Placement3d> for Matrix4 {
         };
         let x = (x - x.dot(z) * z).normalize();
         let y = z.cross(x);
-        Matrix4::new(
-            x.x, x.y, x.z, 0.0, y.x, y.y, y.z, 0.0, z.x, z.y, z.z, 0.0, w.x, w.y, w.z, 1.0,
+        Matrix4::from_cols(
+            x.extend(0.0),
+            y.extend(0.0),
+            z.extend(0.0),
+            w.to_vec().extend(1.0),
         )
     }
 }

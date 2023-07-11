@@ -37,7 +37,7 @@ impl_const_step_length!(Point3, 1);
 
 /// class for display `DIRECTION`.
 #[derive(Clone, Debug, Copy)]
-pub struct VectorAsDirection<V>(V);
+pub struct VectorAsDirection<V>(pub V);
 
 impl Display for StepDisplay<VectorAsDirection<Vector2>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
