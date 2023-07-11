@@ -386,7 +386,7 @@ fn exec_circle(arg: [f64; 10]) {
         false => v.normalize(),
     };
     let x = y.cross(z).normalize();
-    let radius = arg[9] + 100.0;
+    let radius = arg[9] + 100.01;
     let step_str = format!(
         "DATA;
 #1 = CIRCLE('', #2, {radius});
@@ -409,6 +409,175 @@ fn exec_circle(arg: [f64; 10]) {
         let p = Point3::new(radius * f64::cos(t), radius * f64::sin(t), 0.0);
         assert_near!(ellipse.subs(t), mat.transform_point(p));
     });
+}
+
+fn exec_plane(arg: [f64; 9]) {
+    let p = Point3::new(arg[0], arg[1], arg[2]);
+    let v = Vector3::new(arg[3], arg[4], arg[5]);
+    let z = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let ref_dir = Vector3::new(arg[6], arg[7], arg[8]);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let step_str = format!(
+        "DATA;
+#1 = PLANE('', #2);
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+{}{}{}ENDSEC;",
+        StepDisplay::new(p, 3),
+        StepDisplay::new(VectorAsDirection(z), 4),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let step_plane = step_to_entity::<PlaneHolder>(&step_str);
+    let plane = truck::Plane::from(&step_plane);
+    assert_near!(plane.origin(), p);
+    assert_near!(plane.u_axis(), x);
+    assert_near!(plane.v_axis(), y);
+}
+
+fn exec_spherical_surface(arg: [f64; 10]) {
+    let p = Point3::new(arg[0], arg[1], arg[2]);
+    let v = Vector3::new(arg[3], arg[4], arg[5]);
+    let z = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let ref_dir = Vector3::new(arg[6], arg[7], arg[8]);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let radius = arg[9] + 100.01;
+    let step_str = format!(
+        "DATA;
+#1 = SPHERICAL_SURFACE('', #2, {radius});
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+{}{}{}ENDSEC;",
+        StepDisplay::new(p, 3),
+        StepDisplay::new(VectorAsDirection(z), 4),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let step_sphere = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
+    let sphere: alias::ElementarySurface = (&step_sphere).into();
+    let mat = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        p.to_vec().extend(1.0),
+    );
+    (0..=10)
+        .flat_map(move |i| (0..=10).map(move |j| (i, j)))
+        .for_each(|(i, j)| {
+            let u = 2.0 * PI * i as f64 / 10.0;
+            let v = PI * j as f64 / 10.0 - PI / 2.0;
+            let res = sphere.subs(u, v);
+            let ans = mat.transform_point(Point3::new(
+                radius * f64::cos(u) * f64::cos(v),
+                radius * f64::sin(u) * f64::cos(v),
+                radius * f64::sin(v),
+            ));
+            assert_near!(res, ans);
+        })
+}
+
+fn exec_cylindrical_surface(arg: [f64; 10]) {
+    let p = Point3::new(arg[0], arg[1], arg[2]);
+    let v = Vector3::new(arg[3], arg[4], arg[5]);
+    let z = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let ref_dir = Vector3::new(arg[6], arg[7], arg[8]);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let radius = arg[9] + 100.01;
+    let step_str = format!(
+        "DATA;
+#1 = CYLINDRICAL_SURFACE('', #2, {radius});
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+{}{}{}ENDSEC;",
+        StepDisplay::new(p, 3),
+        StepDisplay::new(VectorAsDirection(z), 4),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let step_cylinder = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
+    let cylinder: alias::ElementarySurface = (&step_cylinder).into();
+    let mat = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        p.to_vec().extend(1.0),
+    );
+    (0..=10)
+        .flat_map(move |i| (0..=10).map(move |j| (i, j)))
+        .for_each(|(i, j)| {
+            let u = 2.0 * PI * i as f64 / 10.0;
+            let v = j as f64;
+            let res = cylinder.subs(u, v);
+            let ans =
+                mat.transform_point(Point3::new(radius * f64::cos(u), radius * f64::sin(u), v));
+            assert_near!(res, ans, "u:{u} v:{v} res:{res:?} ans:{ans:?}");
+        })
+}
+
+fn exec_toroidal_surface(arg: [f64; 11]) {
+    let p = Point3::new(arg[0], arg[1], arg[2]);
+    let v = Vector3::new(arg[3], arg[4], arg[5]);
+    let z = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let ref_dir = Vector3::new(arg[6], arg[7], arg[8]);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let major_radius = f64::max(arg[9], arg[10]) + 100.01;
+    let minor_radius = (f64::min(arg[9], arg[10]) + 100.01) / 2.0;
+    let step_str = format!(
+        "DATA;
+#1 = TOROIDAL_SURFACE('', #2, {major_radius}, {minor_radius});
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+{}{}{}ENDSEC;",
+        StepDisplay::new(p, 3),
+        StepDisplay::new(VectorAsDirection(z), 4),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let step_toroidal = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
+    let toroidal: alias::ElementarySurface = (&step_toroidal).into();
+    let mat = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        p.to_vec().extend(1.0),
+    );
+    (0..=10)
+        .flat_map(move |i| (0..=10).map(move |j| (i, j)))
+        .for_each(|(i, j)| {
+            let u = 2.0 * PI * i as f64 / 10.0;
+            let v = 2.0 * PI * j as f64 / 10.0;
+            let res = toroidal.subs(u, v);
+            let ans = mat.transform_point(Point3::new(
+                (major_radius + minor_radius * f64::cos(v)) * f64::cos(u),
+                (major_radius + minor_radius * f64::cos(v)) * f64::sin(u),
+                minor_radius * f64::sin(v),
+            ));
+            assert_near!(res, ans, "u:{u} v:{v} res:{res:?} ans:{ans:?}");
+        })
 }
 
 proptest! {
@@ -482,5 +651,21 @@ proptest! {
     #[test]
     fn circle(arg in array::uniform10(-100.0f64..100.0f64)) {
         exec_circle(arg)
+    }
+    #[test]
+    fn plane(arg in array::uniform9(-100.0f64..100.0f64)) {
+        exec_plane(arg)
+    }
+    #[test]
+    fn spherical_surface(arg in array::uniform10(-100.0f64..100.0f64)) {
+        exec_spherical_surface(arg)
+    }
+    #[test]
+    fn cylindrical_surface(arg in array::uniform10(-100.0f64..100.0f64)) {
+        exec_cylindrical_surface(arg)
+    }
+    #[test]
+    fn toroidal_surface(arg in array::uniform11(-100.0f64..100.0f64)) {
+        exec_toroidal_surface(arg)
     }
 }

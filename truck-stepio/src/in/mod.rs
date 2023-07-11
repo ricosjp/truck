@@ -1247,9 +1247,9 @@ impl TryFrom<&SurfaceAny> for Surface {
     fn try_from(x: &SurfaceAny) -> std::result::Result<Self, Self::Error> {
         use SurfaceAny::*;
         Ok(match x {
-            ElementarySurface(x) => Self::ElementarySurface(x.as_ref().into()),
+            ElementarySurface(x) => Self::ElementarySurface(Box::new(x.as_ref().into())),
             BSplineSurface(x) => x.as_ref().try_into()?,
-            SweptSurface(x) => Self::SweptCurve(x.as_ref().try_into()?),
+            SweptSurface(x) => Self::SweptCurve(Box::new(x.as_ref().try_into()?)),
         })
     }
 }
@@ -1311,13 +1311,23 @@ pub struct SphericalSurface {
     radius: f64,
 }
 
-impl From<&SphericalSurface> for Processor<Sphere, Matrix3> {
+impl From<&SphericalSurface> for alias::SphericalSurface {
     fn from(ss: &SphericalSurface) -> Self {
-        let mat = Matrix4::from(&ss.position);
-        let center = Point3::from_homogeneous(mat[3]);
-        let radius = ss.radius;
-        let mat = Matrix3::from_cols(mat[0].truncate(), mat[1].truncate(), mat[2].truncate());
-        Processor::new(Sphere::new(center, radius)).transformed(mat)
+        let half_circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (-PI / 2.0, PI / 2.0));
+        let sphere =
+            RevolutedCurve::by_revolution(half_circle, Point3::origin(), Vector3::unit_y());
+        let mut processor = Processor::<_, Matrix4>::new(sphere);
+        let mat0 = Matrix4::from_cols(
+            Vector4::unit_x(),
+            Vector4::unit_z(),
+            -Vector4::unit_y(),
+            Vector4::unit_w(),
+        );
+        let mat1 = Matrix4::from_scale(ss.radius);
+        let mat2 = Matrix4::from(&ss.position);
+        processor.transform_by(mat2 * mat1 * mat0);
+        processor.invert();
+        processor
     }
 }
 
@@ -1332,7 +1342,7 @@ pub struct CylindricalSurface {
     radius: f64,
 }
 
-impl From<&CylindricalSurface> for RevolutedCurve<truck::Line<Point3>> {
+impl From<&CylindricalSurface> for alias::CylindricalSurface {
     fn from(cs: &CylindricalSurface) -> Self {
         let mat = Matrix4::from(&cs.position);
         let x = mat[0].truncate();
@@ -1340,7 +1350,9 @@ impl From<&CylindricalSurface> for RevolutedCurve<truck::Line<Point3>> {
         let center = Point3::from_homogeneous(mat[3]);
         let radius = cs.radius;
         let p = center + x * radius;
-        RevolutedCurve::by_revolution(Line(p, p + z), center, z)
+        let mut res = Processor::new(RevolutedCurve::by_revolution(Line(p, p + z), center, z));
+        res.invert();
+        res
     }
 }
 
@@ -1367,15 +1379,20 @@ impl From<&ToroidalSurface> for alias::ToroidalSurface {
     ) -> Self {
         let mat = Matrix4::from(position);
         let mat0 = Matrix4::from_translation(Vector3::unit_x() * *major_radius)
-            * Matrix4::from_scale(*minor_radius);
-        let mut minor_circle =
-            Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)));
-        minor_circle.transform_by(mat * mat0);
-        RevolutedCurve::by_revolution(
-            minor_circle,
-            mat.transform_point(Point3::origin()),
-            mat.transform_vector(Vector3::unit_z()),
-        )
+            * Matrix4::from_scale(*minor_radius)
+            * Matrix4::from_cols(
+                Vector4::unit_x(),
+                Vector4::unit_z(),
+                -Vector4::unit_y(),
+                Vector4::unit_w(),
+            );
+        let mut minor_circle = Processor::new(UnitCircle::new());
+        minor_circle.transform_by(mat0);
+        let rev = RevolutedCurve::by_revolution(minor_circle, Point3::origin(), Vector3::unit_z());
+        let mut processor = Processor::new(rev);
+        processor.transform_by(mat);
+        processor.invert();
+        processor
     }
 }
 
@@ -1398,10 +1415,10 @@ impl TryFrom<&BSplineSurfaceAny> for Surface {
     fn try_from(value: &BSplineSurfaceAny) -> std::result::Result<Self, Self::Error> {
         use BSplineSurfaceAny::*;
         Ok(match value {
-            BSplineSurfaceWithKnots(x) => Self::BSplineSurface(x.as_ref().try_into()?),
-            UniformSurface(x) => Self::BSplineSurface(x.as_ref().try_into()?),
-            QuasiUniformSurface(x) => Self::BSplineSurface(x.as_ref().try_into()?),
-            BezierSurface(x) => Self::BSplineSurface(x.as_ref().try_into()?),
+            BSplineSurfaceWithKnots(x) => Self::BSplineSurface(Box::new(x.as_ref().try_into()?)),
+            UniformSurface(x) => Self::BSplineSurface(Box::new(x.as_ref().try_into()?)),
+            QuasiUniformSurface(x) => Self::BSplineSurface(Box::new(x.as_ref().try_into()?)),
+            BezierSurface(x) => Self::BSplineSurface(Box::new(x.as_ref().try_into()?)),
         })
     }
 }
