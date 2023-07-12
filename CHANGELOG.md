@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- cargo install by `--locked` in `wasm-test`.
 - STEP input test for primitives and curves.
 - `cargo fmt`
 - Fix building webgpu examples.
