@@ -27,7 +27,7 @@ async-trait = "0.1.71"
 env_logger = "0.10.0"
 pollster = "0.3.0"
 rayon = "1.7.0"
-serde_json = "1.0.102"
+serde_json = "1.0.103"
 truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }
 truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
 winit = "0.28.6"

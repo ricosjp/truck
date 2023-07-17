@@ -255,8 +255,7 @@ fn get_components(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
         let mut stack = vec![first];
         let mut component = vec![first];
         unchecked[first] = false;
-        while !stack.is_empty() {
-            let cursor = stack.pop().unwrap();
+        while let Some(cursor) = stack.pop() {
             for i in &adjacency[cursor] {
                 if unchecked[*i] {
                     unchecked[*i] = false;
