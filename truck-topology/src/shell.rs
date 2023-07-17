@@ -1040,8 +1040,7 @@ where T: Eq + Hash + Clone {
     };
     let mut stack = vec![first];
     let mut res = Vec::new();
-    while !stack.is_empty() {
-        let i = stack.pop().unwrap();
+    while let Some(i) = stack.pop() {
         if let Some(vec) = adjacency.remove(&i) {
             res.push(i);
             for j in vec {
