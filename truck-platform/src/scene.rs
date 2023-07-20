@@ -14,12 +14,13 @@ async fn init_default_device(
     window: Option<Arc<Window>>,
 ) -> (DeviceHandler, Option<WindowHandler>) {
     #[cfg(not(feature = "webgl"))]
-    let instance = Instance::new(InstanceDescriptor {
-        backends: Backends::PRIMARY,
-        dx12_shader_compiler: Default::default(),
-    });
+    let backends = Backends::PRIMARY;
     #[cfg(feature = "webgl")]
-    let instance = Instance::new(Backends::all());
+    let backends = Backends::all();
+    let instance = Instance::new(InstanceDescriptor {
+        backends,
+        ..Default::default()
+    });
 
     // trust winit
     #[allow(unsafe_code)]
