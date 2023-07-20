@@ -103,6 +103,16 @@ env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
 command = "cargo"
 args = ["build", "--target=wasm32-unknown-unknown"]
 
+[tasks.webgl-build]
+description = "Build to wasm-target with webgl feature"
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
+command = "cargo"
+args = [
+	"build",
+	"--target=wasm32-unknown-unknown",
+	"--features", "webgl"
+]
+
 [tasks.build-wgpu-examples]
 description = "Build wasms"
 env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
@@ -126,7 +136,7 @@ script = [
 ]
 
 [tasks.wasm-test]
-dependencies = ["wasm-build", "js-test"]
+dependencies = ["wasm-build", "webgl-build", "js-test"]
 
 [tasks.page-build]
 dependencies = ["adhoc-viewer", "build-wgpu-examples"]
