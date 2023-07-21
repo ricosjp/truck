@@ -6,9 +6,9 @@ fn inverse2(m: mat2x2<f32>) -> mat2x2<f32> {
     return mat2x2<f32>(m[1][1] / det, -m[0][1] / det, -m[1][0] / det, m[0][0] / det);
 }
 
-fn inverse3(m: mat3x3<f32>) -> mat3x3<f32> {
-    let det = determinant(m);
-    let m = transpose(m);
+fn inverse3(m0: mat3x3<f32>) -> mat3x3<f32> {
+    let det = determinant(m0);
+    let m = transpose(m0);
     return mat3x3<f32>(
         cross(m[1], m[2]) / det,
         cross(m[2], m[0]) / det,
@@ -16,9 +16,9 @@ fn inverse3(m: mat3x3<f32>) -> mat3x3<f32> {
     );
 }
 
-fn inverse4(m: mat4x4<f32>) -> mat4x4<f32> {
-    let det = determinant(m);
-    let m = transpose(m);
+fn inverse4(m0: mat4x4<f32>) -> mat4x4<f32> {
+    let det = determinant(m0);
+    let m = transpose(m0);
     return mat4x4<f32>(
         determinant(mat3x3<f32>(m[1].yzw, m[2].yzw, m[3].yzw)) / det,
         -determinant(mat3x3<f32>(m[1].xzw, m[2].xzw, m[3].xzw)) / det,

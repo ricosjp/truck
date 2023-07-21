@@ -14,7 +14,7 @@ categories = ["graphics"]
 [dependencies]
 chrono = { version = "0.4.26", features = ["wasmbind"] }
 ruststep = { git = "https://github.com/ricosjp/ruststep.git" }
-serde = { version = "1.0.171", features = ["derive"] }
+serde = { version = "1.0.174", features = ["derive"] }
 truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
 truck-modeling = { version = "0.5.0", path = "../truck-modeling" }

@@ -126,7 +126,7 @@ pub struct BufferHandler {
 pub struct PreBindGroupLayoutEntry {
     pub visibility: ShaderStages,
     pub ty: BindingType,
-    pub count: Option<core::num::NonZeroU32>,
+    pub count: Option<std::num::NonZeroU32>,
 }
 
 /// A collection of GPU buffers used by `wgpu` for rendering

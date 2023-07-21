@@ -28,7 +28,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - cargo upgrade
 - Remove `get_` prefix and replace `Mutex` and `Arc` more faster and compact mem.
 - JS wrapper of STEP API.
-- Parse `SURFACE_CURVE` (not translate to `IntersectionCurve`.
+- Parse `SURFACE_CURVE` (not translate to `IntersectionCurve`).
 - Refactoring for `ruststep` updating.
 - Parse of `PCURVE` in STEP.
 - Dummy struct for STEP parse failure.
@@ -52,7 +52,7 @@ Step input API is W.I.P. and hidden.
 
 ### Latest `cargo upgrade`
 
-2023-07-17
+2023-07-21
 
 ## v0.5
 
