@@ -12,7 +12,8 @@
 )]
 
 use std::io::{BufRead, BufReader};
-use std::process::Command;
+use std::process::{Child, Command};
+use std::thread::JoinHandle;
 
 const EXAMPLES: &[&str] = &[
     "wgsl-sandbox",
@@ -24,6 +25,25 @@ const EXAMPLES: &[&str] = &[
     "simple-shape-viewer",
     "textured-cube",
 ];
+
+fn out_threads(child: &mut Child) -> (JoinHandle<()>, JoinHandle<()>) {
+    let stdout = BufReader::new(child.stdout.take().expect("no stdout"));
+    let stderr = BufReader::new(child.stderr.take().expect("no stderr"));
+    (
+        std::thread::spawn(move || {
+            stdout
+                .lines()
+                .map_while(|line| line.ok())
+                .for_each(|line| println!("{line}"))
+        }),
+        std::thread::spawn(move || {
+            stderr
+                .lines()
+                .map_while(|line| line.ok())
+                .for_each(|line| println!("{line}"))
+        }),
+    )
+}
 
 fn main() {
     let mut child = Command::new("cargo")
@@ -42,21 +62,8 @@ fn main() {
         .stderr(std::process::Stdio::piped())
         .spawn()
         .unwrap_or_else(|e| panic!("{}", e));
-    let stdout = BufReader::new(child.stdout.take().expect("no stdout"));
-    let stderr = BufReader::new(child.stderr.take().expect("no stderr"));
-    let _thread0 = std::thread::spawn(|| {
-        stdout
-            .lines()
-            .map_while(|line| line.ok())
-            .for_each(|line| println!("{line}"))
-    });
-    let _thread1 = std::thread::spawn(|| {
-        stderr
-            .lines()
-            .map_while(|line| line.ok())
-            .for_each(|line| println!("{line}"))
-    });
-    child.wait().unwrap_or_else(|e| panic!("{}", e));
+    let _threads = out_threads(&mut child);
+    assert!(child.wait().unwrap_or_else(|e| panic!("{}", e)).success());
     let mut sum = String::new();
     for dir in EXAMPLES {
         let output_dir = format!("dist/{dir}");
@@ -73,21 +80,8 @@ fn main() {
             .stderr(std::process::Stdio::piped())
             .spawn()
             .unwrap_or_else(|e| panic!("{}", e));
-        let stdout = BufReader::new(child.stdout.take().expect("no stdout"));
-        let stderr = BufReader::new(child.stderr.take().expect("no stderr"));
-        let _thread0 = std::thread::spawn(|| {
-            stdout
-                .lines()
-                .map_while(|line| line.ok())
-                .for_each(|line| println!("{line}"))
-        });
-        let _thread1 = std::thread::spawn(|| {
-            stderr
-                .lines()
-                .map_while(|line| line.ok())
-                .for_each(|line| println!("{line}"))
-        });
-        child.wait().unwrap_or_else(|e| panic!("{}", e));
+        let _threads = out_threads(&mut child);
+        assert!(child.wait().unwrap_or_else(|e| panic!("{}", e)).success());
         std::fs::write(
             format!("{output_dir}/index.html"),
             include_str!("example-index.html").replace("{example}", dir),
