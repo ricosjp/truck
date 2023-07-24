@@ -16,7 +16,9 @@ use app::*;
 
 struct MyApp {
     scene: WindowScene,
-    object: Arc<Mutex<PolygonInstance>>,
+    creator: InstanceCreator,
+    object: Arc<Mutex<StructuredMesh>>,
+    instance: PolygonInstance,
     closed: Arc<AtomicBool>,
     updated: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
@@ -52,8 +54,7 @@ impl MyApp {
         camera
     }
     fn init_thread(
-        creator: InstanceCreator,
-        object: Arc<Mutex<PolygonInstance>>,
+        object: Arc<Mutex<StructuredMesh>>,
         closed: Arc<AtomicBool>,
         updated: Arc<AtomicBool>,
         surface: Arc<Mutex<BSplineSurface<Point3>>>,
@@ -70,6 +71,14 @@ impl MyApp {
                 if updated.load(Ordering::SeqCst) {
                     continue;
                 }
+                if let Ok(mut surface) = surface.lock() {
+                    surface.control_point_mut(3, 3)[1] = time.sin();
+                    let surface0 = surface.clone();
+                    drop(surface);
+                    let mesh =
+                        StructuredMesh::from_surface(&surface0, surface0.parameter_range(), 0.01);
+                    *object.lock().unwrap() = mesh;
+                }
                 updated.store(true, Ordering::SeqCst);
                 count += 1;
                 time += 0.1;
@@ -79,21 +88,6 @@ impl MyApp {
                     instant = std::time::Instant::now();
                     count = 0;
                 }
-                let mut mesh = None;
-                if let Ok(mut surface) = surface.lock() {
-                    surface.control_point_mut(3, 3)[1] = time.sin();
-                    let surface0 = surface.clone();
-                    drop(surface);
-                    mesh = Some(StructuredMesh::from_surface(
-                        &surface0,
-                        surface0.parameter_range(),
-                        0.01,
-                    ));
-                }
-                let mut another_object =
-                    creator.create_instance(&mesh.unwrap(), &Default::default());
-                let mut object = object.lock().unwrap();
-                object.swap_vertex(&mut another_object);
             }
         })
     }
@@ -120,16 +114,13 @@ impl App for MyApp {
         let mut scene = WindowScene::from_window(window, &desc).await;
         let creator = scene.instance_creator();
         let surface = Self::init_surface(3, 4);
-        let object = creator.create_instance(
-            &StructuredMesh::from_surface(&surface, surface.parameter_range(), 0.01),
-            &Default::default(),
-        );
-        scene.add_object(&object);
+        let object = StructuredMesh::from_surface(&surface, surface.parameter_range(), 0.01);
+        let instance = creator.create_instance(&object, &Default::default());
+        scene.add_object(&instance);
         let object = Arc::new(Mutex::new(object));
         let closed = Arc::new(AtomicBool::new(false));
         let updated = Arc::new(AtomicBool::new(false));
         let thread = Some(MyApp::init_thread(
-            creator,
             Arc::clone(&object),
             Arc::clone(&closed),
             Arc::clone(&updated),
@@ -137,6 +128,8 @@ impl App for MyApp {
         ));
         MyApp {
             scene,
+            creator,
+            instance,
             object,
             closed,
             updated,
@@ -148,7 +141,10 @@ impl App for MyApp {
     fn render(&mut self) {
         if self.updated.load(Ordering::SeqCst) {
             let object = self.object.lock().unwrap();
-            self.scene.update_vertex_buffer(&*object);
+            let mut object: PolygonInstance =
+                self.creator.create_instance(&*object, &Default::default());
+            self.instance.swap_vertex(&mut object);
+            self.scene.update_vertex_buffer(&self.instance);
             self.updated.store(false, Ordering::SeqCst);
         }
         self.scene.render_frame();
