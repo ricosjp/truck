@@ -56,7 +56,7 @@ fn main() {
             .map_while(|line| line.ok())
             .for_each(|line| println!("{line}"))
     });
-    child.wait().unwrap_or_else(|e| panic!("{}", e));
+    assert!(child.wait().unwrap_or_else(|e| panic!("{}", e)).success());
     let mut sum = String::new();
     for dir in EXAMPLES {
         let output_dir = format!("dist/{dir}");
@@ -87,7 +87,7 @@ fn main() {
                 .map_while(|line| line.ok())
                 .for_each(|line| println!("{line}"))
         });
-        child.wait().unwrap_or_else(|e| panic!("{}", e));
+        assert!(child.wait().unwrap_or_else(|e| panic!("{}", e)).success());
         std::fs::write(
             format!("{output_dir}/index.html"),
             include_str!("example-index.html").replace("{example}", dir),
