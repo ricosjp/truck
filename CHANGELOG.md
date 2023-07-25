@@ -53,7 +53,7 @@ Step input API is W.I.P. and hidden.
 
 ### Latest `cargo upgrade`
 
-2023-07-24
+2023-07-25
 
 ## v0.5
 
