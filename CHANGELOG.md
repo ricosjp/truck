@@ -4,6 +4,9 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix build error of `bsp-animation` in wasm.
+- Fix the compile error with `webgl` feature.
+- cargo install by `--locked` in `wasm-test`.
 - STEP input test for primitives and curves.
 - `cargo fmt`
 - Fix building webgpu examples.
@@ -26,7 +29,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - cargo upgrade
 - Remove `get_` prefix and replace `Mutex` and `Arc` more faster and compact mem.
 - JS wrapper of STEP API.
-- Parse `SURFACE_CURVE` (not translate to `IntersectionCurve`.
+- Parse `SURFACE_CURVE` (not translate to `IntersectionCurve`).
 - Refactoring for `ruststep` updating.
 - Parse of `PCURVE` in STEP.
 - Dummy struct for STEP parse failure.
@@ -50,7 +53,7 @@ Step input API is W.I.P. and hidden.
 
 ### Latest `cargo upgrade`
 
-2023-07-10
+2023-07-25
 
 ## v0.5
 
