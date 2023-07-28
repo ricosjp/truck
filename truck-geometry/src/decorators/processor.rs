@@ -347,23 +347,52 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
     }
 }
 
-impl<E, D, T> SearchParameter<D> for Processor<E, T>
+impl<E, T> SearchParameter<D1> for Processor<E, T>
 where
-    D: SPDimension,
-    E: SearchParameter<D>,
+    E: SearchParameter<D1> + BoundedCurve,
+    <E as SearchParameter<D1>>::Point: EuclideanSpace,
+    T: Transform<<E as SearchParameter<D1>>::Point>,
+{
+    type Point = <E as SearchParameter<D1>>::Point;
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: <E as SearchParameter<D1>>::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<f64> {
+        let inv = self.transform.inverse_transform().unwrap();
+        let (u, v) = self.entity.parameter_range();
+        let t = self
+            .entity
+            .search_parameter(inv.transform_point(point), hint, trials)?;
+        match self.orientation {
+            true => Some(t),
+            false => Some(u + v - t),
+        }
+    }
+}
+
+impl<E, T> SearchParameter<D2> for Processor<E, T>
+where
+    E: SearchParameter<D2>,
     E::Point: EuclideanSpace,
     T: Transform<E::Point>,
 {
     type Point = E::Point;
-    fn search_parameter<H: Into<D::Hint>>(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: E::Point,
         hint: H,
         trials: usize,
-    ) -> Option<D::Parameter> {
+    ) -> Option<(f64, f64)> {
         let inv = self.transform.inverse_transform().unwrap();
-        self.entity
-            .search_parameter(inv.transform_point(point), hint, trials)
+        let (u, v) = self
+            .entity
+            .search_parameter(inv.transform_point(point), hint, trials)?;
+        match self.orientation {
+            true => Some((u, v)),
+            false => Some((v, u)),
+        }
     }
 }
 
