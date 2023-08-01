@@ -14,5 +14,5 @@ categories = ["graphics"]
 [dependencies]
 cgmath = { version = "0.18.0", features = ["serde"] }
 matext4cgmath = "0.1.0"
-serde = { version = "1.0.179", features = ["derive"] }
+serde = { version = "1.0.180", features = ["derive"] }
 rustc-hash = "1.1.0"
