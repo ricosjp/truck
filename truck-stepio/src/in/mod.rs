@@ -1828,7 +1828,6 @@ impl EdgeCurve {
         if !same_sense {
             curve.invert();
         }
-        println!("{curve:?}\n");
         Ok(curve)
     }
 }
