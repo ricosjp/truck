@@ -165,7 +165,7 @@ update-gpu-test-container:
 
 update-wasm-test-container:
     image: docker:latest
-    stage: test
+    stage: deploy
     services:
         - docker
     variables:
@@ -174,8 +174,8 @@ update-wasm-test-container:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
         - docker build -t $MY_REGISTRY/wasm-test:latest -f docker/wasm-test.Dockerfile --no-cache .
         - docker push $MY_REGISTRY/wasm-test:latest
-#    only:
-#        - schedules
+    only:
+        - schedules
 
 check-dependent:
     image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
