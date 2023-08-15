@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Updates CI container `wasm-test`.
 - Fix build error of `bsp-animation` in wasm.
 - Fix the compile error with `webgl` feature.
 - cargo install by `--locked` in `wasm-test`.
