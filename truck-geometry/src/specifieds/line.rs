@@ -15,6 +15,26 @@ impl<P: Copy> Line<P> {
     }
 }
 
+impl<P> Line<P>
+where
+    P: EuclideanSpace<Scalar = f64>,
+    P::Diff: InnerSpace<Scalar = f64>,
+{
+    /// Returns the projected point to the line.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::prelude::*;
+    /// let line = Line(Point2::new(0.0, 0.0), Point2::new(1.0, 2.0));
+    /// let pt = Point2::new(0.0, 1.0);
+    /// assert_near!(line.projection(pt), Point2::new(0.4, 0.8));
+    /// ```
+    pub fn projection(&self, p: P) -> P {
+        let u = p - self.0;
+        let v = self.1 - self.0;
+        self.0 + v * u.dot(v) / v.dot(v)
+    }
+}
+
 impl<P: ControlPoint<f64>> ParametricCurve for Line<P> {
     type Point = P;
     type Vector = P::Diff;

@@ -1704,7 +1704,12 @@ impl EdgeCurve {
     ) -> std::result::Result<Curve2D, ExpressParseError> {
         use CurveAny::*;
         let mut curve = match curve {
-            Line(_) => Curve2D::Line(truck::Line(p, q)),
+            Line(line) => {
+                let line = truck::Line::<Point2>::from(line.as_ref());
+                let p = line.projection(p);
+                let q = line.projection(q);
+                Curve2D::Line(truck::Line(p, q))
+            },
             BoundedCurve(b) => b.as_ref().try_into()?,
             Circle(circle) => {
                 let mat = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(circle.radius);
