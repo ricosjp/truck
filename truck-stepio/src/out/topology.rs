@@ -94,7 +94,7 @@ where
         };
         formatter.write_fmt(format_args!(
             "#{idx} = {shell_kind}('', {face_indices});\n",
-            face_indices = IndexSliceDisplay(self.face_indices.iter().copied()),
+            face_indices = IndexSliceDisplay(self.face_indices.clone()),
         ))?;
         faces.iter().enumerate().try_for_each(|(i, f)| {
             let idx = face_indices[i];
@@ -111,7 +111,7 @@ where
                 .collect::<Vec<_>>();
             formatter.write_fmt(format_args!(
                 "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sence});\n",
-                face_bound = IndexSliceDisplay(face_bounds.iter().copied()),
+                face_bound = IndexSliceDisplay(face_bounds.clone()),
                 face_geometry = surface_indices[i],
             ))?;
             cursor = idx + 1;

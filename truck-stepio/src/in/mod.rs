@@ -1709,7 +1709,7 @@ impl EdgeCurve {
                 let p = line.projection(p);
                 let q = line.projection(q);
                 Curve2D::Line(truck::Line(p, q))
-            },
+            }
             BoundedCurve(b) => b.as_ref().try_into()?,
             Circle(circle) => {
                 let mat = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(circle.radius);
