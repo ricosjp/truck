@@ -17,7 +17,7 @@ pub type CylindricalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type ToroidalSurface =
     Processor<RevolutedCurve<Processor<UnitCircle<Point3>, Matrix4>>, Matrix4>;
 pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
-pub type StepRevolutedCurve = RevolutedCurve<Curve3D>;
+pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;
 pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
 
 #[derive(

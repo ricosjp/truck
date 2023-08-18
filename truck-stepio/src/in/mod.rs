@@ -1647,7 +1647,9 @@ impl TryFrom<&SurfaceOfRevolution> for StepRevolutedCurve {
         let curve = Curve3D::try_from(&sr.swept_curve)?;
         let origin = Point3::from(&sr.axis_position.location);
         let axis = sr.axis_position.direction().normalize();
-        Ok(RevolutedCurve::by_revolution(curve, origin, axis))
+        let mut rev = Processor::new(RevolutedCurve::by_revolution(curve, origin, axis));
+        rev.invert();
+        Ok(rev)
     }
 }
 

@@ -3,7 +3,7 @@ use ruststep::{ast::DataSection, tables::*};
 use std::{f64::consts::PI, str::FromStr};
 use truck_geometry::prelude as truck;
 use truck_stepio::{
-    out::{IndexSliceDisplay, StepDisplay, VectorAsDirection},
+    out::*,
     r#in::{alias::*, *},
 };
 
@@ -15,6 +15,14 @@ fn float_to_str(x: f64) -> String {
     } else {
         format!("{x:?}")
     }
+}
+
+/// create uniform unit vector from [0.0f64..1.0f64; 2]
+fn dir_from_array(arr: [f64; 2]) -> Vector3 {
+    let z = 2.0 * arr[1] - 1.0;
+    let theta = 2.0 * PI * arr[0];
+    let r = f64::sqrt(f64::max(1.0 - z * z, 0.0));
+    Vector3::new(r * f64::cos(theta), r * f64::sin(theta), z)
 }
 
 fn step_to_entity<THolder>(step_str: &str) -> THolder::Owned
@@ -56,11 +64,9 @@ proptest! {
     }
 }
 
-fn exec_direction(elem: [f64; 3]) {
-    let vec = Vector2::new(elem[0], elem[1]).normalize();
-    if vec.so_small() {
-        return;
-    }
+fn exec_direction(dir_array: [f64; 2]) {
+    let theta = 2.0 * PI * dir_array[0];
+    let vec = Vector2::new(f64::cos(theta), f64::sin(theta));
     exec_test_near::<DirectionHolder, Vector2>(
         vec,
         &format!(
@@ -69,10 +75,7 @@ fn exec_direction(elem: [f64; 3]) {
             float_to_str(vec[1])
         ),
     );
-    let vec = Vector3::from(elem).normalize();
-    if vec.so_small() {
-        return;
-    }
+    let vec = dir_from_array(dir_array);
     exec_test_near::<DirectionHolder, Vector3>(
         vec,
         &format!(
@@ -86,8 +89,8 @@ fn exec_direction(elem: [f64; 3]) {
 
 proptest! {
     #[test]
-    fn direction(elem in array::uniform3(-100.0f64..100.0f64)) {
-        exec_direction(elem)
+    fn direction(dir_array in array::uniform2(0.0f64..1.0)) {
+        exec_direction(dir_array)
     }
 }
 
@@ -137,13 +140,10 @@ proptest! {
     }
 }
 
-fn exec_axis1_placement(org_coord: [f64; 3], dir_elem: [f64; 3]) {
+fn exec_axis1_placement(org_coord: [f64; 3], dir_array: [f64; 2]) {
     let p = Point2::new(org_coord[0], org_coord[1]);
-    let v = Vector2::new(dir_elem[0], dir_elem[1]);
-    if v.so_small() {
-        return;
-    }
-    let dir = v.normalize();
+    let theta = 2.0 * PI * dir_array[0];
+    let dir = Vector2::new(f64::cos(theta), f64::sin(theta));
     let step_str = format!(
         "DATA;#1 = AXIS1_PLACEMENT('', #2, #3);{}{}ENDSEC;",
         StepDisplay::new(p, 2),
@@ -154,11 +154,7 @@ fn exec_axis1_placement(org_coord: [f64; 3], dir_elem: [f64; 3]) {
     assert_near!(dir, placement.direction().truncate());
 
     let p = Point3::from(org_coord);
-    let v = Vector3::from(dir_elem);
-    if v.so_small() {
-        return;
-    }
-    let dir = v.normalize();
+    let dir = dir_from_array(dir_array);
     let step_str = format!(
         "DATA;#1 = AXIS1_PLACEMENT('', #2, #3);{}{}ENDSEC;",
         StepDisplay::new(p, 2),
@@ -173,19 +169,15 @@ proptest! {
     #[test]
     fn axis1_placement(
         org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_elem in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0),
     ) {
-        exec_axis1_placement(org_coord, dir_elem)
+        exec_axis1_placement(org_coord, dir_array)
     }
 }
 
-fn exec_axis2_placement2d(org_coord: [f64; 2], dir_elem: [f64; 2]) {
+fn exec_axis2_placement2d(org_coord: [f64; 2], theta: f64) {
     let origin = Point2::from(org_coord);
-    let v = Vector2::from(dir_elem);
-    let dir = match v.so_small() {
-        true => return,
-        false => v.normalize(),
-    };
+    let dir = Vector2::new(f64::cos(theta), f64::sin(theta));
     let step_str = format!(
         "DATA;#1 = AXIS2_PLACEMENT_2D('', #2, #3);{}{}ENDSEC;",
         StepDisplay::new(origin, 2),
@@ -202,20 +194,16 @@ proptest! {
     #[test]
     fn axis2_placement_2d(
         org_coord in array::uniform2(-100.0f64..100.0f64),
-        dir_elem in array::uniform2(-100.0f64..100.0f64),
+        theta in 0.0f64..2.0 * PI,
     ) {
-        exec_axis2_placement2d(org_coord, dir_elem)
+        exec_axis2_placement2d(org_coord, theta)
     }
 }
 
-fn exec_axis2_placement3d(org_coord: [f64; 3], dir_elem: [f64; 3], ref_dir_elem: [f64; 3]) {
+fn exec_axis2_placement3d(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]) {
     let p = Point3::from(org_coord);
-    let v = Vector3::from(dir_elem);
-    let z = match v.so_small() {
-        true => return,
-        false => v.normalize(),
-    };
-    let ref_dir = Vector3::from(ref_dir_elem);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
     let v = z.cross(ref_dir);
     let y = match v.so_small() {
         true => return,
@@ -243,10 +231,10 @@ proptest! {
     #[test]
     fn axis2_placement_3d(
         org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_elem in array::uniform3(-100.0f64..100.0f64),
-        ref_dir_elem in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0f64),
+        ref_dir_array in array::uniform2(0.0f64..1.0f64),
     ) {
-        exec_axis2_placement3d(org_coord, dir_elem, ref_dir_elem)
+        exec_axis2_placement3d(org_coord, dir_array, ref_dir_array)
     }
 }
 
@@ -316,8 +304,9 @@ proptest! {
 
 fn exec_b_spline_curve_with_knots(
     knot_len: usize,
-    knot_mults: Vec<usize>,
     knot_incrs: Vec<f64>,
+    knot_mults: Vec<usize>,
+    degree: usize,
     ctrlpt_coords: Vec<[f64; 3]>,
 ) {
     let mut s = 0.0;
@@ -330,10 +319,6 @@ fn exec_b_spline_curve_with_knots(
             std::iter::repeat(s).take(*m)
         })
         .collect::<Vec<f64>>();
-    let degree = knot_mults[0] + 1;
-    if vec.len() <= degree + 1 {
-        return;
-    }
     let knots = KnotVec::from(vec);
     let cps = ctrlpt_coords
         .into_iter()
@@ -359,13 +344,26 @@ fn exec_b_spline_curve_with_knots(
 proptest! {
     #[test]
     fn b_spline_curve_with_knots(
-        knot_len in 3usize..20,
-        knot_mults in collection::vec(1usize..4usize, 20),
+        knot_len in 7usize..20,
         knot_incrs in collection::vec(1.0e-3f64..100.0f64, 20),
+        knot_mults in collection::vec(1usize..4usize, 20),
+        degree in 2usize..6,
         ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 80),
     ) {
-        exec_b_spline_curve_with_knots(knot_len, knot_mults, knot_incrs, ctrlpt_coords)
+        exec_b_spline_curve_with_knots(knot_len, knot_incrs, knot_mults, degree, ctrlpt_coords)
     }
+}
+
+fn step_bsp_curve_ctrls(points: &[Point3]) -> (String, String) {
+    (
+        IndexSliceDisplay((0..points.len()).map(|i| 2 + i)).to_string(),
+        points
+            .iter()
+            .enumerate()
+            .map(|(i, p)| StepDisplay::new(*p, i + 2).to_string())
+            .collect::<Vec<_>>()
+            .concat(),
+    )
 }
 
 fn exec_bezier_curve(degree: usize, ctrlpt_coords: Vec<[f64; 3]>) {
@@ -374,16 +372,10 @@ fn exec_bezier_curve(degree: usize, ctrlpt_coords: Vec<[f64; 3]>) {
         .take(degree + 1)
         .map(Point3::from)
         .collect::<Vec<_>>();
-    let step_cps_indices = (0..=degree)
-        .map(|i| format!("#{}", i + 2))
-        .collect::<Vec<_>>();
-    let step_cps_indices = step_cps_indices.join(",");
-    let step_cps = (0..=degree).fold(String::new(), |string, i| {
-        string + &StepDisplay::new(points[i], i + 2).to_string()
-    });
+    let (step_cps_indices, step_cps) = step_bsp_curve_ctrls(&points);
     let step_str = format!(
         "DATA;
-#1 = BEZIER_CURVE('', {degree}, ({step_cps_indices}), .UNSPECIFIED., .U., .U.);
+#1 = BEZIER_CURVE('', {degree}, {step_cps_indices}, .UNSPECIFIED., .U., .U.);
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<BezierCurveHolder>(&step_str);
@@ -419,16 +411,10 @@ fn exec_quasi_uniform_curve(degree: usize, division: usize, ctrlpt_coords: Vec<[
         .take(knots.len() - degree - 1)
         .map(Point3::from)
         .collect::<Vec<_>>();
-    let step_cps_indices = (0..points.len())
-        .map(|i| format!("#{}", i + 2))
-        .collect::<Vec<_>>();
-    let step_cps_indices = step_cps_indices.join(",");
-    let step_cps = (0..points.len()).fold(String::new(), |string, i| {
-        string + &StepDisplay::new(points[i], i + 2).to_string()
-    });
+    let (step_cps_indices, step_cps) = step_bsp_curve_ctrls(&points);
     let step_str = format!(
         "DATA;
-#1 = QUASI_UNIFORM_CURVE('', {degree}, ({step_cps_indices}), .UNSPECIFIED., .U., .U.);
+#1 = QUASI_UNIFORM_CURVE('', {degree}, {step_cps_indices}, .UNSPECIFIED., .U., .U.);
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<QuasiUniformCurveHolder>(&step_str);
@@ -464,16 +450,10 @@ fn exec_uniform_curve(degree: usize, knot_len: usize, ctrlpt_coords: Vec<[f64; 3
         .take(knot_len - degree - 1)
         .map(Point3::from)
         .collect::<Vec<_>>();
-    let step_cps_indices = (0..points.len())
-        .map(|i| format!("#{}", i + 2))
-        .collect::<Vec<_>>();
-    let step_cps_indices = step_cps_indices.join(",");
-    let step_cps = (0..points.len()).fold(String::new(), |string, i| {
-        string + &StepDisplay::new(points[i], i + 2).to_string()
-    });
+    let (step_cps_indices, step_cps) = step_bsp_curve_ctrls(&points);
     let step_str = format!(
         "DATA;
-#1 = UNIFORM_CURVE('', {degree}, ({step_cps_indices}), .UNSPECIFIED., .U., .U.);
+#1 = UNIFORM_CURVE('', {degree}, {step_cps_indices}, .UNSPECIFIED., .U., .U.);
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<UniformCurveHolder>(&step_str);
@@ -502,14 +482,10 @@ proptest! {
     }
 }
 
-fn exec_circle(org_coord: [f64; 3], dir_elem: [f64; 3], ref_dir_elem: [f64; 3], radius: f64) {
+fn exec_circle(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2], radius: f64) {
     let origin = Point3::from(org_coord);
-    let v = Vector3::from(dir_elem);
-    let z = match v.so_small() {
-        true => return,
-        false => v.normalize(),
-    };
-    let ref_dir = Vector3::from(ref_dir_elem);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
     let v = z.cross(ref_dir);
     let y = match v.so_small() {
         true => return,
@@ -544,22 +520,18 @@ proptest! {
     #[test]
     fn circle(
         org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_elem in array::uniform3(-100.0f64..100.0f64),
-        ref_dir_elem in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0),
+        ref_dir_array in array::uniform2(0.0f64..1.0),
         radius in 1.0e-2f64..100.0,
     ) {
-        exec_circle(org_coord, dir_elem, ref_dir_elem, radius)
+        exec_circle(org_coord, dir_array, ref_dir_array, radius)
     }
 }
 
-fn exec_plane(org_coord: [f64; 3], dir_elem: [f64; 3], ref_dir_elem: [f64; 3],) {
+fn exec_plane(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]) {
     let origin = Point3::from(org_coord);
-    let v = Vector3::from(dir_elem);
-    let z = match v.so_small() {
-        true => return,
-        false => v.normalize(),
-    };
-    let ref_dir = Vector3::from(ref_dir_elem);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
     let v = z.cross(ref_dir);
     let y = match v.so_small() {
         true => return,
@@ -586,21 +558,22 @@ proptest! {
     #[test]
     fn plane(
         org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_elem in array::uniform3(-100.0f64..100.0f64),
-        ref_dir_elem in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0f64),
+        ref_dir_array in array::uniform2(0.0f64..1.0f64),
     ) {
-        exec_plane(org_coord, dir_elem, ref_dir_elem)
+        exec_plane(org_coord, dir_array, ref_dir_array)
     }
 }
 
-fn exec_spherical_surface(org_coord: [f64; 3], dir_elem: [f64; 3], ref_dir_elem: [f64; 3], radius: f64) {
+fn exec_spherical_surface(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: f64,
+) {
     let p = Point3::from(org_coord);
-    let v = Vector3::from(dir_elem);
-    let z = match v.so_small() {
-        true => return,
-        false => v.normalize(),
-    };
-    let ref_dir = Vector3::from(ref_dir_elem);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
     let v = z.cross(ref_dir);
     let y = match v.so_small() {
         true => return,
@@ -643,22 +616,23 @@ proptest! {
     #[test]
     fn spherical_surface(
         org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_elem in array::uniform3(-100.0f64..100.0f64),
-        ref_dir_elem in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0f64),
+        ref_dir_array in array::uniform2(0.0f64..1.0f64),
         radius in 1.0e-2f64..100.0f64
     ) {
-        exec_spherical_surface(org_coord, dir_elem, ref_dir_elem, radius)
+        exec_spherical_surface(org_coord, dir_array, ref_dir_array, radius)
     }
 }
 
-fn exec_cylindrical_surface(org_coord: [f64; 3], dir_elem: [f64; 3], ref_dir_elem: [f64; 3], radius: f64) {
+fn exec_cylindrical_surface(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: f64,
+) {
     let p = Point3::from(org_coord);
-    let v = Vector3::from(dir_elem);
-    let z = match v.so_small() {
-        true => return,
-        false => v.normalize(),
-    };
-    let ref_dir = Vector3::from(ref_dir_elem);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
     let v = z.cross(ref_dir);
     let y = match v.so_small() {
         true => return,
@@ -698,22 +672,23 @@ proptest! {
     #[test]
     fn cylindrical_surface(
         org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_elem in array::uniform3(-100.0f64..100.0f64),
-        ref_dir_elem in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0f64),
+        ref_dir_array in array::uniform2(0.0f64..1.0f64),
         radius in 1.0e-2f64..100.0f64
     ) {
-        exec_cylindrical_surface(org_coord, dir_elem, ref_dir_elem, radius)
+        exec_cylindrical_surface(org_coord, dir_array, ref_dir_array, radius)
     }
 }
 
-fn exec_toroidal_surface(org_coord: [f64; 3], dir_elem: [f64; 3], ref_dir_elem: [f64; 3], radii: [f64; 2]) {
+fn exec_toroidal_surface(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radii: [f64; 2],
+) {
     let p = Point3::from(org_coord);
-    let v = Vector3::from(dir_elem);
-    let z = match v.so_small() {
-        true => return,
-        false => v.normalize(),
-    };
-    let ref_dir = Vector3::from(ref_dir_elem);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
     let v = z.cross(ref_dir);
     let y = match v.so_small() {
         true => return,
@@ -758,10 +733,323 @@ proptest! {
     #[test]
     fn toroidal_surface(
         org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_elem in array::uniform3(-100.0f64..100.0f64),
-        ref_dir_elem in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0f64),
+        ref_dir_array in array::uniform2(0.0f64..1.0f64),
         radii in array::uniform2(1.0e-2f64..100.0f64),
     ) {
-        exec_toroidal_surface(org_coord, dir_elem, ref_dir_elem, radii)
+        exec_toroidal_surface(org_coord, dir_array, ref_dir_array, radii)
+    }
+}
+
+fn coords_to_points(
+    upoints_len: usize,
+    vpoints_len: usize,
+    coords: Vec<Vec<[f64; 3]>>,
+) -> Vec<Vec<Point3>> {
+    coords
+        .into_iter()
+        .take(upoints_len)
+        .map(move |vec: Vec<[f64; 3]>| {
+            vec.into_iter()
+                .take(vpoints_len)
+                .map(Point3::from)
+                .collect()
+        })
+        .collect()
+}
+
+fn compare_bsp_surfaces(res: &BSplineSurface<Point3>, ans: &BSplineSurface<Point3>) {
+    assert_eq!(res.uknot_vec().len(), ans.uknot_vec().len());
+    assert_eq!(res.vknot_vec().len(), ans.vknot_vec().len());
+    assert_eq!(res.control_points().len(), ans.control_points().len());
+    res.uknot_vec()
+        .iter()
+        .zip(ans.uknot_vec())
+        .for_each(|(x, y)| assert_near!(x, y));
+    res.vknot_vec()
+        .iter()
+        .zip(ans.vknot_vec())
+        .for_each(|(x, y)| assert_near!(x, y));
+    res.control_points()
+        .iter()
+        .flatten()
+        .zip(ans.control_points().iter().flatten())
+        .for_each(|(x, y)| assert_near!(x, y));
+}
+
+fn exec_b_spline_surface_with_knots(
+    uknot_len: usize,
+    uknot_mults: Vec<usize>,
+    uknot_incrs: Vec<f64>,
+    udegree: usize,
+    vknot_len: usize,
+    vknot_mults: Vec<usize>,
+    vknot_incrs: Vec<f64>,
+    vdegree: usize,
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+) {
+    let mut s = 0.0;
+    let uvec = uknot_mults
+        .iter()
+        .take(uknot_len)
+        .zip(uknot_incrs)
+        .flat_map(|(m, x)| {
+            s += x;
+            std::iter::repeat(s).take(*m)
+        })
+        .collect::<Vec<f64>>();
+    let uknots = KnotVec::from(uvec);
+    let mut s = 0.0;
+    let vvec = vknot_mults
+        .iter()
+        .take(vknot_len)
+        .zip(vknot_incrs)
+        .flat_map(|(m, x)| {
+            s += x;
+            std::iter::repeat(s).take(*m)
+        })
+        .collect::<Vec<f64>>();
+    let vknots = KnotVec::from(vvec);
+    let cps = coords_to_points(
+        uknots.len() - udegree - 1,
+        vknots.len() - vdegree - 1,
+        ctrlpt_coords,
+    );
+    let bsp = BSplineSurface::new((uknots, vknots), cps);
+    let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&bsp, 1));
+    let bsp_step = step_to_entity::<BSplineSurfaceWithKnotsHolder>(&step_str);
+    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    compare_bsp_surfaces(&res, &bsp);
+}
+
+proptest! {
+    #[test]
+    fn b_spline_surface_with_knots(
+        uknot_len in 7usize..10,
+        uknot_mults in collection::vec(1usize..4usize, 10),
+        uknot_incrs in collection::vec(1.0e-3f64..100.0f64, 10),
+        udegree in 2usize..6,
+        vknot_len in 7usize..10,
+        vknot_mults in collection::vec(1usize..4usize, 10),
+        vknot_incrs in collection::vec(1.0e-3f64..100.0f64, 10),
+        vdegree in 2usize..6,
+        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 40), 40),
+    ) {
+        exec_b_spline_surface_with_knots(
+            uknot_len,
+            uknot_mults,
+            uknot_incrs,
+            udegree,
+            vknot_len,
+            vknot_mults,
+            vknot_incrs,
+            vdegree,
+            ctrlpt_coords,
+        )
+    }
+}
+
+fn step_bsp_surface_ctrls(points: &[Vec<Point3>]) -> (String, String) {
+    let indices = (0..points.len())
+        .map(|i| {
+            IndexSliceDisplay(
+                (0..points[0].len())
+                    .map(|j| 2 + i * points[0].len() + j)
+                    .collect::<Vec<usize>>(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let step_cps_indices = SliceDisplay(&indices).to_string();
+    let step_cps = points
+        .iter()
+        .flatten()
+        .enumerate()
+        .fold(String::new(), |string, (i, p)| {
+            let display: StepDisplay<Point3> = StepDisplay::new(*p, 2 + i);
+            string + &display.to_string()
+        });
+    (step_cps_indices, step_cps)
+}
+
+fn exec_bezier_surface([udegree, vdegree]: [usize; 2], ctrlpt_coords: Vec<Vec<[f64; 3]>>) {
+    let points = coords_to_points(udegree + 1, vdegree + 1, ctrlpt_coords);
+    let (step_cps_indices, step_cps) = step_bsp_surface_ctrls(&points);
+    let step_str = format!(
+        "DATA;
+#1 = BEZIER_SURFACE('', {udegree}, {vdegree}, {step_cps_indices}, .UNSPECIFIED., .U., .U., .U.);
+{step_cps}ENDSEC;"
+    );
+    let bsp_step = step_to_entity::<BezierSurfaceHolder>(&step_str);
+    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let ans = BSplineSurface::new(
+        (KnotVec::bezier_knot(udegree), KnotVec::bezier_knot(vdegree)),
+        points,
+    );
+    compare_bsp_surfaces(&res, &ans);
+}
+
+proptest! {
+    #[test]
+    fn bezier_surface(
+        degrees in array::uniform2(1usize..6),
+        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 6), 6),
+    ) {
+        exec_bezier_surface(degrees, ctrlpt_coords)
+    }
+}
+
+fn exec_quasi_uniform_surface(
+    [udegree, vdegree]: [usize; 2],
+    [udivision, vdivision]: [usize; 2],
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+) {
+    let mut uknots = KnotVec::uniform_knot(udegree, udivision);
+    uknots.transform(udivision as f64, 0.0);
+    let mut vknots = KnotVec::uniform_knot(vdegree, vdivision);
+    vknots.transform(vdivision as f64, 0.0);
+    let points = coords_to_points(
+        uknots.len() - udegree - 1,
+        vknots.len() - vdegree - 1,
+        ctrlpt_coords,
+    );
+    let (step_cps_indices, step_cps) = step_bsp_surface_ctrls(&points);
+    let step_str = format!(
+        "DATA;
+#1 = QUASI_UNIFORM_SURFACE('', {udegree}, {vdegree}, {step_cps_indices}, .UNSPECIFIED., .U., .U., .U.);
+{step_cps}ENDSEC;"
+    );
+    let bsp_step = step_to_entity::<QuasiUniformSurfaceHolder>(&step_str);
+    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let ans = BSplineSurface::new((uknots, vknots), points);
+    compare_bsp_surfaces(&res, &ans);
+}
+
+proptest! {
+    #[test]
+    fn quasi_uniform_surface(
+        degrees in array::uniform2(1usize..6),
+        divisions in array::uniform2(2usize..5),
+        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30),
+    ) {
+        exec_quasi_uniform_surface(degrees, divisions, ctrlpt_coords)
+    }
+}
+
+fn exec_uniform_surface(
+    [udegree, vdegree]: [usize; 2],
+    [uknot_len, vknot_len]: [usize; 2],
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+) {
+    let uknots = KnotVec::from_iter((0..uknot_len).map(|i| i as f64 - udegree as f64));
+    let vknots = KnotVec::from_iter((0..vknot_len).map(|i| i as f64 - vdegree as f64));
+    let points = coords_to_points(
+        uknots.len() - udegree - 1,
+        vknots.len() - vdegree - 1,
+        ctrlpt_coords,
+    );
+    let (step_cps_indices, step_cps) = step_bsp_surface_ctrls(&points);
+    let step_str = format!(
+        "DATA;
+#1 = UNIFORM_SURFACE('', {udegree}, {vdegree}, {step_cps_indices}, .UNSPECIFIED., .U., .U., .U.);
+{step_cps}ENDSEC;"
+    );
+    let bsp_step = step_to_entity::<UniformSurfaceHolder>(&step_str);
+    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let ans = BSplineSurface::new((uknots, vknots), points);
+    compare_bsp_surfaces(&res, &ans);
+}
+
+proptest! {
+    #[test]
+    fn uniform_surface(
+        degrees in array::uniform2(1usize..6),
+        knot_lens in array::uniform2(7usize..30),
+        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30),
+    ) {
+        exec_uniform_surface(degrees, knot_lens, ctrlpt_coords)
+    }
+}
+
+fn exec_surface_of_linear_extrusion(
+    point0_coord: [f64; 3],
+    point1_coord: [f64; 3],
+    axis_elem: [f64; 3],
+) {
+    let line = Line(Point3::from(point0_coord), Point3::from(point1_coord));
+    if line.0.near(&line.1) {
+        return;
+    }
+    let axis = Vector3::from(axis_elem);
+    let step_str = format!(
+        "DATA;#1 = SURFACE_OF_LINEAR_EXTRUSION('', #4, #2);{}{}ENDSEC;",
+        StepDisplay::new(axis, 2),
+        StepDisplay::new(&line, 4),
+    );
+    let step_surface = step_to_entity::<SurfaceOfLinearExtrusionHolder>(&step_str);
+    let surface: StepExtrudedCurve = (&step_surface).try_into().unwrap();
+    (0..=100)
+        .flat_map(move |i| (0..=100).map(move |j| (i, j)))
+        .for_each(|(i, j)| {
+            let (u, v) = (i as f64 / 10.0, j as f64 / 10.0);
+            assert_near!(surface.subs(u, v), line.subs(u) + axis * v);
+        });
+}
+
+proptest! {
+    #[test]
+    fn surface_of_linear_extrusion(
+        point0_coord in array::uniform3(-100.0f64..100.0f64),
+        point1_coord in array::uniform3(-100.0f64..100.0f64),
+        axis_elem in array::uniform3(-100.0f64..100.0f64),
+    ) {
+        exec_surface_of_linear_extrusion(point0_coord, point1_coord, axis_elem)
+    }
+}
+
+fn exec_surface_of_revolution(
+    point0_coord: [f64; 3],
+    point1_coord: [f64; 3],
+    org_coord: [f64; 3],
+    axis_array: [f64; 2],
+) {
+    let line = Line(Point3::from(point0_coord), Point3::from(point1_coord));
+    if line.0.near(&line.1) {
+        return;
+    }
+    let origin = Point3::from(org_coord);
+    let dir = dir_from_array(axis_array);
+    let step_str = format!(
+        "DATA;
+#1 = SURFACE_OF_REVOLUTION('', #5, #2);
+#2 = AXIS1_PLACEMENT('', #3, #4);
+{}{}{}ENDSEC;",
+        StepDisplay::new(origin, 3),
+        StepDisplay::new(VectorAsDirection(dir), 4),
+        StepDisplay::new(&line, 5),
+    );
+    let step_surface = step_to_entity::<SurfaceOfRevolutionHolder>(&step_str);
+    let surface: StepRevolutedCurve = (&step_surface).try_into().unwrap();
+    (0..=100)
+        .flat_map(move |i| (0..=100).map(move |j| (i, j)))
+        .for_each(|(i, j)| {
+            let (u, v) = (i as f64 / 10.0, j as f64 / 10.0);
+            let lc = line.subs(v) - origin;
+            let ans = origin
+                + lc * f64::cos(u)
+                + dir * lc.dot(dir) * (1.0 - f64::cos(u))
+                + dir.cross(lc) * f64::sin(u);
+            assert_near!(surface.subs(u, v), ans);
+        });
+}
+
+proptest! {
+    #[test]
+    fn surface_of_revolution(
+        point0_coord in array::uniform3(-100f64..100.0),
+        point1_coord in array::uniform3(-100f64..100.0),
+        org_coord in array::uniform3(-100f64..100.0),
+        axis_array in array::uniform2(0.0f64..1.0),
+    ) {
+        exec_surface_of_revolution(point0_coord, point1_coord, org_coord, axis_array)
     }
 }
