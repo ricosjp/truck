@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- STEP input test for surfaces.
 - Updates CI container `wasm-test`.
 - Fix build error of `bsp-animation` in wasm.
 - Fix the compile error with `webgl` feature.
