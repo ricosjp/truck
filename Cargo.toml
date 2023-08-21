@@ -18,6 +18,8 @@ members = [
 	"readme-generator",
 ]
 
+[profile.release.package.truck-stepio]
+opt-level = 0
+
 [profile.release.package.truck-js]
-opt-level = "s"
-codegen-units = 1
+opt-level = 0

@@ -124,6 +124,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
             Some((t1, hint.1))
         } else {
             algo::surface::search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
+                let v = v.rem_euclid(2.0 * PI);
                 if self.subs(u, v).near(&point) {
                     Some((u, v))
                 } else {
@@ -169,6 +170,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Revolut
                 _ => hint0,
             };
             algo::surface::search_nearest_parameter(self, point, hint, trials).map(|(u, v)| {
+                let v = v.rem_euclid(2.0 * PI);
                 let dist0 = self.subs(u, v).distance(point);
                 let v1 = if v > PI { v - PI } else { v + PI };
                 let dist1 = self.subs(u, v1).distance(point);

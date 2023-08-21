@@ -12,9 +12,12 @@ pub type Ellipse<P, M> = Processor<TrimmedCurve<UnitCircle<P>>, M>;
 pub type Hyperbola<P, M> = Processor<TrimmedCurve<UnitHyperbola<P>>, M>;
 pub type Parabola<P, M> = Processor<TrimmedCurve<UnitParabola<P>>, M>;
 pub type RevolutedLine = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
-pub type ToroidalSurface = RevolutedCurve<Ellipse<Point3, Matrix4>>;
+pub type SphericalSurface = Processor<RevolutedCurve<TrimmedCurve<UnitCircle<Point3>>>, Matrix4>;
+pub type CylindricalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
+pub type ToroidalSurface =
+    Processor<RevolutedCurve<Processor<UnitCircle<Point3>, Matrix4>>, Matrix4>;
 pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
-pub type StepRevolutedCurve = RevolutedCurve<Curve3D>;
+pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;
 pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
 
 #[derive(
@@ -104,8 +107,8 @@ pub enum Curve3D {
 pub enum ElementarySurface {
     Plane(Plane),
     RevolutedLine(RevolutedLine),
-    Sphere(Processor<Sphere, Matrix3>),
-    CylindricalSurface(RevolutedCurve<Line<Point3>>),
+    Sphere(SphericalSurface),
+    CylindricalSurface(CylindricalSurface),
     ToroidalSurface(ToroidalSurface),
 }
 #[derive(
@@ -133,8 +136,8 @@ pub enum SweptCurve {
     Invertible,
 )]
 pub enum Surface {
-    ElementarySurface(ElementarySurface),
-    SweptCurve(SweptCurve),
-    BSplineSurface(BSplineSurface<Point3>),
-    NurbsSurface(NurbsSurface<Vector4>),
+    ElementarySurface(Box<ElementarySurface>),
+    SweptCurve(Box<SweptCurve>),
+    BSplineSurface(Box<BSplineSurface<Point3>>),
+    NurbsSurface(Box<NurbsSurface<Vector4>>),
 }

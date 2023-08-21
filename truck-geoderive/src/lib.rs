@@ -589,6 +589,8 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                 fn uuder(&self, s: f64, t: f64) -> Self::Vector,
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
+                fn u_period(&self,) -> Option<f64>,
+                fn v_period(&self,) -> Option<f64>,
             );
             let methods1 = methods!(
                 variants,
@@ -631,6 +633,10 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
                     #[inline(always)]
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
+                    #[inline(always)]
+                    fn u_period(&self) -> Option<f64> { self.0.u_period() }
+                    #[inline(always)]
+                    fn v_period(&self) -> Option<f64> { self.0.v_period() }
                 }
                 #[automatically_derived]
                 impl #gen truck_geotrait::#trait_name1 for #ty {

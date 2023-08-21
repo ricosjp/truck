@@ -4,8 +4,17 @@ use truck_topology::compress::{CompressedShell, CompressedSolid};
 
 use self::topology::PreStepModel;
 
+/// display step slice
+/// # Examples
+/// ```
+/// use truck_stepio::out::SliceDisplay;
+/// let slice = &[1.0, 2.0, 3.0, 4.0];
+/// let display = SliceDisplay(slice);
+/// let step_string = display.to_string();
+/// assert_eq!(step_string, "(1.0, 2.0, 3.0, 4.0)");
+/// ```
 #[derive(Clone, Debug)]
-struct SliceDisplay<'a, T>(&'a [T]);
+pub struct SliceDisplay<'a, T>(pub &'a [T]);
 
 impl<'a> Display for SliceDisplay<'a, f64> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -65,24 +74,37 @@ impl<'a> Display for SliceDisplay<'a, SliceDisplay<'a, f64>> {
     }
 }
 
+/// display index slice
+/// # Examples
+/// ```
+/// use truck_stepio::out::*;
+/// let indices = [1, 10, 100, 1000, 10000];
+/// let display = IndexSliceDisplay(indices.into_iter());
+/// let step_string = display.to_string();
+/// assert_eq!(step_string, "(#1, #10, #100, #1000, #10000)");
+/// ```
 #[derive(Clone, Debug)]
-struct IndexSliceDisplay<I>(I);
+pub struct IndexSliceDisplay<I>(pub I);
 
-impl<I: Clone + Iterator<Item = usize>> Display for IndexSliceDisplay<I> {
+impl<I: Clone + IntoIterator<Item = usize>> Display for IndexSliceDisplay<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
-        self.0.clone().enumerate().try_for_each(|(i, idx)| {
-            if i != 0 {
-                f.write_fmt(format_args!(", #{idx}"))
-            } else {
-                f.write_fmt(format_args!("#{idx}"))
-            }
-        })?;
+        self.0
+            .clone()
+            .into_iter()
+            .enumerate()
+            .try_for_each(|(i, idx)| {
+                if i != 0 {
+                    f.write_fmt(format_args!(", #{idx}"))
+                } else {
+                    f.write_fmt(format_args!("#{idx}"))
+                }
+            })?;
         f.write_str(")")
     }
 }
 
-impl<'a, I: Clone + Iterator<Item = usize>> Display for SliceDisplay<'a, IndexSliceDisplay<I>> {
+impl<'a, I: Clone + IntoIterator<Item = usize>> Display for SliceDisplay<'a, IndexSliceDisplay<I>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {

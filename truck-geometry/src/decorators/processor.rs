@@ -266,10 +266,19 @@ where
     }
 }
 
-impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
-    type Point = C::Point;
+impl<C> ParameterDivision1D for Processor<C, Matrix3>
+where C: ParameterDivision1D<Point = Point2> + BoundedCurve<Point = Point2>
+{
+    type Point = Point2;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
         let a = self.transform;
+        let range = match self.orientation {
+            true => range,
+            false => (
+                self.get_curve_parameter(range.1),
+                self.get_curve_parameter(range.0),
+            ),
+        };
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
             + a[0][2] * a[0][2]
@@ -279,14 +288,33 @@ impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix3> {
             + a[2][0] * a[2][0]
             + a[2][1] * a[2][1]
             + a[2][2] * a[2][2];
-        self.entity.parameter_division(range, tol / n.sqrt())
+        let (mut params, mut points) = self.entity.parameter_division(range, tol / n.sqrt());
+        points
+            .iter_mut()
+            .for_each(|pt| *pt = a.transform_point(*pt));
+        if !self.orientation {
+            params
+                .iter_mut()
+                .for_each(|t| *t = self.get_curve_parameter(*t));
+            points.reverse();
+        }
+        (params, points)
     }
 }
 
-impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
-    type Point = C::Point;
+impl<C> ParameterDivision1D for Processor<C, Matrix4>
+where C: ParameterDivision1D<Point = Point3> + BoundedCurve<Point = Point3>
+{
+    type Point = Point3;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
         let a = self.transform;
+        let range = match self.orientation {
+            true => range,
+            false => (
+                self.get_curve_parameter(range.1),
+                self.get_curve_parameter(range.0),
+            ),
+        };
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
             + a[0][2] * a[0][2]
@@ -303,7 +331,17 @@ impl<C: ParameterDivision1D> ParameterDivision1D for Processor<C, Matrix4> {
             + a[3][1] * a[3][1]
             + a[3][2] * a[3][2]
             + a[3][3] * a[3][3];
-        self.entity.parameter_division(range, tol / n.sqrt())
+        let (mut params, mut points) = self.entity.parameter_division(range, tol / n.sqrt());
+        points
+            .iter_mut()
+            .for_each(|pt| *pt = a.transform_point(*pt));
+        if !self.orientation {
+            params
+                .iter_mut()
+                .for_each(|t| *t = self.get_curve_parameter(*t));
+            points.reverse();
+        }
+        (params, points)
     }
 }
 
@@ -314,6 +352,10 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
         tol: f64,
     ) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
+        let range = match self.orientation {
+            true => range,
+            false => (range.1, range.0),
+        };
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
             + a[0][2] * a[0][2]
@@ -323,7 +365,11 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
             + a[2][0] * a[2][0]
             + a[2][1] * a[2][1]
             + a[2][2] * a[2][2];
-        self.entity.parameter_division(range, tol / n.sqrt())
+        let (udiv, vdiv) = self.entity.parameter_division(range, tol / n.sqrt());
+        match self.orientation {
+            true => (udiv, vdiv),
+            false => (vdiv, udiv),
+        }
     }
 }
 
@@ -334,6 +380,10 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
         tol: f64,
     ) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
+        let range = match self.orientation {
+            true => range,
+            false => (range.1, range.0),
+        };
         let n = a[0][0] * a[0][0]
             + a[0][1] * a[0][1]
             + a[0][2] * a[0][2]
@@ -343,27 +393,56 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
             + a[2][0] * a[2][0]
             + a[2][1] * a[2][1]
             + a[2][2] * a[2][2];
-        self.entity.parameter_division(range, tol / n.sqrt())
+        let (udiv, vdiv) = self.entity.parameter_division(range, tol / n.sqrt());
+        match self.orientation {
+            true => (udiv, vdiv),
+            false => (vdiv, udiv),
+        }
     }
 }
 
-impl<E, D, T> SearchParameter<D> for Processor<E, T>
+impl<E, T> SearchParameter<D1> for Processor<E, T>
 where
-    D: SPDimension,
-    E: SearchParameter<D>,
+    E: SearchParameter<D1> + BoundedCurve,
+    <E as SearchParameter<D1>>::Point: EuclideanSpace,
+    T: Transform<<E as SearchParameter<D1>>::Point>,
+{
+    type Point = <E as SearchParameter<D1>>::Point;
+    fn search_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: <E as SearchParameter<D1>>::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<f64> {
+        let inv = self.transform.inverse_transform().unwrap();
+        let t = self
+            .entity
+            .search_parameter(inv.transform_point(point), hint, trials)?;
+        Some(self.get_curve_parameter(t))
+    }
+}
+
+impl<E, T> SearchParameter<D2> for Processor<E, T>
+where
+    E: SearchParameter<D2>,
     E::Point: EuclideanSpace,
     T: Transform<E::Point>,
 {
     type Point = E::Point;
-    fn search_parameter<H: Into<D::Hint>>(
+    fn search_parameter<H: Into<SPHint2D>>(
         &self,
         point: E::Point,
         hint: H,
         trials: usize,
-    ) -> Option<D::Parameter> {
+    ) -> Option<(f64, f64)> {
         let inv = self.transform.inverse_transform().unwrap();
-        self.entity
-            .search_parameter(inv.transform_point(point), hint, trials)
+        let (u, v) = self
+            .entity
+            .search_parameter(inv.transform_point(point), hint, trials)?;
+        match self.orientation {
+            true => Some((u, v)),
+            false => Some((v, u)),
+        }
     }
 }
 
