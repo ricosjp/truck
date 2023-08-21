@@ -538,6 +538,7 @@ pub struct CartesianPoint {
     pub coordinates: Vec<f64>,
 }
 impl From<&CartesianPoint> for Point2 {
+    #[inline(always)]
     fn from(pt: &CartesianPoint) -> Self {
         let pt = &pt.coordinates;
         match pt.len() {
@@ -548,6 +549,7 @@ impl From<&CartesianPoint> for Point2 {
     }
 }
 impl From<&CartesianPoint> for Point3 {
+    #[inline(always)]
     fn from(pt: &CartesianPoint) -> Self {
         let pt = &pt.coordinates;
         match pt.len() {
@@ -569,6 +571,7 @@ pub struct Direction {
     pub direction_ratios: Vec<f64>,
 }
 impl From<&Direction> for Vector2 {
+    #[inline(always)]
     fn from(dir: &Direction) -> Self {
         let dir = &dir.direction_ratios;
         match dir.len() {
@@ -579,6 +582,7 @@ impl From<&Direction> for Vector2 {
     }
 }
 impl From<&Direction> for Vector3 {
+    #[inline(always)]
     fn from(dir: &Direction) -> Self {
         let dir = &dir.direction_ratios;
         match dir.len() {
@@ -621,9 +625,11 @@ pub struct Placement {
     pub location: CartesianPoint,
 }
 impl From<&Placement> for Point2 {
+    #[inline(always)]
     fn from(p: &Placement) -> Self { Self::from(&p.location) }
 }
 impl From<&Placement> for Point3 {
+    #[inline(always)]
     fn from(p: &Placement) -> Self { Self::from(&p.location) }
 }
 
@@ -660,6 +666,7 @@ pub enum Axis2Placement {
 
 impl TryFrom<&Axis2Placement> for Matrix3 {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(axis: &Axis2Placement) -> std::result::Result<Self, ExpressParseError> {
         use Axis2Placement::*;
         match axis {
@@ -670,6 +677,7 @@ impl TryFrom<&Axis2Placement> for Matrix3 {
 }
 impl TryFrom<&Axis2Placement> for Matrix4 {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(axis: &Axis2Placement) -> std::result::Result<Self, ExpressParseError> {
         use Axis2Placement::*;
         match axis {
@@ -692,6 +700,7 @@ pub struct Axis2Placement2d {
 }
 
 impl From<&Axis2Placement2d> for Matrix3 {
+    #[inline(always)]
     fn from(axis: &Axis2Placement2d) -> Self {
         let z = Point2::from(&axis.location);
         let x = match &axis.ref_direction {
@@ -718,6 +727,7 @@ pub struct Axis2Placement3d {
 }
 
 impl From<&Axis2Placement3d> for Matrix4 {
+    #[inline(always)]
     fn from(axis: &Axis2Placement3d) -> Matrix4 {
         let w = Point3::from(&axis.location);
         let z = match &axis.axis {
@@ -757,6 +767,7 @@ pub enum CurveAny {
 
 impl TryFrom<&CurveAny> for Curve2D {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(curve: &CurveAny) -> std::result::Result<Self, Self::Error> {
         use CurveAny::*;
         Ok(match curve {
@@ -780,6 +791,7 @@ impl TryFrom<&CurveAny> for Curve2D {
 
 impl TryFrom<&CurveAny> for Curve3D {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(curve: &CurveAny) -> std::result::Result<Self, Self::Error> {
         use CurveAny::*;
         Ok(match curve {
@@ -817,6 +829,7 @@ where
     P: EuclideanSpace + From<&'a CartesianPoint>,
     P::Diff: From<&'a Vector>,
 {
+    #[inline(always)]
     fn from(line: &'a Line) -> Self {
         let p = P::from(&line.pnt);
         let q = p + P::Diff::from(&line.dir);
@@ -836,6 +849,7 @@ pub enum BoundedCurveAny {
 
 impl TryFrom<&BoundedCurveAny> for Curve2D {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(value: &BoundedCurveAny) -> std::result::Result<Self, Self::Error> {
         use BoundedCurveAny::*;
         Ok(match value {
@@ -847,6 +861,7 @@ impl TryFrom<&BoundedCurveAny> for Curve2D {
 
 impl TryFrom<&BoundedCurveAny> for Curve3D {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(value: &BoundedCurveAny) -> std::result::Result<Self, Self::Error> {
         use BoundedCurveAny::*;
         Ok(match value {
@@ -866,6 +881,7 @@ pub struct Polyline {
     pub points: Vec<CartesianPoint>,
 }
 impl<'a, P: From<&'a CartesianPoint>> From<&'a Polyline> for PolylineCurve<P> {
+    #[inline(always)]
     fn from(poly: &'a Polyline) -> Self { Self(poly.points.iter().map(|pt| P::from(pt)).collect()) }
 }
 
@@ -905,6 +921,7 @@ pub struct BSplineCurveWithKnots {
 }
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BSplineCurveWithKnots> for BSplineCurve<P> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(curve: &BSplineCurveWithKnots) -> std::result::Result<Self, ExpressParseError> {
         let knots = curve.knots.clone();
         let multi = curve
@@ -933,6 +950,7 @@ pub struct BezierCurve {
 }
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BezierCurve> for BSplineCurve<P> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(curve: &BezierCurve) -> std::result::Result<Self, ExpressParseError> {
         let degree = curve.degree as usize;
         let knots = KnotVec::bezier_knot(degree);
@@ -956,6 +974,7 @@ pub struct QuasiUniformCurve {
 }
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&QuasiUniformCurve> for BSplineCurve<P> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(curve: &QuasiUniformCurve) -> std::result::Result<Self, ExpressParseError> {
         let knots = quasi_uniform_knots(curve.control_points_list.len(), curve.degree as usize);
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
@@ -985,6 +1004,7 @@ pub struct UniformCurve {
 }
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BSplineCurve<P> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(curve: &UniformCurve) -> std::result::Result<Self, ExpressParseError> {
         let knots = uniform_knots(curve.control_points_list.len(), curve.degree as usize)?;
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
@@ -1016,6 +1036,7 @@ pub enum NonRationalBSplineCurve {
 
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&NonRationalBSplineCurve> for BSplineCurve<P> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(curve: &NonRationalBSplineCurve) -> std::result::Result<Self, ExpressParseError> {
         use NonRationalBSplineCurve::*;
         match curve {
@@ -1045,6 +1066,7 @@ where
     V::Point: for<'a> From<&'a CartesianPoint>,
 {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(curve: &RationalBSplineCurve) -> std::result::Result<Self, ExpressParseError> {
         Ok(Self::try_from_bspline_and_weights(
             BSplineCurve::try_from(&curve.non_rational_b_spline_curve)?,
@@ -1071,6 +1093,7 @@ pub enum BSplineCurveAny {
 
 impl TryFrom<&BSplineCurveAny> for Curve2D {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(value: &BSplineCurveAny) -> std::result::Result<Self, Self::Error> {
         use BSplineCurveAny::*;
         Ok(match value {
@@ -1085,6 +1108,7 @@ impl TryFrom<&BSplineCurveAny> for Curve2D {
 
 impl TryFrom<&BSplineCurveAny> for Curve3D {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(value: &BSplineCurveAny) -> std::result::Result<Self, Self::Error> {
         use BSplineCurveAny::*;
         Ok(match value {
@@ -1110,6 +1134,7 @@ pub struct Circle {
 
 impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
         let radius: f64 = circle.radius;
         let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(radius);
@@ -1122,6 +1147,7 @@ impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
 
 impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
         let radius: f64 = circle.radius;
         let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
@@ -1158,6 +1184,7 @@ pub struct Pcurve {
 
 impl TryFrom<&Pcurve> for PCurve {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(value: &Pcurve) -> std::result::Result<Self, Self::Error> {
         let surface: Surface = (&value.basis_surface).try_into()?;
         let curve: Curve2D = value
@@ -1212,6 +1239,7 @@ pub struct SurfaceCurve {
 
 impl TryFrom<&SurfaceCurve> for Curve3D {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(value: &SurfaceCurve) -> std::result::Result<Self, Self::Error> {
         use PreferredSurfaceCurveRepresentation as PSCR;
         match &value.master_representation {
@@ -1248,6 +1276,7 @@ pub enum SurfaceAny {
 
 impl TryFrom<&SurfaceAny> for Surface {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(x: &SurfaceAny) -> std::result::Result<Self, Self::Error> {
         use SurfaceAny::*;
         Ok(match x {
@@ -1273,6 +1302,7 @@ pub enum ElementarySurfaceAny {
 }
 
 impl From<&ElementarySurfaceAny> for ElementarySurface {
+    #[inline(always)]
     fn from(value: &ElementarySurfaceAny) -> Self {
         use ElementarySurfaceAny::*;
         match value {
@@ -1295,6 +1325,7 @@ pub struct Plane {
 }
 
 impl From<&Plane> for truck::Plane {
+    #[inline(always)]
     fn from(plane: &Plane) -> Self {
         let mat = Matrix4::from(&plane.position);
         let o = Point3::from_homogeneous(mat[3]);
@@ -1316,6 +1347,7 @@ pub struct SphericalSurface {
 }
 
 impl From<&SphericalSurface> for alias::SphericalSurface {
+    #[inline(always)]
     fn from(ss: &SphericalSurface) -> Self {
         let half_circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (-PI / 2.0, PI / 2.0));
         let sphere =
@@ -1347,6 +1379,7 @@ pub struct CylindricalSurface {
 }
 
 impl From<&CylindricalSurface> for alias::CylindricalSurface {
+    #[inline(always)]
     fn from(cs: &CylindricalSurface) -> Self {
         let mat = Matrix4::from(&cs.position);
         let x = mat[0].truncate();
@@ -1373,6 +1406,7 @@ pub struct ToroidalSurface {
 }
 
 impl From<&ToroidalSurface> for alias::ToroidalSurface {
+    #[inline(always)]
     fn from(
         ToroidalSurface {
             position,
@@ -1416,6 +1450,7 @@ pub enum BSplineSurfaceAny {
 
 impl TryFrom<&BSplineSurfaceAny> for Surface {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(value: &BSplineSurfaceAny) -> std::result::Result<Self, Self::Error> {
         use BSplineSurfaceAny::*;
         Ok(match value {
@@ -1465,6 +1500,7 @@ pub struct BSplineSurfaceWithKnots {
 
 impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(surface: &BSplineSurfaceWithKnots) -> std::result::Result<Self, ExpressParseError> {
         let uknots = surface.u_knots.to_vec();
         let umulti = surface
@@ -1507,6 +1543,7 @@ pub struct UniformSurface {
 
 impl TryFrom<&UniformSurface> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(surface: &UniformSurface) -> std::result::Result<Self, ExpressParseError> {
         let uknots = uniform_knots(surface.control_points_list.len(), surface.u_degree as usize)?;
         let first = surface
@@ -1541,6 +1578,7 @@ pub struct QuasiUniformSurface {
 
 impl TryFrom<&QuasiUniformSurface> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(surface: &QuasiUniformSurface) -> std::result::Result<Self, ExpressParseError> {
         let uknots =
             quasi_uniform_knots(surface.control_points_list.len(), surface.u_degree as usize);
@@ -1575,6 +1613,7 @@ pub struct BezierSurface {
 }
 
 impl From<&BezierSurface> for BSplineSurface<Point3> {
+    #[inline(always)]
     fn from(value: &BezierSurface) -> Self {
         let uknots = KnotVec::bezier_knot(value.u_degree as usize);
         let vknots = KnotVec::bezier_knot(value.v_degree as usize);
@@ -1599,6 +1638,7 @@ pub enum SweptSurfaceAny {
 
 impl TryFrom<&SweptSurfaceAny> for SweptCurve {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(value: &SweptSurfaceAny) -> std::result::Result<Self, Self::Error> {
         use SweptSurfaceAny::*;
         Ok(match value {
@@ -1622,6 +1662,7 @@ pub struct SurfaceOfLinearExtrusion {
 
 impl TryFrom<&SurfaceOfLinearExtrusion> for StepExtrudedCurve {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(sr: &SurfaceOfLinearExtrusion) -> std::result::Result<Self, Self::Error> {
         let curve = Curve3D::try_from(&sr.swept_curve)?;
         let vector = Vector3::from(&sr.extrusion_axis);
@@ -1643,6 +1684,7 @@ pub struct SurfaceOfRevolution {
 
 impl TryFrom<&SurfaceOfRevolution> for StepRevolutedCurve {
     type Error = ExpressParseError;
+    #[inline(always)]
     fn try_from(sr: &SurfaceOfRevolution) -> std::result::Result<Self, Self::Error> {
         let curve = Curve3D::try_from(&sr.swept_curve)?;
         let origin = Point3::from(&sr.axis_position.location);
