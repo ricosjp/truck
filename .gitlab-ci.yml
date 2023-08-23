@@ -10,8 +10,6 @@ cpu-test:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
         - cargo make ci-cpu-test
-    except:
-        - schedules
 
 cpu-nightly-test:
     image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
@@ -20,8 +18,6 @@ cpu-nightly-test:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
         - cargo make ci-cpu-nightly-test
-    except:
-        - schedules
 
 meshalgo-features-buildcheck:
     image: rust:latest
@@ -33,8 +29,6 @@ meshalgo-features-buildcheck:
         - cargo check --no-default-features --features analyzers
         - cargo check --no-default-features --features filters
         - cargo check --no-default-features --features tessellation
-    except:
-        - schedules
 
 gpu-test:
     image: $CI_REGISTRY/ricos/truck/truck/gpu-test:latest
@@ -48,8 +42,6 @@ gpu-test:
     artifacts:
         paths:
             - images
-    except:
-        - schedules
 
 wasm-test:
     image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
@@ -59,8 +51,6 @@ wasm-test:
     script:
         - deno lint
         - cargo make wasm-test
-    except:
-        - schedules
 
 page-build:
     image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
@@ -75,8 +65,6 @@ page-build:
     artifacts:
         paths:
             - public
-    except:
-        - schedules
 
 lint-check:
     image: rust:latest
@@ -89,8 +77,6 @@ lint-check:
         - rustup default nightly
         - rustup component add rustfmt
         - cargo fmt -- --check
-    except:
-        - schedules
 
 change-log:
     image: ubuntu:latest
@@ -107,7 +93,6 @@ change-log:
     except:
         - master
         - tags
-        - schedules
 
 readme-generator:
     image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
@@ -119,7 +104,6 @@ readme-generator:
         - git diff --exit-code
     except:
         - tags
-        - schedules
 
 pages:
     image: rust:latest
@@ -132,61 +116,3 @@ pages:
             - public
     only:
         - master
-    except:
-        - schedules
-
-update-cpu-test-container:
-    image: docker:latest
-    stage: deploy
-    services:
-        - docker
-    variables:
-        MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
-    script:
-        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
-        - docker build -t $MY_REGISTRY/cpu-test:latest -f docker/cpu-test.Dockerfile --no-cache .
-        - docker push $MY_REGISTRY/cpu-test:latest
-    only:
-        - schedules
-
-update-gpu-test-container:
-    image: docker:latest
-    stage: deploy
-    services:
-        - docker
-    variables:
-        MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
-    script:
-        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
-        - docker build -t $MY_REGISTRY/gpu-test:latest -f docker/gpu-test.Dockerfile --no-cache .
-        - docker push $MY_REGISTRY/gpu-test:latest
-    only:
-        - schedules
-
-update-wasm-test-container:
-    image: docker:latest
-    stage: deploy
-    services:
-        - docker
-    variables:
-        MY_REGISTRY: $CI_REGISTRY/ricos/truck/truck
-    script:
-        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $MY_REGISTRY
-        - docker build -t $MY_REGISTRY/wasm-test:latest -f docker/wasm-test.Dockerfile --no-cache .
-        - docker push $MY_REGISTRY/wasm-test:latest
-    only:
-        - schedules
-
-check-dependent:
-    image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
-    stage: test
-    variables:
-        GIT_STRATEGY: clone
-    before_script:
-        - cargo install cargo-edit cargo-upgrades
-    script:
-        - cargo upgrade -i
-        - git diff --exit-code
-    allow_failure: true
-    only:
-        - schedules
