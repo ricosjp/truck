@@ -15,7 +15,7 @@ exclude = ["examples/**/*.obj"]
 [dependencies]
 bytemuck = { version = "1.13.1", features = ["derive"] }
 rustc-hash = "1.1.0"
-serde = { version = "1.0.185", features = ["derive"] }
+serde = { version = "1.0.186", features = ["derive"] }
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
 thiserror = "1.0.47"
