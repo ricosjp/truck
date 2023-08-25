@@ -13,7 +13,7 @@ impl<T> ID<T> {
 
 impl<T> Clone for ID<T> {
     #[inline(always)]
-    fn clone(&self) -> ID<T> { ID(self.0, PhantomData) }
+    fn clone(&self) -> ID<T> { *self }
 }
 
 impl<T> Copy for ID<T> {}

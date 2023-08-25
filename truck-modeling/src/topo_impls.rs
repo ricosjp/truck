@@ -94,12 +94,9 @@ pub(super) fn connect_wires<
     connect_curves: &'a CC,
 ) -> impl Iterator<Item = Face<P, C, S>> + 'a {
     let mut vemap = HashMap::<VertexID<P>, Edge<P, C>>::default();
-    wire0
-        .into_iter()
-        .zip(wire1.into_iter())
-        .map(move |(edge0, edge1)| {
-            sub_connect_wires(edge0, edge1, connect_points, connect_curves, &mut vemap)
-        })
+    wire0.into_iter().zip(wire1).map(move |(edge0, edge1)| {
+        sub_connect_wires(edge0, edge1, connect_points, connect_curves, &mut vemap)
+    })
 }
 
 pub(super) fn connect_raw_wires<
@@ -117,10 +114,7 @@ pub(super) fn connect_raw_wires<
     connect_curves: &'a CC,
 ) -> impl Iterator<Item = Face<P, C, S>> + 'a {
     let mut vemap = HashMap::<VertexID<P>, Edge<P, C>>::default();
-    wire0
-        .into_iter()
-        .zip(wire1.into_iter())
-        .map(move |(edge0, edge1)| {
-            sub_connect_wires(&edge0, &edge1, connect_points, connect_curves, &mut vemap)
-        })
+    wire0.into_iter().zip(wire1).map(move |(edge0, edge1)| {
+        sub_connect_wires(&edge0, &edge1, connect_points, connect_curves, &mut vemap)
+    })
 }
