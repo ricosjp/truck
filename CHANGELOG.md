@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix clippy.
 - Separate scheduled CI jobs to another repository.
 - STEP input test for surfaces.
 - Updates CI container `wasm-test`.
