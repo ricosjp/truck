@@ -44,6 +44,7 @@ pub struct Table {
     pub spherical_surface: HashMap<u64, SphericalSurfaceHolder>,
     pub cylindrical_surface: HashMap<u64, CylindricalSurfaceHolder>,
     pub toroidal_surface: HashMap<u64, ToroidalSurfaceHolder>,
+    pub conical_surface: HashMap<u64, ConicalSurfaceHolder>,
     pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
     pub uniform_surface: HashMap<u64, UniformSurfaceHolder>,
     pub quasi_uniform_surface: HashMap<u64, QuasiUniformSurfaceHolder>,
@@ -150,6 +151,10 @@ impl Table {
                 }
                 "TOROIDAL_SURFACE" => {
                     self.toroidal_surface
+                        .insert(*id, Deserialize::deserialize(record)?);
+                }
+                "CONICAL_SURFACE" => {
+                    self.conical_surface
                         .insert(*id, Deserialize::deserialize(record)?);
                 }
                 "B_SPLINE_SURFACE_WITH_KNOTS" => {
@@ -1299,6 +1304,8 @@ pub enum ElementarySurfaceAny {
     CylindricalSurface(Box<CylindricalSurface>),
     #[holder(use_place_holder)]
     ToroidalSurface(Box<ToroidalSurface>),
+    #[holder(use_place_holder)]
+    ConicalSurface(Box<ConicalSurface>),
 }
 
 impl From<&ElementarySurfaceAny> for ElementarySurface {
@@ -1310,6 +1317,7 @@ impl From<&ElementarySurfaceAny> for ElementarySurface {
             SphericalSurface(x) => Self::Sphere(x.as_ref().into()),
             CylindricalSurface(x) => Self::CylindricalSurface(x.as_ref().into()),
             ToroidalSurface(x) => Self::ToroidalSurface(x.as_ref().into()),
+            ConicalSurface(x) => Self::ConicalSurface(x.as_ref().into()),
         }
     }
 }
@@ -1427,6 +1435,39 @@ impl From<&ToroidalSurface> for alias::ToroidalSurface {
         let mut minor_circle = Processor::new(UnitCircle::new());
         minor_circle.transform_by(mat0);
         let rev = RevolutedCurve::by_revolution(minor_circle, Point3::origin(), Vector3::unit_z());
+        let mut processor = Processor::new(rev);
+        processor.transform_by(mat);
+        processor.invert();
+        processor
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = conical_surface)]
+#[holder(generate_deserialize)]
+pub struct ConicalSurface {
+    label: String,
+    #[holder(use_place_holder)]
+    position: Axis2Placement3d,
+    radius: f64,
+    semi_angle: f64,
+}
+
+impl From<&ConicalSurface> for alias::ConicalSurface {
+    fn from(
+        ConicalSurface {
+            position,
+            radius,
+            semi_angle,
+            ..
+        }: &ConicalSurface,
+    ) -> Self {
+        let mat = Matrix4::from(position);
+        let p = Point3::new(*radius, 0.0, 0.0);
+        let v = Vector3::new(f64::tan(*semi_angle), 0.0, 1.0);
+        let rev =
+            RevolutedCurve::by_revolution(Line(p, p + v), Point3::origin(), Vector3::unit_z());
         let mut processor = Processor::new(rev);
         processor.transform_by(mat);
         processor.invert();
