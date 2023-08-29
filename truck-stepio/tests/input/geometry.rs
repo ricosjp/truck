@@ -741,6 +741,68 @@ proptest! {
     }
 }
 
+fn exec_conical_surface(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: f64,
+    semi_angle: f64,
+) {
+    let p = Point3::from(org_coord);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let step_str = format!(
+        "DATA;
+#1 = CONICAL_SURFACE('', #2, {radius}, {semi_angle});
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+{}{}{}ENDSEC;",
+        StepDisplay::new(p, 3),
+        StepDisplay::new(VectorAsDirection(z), 4),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let step_conical = step_to_entity::<ConicalSurfaceHolder>(&step_str);
+    let conical: alias::ConicalSurface = (&step_conical).into();
+    let mat = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        p.to_vec().extend(1.0),
+    );
+    (0..=10)
+        .flat_map(move |i| (0..=10).map(move |j| (i, j)))
+        .for_each(|(i, j)| {
+            let u = 2.0 * PI * i as f64 / 10.0;
+            let v = j as f64 / 10.0;
+            let tan = f64::tan(semi_angle);
+            let res = conical.subs(u, v);
+            let ans = mat.transform_point(Point3::new(
+                (radius + v * tan) * f64::cos(u),
+                (radius + v * tan) * f64::sin(u),
+                v,
+            ));
+            assert_near!(res, ans, "u:{u} v:{v} res:{res:?} ans:{ans:?}");
+        })
+}
+
+proptest! {
+    #[test]
+    fn conical_surface(
+        org_coord in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0f64),
+        ref_dir_array in array::uniform2(0.0f64..1.0f64),
+        radius in 0.01f64..100.0f64,
+        semi_angle in 0.0f64..PI / 2.0,
+    ) {
+        exec_conical_surface(org_coord, dir_array, ref_dir_array, radius, semi_angle)
+    }
+}
+
 fn coords_to_points(
     upoints_len: usize,
     vpoints_len: usize,

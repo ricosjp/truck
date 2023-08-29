@@ -52,13 +52,14 @@ fn read() {
 #27 = QUASI_UNIFORM_SURFACE('QuasiUniformSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
 #28 = BEZIER_SURFACE('BezierSurface', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.);
 #29 = TOROIDAL_SURFACE('ToroidalSurface', #9, 5.0, 2.0);
-#30 = SURFACE_OF_LINEAR_EXTRUSION('SurfaceOfLinearExtrusion', #20, #3);
+#30 = CONICAL_SURFACE('ConicalSurface', #9, 5.0, 0.5);
+#31 = SURFACE_OF_LINEAR_EXTRUSION('SurfaceOfLinearExtrusion', #20, #3);
 
-#32 = ( GEOMETRIC_REPRESENTATION_CONTEXT(2) PARAMETRIC_REPRESENTATION_CONTEXT() REPRESENTATION_CONTEXT('2D SPACE','') );
-#33 = DEFINITIONAL_REPRESENTATION('DefinitionalRepresentation', (#13), #32);
-#34 = PCURVE('Pcurve', #24, #33);
+#33 = ( GEOMETRIC_REPRESENTATION_CONTEXT(2) PARAMETRIC_REPRESENTATION_CONTEXT() REPRESENTATION_CONTEXT('2D SPACE','') );
+#34 = DEFINITIONAL_REPRESENTATION('DefinitionalRepresentation', (#13), #32);
+#35 = PCURVE('Pcurve', #24, #33);
 
-#35 = SURFACE_CURVE('SurfaceCurve', #20, (#21, #29), .CURVE_3D.);
+#36 = SURFACE_CURVE('SurfaceCurve', #20, (#21, #29), .CURVE_3D.);
 
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
@@ -313,7 +314,7 @@ ENDSEC;
             },
         )]),
         definitional_representation: HashMap::from_iter(vec![(
-            33,
+            34,
             DefinitionalRepresentationHolder {
                 label: "DefinitionalRepresentation".to_string(),
                 representation_item: vec![PlaceHolder::Ref(Name::Entity(13))],
@@ -321,7 +322,7 @@ ENDSEC;
             }
         )]),
         pcurve: HashMap::from_iter(vec![(
-            34,
+            35,
             PcurveHolder {
                 label: "Pcurve".to_string(),
                 basis_surface: PlaceHolder::Ref(Name::Entity(24)),
@@ -329,7 +330,7 @@ ENDSEC;
             }
         )]),
         surface_curve: HashMap::from_iter(vec![(
-            35,
+            36,
             SurfaceCurveHolder {
                 label: "SurfaceCurve".to_string(),
                 curve_3d: PlaceHolder::Ref(Name::Entity(20)),
@@ -501,8 +502,17 @@ ENDSEC;
                 minor_radius: 2.0,
             },
         )]),
-        surface_of_linear_extrusion: HashMap::from_iter(vec![(
+        conical_surface: HashMap::from_iter(vec![(
             30,
+            ConicalSurfaceHolder {
+                label: "ConicalSurface".to_string(),
+                position: PlaceHolder::Ref(Name::Entity(9)),
+                radius: 5.0,
+                semi_angle: 0.5,
+            }
+        )]),
+        surface_of_linear_extrusion: HashMap::from_iter(vec![(
+            31,
             SurfaceOfLinearExtrusionHolder {
                 label: "SurfaceOfLinearExtrusion".to_string(),
                 swept_curve: PlaceHolder::Ref(Name::Entity(20)),
@@ -646,7 +656,7 @@ ENDSEC;
                 }
             ),
             (
-                32,
+                33,
                 DummyHolder {
                     record: "[Record { name: \"GEOMETRIC_REPRESENTATION_CONTEXT\", parameter: List([Integer(2)]) }, \
 Record { name: \"PARAMETRIC_REPRESENTATION_CONTEXT\", parameter: List([]) }, \

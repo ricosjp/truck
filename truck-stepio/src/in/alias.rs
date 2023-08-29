@@ -16,6 +16,7 @@ pub type SphericalSurface = Processor<RevolutedCurve<TrimmedCurve<UnitCircle<Poi
 pub type CylindricalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type ToroidalSurface =
     Processor<RevolutedCurve<Processor<UnitCircle<Point3>, Matrix4>>, Matrix4>;
+pub type ConicalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
 pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;
 pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
@@ -110,6 +111,7 @@ pub enum ElementarySurface {
     Sphere(SphericalSurface),
     CylindricalSurface(CylindricalSurface),
     ToroidalSurface(ToroidalSurface),
+    ConicalSurface(ConicalSurface),
 }
 #[derive(
     Clone,
