@@ -185,6 +185,43 @@ impl<V> NurbsSurface<V> {
     }
 }
 
+impl<V: Homogeneous<f64>> NurbsSurface<V> {
+    /// Constructs a rationalization surface from the non-rationalized surface and weights.
+    /// # Failures
+    /// the length of `surface.control_points()` and `weights` must be the same.
+    #[inline(always)]
+    pub fn try_from_bspline_and_weights(
+        surface: BSplineSurface<V::Point>,
+        weights: Vec<Vec<f64>>,
+    ) -> Result<Self> {
+        let BSplineSurface {
+            knot_vecs,
+            control_points,
+        } = surface;
+        if control_points.len() != weights.len() {
+            return Err(Error::DifferentLength);
+        }
+        let control_points = control_points
+            .into_iter()
+            .zip(weights)
+            .map(|(control_points, weights)| {
+                if control_points.len() != weights.len() {
+                    return Err(Error::DifferentLength);
+                }
+                Ok(control_points
+                    .into_iter()
+                    .zip(weights)
+                    .map(|(pt, w)| V::from_point_weight(pt, w))
+                    .collect::<Vec<_>>())
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(Self(BSplineSurface::new_unchecked(
+            knot_vecs,
+            control_points,
+        )))
+    }
+}
+
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsSurface<V> {
     /// Substitutes to a NURBS surface.
     #[inline(always)]
