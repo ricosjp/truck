@@ -766,7 +766,7 @@ fn exec_conical_surface(
         StepDisplay::new(VectorAsDirection(z), 4),
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
-    let step_conical = step_to_entity::<ConicalSurfaceHolder>(&step_str); 
+    let step_conical = step_to_entity::<ConicalSurfaceHolder>(&step_str);
     let conical: alias::ConicalSurface = (&step_conical).into();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
@@ -797,7 +797,7 @@ proptest! {
         dir_array in array::uniform2(0.0f64..1.0f64),
         ref_dir_array in array::uniform2(0.0f64..1.0f64),
         radius in 0.01f64..100.0f64,
-        semi_angle in 0.0f64..PI / 2.0, 
+        semi_angle in 0.0f64..PI / 2.0,
     ) {
         exec_conical_surface(org_coord, dir_array, ref_dir_array, radius, semi_angle)
     }
