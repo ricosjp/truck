@@ -526,8 +526,8 @@ impl Table {
                             "SURFACE",
                             _,
                         ) => {
-                            let mut params = vec![label[0].clone()];
-                            params.extend(bsp_params.iter().cloned());
+                            let mut params = label.clone();
+                            params.extend(bsp_params.clone());
                             self.rational_b_spline_surface.insert(
                                 *id,
                                 RationalBSplineSurfaceHolder {
@@ -556,8 +556,8 @@ impl Table {
                             "UNIFORM_SURFACE",
                             _,
                         ) => {
-                            let mut params = vec![label[0].clone()];
-                            params.extend(bsp_params.iter().cloned());
+                            let mut params = label.clone();
+                            params.extend(bsp_params.clone());
                             self.rational_b_spline_surface.insert(
                                 *id,
                                 RationalBSplineSurfaceHolder {
