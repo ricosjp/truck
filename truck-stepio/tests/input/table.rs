@@ -61,6 +61,16 @@ fn read() {
 
 #36 = SURFACE_CURVE('SurfaceCurve', #20, (#21, #29), .CURVE_3D.);
 
+#37 = (
+    BOUNDED_SURFACE()
+    B_SPLINE_SURFACE(2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.)
+    B_SPLINE_SURFACE_WITH_KNOTS((3, 3), (3, 3), (0.0, 1.0), (0.0, 1.0), .UNSPECIFIED.)
+    GEOMETRIC_REPRESENTATION_ITEM()
+    RATIONAL_B_SPLINE_SURFACE(((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)))
+    REPRESENTATION_ITEM('RationalBSplineSurface')
+    SURFACE()
+);
+
 #100 = VERTEX_POINT('VertexPoint', #1);
 #101 = EDGE_CURVE('EdgeCurve', #100, #100, #13, .T.);
 #102 = ORIENTED_EDGE('OrientedEdge', *, *, #101, .F.);
@@ -492,6 +502,44 @@ ENDSEC;
                 v_closed: Logical::Unknown,
                 self_intersect: Logical::Unknown,
             },
+        )]),
+        rational_b_spline_surface: HashMap::from_iter(vec![(
+            37,
+            RationalBSplineSurfaceHolder {
+                non_rational_b_spline_surface: PlaceHolder::Owned(NonRationalBSplineSurfaceHolder::BSplineSurfaceWithKnots(
+                    Box::new(BSplineSurfaceWithKnotsHolder {
+                label: "RationalBSplineSurface".to_string(),
+                u_degree: 2,
+                v_degree: 2,
+                control_points_list: vec![
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                    vec![
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                        PlaceHolder::Ref(Name::Entity(1)),
+                    ],
+                ],
+                surface_form: BSplineSurfaceForm::Unspecified,
+                u_closed: Logical::Unknown,
+                v_closed: Logical::Unknown,
+                self_intersect: Logical::Unknown,
+                u_multiplicities: vec![3, 3],
+                v_multiplicities: vec![3, 3],
+                u_knots: vec![0.0, 1.0],
+                v_knots: vec![0.0, 1.0],
+                knot_spec: KnotType::Unspecified,
+                }))),
+                weights_data: vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0], vec![7.0, 8.0, 9.0]]
+            }
         )]),
         toroidal_surface: HashMap::from_iter(vec![(
             29,

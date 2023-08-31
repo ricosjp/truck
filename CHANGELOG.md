@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Parse `RATIONAL_B_SPLINE_SURFACE` in STEP.
 - Parse `CONICAL_SURFACE` in STEP.
 - Fix clippy.
 - Separate scheduled CI jobs to another repository.

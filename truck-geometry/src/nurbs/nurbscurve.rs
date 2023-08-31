@@ -78,7 +78,7 @@ impl<V> NurbsCurve<V> {
 }
 
 impl<V: Homogeneous<f64>> NurbsCurve<V> {
-    /// Constructs a rationalization curve from the curves and weights.
+    /// Constructs a rationalization curve from the non-rationalized curve and weights.
     /// # Failures
     /// the length of `curve.control_points()` and `weights` must be the same.
     #[inline(always)]

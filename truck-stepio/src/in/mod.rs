@@ -49,6 +49,7 @@ pub struct Table {
     pub uniform_surface: HashMap<u64, UniformSurfaceHolder>,
     pub quasi_uniform_surface: HashMap<u64, QuasiUniformSurfaceHolder>,
     pub bezier_surface: HashMap<u64, BezierSurfaceHolder>,
+    pub rational_b_spline_surface: HashMap<u64, RationalBSplineSurfaceHolder>,
     pub surface_of_linear_extrusion: HashMap<u64, SurfaceOfLinearExtrusionHolder>,
     pub surface_of_revolution: HashMap<u64, SurfaceOfRevolutionHolder>,
 
@@ -309,6 +310,7 @@ impl Table {
                 subsuper: SubSuperRecord(records),
             } => {
                 use NonRationalBSplineCurveHolder as NRBC;
+                use NonRationalBSplineSurfaceHolder as NRBS;
                 if records.len() == 7 {
                     match (
                         records[0].name.as_str(),
@@ -342,27 +344,16 @@ impl Table {
                             "REPRESENTATION_ITEM",
                             Parameter::List(label),
                         ) => {
+                            let mut params = label.clone();
+                            params.extend(bsp_params.clone());
+                            params.extend(knots_params.clone());
                             self.rational_b_spline_curve.insert(
                                 *id,
                                 RationalBSplineCurveHolder {
                                     non_rational_b_spline_curve: PlaceHolder::Owned(
-                                        NRBC::BSplineCurveWithKnots(BSplineCurveWithKnotsHolder {
-                                            label: Deserialize::deserialize(&label[0])?,
-                                            degree: Deserialize::deserialize(&bsp_params[0])?,
-                                            control_points_list: Deserialize::deserialize(
-                                                &bsp_params[1],
-                                            )?,
-                                            curve_form: Deserialize::deserialize(&bsp_params[2])?,
-                                            closed_curve: Deserialize::deserialize(&bsp_params[3])?,
-                                            self_intersect: Deserialize::deserialize(
-                                                &bsp_params[4],
-                                            )?,
-                                            knot_multiplicities: Deserialize::deserialize(
-                                                &knots_params[0],
-                                            )?,
-                                            knots: Deserialize::deserialize(&knots_params[1])?,
-                                            knot_spec: Deserialize::deserialize(&knots_params[2])?,
-                                        }),
+                                        NRBC::BSplineCurveWithKnots(Deserialize::deserialize(
+                                            &Parameter::List(params),
+                                        )?),
                                     ),
                                     weights_data: Deserialize::deserialize(&weights[0])?,
                                 },
@@ -384,22 +375,15 @@ impl Table {
                             "REPRESENTATION_ITEM",
                             Parameter::List(label),
                         ) => {
-                            let mut params = vec![label[0].clone()];
-                            params.extend(bsp_params.iter().cloned());
+                            let mut params = label.clone();
+                            params.extend(bsp_params.clone());
                             self.rational_b_spline_curve.insert(
                                 *id,
                                 RationalBSplineCurveHolder {
                                     non_rational_b_spline_curve: PlaceHolder::Owned(
-                                        NRBC::BezierCurve(BezierCurveHolder {
-                                            label: Deserialize::deserialize(&params[0])?,
-                                            degree: Deserialize::deserialize(&params[1])?,
-                                            control_points_list: Deserialize::deserialize(
-                                                &params[2],
-                                            )?,
-                                            curve_form: Deserialize::deserialize(&params[3])?,
-                                            closed_curve: Deserialize::deserialize(&params[4])?,
-                                            self_intersect: Deserialize::deserialize(&params[5])?,
-                                        }),
+                                        NRBC::BezierCurve(Deserialize::deserialize(
+                                            &Parameter::List(params),
+                                        )?),
                                     ),
                                     weights_data: Deserialize::deserialize(&weights[0])?,
                                 },
@@ -427,16 +411,9 @@ impl Table {
                                 *id,
                                 RationalBSplineCurveHolder {
                                     non_rational_b_spline_curve: PlaceHolder::Owned(
-                                        NRBC::QuasiUniformCurve(QuasiUniformCurveHolder {
-                                            label: Deserialize::deserialize(&params[0])?,
-                                            degree: Deserialize::deserialize(&params[1])?,
-                                            control_points_list: Deserialize::deserialize(
-                                                &params[2],
-                                            )?,
-                                            curve_form: Deserialize::deserialize(&params[3])?,
-                                            closed_curve: Deserialize::deserialize(&params[4])?,
-                                            self_intersect: Deserialize::deserialize(&params[5])?,
-                                        }),
+                                        NRBC::QuasiUniformCurve(Deserialize::deserialize(
+                                            &Parameter::List(params),
+                                        )?),
                                     ),
                                     weights_data: Deserialize::deserialize(&weights[0])?,
                                 },
@@ -464,16 +441,130 @@ impl Table {
                                 *id,
                                 RationalBSplineCurveHolder {
                                     non_rational_b_spline_curve: PlaceHolder::Owned(
-                                        NRBC::UniformCurve(UniformCurveHolder {
-                                            label: Deserialize::deserialize(&params[0])?,
-                                            degree: Deserialize::deserialize(&params[1])?,
-                                            control_points_list: Deserialize::deserialize(
-                                                &params[2],
-                                            )?,
-                                            curve_form: Deserialize::deserialize(&params[3])?,
-                                            closed_curve: Deserialize::deserialize(&params[4])?,
-                                            self_intersect: Deserialize::deserialize(&params[5])?,
-                                        }),
+                                        NRBC::UniformCurve(Deserialize::deserialize(
+                                            &Parameter::List(params),
+                                        )?),
+                                    ),
+                                    weights_data: Deserialize::deserialize(&weights[0])?,
+                                },
+                            );
+                        }
+                        (
+                            "BOUNDED_SURFACE",
+                            _,
+                            "B_SPLINE_SURFACE",
+                            Parameter::List(bsp_params),
+                            "B_SPLINE_SURFACE_WITH_KNOTS",
+                            Parameter::List(knots_params),
+                            "GEOMETRIC_REPRESENTATION_ITEM",
+                            _,
+                            "RATIONAL_B_SPLINE_SURFACE",
+                            Parameter::List(weights),
+                            "REPRESENTATION_ITEM",
+                            Parameter::List(label),
+                            "SURFACE",
+                            _,
+                        ) => {
+                            let mut params = label.clone();
+                            params.extend(bsp_params.clone());
+                            params.extend(knots_params.clone());
+                            self.rational_b_spline_surface.insert(
+                                *id,
+                                RationalBSplineSurfaceHolder {
+                                    non_rational_b_spline_surface: PlaceHolder::Owned(
+                                        NRBS::BSplineSurfaceWithKnots(Deserialize::deserialize(
+                                            &Parameter::List(params),
+                                        )?),
+                                    ),
+                                    weights_data: Deserialize::deserialize(&weights[0])?,
+                                },
+                            );
+                        }
+                        (
+                            "BEZIER_SURFACE",
+                            _,
+                            "BOUNDED_SURFACE",
+                            _,
+                            "B_SPLINE_SURFACE",
+                            Parameter::List(bsp_params),
+                            "GEOMETRIC_REPRESENTATION_ITEM",
+                            _,
+                            "RATIONAL_B_SPLINE_SURFACE",
+                            Parameter::List(weights),
+                            "REPRESENTATION_ITEM",
+                            Parameter::List(label),
+                            "SURFACE",
+                            _,
+                        ) => {
+                            let mut params = label.clone();
+                            params.extend(bsp_params.clone());
+                            self.rational_b_spline_surface.insert(
+                                *id,
+                                RationalBSplineSurfaceHolder {
+                                    non_rational_b_spline_surface: PlaceHolder::Owned(
+                                        NRBS::BezierSurface(Deserialize::deserialize(
+                                            &Parameter::List(params),
+                                        )?),
+                                    ),
+                                    weights_data: Deserialize::deserialize(&weights[0])?,
+                                },
+                            );
+                        }
+                        (
+                            "BOUNDED_SURFACE",
+                            _,
+                            "B_SPLINE_SURFACE",
+                            Parameter::List(bsp_params),
+                            "GEOMETRIC_REPRESENTATION_ITEM",
+                            _,
+                            "QUASI_UNIFORM_SURFACE",
+                            _,
+                            "RATIONAL_B_SPLINE_SURFACE",
+                            Parameter::List(weights),
+                            "REPRESENTATION_ITEM",
+                            Parameter::List(label),
+                            "SURFACE",
+                            _,
+                        ) => {
+                            let mut params = label.clone();
+                            params.extend(bsp_params.clone());
+                            self.rational_b_spline_surface.insert(
+                                *id,
+                                RationalBSplineSurfaceHolder {
+                                    non_rational_b_spline_surface: PlaceHolder::Owned(
+                                        NRBS::QuasiUniformSurface(Deserialize::deserialize(
+                                            &Parameter::List(params),
+                                        )?),
+                                    ),
+                                    weights_data: Deserialize::deserialize(&weights[0])?,
+                                },
+                            );
+                        }
+                        (
+                            "BOUNDED_SURFACE",
+                            _,
+                            "B_SPLINE_SURFACE",
+                            Parameter::List(bsp_params),
+                            "GEOMETRIC_REPRESENTATION_ITEM",
+                            _,
+                            "RATIONAL_B_SPLINE_SURFACE",
+                            Parameter::List(weights),
+                            "REPRESENTATION_ITEM",
+                            Parameter::List(label),
+                            "SURFACE",
+                            _,
+                            "UNIFORM_SURFACE",
+                            _,
+                        ) => {
+                            let mut params = label.clone();
+                            params.extend(bsp_params.clone());
+                            self.rational_b_spline_surface.insert(
+                                *id,
+                                RationalBSplineSurfaceHolder {
+                                    non_rational_b_spline_surface: PlaceHolder::Owned(
+                                        NRBS::UniformSurface(Deserialize::deserialize(
+                                            &Parameter::List(params),
+                                        )?),
                                     ),
                                     weights_data: Deserialize::deserialize(&weights[0])?,
                                 },
@@ -1085,13 +1176,7 @@ where
 #[holder(generate_deserialize)]
 pub enum BSplineCurveAny {
     #[holder(use_place_holder)]
-    BSplineCurveWithKnots(Box<BSplineCurveWithKnots>),
-    #[holder(use_place_holder)]
-    BezierCurve(Box<BezierCurve>),
-    #[holder(use_place_holder)]
-    QuasiUniformCurve(Box<QuasiUniformCurve>),
-    #[holder(use_place_holder)]
-    UniformCurve(Box<UniformCurve>),
+    NonRationalBSplineCurve(Box<NonRationalBSplineCurve>),
     #[holder(use_place_holder)]
     RationalBSplineCurve(Box<RationalBSplineCurve>),
 }
@@ -1102,10 +1187,7 @@ impl TryFrom<&BSplineCurveAny> for Curve2D {
     fn try_from(value: &BSplineCurveAny) -> std::result::Result<Self, Self::Error> {
         use BSplineCurveAny::*;
         Ok(match value {
-            BSplineCurveWithKnots(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            BezierCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            QuasiUniformCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            UniformCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
+            NonRationalBSplineCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
             RationalBSplineCurve(bsp) => Self::NurbsCurve(bsp.as_ref().try_into()?),
         })
     }
@@ -1117,10 +1199,7 @@ impl TryFrom<&BSplineCurveAny> for Curve3D {
     fn try_from(value: &BSplineCurveAny) -> std::result::Result<Self, Self::Error> {
         use BSplineCurveAny::*;
         Ok(match value {
-            BSplineCurveWithKnots(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            BezierCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            QuasiUniformCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            UniformCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
+            NonRationalBSplineCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
             RationalBSplineCurve(bsp) => Self::NurbsCurve(bsp.as_ref().try_into()?),
         })
     }
@@ -1480,13 +1559,9 @@ impl From<&ConicalSurface> for alias::ConicalSurface {
 #[holder(generate_deserialize)]
 pub enum BSplineSurfaceAny {
     #[holder(use_place_holder)]
-    BSplineSurfaceWithKnots(Box<BSplineSurfaceWithKnots>),
+    NonRationalBSplineSurface(NonRationalBSplineSurface),
     #[holder(use_place_holder)]
-    UniformSurface(Box<UniformSurface>),
-    #[holder(use_place_holder)]
-    QuasiUniformSurface(Box<QuasiUniformSurface>),
-    #[holder(use_place_holder)]
-    BezierSurface(Box<BezierSurface>),
+    RationalBSplineSurface(RationalBSplineSurface),
 }
 
 impl TryFrom<&BSplineSurfaceAny> for Surface {
@@ -1495,10 +1570,8 @@ impl TryFrom<&BSplineSurfaceAny> for Surface {
     fn try_from(value: &BSplineSurfaceAny) -> std::result::Result<Self, Self::Error> {
         use BSplineSurfaceAny::*;
         Ok(match value {
-            BSplineSurfaceWithKnots(x) => Self::BSplineSurface(Box::new(x.as_ref().try_into()?)),
-            UniformSurface(x) => Self::BSplineSurface(Box::new(x.as_ref().try_into()?)),
-            QuasiUniformSurface(x) => Self::BSplineSurface(Box::new(x.as_ref().try_into()?)),
-            BezierSurface(x) => Self::BSplineSurface(Box::new(x.as_ref().try_into()?)),
+            NonRationalBSplineSurface(bsp) => Surface::BSplineSurface(Box::new(bsp.try_into()?)),
+            RationalBSplineSurface(bsp) => Surface::NurbsSurface(Box::new(bsp.try_into()?)),
         })
     }
 }
@@ -1664,6 +1737,61 @@ impl From<&BezierSurface> for BSplineSurface<Point3> {
             .map(|vec| vec.iter().map(Point3::from).collect())
             .collect();
         Self::new((uknots, vknots), ctrls)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum NonRationalBSplineSurface {
+    #[holder(use_place_holder)]
+    BSplineSurfaceWithKnots(Box<BSplineSurfaceWithKnots>),
+    #[holder(use_place_holder)]
+    UniformSurface(Box<UniformSurface>),
+    #[holder(use_place_holder)]
+    QuasiUniformSurface(Box<QuasiUniformSurface>),
+    #[holder(use_place_holder)]
+    BezierSurface(Box<BezierSurface>),
+}
+
+impl TryFrom<&NonRationalBSplineSurface> for BSplineSurface<Point3> {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(value: &NonRationalBSplineSurface) -> std::result::Result<Self, Self::Error> {
+        use NonRationalBSplineSurface::*;
+        match value {
+            BSplineSurfaceWithKnots(x) => x.as_ref().try_into(),
+            UniformSurface(x) => x.as_ref().try_into(),
+            QuasiUniformSurface(x) => x.as_ref().try_into(),
+            BezierSurface(x) => Ok(x.as_ref().into()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = rational_b_spline_surface)]
+#[holder(generate_deserialize)]
+pub struct RationalBSplineSurface {
+    #[holder(use_place_holder)]
+    non_rational_b_spline_surface: NonRationalBSplineSurface,
+    weights_data: Vec<Vec<f64>>,
+}
+
+impl TryFrom<&RationalBSplineSurface> for NurbsSurface<Vector4> {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(
+        RationalBSplineSurface {
+            non_rational_b_spline_surface,
+            weights_data,
+        }: &RationalBSplineSurface,
+    ) -> std::result::Result<Self, Self::Error> {
+        let surface: BSplineSurface<Point3> = non_rational_b_spline_surface.try_into()?;
+        Ok(Self::try_from_bspline_and_weights(
+            surface,
+            weights_data.clone(),
+        )?)
     }
 }
 
