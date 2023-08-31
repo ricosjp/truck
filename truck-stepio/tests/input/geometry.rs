@@ -482,6 +482,223 @@ proptest! {
     }
 }
 
+fn exec_nurbs_curve_b_spline_with_knots(
+    knot_len: usize,
+    knot_incrs: Vec<f64>,
+    knot_mults: Vec<usize>,
+    mut weights: Vec<f64>,
+    degree: usize,
+    ctrlpt_coords: Vec<[f64; 3]>,
+) {
+    let mut s = 0.0;
+    let vec = knot_mults
+        .iter()
+        .take(knot_len)
+        .zip(knot_incrs)
+        .flat_map(|(m, x)| {
+            s += x;
+            std::iter::repeat(s).take(*m)
+        })
+        .collect::<Vec<f64>>();
+    let knots = KnotVec::from(vec);
+    let cps = ctrlpt_coords
+        .into_iter()
+        .take(knots.len() - degree - 1)
+        .map(Point3::from)
+        .collect::<Vec<_>>();
+    weights.truncate(cps.len());
+    let bsp = BSplineCurve::new(knots, cps);
+    let nurbs = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
+    let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&nurbs, 1));
+    let nurbs_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
+    let res: NurbsCurve<Vector4> = (&nurbs_step).try_into().unwrap();
+    assert_eq!(res.knot_vec().len(), nurbs.knot_vec().len());
+    assert_eq!(res.control_points().len(), nurbs.control_points().len());
+    res.knot_vec()
+        .iter()
+        .zip(nurbs.knot_vec())
+        .for_each(|(x, y)| assert_near!(x, y));
+    res.control_points()
+        .iter()
+        .zip(nurbs.control_points())
+        .for_each(|(x, y)| assert_near!(x, y));
+}
+
+proptest! {
+    #[test]
+    fn nurbs_curve_b_spline_curve_with_knots(
+        knot_len in 7usize..20,
+        knot_incrs in collection::vec(1.0e-3f64..100.0f64, 20),
+        knot_mults in collection::vec(1usize..4usize, 20),
+        weights in collection::vec(0.01f64..100.0, 80),
+        degree in 2usize..6,
+        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 80),
+    ) {
+        exec_nurbs_curve_b_spline_with_knots(knot_len, knot_incrs, knot_mults, weights, degree, ctrlpt_coords)
+    }
+}
+
+fn exec_nurbs_curve_bezier_curve(
+    degree: usize,
+    ctrlpt_coords: Vec<[f64; 3]>,
+    mut weights: Vec<f64>,
+) {
+    let points = ctrlpt_coords
+        .into_iter()
+        .take(degree + 1)
+        .map(Point3::from)
+        .collect::<Vec<_>>();
+    weights.truncate(points.len());
+    let weights_display = SliceDisplay(&weights);
+    let (step_cps_indices, step_cps) = step_bsp_curve_ctrls(&points);
+    let step_str = format!(
+        "DATA;
+#1 = (
+    BEZIER_CURVE()
+    BOUNDED_CURVE()
+    B_SPLINE_CURVE({degree}, {step_cps_indices}, .UNSPECIFIED., .U., .U.)
+    CURVE()
+    GEOMETRIC_REPRESENTATION_ITEM()
+    RATIONAL_B_SPLINE_CURVE({weights_display})
+    REPRESENTATION_ITEM('')
+);
+{step_cps}ENDSEC;"
+    );
+    let bsp_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
+    let res: NurbsCurve<Vector4> = (&bsp_step).try_into().unwrap();
+    let bsp = BSplineCurve::new(KnotVec::bezier_knot(degree), points);
+    let ans = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
+    assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
+    assert_eq!(res.control_points().len(), ans.control_points().len());
+    res.knot_vec()
+        .iter()
+        .zip(ans.knot_vec())
+        .for_each(|(x, y)| assert_near!(x, y));
+    res.control_points()
+        .iter()
+        .zip(ans.control_points())
+        .for_each(|(x, y)| assert_near!(x, y));
+}
+
+proptest! {
+    #[test]
+    fn nurbs_curve_bezier_curve(
+        degree in 1usize..6,
+        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 6),
+        weights in collection::vec(0.01f64..100.0, 6),
+    ) {
+        exec_nurbs_curve_bezier_curve(degree, ctrlpt_coords, weights)
+    }
+}
+
+fn exec_nurbs_curve_quasi_uniform_curve(
+    degree: usize,
+    division: usize,
+    ctrlpt_coords: Vec<[f64; 3]>,
+    mut weights: Vec<f64>,
+) {
+    let mut knots = KnotVec::uniform_knot(degree, division);
+    knots.transform(division as f64, 0.0);
+    let points = ctrlpt_coords
+        .into_iter()
+        .take(knots.len() - degree - 1)
+        .map(Point3::from)
+        .collect::<Vec<_>>();
+    weights.truncate(points.len());
+    let weights_display = SliceDisplay(&weights);
+    let (step_cps_indices, step_cps) = step_bsp_curve_ctrls(&points);
+    let step_str = format!(
+        "DATA;
+#1 = (
+    BOUNDED_CURVE()
+    B_SPLINE_CURVE({degree}, {step_cps_indices}, .UNSPECIFIED., .U., .U.)
+    CURVE()
+    GEOMETRIC_REPRESENTATION_ITEM()
+    QUASI_UNIFORM_CURVE()
+    RATIONAL_B_SPLINE_CURVE({weights_display})
+    REPRESENTATION_ITEM('')
+);
+{step_cps}ENDSEC;"
+    );
+    let bsp_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
+    let res: NurbsCurve<Vector4> = (&bsp_step).try_into().unwrap();
+    let bsp = BSplineCurve::new(knots, points);
+    let ans = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
+    assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
+    assert_eq!(res.control_points().len(), ans.control_points().len());
+    res.knot_vec()
+        .iter()
+        .zip(ans.knot_vec())
+        .for_each(|(x, y)| assert_near!(x, y));
+    res.control_points()
+        .iter()
+        .zip(ans.control_points())
+        .for_each(|(x, y)| assert_near!(x, y));
+}
+
+proptest! {
+    #[test]
+    fn nurbs_curve_quasi_uniform_curve(
+        degree in 1usize..4,
+        division in 3usize..5,
+        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 20),
+        weights in collection::vec(0.01f64..100.0, 20),
+    ) {
+        exec_nurbs_curve_quasi_uniform_curve(degree, division, ctrlpt_coords, weights)
+    }
+}
+
+fn exec_nurbs_curve_uniform_curve(degree: usize, knot_len: usize, ctrlpt_coords: Vec<[f64; 3]>, mut weights: Vec<f64>) {
+    let knots = KnotVec::from_iter((0..knot_len).map(|i| i as f64 - degree as f64));
+    let points = ctrlpt_coords
+        .into_iter()
+        .take(knot_len - degree - 1)
+        .map(Point3::from)
+        .collect::<Vec<_>>();
+    weights.truncate(points.len());
+    let weights_display = SliceDisplay(&weights);
+    let (step_cps_indices, step_cps) = step_bsp_curve_ctrls(&points);
+    let step_str = format!(
+        "DATA;
+#1 = (
+    BOUNDED_CURVE()
+    B_SPLINE_CURVE({degree}, {step_cps_indices}, .UNSPECIFIED., .U., .U.)
+    CURVE()
+    GEOMETRIC_REPRESENTATION_ITEM()
+    RATIONAL_B_SPLINE_CURVE({weights_display})
+    REPRESENTATION_ITEM('')
+    UNIFORM_CURVE()
+);
+{step_cps}ENDSEC;"
+    );
+    let bsp_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
+    let res: NurbsCurve<Vector4> = (&bsp_step).try_into().unwrap();
+    let bsp = BSplineCurve::new(knots, points);
+    let ans = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
+    assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
+    assert_eq!(res.control_points().len(), ans.control_points().len());
+    res.knot_vec()
+        .iter()
+        .zip(ans.knot_vec())
+        .for_each(|(x, y)| assert_near!(x, y));
+    res.control_points()
+        .iter()
+        .zip(ans.control_points())
+        .for_each(|(x, y)| assert_near!(x, y));
+}
+
+proptest! {
+   #[test]
+    fn nurbs_curve_uniform_curve(
+        degree in 1usize..4,
+        knot_len in 6usize..10,
+        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 40),
+        weights in collection::vec(0.01f64..100.0, 40),
+    ) {
+        exec_nurbs_curve_uniform_curve(degree, knot_len, ctrlpt_coords, weights)
+    }
+}
+
 fn exec_circle(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2], radius: f64) {
     let origin = Point3::from(org_coord);
     let z = dir_from_array(dir_array);
