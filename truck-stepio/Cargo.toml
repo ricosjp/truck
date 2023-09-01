@@ -12,7 +12,7 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-chrono = { version = "0.4.27", features = ["wasmbind"] }
+chrono = { version = "0.4.28", features = ["wasmbind"] }
 ruststep = { git = "https://github.com/ricosjp/ruststep.git" }
 serde = { version = "1.0.188", features = ["derive"] }
 truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
