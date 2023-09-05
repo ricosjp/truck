@@ -64,7 +64,7 @@ where
             let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
             let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
             let curve = edge.curve();
-            let poly = PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
+            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), tol);
             (id, Edge::debug_new(v0, v1, poly))
         })
         .collect();
@@ -126,7 +126,7 @@ where
             let vb = edge.absolute_back();
             let v1 = vmap.entry_or_insert(vb).clone();
             let curve = edge.curve();
-            let poly = PolylineCurve::from_curve(&curve, curve.parameter_range(), tol);
+            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), tol);
             Edge::debug_new(&v0, &v1, poly)
         },
     );
@@ -181,7 +181,7 @@ where
         let curve = &edge.curve;
         CompressedEdge {
             vertices: edge.vertices,
-            curve: PolylineCurve::from_curve(curve, curve.parameter_range(), tol),
+            curve: PolylineCurve::from_curve(curve, curve.range_tuple(), tol),
         }
     };
     #[cfg(not(target_arch = "wasm32"))]

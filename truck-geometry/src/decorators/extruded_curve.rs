@@ -55,7 +55,7 @@ where
 {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
-        (self.curve.parameter_range(), (0.0, 1.0))
+        (self.curve.range_tuple(), (0.0, 1.0))
     }
 }
 

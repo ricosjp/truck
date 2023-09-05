@@ -1,6 +1,7 @@
 use truck_base::cgmath64::*;
 use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
+use std::ops::Bound;
 
 /// polyline base ntersection curve with parameter
 #[derive(Debug, Clone, derive_more::Deref, derive_more::DerefMut)]
@@ -76,13 +77,13 @@ where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
     fn der(&self, t: f64) -> Vector3 { self.ic.der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Vector3 { self.ic.der2(t) }
+    #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.ic.parameter_range() }
 }
 
 impl<S> BoundedCurve for IntersectionCurveWithParameters<S>
 where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
 {
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { self.ic.parameter_range() }
 }
 
 impl<S> ParameterDivision1D for IntersectionCurveWithParameters<S>

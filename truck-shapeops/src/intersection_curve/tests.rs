@@ -96,7 +96,7 @@ fn intersection_curve_sphere_case() {
 
     const N: usize = 100;
     let mut sum = 0.0;
-    let (t0, t1) = curve.parameter_range();
+    let (t0, t1) = curve.range_tuple();
     for i in 0..N {
         let t = t0 + (t1 - t0) * i as f64 / N as f64;
         let pt = curve.subs(t);
@@ -167,7 +167,7 @@ fn collide_parabola() {
     let curve = curves[0].1.clone().unwrap();
     const N: usize = 100;
     for i in 0..N {
-        let t1 = curve.parameter_range().1;
+        let t1 = curve.range_tuple().1;
         let t = t1 * i as f64 / N as f64;
         let pt = curve.subs(t);
         assert_near!(pt.distance(Point3::origin()) * 0.5, f64::sqrt(0.5) * 0.5);

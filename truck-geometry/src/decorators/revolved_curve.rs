@@ -117,7 +117,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
                 algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
             }
         };
-        let (t0, t1) = self.curve.parameter_range();
+        let (t0, t1) = self.curve.range_tuple();
         if self.is_front_fixed() && self.curve.front().near(&point) {
             Some((t0, hint.1))
         } else if self.is_back_fixed() && self.curve.back().near(&point) {
@@ -151,7 +151,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Revolut
         let hint = hint.into();
         let hint0 =
             algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION);
-        let (t0, t1) = self.curve.parameter_range();
+        let (t0, t1) = self.curve.range_tuple();
         if self.is_front_fixed() && hint0.0.near(&t0) {
             if let SPHint2D::Parameter(_, hint_1) = hint {
                 Some((t0, hint_1))
@@ -228,7 +228,7 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
 impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve<C> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
-        let (u0, u1) = self.curve.parameter_range();
+        let (u0, u1) = self.curve.range_tuple();
         let (uder, vder) = if u.near(&u0) {
             let pt = self.curve.subs(u);
             let radius = self.axis.cross(pt - self.origin);
@@ -257,7 +257,7 @@ impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve
 impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {
     #[inline(always)]
     fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
-        (self.curve.parameter_range(), (0.0, 2.0 * PI))
+        (self.curve.range_tuple(), (0.0, 2.0 * PI))
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::*;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref, DerefMut, Bound};
 use truck_base::cgmath64::control_point::ControlPoint;
 
 impl<P> Deref for PolylineCurve<P> {
@@ -55,11 +55,11 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
     }
     #[inline(always)]
     fn der2(&self, _: f64) -> P::Diff { P::Diff::zero() }
+    #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (Bound::Included(0.0), Bound::Included(self.len() as f64 - 1.0)) }
 }
 
 impl<P: ControlPoint<f64>> BoundedCurve for PolylineCurve<P> {
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { (0.0, self.len() as f64 - 1.0) }
 }
 
 impl<P: Clone> Invertible for PolylineCurve<P> {

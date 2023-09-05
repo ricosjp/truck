@@ -409,7 +409,7 @@ impl<P, C> Edge<P, C> {
         C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
         let mut curve0 = self.curve();
         let t = curve0.search_parameter(vertex.point(), None, SEARCH_PARAMETER_TRIALS)?;
-        let (t0, t1) = curve0.parameter_range();
+        let (t0, t1) = curve0.range_tuple();
         if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
             return None;
         }
@@ -441,7 +441,7 @@ impl<P, C> Edge<P, C> {
         if !curve0.subs(t).near(&vertex.point()) {
             return None;
         }
-        let (t0, t1) = curve0.parameter_range();
+        let (t0, t1) = curve0.range_tuple();
         if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
             return None;
         }
@@ -478,8 +478,8 @@ impl<P, C> Edge<P, C> {
         }
         let curve0 = self.oriented_curve();
         let mut curve1 = rhs.oriented_curve();
-        let t0 = curve0.parameter_range().1;
-        let t1 = curve1.parameter_range().0;
+        let t0 = curve0.range_tuple().1;
+        let t1 = curve1.range_tuple().0;
         curve1.parameter_transform(1.0, t0 - t1);
         let curve = curve0.try_concat(&curve1)?;
         Ok(Edge::debug_new(self.front(), rhs.back(), curve))

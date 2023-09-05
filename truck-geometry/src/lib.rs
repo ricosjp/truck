@@ -14,7 +14,7 @@
 )]
 
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Bound};
 use truck_base::bounding_box::Bounded;
 
 const INCLUDE_CURVE_TRIALS: usize = 100;

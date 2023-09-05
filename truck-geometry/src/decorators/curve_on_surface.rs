@@ -34,6 +34,8 @@ where
         self.surface.uder(pt[0], pt[1]) * der[0] + self.surface.vder(pt[0], pt[1]) * der[1]
     }
     #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.curve.parameter_range() }
+    #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
         let pt = self.curve.subs(t);
         let der = self.curve.der(t);
@@ -50,10 +52,7 @@ impl<C, S> BoundedCurve for PCurve<C, S>
 where
     C: BoundedCurve,
     PCurve<C, S>: ParametricCurve,
-{
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { self.curve.parameter_range() }
-}
+{}
 
 impl<C, S> SearchParameter<D1> for PCurve<C, S>
 where
@@ -115,7 +114,7 @@ where
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
             SPHint1D::None => {
-                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trials)
@@ -162,7 +161,7 @@ fn pcurve_test() {
         ],
     );
     let pcurve = PCurve::new(curve, surface);
-    assert_eq!(pcurve.parameter_range(), (0.0, 1.0));
+    assert_eq!(pcurve.range_tuple(), (0.0, 1.0));
 
     const N: usize = 100;
     for i in 0..=N {

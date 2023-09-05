@@ -133,7 +133,7 @@ impl Curve {
             if matches!(curve.leader(), Leader::Polyline(_)) {
                 if let Some(bspcurve) = BSplineCurve::cubic_approximation(
                     curve,
-                    curve.parameter_range(),
+                    curve.range_tuple(),
                     p_tol,
                     d_tol,
                     trials,

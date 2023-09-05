@@ -54,6 +54,7 @@ where
     derive_method!(subs, C0::Point, t: f64);
     derive_method!(der, C0::Vector, t: f64);
     derive_method!(der2, C0::Vector, t: f64);
+    derive_method!(parameter_range, (std::ops::Bound<f64>, std::ops::Bound<f64>),);
 }
 
 impl<C0, C1> BoundedCurve for Alternative<C0, C1>
@@ -61,7 +62,6 @@ where
     C0: BoundedCurve,
     C1: BoundedCurve<Point = C0::Point, Vector = C0::Vector>,
 {
-    derive_method!(parameter_range, (f64, f64),);
 }
 
 impl<S0, S1> ParametricSurface for Alternative<S0, S1>

@@ -15,6 +15,10 @@ impl ParametricCurve for UnitParabola<Point2> {
     fn der(&self, t: f64) -> Self::Vector { Vector2::new(2.0 * t, 2.0) }
     #[inline]
     fn der2(&self, _: f64) -> Self::Vector { Vector2::new(2.0, 0.0) }
+    #[inline]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Unbounded, Bound::Unbounded)
+    }
 }
 
 impl ParametricCurve for UnitParabola<Point3> {
@@ -26,6 +30,10 @@ impl ParametricCurve for UnitParabola<Point3> {
     fn der(&self, t: f64) -> Self::Vector { Vector3::new(2.0 * t, 2.0, 0.0) }
     #[inline]
     fn der2(&self, _: f64) -> Self::Vector { Vector3::new(2.0, 0.0, 0.0) }
+    #[inline]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Unbounded, Bound::Unbounded)
+    }
 }
 
 impl<P> ParameterDivision1D for UnitParabola<P>

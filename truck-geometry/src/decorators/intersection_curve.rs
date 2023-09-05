@@ -146,6 +146,8 @@ where
     fn der2(&self, _: f64) -> Vector3 {
         unimplemented!();
     }
+    #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.leader.parameter_range() }
 }
 
 impl<C, S> BoundedCurve for IntersectionCurve<C, S>
@@ -153,8 +155,6 @@ where
     C: ParametricCurve3D + BoundedCurve,
     S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { self.leader.parameter_range() }
 }
 
 impl<C, S> ParameterDivision1D for IntersectionCurve<C, S>
@@ -247,7 +247,7 @@ impl<C: BoundedCurve> IntersectionCurve<C, Plane> {
     /// Optimizes intersection curve of [`Plane`] into [`Line`].
     #[inline]
     pub fn optimize(&self) -> Line<C::Point> {
-        let (s, t) = self.leader.parameter_range();
+        let (s, t) = self.leader.range_tuple();
         Line(self.leader.subs(s), self.leader.subs(t))
     }
 }

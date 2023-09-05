@@ -1,5 +1,6 @@
 use truck_base::cgmath64::*;
 use truck_geotrait::*;
+use std::ops::Bound;
 
 // polynomial curve
 #[derive(Clone, Debug)]
@@ -35,10 +36,10 @@ impl<P: EuclideanSpace<Scalar = f64>> ParametricCurve for PolyCurve<P> {
             })
             .1
     }
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (Bound::Included(-100.0), Bound::Included(100.0)) }
 }
 
 impl<P: EuclideanSpace<Scalar = f64>> BoundedCurve for PolyCurve<P> {
-    fn parameter_range(&self) -> (f64, f64) { (-100.0, 100.0) }
 }
 
 impl<P> ParameterDivision1D for PolyCurve<P>

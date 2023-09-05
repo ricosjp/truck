@@ -80,7 +80,7 @@ impl<E: Clone, T: Clone> Invertible for Processor<E, T> {
 impl<C: BoundedCurve, T> Processor<C, T> {
     #[inline(always)]
     fn get_curve_parameter(&self, t: f64) -> f64 {
-        let (t0, t1) = self.parameter_range();
+        let (t0, t1) = self.range_tuple();
         match self.orientation {
             true => t,
             false => t0 + t1 - t,
@@ -113,6 +113,8 @@ where
         self.transform.transform_vector(self.entity.der2(t))
     }
     #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.entity.parameter_range() }
+    #[inline(always)]
     fn period(&self) -> Option<f64> { self.entity.period() }
 }
 
@@ -123,8 +125,6 @@ where
     C::Vector: VectorSpace<Scalar = f64>,
     T: Transform<C::Point> + Clone,
 {
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { self.entity.parameter_range() }
 }
 
 impl<S, T> ParametricSurface for Processor<S, T>
