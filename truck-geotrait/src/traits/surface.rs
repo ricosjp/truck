@@ -1,4 +1,5 @@
 use super::*;
+type ParameterRange = ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>));
 
 /// Parametric surface
 pub trait ParametricSurface: Clone {
@@ -18,6 +19,12 @@ pub trait ParametricSurface: Clone {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation by `v`.
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
+    /// The range of the parameter of the surface.
+    #[inline(always)]
+    fn parameter_range(&self) -> ParameterRange {
+        use Bound::Unbounded as X;
+        ((X, X), (X, X))
+    }
     /// `None` in default; `Some(period)` if periodic w.r.t. parameter u.
     #[inline(always)]
     fn u_period(&self) -> Option<f64> { None }
@@ -42,6 +49,10 @@ impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
     #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        (*self).parameter_range()
+    }
+    #[inline(always)]
     fn u_period(&self) -> Option<f64> { (*self).u_period() }
     #[inline(always)]
     fn v_period(&self) -> Option<f64> { (*self).v_period() }
@@ -62,6 +73,10 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector { (**self).uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
+    #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        (**self).parameter_range()
+    }
     #[inline(always)]
     fn u_period(&self) -> Option<f64> { (**self).u_period() }
     #[inline(always)]
@@ -91,21 +106,32 @@ impl<S: ParametricSurface3D> ParametricSurface3D for Box<S> {
     fn normal(&self, u: f64, v: f64) -> Vector3 { (**self).normal(u, v) }
 }
 
-/// Bounded surface with parametric range
+/// Bounded surface with parametric range i.e. it is guaranteed that the return value of `parameter_range` is not `Bound::Unbounded`.
 pub trait BoundedSurface: ParametricSurface {
-    /// The range of the parameter of the surface.
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64));
+    /// Return the ends of `parameter_range` by tuple.
+    #[inline(always)]
+    fn range_tuple(&self) -> ((f64, f64), (f64, f64)) {
+        let urange = match self.parameter_range().0 {
+            (Bound::Included(x), Bound::Included(y)) => (x, y),
+            (Bound::Excluded(x), Bound::Included(y)) => (x, y),
+            (Bound::Included(x), Bound::Excluded(y)) => (x, y),
+            (Bound::Excluded(x), Bound::Excluded(y)) => (x, y),
+            _ => unreachable!(),
+        };
+        let vrange = match self.parameter_range().1 {
+            (Bound::Included(x), Bound::Included(y)) => (x, y),
+            (Bound::Excluded(x), Bound::Included(y)) => (x, y),
+            (Bound::Included(x), Bound::Excluded(y)) => (x, y),
+            (Bound::Excluded(x), Bound::Excluded(y)) => (x, y),
+            _ => unreachable!(),
+        };
+        (urange, vrange)
+    }
 }
 
-impl<'a, S: BoundedSurface> BoundedSurface for &'a S {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { (*self).parameter_range() }
-}
+impl<'a, S: BoundedSurface> BoundedSurface for &'a S {}
 
-impl<S: BoundedSurface> BoundedSurface for Box<S> {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { (**self).parameter_range() }
-}
+impl<S: BoundedSurface> BoundedSurface for Box<S> {}
 
 /// Whether the surface includes the boundary curve.
 pub trait IncludeCurve<C: ParametricCurve> {
@@ -154,12 +180,16 @@ impl ParametricSurface for () {
     fn uuder(&self, _: f64, _: f64) -> Self::Vector {}
     fn uvder(&self, _: f64, _: f64) -> Self::Vector {}
     fn vvder(&self, _: f64, _: f64) -> Self::Vector {}
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        (
+            (Bound::Included(0.0), Bound::Included(1.0)),
+            (Bound::Included(0.0), Bound::Included(1.0)),
+        )
+    }
 }
 
 /// Implementation for the test of topological methods.
-impl BoundedSurface for () {
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, 1.0), (0.0, 1.0)) }
-}
+impl BoundedSurface for () {}
 
 /// Implementation for the test of topological methods.
 impl IncludeCurve<()> for () {

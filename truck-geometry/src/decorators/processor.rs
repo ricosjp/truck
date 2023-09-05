@@ -80,7 +80,7 @@ impl<E: Clone, T: Clone> Invertible for Processor<E, T> {
 impl<C: BoundedCurve, T> Processor<C, T> {
     #[inline(always)]
     fn get_curve_parameter(&self, t: f64) -> f64 {
-        let (t0, t1) = self.parameter_range();
+        let (t0, t1) = self.range_tuple();
         match self.orientation {
             true => t,
             false => t0 + t1 - t,
@@ -113,6 +113,8 @@ where
         self.transform.transform_vector(self.entity.der2(t))
     }
     #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.entity.parameter_range() }
+    #[inline(always)]
     fn period(&self) -> Option<f64> { self.entity.period() }
 }
 
@@ -123,8 +125,6 @@ where
     C::Vector: VectorSpace<Scalar = f64>,
     T: Transform<C::Point> + Clone,
 {
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { self.entity.parameter_range() }
 }
 
 impl<S, T> ParametricSurface for Processor<S, T>
@@ -178,6 +178,10 @@ where
         }
     }
     #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        self.entity.parameter_range()
+    }
+    #[inline(always)]
     fn u_period(&self) -> Option<f64> {
         match self.orientation {
             true => self.entity.u_period(),
@@ -217,8 +221,6 @@ where
     S: BoundedSurface<Point = Point3, Vector = Vector3>,
     T: Transform<S::Point> + SquareMatrix<Scalar = f64> + Clone,
 {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
 }
 
 impl<E, T> Deref for Processor<E, T> {
@@ -531,7 +533,7 @@ mod tests {
         }
         surface.transform_by(mat);
         processor.transform_by(mat);
-        assert_eq!(surface.parameter_range(), processor.parameter_range());
+        assert_eq!(surface.range_tuple(), processor.range_tuple());
 
         const N: usize = 30;
         for i in 0..=N {
@@ -564,7 +566,7 @@ mod tests {
 
         surface.swap_axes();
         processor.invert();
-        assert_eq!(surface.parameter_range(), processor.parameter_range());
+        assert_eq!(surface.range_tuple(), processor.range_tuple());
         for i in 0..=N {
             for j in 0..=N {
                 let u = i as f64 / N as f64;

@@ -482,7 +482,7 @@ where
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
             SPHint1D::None => {
-                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trial)
@@ -508,7 +508,7 @@ where
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
             SPHint1D::None => {
-                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::curve::search_parameter(self, point, hint, trial)
@@ -544,17 +544,16 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for Nurb
         let der2 = self.0.der2(t);
         pt.rat_der2(der, der2)
     }
-}
-
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCurve<V> {
     #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) {
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
         (
-            self.0.knot_vec[0],
-            self.0.knot_vec[self.0.knot_vec.len() - 1],
+            Bound::Included(self.0.knot_vec[0]),
+            Bound::Included(self.0.knot_vec[self.0.knot_vec.len() - 1]),
         )
     }
 }
+
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCurve<V> {}
 
 impl<V: Clone> Invertible for NurbsCurve<V> {
     #[inline(always)]
@@ -604,7 +603,7 @@ fn test_parameter_division() {
     ];
     let curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     let tol = 0.01;
-    let (div, pts) = curve.parameter_division(curve.parameter_range(), tol * 0.5);
+    let (div, pts) = curve.parameter_division(curve.range_tuple(), tol * 0.5);
     let knot_vec = curve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
