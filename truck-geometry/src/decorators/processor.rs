@@ -218,7 +218,13 @@ where
     T: Transform<S::Point> + SquareMatrix<Scalar = f64> + Clone,
 {
     #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
+    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { 
+        let (urange, vrange) = self.entity.parameter_range();
+        match self.orientation {
+            true => (urange, vrange),
+            false => (vrange, urange),
+        }
+    }
 }
 
 impl<E, T> Deref for Processor<E, T> {
