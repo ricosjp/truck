@@ -179,7 +179,11 @@ where
     }
     #[inline(always)]
     fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
-        self.entity.parameter_range()
+        let (urange, vrange) = self.entity.parameter_range();
+        match self.orientation {
+            true => (urange, vrange),
+            false => (vrange, urange),
+        }
     }
     #[inline(always)]
     fn u_period(&self) -> Option<f64> {

@@ -189,25 +189,53 @@ where
     #[cfg(target_arch = "wasm32")]
     let edges: Vec<_> = shell.edges.iter().map(tessellate_edge).collect();
     let tessellate_face = |face: &CompressedFace<S>| {
-        let boundaries = face.boundaries.clone();
-        let surface = &face.surface;
-        let mut polyline = Polyline::default();
-        let polygon = match boundaries.iter().all(|wire| {
-            let wire_iter = wire
-                .iter()
-                .filter_map(|edge_idx| match edge_idx.orientation {
-                    true => Some(edges.get(edge_idx.index)?.curve.clone()),
-                    false => Some(edges.get(edge_idx.index)?.curve.inverse()),
-                });
-            polyline.add_wire(surface, wire_iter, &sp)
-        }) {
-            true => Some(trimming_tessellation(surface, &polyline, tol)),
-            false => None,
-        };
-        CompressedFace {
-            boundaries,
-            orientation: face.orientation,
-            surface: polygon,
+        // vertex loop case
+        if face.boundaries.is_empty() {
+            use std::ops::Bound;
+            let surface = &face.surface;
+            fn range_tuple<T>(range: (Bound<T>, Bound<T>)) -> Option<(T, T)> {
+                match range {
+                    (Bound::Included(x), Bound::Included(y)) => Some((x, y)),
+                    (Bound::Excluded(x), Bound::Included(y)) => Some((x, y)),
+                    (Bound::Included(x), Bound::Excluded(y)) => Some((x, y)),
+                    (Bound::Excluded(x), Bound::Excluded(y)) => Some((x, y)),
+                    _ => None,
+                }
+            }
+            let urange = range_tuple(surface.parameter_range().0);
+            let vrange = range_tuple(surface.parameter_range().1);
+            let surface = match (urange, vrange) {
+                (Some(urange), Some(vrange)) => {
+                    Some(StructuredMesh::from_surface(surface, (urange, vrange), tol).destruct())
+                }
+                _ => None,
+            };
+            CompressedFace {
+                boundaries: Vec::new(),
+                orientation: face.orientation,
+                surface,
+            }
+        } else {
+            let boundaries = face.boundaries.clone();
+            let surface = &face.surface;
+            let mut polyline = Polyline::default();
+            let polygon = match boundaries.iter().all(|wire| {
+                let wire_iter = wire
+                    .iter()
+                    .filter_map(|edge_idx| match edge_idx.orientation {
+                        true => Some(edges.get(edge_idx.index)?.curve.clone()),
+                        false => Some(edges.get(edge_idx.index)?.curve.inverse()),
+                    });
+                polyline.add_wire(surface, wire_iter, &sp)
+            }) {
+                true => Some(trimming_tessellation(surface, &polyline, tol)),
+                false => None,
+            };
+            CompressedFace {
+                boundaries,
+                orientation: face.orientation,
+                surface: polygon,
+            }
         }
     };
     #[cfg(not(target_arch = "wasm32"))]
