@@ -1,4 +1,5 @@
 use super::*;
+type ParameterRange = ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>));
 
 impl<V> NurbsSurface<V> {
     /// constructor
@@ -170,7 +171,7 @@ impl<V> NurbsSurface<V> {
     }
     /// The range of the parameter of the surface.
     #[inline(always)]
-    pub fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.0.parameter_range() }
+    pub fn parameter_range(&self) -> ParameterRange { self.0.parameter_range() }
     /// Creates the curve whose control points are the `idx`th column control points of `self`.
     #[inline(always)]
     pub fn column_curve(&self, row_idx: usize) -> NurbsCurve<V>
@@ -562,7 +563,7 @@ where
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_nearest_parameter(self, point, hint, trials)
@@ -621,7 +622,7 @@ impl SearchParameter<D2> for NurbsSurface<Vector3> {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_parameter2d(self, point, hint, trials)
@@ -654,6 +655,10 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for Nu
     fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
+    #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        self.parameter_range()
+    }
 }
 
 impl ParametricSurface3D for NurbsSurface<Vector4> {
@@ -679,12 +684,7 @@ where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
     }
 }
 
-impl<V> BoundedSurface for NurbsSurface<V>
-where Self: ParametricSurface
-{
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-}
+impl<V> BoundedSurface for NurbsSurface<V> where Self: ParametricSurface {}
 
 impl IncludeCurve<NurbsCurve<Vector3>> for NurbsSurface<Vector3> {
     #[inline(always)]
@@ -837,7 +837,7 @@ impl SearchParameter<D2> for NurbsSurface<Vector4> {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_parameter3d(self, point, hint, trials)

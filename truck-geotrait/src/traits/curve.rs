@@ -19,7 +19,8 @@ pub trait ParametricCurve: Clone {
     /// Returns the 2nd-order derivation.
     fn der2(&self, t: f64) -> Self::Vector;
     /// Returns default parameter range
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>);
+    #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (Bound::Unbounded, Bound::Unbounded) }
     /// `None` in default implementation; `Some(period)` if periodic.
     #[inline(always)]
     fn period(&self) -> Option<f64> { None }
@@ -65,7 +66,9 @@ impl ParametricCurve for () {
     fn subs(&self, _: f64) -> Self::Point {}
     fn der(&self, _: f64) -> Self::Vector {}
     fn der2(&self, _: f64) -> Self::Vector {}
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (Bound::Included(0.0), Bound::Included(1.0)) }
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(0.0), Bound::Included(1.0))
+    }
 }
 
 impl BoundedCurve for () {}
@@ -82,7 +85,9 @@ impl ParametricCurve for (usize, usize) {
     }
     fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
     fn der2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (Bound::Included(0.0), Bound::Included(1.0)) }
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(0.0), Bound::Included(1.0))
+    }
 }
 
 /// Implementation for the test of topological methods.

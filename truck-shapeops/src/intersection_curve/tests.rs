@@ -151,10 +151,8 @@ fn collide_parabola() {
 
     // meshing surface
     let instant = std::time::Instant::now();
-    let polygon0 =
-        StructuredMesh::from_surface(&surface0, surface0.parameter_range(), TOL).destruct();
-    let polygon1 =
-        StructuredMesh::from_surface(&surface1, surface1.parameter_range(), TOL).destruct();
+    let polygon0 = StructuredMesh::from_surface(&surface0, surface0.range_tuple(), TOL).destruct();
+    let polygon1 = StructuredMesh::from_surface(&surface1, surface1.range_tuple(), TOL).destruct();
     println!("Meshing Surfaces: {}s", instant.elapsed().as_secs_f64());
     // extract intersection curves
     let instant = std::time::Instant::now();

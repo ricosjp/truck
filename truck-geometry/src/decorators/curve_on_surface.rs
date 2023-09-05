@@ -52,7 +52,8 @@ impl<C, S> BoundedCurve for PCurve<C, S>
 where
     C: BoundedCurve,
     PCurve<C, S>: ParametricCurve,
-{}
+{
+}
 
 impl<C, S> SearchParameter<D1> for PCurve<C, S>
 where

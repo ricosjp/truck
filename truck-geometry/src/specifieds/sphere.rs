@@ -45,6 +45,13 @@ impl ParametricSurface for Sphere {
         -self.radius * f64::sin(u) * Vector3::new(f64::cos(v), f64::sin(v), 0.0)
     }
     #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        (
+            (Bound::Included(0.0), Bound::Included(PI)),
+            (Bound::Included(0.0), Bound::Excluded(2.0 * PI)),
+        )
+    }
+    #[inline(always)]
     fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
 }
 
@@ -76,10 +83,7 @@ fn sphere_derivation_test() {
     }
 }
 
-impl BoundedSurface for Sphere {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, PI), (0.0, 2.0 * PI)) }
-}
+impl BoundedSurface for Sphere {}
 
 impl IncludeCurve<BSplineCurve<Point3>> for Sphere {
     #[inline(always)]

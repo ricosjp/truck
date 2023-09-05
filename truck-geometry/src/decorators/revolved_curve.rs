@@ -114,7 +114,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         let (t0, t1) = self.curve.range_tuple();
@@ -149,8 +149,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Revolut
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = hint.into();
-        let hint0 =
-            algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION);
+        let hint0 = algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION);
         let (t0, t1) = self.curve.range_tuple();
         if self.is_front_fixed() && hint0.0.near(&t0) {
             if let SPHint2D::Parameter(_, hint_1) = hint {
@@ -220,6 +219,13 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
             .transform_vector(self.curve.der(u))
     }
     #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        (
+            self.curve.parameter_range(),
+            (Bound::Included(0.0), Bound::Excluded(2.0 * PI)),
+        )
+    }
+    #[inline(always)]
     fn u_period(&self) -> Option<f64> { self.curve.period() }
     #[inline(always)]
     fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
@@ -254,12 +260,7 @@ impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve
     }
 }
 
-impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
-        (self.curve.range_tuple(), (0.0, 2.0 * PI))
-    }
-}
+impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {}
 
 impl<C: Clone> Invertible for RevolutedCurve<C> {
     #[inline(always)]

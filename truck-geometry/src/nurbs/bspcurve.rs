@@ -375,12 +375,14 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     }
     #[inline(always)]
     fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
-        (Bound::Included(self.knot_vec[0]), Bound::Included(self.knot_vec[self.knot_vec.len() - 1]))
+        (
+            Bound::Included(self.knot_vec[0]),
+            Bound::Included(self.knot_vec[self.knot_vec.len() - 1]),
+        )
     }
 }
 
-impl<P: ControlPoint<f64>> BoundedCurve for BSplineCurve<P> {
-}
+impl<P: ControlPoint<f64>> BoundedCurve for BSplineCurve<P> {}
 
 impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Returns whether all control points are the same or not.

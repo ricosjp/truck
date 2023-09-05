@@ -2,6 +2,7 @@ use super::*;
 use crate::errors::Error;
 use std::iter::FusedIterator;
 use std::ops::*;
+type ParameterRange = ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>));
 
 impl<P> BSplineSurface<P> {
     /// constructor.
@@ -278,15 +279,15 @@ impl<P> BSplineSurface<P> {
 
     /// The range of the parameter of the surface.
     #[inline(always)]
-    pub fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
+    pub fn parameter_range(&self) -> ParameterRange {
         (
             (
-                self.knot_vecs.0[0],
-                self.knot_vecs.0[self.knot_vecs.0.len() - 1],
+                Bound::Included(self.knot_vecs.0[0]),
+                Bound::Included(self.knot_vecs.0[self.knot_vecs.0.len() - 1]),
             ),
             (
-                self.knot_vecs.1[0],
-                self.knot_vecs.1[self.knot_vecs.1.len() - 1],
+                Bound::Included(self.knot_vecs.1[0]),
+                Bound::Included(self.knot_vecs.1[self.knot_vecs.1.len() - 1]),
             ),
         )
     }
@@ -837,6 +838,10 @@ impl<P: ControlPoint<f64>> ParametricSurface for BSplineSurface<P> {
             .fold(P::Diff::zero(), closure)
             * degree0 as f64
             * degree1 as f64
+    }
+    #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        self.parameter_range()
     }
 }
 
@@ -1868,12 +1873,7 @@ where P: EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
 
 impl ParametricSurface3D for BSplineSurface<Point3> {}
 
-impl<V> BoundedSurface for BSplineSurface<V>
-where BSplineSurface<V>: ParametricSurface
-{
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.parameter_range() }
-}
+impl<V> BoundedSurface for BSplineSurface<V> where BSplineSurface<V>: ParametricSurface {}
 
 impl<V: Clone> Invertible for BSplineSurface<V> {
     #[inline(always)]
@@ -1894,7 +1894,7 @@ impl SearchParameter<D2> for BSplineSurface<Point2> {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_parameter2d(self, point, hint, trials)
@@ -1915,7 +1915,7 @@ impl SearchParameter<D2> for BSplineSurface<Point3> {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_parameter3d(self, point, hint, trials)
@@ -1942,7 +1942,7 @@ where
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_nearest_parameter(self, point, hint, trials)
@@ -1952,8 +1952,7 @@ where
 impl IncludeCurve<BSplineCurve<Point2>> for BSplineSurface<Point2> {
     fn include(&self, curve: &BSplineCurve<Point2>) -> bool {
         let pt = curve.front();
-        let mut hint =
-            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.range_tuple(), PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter2d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -1989,8 +1988,7 @@ impl IncludeCurve<BSplineCurve<Point2>> for BSplineSurface<Point2> {
 impl IncludeCurve<BSplineCurve<Point3>> for BSplineSurface<Point3> {
     fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let pt = curve.front();
-        let mut hint =
-            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.range_tuple(), PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
@@ -2026,8 +2024,7 @@ impl IncludeCurve<BSplineCurve<Point3>> for BSplineSurface<Point3> {
 impl IncludeCurve<NurbsCurve<Vector4>> for BSplineSurface<Point3> {
     fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let pt = curve.subs(curve.knot_vec()[0]);
-        let mut hint =
-            algo::surface::presearch(self, pt, self.parameter_range(), PRESEARCH_DIVISION);
+        let mut hint = algo::surface::presearch(self, pt, self.range_tuple(), PRESEARCH_DIVISION);
         hint = match algo::surface::search_parameter3d(self, pt, hint, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,

@@ -553,8 +553,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for Nurb
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCurve<V> {
-}
+impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCurve<V> {}
 
 impl<V: Clone> Invertible for NurbsCurve<V> {
     #[inline(always)]

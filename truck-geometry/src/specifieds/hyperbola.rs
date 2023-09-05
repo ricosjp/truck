@@ -15,10 +15,6 @@ impl ParametricCurve for UnitHyperbola<Point2> {
     fn der(&self, t: f64) -> Self::Vector { Vector2::new(f64::sinh(t), f64::cosh(t)) }
     #[inline]
     fn der2(&self, t: f64) -> Self::Vector { Vector2::new(f64::cosh(t), f64::sinh(t)) }
-    #[inline]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
-        (Bound::Unbounded, Bound::Unbounded)
-    }
 }
 
 impl ParametricCurve for UnitHyperbola<Point3> {
@@ -30,10 +26,6 @@ impl ParametricCurve for UnitHyperbola<Point3> {
     fn der(&self, t: f64) -> Self::Vector { Vector3::new(f64::sinh(t), f64::cosh(t), 0.0) }
     #[inline]
     fn der2(&self, t: f64) -> Self::Vector { Vector3::new(f64::cosh(t), f64::sinh(t), 0.0) }
-    #[inline]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
-        (Bound::Unbounded, Bound::Unbounded)
-    }
 }
 
 impl<P> ParameterDivision1D for UnitHyperbola<P>

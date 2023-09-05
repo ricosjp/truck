@@ -178,6 +178,10 @@ where
         }
     }
     #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        self.entity.parameter_range()
+    }
+    #[inline(always)]
     fn u_period(&self) -> Option<f64> {
         match self.orientation {
             true => self.entity.u_period(),
@@ -217,8 +221,6 @@ where
     S: BoundedSurface<Point = Point3, Vector = Vector3>,
     T: Transform<S::Point> + SquareMatrix<Scalar = f64> + Clone,
 {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { self.entity.parameter_range() }
 }
 
 impl<E, T> Deref for Processor<E, T> {
@@ -531,7 +533,7 @@ mod tests {
         }
         surface.transform_by(mat);
         processor.transform_by(mat);
-        assert_eq!(surface.parameter_range(), processor.parameter_range());
+        assert_eq!(surface.range_tuple(), processor.range_tuple());
 
         const N: usize = 30;
         for i in 0..=N {
@@ -564,7 +566,7 @@ mod tests {
 
         surface.swap_axes();
         processor.invert();
-        assert_eq!(surface.parameter_range(), processor.parameter_range());
+        assert_eq!(surface.range_tuple(), processor.range_tuple());
         for i in 0..=N {
             for j in 0..=N {
                 let u = i as f64 / N as f64;

@@ -1,7 +1,7 @@
+use std::ops::Bound;
 use truck_base::{assert_near, cgmath64::*, tolerance::*};
 use truck_geotrait::*;
 use truck_topology::*;
-use std::ops::Bound;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Segment {
@@ -31,11 +31,12 @@ impl ParametricCurve for Segment {
     #[inline(always)]
     fn der2(&self, _: f64) -> Vector3 { Vector3::zero() }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (Bound::Included(self.range.0), Bound::Included(self.range.1)) }
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(self.range.0), Bound::Included(self.range.1))
+    }
 }
 
-impl BoundedCurve for Segment {
-}
+impl BoundedCurve for Segment {}
 
 impl ParameterTransform for Segment {
     #[inline(always)]
