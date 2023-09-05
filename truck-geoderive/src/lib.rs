@@ -603,6 +603,7 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                 fn uuder(&self, s: f64, t: f64) -> Self::Vector,
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
+                fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
             );
@@ -647,6 +648,10 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
                     #[inline(always)]
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
+                    #[inline(always)]
+                    fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)) {
+                        self.0.parameter_range()
+                    }
                     #[inline(always)]
                     fn u_period(&self) -> Option<f64> { self.0.u_period() }
                     #[inline(always)]

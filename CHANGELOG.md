@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implementation for closed surface tessellation.
 - Refactor bounded geometries.
 - Parse `RATIONAL_B_SPLINE_SURFACE` in STEP.
 - Parse `CONICAL_SURFACE` in STEP.
