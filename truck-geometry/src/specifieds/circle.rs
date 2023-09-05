@@ -16,12 +16,13 @@ impl ParametricCurve for UnitCircle<Point2> {
     fn der(&self, t: f64) -> Self::Vector { Vector2::new(-f64::sin(t), f64::cos(t)) }
     #[inline]
     fn der2(&self, t: f64) -> Self::Vector { Vector2::new(-f64::cos(t), -f64::sin(t)) }
+    #[inline]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(0.0), Bound::Excluded(2.0 * PI))
+    }
 }
 
-impl BoundedCurve for UnitCircle<Point2> {
-    #[inline]
-    fn parameter_range(&self) -> (f64, f64) { (0.0, 2.0 * PI) }
-}
+impl BoundedCurve for UnitCircle<Point2> {}
 
 impl ParametricCurve for UnitCircle<Point3> {
     type Point = Point3;
@@ -34,12 +35,13 @@ impl ParametricCurve for UnitCircle<Point3> {
     fn der2(&self, t: f64) -> Self::Vector { Vector3::new(-f64::cos(t), -f64::sin(t), 0.0) }
     #[inline]
     fn period(&self) -> Option<f64> { Some(2.0 * PI) }
+    #[inline]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(0.0), Bound::Excluded(2.0 * PI))
+    }
 }
 
-impl BoundedCurve for UnitCircle<Point3> {
-    #[inline]
-    fn parameter_range(&self) -> (f64, f64) { (0.0, 2.0 * PI) }
-}
+impl BoundedCurve for UnitCircle<Point3> {}
 
 impl<P> ParameterDivision1D for UnitCircle<P>
 where UnitCircle<P>: ParametricCurve<Point = P>
@@ -125,7 +127,7 @@ impl SearchParameter<D1> for UnitCircle<Point3> {
 #[test]
 fn parameter_division() {
     let c = UnitCircle::<Point2>::new();
-    let (_div, pts) = c.parameter_division(c.parameter_range(), 0.05);
+    let (_div, pts) = c.parameter_division(c.range_tuple(), 0.05);
     for a in pts.windows(2) {
         let p = a[0].midpoint(a[1]);
         assert!(p.to_vec().magnitude() > 0.95);

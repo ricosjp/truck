@@ -56,7 +56,7 @@ impl ShapesOpStatus {
     where
         C: ParametricCurve3D + BoundedCurve,
         S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>, {
-        let (t0, t1) = curve.parameter_range();
+        let (t0, t1) = curve.range_tuple();
         let t = (t0 + t1) / 2.0;
         let (_, pt0, pt1) = curve.search_triple(t)?;
         let der = curve.leader().der(t);
@@ -166,7 +166,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
             .find_map(|(i, j, edge)| {
                 let curve = edge.curve();
                 curve.search_parameter(pt, None, 1).and_then(|t| {
-                    let kind = ParameterKind::try_new(t, curve.parameter_range())?;
+                    let kind = ParameterKind::try_new(t, curve.range_tuple())?;
                     Some((i, j, kind))
                 })
             })
@@ -421,7 +421,7 @@ fn create_independent_loop<P, C, D>(mut poly_curve0: C) -> Wire<P, D>
 where
     C: Cut<Point = P>,
     D: From<C>, {
-    let (t0, t1) = poly_curve0.parameter_range();
+    let (t0, t1) = poly_curve0.range_tuple();
     let t = (t0 + t1) / 2.0;
     let poly_curve1 = poly_curve0.cut(t);
     let v0 = Vertex::new(poly_curve0.front());

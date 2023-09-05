@@ -61,7 +61,7 @@ where
     let vec = wire.edge_iter().try_fold(vec![p], |mut vec, edge| {
         let poly = polys.entry(edge.id()).or_insert_with(|| {
             let curve = edge.curve();
-            let div = curve.parameter_division(curve.parameter_range(), tol).1;
+            let div = curve.parameter_division(curve.range_tuple(), tol).1;
             PolylineCurve(div)
         });
         let mut p = *vec.last().unwrap();

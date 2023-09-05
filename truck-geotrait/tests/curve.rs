@@ -34,7 +34,7 @@ fn polycurve_presearch() {
         Vector2::new(0.0, 1.0),
     ];
     let poly = PolyCurve::<Point2>(coef);
-    let t = algo::curve::presearch(&poly, Point2::new(0.0, -1.0), poly.parameter_range(), 100);
+    let t = algo::curve::presearch(&poly, Point2::new(0.0, -1.0), poly.range_tuple(), 100);
     assert_eq!(t, 0.0);
 }
 

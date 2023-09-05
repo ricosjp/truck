@@ -299,7 +299,7 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
         let v0 = edge.front().clone();
         let v2 = edge.back().clone();
         let mut curve = edge.curve();
-        let (t0, t1) = curve.parameter_range();
+        let (t0, t1) = curve.range_tuple();
         let t = (t0 + t1) * 0.5;
         let v1 = Vertex::new(curve.subs(t));
         let curve1 = curve.cut(t);

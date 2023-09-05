@@ -1,3 +1,4 @@
+use std::ops::Bound;
 use truck_base::cgmath64::*;
 use truck_geotrait::*;
 
@@ -35,11 +36,12 @@ impl<P: EuclideanSpace<Scalar = f64>> ParametricCurve for PolyCurve<P> {
             })
             .1
     }
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(-100.0), Bound::Included(100.0))
+    }
 }
 
-impl<P: EuclideanSpace<Scalar = f64>> BoundedCurve for PolyCurve<P> {
-    fn parameter_range(&self) -> (f64, f64) { (-100.0, 100.0) }
-}
+impl<P: EuclideanSpace<Scalar = f64>> BoundedCurve for PolyCurve<P> {}
 
 impl<P> ParameterDivision1D for PolyCurve<P>
 where P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + truck_base::hash::HashGen<f64>
@@ -77,6 +79,13 @@ impl ParametricSurface for PolySurface {
     fn vvder(&self, u: f64, v: f64) -> Vector3 {
         self.0.subs(u).to_vec().mul_element_wise(self.1.der2(v))
     }
+    #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        (
+            (Bound::Included(-100.0), Bound::Included(100.0)),
+            (Bound::Included(-50.0), Bound::Included(50.0)),
+        )
+    }
 }
 
 impl ParametricSurface3D for PolySurface {
@@ -86,10 +95,7 @@ impl ParametricSurface3D for PolySurface {
     }
 }
 
-impl BoundedSurface for PolySurface {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((-100.0, 100.0), (-50.0, 50.0)) }
-}
+impl BoundedSurface for PolySurface {}
 
 impl ParameterDivision2D for PolySurface {
     fn parameter_division(

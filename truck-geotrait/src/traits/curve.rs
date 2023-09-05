@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Bound};
 use thiserror::Error;
 use truck_base::{
     assert_near,
@@ -18,21 +18,45 @@ pub trait ParametricCurve: Clone {
     fn der(&self, t: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation.
     fn der2(&self, t: f64) -> Self::Vector;
+    /// Returns default parameter range
+    #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (Bound::Unbounded, Bound::Unbounded) }
     /// `None` in default implementation; `Some(period)` if periodic.
     #[inline(always)]
     fn period(&self) -> Option<f64> { None }
 }
 
-/// bounded parametric curves
+/// bounded parametric curves i.e. it is guaranteed that the return value of `parameter_range` is not `Bound::Unbounded`.
 pub trait BoundedCurve: ParametricCurve {
-    /// The range of the parameter of the curve.
-    fn parameter_range(&self) -> (f64, f64);
+    /// Return the ends of `parameter_range` by tuple.
+    #[inline(always)]
+    fn range_tuple(&self) -> (f64, f64) {
+        match self.parameter_range() {
+            (Bound::Included(x), Bound::Included(y)) => (x, y),
+            (Bound::Excluded(x), Bound::Included(y)) => (x, y),
+            (Bound::Included(x), Bound::Excluded(y)) => (x, y),
+            (Bound::Excluded(x), Bound::Excluded(y)) => (x, y),
+            _ => unreachable!(),
+        }
+    }
     /// The front end point of the curve.
     #[inline(always)]
-    fn front(&self) -> Self::Point { self.subs(self.parameter_range().0) }
+    fn front(&self) -> Self::Point {
+        match self.parameter_range() {
+            (Bound::Included(x), _) => self.subs(x),
+            (Bound::Excluded(x), _) => self.subs(x),
+            (Bound::Unbounded, _) => unreachable!(),
+        }
+    }
     /// The back end point of the curve.
     #[inline(always)]
-    fn back(&self) -> Self::Point { self.subs(self.parameter_range().1) }
+    fn back(&self) -> Self::Point {
+        match self.parameter_range() {
+            (_, Bound::Included(x)) => self.subs(x),
+            (_, Bound::Excluded(x)) => self.subs(x),
+            (_, Bound::Unbounded) => unreachable!(),
+        }
+    }
 }
 
 /// Implementation for the test of topological methods.
@@ -42,12 +66,12 @@ impl ParametricCurve for () {
     fn subs(&self, _: f64) -> Self::Point {}
     fn der(&self, _: f64) -> Self::Vector {}
     fn der2(&self, _: f64) -> Self::Vector {}
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(0.0), Bound::Included(1.0))
+    }
 }
 
-/// Implementation for the test of topological methods.
-impl BoundedCurve for () {
-    fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
-}
+impl BoundedCurve for () {}
 
 /// Implementation for the test of topological methods.
 impl ParametricCurve for (usize, usize) {
@@ -61,12 +85,13 @@ impl ParametricCurve for (usize, usize) {
     }
     fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
     fn der2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(0.0), Bound::Included(1.0))
+    }
 }
 
 /// Implementation for the test of topological methods.
-impl BoundedCurve for (usize, usize) {
-    fn parameter_range(&self) -> (f64, f64) { (0.0, 1.0) }
-}
+impl BoundedCurve for (usize, usize) {}
 
 impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     type Point = C::Point;
@@ -77,12 +102,12 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
     #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (*self).parameter_range() }
+    #[inline(always)]
     fn period(&self) -> Option<f64> { (*self).period() }
 }
 
 impl<'a, C: BoundedCurve> BoundedCurve for &'a C {
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { (*self).parameter_range() }
     #[inline(always)]
     fn front(&self) -> Self::Point { (*self).front() }
     #[inline(always)]
@@ -98,12 +123,12 @@ impl<C: ParametricCurve> ParametricCurve for Box<C> {
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (**self).der2(t) }
     #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (**self).parameter_range() }
+    #[inline(always)]
     fn period(&self) -> Option<f64> { (**self).period() }
 }
 
 impl<C: BoundedCurve> BoundedCurve for Box<C> {
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { (**self).parameter_range() }
     #[inline(always)]
     fn front(&self) -> Self::Point { (**self).front() }
     #[inline(always)]
@@ -153,7 +178,7 @@ pub trait ParameterTransform: BoundedCurve {
     /// # Examples
     /// ```ignore
     /// let curve0 = ... // implemented ParameterTransform
-    /// assert_eq!(curve0.parameter_range(), (0.0, 1.0));
+    /// assert_eq!(curve0.range_tuple(), (0.0, 1.0));
     /// let curve1 = curve0.parameter_transformed(1.0, 2.0);
     /// assert_eq!(curve1.subs(0.5), curve0.subs(2.5));
     /// ```
@@ -164,7 +189,7 @@ pub trait ParameterTransform: BoundedCurve {
     }
     /// Makes the parameter range `(0.0, 1.0)`.
     fn parameter_normalization(&mut self) -> &mut Self {
-        let (t0, t1) = self.parameter_range();
+        let (t0, t1) = self.range_tuple();
         let a = 1.0 / (t1 - t0);
         let b = -t0 * a;
         self.parameter_transform(a, b)
@@ -196,11 +221,11 @@ where Self::Point: Debug {
     type Output: BoundedCurve<Point = Self::Point, Vector = Self::Vector>;
     /// Try concat two curves.
     /// # Failure
-    /// Returns `None` if `self.parameter_range().1 != rhs.parameter_range().0`.
+    /// Returns `None` if `self.range_tuple().1 != rhs.range_tuple().0`.
     fn try_concat(&self, rhs: &Rhs) -> Result<Self::Output, ConcatError<Self::Point>>;
     /// Try concat two curves.
     /// # Panic
-    /// Panic occurs if `self.parameter_range().1 != rhs.parameter_range().0`.
+    /// Panic occurs if `self.range_tuple().1 != rhs.range_tuple().0`.
     fn concat(&self, rhs: &Rhs) -> Self::Output {
         self.try_concat(rhs).unwrap_or_else(|err| panic!("{}", err))
     }
@@ -334,9 +359,9 @@ where
     let b = rand::random::<f64>() * 2.0;
     let transformed = curve.parameter_transformed(a, b);
 
-    let (t0, t1) = curve.parameter_range();
-    assert_near!(transformed.parameter_range().0, t0 * a + b);
-    assert_near!(transformed.parameter_range().1, t1 * a + b);
+    let (t0, t1) = curve.range_tuple();
+    assert_near!(transformed.range_tuple().0, t0 * a + b);
+    assert_near!(transformed.range_tuple().1, t1 * a + b);
     let p = rand::random::<f64>();
     let t = (1.0 - p) * t0 + p * t1;
     assert_near!(transformed.subs(t * a + b), curve.subs(t));
@@ -365,10 +390,10 @@ where
     C0::Output: BoundedCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
     C1: BoundedCurve<Point = C0::Point, Vector = C0::Vector>, {
     let concatted = curve0.try_concat(curve1).unwrap();
-    let (t0, t1) = curve0.parameter_range();
-    let (_, t2) = curve1.parameter_range();
-    assert_near!(concatted.parameter_range().0, t0);
-    assert_near!(concatted.parameter_range().1, t2);
+    let (t0, t1) = curve0.range_tuple();
+    let (_, t2) = curve1.range_tuple();
+    assert_near!(concatted.range_tuple().0, t0);
+    assert_near!(concatted.range_tuple().1, t2);
 
     let p = rand::random::<f64>();
     let t = t0 * (1.0 - p) + t1 * p;
@@ -400,14 +425,14 @@ where
     C::Point: Debug + Tolerance,
     C::Vector: Debug + Tolerance, {
     let mut part0 = curve.clone();
-    let (t0, t1) = curve.parameter_range();
+    let (t0, t1) = curve.range_tuple();
     let p = rand::random::<f64>();
     let t = t0 * (1.0 - p) + t1 * p;
     let part1 = part0.cut(t);
-    assert_near!(part0.parameter_range().0, t0);
-    assert_near!(part0.parameter_range().1, t);
-    assert_near!(part1.parameter_range().0, t);
-    assert_near!(part1.parameter_range().1, t1);
+    assert_near!(part0.range_tuple().0, t0);
+    assert_near!(part0.range_tuple().1, t);
+    assert_near!(part1.range_tuple().0, t);
+    assert_near!(part1.range_tuple().1, t1);
 
     let p = rand::random::<f64>();
     let s = t0 * (1.0 - p) + t * p;

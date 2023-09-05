@@ -23,12 +23,13 @@ impl<C: ParametricCurve> ParametricCurve for TrimmedCurve<C> {
     fn der2(&self, t: f64) -> Self::Vector { self.curve.der2(t) }
     #[inline(always)]
     fn period(&self) -> Option<f64> { self.curve.period() }
+    #[inline(always)]
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (Bound::Included(self.range.0), Bound::Included(self.range.1))
+    }
 }
 
-impl<C: ParametricCurve> BoundedCurve for TrimmedCurve<C> {
-    #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) { self.range }
-}
+impl<C: ParametricCurve> BoundedCurve for TrimmedCurve<C> {}
 
 impl<C: SearchNearestParameter<D1>> SearchNearestParameter<D1> for TrimmedCurve<C> {
     type Point = C::Point;

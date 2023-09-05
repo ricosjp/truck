@@ -38,6 +38,13 @@ where
     #[inline(always)]
     fn vvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
     #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        (
+            self.curve.parameter_range(),
+            (Bound::Included(0.0), Bound::Included(1.0)),
+        )
+    }
+    #[inline(always)]
     fn u_period(&self) -> Option<f64> { self.curve.period() }
 }
 
@@ -53,10 +60,6 @@ where
     C: BoundedCurve,
     Self: ParametricSurface,
 {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) {
-        (self.curve.parameter_range(), (0.0, 1.0))
-    }
 }
 
 impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
@@ -88,7 +91,7 @@ impl<C: ParametricCurve2D + BoundedCurve> SearchParameter<D2> for ExtrudedCurve<
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_parameter2d(self, point, hint, trials)
@@ -110,7 +113,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for ExtrudedCurve<
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_parameter3d(self, point, hint, trials)
@@ -132,7 +135,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Extrude
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
             SPHint2D::None => {
-                algo::surface::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::surface::search_nearest_parameter(self, point, hint, trials)
@@ -166,7 +169,7 @@ fn extruded_curve_test() {
     let curve = BSplineCurve::new(KnotVec::bezier_knot(2), cpts);
     let surface0 = ExtrudedCurve::by_extrusion(curve, Vector3::unit_z());
     let surface1 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(1)), spts);
-    assert_eq!(surface0.parameter_range(), surface1.parameter_range());
+    assert_eq!(surface0.range_tuple(), surface1.range_tuple());
     const N: usize = 10;
     for i in 0..=N {
         for j in 0..=N {

@@ -67,7 +67,7 @@ impl Plane {
     /// let pt2 = Point3::new(0.0, 2.0, 3.0);
     /// let plane: Plane = Plane::new(pt0, pt1, pt2);
     /// let surface: BSplineSurface<Point3> = plane.into_bspline();
-    /// assert_eq!(surface.parameter_range(), ((0.0, 1.0), (0.0, 1.0)));
+    /// assert_eq!(surface.range_tuple(), ((0.0, 1.0), (0.0, 1.0)));
     ///
     /// const N: usize = 100;
     /// for i in 0..=N {
@@ -99,7 +99,7 @@ impl Plane {
     /// let pt2 = Point3::new(0.0, 2.0, 3.0);
     /// let plane: Plane = Plane::new(pt0, pt1, pt2);
     /// let surface: NurbsSurface<Vector4> = plane.into_nurbs();
-    /// assert_eq!(surface.parameter_range(), ((0.0, 1.0), (0.0, 1.0)));
+    /// assert_eq!(surface.range_tuple(), ((0.0, 1.0), (0.0, 1.0)));
     ///
     /// const N: usize = 100;
     /// for i in 0..=N {
@@ -141,6 +141,12 @@ impl ParametricSurface for Plane {
     fn uvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
     #[inline(always)]
     fn vvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
+    /// as square
+    #[inline(always)]
+    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+        let range = (Bound::Included(0.0), Bound::Included(1.0));
+        (range, range)
+    }
 }
 
 impl ParametricSurface3D for Plane {
@@ -148,10 +154,7 @@ impl ParametricSurface3D for Plane {
     fn normal(&self, _: f64, _: f64) -> Vector3 { self.normal() }
 }
 
-impl BoundedSurface for Plane {
-    #[inline(always)]
-    fn parameter_range(&self) -> ((f64, f64), (f64, f64)) { ((0.0, 1.0), (0.0, 1.0)) }
-}
+impl BoundedSurface for Plane {}
 
 impl Invertible for Plane {
     #[inline(always)]

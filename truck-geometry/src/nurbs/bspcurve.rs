@@ -373,14 +373,16 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
             * k as f64
             * (k - 1) as f64
     }
-}
-
-impl<P: ControlPoint<f64>> BoundedCurve for BSplineCurve<P> {
     #[inline(always)]
-    fn parameter_range(&self) -> (f64, f64) {
-        (self.knot_vec[0], self.knot_vec[self.knot_vec.len() - 1])
+    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+        (
+            Bound::Included(self.knot_vec[0]),
+            Bound::Included(self.knot_vec[self.knot_vec.len() - 1]),
+        )
     }
 }
+
+impl<P: ControlPoint<f64>> BoundedCurve for BSplineCurve<P> {}
 
 impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// Returns whether all control points are the same or not.
@@ -1206,7 +1208,7 @@ where
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
             SPHint1D::None => {
-                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trial)
@@ -1228,7 +1230,7 @@ where
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
             SPHint1D::None => {
-                algo::curve::presearch(self, point, self.parameter_range(), PRESEARCH_DIVISION)
+                algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
         algo::curve::search_parameter(self, point, hint, trial)
@@ -1340,7 +1342,7 @@ fn test_parameter_division() {
     ];
     let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     let tol = 0.01;
-    let (div, pts) = bspcurve.parameter_division(bspcurve.parameter_range(), tol);
+    let (div, pts) = bspcurve.parameter_division(bspcurve.range_tuple(), tol);
     let knot_vec = bspcurve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
