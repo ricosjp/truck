@@ -123,8 +123,11 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
         } else if self.is_back_fixed() && self.curve.back().near(&point) {
             Some((t1, hint.1))
         } else {
-            algo::surface::search_nearest_parameter(self, point, hint, trials).and_then(|(u, v)| {
-                let v = v.rem_euclid(2.0 * PI);
+            algo::surface::search_nearest_parameter(self, point, hint, trials).and_then(|(mut u, mut v)| {
+                if let Some(period) = self.entity_curve().period() {
+                    u = u.rem_euclid(period);
+                }
+                v = v.rem_euclid(2.0 * PI);
                 if self.subs(u, v).near(&point) {
                     Some((u, v))
                 } else {

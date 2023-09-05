@@ -2398,16 +2398,192 @@ impl Table {
             .collect()
     }
 
+    fn vertex_loop_case(
+        vertices: &mut Vec<Point3>,
+        edges: &mut Vec<CompressedEdge<Curve3D>>,
+        faces: &mut [CompressedFace<Surface>],
+    ) {
+        faces
+            .iter_mut()
+            .filter(|face| face.boundaries.is_empty())
+            .for_each(|face| match &face.surface {
+                Surface::ElementarySurface(surface) => match surface.as_ref() {
+                    ElementarySurface::Sphere(sphere) => {
+                        let ((u0, u1), (v0, v1)) = sphere.parameter_range();
+                        vertices.extend([
+                            sphere.subs(u0, v0),
+                            sphere.subs(u1, v0),
+                            sphere.subs(u1, v1),
+                            sphere.subs(u0, v1),
+                        ]);
+                        let len = vertices.len();
+                        edges.extend([
+                            CompressedEdge {
+                                vertices: (len - 4, len - 3),
+                                curve: Curve3D::PCurve(PCurve::new(
+                                    Box::new(Curve2D::Line(Line(
+                                        Point2::new(u0, v0),
+                                        Point2::new(u1, v0),
+                                    ))),
+                                    Box::new(Surface::ElementarySurface(Box::new(
+                                        ElementarySurface::Sphere(sphere.clone()),
+                                    ))),
+                                )),
+                            },
+                            CompressedEdge {
+                                vertices: (len - 3, len - 2),
+                                curve: Curve3D::PCurve(PCurve::new(
+                                    Box::new(Curve2D::Line(Line(
+                                        Point2::new(u1, v0),
+                                        Point2::new(u1, v1),
+                                    ))),
+                                    Box::new(Surface::ElementarySurface(Box::new(
+                                        ElementarySurface::Sphere(sphere.clone()),
+                                    ))),
+                                )),
+                            },
+                            CompressedEdge {
+                                vertices: (len - 2, len - 1),
+                                curve: Curve3D::PCurve(PCurve::new(
+                                    Box::new(Curve2D::Line(Line(
+                                        Point2::new(u1, v1),
+                                        Point2::new(u0, v1),
+                                    ))),
+                                    Box::new(Surface::ElementarySurface(Box::new(
+                                        ElementarySurface::Sphere(sphere.clone()),
+                                    ))),
+                                )),
+                            },
+                            CompressedEdge {
+                                vertices: (len - 1, len - 4),
+                                curve: Curve3D::PCurve(PCurve::new(
+                                    Box::new(Curve2D::Line(Line(
+                                        Point2::new(u0, v1),
+                                        Point2::new(u0, v0),
+                                    ))),
+                                    Box::new(Surface::ElementarySurface(Box::new(
+                                        ElementarySurface::Sphere(sphere.clone()),
+                                    ))),
+                                )),
+                            },
+                        ]);
+                        let len = edges.len();
+                        face.boundaries.push(vec![
+                            CompressedEdgeIndex {
+                                index: len - 4,
+                                orientation: true,
+                            },
+                            CompressedEdgeIndex {
+                                index: len - 3,
+                                orientation: true,
+                            },
+                            CompressedEdgeIndex {
+                                index: len - 2,
+                                orientation: true,
+                            },
+                            CompressedEdgeIndex {
+                                index: len - 1,
+                                orientation: true,
+                            },
+                        ]);
+                    }
+                    ElementarySurface::ToroidalSurface(torus) => {
+                        let ((u0, u1), (v0, v1)) = torus.parameter_range();
+                        vertices.extend([
+                            torus.subs(u0, v0),
+                            torus.subs(u1, v0),
+                            torus.subs(u1, v1),
+                            torus.subs(u0, v1),
+                        ]);
+                        let len = vertices.len();
+                        edges.extend([
+                            CompressedEdge {
+                                vertices: (len - 4, len - 3),
+                                curve: Curve3D::PCurve(PCurve::new(
+                                    Box::new(Curve2D::Line(Line(
+                                        Point2::new(u0, v0),
+                                        Point2::new(u1, v0),
+                                    ))),
+                                    Box::new(Surface::ElementarySurface(Box::new(
+                                        ElementarySurface::ToroidalSurface(torus.clone()),
+                                    ))),
+                                )),
+                            },
+                            CompressedEdge {
+                                vertices: (len - 3, len - 2),
+                                curve: Curve3D::PCurve(PCurve::new(
+                                    Box::new(Curve2D::Line(Line(
+                                        Point2::new(u1, v0),
+                                        Point2::new(u1, v1),
+                                    ))),
+                                    Box::new(Surface::ElementarySurface(Box::new(
+                                        ElementarySurface::ToroidalSurface(torus.clone()),
+                                    ))),
+                                )),
+                            },
+                            CompressedEdge {
+                                vertices: (len - 2, len - 1),
+                                curve: Curve3D::PCurve(PCurve::new(
+                                    Box::new(Curve2D::Line(Line(
+                                        Point2::new(u1, v1),
+                                        Point2::new(u0, v1),
+                                    ))),
+                                    Box::new(Surface::ElementarySurface(Box::new(
+                                        ElementarySurface::ToroidalSurface(torus.clone()),
+                                    ))),
+                                )),
+                            },
+                            CompressedEdge {
+                                vertices: (len - 1, len - 4),
+                                curve: Curve3D::PCurve(PCurve::new(
+                                    Box::new(Curve2D::Line(Line(
+                                        Point2::new(u0, v1),
+                                        Point2::new(u0, v0),
+                                    ))),
+                                    Box::new(Surface::ElementarySurface(Box::new(
+                                        ElementarySurface::ToroidalSurface(torus.clone()),
+                                    ))),
+                                )),
+                            },
+                        ]);
+                        let len = edges.len();
+                        face.boundaries.push(vec![
+                            CompressedEdgeIndex {
+                                index: len - 4,
+                                orientation: true,
+                            },
+                            CompressedEdgeIndex {
+                                index: len - 3,
+                                orientation: true,
+                            },
+                            CompressedEdgeIndex {
+                                index: len - 2,
+                                orientation: true,
+                            },
+                            CompressedEdgeIndex {
+                                index: len - 1,
+                                orientation: true,
+                            },
+                        ]);
+                    }
+                    _ => {}
+                },
+                _ => {}
+            });
+    }
+
     pub fn to_compressed_shell(
         &self,
         shell: &ShellHolder,
     ) -> std::result::Result<CompressedShell<Point3, Curve3D, Surface>, ExpressParseError> {
-        let (vertices, vidx_map) = self.shell_vertices(shell);
-        let (edges, eidx_map) = self.shell_edges(shell, &vidx_map);
+        let (mut vertices, vidx_map) = self.shell_vertices(shell);
+        let (mut edges, eidx_map) = self.shell_edges(shell, &vidx_map);
+        let mut faces = self.shell_faces(shell, &eidx_map);
+        Self::vertex_loop_case(&mut vertices, &mut edges, &mut faces);
         Ok(CompressedShell {
             vertices,
             edges,
-            faces: self.shell_faces(shell, &eidx_map),
+            faces,
         })
     }
 }

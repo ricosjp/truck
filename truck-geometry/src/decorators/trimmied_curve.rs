@@ -21,6 +21,8 @@ impl<C: ParametricCurve> ParametricCurve for TrimmedCurve<C> {
     fn der(&self, t: f64) -> Self::Vector { self.curve.der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { self.curve.der2(t) }
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { self.curve.period() }
 }
 
 impl<C: ParametricCurve> BoundedCurve for TrimmedCurve<C> {
