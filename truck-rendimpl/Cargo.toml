@@ -17,7 +17,7 @@ default = []
 webgl = ["truck-platform/webgl"]
 
 [dependencies]
-bytemuck = { version = "1.13.1", features = ["derive"] }
+bytemuck = { version = "1.14.0", features = ["derive"] }
 image = "0.24.7"
 truck-platform = { version = "0.5.0", path = "../truck-platform" }
 truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
