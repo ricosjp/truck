@@ -2339,7 +2339,7 @@ impl Table {
         use PlaceHolder::Ref;
         let ori = bound.orientation;
         let bound = bound.bound_holder(self)?;
-        let edges: Vec<CompressedEdgeIndex> = bound
+        let mut edges: Vec<CompressedEdgeIndex> = bound
             .edge_list
             .into_iter()
             .filter_map(|edge| {
@@ -2360,6 +2360,9 @@ impl Table {
                 Some(edge_idx)
             })
             .collect();
+        if !ori {
+            edges.reverse();
+        }
         Some(edges)
     }
 
