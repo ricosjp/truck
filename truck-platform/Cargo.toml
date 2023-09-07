@@ -17,7 +17,7 @@ webgl = ["wgpu/webgl"]
 wgpu_trace = ["wgpu/trace"]
 
 [dependencies]
-bytemuck = { version = "1.13.1", features = ["derive"] }
+bytemuck = { version = "1.14.0", features = ["derive"] }
 derive_more = "0.99.17"
 futures-intrusive = "0.5.0"
 rustc-hash = "1.1.0"
