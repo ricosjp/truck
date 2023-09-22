@@ -26,7 +26,7 @@ truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
 truck-topology = { version = "0.5.0", path = "../truck-topology" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rayon = "1.7.0"
+rayon = "1.8.0"
 vtkio = { version = "0.6.3", optional = true }
 
 [dev-dependencies]
