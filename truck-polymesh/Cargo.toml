@@ -18,4 +18,4 @@ rustc-hash = "1.1.0"
 serde = { version = "1.0.188", features = ["derive"] }
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
-thiserror = "1.0.48"
+thiserror = "1.0.49"
