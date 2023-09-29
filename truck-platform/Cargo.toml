@@ -23,7 +23,7 @@ futures-intrusive = "0.5.0"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.4.0", path = "../truck-base" }
 wgpu = "0.17.1"
-winit = "0.28.6"
+winit = "0.28.7"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 instant = { version = "0.1.12", features = [ "now" ] }
