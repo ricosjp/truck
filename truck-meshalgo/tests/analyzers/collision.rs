@@ -1,6 +1,4 @@
 use super::*;
-#[path = "../common/mod.rs"]
-mod common;
 
 #[test]
 fn sphere_interference() {
