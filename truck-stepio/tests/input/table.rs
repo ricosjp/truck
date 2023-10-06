@@ -91,6 +91,7 @@ ENDSEC;
     )
     .unwrap();
     let table = Table::from_data_section(&data_section);
+    #[allow(clippy::needless_update)]
     let ans_table = Table {
         cartesian_point: HashMap::from_iter(vec![(
             1,

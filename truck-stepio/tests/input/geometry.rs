@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use proptest::*;
 use ruststep::{ast::DataSection, tables::*};
 use std::{f64::consts::PI, str::FromStr};
