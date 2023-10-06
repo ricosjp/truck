@@ -1,17 +1,19 @@
 //! Parse STEP data, extract shape, and meshing.
 
-use std::path::Path;
+use std::{cmp::Ordering, path::Path};
 use truck_meshalgo::prelude::*;
 use truck_stepio::r#in::*;
 use truck_topology::compress::CompressedShell;
 
 fn main() {
     let mut args = std::env::args().collect::<Vec<_>>();
-    if args.len() < 2 {
-        eprintln!("usage: step-to-obj <input step file> [output obj file]");
-        return;
-    } else if args.len() == 2 {
-        args.push("output.obj".to_string());
+    match args.len().cmp(&2) {
+        Ordering::Less => {
+            eprintln!("usage: step-to-obj <input step file> [output obj file]");
+            return;
+        }
+        Ordering::Equal => args.push("output.obj".to_string()),
+        Ordering::Greater => {}
     }
 
     println!("reading file...");
@@ -28,7 +30,7 @@ fn main() {
         })
         .collect::<Vec<_>>();
 
-    let path: &Path = &args[2].as_ref();
+    let path: &Path = args[2].as_ref();
     let extension = path.extension().and_then(|e| e.to_str());
     match extension {
         Some("obj") => output_obj(&polyshells, path),
@@ -38,7 +40,7 @@ fn main() {
 }
 
 fn output_obj(
-    polyshells: &Vec<CompressedShell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>>,
+    polyshells: &[CompressedShell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>],
     path: &Path,
 ) {
     let mut polymesh = PolygonMesh::default();
@@ -51,7 +53,7 @@ fn output_obj(
 }
 
 fn output_vtk(
-    polyshells: &Vec<CompressedShell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>>,
+    polyshells: &[CompressedShell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>],
     path: &Path,
 ) {
     use vtkio::model::*;
@@ -62,10 +64,7 @@ fn output_vtk(
             let shell: truck_topology::Shell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>> =
                 shell
                     .into_iter()
-                    .filter_map(|face| match face.surface() {
-                        Some(_) => Some(face),
-                        None => None,
-                    })
+                    .filter_map(|face| face.surface().map(|_| face))
                     .collect();
             let shell = shell.mapped(Point3::clone, PolylineCurve::clone, |x| x.clone().unwrap());
             let DataSet::UnstructuredGrid { pieces, .. } = shell.to_data_set() else {

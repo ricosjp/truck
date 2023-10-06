@@ -99,13 +99,13 @@ impl StepHeaderDescriptor {
     pub fn filename(&self) -> JsString { self.file_name.as_str().into() }
     #[wasm_bindgen(setter)]
     pub fn set_filename(&mut self, filename: JsString) {
-        self.file_name = filename.as_string().unwrap_or(String::new());
+        self.file_name = filename.as_string().unwrap_or_default();
     }
     #[wasm_bindgen(getter)]
     pub fn time_stamp(&self) -> JsString { self.time_stamp.as_str().into() }
     #[wasm_bindgen(setter)]
     pub fn set_time_stamp(&mut self, time_stamp: JsString) {
-        self.time_stamp = time_stamp.as_string().unwrap_or(String::new());
+        self.time_stamp = time_stamp.as_string().unwrap_or_default();
     }
     #[wasm_bindgen(getter)]
     pub fn authors(&self) -> Vec<JsString> {
@@ -115,7 +115,7 @@ impl StepHeaderDescriptor {
     pub fn set_authors(&mut self, authors: Vec<JsString>) {
         self.authors = authors
             .iter()
-            .map(|s| s.as_string().unwrap_or(String::new()))
+            .map(|s| s.as_string().unwrap_or_default())
             .collect();
     }
     #[wasm_bindgen(getter)]
@@ -129,20 +129,20 @@ impl StepHeaderDescriptor {
     pub fn set_organization(&mut self, organization: Vec<JsString>) {
         self.organization = organization
             .iter()
-            .map(|s| s.as_string().unwrap_or(String::new()))
+            .map(|s| s.as_string().unwrap_or_default())
             .collect();
     }
     #[wasm_bindgen(getter)]
     pub fn organization_system(&self) -> JsString { self.organization_system.as_str().into() }
     #[wasm_bindgen(setter)]
     pub fn set_organization_system(&mut self, organization_system: JsString) {
-        self.organization_system = organization_system.as_string().unwrap_or(String::new());
+        self.organization_system = organization_system.as_string().unwrap_or_default();
     }
     #[wasm_bindgen(getter)]
     pub fn authorization(&self) -> JsString { self.authorization.as_str().into() }
     #[wasm_bindgen(setter)]
     pub fn set_authorization(&mut self, authorization: JsString) {
-        self.authorization = authorization.as_string().unwrap_or(String::new());
+        self.authorization = authorization.as_string().unwrap_or_default();
     }
 }
 
