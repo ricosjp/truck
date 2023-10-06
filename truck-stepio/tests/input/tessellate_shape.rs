@@ -16,7 +16,7 @@ const STEP_FILES: &[&str] = &[
 fn tessellate_shape() {
     STEP_FILES.iter().for_each(|name| {
         let path = [STEP_DIRECTORY, name].concat();
-        let step_string = std::fs::read_to_string(&path).unwrap();
+        let step_string = std::fs::read_to_string(path).unwrap();
         let table = Table::from_step(&step_string).unwrap();
         let step_shells = table.shell.values().cloned().collect::<Vec<_>>();
         assert_eq!(step_shells.len(), 1);

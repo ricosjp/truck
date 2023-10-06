@@ -341,7 +341,7 @@ fn edge_multi_sweep() {
     shell.face_iter().for_each(|face| {
         let surface = face.oriented_surface();
         assert_eq!(face.boundaries().len(), 1);
-        assert_near!(face_top_normal(&face), Vector3::unit_z());
+        assert_near!(face_top_normal(face), Vector3::unit_z());
         assert_near!(surface.normal(0.5, 0.5), Vector3::unit_z());
     });
 
@@ -353,7 +353,7 @@ fn edge_multi_sweep() {
     shell.face_iter().for_each(|face| {
         let surface = face.oriented_surface();
         assert_eq!(face.boundaries().len(), 1);
-        assert_near!(face_top_normal(&face), -Vector3::unit_z());
+        assert_near!(face_top_normal(face), -Vector3::unit_z());
         assert_near!(surface.normal(0.5, 0.5), -Vector3::unit_z());
     });
 }
@@ -539,7 +539,7 @@ fn vertex_closed_sweep() {
     let wire = closed_sweep(&Vertex::new(p[0]));
     assert_eq!(wire.len(), 4);
     assert!(wire.is_closed() && wire.is_simple());
-    assert!(wire.edge_iter().all(|e| consistent_line(e)));
+    assert!(wire.edge_iter().all(consistent_line));
     assert_eq!(wire.vertex_iter().count(), 4);
     assert!(wire.vertex_iter().zip(p).all(|(v, p)| v.point().near(&p)));
 }

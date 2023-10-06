@@ -6,18 +6,20 @@
 //! shape-to-step <input shape file> [output shape file]
 //! ```
 
-use std::env;
+use std::{cmp::Ordering, env};
 use truck_modeling::*;
 use truck_stepio::out;
 use truck_topology::compress::CompressedSolid;
 
 fn main() {
     let mut args = env::args().collect::<Vec<_>>();
-    if args.len() < 2 {
-        eprintln!("usage: shape-to-step <input shape file> [output shape file]");
-        return;
-    } else if args.len() == 2 {
-        args.push("output.stp".to_string());
+    match args.len().cmp(&2) {
+        Ordering::Less => {
+            eprintln!("usage: shape-to-step <input shape file> [output shape file]");
+            return;
+        }
+        Ordering::Equal => args.push("output.stp".to_string()),
+        Ordering::Greater => {}
     }
 
     let shape_file = std::fs::read(&args[1]).unwrap();

@@ -205,7 +205,7 @@ fn shell_topology() -> Shell<Point3, PolylineCurve<Point3>, PolygonMesh> {
         Point3::new(0.5, 0.75, 0.0),
         Point3::new(0.25, 0.5, 0.0),
     ];
-    let v = Vertex::news(&p);
+    let v = Vertex::news(p);
     let q = [
         Point3::new(0.75, 0.25, 0.0),
         Point3::new(0.75, 0.75, 0.0),
