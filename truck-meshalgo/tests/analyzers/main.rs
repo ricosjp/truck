@@ -1,8 +1,8 @@
 use truck_meshalgo::prelude::*;
 
+mod collision;
 #[path = "../common/mod.rs"]
 mod common;
-mod collision;
 mod point_cloud;
 mod splitting;
 mod topology;
