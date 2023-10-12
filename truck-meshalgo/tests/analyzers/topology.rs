@@ -1,5 +1,4 @@
 use super::*;
-use truck_topology::shell::ShellCondition;
 
 #[test]
 fn extract_boundaries0() {

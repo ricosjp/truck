@@ -60,6 +60,6 @@ fn singular_vertices_in_certain_boundaries() {
         ),
     ]
     .into();
-    assert!(matches!(shell.shell_condition(), ShellCondition::Oriented));
+    assert_eq!(shell.shell_condition(), ShellCondition::Oriented);
     assert!(shell.singular_vertices().is_empty());
 }

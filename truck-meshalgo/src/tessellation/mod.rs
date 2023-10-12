@@ -206,11 +206,11 @@ pub trait MeshableShape {
     ///
     /// // cube is Solid, however, the tessellated mesh is not closed.
     /// let mut mesh = cube.triangulation(0.01).to_polygon();
-    /// assert!(mesh.shell_condition() != ShellCondition::Closed);
+    /// assert_ne!(mesh.shell_condition(), ShellCondition::Closed);
     ///
     /// // use optimization filters!
     /// mesh.put_together_same_attrs();
-    /// assert!(mesh.shell_condition() == ShellCondition::Closed);
+    /// assert_eq!(mesh.shell_condition(), ShellCondition::Closed);
     /// ```
     fn triangulation(&self, tol: f64) -> Self::MeshedShape;
 }

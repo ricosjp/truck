@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Re-export `ShellCondition` in `truck-meshalgo`.
 - fix clippy
 - Re-export `truck-polymesh::*` in `truck-rendimpl`.
 - Add test for tessellate elementary step files.

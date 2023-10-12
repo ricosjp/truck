@@ -87,5 +87,5 @@ fn special_cylinder() {
     mesh.put_together_same_attrs()
         .remove_degenerate_faces()
         .remove_unused_attrs();
-    assert!(matches!(mesh.shell_condition(), ShellCondition::Closed));
+    assert_eq!(mesh.shell_condition(), ShellCondition::Closed);
 }
