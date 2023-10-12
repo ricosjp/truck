@@ -557,7 +557,7 @@ fn edge_closed_sweep() {
     assert_eq!(eset.len(), 12);
     assert!(shell.edge_iter().all(|e| consistent_line(&e)));
     assert_eq!(shell.extract_boundaries().len(), 2);
-    assert!(matches!(shell.shell_condition(), ShellCondition::Oriented));
+    assert_eq!(shell.shell_condition(), ShellCondition::Oriented);
     shell.face_iter().for_each(|face| {
         let surface = face.oriented_surface();
         let p = surface.subs(0.5, 0.5);
@@ -575,7 +575,7 @@ fn edge_closed_sweep() {
     assert_eq!(eset.len(), 12);
     assert!(shell.edge_iter().all(|e| consistent_line(&e)));
     assert_eq!(shell.extract_boundaries().len(), 2);
-    assert!(matches!(shell.shell_condition(), ShellCondition::Oriented));
+    assert_eq!(shell.shell_condition(), ShellCondition::Oriented);
     shell.face_iter().for_each(|face| {
         let surface = face.oriented_surface();
         let p = surface.subs(0.5, 0.5);
@@ -608,7 +608,7 @@ fn wire_closed_sweep() {
     assert_eq!(eset.len(), 20);
     assert!(shell.edge_iter().all(|e| consistent_line(&e)));
     assert_eq!(shell.extract_boundaries().len(), 2);
-    assert!(matches!(shell.shell_condition(), ShellCondition::Oriented));
+    assert_eq!(shell.shell_condition(), ShellCondition::Oriented);
     shell.face_iter().for_each(|face| {
         let surface = face.oriented_surface();
         let p = surface.subs(0.5, 0.5);

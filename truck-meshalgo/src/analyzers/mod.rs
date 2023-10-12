@@ -12,3 +12,4 @@ pub use point_cloud::WithPointCloud;
 pub use splitting::ExperimentalSplitters;
 pub use splitting::Splitting;
 pub use topology::Topology;
+pub use truck_topology::shell::ShellCondition;
