@@ -122,7 +122,7 @@ pub fn init_device(backends: Backends) -> DeviceHandler {
     pollster::block_on(async {
         let instance = Instance::new(InstanceDescriptor {
             backends,
-            dx12_shader_compiler: Default::default(),
+            ..Default::default()
         });
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {

@@ -10,7 +10,7 @@ fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = Instance::new(InstanceDescriptor {
         backends: backend,
-        dx12_shader_compiler: Default::default(),
+        ..Default::default()
     });
     let handler = common::init_device(&instance);
     let mut scene = Scene::new(

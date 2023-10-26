@@ -102,7 +102,7 @@ fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = wgpu::Instance::new(InstanceDescriptor {
         backends: backend,
-        dx12_shader_compiler: Default::default(),
+        ..Default::default()
     });
     let handler = common::init_device(&instance);
     let mut scene = Scene::new(
@@ -158,7 +158,7 @@ fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
     std::fs::create_dir_all(&out_dir).unwrap();
     let instance = wgpu::Instance::new(InstanceDescriptor {
         backends: backend,
-        dx12_shader_compiler: Default::default(),
+        ..Default::default()
     });
     let handler = common::init_device(&instance);
     let mut scene = Scene::new(
