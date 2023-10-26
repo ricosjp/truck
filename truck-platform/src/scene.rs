@@ -677,7 +677,7 @@ impl Scene {
             view: depth_view,
             depth_ops: Some(Operations {
                 load: LoadOp::Clear(1.0),
-                store: true,
+                store: StoreOp::Store,
             }),
             stencil_ops: None,
         }
@@ -708,7 +708,7 @@ impl Scene {
                     resolve_target,
                     ops: Operations {
                         load: LoadOp::Clear(self.scene_desc.studio.background),
-                        store: true,
+                        store: StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: depth_view
