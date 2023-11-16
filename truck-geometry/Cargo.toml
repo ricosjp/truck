@@ -12,7 +12,7 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-serde = { version = "1.0.190", features = ["derive"] }
+serde = { version = "1.0.192", features = ["derive"] }
 thiserror = "1.0.50"
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
@@ -21,4 +21,4 @@ truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
 rand = "0.8.5"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.2.10", features = ["js"] }
+getrandom = { version = "0.2.11", features = ["js"] }
