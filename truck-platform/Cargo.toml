@@ -34,12 +34,12 @@ web-sys = "0.3.64"
 [dev-dependencies]
 image = "0.24.7"
 rayon = "1.8.0"
-env_logger = "0.10.0"
-naga = { version = "0.14.0", features = ["wgsl-in"] }
+env_logger = "0.10.1"
+naga = { version = "0.14.1", features = ["wgsl-in"] }
 pollster = "0.3.0"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures = "0.4.37"
+wasm-bindgen-futures = "0.4.38"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 web-sys = { version = "0.3.64", features = ["Location"] }
