@@ -2,7 +2,7 @@ use crate::*;
 use rustc_hash::FxHashMap as HashMap;
 use std::convert::identity;
 use truck_base::tolerance::TOLERANCE;
-use truck_topology::{Vertex, *};
+use truck_topology::{compress::*, Vertex, *};
 pub use vtkio;
 use vtkio::model::{Attributes, *};
 
@@ -396,6 +396,125 @@ impl ToDataSet for Shell<Point3, PolylineCurve<Point3>, PolygonMesh> {
         DataSet::UnstructuredGrid {
             meta: None,
             pieces: self.face_iter().map(face_piece).collect(),
+        }
+    }
+}
+
+fn cface_piece(
+    vertices: &[Point3],
+    edges: &[CompressedEdge<PolylineCurve<Point3>>],
+    face: &CompressedFace<PolygonMesh>,
+) -> Piece<UnstructuredGridPiece> {
+    let polygon = match face.orientation {
+        true => face.surface.expands(identity),
+        false => face.surface.inverse().expands(identity),
+    };
+    let mut length = 0;
+    let map: HashMap<Option<[i64; 3]>, usize> = polygon
+        .attributes()
+        .iter()
+        .map(move |attr| {
+            length += 1;
+            (hash_point(attr.position), length - 1)
+        })
+        .collect();
+    let flatten_points = polygon
+        .attributes()
+        .iter()
+        .flat_map(|attr| Into::<[f64; 3]>::into(attr.position))
+        .collect::<Vec<_>>();
+    let flatten_uvs = polygon
+        .attributes()
+        .iter()
+        .flat_map(|attr| match attr.uv_coord {
+            Some(uv) => Into::<[f64; 2]>::into(uv),
+            None => [f64::NAN; 2],
+        })
+        .collect::<Vec<_>>();
+    let uvs = Attribute::DataArray(DataArray {
+        name: "TCoords".to_owned(),
+        elem: ElementType::TCoords(2),
+        data: IOBuffer::F64(flatten_uvs),
+    });
+    let flatten_normals = polygon
+        .attributes()
+        .iter()
+        .flat_map(|attr| match attr.normal {
+            Some(normal) => Into::<[f64; 3]>::into(normal),
+            None => [f64::NAN; 3],
+        })
+        .collect::<Vec<_>>();
+    let normals = Attribute::DataArray(DataArray {
+        name: "Normals".to_owned(),
+        elem: ElementType::Normals,
+        data: IOBuffer::F64(flatten_normals),
+    });
+    let mut cell_verts = to_vertex_numbers(polygon.faces());
+    let mut types = vec![CellType::Polygon; cell_verts.num_cells()];
+    let edge_indices: Vec<_> = face
+        .boundaries
+        .iter()
+        .flat_map::<Box<dyn Iterator<Item = &CompressedEdgeIndex>>, _>(|boundary| {
+            match face.orientation {
+                true => Box::new(boundary.iter()),
+                false => Box::new(boundary.iter().rev()),
+            }
+        })
+        .collect();
+    edge_indices.iter().for_each(|edge| {
+        types.push(CellType::PolyLine);
+        let curve = match face.orientation == edge.orientation {
+            true => edges[edge.index].curve.clone(),
+            false => edges[edge.index].curve.inverse(),
+        };
+        let polyline = curve
+            .iter()
+            .filter_map(|p| map.get(&hash_point(*p)).map(|i| *i as u64));
+        if let VertexNumbers::XML {
+            connectivity,
+            offsets,
+        } = &mut cell_verts
+        {
+            connectivity.extend(polyline);
+            offsets.push(connectivity.len() as u64);
+        }
+    });
+    edge_indices.into_iter().try_for_each(|edge| {
+        types.push(CellType::Vertex);
+        let v = match face.orientation == edge.orientation {
+            true => edges[edge.index].vertices.0,
+            false => edges[edge.index].vertices.1,
+        };
+        let idx = map.get(&hash_point(vertices[v])).map(|i| *i as u64)?;
+        if let VertexNumbers::XML {
+            connectivity,
+            offsets,
+        } = &mut cell_verts
+        {
+            connectivity.push(idx);
+            offsets.push(connectivity.len() as u64)
+        }
+        Some(())
+    });
+    Piece::Inline(Box::new(UnstructuredGridPiece {
+        points: IOBuffer::F64(flatten_points),
+        cells: Cells { cell_verts, types },
+        data: Attributes {
+            point: vec![uvs, normals],
+            ..Default::default()
+        },
+    }))
+}
+
+impl ToDataSet for CompressedShell<Point3, PolylineCurve<Point3>, PolygonMesh> {
+    fn to_data_set(&self) -> DataSet {
+        DataSet::UnstructuredGrid {
+            meta: None,
+            pieces: self
+                .faces
+                .iter()
+                .map(|face| cface_piece(&self.vertices, &self.edges, face))
+                .collect(),
         }
     }
 }
