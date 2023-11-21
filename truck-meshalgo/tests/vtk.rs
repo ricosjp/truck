@@ -568,3 +568,11 @@ fn face() {
 fn shell() {
     assert_eq!(shell_topology().to_data_set(), shell_unstructured_grid());
 }
+
+#[test]
+fn cshell() {
+    assert_eq!(
+        shell_topology().compress().to_data_set(),
+        shell_unstructured_grid()
+    );
+}

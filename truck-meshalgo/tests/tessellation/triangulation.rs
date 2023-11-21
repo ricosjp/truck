@@ -1,5 +1,6 @@
 use super::*;
-use truck_topology::shell::ShellCondition;
+
+type CompressedSolid = truck_topology::compress::CompressedSolid<Point3, Curve, Surface>;
 
 macro_rules! dir ( () => { concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/shape/") });
 
@@ -31,9 +32,36 @@ fn solid_is_closed() {
 }
 
 #[test]
+fn csolid_is_closed() {
+    for (i, json) in read_jsons().into_iter().enumerate() {
+        let solid: CompressedSolid = serde_json::from_reader(json.as_slice()).unwrap();
+        let mut poly = solid.triangulation(0.02).to_polygon();
+        poly.put_together_same_attrs()
+            .remove_degenerate_faces()
+            .remove_unused_attrs();
+        assert_eq!(
+            poly.shell_condition(),
+            ShellCondition::Closed,
+            "not closed: file no. {i}"
+        );
+    }
+}
+
+#[test]
 fn compare_occt_mesh() {
     let jsons = read_jsons();
     let solid: Solid = serde_json::from_slice(jsons[2].as_slice()).unwrap();
+    let res = solid.triangulation(0.01).to_polygon();
+    let path = concat!(dir!(), "../obj/by_occt.obj");
+    let ans = obj::read(std::fs::read(path).unwrap().as_slice()).unwrap();
+    assert!(res.is_clung_to_by(ans.positions(), 0.05));
+    assert!(ans.is_clung_to_by(res.positions(), 0.05));
+}
+
+#[test]
+fn compare_occt_mesh_csolid() {
+    let jsons = read_jsons();
+    let solid: CompressedSolid = serde_json::from_slice(jsons[2].as_slice()).unwrap();
     let res = solid.triangulation(0.01).to_polygon();
     let path = concat!(dir!(), "../obj/by_occt.obj");
     let ans = obj::read(std::fs::read(path).unwrap().as_slice()).unwrap();
@@ -48,8 +76,7 @@ fn large_number_meshing() {
     let _ = torus.triangulation(1.0).to_polygon();
 }
 
-#[test]
-fn special_cylinder() {
+fn special_cylinder_model() -> Shell {
     let v0 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
     let v1 = builder::vertex(Point3::new(0.0, 1.0, 1.0));
     let v2 = builder::vertex(Point3::new(0.0, -1.0, 0.0));
@@ -82,7 +109,22 @@ fn special_cylinder() {
         surface,
     );
 
-    let shell: Shell = vec![face0, face1, face2, face3].into();
+    vec![face0, face1, face2, face3].into()
+}
+
+#[test]
+fn special_cylinder() {
+    let shell = special_cylinder_model();
+    let mut mesh = shell.triangulation(0.01).to_polygon();
+    mesh.put_together_same_attrs()
+        .remove_degenerate_faces()
+        .remove_unused_attrs();
+    assert_eq!(mesh.shell_condition(), ShellCondition::Closed);
+}
+
+#[test]
+fn special_cylinder_csolid() {
+    let shell = special_cylinder_model().compress();
     let mut mesh = shell.triangulation(0.01).to_polygon();
     mesh.put_together_same_attrs()
         .remove_degenerate_faces()
