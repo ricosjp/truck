@@ -454,13 +454,12 @@ fn cface_piece(
     let edge_indices: Vec<_> = face
         .boundaries
         .iter()
-        .map::<Box<dyn Iterator<Item = &CompressedEdgeIndex>>, _>(|boundary| {
+        .flat_map::<Box<dyn Iterator<Item = &CompressedEdgeIndex>>, _>(|boundary| {
             match face.orientation {
                 true => Box::new(boundary.iter()),
                 false => Box::new(boundary.iter().rev()),
             }
         })
-        .flatten()
         .collect();
     edge_indices.iter().for_each(|edge| {
         types.push(CellType::PolyLine);
