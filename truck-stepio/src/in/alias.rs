@@ -147,15 +147,17 @@ pub enum Surface {
 impl SearchNearestParameter<D2> for Surface {
     type Point = Point3;
     fn search_nearest_parameter<H: Into<<D2 as SPDimension>::Hint>>(
-            &self,
-            point: Self::Point,
-            hint: H,
-            trial: usize,
-        ) -> Option<<D2 as SPDimension>::Parameter> {
+        &self,
+        point: Self::Point,
+        hint: H,
+        trial: usize,
+    ) -> Option<<D2 as SPDimension>::Parameter> {
         let hint = match hint.into() {
             SPHint2D::None => (0.0, 0.0),
             SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(x, y) => truck_geotrait::algo::surface::presearch(self, point, (x, y), 100),
+            SPHint2D::Range(x, y) => {
+                truck_geotrait::algo::surface::presearch(self, point, (x, y), 100)
+            }
         };
         truck_geotrait::algo::surface::search_nearest_parameter(self, point, hint, trial)
     }
