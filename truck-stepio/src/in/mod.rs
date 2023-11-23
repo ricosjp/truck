@@ -36,6 +36,7 @@ pub struct Table {
     pub uniform_curve: HashMap<u64, UniformCurveHolder>,
     pub rational_b_spline_curve: HashMap<u64, RationalBSplineCurveHolder>,
     pub circle: HashMap<u64, CircleHolder>,
+    pub ellipse: HashMap<u64, EllipseHolder>,
     pub pcurve: HashMap<u64, PcurveHolder>,
     pub surface_curve: HashMap<u64, SurfaceCurveHolder>,
 
@@ -127,6 +128,9 @@ impl Table {
                 }
                 "CIRCLE" => {
                     self.circle.insert(*id, Deserialize::deserialize(record)?);
+                }
+                "ELLIPSE" => {
+                    self.ellipse.insert(*id, Deserialize::deserialize(record)?);
                 }
                 "PCURVE" => {
                     self.pcurve.insert(*id, Deserialize::deserialize(record)?);
@@ -854,7 +858,7 @@ pub enum CurveAny {
     #[holder(use_place_holder)]
     BoundedCurve(Box<BoundedCurveAny>),
     #[holder(use_place_holder)]
-    Circle(Box<Circle>),
+    Conic(Box<Conic>),
     #[holder(use_place_holder)]
     Pcurve(Box<Pcurve>),
     #[holder(use_place_holder)]
@@ -869,16 +873,7 @@ impl TryFrom<&CurveAny> for Curve2D {
         Ok(match curve {
             Line(line) => Self::Line(line.as_ref().into()),
             BoundedCurve(b) => b.as_ref().try_into()?,
-            Circle(circle) => {
-                let mut ellipse = Processor::new(TrimmedCurve::new(
-                    UnitCircle::<Point2>::new(),
-                    (0.0, 2.0 * PI),
-                ));
-                ellipse.transform_by(
-                    Matrix3::try_from(&circle.position)? * Matrix3::from_scale(circle.radius),
-                );
-                Self::Conic(Conic2D::Ellipse(ellipse))
-            }
+            Conic(curve) => Self::Conic(curve.as_ref().try_into()?),
             Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
             SurfaceCurve(_) => return Err("Surface curves cannot be parsed to 2D curves.".into()),
         })
@@ -893,16 +888,7 @@ impl TryFrom<&CurveAny> for Curve3D {
         Ok(match curve {
             Line(line) => Self::Line(line.as_ref().into()),
             BoundedCurve(b) => b.as_ref().try_into()?,
-            Circle(circle) => {
-                let mut ellipse = Processor::new(TrimmedCurve::new(
-                    UnitCircle::<Point3>::new(),
-                    (0.0, 2.0 * PI),
-                ));
-                ellipse.transform_by(
-                    Matrix4::try_from(&circle.position)? * Matrix4::from_scale(circle.radius),
-                );
-                Self::Conic(Conic3D::Ellipse(ellipse))
-            }
+            Conic(curve) => Self::Conic(curve.as_ref().try_into()?),
             Pcurve(c) => Self::PCurve(c.as_ref().try_into()?),
             SurfaceCurve(c) => c.as_ref().try_into()?,
         })
@@ -1207,6 +1193,38 @@ impl TryFrom<&BSplineCurveAny> for Curve3D {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum Conic {
+    #[holder(use_place_holder)]
+    Circle(Circle),
+    #[holder(use_place_holder)]
+    Ellipse(Ellipse),
+}
+
+impl TryFrom<&Conic> for Conic2D {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(value: &Conic) -> std::prelude::v1::Result<Self, Self::Error> {
+        Ok(match value {
+            Conic::Circle(value) => Conic2D::Ellipse(value.try_into()?),
+            Conic::Ellipse(value) => Conic2D::Ellipse(value.try_into()?),
+        })
+    }
+}
+
+impl TryFrom<&Conic> for Conic3D {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(value: &Conic) -> std::prelude::v1::Result<Self, Self::Error> {
+        Ok(match value {
+            Conic::Circle(value) => Conic3D::Ellipse(value.try_into()?),
+            Conic::Ellipse(value) => Conic3D::Ellipse(value.try_into()?),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
 #[holder(field = circle)]
 #[holder(generate_deserialize)]
 pub struct Circle {
@@ -1216,7 +1234,7 @@ pub struct Circle {
     pub radius: f64,
 }
 
-impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
+impl TryFrom<&Circle> for alias::Ellipse<Point2, Matrix3> {
     type Error = ExpressParseError;
     #[inline(always)]
     fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
@@ -1229,12 +1247,52 @@ impl TryFrom<&Circle> for Ellipse<Point2, Matrix3> {
     }
 }
 
-impl TryFrom<&Circle> for Ellipse<Point3, Matrix4> {
+impl TryFrom<&Circle> for alias::Ellipse<Point3, Matrix4> {
     type Error = ExpressParseError;
     #[inline(always)]
     fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
         let radius: f64 = circle.radius;
         let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
+        Ok(
+            Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+                .transformed(transform),
+        )
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = ellipse)]
+#[holder(generate_deserialize)]
+pub struct Ellipse {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub position: Axis2Placement,
+    pub semi_axis_1: f64,
+    pub semi_axis_2: f64,
+}
+
+impl TryFrom<&Ellipse> for alias::Ellipse<Point2, Matrix3> {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(ellipse: &Ellipse) -> std::prelude::v1::Result<Self, Self::Error> {
+        let (r0, r1) = (ellipse.semi_axis_1, ellipse.semi_axis_2);
+        let transform =
+            Matrix3::try_from(&ellipse.position)? * Matrix3::from_nonuniform_scale(r0, r1);
+        Ok(
+            Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+                .transformed(transform),
+        )
+    }
+}
+
+impl TryFrom<&Ellipse> for alias::Ellipse<Point3, Matrix4> {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(ellipse: &Ellipse) -> std::prelude::v1::Result<Self, Self::Error> {
+        let (r0, r1) = (ellipse.semi_axis_1, ellipse.semi_axis_2);
+        let transform =
+            Matrix4::try_from(&ellipse.position)? * Matrix4::from_nonuniform_scale(r0, r1, 1.0);
         Ok(
             Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
@@ -1915,39 +1973,66 @@ impl EdgeCurve {
         q: Point2,
         same_sense: bool,
     ) -> std::result::Result<Curve2D, ExpressParseError> {
-        use CurveAny::*;
         let mut curve = match curve {
-            Line(line) => {
+            CurveAny::Line(line) => {
                 let line = truck::Line::<Point2>::from(line.as_ref());
                 let p = line.projection(p);
                 let q = line.projection(q);
-                Curve2D::Line(truck::Line(p, q))
+                Curve2D::Line(Line(p, q))
             }
-            BoundedCurve(b) => b.as_ref().try_into()?,
-            Circle(circle) => {
-                let mat = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(circle.radius);
-                let inv_mat = mat
-                    .invert()
-                    .ok_or_else(|| "Failed to convert Circle".to_string())?;
-                let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
-                let (u, mut v) = (
-                    UnitCircle::<Point2>::new()
-                        .search_parameter(p, None, 0)
-                        .ok_or_else(|| "the point is not on circle".to_string())?,
-                    UnitCircle::<Point2>::new()
-                        .search_parameter(q, None, 0)
-                        .ok_or_else(|| "the point is not on circle".to_string())?,
-                );
-                if v <= u + TOLERANCE {
-                    v += 2.0 * PI;
+            CurveAny::BoundedCurve(b) => b.as_ref().try_into()?,
+            CurveAny::Conic(curve) => match curve.as_ref() {
+                Conic::Circle(circle) => {
+                    let mat =
+                        Matrix3::try_from(&circle.position)? * Matrix3::from_scale(circle.radius);
+                    let inv_mat = mat
+                        .invert()
+                        .ok_or_else(|| "Failed to convert Circle".to_string())?;
+                    let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                    let (u, mut v) = (
+                        UnitCircle::<Point2>::new()
+                            .search_parameter(p, None, 0)
+                            .ok_or_else(|| "the point is not on circle".to_string())?,
+                        UnitCircle::<Point2>::new()
+                            .search_parameter(q, None, 0)
+                            .ok_or_else(|| "the point is not on circle".to_string())?,
+                    );
+                    if v <= u + TOLERANCE {
+                        v += 2.0 * PI;
+                    }
+                    let circle = TrimmedCurve::new(UnitCircle::<Point2>::new(), (u, v));
+                    let mut ellipse = Processor::new(circle);
+                    ellipse.transform_by(mat);
+                    Curve2D::Conic(Conic2D::Ellipse(ellipse))
                 }
-                let circle = TrimmedCurve::new(UnitCircle::<Point2>::new(), (u, v));
-                let mut ellipse = Processor::new(circle);
-                ellipse.transform_by(mat);
-                Curve2D::Conic(Conic2D::Ellipse(ellipse))
+                Conic::Ellipse(ellipse) => {
+                    let mat = Matrix3::try_from(&ellipse.position)?
+                        * Matrix3::from_nonuniform_scale(ellipse.semi_axis_1, ellipse.semi_axis_2);
+                    let inv_mat = mat
+                        .invert()
+                        .ok_or_else(|| "Failed to convert Circle".to_string())?;
+                    let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                    let (u, mut v) = (
+                        UnitCircle::<Point2>::new()
+                            .search_parameter(p, None, 0)
+                            .ok_or_else(|| "the point is not on circle".to_string())?,
+                        UnitCircle::<Point2>::new()
+                            .search_parameter(q, None, 0)
+                            .ok_or_else(|| "the point is not on circle".to_string())?,
+                    );
+                    if v <= u + TOLERANCE {
+                        v += 2.0 * PI;
+                    }
+                    let circle = TrimmedCurve::new(UnitCircle::<Point2>::new(), (u, v));
+                    let mut ellipse = Processor::new(circle);
+                    ellipse.transform_by(mat);
+                    Curve2D::Conic(Conic2D::Ellipse(ellipse))
+                }
+            },
+            CurveAny::Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
+            CurveAny::SurfaceCurve(_) => {
+                return Err("Surface curves cannot be parsed to 2D curves.".into())
             }
-            Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
-            SurfaceCurve(_) => return Err("Surface curves cannot be parsed to 2D curves.".into()),
         };
         if !same_sense {
             curve.invert();
@@ -1969,33 +2054,62 @@ impl EdgeCurve {
         q: Point3,
         same_sense: bool,
     ) -> std::result::Result<Curve3D, ExpressParseError> {
-        use CurveAny::*;
         let mut curve = match curve {
-            Line(_) => Curve3D::Line(truck::Line(p, q)),
-            BoundedCurve(b) => b.as_ref().try_into()?,
-            Circle(circle) => {
-                let mat = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(circle.radius);
-                let inv_mat = mat
-                    .invert()
-                    .ok_or_else(|| "Failed to convert Circle".to_string())?;
-                let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
-                let (u, mut v) = (
-                    UnitCircle::<Point3>::new()
-                        .search_parameter(p, None, 0)
-                        .ok_or_else(|| "the point is not on circle".to_string())?,
-                    UnitCircle::<Point3>::new()
-                        .search_parameter(q, None, 0)
-                        .ok_or_else(|| "the point is not on circle".to_string())?,
-                );
-                if v <= u + TOLERANCE {
-                    v += 2.0 * PI;
+            CurveAny::Line(_) => Curve3D::Line(Line(p, q)),
+            CurveAny::BoundedCurve(b) => b.as_ref().try_into()?,
+            CurveAny::Conic(curve) => match curve.as_ref() {
+                Conic::Circle(circle) => {
+                    let mat =
+                        Matrix4::try_from(&circle.position)? * Matrix4::from_scale(circle.radius);
+                    let inv_mat = mat
+                        .invert()
+                        .ok_or_else(|| "Failed to convert Circle".to_string())?;
+                    let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                    let (u, mut v) = (
+                        UnitCircle::<Point3>::new()
+                            .search_parameter(p, None, 0)
+                            .ok_or_else(|| format!("the point is not on circle: {p:?}"))?,
+                        UnitCircle::<Point3>::new()
+                            .search_parameter(q, None, 0)
+                            .ok_or_else(|| format!("the point is not on circle: {q:?}"))?,
+                    );
+                    if v <= u + TOLERANCE {
+                        v += 2.0 * PI;
+                    }
+                    let circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (u, v));
+                    let mut ellipse = Processor::new(circle);
+                    ellipse.transform_by(mat);
+                    Curve3D::Conic(Conic3D::Ellipse(ellipse))
                 }
-                let circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (u, v));
-                let mut ellipse = Processor::new(circle);
-                ellipse.transform_by(mat);
-                Curve3D::Conic(Conic3D::Ellipse(ellipse))
-            }
-            Pcurve(c) => {
+                Conic::Ellipse(ellipse) => {
+                    let mat = Matrix4::try_from(&ellipse.position)?
+                        * Matrix4::from_nonuniform_scale(
+                            ellipse.semi_axis_1,
+                            ellipse.semi_axis_2,
+                            1.0,
+                        );
+                    let inv_mat = mat
+                        .invert()
+                        .ok_or_else(|| "Failed to convert Circle".to_string())?;
+                    let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                    let (u, mut v) = (
+                        UnitCircle::<Point3>::new()
+                            .search_parameter(p, None, 0)
+                            .ok_or_else(|| format!("the point is not on circle: {p:?}"))?,
+                        UnitCircle::<Point3>::new()
+                            .search_parameter(q, None, 0)
+                            .ok_or_else(|| format!("the point is not on circle: {q:?}"))?,
+                    );
+                    if v <= u + TOLERANCE {
+                        v += 2.0 * PI;
+                    }
+                    let circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (u, v));
+                    let mut ellipse = Processor::new(circle);
+                    ellipse.transform_by(mat);
+                    Curve3D::Conic(Conic3D::Ellipse(ellipse))
+                }
+            },
+            CurveAny::Pcurve(c) => {
                 let surface: Surface = (&c.basis_surface).try_into()?;
                 let u = surface
                     .search_parameter(p, None, 100)
@@ -2016,7 +2130,7 @@ impl EdgeCurve {
                 )?;
                 Curve3D::PCurve(truck::PCurve::new(Box::new(curve2d), Box::new(surface)))
             }
-            SurfaceCurve(c) => {
+            CurveAny::SurfaceCurve(c) => {
                 if p.near(&q) {
                     return Self::sub_parse_curve3d(&c.curve_3d, p, q, same_sense);
                 }
@@ -2025,7 +2139,7 @@ impl EdgeCurve {
                     Curve3D => Self::sub_parse_curve3d(&c.curve_3d, p, q, same_sense)?,
                     PcurveS1 => {
                         if let Some(PcurveOrSurface::Pcurve(c)) = c.associated_geometry.get(0) {
-                            Self::sub_parse_curve3d(&Pcurve(c.clone()), p, q, true)?
+                            Self::sub_parse_curve3d(&CurveAny::Pcurve(c.clone()), p, q, true)?
                         } else {
                             return Err(
                                 "The 0-indexed associated geometry is nothing or not PCURVE."
@@ -2035,7 +2149,7 @@ impl EdgeCurve {
                     }
                     PcurveS2 => {
                         if let Some(PcurveOrSurface::Pcurve(c)) = c.associated_geometry.get(1) {
-                            Self::sub_parse_curve3d(&Pcurve(c.clone()), p, q, true)?
+                            Self::sub_parse_curve3d(&CurveAny::Pcurve(c.clone()), p, q, true)?
                         } else {
                             return Err(
                                 "The 1-indexed associated geometry is nothing or not PCURVE."

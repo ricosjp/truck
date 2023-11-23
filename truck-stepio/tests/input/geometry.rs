@@ -726,7 +726,7 @@ fn exec_circle(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_circle = step_to_entity::<CircleHolder>(&step_str);
-    let ellipse: Ellipse<Point3, Matrix4> = (&step_circle).try_into().unwrap();
+    let ellipse: alias::Ellipse<Point3, Matrix4> = (&step_circle).try_into().unwrap();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
