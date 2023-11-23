@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Remove `#[inline(always)]` in derive macro for release build of `truck-stepio`.
 - Parse `ELLIPSE` in STEP.
 - Fix the parameter lookup of the circle.
 - Output `CompressedShell` to `vtu` files.

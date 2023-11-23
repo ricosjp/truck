@@ -18,8 +18,5 @@ members = [
 	"readme-generator",
 ]
 
-[profile.release.package.truck-stepio]
-opt-level = 0
-
 [profile.release.package.truck-js]
-opt-level = 0
+opt-level = "z"

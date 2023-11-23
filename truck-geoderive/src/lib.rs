@@ -194,7 +194,6 @@ where I: IntoIterator<Item = &'a Variant> + 'a + Copy
             )
         };
         quote! {
-            #[inline(always)]
             fn #method_name #generics (#self_field #(#fields),*) -> #return_type { #implement }
         }
     }
@@ -231,11 +230,8 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
             quote! {
                 #[automatically_derived]
                 impl #gen truck_geotrait::#trait_name for #ty {
-                    #[inline(always)]
                     fn range_tuple(&self) -> (f64, f64) { self.0.range_tuple() }
-                    #[inline(always)]
                     fn front(&self) -> Self::Point { self.0.front() }
-                    #[inline(always)]
                     fn back(&self) -> Self::Point { self.0.back() }
                 }
             }
@@ -274,7 +270,6 @@ pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
             quote! {
                 #[automatically_derived]
                 impl #gen truck_geotrait::#trait_name for #ty {
-                    #[inline(always)]
                     fn range_tuple(&self) -> ((f64, f64), (f64, f64)) {
                         self.0.range_tuple()
                     }
@@ -315,7 +310,6 @@ pub fn derive_cut(input: TokenStream) -> TokenStream {
             quote! {
                 #[automatically_derived]
                 impl #gen truck_geotrait::#trait_name for #ty {
-                    #[inline(always)]
                     fn cut(&mut self, t: f64) -> Self { Self(self.0.cut(t)) }
                 }
             }
@@ -355,9 +349,7 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
             quote! {
                 #[automatically_derived]
                 impl #gen truck_geotrait::#trait_name for #ty {
-                    #[inline(always)]
                     fn invert(&mut self) { self.0.invert() }
-                    #[inline(always)]
                     fn inverse(&self) -> Self { Self(self.0.inverse()) }
                 }
             }
@@ -400,7 +392,6 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
                 #[automatically_derived]
                 impl #gen truck_geotrait::#trait_name for #ty {
                     type Point = <#field_type as #trait_name>::Point;
-                    #[inline(always)]
                     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
                         self.0.parameter_division(range, tol)
                     }
@@ -441,7 +432,6 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
             quote! {
                 #[automatically_derived]
                 impl #gen truck_geotrait::#trait_name for #ty {
-                    #[inline(always)]
                     fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
                         self.0.parameter_division(range, tol)
                     }
@@ -493,15 +483,10 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                 impl #gen truck_geotrait::#trait_name for #ty {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
-                    #[inline(always)]
                     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t) }
-                    #[inline(always)]
                     fn der(&self, t: f64) -> Self::Vector { self.0.der(t) }
-                    #[inline(always)]
                     fn der2(&self, t: f64) -> Self::Vector { self.0.der2(t) }
-                    #[inline(always)]
                     fn parameter_range(&self) -> (std::ops::Bound<f64>, std::ops::Bound<f64>) { self.0.parameter_range() }
-                    #[inline(always)]
                     fn period(&self) -> Option<f64> { self.0.period() }
                 }
             }
@@ -555,25 +540,16 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                 impl #gen truck_geotrait::#trait_name for #ty {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
-                    #[inline(always)]
                     fn subs(&self, s: f64, t: f64) -> Self::Point { self.0.subs(s, t) }
-                    #[inline(always)]
                     fn uder(&self, s: f64, t: f64) -> Self::Vector { self.0.uder(s, t) }
-                    #[inline(always)]
                     fn vder(&self, s: f64, t: f64) -> Self::Vector { self.0.vder(s, t) }
-                    #[inline(always)]
                     fn uuder(&self, s: f64, t: f64) -> Self::Vector { self.0.uuder(s, t) }
-                    #[inline(always)]
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
-                    #[inline(always)]
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
-                    #[inline(always)]
                     fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)) {
                         self.0.parameter_range()
                     }
-                    #[inline(always)]
                     fn u_period(&self) -> Option<f64> { self.0.u_period() }
-                    #[inline(always)]
                     fn v_period(&self) -> Option<f64> { self.0.v_period() }
                 }
             }
@@ -636,30 +612,20 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                 impl #gen truck_geotrait::#trait_name0 for #ty {
                     type Point = Point3;
                     type Vector = Vector3;
-                    #[inline(always)]
                     fn subs(&self, s: f64, t: f64) -> Self::Point { self.0.subs(s, t) }
-                    #[inline(always)]
                     fn uder(&self, s: f64, t: f64) -> Self::Vector { self.0.uder(s, t) }
-                    #[inline(always)]
                     fn vder(&self, s: f64, t: f64) -> Self::Vector { self.0.vder(s, t) }
-                    #[inline(always)]
                     fn uuder(&self, s: f64, t: f64) -> Self::Vector { self.0.uuder(s, t) }
-                    #[inline(always)]
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
-                    #[inline(always)]
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
-                    #[inline(always)]
                     fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)) {
                         self.0.parameter_range()
                     }
-                    #[inline(always)]
                     fn u_period(&self) -> Option<f64> { self.0.u_period() }
-                    #[inline(always)]
                     fn v_period(&self) -> Option<f64> { self.0.v_period() }
                 }
                 #[automatically_derived]
                 impl #gen truck_geotrait::#trait_name1 for #ty {
-                    #[inline(always)]
                     fn normal(&self, u: f64, v: f64) -> Vector3 { self.0.normal(u, v) }
                 }
             }
@@ -708,7 +674,6 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
                 #[automatically_derived]
                 impl #gen truck_geotrait::SearchNearestParameter<D1> for #ty {
                     type Point = <#field_type as #trait_name>::Point;
-                    #[inline(always)]
                     fn search_nearest_parameter<H: Into<SPHint1D>>(
                         &self,
                         pt: Self::Point,
@@ -764,7 +729,6 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
                 #[automatically_derived]
                 impl #gen truck_geotrait::SearchNearestParameter<D2> for #ty {
                     type Point = <#field_type as #trait_name>::Point;
-                    #[inline(always)]
                     fn search_nearest_parameter<H: Into<SPHint2D>>(
                         &self,
                         pt: Self::Point,
@@ -820,7 +784,6 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
                 #[automatically_derived]
                 impl #gen truck_geotrait::SearchParameter<D1> for #ty {
                     type Point = <#field_type as #trait_name>::Point;
-                    #[inline(always)]
                     fn search_parameter<H: Into<SPHint1D>>(
                         &self,
                         pt: Self::Point,
@@ -876,7 +839,6 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
                 #[automatically_derived]
                 impl #gen truck_geotrait::SearchParameter<D2> for #ty {
                     type Point = <#field_type as #trait_name>::Point;
-                    #[inline(always)]
                     fn search_parameter<H: Into<SPHint2D>>(
                         &self,
                         pt: Self::Point,
