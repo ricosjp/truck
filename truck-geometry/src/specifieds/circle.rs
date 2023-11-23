@@ -72,7 +72,7 @@ impl SearchNearestParameter<D1> for UnitCircle<Point2> {
         _: usize,
     ) -> Option<f64> {
         let v = pt.to_vec();
-        if v.magnitude2().so_small2() {
+        if v.magnitude().so_small() {
             return None;
         }
         let v = v.normalize();
@@ -89,7 +89,7 @@ impl SearchParameter<D1> for UnitCircle<Point2> {
     type Point = Point2;
     fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point2, _: H, _: usize) -> Option<f64> {
         let v = pt.to_vec();
-        if !v.magnitude2().near2(&1.0) {
+        if !v.magnitude().near(&1.0) {
             return None;
         }
         let v = v.normalize();

@@ -1930,7 +1930,7 @@ impl EdgeCurve {
                     .invert()
                     .ok_or_else(|| "Failed to convert Circle".to_string())?;
                 let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
-                let (u, v) = (
+                let (u, mut v) = (
                     UnitCircle::<Point2>::new()
                         .search_parameter(p, None, 0)
                         .ok_or_else(|| "the point is not on circle".to_string())?,
@@ -1938,6 +1938,9 @@ impl EdgeCurve {
                         .search_parameter(q, None, 0)
                         .ok_or_else(|| "the point is not on circle".to_string())?,
                 );
+                if v <= u + TOLERANCE {
+                    v += 2.0 * PI;
+                }
                 let circle = TrimmedCurve::new(UnitCircle::<Point2>::new(), (u, v));
                 let mut ellipse = Processor::new(circle);
                 ellipse.transform_by(mat);
@@ -1984,7 +1987,7 @@ impl EdgeCurve {
                         .search_parameter(q, None, 0)
                         .ok_or_else(|| "the point is not on circle".to_string())?,
                 );
-                if u.near(&v) {
+                if v <= u + TOLERANCE {
                     v += 2.0 * PI;
                 }
                 let circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (u, v));

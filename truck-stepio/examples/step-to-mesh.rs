@@ -3,7 +3,7 @@
 use std::{cmp::Ordering, path::Path};
 use truck_meshalgo::prelude::*;
 use truck_stepio::r#in::*;
-use truck_topology::compress::CompressedShell;
+use truck_topology::compress::*;
 
 fn main() {
     let mut args = std::env::args().collect::<Vec<_>>();
@@ -34,7 +34,7 @@ fn main() {
     let extension = path.extension().and_then(|e| e.to_str());
     match extension {
         Some("obj") => output_obj(&polyshells, path),
-        Some("vtu") => output_vtk(&polyshells, path),
+        Some("vtu") => output_vtk(polyshells, path),
         _ => {}
     }
 }
@@ -53,25 +53,39 @@ fn output_obj(
 }
 
 fn output_vtk(
-    polyshells: &[CompressedShell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>],
+    polyshells: Vec<CompressedShell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>>,
     path: &Path,
 ) {
     use vtkio::model::*;
     let pieces = polyshells
-        .iter()
-        .flat_map(|shell| {
-            let shell = truck_topology::Shell::extract(shell.clone()).unwrap();
-            let shell: truck_topology::Shell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>> =
-                shell
+        .into_iter()
+        .flat_map(
+            |CompressedShell {
+                 vertices,
+                 edges,
+                 faces,
+             }| {
+                let faces = faces
                     .into_iter()
-                    .filter_map(|face| face.surface().map(|_| face))
+                    .filter_map(|face| {
+                        Some(CompressedFace {
+                            boundaries: face.boundaries,
+                            orientation: face.orientation,
+                            surface: face.surface?,
+                        })
+                    })
                     .collect();
-            let shell = shell.mapped(Point3::clone, PolylineCurve::clone, |x| x.clone().unwrap());
-            let DataSet::UnstructuredGrid { pieces, .. } = shell.to_data_set() else {
-                unreachable!()
-            };
-            pieces
-        })
+                let DataSet::UnstructuredGrid { pieces, .. } = CompressedShell {
+                    vertices,
+                    edges,
+                    faces,
+                }
+                .to_data_set() else {
+                    unreachable!()
+                };
+                pieces
+            },
+        )
         .collect::<Vec<_>>();
     let vtk = Vtk {
         version: (1, 0).into(),
