@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Parse `ELLIPSE` in STEP.
 - Fix the parameter lookup of the circle.
 - Output `CompressedShell` to `vtu` files.
 - Re-export `ShellCondition` in `truck-meshalgo`.
