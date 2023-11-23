@@ -404,7 +404,7 @@ fn cface_piece(
     vertices: &[Point3],
     edges: &[CompressedEdge<PolylineCurve<Point3>>],
     face: &CompressedFace<PolygonMesh>,
-) -> Piece<UnstructuredGridPiece> {
+) -> Option<Piece<UnstructuredGridPiece>> {
     let polygon = match face.orientation {
         true => face.surface.expands(identity),
         false => face.surface.inverse().expands(identity),
@@ -421,13 +421,13 @@ fn cface_piece(
     let flatten_points = polygon
         .attributes()
         .iter()
-        .flat_map(|attr| Into::<[f64; 3]>::into(attr.position))
+        .flat_map::<[f64; 3], _>(|attr| attr.position.into())
         .collect::<Vec<_>>();
     let flatten_uvs = polygon
         .attributes()
         .iter()
         .flat_map(|attr| match attr.uv_coord {
-            Some(uv) => Into::<[f64; 2]>::into(uv),
+            Some(uv) => uv.into(),
             None => [f64::NAN; 2],
         })
         .collect::<Vec<_>>();
@@ -440,7 +440,7 @@ fn cface_piece(
         .attributes()
         .iter()
         .flat_map(|attr| match attr.normal {
-            Some(normal) => Into::<[f64; 3]>::into(normal),
+            Some(normal) => normal.into(),
             None => [f64::NAN; 3],
         })
         .collect::<Vec<_>>();
@@ -461,15 +461,19 @@ fn cface_piece(
             }
         })
         .collect();
-    edge_indices.iter().for_each(|edge| {
-        types.push(CellType::PolyLine);
+    edge_indices.iter().try_for_each(|edge| {
         let curve = match face.orientation == edge.orientation {
             true => edges[edge.index].curve.clone(),
             false => edges[edge.index].curve.inverse(),
         };
         let polyline = curve
             .iter()
-            .filter_map(|p| map.get(&hash_point(*p)).map(|i| *i as u64));
+            .filter_map(|p| map.get(&hash_point(*p)).map(|i| *i as u64))
+            .collect::<Vec<_>>();
+        if polyline.is_empty() {
+            return None;
+        }
+        types.push(CellType::PolyLine);
         if let VertexNumbers::XML {
             connectivity,
             offsets,
@@ -478,14 +482,15 @@ fn cface_piece(
             connectivity.extend(polyline);
             offsets.push(connectivity.len() as u64);
         }
-    });
+        Some(())
+    })?;
     edge_indices.into_iter().try_for_each(|edge| {
-        types.push(CellType::Vertex);
         let v = match face.orientation == edge.orientation {
             true => edges[edge.index].vertices.0,
             false => edges[edge.index].vertices.1,
         };
         let idx = map.get(&hash_point(vertices[v])).map(|i| *i as u64)?;
+        types.push(CellType::Vertex);
         if let VertexNumbers::XML {
             connectivity,
             offsets,
@@ -495,15 +500,15 @@ fn cface_piece(
             offsets.push(connectivity.len() as u64)
         }
         Some(())
-    });
-    Piece::Inline(Box::new(UnstructuredGridPiece {
+    })?;
+    Some(Piece::Inline(Box::new(UnstructuredGridPiece {
         points: IOBuffer::F64(flatten_points),
         cells: Cells { cell_verts, types },
         data: Attributes {
             point: vec![uvs, normals],
             ..Default::default()
         },
-    }))
+    })))
 }
 
 impl ToDataSet for CompressedShell<Point3, PolylineCurve<Point3>, PolygonMesh> {
@@ -513,7 +518,7 @@ impl ToDataSet for CompressedShell<Point3, PolylineCurve<Point3>, PolygonMesh> {
             pieces: self
                 .faces
                 .iter()
-                .map(|face| cface_piece(&self.vertices, &self.edges, face))
+                .filter_map(|face| cface_piece(&self.vertices, &self.edges, face))
                 .collect(),
         }
     }
