@@ -35,6 +35,7 @@ mod meshables_traits {
     pub trait RobustMeshableSurface:
         ParametricSurface3D
         + ParameterDivision2D
+        + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>
         + Send
         + Sync {
@@ -42,6 +43,7 @@ mod meshables_traits {
     impl<
             S: ParametricSurface3D
                 + ParameterDivision2D
+                + SearchParameter<D2, Point = Point3>
                 + SearchNearestParameter<D2, Point = Point3>
                 + Send
                 + Sync,
@@ -76,10 +78,16 @@ mod meshables_traits {
     }
     /// Gathered the traits used in tessellation by [`RobustMeshableShape`].
     pub trait RobustMeshableSurface:
-        ParametricSurface3D + ParameterDivision2D + SearchNearestParameter<D2, Point = Point3> {
+        ParametricSurface3D
+        + ParameterDivision2D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3> {
     }
     impl<
-            S: ParametricSurface3D + ParameterDivision2D + SearchNearestParameter<D2, Point = Point3>,
+            S: ParametricSurface3D
+                + ParameterDivision2D
+                + SearchParameter<D2, Point = Point3>
+                + SearchNearestParameter<D2, Point = Point3>,
         > RobustMeshableSurface for S
     {
     }
