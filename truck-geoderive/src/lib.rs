@@ -162,11 +162,7 @@ where I: IntoIterator<Item = &'a Variant> + 'a + Copy
                 quote! { #var: #ty }
             })
             .collect::<Vec<_>>();
-        let vals = self
-            .fields
-            .iter()
-            .map(|f| f.var.to_token_stream())
-            .collect::<Vec<_>>();
+        let vals = self.fields.iter().map(|f| &f.var).collect::<Vec<_>>();
         let return_type = &self.return_type;
         let implement = if return_type.to_string() == "Self" {
             enumerate_impl_return_self::<'_>(
@@ -195,10 +191,7 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
     let trait_name = quote! { BoundedCurve };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -259,10 +252,7 @@ pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
     let trait_name = quote! { BoundedSurface };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -312,10 +302,7 @@ pub fn derive_cut(input: TokenStream) -> TokenStream {
     let trait_name = quote! { Cut };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -363,10 +350,7 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
     let trait_name = quote! { Invertible };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -418,10 +402,7 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
     let trait_name = quote! { ParameterDivision1D };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -480,10 +461,7 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
     let trait_name = quote! { ParameterDivision2D };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -533,10 +511,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
     let trait_name = quote! { ParametricCurve };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -598,10 +573,7 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
     let trait_name = quote! { ParametricSurface };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -674,10 +646,11 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
     let trait_name1 = quote! { ParametricSurface3D };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates)
+        .collect::<Vec<_>>();
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -768,10 +741,7 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
     let trait_name = quote! { SearchNearestParameter::<D1> };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -835,10 +805,7 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
     let trait_name = quote! { SearchNearestParameter::<D2> };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -902,10 +869,7 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
     let trait_name = quote! { SearchParameter::<D1> };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -971,10 +935,7 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
     let trait_name = quote! { SearchParameter::<D2> };
     let ty = input.ident;
     let gen = input.generics;
-    let where_predicates = match gen.where_clause.as_ref() {
-        Some(where_clause) => where_clause.predicates.iter().collect(),
-        None => Vec::new(),
-    };
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
