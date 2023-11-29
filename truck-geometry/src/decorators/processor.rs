@@ -452,6 +452,55 @@ where
     }
 }
 
+impl<P, E, T> SearchNearestParameter<D1> for Processor<E, T>
+where
+    E: BoundedCurve<Point = P> + SearchNearestParameter<D1, Point = P>,
+    P: EuclideanSpace<Scalar = f64, Diff = E::Vector>,
+    E::Vector: InnerSpace<Scalar = f64> + Tolerance,
+    T: Transform<P> + Clone,
+{
+    type Point = P;
+    fn search_nearest_parameter<H: Into<SPHint1D>>(
+        &self,
+        point: Self::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<f64> {
+        let inv = self.transform.inverse_transform().unwrap();
+        let hint =
+            self.entity
+                .search_nearest_parameter(inv.transform_point(point), hint, trials)?;
+        let t = algo::curve::search_nearest_parameter(self, point, hint, trials)?;
+        Some(self.get_curve_parameter(t))
+    }
+}
+
+impl<P, E, T> SearchNearestParameter<D2> for Processor<E, T>
+where
+    E: ParametricSurface<Point = P> + SearchNearestParameter<D2, Point = P>,
+    P: EuclideanSpace<Scalar = f64, Diff = E::Vector>,
+    E::Vector: InnerSpace<Scalar = f64> + Tolerance,
+    T: Transform<P> + SquareMatrix<Scalar = f64> + Clone,
+{
+    type Point = P;
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
+        &self,
+        point: Self::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
+        let inv = self.transform.inverse_transform().unwrap();
+        let hint =
+            self.entity
+                .search_nearest_parameter(inv.transform_point(point), hint, trials)?;
+        let (u, v) = algo::surface::search_nearest_parameter(self, point, hint, trials)?;
+        Some(match self.orientation {
+            true => (u, v),
+            false => (v, u),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

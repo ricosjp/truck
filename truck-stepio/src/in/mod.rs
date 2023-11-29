@@ -1991,10 +1991,10 @@ impl EdgeCurve {
                     let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
                     let (u, mut v) = (
                         UnitCircle::<Point2>::new()
-                            .search_parameter(p, None, 0)
+                            .search_nearest_parameter(p, None, 0)
                             .ok_or_else(|| "the point is not on circle".to_string())?,
                         UnitCircle::<Point2>::new()
-                            .search_parameter(q, None, 0)
+                            .search_nearest_parameter(q, None, 0)
                             .ok_or_else(|| "the point is not on circle".to_string())?,
                     );
                     if v <= u + TOLERANCE {
@@ -2014,10 +2014,10 @@ impl EdgeCurve {
                     let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
                     let (u, mut v) = (
                         UnitCircle::<Point2>::new()
-                            .search_parameter(p, None, 0)
+                            .search_nearest_parameter(p, None, 0)
                             .ok_or_else(|| "the point is not on circle".to_string())?,
                         UnitCircle::<Point2>::new()
-                            .search_parameter(q, None, 0)
+                            .search_nearest_parameter(q, None, 0)
                             .ok_or_else(|| "the point is not on circle".to_string())?,
                     );
                     if v <= u + TOLERANCE {
@@ -2067,10 +2067,10 @@ impl EdgeCurve {
                     let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
                     let (u, mut v) = (
                         UnitCircle::<Point3>::new()
-                            .search_parameter(p, None, 0)
+                            .search_nearest_parameter(p, None, 0)
                             .ok_or_else(|| format!("the point is not on circle: {p:?}"))?,
                         UnitCircle::<Point3>::new()
-                            .search_parameter(q, None, 0)
+                            .search_nearest_parameter(q, None, 0)
                             .ok_or_else(|| format!("the point is not on circle: {q:?}"))?,
                     );
                     if v <= u + TOLERANCE {
@@ -2094,10 +2094,10 @@ impl EdgeCurve {
                     let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
                     let (u, mut v) = (
                         UnitCircle::<Point3>::new()
-                            .search_parameter(p, None, 0)
+                            .search_nearest_parameter(p, None, 0)
                             .ok_or_else(|| format!("the point is not on circle: {p:?}"))?,
                         UnitCircle::<Point3>::new()
-                            .search_parameter(q, None, 0)
+                            .search_nearest_parameter(q, None, 0)
                             .ok_or_else(|| format!("the point is not on circle: {q:?}"))?,
                     );
                     if v <= u + TOLERANCE {

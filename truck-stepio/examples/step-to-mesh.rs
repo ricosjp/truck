@@ -26,7 +26,7 @@ fn main() {
         .iter()
         .map(|shell| {
             let shell = table.to_compressed_shell(shell.1).unwrap();
-            shell.triangulation(0.05)
+            shell.robust_triangulation(0.05)
         })
         .collect::<Vec<_>>();
 

@@ -34,6 +34,7 @@ pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
     Invertible,
     ParameterDivision1D,
     SearchParameterD1,
+    SearchNearestParameterD1,
 )]
 pub enum Conic2D {
     Ellipse(Ellipse<Point2, Matrix3>),
@@ -51,6 +52,7 @@ pub enum Conic2D {
     Invertible,
     ParameterDivision1D,
     SearchParameterD1,
+    SearchNearestParameterD1,
 )]
 pub enum Curve2D {
     Line(Line<Point2>),
@@ -71,6 +73,7 @@ pub enum Curve2D {
     Invertible,
     ParameterDivision1D,
     SearchParameterD1,
+    SearchNearestParameterD1,
 )]
 pub enum Conic3D {
     Ellipse(Ellipse<Point3, Matrix4>),
@@ -89,6 +92,7 @@ pub enum Conic3D {
     Invertible,
     ParameterDivision1D,
     SearchParameterD1,
+    SearchNearestParameterD1,
 )]
 pub enum Curve3D {
     Line(Line<Point3>),
@@ -108,6 +112,7 @@ pub enum Curve3D {
     ParametricSurface3D,
     ParameterDivision2D,
     SearchParameterD2,
+    SearchNearestParameterD2,
     Invertible,
 )]
 pub enum ElementarySurface {
@@ -126,6 +131,7 @@ pub enum ElementarySurface {
     ParametricSurface3D,
     ParameterDivision2D,
     SearchParameterD2,
+    SearchNearestParameterD2,
     Invertible,
 )]
 pub enum SweptCurve {
@@ -140,6 +146,7 @@ pub enum SweptCurve {
     ParametricSurface3D,
     ParameterDivision2D,
     SearchParameterD2,
+    SearchNearestParameterD2,
     Invertible,
 )]
 pub enum Surface {
@@ -147,23 +154,4 @@ pub enum Surface {
     SweptCurve(Box<SweptCurve>),
     BSplineSurface(Box<BSplineSurface<Point3>>),
     NurbsSurface(Box<NurbsSurface<Vector4>>),
-}
-
-impl SearchNearestParameter<D2> for Surface {
-    type Point = Point3;
-    fn search_nearest_parameter<H: Into<<D2 as SPDimension>::Hint>>(
-        &self,
-        point: Self::Point,
-        hint: H,
-        trial: usize,
-    ) -> Option<<D2 as SPDimension>::Parameter> {
-        let hint = match hint.into() {
-            SPHint2D::None => (0.0, 0.0),
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(x, y) => {
-                truck_geotrait::algo::surface::presearch(self, point, (x, y), 100)
-            }
-        };
-        truck_geotrait::algo::surface::search_nearest_parameter(self, point, hint, trial)
-    }
 }

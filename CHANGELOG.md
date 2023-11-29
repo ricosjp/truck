@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- `SearchNearestParameter` for `Processor`.
 - Derive macros are supported for cases with generics.
 - Remove `#[inline(always)]` in derive macro for release build of `truck-stepio`.
 - Parse `ELLIPSE` in STEP.
