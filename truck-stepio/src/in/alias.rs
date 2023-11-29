@@ -1,3 +1,4 @@
+use derive_more::*;
 use serde::{Deserialize, Serialize};
 pub use truck_geometry::prelude::*;
 pub use truck_polymesh::*;
@@ -25,6 +26,7 @@ pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
     Clone,
     Copy,
     Debug,
+    From,
     Serialize,
     Deserialize,
     ParametricCurve,
@@ -41,6 +43,7 @@ pub enum Conic2D {
 #[derive(
     Clone,
     Debug,
+    From,
     Serialize,
     Deserialize,
     ParametricCurve,
@@ -59,6 +62,7 @@ pub enum Curve2D {
 #[derive(
     Clone,
     Copy,
+    From,
     Debug,
     Serialize,
     Deserialize,
@@ -77,6 +81,7 @@ pub enum Conic3D {
 #[derive(
     Clone,
     Debug,
+    From,
     Serialize,
     Deserialize,
     ParametricCurve,
