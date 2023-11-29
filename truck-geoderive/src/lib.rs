@@ -18,18 +18,6 @@ use proc_macro_error::proc_macro_error;
 use quote::*;
 use syn::*;
 
-fn top_type_of_enumeration<'a>(
-    variants: impl IntoIterator<Item = &'a Variant> + 'a,
-) -> TokenStream2 {
-    let variant = variants.into_iter().next().expect("empty enum!");
-    let vec: Vec<_> = variant.fields.iter().collect();
-    match vec.len() {
-        0 => panic!("empty field!"),
-        1 => vec[0].ty.to_token_stream(),
-        _ => unimplemented!(),
-    }
-}
-
 fn enumerate_impl_return_something<'a>(
     variants: impl IntoIterator<Item = &'a Variant> + 'a,
     method: TokenStream2,
@@ -207,8 +195,20 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
     let trait_name = quote! { BoundedCurve };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant
+                .fields
+                .iter()
+                .map(|field| &field.ty)
+                .collect();
+            let top_ty = &tys[0];
+            let tys = &tys[1..];
             let methods = methods! {
                 variants, trait_name,
                 fn range_tuple(&self,) -> (f64, f64),
@@ -217,7 +217,12 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
             };
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #top_ty: truck_geotrait::#trait_name,
+                    #(#tys: truck_geotrait::#trait_name<Point = <#top_ty as ParametricCurve>::Point>,)*
+                    Self: truck_geotrait::ParametricCurve<Point = <#top_ty as ParametricCurve>::Point>, {
                     #(#methods)*
                 }
             }
@@ -227,9 +232,14 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
             if field.len() != 1 || field[0].ident.is_some() {
                 unimplemented!();
             }
+            let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name,
+                    Self: truck_geotrait::ParametricCurve<Point = <#field_type as ParametricCurve>::Point>, {
                     fn range_tuple(&self) -> (f64, f64) { self.0.range_tuple() }
                     fn front(&self) -> Self::Point { self.0.front() }
                     fn back(&self) -> Self::Point { self.0.back() }
@@ -249,15 +259,24 @@ pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
     let trait_name = quote! { BoundedSurface };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
             let methods = methods! {
                 variants, trait_name,
                 fn range_tuple(&self,) -> ((f64, f64), (f64, f64)),
             };
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name,)* {
                     #(#methods)*
                 }
             }
@@ -267,9 +286,13 @@ pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
             if field.len() != 1 || field[0].ident.is_some() {
                 unimplemented!();
             }
+            let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name {
                     fn range_tuple(&self) -> ((f64, f64), (f64, f64)) {
                         self.0.range_tuple()
                     }
@@ -289,15 +312,24 @@ pub fn derive_cut(input: TokenStream) -> TokenStream {
     let trait_name = quote! { Cut };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
             let methods = methods! {
                 variants, trait_name,
                 fn cut(&mut self, t: f64) -> Self,
             };
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name,)* {
                     #(#methods)*
                 }
             }
@@ -307,9 +339,13 @@ pub fn derive_cut(input: TokenStream) -> TokenStream {
             if field.len() != 1 || field[0].ident.is_some() {
                 unimplemented!();
             }
+            let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name {
                     fn cut(&mut self, t: f64) -> Self { Self(self.0.cut(t)) }
                 }
             }
@@ -327,8 +363,14 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
     let trait_name = quote! { Invertible };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
             let methods = methods! {
                 variants, trait_name,
                 fn invert(&mut self,) -> (),
@@ -336,7 +378,11 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
             };
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name,)*
+                    Self: Clone {
                     #(#methods)*
                 }
             }
@@ -346,9 +392,14 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
             if field.len() != 1 || field[0].ident.is_some() {
                 unimplemented!();
             }
+            let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name,
+                    Self: Clone {
                     fn invert(&mut self) { self.0.invert() }
                     fn inverse(&self) -> Self { Self(self.0.inverse()) }
                 }
@@ -367,17 +418,32 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
     let trait_name = quote! { ParameterDivision1D };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
-            let top_ty = top_type_of_enumeration(variants);
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let top_ty = match tys.len() {
+                0 => panic!("empty field!"),
+                1 => tys[0].clone(),
+                _ => unimplemented!(),
+            };
+            let tys = &tys[1..];
             let methods = methods! {
                 variants, trait_name,
                 fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>),
             };
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
-                    type Point = <#top_ty as #trait_name>::Point;
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #top_ty: truck_geotrait::#trait_name,
+                    #(#tys: truck_geotrait::#trait_name<Point = <#top_ty as truck_geotrait::#trait_name>::Point>,)* {
+                    type Point = <#top_ty as truck_geotrait::#trait_name>::Point;
                     #(#methods)*
                 }
             }
@@ -390,8 +456,11 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
-                    type Point = <#field_type as #trait_name>::Point;
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name {
+                    type Point = <#field_type as truck_geotrait::#trait_name>::Point;
                     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
                         self.0.parameter_division(range, tol)
                     }
@@ -411,15 +480,24 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
     let trait_name = quote! { ParameterDivision2D };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
             let methods = methods! {
                 variants, trait_name,
                 fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>),
             };
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name,)* {
                     #(#methods)*
                 }
             }
@@ -429,9 +507,13 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
             if field.len() != 1 || field[0].ident.is_some() {
                 unimplemented!();
             }
+            let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name {
                     fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
                         self.0.parameter_division(range, tol)
                     }
@@ -451,9 +533,15 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
     let trait_name = quote! { ParametricCurve };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
-            let top_ty = top_type_of_enumeration(variants);
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let top_ty = &tys[0];
             let methods = methods!(
                 variants,
                 trait_name,
@@ -465,7 +553,10 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where #(#where_predicates,)*
+                      #(#tys: truck_geotrait::#trait_name,)*
+                      Self: Clone {
                     type Point = <#top_ty as #trait_name>::Point;
                     type Vector = <#top_ty as #trait_name>::Vector;
                     #(#methods)*
@@ -480,7 +571,10 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where #(#where_predicates,)*
+                      #field_type: truck_geotrait::#trait_name,
+                      Self: Clone, {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
                     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t) }
@@ -504,9 +598,15 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
     let trait_name = quote! { ParametricSurface };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
-            let top_ty = top_type_of_enumeration(variants);
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let top_ty = &tys[0];
             let methods = methods!(
                 variants,
                 trait_name,
@@ -522,7 +622,10 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name,)* {
                     type Point = <#top_ty as #trait_name>::Point;
                     type Vector = <#top_ty as #trait_name>::Vector;
                     #(#methods)*
@@ -537,7 +640,10 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name for #ty {
+                impl #gen truck_geotrait::#trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
                     fn subs(&self, s: f64, t: f64) -> Self::Point { self.0.subs(s, t) }
@@ -568,8 +674,14 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
     let trait_name1 = quote! { ParametricSurface3D };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
             let methods0 = methods!(
                 variants,
                 trait_name0,
@@ -590,14 +702,20 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name0 for #ty {
+                impl #gen truck_geotrait::#trait_name0 for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name0,)* {
                     type Point = Point3;
                     type Vector = Vector3;
                     #(#methods0)*
                 }
 
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name1 for #ty {
+                impl #gen truck_geotrait::#trait_name1 for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name0,)* {
                     #(#methods1)*
                 }
             }
@@ -607,9 +725,13 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
             if field.len() != 1 || field[0].ident.is_some() {
                 unimplemented!();
             }
+            let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name0 for #ty {
+                impl #gen truck_geotrait::#trait_name0 for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name0, {
                     type Point = Point3;
                     type Vector = Vector3;
                     fn subs(&self, s: f64, t: f64) -> Self::Point { self.0.subs(s, t) }
@@ -625,7 +747,10 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     fn v_period(&self) -> Option<f64> { self.0.v_period() }
                 }
                 #[automatically_derived]
-                impl #gen truck_geotrait::#trait_name1 for #ty {
+                impl #gen truck_geotrait::#trait_name1 for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name0, {
                     fn normal(&self, u: f64, v: f64) -> Vector3 { self.0.normal(u, v) }
                 }
             }
@@ -643,9 +768,15 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
     let trait_name = quote! { SearchNearestParameter::<D1> };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
-            let top_ty = top_type_of_enumeration(variants);
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let top_ty = &tys[0];
             let methods = methods!(
                 variants,
                 trait_name,
@@ -658,7 +789,10 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::SearchNearestParameter<D1> for #ty {
+                impl #gen truck_geotrait::SearchNearestParameter<D1> for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name,)* {
                     type Point = <#top_ty as #trait_name>::Point;
                     #(#methods)*
                 }
@@ -672,7 +806,10 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::SearchNearestParameter<D1> for #ty {
+                impl #gen truck_geotrait::SearchNearestParameter<D1> for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
                     fn search_nearest_parameter<H: Into<SPHint1D>>(
                         &self,
@@ -698,9 +835,15 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
     let trait_name = quote! { SearchNearestParameter::<D2> };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
-            let top_ty = top_type_of_enumeration(variants);
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let top_ty = &tys[0];
             let methods = methods!(
                 variants,
                 trait_name,
@@ -713,7 +856,10 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::SearchNearestParameter<D2> for #ty {
+                impl #gen truck_geotrait::SearchNearestParameter<D2> for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name,)* {
                     type Point = <#top_ty as #trait_name>::Point;
                     #(#methods)*
                 }
@@ -727,7 +873,10 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::SearchNearestParameter<D2> for #ty {
+                impl #gen truck_geotrait::SearchNearestParameter<D2> for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
                     fn search_nearest_parameter<H: Into<SPHint2D>>(
                         &self,
@@ -753,9 +902,16 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
     let trait_name = quote! { SearchParameter::<D1> };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
-            let top_ty = top_type_of_enumeration(variants);
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let top_ty = &tys[0];
+            let tys = &tys[1..];
             let methods = methods!(
                 variants,
                 trait_name,
@@ -768,7 +924,11 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::SearchParameter<D1> for #ty {
+                impl #gen truck_geotrait::SearchParameter<D1> for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #top_ty: truck_geotrait::#trait_name,
+                    #(#tys: truck_geotrait::#trait_name<Point = <#top_ty as truck_geotrait::#trait_name>::Point>,)* {
                     type Point = <#top_ty as #trait_name>::Point;
                     #(#methods)*
                 }
@@ -782,15 +942,18 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::SearchParameter<D1> for #ty {
-                    type Point = <#field_type as #trait_name>::Point;
+                impl #gen truck_geotrait::SearchParameter<D1> for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name, {
+                    type Point = <#field_type as truck_geotrait::#trait_name>::Point;
                     fn search_parameter<H: Into<SPHint1D>>(
                         &self,
                         pt: Self::Point,
                         hint: H,
                         trials: usize,
                     ) -> Option<f64> {
-                        self.0.search_nearest_parameter(pt, hint, trials)
+                        self.0.search_parameter(pt, hint, trials)
                     }
                 }
             }
@@ -808,9 +971,15 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
     let trait_name = quote! { SearchParameter::<D2> };
     let ty = input.ident;
     let gen = input.generics;
+    let where_predicates = match gen.where_clause.as_ref() {
+        Some(where_clause) => where_clause.predicates.iter().collect(),
+        None => Vec::new(),
+    };
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
-            let top_ty = top_type_of_enumeration(variants);
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let top_ty = &tys[0];
             let methods = methods!(
                 variants,
                 trait_name,
@@ -823,7 +992,10 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::SearchParameter<D2> for #ty {
+                impl #gen truck_geotrait::SearchParameter<D2> for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: truck_geotrait::#trait_name,)* {
                     type Point = <#top_ty as #trait_name>::Point;
                     #(#methods)*
                 }
@@ -837,7 +1009,10 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen truck_geotrait::SearchParameter<D2> for #ty {
+                impl #gen truck_geotrait::SearchParameter<D2> for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: truck_geotrait::#trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
                     fn search_parameter<H: Into<SPHint2D>>(
                         &self,
@@ -845,7 +1020,7 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
                         hint: H,
                         trials: usize,
                     ) -> Option<(f64, f64)> {
-                        self.0.search_nearest_parameter(pt, hint, trials)
+                        self.0.search_parameter(pt, hint, trials)
                     }
                 }
             }
