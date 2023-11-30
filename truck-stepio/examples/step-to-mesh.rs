@@ -52,7 +52,7 @@ fn main() {
         Some("vtu") => match only_edge {
             true => output_vtk_edge(polyshells, path),
             false => output_vtk(polyshells, path),
-        }
+        },
         _ => {}
     }
 }
