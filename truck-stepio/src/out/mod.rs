@@ -23,10 +23,8 @@ impl<'a> Display for SliceDisplay<'a, f64> {
             if i != 0 {
                 f.write_str(", ")?;
             }
-            if f64::abs(*x) < 1.0e-6 {
-                f.write_str("0.0")
-            } else if f64::abs(*x) < 1.0e-2 && *x != 0.0 {
-                f.write_fmt(format_args!("{x:.7E}"))
+            if f64::abs(*x) < 1.0e-2 && *x != 0.0 {
+                f.write_fmt(format_args!("{x:.10E}"))
             } else {
                 f.write_fmt(format_args!("{x:?}"))
             }
