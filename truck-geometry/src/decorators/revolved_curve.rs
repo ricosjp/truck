@@ -1,28 +1,25 @@
 use super::*;
 use std::f64::consts::PI;
 
-impl<C> RevolutedCurve<C> {
-    /// Creates a surface by revoluting a curve.
-    #[inline(always)]
-    pub fn by_revolution(curve: C, origin: Point3, axis: Vector3) -> Self {
-        RevolutedCurve {
-            curve,
+impl Revolution {
+    fn new(origin: Point3, axis: Vector3) -> Self {
+        Self {
             origin,
             axis: axis.normalize(),
         }
     }
     #[inline(always)]
-    fn point_rotation_matrix(&self, v: f64) -> Matrix4 {
+    fn point_rotation_matrix(self, v: f64) -> Matrix4 {
         Matrix4::from_translation(self.origin.to_vec())
             * Matrix4::from_axis_angle(self.axis, Rad(v))
             * Matrix4::from_translation(-self.origin.to_vec())
     }
     #[inline(always)]
-    fn vector_rotation_matrix(&self, v: f64) -> Matrix4 {
+    fn vector_rotation_matrix(self, v: f64) -> Matrix4 {
         Matrix4::from_axis_angle(self.axis, Rad(v))
     }
     #[inline(always)]
-    fn derivation_rotation_matrix(&self, v: f64) -> Matrix4 {
+    fn derivation_rotation_matrix(self, v: f64) -> Matrix4 {
         let n = self.axis;
         Matrix3::new(
             n[0] * n[0] * f64::sin(v) - f64::sin(v),
@@ -37,6 +34,33 @@ impl<C> RevolutedCurve<C> {
         )
         .into()
     }
+    #[inline(always)]
+    fn invert(&mut self) { self.axis *= -1.0; }
+    #[inline(always)]
+    fn inverse(mut self) -> Self {
+        self.axis *= -1.0;
+        self
+    }
+    #[inline(always)]
+    fn contains(self, p: Point3) -> bool { (p - self.origin).cross(self.axis).so_small() }
+    #[inline(always)]
+    fn proj_point(&self, pt: Point3) -> Point2 {
+        let r = pt - self.origin;
+        let z = r.dot(self.axis);
+        let h = r - z * self.axis;
+        Point2::new(z, h.magnitude2())
+    }
+}
+
+impl<C> RevolutedCurve<C> {
+    /// Creates a surface by revoluting a curve.
+    #[inline(always)]
+    pub fn by_revolution(curve: C, origin: Point3, axis: Vector3) -> Self {
+        RevolutedCurve {
+            curve,
+            revolution: Revolution::new(origin, axis),
+        }
+    }
     /// Returns the curve before revoluted.
     #[inline(always)]
     pub const fn entity_curve(&self) -> &C { &self.curve }
@@ -45,18 +69,10 @@ impl<C> RevolutedCurve<C> {
     pub fn into_entity_curve(self) -> C { self.curve }
     /// Returns origin of revolution
     #[inline(always)]
-    pub const fn origin(&self) -> Point3 { self.origin }
+    pub const fn origin(&self) -> Point3 { self.revolution.origin }
     /// Returns axis of revolution
     #[inline(always)]
-    pub const fn axis(&self) -> Vector3 { self.axis }
-
-    #[inline(always)]
-    fn proj_point(&self, pt: Point3) -> (f64, f64) {
-        let r = pt - self.origin;
-        let z = r.dot(self.axis);
-        let h = r - z * self.axis;
-        (z, h.magnitude2())
-    }
+    pub const fn axis(&self) -> Vector3 { self.revolution.axis }
 }
 
 impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
@@ -74,11 +90,7 @@ impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
     /// assert!(!surface1.is_front_fixed());
     /// ```
     #[inline(always)]
-    pub fn is_front_fixed(&self) -> bool {
-        (self.curve.front() - self.origin)
-            .cross(self.axis)
-            .so_small()
-    }
+    pub fn is_front_fixed(&self) -> bool { self.revolution.contains(self.curve.front()) }
     /// Returns true if the back point of the curve is on the axis of rotation.
     /// # Examples
     /// ```
@@ -93,11 +105,7 @@ impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
     /// assert!(!surface1.is_back_fixed());
     /// ```
     #[inline(always)]
-    pub fn is_back_fixed(&self) -> bool {
-        (self.curve.back() - self.origin)
-            .cross(self.axis)
-            .so_small()
-    }
+    pub fn is_back_fixed(&self) -> bool { self.revolution.contains(self.curve.back()) }
 }
 
 impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve<C> {
@@ -187,36 +195,38 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
     type Vector = Vector3;
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Point3 {
-        self.point_rotation_matrix(v)
-            .transform_point(self.curve.subs(u))
+        let mat = self.revolution.point_rotation_matrix(v);
+        mat.transform_point(self.curve.subs(u))
     }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Vector3 {
-        self.vector_rotation_matrix(v)
-            .transform_vector(self.curve.der(u))
+        let mat = self.revolution.vector_rotation_matrix(v);
+        mat.transform_vector(self.curve.der(u))
     }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Vector3 {
         let pt = self.curve.subs(u);
-        let radius = self.axis.cross(pt - self.origin);
-        self.vector_rotation_matrix(v).transform_vector(radius)
+        let radius = self.axis().cross(pt - self.origin());
+        let mat = self.revolution.vector_rotation_matrix(v);
+        mat.transform_vector(radius)
     }
     #[inline(always)]
     fn uuder(&self, u: f64, v: f64) -> Vector3 {
-        self.vector_rotation_matrix(v)
-            .transform_vector(self.curve.der2(u))
+        let mat = self.revolution.vector_rotation_matrix(v);
+        mat.transform_vector(self.curve.der2(u))
     }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Vector3 {
         let pt = self.curve.subs(u);
-        let z = self.proj_point(pt).0;
-        let radius = pt - self.origin - z * self.axis;
-        -self.vector_rotation_matrix(v).transform_vector(radius)
+        let z = self.revolution.proj_point(pt).x;
+        let radius = pt - self.origin() - z * self.axis();
+        let mat = self.revolution.vector_rotation_matrix(v);
+        -mat.transform_vector(radius)
     }
     #[inline(always)]
     fn uvder(&self, u: f64, v: f64) -> Vector3 {
-        self.derivation_rotation_matrix(v)
-            .transform_vector(self.curve.der(u))
+        let mat = self.revolution.derivation_rotation_matrix(v);
+        mat.transform_vector(self.curve.der(u))
     }
     #[inline(always)]
     fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
@@ -237,19 +247,19 @@ impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve
         let (u0, u1) = self.curve.range_tuple();
         let (uder, vder) = if u.near(&u0) {
             let pt = self.curve.subs(u);
-            let radius = self.axis.cross(pt - self.origin);
+            let radius = self.axis().cross(pt - self.origin());
             if radius.so_small() {
                 let uder = self.curve.der(u);
-                (uder, self.axis.cross(uder))
+                (uder, self.axis().cross(uder))
             } else {
                 (self.uder(u, v), self.vder(u, v))
             }
         } else if u.near(&u1) {
             let pt = self.curve.subs(u);
-            let radius = self.axis.cross(pt - self.origin);
+            let radius = self.axis().cross(pt - self.origin());
             if radius.so_small() {
                 let uder = self.curve.der(u);
-                (uder, uder.cross(self.axis))
+                (uder, uder.cross(self.axis()))
             } else {
                 (self.uder(u, v), self.vder(u, v))
             }
@@ -264,13 +274,12 @@ impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {
 
 impl<C: Clone> Invertible for RevolutedCurve<C> {
     #[inline(always)]
-    fn invert(&mut self) { self.axis = -self.axis; }
+    fn invert(&mut self) { self.revolution.invert() }
     #[inline(always)]
     fn inverse(&self) -> Self {
         RevolutedCurve {
             curve: self.curve.clone(),
-            origin: self.origin,
-            axis: -self.axis,
+            revolution: self.revolution.inverse(),
         }
     }
 }
@@ -385,7 +394,7 @@ where C: ParametricCurve3D + ParameterDivision1D<Point = Point3>
             .1
             .into_iter()
             .fold(0.0, |max2, pt| {
-                let h = self.proj_point(pt).1;
+                let h = self.revolution.proj_point(pt).y;
                 f64::max(max2, h)
             })
             .sqrt();

@@ -1,6 +1,13 @@
 use crate::{prelude::*, *};
 use std::ops::{Deref, DerefMut, Mul};
 
+/// revolution
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+struct Revolution {
+    origin: Point3,
+    axis: Vector3,
+}
+
 /// surface constructed by revoluting a curve
 /// # Examples
 /// Revoluted sphere
@@ -33,8 +40,7 @@ use std::ops::{Deref, DerefMut, Mul};
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct RevolutedCurve<C> {
     curve: C,
-    origin: Point3,
-    axis: Vector3,
+    revolution: Revolution,
 }
 
 /// Linearly extruded curve
