@@ -8,6 +8,9 @@ pub use surface::*;
 mod search_parameter;
 pub use search_parameter::*;
 
+/// parameter range
+pub type ParameterRange = (Bound<f64>, Bound<f64>);
+
 /// Oriented and reversible
 pub trait Invertible: Clone {
     /// Inverts `self`

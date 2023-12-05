@@ -1,5 +1,4 @@
 use super::*;
-type ParameterRange = ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>));
 
 impl<V> NurbsSurface<V> {
     /// constructor
@@ -171,7 +170,7 @@ impl<V> NurbsSurface<V> {
     }
     /// The range of the parameter of the surface.
     #[inline(always)]
-    pub fn parameter_range(&self) -> ParameterRange { self.0.parameter_range() }
+    pub fn parameter_range(&self) -> (ParameterRange, ParameterRange) { self.0.parameter_range() }
     /// Creates the curve whose control points are the `idx`th column control points of `self`.
     #[inline(always)]
     pub fn column_curve(&self, row_idx: usize) -> NurbsCurve<V>
@@ -656,9 +655,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for Nu
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.vvder(u, v) }
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
-        self.parameter_range()
-    }
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) { self.parameter_range() }
 }
 
 impl ParametricSurface3D for NurbsSurface<Vector4> {

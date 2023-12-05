@@ -38,7 +38,7 @@ where
     #[inline(always)]
     fn vvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
             self.curve.parameter_range(),
             (Bound::Included(0.0), Bound::Included(1.0)),

@@ -523,7 +523,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                 fn subs(&self, t: f64) -> Self::Point,
                 fn der(&self, t: f64) -> Self::Vector,
                 fn der2(&self, t: f64) -> Self::Vector,
-                fn parameter_range(&self,) -> (std::ops::Bound<f64>, std::ops::Bound<f64>),
+                fn parameter_range(&self,) -> truck_geotrait::ParameterRange,
                 fn period(&self,) -> Option<f64>,
             );
             quote! {
@@ -555,7 +555,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t) }
                     fn der(&self, t: f64) -> Self::Vector { self.0.der(t) }
                     fn der2(&self, t: f64) -> Self::Vector { self.0.der2(t) }
-                    fn parameter_range(&self) -> (std::ops::Bound<f64>, std::ops::Bound<f64>) { self.0.parameter_range() }
+                    fn parameter_range(&self) -> truck_geotrait::ParameterRange { self.0.parameter_range() }
                     fn period(&self) -> Option<f64> { self.0.period() }
                 }
             }
@@ -588,7 +588,7 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                 fn uuder(&self, s: f64, t: f64) -> Self::Vector,
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
-                fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)),
+                fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
             );
@@ -664,7 +664,7 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                 fn uuder(&self, s: f64, t: f64) -> Self::Vector,
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
-                fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)),
+                fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
             );
@@ -713,7 +713,7 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     fn uuder(&self, s: f64, t: f64) -> Self::Vector { self.0.uuder(s, t) }
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
-                    fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)) {
+                    fn parameter_range(&self,) -> (truck_geotrait::ParmaterRange, truck_geotrait::ParameterRange) {
                         self.0.parameter_range()
                     }
                     fn u_period(&self) -> Option<f64> { self.0.u_period() }

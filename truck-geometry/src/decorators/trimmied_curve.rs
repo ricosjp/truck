@@ -24,7 +24,7 @@ impl<C: ParametricCurve> ParametricCurve for TrimmedCurve<C> {
     #[inline(always)]
     fn period(&self) -> Option<f64> { self.curve.period() }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+    fn parameter_range(&self) -> ParameterRange {
         (Bound::Included(self.range.0), Bound::Included(self.range.1))
     }
 }

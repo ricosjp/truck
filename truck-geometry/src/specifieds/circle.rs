@@ -17,7 +17,7 @@ impl ParametricCurve for UnitCircle<Point2> {
     #[inline]
     fn der2(&self, t: f64) -> Self::Vector { Vector2::new(-f64::cos(t), -f64::sin(t)) }
     #[inline]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+    fn parameter_range(&self) -> ParameterRange {
         (Bound::Included(0.0), Bound::Excluded(2.0 * PI))
     }
 }
@@ -36,7 +36,7 @@ impl ParametricCurve for UnitCircle<Point3> {
     #[inline]
     fn period(&self) -> Option<f64> { Some(2.0 * PI) }
     #[inline]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+    fn parameter_range(&self) -> ParameterRange {
         (Bound::Included(0.0), Bound::Excluded(2.0 * PI))
     }
 }

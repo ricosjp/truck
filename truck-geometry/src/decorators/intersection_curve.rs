@@ -147,7 +147,7 @@ where
         unimplemented!();
     }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.leader.parameter_range() }
+    fn parameter_range(&self) -> ParameterRange { self.leader.parameter_range() }
 }
 
 impl<C, S> BoundedCurve for IntersectionCurve<C, S>
