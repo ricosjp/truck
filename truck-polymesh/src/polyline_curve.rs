@@ -56,7 +56,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
     #[inline(always)]
     fn der2(&self, _: f64) -> P::Diff { P::Diff::zero() }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+    fn parameter_range(&self) -> ParameterRange {
         (
             Bound::Included(0.0),
             Bound::Included(self.len() as f64 - 1.0),

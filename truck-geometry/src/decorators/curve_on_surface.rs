@@ -34,7 +34,7 @@ where
         self.surface.uder(pt[0], pt[1]) * der[0] + self.surface.vder(pt[0], pt[1]) * der[1]
     }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.curve.parameter_range() }
+    fn parameter_range(&self) -> ParameterRange { self.curve.parameter_range() }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
         let pt = self.curve.subs(t);

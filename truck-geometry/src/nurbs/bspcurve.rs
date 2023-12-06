@@ -374,7 +374,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
             * (k - 1) as f64
     }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+    fn parameter_range(&self) -> ParameterRange {
         (
             Bound::Included(self.knot_vec[0]),
             Bound::Included(self.knot_vec[self.knot_vec.len() - 1]),

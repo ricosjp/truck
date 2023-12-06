@@ -46,9 +46,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for Line<P> {
     fn der2(&self, _: f64) -> Self::Vector { Self::Vector::zero() }
     /// Return `0.0..=1.0` i.e. we regard it as a segment
     #[inline]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
-        (Bound::Included(0.0), Bound::Included(1.0))
-    }
+    fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Included(1.0)) }
 }
 
 impl<P: ControlPoint<f64>> BoundedCurve for Line<P> {}

@@ -1,5 +1,4 @@
 use super::*;
-type ParameterRange = ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>));
 
 /// Parametric surface
 pub trait ParametricSurface: Clone {
@@ -21,7 +20,7 @@ pub trait ParametricSurface: Clone {
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
     /// The range of the parameter of the surface.
     #[inline(always)]
-    fn parameter_range(&self) -> ParameterRange {
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         use Bound::Unbounded as X;
         ((X, X), (X, X))
     }
@@ -49,9 +48,7 @@ impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
-        (*self).parameter_range()
-    }
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (*self).parameter_range() }
     #[inline(always)]
     fn u_period(&self) -> Option<f64> { (*self).u_period() }
     #[inline(always)]
@@ -74,9 +71,7 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
-        (**self).parameter_range()
-    }
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (**self).parameter_range() }
     #[inline(always)]
     fn u_period(&self) -> Option<f64> { (**self).u_period() }
     #[inline(always)]
@@ -180,7 +175,7 @@ impl ParametricSurface for () {
     fn uuder(&self, _: f64, _: f64) -> Self::Vector {}
     fn uvder(&self, _: f64, _: f64) -> Self::Vector {}
     fn vvder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
             (Bound::Included(0.0), Bound::Included(1.0)),
             (Bound::Included(0.0), Bound::Included(1.0)),
