@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- type def `ParameterRange`.
 - Change the STEP output precision.
 - Add some options to `step-to-mesh`.
 - `SearchNearestParameter` for `Processor`.

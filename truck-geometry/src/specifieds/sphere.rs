@@ -45,7 +45,7 @@ impl ParametricSurface for Sphere {
         -self.radius * f64::sin(u) * Vector3::new(f64::cos(v), f64::sin(v), 0.0)
     }
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
             (Bound::Included(0.0), Bound::Included(PI)),
             (Bound::Included(0.0), Bound::Excluded(2.0 * PI)),

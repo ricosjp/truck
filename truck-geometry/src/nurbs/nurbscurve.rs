@@ -545,7 +545,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for Nurb
         pt.rat_der2(der, der2)
     }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
+    fn parameter_range(&self) -> ParameterRange {
         (
             Bound::Included(self.0.knot_vec[0]),
             Bound::Included(self.0.knot_vec[self.0.knot_vec.len() - 1]),

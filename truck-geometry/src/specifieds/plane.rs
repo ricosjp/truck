@@ -143,7 +143,7 @@ impl ParametricSurface for Plane {
     fn vvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
     /// as square
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         let range = (Bound::Included(0.0), Bound::Included(1.0));
         (range, range)
     }

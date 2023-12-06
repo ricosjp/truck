@@ -1,4 +1,3 @@
-use std::ops::Bound;
 use truck_base::cgmath64::*;
 use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
@@ -78,7 +77,7 @@ where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
     #[inline(always)]
     fn der2(&self, t: f64) -> Vector3 { self.ic.der2(t) }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.ic.parameter_range() }
+    fn parameter_range(&self) -> ParameterRange { self.ic.parameter_range() }
 }
 
 impl<S> BoundedCurve for IntersectionCurveWithParameters<S> where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3> {}

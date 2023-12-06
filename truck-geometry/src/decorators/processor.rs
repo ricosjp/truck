@@ -113,7 +113,7 @@ where
         self.transform.transform_vector(self.entity.der2(t))
     }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { self.entity.parameter_range() }
+    fn parameter_range(&self) -> ParameterRange { self.entity.parameter_range() }
     #[inline(always)]
     fn period(&self) -> Option<f64> { self.entity.period() }
 }
@@ -178,7 +178,7 @@ where
         }
     }
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         let (urange, vrange) = self.entity.parameter_range();
         match self.orientation {
             true => (urange, vrange),

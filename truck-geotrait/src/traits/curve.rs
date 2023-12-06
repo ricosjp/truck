@@ -1,3 +1,4 @@
+use super::ParameterRange;
 use std::{fmt::Debug, ops::Bound};
 use thiserror::Error;
 use truck_base::{
@@ -20,7 +21,7 @@ pub trait ParametricCurve: Clone {
     fn der2(&self, t: f64) -> Self::Vector;
     /// Returns default parameter range
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (Bound::Unbounded, Bound::Unbounded) }
+    fn parameter_range(&self) -> ParameterRange { (Bound::Unbounded, Bound::Unbounded) }
     /// `None` in default implementation; `Some(period)` if periodic.
     #[inline(always)]
     fn period(&self) -> Option<f64> { None }
@@ -66,9 +67,7 @@ impl ParametricCurve for () {
     fn subs(&self, _: f64) -> Self::Point {}
     fn der(&self, _: f64) -> Self::Vector {}
     fn der2(&self, _: f64) -> Self::Vector {}
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
-        (Bound::Included(0.0), Bound::Included(1.0))
-    }
+    fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Included(1.0)) }
 }
 
 impl BoundedCurve for () {}
@@ -85,9 +84,7 @@ impl ParametricCurve for (usize, usize) {
     }
     fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
     fn der2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) {
-        (Bound::Included(0.0), Bound::Included(1.0))
-    }
+    fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Included(1.0)) }
 }
 
 /// Implementation for the test of topological methods.
@@ -102,7 +99,7 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (*self).parameter_range() }
+    fn parameter_range(&self) -> ParameterRange { (*self).parameter_range() }
     #[inline(always)]
     fn period(&self) -> Option<f64> { (*self).period() }
 }
@@ -123,7 +120,7 @@ impl<C: ParametricCurve> ParametricCurve for Box<C> {
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (**self).der2(t) }
     #[inline(always)]
-    fn parameter_range(&self) -> (Bound<f64>, Bound<f64>) { (**self).parameter_range() }
+    fn parameter_range(&self) -> ParameterRange { (**self).parameter_range() }
     #[inline(always)]
     fn period(&self) -> Option<f64> { (**self).period() }
 }

@@ -229,7 +229,7 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
         mat.transform_vector(self.curve.der(u))
     }
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
             self.curve.parameter_range(),
             (Bound::Included(0.0), Bound::Excluded(2.0 * PI)),

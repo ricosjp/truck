@@ -2,7 +2,6 @@ use super::*;
 use crate::errors::Error;
 use std::iter::FusedIterator;
 use std::ops::*;
-type ParameterRange = ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>));
 
 impl<P> BSplineSurface<P> {
     /// constructor.
@@ -279,7 +278,7 @@ impl<P> BSplineSurface<P> {
 
     /// The range of the parameter of the surface.
     #[inline(always)]
-    pub fn parameter_range(&self) -> ParameterRange {
+    pub fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
             (
                 Bound::Included(self.knot_vecs.0[0]),
@@ -840,9 +839,7 @@ impl<P: ControlPoint<f64>> ParametricSurface for BSplineSurface<P> {
             * degree1 as f64
     }
     #[inline(always)]
-    fn parameter_range(&self) -> ((Bound<f64>, Bound<f64>), (Bound<f64>, Bound<f64>)) {
-        self.parameter_range()
-    }
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) { self.parameter_range() }
 }
 
 impl<V: Tolerance> BSplineSurface<V> {
