@@ -3,12 +3,28 @@
 use crate::traits::*;
 use truck_base::{cgmath64::*, hash::HashGen, tolerance::*};
 
-#[cfg(all(test, debug_assertions))]
-macro_rules! newton_log_error {
-    ($log: expr) => {
-        eprintln!("Newton method is not converges");
-        $log.into_iter().for_each(|t| eprintln!("{:?}", t));
-    };
+/// A structure that stores logs for debugging.
+#[doc(hidden)]
+#[derive(Clone, Debug, Default)]
+pub struct NewtonLog<T>(
+    #[cfg(all(test, debug_assertions))] Vec<T>,
+    std::marker::PhantomData<T>,
+);
+
+impl<T: std::fmt::Debug> NewtonLog<T> {
+    #[inline(always)]
+    fn push(&mut self, _x: T) {
+        #[cfg(all(test, debug_assertions))]
+        self.0.push(_x)
+    }
+    #[inline(always)]
+    fn print_error(self) {
+        #[cfg(all(test, debug_assertions))]
+        {
+            eprintln!("Newton method is not converges");
+            self.0.into_iter().for_each(|t| eprintln!("{:?}", t));
+        }
+    }
 }
 
 /// curve algorithms

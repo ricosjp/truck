@@ -33,10 +33,8 @@ where
     C::Point: EuclideanSpace<Scalar = f64, Diff = C::Vector>,
     C::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
-    #[cfg(all(test, debug_assertions))]
-    let mut log = Vec::new();
+    let mut log = NewtonLog::default();
     for _ in 0..=trials {
-        #[cfg(all(test, debug_assertions))]
         log.push(hint);
         let pt = curve.subs(hint);
         let der = curve.der(hint);
@@ -50,8 +48,7 @@ where
             hint -= f / fprime;
         }
     }
-    #[cfg(all(test, debug_assertions))]
-    newton_log_error!(log);
+    log.print_error();
     None
 }
 
