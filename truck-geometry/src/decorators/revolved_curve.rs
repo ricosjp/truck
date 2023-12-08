@@ -48,23 +48,26 @@ impl Revolution {
         let r = p - self.origin;
         let z = r.dot(self.axis);
         let h = r - z * self.axis;
-        Point2::new(z, h.magnitude2())
+        Point2::new(z, h.magnitude())
     }
     #[inline(always)]
     fn proj_vector(&self, p: Point3, v: Vector3) -> Vector2 {
+        let r = self.proj_point(p).y;
         let vz = v.dot(self.axis);
         let vxy = v - vz * self.axis;
-        let vq_2 = (p - self.origin).dot(vxy);
-        Vector2::new(vz, 2.0 * vq_2)
+        let vq = (p - self.origin).dot(vxy) / r;
+        Vector2::new(vz, vq)
     }
     #[inline(always)]
     fn proj_vector2(&self, p: Point3, v: Vector3, v2: Vector3) -> Vector2 {
+        let r = self.proj_point(p).y;
         let v2z = v2.dot(self.axis);
         let v2xy = v2 - v2z * self.axis;
         let vz = v.dot(self.axis);
         let vxy = v - vz * self.axis;
-        let v2q_2 = vxy.dot(vxy) + (p - self.origin).dot(v2xy);
-        Vector2::new(v2z, 2.0 * v2q_2)
+        let a = (vxy.dot(vxy) + (p - self.origin).dot(v2xy)) / r;
+        let b = f64::powi((p - self.origin).dot(vxy), 2) / (r * r * r);
+        Vector2::new(v2z, a - b)
     }
     #[inline(always)]
     fn proj_angle(&self, p: Point3, q: Point3) -> f64 {
@@ -75,6 +78,100 @@ impl Revolution {
         match hp.cross(hq).dot(self.axis) < 0.0 {
             false => t,
             true => 2.0 * PI - t,
+        }
+    }
+}
+
+impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
+    type Point = Point3;
+    type Vector = Vector3;
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Point3 {
+        let mat = self.revolution.point_rotation_matrix(v);
+        mat.transform_point(self.curve.subs(u))
+    }
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Vector3 {
+        let mat = self.revolution.vector_rotation_matrix(v);
+        mat.transform_vector(self.curve.der(u))
+    }
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Vector3 {
+        let pt = self.curve.subs(u);
+        let radius = self.axis().cross(pt - self.origin());
+        let mat = self.revolution.vector_rotation_matrix(v);
+        mat.transform_vector(radius)
+    }
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Vector3 {
+        let mat = self.revolution.vector_rotation_matrix(v);
+        mat.transform_vector(self.curve.der2(u))
+    }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector3 {
+        let pt = self.curve.subs(u);
+        let z = self.revolution.proj_point(pt).x;
+        let radius = pt - self.origin() - z * self.axis();
+        let mat = self.revolution.vector_rotation_matrix(v);
+        -mat.transform_vector(radius)
+    }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector3 {
+        let mat = self.revolution.derivation_rotation_matrix(v);
+        mat.transform_vector(self.curve.der(u))
+    }
+    #[inline(always)]
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
+        (
+            self.curve.parameter_range(),
+            (Bound::Included(0.0), Bound::Excluded(2.0 * PI)),
+        )
+    }
+    #[inline(always)]
+    fn u_period(&self) -> Option<f64> { self.curve.period() }
+    #[inline(always)]
+    fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
+}
+
+impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve<C> {
+    #[inline(always)]
+    fn normal(&self, u: f64, v: f64) -> Vector3 {
+        let (u0, u1) = self.curve.range_tuple();
+        let (uder, vder) = if u.near(&u0) {
+            let pt = self.curve.subs(u);
+            let radius = self.axis().cross(pt - self.origin());
+            if radius.so_small() {
+                let uder = self.curve.der(u);
+                (uder, self.axis().cross(uder))
+            } else {
+                (self.uder(u, v), self.vder(u, v))
+            }
+        } else if u.near(&u1) {
+            let pt = self.curve.subs(u);
+            let radius = self.axis().cross(pt - self.origin());
+            if radius.so_small() {
+                let uder = self.curve.der(u);
+                (uder, uder.cross(self.axis()))
+            } else {
+                (self.uder(u, v), self.vder(u, v))
+            }
+        } else {
+            (self.uder(u, v), self.vder(u, v))
+        };
+        uder.cross(vder).normalize()
+    }
+}
+
+impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {}
+
+impl<C: Clone> Invertible for RevolutedCurve<C> {
+    #[inline(always)]
+    fn invert(&mut self) { self.revolution.invert() }
+    #[inline(always)]
+    fn inverse(&self) -> Self {
+        RevolutedCurve {
+            curve: self.curve.clone(),
+            revolution: self.revolution.inverse(),
         }
     }
 }
@@ -118,8 +215,12 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D1> for ProjectedCurve
     ) -> Option<f64> {
         let hint = match hint.into() {
             SPHint1D::Parameter(t) => t,
-            SPHint1D::Range(x, y) => algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION),
-            SPHint1D::None => algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION),
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_parameter(self, point, hint, trials)
     }
@@ -135,8 +236,12 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D1> for Project
     ) -> Option<f64> {
         let hint = match hint.into() {
             SPHint1D::Parameter(t) => t,
-            SPHint1D::Range(x, y) => algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION),
-            SPHint1D::None => algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION),
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
+            }
         };
         algo::curve::search_nearest_parameter(self, point, hint, trials)
     }
@@ -246,13 +351,17 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Revolut
         trials: usize,
     ) -> Option<(f64, f64)> {
         let (t0, t1) = self.curve.range_tuple();
-        if self.is_front_fixed() && self.curve.front().near(&point) {
+        let on_axis = move |o: Point3, normal: Vector3| {
+            let op = point - o;
+            op.cross(self.revolution.axis).so_small() && op.dot(normal) >= 0.0
+        };
+        if self.is_front_fixed() && on_axis(self.curve.front(), self.normal(t0, 0.0)) {
             match hint.into() {
                 SPHint2D::Parameter(_, y) => Some((t0, y)),
                 SPHint2D::Range((_, y), _) => Some((t0, y)),
                 SPHint2D::None => Some((t0, 0.0)),
             }
-        } else if self.is_back_fixed() && self.curve.back().near(&point) {
+        } else if self.is_back_fixed() && on_axis(self.curve.back(), self.normal(t1, 0.0)) {
             match hint.into() {
                 SPHint2D::Parameter(_, y) => Some((t1, y)),
                 SPHint2D::Range(_, (_, y)) => Some((t1, y)),
@@ -276,100 +385,6 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Revolut
     }
 }
 
-impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
-    type Point = Point3;
-    type Vector = Vector3;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 {
-        let mat = self.revolution.point_rotation_matrix(v);
-        mat.transform_point(self.curve.subs(u))
-    }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector3 {
-        let mat = self.revolution.vector_rotation_matrix(v);
-        mat.transform_vector(self.curve.der(u))
-    }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector3 {
-        let pt = self.curve.subs(u);
-        let radius = self.axis().cross(pt - self.origin());
-        let mat = self.revolution.vector_rotation_matrix(v);
-        mat.transform_vector(radius)
-    }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 {
-        let mat = self.revolution.vector_rotation_matrix(v);
-        mat.transform_vector(self.curve.der2(u))
-    }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 {
-        let pt = self.curve.subs(u);
-        let z = self.revolution.proj_point(pt).x;
-        let radius = pt - self.origin() - z * self.axis();
-        let mat = self.revolution.vector_rotation_matrix(v);
-        -mat.transform_vector(radius)
-    }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 {
-        let mat = self.revolution.derivation_rotation_matrix(v);
-        mat.transform_vector(self.curve.der(u))
-    }
-    #[inline(always)]
-    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
-        (
-            self.curve.parameter_range(),
-            (Bound::Included(0.0), Bound::Excluded(2.0 * PI)),
-        )
-    }
-    #[inline(always)]
-    fn u_period(&self) -> Option<f64> { self.curve.period() }
-    #[inline(always)]
-    fn v_period(&self) -> Option<f64> { Some(2.0 * PI) }
-}
-
-impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve<C> {
-    #[inline(always)]
-    fn normal(&self, u: f64, v: f64) -> Vector3 {
-        let (u0, u1) = self.curve.range_tuple();
-        let (uder, vder) = if u.near(&u0) {
-            let pt = self.curve.subs(u);
-            let radius = self.axis().cross(pt - self.origin());
-            if radius.so_small() {
-                let uder = self.curve.der(u);
-                (uder, self.axis().cross(uder))
-            } else {
-                (self.uder(u, v), self.vder(u, v))
-            }
-        } else if u.near(&u1) {
-            let pt = self.curve.subs(u);
-            let radius = self.axis().cross(pt - self.origin());
-            if radius.so_small() {
-                let uder = self.curve.der(u);
-                (uder, uder.cross(self.axis()))
-            } else {
-                (self.uder(u, v), self.vder(u, v))
-            }
-        } else {
-            (self.uder(u, v), self.vder(u, v))
-        };
-        uder.cross(vder).normalize()
-    }
-}
-
-impl<C: ParametricCurve3D + BoundedCurve> BoundedSurface for RevolutedCurve<C> {}
-
-impl<C: Clone> Invertible for RevolutedCurve<C> {
-    #[inline(always)]
-    fn invert(&mut self) { self.revolution.invert() }
-    #[inline(always)]
-    fn inverse(&self) -> Self {
-        RevolutedCurve {
-            curve: self.curve.clone(),
-            revolution: self.revolution.inverse(),
-        }
-    }
-}
-
 fn sub_include<C0, C1>(
     surface: &RevolutedCurve<C0>,
     curve: &C1,
@@ -380,7 +395,7 @@ where
     C0: ParametricCurve3D + BoundedCurve,
     C1: ParametricCurve3D + BoundedCurve,
 {
-    let first = ParametricCurve::subs(curve, knots[0]);
+    let first = curve.subs(knots[0]);
     let mut hint = match surface.search_parameter(first, None, INCLUDE_CURVE_TRIALS) {
         Some(hint) => hint,
         None => return false,
