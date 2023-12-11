@@ -1,5 +1,5 @@
 use crate::*;
-use truck_meshalgo::tessellation::{MeshableShape, MeshedShape};
+use truck_meshalgo::tessellation::*;
 use truck_stepio::r#in::alias::*;
 use truck_topology::compress::*;
 
@@ -26,8 +26,8 @@ impl ShapeFromStep {
     pub fn to_polygon(&self, tol: f64) -> crate::PolygonMesh {
         use SubShapeFromStep::*;
         match &self.0 {
-            Shell(x) => x.triangulation(tol).to_polygon().into(),
-            Solid(x) => x.triangulation(tol).to_polygon().into(),
+            Shell(x) => x.robust_triangulation(tol).to_polygon().into(),
+            Solid(x) => x.robust_triangulation(tol).to_polygon().into(),
         }
     }
 }
