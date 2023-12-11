@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Robust tessellation in adhoc viewer.
 - New `SearchNearestParameter` for `RevolutedCurve`.
 - type def `ParameterRange`.
 - Change the STEP output precision.
