@@ -53,7 +53,7 @@ pub(super) fn shell_tessellation<'a, C, S, F>(
 where
     C: PolylineableCurve + 'a,
     S: PreMeshableSurface + 'a,
-    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Sync + Send,
+    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable,
 {
     let vmap: HashMap<_, _> = shell
         .vertex_par_iter()
@@ -79,35 +79,33 @@ where
     };
     let create_boundary =
         |wire: &Wire<Point3, C>| -> Wire<_, _> { wire.edge_iter().map(create_edge).collect() };
-    shell
-        .face_par_iter()
-        .map(move |face| {
-            let wires: Vec<_> = face
-                .absolute_boundaries()
-                .iter()
-                .map(create_boundary)
-                .collect();
-            let surface = face.surface();
-            let mut polyline = Polyline::default();
-            let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
-                polyline.add_wire(&surface, wire.iter().map(Edge::oriented_curve), &sp)
-            }) {
-                true => Some(trimming_tessellation(&surface, &polyline, tol)),
-                false => None,
-            };
-            let mut new_face = Face::debug_new(wires, polygon);
-            if !face.orientation() {
-                new_face.invert();
-            }
-            new_face
-        })
-        .collect()
+    let create_face = move |face: &Face<Point3, C, S>| -> Face<_, _, _> {
+        let wires: Vec<_> = face
+            .absolute_boundaries()
+            .iter()
+            .map(create_boundary)
+            .collect();
+        let surface = face.surface();
+        let mut polyline = Polyline::default();
+        let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
+            polyline.add_wire(&surface, wire.iter().map(Edge::oriented_curve), &sp)
+        }) {
+            true => Some(trimming_tessellation(&surface, &polyline, tol)),
+            false => None,
+        };
+        let mut new_face = Face::debug_new(wires, polygon);
+        if !face.orientation() {
+            new_face.invert();
+        }
+        new_face
+    };
+    shell.face_par_iter().map(create_face).collect()
 }
 
 /// Tessellates faces
 #[allow(dead_code)]
 pub(super) fn shell_tessellation_single_thread<'a, C, S, F>(
-    shell: &Shell<Point3, C, S>,
+    shell: &'a Shell<Point3, C, S>,
     tol: f64,
     sp: F,
 ) -> MeshedShell
@@ -121,7 +119,7 @@ where
         move |v| v.mapped(Point3::clone),
     );
     let mut edge_map = EntryMap::new(
-        move |edge: &Edge<Point3, C>| edge.id(),
+        move |edge: &'a Edge<Point3, C>| edge.id(),
         move |edge| {
             let vf = edge.absolute_front();
             let v0 = vmap.entry_or_insert(vf).clone();
@@ -132,39 +130,37 @@ where
             Edge::debug_new(&v0, &v1, poly)
         },
     );
-    shell
-        .face_iter()
-        .map(|face| {
-            let wires: Vec<_> = face
-                .absolute_boundaries()
-                .iter()
-                .map(|wire| {
-                    wire.edge_iter()
-                        .map(|edge| {
-                            let new_edge = edge_map.entry_or_insert(edge);
-                            match edge.orientation() {
-                                true => new_edge.clone(),
-                                false => new_edge.inverse(),
-                            }
-                        })
-                        .collect()
-                })
-                .collect();
-            let surface = face.surface();
-            let mut polyline = Polyline::default();
-            let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
-                polyline.add_wire(&surface, wire.iter().map(|edge| edge.oriented_curve()), &sp)
-            }) {
-                true => Some(trimming_tessellation(&surface, &polyline, tol)),
-                false => None,
-            };
-            let mut new_face = Face::debug_new(wires, polygon);
-            if !face.orientation() {
-                new_face.invert();
-            }
-            new_face
-        })
-        .collect()
+    let mut create_edge = move |edge: &'a Edge<Point3, C>| -> Edge<_, _> {
+        let new_edge = edge_map.entry_or_insert(edge);
+        match edge.orientation() {
+            true => new_edge.clone(),
+            false => new_edge.inverse(),
+        }
+    };
+    let mut create_boundary = move |wire: &'a Wire<Point3, C>| -> Wire<_, _> {
+        wire.edge_iter().map(&mut create_edge).collect()
+    };
+    let create_face = move |face: &'a Face<Point3, C, S>| -> Face<_, _, _> {
+        let wires: Vec<_> = face
+            .absolute_boundaries()
+            .iter()
+            .map(&mut create_boundary)
+            .collect();
+        let surface = face.surface();
+        let mut polyline = Polyline::default();
+        let polygon = match wires.iter().all(|wire: &Wire<_, _>| {
+            polyline.add_wire(&surface, wire.iter().map(|edge| edge.oriented_curve()), &sp)
+        }) {
+            true => Some(trimming_tessellation(&surface, &polyline, tol)),
+            false => None,
+        };
+        let mut new_face = Face::debug_new(wires, polygon);
+        if !face.orientation() {
+            new_face.invert();
+        }
+        new_face
+    };
+    shell.face_iter().map(create_face).collect()
 }
 
 /// Tessellates faces
@@ -176,7 +172,7 @@ pub(super) fn cshell_tessellation<'a, C, S, F>(
 where
     C: PolylineableCurve + 'a,
     S: PreMeshableSurface + 'a,
-    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Sync + Send,
+    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable,
 {
     let vertices = shell.vertices.clone();
     let tessellate_edge = |edge: &CompressedEdge<C>| {
@@ -204,9 +200,8 @@ where
                     _ => None,
                 }
             }
-            let urange = range_tuple(surface.parameter_range().0);
-            let vrange = range_tuple(surface.parameter_range().1);
-            let surface = match (urange, vrange) {
+            let (urange, vrange) = surface.parameter_range();
+            let surface = match (range_tuple(urange), range_tuple(vrange)) {
                 (Some(urange), Some(vrange)) => {
                     Some(StructuredMesh::from_surface(surface, (urange, vrange), tol).destruct())
                 }

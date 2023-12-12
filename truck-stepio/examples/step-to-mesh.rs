@@ -1,6 +1,7 @@
 //! Parse STEP data, extract shape, and meshing.
 
 use clap::Parser;
+use ruststep::tables::EntityTable;
 use std::path::Path;
 use truck_meshalgo::prelude::*;
 use truck_stepio::r#in::*;
@@ -21,6 +22,10 @@ struct Args {
     /// Ignored when outputting vtk files
     #[arg(long("condition-check"))]
     condition_check: bool,
+    /// output the STEP parse result by json
+    /// When the string "output" is entered, the registered `#i` shell is output "output-i.json".
+    #[arg(long("shape-json"), default_value = "output")]
+    shape_json: Option<String>,
 }
 
 fn main() {
@@ -29,19 +34,30 @@ fn main() {
         output_mesh_file,
         only_edge,
         condition_check,
+        shape_json,
     } = Args::parse();
 
     println!("reading file...");
     let step_file = std::fs::read_to_string(&input_step_file).unwrap();
     let exchange = ruststep::parser::parse(&step_file).unwrap();
     let table = Table::from_data_section(&exchange.data[0]);
+    let bbd = BoundingBox::from_iter(
+        EntityTable::<CartesianPointHolder>::owned_iter(&table).map(|c| Point3::from(&c.unwrap())),
+    );
+    let diameter = bbd.diameter();
+    println!("{diameter}");
     println!("meshing...");
     let polyshells = table
         .shell
         .iter()
-        .map(|shell| {
-            let shell = table.to_compressed_shell(shell.1).unwrap();
-            shell.robust_triangulation(0.05)
+        .map(|(idx, shell)| {
+            let shell = table.to_compressed_shell(shell).unwrap();
+            if let Some(output) = &shape_json {
+                let content = serde_json::to_string_pretty(&shell).unwrap();
+                let file_name = format!("{output}-{idx}.json");
+                std::fs::write(&file_name, &content).unwrap();
+            }
+            shell.robust_triangulation(0.01 * diameter)
         })
         .collect::<Vec<_>>();
 
