@@ -2112,10 +2112,10 @@ impl EdgeCurve {
             CurveAny::Pcurve(c) => {
                 let surface: Surface = (&c.basis_surface).try_into()?;
                 let u = surface
-                    .search_parameter(p, None, 100)
+                    .search_nearest_parameter(p, None, 100)
                     .ok_or_else(|| "the point is not on surface".to_string())?;
                 let v = surface
-                    .search_parameter(q, None, 100)
+                    .search_nearest_parameter(q, None, 100)
                     .ok_or_else(|| "the point is not on surface".to_string())?;
                 let curve2d = c
                     .reference_to_curve

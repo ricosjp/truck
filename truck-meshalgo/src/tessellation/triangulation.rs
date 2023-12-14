@@ -275,33 +275,25 @@ impl Polyline {
             let mut hint = None;
             Vec::from(poly_edge).into_iter().all(|pt| {
                 hint = sp(surface, pt, hint);
+                fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
+                    let f = move |x: &f64| f64::abs(x - previous);
+                    move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
+                }
                 if let (Some((ref mut hint, _)), Some(up), Some((previous, _))) =
                     (&mut hint, up, previous)
                 {
-                    let d0 = f64::abs(*hint - previous);
-                    let d1 = f64::abs(*hint - up - previous);
-                    let d2 = f64::abs(*hint + up - previous);
-                    *hint = match (d0 < d1, d1 < d2, d2 < d0) {
-                        (false, true, _) => *hint - up,
-                        (_, false, true) => *hint + up,
-                        (true, _, false) => *hint,
-                        (false, false, false) => *hint,
-                        (true, true, true) => unreachable!(),
-                    }
+                    *hint = (-2..=2)
+                        .map(|i| *hint + i as f64 * up)
+                        .min_by(abs_diff(previous))
+                        .unwrap();
                 }
                 if let (Some((_, ref mut hint)), Some(vp), Some((_, previous))) =
                     (&mut hint, vp, previous)
                 {
-                    let d0 = f64::abs(*hint - previous);
-                    let d1 = f64::abs(*hint - vp - previous);
-                    let d2 = f64::abs(*hint + vp - previous);
-                    *hint = match (d0 < d1, d1 < d2, d2 < d0) {
-                        (false, true, _) => *hint - vp,
-                        (_, false, true) => *hint + vp,
-                        (true, _, false) => *hint,
-                        (false, false, false) => *hint,
-                        (true, true, true) => unreachable!(),
-                    }
+                    *hint = (-2..=2)
+                        .map(|i| *hint + i as f64 * vp)
+                        .min_by(abs_diff(previous))
+                        .unwrap();
                 }
                 previous = hint;
                 hint.map(|hint| self.positions.push(hint.into())).is_some()
@@ -425,7 +417,9 @@ fn triangulation_into_polymesh<'a>(
                 (tri[0].x + tri[1].x + tri[2].x) / 3.0,
                 (tri[0].y + tri[1].y + tri[2].y) / 3.0,
             );
-            polyline.include(c)
+            let area = (tri[1].x - tri[0].x) * (tri[2].y - tri[0].y)
+                - (tri[1].y - tri[0].y) * (tri[2].x - tri[0].x);
+            polyline.include(c) && !area.so_small2()
         })
         .map(|tri| {
             let idcs = [

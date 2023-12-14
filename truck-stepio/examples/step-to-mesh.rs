@@ -57,7 +57,7 @@ fn main() {
                 let file_name = format!("{output}-{idx}.json");
                 std::fs::write(&file_name, &content).unwrap();
             }
-            shell.robust_triangulation(0.01 * diameter)
+            shell.robust_triangulation(0.005 * diameter)
         })
         .collect::<Vec<_>>();
 
@@ -81,7 +81,9 @@ fn output_obj(
     let mut polymesh = PolygonMesh::default();
     polyshells.iter().for_each(|shell| {
         let mut poly = shell.to_polygon();
-        poly.put_together_same_attrs().remove_unused_attrs();
+        poly.remove_degenerate_faces()
+            .put_together_same_attrs()
+            .remove_unused_attrs();
         if condition_check {
             println!("{:?}", poly.shell_condition());
         }
