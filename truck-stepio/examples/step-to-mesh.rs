@@ -45,7 +45,6 @@ fn main() {
         EntityTable::<CartesianPointHolder>::owned_iter(&table).map(|c| Point3::from(&c.unwrap())),
     );
     let diameter = bbd.diameter();
-    println!("{diameter}");
     println!("meshing...");
     let polyshells = table
         .shell

@@ -3,6 +3,7 @@
 use super::*;
 use crate::filters::NormalFilters;
 use crate::Point2;
+use array_macro::array;
 use rustc_hash::FxHashMap as HashMap;
 use truck_base::entry_map::FxEntryMap as EntryMap;
 use truck_topology::Vertex as TVertex;
@@ -412,26 +413,16 @@ fn triangulation_into_polymesh<'a>(
     let tri_faces: Vec<[StandardVertex; 3]> = triangles
         .map(|tri| tri.vertices())
         .filter(|tri| {
-            let tri = [*tri[0].as_ref(), *tri[1].as_ref(), *tri[2].as_ref()];
-            let c = Point2::new(
-                (tri[0].x + tri[1].x + tri[2].x) / 3.0,
-                (tri[0].y + tri[1].y + tri[2].y) / 3.0,
-            );
-            let area = (tri[1].x - tri[0].x) * (tri[2].y - tri[0].y)
-                - (tri[1].y - tri[0].y) * (tri[2].x - tri[0].x);
+            fn sp2cg(x: SPoint2) -> Point2 { Point2::from(<[f64; 2]>::from(x)) }
+            let tri = array![i => sp2cg(*tri[i].as_ref()); 3];
+            let (a, b) = (tri[1] - tri[0], tri[2] - tri[0]);
+            let c = tri[0] + (a + b) / 3.0;
+            let area = a.x * b.y - a.y * b.x;
             polyline.include(c) && !area.so_small2()
         })
         .map(|tri| {
-            let idcs = [
-                vmap[&tri[0].fix()],
-                vmap[&tri[1].fix()],
-                vmap[&tri[2].fix()],
-            ];
-            [
-                [idcs[0], idcs[0], idcs[0]].into(),
-                [idcs[1], idcs[1], idcs[1]].into(),
-                [idcs[2], idcs[2], idcs[2]].into(),
-            ]
+            let idcs = array![i => vmap[&tri[i].fix()]; 3];
+            array![i => [idcs[i], idcs[i], idcs[i]].into(); 3]
         })
         .collect();
     PolygonMesh::debug_new(
