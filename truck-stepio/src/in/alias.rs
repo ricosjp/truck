@@ -13,7 +13,7 @@ pub type Ellipse<P, M> = Processor<TrimmedCurve<UnitCircle<P>>, M>;
 pub type Hyperbola<P, M> = Processor<TrimmedCurve<UnitHyperbola<P>>, M>;
 pub type Parabola<P, M> = Processor<TrimmedCurve<UnitParabola<P>>, M>;
 pub type RevolutedLine = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
-pub type SphericalSurface = Processor<RevolutedCurve<TrimmedCurve<UnitCircle<Point3>>>, Matrix4>;
+pub type SphericalSurface = Processor<Sphere, Matrix4>;
 pub type CylindricalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type ToroidalSurface =
     Processor<RevolutedCurve<Processor<UnitCircle<Point3>, Matrix4>>, Matrix4>;

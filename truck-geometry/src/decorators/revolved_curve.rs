@@ -337,7 +337,11 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
             };
             let t = proj_curve.search_parameter(p, hint0, trials)?;
             let p = self.curve.subs(t);
-            Some((t, self.revolution.proj_angle(p, point)))
+            let ang = self.revolution.proj_angle(p, point);
+            match self.subs(t, ang).near(&point) {
+                true => Some((t, ang)),
+                false => None,
+            }
         }
     }
 }

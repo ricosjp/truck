@@ -204,6 +204,9 @@ where
 
     for (u, ub) in udiv.windows(2).zip(&mut divide_flag0) {
         for (v, vb) in vdiv.windows(2).zip(&mut divide_flag1) {
+            if *ub && *vb {
+                continue;
+            }
             let (u_gen, v_gen) = ((u[0] + u[1]) / 2.0, (v[0] + v[1]) / 2.0);
             let gen = surface.subs(u_gen, v_gen);
             let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);

@@ -318,8 +318,21 @@ impl PolyBoundary {
                 let q = curve[curve.len() - 1];
                 if let (Some((u0, u1)), Some((v0, v1))) = surface.try_range_tuple() {
                     if p.x < q.x - TOLERANCE {
-                        let del = p.x - u0;
+                        let del = f64::floor((p.x - u0) / (u1 - u0)) * (u1 - u0);
                         curve.iter_mut().for_each(|p| p.x -= del);
+                        if !curve[0].x.near(&u0) {
+                            if let Some(i) = curve.iter().position(|a| u1 < a.x) {
+                                let added = curve[i - 1]
+                                    + (u1 - curve[i - 1].x) / (curve[i].x - curve[i - 1].x)
+                                        * (curve[i] - curve[i - 1]);
+                                let mut curve1 = curve.split_off(i);
+                                curve.push(added);
+                                curve1.insert(0, added);
+                                curve1.iter_mut().for_each(|p| p.x -= u1 - u0);
+                                curve1.append(&mut curve);
+                                curve = curve1;
+                            }
+                        }
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u0, v1);
@@ -329,8 +342,21 @@ impl PolyBoundary {
                         let vec2 = polyline_on_surface(&surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.x < p.x - TOLERANCE {
-                        let del = q.x - u0;
+                        let del = f64::floor((q.x - u0) / (u1 - u0)) * (u1 - u0);
                         curve.iter_mut().for_each(|p| p.x -= del);
+                        if !curve[curve.len() - 1].x.near(&u0) {
+                            if let Some(i) = curve.iter().position(|a| u1 > a.x) {
+                                let added = curve[i - 1]
+                                    + (u1 - curve[i - 1].x) / (curve[i].x - curve[i - 1].x)
+                                        * (curve[i] - curve[i - 1]);
+                                let mut curve1 = curve.split_off(i);
+                                curve.push(added);
+                                curve1.insert(0, added);
+                                curve.iter_mut().for_each(|p| p.x -= u1 - u0);
+                                curve1.append(&mut curve);
+                                curve = curve1;
+                            }
+                        }
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u1, v0);
@@ -340,26 +366,52 @@ impl PolyBoundary {
                         let vec2 = polyline_on_surface(&surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if p.y < q.y - TOLERANCE {
-                        let del = p.y - v0;
+                        let del = f64::floor((p.y - v0) / (v1 - v0)) * (v1 - v0);
                         curve.iter_mut().for_each(|p| p.y -= del);
+                        if !curve[0].y.near(&v0) {
+                            if let Some(i) = curve.iter().position(|a| v1 < a.y) {
+                                let added = curve[i - 1]
+                                    + (v1 - curve[i - 1].y) / (curve[i].y - curve[i - 1].y)
+                                        * (curve[i] - curve[i - 1]);
+                                let mut curve1 = curve.split_off(i);
+                                curve.push(added);
+                                curve1.insert(0, added);
+                                curve1.iter_mut().for_each(|p| p.y -= v1 - v0);
+                                curve1.append(&mut curve);
+                                curve = curve1;
+                            }
+                        }
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
-                        let x = Point2::new(u1, v0);
-                        let y = Point2::new(u1, v1);
+                        let x = Point2::new(u0, v0);
+                        let y = Point2::new(u0, v1);
                         let vec0 = polyline_on_surface(&surface, q, y, tol);
                         let vec1 = polyline_on_surface(&surface, y, x, tol);
                         let vec2 = polyline_on_surface(&surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.y < p.y - TOLERANCE {
-                        let del = q.y - v0;
+                        let del = f64::floor((q.y - v0) / (v1 - v0)) * (v1 - v0);
                         curve.iter_mut().for_each(|p| p.y -= del);
+                        if !curve[curve.len() - 1].y.near(&v0) {
+                            if let Some(i) = curve.iter().position(|a| v1 > a.y) {
+                                let added = curve[i - 1]
+                                    + (v1 - curve[i - 1].y) / (curve[i].y - curve[i - 1].y)
+                                        * (curve[i] - curve[i - 1]);
+                                let mut curve1 = curve.split_off(i);
+                                curve.push(added);
+                                curve1.insert(0, added);
+                                curve.iter_mut().for_each(|p| p.y -= v1 - v0);
+                                curve1.append(&mut curve);
+                                curve = curve1;
+                            }
+                        }
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
-                        let x = Point2::new(u0, v1);
-                        let y = Point2::new(u0, v0);
-                        let vec0 = polyline_on_surface(&surface, q, x, tol);
-                        let vec1 = polyline_on_surface(&surface, x, y, tol);
-                        let vec2 = polyline_on_surface(&surface, y, p, tol);
+                        let x = Point2::new(u1, v1);
+                        let y = Point2::new(u1, v0);
+                        let vec0 = polyline_on_surface(&surface, q, y, tol);
+                        let vec1 = polyline_on_surface(&surface, y, x, tol);
+                        let vec2 = polyline_on_surface(&surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     }
                 }

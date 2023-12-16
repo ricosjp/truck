@@ -1494,6 +1494,10 @@ pub struct SphericalSurface {
 impl From<&SphericalSurface> for alias::SphericalSurface {
     #[inline(always)]
     fn from(ss: &SphericalSurface) -> Self {
+        let mat = Matrix4::from(&ss.position);
+        let sphere = Sphere::new(Point3::origin(), ss.radius);
+        Processor::new(sphere).transformed(mat)
+        /*
         let half_circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (-PI / 2.0, PI / 2.0));
         let sphere =
             RevolutedCurve::by_revolution(half_circle, Point3::origin(), Vector3::unit_y());
@@ -1509,6 +1513,7 @@ impl From<&SphericalSurface> for alias::SphericalSurface {
         processor.transform_by(mat2 * mat1 * mat0);
         processor.invert();
         processor
+        */
     }
 }
 
