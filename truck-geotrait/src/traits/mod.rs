@@ -10,6 +10,14 @@ pub use search_parameter::*;
 
 /// parameter range
 pub type ParameterRange = (Bound<f64>, Bound<f64>);
+fn bound2opt<T>(x: Bound<T>) -> Option<T> {
+    match x {
+        Bound::Included(x) => Some(x),
+        Bound::Excluded(x) => Some(x),
+        Bound::Unbounded => None,
+    }
+}
+const UNBOUNDED_ERROR: &str = "Parameter range is unbounded.";
 
 /// Oriented and reversible
 pub trait Invertible: Clone {

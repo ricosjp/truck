@@ -24,6 +24,16 @@ pub trait ParametricSurface: Clone {
         use Bound::Unbounded as X;
         ((X, X), (X, X))
     }
+    /// Return the ends of `parameter_range` by tuple.
+    /// If the range is unbounded, return `None``.
+    #[inline(always)]
+    fn try_range_tuple(&self) -> (Option<(f64, f64)>, Option<(f64, f64)>) {
+        let ((u0, u1), (v0, v1)) = self.parameter_range();
+        (
+            bound2opt(u0).and_then(move |u0| bound2opt(u1).map(move |u1| (u0, u1))),
+            bound2opt(v0).and_then(move |v0| bound2opt(v1).map(move |v1| (v0, v1))),
+        )
+    }
     /// `None` in default; `Some(period)` if periodic w.r.t. parameter u.
     #[inline(always)]
     fn u_period(&self) -> Option<f64> { None }
@@ -106,21 +116,11 @@ pub trait BoundedSurface: ParametricSurface {
     /// Return the ends of `parameter_range` by tuple.
     #[inline(always)]
     fn range_tuple(&self) -> ((f64, f64), (f64, f64)) {
-        let urange = match self.parameter_range().0 {
-            (Bound::Included(x), Bound::Included(y)) => (x, y),
-            (Bound::Excluded(x), Bound::Included(y)) => (x, y),
-            (Bound::Included(x), Bound::Excluded(y)) => (x, y),
-            (Bound::Excluded(x), Bound::Excluded(y)) => (x, y),
-            _ => unreachable!(),
-        };
-        let vrange = match self.parameter_range().1 {
-            (Bound::Included(x), Bound::Included(y)) => (x, y),
-            (Bound::Excluded(x), Bound::Included(y)) => (x, y),
-            (Bound::Included(x), Bound::Excluded(y)) => (x, y),
-            (Bound::Excluded(x), Bound::Excluded(y)) => (x, y),
-            _ => unreachable!(),
-        };
-        (urange, vrange)
+        let (urange, vrange) = self.try_range_tuple();
+        (
+            urange.expect(UNBOUNDED_ERROR),
+            vrange.expect(UNBOUNDED_ERROR),
+        )
     }
 }
 

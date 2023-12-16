@@ -1,5 +1,5 @@
-use super::ParameterRange;
-use std::{fmt::Debug, ops::Bound};
+use super::*;
+use std::fmt::Debug;
 use thiserror::Error;
 use truck_base::{
     assert_near,
@@ -22,6 +22,13 @@ pub trait ParametricCurve: Clone {
     /// Returns default parameter range
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (Bound::Unbounded, Bound::Unbounded) }
+    /// Return the ends of `parameter_range` by tuple.
+    /// If the range is unbounded, return `None``.
+    #[inline(always)]
+    fn try_range_tuple(&self) -> Option<(f64, f64)> {
+        let (x, y) = self.parameter_range();
+        bound2opt(x).and_then(move |x| bound2opt(y).map(move |y| (x, y)))
+    }
     /// `None` in default implementation; `Some(period)` if periodic.
     #[inline(always)]
     fn period(&self) -> Option<f64> { None }
@@ -31,32 +38,18 @@ pub trait ParametricCurve: Clone {
 pub trait BoundedCurve: ParametricCurve {
     /// Return the ends of `parameter_range` by tuple.
     #[inline(always)]
-    fn range_tuple(&self) -> (f64, f64) {
-        match self.parameter_range() {
-            (Bound::Included(x), Bound::Included(y)) => (x, y),
-            (Bound::Excluded(x), Bound::Included(y)) => (x, y),
-            (Bound::Included(x), Bound::Excluded(y)) => (x, y),
-            (Bound::Excluded(x), Bound::Excluded(y)) => (x, y),
-            _ => unreachable!(),
-        }
-    }
+    fn range_tuple(&self) -> (f64, f64) { self.try_range_tuple().expect(UNBOUNDED_ERROR) }
     /// The front end point of the curve.
     #[inline(always)]
     fn front(&self) -> Self::Point {
-        match self.parameter_range() {
-            (Bound::Included(x), _) => self.subs(x),
-            (Bound::Excluded(x), _) => self.subs(x),
-            (Bound::Unbounded, _) => unreachable!(),
-        }
+        let (x, _) = self.parameter_range();
+        self.subs(bound2opt(x).expect(UNBOUNDED_ERROR))
     }
     /// The back end point of the curve.
     #[inline(always)]
     fn back(&self) -> Self::Point {
-        match self.parameter_range() {
-            (_, Bound::Included(x)) => self.subs(x),
-            (_, Bound::Excluded(x)) => self.subs(x),
-            (_, Bound::Unbounded) => unreachable!(),
-        }
+        let (_, y) = self.parameter_range();
+        self.subs(bound2opt(y).expect(UNBOUNDED_ERROR))
     }
 }
 
