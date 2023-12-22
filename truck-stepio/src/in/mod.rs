@@ -1497,23 +1497,6 @@ impl From<&SphericalSurface> for alias::SphericalSurface {
         let mat = Matrix4::from(&ss.position);
         let sphere = Sphere::new(Point3::origin(), ss.radius);
         Processor::new(sphere).transformed(mat)
-        /*
-        let half_circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (-PI / 2.0, PI / 2.0));
-        let sphere =
-            RevolutedCurve::by_revolution(half_circle, Point3::origin(), Vector3::unit_y());
-        let mut processor = Processor::<_, Matrix4>::new(sphere);
-        let mat0 = Matrix4::from_cols(
-            Vector4::unit_x(),
-            Vector4::unit_z(),
-            -Vector4::unit_y(),
-            Vector4::unit_w(),
-        );
-        let mat1 = Matrix4::from_scale(ss.radius);
-        let mat2 = Matrix4::from(&ss.position);
-        processor.transform_by(mat2 * mat1 * mat0);
-        processor.invert();
-        processor
-        */
     }
 }
 
