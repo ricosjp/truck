@@ -221,9 +221,11 @@ where
                     + pt10.to_vec() * p * (1.0 - q)
                     + pt11.to_vec() * p * q,
             );
-            let u = u[0] * (1.0 - p) + u[1] * p;
-            let v = v[0] * (1.0 - q) + v[1] * q;
-            let far = surface.subs(u, v).distance(pt) > tol;
+            let u0 = u[0] * (1.0 - p) + u[1] * p;
+            let v0 = v[0] * (1.0 - q) + v[1] * q;
+            let p0 = surface.subs(u0, v0);
+            let far = p0.distance2(pt) > tol * tol;
+
             *ub = *ub || far;
             *vb = *vb || far;
         }

@@ -3,6 +3,7 @@
 use super::*;
 use crate::filters::NormalFilters;
 use crate::Point2;
+use analyzers::Topology;
 use array_macro::array;
 use itertools::Itertools;
 use rustc_hash::FxHashMap as HashMap;
@@ -185,14 +186,20 @@ where
                 true => Some(edges.get(edge_idx.index)?.curve.clone()),
                 false => Some(edges.get(edge_idx.index)?.curve.inverse()),
             };
-            let create_boundary = |wire: &Vec<CompressedEdgeIndex>| {
-                let wire_iter = wire.iter().filter_map(create_edge);
-                PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
+            let create_face_boundary = |wire: &Vec<CompressedEdgeIndex>| {
+                let iter = wire.iter().filter_map(create_edge);
+                create_face_boundary(iter)
             };
-            let preboundary: Option<Vec<_>> = boundaries.iter().map(create_boundary).collect();
+            let face_boundaries: Vec<_> = boundaries.iter().map(create_face_boundary).collect();
+            let preboundary: Option<Vec<_>> = face_boundaries
+                .iter()
+                .map(|wire| PolyBoundaryPiece::try_new(surface, wire, &sp))
+                .collect();
             let polygon: Option<PolygonMesh> = (|| {
                 let boundary = PolyBoundary::new(preboundary?, &surface, tol);
-                Some(trimming_tessellation(&surface, &boundary, tol))
+                let mut mesh = trimming_tessellation(&surface, &boundary, tol);
+                make_boundary_on_edge(&mut mesh, &face_boundaries);
+                Some(mesh)
             })();
             CompressedFace {
                 boundaries,
@@ -219,16 +226,20 @@ fn shell_create_polygon<S: PreMeshableSurface>(
     tol: f64,
     sp: impl Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
 ) -> Face<Point3, PolylineCurve, Option<PolygonMesh>> {
-    let preboundary = wires
+    let create_face_boundary = |wire: &Wire<_, _>| {
+        let iter = wire.iter().map(Edge::oriented_curve);
+        create_face_boundary(iter)
+    };
+    let face_boundaries: Vec<_> = wires.iter().map(create_face_boundary).collect();
+    let preboundary = face_boundaries
         .iter()
-        .map(|wire: &Wire<_, _>| {
-            let wire_iter = wire.iter().map(Edge::oriented_curve);
-            PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
-        })
+        .map(|wire| PolyBoundaryPiece::try_new(surface, wire, &sp))
         .collect::<Option<Vec<_>>>();
     let polygon: Option<PolygonMesh> = (|| {
         let boundary = PolyBoundary::new(preboundary?, &surface, tol);
-        Some(trimming_tessellation(surface, &boundary, tol))
+        let mut mesh = trimming_tessellation(surface, &boundary, tol);
+        make_boundary_on_edge(&mut mesh, &face_boundaries);
+        Some(mesh)
     })();
     let mut new_face = Face::debug_new(wires, polygon);
     if !orientation {
@@ -237,28 +248,33 @@ fn shell_create_polygon<S: PreMeshableSurface>(
     new_face
 }
 
+fn create_face_boundary(wire: impl Iterator<Item = PolylineCurve>) -> Vec<Point3> {
+    let mut bdry3d: Vec<Point3> = wire
+        .flat_map(|poly_edge| {
+            let n = poly_edge.len() - 1;
+            poly_edge.0.into_iter().take(n)
+        })
+        .collect();
+    bdry3d.push(bdry3d[0]);
+    bdry3d
+}
+
 #[derive(Debug, Default, Clone)]
 struct PolyBoundaryPiece(Vec<Point2>);
 
 impl PolyBoundaryPiece {
     fn try_new<S: PreMeshableSurface>(
         surface: &S,
-        wire: impl Iterator<Item = PolylineCurve>,
+        bdry3d: &[Point3],
         sp: impl Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
     ) -> Option<Self> {
         let mut previous: Option<(f64, f64)> = None;
         let up = surface.u_period();
         let vp = surface.v_period();
-        let mut bdry3d: Vec<Point3> = wire
-            .flat_map(|poly_edge| {
-                let n = poly_edge.len() - 1;
-                poly_edge.0.into_iter().take(n)
-            })
-            .collect();
-        bdry3d.push(bdry3d[0]);
         let mut hint = None;
         let vec = bdry3d
-            .into_iter()
+            .iter()
+            .copied()
             .map(|pt| {
                 hint = sp(surface, pt, hint);
                 fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
@@ -562,6 +578,47 @@ fn polyline_on_surface(
     let pcurve = PCurve::new(line, surface);
     let (vec, _) = pcurve.parameter_division(pcurve.range_tuple(), tol);
     vec.into_iter().map(|t| line.subs(t)).collect()
+}
+
+fn make_boundary_on_edge<'a>(mesh: &mut PolygonMesh, face_boundaries: &[Vec<Point3>]) {
+    let mesh_boundaries = mesh.extract_boundaries();
+    let positions = mesh.positions_mut();
+    mesh_boundaries.into_iter().for_each(|mboundary| {
+        let first = positions[mboundary[0]];
+        let (i, j, _) = face_boundaries
+            .iter()
+            .enumerate()
+            .flat_map(move |(i, boundary)| boundary.iter().enumerate().map(move |(j, p)| (i, j, p)))
+            .min_by(|(_, _, p), (_, _, q)| {
+                p.distance2(first).partial_cmp(&q.distance2(first)).unwrap()
+            })
+            .unwrap();
+        let len = mboundary.len();
+        if face_boundaries[i].len() < len {
+            return;
+        }
+        let mut counter = 0;
+        mboundary.into_iter().for_each(|idx| {
+            let mut dist = positions[idx].distance2(face_boundaries[i][(counter + j) % len]);
+            loop {
+                let dist0 = positions[idx].distance2(face_boundaries[i][(counter + 1 + j) % len]);
+                if dist <= dist0 {
+                    break;
+                } else {
+                    counter += 1;
+                    dist = dist0;
+                }
+                if counter >= face_boundaries[i].len() {
+                    break;
+                }
+            }
+            if counter >= face_boundaries[i].len() {
+                return;
+            }
+            positions[idx] = face_boundaries[i][(counter + j) % len];
+            counter += 1;
+        });
+    });
 }
 
 #[test]
