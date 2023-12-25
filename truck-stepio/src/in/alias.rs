@@ -15,8 +15,7 @@ pub type Parabola<P, M> = Processor<TrimmedCurve<UnitParabola<P>>, M>;
 pub type RevolutedLine = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type SphericalSurface = Processor<Sphere, Matrix4>;
 pub type CylindricalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
-pub type ToroidalSurface =
-    Processor<RevolutedCurve<Processor<UnitCircle<Point3>, Matrix4>>, Matrix4>;
+pub type ToroidalSurface = Processor<Torus, Matrix4>;
 pub type ConicalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
 pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
 pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;

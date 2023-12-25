@@ -1549,21 +1549,8 @@ impl From<&ToroidalSurface> for alias::ToroidalSurface {
         }: &ToroidalSurface,
     ) -> Self {
         let mat = Matrix4::from(position);
-        let mat0 = Matrix4::from_translation(Vector3::unit_x() * *major_radius)
-            * Matrix4::from_scale(*minor_radius)
-            * Matrix4::from_cols(
-                Vector4::unit_x(),
-                Vector4::unit_z(),
-                -Vector4::unit_y(),
-                Vector4::unit_w(),
-            );
-        let mut minor_circle = Processor::new(UnitCircle::new());
-        minor_circle.transform_by(mat0);
-        let rev = RevolutedCurve::by_revolution(minor_circle, Point3::origin(), Vector3::unit_z());
-        let mut processor = Processor::new(rev);
-        processor.transform_by(mat);
-        processor.invert();
-        processor
+        let torus = Torus::new(Point3::origin(), *major_radius, *minor_radius);
+        Processor::new(torus).transformed(mat)
     }
 }
 
