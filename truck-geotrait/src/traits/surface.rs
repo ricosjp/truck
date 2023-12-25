@@ -1,5 +1,6 @@
 use super::*;
 
+type Tuple = (f64, f64);
 /// Parametric surface
 pub trait ParametricSurface: Clone {
     /// The surface is in the space of `Self::Point`.
@@ -27,7 +28,7 @@ pub trait ParametricSurface: Clone {
     /// Return the ends of `parameter_range` by tuple.
     /// If the range is unbounded, return `None``.
     #[inline(always)]
-    fn try_range_tuple(&self) -> (Option<(f64, f64)>, Option<(f64, f64)>) {
+    fn try_range_tuple(&self) -> (Option<Tuple>, Option<Tuple>) {
         let ((u0, u1), (v0, v1)) = self.parameter_range();
         (
             bound2opt(u0).and_then(move |u0| bound2opt(u1).map(move |u1| (u0, u1))),
