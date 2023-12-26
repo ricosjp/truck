@@ -56,7 +56,7 @@ fn main() {
                 let file_name = format!("{output}-{idx}.json");
                 std::fs::write(&file_name, &content).unwrap();
             }
-            shell.robust_triangulation(0.005 * diameter)
+            shell.robust_triangulation(0.0001 * diameter)
         })
         .collect::<Vec<_>>();
 

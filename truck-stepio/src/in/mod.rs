@@ -1292,7 +1292,7 @@ impl TryFrom<&Ellipse> for alias::Ellipse<Point3, Matrix4> {
     fn try_from(ellipse: &Ellipse) -> std::prelude::v1::Result<Self, Self::Error> {
         let (r0, r1) = (ellipse.semi_axis_1, ellipse.semi_axis_2);
         let transform =
-            Matrix4::try_from(&ellipse.position)? * Matrix4::from_nonuniform_scale(r0, r1, 1.0);
+            Matrix4::try_from(&ellipse.position)? * Matrix4::from_nonuniform_scale(r0, r1, f64::min(r0, r1));
         Ok(
             Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
@@ -2061,7 +2061,7 @@ impl EdgeCurve {
                         * Matrix4::from_nonuniform_scale(
                             ellipse.semi_axis_1,
                             ellipse.semi_axis_2,
-                            1.0,
+                            f64::min(ellipse.semi_axis_1, ellipse.semi_axis_2),
                         );
                     let inv_mat = mat
                         .invert()

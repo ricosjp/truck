@@ -211,6 +211,9 @@ where
             let gen = surface.subs(u_gen, v_gen);
             let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
             let q = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+            let u0 = u[0] * (1.0 - p) + u[1] * p;
+            let v0 = v[0] * (1.0 - q) + v[1] * q;
+            let p0 = surface.subs(u0, v0);
             let pt00 = surface.subs(u[0], v[0]);
             let pt01 = surface.subs(u[0], v[1]);
             let pt10 = surface.subs(u[1], v[0]);
@@ -221,10 +224,16 @@ where
                     + pt10.to_vec() * p * (1.0 - q)
                     + pt11.to_vec() * p * q,
             );
-            let u0 = u[0] * (1.0 - p) + u[1] * p;
-            let v0 = v[0] * (1.0 - q) + v[1] * q;
-            let p0 = surface.subs(u0, v0);
             let far = p0.distance2(pt) > tol * tol;
+
+            /*
+            let ptu0 = surface.subs(u[0], v0);
+            let ptu1 = surface.subs(u[1], v0);
+            let ptv0 = surface.subs(u0, v[0]);
+            let ptv1 = surface.subs(u0, v[1]);
+            let ptu = ptu0 + (ptu1 - ptu0) * p;
+            let ptv = ptv0 + (ptv1 - ptv0) * q;
+            */
 
             *ub = *ub || far;
             *vb = *vb || far;

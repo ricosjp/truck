@@ -4,7 +4,10 @@ use std::f64::consts::PI;
 impl Torus {
     /// constructor
     #[inline(always)]
-    pub const fn new(center: Point3, large_radius: f64, small_radius: f64) -> Self {
+    pub fn new(center: Point3, large_radius: f64, small_radius: f64) -> Self {
+        if large_radius <= 0.0 || small_radius <= 0.0 {
+            panic!("radius must be larger than 0");
+        }
         Self {
             center,
             large_radius,
@@ -151,10 +154,15 @@ impl SearchNearestParameter<D2> for Torus {
 impl ParameterDivision2D for Torus {
     fn parameter_division(
         &self,
-        range: ((f64, f64), (f64, f64)),
+        (urange, vrange): ((f64, f64), (f64, f64)),
         tol: f64,
     ) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, range, tol)
+        let circle = UnitCircle::<Point2>::new();
+        let utol = tol / (self.small_radius() + self.large_radius());
+        let (udiv, _) = circle.parameter_division(urange, utol);
+        let vtol = tol / self.small_radius();
+        let (vdiv, _) = circle.parameter_division(vrange, vtol);
+        (udiv, vdiv)
     }
 }
 

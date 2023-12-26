@@ -497,12 +497,39 @@ fn insert_surface(
     let bdb: BoundingBox<Point2> = polyline.0.iter().flatten().collect();
     let range = ((bdb.min()[0], bdb.max()[0]), (bdb.min()[1], bdb.max()[1]));
     let (udiv, vdiv) = surface.parameter_division(range, tol);
-    udiv.into_iter()
-        .flat_map(|u| vdiv.iter().map(move |v| Point2::new(u, *v)))
-        .filter(|pt| polyline.include(*pt))
-        .for_each(|pt| {
-            let _ = triangulation.insert(SPoint2::new(pt.x, pt.y));
+    let insert_res: Vec<Vec<Option<_>>> = udiv
+        .into_iter()
+        .map(|u| {
+            vdiv.iter()
+                .map(|v| match polyline.include(Point2::new(u, *v)) {
+                    true => triangulation.insert(SPoint2::new(u, *v)).ok(),
+                    false => None,
+                })
+                .collect()
+        })
+        .collect();
+    insert_res.windows(2).for_each(|vec| {
+        vec[0].windows(2).zip(&vec[1]).for_each(|(a, z)| {
+            if let Some(x) = a[0] {
+                if let Some(y) = a[1] {
+                    if triangulation.can_add_constraint(x, y) {
+                        triangulation.add_constraint(x, y);
+                    }
+                }
+                if let Some(z) = z {
+                    if triangulation.can_add_constraint(x, *z) {
+                        triangulation.add_constraint(x, *z);
+                    }
+                }
+            }
         });
+        let idx = vec[0].len() - 1;
+        if let (Some(x), Some(y)) = (vec[0][idx], vec[1][idx]) {
+            if triangulation.can_add_constraint(x, y) {
+                triangulation.add_constraint(x, y);
+            }
+        }
+    });
 }
 
 /// Converts triangulation into `PolygonMesh`.
