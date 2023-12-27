@@ -91,7 +91,7 @@ where
 }
 
 /// Tessellates faces
-#[cfg(any(target = "wasm32", test))]
+#[cfg(any(target_arch = "wasm32", test))]
 pub(super) fn shell_tessellation_single_thread<'a, C, S, F>(
     shell: &'a Shell<Point3, C, S>,
     tol: f64,
