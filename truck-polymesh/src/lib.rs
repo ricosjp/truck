@@ -13,6 +13,7 @@
     unused_qualifications
 )]
 
+use array_macro::array;
 use serde::{Deserialize, Serialize};
 
 /// re-export `truck_base`.
