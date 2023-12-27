@@ -165,26 +165,26 @@ where
     #[cfg(target_arch = "wasm32")]
     let edges: Vec<_> = shell.edges.iter().map(tessellate_edge).collect();
     let tessellate_face = |face: &CompressedFace<S>| {
-            let boundaries = face.boundaries.clone();
-            let surface = &face.surface;
-            let create_edge = |edge_idx: &CompressedEdgeIndex| match edge_idx.orientation {
-                true => Some(edges.get(edge_idx.index)?.curve.clone()),
-                false => Some(edges.get(edge_idx.index)?.curve.inverse()),
-            };
-            let create_boundary = |wire: &Vec<CompressedEdgeIndex>| {
-                let wire_iter = wire.iter().filter_map(create_edge);
-                PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
-            };
-            let preboundary: Option<Vec<_>> = boundaries.iter().map(create_boundary).collect();
-            let polygon: Option<PolygonMesh> = (|| {
-                let boundary = PolyBoundary::new(preboundary?, &surface, tol);
-                Some(trimming_tessellation(&surface, &boundary, tol))
-            })();
-            CompressedFace {
-                boundaries,
-                orientation: face.orientation,
-                surface: polygon,
-            }
+        let boundaries = face.boundaries.clone();
+        let surface = &face.surface;
+        let create_edge = |edge_idx: &CompressedEdgeIndex| match edge_idx.orientation {
+            true => Some(edges.get(edge_idx.index)?.curve.clone()),
+            false => Some(edges.get(edge_idx.index)?.curve.inverse()),
+        };
+        let create_boundary = |wire: &Vec<CompressedEdgeIndex>| {
+            let wire_iter = wire.iter().filter_map(create_edge);
+            PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
+        };
+        let preboundary: Option<Vec<_>> = boundaries.iter().map(create_boundary).collect();
+        let polygon: Option<PolygonMesh> = (|| {
+            let boundary = PolyBoundary::new(preboundary?, &surface, tol);
+            Some(trimming_tessellation(&surface, &boundary, tol))
+        })();
+        CompressedFace {
+            boundaries,
+            orientation: face.orientation,
+            surface: polygon,
+        }
     };
     #[cfg(not(target_arch = "wasm32"))]
     let faces = shell.faces.par_iter().map(tessellate_face).collect();

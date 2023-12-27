@@ -80,8 +80,8 @@ fn output_obj(
     let mut polymesh = PolygonMesh::default();
     polyshells.iter().for_each(|shell| {
         let mut poly = shell.to_polygon();
-        poly.remove_degenerate_faces()
-            .put_together_same_attrs()
+        poly.put_together_same_attrs()
+            .remove_degenerate_faces()
             .remove_unused_attrs();
         if condition_check {
             println!("{:?}", poly.shell_condition());

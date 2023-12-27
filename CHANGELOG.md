@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Enabled meshing when the boundary is not closed in the parameter space.
 - Robust tessellation in adhoc viewer.
 - New `SearchNearestParameter` for `RevolutedCurve`.
 - type def `ParameterRange`.

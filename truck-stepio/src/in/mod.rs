@@ -1495,7 +1495,7 @@ impl From<&SphericalSurface> for alias::SphericalSurface {
     #[inline(always)]
     fn from(ss: &SphericalSurface) -> Self {
         let mat = Matrix4::from(&ss.position);
-        let sphere = Sphere::new(Point3::origin(), ss.radius);
+        let sphere = Sphere(truck::Sphere::new(Point3::origin(), ss.radius));
         Processor::new(sphere).transformed(mat)
     }
 }
