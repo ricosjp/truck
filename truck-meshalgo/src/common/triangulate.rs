@@ -55,21 +55,20 @@ pub struct Triangulate<'a> {
 impl<'a> Triangulate<'a> {
     #[inline(always)]
     pub fn new(entity: &'a PolygonMesh) -> Self {
+        fn divide_mesh<T: Copy>(face: &Vec<T>) -> impl Iterator<Item = [T; 3]> + '_ {
+            face.windows(2).skip(1).map(move |a| [face[0], a[0], a[1]])
+        }
         Triangulate {
-            other_faces: entity
-                .faces()
-                .other_faces()
-                .iter()
-                .flat_map(move |face| (2..face.len()).map(move |i| [face[0], face[i - 1], face[i]]))
-                .collect(),
+            other_faces: entity.other_faces().iter().flat_map(divide_mesh).collect(),
             entity,
         }
     }
     #[inline(always)]
     pub fn get(&self, idx: usize) -> [Vertex; 3] {
+        let tri_and_quad = self.entity.tri_faces().len() + 2 * self.entity.quad_faces().len();
         if idx < self.entity.tri_faces().len() {
             self.entity.tri_faces()[idx]
-        } else if idx < self.entity.tri_faces().len() + 2 * self.entity.quad_faces().len() {
+        } else if idx < tri_and_quad {
             let idx = idx - self.entity.tri_faces().len();
             let face = self.entity.quad_faces()[idx / 2];
             if idx % 2 == 0 {
@@ -78,8 +77,7 @@ impl<'a> Triangulate<'a> {
                 [face[0], face[2], face[3]]
             }
         } else {
-            self.other_faces
-                [idx - self.entity.tri_faces().len() - 2 * self.entity.quad_faces().len()]
+            self.other_faces[idx - tri_and_quad]
         }
     }
     #[inline(always)]

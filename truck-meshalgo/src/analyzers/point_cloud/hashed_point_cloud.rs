@@ -1,4 +1,5 @@
 use super::*;
+use array_macro::array;
 
 #[derive(Clone, Debug)]
 pub struct HashedPointCloud {
@@ -37,14 +38,8 @@ impl HashedPointCloud {
                 size as usize
             }
         });
-        let mut res = HashedPointCloud::new(
-            size.into(),
-            [
-                [bdb.min()[0], bdb.max()[0]],
-                [bdb.min()[1], bdb.max()[1]],
-                [bdb.min()[2], bdb.max()[2]],
-            ],
-        );
+        let mut res =
+            HashedPointCloud::new(size.into(), array![i => [bdb.min()[i], bdb.max()[i]]; 3]);
         points.into_iter().for_each(|pt| res.push(*pt));
         res
     }
@@ -184,11 +179,7 @@ impl DistanceWithPointCloud for [Point3; 3] {
 impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
     fn distance2(&self, space: &HashedPointCloud) -> f64 {
         let dist2 = self.faces().triangle_iter().fold(-1.0, |dist2, tri| {
-            let tri = [
-                self.positions()[tri[0].pos],
-                self.positions()[tri[1].pos],
-                self.positions()[tri[2].pos],
-            ];
+            let tri = array![i => self.positions()[tri[i].pos]; 3];
             f64::max(dist2, tri.distance2(space))
         });
         if dist2 < 0.0 {
@@ -200,11 +191,7 @@ impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
     fn is_colliding(&self, space: &HashedPointCloud, tol: f64) -> bool {
         nonpositive_tolerance!(tol, 0.0);
         self.faces().triangle_iter().any(|tri| {
-            let tri = [
-                self.positions()[tri[0].pos],
-                self.positions()[tri[1].pos],
-                self.positions()[tri[2].pos],
-            ];
+            let tri = array![i => self.positions()[tri[i].pos]; 3];
             tri.distance2(space) < tol * tol
         })
     }

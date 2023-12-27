@@ -205,8 +205,7 @@ impl StructuredMesh {
             .unwrap_or_else(Vec::new);
         let uv = !uv_coords.is_empty();
         let nor = !normals.is_empty();
-        let quad_faces: Vec<_> = (1..m)
-            .flat_map(|i| (1..n).map(move |j| (i, j)))
+        let quad_faces: Vec<_> = itertools::iproduct!(1..m, 1..n)
             .map(move |(i, j)| {
                 [
                     StandardVertex::tuple((i - 1) * n + j - 1, uv, nor),

@@ -130,21 +130,13 @@ fn ascii_one_read<R: BufRead>(lines: &mut Lines<R>) -> Result<Option<StlFace>> {
             continue;
         } else if &line[0..5] == "facet" {
             let args: Vec<_> = line.split_whitespace().collect();
-            face.normal = [
-                args[2].parse::<f32>()?,
-                args[3].parse::<f32>()?,
-                args[4].parse::<f32>()?,
-            ];
+            face.normal = array![i => args[i + 2].parse::<f32>()?; 3];
         } else if &line[0..6] == "vertex" {
             let args: Vec<_> = line.split_whitespace().collect();
             if num_ver > 2 {
                 return Err(syntax_error().into());
             }
-            face.vertices[num_ver] = [
-                args[1].parse::<f32>()?,
-                args[2].parse::<f32>()?,
-                args[3].parse::<f32>()?,
-            ];
+            face.vertices[num_ver] = array![i => args[i + 1].parse::<f32>()?; 3];
             num_ver += 1;
         } else if &line[0..8] == "endfacet" {
             if num_ver != 3 {
@@ -242,18 +234,10 @@ impl<'a> Iterator for PolygonMeshStlFaceIterator<'a> {
     type Item = StlFace;
     fn next(&mut self) -> Option<StlFace> {
         self.faces.next().map(|face| {
-            let p = [
-                self.positions[face[0].pos],
-                self.positions[face[1].pos],
-                self.positions[face[2].pos],
-            ];
+            let p = array![i => self.positions[face[i].pos]; 3];
             let n = (p[1] - p[0]).cross(p[2] - p[0]).normalize();
             let normal = n.cast().unwrap().into();
-            let vertices = [
-                p[0].cast().unwrap().into(),
-                p[1].cast().unwrap().into(),
-                p[2].cast().unwrap().into(),
-            ];
+            let vertices = array![i => p[i].cast().unwrap().into(); 3];
             StlFace { normal, vertices }
         })
     }
@@ -285,60 +269,33 @@ where
 }
 
 fn signup_vector(vector: [f32; 3], map: &mut HashMap<[i64; 3], usize>) -> usize {
-    let vector = [
-        ((vector[0] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
-        ((vector[1] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
-        ((vector[2] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64,
-    ];
+    let vector = array![i =>
+        ((vector[i] as f64 + TOLERANCE * 0.25) / (TOLERANCE * 0.5)) as i64; 3];
     let len = map.len();
     *map.entry(vector).or_insert_with(|| len)
+}
+
+fn decode_vector<T: From<[f64; 3]>>((code, _): ([i64; 3], usize)) -> T {
+    array![i => code[i] as f64 * TOLERANCE * 0.5; 3].into()
 }
 
 impl FromIterator<StlFace> for PolygonMesh {
     fn from_iter<I: IntoIterator<Item = StlFace>>(iter: I) -> PolygonMesh {
         let mut positions = HashMap::<[i64; 3], usize>::default();
         let mut normals = HashMap::<[i64; 3], usize>::default();
-        let faces: Vec<[Vertex; 3]> = iter
-            .into_iter()
-            .map(|face| {
-                let n = signup_vector(face.normal, &mut normals);
-                let p = [
-                    signup_vector(face.vertices[0], &mut positions),
-                    signup_vector(face.vertices[1], &mut positions),
-                    signup_vector(face.vertices[2], &mut positions),
-                ];
-                [
-                    (p[0], None, Some(n)).into(),
-                    (p[1], None, Some(n)).into(),
-                    (p[2], None, Some(n)).into(),
-                ]
-            })
-            .collect();
+        let closure = |face: StlFace| {
+            let n = signup_vector(face.normal, &mut normals);
+            let p = array![i => signup_vector(face.vertices[i], &mut positions); 3];
+            array![i => (p[i], None, Some(n)).into(); 3]
+        };
+        let faces: Vec<[Vertex; 3]> = iter.into_iter().map(closure).collect();
         let faces = Faces::from_tri_and_quad_faces(faces, Vec::new());
         let mut positions: Vec<([i64; 3], usize)> = positions.into_iter().collect();
         positions.sort_by(|a, b| a.1.cmp(&b.1));
-        let positions: Vec<Point3> = positions
-            .into_iter()
-            .map(|(p, _)| {
-                Point3::new(
-                    p[0] as f64 * TOLERANCE * 0.5,
-                    p[1] as f64 * TOLERANCE * 0.5,
-                    p[2] as f64 * TOLERANCE * 0.5,
-                )
-            })
-            .collect();
+        let positions: Vec<Point3> = positions.into_iter().map(decode_vector).collect();
         let mut normals: Vec<([i64; 3], usize)> = normals.into_iter().collect();
         normals.sort_by(|a, b| a.1.cmp(&b.1));
-        let normals: Vec<Vector3> = normals
-            .into_iter()
-            .map(|(p, _)| {
-                Vector3::new(
-                    p[0] as f64 * TOLERANCE * 0.5,
-                    p[1] as f64 * TOLERANCE * 0.5,
-                    p[2] as f64 * TOLERANCE * 0.5,
-                )
-            })
-            .collect();
+        let normals: Vec<Vector3> = normals.into_iter().map(decode_vector).collect();
         PolygonMesh::debug_new(
             StandardAttributes {
                 positions,

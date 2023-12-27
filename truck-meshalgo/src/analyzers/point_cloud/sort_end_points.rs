@@ -1,4 +1,5 @@
 use super::*;
+use array_macro::array;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -76,13 +77,10 @@ fn sorted_endpoints_by_polymesh_points(
         return Vec::new();
     };
     sorted_endpoints(
-        polygon.faces().triangle_iter().map(|tri| {
-            [
-                polygon.positions()[tri[0].pos],
-                polygon.positions()[tri[1].pos],
-                polygon.positions()[tri[2].pos],
-            ]
-        }),
+        polygon
+            .faces()
+            .triangle_iter()
+            .map(|tri| array![i => polygon.positions()[tri[i].pos]; 3]),
         points.iter(),
         unit,
         tol,
@@ -116,11 +114,7 @@ pub fn pointcloud_in_polygon_neighborhood(
             }
             EndPointType::Middle => current.iter().any(|i| {
                 let tri = triangles[*i];
-                let tri = [
-                    polygon.positions()[tri[0].pos],
-                    polygon.positions()[tri[1].pos],
-                    polygon.positions()[tri[2].pos],
-                ];
+                let tri = array![i => polygon.positions()[tri[i].pos]; 3];
                 distance2_point_triangle(points[index], tri) < tol * tol
             }),
         })
