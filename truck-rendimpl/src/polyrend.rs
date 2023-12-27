@@ -1,4 +1,5 @@
 use crate::*;
+use itertools::*;
 
 impl CreateBuffers for PolygonMesh {
     #[inline(always)]
@@ -74,10 +75,9 @@ impl ToInstance<WireFrameInstance> for PolygonMesh {
             .collect();
         let mut strips = Vec::<u32>::new();
         self.faces().face_iter().for_each(|face| {
-            for i in 0..face.len() {
-                strips.push(face[i].pos as u32);
-                strips.push(face[(i + 1) % face.len()].pos as u32);
-            }
+            face.iter().circular_tuple_windows().for_each(|(a, b)| {
+                strips.extend([a.pos as u32, b.pos as u32]);
+            });
         });
         let vb = BufferHandler::from_slice(&positions, device, BufferUsages::VERTEX);
         let ib = BufferHandler::from_slice(&strips, device, BufferUsages::INDEX);
@@ -101,34 +101,30 @@ impl CreateBuffers for StructuredMesh {
     ) -> (BufferHandler, BufferHandler) {
         let mut vertices = Vec::new();
         let (m, n) = (self.positions().len(), self.positions()[0].len());
-        for i in 0..m {
-            for j in 0..n {
-                vertices.push(AttrVertex {
-                    position: self.positions()[i][j].cast().unwrap().into(),
-                    uv_coord: match self.uv_division() {
-                        Some(uv_division) => [uv_division.0[i] as f32, uv_division.1[j] as f32],
-                        None => [0.0, 0.0],
-                    },
-                    normal: match self.normals() {
-                        Some(normals) => normals[i][j].cast().unwrap().into(),
-                        None => [0.0, 0.0, 0.0],
-                    },
-                });
-            }
-        }
+        iproduct!(0..m, 0..n).for_each(|(i, j)| {
+            vertices.push(AttrVertex {
+                position: self.positions()[i][j].cast().unwrap().into(),
+                uv_coord: match self.uv_division() {
+                    Some((udiv, vdiv)) => [udiv[i] as f32, vdiv[j] as f32],
+                    None => [0.0, 0.0],
+                },
+                normal: match self.normals() {
+                    Some(normals) => normals[i][j].cast().unwrap().into(),
+                    None => [0.0, 0.0, 0.0],
+                },
+            });
+        });
         let mut indices = Vec::<u32>::new();
-        for i in 1..m {
-            for j in 1..n {
-                indices.extend([
-                    ((i - 1) * n + j - 1) as u32,
-                    (i * n + j - 1) as u32,
-                    ((i - 1) * n + j) as u32,
-                    ((i - 1) * n + j) as u32,
-                    (i * n + j - 1) as u32,
-                    (i * n + j) as u32,
-                ]);
-            }
-        }
+        iproduct!(1..m, 1..n).for_each(|(i, j)| {
+            indices.extend([
+                ((i - 1) * n + j - 1) as u32,
+                (i * n + j - 1) as u32,
+                ((i - 1) * n + j) as u32,
+                ((i - 1) * n + j) as u32,
+                (i * n + j - 1) as u32,
+                (i * n + j) as u32,
+            ]);
+        });
         (
             BufferHandler::from_slice(&vertices, device, vertex_usage),
             BufferHandler::from_slice(&indices, device, index_usage),

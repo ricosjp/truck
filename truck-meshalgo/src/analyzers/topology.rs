@@ -1,4 +1,5 @@
 use super::*;
+use itertools::Itertools;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use truck_topology::shell::ShellCondition;
 
@@ -70,15 +71,14 @@ impl FromIterator<[Vertex; 2]> for Boundaries {
     }
 }
 
+fn face_edge_iter<T: Copy>(face: &[T]) -> impl Iterator<Item = [T; 2]> + '_ {
+    face.iter().circular_tuple_windows().map(|(v, w)| [*v, *w])
+}
+
 impl Topology for Faces {
     fn extract_boundaries(&self) -> Vec<Vec<usize>> {
-        let mut vemap: HashMap<usize, usize> = self
-            .face_iter()
-            .flat_map(move |face| {
-                let len = face.len();
-                (0..len).map(move |i| [face[i], face[(i + 1) % len]])
-            })
-            .collect::<Boundaries>()
+        let boundaries: Boundaries = self.face_iter().flat_map(face_edge_iter).collect();
+        let mut vemap: HashMap<usize, usize> = boundaries
             .boundary
             .into_iter()
             .map(|(edge, ori)| match ori {
@@ -104,14 +104,10 @@ impl Topology for Faces {
         res
     }
     fn shell_condition(&self) -> ShellCondition {
-        let boundaries: Boundaries = self
-            .face_iter()
-            .flat_map(move |face| {
-                let len = face.len();
-                (0..len).map(move |i| [face[i], face[(i + 1) % len]])
-            })
-            .collect();
-        boundaries.condition()
+        self.face_iter()
+            .flat_map(face_edge_iter)
+            .collect::<Boundaries>()
+            .condition()
     }
 }
 
