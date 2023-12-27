@@ -165,20 +165,6 @@ where
     #[cfg(target_arch = "wasm32")]
     let edges: Vec<_> = shell.edges.iter().map(tessellate_edge).collect();
     let tessellate_face = |face: &CompressedFace<S>| {
-        // vertex loop case
-        if face.boundaries.is_empty() {
-            let surface = &face.surface;
-            let polygon = if let (Some(urange), Some(vrange)) = surface.try_range_tuple() {
-                Some(StructuredMesh::from_surface(surface, (urange, vrange), tol).destruct())
-            } else {
-                None
-            };
-            CompressedFace {
-                boundaries: Vec::new(),
-                orientation: face.orientation,
-                surface: polygon,
-            }
-        } else {
             let boundaries = face.boundaries.clone();
             let surface = &face.surface;
             let create_edge = |edge_idx: &CompressedEdgeIndex| match edge_idx.orientation {
@@ -199,7 +185,6 @@ where
                 orientation: face.orientation,
                 surface: polygon,
             }
-        }
     };
     #[cfg(not(target_arch = "wasm32"))]
     let faces = shell.faces.par_iter().map(tessellate_face).collect();
@@ -316,11 +301,19 @@ fn noramlize_range(curve: &mut Vec<Point2>, compidx: usize, (u0, u1): (f64, f64)
     *curve = curve1;
 }
 
+fn loop_orientation(curve: &[Point2]) -> bool {
+    curve
+        .iter()
+        .circular_tuple_windows()
+        .fold(0.0, |sum, (p, q)| sum + (q.x + p.x) * (q.y - p.y))
+        > 0.0
+}
+
 impl PolyBoundary {
     fn new(pieces: Vec<PolyBoundaryPiece>, surface: &impl PreMeshableSurface, tol: f64) -> Self {
         let (mut closed, mut open) = (Vec::new(), Vec::new());
         pieces.into_iter().for_each(|PolyBoundaryPiece(mut vec)| {
-            match vec[0].distance(vec[vec.len() - 1]) < TOLERANCE * 100.0 {
+            match vec[0].distance(vec[vec.len() - 1]) < 1.0e-3 {
                 true => {
                     vec.pop();
                     closed.push(vec)
@@ -406,6 +399,21 @@ impl PolyBoundary {
                 closed.push(connect_edges([curve0, vec0, curve1, vec1]));
             }
             _ => {}
+        }
+        if !closed.iter().any(|curve| loop_orientation(curve)) {
+            if let (Some((u0, u1)), Some((v0, v1))) = surface.try_range_tuple() {
+                let p = [
+                    Point2::new(u0, v0),
+                    Point2::new(u1, v0),
+                    Point2::new(u1, v1),
+                    Point2::new(u0, v1),
+                ];
+                let vec0 = polyline_on_surface(surface, p[0], p[1], tol);
+                let vec1 = polyline_on_surface(surface, p[1], p[2], tol);
+                let vec2 = polyline_on_surface(surface, p[2], p[3], tol);
+                let vec3 = polyline_on_surface(surface, p[3], p[0], tol);
+                closed.push(connect_edges([vec0, vec1, vec2, vec3]));
+            }
         }
         Self(closed)
     }

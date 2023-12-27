@@ -119,9 +119,9 @@ impl ParameterDivision2D for Sphere {
             tol < self.radius,
             "Tolerance is larger than the radius of sphere."
         );
-        let acos = f64::acos(1.0 - tol / self.radius);
-        let u_div: usize = 1 + ((urange.1 - urange.0) / acos).floor() as usize;
-        let v_div: usize = 1 + ((vrange.1 - vrange.0) / acos).floor() as usize;
+        let delta = 2.0 * f64::acos(1.0 - tol / self.radius);
+        let u_div = 1 + ((urange.1 - urange.0) / delta).floor() as usize;
+        let v_div = 1 + ((vrange.1 - vrange.0) / delta).floor() as usize;
         (
             (0..=u_div)
                 .map(|i| urange.0 + (urange.1 - urange.0) * i as f64 / u_div as f64)
