@@ -24,6 +24,6 @@ fn tessellate_shape() {
         let cshell = table.to_compressed_shell(&step_shell).unwrap();
         let mut poly = cshell.triangulation(0.05).to_polygon();
         poly.put_together_same_attrs().remove_degenerate_faces();
-        assert_eq!(poly.shell_condition(), ShellCondition::Closed);
+        assert_eq!(poly.shell_condition(), ShellCondition::Closed, "{name}");
     });
 }

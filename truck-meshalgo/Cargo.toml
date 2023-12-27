@@ -20,8 +20,11 @@ default = ["analyzers", "filters", "tessellation", "vtk"]
 [dependencies]
 derive_more = "0.99.17"
 rustc-hash = "1.1.0"
+array-macro = "2.1.8"
+itertools = "0.12.0"
 spade = { version = "2.4.1", optional = true }
 truck-base = { version = "0.4.0", path = "../truck-base" }
+truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
 truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
 truck-topology = { version = "0.5.0", path = "../truck-topology" }
 

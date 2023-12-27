@@ -19,7 +19,7 @@ fn read_jsons() -> Vec<Vec<u8>> {
 fn solid_is_closed() {
     for (i, json) in read_jsons().into_iter().enumerate() {
         let solid: Solid = serde_json::from_reader(json.as_slice()).unwrap();
-        let mut poly = solid.triangulation(0.02).to_polygon();
+        let mut poly = solid.triangulation(0.01).to_polygon();
         poly.put_together_same_attrs()
             .remove_degenerate_faces()
             .remove_unused_attrs();
@@ -35,7 +35,7 @@ fn solid_is_closed() {
 fn csolid_is_closed() {
     for (i, json) in read_jsons().into_iter().enumerate() {
         let solid: CompressedSolid = serde_json::from_reader(json.as_slice()).unwrap();
-        let mut poly = solid.triangulation(0.02).to_polygon();
+        let mut poly = solid.triangulation(0.01).to_polygon();
         poly.put_together_same_attrs()
             .remove_degenerate_faces()
             .remove_unused_attrs();

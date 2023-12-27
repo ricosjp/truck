@@ -275,7 +275,11 @@ macro_rules! impl_cast_int {
     ($typename: ident, $n: expr) => {
         impl CastIntVector for $typename {
             type IntVector = [i64; $n];
-            fn cast_int(&self) -> [i64; $n] { self.cast::<i64>().unwrap().into() }
+            fn cast_int(&self) -> [i64; $n] {
+                self.cast::<i64>()
+                    .unwrap_or_else(|| panic!("failed to cast: {self:?}"))
+                    .into()
+            }
         }
     };
 }

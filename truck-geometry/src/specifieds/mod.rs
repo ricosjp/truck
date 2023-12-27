@@ -85,12 +85,21 @@ pub struct Sphere {
     radius: f64,
 }
 
+/// torus
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Torus {
+    center: Point3,
+    large_radius: f64,
+    small_radius: f64,
+}
+
 mod circle;
 mod hyperbola;
 mod line;
 mod parabola;
 mod plane;
 mod sphere;
+mod torus;
 
 macro_rules! always_true {
     ($ty: tt) => {

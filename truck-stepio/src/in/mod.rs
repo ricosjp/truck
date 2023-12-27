@@ -1291,8 +1291,8 @@ impl TryFrom<&Ellipse> for alias::Ellipse<Point3, Matrix4> {
     #[inline(always)]
     fn try_from(ellipse: &Ellipse) -> std::prelude::v1::Result<Self, Self::Error> {
         let (r0, r1) = (ellipse.semi_axis_1, ellipse.semi_axis_2);
-        let transform =
-            Matrix4::try_from(&ellipse.position)? * Matrix4::from_nonuniform_scale(r0, r1, 1.0);
+        let transform = Matrix4::try_from(&ellipse.position)?
+            * Matrix4::from_nonuniform_scale(r0, r1, f64::min(r0, r1));
         Ok(
             Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
@@ -1494,21 +1494,9 @@ pub struct SphericalSurface {
 impl From<&SphericalSurface> for alias::SphericalSurface {
     #[inline(always)]
     fn from(ss: &SphericalSurface) -> Self {
-        let half_circle = TrimmedCurve::new(UnitCircle::<Point3>::new(), (-PI / 2.0, PI / 2.0));
-        let sphere =
-            RevolutedCurve::by_revolution(half_circle, Point3::origin(), Vector3::unit_y());
-        let mut processor = Processor::<_, Matrix4>::new(sphere);
-        let mat0 = Matrix4::from_cols(
-            Vector4::unit_x(),
-            Vector4::unit_z(),
-            -Vector4::unit_y(),
-            Vector4::unit_w(),
-        );
-        let mat1 = Matrix4::from_scale(ss.radius);
-        let mat2 = Matrix4::from(&ss.position);
-        processor.transform_by(mat2 * mat1 * mat0);
-        processor.invert();
-        processor
+        let mat = Matrix4::from(&ss.position);
+        let sphere = Sphere(truck::Sphere::new(Point3::origin(), ss.radius));
+        Processor::new(sphere).transformed(mat)
     }
 }
 
@@ -1561,21 +1549,8 @@ impl From<&ToroidalSurface> for alias::ToroidalSurface {
         }: &ToroidalSurface,
     ) -> Self {
         let mat = Matrix4::from(position);
-        let mat0 = Matrix4::from_translation(Vector3::unit_x() * *major_radius)
-            * Matrix4::from_scale(*minor_radius)
-            * Matrix4::from_cols(
-                Vector4::unit_x(),
-                Vector4::unit_z(),
-                -Vector4::unit_y(),
-                Vector4::unit_w(),
-            );
-        let mut minor_circle = Processor::new(UnitCircle::new());
-        minor_circle.transform_by(mat0);
-        let rev = RevolutedCurve::by_revolution(minor_circle, Point3::origin(), Vector3::unit_z());
-        let mut processor = Processor::new(rev);
-        processor.transform_by(mat);
-        processor.invert();
-        processor
+        let torus = Torus::new(Point3::origin(), *major_radius, *minor_radius);
+        Processor::new(torus).transformed(mat)
     }
 }
 
@@ -2086,7 +2061,7 @@ impl EdgeCurve {
                         * Matrix4::from_nonuniform_scale(
                             ellipse.semi_axis_1,
                             ellipse.semi_axis_2,
-                            1.0,
+                            f64::min(ellipse.semi_axis_1, ellipse.semi_axis_2),
                         );
                     let inv_mat = mat
                         .invert()
@@ -2112,10 +2087,10 @@ impl EdgeCurve {
             CurveAny::Pcurve(c) => {
                 let surface: Surface = (&c.basis_surface).try_into()?;
                 let u = surface
-                    .search_parameter(p, None, 100)
+                    .search_nearest_parameter(p, None, 100)
                     .ok_or_else(|| "the point is not on surface".to_string())?;
                 let v = surface
-                    .search_parameter(q, None, 100)
+                    .search_nearest_parameter(q, None, 100)
                     .ok_or_else(|| "the point is not on surface".to_string())?;
                 let curve2d = c
                     .reference_to_curve

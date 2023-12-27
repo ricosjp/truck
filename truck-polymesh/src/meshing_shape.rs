@@ -2,7 +2,7 @@ use crate::*;
 
 impl<P> PolylineCurve<P> {
     /// meshing the curve
-    pub fn from_curve<C>(curve: &C, range: (f64, f64), tol: f64) -> Self
+    pub fn from_curve<C>(curve: C, range: (f64, f64), tol: f64) -> Self
     where C: ParameterDivision1D<Point = P> {
         PolylineCurve(curve.parameter_division(range, tol).1)
     }

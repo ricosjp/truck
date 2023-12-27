@@ -76,12 +76,26 @@ impl SearchNearestParameter<D1> for UnitCircle<Point2> {
             return None;
         }
         let v = v.normalize();
-        let theta = f64::acos(v.x);
+        let theta = f64::acos(f64::clamp(v.x, -1.0, 1.0));
         let theta = match v.y > 0.0 {
             true => theta,
             false => 2.0 * PI - theta,
         };
         Some(theta)
+    }
+}
+
+#[test]
+fn search_nearest_parameter() {
+    const N: usize = 100;
+    let circle = UnitCircle::<Point2>::new();
+    for i in 0..N {
+        let t = 2.0 * PI * i as f64 / N as f64;
+        let a = 5.0 * rand::random::<f64>() + 0.1;
+        let p = a * circle.subs(t);
+        let s = circle.search_nearest_parameter(p, None, 1).unwrap();
+        let q = a * circle.subs(s);
+        assert_near!(p, q);
     }
 }
 
@@ -93,12 +107,24 @@ impl SearchParameter<D1> for UnitCircle<Point2> {
             return None;
         }
         let v = v.normalize();
-        let theta = f64::acos(v.x);
+        let theta = f64::acos(f64::clamp(v.x, -1.0, 1.0));
         let theta = match v.y > 0.0 {
             true => theta,
             false => 2.0 * PI - theta,
         };
         Some(theta)
+    }
+}
+
+#[test]
+fn search_parameter() {
+    const N: usize = 100;
+    let circle = UnitCircle::<Point2>::new();
+    for i in 1..N {
+        let t = 2.0 * PI * i as f64 / N as f64;
+        let p = circle.subs(t);
+        let s = circle.search_parameter(p, None, 1).unwrap();
+        assert_near!(s, t);
     }
 }
 

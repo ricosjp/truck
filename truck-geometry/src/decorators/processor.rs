@@ -285,16 +285,13 @@ where C: ParameterDivision1D<Point = Point2> + BoundedCurve<Point = Point2>
                 self.get_curve_parameter(range.0),
             ),
         };
-        let n = a[0][0] * a[0][0]
-            + a[0][1] * a[0][1]
-            + a[0][2] * a[0][2]
-            + a[1][0] * a[1][0]
-            + a[1][1] * a[1][1]
-            + a[1][2] * a[1][2]
-            + a[2][0] * a[2][0]
-            + a[2][1] * a[2][1]
-            + a[2][2] * a[2][2];
-        let (mut params, mut points) = self.entity.parameter_division(range, tol / n.sqrt());
+        let (_, k, _) = a
+            .iwasawa_decomposition()
+            .expect("transform matrix must be invertible!");
+        let n = f64::abs(k[0][0])
+            .max(f64::abs(k[1][1]))
+            .max(f64::abs(k[2][2]));
+        let (mut params, mut points) = self.entity.parameter_division(range, tol / n);
         points
             .iter_mut()
             .for_each(|pt| *pt = a.transform_point(*pt));
@@ -321,23 +318,14 @@ where C: ParameterDivision1D<Point = Point3> + BoundedCurve<Point = Point3>
                 self.get_curve_parameter(range.0),
             ),
         };
-        let n = a[0][0] * a[0][0]
-            + a[0][1] * a[0][1]
-            + a[0][2] * a[0][2]
-            + a[0][3] * a[0][3]
-            + a[1][0] * a[1][0]
-            + a[1][1] * a[1][1]
-            + a[1][2] * a[1][2]
-            + a[1][3] * a[1][3]
-            + a[2][0] * a[2][0]
-            + a[2][1] * a[2][1]
-            + a[2][2] * a[2][2]
-            + a[2][3] * a[2][3]
-            + a[3][0] * a[3][0]
-            + a[3][1] * a[3][1]
-            + a[3][2] * a[3][2]
-            + a[3][3] * a[3][3];
-        let (mut params, mut points) = self.entity.parameter_division(range, tol / n.sqrt());
+        let (_, k, _) = a
+            .iwasawa_decomposition()
+            .expect("transform matrix must be invertible!");
+        let n = f64::abs(k[0][0])
+            .max(f64::abs(k[1][1]))
+            .max(f64::abs(k[2][2]))
+            / f64::abs(k[3][3]);
+        let (mut params, mut points) = self.entity.parameter_division(range, tol / n);
         points
             .iter_mut()
             .for_each(|pt| *pt = a.transform_point(*pt));
@@ -362,16 +350,13 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
             true => range,
             false => (range.1, range.0),
         };
-        let n = a[0][0] * a[0][0]
-            + a[0][1] * a[0][1]
-            + a[0][2] * a[0][2]
-            + a[1][0] * a[1][0]
-            + a[1][1] * a[1][1]
-            + a[1][2] * a[1][2]
-            + a[2][0] * a[2][0]
-            + a[2][1] * a[2][1]
-            + a[2][2] * a[2][2];
-        let (udiv, vdiv) = self.entity.parameter_division(range, tol / n.sqrt());
+        let (_, k, _) = a
+            .iwasawa_decomposition()
+            .expect("transform matrix must be invertible!");
+        let n = f64::abs(k[0][0])
+            .max(f64::abs(k[1][1]))
+            .max(f64::abs(k[2][2]));
+        let (udiv, vdiv) = self.entity.parameter_division(range, tol / n);
         match self.orientation {
             true => (udiv, vdiv),
             false => (vdiv, udiv),
@@ -390,16 +375,14 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
             true => range,
             false => (range.1, range.0),
         };
-        let n = a[0][0] * a[0][0]
-            + a[0][1] * a[0][1]
-            + a[0][2] * a[0][2]
-            + a[1][0] * a[1][0]
-            + a[1][1] * a[1][1]
-            + a[1][2] * a[1][2]
-            + a[2][0] * a[2][0]
-            + a[2][1] * a[2][1]
-            + a[2][2] * a[2][2];
-        let (udiv, vdiv) = self.entity.parameter_division(range, tol / n.sqrt());
+        let (_, k, _) = a
+            .iwasawa_decomposition()
+            .expect("transform matrix must be invertible!");
+        let n = f64::abs(k[0][0])
+            .max(f64::abs(k[1][1]))
+            .max(f64::abs(k[2][2]))
+            / f64::abs(k[3][3]);
+        let (udiv, vdiv) = self.entity.parameter_division(range, tol / n);
         match self.orientation {
             true => (udiv, vdiv),
             false => (vdiv, udiv),
@@ -470,8 +453,8 @@ where
         let hint =
             self.entity
                 .search_nearest_parameter(inv.transform_point(point), hint, trials)?;
-        let t = algo::curve::search_nearest_parameter(self, point, hint, trials)?;
-        Some(self.get_curve_parameter(t))
+        let hint = self.get_curve_parameter(hint);
+        algo::curve::search_nearest_parameter(self, point, hint, trials)
     }
 }
 
@@ -493,11 +476,11 @@ where
         let hint =
             self.entity
                 .search_nearest_parameter(inv.transform_point(point), hint, trials)?;
-        let (u, v) = algo::surface::search_nearest_parameter(self, point, hint, trials)?;
-        Some(match self.orientation {
-            true => (u, v),
-            false => (v, u),
-        })
+        let hint = match self.orientation {
+            true => hint,
+            false => (hint.1, hint.0),
+        };
+        algo::surface::search_nearest_parameter(self, point, hint, trials)
     }
 }
 

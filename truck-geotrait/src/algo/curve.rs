@@ -100,7 +100,8 @@ where
     let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
     let t = range.0 * (1.0 - p) + range.1 * p;
     let mid = ends.0 + (ends.1 - ends.0) * p;
-    if curve.subs(t).distance(mid) < tol || trials == 0 {
+    let dist2 = curve.subs(t).distance2(mid);
+    if dist2 < tol * tol || trials == 0 {
         (vec![range.0, range.1], vec![ends.0, ends.1])
     } else {
         let mid_param = (range.0 + range.1) / 2.0;
