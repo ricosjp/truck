@@ -1,5 +1,8 @@
+//! Modeling a sphere
+//!
+//! Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
+
 use std::f64::consts::PI;
-///! Modeling a sphere
 use truck_modeling::*;
 
 fn main() {

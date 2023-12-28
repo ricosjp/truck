@@ -21,7 +21,9 @@ Generated json file can be visualized by `simple-shape-viewer`, an example of `t
 
 ### cone
 
-Modeling a unit cube by three sweeps.
+Modeling cone.
+
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
 ### cube-in-cube
 
@@ -45,9 +47,17 @@ Modeling a unit cube with a hole through it.
 
 Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
+### sphere
+
+Modeling a sphere
+
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
+
 ### torus-punched-cube
 
 A cube punched by a torus.
+
+Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
 ### torus
 

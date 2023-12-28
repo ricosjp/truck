@@ -57,12 +57,12 @@ Adds smooth normals to and quadrangulate the famous teapot.
 - Input: teapot.obj
 - Output: quaded_pot.obj
 
-### tessellate_shape
+### tessellate-shape
 
 Tessellate a shape and output an obj file.
 
 ```bash
-usage: tessellate_shape <input json file> <output json file>
+usage: tessellate-shape <input json file> <output json file>
 ```
 
 The default `<output file>` is output.obj.
