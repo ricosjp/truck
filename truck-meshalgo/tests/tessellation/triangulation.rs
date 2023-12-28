@@ -51,7 +51,7 @@ fn csolid_is_closed() {
 fn compare_occt_mesh() {
     let jsons = read_jsons();
     let solid: Solid = serde_json::from_slice(jsons[2].as_slice()).unwrap();
-    let res = solid.triangulation(0.01).to_polygon();
+    let res = solid.triangulation(0.005).to_polygon();
     let path = concat!(dir!(), "../obj/by_occt.obj");
     let ans = obj::read(std::fs::read(path).unwrap().as_slice()).unwrap();
     assert!(res.is_clung_to_by(ans.positions(), 0.05));
@@ -62,7 +62,7 @@ fn compare_occt_mesh() {
 fn compare_occt_mesh_csolid() {
     let jsons = read_jsons();
     let solid: CompressedSolid = serde_json::from_slice(jsons[2].as_slice()).unwrap();
-    let res = solid.triangulation(0.01).to_polygon();
+    let res = solid.triangulation(0.005).to_polygon();
     let path = concat!(dir!(), "../obj/by_occt.obj");
     let ans = obj::read(std::fs::read(path).unwrap().as_slice()).unwrap();
     assert!(res.is_clung_to_by(ans.positions(), 0.05));

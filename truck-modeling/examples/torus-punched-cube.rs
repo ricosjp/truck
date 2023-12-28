@@ -1,4 +1,6 @@
 //! A cube punched by a torus.
+//!
+//! Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
 use std::f64::consts::PI;
 use truck_modeling::*;

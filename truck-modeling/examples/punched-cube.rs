@@ -10,30 +10,29 @@ fn main() {
     let mut face = builder::tsweep(&edge, Vector3::unit_y());
     let v = builder::vertex(Point3::new(0.2, 0.0, -0.5));
     let edge0 = builder::tsweep(&v, Vector3::new(-0.2, 0.2, 0.0));
-    let edge1 = builder::rsweep(
+    let wire1 = builder::rsweep(
         edge0.back(),
         Point3::origin(),
         Vector3::unit_z(),
         Rad(std::f64::consts::PI / 2.0),
-    )
-    .pop_back()
-    .unwrap();
-    let edge2 = builder::tsweep(edge1.back(), Vector3::new(0.2, -0.2, 0.0));
-    let edge3 = builder::rsweep(
+    );
+    let edge2 = builder::tsweep(wire1.back_vertex().unwrap(), Vector3::new(0.2, -0.2, 0.0));
+    let mut wire3 = builder::rsweep(
         edge2.back(),
         Point3::origin(),
         Vector3::unit_z(),
         Rad(std::f64::consts::PI / 2.0),
-    )
-    .pop_back()
-    .unwrap();
-    let edge3 = Edge::new(edge3.front(), edge0.front(), edge3.curve());
-    let wire = Wire::from(vec![
-        edge3.inverse(),
-        edge2.inverse(),
-        edge1.inverse(),
-        edge0.inverse(),
-    ]);
+    );
+    let back_edge = wire3.pop_back().unwrap();
+    let tmp = Edge::new(back_edge.front(), edge0.front(), back_edge.curve());
+    wire3.push_back(tmp);
+    let mut wire = Wire::from_iter(
+        std::iter::once(edge0)
+            .chain(wire1)
+            .chain(std::iter::once(edge2))
+            .chain(wire3),
+    );
+    wire.invert();
     face.add_boundary(wire);
     let shape = builder::tsweep(&face, Vector3::unit_z());
     let json = serde_json::to_vec_pretty(&shape).unwrap();
