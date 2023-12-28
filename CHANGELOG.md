@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Tessellate sphere modeling by `builder::cone`.
 - Refactoring by `itertools` and `array_macro`.
 - Enabled meshing when the boundary is not closed in the parameter space.
 - Robust tessellation in adhoc viewer.
