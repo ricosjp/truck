@@ -1,4 +1,4 @@
-use crate::loops_store::ShapesOpStatus;
+use super::loops_store::ShapesOpStatus;
 use rustc_hash::FxHashMap as HashMap;
 use truck_topology::*;
 

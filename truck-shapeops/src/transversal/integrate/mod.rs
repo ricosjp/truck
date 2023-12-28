@@ -1,4 +1,4 @@
-use crate::*;
+use super::*;
 use truck_geometry::prelude::IntersectionCurve;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;

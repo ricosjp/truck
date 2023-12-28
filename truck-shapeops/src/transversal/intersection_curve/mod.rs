@@ -155,7 +155,7 @@ where
     S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     let interferences = polygon0.extract_interference(polygon1);
-    let polylines = crate::polyline_construction::construct_polylines(&interferences);
+    let polylines = super::polyline_construction::construct_polylines(&interferences);
     polylines
         .into_iter()
         .map(|polyline| {
