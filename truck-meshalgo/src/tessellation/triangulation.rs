@@ -187,7 +187,7 @@ where
         }
     };
     #[cfg(not(target_arch = "wasm32"))]
-    let faces = shell.faces.iter().map(tessellate_face).collect();
+    let faces = shell.faces.par_iter().map(tessellate_face).collect();
     #[cfg(target_arch = "wasm32")]
     let faces = shell.faces.iter().map(tessellate_face).collect();
     MeshedCShell {
