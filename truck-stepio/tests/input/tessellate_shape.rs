@@ -12,6 +12,7 @@ const STEP_FILES: &[&str] = &[
     "occt-torus.step",
     "abc-0000.step",
     "abc-0006.step",
+    "abc-0008.step",
     "abc-0035.step",
 ];
 
@@ -23,8 +24,12 @@ fn tessellate_shape() {
         let table = Table::from_step(&step_string).unwrap();
         table.shell.values().cloned().for_each(|step_shell| {
             let cshell = table.to_compressed_shell(&step_shell).unwrap();
-            let mut poly = cshell.triangulation(0.01).to_polygon();
-            poly.put_together_same_attrs().remove_degenerate_faces();
+            let bdb = cshell.triangulation(0.01).to_polygon().bounding_box();
+            let diag = bdb.max() - bdb.min();
+            let r = diag.x.min(diag.y).min(diag.z);
+            let mut poly = cshell.triangulation(0.01 * r).to_polygon();
+            poly.put_together_same_attrs(TOLERANCE * 50.0)
+                .remove_degenerate_faces();
             assert_eq!(poly.shell_condition(), ShellCondition::Closed, "{name}");
         });
     });

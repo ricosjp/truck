@@ -8,6 +8,7 @@
 
 use truck_meshalgo::{analyzers::*, filters::*, tessellation::*};
 use truck_modeling::{geometry::*, Point3};
+use truck_polymesh::TOLERANCE;
 use truck_topology::compress::*;
 type CShell = CompressedShell<Point3, Curve, Surface>;
 type CSolid = CompressedSolid<Point3, Curve, Surface>;
@@ -27,7 +28,7 @@ fn main() {
             panic!("Your json file is something wrong.");
         }
     };
-    poly.put_together_same_attrs()
+    poly.put_together_same_attrs(TOLERANCE * 10.0)
         .remove_degenerate_faces()
         .remove_unused_attrs();
     println!("polygon shell condition: {:?}", poly.shell_condition());

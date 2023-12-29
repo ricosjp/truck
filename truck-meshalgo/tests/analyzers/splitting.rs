@@ -75,7 +75,8 @@ fn into_component_test() {
     );
 
     // sign up normals
-    mesh.add_naive_normals(true).put_together_same_attrs();
+    mesh.add_naive_normals(true)
+        .put_together_same_attrs(TOLERANCE);
 
     let components = mesh.components(true);
     // The number of components is six because the mesh is a cube.

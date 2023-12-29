@@ -20,7 +20,7 @@ fn solid_is_closed() {
     for (i, json) in read_jsons().into_iter().enumerate() {
         let solid: Solid = serde_json::from_reader(json.as_slice()).unwrap();
         let mut poly = solid.triangulation(0.01).to_polygon();
-        poly.put_together_same_attrs()
+        poly.put_together_same_attrs(TOLERANCE * 2.0)
             .remove_degenerate_faces()
             .remove_unused_attrs();
         assert_eq!(
@@ -36,7 +36,7 @@ fn csolid_is_closed() {
     for (i, json) in read_jsons().into_iter().enumerate() {
         let solid: CompressedSolid = serde_json::from_reader(json.as_slice()).unwrap();
         let mut poly = solid.triangulation(0.01).to_polygon();
-        poly.put_together_same_attrs()
+        poly.put_together_same_attrs(TOLERANCE * 2.0)
             .remove_degenerate_faces()
             .remove_unused_attrs();
         assert_eq!(
@@ -116,7 +116,7 @@ fn special_cylinder_model() -> Shell {
 fn special_cylinder() {
     let shell = special_cylinder_model();
     let mut mesh = shell.triangulation(0.01).to_polygon();
-    mesh.put_together_same_attrs()
+    mesh.put_together_same_attrs(TOLERANCE)
         .remove_degenerate_faces()
         .remove_unused_attrs();
     assert_eq!(mesh.shell_condition(), ShellCondition::Closed);
@@ -126,7 +126,7 @@ fn special_cylinder() {
 fn special_cylinder_csolid() {
     let shell = special_cylinder_model().compress();
     let mut mesh = shell.triangulation(0.01).to_polygon();
-    mesh.put_together_same_attrs()
+    mesh.put_together_same_attrs(TOLERANCE)
         .remove_degenerate_faces()
         .remove_unused_attrs();
     assert_eq!(mesh.shell_condition(), ShellCondition::Closed);

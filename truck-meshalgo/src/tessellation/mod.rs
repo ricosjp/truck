@@ -161,7 +161,7 @@ pub trait MeshableShape {
     /// assert_ne!(mesh.shell_condition(), ShellCondition::Closed);
     ///
     /// // use optimization filters!
-    /// mesh.put_together_same_attrs();
+    /// mesh.put_together_same_attrs(TOLERANCE);
     /// assert_eq!(mesh.shell_condition(), ShellCondition::Closed);
     /// ```
     fn triangulation(&self, tol: f64) -> Self::MeshedShape;
