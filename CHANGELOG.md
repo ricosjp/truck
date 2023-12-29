@@ -5,6 +5,7 @@ The version is of the bottom crate `truck-rendimpl`.
 ## Unreleased
 
 - Increase the capacity of step file in adhoc-viewer.
+- Fix clippy.
 - Add tessellate test with ABC Dataset.
 - Tessellate sphere modeling by `builder::cone`.
 - Refactoring by `itertools` and `array_macro`.

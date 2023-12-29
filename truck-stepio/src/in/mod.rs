@@ -935,7 +935,7 @@ impl TryFrom<&BoundedCurveAny> for Curve2D {
     fn try_from(value: &BoundedCurveAny) -> std::result::Result<Self, Self::Error> {
         use BoundedCurveAny::*;
         Ok(match value {
-            Polyline(x) => Self::Polyline(x.as_ref().try_into()?),
+            Polyline(x) => Self::Polyline(x.as_ref().into()),
             BSplineCurve(x) => x.as_ref().try_into()?,
         })
     }
@@ -947,7 +947,7 @@ impl TryFrom<&BoundedCurveAny> for Curve3D {
     fn try_from(value: &BoundedCurveAny) -> std::result::Result<Self, Self::Error> {
         use BoundedCurveAny::*;
         Ok(match value {
-            Polyline(x) => Self::Polyline(x.as_ref().try_into()?),
+            Polyline(x) => Self::Polyline(x.as_ref().into()),
             BSplineCurve(x) => x.as_ref().try_into()?,
         })
     }
@@ -1332,7 +1332,7 @@ impl TryFrom<&Pcurve> for PCurve {
         let curve: Curve2D = value
             .reference_to_curve
             .representation_item
-            .get(0)
+            .first()
             .ok_or("no representation item")?
             .try_into()?;
         Ok(alias::PCurve::new(Box::new(curve), Box::new(surface)))
@@ -1387,7 +1387,7 @@ impl TryFrom<&SurfaceCurve> for Curve3D {
         match &value.master_representation {
             PSCR::Curve3D => Ok((&value.curve_3d).try_into()?),
             PSCR::PcurveS1 => {
-                if let Some(PcurveOrSurface::Pcurve(x)) = value.associated_geometry.get(0) {
+                if let Some(PcurveOrSurface::Pcurve(x)) = value.associated_geometry.first() {
                     Ok(Self::PCurve(x.as_ref().try_into()?))
                 } else {
                     Err("The 0-indexed associated geometry is nothing or not PCURVE.".into())
@@ -2095,7 +2095,7 @@ impl EdgeCurve {
                 let curve2d = c
                     .reference_to_curve
                     .representation_item
-                    .get(0)
+                    .first()
                     .ok_or("no representation item")?;
                 let curve2d = Self::sub_parse_2d(
                     curve2d,
@@ -2113,7 +2113,7 @@ impl EdgeCurve {
                 match c.master_representation {
                     Curve3D => Self::sub_parse_curve3d(&c.curve_3d, p, q, same_sense)?,
                     PcurveS1 => {
-                        if let Some(PcurveOrSurface::Pcurve(c)) = c.associated_geometry.get(0) {
+                        if let Some(PcurveOrSurface::Pcurve(c)) = c.associated_geometry.first() {
                             Self::sub_parse_curve3d(&CurveAny::Pcurve(c.clone()), p, q, true)?
                         } else {
                             return Err(
