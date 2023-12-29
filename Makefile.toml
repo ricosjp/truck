@@ -83,6 +83,7 @@ args = [
 
 [tasks.collect-gpu-artifacts]
 description = "Collects artifacts for gpu tests"
+script_runner = "@shell"
 script = [
 	"mkdir images",
 	"mv truck-platform/output images/platform",
@@ -130,10 +131,13 @@ script = [
 
 [tasks.adhoc-viewer]
 description = "build adhoc viewer"
+script_runner = "@shell"
 script = [
 	"cd truck-js",
 	"wasm-pack build --target web",
-	"cp examples/index.html examples/bootstrap.js examples/script.js pkg",
+	"cp examples/index.html pkg/",
+	"cp examples/bootstrap.js pkg/",
+	"cp examples/script.js pkg/",
 ]
 
 [tasks.wasm-test]
