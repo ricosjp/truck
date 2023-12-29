@@ -232,9 +232,12 @@ function fileRead(e) {
       }
     } else if (file_ext === "step" || file_ext === "stp") {
       const APPLY_MAX = 1024;
-      var stepStr = '';
+      var stepStr = "";
       for (var i = 0; i < result.length; i += APPLY_MAX) {
-        stepStr += String.fromCharCode.apply(null, result.slice(i, i + APPLY_MAX));
+        stepStr += String.fromCharCode.apply(
+          null,
+          result.slice(i, i + APPLY_MAX),
+        );
       }
       const table = Truck.Table.from_step(stepStr);
       const indices = table.shell_indices();
