@@ -54,7 +54,7 @@ impl MyRender {
         scene.clear_objects();
         self.instances.clear();
         let mut mesh = obj::read(reader).unwrap();
-        mesh.put_together_same_attrs()
+        mesh.put_together_same_attrs(TOLERANCE)
             .add_smooth_normals(0.5, false);
         let bdd_box = mesh.bounding_box();
         let (size, center) = (bdd_box.size(), bdd_box.center());

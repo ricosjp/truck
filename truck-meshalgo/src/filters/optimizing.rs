@@ -93,7 +93,7 @@ pub trait OptimizingFilter {
     /// mesh.remove_unused_attrs();
     /// assert_eq!(mesh.positions().len(), 4);
     /// ```
-    fn put_together_same_attrs(&mut self) -> &mut Self;
+    fn put_together_same_attrs(&mut self, tol: f64) -> &mut Self;
 }
 
 fn all_pos_mut(faces: &mut Faces) -> impl Iterator<Item = &mut usize> {
@@ -163,7 +163,7 @@ impl OptimizingFilter for PolygonMesh {
         self
     }
 
-    fn put_together_same_attrs(&mut self) -> &mut Self {
+    fn put_together_same_attrs(&mut self, tol: f64) -> &mut Self {
         let mut mesh = self.debug_editor();
         let PolygonMeshEditor {
             attributes:
@@ -182,11 +182,11 @@ impl OptimizingFilter for PolygonMesh {
             .iter()
             .map(move |position| 2.0 * (position - center).zip(diag, |a, b| a / b))
             .collect::<Vec<_>>();
-        let pos_map = sub_put_together_same_attrs(&normalized_positions);
+        let pos_map = sub_put_together_same_attrs(&normalized_positions, tol);
         all_pos_mut(faces).for_each(|idx| *idx = pos_map[*idx]);
-        let uv_map = sub_put_together_same_attrs(uv_coords);
+        let uv_map = sub_put_together_same_attrs(uv_coords, tol);
         all_uv_mut(faces).for_each(|idx| *idx = uv_map[*idx]);
-        let nor_map = sub_put_together_same_attrs(normals);
+        let nor_map = sub_put_together_same_attrs(normals, tol);
         all_nor_mut(faces).for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
         self
@@ -213,11 +213,11 @@ fn sub_remove_unused_attrs<'a, I: Iterator<Item = &'a mut usize>>(
     new2old
 }
 
-fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T]) -> Vec<usize> {
+fn sub_put_together_same_attrs<T: Copy + CastIntVector>(attrs: &[T], tol: f64) -> Vec<usize> {
     let mut res = Vec::new();
     let mut map = HashMap::default();
     for (i, attr) in attrs.iter().enumerate() {
-        let v = ((*attr).add_element_wise(TOLERANCE * 2.0) / (TOLERANCE * 4.0)).cast_int();
+        let v = ((*attr).add_element_wise(tol) / (tol * 2.0)).cast_int();
         res.push(*map.entry(v).or_insert(i));
     }
     res

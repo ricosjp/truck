@@ -17,7 +17,7 @@ fn main() {
     let mut mesh = obj::read(file).unwrap();
     mesh.normalize_normals()
         .remove_unused_attrs()
-        .put_together_same_attrs()
+        .put_together_same_attrs(TOLERANCE * 2.0)
         .remove_degenerate_faces()
         .add_smooth_normals(std::f64::consts::PI / 6.0, true)
         .remove_unused_attrs();
