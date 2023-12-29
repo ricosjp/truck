@@ -232,8 +232,8 @@ function fileRead(e) {
       }
     } else if (file_ext === "step" || file_ext === "stp") {
       const APPLY_MAX = 1024;
-      var stepStr = "";
-      for (var i = 0; i < result.length; i += APPLY_MAX) {
+      let stepStr = "";
+      for (let i = 0; i < result.length; i += APPLY_MAX) {
         stepStr += String.fromCharCode.apply(
           null,
           result.slice(i, i + APPLY_MAX),
@@ -241,7 +241,7 @@ function fileRead(e) {
       }
       const table = Truck.Table.from_step(stepStr);
       const indices = table.shell_indices();
-      for (var i = 0; i < indices.length; i++) {
+      for (let i = 0; i < indices.length; i++) {
         shape[i] = table.get_shape(indices[i]);
       }
       if (typeof shape === "undefined") {
@@ -250,7 +250,7 @@ function fileRead(e) {
       }
     }
     polygon = shape[0].to_polygon(0.01);
-    for (var i = 1; i < shape.length; i++) {
+    for (let i = 1; i < shape.length; i++) {
       polygon.merge(shape[i].to_polygon(0.01));
     }
     if (typeof polygon === "undefined") {
