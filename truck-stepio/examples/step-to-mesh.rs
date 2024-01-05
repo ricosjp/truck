@@ -24,7 +24,7 @@ struct Args {
     condition_check: bool,
     /// output the STEP parse result by json
     /// When the string "output" is entered, the registered `#i` shell is output "output-i.json".
-    #[arg(long("shape-json"), default_value = "output")]
+    #[arg(long("shape-json"))]
     shape_json: Option<String>,
 }
 
@@ -80,7 +80,7 @@ fn output_obj(
     let mut polymesh = PolygonMesh::default();
     polyshells.iter().for_each(|shell| {
         let mut poly = shell.to_polygon();
-        poly.put_together_same_attrs()
+        poly.put_together_same_attrs(TOLERANCE * 50.0)
             .remove_degenerate_faces()
             .remove_unused_attrs();
         if condition_check {

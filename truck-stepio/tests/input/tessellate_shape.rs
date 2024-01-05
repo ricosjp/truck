@@ -10,6 +10,10 @@ const STEP_FILES: &[&str] = &[
     "occt-cylinder.step",
     "occt-sphere.step",
     "occt-torus.step",
+    "abc-0000.step",
+    "abc-0006.step",
+    "abc-0008.step",
+    "abc-0035.step",
 ];
 
 #[test]
@@ -18,12 +22,15 @@ fn tessellate_shape() {
         let path = [STEP_DIRECTORY, name].concat();
         let step_string = std::fs::read_to_string(path).unwrap();
         let table = Table::from_step(&step_string).unwrap();
-        let step_shells = table.shell.values().cloned().collect::<Vec<_>>();
-        assert_eq!(step_shells.len(), 1);
-        let step_shell = step_shells.into_iter().next().unwrap();
-        let cshell = table.to_compressed_shell(&step_shell).unwrap();
-        let mut poly = cshell.triangulation(0.05).to_polygon();
-        poly.put_together_same_attrs().remove_degenerate_faces();
-        assert_eq!(poly.shell_condition(), ShellCondition::Closed, "{name}");
+        table.shell.values().cloned().for_each(|step_shell| {
+            let cshell = table.to_compressed_shell(&step_shell).unwrap();
+            let bdb = cshell.triangulation(0.01).to_polygon().bounding_box();
+            let diag = bdb.max() - bdb.min();
+            let r = diag.x.min(diag.y).min(diag.z);
+            let mut poly = cshell.triangulation(0.01 * r).to_polygon();
+            poly.put_together_same_attrs(TOLERANCE * 50.0)
+                .remove_degenerate_faces();
+            assert_eq!(poly.shell_condition(), ShellCondition::Closed, "{name}");
+        });
     });
 }

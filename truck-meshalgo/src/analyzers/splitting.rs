@@ -115,7 +115,7 @@ pub trait Splitting {
     /// );
     ///
     /// // sign up normals
-    /// mesh.add_naive_normals(true).put_together_same_attrs();
+    /// mesh.add_naive_normals(true).put_together_same_attrs(TOLERANCE);
     ///
     /// // into components with normals
     /// let components = mesh.components(true);

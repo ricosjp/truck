@@ -223,24 +223,36 @@ function fileRead(e) {
   reader.onload = function () {
     const result = new Uint8Array(reader.result);
 
-    let shape;
+    let shape = [];
     if (file_ext === "json") {
-      shape = Truck.Solid.from_json(result);
+      shape = [Truck.Solid.from_json(result)];
       if (typeof shape === "undefined") {
         console.warn("invalid json");
         return;
       }
     } else if (file_ext === "step" || file_ext === "stp") {
-      const step_str = String.fromCharCode(...result);
-      const table = Truck.Table.from_step(step_str);
+      const APPLY_MAX = 1024;
+      let stepStr = "";
+      for (let i = 0; i < result.length; i += APPLY_MAX) {
+        stepStr += String.fromCharCode.apply(
+          null,
+          result.slice(i, i + APPLY_MAX),
+        );
+      }
+      const table = Truck.Table.from_step(stepStr);
       const indices = table.shell_indices();
-      shape = table.get_shape(indices[0]);
+      for (let i = 0; i < indices.length; i++) {
+        shape[i] = table.get_shape(indices[i]);
+      }
       if (typeof shape === "undefined") {
         console.warn("invalid step");
         return;
       }
     }
-    polygon = shape.to_polygon(0.01);
+    polygon = shape[0].to_polygon(0.01);
+    for (let i = 1; i < shape.length; i++) {
+      polygon.merge(shape[i].to_polygon(0.01));
+    }
     if (typeof polygon === "undefined") {
       console.warn("meshing failed");
       return;

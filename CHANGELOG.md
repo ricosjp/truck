@@ -4,6 +4,11 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Tolerance setting of `put_together_same_attrs`.
+- Increase the capacity of step file in adhoc-viewer.
+- Fix clippy.
+- Add tessellate test with ABC Dataset.
+- Tessellate sphere modeling by `builder::cone`.
 - Refactoring by `itertools` and `array_macro`.
 - Enabled meshing when the boundary is not closed in the parameter space.
 - Robust tessellation in adhoc viewer.

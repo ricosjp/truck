@@ -316,7 +316,7 @@ pub fn cone<R: Into<Rad<f64>>>(wire: &Wire, axis: Vector3, angle: R) -> Shell {
         let mut new_wire = Wire::new();
         new_wire.push_back(edge.clone());
         new_wire.push_back(old_wire[1].clone());
-        let new_edge = if closed && i + 1 == shell.len() / new_wire.len() {
+        let new_edge = if closed && i + 1 == shell.len() / wire.len() {
             shell[0].boundaries()[0][0].inverse()
         } else {
             let curve = old_wire[2].oriented_curve();
@@ -646,7 +646,7 @@ fn partial_rsweep<T: MultiSweep<Point3, Curve, Surface>>(
     axis: Vector3,
     angle: Rad<f64>,
 ) -> T::Swept {
-    let division = if angle.0.abs() < PI.0 { 1 } else { 2 };
+    let division = if angle.0.abs() < PI.0 { 2 } else { 3 };
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle / division as f64);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -672,15 +672,16 @@ fn whole_rsweep<T: ClosedSweep<Point3, Curve, Surface>>(
     origin: Point3,
     axis: Vector3,
 ) -> T::Swept {
+    const DIVISION: usize = 3;
     let mat0 = Matrix4::from_translation(-origin.to_vec());
-    let mat1 = Matrix4::from_axis_angle(axis, PI);
+    let mat1 = Matrix4::from_axis_angle(axis, PI * 2.0 / DIVISION as f64);
     let mat2 = Matrix4::from_translation(origin.to_vec());
     let trsl = mat2 * mat1 * mat0;
     elem.closed_sweep(
         &move |pt| trsl.transform_point(*pt),
         &move |curve| curve.transformed(trsl),
         &move |surface| surface.transformed(trsl),
-        &move |pt, _| geom_impls::circle_arc(*pt, origin, axis, PI).into(),
+        &move |pt, _| geom_impls::circle_arc(*pt, origin, axis, PI * 2.0 / DIVISION as f64).into(),
         &move |curve, _| {
             Surface::RevolutedCurve(Processor::new(RevolutedCurve::by_revolution(
                 curve.clone(),
@@ -688,7 +689,7 @@ fn whole_rsweep<T: ClosedSweep<Point3, Curve, Surface>>(
                 axis,
             )))
         },
-        2,
+        DIVISION,
     )
 }
 

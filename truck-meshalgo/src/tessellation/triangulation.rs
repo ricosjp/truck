@@ -231,7 +231,6 @@ impl PolyBoundaryPiece {
         wire: impl Iterator<Item = PolylineCurve>,
         sp: impl Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
     ) -> Option<Self> {
-        let mut previous: Option<(f64, f64)> = None;
         let up = surface.u_period();
         let vp = surface.v_period();
         let mut bdry3d: Vec<Point3> = wire
@@ -241,35 +240,51 @@ impl PolyBoundaryPiece {
             })
             .collect();
         bdry3d.push(bdry3d[0]);
-        let mut hint = None;
-        let vec = bdry3d
+        let mut previous = None;
+        let mut vec = bdry3d
             .into_iter()
-            .map(|pt| {
-                hint = sp(surface, pt, hint);
+            .flat_map(|pt| {
+                let (mut u, mut v) = match sp(surface, pt, previous) {
+                    Some(hint) => hint,
+                    None => return vec![None],
+                };
                 fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
                     let f = move |x: &f64| f64::abs(x - previous);
                     move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
                 }
-                if let (Some((ref mut hint, _)), Some(up), Some((previous, _))) =
-                    (&mut hint, up, previous)
-                {
-                    *hint = (-2..=2)
-                        .map(|i| *hint + i as f64 * up)
-                        .min_by(abs_diff(previous))
+                if let (Some(up), Some((u0, _))) = (up, previous) {
+                    u = (-2..=2)
+                        .map(|i| u + i as f64 * up)
+                        .min_by(abs_diff(u0))
                         .unwrap();
                 }
-                if let (Some((_, ref mut hint)), Some(vp), Some((_, previous))) =
-                    (&mut hint, vp, previous)
-                {
-                    *hint = (-2..=2)
-                        .map(|i| *hint + i as f64 * vp)
-                        .min_by(abs_diff(previous))
+                if let (Some(vp), Some((_, v0))) = (vp, previous) {
+                    v = (-2..=2)
+                        .map(|i| v + i as f64 * vp)
+                        .min_by(abs_diff(v0))
                         .unwrap();
                 }
-                previous = hint;
-                hint.map(Into::<Point2>::into)
+                let res = (|| {
+                    if let Some((u0, v0)) = previous {
+                        if !u0.near(&u) && surface.uder(u0, v0).so_small() {
+                            return vec![Some(Point2::new(u, v0)), Some(Point2::new(u, v))];
+                        } else if !v0.near(&v) && surface.vder(u0, v0).so_small() {
+                            return vec![Some(Point2::new(u0, v)), Some(Point2::new(u, v))];
+                        }
+                    }
+                    vec![Some(Point2::new(u, v))]
+                })();
+                previous = Some((u, v));
+                res
             })
             .collect::<Option<Vec<Point2>>>()?;
+        let last = *vec.last().unwrap();
+        if !vec[0].near(&last) {
+            let Point2 { x: u0, y: v0 } = last;
+            if surface.uder(u0, v0).so_small() || surface.vder(u0, v0).so_small() {
+                vec.push(vec[0]);
+            }
+        }
         Some(Self(vec))
     }
 }

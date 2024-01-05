@@ -15,7 +15,7 @@ fn main() {
     std::fs::copy(PATH, "filleted_cube.obj").unwrap();
     let file = std::fs::File::open(PATH).unwrap();
     let mut mesh = obj::read(file).unwrap();
-    mesh.put_together_same_attrs()
+    mesh.put_together_same_attrs(TOLERANCE * 2.0)
         .quadrangulate(0.1, 1.0)
         .add_smooth_normals(std::f64::consts::PI / 3.0, true);
 
