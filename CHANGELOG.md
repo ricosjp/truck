@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add `sphere.json` to tessellate test.
 - Tolerance setting of `put_together_same_attrs`.
 - Increase the capacity of step file in adhoc-viewer.
 - Fix clippy.

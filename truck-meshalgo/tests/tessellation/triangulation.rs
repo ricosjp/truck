@@ -4,10 +4,12 @@ type CompressedSolid = truck_topology::compress::CompressedSolid<Point3, Curve, 
 
 macro_rules! dir ( () => { concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/shape/") });
 
-const SHAPE_JSONS: [&str; 3] = [
+const SHAPE_JSONS: &[&str] = &[
     concat!(dir!(), "bottle.json"),
     concat!(dir!(), "punched-cube.json"),
     concat!(dir!(), "torus-punched-cube.json"),
+    concat!(dir!(), "sphere.json"),
+    concat!(dir!(), "torus.json"),
 ];
 
 fn read_jsons() -> Vec<Vec<u8>> {
