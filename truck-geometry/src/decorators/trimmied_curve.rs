@@ -31,6 +31,14 @@ impl<C: ParametricCurve> ParametricCurve for TrimmedCurve<C> {
 
 impl<C: ParametricCurve> BoundedCurve for TrimmedCurve<C> {}
 
+impl<C: ParametricCurve> Cut for TrimmedCurve<C> {
+    fn cut(&mut self, t: f64) -> Self {
+        let (t0, t1) = self.range;
+        self.range = (t0, t);
+        Self::new(self.curve.clone(), (t, t1))
+    }
+}
+
 impl<C: SearchNearestParameter<D1>> SearchNearestParameter<D1> for TrimmedCurve<C> {
     type Point = C::Point;
     #[inline(always)]

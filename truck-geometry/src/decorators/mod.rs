@@ -2,7 +2,7 @@ use crate::{prelude::*, *};
 use std::ops::{Deref, DerefMut, Mul};
 
 /// revolution
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 struct Revolution {
     origin: Point3,
     axis: Vector3,
@@ -37,14 +37,14 @@ struct Revolution {
 ///     }
 /// }
 /// ```
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RevolutedCurve<C> {
     curve: C,
     revolution: Revolution,
 }
 
 /// Linearly extruded curve
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ExtrudedCurve<C, V> {
     curve: C,
     vector: V,
@@ -108,7 +108,7 @@ pub struct ExtrudedCurve<C, V> {
 ///     }
 /// }
 /// ```
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Processor<E, T> {
     entity: E,
     transform: T,
@@ -116,14 +116,14 @@ pub struct Processor<E, T> {
 }
 
 /// The composited maps
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PCurve<C, S> {
     curve: C,
     surface: S,
 }
 
 /// Intersection curve between two surfaces.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IntersectionCurve<C, S> {
     // Considering rotational surfaces, we can consider the case
     // where the class `S` holds the curve `C` as a variable.
@@ -134,7 +134,7 @@ pub struct IntersectionCurve<C, S> {
 }
 
 /// trimmed curve for parametric curve
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct TrimmedCurve<C> {
     curve: C,
     range: (f64, f64),

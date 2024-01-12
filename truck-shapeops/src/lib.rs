@@ -13,6 +13,7 @@
     unused_qualifications
 )]
 
+mod healing;
 mod transversal;
 pub use transversal::{and, or, ShapeOpsCurve, ShapeOpsSurface};
 mod alternative;

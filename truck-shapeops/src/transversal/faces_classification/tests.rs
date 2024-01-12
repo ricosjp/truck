@@ -1,5 +1,7 @@
-use super::*;
-use super::super::{loops_store, divide_face};
+use super::{
+    super::{divide_face, loops_store},
+    *,
+};
 use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
 use truck_topology::{shell::ShellCondition, Vertex};

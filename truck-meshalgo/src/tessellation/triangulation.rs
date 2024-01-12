@@ -15,6 +15,11 @@ type Cdt = ConstrainedDelaunayTriangulation<SPoint2>;
 type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
 type MeshedCShell = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
 
+pub(super) trait SP<S>:
+    Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable {
+}
+impl<S, F> SP<S> for F where F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable {}
+
 pub(super) fn by_search_parameter<S>(
     surface: &S,
     point: Point3,
@@ -45,15 +50,14 @@ where
 
 /// Tessellates faces
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn shell_tessellation<'a, C, S, F>(
+pub(super) fn shell_tessellation<'a, C, S>(
     shell: &Shell<Point3, C, S>,
     tol: f64,
-    sp: F,
+    sp: impl SP<S>,
 ) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
     S: PreMeshableSurface + 'a,
-    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable,
 {
     let vmap: HashMap<_, _> = shell
         .vertex_par_iter()
@@ -92,15 +96,14 @@ where
 
 /// Tessellates faces
 #[cfg(any(target_arch = "wasm32", test))]
-pub(super) fn shell_tessellation_single_thread<'a, C, S, F>(
+pub(super) fn shell_tessellation_single_thread<'a, C, S>(
     shell: &'a Shell<Point3, C, S>,
     tol: f64,
-    sp: F,
+    sp: impl SP<S>,
 ) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
     S: PreMeshableSurface + 'a,
-    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
 {
     use truck_base::entry_map::FxEntryMap as EntryMap;
     use truck_topology::Vertex as TVertex;
@@ -142,15 +145,14 @@ where
 }
 
 /// Tessellates faces
-pub(super) fn cshell_tessellation<'a, C, S, F>(
+pub(super) fn cshell_tessellation<'a, C, S>(
     shell: &CompressedShell<Point3, C, S>,
     tol: f64,
-    sp: F,
+    sp: impl SP<S>,
 ) -> MeshedCShell
 where
     C: PolylineableCurve + 'a,
     S: PreMeshableSurface + 'a,
-    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable,
 {
     let vertices = shell.vertices.clone();
     let tessellate_edge = |edge: &CompressedEdge<C>| {
@@ -202,7 +204,7 @@ fn shell_create_polygon<S: PreMeshableSurface>(
     wires: Vec<Wire<Point3, PolylineCurve>>,
     orientation: bool,
     tol: f64,
-    sp: impl Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
+    sp: impl SP<S>,
 ) -> Face<Point3, PolylineCurve, Option<PolygonMesh>> {
     let preboundary = wires
         .iter()
@@ -229,14 +231,14 @@ impl PolyBoundaryPiece {
     fn try_new<S: PreMeshableSurface>(
         surface: &S,
         wire: impl Iterator<Item = PolylineCurve>,
-        sp: impl Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
+        sp: impl SP<S>,
     ) -> Option<Self> {
         let up = surface.u_period();
         let vp = surface.v_period();
         let mut bdry3d: Vec<Point3> = wire
             .flat_map(|poly_edge| {
                 let n = poly_edge.len() - 1;
-                poly_edge.0.into_iter().take(n)
+                poly_edge.into_iter().take(n)
             })
             .collect();
         bdry3d.push(bdry3d[0]);
