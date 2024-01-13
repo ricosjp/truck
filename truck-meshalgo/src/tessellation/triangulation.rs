@@ -233,8 +233,8 @@ impl PolyBoundaryPiece {
         wire: impl Iterator<Item = PolylineCurve>,
         sp: impl SP<S>,
     ) -> Option<Self> {
-        let up = surface.u_period();
-        let vp = surface.v_period();
+        let (up, vp) = (surface.u_period(), surface.v_period());
+        let (urange, vrange) = surface.try_range_tuple();
         let mut bdry3d: Vec<Point3> = wire
             .flat_map(|poly_edge| {
                 let n = poly_edge.len() - 1;
@@ -250,21 +250,11 @@ impl PolyBoundaryPiece {
                     Some(hint) => hint,
                     None => return vec![None],
                 };
-                fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
-                    let f = move |x: &f64| f64::abs(x - previous);
-                    move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
-                }
                 if let (Some(up), Some((u0, _))) = (up, previous) {
-                    u = (-2..=2)
-                        .map(|i| u + i as f64 * up)
-                        .min_by(abs_diff(u0))
-                        .unwrap();
+                    u = get_mindiff(u, u0, up);
                 }
                 if let (Some(vp), Some((_, v0))) = (vp, previous) {
-                    v = (-2..=2)
-                        .map(|i| v + i as f64 * vp)
-                        .min_by(abs_diff(v0))
-                        .unwrap();
+                    v = get_mindiff(v, v0, vp);
                 }
                 let res = (|| {
                     if let Some((u0, v0)) = previous {
@@ -280,6 +270,15 @@ impl PolyBoundaryPiece {
                 res
             })
             .collect::<Option<Vec<Point2>>>()?;
+        let grav = vec.iter().fold(Point2::origin(), |g, p| g + p.to_vec()) / vec.len() as f64;
+        if let (Some(up), Some((u0, _))) = (up, urange) {
+            let quot = f64::floor((grav.x - u0) / up);
+            vec.iter_mut().for_each(|p| p.x -= quot * up);
+        }
+        if let (Some(vp), Some((v0, _))) = (vp, vrange) {
+            let quot = f64::floor((grav.y - v0) / vp);
+            vec.iter_mut().for_each(|p| p.y -= quot * vp);
+        }
         let last = *vec.last().unwrap();
         if !vec[0].near(&last) {
             let Point2 { x: u0, y: v0 } = last;
@@ -289,6 +288,15 @@ impl PolyBoundaryPiece {
         }
         Some(Self(vec))
     }
+}
+
+fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
+    let f = move |x: &f64| f64::abs(x - previous);
+    move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
+}
+fn get_mindiff(u: f64, u0: f64, up: f64) -> f64 {
+    let closure = |i| u + i as f64 * up;
+    (-2..=2).map(closure).min_by(abs_diff(u0)).unwrap()
 }
 
 #[derive(Debug, Default, Clone)]

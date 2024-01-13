@@ -138,8 +138,8 @@ fn to_parametric_polyline<S: ParametricSurface3D>(
     wire: impl Iterator<Item = PolylineCurve<Point3>>,
     sp: impl SP<S>,
 ) -> Option<PolylineCurve<Point2>> {
-    let up = surface.u_period();
-    let vp = surface.v_period();
+    let (up, vp) = (surface.u_period(), surface.v_period());
+    let (urange, vrange) = surface.try_range_tuple();
     let mut bdry3d: Vec<Point3> = wire
         .flat_map(|poly_edge| {
             let n = poly_edge.len() - 1;
@@ -155,21 +155,11 @@ fn to_parametric_polyline<S: ParametricSurface3D>(
                 Some(hint) => hint,
                 None => return vec![None],
             };
-            fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
-                let f = move |x: &f64| f64::abs(x - previous);
-                move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
-            }
             if let (Some(up), Some((u0, _))) = (up, previous) {
-                u = (-2..=2)
-                    .map(|i| u + i as f64 * up)
-                    .min_by(abs_diff(u0))
-                    .unwrap();
+                u = get_mindiff(u, u0, up);
             }
             if let (Some(vp), Some((_, v0))) = (vp, previous) {
-                v = (-2..=2)
-                    .map(|i| v + i as f64 * vp)
-                    .min_by(abs_diff(v0))
-                    .unwrap();
+                v = get_mindiff(v, v0, vp);
             }
             let res = (|| {
                 if let Some((u0, v0)) = previous {
@@ -185,6 +175,15 @@ fn to_parametric_polyline<S: ParametricSurface3D>(
             res
         })
         .collect::<Option<Vec<Point2>>>()?;
+    let grav = vec.iter().fold(Point2::origin(), |g, p| g + p.to_vec()) / vec.len() as f64;
+    if let (Some(up), Some((u0, _))) = (up, urange) {
+        let quot = f64::floor((grav.x - u0) / up);
+        vec.iter_mut().for_each(|p| p.x -= quot * up);
+    }
+    if let (Some(vp), Some((v0, _))) = (vp, vrange) {
+        let quot = f64::floor((grav.y - v0) / vp);
+        vec.iter_mut().for_each(|p| p.y -= quot * vp);
+    }
     let last = *vec.last().unwrap();
     if !vec[0].near(&last) {
         let Point2 { x: u0, y: v0 } = last;
@@ -193,6 +192,15 @@ fn to_parametric_polyline<S: ParametricSurface3D>(
         }
     }
     Some(PolylineCurve(vec))
+}
+
+fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
+    let f = move |x: &f64| f64::abs(x - previous);
+    move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
+}
+fn get_mindiff(u: f64, u0: f64, up: f64) -> f64 {
+    let closure = |i| u + i as f64 * up;
+    (-2..=2).map(closure).min_by(abs_diff(u0)).unwrap()
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -269,36 +277,28 @@ where
     C: TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D,
 {
-    let new_boundary = boundaries
-        .iter_mut()
-        .filter_map(|boundary| {
-            let new_edge = |v0: usize, v1: usize| {
-                let (p0, p1) = (vertices[v0], vertices[v1]);
-                let (u0, u1) = (sp(surface, p0, None)?, sp(surface, p1, None)?);
-                let pcurve = PCurve::new(Line(u0.into(), u1.into()), surface.clone());
-                poly_edges.push(PolylineCurve::from_curve(&pcurve, (0.0, 1.0), tol));
-                Some(Edge {
-                    vertices: (v0, v1),
-                    curve: C::try_from(pcurve).ok()?,
-                })
-            };
-            split_nonsimple_wire(boundary, edges, new_edge)
+    let mut new_edge = |v0: usize, v1: usize| {
+        let (p0, p1) = (vertices[v0], vertices[v1]);
+        let (u0, u1) = (sp(surface, p0, None)?, sp(surface, p1, None)?);
+        let pcurve = PCurve::new(Line(u0.into(), u1.into()), surface.clone());
+        poly_edges.push(PolylineCurve::from_curve(&pcurve, (0.0, 1.0), tol));
+        Some(Edge {
+            vertices: (v0, v1),
+            curve: C::try_from(pcurve).ok()?,
         })
-        .collect::<Vec<_>>();
+    };
+    let closure = |boundary: &mut Wire| split_nonsimple_wire(boundary, edges, &mut new_edge);
+    let new_boundary: Vec<_> = boundaries.iter_mut().filter_map(closure).collect();
     boundaries.extend(new_boundary);
-    let mut vec = Vec::new();
-    vec.append(boundaries);
-    let mut assorted = assort_boundary(surface, vec, poly_edges, sp)?.into_iter();
+    let mut assorted =
+        assort_boundary(surface, boundaries.split_off(0), poly_edges, sp)?.into_iter();
     *boundaries = assorted.next()?;
-    Some(
-        assorted
-            .map(|boundaries| Face {
-                boundaries,
-                surface: surface.clone(),
-                orientation: *orientation,
-            })
-            .collect(),
-    )
+    let to_face = move |boundaries: Vec<Wire>| Face {
+        boundaries,
+        surface: surface.clone(),
+        orientation: *orientation,
+    };
+    Some(assorted.map(to_face).collect())
 }
 
 fn split_closed_faces<C, S>(
