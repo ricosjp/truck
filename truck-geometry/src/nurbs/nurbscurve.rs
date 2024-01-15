@@ -516,8 +516,7 @@ where
 }
 
 impl<V: Homogeneous<f64>> NurbsCurve<V>
-where V::Point:
-        MetricSpace<Metric = f64> + std::ops::Index<usize, Output = f64> + Bounded<f64> + Copy
+where V::Point: Bounded<Scalar = f64>
 {
     /// Returns the bounding box including all control points.
     #[inline(always)]

@@ -1843,9 +1843,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
     }
 }
 
-impl<V> BSplineSurface<V>
-where V: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy
-{
+impl<V: Bounded> BSplineSurface<V> {
     /// Returns the bounding box including all control points.
     #[inline(always)]
     pub fn roughly_bounding_box(&self) -> BoundingBox<V> {
