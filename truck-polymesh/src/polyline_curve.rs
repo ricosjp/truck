@@ -72,6 +72,13 @@ impl<P> IntoIterator for PolylineCurve<P> {
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
 
+impl<'a, P> IntoIterator for &'a PolylineCurve<P> {
+    type Item = &'a P;
+    type IntoIter = std::slice::Iter<'a, P>;
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
 impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
     type Point = P;
     type Vector = P::Diff;
