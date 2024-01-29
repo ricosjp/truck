@@ -39,6 +39,26 @@ impl PolylineCurve<Point2> {
     }
 }
 
+impl<P> AsRef<Vec<P>> for PolylineCurve<P> {
+    #[inline(always)]
+    fn as_ref(&self) -> &Vec<P> { &self.0 }
+}
+
+impl<P> AsMut<Vec<P>> for PolylineCurve<P> {
+    #[inline(always)]
+    fn as_mut(&mut self) -> &mut Vec<P> { &mut self.0 }
+}
+
+impl<P> AsRef<[P]> for PolylineCurve<P> {
+    #[inline(always)]
+    fn as_ref(&self) -> &[P] { &self.0 }
+}
+
+impl<P> AsMut<[P]> for PolylineCurve<P> {
+    #[inline(always)]
+    fn as_mut(&mut self) -> &mut [P] { &mut self.0 }
+}
+
 impl<P> Deref for PolylineCurve<P> {
     type Target = Vec<P>;
     #[inline(always)]

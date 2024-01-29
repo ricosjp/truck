@@ -31,7 +31,7 @@ impl<C> CompressedEdge<C> {
 }
 
 /// The index of an edge in `CompressedShell`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CompressedEdgeIndex {
     /// the index of the edge
     pub index: usize,

@@ -209,10 +209,9 @@ impl<V: Bounded> BoundingBox<V> {
     /// ```
     #[inline(always)]
     pub fn diameter(self) -> V::Scalar {
-        if self.is_empty() {
-            num_traits::Float::neg_infinity()
-        } else {
-            self.0.distance(self.1)
+        match self.is_empty() {
+            true => num_traits::Float::neg_infinity(),
+            false => self.0.distance(self.1),
         }
     }
 
