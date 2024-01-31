@@ -186,9 +186,6 @@ fn test_split_closed_face_simple_cylinder_case() {
 
     assert!(Shell::extract(shell.clone()).is_err());
 
-    fn sp(surface: &Surface, p: Point3, hint: Option<(f64, f64)>) -> Option<(f64, f64)> {
-        surface.search_parameter(p, hint, 10)
-    }
     split_closed_faces(&mut shell, 0.01, sp);
 
     assert!(Shell::extract(shell.clone()).is_ok());
@@ -446,10 +443,6 @@ fn test_split_closed_face_cylinder_with_hole() {
     };
 
     assert!(Shell::extract(shell.clone()).is_err());
-
-    fn sp(surface: &Surface, p: Point3, hint: Option<(f64, f64)>) -> Option<(f64, f64)> {
-        surface.search_parameter(p, hint, 10)
-    }
     split_closed_faces(&mut shell, 0.01, sp);
 
     assert!(Shell::extract(shell.clone()).is_ok());
@@ -575,7 +568,6 @@ fn test_split_closed_face_cylinder_with_hole() {
 
 #[test]
 fn test_split_closed_face_cylinder_with_rotated_hole() {
-    type Surface = RevolutedCurve<Line<Point3>>;
     #[derive(
         Clone,
         Debug,
@@ -609,6 +601,7 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
             Self::PCurve(PCurve::new(ParameterCurve::Line(line), surface))
         }
     }
+    type Surface = RevolutedCurve<Line<Point3>>;
 
     let surface = RevolutedCurve::by_revolution(
         Line(Point3::new(1.0, 0.0, 1.0), Point3::new(1.0, 0.0, 0.0)),
@@ -730,12 +723,7 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
     };
 
     assert!(Shell::extract(shell.clone()).is_err());
-
-    fn sp(surface: &Surface, p: Point3, hint: Option<(f64, f64)>) -> Option<(f64, f64)> {
-        surface.search_parameter(p, hint, 10)
-    }
     split_closed_faces(&mut shell, 0.01, sp);
-
     assert!(Shell::extract(shell.clone()).is_ok());
     assert_eq!(shell.vertices.len(), 8);
     assert_eq!(shell.edges.len(), 11);
@@ -867,4 +855,184 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
             },
         ]
     );
+}
+
+#[test]
+fn too_simple_cylinder() {
+    #[derive(
+        Clone,
+        Debug,
+        ParametricCurve,
+        BoundedCurve,
+        ParameterDivision1D,
+        Cut,
+        SearchNearestParameterD1,
+    )]
+    enum Curve {
+        Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
+        PCurve(PCurve<Line<Point2>, Surface>),
+    }
+    impl From<PCurve<Line<Point2>, Surface>> for Curve {
+        fn from(value: PCurve<Line<Point2>, Surface>) -> Self { Curve::PCurve(value) }
+    }
+    type Surface = RevolutedCurve<Line<Point3>>;
+
+    let vertices = vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 1.0)];
+
+    let translation = Matrix4::from_translation(Vector3::unit_z());
+    let circle0 = TrimmedCurve::new(Processor::new(UnitCircle::new()), (0.0, 2.0 * PI));
+    let circle1 = TrimmedCurve::new(
+        Processor::new(UnitCircle::new()).transformed(translation),
+        (0.0, 2.0 * PI),
+    );
+    let edges = vec![
+        CompressedEdge {
+            vertices: (0, 0),
+            curve: Curve::Arc(circle0),
+        },
+        CompressedEdge {
+            vertices: (1, 1),
+            curve: Curve::Arc(circle1),
+        },
+    ];
+
+    let surface = RevolutedCurve::by_revolution(
+        Line(vertices[1], vertices[0]),
+        Point3::origin(),
+        Vector3::unit_z(),
+    );
+    let faces = vec![CompressedFace {
+        boundaries: vec![
+            vec![CompressedEdgeIndex {
+                index: 0,
+                orientation: true,
+            }],
+            vec![CompressedEdgeIndex {
+                index: 1,
+                orientation: false,
+            }],
+        ],
+        surface: surface.clone(),
+        orientation: true,
+    }];
+
+    let mut shell = CompressedShell {
+        vertices,
+        edges,
+        faces,
+    };
+
+    assert!(Shell::extract(shell.clone()).is_err());
+    split_closed_edges(&mut shell);
+    split_closed_faces(&mut shell, 0.01, sp);
+    assert!(Shell::extract(shell.clone()).is_ok());
+
+    let CompressedShell {
+        ref vertices,
+        ref edges,
+        ref mut faces,
+    } = shell;
+
+    assert_eq!(vertices.len(), 4);
+    assert_near!(vertices[2], Point3::new(-1.0, 0.0, 0.0));
+    assert_near!(vertices[3], Point3::new(-1.0, 0.0, 1.0));
+
+    assert_eq!(edges.len(), 6);
+    assert_eq!(edges[0].vertices, (0, 2));
+    assert_eq!(edges[1].vertices, (1, 3));
+    assert_eq!(edges[2].vertices, (2, 0));
+    assert_eq!(edges[3].vertices, (3, 1));
+    assert_eq!(edges[4].vertices, (0, 1));
+    assert_eq!(edges[5].vertices, (2, 3));
+
+    assert_eq!(faces.len(), 2);
+    let i = faces
+        .iter_mut()
+        .position(|face| {
+            face.boundaries[0].contains(&CompressedEdgeIndex {
+                index: 0,
+                orientation: true,
+            })
+        })
+        .unwrap();
+    if i == 1 {
+        faces.swap(0, 1);
+    }
+    let i = faces[0].boundaries[0]
+        .iter()
+        .position(|edge_index| {
+            *edge_index
+                == CompressedEdgeIndex {
+                    index: 0,
+                    orientation: true,
+                }
+        })
+        .unwrap();
+    faces[0].boundaries[0].rotate_left(i);
+    let i = faces[1].boundaries[0]
+        .iter()
+        .position(|edge_index| {
+            *edge_index
+                == CompressedEdgeIndex {
+                    index: 2,
+                    orientation: true,
+                }
+        })
+        .unwrap();
+    faces[1].boundaries[0].rotate_left(i);
+
+    assert_eq!(
+        shell.faces,
+        vec![
+            Face {
+                boundaries: vec![vec![
+                    CompressedEdgeIndex {
+                        index: 0,
+                        orientation: true,
+                    },
+                    CompressedEdgeIndex {
+                        index: 5,
+                        orientation: true,
+                    },
+                    CompressedEdgeIndex {
+                        index: 1,
+                        orientation: false,
+                    },
+                    CompressedEdgeIndex {
+                        index: 4,
+                        orientation: false,
+                    },
+                ]],
+                surface: surface.clone(),
+                orientation: true,
+            },
+            Face {
+                boundaries: vec![vec![
+                    CompressedEdgeIndex {
+                        index: 2,
+                        orientation: true,
+                    },
+                    CompressedEdgeIndex {
+                        index: 4,
+                        orientation: true,
+                    },
+                    CompressedEdgeIndex {
+                        index: 3,
+                        orientation: false,
+                    },
+                    CompressedEdgeIndex {
+                        index: 5,
+                        orientation: false,
+                    },
+                ]],
+                surface: surface.clone(),
+                orientation: true,
+            },
+        ]
+    );
+}
+
+fn sp<S>(surface: &S, p: Point3, hint: Option<(f64, f64)>) -> Option<(f64, f64)>
+where S: SearchParameter<D2, Point = Point3> {
+    surface.search_parameter(p, hint, 10)
 }

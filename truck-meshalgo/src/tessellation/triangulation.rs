@@ -302,7 +302,7 @@ fn get_mindiff(u: f64, u0: f64, up: f64) -> f64 {
 #[derive(Debug, Default, Clone)]
 struct PolyBoundary(Vec<Vec<Point2>>);
 
-fn noramlize_range(curve: &mut Vec<Point2>, compidx: usize, (u0, u1): (f64, f64)) {
+fn normalize_range(curve: &mut Vec<Point2>, compidx: usize, (u0, u1): (f64, f64)) {
     let p = curve[0];
     let q = curve[curve.len() - 1];
     let tmp = f64::min(p[compidx], q[compidx]) + TOLERANCE;
@@ -360,7 +360,7 @@ impl PolyBoundary {
                 let q = curve[curve.len() - 1];
                 if let (Some((u0, u1)), Some((v0, v1))) = surface.try_range_tuple() {
                     if p.x < q.x - TOLERANCE {
-                        noramlize_range(&mut curve, 0, (u0, u1));
+                        normalize_range(&mut curve, 0, (u0, u1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u0, v1);
@@ -370,7 +370,7 @@ impl PolyBoundary {
                         let vec2 = polyline_on_surface(surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.x < p.x - TOLERANCE {
-                        noramlize_range(&mut curve, 0, (u0, u1));
+                        normalize_range(&mut curve, 0, (u0, u1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u1, v0);
@@ -380,7 +380,7 @@ impl PolyBoundary {
                         let vec2 = polyline_on_surface(surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if p.y < q.y - TOLERANCE {
-                        noramlize_range(&mut curve, 1, (v0, v1));
+                        normalize_range(&mut curve, 1, (v0, v1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u0, v0);
@@ -390,7 +390,7 @@ impl PolyBoundary {
                         let vec2 = polyline_on_surface(surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.y < p.y - TOLERANCE {
-                        noramlize_range(&mut curve, 1, (v0, v1));
+                        normalize_range(&mut curve, 1, (v0, v1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u1, v1);
@@ -409,13 +409,13 @@ impl PolyBoundary {
                 let ((p0, p1), (q0, q1)) = (end_pts(&curve0), end_pts(&curve1));
                 if !p0.x.near(&p1.x) && !q0.x.near(&q1.x) {
                     if let (Some(urange), _) = surface.try_range_tuple() {
-                        noramlize_range(&mut curve0, 0, urange);
-                        noramlize_range(&mut curve1, 0, urange);
+                        normalize_range(&mut curve0, 0, urange);
+                        normalize_range(&mut curve1, 0, urange);
                     }
                 } else if !p0.y.near(&p1.y) && !q0.y.near(&q1.y) {
                     if let (_, Some(vrange)) = surface.try_range_tuple() {
-                        noramlize_range(&mut curve0, 1, vrange);
-                        noramlize_range(&mut curve1, 1, vrange);
+                        normalize_range(&mut curve0, 1, vrange);
+                        normalize_range(&mut curve1, 1, vrange);
                     }
                 }
                 let ((p0, p1), (q0, q1)) = (end_pts(&curve0), end_pts(&curve1));
