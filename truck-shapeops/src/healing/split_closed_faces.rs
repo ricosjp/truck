@@ -65,7 +65,7 @@ where
     } = faces[face_index];
     let param_boundaries = create_param_boundaries(boundaries, surface, poly_edges, &sp)?;
     let param_vertices = create_param_vertices(boundaries, &param_boundaries, edges);
-    let vertices_on_divisor = enumerate_vertices_on_divisor(divisor, &param_vertices)?;
+    let vertices_on_divisor = enumerate_vertices_on_divisor(divisor, &param_vertices, surface)?;
     let new_edges = create_new_edges(&vertices_on_divisor, poly_edges, surface, tol)?;
     let (new_edge_range, new_edge_indices) = signup_new_edges(edges, new_edges);
     let edge_iter = new_edge_indices.chain(closed.iter().flatten().copied());
@@ -311,48 +311,39 @@ where
     } = faces[face_index];
     let param_boundaries = create_param_boundaries(boundaries, surface, poly_edges, &sp)?;
     let (v0, v1) = divisor;
-    let p0 = zip_boundaries(boundaries, &param_boundaries)
-        .filter_map(closure_find_vertex_parameter(v0, edges))
-        .collect::<Vec<_>>();
-    let p1 = zip_boundaries(boundaries, &param_boundaries)
-        .filter_map(closure_find_vertex_parameter(v1, edges))
-        .collect::<Vec<_>>();
-    let nearest_points = p0
-        .into_iter()
-        .map(|p| {
-            p1.iter()
-                .min_by(|q, r| p.distance2(**q).partial_cmp(&p.distance2(**r)).unwrap())
-                .map(|q| (p, *q))
-        })
+    let p = zip_boundaries(boundaries, &param_boundaries)
+        .find_map(closure_find_vertex_parameter(v0, edges))?;
+    let q = zip_boundaries(boundaries, &param_boundaries)
+        .find_map(closure_find_vertex_parameter(v1, edges))?;
+    let Face {
+        ref boundaries,
+        ref surface,
+        ..
+    } = faces[face_index];
+    let periods = (surface.u_period(), surface.v_period());
+    let q = periodic_iterator(q, periods)
+        .min_by(|q, r| p.distance2(*q).partial_cmp(&p.distance2(*r)).unwrap())?;
+    let pcurve = PCurve::new(Line(p, q), surface.clone());
+    let cut_edge = |(edge_index, param_edge): ZippedEdge<'_>| {
+        let index = edge_index.index;
+        let vec = enumerate_intersections(&edges[index], param_edge, &pcurve)?;
+        if vec.is_empty() {
+            return Some(None);
+        }
+        let erange = cut_edge_by_intersections(index, vec, edges, poly_edges, vertices, tol);
+        Some(Some((index, erange)))
+    };
+    let new_edges = zip_boundaries(boundaries, &param_boundaries)
+        .map(cut_edge)
         .collect::<Option<Vec<_>>>()?;
-    nearest_points.into_iter().try_for_each(move |(p, q)| {
-        let Face {
-            ref boundaries,
-            ref surface,
-            ..
-        } = faces[face_index];
-        let pcurve = PCurve::new(Line(p, q), surface.clone());
-        let cut_edge = |(edge_index, param_edge): ZippedEdge<'_>| {
-            let index = edge_index.index;
-            let vec = enumerate_intersections(&edges[index], param_edge, &pcurve)?;
-            if vec.is_empty() {
-                return Some(None);
-            }
-            let erange = cut_edge_by_intersections(index, vec, edges, poly_edges, vertices, tol);
-            Some(Some((index, erange)))
-        };
-        let new_edges = zip_boundaries(boundaries, &param_boundaries)
-            .map(cut_edge)
-            .collect::<Option<Vec<_>>>()?;
-        let insert = |(index, erange): (usize, Range<usize>)| {
-            faces
-                .iter_mut()
-                .flat_map(|face| &mut face.boundaries)
-                .for_each(|wire| insert_new_edges(wire, index, erange.clone()));
-        };
-        new_edges.into_iter().filter_map(identity).for_each(insert);
-        Some(())
-    })
+    let insert = |(index, erange): (usize, Range<usize>)| {
+        faces
+            .iter_mut()
+            .flat_map(|face| &mut face.boundaries)
+            .for_each(|wire| insert_new_edges(wire, index, erange.clone()));
+    };
+    new_edges.into_iter().filter_map(identity).for_each(insert);
+    Some(())
 }
 
 fn closure_find_vertex_parameter<C>(
@@ -530,7 +521,7 @@ where
     } = faces[face_index];
     let param_boundaries = create_param_boundaries(boundaries, surface, poly_edges, &sp)?;
     let param_vertices = create_param_vertices(boundaries, &param_boundaries, edges);
-    let vertices_on_divisor = enumerate_vertices_on_divisor(divisor, &param_vertices)?;
+    let vertices_on_divisor = enumerate_vertices_on_divisor(divisor, &param_vertices, surface)?;
     let new_edges = create_new_edges(&vertices_on_divisor, poly_edges, surface, tol)?;
     let (new_edge_range, new_edge_indices) = signup_new_edges(edges, new_edges);
     let edge_iter = boundaries.iter().flatten().copied().chain(new_edge_indices);
@@ -660,53 +651,34 @@ fn create_param_vertices<C>(
     boundaries: &[Wire],
     param_boundaries: &[Vec<PolylineCurve<Point2>>],
     edges: &[Edge<C>],
-) -> HashMap<usize, Vec<Point2>> {
+) -> HashMap<usize, Point2> {
     let take_front = closure_take_front(edges);
-    let mut vmap = HashMap::default();
-    zip_boundaries(boundaries, param_boundaries).for_each(|(edge_index, param_edge)| {
-        let v = take_front(*edge_index);
-        vmap.entry(v).or_insert_with(Vec::new).push(param_edge[0]);
-    });
-    boundaries.iter().zip(param_boundaries).for_each(|(b, pb)| {
-        let last = pb.last().unwrap().last().unwrap();
-        if pb[0][0].distance(*last) > 1.0e-3 {
-            let v = take_front(b[0]);
-            vmap.entry(v).or_insert_with(Vec::new).push(*last);
-        }
-    });
-    vmap
+    zip_boundaries(boundaries, param_boundaries)
+        .map(|(edge_index, param_edge)| (take_front(*edge_index), param_edge[0]))
+        .collect()
 }
 
 // --- enumerate_vertices_on_divisor ---
 
-fn enumerate_vertices_on_divisor(
+fn enumerate_vertices_on_divisor<S: ParametricSurface>(
     divisor: (usize, usize),
-    param_vertices: &HashMap<usize, Vec<Point2>>,
-) -> Option<Vec<(f64, (usize, Vec<Point2>))>> {
+    param_vertices: &HashMap<usize, Point2>,
+    surface: &S,
+) -> Option<Vec<(f64, (usize, Point2))>> {
     let (v0, v1) = divisor;
-    let (p0, p1) = (param_vertices.get(&v0)?, param_vertices.get(&v1)?);
-    let nearest_points = p0
+    let (p, q) = (*param_vertices.get(&v0)?, *param_vertices.get(&v1)?);
+    let periods = (surface.u_period(), surface.v_period());
+    let q = periodic_iterator(q, periods)
+        .min_by(|q, r| p.distance2(*q).partial_cmp(&p.distance2(*r)).unwrap())?;
+    let line = Line(p, q);
+    let mut vertices_on_divisor = param_vertices
         .iter()
-        .map(|p| {
-            p1.iter()
-                .min_by(|q, r| p.distance2(**q).partial_cmp(&p.distance2(**r)).unwrap())
-                .map(|q| (*p, *q))
+        .filter_map(move |(v, uv)| {
+            periodic_iterator(*uv, periods)
+                .find(|uv| line.distance_to_point_as_segment(*uv).so_small())
+                .map(|uv| (*v, uv))
         })
-        .collect::<Option<Vec<_>>>()?;
-    let mut vertices_on_divisor = nearest_points
-        .into_iter()
-        .flat_map(|(p, q)| {
-            let line = Line(p, q);
-            param_vertices
-                .iter()
-                .filter(move |(_, uv)| line.distance_to_point_as_segment(uv[0]).so_small())
-                .map(move |(v, uv)| {
-                    Some((
-                        line.search_nearest_parameter(uv[0], None, 1)?,
-                        (*v, uv.clone()),
-                    ))
-                })
-        })
+        .map(move |(v, uv)| Some((line.search_nearest_parameter(uv, None, 1)?, (v, uv))))
         .collect::<Option<Vec<_>>>()?;
     vertices_on_divisor.sort_by(|(s, _), (t, _)| s.partial_cmp(t).unwrap());
     Some(vertices_on_divisor)
@@ -715,7 +687,7 @@ fn enumerate_vertices_on_divisor(
 // --- create_new_edges ---
 
 fn create_new_edges<C, S>(
-    vertices_on_divisor: &[(f64, (usize, Vec<Point2>))],
+    vertices_on_divisor: &[(f64, (usize, Point2))],
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
     surface: &S,
     tol: f64,
@@ -727,15 +699,11 @@ where
     vertices_on_divisor
         .chunks(2)
         .map(|p| {
-            let ((_, (v0, vec0)), (_, (v1, vec1))) = (&p[0], &p[1]);
-            let uv0 = vec0[0];
-            let uv1 = *vec1
-                .iter()
-                .min_by(|q, r| uv0.distance2(**q).partial_cmp(&uv0.distance2(**r)).unwrap())?;
+            let ((_, (v0, uv0)), (_, (v1, uv1))) = (p[0], p[1]);
             let pcurve = PCurve::new(Line(uv0, uv1), surface.clone());
             poly_edges.push(PolylineCurve::from_curve(&pcurve, (0.0, 1.0), tol));
             Some(Edge {
-                vertices: (*v0, *v1),
+                vertices: (v0, v1),
                 curve: C::try_from(pcurve).ok()?,
             })
         })
@@ -943,4 +911,19 @@ fn boundary_type(poly: &PolylineCurve<Point2>) -> BoundaryType {
     } else {
         BoundaryType::NotClosed
     }
+}
+
+fn periodic_iterator(
+    p: Point2,
+    (up, vp): (Option<f64>, Option<f64>),
+) -> impl Iterator<Item = Point2> {
+    let up_range = match up {
+        Some(up) => vec![-2.0 * up, -up, 0.0, up, 2.0 * up],
+        None => vec![0.0],
+    };
+    let vp_range = match vp {
+        Some(vp) => vec![-2.0 * vp, -vp, 0.0, vp, 2.0 * vp],
+        None => vec![0.0],
+    };
+    itertools::iproduct!(up_range, vp_range).map(move |(dx, dy)| p + Vector2::new(dx, dy))
 }
