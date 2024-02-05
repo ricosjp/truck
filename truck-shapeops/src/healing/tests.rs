@@ -155,7 +155,7 @@ fn test_split_closed_face_simple_cylinder_case() {
         Vector3::unit_z(),
     );
     let faces = vec![Face {
-        surface: surface.clone(),
+        surface,
         boundaries: vec![vec![
             CompressedEdgeIndex {
                 index: 1,
@@ -267,7 +267,7 @@ fn test_split_closed_face_simple_cylinder_case() {
                         orientation: true,
                     }
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
             Face {
@@ -289,7 +289,7 @@ fn test_split_closed_face_simple_cylinder_case() {
                         orientation: false,
                     },
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
         ]
@@ -390,7 +390,7 @@ fn test_split_closed_face_cylinder_with_hole() {
                     Processor::new(UnitCircle::new()).transformed(transform),
                     (0.0, PI),
                 )),
-                surface.clone(),
+                surface,
             )),
         },
         CompressedEdge {
@@ -400,12 +400,12 @@ fn test_split_closed_face_cylinder_with_hole() {
                     Processor::new(UnitCircle::new()).transformed(transform),
                     (PI, 2.0 * PI),
                 )),
-                surface.clone(),
+                surface,
             )),
         },
     ];
     let faces = vec![Face {
-        surface: surface.clone(),
+        surface: surface,
         boundaries: vec![
             vec![
                 CompressedEdgeIndex {
@@ -543,7 +543,7 @@ fn test_split_closed_face_cylinder_with_hole() {
                         orientation: true,
                     }
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
             Face {
@@ -573,7 +573,7 @@ fn test_split_closed_face_cylinder_with_hole() {
                         orientation: false,
                     },
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
         ]
@@ -674,7 +674,7 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
                     Processor::new(UnitCircle::new()).transformed(transform),
                     (0.5 * PI, 1.5 * PI),
                 )),
-                surface.clone(),
+                surface,
             )),
         },
         CompressedEdge {
@@ -684,12 +684,12 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
                     Processor::new(UnitCircle::new()).transformed(transform),
                     (1.5 * PI, 2.5 * PI),
                 )),
-                surface.clone(),
+                surface,
             )),
         },
     ];
     let faces = vec![Face {
-        surface: surface.clone(),
+        surface,
         boundaries: vec![
             vec![
                 CompressedEdgeIndex {
@@ -835,7 +835,7 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
                         orientation: true,
                     }
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
             Face {
@@ -869,7 +869,7 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
                         orientation: false,
                     },
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
         ]
@@ -931,7 +931,7 @@ fn too_simple_cylinder() {
                 orientation: false,
             }],
         ],
-        surface: surface.clone(),
+        surface,
         orientation: true,
     }];
 
@@ -1022,7 +1022,7 @@ fn too_simple_cylinder() {
                         orientation: false,
                     },
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
             Face {
@@ -1044,7 +1044,7 @@ fn too_simple_cylinder() {
                         orientation: false,
                     },
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
         ]
@@ -1125,7 +1125,7 @@ fn double_closed_boundary_cylinder() {
                     ),
                     (0.0, 2.0 * PI),
                 )),
-                surface.clone(),
+                surface,
             )),
         },
         CompressedEdge {
@@ -1138,7 +1138,7 @@ fn double_closed_boundary_cylinder() {
                     ),
                     (0.0, 2.0 * PI),
                 )),
-                surface.clone(),
+                surface,
             )),
         },
     ];
@@ -1278,7 +1278,7 @@ fn double_closed_boundary_cylinder() {
                         orientation: false,
                     },
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
             CompressedFace {
@@ -1316,11 +1316,188 @@ fn double_closed_boundary_cylinder() {
                         orientation: false,
                     },
                 ]],
-                surface: surface.clone(),
+                surface,
                 orientation: true,
             },
         ]
     );
+}
+
+#[test]
+fn many_closed_boundary_cylinder() {
+    #[derive(
+        Clone,
+        Debug,
+        ParametricCurve,
+        BoundedCurve,
+        ParameterDivision1D,
+        Cut,
+        SearchNearestParameterD1,
+    )]
+    enum ParameterCurve {
+        Line(Line<Point2>),
+        Arc(TrimmedCurve<Processor<UnitCircle<Point2>, Matrix3>>),
+    }
+    #[derive(
+        Clone,
+        Debug,
+        ParametricCurve,
+        BoundedCurve,
+        ParameterDivision1D,
+        Cut,
+        SearchNearestParameterD1,
+    )]
+    enum Curve {
+        Line(Line<Point3>),
+        Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
+        PCurve(PCurve<ParameterCurve, Surface>),
+    }
+    impl From<PCurve<Line<Point2>, Surface>> for Curve {
+        fn from(value: PCurve<Line<Point2>, Surface>) -> Self {
+            let (line, surface) = value.decompose();
+            Self::PCurve(PCurve::new(ParameterCurve::Line(line), surface))
+        }
+    }
+    type Surface = RevolutedCurve<Line<Point3>>;
+
+    const NUM_OF_CIRCLES: usize = 10;
+
+    let vertices = {
+        let mut vertices = vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 1.0)];
+        vertices.extend((0..NUM_OF_CIRCLES).map(|i| {
+            let t = 2.0 * PI * i as f64 / NUM_OF_CIRCLES as f64;
+            Point3::new(f64::cos(t), f64::sin(t), 0.4)
+        }));
+        vertices
+    };
+    let surface = RevolutedCurve::by_revolution(
+        Line(vertices[1], vertices[0]),
+        Point3::origin(),
+        Vector3::unit_z(),
+    );
+    let edges = {
+        let mut edges = vec![
+            CompressedEdge {
+                vertices: (0, 0),
+                curve: Curve::Arc(TrimmedCurve::new(
+                    Processor::new(UnitCircle::new()),
+                    (0.0, 2.0 * PI),
+                )),
+            },
+            CompressedEdge {
+                vertices: (1, 1),
+                curve: Curve::Arc(TrimmedCurve::new(
+                    Processor::new(UnitCircle::new())
+                        .transformed(Matrix4::from_translation(Vector3::unit_z())),
+                    (0.0, 2.0 * PI),
+                )),
+            },
+        ];
+        edges.extend((0..NUM_OF_CIRCLES).map(|i| {
+            let t = 2.0 * PI * i as f64 / NUM_OF_CIRCLES as f64;
+            CompressedEdge {
+                vertices: (2 + i, 2 + i),
+                curve: Curve::PCurve(PCurve::new(
+                    ParameterCurve::Arc(TrimmedCurve::new(
+                        Processor::new(UnitCircle::new()).transformed(
+                            Matrix3::from_translation(Vector2::new(0.5, t))
+                                * Matrix3::from_scale(0.1),
+                        ),
+                        (0.0, 2.0 * PI),
+                    )),
+                    surface,
+                )),
+            }
+        }));
+        edges
+    };
+    let mut boundaries = vec![vec![CompressedEdgeIndex {
+        index: 0,
+        orientation: true,
+    }]];
+    boundaries.extend((0..=NUM_OF_CIRCLES).map(|i| {
+        vec![CompressedEdgeIndex {
+            index: 1 + i,
+            orientation: false,
+        }]
+    }));
+    let faces = vec![CompressedFace {
+        boundaries,
+        surface,
+        orientation: true,
+    }];
+    let mut shell = CompressedShell {
+        vertices,
+        edges,
+        faces,
+    };
+
+    assert!(Shell::extract(shell.clone()).is_err());
+    split_closed_edges(&mut shell);
+    split_closed_faces(&mut shell, 0.05, sp);
+    assert!(Shell::extract(shell.clone()).is_ok());
+
+    let CompressedShell {
+        ref vertices,
+        ref edges,
+        ref mut faces,
+    } = shell;
+
+    assert_eq!(vertices.len(), (2 + NUM_OF_CIRCLES) * 2);
+    assert_near!(vertices[0], Point3::new(1.0, 0.0, 0.0));
+    assert_near!(vertices[1], Point3::new(1.0, 0.0, 1.0));
+    assert_near!(vertices[NUM_OF_CIRCLES + 2], Point3::new(-1.0, 0.0, 0.0));
+    assert_near!(vertices[NUM_OF_CIRCLES + 3], Point3::new(-1.0, 0.0, 1.0));
+    (0..NUM_OF_CIRCLES).for_each(|i| {
+        let t = 2.0 * PI * i as f64 / NUM_OF_CIRCLES as f64;
+        assert_near!(vertices[2 + i], Point3::new(f64::cos(t), f64::sin(t), 0.4));
+        assert_near!(
+            vertices[4 + i + NUM_OF_CIRCLES],
+            Point3::new(f64::cos(t), f64::sin(t), 0.6)
+        );
+    });
+
+    assert_eq!(edges.len(), 8 + NUM_OF_CIRCLES * 2);
+    (0..NUM_OF_CIRCLES + 2).for_each(|i| {
+        let j = i + 2 + NUM_OF_CIRCLES;
+        assert_eq!(edges[i].vertices, (i, j));
+        assert_eq!(edges[j].vertices, (j, i));
+    });
+    let i = 4 + NUM_OF_CIRCLES * 2;
+    assert_eq!(edges[i].vertices, (0, 2));
+    assert_eq!(edges[i + 1].vertices, (4 + NUM_OF_CIRCLES, 1));
+    assert_eq!(
+        edges[i + 2].vertices,
+        (2 + NUM_OF_CIRCLES, 2 + NUM_OF_CIRCLES / 2)
+    );
+    assert_eq!(
+        edges[i + 3].vertices,
+        (4 + NUM_OF_CIRCLES * 3 / 2, 3 + NUM_OF_CIRCLES)
+    );
+
+    let i = faces
+        .iter_mut()
+        .position(|face| {
+            face.boundaries[0].contains(&CompressedEdgeIndex {
+                index: 0,
+                orientation: true,
+            })
+        })
+        .unwrap();
+    if i == 1 {
+        faces.swap(0, 1);
+    }
+
+    assert_eq!(faces[0].boundaries.len(), NUM_OF_CIRCLES / 2);
+    assert_eq!(faces[1].boundaries.len(), NUM_OF_CIRCLES / 2);
+
+    (1..NUM_OF_CIRCLES / 2).for_each(|i| {
+        (0..=1).for_each(|fid| {
+            let eid = faces[fid].boundaries[i][0].index;
+            let p = vertices[edges[eid].vertices.0];
+            assert!(f64::signum(p.y) == f64::signum(f64::powi(-1.0, fid as i32)));
+        });
+    });
 }
 
 fn sp<S>(surface: &S, p: Point3, hint: Option<(f64, f64)>) -> Option<(f64, f64)>
