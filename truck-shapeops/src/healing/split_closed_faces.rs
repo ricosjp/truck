@@ -1,5 +1,5 @@
 use super::*;
-use std::{convert::identity, ops::Range};
+use std::ops::Range;
 
 pub(super) fn split_closed_faces<C, S>(shell: &mut Shell<Point3, C, S>, tol: f64, sp: impl SP<S>)
 where
@@ -113,6 +113,7 @@ fn find_loop() -> impl FnMut((usize, &EdgeIndex)) -> Option<(usize, usize)> {
 
 // --- find_non_closed_wires_in_param_divisor ---
 
+type FindNonClosedWiresInParamDivisorResult = Option<((usize, usize), Vec<Wire>, Vec<Wire>)>;
 fn find_non_closed_wires_in_param_divisor<'a, C, S>(
     Face {
         boundaries,
@@ -122,7 +123,7 @@ fn find_non_closed_wires_in_param_divisor<'a, C, S>(
     edges: &'a [Edge<C>],
     poly_edges: &'a [PolylineCurve<Point3>],
     sp: impl SP<S>,
-) -> Option<((usize, usize), Vec<Wire>, Vec<Wire>)>
+) -> FindNonClosedWiresInParamDivisorResult
 where
     C: ParametricCurve3D + BoundedCurve + TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D,
@@ -152,7 +153,7 @@ where
             };
             let dist = (-2..=2)
                 .map(closure)
-                .min_by(|x, y| x.partial_cmp(&y).unwrap())
+                .min_by(|x, y| x.partial_cmp(y).unwrap())
                 .unwrap();
             (take_front(*edge_index), dist)
         }
@@ -181,7 +182,7 @@ where
         }?;
         vertices
             .into_iter()
-            .min_by(|(_, x), (_, y)| x.partial_cmp(&y).unwrap())
+            .min_by(|(_, x), (_, y)| x.partial_cmp(y).unwrap())
             .map(|(v, _)| v)
     };
     let divisor_vec = open
@@ -189,14 +190,8 @@ where
         .copied()
         .map(create_divisor)
         .collect::<Option<Vec<_>>>()?;
-    let open = open
-        .into_iter()
-        .map(|(w, _)| w.iter().copied().collect())
-        .collect();
-    let closed = closed
-        .into_iter()
-        .map(|(w, _)| w.iter().copied().collect())
-        .collect();
+    let open = open.into_iter().map(|(w, _)| w.to_vec()).collect();
+    let closed = closed.into_iter().map(|(w, _)| w.to_vec()).collect();
     Some(((divisor_vec[0], divisor_vec[1]), open, closed))
 }
 
@@ -298,7 +293,7 @@ where
             .flat_map(|face| &mut face.boundaries)
             .for_each(|wire| insert_new_edges(wire, index, erange.clone()));
     };
-    new_edges.into_iter().filter_map(identity).for_each(insert);
+    new_edges.into_iter().flatten().for_each(insert);
     Some(())
 }
 
@@ -313,10 +308,10 @@ fn closure_find_vertex_parameter<C>(
     }
 }
 
-fn enumerate_intersections<'a, C, S>(
+fn enumerate_intersections<C, S>(
     edge: &Edge<C>,
     param_edge: &PolylineCurve<Point2>,
-    pcurve: &'a PCurve<Line<Point2>, S>,
+    pcurve: &PCurve<Line<Point2>, S>,
 ) -> Option<Vec<(f64, Point3)>>
 where
     C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
@@ -333,7 +328,8 @@ fn intersections_between_line_polyline(
 ) -> Vec<f64> {
     let filter = |p: &[Point2]| {
         let (s, t, _) = line.intersection(Line(p[0], p[1]))?;
-        match 0.0 < s && s < 1.0 && 0.0 <= t && t < 1.0 {
+        let unit = 0.0..1.0;
+        match unit.contains(&s) && unit.contains(&t) {
             true => Some(s),
             false => None,
         }
@@ -362,14 +358,14 @@ where
     S: ParametricSurface3D,
 {
     let closure = |t| {
-        let (_, t, p) = search_intersection(&pcurve, curve, t)?;
+        let (_, t, p) = search_intersection(pcurve, curve, t)?;
         Some((t, p))
     };
     let mut res = naive_intersections
         .into_iter()
         .map(closure)
         .collect::<Option<Vec<_>>>()?;
-    res.sort_by(|(s, _), (t, _)| s.partial_cmp(&t).unwrap());
+    res.sort_by(|(s, _), (t, _)| s.partial_cmp(t).unwrap());
     Some(res)
 }
 
@@ -464,7 +460,7 @@ fn split_boundaries_by_divisor<C, S>(
         surface,
         ..
     }: &Face<S>,
-    closed: &Vec<Wire>,
+    closed: &[Wire],
     divisor: (usize, usize),
     edges: &mut Vec<Edge<C>>,
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
