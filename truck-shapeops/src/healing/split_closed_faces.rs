@@ -124,14 +124,14 @@ fn find_loop() -> impl FnMut((usize, &EdgeIndex)) -> Option<(usize, usize)> {
 // --- find_non_closed_wires_in_param_divisor ---
 
 type FindNonClosedWiresInParamDivisorResult = Option<((usize, usize), Vec<Wire>, Vec<Wire>)>;
-fn non_closed_wires_in_param_divisor<'a, C, S>(
+fn non_closed_wires_in_param_divisor<C, S>(
     face_index: usize,
     Shell {
         edges,
         faces,
         ref vertices,
     }: &mut Shell<Point3, C, S>,
-    poly_edges: &'a [PolylineCurve<Point3>],
+    poly_edges: &[PolylineCurve<Point3>],
     sp: impl SP<S>,
 ) -> FindNonClosedWiresInParamDivisorResult
 where
@@ -959,24 +959,16 @@ fn nearest_correction(
     take_front: impl Fn(EdgeIndex) -> usize,
 ) -> Option<(usize, usize)> {
     let p0 = vertices[v0];
-    let v1 = wire1
-        .iter()
-        .copied()
-        .map(|edge_index| take_front(edge_index))
-        .min_by(|v, w| {
-            p0.distance2(vertices[*v])
-                .partial_cmp(&p0.distance2(vertices[*w]))
-                .unwrap()
-        })?;
+    let v1 = wire1.iter().copied().map(&take_front).min_by(|v, w| {
+        p0.distance2(vertices[*v])
+            .partial_cmp(&p0.distance2(vertices[*w]))
+            .unwrap()
+    })?;
     let p1 = vertices[v1];
-    let v0 = wire0
-        .iter()
-        .copied()
-        .map(|edge_index| take_front(edge_index))
-        .min_by(|v, w| {
-            p1.distance2(vertices[*v])
-                .partial_cmp(&p1.distance2(vertices[*w]))
-                .unwrap()
-        })?;
+    let v0 = wire0.iter().copied().map(&take_front).min_by(|v, w| {
+        p1.distance2(vertices[*v])
+            .partial_cmp(&p1.distance2(vertices[*w]))
+            .unwrap()
+    })?;
     Some((v0, v1))
 }
