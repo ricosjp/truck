@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/truck-shapeops.svg)](https://crates.io/crates/truck-shapeops) [![Docs.rs](https://docs.rs/truck-shapeops/badge.svg)](https://docs.rs/truck-shapeops)
 
-Provides boolean operations to Solid
+Crate for operationg shapes. Provides boolean operations to Solid, and shape healing for importing shapes from other CAD systems.
 
 ## Sample Codes
 

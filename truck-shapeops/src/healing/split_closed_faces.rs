@@ -473,12 +473,14 @@ where
 {
     let param_boundaries = create_param_boundaries(boundaries, surface, poly_edges, &sp)?;
     let param_vertices = create_param_vertices(boundaries, &param_boundaries, edges);
+    let mut duplicated_edges = duplicated_edges(boundaries.iter().flatten().map(|ei| ei.index));
     let vertices_on_divisor = enumerate_vertices_on_divisor(divisor, &param_vertices, surface)?;
     let new_edges = create_new_edges(&vertices_on_divisor, poly_edges, surface, tol)?;
     let (new_edge_range, new_edge_indices) = signup_new_edges(edges, new_edges);
+    duplicated_edges.extend(new_edge_range);
     let edge_iter = closed.iter().flatten().copied().chain(new_edge_indices);
     let vemap = create_vemap(edges, edge_iter);
-    Some(construct_boundaries(vemap, edges, new_edge_range))
+    Some(construct_boundaries(vemap, edges, &duplicated_edges))
 }
 
 // --- create_param_boundaries ---
@@ -609,6 +611,13 @@ fn create_param_vertices<C>(
         .collect()
 }
 
+// --- duplicated_edges ---
+
+fn duplicated_edges(edges: impl Iterator<Item = usize>) -> HashSet<usize> {
+    let mut done = HashSet::default();
+    edges.filter(move |index| !done.insert(*index)).collect()
+}
+
 // --- enumerate_vertices_on_divisor ---
 
 fn enumerate_vertices_on_divisor<S: ParametricSurface>(
@@ -622,15 +631,12 @@ fn enumerate_vertices_on_divisor<S: ParametricSurface>(
     let q = periodic_iterator(q, periods)
         .min_by(|q, r| p.distance2(*q).partial_cmp(&p.distance2(*r)).unwrap())?;
     let line = Line(p, q);
-    let mut vertices_on_divisor = param_vertices
-        .iter()
-        .filter_map(move |(v, uv)| {
-            periodic_iterator(*uv, periods)
-                .find(|uv| line.distance_to_point_as_segment(*uv).so_small())
-                .map(|uv| (*v, uv))
-        })
-        .map(move |(v, uv)| Some((line.search_nearest_parameter(uv, None, 1)?, (v, uv))))
-        .collect::<Option<Vec<_>>>()?;
+    let iter = param_vertices.iter().filter_map(move |(v, uv)| {
+        periodic_iterator(*uv, periods)
+            .find(move |uv| line.distance_to_point_as_segment(*uv).so_small())
+            .map(move |uv| Some((line.search_nearest_parameter(uv, None, 1)?, (*v, uv))))
+    });
+    let mut vertices_on_divisor = iter.collect::<Option<Vec<_>>>()?;
     vertices_on_divisor.sort_by(|(s, _), (t, _)| s.partial_cmp(t).unwrap());
     Some(vertices_on_divisor)
 }
@@ -647,18 +653,18 @@ where
     C: TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D,
 {
-    vertices_on_divisor
-        .chunks(2)
-        .map(|p| {
-            let ((_, (v0, uv0)), (_, (v1, uv1))) = (p[0], p[1]);
-            let pcurve = PCurve::new(Line(uv0, uv1), surface.clone());
-            poly_edges.push(PolylineCurve::from_curve(&pcurve, (0.0, 1.0), tol));
-            Some(Edge {
-                vertices: (v0, v1),
-                curve: C::try_from(pcurve).ok()?,
-            })
+    vertices_on_divisor.iter().for_each(|(_, (_, uv))| print!("{:?} ", surface.subs(uv.x, uv.y)));
+    println!();
+    let make_edge = move |p: &[(f64, (usize, Point2))]| {
+        let ((_, (v0, uv0)), (_, (v1, uv1))) = (p[0], p[1]);
+        let pcurve = PCurve::new(Line(uv0, uv1), surface.clone());
+        poly_edges.push(PolylineCurve::from_curve(&pcurve, (0.0, 1.0), tol));
+        Some(Edge {
+            vertices: (v0, v1),
+            curve: C::try_from(pcurve).ok()?,
         })
-        .collect()
+    };
+    vertices_on_divisor.chunks(2).map(make_edge).collect()
 }
 
 // --- signup new edges ---
@@ -696,7 +702,7 @@ fn create_vemap<C>(
 fn construct_boundaries<C>(
     mut vemap: HashMap<usize, Vec<EdgeIndex>>,
     edges: &[Edge<C>],
-    new_edge_range: Range<usize>,
+    new_edge_range: &HashSet<usize>,
 ) -> Vec<Wire> {
     let take_back = closure_take_back(edges);
     let mut new_boundaries = Vec::new();

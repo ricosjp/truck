@@ -7,6 +7,10 @@ homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
 license = "Apache-2.0"
 
+[features]
+default = ["step-test"]
+step-test = ["truck-stepio"]
+
 [dependencies]
 derive_more = "0.99.17"
 rustc-hash = "1.1.0"
@@ -17,6 +21,7 @@ truck-topology = { version = "0.5.0", path = "../truck-topology" }
 truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }
 
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
+truck-stepio = { version = "0.2.0", path = "../truck-stepio", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"

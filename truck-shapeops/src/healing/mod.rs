@@ -1,4 +1,4 @@
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use truck_geometry::prelude::*;
 use truck_meshalgo::rexport_polymesh::*;
 use truck_topology::compress::*;
@@ -77,7 +77,7 @@ where
 /// # Details
 /// Robust version of [`SplitClosedEdgesAndFaces`] based on [`SearchNearestParameter`].
 pub trait RobustSplitClosedEdgesAndFaces {
-    fn split_closed_edges_and_faces(&mut self, tol: f64);
+    fn robust_split_closed_edges_and_faces(&mut self, tol: f64);
 }
 
 impl<C, S> RobustSplitClosedEdgesAndFaces for CompressedShell<Point3, C, S>
@@ -92,7 +92,7 @@ where
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>,
 {
-    fn split_closed_edges_and_faces(&mut self, tol: f64) {
+    fn robust_split_closed_edges_and_faces(&mut self, tol: f64) {
         fn sp<S>(surface: &S, point: Point3, hint: Option<(f64, f64)>) -> Option<(f64, f64)>
         where S: SearchParameter<D2, Point = Point3> + SearchNearestParameter<D2, Point = Point3>
         {
@@ -119,8 +119,8 @@ where
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>,
 {
-    fn split_closed_edges_and_faces(&mut self, tol: f64) {
-        let fs = RobustSplitClosedEdgesAndFaces::split_closed_edges_and_faces;
+    fn robust_split_closed_edges_and_faces(&mut self, tol: f64) {
+        let fs = RobustSplitClosedEdgesAndFaces::robust_split_closed_edges_and_faces;
         self.boundaries.iter_mut().for_each(|shell| fs(shell, tol))
     }
 }
