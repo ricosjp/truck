@@ -127,6 +127,27 @@ where
 {
 }
 
+impl<C, T> Cut for Processor<C, T>
+where
+    C: BoundedCurve + Cut,
+    C::Point: EuclideanSpace<Diff = C::Vector>,
+    C::Vector: VectorSpace<Scalar = f64>,
+    T: Transform<C::Point> + Clone,
+{
+    fn cut(&mut self, t: f64) -> Self {
+        let t = self.get_curve_parameter(t);
+        let mut entity = self.entity.cut(t);
+        if !self.orientation {
+            std::mem::swap(&mut entity, &mut self.entity);
+        }
+        Self {
+            entity,
+            transform: self.transform.clone(),
+            orientation: self.orientation,
+        }
+    }
+}
+
 impl<S, T> ParametricSurface for Processor<S, T>
 where
     S: ParametricSurface,

@@ -26,7 +26,7 @@ impl HashedPointCloud {
         I: IntoIterator + Clone,
         I::IntoIter: Iterator<Item = &'a Point3>, {
         let mut bdb = BoundingBox::<Point3>::new();
-        let len = points.clone().into_iter().fold(0, |counter, pt| {
+        let len = points.clone().into_iter().copied().fold(0, |counter, pt| {
             bdb.push(pt);
             counter + 1
         });

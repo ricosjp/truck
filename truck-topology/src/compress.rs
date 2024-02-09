@@ -13,7 +13,7 @@ use rustc_hash::FxHashMap as HashMap;
 use serde::{Deserialize, Serialize};
 
 /// Serialized compressed edge
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CompressedEdge<C> {
     /// vertices of the edge
     pub vertices: (usize, usize),
@@ -31,7 +31,7 @@ impl<C> CompressedEdge<C> {
 }
 
 /// The index of an edge in `CompressedShell`.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CompressedEdgeIndex {
     /// the index of the edge
     pub index: usize,
@@ -44,7 +44,7 @@ impl From<(usize, bool)> for CompressedEdgeIndex {
 }
 
 /// Serialized compressed face
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CompressedFace<S> {
     /// Boundaries of the face
     pub boundaries: Vec<Vec<CompressedEdgeIndex>>,
@@ -79,7 +79,7 @@ impl<S> CompressedFace<S> {
 }
 
 /// Serialized compressed shell
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CompressedShell<P, C, S> {
     /// all geometries of vertices
     pub vertices: Vec<P>,
@@ -90,7 +90,7 @@ pub struct CompressedShell<P, C, S> {
 }
 
 /// Serialized compressed solid
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CompressedSolid<P, C, S> {
     /// all boundaries of solid
     pub boundaries: Vec<CompressedShell<P, C, S>>,

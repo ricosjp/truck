@@ -127,7 +127,7 @@ impl MyApp {
                     Curve::Line(line) => vec![line.0, line.1].into_iter().collect(),
                     Curve::BSplineCurve(curve) => {
                         let bdb = curve.roughly_bounding_box();
-                        vec![*bdb.max(), *bdb.min()].into_iter().collect()
+                        vec![bdb.max(), bdb.min()].into_iter().collect()
                     }
                     Curve::NurbsCurve(curve) => curve.roughly_bounding_box(),
                     Curve::IntersectionCurve(_) => BoundingBox::new(),

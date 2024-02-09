@@ -15,6 +15,11 @@ type Cdt = ConstrainedDelaunayTriangulation<SPoint2>;
 type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
 type MeshedCShell = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
 
+pub(super) trait SP<S>:
+    Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable {
+}
+impl<S, F> SP<S> for F where F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable {}
+
 pub(super) fn by_search_parameter<S>(
     surface: &S,
     point: Point3,
@@ -45,15 +50,14 @@ where
 
 /// Tessellates faces
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn shell_tessellation<'a, C, S, F>(
+pub(super) fn shell_tessellation<'a, C, S>(
     shell: &Shell<Point3, C, S>,
     tol: f64,
-    sp: F,
+    sp: impl SP<S>,
 ) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
     S: PreMeshableSurface + 'a,
-    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable,
 {
     let vmap: HashMap<_, _> = shell
         .vertex_par_iter()
@@ -92,15 +96,14 @@ where
 
 /// Tessellates faces
 #[cfg(any(target_arch = "wasm32", test))]
-pub(super) fn shell_tessellation_single_thread<'a, C, S, F>(
+pub(super) fn shell_tessellation_single_thread<'a, C, S>(
     shell: &'a Shell<Point3, C, S>,
     tol: f64,
-    sp: F,
+    sp: impl SP<S>,
 ) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
     S: PreMeshableSurface + 'a,
-    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
 {
     use truck_base::entry_map::FxEntryMap as EntryMap;
     use truck_topology::Vertex as TVertex;
@@ -142,15 +145,14 @@ where
 }
 
 /// Tessellates faces
-pub(super) fn cshell_tessellation<'a, C, S, F>(
+pub(super) fn cshell_tessellation<'a, C, S>(
     shell: &CompressedShell<Point3, C, S>,
     tol: f64,
-    sp: F,
+    sp: impl SP<S>,
 ) -> MeshedCShell
 where
     C: PolylineableCurve + 'a,
     S: PreMeshableSurface + 'a,
-    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable,
 {
     let vertices = shell.vertices.clone();
     let tessellate_edge = |edge: &CompressedEdge<C>| {
@@ -202,7 +204,7 @@ fn shell_create_polygon<S: PreMeshableSurface>(
     wires: Vec<Wire<Point3, PolylineCurve>>,
     orientation: bool,
     tol: f64,
-    sp: impl Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
+    sp: impl SP<S>,
 ) -> Face<Point3, PolylineCurve, Option<PolygonMesh>> {
     let preboundary = wires
         .iter()
@@ -229,14 +231,14 @@ impl PolyBoundaryPiece {
     fn try_new<S: PreMeshableSurface>(
         surface: &S,
         wire: impl Iterator<Item = PolylineCurve>,
-        sp: impl Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)>,
+        sp: impl SP<S>,
     ) -> Option<Self> {
-        let up = surface.u_period();
-        let vp = surface.v_period();
+        let (up, vp) = (surface.u_period(), surface.v_period());
+        let (urange, vrange) = surface.try_range_tuple();
         let mut bdry3d: Vec<Point3> = wire
             .flat_map(|poly_edge| {
                 let n = poly_edge.len() - 1;
-                poly_edge.0.into_iter().take(n)
+                poly_edge.into_iter().take(n)
             })
             .collect();
         bdry3d.push(bdry3d[0]);
@@ -248,21 +250,11 @@ impl PolyBoundaryPiece {
                     Some(hint) => hint,
                     None => return vec![None],
                 };
-                fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
-                    let f = move |x: &f64| f64::abs(x - previous);
-                    move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
-                }
                 if let (Some(up), Some((u0, _))) = (up, previous) {
-                    u = (-2..=2)
-                        .map(|i| u + i as f64 * up)
-                        .min_by(abs_diff(u0))
-                        .unwrap();
+                    u = get_mindiff(u, u0, up);
                 }
                 if let (Some(vp), Some((_, v0))) = (vp, previous) {
-                    v = (-2..=2)
-                        .map(|i| v + i as f64 * vp)
-                        .min_by(abs_diff(v0))
-                        .unwrap();
+                    v = get_mindiff(v, v0, vp);
                 }
                 let res = (|| {
                     if let Some((u0, v0)) = previous {
@@ -278,6 +270,15 @@ impl PolyBoundaryPiece {
                 res
             })
             .collect::<Option<Vec<Point2>>>()?;
+        let grav = vec.iter().fold(Point2::origin(), |g, p| g + p.to_vec()) / vec.len() as f64;
+        if let (Some(up), Some((u0, _))) = (up, urange) {
+            let quot = f64::floor((grav.x - u0) / up);
+            vec.iter_mut().for_each(|p| p.x -= quot * up);
+        }
+        if let (Some(vp), Some((v0, _))) = (vp, vrange) {
+            let quot = f64::floor((grav.y - v0) / vp);
+            vec.iter_mut().for_each(|p| p.y -= quot * vp);
+        }
         let last = *vec.last().unwrap();
         if !vec[0].near(&last) {
             let Point2 { x: u0, y: v0 } = last;
@@ -289,10 +290,19 @@ impl PolyBoundaryPiece {
     }
 }
 
+fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
+    let f = move |x: &f64| f64::abs(x - previous);
+    move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
+}
+fn get_mindiff(u: f64, u0: f64, up: f64) -> f64 {
+    let closure = |i| u + i as f64 * up;
+    (-2..=2).map(closure).min_by(abs_diff(u0)).unwrap()
+}
+
 #[derive(Debug, Default, Clone)]
 struct PolyBoundary(Vec<Vec<Point2>>);
 
-fn noramlize_range(curve: &mut Vec<Point2>, compidx: usize, (u0, u1): (f64, f64)) {
+fn normalize_range(curve: &mut Vec<Point2>, compidx: usize, (u0, u1): (f64, f64)) {
     let p = curve[0];
     let q = curve[curve.len() - 1];
     let tmp = f64::min(p[compidx], q[compidx]) + TOLERANCE;
@@ -350,7 +360,7 @@ impl PolyBoundary {
                 let q = curve[curve.len() - 1];
                 if let (Some((u0, u1)), Some((v0, v1))) = surface.try_range_tuple() {
                     if p.x < q.x - TOLERANCE {
-                        noramlize_range(&mut curve, 0, (u0, u1));
+                        normalize_range(&mut curve, 0, (u0, u1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u0, v1);
@@ -360,7 +370,7 @@ impl PolyBoundary {
                         let vec2 = polyline_on_surface(surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.x < p.x - TOLERANCE {
-                        noramlize_range(&mut curve, 0, (u0, u1));
+                        normalize_range(&mut curve, 0, (u0, u1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u1, v0);
@@ -370,7 +380,7 @@ impl PolyBoundary {
                         let vec2 = polyline_on_surface(surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if p.y < q.y - TOLERANCE {
-                        noramlize_range(&mut curve, 1, (v0, v1));
+                        normalize_range(&mut curve, 1, (v0, v1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u0, v0);
@@ -380,7 +390,7 @@ impl PolyBoundary {
                         let vec2 = polyline_on_surface(surface, x, p, tol);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.y < p.y - TOLERANCE {
-                        noramlize_range(&mut curve, 1, (v0, v1));
+                        normalize_range(&mut curve, 1, (v0, v1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
                         let x = Point2::new(u1, v1);
@@ -399,13 +409,13 @@ impl PolyBoundary {
                 let ((p0, p1), (q0, q1)) = (end_pts(&curve0), end_pts(&curve1));
                 if !p0.x.near(&p1.x) && !q0.x.near(&q1.x) {
                     if let (Some(urange), _) = surface.try_range_tuple() {
-                        noramlize_range(&mut curve0, 0, urange);
-                        noramlize_range(&mut curve1, 0, urange);
+                        normalize_range(&mut curve0, 0, urange);
+                        normalize_range(&mut curve1, 0, urange);
                     }
                 } else if !p0.y.near(&p1.y) && !q0.y.near(&q1.y) {
                     if let (_, Some(vrange)) = surface.try_range_tuple() {
-                        noramlize_range(&mut curve0, 1, vrange);
-                        noramlize_range(&mut curve1, 1, vrange);
+                        normalize_range(&mut curve0, 1, vrange);
+                        normalize_range(&mut curve1, 1, vrange);
                     }
                 }
                 let ((p0, p1), (q0, q1)) = (end_pts(&curve0), end_pts(&curve1));

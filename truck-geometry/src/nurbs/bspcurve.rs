@@ -1237,9 +1237,7 @@ where
     }
 }
 
-impl<P> BSplineCurve<P>
-where P: MetricSpace<Metric = f64> + Index<usize, Output = f64> + Bounded<f64> + Copy
-{
+impl<P: Bounded> BSplineCurve<P> {
     /// Returns the bounding box including all control points.
     #[inline(always)]
     pub fn roughly_bounding_box(&self) -> BoundingBox<P> { self.control_points.iter().collect() }

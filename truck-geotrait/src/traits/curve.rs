@@ -125,6 +125,11 @@ impl<C: BoundedCurve> BoundedCurve for Box<C> {
     fn back(&self) -> Self::Point { (**self).back() }
 }
 
+impl<C: Cut> Cut for Box<C> {
+    #[inline(always)]
+    fn cut(&mut self, t: f64) -> Self { Box::new((**self).cut(t)) }
+}
+
 /// 2D parametric curve
 pub trait ParametricCurve2D: ParametricCurve<Point = Point2, Vector = Vector2> {}
 impl<C: ParametricCurve<Point = Point2, Vector = Vector2>> ParametricCurve2D for C {}

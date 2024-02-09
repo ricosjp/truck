@@ -30,6 +30,7 @@ pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
     Deserialize,
     ParametricCurve,
     BoundedCurve,
+    Cut,
     Invertible,
     ParameterDivision1D,
     SearchParameterD1,
@@ -48,6 +49,7 @@ pub enum Conic2D {
     Deserialize,
     ParametricCurve,
     BoundedCurve,
+    Cut,
     Invertible,
     ParameterDivision1D,
     SearchParameterD1,
@@ -69,6 +71,7 @@ pub enum Curve2D {
     Deserialize,
     ParametricCurve,
     BoundedCurve,
+    Cut,
     Invertible,
     ParameterDivision1D,
     SearchParameterD1,
@@ -88,6 +91,7 @@ pub enum Conic3D {
     Deserialize,
     ParametricCurve,
     BoundedCurve,
+    Cut,
     Invertible,
     ParameterDivision1D,
     SearchParameterD1,
@@ -285,6 +289,19 @@ mod sphere {
                 (n0 - n1).magnitude2() < EPS,
                 "normal failed: {n0:?}, {n1:?}"
             );
+        }
+    }
+}
+
+/// Implementation required to apply a closed surface division to a shape parsed from a STEP file.
+mod from_pcurve {
+    use super::{Curve2D, Curve3D, Surface};
+    use truck_geometry::prelude::*;
+
+    impl From<PCurve<Line<Point2>, Surface>> for Curve3D {
+        fn from(value: PCurve<Line<Point2>, Surface>) -> Self {
+            let (line, surface) = value.decompose();
+            Curve3D::PCurve(PCurve::new(Curve2D::Line(line).into(), surface.into()))
         }
     }
 }

@@ -5,13 +5,17 @@ impl<C, S> PCurve<C, S> {
     #[inline(always)]
     pub const fn new(curve: C, surface: S) -> PCurve<C, S> { PCurve { curve, surface } }
 
-    /// Returns the reference to the previous map
+    /// Returns the reference to the parameter curve
     #[inline(always)]
     pub const fn curve(&self) -> &C { &self.curve }
 
-    /// Returns the reference to the previous map
+    /// Returns the reference to the surface
     #[inline(always)]
     pub const fn surface(&self) -> &S { &self.surface }
+
+    /// Decompose the pcurve into its parameter curve and surface.
+    #[inline(always)]
+    pub fn decompose(self) -> (C, S) { (self.curve, self.surface) }
 }
 
 impl<C, S> ParametricCurve for PCurve<C, S>
@@ -53,6 +57,21 @@ where
     C: BoundedCurve,
     PCurve<C, S>: ParametricCurve,
 {
+}
+
+impl<C, S> Cut for PCurve<C, S>
+where
+    C: Cut,
+    S: Clone,
+    PCurve<C, S>: ParametricCurve,
+{
+    fn cut(&mut self, t: f64) -> Self {
+        let curve = self.curve.cut(t);
+        Self {
+            curve,
+            surface: self.surface.clone(),
+        }
+    }
 }
 
 impl<C, S> SearchParameter<D1> for PCurve<C, S>

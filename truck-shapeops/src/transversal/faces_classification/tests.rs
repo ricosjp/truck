@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    super::{divide_face, loops_store},
+    *,
+};
 use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
 use truck_topology::{shell::ShellCondition, Vertex};
@@ -105,15 +108,15 @@ fn independent_intersection() {
     let poly_shell0 = shell0.triangulation(TOL);
     let poly_shell1 = shell1.triangulation(TOL);
 
-    let crate::loops_store::LoopsStoreQuadruple {
+    let loops_store::LoopsStoreQuadruple {
         geom_loops_store0: loops_store0,
         geom_loops_store1: loops_store1,
         ..
-    } = crate::loops_store::create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1, TOL)
+    } = loops_store::create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1, TOL)
         .unwrap();
-    let mut cls0 = crate::divide_face::divide_faces(&shell0, &loops_store0, TOL).unwrap();
+    let mut cls0 = divide_face::divide_faces(&shell0, &loops_store0, TOL).unwrap();
     cls0.integrate_by_component();
-    let mut cls1 = crate::divide_face::divide_faces(&shell1, &loops_store1, TOL).unwrap();
+    let mut cls1 = divide_face::divide_faces(&shell1, &loops_store1, TOL).unwrap();
     cls1.integrate_by_component();
 
     let [mut and, mut or, _] = cls0.and_or_unknown();

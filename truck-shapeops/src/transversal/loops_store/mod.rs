@@ -1,6 +1,6 @@
 #![allow(clippy::many_single_char_names)]
 
-use crate::*;
+use super::*;
 use rustc_hash::FxHashMap as HashMap;
 use truck_base::cgmath64::*;
 use truck_geometry::prelude::IntersectionCurve;
