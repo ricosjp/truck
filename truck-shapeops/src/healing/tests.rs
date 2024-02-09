@@ -1514,8 +1514,8 @@ fn step_import() {
         "occt-cylinder.step",
         "occt-cone.step",
         "abc-0006.step",
-        //"abc-0008.step",
-        //"abc-0035.step",
+        "abc-0008.step",
+        "abc-0035.step",
     ];
 
     STEP_FILES.iter().for_each(|file_name| {

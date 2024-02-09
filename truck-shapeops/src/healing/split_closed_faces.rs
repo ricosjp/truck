@@ -17,9 +17,8 @@ where
         split_face_with_non_closed_boundary(i, shell, &mut poly_edges, &sp, tol);
     });
     let len = shell.faces.len();
-    let split_closed_face1 =
-        |i| split_face_with_non_simple_wire(i, shell, &mut poly_edges, &sp, tol);
-    let new_faces: Vec<_> = (0..len).filter_map(split_closed_face1).flatten().collect();
+    let closure = |i| split_face_with_non_simple_wire(i, shell, &mut poly_edges, &sp, tol);
+    let new_faces: Vec<_> = (0..len).filter_map(closure).flatten().collect();
     shell.faces.extend(new_faces);
 }
 
@@ -39,9 +38,8 @@ where
         + TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D,
 {
-    let Shell { faces, edges, .. } = &*shell;
     let (divisor, open, closed) =
-        find_non_closed_wires_in_param_divisor(&faces[face_index], edges, poly_edges, &sp)?;
+        non_closed_wires_in_param_divisor(face_index, shell, poly_edges, &sp)?;
     debug_assert_eq!(open.len(), 2);
     take_vertices_to_intersections(divisor, face_index, shell, poly_edges, &sp, tol);
     let Shell { faces, edges, .. } = shell;
@@ -75,7 +73,7 @@ where
     S: ParametricSurface3D,
 {
     let Face { boundaries, .. } = &shell.faces[face_index];
-    let divisor = find_non_simple_wire_divisor(boundaries, &shell.edges)?;
+    let divisor = find_non_simple_wire_divisor(boundaries, &shell.edges, &shell.vertices)?;
     split_face_by_divisor(face_index, divisor, shell, poly_edges, sp, tol)
 }
 
@@ -84,12 +82,17 @@ where
 fn find_non_simple_wire_divisor<C>(
     boundaries: &[Wire],
     edges: &[Edge<C>],
+    vertices: &[Point3],
 ) -> Option<(usize, usize)> {
-    let closure = |boundary| non_simple_wire_divisor(boundary, edges);
+    let closure = |boundary| non_simple_wire_divisor(boundary, edges, vertices);
     boundaries.iter().cloned().find_map(closure)
 }
 
-fn non_simple_wire_divisor<C>(mut boundary: Wire, edges: &[Edge<C>]) -> Option<(usize, usize)> {
+fn non_simple_wire_divisor<C>(
+    mut boundary: Wire,
+    edges: &[Edge<C>],
+    vertices: &[Point3],
+) -> Option<(usize, usize)> {
     let (i0, j0) = boundary.iter().enumerate().find_map(find_loop())?;
     boundary.rotate_left(i0);
     let j0 = j0 - i0;
@@ -103,7 +106,14 @@ fn non_simple_wire_divisor<C>(mut boundary: Wire, edges: &[Edge<C>]) -> Option<(
 
     let (k0, k1) = ((j0 + 1) / 2, (i1 + j1 + 1) / 2);
     let f = closure_take_front(edges);
-    Some((f(boundary[k0]), f(boundary[k1])))
+    let pre_divisor = (f(boundary[k0]), f(boundary[k1]));
+    nearest_correction(
+        pre_divisor,
+        &boundary[1..j0],
+        &boundary[i1 + 1..j1],
+        vertices,
+        closure_take_front(edges),
+    )
 }
 
 fn find_loop() -> impl FnMut((usize, &EdgeIndex)) -> Option<(usize, usize)> {
@@ -114,13 +124,13 @@ fn find_loop() -> impl FnMut((usize, &EdgeIndex)) -> Option<(usize, usize)> {
 // --- find_non_closed_wires_in_param_divisor ---
 
 type FindNonClosedWiresInParamDivisorResult = Option<((usize, usize), Vec<Wire>, Vec<Wire>)>;
-fn find_non_closed_wires_in_param_divisor<'a, C, S>(
-    Face {
-        boundaries,
-        surface,
-        ..
-    }: &Face<S>,
-    edges: &'a [Edge<C>],
+fn non_closed_wires_in_param_divisor<'a, C, S>(
+    face_index: usize,
+    Shell {
+        edges,
+        faces,
+        ref vertices,
+    }: &mut Shell<Point3, C, S>,
     poly_edges: &'a [PolylineCurve<Point3>],
     sp: impl SP<S>,
 ) -> FindNonClosedWiresInParamDivisorResult
@@ -128,6 +138,11 @@ where
     C: ParametricCurve3D + BoundedCurve + TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D,
 {
+    let Face {
+        boundaries,
+        surface,
+        ..
+    } = &faces[face_index];
     let param_boundaries = create_param_boundaries(boundaries, surface, poly_edges, sp)?;
     let (mut open, mut closed) = (Vec::new(), Vec::new());
     boundaries
@@ -158,7 +173,7 @@ where
             (take_front(*edge_index), dist)
         }
     };
-    let create_divisor = move |(wire, poly_wire): ZippedWire<'_>| {
+    let create_pre_divisor = move |(wire, poly_wire): ZippedWire<'_>| {
         let (urange, vrange) = surface.try_range_tuple();
         let (up, vp) = (surface.u_period(), surface.v_period());
         let p = poly_wire[0][0];
@@ -185,14 +200,21 @@ where
             .min_by(|(_, x), (_, y)| x.partial_cmp(y).unwrap())
             .map(|(v, _)| v)
     };
-    let divisor_vec = open
+    let pre_divisor_vec = open
         .iter()
         .copied()
-        .map(create_divisor)
+        .map(create_pre_divisor)
         .collect::<Option<Vec<_>>>()?;
-    let open = open.into_iter().map(|(w, _)| w.to_vec()).collect();
-    let closed = closed.into_iter().map(|(w, _)| w.to_vec()).collect();
-    Some(((divisor_vec[0], divisor_vec[1]), open, closed))
+    let open: Vec<_> = open.into_iter().map(|(w, _)| w.to_vec()).collect();
+    let closed: Vec<_> = closed.into_iter().map(|(w, _)| w.to_vec()).collect();
+    let divisor = nearest_correction(
+        (pre_divisor_vec[0], pre_divisor_vec[1]),
+        &open[0],
+        &open[1],
+        vertices,
+        take_front,
+    )?;
+    Some((divisor, open, closed))
 }
 
 // --- split_face_by_divisor ---
@@ -653,7 +675,9 @@ where
     C: TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D,
 {
-    vertices_on_divisor.iter().for_each(|(_, (_, uv))| print!("{:?} ", surface.subs(uv.x, uv.y)));
+    vertices_on_divisor
+        .iter()
+        .for_each(|(_, (_, uv))| print!("{:?} ", surface.subs(uv.x, uv.y)));
     println!();
     let make_edge = move |p: &[(f64, (usize, Point2))]| {
         let ((_, (v0, uv0)), (_, (v1, uv1))) = (p[0], p[1]);
@@ -925,4 +949,34 @@ fn periodic_iterator(
         None => vec![0.0],
     };
     itertools::iproduct!(up_range, vp_range).map(move |(dx, dy)| p + Vector2::new(dx, dy))
+}
+
+fn nearest_correction(
+    (v0, _v1): (usize, usize),
+    wire0: &[EdgeIndex],
+    wire1: &[EdgeIndex],
+    vertices: &[Point3],
+    take_front: impl Fn(EdgeIndex) -> usize,
+) -> Option<(usize, usize)> {
+    let p0 = vertices[v0];
+    let v1 = wire1
+        .iter()
+        .copied()
+        .map(|edge_index| take_front(edge_index))
+        .min_by(|v, w| {
+            p0.distance2(vertices[*v])
+                .partial_cmp(&p0.distance2(vertices[*w]))
+                .unwrap()
+        })?;
+    let p1 = vertices[v1];
+    let v0 = wire0
+        .iter()
+        .copied()
+        .map(|edge_index| take_front(edge_index))
+        .min_by(|v, w| {
+            p1.distance2(vertices[*v])
+                .partial_cmp(&p1.distance2(vertices[*w]))
+                .unwrap()
+        })?;
+    Some((v0, v1))
 }
