@@ -6,3 +6,4 @@ mod common;
 mod point_cloud;
 mod splitting;
 mod topology;
+mod volume;
