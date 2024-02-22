@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Calculate volume and center of the gravity of PolygonMesh.
 - Split closed edges and faces.
 - Add `sphere.json` to tessellate test.
 - Tolerance setting of `put_together_same_attrs`.
