@@ -1,5 +1,5 @@
 [package]
-name = "truck-geoderive"
+name = "truck-derivers"
 version = "0.1.0"
 edition = "2021"
 description = "Derive macros generating an impl of the geometric traits."

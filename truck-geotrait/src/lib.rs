@@ -35,4 +35,4 @@ pub use traits::*;
 /// Algorithms for curves and surfaces.
 pub mod algo;
 #[cfg(feature = "derive")]
-pub use truck_geoderive::*;
+pub use truck_derivers::*;

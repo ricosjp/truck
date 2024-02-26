@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
 	"truck-base",
-	"truck-geoderive",
+	"truck-derivers",
 	"truck-geometry",
 	"truck-geotrait",
 	"truck-js",
