@@ -4,6 +4,9 @@ use truck_topology::compress::{CompressedShell, CompressedSolid};
 
 use self::topology::PreStepModel;
 
+#[cfg(feature = "derive")]
+pub use truck_derivers::{DisplayByStep, StepLength};
+
 /// display step slice
 /// # Examples
 /// ```
@@ -115,6 +118,16 @@ impl<'a, I: Clone + IntoIterator<Item = usize>> Display for SliceDisplay<'a, Ind
     }
 }
 
+/// trait for outputting by STEP file format.
+pub trait DisplayByStep {
+    ///  formatter
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result;
+}
+
+impl<T: DisplayByStep> DisplayByStep for &T {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(*self, idx, f) }
+}
+
 /// Display struct for outputting some objects to STEP file format.
 #[derive(Clone, Debug)]
 pub struct StepDisplay<T> {
@@ -133,13 +146,17 @@ where StepDisplay<T>: Display
 impl<T> StepDisplay<T> {
     /// constructor
     #[inline]
-    pub fn new(entity: T, idx: usize) -> Self { Self { entity, idx } }
+    pub const fn new(entity: T, idx: usize) -> Self { Self { entity, idx } }
     /// return entity
     #[inline]
-    pub fn entity(&self) -> &T { &self.entity }
+    pub const fn entity(&self) -> &T { &self.entity }
     /// return index
     #[inline]
-    pub fn index(&self) -> usize { self.idx }
+    pub const fn index(&self) -> usize { self.idx }
+}
+
+impl<T: DisplayByStep> Display for StepDisplay<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(&self.entity, self.idx, f) }
 }
 
 /// Constant numbers of lines for outputting an object to a STEP file.

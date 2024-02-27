@@ -11,13 +11,19 @@ license = "Apache-2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
+[features]
+default = ["in", "derive"]
+in = ["derive_more", "ruststep", "serde", "truck-geotrait"]
+derive = ["truck-derivers"]
+
 [dependencies]
 chrono = { version = "0.4.31", features = ["wasmbind"] }
-derive_more = "0.99.17"
-ruststep = { git = "https://github.com/ricosjp/ruststep.git" }
-serde = { version = "1.0.193", features = ["derive"] }
+derive_more = { version = "0.99.17", optional = true }
+ruststep = { git = "https://github.com/ricosjp/ruststep.git", optional = true }
+serde = { version = "1.0.193", features = ["derive"], optional = true }
 truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
-truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
+truck-geotrait = { version = "0.3.0", path = "../truck-geotrait", optional = true }
+truck-derivers = { version = "0.1.0", path = "../truck-derivers", optional = true }
 truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
 truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
 truck-topology = { version = "0.5.0", path = "../truck-topology" }

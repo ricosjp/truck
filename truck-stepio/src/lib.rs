@@ -21,6 +21,7 @@
 
 /// STEP input module
 #[doc(hidden)]
+#[cfg(feature = "in")]
 pub mod r#in;
 /// STEP output module
 pub mod out;
