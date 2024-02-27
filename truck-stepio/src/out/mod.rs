@@ -5,7 +5,7 @@ use truck_topology::compress::{CompressedShell, CompressedSolid};
 use self::topology::PreStepModel;
 
 #[cfg(feature = "derive")]
-pub use truck_derivers::StepLength;
+pub use truck_derivers::{StepLength, DisplayByStep};
 
 /// display step slice
 /// # Examples
@@ -119,9 +119,13 @@ impl<'a, I: Clone + IntoIterator<Item = usize>> Display for SliceDisplay<'a, Ind
 }
 
 /// trait for outputting by STEP file format.
-pub trait DisplayStep {
+pub trait DisplayByStep {
     ///  formatter
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result;
+}
+
+impl<T: DisplayByStep> DisplayByStep for &T {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(*self, idx, f) }
 }
 
 /// Display struct for outputting some objects to STEP file format.
@@ -149,6 +153,10 @@ impl<T> StepDisplay<T> {
     /// return index
     #[inline]
     pub const fn index(&self) -> usize { self.idx }
+}
+
+impl<T: DisplayByStep> Display for StepDisplay<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(&self.entity, self.idx, f) }
 }
 
 /// Constant numbers of lines for outputting an object to a STEP file.
