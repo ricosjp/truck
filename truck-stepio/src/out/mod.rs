@@ -5,7 +5,7 @@ use truck_topology::compress::{CompressedShell, CompressedSolid};
 use self::topology::PreStepModel;
 
 #[cfg(feature = "derive")]
-pub use truck_derivers::{StepLength, DisplayByStep};
+pub use truck_derivers::{DisplayByStep, StepLength};
 
 /// display step slice
 /// # Examples

@@ -262,10 +262,7 @@ impl DisplayByStep for Plane {
 {location}{z_axis}{x_axis}",
             location = StepDisplay::new(self.origin(), location_idx),
             z_axis = StepDisplay::new(VectorAsDirection(self.normal()), z_axis_idx),
-            x_axis = StepDisplay::new(
-                VectorAsDirection(self.u_axis().normalize()),
-                x_axis_idx
-            )
+            x_axis = StepDisplay::new(VectorAsDirection(self.u_axis().normalize()), x_axis_idx)
         ))
     }
 }
@@ -275,8 +272,7 @@ impl ConstStepLength for Plane {
 }
 
 impl<P> DisplayByStep for BSplineSurface<P>
-where
-    P: Copy + DisplayByStep,
+where P: Copy + DisplayByStep
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         let control_points = self.control_points();
@@ -377,8 +373,7 @@ impl<V> StepLength for NurbsSurface<V> {
 }
 
 impl<C> DisplayByStep for RevolutedCurve<C>
-where
-    C: StepLength + DisplayByStep,
+where C: StepLength + DisplayByStep
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         let curve = self.entity_curve();
@@ -401,8 +396,7 @@ impl<C: StepLength> StepLength for RevolutedCurve<C> {
 }
 
 impl<C> DisplayByStep for Processor<RevolutedCurve<C>, Matrix4>
-where
-    C: StepLength + Transformed<Matrix4> + DisplayByStep,
+where C: StepLength + Transformed<Matrix4> + DisplayByStep
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         let surface = self.entity();
