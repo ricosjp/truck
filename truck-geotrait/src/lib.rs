@@ -35,4 +35,8 @@ pub use traits::*;
 /// Algorithms for curves and surfaces.
 pub mod algo;
 #[cfg(feature = "derive")]
-pub use truck_derivers::*;
+pub use truck_derivers::{
+    BoundedCurve, BoundedSurface, Cut, Invertible, ParameterDivision1D, ParameterDivision2D,
+    ParametricCurve, ParametricSurface, ParametricSurface3D, SearchNearestParameterD1,
+    SearchNearestParameterD2, SearchParameterD1, SearchParameterD2,
+};
