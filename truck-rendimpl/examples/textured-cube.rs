@@ -8,7 +8,7 @@ use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use winit::{dpi::*, event::*, event_loop::ControlFlow};
+use winit::{dpi::*, event::*, keyboard::*};
 mod app;
 use app::*;
 
@@ -155,13 +155,13 @@ impl App for MyApp {
         }
         Self::default_control_flow()
     }
-    fn keyboard_input(&mut self, input: KeyboardInput, _: bool) -> ControlFlow {
-        let keycode = match input.virtual_keycode {
-            Some(keycode) => keycode,
-            None => return Self::default_control_flow(),
+    fn keyboard_input(&mut self, input: KeyEvent, _: bool) -> ControlFlow {
+        let keycode = match input.physical_key {
+            PhysicalKey::Code(keycode) => keycode,
+            _ => return Self::default_control_flow(),
         };
         match keycode {
-            VirtualKeyCode::P => {
+            KeyCode::KeyP => {
                 if let Some(ref instant) = self.camera_changed {
                     let time = instant.elapsed().as_secs_f64();
                     if time < 0.2 {
@@ -182,7 +182,7 @@ impl App for MyApp {
                     }
                 }
             }
-            VirtualKeyCode::L => {
+            KeyCode::KeyL => {
                 if let Some(ref instant) = self.light_changed {
                     let time = instant.elapsed().as_secs_f64();
                     if time < 0.2 {

@@ -13,7 +13,7 @@ use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
 use wgpu::*;
-use winit::{dpi::*, event::*, event_loop::ControlFlow};
+use winit::{dpi::*, event::*, keyboard::*};
 mod app;
 use app::*;
 
@@ -240,16 +240,16 @@ impl App for MyApp {
         self.prev_cursor = position;
         Self::default_control_flow()
     }
-    fn keyboard_input(&mut self, input: KeyboardInput, _: bool) -> ControlFlow {
+    fn keyboard_input(&mut self, input: KeyEvent, _: bool) -> ControlFlow {
         if input.state == ElementState::Released {
             return Self::default_control_flow();
         }
-        let keycode = match input.virtual_keycode {
-            Some(keycode) => keycode,
-            None => return Self::default_control_flow(),
+        let keycode = match input.physical_key {
+            PhysicalKey::Code(keycode) => keycode,
+            _ => return Self::default_control_flow(),
         };
         match keycode {
-            VirtualKeyCode::P => {
+            KeyCode::KeyP => {
                 let camera = &mut self.scene.studio_config_mut().camera;
                 *camera = match camera.projection_type() {
                     ProjectionType::Parallel => Camera::perspective_camera(
@@ -263,7 +263,7 @@ impl App for MyApp {
                     }
                 };
             }
-            VirtualKeyCode::L => {
+            KeyCode::KeyL => {
                 let (light, camera) = {
                     let desc = self.scene.studio_config_mut();
                     (&mut desc.lights[0], &desc.camera)
@@ -288,7 +288,7 @@ impl App for MyApp {
                     }
                 };
             }
-            VirtualKeyCode::Space => {
+            KeyCode::Space => {
                 self.render_mode = match self.render_mode {
                     RenderMode::NaiveSurface => RenderMode::SurfaceAndWireFrame,
                     RenderMode::SurfaceAndWireFrame => RenderMode::NaiveWireFrame,

@@ -150,10 +150,10 @@ impl App for MyApp {
         self.scene.render_frame();
     }
 
-    fn closed_requested(&mut self) -> winit::event_loop::ControlFlow {
+    fn closed_requested(&mut self) -> ControlFlow {
         self.closed.store(true, Ordering::SeqCst);
         self.thread.take().unwrap().join().unwrap();
-        winit::event_loop::ControlFlow::Exit
+        ControlFlow::Exit
     }
 }
 

@@ -14,7 +14,7 @@ step-test = ["truck-stepio"]
 [dependencies]
 derive_more = "0.99.17"
 rustc-hash = "1.1.0"
-itertools = "0.12.0"
+itertools = "0.12.1"
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
 truck-topology = { version = "0.5.0", path = "../truck-topology" }
@@ -25,8 +25,8 @@ truck-stepio = { version = "0.2.0", path = "../truck-stepio", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
-serde_json = "1.0.108"
+serde_json = "1.0.114"
 truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.2.11", features = ["js"] }
+getrandom = { version = "0.2.12", features = ["js"] }

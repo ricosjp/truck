@@ -5,7 +5,7 @@ use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
-use winit::{dpi::*, event::*, event_loop::ControlFlow};
+use winit::{dpi::*, event::*, keyboard::*};
 
 struct MyApp {
     scene: WindowScene,
@@ -167,15 +167,15 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn keyboard_input(&mut self, input: KeyboardInput, _: bool) -> ControlFlow {
+    fn keyboard_input(&mut self, input: KeyEvent, _: bool) -> ControlFlow {
         if input.state == ElementState::Released {
             return Self::default_control_flow();
         }
-        let keycode = match input.virtual_keycode {
-            Some(keycode) => keycode,
-            None => return Self::default_control_flow(),
+        let keycode = match input.physical_key {
+            PhysicalKey::Code(keycode) => keycode,
+            _ => return Self::default_control_flow(),
         };
-        if keycode == VirtualKeyCode::Space {
+        if keycode == KeyCode::Space {
             self.render_mode = match self.render_mode {
                 RenderMode::All => RenderMode::Surface,
                 RenderMode::Surface => RenderMode::WireFrame,
