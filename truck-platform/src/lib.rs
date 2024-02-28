@@ -50,6 +50,11 @@ pub use wgpu;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant as TimeInstant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant as TimeInstant;
+
 /// maximum number of light
 pub const LIGHT_MAX: usize = 255;
 
@@ -295,7 +300,7 @@ pub struct Scene {
     foward_depth: Option<Texture>,
     sampling_buffer: Option<Texture>,
     scene_desc: SceneDescriptor,
-    clock: instant::Instant,
+    clock: TimeInstant,
 }
 
 /// Utility for wrapper

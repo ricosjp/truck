@@ -4,13 +4,17 @@
 // Apache license 2.0
 
 pub use async_trait::async_trait;
-use instant::Instant;
 use std::sync::Arc;
 use std::time::Duration;
 use winit::dpi::*;
 use winit::event::*;
 use winit::event_loop::ControlFlow as WControlFlow;
 use winit::window::Window;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
 
 #[allow(unused)]
 #[derive(Clone, Copy, Debug)]
@@ -36,7 +40,7 @@ impl TryFrom<ControlFlow> for WControlFlow {
 /// The framework of applications with `winit`.
 /// The main function of this file is the smallest usecase of this trait.
 #[async_trait(?Send)]
-pub trait App: Sized {
+pub trait App: Sized + 'static {
     /// Initialize application
     /// # Arguments
     /// - handler: `DeviceHandler` provided by `wgpu`
@@ -104,7 +108,7 @@ pub trait App: Sized {
                 .and_then(|win| win.document())
                 .and_then(|doc| doc.body())
                 .and_then(|body| {
-                    body.append_child(&web_sys::Element::from(window.canvas()))
+                    body.append_child(&web_sys::Element::from(window.canvas()?))
                         .ok()
                 })
                 .expect("couldn't append canvas to document body");
@@ -163,10 +167,10 @@ pub trait App: Sized {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn block_on<F: core::future::Future<Output = ()>>(f: F) { pollster::block_on(f); }
+pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) { pollster::block_on(f); }
 
 #[cfg(target_arch = "wasm32")]
-pub fn block_on<F: core::future::Future<Output = ()>>(f: F) {
+pub fn block_on<F: core::future::Future<Output = ()> + 'static>(f: F) {
     wasm_bindgen_futures::spawn_local(f);
 }
 

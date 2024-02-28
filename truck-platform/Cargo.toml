@@ -25,10 +25,8 @@ truck-base = { version = "0.4.0", path = "../truck-base" }
 wgpu = "0.19.1"
 winit = "0.29.11"
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-instant = { version = "0.1.12", features = [ "now" ] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
+web-time = "0.2.4"
 web-sys = "=0.3.67"
 
 [dev-dependencies]

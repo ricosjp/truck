@@ -337,7 +337,7 @@ impl Scene {
             bind_group_layout,
             foward_depth,
             sampling_buffer,
-            clock: instant::Instant::now(),
+            clock: TimeInstant::now(),
             scene_desc: scene_desc.clone(),
             device_handler,
         }
