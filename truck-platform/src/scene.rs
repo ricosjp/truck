@@ -22,16 +22,11 @@ async fn init_default_device(
         ..Default::default()
     });
 
-    // trust winit
-    #[allow(unsafe_code)]
-    let surface = unsafe {
-        let window = window.as_ref();
-        window.map(|window| {
-            instance
-                .create_surface(window.as_ref())
-                .expect("Failed to create `Surface`")
-        })
-    };
+    let surface = window.as_ref().map(|window| {
+        instance
+            .create_surface(Arc::clone(window))
+            .expect("Failed to create `Surface`")
+    });
 
     let adapter = instance
         .request_adapter(&RequestAdapterOptions {
@@ -48,11 +43,11 @@ async fn init_default_device(
     let (device, queue) = adapter
         .request_device(
             &DeviceDescriptor {
-                features: Default::default(),
+                required_features: Default::default(),
                 #[cfg(not(feature = "webgl"))]
-                limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
+                required_limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
                 #[cfg(feature = "webgl")]
-                limits: Limits::downlevel_webgl2_defaults(),
+                required_limits: Limits::downlevel_webgl2_defaults(),
                 label: None,
             },
             None,
@@ -142,6 +137,7 @@ impl RenderTextureConfig {
             alpha_mode: CompositeAlphaMode::Auto,
             present_mode: PresentMode::Fifo,
             view_formats: Vec::new(),
+            desired_maximum_frame_latency: 2,
         }
     }
 }
@@ -341,7 +337,7 @@ impl Scene {
             bind_group_layout,
             foward_depth,
             sampling_buffer,
-            clock: instant::Instant::now(),
+            clock: TimeInstant::now(),
             scene_desc: scene_desc.clone(),
             device_handler,
         }
@@ -819,10 +815,10 @@ impl WindowScene {
     }
     /// Get the reference of initializing window.
     #[inline(always)]
-    pub fn window(&self) -> &Arc<Window> { &self.window_handler.window }
+    pub const fn window(&self) -> &Arc<Window> { &self.window_handler.window }
     /// Get the reference of surface.
     #[inline(always)]
-    pub fn surface(&self) -> &Arc<Surface> { &self.window_handler.surface }
+    pub const fn surface(&self) -> &Arc<Surface<'_>> { &self.window_handler.surface }
     /// Adjusts the size of the backend buffers (depth or sampling buffer) to the size of the window.
     pub fn size_alignment(&mut self) {
         let size = self.window().inner_size();

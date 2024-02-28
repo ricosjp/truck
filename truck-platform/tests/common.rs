@@ -136,8 +136,8 @@ pub fn init_device(backends: Backends) -> DeviceHandler {
         let (device, queue) = adapter
             .request_device(
                 &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Default::default(),
+                    required_features: Default::default(),
+                    required_limits: Default::default(),
                     label: None,
                 },
                 None,

@@ -259,8 +259,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
 use plane::Plane;
 
 async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window::Window) {
-    let window = Arc::new(window);
-    let mut scene = WindowScene::from_window(Arc::clone(&window), &Default::default()).await;
+    let mut scene = WindowScene::from_window(Arc::new(window), &Default::default()).await;
     let args: Vec<_> = std::env::args().collect();
     let source = if args.len() > 1 {
         match std::fs::read_to_string(&args[1]) {
@@ -280,64 +279,70 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
     let mut dragging = false;
     let mut clicked = false;
     let mut cursor = [0.0; 2];
-    event_loop.run(move |ev, _, control_flow| {
-        *control_flow = match ev {
-            Event::MainEventsCleared => {
-                window.request_redraw();
-                ControlFlow::Poll
-            }
-            Event::RedrawRequested(_) => {
-                scene.update_bind_group(&plane);
-                if clicked {
-                    plane.mouse[3] = -plane.mouse[3];
-                    clicked = false;
+    event_loop
+        .run(move |ev, target| {
+            let control_flow = match ev {
+                Event::NewEvents(StartCause::Poll) => {
+                    scene.window().request_redraw();
+                    ControlFlow::Poll
                 }
-                scene.render_frame();
-                ControlFlow::Poll
-            }
-            Event::WindowEvent { event, .. } => match event {
-                WindowEvent::CloseRequested => ControlFlow::Exit,
-                WindowEvent::DroppedFile(path) => {
-                    match std::fs::read_to_string(path) {
-                        Ok(code) => {
-                            plane.set_shader(scene.device(), &code);
-                            scene.update_pipeline(&plane);
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::RedrawRequested => {
+                        scene.update_bind_group(&plane);
+                        if clicked {
+                            plane.mouse[3] = -plane.mouse[3];
+                            clicked = false;
                         }
-                        Err(error) => println!("{error:?}"),
+                        scene.render_frame();
+                        ControlFlow::Poll
                     }
-                    ControlFlow::Poll
-                }
-                WindowEvent::MouseInput { state, .. } => {
-                    dragging = state == ElementState::Pressed;
-                    clicked = dragging;
-                    if dragging {
-                        plane.mouse[0] = cursor[0];
-                        plane.mouse[1] = cursor[1];
-                        plane.mouse[2] = cursor[0];
-                        plane.mouse[3] = cursor[1];
-                    } else {
-                        plane.mouse[2] = -plane.mouse[2];
+                    WindowEvent::CloseRequested => {
+                        target.exit();
+                        ControlFlow::Poll
                     }
-                    ControlFlow::Poll
-                }
-                WindowEvent::CursorMoved { position, .. } => {
-                    let height = scene.descriptor().render_texture.canvas_size.1 as f32;
-                    cursor = [position.x as f32, height - position.y as f32];
-                    if dragging {
-                        plane.mouse[0] = cursor[0];
-                        plane.mouse[1] = cursor[1];
+                    WindowEvent::DroppedFile(path) => {
+                        match std::fs::read_to_string(path) {
+                            Ok(code) => {
+                                plane.set_shader(scene.device(), &code);
+                                scene.update_pipeline(&plane);
+                            }
+                            Err(error) => println!("{error:?}"),
+                        }
+                        ControlFlow::Poll
                     }
-                    ControlFlow::Poll
-                }
+                    WindowEvent::MouseInput { state, .. } => {
+                        dragging = state == ElementState::Pressed;
+                        clicked = dragging;
+                        if dragging {
+                            plane.mouse[0] = cursor[0];
+                            plane.mouse[1] = cursor[1];
+                            plane.mouse[2] = cursor[0];
+                            plane.mouse[3] = cursor[1];
+                        } else {
+                            plane.mouse[2] = -plane.mouse[2];
+                        }
+                        ControlFlow::Poll
+                    }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        let height = scene.descriptor().render_texture.canvas_size.1 as f32;
+                        cursor = [position.x as f32, height - position.y as f32];
+                        if dragging {
+                            plane.mouse[0] = cursor[0];
+                            plane.mouse[1] = cursor[1];
+                        }
+                        ControlFlow::Poll
+                    }
+                    _ => ControlFlow::Poll,
+                },
                 _ => ControlFlow::Poll,
-            },
-            _ => ControlFlow::Poll,
-        };
-    })
+            };
+            target.set_control_flow(control_flow);
+        })
+        .unwrap()
 }
 
 fn main() {
-    let event_loop = winit::event_loop::EventLoop::new();
+    let event_loop = winit::event_loop::EventLoop::new().unwrap();
     let mut wb = winit::window::WindowBuilder::new();
     wb = wb.with_title("wGSL Sandbox");
     let window = wb.build(&event_loop).unwrap();
@@ -353,7 +358,7 @@ fn main() {
             .and_then(|win| win.document())
             .and_then(|doc| doc.body())
             .and_then(|body| {
-                body.append_child(&web_sys::Element::from(window.canvas()))
+                body.append_child(&web_sys::Element::from(window.canvas()?))
                     .ok()
             })
             .expect("couldn't append canvas to document body");

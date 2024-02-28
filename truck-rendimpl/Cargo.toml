@@ -17,28 +17,25 @@ default = []
 webgl = ["truck-platform/webgl"]
 
 [dependencies]
-itertools = "0.12.0"
-bytemuck = { version = "1.14.0", features = ["derive"] }
-image = "0.24.7"
+itertools = "0.12.1"
+bytemuck = { version = "1.14.3", features = ["derive"] }
+image = "0.24.9"
 truck-platform = { version = "0.5.0", path = "../truck-platform" }
 truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
 
 [dev-dependencies]
-async-trait = "0.1.74"
-env_logger = "0.10.1"
+async-trait = "0.1.77"
+env_logger = "0.11.2"
 pollster = "0.3.0"
-rayon = "1.8.0"
-serde_json = "1.0.108"
+rayon = "1.9.0"
+serde_json = "1.0.114"
 truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }
 truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
-winit = "0.28.7"
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-instant = { version = "0.1.12", features = [ "now" ] }
+winit = "0.29.11"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-instant = { version = "0.1.12", features = [ "now", "wasm-bindgen" ] }
-wasm-bindgen-futures = "0.4.39"
+web-time = "0.2.4"
+wasm-bindgen-futures = "0.4.41"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
-web-sys = { version = "0.3.64", features = ["Location"] }
+web-sys = { version = "=0.3.67", features = ["Location"] }

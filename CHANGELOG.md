@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Update `wgpu` to `0.19.x`.
 - Derive macros for `StepLength` and `DisplayByStep`.
 - Calculate volume and center of the gravity of PolygonMesh.
 - Split closed edges and faces.

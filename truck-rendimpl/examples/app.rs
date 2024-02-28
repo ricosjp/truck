@@ -4,13 +4,38 @@
 // Apache license 2.0
 
 pub use async_trait::async_trait;
-use instant::Instant;
 use std::sync::Arc;
 use std::time::Duration;
 use winit::dpi::*;
 use winit::event::*;
-use winit::event_loop::ControlFlow;
+use winit::event_loop::ControlFlow as WControlFlow;
 use winit::window::Window;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
+#[allow(unused)]
+#[derive(Clone, Copy, Debug)]
+pub enum ControlFlow {
+    Poll,
+    Exit,
+    Wait,
+    WaitUntil(Instant),
+}
+
+impl TryFrom<ControlFlow> for WControlFlow {
+    type Error = ();
+    fn try_from(value: ControlFlow) -> Result<Self, Self::Error> {
+        match value {
+            ControlFlow::Exit => Err(()),
+            ControlFlow::Poll => Ok(WControlFlow::Poll),
+            ControlFlow::Wait => Ok(WControlFlow::Wait),
+            ControlFlow::WaitUntil(x) => Ok(WControlFlow::WaitUntil(x)),
+        }
+    }
+}
 
 /// The framework of applications with `winit`.
 /// The main function of this file is the smallest usecase of this trait.
@@ -50,7 +75,7 @@ pub trait App: Sized + 'static {
         Self::default_control_flow()
     }
     /// By overriding this function, one can change the behavior when a keybourd input occurs.
-    fn keyboard_input(&mut self, _input: KeyboardInput, _is_synthetic: bool) -> ControlFlow {
+    fn keyboard_input(&mut self, _input: KeyEvent, _is_synthetic: bool) -> ControlFlow {
         Self::default_control_flow()
     }
     /// By overriding this function, one can change the behavior when a mouse input occurs.
@@ -67,7 +92,7 @@ pub trait App: Sized + 'static {
     }
     /// Run the application in the future.
     async fn async_run() {
-        let event_loop = winit::event_loop::EventLoop::new();
+        let event_loop = winit::event_loop::EventLoop::new().unwrap();
         let mut wb = winit::window::WindowBuilder::new();
         if let Some(title) = Self::app_title() {
             wb = wb.with_title(title);
@@ -83,7 +108,7 @@ pub trait App: Sized + 'static {
                 .and_then(|win| win.document())
                 .and_then(|doc| doc.body())
                 .and_then(|body| {
-                    body.append_child(&web_sys::Element::from(window.canvas()))
+                    body.append_child(&web_sys::Element::from(window.canvas()?))
                         .ok()
                 })
                 .expect("couldn't append canvas to document body");
@@ -92,39 +117,49 @@ pub trait App: Sized + 'static {
         let window = Arc::new(window);
         let mut app = Self::init(Arc::clone(&window)).await;
 
-        event_loop.run(move |ev, _, control_flow| {
-            *control_flow = match ev {
-                Event::MainEventsCleared => {
-                    window.request_redraw();
-                    Self::default_control_flow()
-                }
-                Event::RedrawRequested(_) => {
-                    app.render();
-                    Self::default_control_flow()
-                }
-                Event::WindowEvent { event, .. } => match event {
-                    WindowEvent::Resized(size) => {
-                        app.resized(size);
+        event_loop
+            .run(move |ev, target| {
+                let control_flow = match ev {
+                    Event::NewEvents(_) => {
+                        window.request_redraw();
                         Self::default_control_flow()
                     }
-                    WindowEvent::Moved(position) => app.moved(position),
-                    WindowEvent::CloseRequested => app.closed_requested(),
-                    WindowEvent::Destroyed => app.destroyed(),
-                    WindowEvent::DroppedFile(path) => app.dropped_file(path),
-                    WindowEvent::HoveredFile(path) => app.hovered_file(path),
-                    WindowEvent::KeyboardInput {
-                        input,
-                        is_synthetic,
-                        ..
-                    } => app.keyboard_input(input, is_synthetic),
-                    WindowEvent::MouseInput { state, button, .. } => app.mouse_input(state, button),
-                    WindowEvent::MouseWheel { delta, phase, .. } => app.mouse_wheel(delta, phase),
-                    WindowEvent::CursorMoved { position, .. } => app.cursor_moved(position),
+                    Event::WindowEvent { event, .. } => match event {
+                        WindowEvent::Resized(size) => {
+                            app.resized(size);
+                            Self::default_control_flow()
+                        }
+                        WindowEvent::RedrawRequested => {
+                            app.render();
+                            Self::default_control_flow()
+                        }
+                        WindowEvent::Moved(position) => app.moved(position),
+                        WindowEvent::CloseRequested => app.closed_requested(),
+                        WindowEvent::Destroyed => app.destroyed(),
+                        WindowEvent::DroppedFile(path) => app.dropped_file(path),
+                        WindowEvent::HoveredFile(path) => app.hovered_file(path),
+                        WindowEvent::KeyboardInput {
+                            event,
+                            is_synthetic,
+                            ..
+                        } => app.keyboard_input(event, is_synthetic),
+                        WindowEvent::MouseInput { state, button, .. } => {
+                            app.mouse_input(state, button)
+                        }
+                        WindowEvent::MouseWheel { delta, phase, .. } => {
+                            app.mouse_wheel(delta, phase)
+                        }
+                        WindowEvent::CursorMoved { position, .. } => app.cursor_moved(position),
+                        _ => Self::default_control_flow(),
+                    },
                     _ => Self::default_control_flow(),
-                },
-                _ => Self::default_control_flow(),
-            };
-        })
+                };
+                match control_flow {
+                    ControlFlow::Exit => target.exit(),
+                    _ => target.set_control_flow(control_flow.try_into().unwrap()),
+                }
+            })
+            .unwrap()
     }
     /// Run the application.
     #[inline]

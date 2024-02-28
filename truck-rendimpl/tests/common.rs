@@ -166,8 +166,8 @@ pub fn init_device(instance: &Instance) -> DeviceHandler {
         let (device, queue) = adapter
             .request_device(
                 &DeviceDescriptor {
-                    features: Default::default(),
-                    limits: Limits::default(),
+                    required_features: Default::default(),
+                    required_limits: Limits::default(),
                     label: None,
                 },
                 None,
@@ -187,6 +187,7 @@ pub fn swap_chain_descriptor(size: (u32, u32)) -> SurfaceConfiguration {
         present_mode: PresentMode::Mailbox,
         view_formats: Vec::new(),
         alpha_mode: CompositeAlphaMode::Auto,
+        desired_maximum_frame_latency: 2,
     }
 }
 
