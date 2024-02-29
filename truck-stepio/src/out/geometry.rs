@@ -44,10 +44,7 @@ impl DisplayByStep for VectorAsDirection<Vector3> {
         ))
     }
 }
-
-impl<V> ConstStepLength for VectorAsDirection<V> {
-    const LENGTH: usize = 1;
-}
+impl_const_step_length!(VectorAsDirection<V>, 1, <V>);
 
 impl<V> DisplayByStep for V
 where
@@ -80,6 +77,15 @@ where
             dir = StepDisplay::new(self.1 - self.0, dir_idx),
         ))
     }
+}
+
+impl<P> StepLength for Line<P>
+where
+    P: EuclideanSpace + ConstStepLength,
+    P::Diff: ConstStepLength,
+{
+    #[inline(always)]
+    fn step_length(&self) -> usize { <Self as ConstStepLength>::LENGTH }
 }
 
 impl<P> ConstStepLength for Line<P>
@@ -266,10 +272,7 @@ impl DisplayByStep for Plane {
         ))
     }
 }
-
-impl ConstStepLength for Plane {
-    const LENGTH: usize = 5;
-}
+impl_const_step_length!(Plane, 5);
 
 impl<P> DisplayByStep for BSplineSurface<P>
 where P: Copy + DisplayByStep

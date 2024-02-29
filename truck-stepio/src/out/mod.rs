@@ -159,26 +159,43 @@ impl<T: DisplayByStep> Display for StepDisplay<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(&self.entity, self.idx, f) }
 }
 
-/// Constant numbers of lines for outputting an object to a STEP file.
-pub trait ConstStepLength {
-    /// the number of line
-    const LENGTH: usize;
-}
-
 /// Calculate how many lines are used in outputting an object to a STEP file
 pub trait StepLength {
     /// Calculate how many lines are used in outputting an object to a STEP file
     fn step_length(&self) -> usize;
 }
 
-impl<T: ConstStepLength> StepLength for T {
-    fn step_length(&self) -> usize { T::LENGTH }
+impl<T: StepLength> StepLength for &T {
+    fn step_length(&self) -> usize { StepLength::step_length(*self) }
+}
+
+impl<T: StepLength> StepLength for Box<T> {
+    fn step_length(&self) -> usize { self.as_ref().step_length() }
+}
+
+/// Constant numbers of lines for outputting an object to a STEP file.
+/// `x.step_length() == X::LENGTH` must always hold.
+pub trait ConstStepLength: StepLength {
+    /// the number of line
+    const LENGTH: usize;
+}
+
+impl<T: ConstStepLength> ConstStepLength for &T {
+    const LENGTH: usize = T::LENGTH;
+}
+
+impl<T: ConstStepLength> ConstStepLength for Box<T> {
+    const LENGTH: usize = T::LENGTH;
 }
 
 macro_rules! impl_const_step_length {
-    ($type: ty, $len: expr) => {
-        impl ConstStepLength for $type {
+    ($type: ty, $len: expr $(,<$($gen: ident),*>)?) => {
+        impl$(<$($gen),*>)? ConstStepLength for $type {
             const LENGTH: usize = $len;
+        }
+        impl$(<$($gen),*>)? StepLength for $type {
+            #[inline(always)]
+            fn step_length(&self) -> usize { <Self as ConstStepLength>::LENGTH }
         }
     };
 }
