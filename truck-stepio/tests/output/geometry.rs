@@ -72,6 +72,149 @@ fn geometry() {
 #4 = CARTESIAN_POINT('', (0.5, 0.0));\n",
         4,
     );
+    step_test::<Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>>(
+        Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 1.0))).transformed(
+            Matrix3::from_cols(
+                Vector3::new(0.0, 3.0, 0.0),
+                Vector3::new(-3.0, 0.0, 0.0),
+                Vector3::new(1.0, 2.0, 1.0),
+            ),
+        ),
+        "\
+#1 = CIRCLE('', #2, 3.0);
+#2 = AXIS2_PLACEMENT_2D('', #3, #4);
+#3 = CARTESIAN_POINT('', (1.0, 2.0));
+#4 = DIRECTION('', (0.0, 1.0));\n",
+        4,
+    );
+    step_test::<Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>>(
+        Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 1.0))).transformed(
+            Matrix3::from_cols(
+                Vector3::new(0.0, 3.0, 0.0),
+                Vector3::new(-8.0, 0.0, 0.0),
+                Vector3::new(1.0, 2.0, 1.0),
+            ),
+        ),
+        "\
+#1 = ELLIPSE('', #2, 3.0, 8.0);
+#2 = AXIS2_PLACEMENT_2D('', #3, #4);
+#3 = CARTESIAN_POINT('', (1.0, 2.0));
+#4 = DIRECTION('', (0.0, 1.0));\n",
+        4,
+    );
+    step_test::<Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>>(
+        Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 1.0))).transformed(
+            Matrix4::from_cols(
+                Vector4::new(0.0, 3.0, 0.0, 0.0),
+                Vector4::new(-3.0, 0.0, 0.0, 0.0),
+                Vector4::new(0.0, 0.0, 3.0, 0.0),
+                Vector4::new(3.0, 1.0, 2.0, 1.0),
+            ),
+        ),
+        "\
+#1 = CIRCLE('', #2, 3.0);
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+#3 = CARTESIAN_POINT('', (3.0, 1.0, 2.0));
+#4 = DIRECTION('', (0.0, 0.0, 1.0));
+#5 = DIRECTION('', (0.0, 1.0, 0.0));\n",
+        5,
+    );
+    step_test::<Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>>(
+        Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 1.0))).transformed(
+            Matrix4::from_cols(
+                Vector4::new(0.0, 3.0, 0.0, 0.0),
+                Vector4::new(-8.0, 0.0, 0.0, 0.0),
+                Vector4::new(0.0, 0.0, 1.0, 0.0),
+                Vector4::new(3.0, 1.0, 2.0, 1.0),
+            ),
+        ),
+        "\
+#1 = ELLIPSE('', #2, 3.0, 8.0);
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+#3 = CARTESIAN_POINT('', (3.0, 1.0, 2.0));
+#4 = DIRECTION('', (0.0, 0.0, 1.0));
+#5 = DIRECTION('', (0.0, 1.0, 0.0));\n",
+        5,
+    );
+    step_test::<Processor<TrimmedCurve<UnitHyperbola<Point2>>, Matrix3>>(
+        Processor::new(TrimmedCurve::new(UnitHyperbola::new(), (0.0, 1.0))).transformed(
+            Matrix3::from_cols(
+                Vector3::new(0.0, 3.0, 0.0),
+                Vector3::new(-8.0, 0.0, 0.0),
+                Vector3::new(1.0, 2.0, 1.0),
+            ),
+        ),
+        "\
+#1 = HYPERBOLA('', #2, 3.0, 8.0);
+#2 = AXIS2_PLACEMENT_2D('', #3, #4);
+#3 = CARTESIAN_POINT('', (1.0, 2.0));
+#4 = DIRECTION('', (0.0, 1.0));\n",
+        4,
+    );
+    step_test::<Processor<TrimmedCurve<UnitHyperbola<Point3>>, Matrix4>>(
+        Processor::new(TrimmedCurve::new(UnitHyperbola::new(), (0.0, 1.0))).transformed(
+            Matrix4::from_cols(
+                Vector4::new(0.0, 3.0, 0.0, 0.0),
+                Vector4::new(-8.0, 0.0, 0.0, 0.0),
+                Vector4::new(0.0, 0.0, 1.0, 0.0),
+                Vector4::new(3.0, 1.0, 2.0, 1.0),
+            ),
+        ),
+        "\
+#1 = HYPERBOLA('', #2, 3.0, 8.0);
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+#3 = CARTESIAN_POINT('', (3.0, 1.0, 2.0));
+#4 = DIRECTION('', (0.0, 0.0, 1.0));
+#5 = DIRECTION('', (0.0, 1.0, 0.0));\n",
+        5,
+    );
+    step_test::<Processor<TrimmedCurve<UnitParabola<Point2>>, Matrix3>>(
+        Processor::new(TrimmedCurve::new(UnitParabola::new(), (0.0, 1.0))).transformed(
+            Matrix3::from_cols(
+                Vector3::new(0.0, 4.0, 0.0),
+                Vector3::new(-2.0, 0.0, 0.0),
+                Vector3::new(1.0, 2.0, 1.0),
+            ),
+        ),
+        "\
+#1 = PARABOLA('', #2, 1.0);
+#2 = AXIS2_PLACEMENT_2D('', #3, #4);
+#3 = CARTESIAN_POINT('', (1.0, 2.0));
+#4 = DIRECTION('', (0.0, 1.0));\n",
+        4,
+    );
+    step_test::<Processor<TrimmedCurve<UnitParabola<Point3>>, Matrix4>>(
+        Processor::new(TrimmedCurve::new(UnitParabola::new(), (0.0, 1.0))).transformed(
+            Matrix4::from_cols(
+                Vector4::new(0.0, 4.0, 0.0, 0.0),
+                Vector4::new(-2.0, 0.0, 0.0, 0.0),
+                Vector4::new(0.0, 0.0, 1.0, 0.0),
+                Vector4::new(3.0, 1.0, 2.0, 1.0),
+            ),
+        ),
+        "\
+#1 = PARABOLA('', #2, 1.0);
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+#3 = CARTESIAN_POINT('', (3.0, 1.0, 2.0));
+#4 = DIRECTION('', (0.0, 0.0, 1.0));
+#5 = DIRECTION('', (0.0, 1.0, 0.0));\n",
+        5,
+    );
+    step_test::<PCurve<Line<Point2>, Plane>>(
+        PCurve::new(Line(Point2::new(0.0, 0.0), Point2::new(3.0, 4.0)), Plane::new(Point3::new(1.0, 2.0, 3.0), Point3::new(2.0, 2.0, 3.0), Point3::new(1.0, 5.0, 3.0))),
+        "\
+#1 = PCURVE('', #2, #6);
+#2 = LINE('', #3, #4);
+#3 = CARTESIAN_POINT('', (0.0, 0.0));
+#4 = VECTOR('', #5, 5.0);
+#5 = DIRECTION('', (0.6, 0.8));
+#6 = PLANE('', #7);
+#7 = AXIS2_PLACEMENT_3D('', #8, #9, #10);
+#8 = CARTESIAN_POINT('', (1.0, 2.0, 3.0));
+#9 = DIRECTION('', (0.0, 0.0, 1.0));
+#10 = DIRECTION('', (1.0, 0.0, 0.0));\n",
+        10
+    );
     step_test::<Plane>(
         Plane::new(
             Point3::new(1.0, 2.0, 3.0),

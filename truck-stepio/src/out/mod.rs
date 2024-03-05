@@ -7,6 +7,21 @@ use self::topology::PreStepModel;
 #[cfg(feature = "derive")]
 pub use truck_derivers::{DisplayByStep, StepLength};
 
+/// display float number to step file
+#[derive(Clone, Copy, Debug)]
+pub struct FloatDisplay(pub f64);
+
+impl Display for FloatDisplay {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let FloatDisplay(x) = *self;
+        if f64::abs(x) < 1.0e-2 && x != 0.0 {
+            f.write_fmt(format_args!("{x:.10E}"))
+        } else {
+            f.write_fmt(format_args!("{x:?}"))
+        }
+    }
+}
+
 /// display step slice
 /// # Examples
 /// ```
@@ -26,11 +41,7 @@ impl<'a> Display for SliceDisplay<'a, f64> {
             if i != 0 {
                 f.write_str(", ")?;
             }
-            if f64::abs(*x) < 1.0e-2 && *x != 0.0 {
-                f.write_fmt(format_args!("{x:.10E}"))
-            } else {
-                f.write_fmt(format_args!("{x:?}"))
-            }
+            Display::fmt(&FloatDisplay(*x), f)
         })?;
         f.write_str(")")
     }
@@ -166,10 +177,12 @@ pub trait StepLength {
 }
 
 impl<T: StepLength> StepLength for &T {
+    #[inline(always)]
     fn step_length(&self) -> usize { StepLength::step_length(*self) }
 }
 
 impl<T: StepLength> StepLength for Box<T> {
+    #[inline(always)]
     fn step_length(&self) -> usize { self.as_ref().step_length() }
 }
 

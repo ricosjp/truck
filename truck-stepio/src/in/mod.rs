@@ -2,12 +2,12 @@
 
 use ruststep::{
     ast::{DataSection, EntityInstance, Name, Parameter, SubSuperRecord},
-    error::Result,
     primitive::Logical,
     tables::{EntityTable, IntoOwned, PlaceHolder},
     Holder,
 };
 use serde::{Deserialize, Serialize};
+use std::result::Result;
 use std::{collections::HashMap, f64::consts::PI};
 use truck_geometry::prelude as truck;
 use truck_topology::compress::*;
@@ -37,6 +37,8 @@ pub struct Table {
     pub rational_b_spline_curve: HashMap<u64, RationalBSplineCurveHolder>,
     pub circle: HashMap<u64, CircleHolder>,
     pub ellipse: HashMap<u64, EllipseHolder>,
+    pub hyperbola: HashMap<u64, HyperbolaHolder>,
+    pub parabola: HashMap<u64, ParabolaHolder>,
     pub pcurve: HashMap<u64, PcurveHolder>,
     pub surface_curve: HashMap<u64, SurfaceCurveHolder>,
 
@@ -73,7 +75,7 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn push_instance(&mut self, instance: &EntityInstance) -> Result<()> {
+    pub fn push_instance(&mut self, instance: &EntityInstance) -> ruststep::error::Result<()> {
         match instance {
             EntityInstance::Simple { id, record } => match record.name.as_str() {
                 "CARTESIAN_POINT" => {
@@ -131,6 +133,13 @@ impl Table {
                 }
                 "ELLIPSE" => {
                     self.ellipse.insert(*id, Deserialize::deserialize(record)?);
+                }
+                "HYPERBOLA" => {
+                    self.hyperbola
+                        .insert(*id, Deserialize::deserialize(record)?);
+                }
+                "PARABOLA" => {
+                    self.parabola.insert(*id, Deserialize::deserialize(record)?);
                 }
                 "PCURVE" => {
                     self.pcurve.insert(*id, Deserialize::deserialize(record)?);
@@ -767,7 +776,7 @@ pub enum Axis2Placement {
 impl TryFrom<&Axis2Placement> for Matrix3 {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(axis: &Axis2Placement) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(axis: &Axis2Placement) -> Result<Self, ExpressParseError> {
         use Axis2Placement::*;
         match axis {
             Axis2Placement2d(axis) => Ok(Matrix3::from(axis)),
@@ -778,7 +787,7 @@ impl TryFrom<&Axis2Placement> for Matrix3 {
 impl TryFrom<&Axis2Placement> for Matrix4 {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(axis: &Axis2Placement) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(axis: &Axis2Placement) -> Result<Self, ExpressParseError> {
         use Axis2Placement::*;
         match axis {
             Axis2Placement2d(_) => Err("This is not a 3D axis placement.".into()),
@@ -868,7 +877,7 @@ pub enum CurveAny {
 impl TryFrom<&CurveAny> for Curve2D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(curve: &CurveAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(curve: &CurveAny) -> Result<Self, Self::Error> {
         use CurveAny::*;
         Ok(match curve {
             Line(line) => Self::Line(line.as_ref().into()),
@@ -883,7 +892,7 @@ impl TryFrom<&CurveAny> for Curve2D {
 impl TryFrom<&CurveAny> for Curve3D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(curve: &CurveAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(curve: &CurveAny) -> Result<Self, Self::Error> {
         use CurveAny::*;
         Ok(match curve {
             Line(line) => Self::Line(line.as_ref().into()),
@@ -932,7 +941,7 @@ pub enum BoundedCurveAny {
 impl TryFrom<&BoundedCurveAny> for Curve2D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &BoundedCurveAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &BoundedCurveAny) -> Result<Self, Self::Error> {
         use BoundedCurveAny::*;
         Ok(match value {
             Polyline(x) => Self::Polyline(x.as_ref().into()),
@@ -944,7 +953,7 @@ impl TryFrom<&BoundedCurveAny> for Curve2D {
 impl TryFrom<&BoundedCurveAny> for Curve3D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &BoundedCurveAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &BoundedCurveAny) -> Result<Self, Self::Error> {
         use BoundedCurveAny::*;
         Ok(match value {
             Polyline(x) => Self::Polyline(x.as_ref().into()),
@@ -1004,7 +1013,7 @@ pub struct BSplineCurveWithKnots {
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BSplineCurveWithKnots> for BSplineCurve<P> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(curve: &BSplineCurveWithKnots) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(curve: &BSplineCurveWithKnots) -> Result<Self, ExpressParseError> {
         let knots = curve.knots.clone();
         let multi = curve
             .knot_multiplicities
@@ -1033,7 +1042,7 @@ pub struct BezierCurve {
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BezierCurve> for BSplineCurve<P> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(curve: &BezierCurve) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(curve: &BezierCurve) -> Result<Self, ExpressParseError> {
         let degree = curve.degree as usize;
         let knots = KnotVec::bezier_knot(degree);
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
@@ -1057,7 +1066,7 @@ pub struct QuasiUniformCurve {
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&QuasiUniformCurve> for BSplineCurve<P> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(curve: &QuasiUniformCurve) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(curve: &QuasiUniformCurve) -> Result<Self, ExpressParseError> {
         let knots = quasi_uniform_knots(curve.control_points_list.len(), curve.degree as usize);
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
         Ok(Self::try_new(knots, ctrpts)?)
@@ -1087,7 +1096,7 @@ pub struct UniformCurve {
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BSplineCurve<P> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(curve: &UniformCurve) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(curve: &UniformCurve) -> Result<Self, ExpressParseError> {
         let knots = uniform_knots(curve.control_points_list.len(), curve.degree as usize)?;
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
         Ok(Self::try_new(knots, ctrpts)?)
@@ -1119,7 +1128,7 @@ pub enum NonRationalBSplineCurve {
 impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&NonRationalBSplineCurve> for BSplineCurve<P> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(curve: &NonRationalBSplineCurve) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(curve: &NonRationalBSplineCurve) -> Result<Self, ExpressParseError> {
         use NonRationalBSplineCurve::*;
         match curve {
             BSplineCurveWithKnots(x) => x.try_into(),
@@ -1149,7 +1158,7 @@ where
 {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(curve: &RationalBSplineCurve) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(curve: &RationalBSplineCurve) -> Result<Self, ExpressParseError> {
         Ok(Self::try_from_bspline_and_weights(
             BSplineCurve::try_from(&curve.non_rational_b_spline_curve)?,
             curve.weights_data.clone(),
@@ -1170,7 +1179,7 @@ pub enum BSplineCurveAny {
 impl TryFrom<&BSplineCurveAny> for Curve2D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &BSplineCurveAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &BSplineCurveAny) -> Result<Self, Self::Error> {
         use BSplineCurveAny::*;
         Ok(match value {
             NonRationalBSplineCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
@@ -1182,7 +1191,7 @@ impl TryFrom<&BSplineCurveAny> for Curve2D {
 impl TryFrom<&BSplineCurveAny> for Curve3D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &BSplineCurveAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &BSplineCurveAny) -> Result<Self, Self::Error> {
         use BSplineCurveAny::*;
         Ok(match value {
             NonRationalBSplineCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
@@ -1199,15 +1208,21 @@ pub enum Conic {
     Circle(Circle),
     #[holder(use_place_holder)]
     Ellipse(Ellipse),
+    #[holder(use_place_holder)]
+    Hyperbola(Hyperbola),
+    #[holder(use_place_holder)]
+    Parabola(Parabola),
 }
 
 impl TryFrom<&Conic> for Conic2D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &Conic) -> std::prelude::v1::Result<Self, Self::Error> {
+    fn try_from(value: &Conic) -> Result<Self, Self::Error> {
         Ok(match value {
             Conic::Circle(value) => Conic2D::Ellipse(value.try_into()?),
             Conic::Ellipse(value) => Conic2D::Ellipse(value.try_into()?),
+            Conic::Hyperbola(value) => Conic2D::Hyperbola(value.try_into()?),
+            Conic::Parabola(value) => Conic2D::Parabola(value.try_into()?),
         })
     }
 }
@@ -1215,10 +1230,12 @@ impl TryFrom<&Conic> for Conic2D {
 impl TryFrom<&Conic> for Conic3D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &Conic) -> std::prelude::v1::Result<Self, Self::Error> {
+    fn try_from(value: &Conic) -> Result<Self, Self::Error> {
         Ok(match value {
             Conic::Circle(value) => Conic3D::Ellipse(value.try_into()?),
             Conic::Ellipse(value) => Conic3D::Ellipse(value.try_into()?),
+            Conic::Hyperbola(value) => Conic3D::Hyperbola(value.try_into()?),
+            Conic::Parabola(value) => Conic3D::Parabola(value.try_into()?),
         })
     }
 }
@@ -1237,9 +1254,8 @@ pub struct Circle {
 impl TryFrom<&Circle> for alias::Ellipse<Point2, Matrix3> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
-        let radius: f64 = circle.radius;
-        let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(radius);
+    fn try_from(circle: &Circle) -> Result<Self, Self::Error> {
+        let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(circle.radius);
         Ok(
             Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
@@ -1250,9 +1266,8 @@ impl TryFrom<&Circle> for alias::Ellipse<Point2, Matrix3> {
 impl TryFrom<&Circle> for alias::Ellipse<Point3, Matrix4> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(circle: &Circle) -> std::result::Result<Self, Self::Error> {
-        let radius: f64 = circle.radius;
-        let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(radius);
+    fn try_from(circle: &Circle) -> Result<Self, Self::Error> {
+        let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(circle.radius);
         Ok(
             Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
@@ -1275,7 +1290,7 @@ pub struct Ellipse {
 impl TryFrom<&Ellipse> for alias::Ellipse<Point2, Matrix3> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(ellipse: &Ellipse) -> std::prelude::v1::Result<Self, Self::Error> {
+    fn try_from(ellipse: &Ellipse) -> Result<Self, Self::Error> {
         let (r0, r1) = (ellipse.semi_axis_1, ellipse.semi_axis_2);
         let transform =
             Matrix3::try_from(&ellipse.position)? * Matrix3::from_nonuniform_scale(r0, r1);
@@ -1289,12 +1304,89 @@ impl TryFrom<&Ellipse> for alias::Ellipse<Point2, Matrix3> {
 impl TryFrom<&Ellipse> for alias::Ellipse<Point3, Matrix4> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(ellipse: &Ellipse) -> std::prelude::v1::Result<Self, Self::Error> {
+    fn try_from(ellipse: &Ellipse) -> Result<Self, Self::Error> {
         let (r0, r1) = (ellipse.semi_axis_1, ellipse.semi_axis_2);
         let transform = Matrix4::try_from(&ellipse.position)?
             * Matrix4::from_nonuniform_scale(r0, r1, f64::min(r0, r1));
         Ok(
             Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+                .transformed(transform),
+        )
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = hyperbola)]
+#[holder(generate_deserialize)]
+pub struct Hyperbola {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub position: Axis2Placement,
+    pub semi_axis: f64,
+    pub semi_imag_axis: f64,
+}
+
+impl TryFrom<&Hyperbola> for alias::Hyperbola<Point2, Matrix3> {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(hyperbola: &Hyperbola) -> Result<Self, Self::Error> {
+        let (r0, r1) = (hyperbola.semi_axis, hyperbola.semi_imag_axis);
+        let transform =
+            Matrix3::try_from(&hyperbola.position)? * Matrix3::from_nonuniform_scale(r0, r1);
+        Ok(
+            Processor::new(truck::TrimmedCurve::new(UnitHyperbola::new(), (-1.0, 1.0)))
+                .transformed(transform),
+        )
+    }
+}
+
+impl TryFrom<&Hyperbola> for alias::Hyperbola<Point3, Matrix4> {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(hyperbola: &Hyperbola) -> Result<Self, Self::Error> {
+        let (r0, r1) = (hyperbola.semi_axis, hyperbola.semi_imag_axis);
+        let transform = Matrix4::try_from(&hyperbola.position)?
+            * Matrix4::from_nonuniform_scale(r0, r1, f64::min(r0, r1));
+        Ok(
+            Processor::new(truck::TrimmedCurve::new(UnitHyperbola::new(), (-1.0, 1.0)))
+                .transformed(transform),
+        )
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = parabola)]
+#[holder(generate_deserialize)]
+pub struct Parabola {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub position: Axis2Placement,
+    pub focal_dist: f64,
+}
+
+impl TryFrom<&Parabola> for alias::Parabola<Point2, Matrix3> {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(parabola: &Parabola) -> Result<Self, Self::Error> {
+        let transform =
+            Matrix3::try_from(&parabola.position)? * Matrix3::from_scale(parabola.focal_dist);
+        Ok(
+            Processor::new(truck::TrimmedCurve::new(UnitParabola::new(), (-1.0, 1.0)))
+                .transformed(transform),
+        )
+    }
+}
+
+impl TryFrom<&Parabola> for alias::Parabola<Point3, Matrix4> {
+    type Error = ExpressParseError;
+    #[inline(always)]
+    fn try_from(parabola: &Parabola) -> Result<Self, Self::Error> {
+        let transform =
+            Matrix4::try_from(&parabola.position)? * Matrix4::from_scale(parabola.focal_dist);
+        Ok(
+            Processor::new(truck::TrimmedCurve::new(UnitParabola::new(), (-1.0, 1.0)))
                 .transformed(transform),
         )
     }
@@ -1327,7 +1419,7 @@ pub struct Pcurve {
 impl TryFrom<&Pcurve> for PCurve {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &Pcurve) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &Pcurve) -> Result<Self, Self::Error> {
         let surface: Surface = (&value.basis_surface).try_into()?;
         let curve: Curve2D = value
             .reference_to_curve
@@ -1382,7 +1474,7 @@ pub struct SurfaceCurve {
 impl TryFrom<&SurfaceCurve> for Curve3D {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &SurfaceCurve) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &SurfaceCurve) -> Result<Self, Self::Error> {
         use PreferredSurfaceCurveRepresentation as PSCR;
         match &value.master_representation {
             PSCR::Curve3D => Ok((&value.curve_3d).try_into()?),
@@ -1419,7 +1511,7 @@ pub enum SurfaceAny {
 impl TryFrom<&SurfaceAny> for Surface {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(x: &SurfaceAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(x: &SurfaceAny) -> Result<Self, Self::Error> {
         use SurfaceAny::*;
         Ok(match x {
             ElementarySurface(x) => Self::ElementarySurface(Box::new(x.as_ref().into())),
@@ -1600,7 +1692,7 @@ pub enum BSplineSurfaceAny {
 impl TryFrom<&BSplineSurfaceAny> for Surface {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &BSplineSurfaceAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &BSplineSurfaceAny) -> Result<Self, Self::Error> {
         use BSplineSurfaceAny::*;
         Ok(match value {
             NonRationalBSplineSurface(bsp) => Surface::BSplineSurface(Box::new(bsp.try_into()?)),
@@ -1648,7 +1740,7 @@ pub struct BSplineSurfaceWithKnots {
 impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(surface: &BSplineSurfaceWithKnots) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(surface: &BSplineSurfaceWithKnots) -> Result<Self, ExpressParseError> {
         let uknots = surface.u_knots.to_vec();
         let umulti = surface
             .u_multiplicities
@@ -1691,7 +1783,7 @@ pub struct UniformSurface {
 impl TryFrom<&UniformSurface> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(surface: &UniformSurface) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(surface: &UniformSurface) -> Result<Self, ExpressParseError> {
         let uknots = uniform_knots(surface.control_points_list.len(), surface.u_degree as usize)?;
         let first = surface
             .control_points_list
@@ -1726,7 +1818,7 @@ pub struct QuasiUniformSurface {
 impl TryFrom<&QuasiUniformSurface> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(surface: &QuasiUniformSurface) -> std::result::Result<Self, ExpressParseError> {
+    fn try_from(surface: &QuasiUniformSurface) -> Result<Self, ExpressParseError> {
         let uknots =
             quasi_uniform_knots(surface.control_points_list.len(), surface.u_degree as usize);
         let first = surface
@@ -1790,7 +1882,7 @@ pub enum NonRationalBSplineSurface {
 impl TryFrom<&NonRationalBSplineSurface> for BSplineSurface<Point3> {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &NonRationalBSplineSurface) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &NonRationalBSplineSurface) -> Result<Self, Self::Error> {
         use NonRationalBSplineSurface::*;
         match value {
             BSplineSurfaceWithKnots(x) => x.as_ref().try_into(),
@@ -1819,7 +1911,7 @@ impl TryFrom<&RationalBSplineSurface> for NurbsSurface<Vector4> {
             non_rational_b_spline_surface,
             weights_data,
         }: &RationalBSplineSurface,
-    ) -> std::result::Result<Self, Self::Error> {
+    ) -> Result<Self, Self::Error> {
         let surface: BSplineSurface<Point3> = non_rational_b_spline_surface.try_into()?;
         Ok(Self::try_from_bspline_and_weights(
             surface,
@@ -1841,7 +1933,7 @@ pub enum SweptSurfaceAny {
 impl TryFrom<&SweptSurfaceAny> for SweptCurve {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(value: &SweptSurfaceAny) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &SweptSurfaceAny) -> Result<Self, Self::Error> {
         use SweptSurfaceAny::*;
         Ok(match value {
             SurfaceOfLinearExtrusion(x) => SweptCurve::ExtrudedCurve(x.as_ref().try_into()?),
@@ -1865,7 +1957,7 @@ pub struct SurfaceOfLinearExtrusion {
 impl TryFrom<&SurfaceOfLinearExtrusion> for StepExtrudedCurve {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(sr: &SurfaceOfLinearExtrusion) -> std::result::Result<Self, Self::Error> {
+    fn try_from(sr: &SurfaceOfLinearExtrusion) -> Result<Self, Self::Error> {
         let curve = Curve3D::try_from(&sr.swept_curve)?;
         let vector = Vector3::from(&sr.extrusion_axis);
         Ok(ExtrudedCurve::by_extrusion(curve, vector))
@@ -1887,7 +1979,7 @@ pub struct SurfaceOfRevolution {
 impl TryFrom<&SurfaceOfRevolution> for StepRevolutedCurve {
     type Error = ExpressParseError;
     #[inline(always)]
-    fn try_from(sr: &SurfaceOfRevolution) -> std::result::Result<Self, Self::Error> {
+    fn try_from(sr: &SurfaceOfRevolution) -> Result<Self, Self::Error> {
         let curve = Curve3D::try_from(&sr.swept_curve)?;
         let origin = Point3::from(&sr.axis_position.location);
         let axis = sr.axis_position.direction().normalize();
@@ -1933,7 +2025,7 @@ pub struct EdgeCurve {
 }
 
 impl EdgeCurve {
-    pub fn parse_curve2d(&self) -> std::result::Result<Curve2D, ExpressParseError> {
+    pub fn parse_curve2d(&self) -> Result<Curve2D, ExpressParseError> {
         let p = Point2::from(&self.edge_start.vertex_geometry);
         let q = Point2::from(&self.edge_end.vertex_geometry);
         let (p, q) = match self.same_sense {
@@ -1947,7 +2039,7 @@ impl EdgeCurve {
         p: Point2,
         q: Point2,
         same_sense: bool,
-    ) -> std::result::Result<Curve2D, ExpressParseError> {
+    ) -> Result<Curve2D, ExpressParseError> {
         let mut curve = match curve {
             CurveAny::Line(line) => {
                 let line = truck::Line::<Point2>::from(line.as_ref());
@@ -2003,6 +2095,49 @@ impl EdgeCurve {
                     ellipse.transform_by(mat);
                     Curve2D::Conic(Conic2D::Ellipse(ellipse))
                 }
+                Conic::Hyperbola(hyperbola) => {
+                    let mat = Matrix3::try_from(&hyperbola.position)?
+                        * Matrix3::from_nonuniform_scale(
+                            hyperbola.semi_axis,
+                            hyperbola.semi_imag_axis,
+                        );
+                    let inv_mat = mat
+                        .invert()
+                        .ok_or_else(|| "Failed to convert Hyperbola".to_string())?;
+                    let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                    let (u, v) = (
+                        UnitHyperbola::<Point2>::new()
+                            .search_nearest_parameter(p, None, 0)
+                            .ok_or_else(|| "the point is not on hyperbola".to_string())?,
+                        UnitHyperbola::<Point2>::new()
+                            .search_nearest_parameter(q, None, 0)
+                            .ok_or_else(|| "the point is not on hyparbola".to_string())?,
+                    );
+                    let unit = TrimmedCurve::new(UnitHyperbola::<Point2>::new(), (u, v));
+                    let mut hyperbola = Processor::new(unit);
+                    hyperbola.transform_by(mat);
+                    Curve2D::Conic(Conic2D::Hyperbola(hyperbola))
+                }
+                Conic::Parabola(parabola) => {
+                    let mat = Matrix3::try_from(&parabola.position)?
+                        * Matrix3::from_scale(parabola.focal_dist);
+                    let inv_mat = mat
+                        .invert()
+                        .ok_or_else(|| "Failed to convert Parabola".to_string())?;
+                    let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                    let (u, v) = (
+                        UnitHyperbola::<Point2>::new()
+                            .search_nearest_parameter(p, None, 0)
+                            .ok_or_else(|| "the point is not on parabola".to_string())?,
+                        UnitHyperbola::<Point2>::new()
+                            .search_nearest_parameter(q, None, 0)
+                            .ok_or_else(|| "the point is not on parabola".to_string())?,
+                    );
+                    let unit = TrimmedCurve::new(UnitHyperbola::<Point2>::new(), (u, v));
+                    let mut parabola = Processor::new(unit);
+                    parabola.transform_by(mat);
+                    Curve2D::Conic(Conic2D::Hyperbola(parabola))
+                }
             },
             CurveAny::Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
             CurveAny::SurfaceCurve(_) => {
@@ -2014,7 +2149,7 @@ impl EdgeCurve {
         }
         Ok(curve)
     }
-    pub fn parse_curve3d(&self) -> std::result::Result<Curve3D, ExpressParseError> {
+    pub fn parse_curve3d(&self) -> Result<Curve3D, ExpressParseError> {
         let p = Point3::from(&self.edge_start.vertex_geometry);
         let q = Point3::from(&self.edge_end.vertex_geometry);
         let (p, q) = match self.same_sense {
@@ -2028,7 +2163,7 @@ impl EdgeCurve {
         p: Point3,
         q: Point3,
         same_sense: bool,
-    ) -> std::result::Result<Curve3D, ExpressParseError> {
+    ) -> Result<Curve3D, ExpressParseError> {
         let mut curve = match curve {
             CurveAny::Line(_) => Curve3D::Line(Line(p, q)),
             CurveAny::BoundedCurve(b) => b.as_ref().try_into()?,
@@ -2082,6 +2217,53 @@ impl EdgeCurve {
                     let mut ellipse = Processor::new(circle);
                     ellipse.transform_by(mat);
                     Curve3D::Conic(Conic3D::Ellipse(ellipse))
+                }
+                Conic::Hyperbola(hyperbola) => {
+                    let mat = Matrix4::try_from(&hyperbola.position)?
+                        * Matrix4::from_nonuniform_scale(
+                            hyperbola.semi_axis,
+                            hyperbola.semi_imag_axis,
+                            f64::min(hyperbola.semi_axis, hyperbola.semi_imag_axis),
+                        );
+                    let inv_mat = mat
+                        .invert()
+                        .ok_or_else(|| "Failed to convert Circle".to_string())?;
+                    let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                    let (u, mut v) = (
+                        UnitHyperbola::<Point3>::new()
+                            .search_nearest_parameter(p, None, 0)
+                            .ok_or_else(|| "the point is not on circle".to_string())?,
+                        UnitHyperbola::<Point3>::new()
+                            .search_nearest_parameter(q, None, 0)
+                            .ok_or_else(|| "the point is not on circle".to_string())?,
+                    );
+                    if v <= u + TOLERANCE {
+                        v += 2.0 * PI;
+                    }
+                    let unit = TrimmedCurve::new(UnitHyperbola::<Point3>::new(), (u, v));
+                    let mut hyperbola = Processor::new(unit);
+                    hyperbola.transform_by(mat);
+                    Curve3D::Conic(Conic3D::Hyperbola(hyperbola))
+                }
+                Conic::Parabola(parabola) => {
+                    let mat = Matrix4::try_from(&parabola.position)?
+                        * Matrix4::from_scale(parabola.focal_dist);
+                    let inv_mat = mat
+                        .invert()
+                        .ok_or_else(|| "Failed to convert Parabola".to_string())?;
+                    let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
+                    let (u, v) = (
+                        UnitHyperbola::<Point3>::new()
+                            .search_nearest_parameter(p, None, 0)
+                            .ok_or_else(|| "the point is not on parabola".to_string())?,
+                        UnitHyperbola::<Point3>::new()
+                            .search_nearest_parameter(q, None, 0)
+                            .ok_or_else(|| "the point is not on parabola".to_string())?,
+                    );
+                    let unit = TrimmedCurve::new(UnitHyperbola::<Point3>::new(), (u, v));
+                    let mut parabola = Processor::new(unit);
+                    parabola.transform_by(mat);
+                    Curve3D::Conic(Conic3D::Hyperbola(parabola))
                 }
             },
             CurveAny::Pcurve(c) => {
@@ -2496,7 +2678,7 @@ impl Table {
     pub fn to_compressed_shell(
         &self,
         shell: &ShellHolder,
-    ) -> std::result::Result<CompressedShell<Point3, Curve3D, Surface>, ExpressParseError> {
+    ) -> Result<CompressedShell<Point3, Curve3D, Surface>, ExpressParseError> {
         let (vertices, vidx_map) = self.shell_vertices(shell);
         let (edges, eidx_map) = self.shell_edges(shell, &vidx_map);
         Ok(CompressedShell {

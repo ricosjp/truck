@@ -55,8 +55,9 @@ where
         let magnitude = self.magnitude();
         let direction_idx = idx + 1;
         f.write_fmt(format_args!(
-            "#{idx} = VECTOR('', #{direction_idx}, {magnitude:?});\n{direction}",
+            "#{idx} = VECTOR('', #{direction_idx}, {magnitude});\n{direction}",
             direction = StepDisplay::new(VectorAsDirection(*self / magnitude), direction_idx),
+            magnitude = FloatDisplay(magnitude),
         ))
     }
 }
@@ -104,14 +105,13 @@ where P: Copy + ConstStepLength + DisplayByStep
             "#{idx} = POLYLINE('', {range});\n",
             range = IndexSliceDisplay(idx + 1..=idx + self.0.len())
         ))?;
-        self.0
-            .iter()
-            .enumerate()
-            .try_for_each(|(i, p)| Display::fmt(&StepDisplay::new(*p, idx + 1 + i * P::LENGTH), f))
+        let closure = |(i, p): (usize, &P)| p.fmt(idx + 1 + i * P::LENGTH, f);
+        self.0.iter().enumerate().try_for_each(closure)
     }
 }
 
 impl<P: ConstStepLength> StepLength for PolylineCurve<P> {
+    #[inline(always)]
     fn step_length(&self) -> usize { 1 + self.0.len() * P::LENGTH }
 }
 
@@ -138,6 +138,7 @@ where P: Copy + ConstStepLength + DisplayByStep
 }
 
 impl<P> StepLength for BSplineCurve<P> {
+    #[inline(always)]
     fn step_length(&self) -> usize { self.control_points().len() + 1 }
 }
 
@@ -183,8 +184,158 @@ where
 }
 
 impl<P> StepLength for NurbsCurve<P> {
+    #[inline(always)]
     fn step_length(&self) -> usize { self.control_points().len() + 1 }
 }
+
+impl DisplayByStep for Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let transform = *self.transform();
+        let position_idx = idx + 1;
+        let location_idx = idx + 2;
+        let ref_direction_idx = idx + 3;
+        let r0 = transform[0].magnitude();
+        let r1 = transform[1].magnitude();
+        let ref_direction = VectorAsDirection(transform[0].truncate() / r0);
+        let location = transform[2].to_point();
+        if r0.near(&r1) {
+            let r = FloatDisplay(r0);
+            f.write_fmt(format_args!("#{idx} = CIRCLE('', #{position_idx}, {r});\n"))?;
+        } else {
+            let (r0, r1) = (FloatDisplay(r0), FloatDisplay(r1));
+            f.write_fmt(format_args!(
+                "#{idx} = ELLIPSE('', #{position_idx}, {r0}, {r1});\n"
+            ))?;
+        }
+        f.write_fmt(format_args!(
+            "#{position_idx} = AXIS2_PLACEMENT_2D('', #{location_idx}, #{ref_direction_idx});\n",
+        ))?;
+        DisplayByStep::fmt(&location, location_idx, f)?;
+        DisplayByStep::fmt(&ref_direction, ref_direction_idx, f)
+    }
+}
+impl_const_step_length!(Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>, 4);
+
+impl DisplayByStep for Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let transform = self.transform();
+        let position_idx = idx + 1;
+        let location_idx = idx + 2;
+        let axis_idx = idx + 3;
+        let ref_direction_idx = idx + 4;
+        let location = transform[3].to_point();
+        let axis = VectorAsDirection(transform[2].truncate().normalize());
+        let r0 = transform[0].magnitude();
+        let r1 = transform[1].magnitude();
+        let ref_direction = VectorAsDirection(transform[0].truncate() / r0);
+        if r0.near(&r1) {
+            let r = FloatDisplay(r0);
+            f.write_fmt(format_args!("#{idx} = CIRCLE('', #{position_idx}, {r});\n"))?;
+        } else {
+            let (r0, r1) = (FloatDisplay(r0), FloatDisplay(r1));
+            f.write_fmt(format_args!(
+                "#{idx} = ELLIPSE('', #{position_idx}, {r0}, {r1});\n"
+            ))?;
+        }
+        f.write_fmt(format_args!(
+            "#{position_idx} = AXIS2_PLACEMENT_3D('', #{location_idx}, #{axis_idx}, #{ref_direction_idx});\n",
+        ))?;
+        DisplayByStep::fmt(&location, location_idx, f)?;
+        DisplayByStep::fmt(&axis, axis_idx, f)?;
+        DisplayByStep::fmt(&ref_direction, ref_direction_idx, f)
+    }
+}
+impl_const_step_length!(Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>, 5);
+
+impl DisplayByStep for Processor<TrimmedCurve<UnitHyperbola<Point2>>, Matrix3> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let transform = *self.transform();
+        let position_idx = idx + 1;
+        let location_idx = idx + 2;
+        let ref_direction_idx = idx + 3;
+        let r0 = transform[0].magnitude();
+        let r1 = transform[1].magnitude();
+        let ref_direction_raw = VectorAsDirection(transform[0].truncate() / r0);
+        let ref_direction = StepDisplay::new(ref_direction_raw, ref_direction_idx);
+        let location = StepDisplay::new(transform[2].to_point(), location_idx);
+        let (r0, r1) = (FloatDisplay(r0), FloatDisplay(r1));
+        f.write_fmt(format_args!(
+            "#{idx} = HYPERBOLA('', #{position_idx}, {r0}, {r1});
+#{position_idx} = AXIS2_PLACEMENT_2D('', #{location_idx}, #{ref_direction_idx});
+{location}{ref_direction}"
+        ))
+    }
+}
+impl_const_step_length!(Processor<TrimmedCurve<UnitHyperbola<Point2>>, Matrix3>, 4);
+
+impl DisplayByStep for Processor<TrimmedCurve<UnitHyperbola<Point3>>, Matrix4> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let transform = self.transform();
+        let position_idx = idx + 1;
+        let location_idx = idx + 2;
+        let axis_idx = idx + 3;
+        let ref_direction_idx = idx + 4;
+        let location = StepDisplay::new(transform[3].to_point(), location_idx);
+        let axis_raw = VectorAsDirection(transform[2].truncate().normalize());
+        let axis = StepDisplay::new(axis_raw, axis_idx);
+        let r0 = transform[0].magnitude();
+        let r1 = transform[1].magnitude();
+        let ref_direction_raw = VectorAsDirection(transform[0].truncate() / r0);
+        let ref_direction = StepDisplay::new(ref_direction_raw, ref_direction_idx);
+        let (r0, r1) = (FloatDisplay(r0), FloatDisplay(r1));
+        f.write_fmt(format_args!(
+            "#{idx} = HYPERBOLA('', #{position_idx}, {r0}, {r1});
+#{position_idx} = AXIS2_PLACEMENT_3D('', #{location_idx}, #{axis_idx}, #{ref_direction_idx});
+{location}{axis}{ref_direction}"
+        ))
+    }
+}
+impl_const_step_length!(Processor<TrimmedCurve<UnitHyperbola<Point3>>, Matrix4>, 5);
+
+impl DisplayByStep for Processor<TrimmedCurve<UnitParabola<Point2>>, Matrix3> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let transform = *self.transform();
+        let position_idx = idx + 1;
+        let location_idx = idx + 2;
+        let ref_direction_idx = idx + 3;
+        let r0 = transform[0].magnitude();
+        let r1 = transform[1].magnitude();
+        let focal_dist = FloatDisplay(r1 * r1 / r0);
+        let ref_direction_raw = VectorAsDirection(transform[0].truncate() / r0);
+        let ref_direction = StepDisplay::new(ref_direction_raw, ref_direction_idx);
+        let location = StepDisplay::new(transform[2].to_point(), location_idx);
+        f.write_fmt(format_args!(
+            "#{idx} = PARABOLA('', #{position_idx}, {focal_dist});
+#{position_idx} = AXIS2_PLACEMENT_2D('', #{location_idx}, #{ref_direction_idx});
+{location}{ref_direction}"
+        ))
+    }
+}
+impl_const_step_length!(Processor<TrimmedCurve<UnitParabola<Point2>>, Matrix3>, 4);
+
+impl DisplayByStep for Processor<TrimmedCurve<UnitParabola<Point3>>, Matrix4> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let transform = self.transform();
+        let position_idx = idx + 1;
+        let location_idx = idx + 2;
+        let axis_idx = idx + 3;
+        let ref_direction_idx = idx + 4;
+        let location = StepDisplay::new(transform[3].to_point(), location_idx);
+        let axis_raw = VectorAsDirection(transform[2].truncate().normalize());
+        let axis = StepDisplay::new(axis_raw, axis_idx);
+        let r0 = transform[0].magnitude();
+        let r1 = transform[1].magnitude();
+        let focal_dist = FloatDisplay(r1 * r1 / r0);
+        let ref_direction_raw = VectorAsDirection(transform[0].truncate() / r0);
+        let ref_direction = StepDisplay::new(ref_direction_raw, ref_direction_idx);
+        f.write_fmt(format_args!(
+            "#{idx} = PARABOLA('', #{position_idx}, {focal_dist});
+#{position_idx} = AXIS2_PLACEMENT_3D('', #{location_idx}, #{axis_idx}, #{ref_direction_idx});
+{location}{axis}{ref_direction}"
+        ))
+    }
+}
+impl_const_step_length!(Processor<TrimmedCurve<UnitParabola<Point3>>, Matrix4>, 5);
 
 impl<C, S> DisplayByStep for IntersectionCurve<C, S>
 where
@@ -198,17 +349,14 @@ where
         f.write_fmt(format_args!(
             "#{idx} = INTERSECTION_CURVE('', #{curve_idx}, (#{surface0_idx}, #{surface1_idx}), .CURVE_3D.);\n"
         ))?;
-        Display::fmt(&StepDisplay::new(self.leader(), curve_idx), f)?;
-        Display::fmt(&StepDisplay::new(self.surface0(), surface0_idx), f)?;
-        Display::fmt(&StepDisplay::new(self.surface1(), surface1_idx), f)
+        self.leader().fmt(curve_idx, f)?;
+        self.surface0().fmt(surface0_idx, f)?;
+        self.surface1().fmt(surface0_idx, f)
     }
 }
 
-impl<C, S> StepLength for IntersectionCurve<C, S>
-where
-    C: StepLength,
-    S: StepLength,
-{
+impl<C: StepLength, S: StepLength> StepLength for IntersectionCurve<C, S> {
+    #[inline(always)]
     fn step_length(&self) -> usize {
         1 + self.leader().step_length()
             + self.surface0().step_length()
@@ -216,11 +364,47 @@ where
     }
 }
 
+impl<C, S> ConstStepLength for IntersectionCurve<C, S>
+where
+    C: ConstStepLength,
+    S: ConstStepLength,
+{
+    const LENGTH: usize = 1 + C::LENGTH + S::LENGTH + S::LENGTH;
+}
+
+impl<C, S> DisplayByStep for PCurve<C, S>
+where
+    C: StepLength + DisplayByStep,
+    S: DisplayByStep,
+{
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let curve_idx = idx + 1;
+        let surface_idx = curve_idx + self.curve().step_length();
+        let curve = StepDisplay::new(self.curve(), curve_idx);
+        let surface = StepDisplay::new(self.surface(), surface_idx);
+        f.write_fmt(format_args!(
+            "#{idx} = PCURVE('', #{curve_idx}, #{surface_idx});\n{curve}{surface}"
+        ))
+    }
+}
+
+impl<C: StepLength, S: StepLength> StepLength for PCurve<C, S> {
+    fn step_length(&self) -> usize { 1 + self.curve().step_length() + self.surface().step_length() }
+}
+
+impl<C, S> ConstStepLength for PCurve<C, S>
+where
+    C: ConstStepLength,
+    S: ConstStepLength,
+{
+    const LENGTH: usize = 1 + C::LENGTH + S::LENGTH;
+}
+
 impl DisplayByStep for Leader {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         match self {
-            Leader::Polyline(x) => Display::fmt(&StepDisplay::new(x, idx), f),
-            Leader::BSpline(x) => Display::fmt(&StepDisplay::new(x, idx), f),
+            Leader::Polyline(x) => DisplayByStep::fmt(x, idx, f),
+            Leader::BSpline(x) => DisplayByStep::fmt(x, idx, f),
         }
     }
 }
@@ -237,10 +421,10 @@ impl StepLength for Leader {
 impl DisplayByStep for ModelingCurve {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         match self {
-            ModelingCurve::Line(x) => Display::fmt(&StepDisplay::new(x, idx), f),
-            ModelingCurve::BSplineCurve(x) => Display::fmt(&StepDisplay::new(x, idx), f),
-            ModelingCurve::NurbsCurve(x) => Display::fmt(&StepDisplay::new(x, idx), f),
-            ModelingCurve::IntersectionCurve(x) => Display::fmt(&StepDisplay::new(x, idx), f),
+            ModelingCurve::Line(x) => DisplayByStep::fmt(x, idx, f),
+            ModelingCurve::BSplineCurve(x) => DisplayByStep::fmt(x, idx, f),
+            ModelingCurve::NurbsCurve(x) => DisplayByStep::fmt(x, idx, f),
+            ModelingCurve::IntersectionCurve(x) => DisplayByStep::fmt(x, idx, f),
         }
     }
 }
@@ -312,6 +496,7 @@ where P: Copy + DisplayByStep
 }
 
 impl<P> StepLength for BSplineSurface<P> {
+    #[inline(always)]
     fn step_length(&self) -> usize { 1 + self.control_points().iter().map(Vec::len).sum::<usize>() }
 }
 
@@ -372,6 +557,7 @@ where
 }
 
 impl<V> StepLength for NurbsSurface<V> {
+    #[inline(always)]
     fn step_length(&self) -> usize { 1 + self.control_points().iter().map(Vec::len).sum::<usize>() }
 }
 
@@ -395,7 +581,12 @@ where C: StepLength + DisplayByStep
 }
 
 impl<C: StepLength> StepLength for RevolutedCurve<C> {
+    #[inline(always)]
     fn step_length(&self) -> usize { 4 + self.entity_curve().step_length() }
+}
+
+impl<C: ConstStepLength> ConstStepLength for RevolutedCurve<C> {
+    const LENGTH: usize = 4 + C::LENGTH;
 }
 
 impl<C> DisplayByStep for Processor<RevolutedCurve<C>, Matrix4>
@@ -413,17 +604,17 @@ where C: StepLength + Transformed<Matrix4> + DisplayByStep
         let axis = k.transform_vector(surface.axis());
         let origin = transform.transform_point(surface.origin());
         let surface = RevolutedCurve::by_revolution(curve, origin, axis);
-        Display::fmt(&StepDisplay::new(surface, idx), f)
+        DisplayByStep::fmt(&surface, idx, f)
     }
 }
 
 impl DisplayByStep for ModelingSurface {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         match self {
-            ModelingSurface::Plane(x) => Display::fmt(&StepDisplay::new(x, idx), f),
-            ModelingSurface::BSplineSurface(x) => Display::fmt(&StepDisplay::new(x, idx), f),
-            ModelingSurface::NurbsSurface(x) => Display::fmt(&StepDisplay::new(x, idx), f),
-            ModelingSurface::RevolutedCurve(x) => Display::fmt(&StepDisplay::new(x, idx), f),
+            ModelingSurface::Plane(x) => DisplayByStep::fmt(x, idx, f),
+            ModelingSurface::BSplineSurface(x) => DisplayByStep::fmt(x, idx, f),
+            ModelingSurface::NurbsSurface(x) => DisplayByStep::fmt(x, idx, f),
+            ModelingSurface::RevolutedCurve(x) => DisplayByStep::fmt(x, idx, f),
         }
     }
 }
@@ -431,7 +622,7 @@ impl DisplayByStep for ModelingSurface {
 impl StepLength for ModelingSurface {
     fn step_length(&self) -> usize {
         match self {
-            ModelingSurface::Plane(x) => x.step_length(),
+            ModelingSurface::Plane(_) => Plane::LENGTH,
             ModelingSurface::BSplineSurface(x) => x.step_length(),
             ModelingSurface::NurbsSurface(x) => x.step_length(),
             ModelingSurface::RevolutedCurve(x) => x.entity().step_length(),

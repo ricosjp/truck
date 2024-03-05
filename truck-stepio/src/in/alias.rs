@@ -1,13 +1,11 @@
+use crate as truck_stepio;
 use derive_more::*;
 use serde::{Deserialize, Serialize};
+use truck_derivers::{DisplayByStep, StepLength};
 pub use truck_geometry::prelude::*;
 pub use truck_polymesh::*;
 
 pub type ExpressParseError = Box<dyn std::error::Error>;
-
-pub trait Empty {
-    fn empty() -> Self;
-}
 
 pub type Ellipse<P, M> = Processor<TrimmedCurve<UnitCircle<P>>, M>;
 pub type Hyperbola<P, M> = Processor<TrimmedCurve<UnitHyperbola<P>>, M>;
@@ -35,6 +33,8 @@ pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
     ParameterDivision1D,
     SearchParameterD1,
     SearchNearestParameterD1,
+    StepLength,
+    DisplayByStep,
 )]
 pub enum Conic2D {
     Ellipse(Ellipse<Point2, Matrix3>),
@@ -54,6 +54,8 @@ pub enum Conic2D {
     ParameterDivision1D,
     SearchParameterD1,
     SearchNearestParameterD1,
+    StepLength,
+    DisplayByStep,
 )]
 pub enum Curve2D {
     Line(Line<Point2>),
@@ -76,6 +78,8 @@ pub enum Curve2D {
     ParameterDivision1D,
     SearchParameterD1,
     SearchNearestParameterD1,
+    StepLength,
+    DisplayByStep,
 )]
 pub enum Conic3D {
     Ellipse(Ellipse<Point3, Matrix4>),
@@ -126,6 +130,7 @@ pub enum ElementarySurface {
     ToroidalSurface(ToroidalSurface),
     ConicalSurface(ConicalSurface),
 }
+
 #[derive(
     Clone,
     Debug,
@@ -141,6 +146,7 @@ pub enum SweptCurve {
     ExtrudedCurve(StepExtrudedCurve),
     RevolutedCurve(StepRevolutedCurve),
 }
+
 #[derive(
     Clone,
     Debug,
