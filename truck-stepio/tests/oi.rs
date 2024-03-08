@@ -211,6 +211,41 @@ fn oi() {
         Point3::new(2.0, 2.0, 3.0),
         Point3::new(1.0, 3.0, 3.0),
     ));
+    oitest::<Processor<alias::Sphere, Matrix4>, SphericalSurfaceHolder>(
+        Processor::new(alias::Sphere(truck::Sphere::new(
+            Point3::new(0.0, 0.0, 0.0),
+            15.0,
+        )))
+        .transformed(Matrix4::from_cols(
+            Vector4::new(0.0, 1.0, 0.0, 0.0),
+            Vector4::new(-1.0, 0.0, 0.0, 0.0),
+            Vector4::new(0.0, 0.0, 1.0, 0.0),
+            Vector4::new(1.0, 2.0, 3.0, 1.0),
+        )),
+    );
+    oitest::<Processor<Torus, Matrix4>, ToroidalSurfaceHolder>(
+        Processor::new(Torus::new(Point3::new(0.0, 0.0, 0.0), 15.0, 9.0)).transformed(
+            Matrix4::from_cols(
+                Vector4::new(0.0, 1.0, 0.0, 0.0),
+                Vector4::new(-1.0, 0.0, 0.0, 0.0),
+                Vector4::new(0.0, 0.0, 1.0, 0.0),
+                Vector4::new(1.0, 2.0, 3.0, 1.0),
+            ),
+        ),
+    );
+    oitest_tryfrom::<PCurve<Box<alias::Curve2D>, Box<alias::Surface>>, PcurveHolder>(PCurve::new(
+        Box::new(alias::Curve2D::Line(Line(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 1.0),
+        ))),
+        Box::new(alias::Surface::ElementarySurface(Box::new(
+            alias::ElementarySurface::Plane(truck::Plane::new(
+                Point3::new(1.0, 2.0, 3.0),
+                Point3::new(1.0, 2.0, 4.0),
+                Point3::new(1.0, 1.0, 3.0),
+            )),
+        ))),
+    ));
     oitest_tryfrom::<BSplineSurface<Point3>, BSplineSurfaceWithKnotsHolder>(BSplineSurface::new(
         (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2)),
         vec![

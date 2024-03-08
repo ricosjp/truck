@@ -201,19 +201,32 @@ fn geometry() {
         5,
     );
     step_test::<PCurve<Line<Point2>, Plane>>(
-        PCurve::new(Line(Point2::new(0.0, 0.0), Point2::new(3.0, 4.0)), Plane::new(Point3::new(1.0, 2.0, 3.0), Point3::new(2.0, 2.0, 3.0), Point3::new(1.0, 5.0, 3.0))),
+        PCurve::new(
+            Line(Point2::new(0.0, 0.0), Point2::new(3.0, 4.0)),
+            Plane::new(
+                Point3::new(1.0, 2.0, 3.0),
+                Point3::new(2.0, 2.0, 3.0),
+                Point3::new(1.0, 5.0, 3.0),
+            ),
+        ),
         "\
-#1 = PCURVE('', #2, #6);
-#2 = LINE('', #3, #4);
-#3 = CARTESIAN_POINT('', (0.0, 0.0));
-#4 = VECTOR('', #5, 5.0);
-#5 = DIRECTION('', (0.6, 0.8));
-#6 = PLANE('', #7);
-#7 = AXIS2_PLACEMENT_3D('', #8, #9, #10);
-#8 = CARTESIAN_POINT('', (1.0, 2.0, 3.0));
-#9 = DIRECTION('', (0.0, 0.0, 1.0));
-#10 = DIRECTION('', (1.0, 0.0, 0.0));\n",
-        10
+#1 = PCURVE('', #2, #7);
+#2 = PLANE('', #3);
+#3 = AXIS2_PLACEMENT_3D('', #4, #5, #6);
+#4 = CARTESIAN_POINT('', (1.0, 2.0, 3.0));
+#5 = DIRECTION('', (0.0, 0.0, 1.0));
+#6 = DIRECTION('', (1.0, 0.0, 0.0));
+#7 = DEFINITIONAL_REPRESENTATION('', (#9), #8);
+#8 = (
+    GEOMETRIC_REPRESENTATION_CONTEXT(2)
+    PARAMETRIC_REPRESENTATION_CONTEXT()
+    REPRESENTATION_CONTEXT('2D SPACE', '')
+);
+#9 = LINE('', #10, #11);
+#10 = CARTESIAN_POINT('', (0.0, 0.0));
+#11 = VECTOR('', #12, 5.0);
+#12 = DIRECTION('', (0.6, 0.8));\n",
+        12,
     );
     step_test::<Plane>(
         Plane::new(
@@ -227,6 +240,40 @@ fn geometry() {
 #3 = CARTESIAN_POINT('', (1.0, 2.0, 3.0));
 #4 = DIRECTION('', (0.0, 1.0, 0.0));
 #5 = DIRECTION('', (0.0, 0.0, 1.0));\n",
+        5,
+    );
+    step_test::<Processor<Sphere, Matrix4>>(
+        Processor::new(Sphere::new(Point3::new(1.0, 2.0, 3.0), 5.0)).transformed(
+            Matrix4::from_cols(
+                Vector4::new(0.0, 3.0, 0.0, 0.0),
+                Vector4::new(-3.0, 0.0, 0.0, 0.0),
+                Vector4::new(0.0, 0.0, 3.0, 0.0),
+                Vector4::new(2.0, 1.0, 3.0, 1.0),
+            ),
+        ),
+        "\
+#1 = SPHERICAL_SURFACE('', #2, 15.0);
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+#3 = CARTESIAN_POINT('', (3.0, 3.0, 6.0));
+#4 = DIRECTION('', (0.0, 0.0, 1.0));
+#5 = DIRECTION('', (0.0, 1.0, 0.0));\n",
+        5,
+    );
+    step_test::<Processor<Torus, Matrix4>>(
+        Processor::new(Torus::new(Point3::new(1.0, 2.0, 3.0), 5.0, 3.0)).transformed(
+            Matrix4::from_cols(
+                Vector4::new(0.0, 3.0, 0.0, 0.0),
+                Vector4::new(-3.0, 0.0, 0.0, 0.0),
+                Vector4::new(0.0, 0.0, 3.0, 0.0),
+                Vector4::new(2.0, 1.0, 3.0, 1.0),
+            ),
+        ),
+        "\
+#1 = TOROIDAL_SURFACE('', #2, 15.0, 9.0);
+#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
+#3 = CARTESIAN_POINT('', (3.0, 3.0, 6.0));
+#4 = DIRECTION('', (0.0, 0.0, 1.0));
+#5 = DIRECTION('', (0.0, 1.0, 0.0));\n",
         5,
     );
     step_test::<BSplineSurface<Point2>>(

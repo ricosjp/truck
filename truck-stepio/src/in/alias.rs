@@ -1,4 +1,4 @@
-use crate as truck_stepio;
+use crate::{self as truck_stepio};
 use derive_more::*;
 use serde::{Deserialize, Serialize};
 use truck_derivers::{DisplayByStep, StepLength};
@@ -23,6 +23,7 @@ pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
     Clone,
     Copy,
     Debug,
+    PartialEq,
     From,
     Serialize,
     Deserialize,
@@ -33,6 +34,7 @@ pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
     ParameterDivision1D,
     SearchParameterD1,
     SearchNearestParameterD1,
+    TransformedM3,
     StepLength,
     DisplayByStep,
 )]
@@ -41,9 +43,11 @@ pub enum Conic2D {
     Hyperbola(Hyperbola<Point2, Matrix3>),
     Parabola(Parabola<Point2, Matrix3>),
 }
+
 #[derive(
     Clone,
     Debug,
+    PartialEq,
     From,
     Serialize,
     Deserialize,
@@ -54,9 +58,11 @@ pub enum Conic2D {
     ParameterDivision1D,
     SearchParameterD1,
     SearchNearestParameterD1,
+    TransformedM3,
     StepLength,
     DisplayByStep,
 )]
+
 pub enum Curve2D {
     Line(Line<Point2>),
     Polyline(PolylineCurve<Point2>),
@@ -67,8 +73,9 @@ pub enum Curve2D {
 #[derive(
     Clone,
     Copy,
-    From,
     Debug,
+    PartialEq,
+    From,
     Serialize,
     Deserialize,
     ParametricCurve,
@@ -78,6 +85,7 @@ pub enum Curve2D {
     ParameterDivision1D,
     SearchParameterD1,
     SearchNearestParameterD1,
+    TransformedM4,
     StepLength,
     DisplayByStep,
 )]
@@ -90,6 +98,7 @@ pub enum Conic3D {
 #[derive(
     Clone,
     Debug,
+    PartialEq,
     From,
     Serialize,
     Deserialize,
@@ -100,6 +109,9 @@ pub enum Conic3D {
     ParameterDivision1D,
     SearchParameterD1,
     SearchNearestParameterD1,
+    TransformedM4,
+    StepLength,
+    DisplayByStep,
 )]
 pub enum Curve3D {
     Line(Line<Point3>),
@@ -114,6 +126,7 @@ pub enum Curve3D {
     Clone,
     Copy,
     Debug,
+    PartialEq,
     Serialize,
     Deserialize,
     ParametricSurface3D,
@@ -121,6 +134,9 @@ pub enum Curve3D {
     SearchParameterD2,
     SearchNearestParameterD2,
     Invertible,
+    TransformedM4,
+    StepLength,
+    DisplayByStep,
 )]
 pub enum ElementarySurface {
     Plane(Plane),
@@ -134,6 +150,7 @@ pub enum ElementarySurface {
 #[derive(
     Clone,
     Debug,
+    PartialEq,
     Serialize,
     Deserialize,
     ParametricSurface3D,
@@ -141,6 +158,9 @@ pub enum ElementarySurface {
     SearchParameterD2,
     SearchNearestParameterD2,
     Invertible,
+    TransformedM4,
+    StepLength,
+    DisplayByStep,
 )]
 pub enum SweptCurve {
     ExtrudedCurve(StepExtrudedCurve),
@@ -150,6 +170,7 @@ pub enum SweptCurve {
 #[derive(
     Clone,
     Debug,
+    PartialEq,
     Serialize,
     Deserialize,
     ParametricSurface3D,
@@ -157,6 +178,8 @@ pub enum SweptCurve {
     SearchParameterD2,
     SearchNearestParameterD2,
     Invertible,
+    TransformedM4,
+    StepLength,
 )]
 pub enum Surface {
     ElementarySurface(Box<ElementarySurface>),
@@ -165,7 +188,19 @@ pub enum Surface {
     NurbsSurface(Box<NurbsSurface<Vector4>>),
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+impl truck_stepio::out::DisplayByStep for Surface {
+    fn fmt(&self, idx: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use Surface::*;
+        match self {
+            ElementarySurface(x) => x.fmt(idx, f),
+            SweptCurve(x) => x.fmt(idx, f),
+            BSplineSurface(x) => x.fmt(idx, f),
+            NurbsSurface(x) => x.fmt(idx, f),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Sphere(pub truck_geometry::prelude::Sphere);
 
 mod sphere {
@@ -296,6 +331,20 @@ mod sphere {
                 "normal failed: {n0:?}, {n1:?}"
             );
         }
+    }
+}
+
+impl truck_stepio::out::ConstStepLength for Processor<Sphere, Matrix4> {
+    const LENGTH: usize = Processor::<truck_geometry::prelude::Sphere, Matrix4>::LENGTH;
+}
+impl truck_stepio::out::StepLength for Processor<Sphere, Matrix4> {
+    fn step_length(&self) -> usize { <Self as truck_stepio::out::ConstStepLength>::LENGTH }
+}
+impl truck_stepio::out::DisplayByStep for Processor<Sphere, Matrix4> {
+    fn fmt(&self, idx: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Processor::new(self.entity().0)
+            .transformed(*self.transform())
+            .fmt(idx, f)
     }
 }
 

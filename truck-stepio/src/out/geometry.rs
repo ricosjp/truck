@@ -374,22 +374,31 @@ where
 
 impl<C, S> DisplayByStep for PCurve<C, S>
 where
-    C: StepLength + DisplayByStep,
-    S: DisplayByStep,
+    C: DisplayByStep,
+    S: DisplayByStep + StepLength,
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
-        let curve_idx = idx + 1;
-        let surface_idx = curve_idx + self.curve().step_length();
+        let surface_idx = idx + 1;
+        let repr_idx = surface_idx + self.surface().step_length();
+        let context_idx = repr_idx + 1;
+        let curve_idx = repr_idx + 2;
         let curve = StepDisplay::new(self.curve(), curve_idx);
         let surface = StepDisplay::new(self.surface(), surface_idx);
         f.write_fmt(format_args!(
-            "#{idx} = PCURVE('', #{curve_idx}, #{surface_idx});\n{curve}{surface}"
+            "#{idx} = PCURVE('', #{surface_idx}, #{repr_idx});
+{surface}#{repr_idx} = DEFINITIONAL_REPRESENTATION('', (#{curve_idx}), #{context_idx});
+#{context_idx} = (
+    GEOMETRIC_REPRESENTATION_CONTEXT(2)
+    PARAMETRIC_REPRESENTATION_CONTEXT()
+    REPRESENTATION_CONTEXT('2D SPACE', '')
+);
+{curve}"
         ))
     }
 }
 
 impl<C: StepLength, S: StepLength> StepLength for PCurve<C, S> {
-    fn step_length(&self) -> usize { 1 + self.curve().step_length() + self.surface().step_length() }
+    fn step_length(&self) -> usize { 3 + self.curve().step_length() + self.surface().step_length() }
 }
 
 impl<C, S> ConstStepLength for PCurve<C, S>
@@ -397,7 +406,7 @@ where
     C: ConstStepLength,
     S: ConstStepLength,
 {
-    const LENGTH: usize = 1 + C::LENGTH + S::LENGTH;
+    const LENGTH: usize = 3 + C::LENGTH + S::LENGTH;
 }
 
 impl DisplayByStep for Leader {
@@ -457,6 +466,81 @@ impl DisplayByStep for Plane {
     }
 }
 impl_const_step_length!(Plane, 5);
+
+impl DisplayByStep for Processor<Sphere, Matrix4> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let sphere = *self.entity();
+        let transform = self.transform();
+        let position_idx = idx + 1;
+        let location_idx = idx + 2;
+        let axis_idx = idx + 3;
+        let ref_direction_idx = idx + 4;
+        let location = transform[3].to_point() + sphere.center().to_vec();
+        let axis = VectorAsDirection(transform[2].truncate().normalize());
+        let r0 = transform[0].magnitude();
+        let r1 = transform[1].magnitude();
+        if !r0.near(&r1) {
+            f.write_str("The transform of sphere includes non-uniform scale.")?;
+            return ERR;
+        }
+        let ref_direction = VectorAsDirection(transform[0].truncate() / r0);
+        let r = FloatDisplay(r0 * sphere.radius());
+        f.write_fmt(format_args!(
+            "#{idx} = SPHERICAL_SURFACE('', #{position_idx}, {r});
+#{position_idx} = AXIS2_PLACEMENT_3D('', #{location_idx}, #{axis_idx}, #{ref_direction_idx});
+{}{}{}",
+            StepDisplay::new(location, location_idx),
+            StepDisplay::new(axis, axis_idx),
+            StepDisplay::new(ref_direction, ref_direction_idx),
+        ))
+    }
+}
+impl_const_step_length!(Processor<Sphere, Matrix4>, 5);
+
+impl DisplayByStep for Sphere {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        DisplayByStep::fmt(&Processor::new(*self), idx, f)
+    }
+}
+impl_const_step_length!(Sphere, 5);
+
+impl DisplayByStep for Processor<Torus, Matrix4> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let torus = *self.entity();
+        let transform = self.transform();
+        let position_idx = idx + 1;
+        let location_idx = idx + 2;
+        let axis_idx = idx + 3;
+        let ref_direction_idx = idx + 4;
+        let location = transform[3].to_point() + torus.center().to_vec();
+        let axis = VectorAsDirection(transform[2].truncate().normalize());
+        let r0 = transform[0].magnitude();
+        let r1 = transform[1].magnitude();
+        if !r0.near(&r1) {
+            f.write_str("The transform of sphere includes non-uniform scale.")?;
+            return ERR;
+        }
+        let ref_direction = VectorAsDirection(transform[0].truncate() / r0);
+        let greater = FloatDisplay(r0 * torus.large_radius());
+        let lesser = FloatDisplay(r0 * torus.small_radius());
+        f.write_fmt(format_args!(
+            "#{idx} = TOROIDAL_SURFACE('', #{position_idx}, {greater}, {lesser});
+#{position_idx} = AXIS2_PLACEMENT_3D('', #{location_idx}, #{axis_idx}, #{ref_direction_idx});
+{}{}{}",
+            StepDisplay::new(location, location_idx),
+            StepDisplay::new(axis, axis_idx),
+            StepDisplay::new(ref_direction, ref_direction_idx),
+        ))
+    }
+}
+impl_const_step_length!(Processor<Torus, Matrix4>, 5);
+
+impl DisplayByStep for Torus {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        DisplayByStep::fmt(&Processor::new(*self), idx, f)
+    }
+}
+impl_const_step_length!(Torus, 5);
 
 impl<P> DisplayByStep for BSplineSurface<P>
 where P: Copy + DisplayByStep
@@ -561,6 +645,28 @@ impl<V> StepLength for NurbsSurface<V> {
     fn step_length(&self) -> usize { 1 + self.control_points().iter().map(Vec::len).sum::<usize>() }
 }
 
+impl<C> DisplayByStep for ExtrudedCurve<C, Vector3>
+where C: StepLength + DisplayByStep
+{
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let curve = self.entity_curve();
+        let curve_idx = idx + 1;
+        let vector_idx = idx + 1 + curve.step_length();
+        let vector = self.extruding_vector();
+        f.write_fmt(format_args!(
+            "#{idx} = SURFACE_OF_LINEAR_EXTRUSION('', #{curve_idx}, #{vector_idx});{}{}",
+            StepDisplay::new(curve, curve_idx),
+            StepDisplay::new(vector, vector_idx),
+        ))
+    }
+}
+impl<C: StepLength> StepLength for ExtrudedCurve<C, Vector3> {
+    fn step_length(&self) -> usize { 1 + self.entity_curve().step_length() + Vector3::LENGTH }
+}
+impl<C: ConstStepLength> ConstStepLength for ExtrudedCurve<C, Vector3> {
+    const LENGTH: usize = 1 + C::LENGTH + Vector3::LENGTH;
+}
+
 impl<C> DisplayByStep for RevolutedCurve<C>
 where C: StepLength + DisplayByStep
 {
@@ -595,17 +701,26 @@ where C: StepLength + Transformed<Matrix4> + DisplayByStep
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         let surface = self.entity();
         let transform = self.transform();
-        let (k, a, _) = transform
-            .iwasawa_decomposition()
-            .expect("Transform is not regular.");
-        assert_near!(a[0][0], a[1][1], "Transform contains non-uniform scale.");
-        assert_near!(a[1][1], a[2][2], "Transform contains non-uniform scale.");
+        let (k, a, _) = match transform.iwasawa_decomposition() {
+            Some(x) => x,
+            None => {
+                f.write_str("Transform is not regular")?;
+                return ERR;
+            }
+        };
+        if !a[0][0].near(&a[1][1]) || !a[1][1].near(&a[2][2]) {
+            f.write_str("Transform contains non-uniform scale.")?;
+            return ERR;
+        }
         let curve = surface.entity_curve().transformed(*transform);
         let axis = k.transform_vector(surface.axis());
         let origin = transform.transform_point(surface.origin());
         let surface = RevolutedCurve::by_revolution(curve, origin, axis);
         DisplayByStep::fmt(&surface, idx, f)
     }
+}
+impl<C: StepLength> StepLength for Processor<RevolutedCurve<C>, Matrix4> {
+    fn step_length(&self) -> usize { self.entity().step_length() }
 }
 
 impl DisplayByStep for ModelingSurface {

@@ -749,7 +749,12 @@ proptest! {
     }
 }
 
-fn exec_ellipse(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2], radius: [f64; 2]) {
+fn exec_ellipse(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: [f64; 2],
+) {
     let origin = Point3::from(org_coord);
     let z = dir_from_array(dir_array);
     let ref_dir = dir_from_array(ref_dir_array);
@@ -794,7 +799,12 @@ proptest! {
     }
 }
 
-fn exec_hyperbola(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2], radius: [f64; 2]) {
+fn exec_hyperbola(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: [f64; 2],
+) {
     let origin = Point3::from(org_coord);
     let z = dir_from_array(dir_array);
     let ref_dir = dir_from_array(ref_dir_array);
@@ -839,7 +849,12 @@ proptest! {
     }
 }
 
-fn exec_parabola(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2], focal_dist: f64) {
+fn exec_parabola(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    focal_dist: f64,
+) {
     let origin = Point3::from(org_coord);
     let z = dir_from_array(dir_array);
     let ref_dir = dir_from_array(ref_dir_array);

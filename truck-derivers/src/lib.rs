@@ -992,6 +992,115 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Derive macro generating an impl of the trait `Transformed<Matrix3>` for enums or single field tuple structs.
+#[proc_macro_error]
+#[proc_macro_derive(TransformedM3)]
+pub fn derive_transform_m3(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let trait_name = quote! { truck_geotrait::Transformed::<Matrix3> };
+    let ty = input.ident;
+    let gen = input.generics;
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    match input.data {
+        Data::Enum(DataEnum { ref variants, .. }) => {
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let methods = methods!(
+                variants,
+                trait_name,
+                fn transform_by(&mut self, mat: truck_geometry::prelude::Matrix3) -> (),
+                fn transformed(&self, mat: truck_geometry::prelude::Matrix3) -> Self,
+            );
+            quote! {
+                #[automatically_derived]
+                impl #gen #trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: #trait_name,)* {
+                    #(#methods)*
+                }
+            }
+        }
+        Data::Struct(DataStruct { ref fields, .. }) => {
+            let field: Vec<_> = fields.iter().collect();
+            if field.len() != 1 || field[0].ident.is_some() {
+                unimplemented!();
+            }
+            let field_type = &field[0].ty;
+            quote! {
+                #[automatically_derived]
+                impl #gen #trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: #trait_name, {
+                    fn transform_by(&mut self, mat: truck_geometry::prelude::Matrix3) {
+                        self.0.transformed(mat)
+                    }
+                    fn transformed(&self, mat: truck_geometry::prelude::Matrix3) -> Self {
+                        Self(self.0.transformed(mat))
+                    }
+                }
+            }
+        }
+        _ => unimplemented!(),
+    }
+    .into()
+}
+
+/// Derive macro generating an impl of the trait `Transformed<Matrix4>` for enums or single field tuple structs.
+#[proc_macro_error]
+#[proc_macro_derive(TransformedM4)]
+pub fn derive_transform_m4(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let trait_name = quote! { truck_geotrait::Transformed::<Matrix4> };
+    let ty = input.ident;
+    let gen = input.generics;
+    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    match input.data {
+        Data::Enum(DataEnum { ref variants, .. }) => {
+            let variant = variants.into_iter().next().expect("empty enum!");
+            let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
+            let methods = methods!(
+                variants,
+                trait_name,
+                fn transform_by(&mut self, mat: truck_geometry::prelude::Matrix4) -> (),
+                fn transformed(&self, mat: truck_geometry::prelude::Matrix4) -> Self,
+            );
+            quote! {
+                #[automatically_derived]
+                impl #gen #trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #(#tys: #trait_name,)* {
+                    #(#methods)*
+                }
+            }
+        }
+        Data::Struct(DataStruct { ref fields, .. }) => {
+            let field: Vec<_> = fields.iter().collect();
+            if field.len() != 1 || field[0].ident.is_some() {
+                unimplemented!();
+            }
+            let field_type = &field[0].ty;
+            quote! {
+                #[automatically_derived]
+                impl #gen #trait_name for #ty #gen
+                where
+                    #(#where_predicates,)*
+                    #field_type: #trait_name, {
+                    fn transform_by(&mut self, mat: truck_geometry::prelude::Matrix4) {
+                        self.0.transformed(mat)
+                    }
+                    fn transformed(&self, mat: truck_geometry::prelude::Matrix4) -> Self {
+                        Self(self.0.transformed(mat))
+                    }
+                }
+            }
+        }
+        _ => unimplemented!(),
+    }
+    .into()
+}
 /// Derive macro generating an impl of the trait `StepLength` for enums or single field tuple structs.
 #[proc_macro_error]
 #[proc_macro_derive(StepLength)]
@@ -1032,7 +1141,7 @@ pub fn derive_step_length(input: TokenStream) -> TokenStream {
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
-                    fn step_length(&self) -> usize { self.0.step_length }
+                    fn step_length(&self) -> usize { self.0.step_length() }
                 }
             }
         }
@@ -1082,7 +1191,7 @@ pub fn derive_display_by_step(input: TokenStream) -> TokenStream {
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
                     fn fmt(&self, idx: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        #trait_name::fmt(self.0, idx, f)
+                        #trait_name::fmt(&self.0, idx, f)
                     }
                 }
             }

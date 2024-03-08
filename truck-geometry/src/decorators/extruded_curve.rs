@@ -154,6 +154,19 @@ impl<C: Invertible> Invertible for ExtrudedCurve<C, Vector3> {
     }
 }
 
+impl<C: Transformed<Matrix4>> Transformed<Matrix4> for ExtrudedCurve<C, Vector3> {
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.curve.transform_by(trans);
+        self.vector = trans.transform_vector(self.vector);
+    }
+    fn transformed(&self, trans: Matrix4) -> Self {
+        Self {
+            curve: self.curve.transformed(trans),
+            vector: trans.transform_vector(self.vector),
+        }
+    }
+}
+
 #[test]
 fn extruded_curve_test() {
     let cpts = vec![

@@ -4,6 +4,8 @@ use truck_topology::compress::{CompressedShell, CompressedSolid};
 
 use self::topology::PreStepModel;
 
+const ERR: Result = Err(std::fmt::Error);
+
 #[cfg(feature = "derive")]
 pub use truck_derivers::{DisplayByStep, StepLength};
 
@@ -137,6 +139,12 @@ pub trait DisplayByStep {
 
 impl<T: DisplayByStep> DisplayByStep for &T {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(*self, idx, f) }
+}
+
+impl<T: DisplayByStep> DisplayByStep for Box<T> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        DisplayByStep::fmt(self.as_ref(), idx, f)
+    }
 }
 
 /// Display struct for outputting some objects to STEP file format.
