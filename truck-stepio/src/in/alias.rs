@@ -1,7 +1,7 @@
 use crate::{self as truck_stepio};
 use derive_more::*;
 use serde::{Deserialize, Serialize};
-use truck_derivers::{DisplayByStep, StepLength};
+use truck_derivers::{DisplayByStep, StepCurve, StepLength, StepSurface};
 pub use truck_geometry::prelude::*;
 pub use truck_polymesh::*;
 
@@ -37,6 +37,7 @@ pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
     TransformedM3,
     StepLength,
     DisplayByStep,
+    StepCurve,
 )]
 pub enum Conic2D {
     Ellipse(Ellipse<Point2, Matrix3>),
@@ -61,6 +62,7 @@ pub enum Conic2D {
     TransformedM3,
     StepLength,
     DisplayByStep,
+    StepCurve,
 )]
 
 pub enum Curve2D {
@@ -88,6 +90,7 @@ pub enum Curve2D {
     TransformedM4,
     StepLength,
     DisplayByStep,
+    StepCurve,
 )]
 pub enum Conic3D {
     Ellipse(Ellipse<Point3, Matrix4>),
@@ -112,6 +115,7 @@ pub enum Conic3D {
     TransformedM4,
     StepLength,
     DisplayByStep,
+    StepCurve,
 )]
 pub enum Curve3D {
     Line(Line<Point3>),
@@ -137,6 +141,7 @@ pub enum Curve3D {
     TransformedM4,
     StepLength,
     DisplayByStep,
+    StepSurface,
 )]
 pub enum ElementarySurface {
     Plane(Plane),
@@ -161,6 +166,7 @@ pub enum ElementarySurface {
     TransformedM4,
     StepLength,
     DisplayByStep,
+    StepSurface,
 )]
 pub enum SweptCurve {
     ExtrudedCurve(StepExtrudedCurve),
@@ -180,6 +186,7 @@ pub enum SweptCurve {
     Invertible,
     TransformedM4,
     StepLength,
+    StepSurface,
 )]
 pub enum Surface {
     ElementarySurface(Box<ElementarySurface>),
@@ -200,8 +207,13 @@ impl truck_stepio::out::DisplayByStep for Surface {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, StepSurface)]
 pub struct Sphere(pub truck_geometry::prelude::Sphere);
+
+impl truck_stepio::out::StepSurface for Processor<Sphere, Matrix4> {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { self.orientation() }
+}
 
 mod sphere {
     use super::*;

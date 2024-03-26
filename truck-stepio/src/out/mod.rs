@@ -221,6 +221,40 @@ macro_rules! impl_const_step_length {
     };
 }
 
+/// Additional information for output to `edge_curve`.
+pub trait StepCurve {
+    /// the parameter `same_sense`.
+    #[inline(always)]
+    fn same_sense(&self) -> bool { true }
+}
+
+impl<T: StepCurve> StepCurve for &T {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { (*self).same_sense() }
+}
+
+impl<T: StepCurve> StepCurve for Box<T> {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { self.as_ref().same_sense() }
+}
+
+/// Additional information for output to `face_surface`.
+pub trait StepSurface {
+    /// the parameter `same_sense`.
+    #[inline(always)]
+    fn same_sense(&self) -> bool { true }
+}
+
+impl<T: StepSurface> StepSurface for &T {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { (*self).same_sense() }
+}
+
+impl<T: StepSurface> StepSurface for Box<T> {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { self.as_ref().same_sense() }
+}
+
 /// Describe STEP file header
 #[derive(Clone, Debug)]
 pub struct StepHeaderDescriptor {
