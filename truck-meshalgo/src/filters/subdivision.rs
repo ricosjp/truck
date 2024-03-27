@@ -104,6 +104,7 @@ fn add_vertex_edge(
 
 #[derive(Clone, Copy, Debug)]
 enum VertexBoundaryCondition {
+    #[allow(dead_code)]
     Corner(usize, usize),
     Boundary(usize, usize),
     Inner,

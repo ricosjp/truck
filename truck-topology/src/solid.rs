@@ -222,7 +222,7 @@ impl<P: Clone, C: Clone, S: Clone> Solid<P, C, Option<S>> {
         self.try_mapped(
             |x| Some(x.clone()),
             |x| Some(x.clone()),
-            |x| x.as_ref().map(Clone::clone),
+            Clone::clone,
         )
     }
 }
