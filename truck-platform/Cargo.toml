@@ -26,7 +26,7 @@ wgpu = "0.19.3"
 winit = "0.29.15"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-web-time = "1.1.0"
+web-time = "=0.2.4"
 web-sys = "=0.3.67"
 
 [dev-dependencies]
