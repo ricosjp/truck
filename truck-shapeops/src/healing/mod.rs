@@ -32,6 +32,7 @@ use split_closed_faces::split_closed_faces;
 /// Boundary simplification is still only implemented for cylinders.
 /// It has not yet been implemented for cases involving singularities, such as spherical surfaces.
 pub trait SplitClosedEdgesAndFaces {
+    /// Splits closed edges and faces
     fn split_closed_edges_and_faces(&mut self, tol: f64);
 }
 
@@ -77,6 +78,7 @@ where
 /// # Details
 /// Robust version of [`SplitClosedEdgesAndFaces`] based on [`SearchNearestParameter`].
 pub trait RobustSplitClosedEdgesAndFaces {
+    /// Splits closed edges and faces
     fn robust_split_closed_edges_and_faces(&mut self, tol: f64);
 }
 
