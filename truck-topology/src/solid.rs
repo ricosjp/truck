@@ -219,11 +219,7 @@ impl<P: Clone, C: Clone, S: Clone> Solid<P, C, Option<S>> {
     /// Returns the value with the Option removed if there is no `None` in the surfaces of the faces.
     #[inline(always)]
     pub fn collect_option(&self) -> Option<Solid<P, C, S>> {
-        self.try_mapped(
-            |x| Some(x.clone()),
-            |x| Some(x.clone()),
-            Clone::clone,
-        )
+        self.try_mapped(|x| Some(x.clone()), |x| Some(x.clone()), Clone::clone)
     }
 }
 
