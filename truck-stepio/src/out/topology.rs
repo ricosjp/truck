@@ -97,8 +97,6 @@ where
         ))?;
         faces.iter().enumerate().try_for_each(|(i, f)| {
             let idx = face_indices[i];
-            let orientation = f.orientation == f.surface.same_sense();
-            let same_sence = if orientation { ".T." } else { ".F." };
             let mut cursor = idx + 1;
             let face_bounds = f
                 .boundaries
@@ -110,7 +108,8 @@ where
                 })
                 .collect::<Vec<_>>();
             formatter.write_fmt(format_args!(
-                "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sence});\n",
+                "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sense});\n",
+                same_sense = BooleanDisplay(f.orientation == f.surface.same_sense()),
                 face_bound = IndexSliceDisplay(face_bounds.clone()),
                 face_geometry = surface_indices[i],
             ))?;
@@ -121,8 +120,9 @@ where
                 let ep_oriented_edges = cursor + 2;
                 cursor += 2 + b.len();
                 formatter.write_fmt(format_args!(
-                    "#{face_bound_idx} = FACE_BOUND('', #{edge_loop_idx}, {same_sence});
+                    "#{face_bound_idx} = FACE_BOUND('', #{edge_loop_idx}, {orientation});
 #{edge_loop_idx} = EDGE_LOOP('', {oriented_edge_indices});\n",
+                    orientation = BooleanDisplay(f.orientation),
                     oriented_edge_indices =
                         IndexSliceDisplay(ep_oriented_edges..ep_oriented_edges + b.len()),
                 ))?;

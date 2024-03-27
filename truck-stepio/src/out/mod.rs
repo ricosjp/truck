@@ -9,6 +9,19 @@ const ERR: Result = Err(std::fmt::Error);
 #[cfg(feature = "derive")]
 pub use truck_derivers::{DisplayByStep, StepLength};
 
+/// display boolean number to step file
+#[derive(Clone, Copy, Debug)]
+pub struct BooleanDisplay(pub bool);
+
+impl Display for BooleanDisplay {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self.0 {
+            true => f.write_str(".T."),
+            false => f.write_str(".F."),
+        }
+    }
+}
+
 /// display float number to step file
 #[derive(Clone, Copy, Debug)]
 pub struct FloatDisplay(pub f64);

@@ -1,7 +1,6 @@
 //! Parse STEP data, extract shape, and meshing.
 
 use clap::Parser;
-use ruststep::tables::EntityTable;
 use std::path::Path;
 use truck_meshalgo::prelude::*;
 use truck_stepio::r#in::*;
@@ -41,10 +40,6 @@ fn main() {
     let step_file = std::fs::read_to_string(&input_step_file).unwrap();
     let exchange = ruststep::parser::parse(&step_file).unwrap();
     let table = Table::from_data_section(&exchange.data[0]);
-    let bbd = BoundingBox::from_iter(
-        EntityTable::<CartesianPointHolder>::owned_iter(&table).map(|c| Point3::from(&c.unwrap())),
-    );
-    let diameter = bbd.diameter();
     println!("meshing...");
     let polyshells = table
         .shell
@@ -56,7 +51,9 @@ fn main() {
                 let file_name = format!("{output}-{idx}.json");
                 std::fs::write(&file_name, &content).unwrap();
             }
-            shell.robust_triangulation(0.001 * diameter)
+            let pre = shell.robust_triangulation(0.01).to_polygon();
+            let bdd = pre.bounding_box();
+            shell.robust_triangulation(bdd.diameter() * 0.001)
         })
         .collect::<Vec<_>>();
 
