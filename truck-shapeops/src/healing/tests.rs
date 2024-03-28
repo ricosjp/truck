@@ -101,6 +101,7 @@ fn test_split_closed_face_simple_cylinder_case() {
     enum Curve {
         Line(Line<Point3>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
+        #[allow(clippy::enum_variant_names)]
         PCurve(PCurve<Line<Point2>, Surface>),
     }
     impl From<PCurve<Line<Point2>, Surface>> for Curve {
@@ -405,7 +406,7 @@ fn test_split_closed_face_cylinder_with_hole() {
         },
     ];
     let faces = vec![Face {
-        surface: surface,
+        surface,
         boundaries: vec![
             vec![
                 CompressedEdgeIndex {
@@ -1078,6 +1079,7 @@ fn double_closed_boundary_cylinder() {
     enum Curve {
         Line(Line<Point3>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
+        #[allow(clippy::enum_variant_names)]
         PCurve(PCurve<ParameterCurve, Surface>),
     }
     impl From<PCurve<Line<Point2>, Surface>> for Curve {

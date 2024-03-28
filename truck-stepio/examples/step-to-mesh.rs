@@ -37,7 +37,7 @@ fn main() {
     } = Args::parse();
 
     println!("reading file...");
-    let step_file = std::fs::read_to_string(&input_step_file).unwrap();
+    let step_file = std::fs::read_to_string(input_step_file).unwrap();
     let exchange = ruststep::parser::parse(&step_file).unwrap();
     let table = Table::from_data_section(&exchange.data[0]);
     println!("meshing...");
@@ -49,7 +49,7 @@ fn main() {
             if let Some(output) = &shape_json {
                 let content = serde_json::to_string_pretty(&shell).unwrap();
                 let file_name = format!("{output}-{idx}.json");
-                std::fs::write(&file_name, &content).unwrap();
+                std::fs::write(file_name, content).unwrap();
             }
             let pre = shell.robust_triangulation(0.01).to_polygon();
             let bdd = pre.bounding_box();

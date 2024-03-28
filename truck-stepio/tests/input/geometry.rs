@@ -1331,7 +1331,7 @@ fn exec_bezier_surface([udegree, vdegree]: [usize; 2], ctrlpt_coords: Vec<Vec<[f
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<BezierSurfaceHolder>(&step_str);
-    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let res: BSplineSurface<Point3> = (&bsp_step).into();
     let ans = BSplineSurface::new(
         (KnotVec::bezier_knot(udegree), KnotVec::bezier_knot(vdegree)),
         points,

@@ -21,7 +21,7 @@ fn ioi() {
     STEP_FILES.iter().for_each(|file_name| {
         println!("{file_name}");
         let input = [STEP_DIRECTORY, file_name].concat();
-        let step_string = std::fs::read_to_string(&input).unwrap();
+        let step_string = std::fs::read_to_string(input).unwrap();
         let table = Table::from_step(&step_string).unwrap();
         table.shell.values().cloned().for_each(|step_shell| {
             let cshell = table.to_compressed_shell(&step_shell).unwrap();

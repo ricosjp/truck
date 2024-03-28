@@ -57,7 +57,7 @@ where
         let ep_points = cursor;
         StepShell {
             entity: shell,
-            idx: idx,
+            idx,
             face_indices,
             ep_edges,
             ep_vertices,
