@@ -27,7 +27,7 @@ fn main() {
         output_step_file,
     } = Args::parse();
 
-    let shape_file = std::fs::read(&input_shape_file).unwrap();
+    let shape_file = std::fs::read(input_shape_file).unwrap();
     let compressed: CompressedSolid<Point3, Curve, Surface> =
         serde_json::from_reader(shape_file.as_slice()).unwrap();
     let step_string = out::CompleteStepDisplay::new(
@@ -38,7 +38,7 @@ fn main() {
         },
     )
     .to_string();
-    let mut step_file = std::fs::File::create(&output_step_file).unwrap();
+    let mut step_file = std::fs::File::create(output_step_file).unwrap();
     std::io::Write::write_all(&mut step_file, step_string.as_ref()).unwrap();
     let _ = ruststep::parser::parse(&step_string).unwrap();
 }

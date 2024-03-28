@@ -717,10 +717,7 @@ fn exec_circle(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]
     };
     let x = y.cross(z).normalize();
     let step_str = format!(
-        "DATA;
-#1 = CIRCLE('', #2, {radius});
-#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
-{}{}{}ENDSEC;",
+        "DATA; #1 = CIRCLE('', #2, {radius}); #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5); {}{}{}ENDSEC;",
         StepDisplay::new(origin, 3),
         StepDisplay::new(VectorAsDirection(z), 4),
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
@@ -749,6 +746,155 @@ proptest! {
         radius in 1.0e-2f64..100.0,
     ) {
         exec_circle(org_coord, dir_array, ref_dir_array, radius)
+    }
+}
+
+fn exec_ellipse(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: [f64; 2],
+) {
+    let origin = Point3::from(org_coord);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let step_str = format!(
+        "DATA; #1 = ELLIPSE('', #2, {}, {}); #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5); {}{}{}ENDSEC;",
+        FloatDisplay(radius[0]),
+        FloatDisplay(radius[1]),
+        StepDisplay::new(origin, 3),
+        StepDisplay::new(VectorAsDirection(z), 4),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let step_ellipse = step_to_entity::<EllipseHolder>(&step_str);
+    let ellipse: alias::Ellipse<Point3, Matrix4> = (&step_ellipse).try_into().unwrap();
+    let mat = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        origin.to_vec().extend(1.0),
+    );
+    (0..10).for_each(|i| {
+        let t = 2.0 * PI * i as f64 / 10.0;
+        let p = Point3::new(radius[0] * f64::cos(t), radius[1] * f64::sin(t), 0.0);
+        assert_near!(ellipse.subs(t), mat.transform_point(p));
+    });
+}
+
+proptest! {
+    #[test]
+    fn ellipse(
+        org_coord in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0),
+        ref_dir_array in array::uniform2(0.0f64..1.0),
+        radius in array::uniform2(1.0e-2f64..100.0),
+    ) {
+        exec_ellipse(org_coord, dir_array, ref_dir_array, radius)
+    }
+}
+
+fn exec_hyperbola(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: [f64; 2],
+) {
+    let origin = Point3::from(org_coord);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let step_str = format!(
+        "DATA; #1 = HYPERBOLA('', #2, {}, {}); #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5); {}{}{}ENDSEC;",
+        FloatDisplay(radius[0]),
+        FloatDisplay(radius[1]),
+        StepDisplay::new(origin, 3),
+        StepDisplay::new(VectorAsDirection(z), 4),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let step_hyperbola = step_to_entity::<HyperbolaHolder>(&step_str);
+    let hyperbola: alias::Hyperbola<Point3, Matrix4> = (&step_hyperbola).try_into().unwrap();
+    let mat = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        origin.to_vec().extend(1.0),
+    );
+    (0..10).for_each(|i| {
+        let t = 2.0 * i as f64 / 10.0 - 1.0;
+        let p = Point3::new(radius[0] * f64::cosh(t), radius[1] * f64::sinh(t), 0.0);
+        assert_near!(hyperbola.subs(t), mat.transform_point(p));
+    });
+}
+
+proptest! {
+    #[test]
+    fn hyperbola(
+        org_coord in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0),
+        ref_dir_array in array::uniform2(0.0f64..1.0),
+        radius in array::uniform2(1.0e-2f64..100.0),
+    ) {
+        exec_hyperbola(org_coord, dir_array, ref_dir_array, radius)
+    }
+}
+
+fn exec_parabola(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    focal_dist: f64,
+) {
+    let origin = Point3::from(org_coord);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
+    let v = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let step_str = format!(
+        "DATA; #1 = PARABOLA('', #2, {}); #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5); {}{}{}ENDSEC;",
+        FloatDisplay(focal_dist),
+        StepDisplay::new(origin, 3),
+        StepDisplay::new(VectorAsDirection(z), 4),
+        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let step_parabola = step_to_entity::<ParabolaHolder>(&step_str);
+    let parabola: alias::Parabola<Point3, Matrix4> = (&step_parabola).try_into().unwrap();
+    let mat = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        origin.to_vec().extend(1.0),
+    );
+    (0..10).for_each(|i| {
+        let t = 2.0 * i as f64 / 10.0 - 1.0;
+        let p = Point3::new(focal_dist * t * t, focal_dist * 2.0 * t, 0.0);
+        assert_near!(parabola.subs(t), mat.transform_point(p));
+    });
+}
+
+proptest! {
+    #[test]
+    fn parabola(
+        org_coord in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0),
+        ref_dir_array in array::uniform2(0.0f64..1.0),
+        focal_dist in 0.01f64..100.0,
+    ) {
+        exec_parabola(org_coord, dir_array, ref_dir_array, focal_dist)
     }
 }
 
@@ -1185,7 +1331,7 @@ fn exec_bezier_surface([udegree, vdegree]: [usize; 2], ctrlpt_coords: Vec<Vec<[f
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<BezierSurfaceHolder>(&step_str);
-    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let res: BSplineSurface<Point3> = (&bsp_step).into();
     let ans = BSplineSurface::new(
         (KnotVec::bezier_knot(udegree), KnotVec::bezier_knot(vdegree)),
         points,

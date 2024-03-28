@@ -38,5 +38,5 @@ pub mod algo;
 pub use truck_derivers::{
     BoundedCurve, BoundedSurface, Cut, Invertible, ParameterDivision1D, ParameterDivision2D,
     ParametricCurve, ParametricSurface, ParametricSurface3D, SearchNearestParameterD1,
-    SearchNearestParameterD2, SearchParameterD1, SearchParameterD2,
+    SearchNearestParameterD2, SearchParameterD1, SearchParameterD2, TransformedM3, TransformedM4,
 };

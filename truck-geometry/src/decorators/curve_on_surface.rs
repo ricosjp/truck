@@ -162,6 +162,19 @@ where
     fn invert(&mut self) { self.curve.invert() }
 }
 
+impl<C: Clone, S: Clone, T> Transformed<T> for PCurve<C, S>
+where S: Transformed<T>
+{
+    #[inline(always)]
+    fn transform_by(&mut self, trans: T) { self.surface.transform_by(trans); }
+    fn transformed(&self, trans: T) -> Self {
+        Self {
+            curve: self.curve.clone(),
+            surface: self.surface.transformed(trans),
+        }
+    }
+}
+
 #[test]
 fn pcurve_test() {
     let curve = BSplineCurve::new(

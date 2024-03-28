@@ -1,11 +1,41 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use truck_topology::compress::{CompressedShell, CompressedSolid};
+use truck_topology::compress::*;
 
 use self::topology::PreStepModel;
 
+const ERR: Result = Err(std::fmt::Error);
+
 #[cfg(feature = "derive")]
 pub use truck_derivers::{DisplayByStep, StepLength};
+
+/// display boolean number to step file
+#[derive(Clone, Copy, Debug)]
+pub struct BooleanDisplay(pub bool);
+
+impl Display for BooleanDisplay {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self.0 {
+            true => f.write_str(".T."),
+            false => f.write_str(".F."),
+        }
+    }
+}
+
+/// display float number to step file
+#[derive(Clone, Copy, Debug)]
+pub struct FloatDisplay(pub f64);
+
+impl Display for FloatDisplay {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let FloatDisplay(x) = *self;
+        if f64::abs(x) < 1.0e-2 && x != 0.0 {
+            f.write_fmt(format_args!("{x:.10E}"))
+        } else {
+            f.write_fmt(format_args!("{x:?}"))
+        }
+    }
+}
 
 /// display step slice
 /// # Examples
@@ -26,11 +56,7 @@ impl<'a> Display for SliceDisplay<'a, f64> {
             if i != 0 {
                 f.write_str(", ")?;
             }
-            if f64::abs(*x) < 1.0e-2 && *x != 0.0 {
-                f.write_fmt(format_args!("{x:.10E}"))
-            } else {
-                f.write_fmt(format_args!("{x:?}"))
-            }
+            Display::fmt(&FloatDisplay(*x), f)
         })?;
         f.write_str(")")
     }
@@ -128,6 +154,12 @@ impl<T: DisplayByStep> DisplayByStep for &T {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(*self, idx, f) }
 }
 
+impl<T: DisplayByStep> DisplayByStep for Box<T> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        DisplayByStep::fmt(self.as_ref(), idx, f)
+    }
+}
+
 /// Display struct for outputting some objects to STEP file format.
 #[derive(Clone, Debug)]
 pub struct StepDisplay<T> {
@@ -159,28 +191,81 @@ impl<T: DisplayByStep> Display for StepDisplay<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(&self.entity, self.idx, f) }
 }
 
-/// Constant numbers of lines for outputting an object to a STEP file.
-pub trait ConstStepLength {
-    /// the number of line
-    const LENGTH: usize;
-}
-
 /// Calculate how many lines are used in outputting an object to a STEP file
 pub trait StepLength {
     /// Calculate how many lines are used in outputting an object to a STEP file
     fn step_length(&self) -> usize;
 }
 
-impl<T: ConstStepLength> StepLength for T {
-    fn step_length(&self) -> usize { T::LENGTH }
+impl<T: StepLength> StepLength for &T {
+    #[inline(always)]
+    fn step_length(&self) -> usize { StepLength::step_length(*self) }
+}
+
+impl<T: StepLength> StepLength for Box<T> {
+    #[inline(always)]
+    fn step_length(&self) -> usize { self.as_ref().step_length() }
+}
+
+/// Constant numbers of lines for outputting an object to a STEP file.
+/// `x.step_length() == X::LENGTH` must always hold.
+pub trait ConstStepLength: StepLength {
+    /// the number of line
+    const LENGTH: usize;
+}
+
+impl<T: ConstStepLength> ConstStepLength for &T {
+    const LENGTH: usize = T::LENGTH;
+}
+
+impl<T: ConstStepLength> ConstStepLength for Box<T> {
+    const LENGTH: usize = T::LENGTH;
 }
 
 macro_rules! impl_const_step_length {
-    ($type: ty, $len: expr) => {
-        impl ConstStepLength for $type {
+    ($type: ty, $len: expr $(,<$($gen: ident),*>)?) => {
+        impl$(<$($gen),*>)? ConstStepLength for $type {
             const LENGTH: usize = $len;
         }
+        impl$(<$($gen),*>)? StepLength for $type {
+            #[inline(always)]
+            fn step_length(&self) -> usize { <Self as ConstStepLength>::LENGTH }
+        }
     };
+}
+
+/// Additional information for output to `edge_curve`.
+pub trait StepCurve {
+    /// the parameter `same_sense`.
+    #[inline(always)]
+    fn same_sense(&self) -> bool { true }
+}
+
+impl<T: StepCurve> StepCurve for &T {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { (*self).same_sense() }
+}
+
+impl<T: StepCurve> StepCurve for Box<T> {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { self.as_ref().same_sense() }
+}
+
+/// Additional information for output to `face_surface`.
+pub trait StepSurface {
+    /// the parameter `same_sense`.
+    #[inline(always)]
+    fn same_sense(&self) -> bool { true }
+}
+
+impl<T: StepSurface> StepSurface for &T {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { (*self).same_sense() }
+}
+
+impl<T: StepSurface> StepSurface for Box<T> {
+    #[inline(always)]
+    fn same_sense(&self) -> bool { self.as_ref().same_sense() }
 }
 
 /// Describe STEP file header

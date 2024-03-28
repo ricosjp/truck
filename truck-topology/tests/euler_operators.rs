@@ -152,7 +152,7 @@ fn solid_cut_edge() {
         Point3::new(0.5, 0.5, 0.5),
     ];
     let v = Vertex::news(&p);
-    let edge = vec![
+    let edge = [
         Edge::new(&v[0], &v[1], Segment::new(p[0], p[1])),
         Edge::new(&v[0], &v[2], Segment::new(p[0], p[2])),
         Edge::new(&v[0], &v[3], Segment::new(p[0], p[3])),

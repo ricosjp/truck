@@ -13,23 +13,25 @@ pub(super) struct StepShell<'a, P, C, S> {
     is_open: bool,
 }
 
-impl<'a, P, C, S> StepDisplay<&'a CompressedShell<P, C, S>>
+impl<'a, P, C, S> StepShell<'a, P, C, S>
 where
     P: Copy,
     C: StepLength,
     S: StepLength,
 {
-    fn to_step_shell(&self, is_open: bool) -> StepShell<'a, P, C, S> {
-        let shell = self.entity;
+    fn new(shell: &'a CompressedShell<P, C, S>, idx: usize, is_open: bool) -> Self {
         let faces = &shell.faces;
         let edges = &shell.edges;
         let vertices = &shell.vertices;
-        let mut cursor = self.idx + 1;
+        let mut cursor = idx + 1;
         let face_indices = faces
             .iter()
             .map(|f| {
                 let res = cursor;
-                cursor += 1 + f.boundaries.iter().map(|b| 2 + b.len()).sum::<usize>();
+                cursor += match f.boundaries.is_empty() {
+                    true => 5,
+                    false => 1 + f.boundaries.iter().map(|b| 2 + b.len()).sum::<usize>(),
+                };
                 res
             })
             .collect::<Vec<_>>();
@@ -54,8 +56,8 @@ where
             .collect::<Vec<_>>();
         let ep_points = cursor;
         StepShell {
-            entity: self.entity,
-            idx: self.idx,
+            entity: shell,
+            idx,
             face_indices,
             ep_edges,
             ep_vertices,
@@ -67,11 +69,11 @@ where
     }
 }
 
-impl<'a, P: Copy, C, S> Display for StepShell<'a, P, C, S>
+impl<'a, P, C, S> Display for StepShell<'a, P, C, S>
 where
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display,
-    StepDisplay<&'a S>: Display,
+    P: DisplayByStep + Copy,
+    C: DisplayByStep + StepCurve,
+    S: DisplayByStep + StepSurface,
 {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result {
         let StepShell {
@@ -98,31 +100,46 @@ where
         ))?;
         faces.iter().enumerate().try_for_each(|(i, f)| {
             let idx = face_indices[i];
-            let same_sence = if f.orientation { ".T." } else { ".F." };
             let mut cursor = idx + 1;
-            let face_bounds = f
-                .boundaries
-                .iter()
-                .map(|b| {
-                    let res = cursor;
-                    cursor += 2 + b.len();
-                    res
-                })
-                .collect::<Vec<_>>();
+            let face_geometry = surface_indices[i];
+            let face_bounds = match f.boundaries.is_empty() {
+                true => vec![cursor],
+                false => {
+                    let closure = |b: &Vec<CompressedEdgeIndex>| {
+                        let res = cursor;
+                        cursor += 2 + b.len();
+                        res
+                    };
+                    f.boundaries.iter().map(closure).collect()
+                }
+            };
             formatter.write_fmt(format_args!(
-                "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sence});\n",
+                "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sense});\n",
+                same_sense = BooleanDisplay(f.orientation == f.surface.same_sense()),
                 face_bound = IndexSliceDisplay(face_bounds.clone()),
-                face_geometry = surface_indices[i],
             ))?;
             cursor = idx + 1;
+            if f.boundaries.is_empty() {
+                let face_bound_idx = cursor;
+                let vertex_loop_idx = cursor + 1;
+                let vertex_idx = cursor + 2;
+                let vertex_geometry = cursor + 3;
+                formatter.write_fmt(format_args!(
+                    "#{face_bound_idx} = FACE_BOUND('', #{vertex_loop_idx}, .T.);
+#{vertex_loop_idx} = VERTEX_LOOP('', #{vertex_idx});
+#{vertex_idx} = VERTEX_POINT('', #{vertex_geometry});
+#{vertex_geometry} = POINT_ON_SURFACE('', #{face_geometry}, 0.0, 0.0);\n"
+                ))?;
+            }
             f.boundaries.iter().try_for_each(|b| {
                 let face_bound_idx = cursor;
                 let edge_loop_idx = cursor + 1;
                 let ep_oriented_edges = cursor + 2;
                 cursor += 2 + b.len();
                 formatter.write_fmt(format_args!(
-                    "#{face_bound_idx} = FACE_BOUND('', #{edge_loop_idx}, {same_sence});
+                    "#{face_bound_idx} = FACE_BOUND('', #{edge_loop_idx}, {orientation});
 #{edge_loop_idx} = EDGE_LOOP('', {oriented_edge_indices});\n",
+                    orientation = BooleanDisplay(f.orientation),
                     oriented_edge_indices =
                         IndexSliceDisplay(ep_oriented_edges..ep_oriented_edges + b.len()),
                 ))?;
@@ -137,8 +154,9 @@ where
             })
         })?;
         edges.iter().enumerate().try_for_each(|(i, e)| {
+            let same_sense = if e.curve.same_sense() { ".T." } else { ".F." };
             formatter.write_fmt(format_args!(
-                "#{idx} = EDGE_CURVE('', #{edge_start}, #{edge_end}, #{edge_geometry}, .T.);\n",
+                "#{idx} = EDGE_CURVE('', #{edge_start}, #{edge_end}, #{edge_geometry}, {same_sense});\n",
                 idx = ep_edges + i,
                 edge_start = ep_vertices + e.vertices.0,
                 edge_end = ep_vertices + e.vertices.1,
@@ -178,39 +196,32 @@ pub(super) struct StepSolid<'a, P, C, S> {
     boundaries: Vec<StepShell<'a, P, C, S>>,
 }
 
-impl<'a, P, C, S> StepDisplay<&'a CompressedSolid<P, C, S>>
+impl<'a, P, C, S> StepSolid<'a, P, C, S>
 where
     P: Copy,
     C: StepLength,
     S: StepLength,
 {
-    fn to_step_solid(&self) -> StepSolid<'a, P, C, S> {
-        let StepDisplay { entity: solid, idx } = self;
+    fn new(solid: &'a CompressedSolid<P, C, S>, idx: usize) -> Self {
         let mut cursor = idx + 1;
         let boundaries = solid
             .boundaries
             .iter()
             .map(|shell| {
-                let res = StepDisplay::new(shell, cursor).to_step_shell(false);
+                let res = StepShell::new(shell, cursor, false);
                 cursor += 1 + res.step_length();
                 res
             })
             .collect::<Vec<_>>();
-        StepSolid {
-            idx: *idx,
-            boundaries,
-        }
+        StepSolid { idx, boundaries }
     }
 }
 
 impl<'a, P, C, S> Display for StepSolid<'a, P, C, S>
 where
-    P: Copy,
-    C: StepLength,
-    S: StepLength,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display,
-    StepDisplay<&'a S>: Display,
+    P: DisplayByStep + Copy,
+    C: DisplayByStep + StepLength + StepCurve,
+    S: DisplayByStep + StepLength + StepSurface,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let StepSolid { idx, boundaries } = self;
@@ -277,7 +288,7 @@ where
     S: StepLength,
 {
     fn from(shell: &'a CompressedShell<P, C, S>) -> Self {
-        Self::Shell(StepDisplay::new(shell, 17).to_step_shell(true))
+        Self::Shell(StepShell::new(shell, 17, true))
     }
 }
 
@@ -287,19 +298,14 @@ where
     C: StepLength,
     S: StepLength,
 {
-    fn from(solid: &'a CompressedSolid<P, C, S>) -> Self {
-        Self::Solid(StepDisplay::new(solid, 16).to_step_solid())
-    }
+    fn from(solid: &'a CompressedSolid<P, C, S>) -> Self { Self::Solid(StepSolid::new(solid, 16)) }
 }
 
 impl<'a, P, C, S> Display for PreStepModel<'a, P, C, S>
 where
-    P: Copy,
-    C: StepLength,
-    S: StepLength,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display,
-    StepDisplay<&'a S>: Display,
+    P: DisplayByStep + Copy,
+    C: DisplayByStep + StepLength + StepCurve,
+    S: DisplayByStep + StepLength + StepSurface,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
@@ -345,12 +351,9 @@ where
 
 impl<'a, P, C, S> Display for StepModel<'a, P, C, S>
 where
-    P: Copy,
-    C: StepLength,
-    S: StepLength,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display,
-    StepDisplay<&'a S>: Display,
+    P: DisplayByStep + Copy,
+    C: DisplayByStep + StepLength + StepCurve,
+    S: DisplayByStep + StepLength + StepSurface,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.pad(
@@ -396,14 +399,13 @@ where
 {
     /// push a shell to step models
     pub fn push_shell(&mut self, shell: &'a CompressedShell<P, C, S>) {
-        let model =
-            PreStepModel::Shell(StepDisplay::new(shell, self.next_idx + 1).to_step_shell(true));
+        let model = PreStepModel::Shell(StepShell::new(shell, self.next_idx + 1, true));
         self.next_idx += model.step_length();
         self.models.push(model)
     }
     /// push a solid to step models
     pub fn push_solid(&mut self, solid: &'a CompressedSolid<P, C, S>) {
-        let model = PreStepModel::Solid(StepDisplay::new(solid, self.next_idx).to_step_solid());
+        let model = PreStepModel::Solid(StepSolid::new(solid, self.next_idx));
         self.next_idx += model.step_length();
         self.models.push(model)
     }
@@ -420,8 +422,7 @@ where
         let models = iter
             .into_iter()
             .map(|shell| {
-                let model =
-                    PreStepModel::Shell(StepDisplay::new(shell, next_idx + 1).to_step_shell(true));
+                let model = PreStepModel::Shell(StepShell::new(shell, next_idx + 1, true));
                 next_idx += model.step_length();
                 model
             })
@@ -441,7 +442,7 @@ where
         let models = iter
             .into_iter()
             .map(|solid| {
-                let model = PreStepModel::Solid(StepDisplay::new(solid, next_idx).to_step_solid());
+                let model = PreStepModel::Solid(StepSolid::new(solid, next_idx));
                 next_idx += model.step_length();
                 model
             })
@@ -452,12 +453,9 @@ where
 
 impl<'a, P, C, S> Display for StepModels<'a, P, C, S>
 where
-    P: Copy,
-    C: StepLength,
-    S: StepLength,
-    StepDisplay<P>: Display,
-    StepDisplay<&'a C>: Display,
-    StepDisplay<&'a S>: Display,
+    P: DisplayByStep + Copy,
+    C: DisplayByStep + StepLength + StepCurve,
+    S: DisplayByStep + StepLength + StepSurface,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.pad(
