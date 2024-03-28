@@ -17,7 +17,7 @@ in = ["derive_more", "ruststep", "serde", "truck-geotrait"]
 derive = ["truck-derivers"]
 
 [dependencies]
-chrono = { version = "0.4.35", features = ["wasmbind"] }
+chrono = { version = "0.4.37", features = ["wasmbind"] }
 derive_more = { version = "0.99.17", optional = true }
 ruststep = { git = "https://github.com/ricosjp/ruststep.git", optional = true }
 serde = { version = "1.0.197", features = ["derive"], optional = true }
