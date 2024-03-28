@@ -28,7 +28,10 @@ where
             .iter()
             .map(|f| {
                 let res = cursor;
-                cursor += 1 + f.boundaries.iter().map(|b| 2 + b.len()).sum::<usize>();
+                cursor += match f.boundaries.is_empty() {
+                    true => 5,
+                    false => 1 + f.boundaries.iter().map(|b| 2 + b.len()).sum::<usize>(),
+                };
                 res
             })
             .collect::<Vec<_>>();
@@ -98,22 +101,36 @@ where
         faces.iter().enumerate().try_for_each(|(i, f)| {
             let idx = face_indices[i];
             let mut cursor = idx + 1;
-            let face_bounds = f
-                .boundaries
-                .iter()
-                .map(|b| {
-                    let res = cursor;
-                    cursor += 2 + b.len();
-                    res
-                })
-                .collect::<Vec<_>>();
+            let face_geometry = surface_indices[i];
+            let face_bounds = match f.boundaries.is_empty() {
+                true => vec![cursor],
+                false => {
+                    let closure = |b: &Vec<CompressedEdgeIndex>| {
+                        let res = cursor;
+                        cursor += 2 + b.len();
+                        res
+                    };
+                    f.boundaries.iter().map(closure).collect()
+                }
+            };
             formatter.write_fmt(format_args!(
                 "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sense});\n",
                 same_sense = BooleanDisplay(f.orientation == f.surface.same_sense()),
                 face_bound = IndexSliceDisplay(face_bounds.clone()),
-                face_geometry = surface_indices[i],
             ))?;
             cursor = idx + 1;
+            if f.boundaries.is_empty() {
+                let face_bound_idx = cursor;
+                let vertex_loop_idx = cursor + 1;
+                let vertex_idx = cursor + 2;
+                let vertex_geometry = cursor + 3;
+                formatter.write_fmt(format_args!(
+                    "#{face_bound_idx} = FACE_BOUND('', #{vertex_loop_idx}, .T.);
+#{vertex_loop_idx} = VERTEX_LOOP('', #{vertex_idx});
+#{vertex_idx} = VERTEX_POINT('', #{vertex_geometry});
+#{vertex_geometry} = POINT_ON_SURFACE('', #{face_geometry}, 0.0, 0.0);\n"
+                ))?;
+            }
             f.boundaries.iter().try_for_each(|b| {
                 let face_bound_idx = cursor;
                 let edge_loop_idx = cursor + 1;

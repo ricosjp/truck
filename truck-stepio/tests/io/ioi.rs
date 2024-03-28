@@ -8,6 +8,8 @@ const STEP_FILES: &[&str] = &[
     "occt-cone.step",
     "occt-cube.step",
     "occt-cylinder.step",
+    "occt-sphere.step",
+    "occt-torus.step",
     "abc-0000.step",
     "abc-0006.step",
     "abc-0008.step",

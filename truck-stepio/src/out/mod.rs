@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use truck_topology::compress::{CompressedShell, CompressedSolid};
+use truck_topology::compress::*;
 
 use self::topology::PreStepModel;
 
