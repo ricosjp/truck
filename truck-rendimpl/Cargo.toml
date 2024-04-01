@@ -19,7 +19,7 @@ webgl = ["truck-platform/webgl"]
 [dependencies]
 itertools = "0.12.1"
 bytemuck = { version = "1.15.0", features = ["derive"] }
-image = "0.25.0"
+image = "0.25.1"
 truck-platform = { version = "0.5.0", path = "../truck-platform" }
 truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
 
