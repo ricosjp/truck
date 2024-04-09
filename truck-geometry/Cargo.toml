@@ -21,4 +21,4 @@ truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
 rand = "0.8.5"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.2.13", features = ["js"] }
+getrandom = { version = "0.2.14", features = ["js"] }
