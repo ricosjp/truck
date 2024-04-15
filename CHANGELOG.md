@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implelment `AsRef`, `Borrow`, and `Extend` for `Wire` and `Shell`.
 - Stop GPU test for a bug caused by some drop methods.
 - Output shapes from step files to step files.
 - Update `wgpu` to `0.19.x`.
