@@ -438,6 +438,7 @@ impl<P, C> Wire<P, C> {
             })
             .collect()
     }
+
     /// Returns a new wire whose curves are mapped by `curve_mapping` and
     /// whose points are mapped by `point_mapping`.
     /// # Examples
@@ -581,8 +582,8 @@ where
     }
 }
 
-impl<T, P, C> From<T> for Wire<P, C>
-where T: Into<VecDeque<Edge<P, C>>>
+impl<P, C, T> From<T> for Wire<P, C>
+where VecDeque<Edge<P, C>>: From<T>
 {
     #[inline(always)]
     fn from(edge_list: T) -> Wire<P, C> {
@@ -749,6 +750,11 @@ impl<P, C> Extend<Edge<P, C>> for Wire<P, C> {
     }
 }
 
+impl<P, C> AsRef<VecDeque<Edge<P, C>>> for Wire<P, C> {
+    #[inline(always)]
+    fn as_ref(&self) -> &VecDeque<Edge<P, C>> { &self.edge_list }
+}
+
 impl<P, C> std::ops::Deref for Wire<P, C> {
     type Target = VecDeque<Edge<P, C>>;
     #[inline(always)]
@@ -758,6 +764,11 @@ impl<P, C> std::ops::Deref for Wire<P, C> {
 impl<P, C> std::ops::DerefMut for Wire<P, C> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.edge_list }
+}
+
+impl<P, C> std::borrow::Borrow<VecDeque<Edge<P, C>>> for Wire<P, C> {
+    #[inline(always)]
+    fn borrow(&self) -> &VecDeque<Edge<P, C>> { &self.edge_list }
 }
 
 impl<P, C> Clone for Wire<P, C> {
