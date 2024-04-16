@@ -755,6 +755,42 @@ impl<P, C, S> Face<P, C, S> {
     /// assert!(face.cut_by_edge(Edge::new(&v[1], &v[4], ())).is_none());
     pub fn cut_by_edge(&self, edge: Edge<P, C>) -> Option<(Self, Self)>
     where S: Clone {
+        self.cut_by_wire([edge].into())
+    }
+
+    /// Cuts a face with only one boundary by an edge.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news([(); 5]);
+    /// let boundary = Wire::from([
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[2], &v[3], ()),
+    ///     Edge::new(&v[3], &v[0], ()),
+    /// ]);
+    /// let face = Face::new(vec![boundary], ());
+    /// let wire = Wire::from([
+    ///     Edge::new(&v[1], &v[4], ()),
+    ///     Edge::new(&v[4], &v[3], ()),
+    /// ]);
+    /// let (face0, face1) = face.cut_by_wire(wire).unwrap();
+    ///
+    /// // The front vertex of face0's boundary becomes the back of cutting wire.
+    /// let v0: Vec<Vertex<()>> = face0.boundaries()[0].vertex_iter().collect();
+    /// assert_eq!(v0, vec![v[3].clone(), v[0].clone(), v[1].clone(), v[4].clone()]);
+    ///
+    /// let v1: Vec<Vertex<()>> = face1.boundaries()[0].vertex_iter().collect();
+    /// assert_eq!(v1, vec![v[1].clone(), v[2].clone(), v[3].clone(), v[4].clone()]);
+    /// ```
+    /// # Failures
+    /// Returns `None` if:
+    /// - `self` has several boundaries, or
+    /// - `self` does not include vertices of the end vertices of `wire`.
+    ///
+    /// See also [`Face::cut_by_edge`].
+    pub fn cut_by_wire(&self, wire: Wire<P, C>) -> Option<(Self, Self)>
+    where S: Clone {
         if self.boundaries.len() != 1 {
             return None;
         }
@@ -763,22 +799,22 @@ impl<P, C, S> Face<P, C, S> {
             orientation: self.orientation,
             surface: Arc::new(Mutex::new(self.surface())),
         };
-        let wire = &mut face0.boundaries[0];
-        let i = wire
+        let boundary = &mut face0.boundaries[0];
+        let i = boundary
             .edge_iter()
             .enumerate()
-            .find(|(_, e)| e.front() == edge.back())
+            .find(|(_, e)| Some(e.front()) == wire.back_vertex())
             .map(|(i, _)| i)?;
-        let j = wire
+        let j = boundary
             .edge_iter()
             .enumerate()
-            .find(|(_, e)| e.back() == edge.front())
+            .find(|(_, e)| Some(e.back()) == wire.front_vertex())
             .map(|(i, _)| i)?;
-        wire.rotate_left(i);
-        let j = (j + wire.len() - i) % wire.len();
-        let mut new_wire = wire.split_off(j + 1);
-        wire.push_back(edge.clone());
-        new_wire.push_back(edge.inverse());
+        boundary.rotate_left(i);
+        let j = (j + boundary.len() - i) % boundary.len();
+        let mut new_wire = boundary.split_off(j + 1);
+        new_wire.extend(wire.iter().rev().map(|e| e.inverse()));
+        boundary.extend(wire);
         debug_assert!(Face::try_new(self.boundaries.clone(), ()).is_ok());
         debug_assert!(Face::try_new(vec![new_wire.clone()], ()).is_ok());
         let face1 = Face {
