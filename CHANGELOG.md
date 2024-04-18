@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Upgrade `wgpu` and re-start `gpu-test`.
 - Add `Face::cut_by_wire`.
 - Implelment `AsRef`, `Borrow`, and `Extend` for `Wire` and `Shell`.
 - Stop GPU test for a bug caused by some drop methods.
