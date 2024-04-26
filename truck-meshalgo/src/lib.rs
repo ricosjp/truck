@@ -1,4 +1,4 @@
-//! Mesh algorighms, include tessellations of the shape.
+//! Mesh algorigthms, include tessellations of the shape.
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]

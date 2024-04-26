@@ -2,7 +2,7 @@
 name = "truck-meshalgo"
 version = "0.3.0"
 edition = "2021"
-description = "Mesh algorighms, include tessellations of the shape."
+description = "Mesh algorigthms, include tessellations of the shape."
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
 license = "Apache-2.0"
