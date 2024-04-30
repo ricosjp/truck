@@ -747,21 +747,22 @@ impl<P, C, S> Clone for Shell<P, C, S> {
     }
 }
 
-impl<P, C, S> From<Shell<P, C, S>> for Vec<Face<P, C, S>> {
+impl<P, C, S, T> From<T> for Shell<P, C, S>
+where Vec<Face<P, C, S>>: From<T>
+{
     #[inline(always)]
-    fn from(shell: Shell<P, C, S>) -> Vec<Face<P, C, S>> { shell.face_list }
-}
-
-impl<P, C, S> From<Vec<Face<P, C, S>>> for Shell<P, C, S> {
-    #[inline(always)]
-    fn from(faces: Vec<Face<P, C, S>>) -> Shell<P, C, S> { Shell { face_list: faces } }
+    fn from(faces: T) -> Shell<P, C, S> {
+        Shell {
+            face_list: faces.into(),
+        }
+    }
 }
 
 impl<P, C, S> FromIterator<Face<P, C, S>> for Shell<P, C, S> {
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = Face<P, C, S>>>(iter: I) -> Shell<P, C, S> {
         Shell {
-            face_list: iter.into_iter().collect(),
+            face_list: Vec::from_iter(iter),
         }
     }
 }
@@ -780,6 +781,16 @@ impl<'a, P, C, S> IntoIterator for &'a Shell<P, C, S> {
     fn into_iter(self) -> Self::IntoIter { self.face_list.iter() }
 }
 
+impl<P, C, S> AsRef<Vec<Face<P, C, S>>> for Shell<P, C, S> {
+    #[inline(always)]
+    fn as_ref(&self) -> &Vec<Face<P, C, S>> { &self.face_list }
+}
+
+impl<P, C, S> AsRef<[Face<P, C, S>]> for Shell<P, C, S> {
+    #[inline(always)]
+    fn as_ref(&self) -> &[Face<P, C, S>] { &self.face_list }
+}
+
 impl<P, C, S> std::ops::Deref for Shell<P, C, S> {
     type Target = Vec<Face<P, C, S>>;
     #[inline(always)]
@@ -789,6 +800,23 @@ impl<P, C, S> std::ops::Deref for Shell<P, C, S> {
 impl<P, C, S> std::ops::DerefMut for Shell<P, C, S> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Vec<Face<P, C, S>> { &mut self.face_list }
+}
+
+impl<P, C, S> std::borrow::Borrow<Vec<Face<P, C, S>>> for Shell<P, C, S> {
+    #[inline(always)]
+    fn borrow(&self) -> &Vec<Face<P, C, S>> { &self.face_list }
+}
+
+impl<P, C, S> std::borrow::Borrow<[Face<P, C, S>]> for Shell<P, C, S> {
+    #[inline(always)]
+    fn borrow(&self) -> &[Face<P, C, S>] { &self.face_list }
+}
+
+impl<P, C, S> Extend<Face<P, C, S>> for Shell<P, C, S> {
+    #[inline(always)]
+    fn extend<T: IntoIterator<Item = Face<P, C, S>>>(&mut self, iter: T) {
+        self.face_list.extend(iter)
+    }
 }
 
 impl<P, C, S> Default for Shell<P, C, S> {

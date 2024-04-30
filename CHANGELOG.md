@@ -4,6 +4,10 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix typo in `truck-meshalgo`.
+- Add `Face::cut_by_wire`.
+- Implelment `AsRef`, `Borrow`, and `Extend` for `Wire` and `Shell`.
+- Stop GPU test for a bug caused by some drop methods.
 - Output shapes from step files to step files.
 - Update `wgpu` to `0.19.x`.
 - Derive macros for `StepLength` and `DisplayByStep`.
@@ -88,7 +92,7 @@ Step input API is W.I.P. and hidden.
 
 ### Latest `cargo upgrade`
 
-2024-04-04
+2024-04-29
 
 ## v0.5
 

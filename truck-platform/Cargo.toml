@@ -22,7 +22,7 @@ derive_more = "0.99.17"
 futures-intrusive = "0.5.0"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.4.0", path = "../truck-base" }
-wgpu = "0.19.3"
+wgpu = "0.19.4"
 winit = "0.29.15"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

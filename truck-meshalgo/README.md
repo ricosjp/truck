@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/truck-meshalgo.svg)](https://crates.io/crates/truck-meshalgo) [![Docs.rs](https://docs.rs/truck-meshalgo/badge.svg)](https://docs.rs/truck-meshalgo)
 
-Mesh algorighms, include tessellations of the shape.
+Mesh algorigthms, include tessellations of the shape.
 
 ## Sample Codes
 

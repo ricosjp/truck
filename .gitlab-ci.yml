@@ -42,6 +42,7 @@ gpu-test:
     artifacts:
         paths:
             - images
+    when: manual
 
 wasm-test:
     image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
