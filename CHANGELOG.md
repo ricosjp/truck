@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix a bug on partial `rsweep` with a negative angle.
 - Fix typo in `truck-meshalgo`.
 - Add `Face::cut_by_wire`.
 - Implelment `AsRef`, `Borrow`, and `Extend` for `Wire` and `Shell`.
