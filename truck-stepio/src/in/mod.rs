@@ -1,4 +1,4 @@
-#![allow(missing_docs)]
+#![allow(missing_docs, unused_qualifications)]
 
 use ruststep::{
     ast::{DataSection, EntityInstance, Name, Parameter, SubSuperRecord},
@@ -2537,7 +2537,7 @@ impl Table {
         let mut vidx_map = HashMap::<u64, usize>::new();
         let vertex_to_point = |v: PlaceHolder<VertexPointHolder>| {
             if let Ref(Name::Entity(ref idx)) = v {
-                if vidx_map.get(idx).is_none() {
+                if !vidx_map.contains_key(idx) {
                     let len = vidx_map.len();
                     vidx_map.insert(*idx, len);
                     let p = EntityTable::<VertexPointHolder>::get_owned(self, *idx)
@@ -2569,7 +2569,7 @@ impl Table {
         use PlaceHolder::Ref;
         let mut eidx_map = HashMap::<u64, usize>::new();
         let edge_curve_to_compressed_edge = |(idx, edge): (u64, EdgeCurveHolder)| {
-            if eidx_map.get(&idx).is_some() {
+            if eidx_map.contains_key(&idx) {
                 return None;
             }
             let len = eidx_map.len();

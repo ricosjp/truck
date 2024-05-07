@@ -851,7 +851,7 @@ impl WindowScene {
         };
         let view = surface_texture
             .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+            .create_view(&TextureViewDescriptor::default());
         self.render(&view);
         surface_texture.present();
     }

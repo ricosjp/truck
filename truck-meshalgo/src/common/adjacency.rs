@@ -2,6 +2,7 @@ use super::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 pub trait Adjacency {
+    #[allow(dead_code)]
     fn vertex_adjacency(&self, num_of_vertices: usize) -> Vec<Vec<usize>>;
     /// create the adjacency list of the faces
     fn face_adjacency(&self, use_normal: bool) -> Vec<Vec<usize>>;
