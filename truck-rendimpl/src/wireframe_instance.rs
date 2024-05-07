@@ -127,7 +127,7 @@ impl Rendered for WireFrameInstance {
             depth_stencil: Some(DepthStencilState {
                 format: TextureFormat::Depth32Float,
                 depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::Less,
+                depth_compare: CompareFunction::Less,
                 stencil: Default::default(),
                 bias: Default::default(),
             }),

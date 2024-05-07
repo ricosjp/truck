@@ -506,7 +506,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface
     /// ```
     #[inline(always)]
     pub fn splitted_boundary(&self) -> [NurbsCurve<V>; 4] {
-        std::convert::TryFrom::try_from(
+        TryFrom::try_from(
             self.0
                 .splitted_boundary()
                 .iter()

@@ -175,7 +175,7 @@ pub struct Solid<P, C, S> {
 }
 
 /// `Result` with crate's errors.
-pub type Result<T> = std::result::Result<T, crate::errors::Error>;
+pub type Result<T> = std::result::Result<T, errors::Error>;
 
 trait RemoveTry<T> {
     fn remove_try(self) -> T;

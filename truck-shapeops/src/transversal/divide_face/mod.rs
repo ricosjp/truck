@@ -7,43 +7,6 @@ use std::ops::Deref;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 
-trait PolylineBoundary {
-    fn area(&self) -> f64;
-    fn include(&self, c: Point2) -> bool;
-}
-
-impl PolylineBoundary for PolylineCurve<Point2> {
-    fn area(&self) -> f64 {
-        self.windows(2).fold(0.0, |res, p| {
-            res + (p[1][0] + p[0][0]) * (p[1][1] - p[0][1])
-        }) / 2.0
-    }
-    fn include(&self, c: Point2) -> bool {
-        let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
-        let r = Vector2::new(f64::cos(t), f64::sin(t));
-        self.windows(2)
-            .try_fold(0_i32, |counter, p| {
-                let a = p[0] - c;
-                let b = p[1] - c;
-                let s0 = r[0] * a[1] - r[1] * a[0];
-                let s1 = r[0] * b[1] - r[1] * b[0];
-                let s2 = a[0] * b[1] - a[1] * b[0];
-                let x = s2 / (s1 - s0);
-                if x.so_small() && s0 * s1 < 0.0 {
-                    None
-                } else if x > 0.0 && s0 <= 0.0 && s1 > 0.0 {
-                    Some(counter + 1)
-                } else if x > 0.0 && s0 >= 0.0 && s1 < 0.0 {
-                    Some(counter - 1)
-                } else {
-                    Some(counter)
-                }
-            })
-            .map(|counter| counter > 0)
-            .unwrap_or(false)
-    }
-}
-
 fn create_parameter_boundary<P, C, S>(
     face: &Face<P, C, S>,
     wire: &Wire<P, C>,

@@ -2,7 +2,7 @@ use crate::{prelude::*, *};
 use truck_base::cgmath64::control_point::ControlPoint;
 
 /// knot vector
-#[derive(Clone, PartialEq, Debug, Serialize)]
+#[derive(Clone, PartialEq, Debug, Default, Serialize)]
 pub struct KnotVec(Vec<f64>);
 
 /// B-spline curve
