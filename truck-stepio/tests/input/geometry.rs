@@ -240,6 +240,58 @@ proptest! {
     }
 }
 
+fn exec_axis2_placement3d_without_reference(org_coord: Point3, dir: Vector3) {
+    let p = org_coord;
+    let z = dir;
+    let ref_dir = match z.near(&Vector3::unit_x()){
+        true => Vector3::unit_y(),
+        false => Vector3::unit_x(),
+    };
+    let v: cgmath::Vector3<f64> = z.cross(ref_dir);
+    let y = match v.so_small() {
+        true => return,
+        false => v.normalize(),
+    };
+    let x = y.cross(z).normalize();
+    let step_str = format!(
+        "DATA;#1 = AXIS2_PLACEMENT_3D('', #2, #3, $);{}{}ENDSEC;",
+        StepDisplay::new(p, 2),
+        StepDisplay::new(VectorAsDirection(z), 3),
+    );
+    let placement = step_to_entity::<Axis2Placement3dHolder>(&step_str);
+    let res: Matrix4 = (&placement).into();
+    let ans = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        p.to_vec().extend(1.0),
+    );
+    // if x and z are both equal to x_unit, the matrix is partially nan and the determinant is nan too
+    assert_eq!(res.determinant().is_nan(), false);
+    assert_near!(res, ans);
+}
+
+proptest! {
+    #[test]
+    fn axis2_placement_3d_without_reference(
+        org_coord in array::uniform3(-100.0f64..100.0f64),
+        dir_array in array::uniform2(0.0f64..1.0f64),
+    ) {
+        // Works totally fine without any changes
+        let p = Point3::from(org_coord);
+        let z = dir_from_array(dir_array);
+        exec_axis2_placement3d_without_reference(p, z)
+    }
+}
+
+#[test]
+fn axis2_placement_3d_without_reference_x_unit() {
+    // This edge case, z parrallel to x, curently will produce a zero length vector/Nan values
+    let p = Point3::new(0.0, 0.0, 0.0);
+    let z = Vector3::unit_x();
+    exec_axis2_placement3d_without_reference(p, z)
+}
+
 fn exec_line(org_coord: [f64; 3], vec_elem: [f64; 3]) {
     let p = Point3::from(org_coord);
     let v = Vector3::from(vec_elem);
