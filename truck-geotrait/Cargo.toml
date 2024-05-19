@@ -17,7 +17,7 @@ derive = ["truck-derivers"]
 [dependencies]
 truck-base = { version = "0.4.0", path = "../truck-base" }
 rand = "0.8.5"
-thiserror = "1.0.60"
+thiserror = "1.0.61"
 truck-derivers = { version = "0.1.0", path = "../truck-derivers", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
