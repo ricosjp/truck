@@ -13,7 +13,7 @@ where
     S::Point: MetricSpace<Metric = f64> + Copy,
 {
     let mut res = (0.0, 0.0);
-    let mut min = std::f64::INFINITY;
+    let mut min = f64::INFINITY;
     let ((u0, u1), (v0, v1)) = (urange, vrange);
     for i in 0..=division {
         for j in 0..=division {
