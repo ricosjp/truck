@@ -1071,9 +1071,7 @@ where T: Eq + Hash + Clone {
     while let Some(i) = stack.pop() {
         if let Some(vec) = adjacency.remove(&i) {
             res.push(i);
-            for j in vec {
-                stack.push(j);
-            }
+            stack.extend(vec);
         }
     }
     res
