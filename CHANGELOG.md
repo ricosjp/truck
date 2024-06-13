@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Make `put_toghether_each_attrs` faster.
 - Improve `put_together_each_attrs`.
 - Fix a bug on partial `rsweep` with a negative angle.
 - Fix typo in `truck-meshalgo`.

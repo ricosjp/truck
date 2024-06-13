@@ -217,19 +217,18 @@ trait SameAttr: Copy + CastIntVector + MetricSpace<Metric = f64> {}
 impl<T> SameAttr for T where T: Copy + CastIntVector + MetricSpace<Metric = f64> {}
 
 fn sub_put_together_same_attrs<T: SameAttr>(attrs: &[T], tol: f64) -> Vec<usize> {
-    let map = create_blockes(attrs, tol);
+    let map = create_blocks(attrs, tol);
     let adj = create_adjacency(map, attrs, tol);
     let components = create_components(adj, attrs);
     centralize(components, attrs)
 }
 
-type BlockMap<'a, T> = HashMap<<T as CastIntVector>::IntVector, Vec<(usize, &'a T)>>;
-fn create_blockes<T: SameAttr>(attrs: &[T], tol: f64) -> BlockMap<'_, T> {
+type BlockMap<'a, T> = HashMap<<T as CastIntVector>::IntVector, Vec<usize>>;
+fn create_blocks<T: SameAttr>(attrs: &[T], tol: f64) -> BlockMap<'_, T> {
     let mut map = HashMap::default();
     attrs.iter().enumerate().for_each(|(i, attr)| {
         attr.round(tol).neighborhood().into_iter().for_each(|idx| {
-            let vec = map.entry(idx).or_insert_with(Vec::new);
-            vec.push((i, attr));
+            map.entry(idx).or_insert_with(Vec::new).push(i);
         });
     });
     map
@@ -239,29 +238,27 @@ fn create_adjacency<T: SameAttr>(map: BlockMap<'_, T>, attrs: &[T], tol: f64) ->
     let mut adj = vec![Vec::new(); attrs.len()];
     map.into_iter().for_each(|(_, vec)| {
         if vec.len() > 1 {
-            vec.iter().enumerate().for_each(|(k, (i, p))| {
-                vec[(k + 1)..].iter().for_each(|(j, q)| {
-                    if p.distance2(**q) < tol * tol {
-                        adj[*i].push(*j);
-                        adj[*j].push(*i);
+            vec.iter().copied().enumerate().for_each(|(k, i)| {
+                vec[(k + 1)..].iter().copied().for_each(|j| {
+                    if attrs[i].distance2(attrs[j]) < tol * tol {
+                        adj[i].push(j);
+                        adj[j].push(i);
                     }
                 });
             });
         }
     });
-    adj.iter_mut().for_each(|vec| {
-        vec.sort();
-        vec.dedup();
-    });
     adj
 }
 
-fn create_components<T: SameAttr>(mut adj: Vec<Vec<usize>>, attrs: &[T]) -> Vec<Vec<usize>> {
-    let mut res = Vec::new();
+fn create_components<T: SameAttr>(
+    mut adj: Vec<Vec<usize>>,
+    attrs: &[T],
+) -> impl Iterator<Item = Vec<usize>> {
     let mut already = vec![false; attrs.len()];
-    (0..adj.len()).for_each(|i| {
+    (0..adj.len()).filter_map(move |i| {
         if already[i] {
-            return;
+            return None;
         }
         let mut stack = vec![i];
         let mut component = Vec::new();
@@ -272,26 +269,28 @@ fn create_components<T: SameAttr>(mut adj: Vec<Vec<usize>>, attrs: &[T]) -> Vec<
                 stack.append(&mut adj[i]);
             }
         }
-        res.push(component);
-    });
-    res
+        Some(component)
+    })
 }
 
-fn centralize<T: SameAttr>(components: Vec<Vec<usize>>, attrs: &[T]) -> Vec<usize> {
+fn centralize<T: SameAttr>(
+    components: impl Iterator<Item = Vec<usize>>,
+    attrs: &[T],
+) -> Vec<usize> {
     let mut res = vec![0; attrs.len()];
-    components.into_iter().for_each(|component| {
+    components.for_each(|component| {
         let center = component
             .iter()
             .fold(T::zero(), |sum, j| sum.add_element_wise(attrs[*j]))
             / component.len() as f64;
-        let mindx = *component
-            .iter()
-            .min_by(|a, b| {
-                let dist0 = attrs[**a].distance2(center);
-                let dist1 = attrs[**b].distance2(center);
-                dist0.partial_cmp(&dist1).unwrap()
-            })
-            .unwrap();
+        let (mut mindist, mut mindx) = (f64::INFINITY, 0);
+        component.iter().copied().for_each(|i| {
+            let dist = attrs[i].distance2(center);
+            if dist < mindist {
+                mindist = dist;
+                mindx = i;
+            }
+        });
         component.into_iter().for_each(|i| {
             res[i] = mindx;
         });
