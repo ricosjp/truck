@@ -18,7 +18,7 @@ wgpu_trace = ["wgpu/trace"]
 
 [dependencies]
 bytemuck = { version = "1.16.0", features = ["derive"] }
-derive_more = "0.99.17"
+derive_more = "0.99.18"
 futures-intrusive = "0.5.0"
 rustc-hash = "1.1.0"
 truck-base = { version = "0.4.0", path = "../truck-base" }
