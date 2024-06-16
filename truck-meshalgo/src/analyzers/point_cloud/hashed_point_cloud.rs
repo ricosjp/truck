@@ -117,7 +117,7 @@ impl DistanceWithPointCloud for Point3 {
     fn distance2(&self, space: &HashedPointCloud) -> f64 {
         let idcs = self.hash(space);
         let closure = |dist2: f64, pt: &Point3| f64::min(dist2, MetricSpace::distance2(*self, *pt));
-        let mut dist2 = space[idcs].iter().fold(std::f64::INFINITY, closure);
+        let mut dist2 = space[idcs].iter().fold(f64::INFINITY, closure);
         if idcs[0] > 0 {
             dist2 = space[[idcs[0] - 1, idcs[1], idcs[2]]]
                 .iter()
@@ -162,7 +162,7 @@ impl DistanceWithPointCloud for [Point3; 3] {
         range[1][0] = usize::min(range[1][0] + 1, space.size[0] - 1);
         range[1][1] = usize::min(range[1][1] + 1, space.size[1] - 1);
         range[1][2] = usize::min(range[1][2] + 1, space.size[2] - 1);
-        let mut dist2 = std::f64::INFINITY;
+        let mut dist2 = f64::INFINITY;
         (range[0][0]..=range[1][0]).for_each(|ix| {
             (range[0][1]..=range[1][1]).for_each(|iy| {
                 (range[0][2]..=range[1][2]).for_each(|iz| {
@@ -182,10 +182,9 @@ impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
             let tri = array![i => self.positions()[tri[i].pos]; 3];
             f64::max(dist2, tri.distance2(space))
         });
-        if dist2 < 0.0 {
-            std::f64::INFINITY
-        } else {
-            dist2
+        match dist2 < 0.0 {
+            true => f64::INFINITY,
+            false => dist2,
         }
     }
     fn is_colliding(&self, space: &HashedPointCloud, tol: f64) -> bool {
