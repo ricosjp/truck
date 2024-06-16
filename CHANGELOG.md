@@ -5,6 +5,8 @@ The version is of the bottom crate `truck-rendimpl`.
 ## Unreleased
 
 - Fix new clippy(2024-06-16)
+- Make `put_toghether_each_attrs` faster.
+- Improve `put_together_each_attrs`.
 - Fix a bug on partial `rsweep` with a negative angle.
 - Fix typo in `truck-meshalgo`.
 - Add `Face::cut_by_wire`.
@@ -94,7 +96,7 @@ Step input API is W.I.P. and hidden.
 
 ### Latest `cargo upgrade`
 
-2024-05-23
+2024-06-10
 
 ## v0.5
 
