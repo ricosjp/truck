@@ -477,7 +477,7 @@ impl PolyBoundary {
             .0
             .iter()
             .flatten()
-            .filter_map(|pt| triangulation.insert(SPoint2::from([pt.x, pt.y])).ok())
+            .map(|pt| triangulation.insert(SPoint2::from([pt.x, pt.y])).ok())
             .collect();
         let mut prev: Option<usize> = None;
         let mut counter = 0;
@@ -490,15 +490,20 @@ impl PolyBoundary {
                 range.circular_tuple_windows()
             })
             .for_each(|(i, j)| {
+                let Some(vj) = poly2tri[j] else { return };
                 if let Some(p) = prev {
-                    if triangulation.can_add_constraint(poly2tri[p], poly2tri[j]) {
-                        triangulation.add_constraint(poly2tri[p], poly2tri[j]);
+                    let Some(v) = poly2tri[p] else { return };
+                    if triangulation.can_add_constraint(v, vj) {
+                        triangulation.add_constraint(v, vj);
                         prev = None;
                     }
-                } else if triangulation.can_add_constraint(poly2tri[i], poly2tri[j]) {
-                    triangulation.add_constraint(poly2tri[i], poly2tri[j]);
                 } else {
-                    prev = Some(i);
+                    let Some(vi) = poly2tri[i] else { return };
+                    if triangulation.can_add_constraint(vi, vj) {
+                        triangulation.add_constraint(vi, vj);
+                    } else {
+                        prev = Some(i);
+                    }
                 }
             });
     }
