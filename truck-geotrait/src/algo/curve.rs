@@ -8,7 +8,7 @@ where
     C::Point: MetricSpace<Metric = f64> + Copy, {
     let (t0, t1) = range;
     let mut res = t0;
-    let mut min = std::f64::INFINITY;
+    let mut min = f64::INFINITY;
     for i in 0..=division {
         let p = i as f64 / division as f64;
         let t = t0 * (1.0 - p) + t1 * p;

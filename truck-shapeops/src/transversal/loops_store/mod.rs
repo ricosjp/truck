@@ -431,6 +431,7 @@ where
     vec![edge0, edge1].into()
 }
 
+#[allow(dead_code)]
 pub struct LoopsStoreQuadruple<C> {
     pub geom_loops_store0: LoopsStore<Point3, C>,
     pub poly_loops_store0: LoopsStore<Point3, PolylineCurve>,
