@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix the implementation `triangulation` for robust meshing.
 - Fix new clippy(2024-06-16)
 - Make `put_toghether_each_attrs` faster.
 - Improve `put_together_each_attrs`.
