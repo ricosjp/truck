@@ -97,7 +97,7 @@ Step input API is W.I.P. and hidden.
 
 ### Latest `cargo upgrade`
 
-2024-06-15
+2024-06-19
 
 ## v0.5
 
