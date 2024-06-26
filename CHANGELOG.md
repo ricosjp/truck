@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- `area` and `include` function for a domain with several polyline boundaries.
 - Fix the implementation `triangulation` for robust meshing.
 - Fix new clippy(2024-06-16)
 - Make `put_toghether_each_attrs` faster.
