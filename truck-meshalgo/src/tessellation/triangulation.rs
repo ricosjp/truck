@@ -477,7 +477,10 @@ impl PolyBoundary {
             .0
             .iter()
             .flatten()
-            .map(|pt| triangulation.insert(SPoint2::from([pt.x, pt.y])).ok())
+            .map(|pt| {
+                let p = [spade_round(pt.x), spade_round(pt.y)];
+                triangulation.insert(SPoint2::from(p)).ok()
+            })
             .collect();
         let mut prev: Option<usize> = None;
         let mut counter = 0;
@@ -506,6 +509,13 @@ impl PolyBoundary {
                     }
                 }
             });
+    }
+}
+
+fn spade_round(x: f64) -> f64 {
+    match f64::abs(x) < MIN_ALLOWED_VALUE {
+        true => 0.0,
+        false => x,
     }
 }
 

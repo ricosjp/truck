@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add a private function `spade_round` for fixing insert error.
 - `area` and `include` function for a domain with several polyline boundaries.
 - Fix the implementation `triangulation` for robust meshing.
 - Fix new clippy(2024-06-16)
