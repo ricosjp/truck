@@ -1,5 +1,6 @@
 FROM rust:latest AS wasm-test
 ENV RUSTFLAGS "--cfg tokio_unstable"
+RUN apt-get update && apt-get install cmake -y
 RUN rustup default stable
 RUN rustup target add wasm32-unknown-unknown
 RUN cargo install cargo-make wasm-bindgen-cli wasm-pack --locked
