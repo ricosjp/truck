@@ -30,7 +30,7 @@ web-time = "=0.2.4"
 web-sys = "=0.3.67"
 
 [dev-dependencies]
-image = "0.25.1"
+image = "0.25.2"
 rayon = "1.10.0"
 env_logger = "0.11.3"
 naga = { version = "0.19.2", features = ["wgsl-in"] }
