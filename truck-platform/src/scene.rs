@@ -723,8 +723,7 @@ impl Scene {
                 match object.index_buffer {
                     Some(ref index_buffer) => {
                         rpass.set_index_buffer(index_buffer.buffer.slice(..), IndexFormat::Uint32);
-                        let index_size =
-                            index_buffer.size as u32 / size_of::<u32>() as u32;
+                        let index_size = index_buffer.size as u32 / size_of::<u32>() as u32;
                         rpass.draw_indexed(0..index_size, 0, 0..1);
                     }
                     None => rpass.draw(
