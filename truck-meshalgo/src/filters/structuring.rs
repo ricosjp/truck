@@ -45,10 +45,10 @@ pub trait StructuringFilter {
     ///   * two faces are adjacent by one edge,
     ///   * the pair of faces consists four vertices in the same plane
     /// 1. for each joined quadrangle, calculate the score by the sum of the absolute value of
-    /// the cosine for each angles,
+    ///    the cosine for each angles,
     /// 1. sort the list of the pairs of triangles by the score
     /// 1. take a pair of triangles in order from the top of the list and register a new one
-    /// if it doesn't conflict with the one has been already registered.
+    ///    if it doesn't conflict with the one has been already registered.
     /// # Panics
     /// `plane_tol` and `score_tol` must be more than `TOLERANCE`.
     /// # Examples
