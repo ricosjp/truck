@@ -3,7 +3,7 @@ use bytemuck::{Pod, Zeroable};
 use rustc_hash::FxHashMap as HashMap;
 use std::io::{BufRead, BufReader, Lines, Read, Write};
 
-const FACESIZE: usize = std::mem::size_of::<StlFace>();
+const FACESIZE: usize = size_of::<StlFace>();
 const CHUNKSIZE: usize = FACESIZE + 2;
 
 type Vertex = StandardVertex;
