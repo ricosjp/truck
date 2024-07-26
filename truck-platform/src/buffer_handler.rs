@@ -13,7 +13,7 @@ impl BufferHandler {
             usage,
             label: None,
         });
-        let stride = std::mem::size_of::<T>() as u64;
+        let stride = size_of::<T>() as u64;
         let size = vec.as_ref().len() as u64 * stride;
         BufferHandler {
             buffer,

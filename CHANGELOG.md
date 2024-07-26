@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Remove quolification from `size_of`.
 - Add `cmake` install for the wasm-test container.
 - Add a private function `spade_round` for fixing insert error.
 - `area` and `include` function for a domain with several polyline boundaries.

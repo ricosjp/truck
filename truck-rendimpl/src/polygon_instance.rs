@@ -140,7 +140,7 @@ impl Rendered for PolygonInstance {
                 module: &self.shaders.vertex_module,
                 entry_point: self.shaders.vertex_entry,
                 buffers: &[VertexBufferLayout {
-                    array_stride: std::mem::size_of::<AttrVertex>() as BufferAddress,
+                    array_stride: size_of::<AttrVertex>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
                     attributes: &[
                         VertexAttribute {
