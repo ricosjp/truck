@@ -75,13 +75,11 @@ pub trait NormalFilters {
     /// add the smooth normal vectors to the mesh.
     /// # Details
     /// For each vertex, apply the following algorithm:
-    /// 1. prepare vectors that enumerate the normals of the faces containing
-    /// the target vertices in order.
+    /// 1. prepare vectors that enumerate the normals of the faces containing the target vertices in order.
     /// 1. cluster each normal `n` in turn in the following manner.
     ///  * If there is an existing cluster `A` in which the angle between the weighted
-    /// average of `A` and `n` is less than or equal to `tol_ang`, add `n` to `A`.
-    ///  * If cluster `A` as described above does not exist,
-    /// create a new cluster that contains only `n`.
+    ///    average of `A` and `n` is less than or equal to `tol_ang`, add `n` to `A`.
+    ///  * If cluster `A` as described above does not exist, create a new cluster that contains only `n`.
     /// # Arguments
     /// - If `overwrite == true`, clear all normals and update all normals in vertices.
     /// - If `overwrite == false`, add normals only for `nor` is `None`.

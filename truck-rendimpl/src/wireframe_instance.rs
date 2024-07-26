@@ -102,7 +102,7 @@ impl Rendered for WireFrameInstance {
                 module: &self.shaders.vertex_module,
                 entry_point: self.shaders.vertex_entry,
                 buffers: &[VertexBufferLayout {
-                    array_stride: std::mem::size_of::<[f32; 3]>() as BufferAddress,
+                    array_stride: size_of::<[f32; 3]>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
                     attributes: &[VertexAttribute {
                         format: VertexFormat::Float32x3,

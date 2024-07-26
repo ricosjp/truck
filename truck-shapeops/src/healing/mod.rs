@@ -24,6 +24,7 @@ use split_closed_faces::split_closed_faces;
 /// The topology of the shapes handled by truck has the following rules
 /// - The endpoints of the edges must be different.
 /// - The boundaries of the faces must be a simple wire.
+///
 /// Shapes created in other CAD systems do not necessarily follow these rules.
 /// When such shapes are handled by truck, this method is applied at the stage
 /// of `CompressedShell` and `CompressedSolid`, which are intermediate forms.

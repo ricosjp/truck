@@ -44,7 +44,7 @@ where
         bytemuck::cast_slice(image_buffer),
         ImageDataLayout {
             offset: 0,
-            bytes_per_row: Some(size.width * std::mem::size_of::<P>() as u32),
+            bytes_per_row: Some(size.width * size_of::<P>() as u32),
             rows_per_image: Some(size.height),
         },
         size,
