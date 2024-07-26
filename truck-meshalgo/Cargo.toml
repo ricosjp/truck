@@ -22,7 +22,7 @@ derive_more = "0.99.18"
 rustc-hash = "1.1.0"
 array-macro = "2.1.8"
 itertools = "0.12.1"
-spade = { version = "2.9.0", optional = true }
+spade = { version = "2.10.0", optional = true }
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
 truck-polymesh = { version = "0.5.0", path = "../truck-polymesh" }
