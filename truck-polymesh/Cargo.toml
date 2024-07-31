@@ -14,7 +14,7 @@ exclude = ["examples/**/*.obj"]
 
 [dependencies]
 array-macro = "2.1.8"
-bytemuck = { version = "1.16.1", features = ["derive"] }
+bytemuck = { version = "1.16.3", features = ["derive"] }
 itertools = "0.12.1"
 rustc-hash = "1.1.0"
 serde = { version = "1.0.204", features = ["derive"] }
