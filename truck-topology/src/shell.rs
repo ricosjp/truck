@@ -1,10 +1,30 @@
 use crate::*;
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::vec::Vec;
 use truck_base::entry_map::FxEntryMap as EntryMap;
 
-type FaceAdjacencyMap<'a, P, C, S> = HashMap<&'a Face<P, C, S>, Vec<&'a Face<P, C, S>>>;
+/// A face adjacent to the specified face
+#[derive(Clone, Debug)]
+pub struct AdjacentFace<'a, P, C, S> {
+    /// face adjacent to the specified face
+    pub face: &'a Face<P, C, S>,
+    /// edges shared by two faces
+    pub common_edges: Vec<EdgeID<C>>,
+}
+
+trait As<T> {
+    fn as_(self) -> T;
+}
+
+impl<T> As<T> for T {
+    fn as_(self) -> T { self }
+}
+
+impl<'a, P, C, S> As<&'a Face<P, C, S>> for AdjacentFace<'a, P, C, S> {
+    fn as_(self) -> &'a Face<P, C, S> { self.face }
+}
+
+type FaceAdjacencyMap<'a, P, C, S> = HashMap<&'a Face<P, C, S>, Vec<AdjacentFace<'a, P, C, S>>>;
 impl<P, C, S> Shell<P, C, S> {
     /// Creates the empty shell.
     #[inline(always)]
@@ -222,7 +242,6 @@ impl<P, C, S> Shell<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// use truck_topology::shell::ShellCondition;
     /// let v = Vertex::news(&[(); 6]);
     /// let edge = [
     ///     Edge::new(&v[0], &v[1], ()),
@@ -248,22 +267,88 @@ impl<P, C, S> Shell<P, C, S> {
     /// assert_eq!(face_adjacency[&shell[2]].len(), 1);
     /// assert_eq!(face_adjacency[&shell[3]].len(), 3);
     /// ```
+    /// ```
+    /// use truck_topology::*;
+    /// use shell::AdjacentFace;
+    /// let v = Vertex::news(&[(); 8]);
+    /// let edge = [
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     Edge::new(&v[0], &v[3], ()),
+    ///     Edge::new(&v[1], &v[6], ()),
+    ///     Edge::new(&v[6], &v[7], ()),
+    ///     Edge::new(&v[6], &v[7], ()),
+    ///     Edge::new(&v[7], &v[4], ()),
+    ///     Edge::new(&v[2], &v[5], ()),
+    ///     Edge::new(&v[3], &v[4], ()),
+    ///     Edge::new(&v[4], &v[5], ()),
+    /// ];
+    /// let wire = vec![
+    ///     Wire::from_iter(vec![
+    ///         &edge[2],
+    ///         &edge[8],
+    ///         &edge[6].inverse(),
+    ///         &edge[4].inverse(),
+    ///         &edge[3].inverse(),
+    ///         &edge[0].inverse()
+    ///     ]),
+    ///     Wire::from_iter(vec![
+    ///         &edge[3],
+    ///         &edge[5],
+    ///         &edge[6],
+    ///         &edge[9],
+    ///         &edge[7].inverse(),
+    ///         &edge[1].inverse(),
+    ///     ]),
+    ///     Wire::from_iter(vec![&edge[4], &edge[5].inverse()]),
+    /// ];
+    /// let shell: Shell<_, _, _> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
+    /// let face_adjacency = shell.face_adjacency();
+    /// let determine = |face0: &Face<_, _, _>, face1: &Face<_, _, _>, common_edges: usize| {
+    ///     if (face0, face1) == (&shell[0], &shell[1]) || (face0, face1) == (&shell[1], &shell[0]) {
+    ///         assert_eq!(common_edges, 2);
+    ///     } else {
+    ///         assert_eq!(common_edges, 1);
+    ///     }
+    /// };
+    /// face_adjacency.into_iter().for_each(|(face0, adjacents)| {
+    ///     adjacents.into_iter().for_each(|AdjacentFace { face, common_edges }| {
+    ///         determine(face, face0, common_edges.len());
+    ///     })
+    /// })
+    /// ```
     pub fn face_adjacency(&self) -> FaceAdjacencyMap<'_, P, C, S> {
-        let mut adjacency = EntryMap::new(|x| x, |_| Vec::new());
-        let mut edge_face_map = EntryMap::new(|x| x, |_| Vec::new());
+        let mut edge_face_map = EntryMap::new(|edge: &Edge<P, C>| edge.id(), |_| Vec::new());
         self.face_iter().for_each(|face| {
-            face.absolute_boundaries()
-                .iter()
-                .flatten()
-                .for_each(|edge| {
-                    let vec = edge_face_map.entry_or_insert(edge.id());
-                    adjacency.entry_or_insert(face).extend(vec.iter().copied());
-                    vec.iter().for_each(|tmp| {
-                        adjacency.entry_or_insert(*tmp).push(face);
-                    });
-                    vec.push(face);
-                });
+            let insert = |edge| edge_face_map.entry_or_insert(edge).push(face);
+            face.absolute_boundaries().iter().flatten().for_each(insert)
         });
+        let mut adjacency = EntryMap::new(|x| x, |_| Vec::new());
+        edge_face_map.into_iter().for_each(|(edge_id, vec)| {
+            vec.iter().for_each(|face| {
+                let adjacents = adjacency.entry_or_insert(*face);
+                vec.iter().for_each(|face0| {
+                    if face == face0 {
+                        return;
+                    }
+                    let add_edge = |adjacent: &mut AdjacentFace<'_, P, C, S>| {
+                        let res = &adjacent.face == face0;
+                        if res {
+                            adjacent.common_edges.push(edge_id);
+                        }
+                        res
+                    };
+                    let exists = adjacents.iter_mut().any(add_edge);
+                    if !exists {
+                        adjacents.push(AdjacentFace {
+                            face: face0,
+                            common_edges: vec![edge_id],
+                        });
+                    }
+                });
+            });
+        });
+
         adjacency.into()
     }
 
@@ -1046,8 +1131,10 @@ where T: Eq + Clone + Hash {
     adjacency.is_empty()
 }
 
-fn create_components<T>(adjacency: &mut HashMap<T, Vec<T>>) -> Vec<Vec<T>>
-where T: Eq + Clone + Hash {
+fn create_components<T, U>(adjacency: &mut HashMap<T, Vec<U>>) -> Vec<Vec<T>>
+where
+    T: Eq + Clone + Hash,
+    U: As<T>, {
     let mut res = Vec::new();
     loop {
         let component = create_one_component(adjacency);
@@ -1059,19 +1146,21 @@ where T: Eq + Clone + Hash {
     res
 }
 
-fn create_one_component<T>(adjacency: &mut HashMap<T, Vec<T>>) -> Vec<T>
-where T: Eq + Hash + Clone {
+fn create_one_component<T, U>(adjacency: &mut HashMap<T, Vec<U>>) -> Vec<T>
+where
+    T: Eq + Hash + Clone,
+    U: As<T>, {
     let mut iter = adjacency.keys();
     let first = match iter.next() {
         Some(key) => key.clone(),
         None => return Vec::new(),
     };
-    let mut stack = vec![first];
+    let mut stack = vec![first.as_()];
     let mut res = Vec::new();
     while let Some(i) = stack.pop() {
         if let Some(vec) = adjacency.remove(&i) {
             res.push(i);
-            stack.extend(vec);
+            stack.extend(vec.into_iter().map(|x| x.as_()));
         }
     }
     res

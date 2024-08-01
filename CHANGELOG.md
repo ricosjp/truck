@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Improve `Shell::face_adjacency`.
 - Remove quolification from `size_of`.
 - Add `cmake` install for the wasm-test container.
 - Add a private function `spade_round` for fixing insert error.
