@@ -25,6 +25,7 @@
 //! ```
 //!
 //! Also, see the sample `newton-cuberoot.wgsl`, default shader, in `examples`.
+#![allow(deprecated)]
 
 use std::sync::Arc;
 use truck_platform::*;
@@ -178,6 +179,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                                     shader_location: 0,
                                 }],
                             }],
+                            compilation_options: Default::default(),
                         },
                         fragment: Some(FragmentState {
                             module: &self.module,
@@ -187,6 +189,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                                 blend: Some(BlendState::REPLACE),
                                 write_mask: ColorWrites::ALL,
                             })],
+                            compilation_options: Default::default(),
                         }),
                         primitive: PrimitiveState {
                             topology: PrimitiveTopology::TriangleList,
@@ -209,6 +212,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                         },
                         label: None,
                         multiview: None,
+                        cache: None,
                     }),
             )
         }
@@ -343,9 +347,11 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
 
 fn main() {
     let event_loop = winit::event_loop::EventLoop::new().unwrap();
-    let mut wb = winit::window::WindowBuilder::new();
-    wb = wb.with_title("wGSL Sandbox");
-    let window = wb.build(&event_loop).unwrap();
+    let mut wa = winit::window::Window::default_attributes();
+    wa.title = "WGSL Sandbox".to_string();
+    let window = event_loop
+        .create_window(wa)
+        .expect("failed to build window");
     #[cfg(not(target_arch = "wasm32"))]
     pollster::block_on(run(event_loop, window));
     #[cfg(target_arch = "wasm32")]

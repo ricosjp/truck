@@ -2,6 +2,7 @@
 
 // Copyright © 2021 RICOS
 // Apache license 2.0
+#![allow(deprecated)]
 
 pub use async_trait::async_trait;
 use std::sync::Arc;
@@ -93,11 +94,13 @@ pub trait App: Sized + 'static {
     /// Run the application in the future.
     async fn async_run() {
         let event_loop = winit::event_loop::EventLoop::new().unwrap();
-        let mut wb = winit::window::WindowBuilder::new();
+        let mut wa = winit::window::Window::default_attributes();
         if let Some(title) = Self::app_title() {
-            wb = wb.with_title(title);
+            wa.title = title.to_owned();
         }
-        let window = wb.build(&event_loop).expect("failed to build window");
+        let window = event_loop
+            .create_window(wa)
+            .expect("failed to build window");
         #[cfg(target_arch = "wasm32")]
         {
             std::panic::set_hook(Box::new(console_error_panic_hook::hook));

@@ -15,8 +15,8 @@ exclude = ["examples/**/*.obj"]
 [dependencies]
 array-macro = "2.1.8"
 bytemuck = { version = "1.16.3", features = ["derive"] }
-itertools = "0.12.1"
-rustc-hash = "1.1.0"
+itertools = "0.13.0"
+rustc-hash = "2.0.0"
 serde = { version = "1.0.204", features = ["derive"] }
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }

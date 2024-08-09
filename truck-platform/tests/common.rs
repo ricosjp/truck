@@ -82,6 +82,7 @@ impl<'a> Rendered for Plane<'a> {
                                 shader_location: 0,
                             }],
                         }],
+                        compilation_options: Default::default(),
                     },
                     fragment: Some(FragmentState {
                         module: &module,
@@ -91,6 +92,7 @@ impl<'a> Rendered for Plane<'a> {
                             blend: Some(BlendState::REPLACE),
                             write_mask: ColorWrites::ALL,
                         })],
+                        compilation_options: Default::default(),
                     }),
                     primitive: PrimitiveState {
                         topology: PrimitiveTopology::TriangleList,
@@ -113,6 +115,7 @@ impl<'a> Rendered for Plane<'a> {
                     },
                     label: None,
                     multiview: None,
+                    cache: None,
                 }),
         )
     }
@@ -138,6 +141,7 @@ pub fn init_device(backends: Backends) -> DeviceHandler {
                 &DeviceDescriptor {
                     required_features: Default::default(),
                     required_limits: Default::default(),
+                    memory_hints: Default::default(),
                     label: None,
                 },
                 None,

@@ -31,8 +31,7 @@ pub struct EntryMap<K, V, KF, VF, P, S = RandomState> {
 }
 
 /// type alias for EntryMap with `FxHasher`.
-pub type FxEntryMap<K, V, KF, VF, P> =
-    EntryMap<K, V, KF, VF, P, BuildHasherDefault<rustc_hash::FxHasher>>;
+pub type FxEntryMap<K, V, KF, VF, P> = EntryMap<K, V, KF, VF, P, rustc_hash::FxBuildHasher>;
 
 impl<K, V, KF, VF, P, S> EntryMap<K, V, KF, VF, P, S>
 where

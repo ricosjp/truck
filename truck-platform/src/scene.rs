@@ -44,6 +44,7 @@ async fn init_default_device(
         .request_device(
             &DeviceDescriptor {
                 required_features: Default::default(),
+                memory_hints: MemoryHints::Performance,
                 #[cfg(not(feature = "webgl"))]
                 required_limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
                 #[cfg(feature = "webgl")]

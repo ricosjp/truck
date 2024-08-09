@@ -19,9 +19,9 @@ default = ["analyzers", "filters", "tessellation", "vtk"]
 
 [dependencies]
 derive_more = "0.99.18"
-rustc-hash = "1.1.0"
+rustc-hash = "2.0.0"
 array-macro = "2.1.8"
-itertools = "0.12.1"
+itertools = "0.13.0"
 spade = { version = "2.11.0", optional = true }
 truck-base = { version = "0.4.0", path = "../truck-base" }
 truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
