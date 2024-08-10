@@ -276,8 +276,8 @@ impl ToDataSet for Wire<Point3, PolylineCurve<Point3>> {
             );
             types.push(CellType::PolyLine);
         });
-        vmap.into_values().for_each(|idx| {
-            connectivity.push(idx);
+        self.vertex_iter().enumerate().for_each(|(idx, _)| {
+            connectivity.push(idx as u64);
             offsets.push(connectivity.len() as u64);
             types.push(CellType::Vertex);
         });
