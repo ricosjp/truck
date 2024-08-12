@@ -177,7 +177,8 @@ impl<P, C, S> Shell<P, C, S> {
             })
             .collect();
         let mut res = Vec::new();
-        while let Some(edge) = vemap.values().next() {
+        while !vemap.is_empty() {
+            let edge = self.vertex_iter().find_map(|v| vemap.get(&v.id())).unwrap();
             if let Some(mut cursor) = vemap.remove(&edge.front().id()) {
                 let mut wire = Wire::from(vec![cursor.clone()]);
                 loop {
