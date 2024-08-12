@@ -730,7 +730,8 @@ fn construct_boundaries<C>(
 ) -> Vec<Wire> {
     let take_back = closure_take_back(edges);
     let mut new_boundaries = Vec::new();
-    while let Some((start, vec)) = vemap.iter_mut().next() {
+    while !vemap.is_empty() {
+        let (start, vec) = vemap.iter_mut().min_by_key(|(idx, _)| *idx).unwrap();
         let start = *start;
         let mut edge_index = vec.pop().unwrap();
         if vec.is_empty() {

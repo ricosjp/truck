@@ -2,13 +2,14 @@
 
 // Copyright © 2021 RICOS
 // Apache license 2.0
+#![allow(deprecated)]
 
 pub use async_trait::async_trait;
 use std::sync::Arc;
-use std::time::Duration;
+//use std::time::Duration;
 use winit::dpi::*;
 use winit::event::*;
-use winit::event_loop::ControlFlow as WControlFlow;
+use winit::event_loop::{ActiveEventLoop, ControlFlow as WControlFlow};
 use winit::window::Window;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -51,8 +52,11 @@ pub trait App: Sized + 'static {
     fn app_title<'a>() -> Option<&'a str> { None }
     /// Default is `ControlFlow::WaitUntil(1 / 60 seconds)`.
     fn default_control_flow() -> ControlFlow {
+        /*
         let next_frame_time = Instant::now() + Duration::from_nanos(16_666_667);
         ControlFlow::WaitUntil(next_frame_time)
+        */
+        ControlFlow::Poll
     }
     /// By overriding this function, one can set the rendering process for each frame.
     fn render(&mut self) {}
@@ -93,11 +97,13 @@ pub trait App: Sized + 'static {
     /// Run the application in the future.
     async fn async_run() {
         let event_loop = winit::event_loop::EventLoop::new().unwrap();
-        let mut wb = winit::window::WindowBuilder::new();
+        let mut wa = winit::window::Window::default_attributes();
         if let Some(title) = Self::app_title() {
-            wb = wb.with_title(title);
+            wa.title = title.to_owned();
         }
-        let window = wb.build(&event_loop).expect("failed to build window");
+        let window = event_loop
+            .create_window(wa)
+            .expect("failed to build window");
         #[cfg(target_arch = "wasm32")]
         {
             std::panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -108,8 +114,10 @@ pub trait App: Sized + 'static {
                 .and_then(|win| win.document())
                 .and_then(|doc| doc.body())
                 .and_then(|body| {
-                    body.append_child(&web_sys::Element::from(window.canvas()?))
-                        .ok()
+                    let canvas = window.canvas()?;
+                    canvas.set_width(500);
+                    canvas.set_height(500);
+                    body.append_child(&web_sys::Element::from(canvas)).ok()
                 })
                 .expect("couldn't append canvas to document body");
         }
@@ -117,49 +125,50 @@ pub trait App: Sized + 'static {
         let window = Arc::new(window);
         let mut app = Self::init(Arc::clone(&window)).await;
 
-        event_loop
-            .run(move |ev, target| {
-                let control_flow = match ev {
-                    Event::NewEvents(_) => {
-                        window.request_redraw();
+        let routine = move |ev: Event<()>, target: &ActiveEventLoop| {
+            let control_flow = match ev {
+                Event::NewEvents(_) => {
+                    window.request_redraw();
+                    Self::default_control_flow()
+                }
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::Resized(size) => {
+                        app.resized(size);
                         Self::default_control_flow()
                     }
-                    Event::WindowEvent { event, .. } => match event {
-                        WindowEvent::Resized(size) => {
-                            app.resized(size);
-                            Self::default_control_flow()
-                        }
-                        WindowEvent::RedrawRequested => {
-                            app.render();
-                            Self::default_control_flow()
-                        }
-                        WindowEvent::Moved(position) => app.moved(position),
-                        WindowEvent::CloseRequested => app.closed_requested(),
-                        WindowEvent::Destroyed => app.destroyed(),
-                        WindowEvent::DroppedFile(path) => app.dropped_file(path),
-                        WindowEvent::HoveredFile(path) => app.hovered_file(path),
-                        WindowEvent::KeyboardInput {
-                            event,
-                            is_synthetic,
-                            ..
-                        } => app.keyboard_input(event, is_synthetic),
-                        WindowEvent::MouseInput { state, button, .. } => {
-                            app.mouse_input(state, button)
-                        }
-                        WindowEvent::MouseWheel { delta, phase, .. } => {
-                            app.mouse_wheel(delta, phase)
-                        }
-                        WindowEvent::CursorMoved { position, .. } => app.cursor_moved(position),
-                        _ => Self::default_control_flow(),
-                    },
+                    WindowEvent::RedrawRequested => {
+                        app.render();
+                        Self::default_control_flow()
+                    }
+                    WindowEvent::Moved(position) => app.moved(position),
+                    WindowEvent::CloseRequested => app.closed_requested(),
+                    WindowEvent::Destroyed => app.destroyed(),
+                    WindowEvent::DroppedFile(path) => app.dropped_file(path),
+                    WindowEvent::HoveredFile(path) => app.hovered_file(path),
+                    WindowEvent::KeyboardInput {
+                        event,
+                        is_synthetic,
+                        ..
+                    } => app.keyboard_input(event, is_synthetic),
+                    WindowEvent::MouseInput { state, button, .. } => app.mouse_input(state, button),
+                    WindowEvent::MouseWheel { delta, phase, .. } => app.mouse_wheel(delta, phase),
+                    WindowEvent::CursorMoved { position, .. } => app.cursor_moved(position),
                     _ => Self::default_control_flow(),
-                };
-                match control_flow {
-                    ControlFlow::Exit => target.exit(),
-                    _ => target.set_control_flow(control_flow.try_into().unwrap()),
-                }
-            })
-            .unwrap()
+                },
+                _ => Self::default_control_flow(),
+            };
+            match control_flow {
+                ControlFlow::Exit => target.exit(),
+                _ => target.set_control_flow(control_flow.try_into().unwrap()),
+            }
+        };
+        #[cfg(not(target_arch = "wasm32"))]
+        event_loop.run(routine).unwrap();
+        #[cfg(target_arch = "wasm32")]
+        {
+            use winit::platform::web::EventLoopExtWebSys;
+            event_loop.spawn(routine);
+        }
     }
     /// Run the application.
     #[inline]

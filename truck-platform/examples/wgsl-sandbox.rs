@@ -25,12 +25,13 @@
 //! ```
 //!
 //! Also, see the sample `newton-cuberoot.wgsl`, default shader, in `examples`.
+#![allow(deprecated)]
 
 use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
 use winit::event::*;
-use winit::event_loop::ControlFlow;
+use winit::event_loop::*;
 
 const DEFAULT_SHADER: &str = include_str!("newton-cuberoot.wgsl");
 
@@ -178,6 +179,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                                     shader_location: 0,
                                 }],
                             }],
+                            compilation_options: Default::default(),
                         },
                         fragment: Some(FragmentState {
                             module: &self.module,
@@ -187,6 +189,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                                 blend: Some(BlendState::REPLACE),
                                 write_mask: ColorWrites::ALL,
                             })],
+                            compilation_options: Default::default(),
                         }),
                         primitive: PrimitiveState {
                             topology: PrimitiveTopology::TriangleList,
@@ -209,6 +212,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                         },
                         label: None,
                         multiview: None,
+                        cache: None,
                     }),
             )
         }
@@ -258,7 +262,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
 }
 use plane::Plane;
 
-async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window::Window) {
+async fn run(event_loop: EventLoop<()>, window: winit::window::Window) {
     let mut scene = WindowScene::from_window(Arc::new(window), &Default::default()).await;
     let args: Vec<_> = std::env::args().collect();
     let source = if args.len() > 1 {
@@ -279,73 +283,80 @@ async fn run(event_loop: winit::event_loop::EventLoop<()>, window: winit::window
     let mut dragging = false;
     let mut clicked = false;
     let mut cursor = [0.0; 2];
-    event_loop
-        .run(move |ev, target| {
-            let control_flow = match ev {
-                Event::NewEvents(StartCause::Poll) => {
-                    scene.window().request_redraw();
+    let routine = move |ev: Event<()>, target: &ActiveEventLoop| {
+        let control_flow = match ev {
+            Event::NewEvents(StartCause::Poll) => {
+                scene.window().request_redraw();
+                ControlFlow::Poll
+            }
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::RedrawRequested => {
+                    scene.update_bind_group(&plane);
+                    if clicked {
+                        plane.mouse[3] = -plane.mouse[3];
+                        clicked = false;
+                    }
+                    scene.render_frame();
                     ControlFlow::Poll
                 }
-                Event::WindowEvent { event, .. } => match event {
-                    WindowEvent::RedrawRequested => {
-                        scene.update_bind_group(&plane);
-                        if clicked {
-                            plane.mouse[3] = -plane.mouse[3];
-                            clicked = false;
+                WindowEvent::CloseRequested => {
+                    target.exit();
+                    ControlFlow::Poll
+                }
+                WindowEvent::DroppedFile(path) => {
+                    match std::fs::read_to_string(path) {
+                        Ok(code) => {
+                            plane.set_shader(scene.device(), &code);
+                            scene.update_pipeline(&plane);
                         }
-                        scene.render_frame();
-                        ControlFlow::Poll
+                        Err(error) => println!("{error:?}"),
                     }
-                    WindowEvent::CloseRequested => {
-                        target.exit();
-                        ControlFlow::Poll
+                    ControlFlow::Poll
+                }
+                WindowEvent::MouseInput { state, .. } => {
+                    dragging = state == ElementState::Pressed;
+                    clicked = dragging;
+                    if dragging {
+                        plane.mouse[0] = cursor[0];
+                        plane.mouse[1] = cursor[1];
+                        plane.mouse[2] = cursor[0];
+                        plane.mouse[3] = cursor[1];
+                    } else {
+                        plane.mouse[2] = -plane.mouse[2];
                     }
-                    WindowEvent::DroppedFile(path) => {
-                        match std::fs::read_to_string(path) {
-                            Ok(code) => {
-                                plane.set_shader(scene.device(), &code);
-                                scene.update_pipeline(&plane);
-                            }
-                            Err(error) => println!("{error:?}"),
-                        }
-                        ControlFlow::Poll
+                    ControlFlow::Poll
+                }
+                WindowEvent::CursorMoved { position, .. } => {
+                    let height = scene.descriptor().render_texture.canvas_size.1 as f32;
+                    cursor = [position.x as f32, height - position.y as f32];
+                    if dragging {
+                        plane.mouse[0] = cursor[0];
+                        plane.mouse[1] = cursor[1];
                     }
-                    WindowEvent::MouseInput { state, .. } => {
-                        dragging = state == ElementState::Pressed;
-                        clicked = dragging;
-                        if dragging {
-                            plane.mouse[0] = cursor[0];
-                            plane.mouse[1] = cursor[1];
-                            plane.mouse[2] = cursor[0];
-                            plane.mouse[3] = cursor[1];
-                        } else {
-                            plane.mouse[2] = -plane.mouse[2];
-                        }
-                        ControlFlow::Poll
-                    }
-                    WindowEvent::CursorMoved { position, .. } => {
-                        let height = scene.descriptor().render_texture.canvas_size.1 as f32;
-                        cursor = [position.x as f32, height - position.y as f32];
-                        if dragging {
-                            plane.mouse[0] = cursor[0];
-                            plane.mouse[1] = cursor[1];
-                        }
-                        ControlFlow::Poll
-                    }
-                    _ => ControlFlow::Poll,
-                },
+                    ControlFlow::Poll
+                }
                 _ => ControlFlow::Poll,
-            };
-            target.set_control_flow(control_flow);
-        })
-        .unwrap()
+            },
+            _ => ControlFlow::Poll,
+        };
+        target.set_control_flow(control_flow);
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    event_loop.run(routine).unwrap();
+    #[cfg(target_arch = "wasm32")]
+    {
+        use winit::platform::web::EventLoopExtWebSys;
+        event_loop.spawn(routine);
+    }
 }
 
 fn main() {
     let event_loop = winit::event_loop::EventLoop::new().unwrap();
-    let mut wb = winit::window::WindowBuilder::new();
-    wb = wb.with_title("wGSL Sandbox");
-    let window = wb.build(&event_loop).unwrap();
+    let mut wa = winit::window::Window::default_attributes();
+    wa.title = "WGSL Sandbox".to_string();
+    let window = event_loop
+        .create_window(wa)
+        .expect("failed to build window");
     #[cfg(not(target_arch = "wasm32"))]
     pollster::block_on(run(event_loop, window));
     #[cfg(target_arch = "wasm32")]
@@ -358,8 +369,10 @@ fn main() {
             .and_then(|win| win.document())
             .and_then(|doc| doc.body())
             .and_then(|body| {
-                body.append_child(&web_sys::Element::from(window.canvas()?))
-                    .ok()
+                let canvas = window.canvas()?;
+                canvas.set_width(500);
+                canvas.set_height(500);
+                body.append_child(&web_sys::Element::from(canvas)).ok()
             })
             .expect("couldn't append canvas to document body");
         wasm_bindgen_futures::spawn_local(run(event_loop, window));

@@ -17,7 +17,7 @@ default = []
 webgl = ["truck-platform/webgl"]
 
 [dependencies]
-itertools = "0.12.1"
+itertools = "0.13.0"
 bytemuck = { version = "1.16.3", features = ["derive"] }
 image = "0.25.2"
 truck-platform = { version = "0.5.0", path = "../truck-platform" }
@@ -31,11 +31,11 @@ rayon = "1.10.0"
 serde_json = "1.0.122"
 truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }
 truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
-winit = "0.29.15"
+winit = "0.30.4"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-web-time = "=0.2.4"
+web-time = "1.1.0"
 wasm-bindgen-futures = "0.4.42"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
-web-sys = { version = "=0.3.67", features = ["Location"] }
+web-sys = { version = "0.3.69", features = ["Location"] }
