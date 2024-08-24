@@ -11,7 +11,7 @@ license = "Apache-2.0"
 proc-macro = true
 
 [dependencies]
-quote = "1.0.36"
+quote = "1.0.37"
 proc-macro2 = "1.0.86"
 syn = { version = "2.0.75", features = ["derive", "printing"] }
 proc-macro-error = "1.0.4"
