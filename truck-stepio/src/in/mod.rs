@@ -632,6 +632,7 @@ impl<'a> FromIterator<&'a EntityInstance> for Table {
     }
 }
 
+/// Undefined structures are parsed into this.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(field = dummy)]

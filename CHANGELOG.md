@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Document of `truck_stepio::in`.
 - Update `wgpu` and so on.
 - Improve `Shell::face_adjacency`.
 - Remove quolification from `size_of`.
