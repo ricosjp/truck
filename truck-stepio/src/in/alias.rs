@@ -2,23 +2,39 @@ use crate::{self as truck_stepio};
 use derive_more::*;
 use serde::{Deserialize, Serialize};
 use truck_derivers::{DisplayByStep, StepCurve, StepLength, StepSurface};
-pub use truck_geometry::prelude::*;
-pub use truck_polymesh::*;
 
-pub type ExpressParseError = Box<dyn std::error::Error>;
+/// re-export structs in `truck-geometry` and `truck-polymesh`.
+pub mod re_exports {
+    pub use truck_geometry::prelude::*;
+    pub use truck_polymesh::*;
+}
+pub use re_exports::*;
 
+/// Errors that occur when converting STEP format
+pub type StepConvertingError = Box<dyn std::error::Error>;
+
+/// `ellipse`, realized in `truck`
 pub type Ellipse<P, M> = Processor<TrimmedCurve<UnitCircle<P>>, M>;
+/// `hyperbola`, realized in `truck`
 pub type Hyperbola<P, M> = Processor<TrimmedCurve<UnitHyperbola<P>>, M>;
+/// `parabola`, realized in `truck`
 pub type Parabola<P, M> = Processor<TrimmedCurve<UnitParabola<P>>, M>;
-pub type RevolutedLine = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
+/// `spherical_surface`, realized in `truck`
 pub type SphericalSurface = Processor<Sphere, Matrix4>;
+/// `cylindrical_surface`, realized in `truck`
 pub type CylindricalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
+/// `toroidal_surface`, realized in `truck`
 pub type ToroidalSurface = Processor<Torus, Matrix4>;
+/// `conical_surface`, realized in `truck`
 pub type ConicalSurface = Processor<RevolutedCurve<Line<Point3>>, Matrix4>;
+/// `surface_of_linear_extrusion`, realized in `truck`
 pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
+/// `surface_of_revolution`, realized in `truck`
 pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;
+/// `pcurve`, realized in `truck`
 pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
 
+/// `conic` in 2D, realized in `truck`
 #[derive(
     Clone,
     Copy,
@@ -45,6 +61,7 @@ pub enum Conic2D {
     Parabola(Parabola<Point2, Matrix3>),
 }
 
+/// `curve` in 2D, realized in `truck`
 #[derive(
     Clone,
     Debug,
@@ -72,6 +89,8 @@ pub enum Curve2D {
     BSplineCurve(BSplineCurve<Point2>),
     NurbsCurve(NurbsCurve<Vector3>),
 }
+
+/// `conic` in 3D, realized in `truck`
 #[derive(
     Clone,
     Copy,
@@ -98,6 +117,7 @@ pub enum Conic3D {
     Parabola(Parabola<Point3, Matrix4>),
 }
 
+/// `curve` in 3D, realized in `truck`
 #[derive(
     Clone,
     Debug,
@@ -126,6 +146,7 @@ pub enum Curve3D {
     NurbsCurve(NurbsCurve<Vector4>),
 }
 
+/// `elementary_surface`, realized in `truck`
 #[derive(
     Clone,
     Copy,
@@ -145,13 +166,13 @@ pub enum Curve3D {
 )]
 pub enum ElementarySurface {
     Plane(Plane),
-    RevolutedLine(RevolutedLine),
     Sphere(SphericalSurface),
     CylindricalSurface(CylindricalSurface),
     ToroidalSurface(ToroidalSurface),
     ConicalSurface(ConicalSurface),
 }
 
+/// `swept_surface`, realized in `truck`
 #[derive(
     Clone,
     Debug,
@@ -173,6 +194,7 @@ pub enum SweptCurve {
     RevolutedCurve(StepRevolutedCurve),
 }
 
+/// `surface`, realized in `truck`
 #[derive(
     Clone,
     Debug,
@@ -207,6 +229,7 @@ impl truck_stepio::out::DisplayByStep for Surface {
     }
 }
 
+/// `spherical_surface`, realized in `truck`
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, StepSurface)]
 pub struct Sphere(pub truck_geometry::prelude::Sphere);
 
