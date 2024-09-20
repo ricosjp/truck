@@ -96,6 +96,6 @@ Javascript wrapper of truck.
 
 There are some learning resources for using truck v0.1.x series.
 
-- [truck-tutorial](https://ricos.gitlab.io/truck-tutorial/v0.1/)
-- [truck-tutorial-ja](https://ricos.gitlab.io/truck-tutorial-ja/v0.1/) (Japanese version)
-- [truck-tutorial-code](https://github.com/ricosjp/truck-tutorial-code/tree/v0.1) (pre-created sample code)
+- [truck-tutorial](https://ricos.gitlab.io/truck-tutorial/v0.6/)
+- [truck-tutorial-ja](https://ricos.gitlab.io/truck-tutorial-ja/v0.6/) (Japanese version)
+- [truck-tutorial-code](https://github.com/ricosjp/truck-tutorial-code/tree/v0.6) (pre-created sample code)
