@@ -1,6 +1,6 @@
 [package]
 name = "truck-shapeops"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 description = "Provides boolean operations to Solid"
 homepage = "https://github.com/ricosjp/truck"
@@ -15,18 +15,18 @@ step-test = ["truck-stepio"]
 derive_more = "0.99.18"
 rustc-hash = "2.0.0"
 itertools = "0.13.0"
-truck-base = { version = "0.4.0", path = "../truck-base" }
-truck-geometry = { version = "0.4.0", path = "../truck-geometry" }
-truck-topology = { version = "0.5.0", path = "../truck-topology" }
-truck-meshalgo = { version = "0.3.0", path = "../truck-meshalgo" }
+truck-base = { version = "0.5.0", path = "../truck-base" }
+truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
+truck-topology = { version = "0.6.0", path = "../truck-topology" }
+truck-meshalgo = { version = "0.4.0", path = "../truck-meshalgo" }
 
-truck-geotrait = { version = "0.3.0", path = "../truck-geotrait" }
-truck-stepio = { version = "0.2.0", path = "../truck-stepio", optional = true }
+truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
+truck-stepio = { version = "0.3.0", path = "../truck-stepio", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
 serde_json = "1.0.128"
-truck-modeling = { version = "0.5.0", path = "../truck-modeling" }
+truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.2.15", features = ["js"] }
