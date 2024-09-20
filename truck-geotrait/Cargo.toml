@@ -1,6 +1,6 @@
 [package]
 name = "truck-geotrait"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
 description = "Defines geometric traits for truck"
@@ -15,7 +15,7 @@ default = []
 derive = ["truck-derivers"]
 
 [dependencies]
-truck-base = { version = "0.4.0", path = "../truck-base" }
+truck-base = { version = "0.5.0", path = "../truck-base" }
 rand = "0.8.5"
 thiserror = "1.0.63"
 truck-derivers = { version = "0.1.0", path = "../truck-derivers", optional = true }
