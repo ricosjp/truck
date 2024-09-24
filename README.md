@@ -94,7 +94,7 @@ Javascript wrapper of truck.
 
 ## Tutorials
 
-There are some learning resources for using truck v0.1.x series.
+There are some learning resources for using truck v0.6.x series.
 
 - [truck-tutorial](https://ricos.gitlab.io/truck-tutorial/v0.6/)
 - [truck-tutorial-ja](https://ricos.gitlab.io/truck-tutorial-ja/v0.6/) (Japanese version)

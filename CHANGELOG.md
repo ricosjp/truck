@@ -60,6 +60,7 @@ The version is of the bottom crate `truck-rendimpl`.
   - Make some struct naming canonical. ex: NURBSCurve -> NurbsCurve.
   - Remove `get_` prefix from `Vertex::get_point`, `Edge::get_curve`, and `Face::get_surface`.
 - Put `truck_geometry::prelude` for resolve multiple re-export.
+- Tutorial for v0.6 series has been released.
 
 ## v0.5
 
