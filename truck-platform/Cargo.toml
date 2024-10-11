@@ -26,7 +26,7 @@ winit = "0.30.5"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-time = "1.1.0"
-web-sys = "0.3.70"
+web-sys = "0.3.71"
 
 [dev-dependencies]
 image = "0.25.2"
@@ -37,7 +37,7 @@ pollster = "0.3.0"
 log = "0.4.22"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures = "0.4.43"
+wasm-bindgen-futures = "0.4.44"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
-web-sys = { version = "0.3.70", features = ["Location"] }
+web-sys = { version = "0.3.71", features = ["Location"] }
