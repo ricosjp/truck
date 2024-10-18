@@ -16,7 +16,7 @@ default = []
 webgl = ["wgpu/webgl"]
 
 [dependencies]
-bytemuck = { version = "1.18.0", features = ["derive"] }
+bytemuck = { version = "1.19.0", features = ["derive"] }
 derive_more = "0.99.18"
 futures-intrusive = "0.5.0"
 rustc-hash = "2.0.0"
@@ -29,7 +29,7 @@ web-time = "1.1.0"
 web-sys = "0.3.72"
 
 [dev-dependencies]
-image = "0.25.2"
+image = "0.25.4"
 rayon = "1.10.0"
 env_logger = "0.11.5"
 naga = { version = "22.1.0", features = ["wgsl-in"] }
