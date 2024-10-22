@@ -838,6 +838,20 @@ impl SearchParameter<D2> for NurbsSurface<Vector4> {
     }
 }
 
+impl<V: Homogeneous<f64>> From<BSplineSurface<V::Point>> for NurbsSurface<V> {
+    fn from(bsp: BSplineSurface<V::Point>) -> Self {
+        let control_points = bsp
+            .control_points
+            .into_iter()
+            .map(|vec| vec.into_iter().map(|p| V::from_point(p)).collect())
+            .collect();
+        Self(BSplineSurface {
+            knot_vecs: bsp.knot_vecs,
+            control_points,
+        })
+    }
+}
+
 #[test]
 fn test_include2d() {
     let knot_vec = KnotVec::uniform_knot(2, 3);

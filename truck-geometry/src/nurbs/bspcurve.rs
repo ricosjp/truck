@@ -99,6 +99,10 @@ impl<P> BSplineCurve<P> {
         self.control_points.iter_mut()
     }
 
+    /// Into the tuple of knot vector and control points.
+    #[inline(always)]
+    pub fn destruct(self) -> (KnotVec, Vec<P>) { (self.knot_vec, self.control_points) }
+
     /// Apply the given transformation to all control points.
     #[inline(always)]
     pub fn transform_control_points<F: FnMut(&mut P)>(&mut self, f: F) {
