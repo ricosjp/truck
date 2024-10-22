@@ -30,28 +30,8 @@ pub use geometry::*;
 
 /// topological elements
 pub mod topology {
-    use super::*;
-    /// Vertex, the minimum topological unit.
-    pub type Vertex = truck_topology::Vertex<Point3>;
-    /// Edge, which consists two vertices.
-    pub type Edge = truck_topology::Edge<Point3, Curve>;
-    /// Wire, a path or cycle which consists some edges.
-    pub type Wire = truck_topology::Wire<Point3, Curve>;
-    /// Face, attached to a simple and closed wire.
-    pub type Face = truck_topology::Face<Point3, Curve, Surface>;
-    /// Shell, a connected compounded faces.
-    pub type Shell = truck_topology::Shell<Point3, Curve, Surface>;
-    /// Solid, attached to a closed shells.
-    pub type Solid = truck_topology::Solid<Point3, Curve, Surface>;
-
-    /// The id of vertex. `Copy` trait is implemented.
-    pub type VertexID = truck_topology::VertexID<Point3>;
-    /// The id that does not depend on the direction of the edge.
-    pub type EdgeID = truck_topology::EdgeID<Curve>;
-    /// The id that does not depend on the direction of the face.
-    pub type FaceID = truck_topology::FaceID<Surface>;
-
-    pub use truck_topology::shell::ShellCondition;
+    use crate::{Point3, Curve, Surface};
+    truck_topology::prelude!(Point3, Curve, Surface, pub);
 }
 pub use topology::*;
 

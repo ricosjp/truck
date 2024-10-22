@@ -418,3 +418,6 @@ pub mod format {
     }
 }
 use format::*;
+
+/// This is a list of structures that are read or redefined by `prelude!(Point, Curve, Surface)`.
+pub mod prelude_macro;
