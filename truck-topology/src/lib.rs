@@ -429,7 +429,7 @@ use format::*;
 ///     struct Point;
 ///     struct Curve;
 ///     struct Surface;
-/// 
+///
 ///     // import topological structures with empty geometries
 ///     truck_topology::prelude!(Point, Curve, Surface, pub);
 /// }

@@ -30,7 +30,7 @@ pub use geometry::*;
 
 /// topological elements
 pub mod topology {
-    use crate::{Point3, Curve, Surface};
+    use crate::{Curve, Point3, Surface};
     truck_topology::prelude!(Point3, Curve, Surface, pub);
 }
 pub use topology::*;

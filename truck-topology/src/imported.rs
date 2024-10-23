@@ -42,7 +42,7 @@
 ///     let _ = first::second::Vertex::new(());
 /// }
 /// ```
-/// 
+///
 /// [`imported`]: crate::imported
 #[macro_export]
 macro_rules! prelude {
