@@ -1,5 +1,6 @@
 /// This macro is a replacement for the prelude module. It loads the main public structures in truck-topology,
-/// and then redefines the topological elements with the specific geometric elements.
+/// and redefines the topological elements in a way that relates them to geometric elements.
+/// For information on the actual structures that are loaded (or aliased), please refer to [`imported`].
 ///
 /// # Examples
 /// ```
@@ -27,11 +28,27 @@
 ///     type_name::<truck_topology::Shell<(), (), ()>>(),
 /// );
 /// ```
+/// ```compile_fail
+/// mod first {
+///     pub mod second {
+///         truck_topology::prelude!((), (), (), pub(super));
+///     }
+///     fn inside_public_range() {
+///         let _ = second::Vertex::new(());
+///     }
+/// }
+/// // compile fail
+/// fn outside_public_range() {
+///     let _ = first::second::Vertex::new(());
+/// }
+/// ```
+/// 
+/// [`imported`]: crate::imported
 #[macro_export]
 macro_rules! prelude {
-    ($point: ty, $curve: ty, $surface: ty $(, $pub: tt)?) => {
+    ($point: ty, $curve: ty, $surface: ty $(, $pub: tt $($super: tt)?)?) => {
         #[allow(unused)]
-        $($pub)? use $crate::{
+        $($pub$($super)?)? use $crate::{
             compress::CompressedEdgeIndex,
             shell::ShellCondition,
             VertexDisplayFormat,
@@ -44,45 +61,45 @@ macro_rules! prelude {
 
         /// Vertex, the minimum topological unit.
         #[allow(unused)]
-        $($pub)? type Vertex = $crate::Vertex<$point>;
+        $($pub$($super)?)? type Vertex = $crate::Vertex<$point>;
         /// Edge, which consists two vertices.
         #[allow(unused)]
-        $($pub)? type Edge = $crate::Edge<$point, $curve>;
+        $($pub$($super)?)? type Edge = $crate::Edge<$point, $curve>;
         /// Wire, a path or cycle which consists some edges.
         #[allow(unused)]
-        $($pub)? type Wire = $crate::Wire<$point, $curve>;
+        $($pub$($super)?)? type Wire = $crate::Wire<$point, $curve>;
         /// Face, attached to a simple and closed wire.
         #[allow(unused)]
-        $($pub)? type Face = $crate::Face<$point, $curve, $surface>;
+        $($pub$($super)?)? type Face = $crate::Face<$point, $curve, $surface>;
         /// Shell, a connected compounded faces.
         #[allow(unused)]
-        $($pub)? type Shell = $crate::Shell<$point, $curve, $surface>;
+        $($pub$($super)?)? type Shell = $crate::Shell<$point, $curve, $surface>;
         /// Solid, attached to a closed shells.
         #[allow(unused)]
-        $($pub)? type Solid = $crate::Solid<$point, $curve, $surface>;
+        $($pub$($super)?)? type Solid = $crate::Solid<$point, $curve, $surface>;
 
         /// The id of vertex. `Copy` trait is implemented.
         #[allow(unused)]
-        $($pub)? type VertexID = $crate::VertexID<$point>;
+        $($pub$($super)?)? type VertexID = $crate::VertexID<$point>;
         /// The id that does not depend on the direction of the edge.
         #[allow(unused)]
-        $($pub)? type EdgeID = $crate::EdgeID<$curve>;
+        $($pub$($super)?)? type EdgeID = $crate::EdgeID<$curve>;
         /// The id that does not depend on the direction of the face.
         #[allow(unused)]
-        $($pub)? type FaceID = $crate::FaceID<$surface>;
+        $($pub$($super)?)? type FaceID = $crate::FaceID<$surface>;
 
         /// Serialized compressed edge
         #[allow(unused)]
-        $($pub)? type CompressedEdge = $crate::compress::CompressedEdge<$curve>;
+        $($pub$($super)?)? type CompressedEdge = $crate::compress::CompressedEdge<$curve>;
         /// Serialized compressed face
         #[allow(unused)]
-        $($pub)? type CompressedFace = $crate::compress::CompressedFace<$surface>;
+        $($pub$($super)?)? type CompressedFace = $crate::compress::CompressedFace<$surface>;
         /// Serialized compressed shell
         #[allow(unused)]
-        $($pub)? type CompressedShell = $crate::compress::CompressedShell<$point, $curve, $surface>;
+        $($pub$($super)?)? type CompressedShell = $crate::compress::CompressedShell<$point, $curve, $surface>;
         /// Serialized compressed solid
         #[allow(unused)]
-        $($pub)? type CompressedSolid = $crate::compress::CompressedSolid<$point, $curve, $surface>;
+        $($pub$($super)?)? type CompressedSolid = $crate::compress::CompressedSolid<$point, $curve, $surface>;
     };
 }
 
@@ -93,5 +110,6 @@ pub mod empty_geometries {
     pub struct Curve;
     pub struct Surface;
 }
+#[doc(hidden)]
 pub use empty_geometries::*;
 prelude!(Point, Curve, Surface, pub);
