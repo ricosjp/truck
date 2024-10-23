@@ -21,7 +21,7 @@ impl<P> Vertex<P> {
     /// Creates `len` distinct vertices and return them by vector.
     /// # Examples
     /// ```
-    /// use truck_topology::Vertex;
+    /// use truck_topology::*;
     /// let v = Vertex::news(&[(), (), ()]);
     /// assert_eq!(v.len(), 3);
     /// assert_ne!(v[0], v[2]);
