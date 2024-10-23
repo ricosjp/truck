@@ -4,9 +4,11 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add the macro `truck_topology::prelude!`
+
 ### Latest `cargo upgrade`
 
-2024-10-08
+2024-10-22
 
 ## v0.6
 

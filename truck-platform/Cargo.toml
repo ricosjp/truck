@@ -16,7 +16,7 @@ default = []
 webgl = ["wgpu/webgl"]
 
 [dependencies]
-bytemuck = { version = "1.18.0", features = ["derive"] }
+bytemuck = { version = "1.19.0", features = ["derive"] }
 derive_more = "0.99.18"
 futures-intrusive = "0.5.0"
 rustc-hash = "2.0.0"
@@ -26,10 +26,10 @@ winit = "0.30.5"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-time = "1.1.0"
-web-sys = "0.3.70"
+web-sys = "0.3.72"
 
 [dev-dependencies]
-image = "0.25.2"
+image = "0.25.4"
 rayon = "1.10.0"
 env_logger = "0.11.5"
 naga = { version = "22.1.0", features = ["wgsl-in"] }
@@ -37,7 +37,7 @@ pollster = "0.3.0"
 log = "0.4.22"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures = "0.4.43"
+wasm-bindgen-futures = "0.4.45"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
-web-sys = { version = "0.3.70", features = ["Location"] }
+web-sys = { version = "0.3.72", features = ["Location"] }
