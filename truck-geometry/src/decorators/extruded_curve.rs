@@ -1,3 +1,5 @@
+use algo::surface::SspVector;
+
 use super::*;
 
 impl<C, V: Copy> ExtrudedCurve<C, V> {
@@ -76,12 +78,17 @@ impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
     }
 }
 
-impl<C: ParametricCurve2D + BoundedCurve> SearchParameter<D2> for ExtrudedCurve<C, Vector2> {
-    type Point = Point2;
+impl<P, C> SearchParameter<D2> for ExtrudedCurve<C, P::Diff>
+where
+    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+    P::Diff: SspVector,
+    C: ParametricCurve<Point = P, Vector = P::Diff> + BoundedCurve,
+{
+    type Point = P;
     #[inline(always)]
     fn search_parameter<H: Into<SPHint2D>>(
         &self,
-        point: Point2,
+        point: P,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
@@ -94,29 +101,7 @@ impl<C: ParametricCurve2D + BoundedCurve> SearchParameter<D2> for ExtrudedCurve<
                 algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
-        algo::surface::search_parameter2d(self, point, hint, trials)
-    }
-}
-
-impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for ExtrudedCurve<C, Vector3> {
-    type Point = Point3;
-    #[inline(always)]
-    fn search_parameter<H: Into<SPHint2D>>(
-        &self,
-        point: Point3,
-        hint: H,
-        trials: usize,
-    ) -> Option<(f64, f64)> {
-        let hint = match hint.into() {
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(range0, range1) => {
-                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
-            }
-            SPHint2D::None => {
-                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
-            }
-        };
-        algo::surface::search_parameter3d(self, point, hint, trials)
+        algo::surface::search_parameter(self, point, hint, trials)
     }
 }
 

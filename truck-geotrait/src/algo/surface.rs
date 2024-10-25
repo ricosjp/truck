@@ -70,45 +70,49 @@ where
     None
 }
 
-/// Searches the parameter by Newton's method.
-#[inline(always)]
-pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>>(
-    surface: &S,
-    point: Point2,
-    mut hint: (f64, f64),
-    trials: usize,
-) -> Option<(f64, f64)> {
-    let mut log = NewtonLog::default();
-    for _ in 0..=trials {
-        log.push(hint);
-        let (u0, v0) = hint;
-        let pt = surface.subs(u0, v0);
-        let uder = surface.uder(u0, v0);
-        let vder = surface.vder(u0, v0);
-        let dermag2 = f64::min(0.05, uder.magnitude2());
-        let dermag2 = f64::min(dermag2, vder.magnitude2());
-        if pt.distance2(point) < TOLERANCE2 * dermag2 {
-            return Some(hint);
-        }
-        let inv = Matrix2::from_cols(uder, vder).invert()?;
-        hint = (Vector2::from(hint) - inv * (pt - point)).into();
+/// Vectors whose points returned by the surface that can be the target of [`search_parameter`].
+pub trait SspVector: InnerSpace<Scalar = f64> {
+    #[doc(hidden)]
+    fn advance_newton(self, diff: Self, uder: Self, vder: Self) -> Option<Self>;
+    #[doc(hidden)]
+    fn into_param(self) -> (f64, f64);
+    #[doc(hidden)]
+    fn from_param(param: (f64, f64)) -> Self;
+}
+
+impl SspVector for Vector2 {
+    fn advance_newton(self, diff: Self, uder: Self, vder: Self) -> Option<Self> {
+        Some(self - Matrix2::from_cols(uder, vder).invert()? * diff)
     }
-    log.print_error();
-    None
+    fn into_param(self) -> (f64, f64) { self.into() }
+    fn from_param(param: (f64, f64)) -> Self { param.into() }
+}
+
+impl SspVector for Vector3 {
+    fn advance_newton(self, diff: Self, uder: Self, vder: Self) -> Option<Self> {
+        Some(self - Matrix3::from_cols(uder, vder, uder.cross(vder)).invert()? * diff)
+    }
+    fn into_param(self) -> (f64, f64) { self.truncate().into() }
+    fn from_param((u, v): (f64, f64)) -> Self { Self::new(u, v, 0.0) }
 }
 
 /// Searches the parameter by Newton's method.
 #[inline(always)]
-pub fn search_parameter3d<S: ParametricSurface3D>(
+pub fn search_parameter<P, S>(
     surface: &S,
-    point: Point3,
+    point: P,
     hint: (f64, f64),
     trials: usize,
-) -> Option<(f64, f64)> {
+) -> Option<(f64, f64)>
+where
+    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+    P::Diff: SspVector,
+    S: ParametricSurface<Point = P, Vector = P::Diff>,
+{
     let mut log = NewtonLog::default();
-    let mut vec = Vector3::new(hint.0, hint.1, 0.0);
+    let mut vec = P::Diff::from_param(hint);
     for _ in 0..=trials {
-        let (u0, v0) = (vec.x, vec.y);
+        let (u0, v0) = vec.into_param();
         log.push((u0, v0));
         let pt = surface.subs(u0, v0);
         let uder = surface.uder(u0, v0);
@@ -116,10 +120,9 @@ pub fn search_parameter3d<S: ParametricSurface3D>(
         let dermag2 = f64::min(0.05, uder.magnitude2());
         let dermag2 = f64::min(dermag2, vder.magnitude2());
         if pt.distance2(point) < TOLERANCE2 * dermag2 {
-            return Some((vec.x, vec.y));
+            return Some((u0, v0));
         }
-        let inv = Matrix3::from_cols(uder, vder, uder.cross(vder)).invert()?;
-        vec = vec - inv * (pt - point);
+        vec = vec.advance_newton(pt - point, uder, vder)?;
     }
     log.print_error();
     None
