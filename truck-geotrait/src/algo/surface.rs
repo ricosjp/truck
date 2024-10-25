@@ -97,81 +97,32 @@ pub fn search_parameter2d<S: ParametricSurface<Point = Point2, Vector = Vector2>
     None
 }
 
-#[derive(Clone, Debug)]
-struct ProjectedSurface<'a, S> {
-    surface: &'a S,
-    origin: Point3,
-    u_axis: Vector3,
-    v_axis: Vector3,
-}
-
-impl<'a, S: ParametricSurface3D> ProjectedSurface<'a, S> {
-    fn new(surface: &'a S, (u, v): (f64, f64)) -> Self {
-        let origin = surface.subs(u, v);
-        let normal = surface.normal(u, v);
-        let tmp = normal.map(f64::abs);
-        let max = match (tmp[0] < tmp[1], tmp[1] < tmp[2], tmp[2] < tmp[0]) {
-            (false, _, true) => 0,
-            (true, false, _) => 1,
-            (_, true, false) => 2,
-            (false, false, false) => 0, // all componets have same values
-            (true, true, true) => unreachable!(),
-        };
-        let mut u_axis = Vector3::zero();
-        u_axis[max] = -normal[(max + 1) % 3];
-        u_axis[(max + 1) % 3] = normal[max];
-        let mut v_axis = Vector3::zero();
-        v_axis[max] = -normal[(max + 2) % 3];
-        v_axis[(max + 2) % 3] = normal[max];
-        ProjectedSurface {
-            surface,
-            origin,
-            u_axis,
-            v_axis,
-        }
-    }
-    #[inline(always)]
-    fn vector_proj(&self, vector: Vector3) -> Vector2 {
-        Vector2::new(self.u_axis.dot(vector), self.v_axis.dot(vector))
-    }
-    #[inline(always)]
-    fn point_proj(&self, point: Point3) -> Point2 {
-        Point2::from_vec(self.vector_proj(point - self.origin))
-    }
-}
-
-impl<'a, S: ParametricSurface3D> ParametricSurface for ProjectedSurface<'a, S> {
-    type Point = Point2;
-    type Vector = Vector2;
-    #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point2 { self.point_proj(self.surface.subs(u, v)) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uder(u, v)) }
-    #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vder(u, v)) }
-    #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uuder(u, v)) }
-    #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.uvder(u, v)) }
-    #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector2 { self.vector_proj(self.surface.vvder(u, v)) }
-}
-
 /// Searches the parameter by Newton's method.
 #[inline(always)]
 pub fn search_parameter3d<S: ParametricSurface3D>(
     surface: &S,
     point: Point3,
-    (u0, v0): (f64, f64),
+    hint: (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)> {
-    let proj = ProjectedSurface::new(surface, (u0, v0));
-    search_parameter2d(&proj, proj.point_proj(point), (u0, v0), trials).and_then(|(u, v)| {
-        match surface.subs(u, v).near(&point) {
-            true => Some((u, v)),
-            false => None,
+    let mut log = NewtonLog::default();
+    let mut vec = Vector3::new(hint.0, hint.1, 0.0);
+    for _ in 0..=trials {
+        let (u0, v0) = (vec.x, vec.y);
+        log.push((u0, v0));
+        let pt = surface.subs(u0, v0);
+        let uder = surface.uder(u0, v0);
+        let vder = surface.vder(u0, v0);
+        let dermag2 = f64::min(0.05, uder.magnitude2());
+        let dermag2 = f64::min(dermag2, vder.magnitude2());
+        if pt.distance2(point) < TOLERANCE2 * dermag2 {
+            return Some((vec.x, vec.y));
         }
-    })
+        let inv = Matrix3::from_cols(uder, vder, uder.cross(vder)).invert()?;
+        vec = vec - inv * (pt - point);
+    }
+    log.print_error();
+    None
 }
 
 /// Creates the surface division
