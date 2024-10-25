@@ -128,7 +128,7 @@ fn exec_polysurface_sp_on_surface() -> bool {
     let pt = poly.subs(u, v);
     let u0 = u + 2.0 * rand::random::<f64>() - 1.0;
     let v0 = v + 2.0 * rand::random::<f64>() - 1.0;
-    match algo::surface::search_parameter3d(&poly, pt, (u0, v0), 100) {
+    match algo::surface::search_parameter(&poly, pt, (u0, v0), 100) {
         Some(res) => match poly.subs(res.0, res.1).near(&pt) {
             true => true,
             false => {

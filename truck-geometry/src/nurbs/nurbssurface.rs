@@ -1,3 +1,5 @@
+use algo::surface::SspVector;
+
 use super::*;
 
 impl<V> NurbsSurface<V> {
@@ -584,47 +586,6 @@ where V::Point: Bounded<Scalar = f64>
     }
 }
 
-impl SearchParameter<D2> for NurbsSurface<Vector3> {
-    type Point = Point2;
-    /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
-    /// If cannot find, then return `None`.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::prelude::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![
-    ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.1, 0.0, 0.5), Vector3::new(0.5, 0.0, 0.3), Vector3::new(1.0, 0.0, 1.0)],
-    ///     vec![Vector3::new(0.0, 0.1, 0.1), Vector3::new(0.2, 0.2, 0.1), Vector3::new(0.4, 0.3, 0.4), Vector3::new(1.0, 0.3, 0.7)],
-    ///     vec![Vector3::new(0.0, 0.5, 0.4), Vector3::new(0.3, 0.6, 0.5), Vector3::new(0.6, 0.4, 1.0), Vector3::new(1.0, 0.5, 0.4)],
-    ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.1, 1.0, 1.0), Vector3::new(0.5, 1.0, 0.5), Vector3::new(1.0, 1.0, 0.3)],
-    /// ];
-    /// let bspsurface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
-    /// let surface = NurbsSurface::new(bspsurface);
-    ///
-    /// let pt = surface.subs(0.3, 0.7);
-    /// let (u, v) = surface.search_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
-    /// assert_near!(surface.subs(u, v), pt);
-    /// ```
-    #[inline(always)]
-    fn search_parameter<H: Into<SPHint2D>>(
-        &self,
-        point: Point2,
-        hint: H,
-        trials: usize,
-    ) -> Option<(f64, f64)> {
-        let hint = match hint.into() {
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(range0, range1) => {
-                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
-            }
-            SPHint2D::None => {
-                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
-            }
-        };
-        algo::surface::search_parameter2d(self, point, hint, trials)
-    }
-}
-
 impl<V: Clone> Invertible for NurbsSurface<V> {
     #[inline(always)]
     fn invert(&mut self) { self.swap_axes(); }
@@ -798,8 +759,15 @@ where M: Copy + std::ops::Mul<V, Output = V>
     }
 }
 
-impl SearchParameter<D2> for NurbsSurface<Vector4> {
-    type Point = Point3;
+impl<Homog, P, V> SearchParameter<D2> for NurbsSurface<Homog>
+where
+    Homog: Homogeneous<f64, Point = P> + ControlPoint<f64, Diff = Homog>,
+    P: ControlPoint<f64, Diff = V>
+        + EuclideanSpace<Scalar = f64, Diff = V>
+        + MetricSpace<Metric = f64>,
+    V: SspVector,
+{
+    type Point = P;
     /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
     /// # Examples
@@ -821,7 +789,7 @@ impl SearchParameter<D2> for NurbsSurface<Vector4> {
     /// ```
     fn search_parameter<H: Into<SPHint2D>>(
         &self,
-        point: Point3,
+        point: P,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
@@ -834,7 +802,7 @@ impl SearchParameter<D2> for NurbsSurface<Vector4> {
                 algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
-        algo::surface::search_parameter3d(self, point, hint, trials)
+        algo::surface::search_parameter(self, point, hint, trials)
     }
 }
 
