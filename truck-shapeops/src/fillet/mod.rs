@@ -2,16 +2,7 @@
 
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;
-
-type Vertex = truck_topology::Vertex<Point3>;
-type VertexID = truck_topology::VertexID<Point3>;
-type Edge = truck_topology::Edge<Point3, NurbsCurve<Vector4>>;
-type EdgeID = truck_topology::EdgeID<NurbsCurve<Vector4>>;
-type Wire = truck_topology::Wire<Point3, NurbsCurve<Vector4>>;
-type Face = truck_topology::Face<Point3, NurbsCurve<Vector4>, NurbsSurface<Vector4>>;
-type FaceID = truck_topology::FaceID<NurbsSurface<Vector4>>;
-type Shell = truck_topology::Shell<Point3, NurbsCurve<Vector4>, NurbsSurface<Vector4>>;
-type Solid = truck_topology::Solid<Point3, NurbsCurve<Vector4>, NurbsSurface<Vector4>>;
+truck_topology::prelude!(Point3, NurbsCurve<Vector4>, NurbsSurface<Vector4>);
 
 pub trait FilletCurve: ParametricCurve3D + BoundedCurve + ParameterDivision1D {}
 impl<C: ParametricCurve3D + BoundedCurve + ParameterDivision1D> FilletCurve for C {}
@@ -101,7 +92,6 @@ fn interpole_bezier(points: &[Point3]) -> BSplineCurve<Point3> {
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    println!("{:?}", rows);
     let vec = (0..3)
         .map(|i| {
             let mut rows = rows.clone();
@@ -115,7 +105,7 @@ fn interpole_bezier(points: &[Point3]) -> BSplineCurve<Point3> {
         .iter()
         .zip(&vec[1])
         .zip(&vec[2])
-        .map(|((a, b), c)| Point3::new(*a, *b, *c))
+        .map(|((a, b), c)| (*a, *b, *c).into())
         .collect::<Vec<_>>();
     BSplineCurve::new(KnotVec::bezier_knot(n), control_points)
 }
@@ -213,20 +203,14 @@ impl RelaySphere {
         }
         Self {
             center,
-            contact0: (p0, Point2::new(u0, v0)),
-            contact1: (p1, Point2::new(u1, v1)),
+            contact0: (p0, (u0, v0).into()),
+            contact1: (p1, (u1, v1).into()),
             transit: center + radius * (p - center).normalize(),
         }
     }
 
     fn fillet_wire(self) -> NurbsCurve<Vector4> {
-        let RelaySphere {
-            center: _,
-            contact0: (p0, _),
-            contact1: (p1, _),
-            transit,
-        } = self;
-        circle_arc_by_three_points(p0, p1, transit)
+        circle_arc_by_three_points(self.contact0.0, self.contact1.0, self.transit)
     }
 }
 
