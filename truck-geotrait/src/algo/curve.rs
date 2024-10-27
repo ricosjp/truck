@@ -1,3 +1,5 @@
+use surface::SspVector;
+
 use super::*;
 
 /// Divides the domain into equal parts, examines all the values, and returns `t` such that `curve.subs(t)` is closest to `point`.
@@ -215,40 +217,17 @@ where
 
 /// Searches the parameters of the intersection point of the two curves.
 #[inline(always)]
-pub fn search_intersection_parameter2d<C0, C1>(
+pub fn search_intersection_parameter<P, C0, C1>(
     curve0: &C0,
     curve1: &C1,
     hint: (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)>
 where
-    C0: ParametricCurve2D,
-    C1: ParametricCurve2D,
+    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + Tolerance,
+    P::Diff: SspVector + Tolerance,
+    C0: ParametricCurve<Point = P, Vector = P::Diff>,
+    C1: ParametricCurve<Point = P, Vector = P::Diff>,
 {
-    surface::search_parameter2d(
-        &SubSurface { curve0, curve1 },
-        Point2::origin(),
-        hint,
-        trials,
-    )
-}
-
-/// Searches the parameters of the intersection point of the two curves.
-#[inline(always)]
-pub fn search_intersection_parameter3d<C0, C1>(
-    curve0: &C0,
-    curve1: &C1,
-    hint: (f64, f64),
-    trials: usize,
-) -> Option<(f64, f64)>
-where
-    C0: ParametricCurve3D,
-    C1: ParametricCurve3D,
-{
-    surface::search_parameter3d(
-        &SubSurface { curve0, curve1 },
-        Point3::origin(),
-        hint,
-        trials,
-    )
+    surface::search_parameter(&SubSurface { curve0, curve1 }, P::origin(), hint, trials)
 }

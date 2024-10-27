@@ -535,7 +535,7 @@ impl From<&[f64]> for KnotVec {
     /// Constructs by the reference of vector. The clone of vector is sorted by the order.
     /// ```
     /// use truck_geometry::prelude::KnotVec;
-    /// let knot_vec = KnotVec::from(&[1.0, 0.0, 3.0, 2.0]);
+    /// let knot_vec = KnotVec::from([1.0, 0.0, 3.0, 2.0].as_slice());
     /// let arr : Vec<f64> = knot_vec.into();
     /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
     /// ```

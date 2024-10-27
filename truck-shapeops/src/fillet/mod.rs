@@ -1,5 +1,10 @@
+/***********************************/
+/*** This module is a prototype. ***/
+/***********************************/
+
 #![allow(dead_code)]
 
+use itertools::Itertools;
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;
 truck_topology::prelude!(Point3, NurbsCurve<Vector4>, NurbsSurface<Vector4>);
@@ -184,11 +189,11 @@ impl RelaySphere {
         surface0: &(impl ParametricSurface3D + SearchParameter<D2, Point = Point3>),
         surface1: &(impl ParametricSurface3D + SearchParameter<D2, Point = Point3>),
         radius: f64,
-    ) -> Self {
+    ) -> Option<Self> {
         let (p, der) = point_on_curve;
         let (mut p0, mut p1) = (p, p);
-        let (mut u0, mut v0) = surface0.search_parameter(p0, None, 10).unwrap();
-        let (mut u1, mut v1) = surface1.search_parameter(p1, None, 10).unwrap();
+        let (mut u0, mut v0) = surface0.search_parameter(p0, None, 10)?;
+        let (mut u1, mut v1) = surface1.search_parameter(p1, None, 10)?;
         let mut center = Point3::origin();
         for _ in 0..100 {
             let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
@@ -201,12 +206,12 @@ impl RelaySphere {
                 (p1, (u1, v1)) = Self::next_point(surface1, (u1, v1), (p1, q1));
             }
         }
-        Self {
+        Some(Self {
             center,
             contact0: (p0, (u0, v0).into()),
             contact1: (p1, (u1, v1).into()),
             transit: center + radius * (p - center).normalize(),
-        }
+        })
     }
 
     fn fillet_wire(self) -> NurbsCurve<Vector4> {
@@ -220,14 +225,14 @@ fn relay_spheres(
     curve: &impl FilletCurve,
     division: usize,
     radius: impl Fn(f64) -> f64,
-) -> Vec<RelaySphere> {
+) -> Option<Vec<RelaySphere>> {
     let (t0, t1) = curve.range_tuple();
-    let generator = move |i: usize| {
+    let generator = move |i: isize| {
         let a = i as f64 / division as f64;
         let t = (1.0 - a) * t0 + a * t1;
         RelaySphere::generate((curve.subs(t), curve.der(t)), surface0, surface1, radius(a))
     };
-    (0..=division).map(generator).collect()
+    (-1..=(division as isize + 1)).map(generator).collect()
 }
 
 fn almost_fillet_patch(rs0: RelaySphere, rs1: RelaySphere) -> BSplineSurface<Vector4> {
@@ -301,13 +306,158 @@ fn rolling_ball_fillet_surface(
     curve: &impl FilletCurve,
     division: usize,
     radius: impl Fn(f64) -> f64,
-) -> NurbsSurface<Vector4> {
-    let relay_spheres = relay_spheres(surface0, surface1, curve, division, radius);
-    expand_fillet(&relay_spheres, surface0, surface1)
+) -> Option<NurbsSurface<Vector4>> {
+    let relay_spheres = relay_spheres(surface0, surface1, curve, division, radius)?;
+    Some(expand_fillet(&relay_spheres, surface0, surface1))
+}
+
+fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Option<(Face, Face, NurbsSurface<Vector4>)> {
+    let surface0 = face0.oriented_surface();
+    let surface1 = face1.oriented_surface();
+
+    let boundaries0 = face0.boundaries();
+    let boundaries1 = face1.boundaries();
+
+    let (edge, boundary0, boundary1) = boundaries0.iter().find_map(|boundary0| {
+        boundaries1.iter().find_map(|boundary1| {
+            let edge = boundary0
+                .iter()
+                .find(|edge0| boundary1.edge_iter().any(|edge1| edge0.is_same(&edge1)))?;
+            Some((edge, boundary0, boundary1))
+        })
+    })?;
+
+    let curve = edge.oriented_curve();
+    let fillet_surface = rolling_ball_fillet_surface(&surface0, &surface1, &curve, 5, radius)?;
+
+    let mut bezier0 = fillet_surface.column_curve(0);
+    let (front_edge, back_edge) =
+        boundary0
+            .iter()
+            .circular_tuple_windows()
+            .find_map(|(x, edge0, y)| match edge.is_same(&edge0) {
+                true => Some((x, y)),
+                false => None,
+            })?;
+    let front_curve = front_edge.curve();
+    let hint = match front_edge.orientation() {
+        true => front_curve.range_tuple().1,
+        false => front_curve.range_tuple().0,
+    };
+    let (t0, t1) =
+        algo::curve::search_intersection_parameter(&bezier0, &front_curve, (0.0, hint), 100)?;
+    let v0 = Vertex::new(front_curve.subs(t1));
+    let (front_edge0, front_edge1) = front_edge.cut_with_parameter(&v0, t1)?;
+    bezier0 = bezier0.cut(t0);
+    *bezier0.control_point_mut(0) = v0.point().to_homogeneous();
+    let new_front_edge = match edge.orientation() {
+        true => front_edge0,
+        false => front_edge1,
+    };
+    let back_curve = back_edge.curve();
+    let hint = match back_edge.orientation() {
+        true => back_curve.range_tuple().0,
+        false => back_curve.range_tuple().1,
+    };
+    let (t0, t1) =
+        algo::curve::search_intersection_parameter(&bezier0, &back_curve, (1.0, hint), 100)?;
+    let v1 = Vertex::new(back_curve.subs(t1));
+    let (back_edge0, back_edge1) = back_edge.cut_with_parameter(&v1, t1)?;
+    bezier0.cut(t0);
+    *bezier0.control_point_mut(bezier0.control_points().len() - 1) = v1.point().to_homogeneous();
+    let new_back_edge = match edge.orientation() {
+        true => back_edge1,
+        false => back_edge0,
+    };
+    let fillet_edge0 = Edge::new(&v0, &v1, bezier0);
+
+    let new_boundaries0 = face0
+        .absolute_boundaries()
+        .iter()
+        .cloned()
+        .map(|mut boundary| {
+            let Some(idx) = boundary.iter().position(|edge0| edge0.is_same(front_edge)) else {
+                return boundary;
+            };
+            boundary.rotate_left(idx);
+            boundary[0] = new_front_edge.clone();
+            boundary[1] = fillet_edge0.clone();
+            boundary[2] = new_back_edge.clone();
+            boundary
+        })
+        .collect::<Vec<_>>();
+    let mut new_face0 = Face::new(new_boundaries0, face0.surface());
+    if !face0.orientation() {
+        new_face0.invert();
+    }
+
+    let mut bezier1 = fillet_surface.column_curve(fillet_surface.control_points().len() - 1);
+    bezier1.invert();
+    let (front_edge, back_edge) =
+        boundary1
+            .iter()
+            .circular_tuple_windows()
+            .find_map(|(x, edge0, y)| match edge.is_same(&edge0) {
+                true => Some((x, y)),
+                false => None,
+            })?;
+    let front_curve = front_edge.curve();
+    let hint = match front_edge.orientation() {
+        true => front_curve.range_tuple().1,
+        false => front_curve.range_tuple().0,
+    };
+    let (t0, t1) =
+        algo::curve::search_intersection_parameter(&bezier1, &front_curve, (0.0, hint), 100)?;
+    let v0 = Vertex::new(front_curve.subs(t1));
+    let (front_edge0, front_edge1) = front_edge.cut_with_parameter(&v0, t1)?;
+    bezier1 = bezier1.cut(t0);
+    *bezier1.control_point_mut(0) = v0.point().to_homogeneous();
+    let new_front_edge = match edge.orientation() {
+        true => front_edge0,
+        false => front_edge1,
+    };
+    let back_curve = back_edge.curve();
+    let hint = match back_edge.orientation() {
+        true => back_curve.range_tuple().0,
+        false => back_curve.range_tuple().1,
+    };
+    let (t0, t1) =
+        algo::curve::search_intersection_parameter(&bezier1, &back_curve, (1.0, hint), 100)?;
+    let v1 = Vertex::new(back_curve.subs(t1));
+    let (back_edge0, back_edge1) = back_edge.cut_with_parameter(&v1, t1)?;
+    bezier1.cut(t0);
+    *bezier1.control_point_mut(bezier1.control_points().len() - 1) = v1.point().to_homogeneous();
+    let new_back_edge = match edge.orientation() {
+        true => back_edge1,
+        false => back_edge0,
+    };
+    let fillet_edge1 = Edge::new(&v0, &v1, bezier1);
+
+    let new_boundaries1 = face1
+        .absolute_boundaries()
+        .iter()
+        .cloned()
+        .map(|mut boundary| {
+            let Some(idx) = boundary.iter().position(|edge0| edge0.is_same(front_edge)) else {
+                return boundary;
+            };
+            boundary.rotate_left(idx);
+            boundary[0] = new_front_edge.clone();
+            boundary[1] = fillet_edge1.clone();
+            boundary[2] = new_back_edge.clone();
+            boundary
+        })
+        .collect::<Vec<_>>();
+    let mut new_face1 = Face::new(new_boundaries1, face1.surface());
+    if !face1.orientation() {
+        new_face1.invert();
+    }
+
+    Some((new_face0, new_face1, fillet_surface))
 }
 
 #[test]
-fn create_fillet() {
+fn create_fillet_surface() {
     use truck_meshalgo::prelude::*;
     let surface0 = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
@@ -368,8 +518,97 @@ fn create_fillet() {
             Point3::new(0.2, 0.0, 0.0),
         ],
     );
-    let surface = rolling_ball_fillet_surface(&surface0, &surface1, &curve, 5, |_| 0.3);
-    let poly = StructuredMesh::from_surface(&surface, ((0.0, 1.0), (0.0, 1.0)), 0.001).destruct();
+    let surface = rolling_ball_fillet_surface(&surface0, &surface1, &curve, 5, |_| 0.3).unwrap();
+    let poly = StructuredMesh::from_surface(&surface, ((0.0, 1.0), (0.0, 1.0)), 0.01).destruct();
+    let file1 = std::fs::File::create("fillet.obj").unwrap();
+    obj::write(&poly, file1).unwrap();
+}
+
+#[test]
+fn create_simple_fillet() {
+    use truck_meshalgo::prelude::*;
+    let surface0: NurbsSurface<_> = BSplineSurface::new(
+        (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
+        vec![
+            vec![
+                Point3::new(0.1, 0.0, 0.0),
+                Point3::new(0.0, 0.5, 0.0),
+                Point3::new(-0.1, 1.0, 0.0),
+            ],
+            vec![
+                Point3::new(0.5, 0.0, 0.1),
+                Point3::new(0.5, 0.5, 0.0),
+                Point3::new(0.5, 1.0, 0.1),
+            ],
+            vec![
+                Point3::new(1.0, 0.0, 0.1),
+                Point3::new(1.0, 0.5, 0.1),
+                Point3::new(1.0, 1.0, 0.1),
+            ],
+        ],
+    )
+    .into();
+    let surface1: NurbsSurface<_> = BSplineSurface::new(
+        (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
+        vec![
+            vec![
+                Point3::new(0.1, 0.0, 0.0),
+                Point3::new(0.0, 0.0, -0.5),
+                Point3::new(-0.1, 0.0, -1.0),
+            ],
+            vec![
+                Point3::new(0.0, 0.5, 0.0),
+                Point3::new(0.0, 0.5, -0.5),
+                Point3::new(0.0, 0.5, -1.0),
+            ],
+            vec![
+                Point3::new(-0.1, 1.0, 0.0),
+                Point3::new(0.1, 1.0, -0.5),
+                Point3::new(0.0, 1.0, -1.0),
+            ],
+        ],
+    )
+    .into();
+
+    let v = Vertex::news(&[
+        Point3::new(0.1, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.1),
+        Point3::new(1.0, 1.0, 0.1),
+        Point3::new(-0.1, 1.0, 0.0),
+        Point3::new(-0.1, 0.0, -1.0),
+        Point3::new(0.0, 1.0, -1.0),
+    ]);
+
+    let boundary0 = surface0.splitted_boundary();
+    let boundary1 = surface1.splitted_boundary();
+
+    let wire0: Wire = [
+        Edge::new(&v[0], &v[1], boundary0[0].clone()),
+        Edge::new(&v[1], &v[2], boundary0[1].clone()),
+        Edge::new(&v[2], &v[3], boundary0[2].clone()),
+        Edge::new(&v[3], &v[0], boundary0[3].clone()),
+    ]
+    .into();
+
+    let wire1: Wire = [
+        wire0[3].inverse(),
+        Edge::new(&v[3], &v[5], boundary1[1].clone()),
+        Edge::new(&v[5], &v[4], boundary1[2].clone()),
+        Edge::new(&v[4], &v[0], boundary1[3].clone()),
+    ]
+    .into();
+
+    let face0 = Face::new(vec![wire0], surface0);
+    let face1 = Face::new(vec![wire1], surface1);
+
+    let (face0, face1, fillet_surface) = simple_fillet(&face0, &face1, |_| 0.3).unwrap();
+    let shell: Shell = [face0, face1].into();
+    let poly = shell.robust_triangulation(0.001).to_polygon();
+
+    let file = std::fs::File::create("trimmed.obj").unwrap();
+    obj::write(&poly, file).unwrap();
+
+    let poly = StructuredMesh::from_surface(&fillet_surface, ((0.0, 1.0), (0.0, 1.0)), 0.01).destruct();
     let file1 = std::fs::File::create("fillet.obj").unwrap();
     obj::write(&poly, file1).unwrap();
 }

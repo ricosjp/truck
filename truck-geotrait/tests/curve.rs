@@ -167,7 +167,7 @@ fn exec_polycurve_intersection_point() -> bool {
     ];
     let poly0 = PolyCurve::<Point2>(coef0);
     let poly1 = PolyCurve::<Point2>(coef1);
-    let res = algo::curve::search_intersection_parameter2d(&poly0, &poly1, (0.5, 0.5), 100);
+    let res = algo::curve::search_intersection_parameter(&poly0, &poly1, (0.5, 0.5), 100);
     let (t0, t1) = match res {
         Some(res) => res,
         None => return false,
