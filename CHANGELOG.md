@@ -6,6 +6,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 - Add the macro `truck_topology::prelude!`.
 - Simplify `truck_geotrait::algo::surface::search_parameter`.
+- More improve of `truck_geotrait::algo::surface::search_parameter`.
 
 ### Latest `cargo upgrade`
 

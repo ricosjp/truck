@@ -5,11 +5,21 @@ use truck_base::{cgmath64::*, hash::HashGen, tolerance::*};
 
 /// A structure that stores logs for debugging.
 #[doc(hidden)]
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct NewtonLog<T>(
     #[cfg(all(test, debug_assertions))] Vec<T>,
     std::marker::PhantomData<T>,
 );
+
+impl<T> Default for NewtonLog<T> {
+    fn default() -> Self {
+        Self(
+            #[cfg(all(test, debug_assertions))]
+            Vec::new(),
+            std::marker::PhantomData::<T>,
+        )
+    }
+}
 
 impl<T: std::fmt::Debug> NewtonLog<T> {
     #[inline(always)]

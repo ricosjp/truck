@@ -35,7 +35,7 @@ where
 pub fn search_nearest_parameter<S>(
     surface: &S,
     point: S::Point,
-    mut hint: (f64, f64),
+    hint: (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)>
 where
@@ -44,9 +44,10 @@ where
     S::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
     let mut log = NewtonLog::default();
+    let mut vec: Vector2 = hint.into();
     for _ in 0..=trials {
-        log.push(hint);
-        let (u0, v0) = hint;
+        log.push(vec);
+        let Vector2 { x: u0, y: v0 } = vec;
         let s = surface.subs(u0, v0);
         let ud = surface.uder(u0, v0);
         let vd = surface.vder(u0, v0);
@@ -58,12 +59,11 @@ where
         let c = uvd.dot(s - point) + ud.dot(vd);
         let b = vvd.dot(s - point) + vd.dot(vd);
         let fprime = Matrix2::new(a, c, c, b);
-        let dermag2 = f64::min(1.0, ud.magnitude2());
-        let dermag2 = f64::min(dermag2, vd.magnitude2());
-        if f.magnitude2() < TOLERANCE2 * dermag2 || fprime.determinant().so_small() {
-            return Some(hint);
+        let w = vec - fprime.invert()? * f;
+        if w.near2(&vec) {
+            return Some(vec.into());
         } else {
-            hint = (Vector2::from(hint) - fprime.invert()? * f).into();
+            vec = w;
         }
     }
     log.print_error();
@@ -71,9 +71,10 @@ where
 }
 
 /// Vectors whose points returned by the surface that can be the target of [`search_parameter`].
-pub trait SspVector: InnerSpace<Scalar = f64> {
+pub trait SspVector: InnerSpace<Scalar = f64> + Tolerance {
     #[doc(hidden)]
-    fn advance_newton(self, diff: Self, uder: Self, vder: Self) -> Option<Self>;
+    fn advance_newton<S>(self, surface: &S, diff: Self) -> Option<Self>
+    where S: ParametricSurface<Vector = Self>;
     #[doc(hidden)]
     fn into_param(self) -> (f64, f64);
     #[doc(hidden)]
@@ -81,7 +82,11 @@ pub trait SspVector: InnerSpace<Scalar = f64> {
 }
 
 impl SspVector for Vector2 {
-    fn advance_newton(self, diff: Self, uder: Self, vder: Self) -> Option<Self> {
+    fn advance_newton<S>(self, surface: &S, diff: Self) -> Option<Self>
+    where S: ParametricSurface<Vector = Self> {
+        let Vector2 { x: u, y: v } = self;
+        let uder = surface.uder(u, v);
+        let vder = surface.vder(u, v);
         Some(self - Matrix2::from_cols(uder, vder).invert()? * diff)
     }
     fn into_param(self) -> (f64, f64) { self.into() }
@@ -89,8 +94,20 @@ impl SspVector for Vector2 {
 }
 
 impl SspVector for Vector3 {
-    fn advance_newton(self, diff: Self, uder: Self, vder: Self) -> Option<Self> {
-        Some(self - Matrix3::from_cols(uder, vder, uder.cross(vder)).invert()? * diff)
+    fn advance_newton<S>(self, surface: &S, diff: Self) -> Option<Self>
+    where S: ParametricSurface<Vector = Self> {
+        let Vector3 { x: u, y: v, z: w } = self;
+        let uder = surface.uder(u, v);
+        let vder = surface.vder(u, v);
+        let uuder = surface.uuder(u, v);
+        let uvder = surface.uvder(u, v);
+        let vvder = surface.vvder(u, v);
+        let uv_cross = uder.cross(vder);
+        let b = diff + uv_cross * w;
+        let b_uder = uder + (uuder.cross(vder) + uder.cross(uvder)) * w;
+        let b_vder = vder + (uvder.cross(vder) + uder.cross(vvder)) * w;
+        let b_wder = uv_cross;
+        Some(self - Matrix3::from_cols(b_uder, b_vder, b_wder).invert()? * b)
     }
     fn into_param(self) -> (f64, f64) { self.truncate().into() }
     fn from_param((u, v): (f64, f64)) -> Self { Self::new(u, v, 0.0) }
@@ -113,16 +130,13 @@ where
     let mut vec = P::Diff::from_param(hint);
     for _ in 0..=trials {
         let (u0, v0) = vec.into_param();
-        log.push((u0, v0));
-        let pt = surface.subs(u0, v0);
-        let uder = surface.uder(u0, v0);
-        let vder = surface.vder(u0, v0);
-        let dermag2 = f64::min(0.05, uder.magnitude2());
-        let dermag2 = f64::min(dermag2, vder.magnitude2());
-        if pt.distance2(point) < TOLERANCE2 * dermag2 {
+        log.push(vec);
+        let diff = surface.subs(u0, v0) - point;
+        let w = vec.advance_newton(surface, diff)?;
+        if vec.near2(&w) {
             return Some((u0, v0));
         }
-        vec = vec.advance_newton(pt - point, uder, vder)?;
+        vec = w;
     }
     log.print_error();
     None
