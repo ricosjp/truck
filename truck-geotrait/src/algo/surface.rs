@@ -43,7 +43,7 @@ where
     S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>,
     S::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
-    let mut log = NewtonLog::default();
+    let mut log = NewtonLog::new(trials);
     let mut vec: Vector2 = hint.into();
     for _ in 0..=trials {
         log.push(vec);
@@ -62,9 +62,8 @@ where
         let w = vec - fprime.invert()? * f;
         if w.near2(&vec) {
             return Some(vec.into());
-        } else {
-            vec = w;
         }
+        vec = w;
     }
     log.print_error();
     None
@@ -126,7 +125,7 @@ where
     P::Diff: SspVector,
     S: ParametricSurface<Point = P, Vector = P::Diff>,
 {
-    let mut log = NewtonLog::default();
+    let mut log = NewtonLog::new(trials);
     let mut vec = P::Diff::from_param(hint);
     for _ in 0..=trials {
         let (u0, v0) = vec.into_param();

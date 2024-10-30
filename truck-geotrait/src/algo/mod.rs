@@ -11,17 +11,15 @@ pub struct NewtonLog<T>(
     std::marker::PhantomData<T>,
 );
 
-impl<T> Default for NewtonLog<T> {
-    fn default() -> Self {
+impl<T: std::fmt::Debug> NewtonLog<T> {
+    #[inline(always)]
+    fn new(_trials: usize) -> Self {
         Self(
             #[cfg(all(test, debug_assertions))]
-            Vec::new(),
+            Vec::with_capacity(_trials),
             std::marker::PhantomData::<T>,
         )
     }
-}
-
-impl<T: std::fmt::Debug> NewtonLog<T> {
     #[inline(always)]
     fn push(&mut self, _x: T) {
         #[cfg(all(test, debug_assertions))]
