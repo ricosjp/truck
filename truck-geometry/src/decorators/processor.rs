@@ -1,4 +1,5 @@
 use super::*;
+use algo::surface::SspVector;
 
 impl<E, T: One> Processor<E, T> {
     /// Creates new processor
@@ -482,8 +483,8 @@ where
 impl<P, E, T> SearchNearestParameter<D2> for Processor<E, T>
 where
     E: ParametricSurface<Point = P> + SearchNearestParameter<D2, Point = P>,
-    P: EuclideanSpace<Scalar = f64, Diff = E::Vector>,
-    E::Vector: InnerSpace<Scalar = f64> + Tolerance,
+    P: EuclideanSpace<Scalar = f64, Diff = E::Vector> + MetricSpace<Metric = f64> + Tolerance,
+    E::Vector: SspVector,
     T: Transform<P> + SquareMatrix<Scalar = f64> + Clone,
 {
     type Point = P;

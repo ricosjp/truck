@@ -1,6 +1,5 @@
-use algo::surface::SspVector;
-
 use super::*;
+use algo::surface::SspVector;
 
 impl<C, V: Copy> ExtrudedCurve<C, V> {
     /// Creates a linear extruded curve by extrusion.
@@ -80,7 +79,7 @@ impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
 
 impl<P, C> SearchParameter<D2> for ExtrudedCurve<C, P::Diff>
 where
-    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + Tolerance,
     P::Diff: SspVector,
     C: ParametricCurve<Point = P, Vector = P::Diff> + BoundedCurve,
 {
