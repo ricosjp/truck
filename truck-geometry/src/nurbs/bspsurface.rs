@@ -1,6 +1,6 @@
 use super::*;
-use algo::surface::SspVector;
 use crate::errors::Error;
+use algo::surface::SspVector;
 use std::iter::FusedIterator;
 use std::ops::*;
 
