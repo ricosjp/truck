@@ -1,5 +1,3 @@
-use algo::surface::SspVector;
-
 use super::*;
 use crate::errors::Error;
 use std::iter::FusedIterator;
@@ -1881,8 +1879,9 @@ impl<P, V> SearchParameter<D2> for BSplineSurface<P>
 where
     P: ControlPoint<f64, Diff = V>
         + EuclideanSpace<Scalar = f64, Diff = V>
-        + MetricSpace<Metric = f64>,
-    V: SspVector,
+        + MetricSpace<Metric = f64>
+        + Tolerance,
+    V: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
     fn search_parameter<H: Into<SPHint2D>>(

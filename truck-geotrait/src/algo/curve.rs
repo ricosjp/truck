@@ -46,7 +46,7 @@ where
         }
         let next = hint - f / fprime;
         if hint.near2(&next) {
-            return Some(hint)
+            return Some(hint);
         }
         hint = next;
     }

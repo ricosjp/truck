@@ -48,16 +48,16 @@ where
     for _ in 0..=trials {
         log.push(vec);
         let Vector2 { x: u0, y: v0 } = vec;
-        let s = surface.subs(u0, v0);
+        let diff = surface.subs(u0, v0) - point;
         let ud = surface.uder(u0, v0);
         let vd = surface.vder(u0, v0);
         let uud = surface.uuder(u0, v0);
         let uvd = surface.uvder(u0, v0);
         let vvd = surface.vvder(u0, v0);
-        let f = Vector2::new(ud.dot(s - point), vd.dot(s - point));
-        let a = uud.dot(s - point) + ud.dot(ud);
-        let c = uvd.dot(s - point) + ud.dot(vd);
-        let b = vvd.dot(s - point) + vd.dot(vd);
+        let f = Vector2::new(ud.dot(diff), vd.dot(diff));
+        let a = uud.dot(diff) + ud.dot(ud);
+        let c = uvd.dot(diff) + ud.dot(vd);
+        let b = vvd.dot(diff) + vd.dot(vd);
         let fprime = Matrix2::new(a, c, c, b);
         let w = vec - fprime.invert()? * f;
         if w.near2(&vec) {
@@ -69,76 +69,25 @@ where
     None
 }
 
-/// Vectors whose points returned by the surface that can be the target of [`search_parameter`].
-pub trait SspVector: InnerSpace<Scalar = f64> + Tolerance {
-    #[doc(hidden)]
-    fn advance_newton<S>(self, surface: &S, diff: Self) -> Option<Self>
-    where S: ParametricSurface<Vector = Self>;
-    #[doc(hidden)]
-    fn into_param(self) -> (f64, f64);
-    #[doc(hidden)]
-    fn from_param(param: (f64, f64)) -> Self;
-}
-
-impl SspVector for Vector2 {
-    fn advance_newton<S>(self, surface: &S, diff: Self) -> Option<Self>
-    where S: ParametricSurface<Vector = Self> {
-        let Vector2 { x: u, y: v } = self;
-        let uder = surface.uder(u, v);
-        let vder = surface.vder(u, v);
-        Some(self - Matrix2::from_cols(uder, vder).invert()? * diff)
-    }
-    fn into_param(self) -> (f64, f64) { self.into() }
-    fn from_param(param: (f64, f64)) -> Self { param.into() }
-}
-
-impl SspVector for Vector3 {
-    fn advance_newton<S>(self, surface: &S, diff: Self) -> Option<Self>
-    where S: ParametricSurface<Vector = Self> {
-        let Vector3 { x: u, y: v, z: w } = self;
-        let uder = surface.uder(u, v);
-        let vder = surface.vder(u, v);
-        let uuder = surface.uuder(u, v);
-        let uvder = surface.uvder(u, v);
-        let vvder = surface.vvder(u, v);
-        let uv_cross = uder.cross(vder);
-        let b = diff + uv_cross * w;
-        let b_uder = uder + (uuder.cross(vder) + uder.cross(uvder)) * w;
-        let b_vder = vder + (uvder.cross(vder) + uder.cross(vvder)) * w;
-        let b_wder = uv_cross;
-        Some(self - Matrix3::from_cols(b_uder, b_vder, b_wder).invert()? * b)
-    }
-    fn into_param(self) -> (f64, f64) { self.truncate().into() }
-    fn from_param((u, v): (f64, f64)) -> Self { Self::new(u, v, 0.0) }
-}
-
 /// Searches the parameter by Newton's method.
 #[inline(always)]
-pub fn search_parameter<P, S>(
+pub fn search_parameter<S>(
     surface: &S,
-    point: P,
+    point: S::Point,
     hint: (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)>
 where
-    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    P::Diff: SspVector,
-    S: ParametricSurface<Point = P, Vector = P::Diff>,
+    S: ParametricSurface,
+    S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector> + Tolerance,
+    S::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
-    let mut log = NewtonLog::new(trials);
-    let mut vec = P::Diff::from_param(hint);
-    for _ in 0..=trials {
-        let (u0, v0) = vec.into_param();
-        log.push(vec);
-        let diff = surface.subs(u0, v0) - point;
-        let w = vec.advance_newton(surface, diff)?;
-        if vec.near2(&w) {
-            return Some((u0, v0));
+    search_nearest_parameter(surface, point, hint, trials).and_then(|(u, v)| {
+        match surface.subs(u, v).near(&point) {
+            true => Some((u, v)),
+            false => None,
         }
-        vec = w;
-    }
-    log.print_error();
-    None
+    })
 }
 
 /// Creates the surface division

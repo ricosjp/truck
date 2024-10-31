@@ -1,5 +1,3 @@
-use algo::surface::SspVector;
-
 use super::*;
 
 impl<V> NurbsSurface<V> {
@@ -764,8 +762,9 @@ where
     Homog: Homogeneous<f64, Point = P> + ControlPoint<f64, Diff = Homog>,
     P: ControlPoint<f64, Diff = V>
         + EuclideanSpace<Scalar = f64, Diff = V>
-        + MetricSpace<Metric = f64>,
-    V: SspVector,
+        + MetricSpace<Metric = f64>
+        + Tolerance,
+    V: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
     /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
