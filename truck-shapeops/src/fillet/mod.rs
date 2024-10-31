@@ -4,10 +4,20 @@
 
 #![allow(dead_code)]
 
+use derive_more::*;
 use itertools::Itertools;
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;
-truck_topology::prelude!(Point3, NurbsCurve<Vector4>, NurbsSurface<Vector4>);
+
+#[derive(
+    Clone, Debug, ParametricCurve, BoundedCurve, ParameterDivision1D, Cut, From, Invertible,
+)]
+enum Curve {
+    NurbsCurve(NurbsCurve<Vector4>),
+    PCurve(PCurve<Line<Point2>, NurbsSurface<Vector4>>),
+}
+
+truck_topology::prelude!(Point3, Curve, NurbsSurface<Vector4>);
 
 pub trait FilletCurve: ParametricCurve3D + BoundedCurve + ParameterDivision1D {}
 impl<C: ParametricCurve3D + BoundedCurve + ParameterDivision1D> FilletCurve for C {}
@@ -311,7 +321,11 @@ fn rolling_ball_fillet_surface(
     Some(expand_fillet(&relay_spheres, surface0, surface1))
 }
 
-fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Option<(Face, Face, NurbsSurface<Vector4>)> {
+fn simple_fillet(
+    face0: &Face,
+    face1: &Face,
+    radius: impl Fn(f64) -> f64,
+) -> Option<(Face, Face, Face)> {
     let surface0 = face0.oriented_surface();
     let surface1 = face1.oriented_surface();
 
@@ -346,10 +360,9 @@ fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Opt
     };
     let (t0, t1) =
         algo::curve::search_intersection_parameter(&bezier0, &front_curve, (0.0, hint), 100)?;
-    let v0 = Vertex::new(front_curve.subs(t1));
-    let (front_edge0, front_edge1) = front_edge.cut_with_parameter(&v0, t1)?;
+    let v0 = Vertex::new(bezier0.subs(t0));
     bezier0 = bezier0.cut(t0);
-    *bezier0.control_point_mut(0) = v0.point().to_homogeneous();
+    let (front_edge0, front_edge1) = front_edge.cut_with_parameter(&v0, t1)?;
     let new_front_edge = match edge.orientation() {
         true => front_edge0,
         false => front_edge1,
@@ -361,15 +374,14 @@ fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Opt
     };
     let (t0, t1) =
         algo::curve::search_intersection_parameter(&bezier0, &back_curve, (1.0, hint), 100)?;
-    let v1 = Vertex::new(back_curve.subs(t1));
-    let (back_edge0, back_edge1) = back_edge.cut_with_parameter(&v1, t1)?;
+    let v1 = Vertex::new(bezier0.subs(t0));
     bezier0.cut(t0);
-    *bezier0.control_point_mut(bezier0.control_points().len() - 1) = v1.point().to_homogeneous();
+    let (back_edge0, back_edge1) = back_edge.cut_with_parameter(&v1, t1)?;
     let new_back_edge = match edge.orientation() {
         true => back_edge1,
         false => back_edge0,
     };
-    let fillet_edge0 = Edge::new(&v0, &v1, bezier0);
+    let fillet_edge0 = Edge::new(&v0, &v1, bezier0.into());
 
     let new_boundaries0 = face0
         .absolute_boundaries()
@@ -380,9 +392,15 @@ fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Opt
                 return boundary;
             };
             boundary.rotate_left(idx);
-            boundary[0] = new_front_edge.clone();
-            boundary[1] = fillet_edge0.clone();
-            boundary[2] = new_back_edge.clone();
+            if face0.orientation() {
+                boundary[0] = new_front_edge.clone();
+                boundary[1] = fillet_edge0.clone();
+                boundary[2] = new_back_edge.clone();
+            } else {
+                boundary[0] = new_back_edge.inverse();
+                boundary[1] = fillet_edge0.inverse();
+                boundary[2] = new_front_edge.inverse();
+            }
             boundary
         })
         .collect::<Vec<_>>();
@@ -408,10 +426,9 @@ fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Opt
     };
     let (t0, t1) =
         algo::curve::search_intersection_parameter(&bezier1, &front_curve, (0.0, hint), 100)?;
-    let v0 = Vertex::new(front_curve.subs(t1));
-    let (front_edge0, front_edge1) = front_edge.cut_with_parameter(&v0, t1)?;
+    let v0 = Vertex::new(bezier1.subs(t0));
     bezier1 = bezier1.cut(t0);
-    *bezier1.control_point_mut(0) = v0.point().to_homogeneous();
+    let (front_edge0, front_edge1) = front_edge.cut_with_parameter(&v0, t1)?;
     let new_front_edge = match edge.orientation() {
         true => front_edge0,
         false => front_edge1,
@@ -423,15 +440,14 @@ fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Opt
     };
     let (t0, t1) =
         algo::curve::search_intersection_parameter(&bezier1, &back_curve, (1.0, hint), 100)?;
-    let v1 = Vertex::new(back_curve.subs(t1));
-    let (back_edge0, back_edge1) = back_edge.cut_with_parameter(&v1, t1)?;
+    let v1 = Vertex::new(bezier1.subs(t0));
     bezier1.cut(t0);
-    *bezier1.control_point_mut(bezier1.control_points().len() - 1) = v1.point().to_homogeneous();
+    let (back_edge0, back_edge1) = back_edge.cut_with_parameter(&v1, t1)?;
     let new_back_edge = match edge.orientation() {
         true => back_edge1,
         false => back_edge0,
     };
-    let fillet_edge1 = Edge::new(&v0, &v1, bezier1);
+    let fillet_edge1 = Edge::new(&v0, &v1, bezier1.into());
 
     let new_boundaries1 = face1
         .absolute_boundaries()
@@ -442,9 +458,15 @@ fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Opt
                 return boundary;
             };
             boundary.rotate_left(idx);
-            boundary[0] = new_front_edge.clone();
-            boundary[1] = fillet_edge1.clone();
-            boundary[2] = new_back_edge.clone();
+            if face1.orientation() {
+                boundary[0] = new_front_edge.clone();
+                boundary[1] = fillet_edge1.clone();
+                boundary[2] = new_back_edge.clone();
+            } else {
+                boundary[0] = new_back_edge.inverse();
+                boundary[1] = fillet_edge1.inverse();
+                boundary[2] = new_front_edge.inverse();
+            }
             boundary
         })
         .collect::<Vec<_>>();
@@ -453,7 +475,26 @@ fn simple_fillet(face0: &Face, face1: &Face, radius: impl Fn(f64) -> f64) -> Opt
         new_face1.invert();
     }
 
-    Some((new_face0, new_face1, fillet_surface))
+    let (v0, v1) = fillet_edge0.ends();
+    let (v2, v3) = fillet_edge1.ends();
+
+    let uv0 = fillet_surface.search_parameter(v0.point(), (0.0, 0.0), 100)?;
+    let uv1 = fillet_surface.search_parameter(v1.point(), (0.0, 1.0), 100)?;
+    let uv2 = fillet_surface.search_parameter(v2.point(), (1.0, 1.0), 100)?;
+    let uv3 = fillet_surface.search_parameter(v3.point(), (1.0, 1.0), 100)?;
+
+    let edge0 = Edge::new(v0, v3, PCurve::new(Line(uv0.into(), uv3.into()), fillet_surface.clone()).into());
+    let edge1 = Edge::new(v2, v1, PCurve::new(Line(uv2.into(), uv1.into()), fillet_surface.clone()).into());
+
+    let fillet_boundary = Wire::from_iter([
+        fillet_edge0.inverse(),
+        edge0,
+        fillet_edge1.inverse(),
+        edge1,
+    ]);
+    let fillet = Face::new(vec![fillet_boundary], fillet_surface);
+
+    Some((new_face0, new_face1, fillet))
 }
 
 #[test]
@@ -531,19 +572,19 @@ fn create_simple_fillet() {
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
         vec![
             vec![
-                Point3::new(0.1, 0.0, 0.0),
+                Point3::new(-1.0, 0.0, 0.0),
+                Point3::new(-1.0, 0.5, 0.0),
+                Point3::new(-1.0, 1.0, 1.0),
+            ],
+            vec![
+                Point3::new(0.0, 0.0, 0.0),
                 Point3::new(0.0, 0.5, 0.0),
-                Point3::new(-0.1, 1.0, 0.0),
+                Point3::new(0.0, 1.0, 1.0),
             ],
             vec![
-                Point3::new(0.5, 0.0, 0.1),
-                Point3::new(0.5, 0.5, 0.0),
-                Point3::new(0.5, 1.0, 0.1),
-            ],
-            vec![
-                Point3::new(1.0, 0.0, 0.1),
-                Point3::new(1.0, 0.5, 0.1),
-                Point3::new(1.0, 1.0, 0.1),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(1.0, 0.5, 0.0),
+                Point3::new(1.0, 1.0, 1.0),
             ],
         ],
     )
@@ -552,65 +593,66 @@ fn create_simple_fillet() {
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
         vec![
             vec![
-                Point3::new(0.1, 0.0, 0.0),
-                Point3::new(0.0, 0.0, -0.5),
-                Point3::new(-0.1, 0.0, -1.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(1.0, 0.0, -0.5),
+                Point3::new(1.0, 1.0, -1.0),
             ],
             vec![
-                Point3::new(0.0, 0.5, 0.0),
+                Point3::new(0.0, 0.0, 0.0),
                 Point3::new(0.0, 0.5, -0.5),
-                Point3::new(0.0, 0.5, -1.0),
+                Point3::new(0.0, 1.0, -1.0),
             ],
             vec![
-                Point3::new(-0.1, 1.0, 0.0),
-                Point3::new(0.1, 1.0, -0.5),
-                Point3::new(0.0, 1.0, -1.0),
+                Point3::new(-1.0, 0.0, 0.0),
+                Point3::new(-1.0, 0.0, -0.5),
+                Point3::new(-1.0, 1.0, -1.0),
             ],
         ],
     )
     .into();
 
     let v = Vertex::news(&[
-        Point3::new(0.1, 0.0, 0.0),
-        Point3::new(1.0, 0.0, 0.1),
-        Point3::new(1.0, 1.0, 0.1),
-        Point3::new(-0.1, 1.0, 0.0),
-        Point3::new(-0.1, 0.0, -1.0),
-        Point3::new(0.0, 1.0, -1.0),
+        Point3::new(-1.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(-1.0, 1.0, 1.0),
+        Point3::new(-1.0, 1.0, -1.0),
+        Point3::new(1.0, 1.0, -1.0),
     ]);
 
     let boundary0 = surface0.splitted_boundary();
     let boundary1 = surface1.splitted_boundary();
 
     let wire0: Wire = [
-        Edge::new(&v[0], &v[1], boundary0[0].clone()),
-        Edge::new(&v[1], &v[2], boundary0[1].clone()),
-        Edge::new(&v[2], &v[3], boundary0[2].clone()),
-        Edge::new(&v[3], &v[0], boundary0[3].clone()),
+        Edge::new(&v[0], &v[1], boundary0[0].clone().into()),
+        Edge::new(&v[1], &v[2], boundary0[1].clone().into()),
+        Edge::new(&v[2], &v[3], boundary0[2].clone().into()),
+        Edge::new(&v[3], &v[0], boundary0[3].clone().into()),
     ]
     .into();
 
     let wire1: Wire = [
-        wire0[3].inverse(),
-        Edge::new(&v[3], &v[5], boundary1[1].clone()),
-        Edge::new(&v[5], &v[4], boundary1[2].clone()),
-        Edge::new(&v[4], &v[0], boundary1[3].clone()),
+        wire0[0].inverse(),
+        Edge::new(&v[0], &v[4], boundary1[1].clone().into()),
+        Edge::new(&v[4], &v[5], boundary1[2].clone().into()),
+        Edge::new(&v[5], &v[1], boundary1[3].clone().into()),
     ]
     .into();
 
     let face0 = Face::new(vec![wire0], surface0);
     let face1 = Face::new(vec![wire1], surface1);
-
-    let (face0, face1, fillet_surface) = simple_fillet(&face0, &face1, |_| 0.3).unwrap();
-    let shell: Shell = [face0, face1].into();
+    
+    let shell: Shell = [face0.clone(), face1.clone()].into();
     let poly = shell.robust_triangulation(0.001).to_polygon();
-
-    let file = std::fs::File::create("trimmed.obj").unwrap();
+    let file = std::fs::File::create("edged-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
 
-    let poly = StructuredMesh::from_surface(&fillet_surface, ((0.0, 1.0), (0.0, 1.0)), 0.01).destruct();
-    let file1 = std::fs::File::create("fillet.obj").unwrap();
-    obj::write(&poly, file1).unwrap();
+    let (face0, face1, fillet) = simple_fillet(&face0, &face1, |_| 0.3).unwrap();
+
+    let shell: Shell = [face0, face1, fillet].into();
+    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let file = std::fs::File::create("fillet-shell.obj").unwrap();
+    obj::write(&poly, file).unwrap();
 }
 
 // https://the-algorithms.com/algorithm/gaussian-elimination?lang=rust
