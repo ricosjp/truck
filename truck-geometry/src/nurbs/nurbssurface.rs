@@ -1,4 +1,5 @@
 use super::*;
+use algo::surface::SspVector;
 
 impl<V> NurbsSurface<V> {
     /// constructor
@@ -526,7 +527,7 @@ impl<V: Homogeneous<f64>> SearchNearestParameter<D2> for NurbsSurface<V>
 where
     Self: ParametricSurface<Point = V::Point, Vector = <V::Point as EuclideanSpace>::Diff>,
     V::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    <V::Point as EuclideanSpace>::Diff: InnerSpace<Scalar = f64> + Tolerance,
+    <V::Point as EuclideanSpace>::Diff: SspVector,
 {
     type Point = V::Point;
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
@@ -764,7 +765,7 @@ where
         + EuclideanSpace<Scalar = f64, Diff = V>
         + MetricSpace<Metric = f64>
         + Tolerance,
-    V: InnerSpace<Scalar = f64> + Tolerance,
+    V: SspVector,
 {
     type Point = P;
     /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
