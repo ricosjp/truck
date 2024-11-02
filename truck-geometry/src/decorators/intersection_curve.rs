@@ -18,7 +18,6 @@ where
     let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(plane_point, hint0, trials))?;
     let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(plane_point, hint1, trials))?;
     let mut vec = Vector4::new(x, y, z, w);
-    println!();
     for _ in 0..trials {
         log.push(vec);
         let Vector4 { x, y, z, w } = vec;
@@ -38,7 +37,6 @@ where
         let wder = -vder1.extend(0.0);
 
         let der_mat = Matrix4::from_cols(xder, yder, zder, wder);
-        println!("{vec:?} {:?}", der_mat.determinant());
         let next_vec = vec - der_mat.invert()? * point;
         if vec.near2(&next_vec) {
             return match pt0.near(&pt1) {
@@ -152,9 +150,7 @@ where
     }
     /// This method is unimplemented! Should panic!!
     #[inline(always)]
-    fn der2(&self, _: f64) -> Vector3 {
-        unimplemented!();
-    }
+    fn der2(&self, _: f64) -> Vector3 { unimplemented!() }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.leader.parameter_range() }
 }
