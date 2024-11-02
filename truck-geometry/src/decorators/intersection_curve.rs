@@ -1,4 +1,5 @@
 use super::*;
+use algo::NewtonLog;
 
 #[doc(hidden)]
 pub fn double_projection<S>(
@@ -6,40 +7,46 @@ pub fn double_projection<S>(
     hint0: Option<(f64, f64)>,
     surface1: &S,
     hint1: Option<(f64, f64)>,
-    mut point: Point3,
-    normal: Vector3,
+    plane_point: Point3,
+    plane_normal: Vector3,
     trials: usize,
 ) -> Option<(Point3, Point2, Point2)>
 where
     S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
-    #[cfg(all(test, debug_assertions))]
-    let mut log = Vec::new();
-    let mut uv0 = surface0.search_nearest_parameter(point, hint0, 10)?;
-    let mut uv1 = surface1.search_nearest_parameter(point, hint1, 10)?;
+    let mut log = NewtonLog::new(trials);
+    let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(plane_point, hint0, trials))?;
+    let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(plane_point, hint1, trials))?;
+    let mut vec = Vector4::new(x, y, z, w);
     for _ in 0..trials {
-        #[cfg(all(test, debug_assertions))]
-        log.push((point, uv0, uv1));
-        uv0 = surface0.search_nearest_parameter(point, Some(uv0), 10)?;
-        let pt0 = surface0.subs(uv0.0, uv0.1);
-        uv1 = surface1.search_nearest_parameter(point, Some(uv1), 10)?;
-        let pt1 = surface1.subs(uv1.0, uv1.1);
-        if point.near(&pt0) && point.near(&pt1) && pt0.near(&pt1) {
-            return Some((point, Point2::from(uv0), Point2::from(uv1)));
-        } else {
-            let n0 = surface0.normal(uv0.0, uv0.1);
-            let n1 = surface1.normal(uv1.0, uv1.1);
-            let mat = Matrix3::from_cols(n0, n1, normal).transpose();
-            let inv = mat.invert()?;
-            let pt = inv * Vector3::new(pt0.dot(n0), pt1.dot(n1), point.dot(normal));
-            point = Point3::from_vec(pt);
+        log.push(vec);
+        let Vector4 { x, y, z, w } = vec;
+
+        let pt0 = surface0.subs(x, y);
+        let uder0 = surface0.uder(x, y);
+        let vder0 = surface0.vder(x, y);
+
+        let pt1 = surface1.subs(z, w);
+        let uder1 = surface1.uder(z, w);
+        let vder1 = surface1.vder(z, w);
+
+        let point = (pt0 - pt1).extend(plane_normal.dot(pt0 - plane_point));
+        let xder = uder0.extend(plane_normal.dot(uder0));
+        let yder = vder0.extend(plane_normal.dot(vder0));
+        let zder = -uder1.extend(0.0);
+        let wder = -vder1.extend(0.0);
+
+        let der_mat = Matrix4::from_cols(xder, yder, zder, wder);
+        let next_vec = vec - der_mat.invert()? * point;
+        if vec.near2(&next_vec) {
+            return match pt0.near(&pt1) {
+                true => Some(((pt0.midpoint(pt1)), Point2::new(x, y), Point2::new(z, w))),
+                false => None,
+            };
         }
+        vec = next_vec;
     }
-    #[cfg(all(test, debug_assertions))]
-    {
-        eprintln!("Newton method is not converges");
-        log.into_iter().for_each(|t| eprintln!("{t:?}"));
-    }
+    log.print_error();
     None
 }
 
@@ -143,9 +150,7 @@ where
     }
     /// This method is unimplemented! Should panic!!
     #[inline(always)]
-    fn der2(&self, _: f64) -> Vector3 {
-        unimplemented!();
-    }
+    fn der2(&self, _: f64) -> Vector3 { unimplemented!() }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.leader.parameter_range() }
 }

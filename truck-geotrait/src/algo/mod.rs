@@ -13,7 +13,7 @@ pub struct NewtonLog<T>(
 
 impl<T: std::fmt::Debug> NewtonLog<T> {
     #[inline(always)]
-    fn new(_trials: usize) -> Self {
+    pub fn new(_trials: usize) -> Self {
         Self(
             #[cfg(all(test, debug_assertions))]
             Vec::with_capacity(_trials),
@@ -21,12 +21,12 @@ impl<T: std::fmt::Debug> NewtonLog<T> {
         )
     }
     #[inline(always)]
-    fn push(&mut self, _x: T) {
+    pub fn push(&mut self, _x: T) {
         #[cfg(all(test, debug_assertions))]
         self.0.push(_x)
     }
     #[inline(always)]
-    fn print_error(self) {
+    pub fn print_error(self) {
         #[cfg(all(test, debug_assertions))]
         {
             eprintln!("Newton method is not converges");
