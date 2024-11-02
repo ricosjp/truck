@@ -13,7 +13,7 @@ categories = ["graphics"]
 
 [dependencies]
 serde = { version = "1.0.214", features = ["derive"] }
-thiserror = "1.0.65"
+thiserror = "1.0.66"
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
 
