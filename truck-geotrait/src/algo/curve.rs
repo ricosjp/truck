@@ -35,7 +35,7 @@ where
     C::Point: EuclideanSpace<Scalar = f64, Diff = C::Vector>,
     C::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
-    let mut log = NewtonLog::default();
+    let mut log = NewtonLog::new(trials);
     for _ in 0..=trials {
         log.push(hint);
         let pt = curve.subs(hint);
@@ -43,12 +43,14 @@ where
         let der2 = curve.der2(hint);
         let f = der.dot(pt - point);
         let fprime = der2.dot(pt - point) + der.magnitude2();
-        let dermag = f64::min(der.magnitude(), 1.0);
-        if f64::abs(f) < TOLERANCE * dermag || fprime.so_small() {
-            return Some(hint);
-        } else {
-            hint -= f / fprime;
+        if fprime == 0.0 {
+            return None;
         }
+        let next = hint - f / fprime;
+        if hint.near2(&next) {
+            return Some(hint);
+        }
+        hint = next;
     }
     log.print_error();
     None

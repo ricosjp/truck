@@ -4,12 +4,14 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
-- Add the macro `truck_topology::prelude!`.
+- Update algorithm of `double_projection`.
+- More improve of `truck_geotrait::algo::surface::search_parameter`.
 - Simplify `truck_geotrait::algo::surface::search_parameter`.
+- Add the macro `truck_topology::prelude!`.
 
 ### Latest `cargo upgrade`
 
-2024-10-24
+2024-11-01
 
 ## v0.6
 
