@@ -9,6 +9,9 @@ use itertools::Itertools;
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;
 
+#[cfg(test)]
+use truck_meshalgo::prelude::*;
+
 type PCurveLns = PCurve<Line<Point2>, NurbsSurface<Vector4>>;
 
 #[derive(
@@ -335,13 +338,13 @@ fn cut_face_by_bezier(
     face: &Face,
     mut bezier: NurbsCurve<Vector4>,
     filleted_edge_id: EdgeID,
-    filleted_boundary: &Wire,
 ) -> Option<(Face, Edge)> {
     use algo::curve::search_intersection_parameter;
 
-    let (front_edge, _, back_edge) = filleted_boundary
-        .iter()
-        .circular_tuple_windows()
+    let (front_edge, _, back_edge) = face
+        .boundary_iters()
+        .into_iter()
+        .flat_map(|boundary_iter| boundary_iter.circular_tuple_windows())
         .find(|(_, edge, _)| edge.id() == filleted_edge_id)?;
 
     let new_front_edge = {
@@ -350,10 +353,7 @@ fn cut_face_by_bezier(
         let (t0, t1) = search_intersection_parameter(&bezier, &curve, (0.0, hint), 100)?;
         let v0 = Vertex::new(bezier.subs(t0));
         bezier = bezier.cut(t0);
-        take_ori(
-            front_edge.orientation(),
-            front_edge.cut_with_parameter(&v0, t1)?,
-        )
+        front_edge.cut_with_parameter(&v0, t1)?.0
     };
 
     let new_back_edge = {
@@ -362,10 +362,7 @@ fn cut_face_by_bezier(
         let (t0, t1) = search_intersection_parameter(&bezier, &curve, (1.0, hint), 100)?;
         let v1 = Vertex::new(bezier.subs(t0));
         bezier.cut(t0);
-        take_ori(
-            !back_edge.orientation(),
-            back_edge.cut_with_parameter(&v1, t1)?,
-        )
+        back_edge.cut_with_parameter(&v1, t1)?.1
     };
 
     let fillet_edge = Edge::new(
@@ -378,7 +375,7 @@ fn cut_face_by_bezier(
         .iter()
         .cloned()
         .map(|mut boundary| {
-            let Some(idx) = boundary.iter().position(|edge0| edge0.is_same(front_edge)) else {
+            let Some(idx) = boundary.iter().position(|edge0| edge0.is_same(&front_edge)) else {
                 return boundary;
             };
             boundary.rotate_left(idx);
@@ -404,17 +401,11 @@ fn cut_face_by_bezier(
 fn simple_fillet(
     face0: &Face,
     face1: &Face,
+    filleted_edge_id: EdgeID,
     radius: impl Fn(f64) -> f64,
 ) -> Option<(Face, Face, Face)> {
-    let (boundaries0, boundaries1) = (face0.boundaries(), face1.boundaries());
-    let (filleted_edge, boundary0, boundary1) = boundaries0.iter().find_map(|boundary0| {
-        boundaries1.iter().find_map(|boundary1| {
-            let filleted_edge = boundary0
-                .iter()
-                .find(|edge0| boundary1.edge_iter().any(|edge1| edge0.is_same(&edge1)))?;
-            Some((filleted_edge, boundary0, boundary1))
-        })
-    })?;
+    let find_filleted_edge = move |edge: &Edge| edge.id() == filleted_edge_id;
+    let filleted_edge = face0.edge_iter().find(find_filleted_edge)?;
 
     let fillet_surface = {
         let surface0 = face0.oriented_surface();
@@ -425,11 +416,11 @@ fn simple_fillet(
 
     let (new_face0, fillet_edge0) = {
         let bezier0 = fillet_surface.column_curve(0);
-        cut_face_by_bezier(&face0, bezier0, filleted_edge.id(), boundary0)?
+        cut_face_by_bezier(&face0, bezier0, filleted_edge.id())?
     };
     let (new_face1, fillet_edge1) = {
         let bezier1 = fillet_surface.column_curve(fillet_surface.control_points().len() - 1);
-        cut_face_by_bezier(&face1, bezier1.inverse(), filleted_edge.id(), boundary1)?
+        cut_face_by_bezier(&face1, bezier1.inverse(), filleted_edge.id())?
     };
 
     let ((v0, v1), (v2, v3)) = (fillet_edge0.ends(), fillet_edge1.ends());
@@ -454,48 +445,154 @@ fn simple_fillet(
     Some((new_face0, new_face1, fillet))
 }
 
+fn fillet_with_side(
+    face0: &Face,
+    face1: &Face,
+    filleted_edge_id: EdgeID,
+    side0: Option<&Face>,
+    side1: Option<&Face>,
+    radius: impl Fn(f64) -> f64,
+) -> Option<(Face, Face, Face, Option<Face>, Option<Face>)> {
+    let (new_face0, new_face1, fillet) = simple_fillet(face0, face1, filleted_edge_id, radius)?;
+
+    let fillet_edge0_id = fillet.absolute_boundaries()[0][0].id();
+    let (front_edge0, _, back_edge0) = new_face0
+        .boundary_iters()
+        .into_iter()
+        .flat_map(|boundary_iter| boundary_iter.circular_tuple_windows())
+        .find(|(_, edge, _)| edge.id() == fillet_edge0_id)?;
+
+    let fillet_edge1_id = fillet.absolute_boundaries()[0][2].id();
+    let (front_edge1, _, back_edge1) = new_face1
+        .boundary_iters()
+        .into_iter()
+        .flat_map(|boundary_iter| boundary_iter.circular_tuple_windows())
+        .find(|(_, edge, _)| edge.id() == fillet_edge1_id)?;
+
+    let filleted_edge = face0
+        .edge_iter()
+        .find(|edge| edge.id() == filleted_edge_id)?;
+    let (v0, v1) = filleted_edge.ends();
+
+    let new_side0 = side0.and_then(|side0| {
+        let fillet_edge = &fillet.absolute_boundaries()[0][1];
+        let (boundary_idx, edge_idx) = side0.boundary_iters().into_iter().enumerate().find_map(
+            |(boundary_idx, boundary_iter)| {
+                boundary_iter
+                    .enumerate()
+                    .find(|(_, edge)| edge.back() == v0)
+                    .map(move |(edge_idx, _)| (boundary_idx, edge_idx))
+            },
+        )?;
+        let new_boundaries = side0
+            .absolute_boundaries()
+            .iter()
+            .enumerate()
+            .map(|(idx, boundary)| {
+                let mut new_boundary = boundary.clone();
+                if idx == boundary_idx {
+                    if side0.orientation() {
+                        let len = new_boundary.len();
+                        new_boundary[edge_idx] = back_edge1.inverse();
+                        new_boundary[(edge_idx + 1) % len] = front_edge0.inverse();
+                        new_boundary.insert(edge_idx + 1, fillet_edge.inverse());
+                    } else {
+                        let len = new_boundary.len();
+                        new_boundary[len - edge_idx - 1] = back_edge1.clone();
+                        new_boundary[(2 * len - edge_idx - 2) % len] = front_edge0.clone();
+                        new_boundary.insert(len - edge_idx, fillet_edge.clone());
+                    }
+                }
+                new_boundary
+            })
+            .collect();
+        let side_surface = side0.oriented_surface();
+        let Curve::PCurve(pcurve) = fillet_edge.curve() else {
+            unreachable!()
+        };
+        let is_curve = IntersectionCurve::new_unchecked(
+            Box::new(side_surface),
+            Box::new(pcurve.surface().clone()),
+            pcurve,
+        );
+        fillet_edge.set_curve(is_curve.into());
+        let mut new_face = Face::new(new_boundaries, side0.surface());
+        if side0.orientation() {
+            new_face.invert();
+        }
+        Some(new_face)
+    });
+    let new_side1 = side1.and_then(|side1| {
+        let fillet_edge = &fillet.absolute_boundaries()[0][3];
+        let (boundary_idx, edge_idx) = side1.boundary_iters().into_iter().enumerate().find_map(
+            |(boundary_idx, boundary_iter)| {
+                boundary_iter
+                    .enumerate()
+                    .find(|(_, edge)| edge.back() == v1)
+                    .map(move |(edge_idx, _)| (boundary_idx, edge_idx))
+            },
+        )?;
+        let new_boundaries = side1
+            .absolute_boundaries()
+            .iter()
+            .enumerate()
+            .map(|(idx, boundary)| {
+                let mut new_boundary = boundary.clone();
+                if idx == boundary_idx {
+                    if side1.orientation() {
+                        let len = new_boundary.len();
+                        new_boundary[edge_idx] = back_edge0.inverse();
+                        new_boundary[(edge_idx + 1) % len] = front_edge1.inverse();
+                        new_boundary.insert(edge_idx + 1, fillet_edge.inverse());
+                    } else {
+                        let len = new_boundary.len();
+                        new_boundary[len - edge_idx - 1] = back_edge0.clone();
+                        new_boundary[(2 * len - edge_idx - 2) % len] = front_edge1.clone();
+                        new_boundary.insert(len - edge_idx, fillet_edge.clone());
+                    }
+                }
+                new_boundary
+            })
+            .collect();
+        let side_surface = side1.oriented_surface();
+        let Curve::PCurve(pcurve) = fillet_edge.curve() else {
+            unreachable!()
+        };
+        let is_curve = IntersectionCurve::new_unchecked(
+            Box::new(side_surface),
+            Box::new(pcurve.surface().clone()),
+            pcurve,
+        );
+        fillet_edge.set_curve(is_curve.into());
+        let mut new_face = Face::new(new_boundaries, side1.surface());
+        if !side1.orientation() {
+            new_face.invert();
+        }
+        Some(new_face)
+    });
+    Some((new_face0, new_face1, fillet, new_side0, new_side1))
+}
+
 #[test]
 fn create_fillet_surface() {
     use truck_meshalgo::prelude::*;
+    #[rustfmt::skip]
     let surface0 = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
         vec![
-            vec![
-                Point3::new(0.2, 0.0, 0.0),
-                Point3::new(0.0, 0.5, 0.0),
-                Point3::new(-0.2, 1.0, 0.0),
-            ],
-            vec![
-                Point3::new(0.5, 0.0, 0.1),
-                Point3::new(0.5, 0.5, 0.0),
-                Point3::new(0.5, 1.0, 0.2),
-            ],
-            vec![
-                Point3::new(1.0, 0.0, 0.3),
-                Point3::new(1.0, 0.5, 0.3),
-                Point3::new(1.0, 1.0, 0.1),
-            ],
+            vec![Point3::new(0.2, 0.0, 0.0), Point3::new(0.0, 0.5, 0.0), Point3::new(-0.2, 1.0, 0.0)],
+            vec![Point3::new(0.5, 0.0, 0.1), Point3::new(0.5, 0.5, 0.0), Point3::new(0.5, 1.0, 0.2)],
+            vec![Point3::new(1.0, 0.0, 0.3), Point3::new(1.0, 0.5, 0.3), Point3::new(1.0, 1.0, 0.1)],
         ],
     )
     .into();
+    #[rustfmt::skip]
     let surface1 = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
         vec![
-            vec![
-                Point3::new(0.2, 0.0, 0.0),
-                Point3::new(0.0, 0.0, -0.5),
-                Point3::new(-0.2, 0.0, -1.0),
-            ],
-            vec![
-                Point3::new(0.0, 0.5, 0.0),
-                Point3::new(0.0, 0.5, -0.5),
-                Point3::new(0.0, 0.5, -1.0),
-            ],
-            vec![
-                Point3::new(-0.2, 1.0, 0.0),
-                Point3::new(0.2, 1.0, -0.5),
-                Point3::new(0.0, 1.0, -1.0),
-            ],
+            vec![Point3::new(0.2, 0.0, 0.0),  Point3::new(0.0, 0.0, -0.5), Point3::new(-0.2, 0.0, -1.0)],
+            vec![Point3::new(0.0, 0.5, 0.0),  Point3::new(0.0, 0.5, -0.5), Point3::new(0.0, 0.5, -1.0)],
+            vec![Point3::new(-0.2, 1.0, 0.0), Point3::new(0.2, 1.0, -0.5), Point3::new(0.0, 1.0, -1.0)],
         ],
     )
     .into();
@@ -524,46 +621,23 @@ fn create_fillet_surface() {
 
 #[test]
 fn create_simple_fillet() {
-    use truck_meshalgo::prelude::*;
+    #[rustfmt::skip]
     let surface0: NurbsSurface<_> = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
         vec![
-            vec![
-                Point3::new(-1.0, 0.0, 0.0),
-                Point3::new(-1.0, 0.5, 0.0),
-                Point3::new(-1.0, 1.0, 1.0),
-            ],
-            vec![
-                Point3::new(0.0, 0.0, 0.0),
-                Point3::new(0.0, 0.5, 0.0),
-                Point3::new(0.0, 1.0, 1.0),
-            ],
-            vec![
-                Point3::new(1.0, 0.0, 0.0),
-                Point3::new(1.0, 0.5, 0.0),
-                Point3::new(1.0, 1.0, 1.0),
-            ],
+            vec![Point3::new(-1.0, 0.0, 0.0), Point3::new(-1.0, 0.5, 0.0), Point3::new(-1.0, 1.0, 1.0)],
+            vec![Point3::new(0.0, 0.0, 0.0),  Point3::new(0.0, 0.5, 0.0),  Point3::new(0.0, 1.0, 1.0)],
+            vec![Point3::new(1.0, 0.0, 0.0),  Point3::new(1.0, 0.5, 0.0),  Point3::new(1.0, 1.0, 1.0)],
         ],
     )
     .into();
+    #[rustfmt::skip]
     let surface1: NurbsSurface<_> = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
         vec![
-            vec![
-                Point3::new(1.0, 0.0, 0.0),
-                Point3::new(1.0, 0.0, -0.5),
-                Point3::new(1.0, 1.0, -1.0),
-            ],
-            vec![
-                Point3::new(0.0, 0.0, 0.0),
-                Point3::new(0.0, 0.5, -0.5),
-                Point3::new(0.0, 1.0, -1.0),
-            ],
-            vec![
-                Point3::new(-1.0, 0.0, 0.0),
-                Point3::new(-1.0, 0.0, -0.5),
-                Point3::new(-1.0, 1.0, -1.0),
-            ],
+            vec![Point3::new(1.0, 0.0, 0.0),  Point3::new(1.0, 0.0, -0.5),  Point3::new(1.0, 1.0, -1.0)],
+            vec![Point3::new(0.0, 0.0, 0.0),  Point3::new(0.0, 0.5, -0.5),  Point3::new(0.0, 1.0, -1.0)],
+            vec![Point3::new(-1.0, 0.0, 0.0), Point3::new(-1.0, 0.0, -0.5), Point3::new(-1.0, 1.0, -1.0)],
         ],
     )
     .into();
@@ -596,6 +670,7 @@ fn create_simple_fillet() {
     ]
     .into();
 
+    let shared_edge_id = wire0[0].id();
     let face0 = Face::new(vec![wire0], surface0);
     let face1 = Face::new(vec![wire1], surface1);
 
@@ -604,11 +679,82 @@ fn create_simple_fillet() {
     let file = std::fs::File::create("edged-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
 
-    let (face0, face1, fillet) = simple_fillet(&face0, &face1, |_| 0.3).unwrap();
+    let (face0, face1, fillet) = simple_fillet(&face0, &face1, shared_edge_id, |_| 0.3).unwrap();
 
     let shell: Shell = [face0, face1, fillet].into();
     let poly = shell.robust_triangulation(0.001).to_polygon();
     let file = std::fs::File::create("fillet-shell.obj").unwrap();
+    obj::write(&poly, file).unwrap();
+}
+
+#[test]
+fn create_fillet_with_side() {
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.3, 1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+    ];
+    let v = Vertex::news(&p);
+
+    let line = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+
+    let edge = [
+        line(0, 1),
+        line(1, 2),
+        line(2, 3),
+        line(3, 0),
+        line(0, 4),
+        line(1, 5),
+        line(2, 6),
+        line(3, 7),
+        line(4, 5),
+        line(5, 6),
+        line(6, 7),
+        line(7, 4),
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let knot_vecs = (knot_vec.clone(), knot_vec);
+        let bsp = BSplineSurface::new(knot_vecs, control_points);
+
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(i, j)| {
+                edge.iter()
+                    .find_map(|edge| {
+                        if edge.front() == &v[i] && edge.back() == &v[j] {
+                            Some(edge.clone())
+                        } else if edge.back() == &v[i] && edge.front() == &v[j] {
+                            Some(edge.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let face = [plane(0, 1, 2, 3), plane(0, 3, 7, 4), plane(0, 4, 5, 1)];
+
+    let (face0, face1, fillet, _, side1) = fillet_with_side(&face[0], &face[1], edge[3].id(), None, Some(&face[2]), |t| 0.3 + 0.3 * t).unwrap();
+
+    let shell: Shell = vec![face0, face1, fillet, side1.unwrap()].into();
+
+    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let file = std::fs::File::create("fillet-with-edge.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }
 

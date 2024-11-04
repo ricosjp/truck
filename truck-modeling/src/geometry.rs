@@ -140,7 +140,6 @@ impl Curve {
                 ) {
                     let editor = curve.editor();
                     *editor.leader = Leader::BSpline(bspcurve);
-                    *editor.tol = p_tol;
                     return true;
                 }
             }

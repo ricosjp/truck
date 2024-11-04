@@ -209,8 +209,8 @@ pub fn search_closest_parameter<P, C0, C1>(
     trials: usize,
 ) -> Option<(f64, f64)>
 where
-    P: EuclideanSpace<Scalar = f64>,
-    P::Diff: InnerSpace<Scalar = f64> + Tolerance,
+    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
+    P::Diff: SspVector + Tolerance,
     C0: ParametricCurve<Point = P, Vector = P::Diff>,
     C1: ParametricCurve<Point = P, Vector = P::Diff>,
 {
