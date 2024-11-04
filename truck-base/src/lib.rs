@@ -27,3 +27,4 @@ pub mod hash;
 pub mod id;
 /// Setting Tolerance
 pub mod tolerance;
+pub mod newton;
