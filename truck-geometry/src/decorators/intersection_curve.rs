@@ -30,11 +30,11 @@ where
         let uder1 = surface1.uder(z, w);
         let vder1 = surface1.vder(z, w);
 
-        let point = (pt0 - pt1).extend(plane_normal.dot(pt0 - plane_point));
-        let xder = uder0.extend(plane_normal.dot(uder0));
-        let yder = vder0.extend(plane_normal.dot(vder0));
-        let zder = -uder1.extend(0.0);
-        let wder = -vder1.extend(0.0);
+        let point = (pt0 - pt1).extend(plane_normal.dot(pt0.midpoint(pt1) - plane_point));
+        let xder = uder0.extend(plane_normal.dot(uder0) / 2.0);
+        let yder = vder0.extend(plane_normal.dot(vder0) / 2.0);
+        let zder = (-uder1).extend(plane_normal.dot(uder1) / 2.0);
+        let wder = (-vder1).extend(plane_normal.dot(vder1) / 2.0);
 
         let der_mat = Matrix4::from_cols(xder, yder, zder, wder);
         let next_vec = vec - der_mat.invert()? * point;
