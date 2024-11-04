@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Minor correction of `double_projection`.
 - Update algorithm of `double_projection`.
 - More improve of `truck_geotrait::algo::surface::search_parameter`.
 - Simplify `truck_geotrait::algo::surface::search_parameter`.
