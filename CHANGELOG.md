@@ -4,6 +4,8 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implement abstract newton method.
+- Minor correction of `double_projection`.
 - Update algorithm of `double_projection`.
 - More improve of `truck_geotrait::algo::surface::search_parameter`.
 - Simplify `truck_geotrait::algo::surface::search_parameter`.
@@ -11,7 +13,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2024-11-01
+2024-11-04
 
 ## v0.6
 

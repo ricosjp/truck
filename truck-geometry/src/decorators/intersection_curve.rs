@@ -1,5 +1,11 @@
 use super::*;
-use algo::NewtonLog;
+
+fn subs_tuple<S: ParametricSurface>(
+    surface: &S,
+    (u, v): (f64, f64),
+) -> (S::Point, S::Vector, S::Vector) {
+    (surface.subs(u, v), surface.uder(u, v), surface.vder(u, v))
+}
 
 #[doc(hidden)]
 pub fn double_projection<S>(
@@ -14,40 +20,25 @@ pub fn double_projection<S>(
 where
     S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
-    let mut log = NewtonLog::new(trials);
+    use truck_base::newton::{self, CalcOutput};
+    let function = move |Vector4 { x, y, z, w }| {
+        let (pt0, uder0, vder0) = subs_tuple(surface0, (x, y));
+        let (pt1, uder1, vder1) = subs_tuple(surface1, (z, w));
+        CalcOutput {
+            value: (pt0 - pt1).extend(plane_normal.dot(pt0.midpoint(pt1) - plane_point)),
+            derivation: Matrix4::from_cols(
+                uder0.extend(plane_normal.dot(uder0) / 2.0),
+                vder0.extend(plane_normal.dot(vder0) / 2.0),
+                (-uder1).extend(plane_normal.dot(uder1) / 2.0),
+                (-vder1).extend(plane_normal.dot(vder1) / 2.0),
+            ),
+        }
+    };
     let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(plane_point, hint0, trials))?;
     let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(plane_point, hint1, trials))?;
-    let mut vec = Vector4::new(x, y, z, w);
-    for _ in 0..trials {
-        log.push(vec);
-        let Vector4 { x, y, z, w } = vec;
-
-        let pt0 = surface0.subs(x, y);
-        let uder0 = surface0.uder(x, y);
-        let vder0 = surface0.vder(x, y);
-
-        let pt1 = surface1.subs(z, w);
-        let uder1 = surface1.uder(z, w);
-        let vder1 = surface1.vder(z, w);
-
-        let point = (pt0 - pt1).extend(plane_normal.dot(pt0 - plane_point));
-        let xder = uder0.extend(plane_normal.dot(uder0));
-        let yder = vder0.extend(plane_normal.dot(vder0));
-        let zder = -uder1.extend(0.0);
-        let wder = -vder1.extend(0.0);
-
-        let der_mat = Matrix4::from_cols(xder, yder, zder, wder);
-        let next_vec = vec - der_mat.invert()? * point;
-        if vec.near2(&next_vec) {
-            return match pt0.near(&pt1) {
-                true => Some(((pt0.midpoint(pt1)), Point2::new(x, y), Point2::new(z, w))),
-                false => None,
-            };
-        }
-        vec = next_vec;
-    }
-    log.print_error();
-    None
+    let Vector4 { x, y, z, w } = newton::solve(function, Vector4::new(x, y, z, w), trials).ok()?;
+    let point = surface0.subs(x, y).midpoint(surface1.subs(z, w));
+    Some((point, Point2::new(x, y), Point2::new(z, w)))
 }
 
 /// Mutable editor for `IntersectionCurve`.
