@@ -23,12 +23,12 @@ impl<T: AbsDiffEq<Epsilon = f64> + Debug> Tolerance for T {}
 #[macro_export]
 macro_rules! assert_near {
     ($left: expr, $right: expr $(,)?) => {
-        assert!($left.near(&$right), "assertion failed: `left` is near `right`
+        assert!($crate::tolerance::Tolerance::near(&$left, &$right), "assertion failed: `left` is near `right`
 left: {:?},
 right: {:?}", $left, $right)
     };
     ($left: expr, $right: expr, $($arg: tt)+) => {
-        assert!($left.near(&$right), "assertion failed: `left` is near `right`
+        assert!($crate::tolerance::Tolerance::near(&$left, &$right), "assertion failed: `left` is near `right`
 left: {:?},
 right: {:?}: {}", $left, $right, format_args!($($arg)+))
     };
@@ -50,12 +50,12 @@ fn assert_near_with_msg() {
 #[macro_export]
 macro_rules! assert_near2 {
     ($left: expr, $right: expr $(,)?) => {
-        assert!($left.near2(&$right), "assertion failed: `left` is near `right`
+        assert!($crate::tolerance::Tolerance::near2(&$left, &$right), "assertion failed: `left` is near `right`
 left: {:?},
 right: {:?}", $left, $right)
     };
     ($left: expr, $right: expr, $($arg: tt)+) => {
-        assert!($left.near2(&$right), "assertion failed: `left` is near `right`
+        assert!($crate::tolerance::Tolerance::near2(&$left, &$right), "assertion failed: `left` is near `right`
 left: {:?},
 right: {:?}: {}", $left, $right, format_args!($($arg)+))
     };
