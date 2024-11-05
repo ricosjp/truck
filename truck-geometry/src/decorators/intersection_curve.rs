@@ -21,7 +21,7 @@ where
     S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     use truck_base::newton::{self, CalcOutput};
-    let function = |Vector4 { x, y, z, w }| {
+    let function = move |Vector4 { x, y, z, w }| {
         let (pt0, uder0, vder0) = subs_tuple(surface0, (x, y));
         let (pt1, uder1, vder1) = subs_tuple(surface1, (z, w));
         CalcOutput {

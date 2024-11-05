@@ -73,7 +73,7 @@ where
         };
         let next = hint - inv * value;
         if next.near2(&hint) {
-            return Ok(next);
+            return Ok(hint);
         }
         hint = next;
     }
