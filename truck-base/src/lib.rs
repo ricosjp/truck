@@ -25,6 +25,6 @@ pub mod entry_map;
 pub mod hash;
 /// ID structure with `Copy`, `Hash` and `Eq` using raw pointers
 pub mod id;
+pub mod newton;
 /// Setting Tolerance
 pub mod tolerance;
-pub mod newton;

@@ -80,7 +80,7 @@ impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
 impl<P, C> SearchParameter<D2> for ExtrudedCurve<C, P::Diff>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + Tolerance,
-    P::Diff: SspVector,
+    P::Diff: SspVector<Point = P>,
     C: ParametricCurve<Point = P, Vector = P::Diff> + BoundedCurve,
 {
     type Point = P;

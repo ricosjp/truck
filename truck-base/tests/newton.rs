@@ -1,6 +1,6 @@
 use proptest::prelude::*;
-use truck_base::{assert_near, cgmath64::*, newton::*, tolerance::*};
 use std::f64::consts::PI;
+use truck_base::{assert_near, cgmath64::*, newton::*, tolerance::*};
 
 proptest! {
     #[test]
@@ -10,10 +10,12 @@ proptest! {
         delta in -0.5f64..=0.5f64,
     ) {
         let poly = |x: f64| a[0] + a[1] * x + a[2] * x * x + a[3] * x * x * x;
-        let value = |x: f64| poly(x) - poly(x0);
-        let der = |x: f64| a[1] + 2.0 * a[2] * x + 3.0 * a[3] * x * x;
-        match newton1(value, der, x0 + delta, 100) {
-            Ok(res) => assert_near!(value(res), 0.0),
+        let function = |x: f64| CalcOutput {
+            value: poly(x) - poly(x0),
+            derivation: a[1] + 2.0 * a[2] * x + 3.0 * a[3] * x * x,
+        };
+        match solve(function, x0 + delta, 100) {
+            Ok(res) => assert_near!(function(res).value, 0.0),
             Err(log) => assert!(log.degenerate(), "{log}"),
         }
     }
@@ -28,12 +30,16 @@ proptest! {
             return Ok(());
         }
         let n = n.normalize();
-        let value = |vec: Vector2| Vector2::new(vec.magnitude2() - 1.0, vec.dot(n));
-        let der0 = |Vector2 { x, .. }| Vector2::new(2.0 * x, n.x);
-        let der1 = |Vector2 { y, .. }| Vector2::new(2.0 * y, n.y);
+        let function = |vec: Vector2| CalcOutput {
+            value: Vector2::new(vec.magnitude2() - 1.0, vec.dot(n)),
+            derivation: Matrix2::from_cols(
+                Vector2::new(2.0 * vec.x, n.x),
+                Vector2::new(2.0 * vec.y, n.y),
+            ),
+        };
         let hint = Matrix2::from_angle(-Rad(PI / 2.0)) * n + Vector2::from(delta);
-        match newton2(value, der0, der1, hint, 10) {
-            Ok(res) => assert_near!(value(res), Vector2::zero()),
+        match solve(function, hint, 10) {
+            Ok(res) => assert_near!(function(res).value, Vector2::zero()),
             Err(log) => assert!(log.degenerate(), "{log}"),
         }
     }

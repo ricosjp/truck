@@ -25,7 +25,7 @@ where
 pub fn search_nearest_parameter<C>(
     curve: &C,
     point: C::Point,
-    mut hint: f64,
+    hint: f64,
     trials: usize,
 ) -> Option<f64>
 where
@@ -33,25 +33,16 @@ where
     C::Point: EuclideanSpace<Scalar = f64, Diff = C::Vector>,
     C::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
-    let mut log = NewtonLog::new(trials);
-    for _ in 0..=trials {
-        log.push(hint);
-        let pt = curve.subs(hint);
-        let der = curve.der(hint);
-        let der2 = curve.der2(hint);
-        let f = der.dot(pt - point);
-        let fprime = der2.dot(pt - point) + der.magnitude2();
-        if fprime == 0.0 {
-            return None;
+    let function = move |t: f64| {
+        let diff = curve.subs(t) - point;
+        let der = curve.der(t);
+        let der2 = curve.der2(t);
+        CalcOutput {
+            value: der.dot(diff),
+            derivation: der2.dot(diff) + der.magnitude2(),
         }
-        let next = hint - f / fprime;
-        if hint.near2(&next) {
-            return Some(hint);
-        }
-        hint = next;
-    }
-    log.print_error();
-    None
+    };
+    newton::solve(function, hint, trials).ok()
 }
 
 /// Searches the parameter by Newton's method.

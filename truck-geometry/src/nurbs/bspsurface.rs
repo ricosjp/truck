@@ -1882,7 +1882,7 @@ where
         + EuclideanSpace<Scalar = f64, Diff = V>
         + MetricSpace<Metric = f64>
         + Tolerance,
-    V: SspVector,
+    V: SspVector<Point = P>,
 {
     type Point = P;
     fn search_parameter<H: Into<SPHint2D>>(
@@ -1909,7 +1909,7 @@ where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
         + MetricSpace<Metric = f64>,
-    <P as ControlPoint<f64>>::Diff: SspVector,
+    <P as ControlPoint<f64>>::Diff: SspVector<Point = P>,
 {
     type Point = P;
     fn search_nearest_parameter<H: Into<SPHint2D>>(
