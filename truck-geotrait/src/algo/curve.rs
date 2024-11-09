@@ -201,7 +201,7 @@ pub fn search_closest_parameter<P, C0, C1>(
 ) -> Option<(f64, f64)>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    P::Diff: SspVector + Tolerance,
+    P::Diff: SspVector<Point = P> + Tolerance,
     C0: ParametricCurve<Point = P, Vector = P::Diff>,
     C1: ParametricCurve<Point = P, Vector = P::Diff>,
 {
@@ -218,7 +218,7 @@ pub fn search_intersection_parameter<P, C0, C1>(
 ) -> Option<(f64, f64)>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + Tolerance,
-    P::Diff: SspVector + Tolerance,
+    P::Diff: SspVector<Point = P> + Tolerance,
     C0: ParametricCurve<Point = P, Vector = P::Diff>,
     C1: ParametricCurve<Point = P, Vector = P::Diff>,
 {
