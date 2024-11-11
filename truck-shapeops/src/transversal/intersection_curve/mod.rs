@@ -19,11 +19,7 @@ impl<S> From<IntersectionCurveWithParameters<S>> for IntersectionCurve<PolylineC
 impl<S> IntersectionCurveWithParameters<S>
 where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
 {
-    pub fn try_new(
-        surface0: S,
-        surface1: S,
-        poly: PolylineCurve<Point3>,
-    ) -> Option<Self> {
+    pub fn try_new(surface0: S, surface1: S, poly: PolylineCurve<Point3>) -> Option<Self> {
         let mut polyline = PolylineCurve(Vec::new());
         let mut params0 = PolylineCurve(Vec::new());
         let mut params1 = PolylineCurve(Vec::new());
@@ -52,11 +48,7 @@ where S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>
         params0.push(p0);
         params1.push(p1);
         Some(Self {
-            ic: IntersectionCurve::new_unchecked(
-                Box::new(surface0),
-                Box::new(surface1),
-                polyline,
-            ),
+            ic: IntersectionCurve::new_unchecked(Box::new(surface0), Box::new(surface1), polyline),
             params0,
             params1,
         })

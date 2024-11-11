@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Prototyping for fillet surface with NURBS geometry.
 - Implement abstract newton method.
 - Minor correction of `double_projection`.
 - Update algorithm of `double_projection`.

@@ -174,14 +174,14 @@ fn exec_polycurve_intersection_point() -> bool {
     };
 
     let (p0, p1) = (poly0.subs(t0), poly1.subs(t1));
-    poly0.subs(t0).near(&p0)
-    && poly1.subs(t1).near(&p1)
-    && p0.near(&p1)
+    poly0.subs(t0).near(&p0) && poly1.subs(t1).near(&p1) && p0.near(&p1)
 }
 
 #[test]
 fn polycurve_intersection_point() {
-    let count = (0..10).filter(|_| exec_polycurve_intersection_point()).count();
+    let count = (0..10)
+        .filter(|_| exec_polycurve_intersection_point())
+        .count();
     println!("searching intersection point error: {}", 10 - count);
     assert!(count >= 8);
 }

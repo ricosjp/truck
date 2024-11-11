@@ -15,6 +15,7 @@ use truck_meshalgo::prelude::*;
 
 type PCurveLns = PCurve<Line<Point2>, NurbsSurface<Vector4>>;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(
     Clone,
     Debug,
@@ -243,9 +244,7 @@ fn composite_line_bezier(
     let points = (0..=degree)
         .map(|i| curve.subs(i as f64 / degree as f64))
         .collect::<Vec<_>>();
-    let res = interpole_bezier(&points);
-
-    res
+    interpole_bezier(&points)
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -498,11 +497,7 @@ fn cut_face_by_bezier(
         back_edge.not_strictly_cut_with_parameter(&v1, t1)?.1
     };
 
-    let fillet_edge = Edge::new(
-        &new_front_edge.back(),
-        &new_back_edge.front(),
-        bezier.into(),
-    );
+    let fillet_edge = Edge::new(new_front_edge.back(), new_back_edge.front(), bezier.into());
     let new_boundaries = face
         .absolute_boundaries()
         .iter()
@@ -560,16 +555,16 @@ fn simple_fillet(
 
     let (new_face0, fillet_edge0) = {
         let bezier = fillet_surface.column_curve(0);
-        cut_face_by_bezier(&face0, bezier, filleted_edge.id())?
+        cut_face_by_bezier(face0, bezier, filleted_edge.id())?
     };
     let (new_face1, fillet_edge1) = {
         let bezier = fillet_surface.column_curve(fillet_surface.control_points().len() - 1);
-        cut_face_by_bezier(&face1, bezier.inverse(), filleted_edge.id())?
+        cut_face_by_bezier(face1, bezier.inverse(), filleted_edge.id())?
     };
 
     let ((v0, v1), (v2, v3)) = (fillet_edge0.ends(), fillet_edge1.ends());
-    let edge0 = create_pcurve_edge((&v0, (0.0, 0.0)), (&v3, (1.0, 0.0)), &fillet_surface)?;
-    let edge1 = create_pcurve_edge((&v2, (1.0, 1.0)), (&v1, (0.0, 1.0)), &fillet_surface)?;
+    let edge0 = create_pcurve_edge((v0, (0.0, 0.0)), (v3, (1.0, 0.0)), &fillet_surface)?;
+    let edge1 = create_pcurve_edge((v2, (1.0, 1.0)), (v1, (0.0, 1.0)), &fillet_surface)?;
     let fillet = {
         let fillet_boundary = [fillet_edge0.inverse(), edge0, fillet_edge1.inverse(), edge1];
         Face::new(vec![fillet_boundary.into()], fillet_surface)
@@ -628,6 +623,7 @@ fn create_new_side(
     Some(new_face)
 }
 
+#[allow(clippy::type_complexity)]
 fn fillet_with_side(
     face0: &Face,
     face1: &Face,
@@ -659,7 +655,7 @@ fn fillet_with_side(
     });
     let new_side1 = side1.and_then(|side1| {
         let fillet_edge = &fillet.absolute_boundaries()[0][3];
-        create_new_side(side1, &fillet_edge, v1.id(), &front_edge1, &back_edge0)
+        create_new_side(side1, fillet_edge, v1.id(), &front_edge1, &back_edge0)
     });
     Some((new_face0, new_face1, fillet, new_side0, new_side1))
 }
@@ -709,7 +705,7 @@ fn enumerate_adjacent_faces(
             let mut boundary_iter = face.boundary_iters().into_iter().enumerate();
             boundary_iter.find_map(|(boundary_idx, boundary_iter)| {
                 let mut edge_iter = boundary_iter.enumerate();
-                edge_iter.find_map(|(edge_idx, edge)| match edge.is_same(&edge0) {
+                edge_iter.find_map(|(edge_idx, edge)| match edge.is_same(edge0) {
                     true => Some((face_idx, boundary_idx, edge_idx).into()),
                     false => None,
                 })
@@ -964,18 +960,26 @@ fn fillet_along_wire(
             .collect::<Wire>();
 
         let shared_face = &mut shell[shared_face_index.face_index];
-        let (front_edge, _) = find_adjacent_edge(&shared_face, wire[0].id())?;
-        let (_, back_edge) = find_adjacent_edge(&shared_face, wire[wire.len() - 1].id())?;
+        let (front_edge, _) = find_adjacent_edge(shared_face, wire[0].id())?;
+        let (_, back_edge) = find_adjacent_edge(shared_face, wire[wire.len() - 1].id())?;
 
         let mut boundaries = shared_face.boundaries();
 
         if front_edge == back_edge {
-            let pre_new_edge = front_edge.not_strictly_cut(new_wire.front_vertex().unwrap())?.0;
-            let new_edge = pre_new_edge.not_strictly_cut(new_wire.back_vertex().unwrap())?.1;
+            let pre_new_edge = front_edge
+                .not_strictly_cut(new_wire.front_vertex().unwrap())?
+                .0;
+            let new_edge = pre_new_edge
+                .not_strictly_cut(new_wire.back_vertex().unwrap())?
+                .1;
             new_wire.push_front(new_edge);
         } else {
-            let new_front_edge = front_edge.not_strictly_cut(new_wire.front_vertex().unwrap())?.0;
-            let new_back_edge = back_edge.not_strictly_cut(new_wire.back_vertex().unwrap())?.1;
+            let new_front_edge = front_edge
+                .not_strictly_cut(new_wire.front_vertex().unwrap())?
+                .0;
+            let new_back_edge = back_edge
+                .not_strictly_cut(new_wire.back_vertex().unwrap())?
+                .1;
             new_wire.push_front(new_front_edge);
             new_wire.push_back(new_back_edge);
 
