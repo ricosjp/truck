@@ -40,8 +40,8 @@ impl<C: ParametricCurve3D + BoundedCurve + ParameterDivision1D> FilletCurve for 
 
 trait NotStrictlyCut: Sized {
     fn pre_cut(&self, vertex: &Vertex, curve: Curve, t: f64) -> (Self, Self);
-    fn cut(&self, vertex: &Vertex) -> Option<(Self, Self)>;
-    fn cut_with_parameter(&self, vertex: &Vertex, t: f64) -> Option<(Self, Self)>;
+    fn not_strictly_cut(&self, vertex: &Vertex) -> Option<(Self, Self)>;
+    fn not_strictly_cut_with_parameter(&self, vertex: &Vertex, t: f64) -> Option<(Self, Self)>;
 }
 
 impl NotStrictlyCut for Edge {
@@ -58,7 +58,7 @@ impl NotStrictlyCut for Edge {
             }
         }
     }
-    fn cut(&self, vertex: &Vertex) -> Option<(Self, Self)> {
+    fn not_strictly_cut(&self, vertex: &Vertex) -> Option<(Self, Self)> {
         let curve0 = self.curve();
         let t = curve0.search_nearest_parameter(vertex.point(), None, 100)?;
         let (t0, t1) = curve0.range_tuple();
@@ -68,7 +68,7 @@ impl NotStrictlyCut for Edge {
         Some(self.pre_cut(vertex, curve0, t))
     }
 
-    fn cut_with_parameter(&self, vertex: &Vertex, t: f64) -> Option<(Self, Self)> {
+    fn not_strictly_cut_with_parameter(&self, vertex: &Vertex, t: f64) -> Option<(Self, Self)> {
         let curve0 = self.curve();
         let (t0, t1) = curve0.range_tuple();
         if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
@@ -481,7 +481,7 @@ fn cut_face_by_bezier(
         let (t0, t1) = search_closest_parameter(&bezier, &curve, hint, 100)?;
         let v0 = Vertex::new(bezier.subs(t0));
         bezier = bezier.cut(t0);
-        front_edge.cut_with_parameter(&v0, t1)?.0
+        front_edge.not_strictly_cut_with_parameter(&v0, t1)?.0
     };
 
     let new_back_edge = {
@@ -495,7 +495,7 @@ fn cut_face_by_bezier(
         let (t0, t1) = search_closest_parameter(&bezier, &curve, hint, 100)?;
         let v1 = Vertex::new(bezier.subs(t0));
         bezier.cut(t0);
-        back_edge.cut_with_parameter(&v1, t1)?.1
+        back_edge.not_strictly_cut_with_parameter(&v1, t1)?.1
     };
 
     let fillet_edge = Edge::new(
@@ -970,12 +970,12 @@ fn fillet_along_wire(
         let mut boundaries = shared_face.boundaries();
 
         if front_edge == back_edge {
-            let pre_new_edge = front_edge.cut(new_wire.front_vertex().unwrap())?.0;
-            let new_edge = pre_new_edge.cut(new_wire.back_vertex().unwrap())?.1;
+            let pre_new_edge = front_edge.not_strictly_cut(new_wire.front_vertex().unwrap())?.0;
+            let new_edge = pre_new_edge.not_strictly_cut(new_wire.back_vertex().unwrap())?.1;
             new_wire.push_front(new_edge);
         } else {
-            let new_front_edge = front_edge.cut(new_wire.front_vertex().unwrap())?.0;
-            let new_back_edge = back_edge.cut(new_wire.back_vertex().unwrap())?.1;
+            let new_front_edge = front_edge.not_strictly_cut(new_wire.front_vertex().unwrap())?.0;
+            let new_back_edge = back_edge.not_strictly_cut(new_wire.back_vertex().unwrap())?.1;
             new_wire.push_front(new_front_edge);
             new_wire.push_back(new_back_edge);
 
