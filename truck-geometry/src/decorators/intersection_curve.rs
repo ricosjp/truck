@@ -1,4 +1,5 @@
 use super::*;
+use truck_base::newton::{self, CalcOutput};
 
 fn subs_tuple<S: ParametricSurface>(
     surface: &S,
@@ -20,7 +21,6 @@ pub fn double_projection<S>(
 where
     S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
-    use truck_base::newton::{self, CalcOutput};
     let function = move |Vector4 { x, y, z, w }| {
         let (pt0, uder0, vder0) = subs_tuple(surface0, (x, y));
         let (pt1, uder1, vder1) = subs_tuple(surface1, (z, w));
@@ -36,7 +36,7 @@ where
     };
     let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(plane_point, hint0, trials))?;
     let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(plane_point, hint1, trials))?;
-    let Vector4 { x, y, z, w } = newton::solve(function, Vector4::new(x, y, z, w), trials).ok()?;
+    let Vector4 { x, y, z, w } = newton::solve(function, Vector4 { x, y, z, w }, trials).ok()?;
     let point = surface0.subs(x, y).midpoint(surface1.subs(z, w));
     Some((point, Point2::new(x, y), Point2::new(z, w)))
 }
@@ -112,6 +112,45 @@ where
             100,
         )
     }
+    /// Search triple value of the point nearest to `point`.
+    /// - the coordinate on 3D space
+    /// - the uv coordinate on `self.surface0()`
+    /// - the uv coordinate on `self.surface1()`
+    pub fn search_nearest_point(
+        &self,
+        point: Point3,
+        hint0: Option<(f64, f64)>,
+        hint1: Option<(f64, f64)>,
+        trials: usize,
+    ) -> Option<(Point3, Point2, Point2)> {
+        let (surface0, surface1) = (self.surface0(), self.surface1());
+        let function = |Vector4 { x, y, z, w }| {
+            let (pt0, uder0, vder0, uuder0, uvder0, vvder0) = subs_tuple_der2(surface0, (x, y));
+            let (pt1, uder1, vder1, uuder1, uvder1, vvder1) = subs_tuple_der2(surface1, (z, w));
+            let diff = pt0.midpoint(pt1) - point;
+            let (n0, n1) = (uder0.cross(vder0), uder1.cross(vder1));
+            let n = n0.cross(n1);
+            let n_xder = (uuder0.cross(vder0) + uder0.cross(uvder0)).cross(n1);
+            let n_yder = (uvder0.cross(vder0) + uder0.cross(vvder0)).cross(n1);
+            let n_zder = n0.cross(uuder1.cross(vder1) + uder1.cross(uvder1));
+            let n_wder = n0.cross(uvder1.cross(vder1) + uder1.cross(vvder1));
+            CalcOutput {
+                value: (pt0 - pt1).extend(n.dot(diff)),
+                derivation: Matrix4::from_cols(
+                    uder0.extend(n_xder.dot(diff) + n.dot(uder0) / 2.0),
+                    vder0.extend(n_yder.dot(diff) + n.dot(vder0) / 2.0),
+                    (-uder1).extend(n_zder.dot(diff) + n.dot(uder1) / 2.0),
+                    (-vder1).extend(n_wder.dot(diff) + n.dot(vder1) / 2.0),
+                ),
+            }
+        };
+        let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(point, hint0, trials))?;
+        let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(point, hint1, trials))?;
+        let Vector4 { x, y, z, w } =
+            newton::solve(function, Vector4 { x, y, z, w }, trials).ok()?;
+        let point = surface0.subs(x, y).midpoint(surface1.subs(z, w));
+        Some((point, Point2::new(x, y), Point2::new(z, w)))
+    }
 }
 
 impl<C, S> ParametricCurve for IntersectionCurve<C, S>
@@ -123,14 +162,17 @@ where
     type Vector = Vector3;
     fn subs(&self, t: f64) -> Point3 { self.search_triple(t).unwrap().0 }
     fn der(&self, t: f64) -> Vector3 {
-        let n = self.leader.der(t);
-        let (_, p0, p1) = self.search_triple(t).unwrap();
-        let d = self
-            .surface0
-            .normal(p0.x, p0.y)
-            .cross(self.surface1.normal(p1.x, p1.y))
-            .normalize();
-        d * (n.dot(n) / d.dot(n))
+        let IntersectionCurve {
+            surface0,
+            surface1,
+            leader,
+        } = self;
+        let (l, l_der, l_der2) = (leader.subs(t), leader.der(t), leader.der2(t));
+        let (c, uv0, uv1) = self.search_triple(t).unwrap();
+        let (n0, n1) = (surface0.normal(uv0.x, uv0.y), surface1.normal(uv1.x, uv1.y));
+        let n = n0.cross(n1);
+        let k = (l_der.magnitude2() - (c - l).dot(l_der2)) / n.dot(l_der);
+        n * k
     }
     /// This method is unimplemented! Should panic!!
     #[inline(always)]
@@ -191,8 +233,7 @@ where
     ) -> Option<f64> {
         let t = self
             .leader()
-            .search_nearest_parameter(point, hint, trials)
-            .unwrap();
+            .search_nearest_parameter(point, hint, trials)?;
         let pt = self.subs(t);
         match pt.near(&point) {
             true => Some(t),
@@ -201,7 +242,25 @@ where
     }
 }
 
-/// Only derive from leading curve. Not precise.
+type DersSubsTuple<S> = (
+    <S as ParametricSurface>::Point,
+    <S as ParametricSurface>::Vector,
+    <S as ParametricSurface>::Vector,
+    <S as ParametricSurface>::Vector,
+    <S as ParametricSurface>::Vector,
+    <S as ParametricSurface>::Vector,
+);
+fn subs_tuple_der2<S: ParametricSurface>(surface: &S, (u, v): (f64, f64)) -> DersSubsTuple<S> {
+    (
+        surface.subs(u, v),
+        surface.uder(u, v),
+        surface.vder(u, v),
+        surface.uuder(u, v),
+        surface.uvder(u, v),
+        surface.vvder(u, v),
+    )
+}
+
 impl<C, S> SearchNearestParameter<D1> for IntersectionCurve<C, S>
 where
     C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
@@ -214,7 +273,9 @@ where
         hint: H,
         trials: usize,
     ) -> Option<f64> {
-        self.leader().search_nearest_parameter(point, hint, trials)
+        let (near_point, _, _) = self.search_nearest_point(point, None, None, trials)?;
+        self.leader()
+            .search_nearest_parameter(near_point, hint, trials)
     }
 }
 
