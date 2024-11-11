@@ -295,17 +295,21 @@ impl<P, C> Edge<P, C> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
+    ///
     /// // Create one edge
     /// let v = Vertex::news(&[(), ()]);
     /// let e0 = Edge::new(&v[0], &v[1], ());
     /// assert_eq!(e0.count(), 1);
+    ///
     /// // Create another edge, independent from e0
     /// let e1 = Edge::new(&v[0], &v[1], ());
     /// assert_eq!(e0.count(), 1);
+    ///
     /// // Clone e0, count will be 2
     /// let e2 = e0.clone();
     /// assert_eq!(e0.count(), 2);
     /// assert_eq!(e2.count(), 2);
+    ///
     /// // drop e2, count will be 1
     /// drop(e2);
     /// assert_eq!(e0.count(), 1);
@@ -398,6 +402,26 @@ impl<P, C> Edge<P, C> {
         geom_front.near(&*top_front) && geom_back.near(&*top_back)
     }
 
+    #[inline(always)]
+    fn pre_cut(&self, vertex: &Vertex<P>, mut curve0: C, t: f64) -> (Self, Self)
+    where C: Cut<Point = P> {
+        let curve1 = curve0.cut(t);
+        let edge0 = Edge {
+            vertices: (self.absolute_front().clone(), vertex.clone()),
+            orientation: self.orientation,
+            curve: Arc::new(Mutex::new(curve0)),
+        };
+        let edge1 = Edge {
+            vertices: (vertex.clone(), self.absolute_back().clone()),
+            orientation: self.orientation,
+            curve: Arc::new(Mutex::new(curve1)),
+        };
+        match self.orientation {
+            true => (edge0, edge1),
+            false => (edge1, edge0),
+        }
+    }
+
     /// Cuts the edge at `vertex`.
     /// # Failures
     /// Returns `None` if:
@@ -407,27 +431,13 @@ impl<P, C> Edge<P, C> {
     where
         P: Clone,
         C: Cut<Point = P> + SearchParameter<D1, Point = P>, {
-        let mut curve0 = self.curve();
+        let curve0 = self.curve();
         let t = curve0.search_parameter(vertex.point(), None, SEARCH_PARAMETER_TRIALS)?;
         let (t0, t1) = curve0.range_tuple();
         if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
             return None;
         }
-        let curve1 = curve0.cut(t);
-        let edge0 = Edge {
-            vertices: (self.absolute_front().clone(), vertex.clone()),
-            orientation: self.orientation,
-            curve: Arc::new(Mutex::new(curve0)),
-        };
-        let edge1 = Edge {
-            vertices: (vertex.clone(), self.absolute_back().clone()),
-            orientation: self.orientation,
-            curve: Arc::new(Mutex::new(curve1)),
-        };
-        match self.orientation {
-            true => Some((edge0, edge1)),
-            false => Some((edge1, edge0)),
-        }
+        Some(self.pre_cut(vertex, curve0, t))
     }
 
     /// Cuts the edge at `vertex` with parameter `t`.
@@ -437,7 +447,7 @@ impl<P, C> Edge<P, C> {
     where
         P: Clone + Tolerance,
         C: Cut<Point = P>, {
-        let mut curve0 = self.curve();
+        let curve0 = self.curve();
         if !curve0.subs(t).near(&vertex.point()) {
             return None;
         }
@@ -445,21 +455,7 @@ impl<P, C> Edge<P, C> {
         if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
             return None;
         }
-        let curve1 = curve0.cut(t);
-        let edge0 = Edge {
-            vertices: (self.absolute_front().clone(), vertex.clone()),
-            orientation: self.orientation,
-            curve: Arc::new(Mutex::new(curve0)),
-        };
-        let edge1 = Edge {
-            vertices: (vertex.clone(), self.absolute_back().clone()),
-            orientation: self.orientation,
-            curve: Arc::new(Mutex::new(curve1)),
-        };
-        match self.orientation {
-            true => Some((edge0, edge1)),
-            false => Some((edge1, edge0)),
-        }
+        Some(self.pre_cut(vertex, curve0, t))
     }
 
     /// Concats two edges.

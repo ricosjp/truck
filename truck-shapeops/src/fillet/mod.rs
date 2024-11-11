@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use algo::curve::search_intersection_parameter;
+use algo::curve::search_closest_parameter;
 use derive_more::*;
 use itertools::Itertools;
 use std::f64::consts::PI;
@@ -25,6 +25,7 @@ type PCurveLns = PCurve<Line<Point2>, NurbsSurface<Vector4>>;
     From,
     Invertible,
     SearchParameterD1,
+    SearchNearestParameterD1,
 )]
 enum Curve {
     NurbsCurve(NurbsCurve<Vector4>),
@@ -36,7 +37,46 @@ truck_topology::prelude!(Point3, Curve, NurbsSurface<Vector4>);
 
 pub trait FilletCurve: ParametricCurve3D + BoundedCurve + ParameterDivision1D {}
 impl<C: ParametricCurve3D + BoundedCurve + ParameterDivision1D> FilletCurve for C {}
-pub trait FilletSurface: ParametricSurface3D + SearchNearestParameter<D2> {}
+
+trait NotStrictlyCut: Sized {
+    fn pre_cut(&self, vertex: &Vertex, curve: Curve, t: f64) -> (Self, Self);
+    fn cut(&self, vertex: &Vertex) -> Option<(Self, Self)>;
+    fn cut_with_parameter(&self, vertex: &Vertex, t: f64) -> Option<(Self, Self)>;
+}
+
+impl NotStrictlyCut for Edge {
+    fn pre_cut(&self, vertex: &Vertex, mut curve0: Curve, t: f64) -> (Self, Self) {
+        let curve1 = curve0.cut(t);
+        let mut edge0 = Edge::new(self.absolute_front(), vertex, curve0);
+        let mut edge1 = Edge::new(vertex, self.absolute_back(), curve1);
+        match self.orientation() {
+            true => (edge0, edge1),
+            false => {
+                edge0.invert();
+                edge1.invert();
+                (edge1, edge0)
+            }
+        }
+    }
+    fn cut(&self, vertex: &Vertex) -> Option<(Self, Self)> {
+        let curve0 = self.curve();
+        let t = curve0.search_nearest_parameter(vertex.point(), None, 100)?;
+        let (t0, t1) = curve0.range_tuple();
+        if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
+            return None;
+        }
+        Some(self.pre_cut(vertex, curve0, t))
+    }
+
+    fn cut_with_parameter(&self, vertex: &Vertex, t: f64) -> Option<(Self, Self)> {
+        let curve0 = self.curve();
+        let (t0, t1) = curve0.range_tuple();
+        if t < t0 + TOLERANCE || t1 - TOLERANCE < t {
+            return None;
+        }
+        Some(self.pre_cut(vertex, curve0, t))
+    }
+}
 
 fn circle_arc(
     point: Point3,
@@ -438,7 +478,7 @@ fn cut_face_by_bezier(
             (bezier.range_tuple(), curve.range_tuple()),
             10,
         );
-        let (t0, t1) = search_intersection_parameter(&bezier, &curve, hint, 100)?;
+        let (t0, t1) = search_closest_parameter(&bezier, &curve, hint, 100)?;
         let v0 = Vertex::new(bezier.subs(t0));
         bezier = bezier.cut(t0);
         front_edge.cut_with_parameter(&v0, t1)?.0
@@ -452,7 +492,7 @@ fn cut_face_by_bezier(
             (bezier.range_tuple(), curve.range_tuple()),
             10,
         );
-        let (t0, t1) = search_intersection_parameter(&bezier, &curve, hint, 100)?;
+        let (t0, t1) = search_closest_parameter(&bezier, &curve, hint, 100)?;
         let v1 = Vertex::new(bezier.subs(t0));
         bezier.cut(t0);
         back_edge.cut_with_parameter(&v1, t1)?.1
@@ -743,7 +783,8 @@ fn cut_face_by_last_bezier(
     let last_long_bezier = fillet_surface.column_curve(len - 1);
     let face = &shell[face_index.face_index];
     let filleted_edge = &face.boundaries()[face_index.boundary_index][face_index.edge_index];
-    let (trimmed_face, edge1) = cut_face_by_bezier(face, last_long_bezier.inverse(), filleted_edge.id())?;
+    let (trimmed_face, edge1) =
+        cut_face_by_bezier(face, last_long_bezier.inverse(), filleted_edge.id())?;
     shell[face_index.face_index] = trimmed_face;
     Some(edge1)
 }
@@ -769,7 +810,7 @@ fn fillet_along_wire(
     let shared_face_index = find_shared_face_with_front_edge(shell, wire)?;
     let adjacent_faces = enumerate_adjacent_faces(shell, wire, shared_face_index)?;
 
-    let fillet_surfaces = fillet_surfaces_along_wire(
+    let mut fillet_surfaces = fillet_surfaces_along_wire(
         shell,
         wire,
         shared_face_index,
@@ -777,6 +818,18 @@ fn fillet_along_wire(
         radius,
         fillet_division,
     )?;
+
+    (1..fillet_surfaces.len()).for_each(|i| {
+        let len = fillet_surfaces[i].control_points().len();
+        (0..len).for_each(|j| {
+            let len = fillet_surfaces[i - 1].control_points()[j].len();
+            let p = *fillet_surfaces[i - 1].control_point(j, len - 1);
+            let q = *fillet_surfaces[i].control_point(j, 0);
+            let c = (p + q) / 2.0;
+            *fillet_surfaces[i - 1].control_point_mut(j, len - 1) = c;
+            *fillet_surfaces[i].control_point_mut(j, 0) = c;
+        });
+    });
 
     type CffTuple<'a> = (&'a [NurbsSurface<Vector4>], &'a FaceBoundaryEdgeIndex);
     let create_fillet_face = |(surfaces, face_index): CffTuple<'_>| {
@@ -820,7 +873,7 @@ fn fillet_along_wire(
         let edge0 = {
             let mut bezier = fillet_surfaces[0].column_curve(0);
             let curve = front_edge.oriented_curve();
-            let (t0, _) = search_intersection_parameter(&bezier, &curve, (0.0, 1.0), 100)?;
+            let (t0, _) = search_closest_parameter(&bezier, &curve, (0.0, 1.0), 100)?;
             bezier = bezier.cut(t0);
             let v0 = Vertex::new(bezier.front());
             let v1 = Vertex::new(bezier.back());
@@ -860,7 +913,7 @@ fn fillet_along_wire(
         let edge0 = {
             let mut bezier = fillet_surfaces[len - 1].column_curve(0);
             let curve = last_edge.oriented_curve();
-            let (t0, _) = search_intersection_parameter(&bezier, &curve, (1.0, 2.0), 100)?;
+            let (t0, _) = search_closest_parameter(&bezier, &curve, (1.0, 2.0), 100)?;
             bezier.cut(t0);
             let v0 = Vertex::new(bezier.front());
             let v1 = Vertex::new(bezier.back());
@@ -1249,10 +1302,10 @@ fn fillet_semi_cube() {
         Point3::new(1.0, 0.0, 1.0),
         Point3::new(1.0, 1.0, 1.0),
         Point3::new(0.0, 1.0, 1.0),
-        Point3::new(0.0, 0.0, 0.0),
-        Point3::new(1.0, 0.0, 0.0),
-        Point3::new(1.0, 1.0, 0.0),
-        Point3::new(0.0, 1.0, 0.0),
+        Point3::new(0.0, -0.1, 0.0),
+        Point3::new(1.1, -0.1, 0.0),
+        Point3::new(1.1, 1.1, 0.0),
+        Point3::new(0.0, 1.1, 0.0),
     ];
     let v = Vertex::news(&p);
 
