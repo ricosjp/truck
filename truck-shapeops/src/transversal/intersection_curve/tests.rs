@@ -97,23 +97,31 @@ fn intersection_curve_sphere_case() {
     const N: usize = 100;
     let mut sum = 0.0;
     let (t0, t1) = curve.range_tuple();
-    for i in 0..N {
+    for i in 0..=N {
         let t = t0 + (t1 - t0) * i as f64 / N as f64;
         let pt = curve.subs(t);
         assert_near!(pt.distance(Point3::origin()), 1.0);
         let vec = curve.der(t);
         assert!(pt.dot(vec).so_small(), "{i} {t} {vec:?}");
         assert!(vec[2].so_small());
-        sum += vec.magnitude() * (t1 - t0) / N as f64;
+        let denom = if i == 0 || i == N { 2.0 } else { 1.0 };
+        sum += vec.magnitude() / denom * (t1 - t0) / N as f64;
     }
-    assert!(f64::abs(sum - 2.0 * PI) < 0.1, "{}", sum);
+    assert!(
+        f64::abs(sum - 2.0 * PI) < 0.01,
+        "res: {}\nans: {}",
+        sum,
+        2.0 * PI
+    );
 
     let theta = 2.0 * PI * rand::random::<f64>();
     let pt = Point3::new(f64::cos(theta), f64::sin(theta), 0.0);
-    let t = curve.search_parameter(pt, None, 1).unwrap();
-    assert!(curve.subs(t).near(&pt));
+    let t = curve.search_parameter(pt, None, 10).unwrap();
+    assert_near!(curve.subs(t), pt);
     let pt = Point3::new(1.1 * f64::cos(theta), 1.1 * f64::sin(theta), 0.0);
-    assert!(curve.search_parameter(pt, None, 1).is_none());
+    assert!(curve.search_parameter(pt, None, 10).is_none());
+    let t = curve.search_nearest_parameter(pt, None, 10).unwrap();
+    assert_near!(curve.subs(t).distance(pt), 0.1);
 
     let mut curve0 = curve.clone();
     let curve1 = curve0.cut(2.5);
