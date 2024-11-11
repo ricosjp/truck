@@ -130,7 +130,6 @@ pub struct IntersectionCurve<C, S> {
     surface0: Box<S>,
     surface1: Box<S>,
     leader: C,
-    tol: f64,
 }
 
 /// trimmed curve for parametric curve

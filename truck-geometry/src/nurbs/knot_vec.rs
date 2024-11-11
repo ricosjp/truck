@@ -381,9 +381,7 @@ impl KnotVec {
         }
 
         self.0.truncate(self.len() - degree - 1);
-        for knot in &other.0 {
-            self.0.push(*knot);
-        }
+        self.0.extend(other.0.iter().copied());
 
         Ok(self)
     }
@@ -513,7 +511,7 @@ impl KnotVec {
     /// ```
     pub fn uniform_knot(degree: usize, division: usize) -> KnotVec {
         let mut vec = vec![0.0; degree + 1];
-        vec.extend((1..division).map(|i| (i as f64) / (division as f64)));
+        vec.extend((1..division).map(|i| i as f64 / division as f64));
         vec.extend(std::iter::repeat(1.0).take(degree + 1));
         KnotVec(vec)
     }
@@ -530,6 +528,22 @@ impl From<Vec<f64>> for KnotVec {
     fn from(mut vec: Vec<f64>) -> KnotVec {
         vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
         KnotVec(vec)
+    }
+}
+
+impl From<&[f64]> for KnotVec {
+    /// Constructs by the reference of vector. The clone of vector is sorted by the order.
+    /// ```
+    /// use truck_geometry::prelude::KnotVec;
+    /// let knot_vec = KnotVec::from([1.0, 0.0, 3.0, 2.0].as_slice());
+    /// let arr : Vec<f64> = knot_vec.into();
+    /// assert_eq!(arr, vec![0.0, 1.0, 2.0, 3.0]);
+    /// ```
+    #[inline(always)]
+    fn from(vec: &[f64]) -> KnotVec {
+        let mut copy_vec = vec.to_vec();
+        copy_vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        KnotVec(copy_vec)
     }
 }
 

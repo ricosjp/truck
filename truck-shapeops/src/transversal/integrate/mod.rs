@@ -59,7 +59,7 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
         geom_loops_store0: loops_store0,
         geom_loops_store1: loops_store1,
         ..
-    } = loops_store::create_loops_stores(shell0, &poly_shell0, shell1, &poly_shell1, tol)?;
+    } = loops_store::create_loops_stores(shell0, &poly_shell0, shell1, &poly_shell1)?;
     let mut cls0 = divide_face::divide_faces(shell0, &loops_store0, tol)?;
     cls0.integrate_by_component();
     let mut cls1 = divide_face::divide_faces(shell1, &loops_store1, tol)?;

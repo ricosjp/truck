@@ -578,6 +578,7 @@ where M: Copy + std::ops::Mul<V, Output = V>
 }
 
 impl<V: Homogeneous<f64>> From<BSplineCurve<V::Point>> for NurbsCurve<V> {
+    #[inline(always)]
     fn from(bspcurve: BSplineCurve<V::Point>) -> NurbsCurve<V> {
         NurbsCurve::new(BSplineCurve::new_unchecked(
             bspcurve.knot_vec,

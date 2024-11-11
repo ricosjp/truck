@@ -190,15 +190,6 @@ where
             );
             let far = p0.distance2(pt) > tol * tol;
 
-            /*
-            let ptu0 = surface.subs(u[0], v0);
-            let ptu1 = surface.subs(u[1], v0);
-            let ptv0 = surface.subs(u0, v[0]);
-            let ptv1 = surface.subs(u0, v[1]);
-            let ptu = ptu0 + (ptu1 - ptu0) * p;
-            let ptv = ptv0 + (ptv1 - ptv0) * q;
-            */
-
             *ub = *ub || far;
             *vb = *vb || far;
         }

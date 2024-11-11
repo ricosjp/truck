@@ -32,10 +32,7 @@ proptest! {
         let n = n.normalize();
         let function = |vec: Vector2| CalcOutput {
             value: Vector2::new(vec.magnitude2() - 1.0, vec.dot(n)),
-            derivation: Matrix2::from_cols(
-                Vector2::new(2.0 * vec.x, n.x),
-                Vector2::new(2.0 * vec.y, n.y),
-            ),
+            derivation: Matrix2::new(2.0 * vec.x, n.x, 2.0 * vec.y, n.y),
         };
         let hint = Matrix2::from_angle(-Rad(PI / 2.0)) * n + Vector2::from(delta);
         match solve(function, hint, 10) {

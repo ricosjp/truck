@@ -48,7 +48,6 @@ pub struct IntersectionCurveEditor<'a, C, S> {
     pub surface0: &'a mut S,
     pub surface1: &'a mut S,
     pub leader: &'a mut C,
-    pub tol: &'a mut f64,
 }
 
 impl<C, S> IntersectionCurve<C, S> {
@@ -69,7 +68,6 @@ impl<C, S> IntersectionCurve<C, S> {
             surface0: &mut self.surface0,
             surface1: &mut self.surface1,
             leader: &mut self.leader,
-            tol: &mut self.tol,
         }
     }
     /// Change leader.
@@ -80,20 +78,15 @@ impl<C, S> IntersectionCurve<C, S> {
             surface0: self.surface0,
             surface1: self.surface1,
             leader: f(self.leader),
-            tol: self.tol,
         }
     }
-    /// The tolerance for generating this intersection curve.
-    #[inline(always)]
-    pub fn tolerance(&self) -> f64 { self.tol }
     /// Creates intersection curve with unchecked bound. This method is only for developer of `truck`, deplicated for users.
     #[inline(always)]
-    pub fn new_unchecked(surface0: Box<S>, surface1: Box<S>, leader: C, tol: f64) -> Self {
+    pub fn new_unchecked(surface0: Box<S>, surface1: Box<S>, leader: C) -> Self {
         Self {
             surface0,
             surface1,
             leader,
-            tol,
         }
     }
 }
@@ -176,7 +169,6 @@ where
             surface0: self.surface0.clone(),
             surface1: self.surface1.clone(),
             leader: self.leader.cut(t),
-            tol: self.tol,
         }
     }
 }
@@ -235,7 +227,6 @@ where
         self.surface0.transform_by(trans);
         self.surface1.transform_by(trans);
         self.leader.transform_by(trans);
-        self.tol *= trans.norm_l2();
     }
 }
 

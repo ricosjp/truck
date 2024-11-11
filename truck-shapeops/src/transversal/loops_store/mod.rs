@@ -444,7 +444,6 @@ pub fn create_loops_stores<C, S>(
     poly_shell0: &Shell<Point3, PolylineCurve, Option<PolygonMesh>>,
     geom_shell1: &Shell<Point3, C, S>,
     poly_shell1: &Shell<Point3, PolylineCurve, Option<PolygonMesh>>,
-    tol: f64,
 ) -> Option<LoopsStoreQuadruple<C>>
 where
     C: SearchNearestParameter<D1, Point = Point3>
@@ -473,7 +472,6 @@ where
                 &polygon0,
                 surface1.clone(),
                 &polygon1,
-                tol,
             )
             .into_iter()
             .try_for_each(|(polyline, intersection_curve)| {
