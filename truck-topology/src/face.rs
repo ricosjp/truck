@@ -681,10 +681,10 @@ impl<P, C, S> Face<P, C, S> {
     /// let another_edge = Edge::new(&v[0], &v[1], ());
     /// let inversed_edge = shared_edge.inverse();
     /// let wire = vec![
-    ///     Wire::from_iter(vec![&Edge::new(&v[2], &v[0], ()), &shared_edge, &Edge::new(&v[1], &v[2], ())]),
-    ///     Wire::from_iter(vec![&Edge::new(&v[2], &v[0], ()), &another_edge, &Edge::new(&v[1], &v[2], ())]),
-    ///     Wire::from_iter(vec![&Edge::new(&v[3], &v[0], ()), &shared_edge, &Edge::new(&v[1], &v[3], ())]),
-    ///     Wire::from_iter(vec![&Edge::new(&v[3], &v[1], ()), &inversed_edge, &Edge::new(&v[0], &v[3], ())]),
+    ///     wire![&Edge::new(&v[2], &v[0], ()), &shared_edge, &Edge::new(&v[1], &v[2], ())],
+    ///     wire![&Edge::new(&v[2], &v[0], ()), &another_edge, &Edge::new(&v[1], &v[2], ())],
+    ///     wire![&Edge::new(&v[3], &v[0], ()), &shared_edge, &Edge::new(&v[1], &v[3], ())],
+    ///     wire![&Edge::new(&v[3], &v[1], ()), &inversed_edge, &Edge::new(&v[0], &v[3], ())],
     /// ];
     /// let face: Vec<_> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     /// assert!(face[0].border_on(&face[2]));

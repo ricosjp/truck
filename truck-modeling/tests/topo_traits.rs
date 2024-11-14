@@ -76,20 +76,18 @@ fn test_face() -> Face<Point3, Line, Surface> {
     ];
     let v = Vertex::news(p);
     let wire: Vec<Wire<_, _>> = vec![
-        vec![
+        wire![
             Edge::new(&v[0], &v[1], Line(p[0], p[1])),
             Edge::new(&v[2], &v[1], Line(p[2], p[1])).inverse(),
             Edge::new(&v[2], &v[3], Line(p[2], p[3])),
             Edge::new(&v[3], &v[0], Line(p[3], p[0])),
-        ]
-        .into(),
-        vec![
+        ],
+        wire![
             Edge::new(&v[7], &v[4], Line(p[7], p[4])).inverse(),
             Edge::new(&v[7], &v[6], Line(p[7], p[6])),
             Edge::new(&v[5], &v[6], Line(p[5], p[6])).inverse(),
             Edge::new(&v[4], &v[5], Line(p[4], p[5])).inverse(),
-        ]
-        .into(),
+        ],
     ];
     Face::new(wire, Plane::new(p[0], p[1], p[3]).into_bspline())
 }
@@ -120,21 +118,19 @@ fn test_shell() -> Shell<Point3, Line, Surface> {
         Edge::new(&v[8], &v[5], Line(p[8], p[5])),
     ];
     let w: Vec<Wire<_, _>> = vec![
-        vec![e[0].clone(), e[5].clone(), e[3].clone(), e[4].clone()].into(),
-        vec![
+        wire![e[0].clone(), e[5].clone(), e[3].clone(), e[4].clone()],
+        wire![
             e[9].inverse(),
             e[8].inverse(),
             e[7].inverse(),
             e[6].inverse(),
-        ]
-        .into(),
-        vec![e[5].clone(), e[2].clone(), e[1].inverse()].into(),
+        ],
+        wire![e[5].clone(), e[2].clone(), e[1].inverse()],
     ];
-    vec![
+    shell![
         Face::new(w[..2].to_vec(), Plane::new(p[0], p[1], p[4]).into_bspline()),
         Face::new(w[2..].to_vec(), Plane::new(p[1], p[3], p[2]).into_bspline()).inverse(),
     ]
-    .into()
 }
 
 #[test]
@@ -634,20 +630,18 @@ fn face_closed_sweep() {
     let v = Vertex::news(p);
     let face = Face::new(
         vec![
-            vec![
+            wire![
                 Edge::new(&v[0], &v[1], Line(p[0], p[1])),
                 Edge::new(&v[2], &v[1], Line(p[2], p[1])).inverse(),
                 Edge::new(&v[2], &v[3], Line(p[2], p[3])),
                 Edge::new(&v[3], &v[0], Line(p[3], p[0])),
-            ]
-            .into(),
-            vec![
+            ],
+            wire![
                 Edge::new(&v[7], &v[6], Line(p[7], p[6])),
                 Edge::new(&v[6], &v[5], Line(p[6], p[5])),
                 Edge::new(&v[4], &v[5], Line(p[4], p[5])).inverse(),
                 Edge::new(&v[4], &v[7], Line(p[4], p[7])),
-            ]
-            .into(),
+            ],
         ],
         Plane::new(p[0], p[1], p[3]).into_bspline(),
     );
@@ -780,8 +774,8 @@ fn shell_closed_sweep() {
     let shell: Shell<_, _, _> = vec![
         Face::new(
             vec![
-                vec![e[1].clone(), e[2].clone(), e[3].clone(), e[5].inverse()].into(),
-                vec![e[6].clone(), e[7].clone(), e[8].clone(), e[9].clone()].into(),
+                wire![e[1].clone(), e[2].clone(), e[3].clone(), e[5].inverse()],
+                wire![e[6].clone(), e[7].clone(), e[8].clone(), e[9].clone()],
             ],
             Plane::new(p[1], p[2], p[4]).into_bspline(),
         ),

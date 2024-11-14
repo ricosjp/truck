@@ -260,8 +260,8 @@ impl<P, C> Wire<P, C> {
     /// let edge3 = Edge::new(&v[3], &v[1], ());
     /// let edge4 = Edge::new(&v[3], &v[0], ());
     ///
-    /// let wire0 = Wire::from_iter(vec![&edge0, &edge1, &edge2, &edge3]);
-    /// let wire1 = Wire::from(vec![edge0, edge1, edge2, edge4]);
+    /// let wire0 = wire![&edge0, &edge1, &edge2, &edge3];
+    /// let wire1 = wire![edge0, edge1, edge2, edge4];
     ///
     /// assert!(!wire0.is_simple());
     /// assert!(wire1.is_simple());
