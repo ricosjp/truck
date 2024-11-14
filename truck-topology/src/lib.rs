@@ -23,10 +23,10 @@
 //! // Create boundaries of faces as the wire.
 //! // Edge is implemented the Copy trait.
 //! let wire = vec![
-//!     Wire::from_iter(vec![&edge[0], &edge[3], &edge[1].inverse()]),
-//!     Wire::from_iter(vec![&edge[1], &edge[5], &edge[2].inverse()]),
-//!     Wire::from_iter(vec![&edge[2], &edge[4].inverse(), &edge[0].inverse()]),
-//!     Wire::from_iter(vec![&edge[3], &edge[5], &edge[4].inverse()]),
+//!     wire![&edge[0], &edge[3], &edge[1].inverse()],
+//!     wire![&edge[1], &edge[5], &edge[2].inverse()],
+//!     wire![&edge[2], &edge[4].inverse(), &edge[0].inverse()],
+//!     wire![&edge[3], &edge[5], &edge[4].inverse()],
 //! ];
 //!
 //! // Create faces by the boundary wires.
@@ -148,7 +148,7 @@ pub struct Wire<P, C> {
 /// let v = Vertex::news(&[(), ()]);
 /// let edge0 = Edge::new(&v[0], &v[1], ());
 /// let edge1 = Edge::new(&v[1], &v[0], ());
-/// let wire = Wire::from_iter(vec![&edge0, &edge1]);
+/// let wire = wire![&edge0, &edge1];
 /// let face0 = Face::new(vec![wire.clone()], ());
 /// let face1 = Face::new(vec![wire], ());
 /// assert_ne!(face0.id(), face1.id());
@@ -449,7 +449,7 @@ pub mod imported;
 /// ];
 /// ```
 #[macro_export]
-macro_rules! wire { ($($t:tt)*) => { $crate::Wire::from([$($t)*]) }; }
+macro_rules! wire { ($($t:tt)*) => { $crate::Wire::from_iter([$($t)*]) }; }
 
 /// Creates a Vec containing the arguments.
 ///
@@ -473,4 +473,4 @@ macro_rules! wire { ($($t:tt)*) => { $crate::Wire::from([$($t)*]) }; }
 /// ];
 /// ```
 #[macro_export]
-macro_rules! shell { ($($t:tt)*) => { $crate::Shell::from([$($t)*]) }; }
+macro_rules! shell { ($($t:tt)*) => { $crate::Shell::from_iter([$($t)*]) }; }

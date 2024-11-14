@@ -283,45 +283,25 @@ pub(super) fn cube() -> Solid<(), (), ()> {
         Edge::new(&v[7], &v[4], ()), // 11
     ];
 
-    let wire0 = Wire::from_iter(vec![&edge[0], &edge[1], &edge[2], &edge[3]]);
+    let wire0 = wire![&edge[0], &edge[1], &edge[2], &edge[3]];
     let face0 = Face::new(vec![wire0], ());
 
-    let wire1 = Wire::from_iter(vec![
-        &edge[4],
-        &edge[8],
-        &edge[5].inverse(),
-        &edge[0].inverse(),
-    ]);
+    let wire1 = wire![&edge[4], &edge[8], &edge[5].inverse(), &edge[0].inverse(),];
     let face1 = Face::new(vec![wire1], ());
 
-    let wire2 = Wire::from_iter(vec![
-        &edge[5],
-        &edge[9],
-        &edge[6].inverse(),
-        &edge[1].inverse(),
-    ]);
+    let wire2 = wire![&edge[5], &edge[9], &edge[6].inverse(), &edge[1].inverse(),];
     let face2 = Face::new(vec![wire2], ());
 
-    let wire3 = Wire::from_iter(vec![
-        &edge[6],
-        &edge[10],
-        &edge[7].inverse(),
-        &edge[2].inverse(),
-    ]);
+    let wire3 = wire![&edge[6], &edge[10], &edge[7].inverse(), &edge[2].inverse(),];
     let face3 = Face::new(vec![wire3], ());
-    let wire4 = Wire::from_iter(vec![
-        &edge[7],
-        &edge[11],
-        &edge[4].inverse(),
-        &edge[3].inverse(),
-    ]);
+    let wire4 = wire![&edge[7], &edge[11], &edge[4].inverse(), &edge[3].inverse(),];
     let face4 = Face::new(vec![wire4], ());
-    let wire5 = Wire::from_iter(vec![
+    let wire5 = wire![
         &edge[11].inverse(),
         &edge[10].inverse(),
         &edge[9].inverse(),
         &edge[8].inverse(),
-    ]);
+    ];
     let face5 = Face::new(vec![wire5], ());
 
     let mut shell = Shell::new();

@@ -103,10 +103,10 @@ pub enum Error {
     ///     Edge::new(&v[2], &v[1], ()),
     /// ];
     /// let wire = vec![
-    ///     Wire::from_iter(vec![&edge[0], &edge[1]]),
-    ///     Wire::from_iter(vec![&edge[1].inverse(), &edge[0].inverse()]),
-    ///     Wire::from_iter(vec![&edge[2], &edge[3]]),
-    ///     Wire::from_iter(vec![&edge[3].inverse(), &edge[2].inverse()]),
+    ///     wire![&edge[0], &edge[1]],
+    ///     wire![&edge[1].inverse(), &edge[0].inverse()],
+    ///     wire![&edge[2], &edge[3]],
+    ///     wire![&edge[3].inverse(), &edge[2].inverse()],
     /// ];
     /// let shell: Shell<(), (), ()> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     /// assert_eq!(Solid::try_new(vec![shell]), Err(Error::NotManifold));
