@@ -435,3 +435,42 @@ use format::*;
 /// }
 /// ```
 pub mod imported;
+
+/// Creates a Vec containing the arguments.
+///
+/// # Example
+/// ```
+/// use truck_topology::*;
+/// let v: Vec<Vertex<()>> = Vertex::news([(); 3]);
+/// let wire: Wire<(), ()> = wire![
+///     Edge::new(&v[0], &v[1], ()),
+///     Edge::new(&v[1], &v[2], ()),
+///     Edge::new(&v[2], &v[0], ()),
+/// ];
+/// ```
+#[macro_export]
+macro_rules! wire { ($($t:tt)*) => { $crate::Wire::from([$($t)*]) }; }
+
+/// Creates a Vec containing the arguments.
+///
+/// # Example
+/// ```
+/// use truck_topology::*;
+/// let v: Vec<Vertex<()>> = Vertex::news([(); 4]);
+/// let wire0: Wire<(), ()> = wire![
+///     Edge::new(&v[0], &v[1], ()),
+///     Edge::new(&v[1], &v[2], ()),
+///     Edge::new(&v[2], &v[0], ()),
+/// ];
+/// let wire1: Wire<(), ()> = wire![
+///     wire0[0].inverse(),
+///     Edge::new(&v[0], &v[3], ()),
+///     Edge::new(&v[3], &v[1], ()),
+/// ];
+/// let shell = shell![
+///     Face::new(vec![wire0], ()),
+///     Face::new(vec![wire1], ()),
+/// ];
+/// ```
+#[macro_export]
+macro_rules! shell { ($($t:tt)*) => { $crate::Shell::from([$($t)*]) }; }

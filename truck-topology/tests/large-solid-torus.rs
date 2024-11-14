@@ -1,10 +1,4 @@
-// type definition for test
-type Vertex = truck_topology::Vertex<()>;
-type Edge = truck_topology::Edge<(), ()>;
-type Wire = truck_topology::Wire<(), ()>;
-type Face = truck_topology::Face<(), (), ()>;
-type Shell = truck_topology::Shell<(), (), ()>;
-type Solid = truck_topology::Solid<(), (), ()>;
+truck_topology::prelude!((), (), ());
 
 fn large_torus() -> Solid {
     const N: usize = 1_000;
@@ -28,12 +22,12 @@ fn large_torus() -> Solid {
     let shell: Shell = (0..N)
         .flat_map(|i| (0..N).map(move |j| (i, j)))
         .map(|(i, j)| {
-            let wire = Wire::from_iter(vec![
-                &row_edge[i][j],
-                &col_edge[i][(j + 1) % N],
-                &row_edge[(i + 1) % N][j].inverse(),
-                &col_edge[i][j].inverse(),
-            ]);
+            let wire = wire![
+                row_edge[i][j].clone(),
+                col_edge[i][(j + 1) % N].clone(),
+                row_edge[(i + 1) % N][j].inverse(),
+                col_edge[i][j].inverse(),
+            ];
             Face::new(vec![wire], ())
         })
         .collect();

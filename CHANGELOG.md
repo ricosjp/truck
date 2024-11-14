@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add macros: `wire` and `shell`.
 - Strict derivation and `search_parameter` of `IntersectionCurve`.
 - Prototyping for fillet surface with NURBS geometry.
 - Implement abstract newton method.

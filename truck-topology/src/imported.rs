@@ -57,6 +57,8 @@ macro_rules! prelude {
             FaceDisplayFormat,
             ShellDisplayFormat,
             SolidDisplayFormat,
+            wire,
+            shell,
         };
 
         /// Vertex, the minimum topological unit.

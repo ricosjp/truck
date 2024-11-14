@@ -23,39 +23,36 @@ fn singular_vertices_in_certain_boundaries() {
     let shell: Shell<(), (), ()> = vec![
         Face::new(
             vec![
-                vec![
+                wire![
                     edge[9].inverse(),
                     edge[2].inverse(),
                     edge[0].clone(),
                     edge[3].clone(),
-                ]
-                .into(),
-                vec![edge[5].clone(), edge[6].clone()].into(),
+                ],
+                wire![edge[5].clone(), edge[6].clone()],
             ],
             (),
         ),
         Face::new(
             vec![
-                vec![
+                wire![
                     edge[3].inverse(),
                     edge[1].clone(),
                     edge[4].clone(),
                     edge[10].inverse(),
-                ]
-                .into(),
-                vec![edge[7].clone(), edge[8].clone()].into(),
+                ],
+                wire![edge[7].clone(), edge[8].clone()],
             ],
             (),
         ),
         Face::new(
-            vec![vec![
+            vec![wire![
                 edge[10].clone(),
                 edge[12].clone(),
                 edge[13].inverse(),
                 edge[11].inverse(),
                 edge[9].clone(),
-            ]
-            .into()],
+            ]],
             (),
         ),
     ]
