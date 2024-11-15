@@ -297,7 +297,7 @@ pub struct Scene {
     device_handler: DeviceHandler,
     objects: SliceHashMap<RenderID, RenderObject>,
     bind_group_layout: BindGroupLayout,
-    foward_depth: Option<Texture>,
+    forward_depth: Option<Texture>,
     sampling_buffer: Option<Texture>,
     scene_desc: SceneDescriptor,
     clock: TimeInstant,

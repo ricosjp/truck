@@ -61,7 +61,7 @@
 //!
 //! The entities of `Wire` and `Shell` are `std::collections::VecDeque<Edge>` and `std::vec::Vec<Face>`,
 //! respectively, and many methods inherited by `Deref` and `DerefMut`.
-//! These containers are used for creating higher-dimentional topological elements and checked the
+//! These containers are used for creating higher-dimensional topological elements and checked the
 //! regularity (e.g. connectivity, closedness, and so on) before creating these elements.
 //! ## Features
 //! * `nightly` – Use features available only in a `nightly` toolchain.

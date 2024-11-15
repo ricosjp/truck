@@ -1513,11 +1513,11 @@ fn exec_nurbs_surface_bezier_surface(
         .iter_mut()
         .zip(&points)
         .for_each(|(vec, vec0)| vec.truncate(vec0.len()));
-    let weights_diaplays = weights
+    let weights_displays = weights
         .iter()
         .map(|vec| SliceDisplay(vec))
         .collect::<Vec<_>>();
-    let weights_display = SliceDisplay(&weights_diaplays);
+    let weights_display = SliceDisplay(&weights_displays);
     let (step_cps_indices, step_cps) = step_bsp_surface_ctrls(&points);
     let step_str = format!(
         "DATA;
@@ -1573,11 +1573,11 @@ fn exec_nurbs_surface_quasi_uniform_surface(
         .iter_mut()
         .zip(&points)
         .for_each(|(vec, vec0)| vec.truncate(vec0.len()));
-    let weights_diaplays = weights
+    let weights_displays = weights
         .iter()
         .map(|vec| SliceDisplay(vec))
         .collect::<Vec<_>>();
-    let weights_display = SliceDisplay(&weights_diaplays);
+    let weights_display = SliceDisplay(&weights_displays);
     let (step_cps_indices, step_cps) = step_bsp_surface_ctrls(&points);
     let step_str = format!(
         "DATA;
@@ -1630,11 +1630,11 @@ fn exec_nurbs_surface_uniform_surface(
         .iter_mut()
         .zip(&points)
         .for_each(|(vec, vec0)| vec.truncate(vec0.len()));
-    let weights_diaplays = weights
+    let weights_displays = weights
         .iter()
         .map(|vec| SliceDisplay(vec))
         .collect::<Vec<_>>();
-    let weights_display = SliceDisplay(&weights_diaplays);
+    let weights_display = SliceDisplay(&weights_displays);
     let (step_cps_indices, step_cps) = step_bsp_surface_ctrls(&points);
     let step_str = format!(
         "DATA;
