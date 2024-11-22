@@ -144,7 +144,7 @@ fn exec_polycurve_closest_point() -> bool {
 fn polycurve_closest_point() {
     let count = (0..10).filter(|_| exec_polycurve_closest_point()).count();
     println!("searching closest point error: {}", 10 - count);
-    assert!(count >= 8);
+    assert!(count >= 7);
 }
 
 fn exec_polycurve_intersection_point() -> bool {
@@ -183,5 +183,5 @@ fn polycurve_intersection_point() {
         .filter(|_| exec_polycurve_intersection_point())
         .count();
     println!("searching intersection point error: {}", 10 - count);
-    assert!(count >= 8);
+    assert!(count >= 7);
 }

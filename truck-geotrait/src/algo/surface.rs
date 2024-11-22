@@ -112,7 +112,7 @@ where
     P::Diff: SspVector<Point = P>,
     S: ParametricSurface<Point = P, Vector = P::Diff>,
 {
-    let function = |param: P::Diff| SspVector::subs(surface, point, param);
+    let function = move |param: P::Diff| SspVector::subs(surface, point, param);
     let res = newton::solve(function, P::Diff::from_param(hint), trials);
     res.ok().map(P::Diff::into_param)
 }
@@ -121,7 +121,7 @@ where
 #[inline(always)]
 pub fn search_parameter<P, S>(
     surface: &S,
-    point: S::Point,
+    point: P,
     hint: (f64, f64),
     trials: usize,
 ) -> Option<(f64, f64)>
@@ -136,6 +136,30 @@ where
             false => None,
         }
     })
+}
+
+/// Searches the parameters of the intersection point of `surface` and `curve`.
+pub fn search_intersection_parameter<C, S>(
+    surface: &S,
+    hint0: (f64, f64),
+    curve: &C,
+    hint1: f64,
+    trials: usize,
+) -> Option<((f64, f64), f64)>
+where
+    C: ParametricCurve3D,
+    S: ParametricSurface3D,
+{
+    let function = move |Vector3 { x, y, z }| CalcOutput {
+        value: surface.subs(x, y) - curve.subs(z),
+        derivation: Matrix3::from_cols(surface.uder(x, y), surface.vder(x, y), -curve.der(z)),
+    };
+    let hint = Vector3::new(hint0.0, hint0.1, hint1);
+    let Vector3 { x, y, z } = newton::solve(function, hint, trials).ok()?;
+    match surface.subs(x, y).near(&curve.subs(z)) {
+        true => Some(((x, y), z)),
+        false => None,
+    }
 }
 
 /// Creates the surface division
