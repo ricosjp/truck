@@ -1,3 +1,4 @@
+use algo::surface;
 use truck_base::{cgmath64::*, tolerance::*};
 use truck_geotrait::*;
 mod polynomial;
@@ -166,6 +167,39 @@ fn polysurface_sp_on_surface() {
         count > 90
     });
     assert!(flag, "too many failure");
+}
+
+fn exec_polysurface_intersection_point() -> bool {
+    let (a, b) = (rand::random::<f64>(), rand::random::<f64>());
+    let coef0 = vec![
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
+    ];
+    let coef1 = vec![
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
+    ];
+    let surface = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
+    let coef = vec![Vector3::new(a, b, 0.0), Vector3::new(0.0, 0.0, 1.0)];
+    let curve = PolyCurve::<Point3>(coef);
+
+    match surface::search_intersection_parameter(&surface, (0.5, 0.5), &curve, 0.0, 100) {
+        Some(((x, y), z)) => {
+            let (p, q) = (surface.subs(x, y), curve.subs(z));
+            p.near(&q) && x.near(&a) && y.near(&b) && p.z.near(&z)
+        }
+        None => false,
+    }
+}
+
+#[test]
+fn polysurface_intersection_point() {
+    let count = (0..10)
+        .filter(|_| exec_polysurface_intersection_point())
+        .count();
+    assert!(count > 7, "wrong answer: {:?}", 10 - count);
 }
 
 fn exec_polysurface_division() -> bool {
