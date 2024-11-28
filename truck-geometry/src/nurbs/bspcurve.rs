@@ -306,16 +306,13 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
         for i in 0..P::DIM {
             let mut rows = rows.clone();
             rows.iter_mut()
-                .zip(&*parameter_points)
+                .zip(parameter_points.iter())
                 .for_each(|(row, (_, p))| row.push(p[i]));
-            let res = gaussian_elimination::gaussian_elimination(&mut rows)
-                .ok_or(Error::GaussianEliminationFailure)?;
-            parameter_points
-                .iter_mut()
-                .zip(res)
-                .for_each(|((_, p), res)| {
-                    p[i] = res;
-                });
+            gaussian_elimination::gaussian_elimination(&mut rows)
+                .ok_or(Error::GaussianEliminationFailure)?
+                .into_iter()
+                .zip(parameter_points.iter_mut())
+                .for_each(|(res, (_, p))| p[i] = res);
         }
 
         let control_points = parameter_points.iter().map(|(_, p)| *p).collect::<Vec<_>>();
