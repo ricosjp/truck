@@ -18,7 +18,9 @@ pub mod control_point {
         + DivAssign<S>
         + Copy
         + Clone
-        + Debug {
+        + Debug
+        + Index<usize, Output = S>
+        + IndexMut<usize, Output = S> {
         /// differential vector
         type Diff: Add<Self::Diff, Output = Self::Diff>
             + Sub<Self::Diff, Output = Self::Diff>
@@ -31,7 +33,11 @@ pub mod control_point {
             + Zero
             + Copy
             + Clone
-            + Debug;
+            + Debug
+            + Index<usize, Output = S>
+            + IndexMut<usize, Output = S>;
+        /// dimension
+        const DIM: usize;
         /// origin
         fn origin() -> Self;
         /// into the vector
@@ -40,36 +46,43 @@ pub mod control_point {
 
     impl<S: BaseFloat> ControlPoint<S> for Point1<S> {
         type Diff = Vector1<S>;
+        const DIM: usize = 1;
         fn origin() -> Self { EuclideanSpace::origin() }
         fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
     }
     impl<S: BaseFloat> ControlPoint<S> for Point2<S> {
         type Diff = Vector2<S>;
+        const DIM: usize = 2;
         fn origin() -> Self { EuclideanSpace::origin() }
         fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
     }
     impl<S: BaseFloat> ControlPoint<S> for Point3<S> {
         type Diff = Vector3<S>;
+        const DIM: usize = 3;
         fn origin() -> Self { EuclideanSpace::origin() }
         fn to_vec(self) -> Self::Diff { EuclideanSpace::to_vec(self) }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector1<S> {
         type Diff = Vector1<S>;
+        const DIM: usize = 1;
         fn origin() -> Self { Zero::zero() }
         fn to_vec(self) -> Self { self }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector2<S> {
         type Diff = Vector2<S>;
+        const DIM: usize = 2;
         fn origin() -> Self { Zero::zero() }
         fn to_vec(self) -> Self { self }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector3<S> {
         type Diff = Vector3<S>;
+        const DIM: usize = 3;
         fn origin() -> Self { Zero::zero() }
         fn to_vec(self) -> Self { self }
     }
     impl<S: BaseFloat> ControlPoint<S> for Vector4<S> {
         type Diff = Vector4<S>;
+        const DIM: usize = 4;
         fn origin() -> Self { Zero::zero() }
         fn to_vec(self) -> Self { self }
     }

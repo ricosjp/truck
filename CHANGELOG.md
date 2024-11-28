@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implement `BSplineCurve::interpole`.
 - Implement `search_intersection_parameter` between surface and curve.
 - Add macros: `wire` and `shell`.
 - Strict derivation and `search_parameter` of `IntersectionCurve`.

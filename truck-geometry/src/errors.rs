@@ -169,6 +169,28 @@ the number of control points: {1}"
     /// ```
     #[error("The vector of control points and the one of weights have different length.")]
     DifferentLength,
+    /// Gaussian eliminaition is failed. Typically, this is because one has included multiple
+    /// parameters for which the B-spline basis functions take the same value.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::prelude::*;
+    /// use truck_geometry::errors::Error;
+    ///
+    /// let knot_vec = KnotVec::uniform_knot(2, 2);
+    /// let parameter_points = [
+    ///     (0.1, Point3::new(1.0, 2.0, 3.0)),
+    ///     (0.8, Point3::new(4.0, -1.0, 10.0)),
+    ///     (0.8, Point3::new(-3.0, 5.0, 6.0)),
+    ///     (1.0, Point3::new(6.0, 2.0, 12.0)),
+    /// ];
+    ///
+    /// assert!(matches!(
+    ///     BSplineCurve::try_interpole(knot_vec, parameter_points),
+    ///     Err(Error::GaussianEliminationFailure),
+    /// ));
+    /// ```
+    #[error("Gaussian elimination is failed.")]
+    GaussianEliminationFailure,
 }
 
 #[test]
