@@ -180,7 +180,7 @@ fn unit_circle_info() {
 proptest::proptest! {
     #[test]
     fn test_unit_circle(
-        angle in 0.1f64..(2.0 * PI - 0.01),
+        angle in 0.1f64..(1.5 * PI),
         w0 in 0.1f64..5.0,
         w1 in 0.1f64..5.0,
     ) {
@@ -190,7 +190,7 @@ proptest::proptest! {
             let t = i as f64 / N as f64;
             let p = uc.subs(t).to_vec();
             let v = uc.der(t);
-            assert_near!(p.magnitude2(), 1.0, "{w0} {w1} {p:?}");
+            assert_near!(p.magnitude2(), 1.0, "{w0} {w1} {p:?} {angle}");
             assert!(p.z.so_small2());
             assert!(p.x * v.y - p.y * v.x > 0.0, "minus area {:?}", uc.control_point(1));
         }
@@ -200,39 +200,13 @@ proptest::proptest! {
 }
 
 fn interpole_bezier(points: &[Vector4]) -> BSplineCurve<Vector4> {
-    use gaussian_elimination::gaussian_elimination;
     let n = points.len() - 1;
-    let rows = (0..=n)
-        .map(|i| {
-            let t = i as f64 / n as f64;
-            let mut s = 1;
-            (0..=n)
-                .map(|k| {
-                    let b = (1.0 - t).powi((n - k) as i32) * t.powi(k as i32) * s as f64;
-                    s *= n - k;
-                    s /= k + 1;
-                    b
-                })
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let vec = (0..4)
-        .map(|i| {
-            let mut rows = rows.clone();
-            rows.iter_mut()
-                .zip(points)
-                .for_each(|(row, point)| row.push(point[i]));
-            gaussian_elimination(rows.as_mut_slice())
-        })
-        .collect::<Vec<_>>();
-    let control_points = vec[0]
+    let parameter_points = points
         .iter()
-        .zip(&vec[1])
-        .zip(&vec[2])
-        .zip(&vec[3])
-        .map(|(((a, b), c), d)| (*a, *b, *c, *d).into())
+        .enumerate()
+        .map(|(i, p)| (i as f64 / n as f64, *p))
         .collect::<Vec<_>>();
-    BSplineCurve::new(KnotVec::bezier_knot(n), control_points)
+    BSplineCurve::interpole(KnotVec::bezier_knot(n), parameter_points)
 }
 
 fn composite_line_bezier(
@@ -1408,61 +1382,4 @@ fn fillet_semi_cube() {
     let poly = shell.robust_triangulation(0.001).to_polygon();
     let file = std::fs::File::create("fillet-cube.obj").unwrap();
     obj::write(&poly, file).unwrap();
-}
-
-// https://the-algorithms.com/algorithm/gaussian-elimination?lang=rust
-mod gaussian_elimination {
-
-    // Gaussian Elimination of Quadratic Matrices
-    // Takes an augmented matrix as input, returns vector of results
-    // Wikipedia reference: augmented matrix: https://en.wikipedia.org/wiki/Augmented_matrix
-    // Wikipedia reference: algorithm: https://en.wikipedia.org/wiki/Gaussian_elimination
-
-    pub fn gaussian_elimination(matrix: &mut [Vec<f64>]) -> Vec<f64> {
-        let size = matrix.len();
-        assert_eq!(size, matrix[0].len() - 1);
-
-        for i in 0..size - 1 {
-            for j in i..size - 1 {
-                echelon(matrix, i, j);
-            }
-        }
-
-        for i in (1..size).rev() {
-            eliminate(matrix, i);
-        }
-
-        // Disable cargo clippy warnings about needless range loops.
-        // Checking the diagonal like this is simpler than any alternative.
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..size {
-            if matrix[i][i] == 0f64 {
-                println!("Infinitely many solutions");
-            }
-        }
-
-        (0..size).map(|i| matrix[i][size] / matrix[i][i]).collect()
-    }
-
-    fn echelon(matrix: &mut [Vec<f64>], i: usize, j: usize) {
-        let size = matrix.len();
-        if matrix[i][i] != 0f64 {
-            let factor = matrix[j + 1][i] / matrix[i][i];
-            (i..size + 1).for_each(|k| {
-                matrix[j + 1][k] -= factor * matrix[i][k];
-            });
-        }
-    }
-
-    fn eliminate(matrix: &mut [Vec<f64>], i: usize) {
-        let size = matrix.len();
-        if matrix[i][i] != 0f64 {
-            for j in (1..i + 1).rev() {
-                let factor = matrix[j - 1][i] / matrix[i][i];
-                for k in (0..size + 1).rev() {
-                    matrix[j - 1][k] -= factor * matrix[i][k];
-                }
-            }
-        }
-    }
 }

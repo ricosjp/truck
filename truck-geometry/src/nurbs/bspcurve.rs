@@ -265,6 +265,64 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
         }
         true
     }
+
+    /// Interpole by B-spline curve with the knot vector `knot_vec`.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::prelude::*;
+    ///
+    /// let knot_vec = KnotVec::uniform_knot(2, 2);
+    /// let parameter_points = [
+    ///     (0.1, Point3::new(1.0, 2.0, 3.0)),
+    ///     (0.8, Point3::new(4.0, -1.0, 10.0)),
+    ///     (0.4, Point3::new(-3.0, 5.0, 6.0)),
+    ///     (1.0, Point3::new(6.0, 2.0, 12.0)),
+    /// ];
+    /// let curve = BSplineCurve::try_interpole(knot_vec, parameter_points.clone()).unwrap();
+    ///
+    /// parameter_points.into_iter().for_each(|(t, p)| {
+    ///     assert_near!(curve.subs(t), p);
+    /// });
+    /// ```
+    pub fn try_interpole(
+        knot_vec: KnotVec,
+        mut parameter_points: impl AsMut<[(f64, P)]>,
+    ) -> Result<Self> {
+        let parameter_points = parameter_points.as_mut();
+        if knot_vec.len() <= parameter_points.len() {
+            return Err(Error::TooShortKnotVector(
+                knot_vec.len(),
+                parameter_points.len(),
+            ));
+        }
+
+        let degree = knot_vec.len() - parameter_points.len() - 1;
+
+        let rows = parameter_points
+            .iter()
+            .map(|(t, _)| knot_vec.try_bspline_basis_functions(degree, *t))
+            .collect::<Result<Vec<_>>>()?;
+
+        for i in 0..P::DIM {
+            let mut rows = rows.clone();
+            rows.iter_mut()
+                .zip(parameter_points.iter())
+                .for_each(|(row, (_, p))| row.push(p[i]));
+            gaussian_elimination::gaussian_elimination(&mut rows)
+                .ok_or(Error::GaussianEliminationFailure)?
+                .into_iter()
+                .zip(parameter_points.iter_mut())
+                .for_each(|(res, (_, p))| p[i] = res);
+        }
+
+        let control_points = parameter_points.iter().map(|(_, p)| *p).collect::<Vec<_>>();
+        Self::try_new(knot_vec, control_points)
+    }
+
+    /// Interpole by B-spline curve with the knot vector `knot_vec`. cf) [`BSplineCurve::try_interpole`].
+    pub fn interpole(knot_vec: KnotVec, parameter_points: impl AsMut<[(f64, P)]>) -> Self {
+        Self::try_interpole(knot_vec, parameter_points).unwrap()
+    }
 }
 
 impl<V: Homogeneous<f64>> BSplineCurve<V> {

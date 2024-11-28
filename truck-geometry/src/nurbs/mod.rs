@@ -133,3 +133,63 @@ pub fn inv_or_zero(delta: f64) -> f64 {
         1.0 / delta
     }
 }
+
+// This code is modified version of https://the-algorithms.com/algorithm/gaussian-elimination?lang=rust
+mod gaussian_elimination {
+    use truck_base::cgmath64::cgmath::BaseFloat;
+
+    // Gaussian Elimination of Quadratic Matrices
+    // Takes an augmented matrix as input, returns vector of results
+    // Wikipedia reference: augmented matrix: https://en.wikipedia.org/wiki/Augmented_matrix
+    // Wikipedia reference: algorithm: https://en.wikipedia.org/wiki/Gaussian_elimination
+
+    pub fn gaussian_elimination<S: BaseFloat>(matrix: &mut [Vec<S>]) -> Option<Vec<S>> {
+        let size = matrix.len();
+        if size != matrix[0].len() - 1 {
+            return None;
+        }
+
+        for i in 0..size - 1 {
+            for j in i..size - 1 {
+                echelon(matrix, i, j);
+            }
+        }
+
+        for i in (1..size).rev() {
+            eliminate(matrix, i);
+        }
+
+        // Disable cargo clippy warnings about needless range loops.
+        // Checking the diagonal like this is simpler than any alternative.
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..size {
+            if matrix[i][i].is_zero() {
+                return None;
+            }
+        }
+
+        Some((0..size).map(|i| matrix[i][size] / matrix[i][i]).collect())
+    }
+
+    fn echelon<S: BaseFloat>(matrix: &mut [Vec<S>], i: usize, j: usize) {
+        let size = matrix.len();
+        if matrix[i][i] != S::zero() {
+            let factor = matrix[j + 1][i] / matrix[i][i];
+            (i..size + 1).for_each(|k| {
+                matrix[j + 1][k] = matrix[j + 1][k] - factor * matrix[i][k];
+            });
+        }
+    }
+
+    fn eliminate<S: BaseFloat>(matrix: &mut [Vec<S>], i: usize) {
+        let size = matrix.len();
+        if matrix[i][i] != S::zero() {
+            for j in (1..i + 1).rev() {
+                let factor = matrix[j - 1][i] / matrix[i][i];
+                for k in (0..size + 1).rev() {
+                    matrix[j - 1][k] = matrix[j - 1][k] - factor * matrix[i][k];
+                }
+            }
+        }
+    }
+}
