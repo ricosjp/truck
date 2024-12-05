@@ -368,7 +368,7 @@ where
 #9 = PRODUCT_DEFINITION_CONTEXT('part definition', #2, 'design');
 #10 = ADVANCED_BREP_SHAPE_REPRESENTATION('', (#16), #11);
 #11 = (
-    GEOMETRIC_REPRESENTATION_CONTEXT(3) 
+    GEOMETRIC_REPRESENTATION_CONTEXT(3)
     GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#15))
     GLOBAL_UNIT_ASSIGNED_CONTEXT((#12, #13, #14))
     REPRESENTATION_CONTEXT('Context #1', '3D Context with UNIT and UNCERTAINTY')
@@ -376,7 +376,7 @@ where
 #12 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
 #13 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
 #14 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
-#15 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #12, 'distance_accuracy_value','confusion accuracy');\n"
+#15 = UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.0E-6), #12, 'distance_accuracy_value','confusion accuracy');\n"
         )?;
         Display::fmt(&self.0, f)
     }
@@ -484,7 +484,7 @@ where
 #12 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
 #13 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
 #14 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
-#15 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #12, 'distance_accuracy_value','confusion accuracy');\n"
+#15 = UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.0E-6), #12, 'distance_accuracy_value','confusion accuracy');\n"
         )?;
         self.models
             .iter()
