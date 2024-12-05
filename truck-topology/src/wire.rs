@@ -700,7 +700,7 @@ pub struct VertexIter<'a, P, C> {
     cyclic: bool,
 }
 
-impl<'a, P, C> Iterator for VertexIter<'a, P, C> {
+impl<P, C> Iterator for VertexIter<'_, P, C> {
     type Item = Vertex<P>;
 
     fn next(&mut self) -> Option<Vertex<P>> {
@@ -740,7 +740,7 @@ impl<'a, P, C> Iterator for VertexIter<'a, P, C> {
     }
 }
 
-impl<'a, P, C> std::iter::FusedIterator for VertexIter<'a, P, C> {}
+impl<P, C> std::iter::FusedIterator for VertexIter<'_, P, C> {}
 
 impl<P, C> Extend<Edge<P, C>> for Wire<P, C> {
     fn extend<T: IntoIterator<Item = Edge<P, C>>>(&mut self, iter: T) {
@@ -796,7 +796,7 @@ impl<P, C> Default for Wire<P, C> {
     }
 }
 
-impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Wire<P, C>, WireDisplayFormat> {
+impl<P: Debug, C: Debug> Debug for DebugDisplay<'_, Wire<P, C>, WireDisplayFormat> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             WireDisplayFormat::EdgesListTuple { edge_format } => f

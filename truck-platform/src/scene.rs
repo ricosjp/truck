@@ -254,18 +254,18 @@ impl SceneDescriptor {
 #[derive(Debug)]
 pub struct SceneDescriptorMut<'a>(&'a mut Scene);
 
-impl<'a> std::ops::Deref for SceneDescriptorMut<'a> {
+impl std::ops::Deref for SceneDescriptorMut<'_> {
     type Target = SceneDescriptor;
     #[inline(always)]
     fn deref(&self) -> &SceneDescriptor { &self.0.scene_desc }
 }
 
-impl<'a> std::ops::DerefMut for SceneDescriptorMut<'a> {
+impl std::ops::DerefMut for SceneDescriptorMut<'_> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut SceneDescriptor { &mut self.0.scene_desc }
 }
 
-impl<'a> Drop for SceneDescriptorMut<'a> {
+impl Drop for SceneDescriptorMut<'_> {
     fn drop(&mut self) {
         let (forward_depth, sampling_buffer) = self.backend_buffers(self.0.device());
         self.0.foward_depth = forward_depth;

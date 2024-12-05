@@ -412,7 +412,7 @@ pub mod format {
     #[derive(Clone)]
     pub(super) struct MutexFmt<'a, T>(pub &'a Mutex<T>);
 
-    impl<'a, T: Debug> Debug for MutexFmt<'a, T> {
+    impl<T: Debug> Debug for MutexFmt<'_, T> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             f.write_fmt(format_args!("{:?}", self.0.lock()))
         }

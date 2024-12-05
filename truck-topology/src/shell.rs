@@ -1167,9 +1167,7 @@ where
     res
 }
 
-impl<'a, P: Debug, C: Debug, S: Debug> Debug
-    for DebugDisplay<'a, Shell<P, C, S>, ShellDisplayFormat>
-{
+impl<P: Debug, C: Debug, S: Debug> Debug for DebugDisplay<'_, Shell<P, C, S>, ShellDisplayFormat> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             ShellDisplayFormat::FacesList { face_format } => f

@@ -214,7 +214,7 @@ impl KnotVec {
         res[idx] = 1.0;
 
         for k in 1..=degree {
-            let base = if idx < k { 0 } else { idx - k };
+            let base = idx.saturating_sub(k);
             let delta = self[base + k] - self[base];
             let max = if idx + k < n { idx } else { n - k - 1 };
             let mut a = inv_or_zero(delta) * (t - self[base]);

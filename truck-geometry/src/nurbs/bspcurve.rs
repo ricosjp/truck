@@ -528,7 +528,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
         let n = self.control_points.len();
 
         let idx = self.knot_vec.add_knot(x);
-        let start = if idx > k { idx - k } else { 0 };
+        let start = idx.saturating_sub(k);
         let end = if idx > n {
             self.control_points.push(P::origin());
             n + 1

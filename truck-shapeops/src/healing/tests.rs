@@ -325,6 +325,7 @@ fn test_split_closed_face_cylinder_with_hole() {
     enum Curve {
         Line(Line<Point3>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
+        #[allow(clippy::enum_variant_names)]
         PCurve(PCurve<ParameterCurve, Surface>),
     }
     impl From<PCurve<Line<Point2>, Surface>> for Curve {

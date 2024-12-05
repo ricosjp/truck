@@ -1043,7 +1043,7 @@ fn create_simple_fillet() {
     )
     .into();
 
-    let v = Vertex::news(&[
+    let v = Vertex::news([
         Point3::new(-1.0, 0.0, 0.0),
         Point3::new(1.0, 0.0, 0.0),
         Point3::new(1.0, 1.0, 1.0),
@@ -1100,7 +1100,7 @@ fn create_fillet_with_side() {
         Point3::new(1.0, 1.0, 0.0),
         Point3::new(0.0, 1.0, 0.0),
     ];
-    let v = Vertex::news(&p);
+    let v = Vertex::news(p);
 
     let line = |i: usize, j: usize| {
         let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
@@ -1178,7 +1178,7 @@ fn fillet_to_nurbs() {
         Point3::new(1.0, 0.0, 0.0),
         Point3::new(0.0, 1.0, 0.0),
     ];
-    let v = Vertex::news(&p);
+    let v = Vertex::news(p);
 
     let line = |i: usize, j: usize| {
         let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
@@ -1285,7 +1285,7 @@ fn fillet_semi_cube() {
         Point3::new(1.1, 1.1, 0.0),
         Point3::new(0.0, 1.1, 0.0),
     ];
-    let v = Vertex::news(&p);
+    let v = Vertex::news(p);
 
     let line = |i: usize, j: usize| {
         let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);

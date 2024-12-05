@@ -13,7 +13,7 @@ impl From<&Vertex> for Vertex {
     fn from(v: &Vertex) -> Vertex { *v }
 }
 
-impl<'a, T: AsVertexSlice> AsVertexSlice for &'a T {
+impl<T: AsVertexSlice> AsVertexSlice for &T {
     type V = T::V;
 }
 
@@ -393,7 +393,7 @@ pub struct TriangleIterator<'a, V> {
     len: usize,
 }
 
-impl<'a, V: Copy> Iterator for TriangleIterator<'a, V> {
+impl<V: Copy> Iterator for TriangleIterator<'_, V> {
     type Item = [V; 3];
     fn next(&mut self) -> Option<[V; 3]> {
         let TriangleIterator {
@@ -435,4 +435,4 @@ impl<'a, V: Copy> Iterator for TriangleIterator<'a, V> {
     fn size_hint(&self) -> (usize, Option<usize>) { (self.len, Some(self.len)) }
 }
 
-impl<'a, V: Copy> ExactSizeIterator for TriangleIterator<'a, V> {}
+impl<V: Copy> ExactSizeIterator for TriangleIterator<'_, V> {}

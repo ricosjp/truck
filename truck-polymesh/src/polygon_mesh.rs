@@ -319,7 +319,7 @@ pub struct PolygonMeshEditor<'a, V: Copy + Debug, A: Attributes<V>> {
     bound_check: bool,
 }
 
-impl<'a, V: Copy + Debug, A: Attributes<V>> PolygonMeshEditor<'a, V, A> {
+impl<V: Copy + Debug, A: Attributes<V>> PolygonMeshEditor<'_, V, A> {
     #[inline(always)]
     fn is_compatible(&self) -> Result<(), Error<V>> { self.faces.is_compatible(&*self.attributes) }
 
@@ -331,7 +331,7 @@ impl<'a, V: Copy + Debug, A: Attributes<V>> PolygonMeshEditor<'a, V, A> {
     }
 }
 
-impl<'a, V: Copy + Debug, A: Attributes<V>> Drop for PolygonMeshEditor<'a, V, A> {
+impl<V: Copy + Debug, A: Attributes<V>> Drop for PolygonMeshEditor<'_, V, A> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.bound_check {
