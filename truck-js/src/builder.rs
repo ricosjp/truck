@@ -5,7 +5,7 @@ macro_rules! intopt {
     ($type: ty, $slice: ident) => {
         assert!(
             $slice.len() == 3,
-            "{} is not a 3-dimentional!",
+            "{} is not a 3-dimensional!",
             stringify!($slice)
         );
         let $slice = <$type>::new($slice[0], $slice[1], $slice[2]);
@@ -32,7 +32,7 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: &[f64]) -> Edge {
 pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, inter_points: &[f64]) -> Edge {
     assert!(
         inter_points.len() % 3 == 0,
-        "inter_points cannot convert to 3-dimentional points!"
+        "inter_points cannot convert to 3-dimensional points!"
     );
     let inter_points = inter_points
         .chunks(3)

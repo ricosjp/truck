@@ -80,7 +80,7 @@ impl<C, S> IntersectionCurve<C, S> {
             leader: f(self.leader),
         }
     }
-    /// Creates intersection curve with unchecked bound. This method is only for developer of `truck`, deplicated for users.
+    /// Creates intersection curve with unchecked bound. This method is only for developer of `truck`, deprecated for users.
     #[inline(always)]
     pub fn new_unchecked(surface0: Box<S>, surface1: Box<S>, leader: C) -> Self {
         Self {

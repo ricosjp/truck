@@ -41,7 +41,7 @@ pub trait WithPointCloud {
     /// Whether the polygon mesh `self` and `point_cloud` collides.
     /// # Panics
     /// `tol` must be more than `TOLERANCE`.
-    fn collide_with_neiborhood_of(&self, point_cloud: &[Point3], tol: f64) -> bool;
+    fn collide_with_neighborhood_of(&self, point_cloud: &[Point3], tol: f64) -> bool;
 }
 
 impl WithPointCloud for PolygonMesh {
@@ -51,7 +51,7 @@ impl WithPointCloud for PolygonMesh {
         HashedPointCloud::from_points(point_cloud, tol * 2.0).distance2(self) < tol * tol
     }
     #[inline(always)]
-    fn collide_with_neiborhood_of(&self, point_cloud: &[Point3], tol: f64) -> bool {
+    fn collide_with_neighborhood_of(&self, point_cloud: &[Point3], tol: f64) -> bool {
         HashedPointCloud::from_points(point_cloud, tol * 2.0).is_colliding(self, tol)
     }
     #[inline(always)]

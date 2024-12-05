@@ -738,7 +738,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// - there are no vertex corresponding to `vertex_id` in the shell,
     /// - the vertex is included more than 2 face boundaries,
     /// - the vertex is included more than 2 edges, or
-    /// - concating edges is failed.
+    /// - concatenating edges is failed.
     pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> Option<Edge<P, C>>
     where
         P: Debug,

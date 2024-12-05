@@ -337,11 +337,11 @@ ENDSEC;\n",
     }
 }
 
-/// Display model with configuations
+/// Display model with configurations
 #[derive(Clone, Debug)]
 pub struct StepModel<'a, P, C, S>(PreStepModel<'a, P, C, S>);
 
-/// Display models with configuations
+/// Display models with configurations
 #[derive(Clone, Debug)]
 pub struct StepModels<'a, P, C, S> {
     models: Vec<PreStepModel<'a, P, C, S>>,

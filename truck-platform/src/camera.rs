@@ -171,7 +171,7 @@ impl Camera {
 
     /// Returns the projection matrix into the normalized view volume.
     /// # Arguments
-    /// `as_rat`: the aspect ratio, x-resolution / y-resulution.
+    /// `as_rat`: the aspect ratio, x-resolution / y-resolution.
     /// # Examples
     /// ```
     /// // perspective camera
