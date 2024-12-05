@@ -26,7 +26,7 @@ pub trait ParametricSurface: Clone {
         ((X, X), (X, X))
     }
     /// Return the ends of `parameter_range` by tuple.
-    /// If the range is unbounded, return `None``.
+    /// If the range is unbounded, return `None`.
     #[inline(always)]
     fn try_range_tuple(&self) -> (Option<Tuple>, Option<Tuple>) {
         let ((u0, u1), (v0, v1)) = self.parameter_range();

@@ -300,7 +300,7 @@ impl Table {
                                 DefinitionalRepresentationHolder {
                                     label: Deserialize::deserialize(&params[0])?,
                                     representation_item: Deserialize::deserialize(&params[1])?,
-                                    contex_of_items: match &params[2] {
+                                    context_of_items: match &params[2] {
                                         Parameter::Ref(x) => PlaceHolder::Ref(x.clone()),
                                         _ => PlaceHolder::Owned(DummyHolder {
                                             record: format!("{:?}", params[2]),
@@ -1431,7 +1431,7 @@ pub struct DefinitionalRepresentation {
     #[holder(use_place_holder)]
     representation_item: Vec<CurveAny>,
     #[holder(use_place_holder)]
-    contex_of_items: Dummy,
+    context_of_items: Dummy,
 }
 
 /// `pcurve`

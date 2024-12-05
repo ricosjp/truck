@@ -226,7 +226,7 @@ impl SceneDescriptor {
     }
 
     fn backend_buffers(&self, device: &Device) -> (Option<Texture>, Option<Texture>) {
-        let foward_depth = if self.backend_buffer.depth_test {
+        let forward_depth = if self.backend_buffer.depth_test {
             Some(Self::depth_texture(
                 device,
                 self.render_texture.canvas_size,
@@ -244,7 +244,7 @@ impl SceneDescriptor {
         } else {
             None
         };
-        (foward_depth, sampling_buffer)
+        (forward_depth, sampling_buffer)
     }
 }
 
@@ -268,7 +268,7 @@ impl std::ops::DerefMut for SceneDescriptorMut<'_> {
 impl Drop for SceneDescriptorMut<'_> {
     fn drop(&mut self) {
         let (forward_depth, sampling_buffer) = self.backend_buffers(self.0.device());
-        self.0.foward_depth = forward_depth;
+        self.0.forward_depth = forward_depth;
         self.0.sampling_buffer = sampling_buffer;
     }
 }
@@ -331,12 +331,12 @@ impl Scene {
     #[inline(always)]
     pub fn new(device_handler: DeviceHandler, scene_desc: &SceneDescriptor) -> Scene {
         let device = device_handler.device();
-        let (foward_depth, sampling_buffer) = scene_desc.backend_buffers(device);
+        let (forward_depth, sampling_buffer) = scene_desc.backend_buffers(device);
         let bind_group_layout = Self::init_scene_bind_group_layout(device);
         Scene {
             objects: Default::default(),
             bind_group_layout,
-            foward_depth,
+            forward_depth,
             sampling_buffer,
             clock: TimeInstant::now(),
             scene_desc: scene_desc.clone(),
@@ -684,7 +684,7 @@ impl Scene {
     pub fn render(&self, view: &TextureView) {
         let bind_group = self.scene_bind_group();
         let depth_view = self
-            .foward_depth
+            .forward_depth
             .as_ref()
             .map(|tex| tex.create_view(&Default::default()));
         let sampled_view = self

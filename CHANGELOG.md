@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix some typos.
 - Implement `BSplineCurve::interpole`.
 - Implement `search_intersection_parameter` between surface and curve.
 - Add macros: `wire` and `shell`.
@@ -37,7 +38,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Updated APIs
 
-- Add "periodic" identifer to `ParametricCurve` and `ParametricSurface`.
+- Add "periodic" identifier to `ParametricCurve` and `ParametricSurface`.
 - Remove the `Invertible` constraint from tessellating traits.
 - Features has been set up to use each module in `truck-meshalgo` separately.
 - Non-bounded parameter ranges has been supported. Updates `ParametricXXX` and `BoundedXXX`.

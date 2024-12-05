@@ -23,7 +23,7 @@ pub trait ParametricCurve: Clone {
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (Bound::Unbounded, Bound::Unbounded) }
     /// Return the ends of `parameter_range` by tuple.
-    /// If the range is unbounded, return `None``.
+    /// If the range is unbounded, return `None`.
     #[inline(always)]
     fn try_range_tuple(&self) -> Option<(f64, f64)> {
         let (x, y) = self.parameter_range();
