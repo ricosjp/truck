@@ -49,7 +49,7 @@ impl Display for FloatDisplay {
 #[derive(Clone, Debug)]
 pub struct SliceDisplay<'a, T>(pub &'a [T]);
 
-impl<'a> Display for SliceDisplay<'a, f64> {
+impl Display for SliceDisplay<'_, f64> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
@@ -62,7 +62,7 @@ impl<'a> Display for SliceDisplay<'a, f64> {
     }
 }
 
-impl<'a> Display for SliceDisplay<'a, usize> {
+impl Display for SliceDisplay<'_, usize> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
@@ -75,7 +75,7 @@ impl<'a> Display for SliceDisplay<'a, usize> {
     }
 }
 
-impl<'a> Display for SliceDisplay<'a, String> {
+impl Display for SliceDisplay<'_, String> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
@@ -131,7 +131,7 @@ impl<I: Clone + IntoIterator<Item = usize>> Display for IndexSliceDisplay<I> {
     }
 }
 
-impl<'a, I: Clone + IntoIterator<Item = usize>> Display for SliceDisplay<'a, IndexSliceDisplay<I>> {
+impl<I: Clone + IntoIterator<Item = usize>> Display for SliceDisplay<'_, IndexSliceDisplay<I>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
@@ -167,7 +167,7 @@ pub struct StepDisplay<T> {
     idx: usize,
 }
 
-impl<'a, T> Display for SliceDisplay<'a, StepDisplay<T>>
+impl<T> Display for SliceDisplay<'_, StepDisplay<T>>
 where StepDisplay<T>: Display
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {

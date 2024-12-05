@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<'a, P, C, S> Display for StepShell<'a, P, C, S>
+impl<P, C, S> Display for StepShell<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepCurve,
@@ -184,7 +184,7 @@ where
     }
 }
 
-impl<'a, P, C, S> StepLength for StepShell<'a, P, C, S> {
+impl<P, C, S> StepLength for StepShell<'_, P, C, S> {
     fn step_length(&self) -> usize {
         1 + self.ep_points + self.entity.vertices.len() - self.face_indices[0]
     }
@@ -217,7 +217,7 @@ where
     }
 }
 
-impl<'a, P, C, S> Display for StepSolid<'a, P, C, S>
+impl<P, C, S> Display for StepSolid<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,
@@ -262,7 +262,7 @@ where
     }
 }
 
-impl<'a, P, C, S> StepLength for StepSolid<'a, P, C, S> {
+impl<P, C, S> StepLength for StepSolid<'_, P, C, S> {
     fn step_length(&self) -> usize {
         let b = &self.boundaries;
         match b.len() {
@@ -301,7 +301,7 @@ where
     fn from(solid: &'a CompressedSolid<P, C, S>) -> Self { Self::Solid(StepSolid::new(solid, 16)) }
 }
 
-impl<'a, P, C, S> Display for PreStepModel<'a, P, C, S>
+impl<P, C, S> Display for PreStepModel<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,
@@ -322,7 +322,7 @@ where
     }
 }
 
-impl<'a, P, C, S> StepLength for PreStepModel<'a, P, C, S> {
+impl<P, C, S> StepLength for PreStepModel<'_, P, C, S> {
     fn step_length(&self) -> usize {
         match self {
             Self::Shell(x) => 1 + x.step_length(),
@@ -349,7 +349,7 @@ where
     fn from(solid: &'a CompressedSolid<P, C, S>) -> Self { Self(solid.into()) }
 }
 
-impl<'a, P, C, S> Display for StepModel<'a, P, C, S>
+impl<P, C, S> Display for StepModel<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,
@@ -382,7 +382,7 @@ where
     }
 }
 
-impl<'a, P, C, S> Default for StepModels<'a, P, C, S> {
+impl<P, C, S> Default for StepModels<'_, P, C, S> {
     fn default() -> Self {
         Self {
             models: Vec::new(),
@@ -451,7 +451,7 @@ where
     }
 }
 
-impl<'a, P, C, S> Display for StepModels<'a, P, C, S>
+impl<P, C, S> Display for StepModels<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,

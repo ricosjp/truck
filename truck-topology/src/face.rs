@@ -1078,7 +1078,7 @@ pub struct BoundaryIter<'a, P, C> {
     orientation: bool,
 }
 
-impl<'a, P, C> Iterator for BoundaryIter<'a, P, C> {
+impl<P, C> Iterator for BoundaryIter<'_, P, C> {
     type Item = Edge<P, C>;
     #[inline(always)]
     fn next(&mut self) -> Option<Edge<P, C>> {
@@ -1095,7 +1095,7 @@ impl<'a, P, C> Iterator for BoundaryIter<'a, P, C> {
     fn last(mut self) -> Option<Edge<P, C>> { self.next_back() }
 }
 
-impl<'a, P, C> DoubleEndedIterator for BoundaryIter<'a, P, C> {
+impl<P, C> DoubleEndedIterator for BoundaryIter<'_, P, C> {
     #[inline(always)]
     fn next_back(&mut self) -> Option<Edge<P, C>> {
         match self.orientation {
@@ -1105,16 +1105,14 @@ impl<'a, P, C> DoubleEndedIterator for BoundaryIter<'a, P, C> {
     }
 }
 
-impl<'a, P, C> ExactSizeIterator for BoundaryIter<'a, P, C> {
+impl<P, C> ExactSizeIterator for BoundaryIter<'_, P, C> {
     #[inline(always)]
     fn len(&self) -> usize { self.edge_iter.len() }
 }
 
-impl<'a, P, C> std::iter::FusedIterator for BoundaryIter<'a, P, C> {}
+impl<P, C> std::iter::FusedIterator for BoundaryIter<'_, P, C> {}
 
-impl<'a, P: Debug, C: Debug, S: Debug> Debug
-    for DebugDisplay<'a, Face<P, C, S>, FaceDisplayFormat>
-{
+impl<P: Debug, C: Debug, S: Debug> Debug for DebugDisplay<'_, Face<P, C, S>, FaceDisplayFormat> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             FaceDisplayFormat::Full { wire_format } => f

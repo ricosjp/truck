@@ -17,7 +17,7 @@ struct DebugDisplay<'a, T, Format> {
     format: Format,
 }
 
-impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Loops<P, C>, WireDisplayFormat> {
+impl<P: Debug, C: Debug> Debug for DebugDisplay<'_, Loops<P, C>, WireDisplayFormat> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Loops")
             .field(
@@ -32,7 +32,7 @@ impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Loops<P, C>, WireDisplay
     }
 }
 
-impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, LoopsStore<P, C>, WireDisplayFormat> {
+impl<P: Debug, C: Debug> Debug for DebugDisplay<'_, LoopsStore<P, C>, WireDisplayFormat> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_list()
             .entries(self.entity.0.iter().map(|loops| DebugDisplay {

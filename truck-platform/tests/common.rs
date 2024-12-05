@@ -26,7 +26,7 @@ macro_rules! new_plane {
     };
 }
 
-impl<'a> Rendered for Plane<'a> {
+impl Rendered for Plane<'_> {
     impl_render_id!(id);
     fn vertex_buffer(
         &self,

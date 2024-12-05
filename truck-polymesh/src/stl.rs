@@ -230,7 +230,7 @@ pub struct PolygonMeshStlFaceIterator<'a> {
     len: usize,
 }
 
-impl<'a> Iterator for PolygonMeshStlFaceIterator<'a> {
+impl Iterator for PolygonMeshStlFaceIterator<'_> {
     type Item = StlFace;
     fn next(&mut self) -> Option<StlFace> {
         self.faces.next().map(|face| {
@@ -245,7 +245,7 @@ impl<'a> Iterator for PolygonMeshStlFaceIterator<'a> {
     fn size_hint(&self) -> (usize, Option<usize>) { (self.len, Some(self.len)) }
 }
 
-impl<'a> ExactSizeIterator for PolygonMeshStlFaceIterator<'a> {}
+impl ExactSizeIterator for PolygonMeshStlFaceIterator<'_> {}
 
 impl<'a> IntoStlIterator for &'a PolygonMesh {
     type IntoIter = PolygonMeshStlFaceIterator<'a>;

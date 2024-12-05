@@ -83,7 +83,7 @@ impl ParametricCurve for (usize, usize) {
 /// Implementation for the test of topological methods.
 impl BoundedCurve for (usize, usize) {}
 
-impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
+impl<C: ParametricCurve> ParametricCurve for &C {
     type Point = C::Point;
     type Vector = C::Vector;
     fn subs(&self, t: f64) -> Self::Point { (*self).subs(t) }
@@ -97,7 +97,7 @@ impl<'a, C: ParametricCurve> ParametricCurve for &'a C {
     fn period(&self) -> Option<f64> { (*self).period() }
 }
 
-impl<'a, C: BoundedCurve> BoundedCurve for &'a C {
+impl<C: BoundedCurve> BoundedCurve for &C {
     #[inline(always)]
     fn front(&self) -> Self::Point { (*self).front() }
     #[inline(always)]
@@ -149,7 +149,7 @@ pub trait ParameterDivision1D {
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>);
 }
 
-impl<'a, C: ParameterDivision1D> ParameterDivision1D for &'a C {
+impl<C: ParameterDivision1D> ParameterDivision1D for &C {
     type Point = C::Point;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
         (*self).parameter_division(range, tol)
