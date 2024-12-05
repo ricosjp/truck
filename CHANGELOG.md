@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix STEP header description.
 - Fix some typos.
 - Implement `BSplineCurve::interpole`.
 - Implement `search_intersection_parameter` between surface and curve.

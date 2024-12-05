@@ -315,24 +315,24 @@ impl Display for StepHeader {
         f.write_fmt(format_args!(
             "HEADER;
 FILE_DESCRIPTION(('Shape Data from Truck'), '2;1');
-FILE_NAME('{}', '{}', ({}), ({}), 'truck', '{}', '{}');
-FILE_SCHEMA(('{}'));
+FILE_NAME('{file_name}', '{time_stamp}', {authors}, {organization}, 'truck', '{origination_system}', '{authorization}');
+FILE_SCHEMA(('{schema}'));
 ENDSEC;\n",
-            self.file_name,
-            self.time_stamp,
-            if self.authors.is_empty() {
+            file_name = self.file_name,
+            time_stamp = self.time_stamp,
+            authors = if self.authors.is_empty() {
                 SliceDisplay(&empty_string)
             } else {
                 SliceDisplay(&self.authors)
             },
-            if self.organization.is_empty() {
+            organization = if self.organization.is_empty() {
                 SliceDisplay(&empty_string)
             } else {
                 SliceDisplay(&self.organization)
             },
-            self.origination_system,
-            self.authorization,
-            self.schema,
+            origination_system = self.origination_system,
+            authorization = self.authorization,
+            schema = self.schema,
         ))
     }
 }
