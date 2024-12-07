@@ -24,9 +24,9 @@ where
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     pub fn try_new(surface0: S0, surface1: S1, poly: PolylineCurve<Point3>) -> Option<Self> {
-        let len = poly.len();
-        let ic = IntersectionCurve::new(surface0, surface1, poly);
+        let ic = IntersectionCurve::new(&surface0, &surface1, poly);
         let poly = ic.leader();
+        let len = poly.len();
         let mut polyline = PolylineCurve(Vec::new());
         let mut params0 = PolylineCurve(Vec::new());
         let mut params1 = PolylineCurve(Vec::new());
@@ -36,7 +36,7 @@ where
             params0.push(p0);
             params1.push(p1);
         }
-        let (q, p0, p1) = match poly[0].near(&poly[poly.len() - 1]) {
+        let (q, p0, p1) = match poly[0].near(&poly[len - 1]) {
             true => (polyline[0], params0[0], params1[0]),
             false => ic.search_triple((len - 1) as f64, 100)?,
         };
@@ -44,7 +44,7 @@ where
         params0.push(p0);
         params1.push(p1);
         Some(Self {
-            ic,
+            ic: IntersectionCurve::new(surface0, surface1, polyline),
             params0,
             params1,
         })
@@ -142,15 +142,16 @@ where
     }
 }
 
+type IntersectionTuple<S0, S1> = (
+    PolylineCurve<Point3>,
+    IntersectionCurveWithParameters<S0, S1>,
+);
 pub fn intersection_curves<S0, S1>(
     surface0: S0,
     polygon0: &PolygonMesh,
     surface1: S1,
     polygon1: &PolygonMesh,
-) -> Vec<(
-    PolylineCurve<Point3>,
-    Option<IntersectionCurveWithParameters<S0, S1>>,
-)>
+) -> Option<Vec<IntersectionTuple<S0, S1>>>
 where
     S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
@@ -160,12 +161,14 @@ where
     polylines
         .into_iter()
         .map(|polyline| {
-            let curve = IntersectionCurveWithParameters::try_new(
-                surface0.clone(),
-                surface1.clone(),
+            Some((
                 polyline.clone(),
-            );
-            (polyline, curve)
+                IntersectionCurveWithParameters::try_new(
+                    surface0.clone(),
+                    surface1.clone(),
+                    polyline,
+                )?,
+            ))
         })
         .collect()
 }

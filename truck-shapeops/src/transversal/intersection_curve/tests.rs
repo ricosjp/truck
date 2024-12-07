@@ -12,10 +12,10 @@ fn intersection_curve_sphere_case() {
             Point3::new(0.8 * f64::cos(t), 0.8 * f64::sin(t), 0.0)
         })
         .collect::<PolylineCurve<_>>();
-    let curve: IntersectionCurve<_, _, _> =
-        IntersectionCurveWithParameters::try_new(sphere0, sphere1, polyline)
-            .unwrap()
-            .into();
+    let semi = IntersectionCurveWithParameters::try_new(sphere0, sphere1, polyline)
+            .unwrap();
+        println!("{semi:?}");
+    let curve: IntersectionCurve<_, _, _> = semi.into();
 
     const N: usize = 100;
     let mut sum = 0.0;
@@ -27,7 +27,7 @@ fn intersection_curve_sphere_case() {
         let vec = curve.der(t);
         assert!(pt.dot(vec).so_small(), "{i} {t} {vec:?}");
         assert!(vec[2].so_small());
-        let denom = if i == 0 || i == N { 2.0 } else { 1.0 };
+        let denom = if matches!(i, 0 | N) { 2.0 } else { 1.0 };
         sum += vec.magnitude() / denom * (t1 - t0) / N as f64;
     }
     assert!(
@@ -87,13 +87,13 @@ fn collide_parabola() {
     println!("Meshing Surfaces: {}s", instant.elapsed().as_secs_f64());
     // extract intersection curves
     let instant = std::time::Instant::now();
-    let curves = intersection_curves(surface0, &polygon0, surface1, &polygon1);
+    let curves = intersection_curves(surface0, &polygon0, surface1, &polygon1).unwrap();
     println!(
         "Extracting Intersection: {}s",
         instant.elapsed().as_secs_f64()
     );
     assert_eq!(curves.len(), 1);
-    let curve = curves[0].1.clone().unwrap();
+    let curve = curves[0].1.clone();
     const N: usize = 100;
     for i in 0..N {
         let t1 = curve.range_tuple().1;

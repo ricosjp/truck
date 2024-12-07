@@ -473,10 +473,10 @@ where
                 &polygon0,
                 surface1.clone(),
                 &polygon1,
-            )
+            )?
             .into_iter()
             .try_for_each(|(polyline, intersection_curve)| {
-                let mut intersection_curve = intersection_curve?.into();
+                let mut intersection_curve = intersection_curve.into();
                 let status = ShapesOpStatus::from_is_curve(&intersection_curve)?;
                 let (status0, status1) = match (ori0, ori1) {
                     (true, true) => (status, status.not()),
