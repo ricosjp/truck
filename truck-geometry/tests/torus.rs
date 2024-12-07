@@ -9,10 +9,10 @@ proptest! {
         small_radius in 1f64..=5f64,
         radius_diff in 0.1f64..=5f64,
         (u, v) in (0f64..=2.0 * PI, 0f64..=2.0 * PI),
-        deform in -0.2f64..=0.2
+        deform in -0.4f64..=0.4
     ) {
         const EPS: f64 = 1.0e-2;
-        let large_radius = small_radius + radius_diff;
+        let large_radius = 2.0 * small_radius + radius_diff;
         let torus = Torus::new(Point3::origin(), large_radius, small_radius);
 
         let p = torus.subs(u, v);

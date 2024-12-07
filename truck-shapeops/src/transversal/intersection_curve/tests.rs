@@ -12,10 +12,10 @@ fn intersection_curve_sphere_case() {
             Point3::new(0.8 * f64::cos(t), 0.8 * f64::sin(t), 0.0)
         })
         .collect::<PolylineCurve<_>>();
-    let semi = IntersectionCurveWithParameters::try_new(sphere0, sphere1, polyline)
-            .unwrap();
-        println!("{semi:?}");
-    let curve: IntersectionCurve<_, _, _> = semi.into();
+    let curve: IntersectionCurve<_, _, _> =
+        IntersectionCurveWithParameters::try_new(sphere0, sphere1, polyline)
+            .unwrap()
+            .into();
 
     const N: usize = 100;
     let mut sum = 0.0;
