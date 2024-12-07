@@ -8,18 +8,18 @@ fn subs_tuple<S: ParametricSurface>(
     (surface.subs(u, v), surface.uder(u, v), surface.vder(u, v))
 }
 
-#[doc(hidden)]
-pub fn double_projection<S>(
-    surface0: &S,
+fn double_projection<S0, S1>(
+    surface0: &S0,
     hint0: Option<(f64, f64)>,
-    surface1: &S,
+    surface1: &S1,
     hint1: Option<(f64, f64)>,
     plane_point: Point3,
     plane_normal: Vector3,
     trials: usize,
 ) -> Option<(Point3, Point2, Point2)>
 where
-    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     let function = move |Vector4 { x, y, z, w }| {
         let (pt0, uder0, vder0) = subs_tuple(surface0, (x, y));
@@ -41,67 +41,61 @@ where
     Some((point, Point2::new(x, y), Point2::new(z, w)))
 }
 
-/// Mutable editor for `IntersectionCurve`.
-#[doc(hidden)]
-#[derive(Debug)]
-pub struct IntersectionCurveEditor<'a, C, S> {
-    pub surface0: &'a mut S,
-    pub surface1: &'a mut S,
-    pub leader: &'a mut C,
-}
-
-impl<C, S> IntersectionCurve<C, S> {
-    /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
+impl<C, S0, S1> IntersectionCurve<C, S0, S1> {
+    /// Constructor
     #[inline(always)]
-    pub fn surface0(&self) -> &S { &self.surface0 }
-    /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
-    #[inline(always)]
-    pub fn surface1(&self) -> &S { &self.surface1 }
-    /// Returns the polyline leading this curve.
-    #[inline(always)]
-    pub fn leader(&self) -> &C { &self.leader }
-    /// Returns editor for `IntersectionCurve`. This method is only for developers, do not use.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn editor(&mut self) -> IntersectionCurveEditor<'_, C, S> {
-        IntersectionCurveEditor {
-            surface0: &mut self.surface0,
-            surface1: &mut self.surface1,
-            leader: &mut self.leader,
-        }
-    }
-    /// Change leader.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn change_leader<D>(self, f: impl FnOnce(C) -> D) -> IntersectionCurve<D, S> {
-        IntersectionCurve {
-            surface0: self.surface0,
-            surface1: self.surface1,
-            leader: f(self.leader),
-        }
-    }
-    /// Creates intersection curve with unchecked bound. This method is only for developer of `truck`, deplicated for users.
-    #[inline(always)]
-    pub fn new_unchecked(surface0: Box<S>, surface1: Box<S>, leader: C) -> Self {
+    pub fn new(surface0: S0, surface1: S1, leader: C) -> Self {
         Self {
             surface0,
             surface1,
             leader,
         }
     }
+    /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
+    #[inline(always)]
+    pub fn surface0(&self) -> &S0 { &self.surface0 }
+    /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
+    #[inline(always)]
+    pub fn surface1(&self) -> &S1 { &self.surface1 }
+    /// Returns the polyline leading this curve.
+    #[inline(always)]
+    pub fn leader(&self) -> &C { &self.leader }
+    /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
+    #[inline(always)]
+    pub fn surface0_mut(&mut self) -> &mut S0 { &mut self.surface0 }
+    /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
+    #[inline(always)]
+    pub fn surface1_mut(&mut self) -> &mut S1 { &mut self.surface1 }
+    /// Returns the curve leading this curve.
+    #[inline(always)]
+    pub fn leader_mut(&mut self) -> &mut C { &mut self.leader }
+    /// destruct `self`.
+    #[inline(always)]
+    pub fn destruct(self) -> (S0, S1, C) { (self.surface0, self.surface1, self.leader) }
+    /// Change leader.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn change_leader<D>(self, f: impl FnOnce(C) -> D) -> IntersectionCurve<D, S0, S1> {
+        IntersectionCurve {
+            surface0: self.surface0,
+            surface1: self.surface1,
+            leader: f(self.leader),
+        }
+    }
 }
 
-impl<C, S> IntersectionCurve<C, S>
+impl<C, S0, S1> IntersectionCurve<C, S0, S1>
 where
     C: ParametricCurve3D,
-    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     /// Search triple value of the point corresponding to the parameter `t`.
     /// - the coordinate on 3D space
     /// - the uv coordinate on `self.surface0()`
     /// - the uv coordinate on `self.surface1()`
     #[inline(always)]
-    pub fn search_triple(&self, t: f64) -> Option<(Point3, Point2, Point2)> {
+    pub fn search_triple(&self, t: f64, trials: usize) -> Option<(Point3, Point2, Point2)> {
         double_projection(
             self.surface0(),
             None,
@@ -109,7 +103,7 @@ where
             None,
             self.leader.subs(t),
             self.leader.der(t),
-            100,
+            trials,
         )
     }
     /// Search triple value of the point nearest to `point`.
@@ -153,14 +147,15 @@ where
     }
 }
 
-impl<C, S> ParametricCurve for IntersectionCurve<C, S>
+impl<C, S0, S1> ParametricCurve for IntersectionCurve<C, S0, S1>
 where
     C: ParametricCurve3D,
-    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn subs(&self, t: f64) -> Point3 { self.search_triple(t).unwrap().0 }
+    fn subs(&self, t: f64) -> Point3 { self.search_triple(t, 100).unwrap().0 }
     fn der(&self, t: f64) -> Vector3 {
         let IntersectionCurve {
             surface0,
@@ -168,7 +163,7 @@ where
             leader,
         } = self;
         let (l, l_der, l_der2) = (leader.subs(t), leader.der(t), leader.der2(t));
-        let (c, uv0, uv1) = self.search_triple(t).unwrap();
+        let (c, uv0, uv1) = self.search_triple(t, 100).unwrap();
         let (n0, n1) = (surface0.normal(uv0.x, uv0.y), surface1.normal(uv1.x, uv1.y));
         let n = n0.cross(n1);
         let k = (l_der.magnitude2() - (c - l).dot(l_der2)) / n.dot(l_der);
@@ -181,17 +176,19 @@ where
     fn parameter_range(&self) -> ParameterRange { self.leader.parameter_range() }
 }
 
-impl<C, S> BoundedCurve for IntersectionCurve<C, S>
+impl<C, S0, S1> BoundedCurve for IntersectionCurve<C, S0, S1>
 where
     C: ParametricCurve3D + BoundedCurve,
-    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
 }
 
-impl<C, S> ParameterDivision1D for IntersectionCurve<C, S>
+impl<C, S0, S1> ParameterDivision1D for IntersectionCurve<C, S0, S1>
 where
     C: ParametricCurve3D,
-    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
     #[inline(always)]
@@ -200,10 +197,11 @@ where
     }
 }
 
-impl<C, S> Cut for IntersectionCurve<C, S>
+impl<C, S0, S1> Cut for IntersectionCurve<C, S0, S1>
 where
     C: Cut<Point = Point3, Vector = Vector3>,
-    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     #[inline(always)]
     fn cut(&mut self, t: f64) -> Self {
@@ -215,14 +213,15 @@ where
     }
 }
 
-impl<C: Invertible, S: Clone> Invertible for IntersectionCurve<C, S> {
+impl<C: Invertible, S0: Clone, S1: Clone> Invertible for IntersectionCurve<C, S0, S1> {
     fn invert(&mut self) { self.leader.invert(); }
 }
 
-impl<C, S> SearchParameter<D1> for IntersectionCurve<C, S>
+impl<C, S0, S1> SearchParameter<D1> for IntersectionCurve<C, S0, S1>
 where
     C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
-    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
     fn search_parameter<H: Into<SPHint1D>>(
@@ -250,6 +249,7 @@ type DersSubsTuple<S> = (
     <S as ParametricSurface>::Vector,
     <S as ParametricSurface>::Vector,
 );
+
 fn subs_tuple_der2<S: ParametricSurface>(surface: &S, (u, v): (f64, f64)) -> DersSubsTuple<S> {
     (
         surface.subs(u, v),
@@ -261,10 +261,11 @@ fn subs_tuple_der2<S: ParametricSurface>(surface: &S, (u, v): (f64, f64)) -> Der
     )
 }
 
-impl<C, S> SearchNearestParameter<D1> for IntersectionCurve<C, S>
+impl<C, S0, S1> SearchNearestParameter<D1> for IntersectionCurve<C, S0, S1>
 where
     C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
-    S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
     fn search_nearest_parameter<H: Into<SPHint1D>>(
@@ -279,10 +280,11 @@ where
     }
 }
 
-impl<C, S> Transformed<Matrix4> for IntersectionCurve<C, S>
+impl<C, S0, S1> Transformed<Matrix4> for IntersectionCurve<C, S0, S1>
 where
     C: Transformed<Matrix4>,
-    S: Transformed<Matrix4>,
+    S0: Transformed<Matrix4>,
+    S1: Transformed<Matrix4>,
 {
     fn transform_by(&mut self, trans: Matrix4) {
         self.surface0.transform_by(trans);
@@ -291,11 +293,90 @@ where
     }
 }
 
-impl<C: BoundedCurve> IntersectionCurve<C, Plane> {
+impl<C: BoundedCurve> IntersectionCurve<C, Plane, Plane> {
     /// Optimizes intersection curve of [`Plane`] into [`Line`].
     #[inline]
     pub fn optimize(&self) -> Line<C::Point> {
         let (s, t) = self.leader.range_tuple();
         Line(self.leader.subs(s), self.leader.subs(t))
+    }
+}
+
+#[cfg(test)]
+mod double_projection_tests {
+    use super::*;
+    use proptest::prelude::*;
+    use std::f64::consts::PI;
+
+    fn get_one_vector(u: [f64; 2]) -> Vector3 {
+        let angle = 2.0 * PI * u[0];
+        let w = f64::sqrt(1.0 - u[1] * u[1]);
+        Vector3::new(w * f64::cos(angle), w * f64::sin(angle), u[1])
+    }
+
+    fn create_axis(n: Vector3) -> (Vector3, Vector3) {
+        let idx = if n[0].abs() < n[1].abs() { 0 } else { 1 };
+        let idx = if n[idx].abs() < n[2].abs() { idx } else { 2 };
+        let mut e = Vector3::zero();
+        e[idx] = 1.0;
+        let x = n.cross(e).normalize();
+        (x, n.cross(x))
+    }
+
+    fn exec_plane_case(c0: [f64; 3], n0: [f64; 2], c1: [f64; 3], n1: [f64; 2]) {
+        let c0 = Point3::from(c0);
+        let n0 = get_one_vector(n0);
+        let (x, y) = create_axis(n0);
+        let plane0 = Plane::new(c0, c0 + x, c0 + y);
+        let c1 = Point3::from(c1);
+        let n1 = get_one_vector(n1);
+        let (x, y) = create_axis(n1);
+        let plane1 = Plane::new(c1, c1 + x, c1 + y);
+        let n = n0.cross(n1).normalize();
+        let mut o = None;
+        for i in 0..10 {
+            let t = i as f64;
+            let p = Point3::origin() + t * n;
+            let (q, p0, p1) = double_projection(&plane0, None, &plane1, None, p, n, 100)
+                .unwrap_or_else(|| panic!("plane0: {plane0:?}\nplane1: {plane1:?}\n p: {p:?}"));
+            assert_near!(q, plane0.subs(p0.x, p0.y));
+            assert_near!(q, plane1.subs(p1.x, p1.y));
+            if let Some(o) = o {
+                assert_near!(q.distance2(o), t * t);
+            } else {
+                o = Some(q);
+            }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn plane_case(
+            c0 in prop::array::uniform3(-1f64..=1f64),
+            n0 in prop::array::uniform2(0f64..=1f64),
+            c1 in prop::array::uniform3(-1f64..=1f64),
+            n1 in prop::array::uniform2(0f64..=1f64),
+        ) {
+            exec_plane_case(c0, n0, c1, n1);
+        }
+    }
+
+    fn exec_sphere_case(t: f64, r: f64) {
+        let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
+        let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
+        let p = Point3::new(r * f64::cos(t), r * f64::sin(t), 0.0);
+        let n = Vector3::new(-f64::sin(t), f64::cos(t), 0.0);
+        let (q, p0, p1) = double_projection(&sphere0, None, &sphere1, None, p, n, 100)
+            .unwrap_or_else(|| panic!("p: {p:?}"));
+        assert_near!(q, sphere0.subs(p0.x, p0.y));
+        assert_near!(q, sphere1.subs(p1.x, p1.y));
+        assert_near!(q, Point3::new(f64::cos(t), f64::sin(t), 0.0));
+    }
+
+    proptest! {
+        #[test]
+        fn sphere_case(t in 0f64..=(2.0 * PI), r in 0.5f64..=1.5f64) {
+            exec_sphere_case(t, r);
+        }
     }
 }

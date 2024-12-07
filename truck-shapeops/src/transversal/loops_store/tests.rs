@@ -1,15 +1,14 @@
 use super::*;
 use std::fmt::Debug;
-use truck_geometry::prelude::*;
 const TOL: f64 = 0.01;
 
 crate::impl_from!(
     NurbsCurve<Vector4>,
-    IntersectionCurve<PolylineCurve, BSplineSurface<Point3>>
+    IntersectionCurve<PolylineCurve, BSplineSurface<Point3>, BSplineSurface<Point3>>
 );
 type AlternativeIntersection = crate::alternative::Alternative<
     NurbsCurve<Vector4>,
-    IntersectionCurve<PolylineCurve, BSplineSurface<Point3>>,
+    IntersectionCurve<PolylineCurve, BSplineSurface<Point3>, BSplineSurface<Point3>>,
 >;
 
 struct DebugDisplay<'a, T, Format> {

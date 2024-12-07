@@ -89,13 +89,13 @@ fn divide_plane_test() {
 
 type AlternativeIntersection = crate::alternative::Alternative<
     NurbsCurve<Vector4>,
-    IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface>,
+    IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface, AlternativeSurface>,
 >;
 type AlternativeSurface = crate::alternative::Alternative<BSplineSurface<Point3>, Plane>;
 
 crate::impl_from!(
     NurbsCurve<Vector4>,
-    IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface>
+    IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface, AlternativeSurface>
 );
 crate::impl_from!(BSplineSurface<Point3>, Plane);
 

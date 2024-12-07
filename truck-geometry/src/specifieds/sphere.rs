@@ -66,23 +66,6 @@ impl ParametricSurface3D for Sphere {
     }
 }
 
-#[test]
-fn sphere_derivation_test() {
-    let center = Point3::new(1.0, 2.0, 3.0);
-    let radius = 4.56;
-    let sphere = Sphere::new(center, radius);
-    const N: usize = 100;
-    for i in 0..N {
-        for j in 0..N {
-            let u = PI * i as f64 / N as f64;
-            let v = 2.0 * PI * j as f64 / N as f64;
-            let normal = sphere.normal(u, v);
-            assert!(normal.dot(sphere.uder(u, v)).so_small());
-            assert!(normal.dot(sphere.vder(u, v)).so_small());
-        }
-    }
-}
-
 impl BoundedSurface for Sphere {}
 
 impl IncludeCurve<BSplineCurve<Point3>> for Sphere {
@@ -186,34 +169,3 @@ impl SearchNearestParameter<D2> for Sphere {
         Some((u, v))
     }
 }
-
-#[cfg(test)]
-fn exec_search_parameter_test() {
-    let center = Point3::new(
-        100.0 * rand::random::<f64>() - 50.0,
-        100.0 * rand::random::<f64>() - 50.0,
-        100.0 * rand::random::<f64>() - 50.0,
-    );
-    let radius = 100.0 * rand::random::<f64>();
-    let sphere = Sphere::new(center, radius);
-    let u = PI * rand::random::<f64>();
-    let v = 2.0 * PI * rand::random::<f64>();
-    let pt = sphere.subs(u, v);
-    let (u0, v0) = sphere.search_parameter(pt, None, 100).unwrap();
-    assert_near!(Vector2::new(u, v), Vector2::new(u0, v0));
-    let pt = pt
-        + Vector3::new(
-            (0.1 * rand::random::<f64>() + 0.01) * f64::signum(rand::random::<f64>() - 0.5),
-            (0.1 * rand::random::<f64>() + 0.01) * f64::signum(rand::random::<f64>() - 0.5),
-            (0.1 * rand::random::<f64>() + 0.01) * f64::signum(rand::random::<f64>() - 0.5),
-        );
-    assert!(sphere.search_parameter(pt, None, 100).is_none());
-    let (u, v) = sphere.search_nearest_parameter(pt, None, 100).unwrap();
-    assert_near!(
-        sphere.subs(u, v),
-        center + (pt - center).normalize() * radius
-    );
-}
-
-#[test]
-fn search_parameter_test() { (0..10).for_each(|_| exec_search_parameter_test()) }

@@ -31,7 +31,9 @@ type PCurveLns = PCurve<Line<Point2>, NurbsSurface<Vector4>>;
 enum Curve {
     NurbsCurve(NurbsCurve<Vector4>),
     PCurve(PCurveLns),
-    IntersectionCurve(IntersectionCurve<PCurveLns, NurbsSurface<Vector4>>),
+    IntersectionCurve(
+        IntersectionCurve<PCurveLns, Box<NurbsSurface<Vector4>>, Box<NurbsSurface<Vector4>>>,
+    ),
 }
 
 truck_topology::prelude!(Point3, Curve, NurbsSurface<Vector4>);
@@ -588,7 +590,7 @@ fn create_new_side(
         return None;
     };
     let fillet_surface = Box::new(fillet_curve.surface().clone());
-    let new_curve = IntersectionCurve::new_unchecked(side_surface, fillet_surface, fillet_curve);
+    let new_curve = IntersectionCurve::new(side_surface, fillet_surface, fillet_curve);
     fillet_edge.set_curve(new_curve.into());
     let mut new_face = Face::new(new_boundaries, side.surface());
     if !side.orientation() {

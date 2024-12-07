@@ -1,6 +1,6 @@
 use super::{Result, *};
 use truck_geometry::prelude::*;
-use truck_modeling::{Curve as ModelingCurve, Leader, Surface as ModelingSurface};
+use truck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
 use truck_polymesh::PolylineCurve;
 
 impl DisplayByStep for Point2 {
@@ -350,10 +350,11 @@ impl<C, M: One> StepCurve for Processor<C, M> {
     fn same_sense(&self) -> bool { self.orientation() }
 }
 
-impl<C, S> DisplayByStep for IntersectionCurve<C, S>
+impl<C, S0, S1> DisplayByStep for IntersectionCurve<C, S0, S1>
 where
     C: StepLength + DisplayByStep,
-    S: StepLength + DisplayByStep,
+    S0: StepLength + DisplayByStep,
+    S1: StepLength + DisplayByStep,
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         let curve_idx = idx + 1;
@@ -368,7 +369,7 @@ where
     }
 }
 
-impl<C: StepLength, S: StepLength> StepLength for IntersectionCurve<C, S> {
+impl<C: StepLength, S0: StepLength, S1: StepLength> StepLength for IntersectionCurve<C, S0, S1> {
     #[inline(always)]
     fn step_length(&self) -> usize {
         1 + self.leader().step_length()
@@ -377,15 +378,16 @@ impl<C: StepLength, S: StepLength> StepLength for IntersectionCurve<C, S> {
     }
 }
 
-impl<C, S> ConstStepLength for IntersectionCurve<C, S>
+impl<C, S0, S1> ConstStepLength for IntersectionCurve<C, S0, S1>
 where
     C: ConstStepLength,
-    S: ConstStepLength,
+    S0: ConstStepLength,
+    S1: ConstStepLength,
 {
-    const LENGTH: usize = 1 + C::LENGTH + S::LENGTH + S::LENGTH;
+    const LENGTH: usize = 1 + C::LENGTH + S0::LENGTH + S1::LENGTH;
 }
 
-impl<C: StepCurve, S> StepCurve for IntersectionCurve<C, S> {
+impl<C: StepCurve, S0, S1> StepCurve for IntersectionCurve<C, S0, S1> {
     #[inline(always)]
     fn same_sense(&self) -> bool { self.leader().same_sense() }
 }
@@ -431,26 +433,6 @@ impl<C: StepCurve, S> StepCurve for PCurve<C, S> {
     #[inline(always)]
     fn same_sense(&self) -> bool { self.curve().same_sense() }
 }
-
-impl DisplayByStep for Leader {
-    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Leader::Polyline(x) => DisplayByStep::fmt(x, idx, f),
-            Leader::BSpline(x) => DisplayByStep::fmt(x, idx, f),
-        }
-    }
-}
-
-impl StepLength for Leader {
-    fn step_length(&self) -> usize {
-        match self {
-            Leader::Polyline(x) => x.step_length(),
-            Leader::BSpline(x) => x.step_length(),
-        }
-    }
-}
-
-impl StepCurve for Leader {}
 
 impl DisplayByStep for ModelingCurve {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {

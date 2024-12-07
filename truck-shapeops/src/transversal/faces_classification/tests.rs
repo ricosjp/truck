@@ -9,7 +9,7 @@ const TOL: f64 = 0.05;
 
 type AlternativeIntersection = crate::alternative::Alternative<
     NurbsCurve<Vector4>,
-    IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface>,
+    IntersectionCurve<PolylineCurve<Point3>, AlternativeSurface, AlternativeSurface>,
 >;
 type AlternativeSurface = crate::alternative::Alternative<BSplineSurface<Point3>, Plane>;
 
