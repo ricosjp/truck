@@ -72,16 +72,6 @@ impl<C, S0, S1> IntersectionCurve<C, S0, S1> {
     /// destruct `self`.
     #[inline(always)]
     pub fn destruct(self) -> (S0, S1, C) { (self.surface0, self.surface1, self.leader) }
-    /// Change leader.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn change_leader<D>(self, f: impl FnOnce(C) -> D) -> IntersectionCurve<D, S0, S1> {
-        IntersectionCurve {
-            surface0: self.surface0,
-            surface1: self.surface1,
-            leader: f(self.leader),
-        }
-    }
 }
 
 impl<C, S0, S1> IntersectionCurve<C, S0, S1>
