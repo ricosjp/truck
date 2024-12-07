@@ -558,7 +558,7 @@ impl<'a, P> PolyWireIter<'a, P> {
     }
 }
 
-impl<'a, P: Copy> Iterator for PolyWireIter<'a, P> {
+impl<P: Copy> Iterator for PolyWireIter<'_, P> {
     type Item = P;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(next) = self.current.next() {

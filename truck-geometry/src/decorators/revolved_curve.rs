@@ -422,7 +422,7 @@ where
         })
 }
 
-impl<'a> IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&'a BSplineCurve<Point3>> {
+impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&BSplineCurve<Point3>> {
     fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = usize::max(2, usize::max(curve.degree(), self.curve.degree()));
@@ -438,7 +438,7 @@ impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<BSplineCurve<Point3>>
     }
 }
 
-impl<'a> IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&'a NurbsCurve<Vector4>> {
+impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&NurbsCurve<Vector4>> {
     fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
@@ -454,7 +454,7 @@ impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<NurbsCurve<Vector4>> 
     }
 }
 
-impl<'a> IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&'a BSplineCurve<Point3>> {
+impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&BSplineCurve<Point3>> {
     fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
@@ -470,7 +470,7 @@ impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<BSplineCurve<Point3>> 
     }
 }
 
-impl<'a> IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&'a NurbsCurve<Vector4>> {
+impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&NurbsCurve<Vector4>> {
     fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());

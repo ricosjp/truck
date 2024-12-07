@@ -61,7 +61,7 @@
 //!
 //! The entities of `Wire` and `Shell` are `std::collections::VecDeque<Edge>` and `std::vec::Vec<Face>`,
 //! respectively, and many methods inherited by `Deref` and `DerefMut`.
-//! These containers are used for creating higher-dimentional topological elements and checked the
+//! These containers are used for creating higher-dimensional topological elements and checked the
 //! regularity (e.g. connectivity, closedness, and so on) before creating these elements.
 //! ## Features
 //! * `nightly` – Use features available only in a `nightly` toolchain.
@@ -412,7 +412,7 @@ pub mod format {
     #[derive(Clone)]
     pub(super) struct MutexFmt<'a, T>(pub &'a Mutex<T>);
 
-    impl<'a, T: Debug> Debug for MutexFmt<'a, T> {
+    impl<T: Debug> Debug for MutexFmt<'_, T> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             f.write_fmt(format_args!("{:?}", self.0.lock()))
         }

@@ -105,7 +105,7 @@ pub trait SearchParameter<Dim: SPDimension> {
     ) -> Option<Dim::Parameter>;
 }
 
-impl<'a, Dim: SPDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for &'a T {
+impl<Dim: SPDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for &T {
     type Point = T::Point;
     #[inline(always)]
     fn search_parameter<H: Into<Dim::Hint>>(
@@ -145,7 +145,7 @@ pub trait SearchNearestParameter<Dim: SPDimension> {
     ) -> Option<Dim::Parameter>;
 }
 
-impl<'a, Dim: SPDimension, T: SearchNearestParameter<Dim>> SearchNearestParameter<Dim> for &'a T {
+impl<Dim: SPDimension, T: SearchNearestParameter<Dim>> SearchNearestParameter<Dim> for &T {
     type Point = T::Point;
     #[inline(always)]
     fn search_nearest_parameter<H: Into<Dim::Hint>>(

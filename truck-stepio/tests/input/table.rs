@@ -329,7 +329,7 @@ ENDSEC;
             DefinitionalRepresentationHolder {
                 label: "DefinitionalRepresentation".to_string(),
                 representation_item: vec![PlaceHolder::Ref(Name::Entity(13))],
-                contex_of_items: PlaceHolder::Ref(Name::Entity(32)),
+                context_of_items: PlaceHolder::Ref(Name::Entity(32)),
             }
         )]),
         pcurve: HashMap::from_iter(vec![(

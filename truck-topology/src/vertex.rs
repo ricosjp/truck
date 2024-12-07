@@ -172,7 +172,7 @@ impl<P> Hash for Vertex<P> {
     fn hash<H: Hasher>(&self, state: &mut H) { std::ptr::hash(Arc::as_ptr(&self.point), state); }
 }
 
-impl<'a, P: Debug> Debug for DebugDisplay<'a, Vertex<P>, VertexDisplayFormat> {
+impl<P: Debug> Debug for DebugDisplay<'_, Vertex<P>, VertexDisplayFormat> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             VertexDisplayFormat::Full => f

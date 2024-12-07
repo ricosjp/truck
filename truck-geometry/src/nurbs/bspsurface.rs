@@ -923,7 +923,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         }
 
         let idx = uknot_vec.add_knot(x);
-        let start = if idx > k { idx - k } else { 0 };
+        let start = idx.saturating_sub(k);
         let end = if idx > n0 {
             control_points.push(vec![P::origin(); n1]);
             n0 + 1
@@ -975,7 +975,7 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         let n1 = self.control_points[0].len();
 
         let idx = self.knot_vecs.1.add_knot(x);
-        let start = if idx > k { idx - k } else { 0 };
+        let start = idx.saturating_sub(k);
         let end = if idx > n1 {
             self.control_points
                 .iter_mut()

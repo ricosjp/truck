@@ -49,7 +49,7 @@ impl Display for FloatDisplay {
 #[derive(Clone, Debug)]
 pub struct SliceDisplay<'a, T>(pub &'a [T]);
 
-impl<'a> Display for SliceDisplay<'a, f64> {
+impl Display for SliceDisplay<'_, f64> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
@@ -62,7 +62,7 @@ impl<'a> Display for SliceDisplay<'a, f64> {
     }
 }
 
-impl<'a> Display for SliceDisplay<'a, usize> {
+impl Display for SliceDisplay<'_, usize> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
@@ -75,7 +75,7 @@ impl<'a> Display for SliceDisplay<'a, usize> {
     }
 }
 
-impl<'a> Display for SliceDisplay<'a, String> {
+impl Display for SliceDisplay<'_, String> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
@@ -131,7 +131,7 @@ impl<I: Clone + IntoIterator<Item = usize>> Display for IndexSliceDisplay<I> {
     }
 }
 
-impl<'a, I: Clone + IntoIterator<Item = usize>> Display for SliceDisplay<'a, IndexSliceDisplay<I>> {
+impl<I: Clone + IntoIterator<Item = usize>> Display for SliceDisplay<'_, IndexSliceDisplay<I>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("(")?;
         self.0.iter().enumerate().try_for_each(|(i, x)| {
@@ -167,7 +167,7 @@ pub struct StepDisplay<T> {
     idx: usize,
 }
 
-impl<'a, T> Display for SliceDisplay<'a, StepDisplay<T>>
+impl<T> Display for SliceDisplay<'_, StepDisplay<T>>
 where StepDisplay<T>: Display
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -315,33 +315,33 @@ impl Display for StepHeader {
         f.write_fmt(format_args!(
             "HEADER;
 FILE_DESCRIPTION(('Shape Data from Truck'), '2;1');
-FILE_NAME('{}', '{}', ({}), ({}), 'truck', '{}', '{}');
-FILE_SCHEMA(('{}'));
+FILE_NAME('{file_name}', '{time_stamp}', {authors}, {organization}, 'truck', '{origination_system}', '{authorization}');
+FILE_SCHEMA(('{schema}'));
 ENDSEC;\n",
-            self.file_name,
-            self.time_stamp,
-            if self.authors.is_empty() {
+            file_name = self.file_name,
+            time_stamp = self.time_stamp,
+            authors = if self.authors.is_empty() {
                 SliceDisplay(&empty_string)
             } else {
                 SliceDisplay(&self.authors)
             },
-            if self.organization.is_empty() {
+            organization = if self.organization.is_empty() {
                 SliceDisplay(&empty_string)
             } else {
                 SliceDisplay(&self.organization)
             },
-            self.origination_system,
-            self.authorization,
-            self.schema,
+            origination_system = self.origination_system,
+            authorization = self.authorization,
+            schema = self.schema,
         ))
     }
 }
 
-/// Display model with configuations
+/// Display model with configurations
 #[derive(Clone, Debug)]
 pub struct StepModel<'a, P, C, S>(PreStepModel<'a, P, C, S>);
 
-/// Display models with configuations
+/// Display models with configurations
 #[derive(Clone, Debug)]
 pub struct StepModels<'a, P, C, S> {
     models: Vec<PreStepModel<'a, P, C, S>>,

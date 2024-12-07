@@ -574,7 +574,7 @@ impl<P, C> Hash for Edge<P, C> {
     }
 }
 
-impl<'a, P: Debug, C: Debug> Debug for DebugDisplay<'a, Edge<P, C>, EdgeDisplayFormat> {
+impl<P: Debug, C: Debug> Debug for DebugDisplay<'_, Edge<P, C>, EdgeDisplayFormat> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             EdgeDisplayFormat::Full { vertex_format } => f

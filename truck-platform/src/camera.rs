@@ -113,7 +113,7 @@ impl Camera {
     /// Creates a parallel camera.
     /// # Arguments
     /// * `matrix`:  camera matrix
-    /// * `screen_size`: screen size, based on the vertical direction of the screen.`
+    /// * `screen_size`: screen size, based on the vertical direction of the screen.
     /// * `near_clip`: distance to the nearest face of the view volume
     /// * `far_clip`: distance to the farthest face of the view volume
     /// # Examples
@@ -171,7 +171,7 @@ impl Camera {
 
     /// Returns the projection matrix into the normalized view volume.
     /// # Arguments
-    /// `as_rat`: the aspect ratio, x-resolution / y-resulution.
+    /// `as_rat`: the aspect ratio, x-resolution / y-resolution.
     /// # Examples
     /// ```
     /// // perspective camera

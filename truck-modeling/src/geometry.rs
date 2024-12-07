@@ -76,7 +76,7 @@ impl From<IntersectionCurve<BSplineCurve<Point3>, Surface, Surface>> for Curve {
 }
 
 impl Curve {
-    /// Into non-ratinalized 4-dimensinal B-spline curve
+    /// Into non-ratinalized 4-dimensional B-spline curve
     pub fn lift_up(self) -> BSplineCurve<Vector4> {
         match self {
             Curve::Line(curve) => Curve::BSplineCurve(curve.to_bspline()).lift_up(),

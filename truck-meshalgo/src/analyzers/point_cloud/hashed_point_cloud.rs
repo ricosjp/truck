@@ -176,7 +176,7 @@ impl DistanceWithPointCloud for [Point3; 3] {
     }
 }
 
-impl<'a> DistanceWithPointCloud for &'a PolygonMesh {
+impl DistanceWithPointCloud for &PolygonMesh {
     fn distance2(&self, space: &HashedPointCloud) -> f64 {
         let dist2 = self.faces().triangle_iter().fold(-1.0, |dist2, tri| {
             let tri = array![i => self.positions()[tri[i].pos]; 3];
@@ -268,10 +268,10 @@ fn exec_space_division_distance() {
         })
         .collect::<Vec<_>>();
     let hashed = HashedPointCloud::from_points(&points, 1.0);
-    let dist_0 = triangles.iter().fold(std::f64::INFINITY, |dist, triangle| {
+    let dist_0 = triangles.iter().fold(f64::INFINITY, |dist, triangle| {
         f64::min(dist, hashed.distance2(*triangle))
     });
-    let dist_1 = points.iter().fold(std::f64::INFINITY, |dist2, pt| {
+    let dist_1 = points.iter().fold(f64::INFINITY, |dist2, pt| {
         triangles.iter().fold(dist2, |dist2, triangle| {
             f64::min(dist2, distance2_point_triangle(*pt, *triangle))
         })

@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<'a, P, C, S> Display for StepShell<'a, P, C, S>
+impl<P, C, S> Display for StepShell<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepCurve,
@@ -184,7 +184,7 @@ where
     }
 }
 
-impl<'a, P, C, S> StepLength for StepShell<'a, P, C, S> {
+impl<P, C, S> StepLength for StepShell<'_, P, C, S> {
     fn step_length(&self) -> usize {
         1 + self.ep_points + self.entity.vertices.len() - self.face_indices[0]
     }
@@ -217,7 +217,7 @@ where
     }
 }
 
-impl<'a, P, C, S> Display for StepSolid<'a, P, C, S>
+impl<P, C, S> Display for StepSolid<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,
@@ -262,7 +262,7 @@ where
     }
 }
 
-impl<'a, P, C, S> StepLength for StepSolid<'a, P, C, S> {
+impl<P, C, S> StepLength for StepSolid<'_, P, C, S> {
     fn step_length(&self) -> usize {
         let b = &self.boundaries;
         match b.len() {
@@ -301,7 +301,7 @@ where
     fn from(solid: &'a CompressedSolid<P, C, S>) -> Self { Self::Solid(StepSolid::new(solid, 16)) }
 }
 
-impl<'a, P, C, S> Display for PreStepModel<'a, P, C, S>
+impl<P, C, S> Display for PreStepModel<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,
@@ -322,7 +322,7 @@ where
     }
 }
 
-impl<'a, P, C, S> StepLength for PreStepModel<'a, P, C, S> {
+impl<P, C, S> StepLength for PreStepModel<'_, P, C, S> {
     fn step_length(&self) -> usize {
         match self {
             Self::Shell(x) => 1 + x.step_length(),
@@ -349,7 +349,7 @@ where
     fn from(solid: &'a CompressedSolid<P, C, S>) -> Self { Self(solid.into()) }
 }
 
-impl<'a, P, C, S> Display for StepModel<'a, P, C, S>
+impl<P, C, S> Display for StepModel<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,
@@ -368,7 +368,7 @@ where
 #9 = PRODUCT_DEFINITION_CONTEXT('part definition', #2, 'design');
 #10 = ADVANCED_BREP_SHAPE_REPRESENTATION('', (#16), #11);
 #11 = (
-    GEOMETRIC_REPRESENTATION_CONTEXT(3) 
+    GEOMETRIC_REPRESENTATION_CONTEXT(3)
     GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#15))
     GLOBAL_UNIT_ASSIGNED_CONTEXT((#12, #13, #14))
     REPRESENTATION_CONTEXT('Context #1', '3D Context with UNIT and UNCERTAINTY')
@@ -376,13 +376,13 @@ where
 #12 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
 #13 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
 #14 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
-#15 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #12, 'distance_accuracy_value','confusion accuracy');\n"
+#15 = UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.0E-6), #12, 'distance_accuracy_value','confusion accuracy');\n"
         )?;
         Display::fmt(&self.0, f)
     }
 }
 
-impl<'a, P, C, S> Default for StepModels<'a, P, C, S> {
+impl<P, C, S> Default for StepModels<'_, P, C, S> {
     fn default() -> Self {
         Self {
             models: Vec::new(),
@@ -451,7 +451,7 @@ where
     }
 }
 
-impl<'a, P, C, S> Display for StepModels<'a, P, C, S>
+impl<P, C, S> Display for StepModels<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,
@@ -484,7 +484,7 @@ where
 #12 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
 #13 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
 #14 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
-#15 = UNCERTAINTY_MEASURE_WITH_UNIT(1.0E-6, #12, 'distance_accuracy_value','confusion accuracy');\n"
+#15 = UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.0E-6), #12, 'distance_accuracy_value','confusion accuracy');\n"
         )?;
         self.models
             .iter()

@@ -738,7 +738,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// - there are no vertex corresponding to `vertex_id` in the shell,
     /// - the vertex is included more than 2 face boundaries,
     /// - the vertex is included more than 2 edges, or
-    /// - concating edges is failed.
+    /// - concatenating edges is failed.
     pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> Option<Edge<P, C>>
     where
         P: Debug,
@@ -1167,9 +1167,7 @@ where
     res
 }
 
-impl<'a, P: Debug, C: Debug, S: Debug> Debug
-    for DebugDisplay<'a, Shell<P, C, S>, ShellDisplayFormat>
-{
+impl<P: Debug, C: Debug, S: Debug> Debug for DebugDisplay<'_, Shell<P, C, S>, ShellDisplayFormat> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             ShellDisplayFormat::FacesList { face_format } => f

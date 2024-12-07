@@ -229,9 +229,7 @@ impl<P, C, S> PartialEq for Solid<P, C, S> {
 
 impl<P, C, S> Eq for Solid<P, C, S> {}
 
-impl<'a, P: Debug, C: Debug, S: Debug> Debug
-    for DebugDisplay<'a, Solid<P, C, S>, SolidDisplayFormat>
-{
+impl<P: Debug, C: Debug, S: Debug> Debug for DebugDisplay<'_, Solid<P, C, S>, SolidDisplayFormat> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.format {
             SolidDisplayFormat::ShellsList { shell_format } => f

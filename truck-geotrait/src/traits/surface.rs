@@ -26,7 +26,7 @@ pub trait ParametricSurface: Clone {
         ((X, X), (X, X))
     }
     /// Return the ends of `parameter_range` by tuple.
-    /// If the range is unbounded, return `None``.
+    /// If the range is unbounded, return `None`.
     #[inline(always)]
     fn try_range_tuple(&self) -> (Option<Tuple>, Option<Tuple>) {
         let ((u0, u1), (v0, v1)) = self.parameter_range();
@@ -43,7 +43,7 @@ pub trait ParametricSurface: Clone {
     fn v_period(&self) -> Option<f64> { None }
 }
 
-impl<'a, S: ParametricSurface> ParametricSurface for &'a S {
+impl<S: ParametricSurface> ParametricSurface for &S {
     type Point = S::Point;
     type Vector = S::Vector;
     #[inline(always)]
@@ -102,7 +102,7 @@ pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector
     }
 }
 
-impl<'a, S: ParametricSurface3D> ParametricSurface3D for &'a S {
+impl<S: ParametricSurface3D> ParametricSurface3D for &S {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 { (*self).normal(u, v) }
 }
@@ -125,7 +125,7 @@ pub trait BoundedSurface: ParametricSurface {
     }
 }
 
-impl<'a, S: BoundedSurface> BoundedSurface for &'a S {}
+impl<S: BoundedSurface> BoundedSurface for &S {}
 
 impl<S: BoundedSurface> BoundedSurface for Box<S> {}
 
@@ -146,7 +146,7 @@ pub trait ParameterDivision2D {
         -> (Vec<f64>, Vec<f64>);
 }
 
-impl<'a, S: ParameterDivision2D> ParameterDivision2D for &'a S {
+impl<S: ParameterDivision2D> ParameterDivision2D for &S {
     fn parameter_division(
         &self,
         range: ((f64, f64), (f64, f64)),
