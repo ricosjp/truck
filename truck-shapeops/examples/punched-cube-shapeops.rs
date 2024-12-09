@@ -14,17 +14,6 @@ fn main() {
     let mut cylinder = builder::tsweep(&f, Vector3::unit_z() * 2.0);
     cylinder.not();
     let and = truck_shapeops::and(&cube, &cylinder, 0.05).unwrap();
-    and.edge_iter().for_each(|edge| {
-        let mut curve = edge.curve();
-        if let Curve::IntersectionCurve(inter) = &curve {
-            if matches! { inter.leader(), Leader::Polyline(_) } {
-                let flag = curve.to_bspline_leader(0.01, 0.1, 20);
-                println!("{flag}");
-            }
-        }
-        edge.set_curve(curve);
-    });
-
     let json = serde_json::to_vec_pretty(&and).unwrap();
     std::fs::write("punched-cube-shapeops.json", json).unwrap();
 }

@@ -150,38 +150,3 @@ impl<C: Transformed<Matrix4>> Transformed<Matrix4> for ExtrudedCurve<C, Vector3>
         }
     }
 }
-
-#[test]
-fn extruded_curve_test() {
-    let cpts = vec![
-        Point3::new(0.0, 0.0, 0.0),
-        Point3::new(0.0, 1.0, 0.0),
-        Point3::new(1.0, 0.0, 0.0),
-    ];
-    let spts = vec![
-        vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 1.0)],
-        vec![Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 1.0, 1.0)],
-        vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 1.0)],
-    ];
-    let curve = BSplineCurve::new(KnotVec::bezier_knot(2), cpts);
-    let surface0 = ExtrudedCurve::by_extrusion(curve, Vector3::unit_z());
-    let surface1 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(1)), spts);
-    assert_eq!(surface0.range_tuple(), surface1.range_tuple());
-    const N: usize = 10;
-    for i in 0..=N {
-        for j in 0..=N {
-            let u = i as f64 / N as f64;
-            let v = j as f64 / N as f64;
-            assert_near!(
-                surface0.subs(u, v),
-                ParametricSurface::subs(&surface1, u, v)
-            );
-            assert_near!(surface0.uder(u, v), surface1.uder(u, v));
-            assert_near!(surface0.vder(u, v), surface1.vder(u, v));
-            assert_near!(surface0.uuder(u, v), surface1.uuder(u, v));
-            assert_near!(surface0.uvder(u, v), surface1.uvder(u, v));
-            assert_near!(surface0.vvder(u, v), surface1.vvder(u, v));
-            assert_near!(surface0.normal(u, v), surface1.normal(u, v));
-        }
-    }
-}

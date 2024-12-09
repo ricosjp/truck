@@ -6,29 +6,6 @@ pub use truck_geometry::prelude::{algo, inv_or_zero};
 pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
 pub use truck_polymesh::PolylineCurve;
 
-/// Leading curve for intersection
-#[derive(
-    Clone,
-    Debug,
-    Serialize,
-    Deserialize,
-    From,
-    TryInto,
-    ParametricCurve,
-    BoundedCurve,
-    ParameterDivision1D,
-    Cut,
-    Invertible,
-    SearchNearestParameterD1,
-    SearchParameterD1,
-)]
-pub enum Leader {
-    /// polyline curve
-    Polyline(PolylineCurve<Point3>),
-    /// bspline curve
-    BSpline(BSplineCurve<Point3>),
-}
-
 /// 3-dimensional curve
 #[derive(
     Clone,
@@ -53,7 +30,7 @@ pub enum Curve {
     /// 3-dimensional NURBS curve
     NurbsCurve(NurbsCurve<Vector4>),
     /// intersection curve
-    IntersectionCurve(IntersectionCurve<Leader, Surface>),
+    IntersectionCurve(IntersectionCurve<Box<Curve>, Box<Surface>, Box<Surface>>),
 }
 
 macro_rules! derive_curve_method {
@@ -78,21 +55,6 @@ macro_rules! derive_curve_self_method {
     };
 }
 
-impl Transformed<Matrix4> for Leader {
-    fn transform_by(&mut self, trans: Matrix4) {
-        match self {
-            Leader::Polyline(x) => Transformed::transform_by(x, trans),
-            Leader::BSpline(x) => Transformed::transform_by(x, trans),
-        }
-    }
-    fn transformed(&self, trans: Matrix4) -> Leader {
-        match self {
-            Leader::Polyline(x) => Leader::Polyline(Transformed::transformed(x, trans)),
-            Leader::BSpline(x) => Leader::BSpline(Transformed::transformed(x, trans)),
-        }
-    }
-}
-
 impl Transformed<Matrix4> for Curve {
     fn transform_by(&mut self, trans: Matrix4) {
         derive_curve_method!(self, Transformed::transform_by, trans);
@@ -102,9 +64,14 @@ impl Transformed<Matrix4> for Curve {
     }
 }
 
-impl From<IntersectionCurve<PolylineCurve<Point3>, Surface>> for Curve {
-    fn from(x: IntersectionCurve<PolylineCurve<Point3>, Surface>) -> Curve {
-        Curve::IntersectionCurve(x.change_leader(Leader::Polyline))
+impl From<IntersectionCurve<BSplineCurve<Point3>, Surface, Surface>> for Curve {
+    fn from(c: IntersectionCurve<BSplineCurve<Point3>, Surface, Surface>) -> Curve {
+        let (surface0, surface1, leader) = c.destruct();
+        Curve::IntersectionCurve(IntersectionCurve::new(
+            Box::new(surface0),
+            Box::new(surface1),
+            Box::new(leader.into()),
+        ))
     }
 }
 
@@ -126,25 +93,6 @@ impl Curve {
                 unimplemented!("intersection curve cannot connect by homotopy")
             }
         }
-    }
-    /// Make the leaders of `IntersectionCurve`s B-spline curves.
-    pub fn to_bspline_leader(&mut self, p_tol: f64, d_tol: f64, trials: usize) -> bool {
-        if let Curve::IntersectionCurve(ref mut curve) = self {
-            if matches!(curve.leader(), Leader::Polyline(_)) {
-                if let Some(bspcurve) = BSplineCurve::cubic_approximation(
-                    curve,
-                    curve.range_tuple(),
-                    p_tol,
-                    d_tol,
-                    trials,
-                ) {
-                    let editor = curve.editor();
-                    *editor.leader = Leader::BSpline(bspcurve);
-                    return true;
-                }
-            }
-        }
-        false
     }
 }
 

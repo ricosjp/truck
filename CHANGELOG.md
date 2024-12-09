@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Review of the specifications for `IntersectionCurve`.
 - Fix STEP header description.
 - Fix some typos.
 - Implement `BSplineCurve::interpole`.

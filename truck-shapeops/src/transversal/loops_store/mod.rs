@@ -3,7 +3,7 @@
 use super::*;
 use rustc_hash::FxHashMap as HashMap;
 use truck_base::cgmath64::*;
-use truck_geometry::prelude::IntersectionCurve;
+use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
 use truck_topology::{Vertex, *};
 
@@ -52,13 +52,14 @@ impl<P, C> BoundaryWire<P, C> {
 }
 
 impl ShapesOpStatus {
-    fn from_is_curve<C, S>(curve: &IntersectionCurve<C, S>) -> Option<ShapesOpStatus>
+    fn from_is_curve<C, S0, S1>(curve: &IntersectionCurve<C, S0, S1>) -> Option<ShapesOpStatus>
     where
         C: ParametricCurve3D + BoundedCurve,
-        S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>, {
+        S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+        S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>, {
         let (t0, t1) = curve.range_tuple();
         let t = (t0 + t1) / 2.0;
-        let (_, pt0, pt1) = curve.search_triple(t)?;
+        let (_, pt0, pt1) = curve.search_triple(t, 100)?;
         let der = curve.leader().der(t);
         let normal0 = curve.surface0().normal(pt0[0], pt0[1]);
         let normal1 = curve.surface1().normal(pt1[0], pt1[1]);
@@ -428,7 +429,7 @@ where
     let v1 = Vertex::new(poly_curve1.front());
     let edge0 = Edge::new(&v0, &v1, poly_curve0.into());
     let edge1 = Edge::new(&v1, &v0, poly_curve1.into());
-    vec![edge0, edge1].into()
+    wire![edge0, edge1]
 }
 
 #[allow(dead_code)]
@@ -449,7 +450,7 @@ where
     C: SearchNearestParameter<D1, Point = Point3>
         + SearchParameter<D1, Point = Point3>
         + Cut<Point = Point3, Vector = Vector3>
-        + From<IntersectionCurve<PolylineCurve, S>>,
+        + From<IntersectionCurve<PolylineCurve, S, S>>,
     S: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     let mut geom_loops_store0: LoopsStore<_, _> = geom_shell0.face_iter().collect();
@@ -472,10 +473,10 @@ where
                 &polygon0,
                 surface1.clone(),
                 &polygon1,
-            )
+            )?
             .into_iter()
             .try_for_each(|(polyline, intersection_curve)| {
-                let mut intersection_curve = intersection_curve?.into();
+                let mut intersection_curve = intersection_curve.into();
                 let status = ShapesOpStatus::from_is_curve(&intersection_curve)?;
                 let (status0, status1) = match (ori0, ori1) {
                     (true, true) => (status, status.not()),
@@ -513,7 +514,7 @@ where
                             &surface1,
                             &mut gemap0,
                         )?;
-                        let polyline = intersection_curve.editor().leader;
+                        let polyline = intersection_curve.leader_mut();
                         *polyline.first_mut().unwrap() = gv0.point();
                     }
                     let idx01 =
@@ -526,7 +527,7 @@ where
                             &surface1,
                             &mut gemap1,
                         )?;
-                        let polyline = intersection_curve.editor().leader;
+                        let polyline = intersection_curve.leader_mut();
                         *polyline.last_mut().unwrap() = gv1.point();
                     }
                     let idx10 =
@@ -539,7 +540,7 @@ where
                             &surface0,
                             &mut gemap0,
                         )?;
-                        let polyline = intersection_curve.editor().leader;
+                        let polyline = intersection_curve.leader_mut();
                         *polyline.first_mut().unwrap() = gv0.point();
                     }
                     let idx11 =
@@ -552,7 +553,7 @@ where
                             &surface0,
                             &mut gemap1,
                         )?;
-                        let polyline = intersection_curve.editor().leader;
+                        let polyline = intersection_curve.leader_mut();
                         *polyline.last_mut().unwrap() = gv1.point();
                     }
                     let pedge = Edge::new(&pv0, &pv1, polyline);

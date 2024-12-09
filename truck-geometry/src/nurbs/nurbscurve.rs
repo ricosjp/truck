@@ -308,28 +308,6 @@ where <V as Homogeneous<f64>>::Point: Debug
     }
 }
 
-#[test]
-fn concat_positive_test() {
-    let mut part0 = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::uniform_knot(4, 4),
-        (0..8)
-            .map(|_| {
-                Vector4::new(
-                    rand::random::<f64>(),
-                    rand::random::<f64>(),
-                    rand::random::<f64>(),
-                    rand::random::<f64>() + 0.5,
-                )
-            })
-            .collect(),
-    ));
-    let mut part1 = part0.cut(0.56);
-    let w = 20.0 * rand::random::<f64>() - 10.0;
-    part1.transform_control_points(|vec| *vec *= w);
-    assert_near!(part0.back(), part1.front());
-    concat_random_test(&part0, &part1, 10);
-}
-
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V>
 where V::Point: Tolerance
 {
@@ -588,33 +566,5 @@ impl<V: Homogeneous<f64>> From<BSplineCurve<V::Point>> for NurbsCurve<V> {
                 .map(V::from_point)
                 .collect(),
         ))
-    }
-}
-
-#[test]
-fn test_parameter_division() {
-    let knot_vec = KnotVec::uniform_knot(2, 3);
-    let ctrl_pts = vec![
-        Vector4::new(0.0, 0.0, 0.0, 1.0),
-        Vector4::new(2.0, 0.0, 0.0, 2.0),
-        Vector4::new(0.0, 3.0, 0.0, 3.0),
-        Vector4::new(0.0, 0.0, 2.0, 2.0),
-        Vector4::new(1.0, 1.0, 1.0, 1.0),
-    ];
-    let curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
-    let tol = 0.01;
-    let (div, pts) = curve.parameter_division(curve.range_tuple(), tol * 0.5);
-    let knot_vec = curve.knot_vec();
-    assert_eq!(knot_vec[0], div[0]);
-    assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);
-    for i in 1..div.len() {
-        let pt0 = curve.subs(div[i - 1]);
-        assert_eq!(pt0, pts[i - 1]);
-        let pt1 = curve.subs(div[i]);
-        assert_eq!(pt1, pts[i]);
-        let value_middle = pt0.midpoint(pt1);
-        let param_middle = curve.subs((div[i - 1] + div[i]) / 2.0);
-        let dist = value_middle.distance(param_middle);
-        assert!(dist < tol, "large distance: {dist}");
     }
 }

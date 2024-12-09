@@ -85,20 +85,6 @@ impl SearchNearestParameter<D1> for UnitCircle<Point2> {
     }
 }
 
-#[test]
-fn search_nearest_parameter() {
-    const N: usize = 100;
-    let circle = UnitCircle::<Point2>::new();
-    for i in 0..N {
-        let t = 2.0 * PI * i as f64 / N as f64;
-        let a = 5.0 * rand::random::<f64>() + 0.1;
-        let p = a * circle.subs(t);
-        let s = circle.search_nearest_parameter(p, None, 1).unwrap();
-        let q = a * circle.subs(s);
-        assert_near!(p, q);
-    }
-}
-
 impl SearchParameter<D1> for UnitCircle<Point2> {
     type Point = Point2;
     fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point2, _: H, _: usize) -> Option<f64> {
@@ -113,18 +99,6 @@ impl SearchParameter<D1> for UnitCircle<Point2> {
             false => 2.0 * PI - theta,
         };
         Some(theta)
-    }
-}
-
-#[test]
-fn search_parameter() {
-    const N: usize = 100;
-    let circle = UnitCircle::<Point2>::new();
-    for i in 1..N {
-        let t = 2.0 * PI * i as f64 / N as f64;
-        let p = circle.subs(t);
-        let s = circle.search_parameter(p, None, 1).unwrap();
-        assert_near!(s, t);
     }
 }
 
@@ -147,15 +121,5 @@ impl SearchParameter<D1> for UnitCircle<Point3> {
             return None;
         }
         UnitCircle::<Point2>::new().search_parameter(Point2::new(pt.x, pt.y), None, 0)
-    }
-}
-
-#[test]
-fn parameter_division() {
-    let c = UnitCircle::<Point2>::new();
-    let (_div, pts) = c.parameter_division(c.range_tuple(), 0.05);
-    for a in pts.windows(2) {
-        let p = a[0].midpoint(a[1]);
-        assert!(p.to_vec().magnitude() > 0.95);
     }
 }

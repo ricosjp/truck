@@ -1,5 +1,7 @@
+use crate::alternative::Alternative;
+
 use super::*;
-use truck_geometry::prelude::IntersectionCurve;
+use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 
@@ -29,7 +31,7 @@ pub trait ShapeOpsCurve<S: ShapeOpsSurface>:
     + ParameterDivision1D<Point = Point3>
     + Cut
     + Invertible
-    + From<IntersectionCurve<PolylineCurve<Point3>, S>>
+    + From<IntersectionCurve<BSplineCurve<Point3>, S, S>>
     + SearchParameter<D1, Point = Point3>
     + SearchNearestParameter<D1, Point = Point3>
     + Send
@@ -39,12 +41,35 @@ impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where C: ParametricCurve3D
         + ParameterDivision1D<Point = Point3>
         + Cut
         + Invertible
-        + From<IntersectionCurve<PolylineCurve<Point3>, S>>
+        + From<IntersectionCurve<BSplineCurve<Point3>, S, S>>
         + SearchParameter<D1, Point = Point3>
         + SearchNearestParameter<D1, Point = Point3>
         + Send
         + Sync
 {
+}
+
+type AltCurveShell<C, S> =
+    Shell<Point3, Alternative<C, IntersectionCurve<PolylineCurve<Point3>, S, S>>, S>;
+
+fn altshell_to_shell<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
+    altshell: &AltCurveShell<C, S>,
+    tol: f64,
+) -> Option<Shell<Point3, C, S>> {
+    altshell.try_mapped(
+        |p| Some(*p),
+        |c| match c {
+            Alternative::FirstType(c) => Some(c.clone()),
+            Alternative::SecondType(ic) => {
+                let bsp = BSplineCurve::quadratic_approximation(ic, ic.range_tuple(), tol, 100)?;
+                Some(
+                    IntersectionCurve::new(ic.surface0().clone(), ic.surface1().clone(), bsp)
+                        .into(),
+                )
+            }
+        },
+        |s| Some(s.clone()),
+    )
 }
 
 fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
@@ -55,14 +80,18 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     nonpositive_tolerance!(tol);
     let poly_shell0 = shell0.triangulation(tol);
     let poly_shell1 = shell1.triangulation(tol);
+    let altshell0: AltCurveShell<C, S> =
+        shell0.mapped(|x| *x, |c| Alternative::FirstType(c.clone()), Clone::clone);
+    let altshell1: AltCurveShell<C, S> =
+        shell1.mapped(|x| *x, |c| Alternative::FirstType(c.clone()), Clone::clone);
     let loops_store::LoopsStoreQuadruple {
         geom_loops_store0: loops_store0,
         geom_loops_store1: loops_store1,
         ..
-    } = loops_store::create_loops_stores(shell0, &poly_shell0, shell1, &poly_shell1)?;
-    let mut cls0 = divide_face::divide_faces(shell0, &loops_store0, tol)?;
+    } = loops_store::create_loops_stores(&altshell0, &poly_shell0, &altshell1, &poly_shell1)?;
+    let mut cls0 = divide_face::divide_faces(&altshell0, &loops_store0, tol)?;
     cls0.integrate_by_component();
-    let mut cls1 = divide_face::divide_faces(shell1, &loops_store1, tol)?;
+    let mut cls1 = divide_face::divide_faces(&altshell1, &loops_store1, tol)?;
     cls1.integrate_by_component();
     let [mut and0, mut or0, unknown0] = cls0.and_or_unknown();
     unknown0.into_iter().try_for_each(|face| {
@@ -96,7 +125,10 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     })?;
     and0.append(&mut and1);
     or0.append(&mut or1);
-    Some([and0, or0])
+    Some([
+        altshell_to_shell(&and0, tol)?,
+        altshell_to_shell(&or0, tol)?,
+    ])
 }
 
 /// AND operation between two solids.

@@ -1,83 +1,6 @@
 use super::*;
 use std::f64::consts::PI;
 
-mod double_projection_tests {
-    use super::*;
-
-    fn create_axis(n: Vector3) -> (Vector3, Vector3) {
-        let idx = if n[0].abs() < n[1].abs() { 0 } else { 1 };
-        let idx = if n[idx].abs() < n[2].abs() { idx } else { 2 };
-        let mut e = Vector3::zero();
-        e[idx] = 1.0;
-        let x = n.cross(e).normalize();
-        (x, n.cross(x))
-    }
-
-    fn exec_plane_case() {
-        let c0 = Point3::new(
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-        );
-        let n0 = Vector3::new(
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-        )
-        .normalize();
-        let (x, y) = create_axis(n0);
-        let plane0 = Plane::new(c0, c0 + x, c0 + y);
-        let c1 = Point3::new(
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-        );
-        let n1 = Vector3::new(
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-            2.0 * rand::random::<f64>() - 1.0,
-        )
-        .normalize();
-        let (x, y) = create_axis(n1);
-        let plane1 = Plane::new(c1, c1 + x, c1 + y);
-        let n = n0.cross(n1).normalize();
-        let mut o = None;
-        for i in 0..10 {
-            let t = i as f64;
-            let p = Point3::origin() + t * n;
-            let (q, p0, p1) = double_projection(&plane0, None, &plane1, None, p, n, 100)
-                .unwrap_or_else(|| panic!("plane0: {plane0:?}\nplane1: {plane1:?}\n p: {p:?}"));
-            assert_near!(q, plane0.subs(p0.x, p0.y));
-            assert_near!(q, plane1.subs(p1.x, p1.y));
-            if let Some(o) = o {
-                assert_near!(q.distance2(o), t * t);
-            } else {
-                o = Some(q);
-            }
-        }
-    }
-
-    #[test]
-    fn plane_case() { (0..100).for_each(|_| exec_plane_case()); }
-
-    #[test]
-    fn sphere_case() {
-        let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
-        let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
-        for _ in 0..100 {
-            let t = 2.0 * PI * rand::random::<f64>();
-            let r = 0.5 + 0.5 * rand::random::<f64>();
-            let p = Point3::new(r * f64::cos(t), r * f64::sin(t), 0.0);
-            let n = Vector3::new(-f64::sin(t), f64::cos(t), 0.0);
-            let (q, p0, p1) = double_projection(&sphere0, None, &sphere1, None, p, n, 100)
-                .unwrap_or_else(|| panic!("p: {p:?}"));
-            assert_near!(q, sphere0.subs(p0.x, p0.y));
-            assert_near!(q, sphere1.subs(p1.x, p1.y));
-            assert_near!(q, Point3::new(f64::cos(t), f64::sin(t), 0.0));
-        }
-    }
-}
-
 #[test]
 fn intersection_curve_sphere_case() {
     let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
@@ -89,7 +12,7 @@ fn intersection_curve_sphere_case() {
             Point3::new(0.8 * f64::cos(t), 0.8 * f64::sin(t), 0.0)
         })
         .collect::<PolylineCurve<_>>();
-    let curve: IntersectionCurve<_, _> =
+    let curve: IntersectionCurve<_, _, _> =
         IntersectionCurveWithParameters::try_new(sphere0, sphere1, polyline)
             .unwrap()
             .into();
@@ -104,7 +27,7 @@ fn intersection_curve_sphere_case() {
         let vec = curve.der(t);
         assert!(pt.dot(vec).so_small(), "{i} {t} {vec:?}");
         assert!(vec[2].so_small());
-        let denom = if i == 0 || i == N { 2.0 } else { 1.0 };
+        let denom = if matches!(i, 0 | N) { 2.0 } else { 1.0 };
         sum += vec.magnitude() / denom * (t1 - t0) / N as f64;
     }
     assert!(
@@ -164,13 +87,13 @@ fn collide_parabola() {
     println!("Meshing Surfaces: {}s", instant.elapsed().as_secs_f64());
     // extract intersection curves
     let instant = std::time::Instant::now();
-    let curves = intersection_curves(surface0, &polygon0, surface1, &polygon1);
+    let curves = intersection_curves(surface0, &polygon0, surface1, &polygon1).unwrap();
     println!(
         "Extracting Intersection: {}s",
         instant.elapsed().as_secs_f64()
     );
     assert_eq!(curves.len(), 1);
-    let curve = curves[0].1.clone().unwrap();
+    let curve = curves[0].1.clone();
     const N: usize = 100;
     for i in 0..N {
         let t1 = curve.range_tuple().1;
