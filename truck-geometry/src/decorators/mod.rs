@@ -278,9 +278,48 @@ pub struct TrimmedCurve<C> {
     range: (f64, f64),
 }
 
+/// homotopy surface connecting two curves.
+/// 
+/// # Examples
+/// ```
+/// use truck_geometry::prelude::*;
+/// 
+/// // create homotopy between two lines
+/// let line0 = Line(Point3::new(-1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0));
+/// let line1 = Line(Point3::new(0.0, -1.0, 1.0), Point3::new(0.0, 1.0, 1.0));
+/// let homotopy = HomotopySurface::new(line0, line1);
+/// 
+/// // explicit definition
+/// let surface = |u: f64, v: f64| {
+///     Point3::new((2.0 * u - 1.0) * (1.0 - v), (2.0 * u - 1.0) * v, v)
+/// };
+/// let uder = |v: f64| Vector3::new(2.0 * (1.0 - v), 2.0 * v, 0.0);
+/// let vder = |u: f64| Vector3::new(1.0 - 2.0 * u, 2.0 * u - 1.0, 1.0);
+/// let uvder = Vector3::new(-2.0, 2.0, 0.0);
+///
+/// // test
+/// for i in 0..=10 {
+///     for j in 0..=10 {
+///         let (u, v) = (i as f64 / 10.0, j as f64 / 10.0);
+///         assert_near!(homotopy.subs(u, v), surface(u, v));
+///         assert_near!(homotopy.uder(u, v), uder(v));
+///         assert_near!(homotopy.vder(u, v), vder(u));
+///         assert!(homotopy.uuder(u, v).so_small());
+///         assert_near!(homotopy.uvder(u, v), uvder);
+///         assert!(homotopy.vvder(u, v).so_small());
+///     }
+/// }
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct HomotopySurface<C0, C1> {
+    curve0: C0,
+    curve1: C1,
+}
+
 mod extruded_curve;
 mod intersection_curve;
 mod pcurve;
 mod processor;
 mod revolved_curve;
 mod trimmied_curve;
+mod homotopy;
