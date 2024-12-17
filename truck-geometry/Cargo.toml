@@ -18,7 +18,7 @@ truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
 
 [dev-dependencies]
-proptest = "1.5.0"
+proptest = "1.6.0"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.2.15", features = ["js"] }
