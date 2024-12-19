@@ -2,68 +2,71 @@ use crate::topo_impls::*;
 use crate::topo_traits::*;
 use truck_topology::*;
 
-impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Vertex<P> {
-    type Swept = Edge<P, C>;
+impl<P, C, T, PC, CC> Sweep<T, PC, CC, Edge<P, C>> for Vertex<P>
+where
+    P: Clone,
+    C: Clone,
+    T: GeometricMapping<P> + Copy,
+    PC: Connector<P, C>,
+{
     /// Transforms a vertex and creates an edge by connecting vertices.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// truck_topology::prelude!(usize, isize, ());
     /// use truck_modeling::topo_traits::*;
+    /// 
     /// let v = Vertex::new(1);
     /// let edge = v.sweep(
-    ///     &move |i: &usize| *i + 1,
-    ///     &usize::clone,
-    ///     &<()>::clone,
-    ///     &move |i: &usize, j: &usize| *i * 10 + j,
-    ///     &move |_, _| (),
+    ///     (|i| i + 1) as fn(&usize) -> usize,
+    ///     (|i, j| (i * 10 + j) as isize) as fn(&usize, &usize) -> isize,
+    ///     (|_, _ | ()) as fn(&isize, &isize) -> (),
     /// );
     /// assert_eq!(edge.front().point(), 1);
     /// assert_eq!(edge.back().point(), 2);
     /// assert_eq!(edge.curve(), 12);
     /// ```
-    fn sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CC: Fn(&C, &C) -> S,
-    >(
-        &self,
-        point_mapping: &FP,
-        _: &FC,
-        _: &FS,
-        connect_points: &CP,
-        _: &CC,
-    ) -> Self::Swept {
-        let v = self.mapped(point_mapping);
-        connect_vertices(self, &v, connect_points)
+    fn sweep(&self, trans: T, connect_points: PC, _: CC) -> Edge<P, C> {
+        let v = self.mapped(trans.mapping());
+        connect_vertices(self, &v, &connect_points.connector())
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Edge<P, C> {
-    type Swept = Face<P, C, S>;
+impl<P, C, S, T, PC, CC> Sweep<T, PC, CC, Face<P, C, S>> for Edge<P, C>
+where
+    P: Clone,
+    C: Clone,
+    S: Clone,
+    T: GeometricMapping<P> + GeometricMapping<C> + Copy,
+    PC: Connector<P, C>,
+    CC: Connector<C, S>,
+{
     /// Transforms an edge and creates a face by connecting vertices and edges.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// truck_topology::prelude!(usize, isize, i64);
     /// use truck_modeling::topo_traits::*;
-    /// let edge = Edge::new(
-    ///     &Vertex::new(1),
-    ///     &Vertex::new(2),
-    ///     100,
-    /// );
+    /// 
+    /// #[derive(Clone, Copy)]
+    /// struct Mapping;
+    /// impl GeometricMapping<usize> for Mapping {
+    ///     fn mapping(self) -> impl Fn(&usize) -> usize { |i| *i + 2 }
+    /// }
+    /// impl GeometricMapping<isize> for Mapping {
+    ///     fn mapping(self) -> impl Fn(&isize) -> isize { |i| *i + 100 }
+    /// }
+    ///
+    /// let v = Vertex::news([1, 2]);
+    /// let edge = Edge::new(&v[0], &v[1], 100);
     /// let face = edge.sweep(
-    ///     &move |i: &usize| *i + 2,
-    ///     &move |j: &usize| *j + 100,
-    ///     &usize::clone,
-    ///     &move |i: &usize, j: &usize| *i * 10 + j,
-    ///     &move |i: &usize, j: &usize| *i + *j,
+    ///     Mapping,
+    ///     (|i, j| (i * 10 + j) as isize) as fn(&usize, &usize) -> isize,
+    ///     (|i, j| (i + j) as i64) as fn(&isize, &isize) -> i64,
     /// );
     ///
     /// assert_eq!(face.surface(), 300);
     /// assert_eq!(face.boundaries().len(), 1);
     ///
-    /// let boundary: Wire<usize, usize> = face.boundaries()[0].clone();
+    /// let boundary = face.boundaries()[0].clone();
     /// assert_eq!(boundary.len(), 4);
     ///
     /// assert_eq!(boundary[0], edge);
@@ -81,33 +84,40 @@ impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Edge<P, C> {
     /// assert_eq!(boundary[3].back().point(), 1);
     /// assert_eq!(boundary[3].curve(), 13);
     /// ```
-    fn sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CC: Fn(&C, &C) -> S,
-    >(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        _: &FS,
-        connect_points: &CP,
-        connect_curves: &CC,
-    ) -> Self::Swept {
+    fn sweep(&self, trans: T, point_connector: PC, curve_connector: CC) -> Face<P, C, S> {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
+        let connect_points = point_connector.connector();
+        let connect_curves = curve_connector.connector();
         let edge = self.mapped(point_mapping, curve_mapping);
-        connect_edges(self, &edge, connect_points, connect_curves)
+        connect_edges(self, &edge, &connect_points, &connect_curves)
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Wire<P, C> {
-    type Swept = Shell<P, C, S>;
+impl<P, C, S, T, PC, CC> Sweep<T, PC, CC, Shell<P, C, S>> for Wire<P, C>
+where
+    P: Clone,
+    C: Clone,
+    S: Clone,
+    T: GeometricMapping<P> + GeometricMapping<C> + Copy,
+    PC: Connector<P, C>,
+    CC: Connector<C, S>,
+{
     /// Transforms a wire and creates a shell by connecting vertices and edges.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// truck_topology::prelude!(usize, isize, i64);
     /// use truck_modeling::topo_traits::*;
-    /// use shell::ShellCondition;
+    /// 
+    /// #[derive(Clone, Copy)]
+    /// struct Mapping;
+    /// impl GeometricMapping<usize> for Mapping {
+    ///     fn mapping(self) -> impl Fn(&usize) -> usize { |i| *i + 4 }
+    /// }
+    /// impl GeometricMapping<isize> for Mapping {
+    ///     fn mapping(self) -> impl Fn(&isize) -> isize { |j| *j + 100 }
+    /// }
+    /// 
     /// let v = Vertex::news(&[1, 2, 3, 4]);
     /// let wire = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -116,11 +126,9 @@ impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Wire<P, C> {
     ///     Edge::new(&v[3], &v[1], 130),
     /// ]);
     /// let shell = wire.sweep(
-    ///     &move |i: &usize| *i + 4,
-    ///     &move |j: &usize| *j + 100,
-    ///     &usize::clone,
-    ///     &move |i: &usize, j: &usize| *i * 10 + j,
-    ///     &move |i: &usize, j: &usize| *i + *j,
+    ///     Mapping,
+    ///     (|i, j| (i * 10 + j) as isize) as fn(&usize, &usize) -> isize,
+    ///     (|i, j| (i + j) as i64) as fn(&isize, &isize) -> i64,
     /// );
     /// assert!(shell.is_connected());
     ///
@@ -151,48 +159,50 @@ impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Wire<P, C> {
     /// assert_eq!(boundary1[1].id(), boundary2[3].id());
     /// assert_ne!(boundary1[1], boundary2[3]);
     /// ```
-    fn sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CC: Fn(&C, &C) -> S,
-    >(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        _: &FS,
-        connect_points: &CP,
-        connect_curves: &CC,
-    ) -> Self::Swept {
+    fn sweep(&self, trans: T, point_connector: PC, curve_connector: CC) -> Shell<P, C, S> {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
+        let connect_points = point_connector.connector();
+        let connect_curves = curve_connector.connector();
         let wire = self.mapped(point_mapping, curve_mapping);
-        connect_wires(self, &wire, connect_points, connect_curves).collect()
+        connect_wires(self, &wire, &connect_points, &connect_curves).collect()
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Face<P, C, S> {
-    type Swept = Solid<P, C, S>;
+impl<P, C, S, T, PC, CC> Sweep<T, PC, CC, Solid<P, C, S>> for Face<P, C, S>
+where
+    P: Clone,
+    C: Clone,
+    S: Clone,
+    T: GeometricMapping<P> + GeometricMapping<C> + GeometricMapping<S> + Copy,
+    PC: Connector<P, C>,
+    CC: Connector<C, S>,
+{
     /// Transforms a face and creates a solid by connecting vertices, edges and faces.
     /// # Examples
     /// ```
-    /// use truck_topology::*;
+    /// truck_topology::prelude!(usize, isize, i64);
     /// use truck_modeling::topo_traits::*;
+    /// 
+    /// #[derive(Clone, Copy)]
+    /// struct Mapping(usize, isize, i64);
+    /// impl GeometricMapping<usize> for Mapping {
+    ///     fn mapping(self) -> impl Fn(&usize) -> usize { move |i| *i + self.0 }
+    /// }
+    /// impl GeometricMapping<isize> for Mapping {
+    ///     fn mapping(self) -> impl Fn(&isize) -> isize { move |i| *i + self.1 }
+    /// }
+    /// impl GeometricMapping<i64> for Mapping {
+    ///     fn mapping(self) -> impl Fn(&i64) -> i64 { move |i| *i + self.2 }
+    /// }
+    /// 
+    /// let connect_points: fn(&usize, &usize) -> isize = |i, j| (*i * 10 + *j) as isize;
+    /// let connect_curves: fn(&isize, &isize) -> i64 = |i, j| (*i * 100 + *j) as i64;
+    /// 
     /// let v = Vertex::news(&[1, 2]);
     /// let edge = Edge::new(&v[0], &v[1], 12);
-    /// let face = edge.sweep(
-    ///     &move |i: &usize| *i + 2,
-    ///     &move |i: &usize| *i + 22,
-    ///     &usize::clone,
-    ///     &move |i: &usize, j: &usize| *i * 10 + *j,
-    ///     &move |i: &usize, j: &usize| *i * 100 + *j,
-    /// );
-    /// let solid = face.sweep(
-    ///     &move |i: &usize| *i + 4,
-    ///     &move |i: &usize| *i + 44,
-    ///     &move |i: &usize| *i + 3333,
-    ///     &move |i: &usize, j: &usize| *i * 10 + *j,
-    ///     &move |i: &usize, j: &usize| *i * 100 + *j,
-    /// );
+    /// let face = edge.sweep(Mapping(2, 22, 0), connect_points, connect_curves);
+    /// let solid = face.sweep(Mapping(4, 44, 3333), connect_points, connect_curves);
     /// let shell = &solid.boundaries()[0];
     /// # assert_eq!(shell.shell_condition(), shell::ShellCondition::Closed);
     ///
@@ -214,37 +224,36 @@ impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Face<P, C, S> {
     /// // Check the last face: seiling.
     /// assert_eq!(shell[5].surface(), 4567);
     /// ```
-    fn sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CC: Fn(&C, &C) -> S,
-    >(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-        connect_points: &CP,
-        connect_curves: &CC,
-    ) -> Self::Swept {
-        let mut shell = vec![self.inverse()];
+    fn sweep(&self, trans: T, point_connector: PC, curve_connector: CC) -> Solid<P, C, S> {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
+        let surface_mapping = GeometricMapping::<S>::mapping(trans);
+        let connect_points = point_connector.connector();
+        let connect_curves = curve_connector.connector();
+        let mut shell = shell![self.inverse()];
         let seiling = self.mapped(point_mapping, curve_mapping, surface_mapping);
         let biter0 = self.boundary_iters().into_iter().flatten();
         let biter1 = seiling.boundary_iters().into_iter().flatten();
         shell.extend(connect_raw_wires(
             biter0,
             biter1,
-            connect_points,
-            connect_curves,
+            &connect_points,
+            &connect_curves,
         ));
         shell.push(seiling);
-        Solid::debug_new(vec![shell.into()])
+        Solid::debug_new(vec![shell])
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Shell<P, C, S> {
-    type Swept = Vec<Result<Solid<P, C, S>>>;
+impl<P, C, S, T, PC, CC> Sweep<T, PC, CC, Vec<Result<Solid<P, C, S>>>> for Shell<P, C, S>
+where
+    P: Clone,
+    C: Clone,
+    S: Clone,
+    T: GeometricMapping<P> + GeometricMapping<C> + GeometricMapping<S> + Copy,
+    PC: Connector<P, C>,
+    CC: Connector<C, S>,
+{
     /// Transforms a shell and tries to create solids by connecting vertices, edges and faces.
     ///
     /// In this function, the shell is broken down into connected components and each of components
@@ -254,25 +263,22 @@ impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Shell<P, C, S> {
     /// For each component, this method returns `Result` of sweeping,
     /// since there is no clear guarantee that a solid can be formed by the extrusion of the shell.
     /// At least, a component must be oriented and not be closed to be extruded.
-    fn sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CC: Fn(&C, &C) -> S,
-    >(
+    fn sweep(
         &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-        connect_points: &CP,
-        connect_curves: &CC,
-    ) -> Self::Swept {
+        trans: T,
+        point_connector: PC,
+        curve_connector: CC,
+    ) -> Vec<Result<Solid<P, C, S>>> {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
+        let surface_mapping = GeometricMapping::<S>::mapping(trans);
+        let connect_points = point_connector.connector();
+        let connect_curves = curve_connector.connector();
         self.connected_components()
             .into_iter()
             .map(move |shell| {
                 let mut bdry = Shell::new();
-                let mut seiling = shell.mapped(point_mapping, curve_mapping, surface_mapping);
+                let mut seiling = shell.mapped(&point_mapping, &curve_mapping, &surface_mapping);
                 bdry.extend(shell.face_iter().map(|face| face.inverse()));
                 let bdries0 = shell.extract_boundaries();
                 let bdries1 = seiling.extract_boundaries();
@@ -281,8 +287,8 @@ impl<P: Clone, C: Clone, S: Clone> Sweep<P, C, S> for Shell<P, C, S> {
                 bdry.extend(connect_wires(
                     biter0,
                     biter1,
-                    connect_points,
-                    connect_curves,
+                    &connect_points,
+                    &connect_curves,
                 ));
                 bdry.append(&mut seiling);
                 Solid::try_new(vec![bdry])

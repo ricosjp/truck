@@ -10,7 +10,7 @@ fn main() {
     let e = builder::tsweep(&v, Vector3::unit_x());
     let f = builder::tsweep(&e, Vector3::unit_y());
     let s = builder::tsweep(&f, Vector3::unit_z());
-    let mut shell = s.into_boundaries().pop().unwrap();
+    let mut shell: Shell = s.into_boundaries().pop().unwrap();
     let v = builder::vertex(Point3::new(0.5, 0.0, 0.25));
     let w = builder::rsweep(
         &v,

@@ -18,6 +18,22 @@ proptest! {
         let q = a * circle.subs(s);
         assert_near!(p, q);
     }
+
+    #[test]
+    fn to_nurbs(t0 in 0f64..=PI, t1 in PI..=(2.0 * PI)) {
+        let circle = UnitCircle::<Point2>::new();
+        let arc = TrimmedCurve::new(circle, (t0, t1));
+        let bsp: NurbsCurve<_> = arc.to_same_geometry();
+        assert_near!(bsp.front(), arc.front());
+        assert_near!(bsp.back(), arc.back());
+        for i in 0..=10 {
+            let t = i as f64 / 10.0;
+            let p = bsp.subs(t).to_vec();
+            let der = bsp.der(t);
+            assert_near!(p.magnitude2(), 1.0);
+            assert!(der.dot(p).so_small());
+        }
+    }
 }
 
 #[test]

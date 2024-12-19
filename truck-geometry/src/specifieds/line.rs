@@ -8,11 +8,6 @@ impl<P: Copy> Line<P> {
     where P: std::ops::Add<V, Output = P> {
         Self(origin, origin + direction)
     }
-    /// to a bspline curve
-    #[inline]
-    pub fn to_bspline(self) -> BSplineCurve<P> {
-        BSplineCurve::new(KnotVec::bezier_knot(1), vec![self.0, self.1])
-    }
 }
 
 impl<P> Line<P>
@@ -183,6 +178,16 @@ impl<P: EuclideanSpace, M: Transform<P>> Transformed<M> for Line<P> {
     fn transformed(&self, trans: M) -> Self {
         Line(trans.transform_point(self.0), trans.transform_point(self.1))
     }
+}
+
+impl<P> From<Line<P>> for BSplineCurve<P> {
+    fn from(Line(p, q): Line<P>) -> Self {
+        BSplineCurve::new_unchecked(KnotVec::bezier_knot(1), vec![p, q])
+    }
+}
+
+impl<P: Copy> ToSameGeometry<BSplineCurve<P>> for Line<P> {
+    fn to_same_geometry(&self) -> BSplineCurve<P> { BSplineCurve::from(*self) }
 }
 
 #[test]

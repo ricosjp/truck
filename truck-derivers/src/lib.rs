@@ -1298,3 +1298,19 @@ pub fn derive_step_surface(input: TokenStream) -> TokenStream {
     }
     .into()
 }
+
+/// Derive macro generating an impl of the trait `ToSameGeometry<Self>` for structs.
+#[proc_macro_error]
+#[proc_macro_derive(SelfSameGeometry)]
+pub fn derive_self_same_geometry(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let ident = input.ident;
+    let gen = input.generics;
+    quote! {
+        #[automatically_derived]
+        impl #gen ToSameGeometry<Self> for #ident #gen where Self: Clone {
+            #[inline(always)]
+            fn to_same_geometry(&self) -> Self { self.clone() }
+        }
+    }.into()
+}

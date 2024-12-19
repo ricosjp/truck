@@ -1,4 +1,5 @@
 use algo::surface::SspVector;
+use control_point::ControlPoint;
 
 use super::*;
 use std::ops::RangeBounds;
@@ -152,6 +153,33 @@ where
     }
 }
 
+impl<P> From<HomotopySurface<BSplineCurve<P>, BSplineCurve<P>>> for BSplineSurface<P>
+where P: ControlPoint<f64> + Tolerance
+{
+    fn from(value: HomotopySurface<BSplineCurve<P>, BSplineCurve<P>>) -> Self {
+        let HomotopySurface {
+            curve0: mut bspcurve0,
+            curve1: mut bspcurve1,
+        } = value;
+        bspcurve0.syncro_degree(&mut bspcurve1);
+
+        //bspcurve0.optimize();
+        //bspcurve1.optimize();
+
+        bspcurve0.syncro_knots(&mut bspcurve1);
+
+        let uknot_vec = bspcurve0.knot_vec().clone();
+        let vknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+        let mut control_points = Vec::new();
+        for i in 0..bspcurve0.control_points().len() {
+            control_points.push(Vec::new());
+            control_points[i].push(*bspcurve0.control_point(i));
+            control_points[i].push(*bspcurve1.control_point(i));
+        }
+        BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
+    }
+}
+
 fn bound2opt<T>(x: Bound<T>) -> Option<T> {
     match x {
         Bound::Included(x) => Some(x),
@@ -168,7 +196,7 @@ where
     let (t00, t01) = (range0.start_bound(), range0.end_bound());
     let (t10, t11) = (range1.start_bound(), range1.end_bound());
     let t0 = match (bound2opt(t00), bound2opt(t10)) {
-        (Some(x), Some(y)) => match x.partial_cmp(&y).unwrap() {
+        (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
             Ordering::Greater => t00,
             Ordering::Less => t10,
             Ordering::Equal => match matches!(t00, Bound::Excluded(_)) {
@@ -180,7 +208,7 @@ where
         (None, _) => t10,
     };
     let t1 = match (bound2opt(t01), bound2opt(t11)) {
-        (Some(x), Some(y)) => match x.partial_cmp(&y).unwrap() {
+        (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
             Ordering::Less => t01,
             Ordering::Greater => t11,
             Ordering::Equal => match matches!(t01, Bound::Excluded(_)) {

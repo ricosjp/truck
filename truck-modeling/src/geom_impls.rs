@@ -1,11 +1,12 @@
 use crate::*;
+use itertools::Itertools;
 use std::f64::consts::PI;
 
 pub(super) fn circle_arc_by_three_points(
     point0: Point3,
     point1: Point3,
     transit: Point3,
-) -> NurbsCurve<Vector4> {
+) -> Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4> {
     let origin = circum_center(point0, point1, transit);
     let (vec0, vec1) = (point0 - transit, point1 - transit);
     let axis = vec1.cross(vec0).normalize();
@@ -20,28 +21,12 @@ fn circum_center(pt0: Point3, pt1: Point3, pt2: Point3) -> Point3 {
     pt0 + u / (2.0 * det) * vec0 + v / (2.0 * det) * vec1
 }
 
-fn unit_circle_arc(angle: Rad<f64>) -> NurbsCurve<Vector4> {
-    let (cos2, sin2) = (Rad::cos(angle / 2.0), Rad::sin(angle / 2.0));
-    let mut curve = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
-        vec![
-            Vector4::new(1.0, 0.0, 0.0, 1.0),
-            Vector4::new(cos2, sin2, 0.0, cos2),
-            Vector4::new(Rad::cos(angle), Rad::sin(angle), 0.0, 1.0),
-        ],
-    ));
-    curve.add_knot(0.25);
-    curve.add_knot(0.5);
-    curve.add_knot(0.75);
-    curve
-}
-
 pub(super) fn circle_arc(
     point: Point3,
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
-) -> NurbsCurve<Vector4> {
+) -> Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4> {
     let origin = origin + (axis.dot(point - origin)) * axis;
     let diag = point - origin;
     let axis_trsf = Matrix4::from_cols(
@@ -50,15 +35,14 @@ pub(super) fn circle_arc(
         axis.extend(0.0),
         origin.to_homogeneous(),
     );
-    let mut unit_curve = unit_circle_arc(angle);
-    unit_curve.transform_by(axis_trsf);
-    unit_curve
+    let unit_arc = TrimmedCurve::new(UnitCircle::new(), (0.0, angle.0));
+    Processor::with_transform(unit_arc, axis_trsf)
 }
 
 fn closed_polyline_orientation<'a>(pts: impl IntoIterator<Item = &'a Vec<Point3>>) -> bool {
     pts.into_iter()
-        .flat_map(|vec| vec.windows(2))
-        .map(|p| (p[1][0] + p[0][0]) * (p[1][1] - p[0][1]))
+        .flat_map(|vec| vec.iter().circular_tuple_windows())
+        .map(|(p0, p1)| (p1[0] + p0[0]) * (p1[1] - p0[1]))
         .sum::<f64>()
         >= 0.0
 }
@@ -80,9 +64,9 @@ pub(super) fn attach_plane(mut pts: Vec<Vec<Point3>>) -> Option<Plane> {
         / pts.len() as f64;
     let normal = pts
         .iter()
-        .flat_map(|vec| vec.windows(2))
-        .fold(Vector3::zero(), |sum, p| {
-            sum + (p[0] - center).cross(p[1] - center)
+        .flat_map(|vec| vec.iter().circular_tuple_windows())
+        .fold(Vector3::zero(), |sum, (p0, p1)| {
+            sum + (p0 - center).cross(p1 - center)
         });
     let n = match normal.so_small() {
         true => return None,
@@ -214,7 +198,8 @@ mod test_geom_impl {
 
             // Any point on the curve is on the same side as point `p2`.
             // Check by the circular angle theorem.
-            let p3 = curve.subs(t);
+            let (t0, t1) = curve.range_tuple();
+            let p3 = curve.subs((1.0 - t) * t0 + t * t1);
             let angle2 = (p2 - p1).angle(p2 - p0);
             let angle3 = (p3 - p1).angle(p3 - p0);
             assert_near!(angle2, angle3);
@@ -224,7 +209,7 @@ mod test_geom_impl {
         fn test_circle_arc(
             origin in array::uniform3(-10.0f64..10.0),
             axis_pole in array::uniform2(-1.0f64..1.0),
-            angle in 0.0f64..(1.5 * PI),
+            angle in TOLERANCE..(1.5 * PI),
             pt0 in array::uniform3(-10.0f64..10.0),
             t in TOLERANCE..(1.0 - TOLERANCE),
         ) {
@@ -243,7 +228,8 @@ mod test_geom_impl {
             assert_near!(curve.back(), pt1);
 
             // Any point on the curve lies in the same plane perpendicular to the axis.
-            let pt2 = curve.subs(t);
+            let (t0, t1) = curve.range_tuple();
+            let pt2 = curve.subs((1.0 - t) * t0 + t * t1);
             let vec0 = pt0 - origin;
             let vec2 = pt2 - origin;
             assert_near!(vec0.dot(axis), vec2.dot(axis));
@@ -314,5 +300,45 @@ mod test_geom_impl {
             let plane = attach_plane(multiple_boundary).unwrap();
             assert_near!(plane.normal(), axis);
         }
+    }
+}
+
+impl<T: Clone> GeometricMapping<T> for () {
+    #[inline]
+    fn mapping(self) -> impl Fn(&T) -> T { Clone::clone }
+}
+impl<T: Transformed<Matrix4>> GeometricMapping<T> for Matrix4 {
+    #[inline]
+    fn mapping(self) -> impl Fn(&T) -> T { move |t| t.transformed(self) }
+}
+impl<T> GeometricMapping<T> for fn(&T) -> T {
+    #[inline]
+    fn mapping(self) -> impl Fn(&T) -> T { self }
+}
+
+impl<T, H> Connector<T, H> for fn(&T, &T) -> H {
+    #[inline]
+    fn connector(self) -> impl Fn(&T, &T) -> H { self }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LineConnector;
+
+impl<C> Connector<Point3, C> for LineConnector
+where Line<Point3>: ToSameGeometry<C>
+{
+    fn connector(self) -> impl Fn(&Point3, &Point3) -> C { |p, q| Line(*p, *q).to_same_geometry() }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct HomotopyConnector;
+
+impl<C, S> Connector<C, S> for HomotopyConnector
+where
+    C: Clone,
+    HomotopySurface<C, C>: ToSameGeometry<S>,
+{
+    fn connector(self) -> impl Fn(&C, &C) -> S {
+        |curve0, curve1| HomotopySurface::new(curve0.clone(), curve1.clone()).to_same_geometry()
     }
 }

@@ -71,3 +71,23 @@ impl<S: Transformed<T>, T> Transformed<T> for Box<S> {
     #[inline(always)]
     fn transformed(&self, trans: T) -> Self { Box::new((**self).transformed(trans)) }
 }
+
+macro_rules! impl_transformed {
+    ($point: ty, $matrix: ty) => {
+        impl Transformed<$matrix> for $point {
+            #[inline(always)]
+            fn transform_by(&mut self, trans: $matrix) { *self = trans.transform_point(*self) }
+            #[inline(always)]
+            fn transformed(&self, trans: $matrix) -> Self { trans.transform_point(*self) }
+        }
+    };
+}
+impl_transformed!(Point2, Matrix3);
+impl_transformed!(Point3, Matrix3);
+impl_transformed!(Point3, Matrix4);
+
+/// Obtain a curve or surface that gives the same image as a given curve or surface.
+pub trait ToSameGeometry<T> {
+    /// Obtain a curve or surface that gives the same image as a given curve or surface.
+    fn to_same_geometry(&self) -> T;
+}

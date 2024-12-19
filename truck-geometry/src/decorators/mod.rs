@@ -37,7 +37,7 @@ struct Revolution {
 ///     }
 /// }
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
 pub struct RevolutedCurve<C> {
     curve: C,
     revolution: Revolution,
@@ -88,7 +88,7 @@ pub struct RevolutedCurve<C> {
 ///     }
 /// }
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
 pub struct ExtrudedCurve<C, V> {
     curve: C,
     vector: V,
@@ -218,7 +218,7 @@ pub struct Processor<E, T> {
 /// let t = pcurve.search_nearest_parameter(pt, None, 100).unwrap();
 /// assert!(pcurve.der(t).dot(pcurve.subs(t) - pt).so_small());
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
 pub struct PCurve<C, S> {
     curve: C,
     surface: S,
@@ -264,7 +264,7 @@ pub struct PCurve<C, S> {
 /// let length = sum / 100.0 / 2.0;
 /// assert!(f64::abs(length - PI) < 1.0e-4 * PI);
 /// ```
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
 pub struct IntersectionCurve<C, S0, S1> {
     surface0: S0,
     surface1: S1,
@@ -272,7 +272,7 @@ pub struct IntersectionCurve<C, S0, S1> {
 }
 
 /// trimmed curve for parametric curve
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
 pub struct TrimmedCurve<C> {
     curve: C,
     range: (f64, f64),
@@ -310,7 +310,7 @@ pub struct TrimmedCurve<C> {
 ///     }
 /// }
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
 pub struct HomotopySurface<C0, C1> {
     curve0: C0,
     curve1: C1,

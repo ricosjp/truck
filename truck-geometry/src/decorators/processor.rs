@@ -4,10 +4,20 @@ use algo::surface::SspVector;
 impl<E, T: One> Processor<E, T> {
     /// Creates new processor
     #[inline(always)]
-    pub fn new(entity: E) -> Processor<E, T> {
-        Processor {
+    pub fn new(entity: E) -> Self {
+        Self {
             entity,
             transform: T::one(),
+            orientation: true,
+        }
+    }
+
+    /// Creates new transformed processor
+    #[inline(always)]
+    pub const fn with_transform(entity: E, transform: T) -> Self {
+        Self {
+            entity,
+            transform,
             orientation: true,
         }
     }
@@ -503,5 +513,26 @@ where
             false => (hint.1, hint.0),
         };
         algo::surface::search_nearest_parameter(self, point, hint, trials)
+    }
+}
+
+impl<E, T, U> ToSameGeometry<U> for Processor<E, T>
+where
+    E: ToSameGeometry<U>,
+    T: Copy,
+    U: Transformed<T> + Invertible,
+{
+    fn to_same_geometry(&self) -> U {
+        let Self {
+            entity,
+            transform,
+            orientation,
+        } = self;
+        let mut u = entity.to_same_geometry();
+        u.transform_by(*transform);
+        if !orientation {
+            u.invert();
+        }
+        u
     }
 }
