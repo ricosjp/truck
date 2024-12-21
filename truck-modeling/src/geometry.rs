@@ -244,6 +244,12 @@ impl ToSameGeometry<Surface> for Plane {
     fn to_same_geometry(&self) -> Surface { (*self).into() }
 }
 
+impl ToSameGeometry<Surface> for RevolutedCurve<Curve> {
+    fn to_same_geometry(&self) -> Surface {
+        Surface::RevolutedCurve(Processor::new(self.clone()))
+    }
+}
+
 impl SearchNearestParameter<D2> for Surface {
     type Point = Point3;
     fn search_nearest_parameter<H: Into<SPHint2D>>(

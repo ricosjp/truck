@@ -342,3 +342,42 @@ where
         |curve0, curve1| HomotopySurface::new(curve0.clone(), curve1.clone()).to_same_geometry()
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct ArcConnector {
+    pub origin: Point3,
+    pub axis: Vector3,
+    pub angle: Rad<f64>,
+}
+
+impl<C> Connector<Point3, C> for ArcConnector
+where Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C>
+{
+    fn connector(self) -> impl Fn(&Point3, &Point3) -> C {
+        let Self {
+            origin,
+            axis,
+            angle,
+        } = self;
+        move |p, _| circle_arc(*p, origin, axis, angle).to_same_geometry()
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct RevoluteConnector {
+    pub origin: Point3,
+    pub axis: Vector3,
+}
+
+impl<C, S> Connector<C, S> for RevoluteConnector
+where
+    C: Clone,
+    RevolutedCurve<C>: ToSameGeometry<S>,
+{
+    fn connector(self) -> impl Fn(&C, &C) -> S {
+        let Self { origin, axis } = self;
+        move |curve, _| {
+            RevolutedCurve::by_revolution(curve.clone(), origin, axis).to_same_geometry()
+        }
+    }
+}

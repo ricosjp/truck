@@ -7,35 +7,18 @@ use truck_topology::{shell::ShellCondition, *};
 type Line = truck_geometry::prelude::Line<Point3>;
 type Surface = BSplineSurface<Point3>;
 
-fn point_mapping(p: &Point3) -> Point3 { p + Vector3::new(0.0, 1.0, 0.0) }
-
-fn curve_mapping(line: &Line) -> Line { Line(point_mapping(&line.0), point_mapping(&line.1)) }
-
-fn surface_mapping(surface: &Surface) -> Surface {
-    surface.transformed(Matrix4::from_translation(Vector3::new(0.0, 1.0, 0.0)))
-}
-
-fn connect_points(p: &Point3, q: &Point3) -> Line { Line(*p, *q) }
-
-fn connect_curves(line0: &Line, line1: &Line) -> Surface {
-    Surface::new(
-        (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
-        vec![vec![line0.0, line1.0], vec![line0.1, line1.1]],
-    )
-}
-
 #[derive(Clone, Copy, Debug)]
-struct Mapping;
-impl GeometricMapping<Point3> for Mapping {
+struct LinearMapping;
+impl GeometricMapping<Point3> for LinearMapping {
     fn mapping(self) -> impl Fn(&Point3) -> Point3 { |p| p + Vector3::new(0.0, 1.0, 0.0) }
 }
-impl GeometricMapping<Line> for Mapping {
+impl GeometricMapping<Line> for LinearMapping {
     fn mapping(self) -> impl Fn(&Line) -> Line {
-        let point_mapping = GeometricMapping::<Point3>::mapping(Mapping);
+        let point_mapping = GeometricMapping::<Point3>::mapping(LinearMapping);
         move |Line(p, q): &Line| Line(point_mapping(p), point_mapping(q))
     }
 }
-impl GeometricMapping<Surface> for Mapping {
+impl GeometricMapping<Surface> for LinearMapping {
     fn mapping(self) -> impl Fn(&Surface) -> Surface {
         |surface| surface.transformed(Matrix4::from_translation(Vector3::new(0.0, 1.0, 0.0)))
     }
@@ -57,19 +40,12 @@ impl Connector<Line, Surface> for Connection {
     }
 }
 
-fn sweep<T: Sweep<Mapping, Connection, Connection, Res>, Res>(elem: &T) -> Res {
-    elem.sweep(Mapping, Connection, Connection)
+fn sweep<T: Sweep<LinearMapping, Connection, Connection, Res>, Res>(elem: &T) -> Res {
+    elem.sweep(LinearMapping, Connection, Connection)
 }
 
-fn multi_sweep<T: MultiSweep<Point3, Line, Surface>>(elem: &T) -> T::Swept {
-    elem.multi_sweep(
-        &point_mapping,
-        &curve_mapping,
-        &surface_mapping,
-        &connect_points,
-        &connect_curves,
-        2,
-    )
+fn multi_sweep<T: MultiSweep<LinearMapping, Connection, Connection, Res>, Res>(elem: &T) -> Res {
+    elem.multi_sweep(LinearMapping, Connection, Connection, 2)
 }
 
 fn consistent_line(edge: &Edge<Point3, Line>) -> bool {
@@ -163,7 +139,7 @@ fn test_shell() -> Shell<Point3, Line, Surface> {
 #[test]
 fn vertex_sweep() {
     let p = Point3::new(0.0, 0.0, 0.0);
-    let q = point_mapping(&p);
+    let q = GeometricMapping::<Point3>::mapping(LinearMapping)(&p);
     let edge = sweep(&Vertex::new(p));
     assert_near!(edge.front().point(), p);
     assert_near!(edge.back().point(), q);
@@ -528,27 +504,29 @@ fn shell_multi_sweep() {
     });
 }
 
-fn circle_point_mapping(p: &Point3) -> Point3 {
-    Matrix4::from_angle_y(Rad(PI / 2.0)).transform_point(*p)
+#[derive(Clone, Copy, Debug)]
+struct CircleMapping;
+impl GeometricMapping<Point3> for CircleMapping {
+    fn mapping(self) -> impl Fn(&Point3) -> Point3 {
+        move |p| Matrix4::from_angle_y(Rad(PI / 2.0)).transform_point(*p)
+    }
+}
+impl GeometricMapping<Line> for CircleMapping {
+    fn mapping(self) -> impl Fn(&Line) -> Line {
+        let point_mapping = GeometricMapping::<Point3>::mapping(CircleMapping);
+        move |line| Line(point_mapping(&line.0), point_mapping(&line.1))
+    }
+}
+impl GeometricMapping<Surface> for CircleMapping {
+    fn mapping(self) -> impl Fn(&Surface) -> Surface {
+        move |surface| surface.transformed(Matrix4::from_angle_y(Rad(PI / 2.0)))
+    }
 }
 
-fn circle_curve_mapping(line: &Line) -> Line {
-    Line(circle_point_mapping(&line.0), circle_point_mapping(&line.1))
-}
-
-fn circle_surface_mapping(surface: &Surface) -> Surface {
-    surface.transformed(Matrix4::from_angle_y(Rad(PI / 2.0)))
-}
-
-fn closed_sweep<T: ClosedSweep<Point3, Line, Surface>>(elem: &T) -> T::Swept {
-    elem.closed_sweep(
-        &circle_point_mapping,
-        &circle_curve_mapping,
-        &circle_surface_mapping,
-        &connect_points,
-        &connect_curves,
-        4,
-    )
+fn closed_sweep<T: ClosedSweep<CircleMapping, Connection, Connection, Swept>, Swept>(
+    elem: &T,
+) -> Swept {
+    elem.closed_sweep(CircleMapping, Connection, Connection, 4)
 }
 
 #[test]

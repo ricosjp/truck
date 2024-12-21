@@ -6,7 +6,7 @@ fn main() {
     let v = builder::vertex(Point3::origin());
     let e = builder::tsweep(&v, Vector3::unit_x());
     let f = builder::tsweep(&e, Vector3::unit_y());
-    let cube = builder::tsweep(&f, Vector3::unit_z());
+    let cube: Solid = builder::tsweep(&f, Vector3::unit_z());
 
     let v = builder::vertex(Point3::new(0.5, 0.25, -0.5));
     let w = builder::rsweep(&v, Point3::new(0.5, 0.5, 0.0), Vector3::unit_z(), Rad(7.0));
