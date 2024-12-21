@@ -1,6 +1,6 @@
 use crate::{
     errors::Error,
-    geom_impls::{self, ArcConnector, HomotopyConnector, LineConnector, RevoluteConnector},
+    geom_impls::{self, ArcConnector, ExtrudeConnector, LineConnector, RevoluteConnector},
     topo_traits::*,
     Result,
 };
@@ -19,11 +19,37 @@ type Shell<C, S> = truck_topology::Shell<Point3, C, S>;
 /// use truck_modeling::*;
 ///
 /// // put a vertex
-/// let vertex = builder::vertex(Point3::new(1.0, 2.0, 3.0));
+/// let vertex = builder::vertex((1.0, 2.0, 3.0));
 /// # assert_eq!(vertex.point(), Point3::new(1.0, 2.0, 3.0));
 /// ```
 #[inline(always)]
-pub fn vertex(pt: Point3) -> Vertex { Vertex::new(pt) }
+pub fn vertex<P: Into<Point3>>(p: P) -> Vertex { Vertex::new(p.into()) }
+
+/// Creates and returns vertices by three dimensional points.
+/// # Examples
+/// ```
+/// use truck_modeling::*;
+///
+/// // put vertices of a unit cube
+/// let vertices = builder::vertices([
+///     (0.0, 0.0, 0.0),
+///     (1.0, 0.0, 0.0),
+///     (0.0, 1.0, 0.0),
+///     (0.0, 0.0, 1.0),
+///     (0.0, 1.0, 1.0),
+///     (1.0, 0.0, 1.0),
+///     (1.0, 1.0, 0.0),
+///     (1.0, 1.0, 1.0),
+/// ]);
+/// # assert_eq!(vertices[3].point(), Point3::new(0.0, 0.0, 1.0));
+/// ```
+#[inline(always)]
+pub fn vertices<P: Into<Point3>>(points: impl IntoIterator<Item = P>) -> Vec<Vertex> {
+    points
+        .into_iter()
+        .map(|p| Vertex::new(p.into()))
+        .collect()
+}
 
 /// Returns a line from `vertex0` to `vertex1`.
 /// # Examples
@@ -147,6 +173,7 @@ where
     let homotopy = HomotopySurface::new(curve0, curve1);
     Face::new(vec![wire], homotopy.to_same_geometry())
 }
+
 /// Returns a homotopic shell from `wire0` to `wire1`.
 /// # Examples
 /// ```
@@ -372,6 +399,7 @@ pub fn scaled<T: Mapped<Matrix4>>(elem: &T, origin: Point3, scalars: Vector3) ->
 }
 
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by a vector.
+///
 /// # Examples
 /// ```
 /// use truck_modeling::*;
@@ -408,10 +436,19 @@ pub fn scaled<T: Mapped<Matrix4>>(elem: &T, origin: Point3, scalars: Vector3) ->
 /// # assert_eq!(loop_iter.next().unwrap().point(), Point3::new(0.0, 1.0, 1.0));
 /// # assert_eq!(loop_iter.next(), None);
 /// ```
+///
+/// # Requirement
+/// In order to apply this method to `Vertex<Point3>`, ..., `Shell<Point3, C, S>`, the following constraints must be satisfied.
+/// ```ignore
+/// C: Transformed<Matrix4>,
+/// S: Transformed<Matrix4>,
+/// Line<Point3>: ToSameGeometry<C>,
+/// ExtrudedCurve<C, Vector3>: ToSameGeometry<S>
+/// ```
 pub fn tsweep<T, Swept>(elem: &T, vector: Vector3) -> Swept
-where T: Sweep<Matrix4, LineConnector, HomotopyConnector, Swept> {
+where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
     let trsl = Matrix4::from_translation(vector);
-    elem.sweep(trsl, LineConnector, HomotopyConnector)
+    elem.sweep(trsl, LineConnector, ExtrudeConnector { vector })
 }
 
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by the rotation.
@@ -508,6 +545,15 @@ where T: Sweep<Matrix4, LineConnector, HomotopyConnector, Swept> {
 /// #    }
 /// # }
 /// ```
+///
+/// # Requirement
+/// In order to apply this method to `Vertex<Point3>`, ..., `Shell<Point3, C, S>`, the following constraints must be satisfied.
+/// ```ignore
+/// C: Transformed<Matrix4>,
+/// S: Transformed<Matrix4>,
+/// Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C>,
+/// RevolutedCurve<C>: ToSameGeometry<S>,
+/// ```
 pub fn rsweep<T, Swept, R>(elem: &T, origin: Point3, axis: Vector3, angle: R) -> Swept
 where
     T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>,
@@ -597,10 +643,11 @@ fn whole_rsweep<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>,
 /// ```
 pub fn cone<C, S, R>(wire: &Wire<C>, axis: Vector3, angle: R) -> Shell<C, S>
 where
-    C: ParametricCurve3D + BoundedCurve + Cut + Invertible,
+    C: ParametricCurve3D + BoundedCurve + Cut + Invertible + Transformed<Matrix4>,
     S: Invertible,
     R: Into<Rad<f64>>,
-    Wire<C>: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Shell<C, S>>, {
+    Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C>,
+    RevolutedCurve<C>: ToSameGeometry<S>, {
     let angle = angle.into();
     let closed = angle.0.abs() >= 2.0 * PI.0;
     let mut wire = wire.clone();

@@ -6,7 +6,7 @@ use std::{f64::consts::PI, str::FromStr};
 use truck_geometry::prelude as truck;
 use truck_stepio::{
     out::*,
-    r#in::{alias::*, *},
+    r#in::{step_geometry::*, *},
 };
 
 fn float_to_str(x: f64) -> String {
@@ -723,7 +723,7 @@ fn exec_circle(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_circle = step_to_entity::<CircleHolder>(&step_str);
-    let ellipse: alias::Ellipse<Point3, Matrix4> = (&step_circle).try_into().unwrap();
+    let ellipse: step_geometry::Ellipse<Point3, Matrix4> = (&step_circle).try_into().unwrap();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -773,7 +773,7 @@ fn exec_ellipse(
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_ellipse = step_to_entity::<EllipseHolder>(&step_str);
-    let ellipse: alias::Ellipse<Point3, Matrix4> = (&step_ellipse).try_into().unwrap();
+    let ellipse: step_geometry::Ellipse<Point3, Matrix4> = (&step_ellipse).try_into().unwrap();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -823,7 +823,7 @@ fn exec_hyperbola(
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_hyperbola = step_to_entity::<HyperbolaHolder>(&step_str);
-    let hyperbola: alias::Hyperbola<Point3, Matrix4> = (&step_hyperbola).try_into().unwrap();
+    let hyperbola: step_geometry::Hyperbola<Point3, Matrix4> = (&step_hyperbola).try_into().unwrap();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -872,7 +872,7 @@ fn exec_parabola(
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_parabola = step_to_entity::<ParabolaHolder>(&step_str);
-    let parabola: alias::Parabola<Point3, Matrix4> = (&step_parabola).try_into().unwrap();
+    let parabola: step_geometry::Parabola<Point3, Matrix4> = (&step_parabola).try_into().unwrap();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -960,7 +960,7 @@ fn exec_spherical_surface(
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_sphere = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
-    let sphere: alias::ElementarySurface = (&step_sphere).into();
+    let sphere: step_geometry::ElementarySurface = (&step_sphere).into();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -1019,7 +1019,7 @@ fn exec_cylindrical_surface(
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_cylinder = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
-    let cylinder: alias::ElementarySurface = (&step_cylinder).into();
+    let cylinder: step_geometry::ElementarySurface = (&step_cylinder).into();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -1077,7 +1077,7 @@ fn exec_toroidal_surface(
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_toroidal = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
-    let toroidal: alias::ElementarySurface = (&step_toroidal).into();
+    let toroidal: step_geometry::ElementarySurface = (&step_toroidal).into();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -1137,7 +1137,7 @@ fn exec_conical_surface(
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_conical = step_to_entity::<ConicalSurfaceHolder>(&step_str);
-    let conical: alias::ConicalSurface = (&step_conical).into();
+    let conical: step_geometry::ConicalSurface = (&step_conical).into();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),

@@ -105,6 +105,14 @@ impl Invertible for Plane {
     fn invert(&mut self) { *self = self.inverse(); }
 }
 
+impl IncludeCurve<Line<Point3>> for Plane {
+    #[inline(always)]
+    fn include(&self, line: &Line<Point3>) -> bool {
+        self.search_parameter(line.0, None, 1).is_some()
+        && self.search_parameter(line.1, None, 1).is_some()
+    }
+}
+
 impl IncludeCurve<BSplineCurve<Point3>> for Plane {
     #[inline(always)]
     fn include(&self, curve: &BSplineCurve<Point3>) -> bool {

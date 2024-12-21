@@ -331,15 +331,17 @@ where Line<Point3>: ToSameGeometry<C>
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct HomotopyConnector;
+pub struct ExtrudeConnector {
+    pub vector: Vector3,
+}
 
-impl<C, S> Connector<C, S> for HomotopyConnector
+impl<C, S> Connector<C, S> for ExtrudeConnector
 where
     C: Clone,
-    HomotopySurface<C, C>: ToSameGeometry<S>,
+    ExtrudedCurve<C, Vector3>: ToSameGeometry<S>,
 {
     fn connector(self) -> impl Fn(&C, &C) -> S {
-        |curve0, curve1| HomotopySurface::new(curve0.clone(), curve1.clone()).to_same_geometry()
+        move |curve0, _| ExtrudedCurve::by_extrusion(curve0.clone(), self.vector).to_same_geometry()
     }
 }
 

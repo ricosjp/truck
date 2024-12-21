@@ -245,9 +245,7 @@ impl ToSameGeometry<Surface> for Plane {
 }
 
 impl ToSameGeometry<Surface> for RevolutedCurve<Curve> {
-    fn to_same_geometry(&self) -> Surface {
-        Surface::RevolutedCurve(Processor::new(self.clone()))
-    }
+    fn to_same_geometry(&self) -> Surface { Surface::RevolutedCurve(Processor::new(self.clone())) }
 }
 
 impl SearchNearestParameter<D2> for Surface {
@@ -283,5 +281,13 @@ impl ToSameGeometry<Surface> for HomotopySurface<Curve, Curve> {
         let curve0 = self.first_curve().clone().lift_up();
         let curve1 = self.second_curve().clone().lift_up();
         NurbsSurface::new(BSplineSurface::homotopy(curve0, curve1)).into()
+    }
+}
+
+impl ToSameGeometry<Surface> for ExtrudedCurve<Curve, Vector3> {
+    fn to_same_geometry(&self) -> Surface {
+        let trsl = Matrix4::from_translation(self.extruding_vector());
+        let curve = self.entity_curve().transformed(trsl);
+        HomotopySurface::new(self.entity_curve().clone(), curve).to_same_geometry()
     }
 }

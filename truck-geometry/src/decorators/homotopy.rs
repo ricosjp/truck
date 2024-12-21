@@ -162,10 +162,6 @@ where P: ControlPoint<f64> + Tolerance
             curve1: mut bspcurve1,
         } = value;
         bspcurve0.syncro_degree(&mut bspcurve1);
-
-        //bspcurve0.optimize();
-        //bspcurve1.optimize();
-
         bspcurve0.syncro_knots(&mut bspcurve1);
 
         let uknot_vec = bspcurve0.knot_vec().clone();
