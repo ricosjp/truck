@@ -823,7 +823,8 @@ fn exec_hyperbola(
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_hyperbola = step_to_entity::<HyperbolaHolder>(&step_str);
-    let hyperbola: step_geometry::Hyperbola<Point3, Matrix4> = (&step_hyperbola).try_into().unwrap();
+    let hyperbola: step_geometry::Hyperbola<Point3, Matrix4> =
+        (&step_hyperbola).try_into().unwrap();
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),

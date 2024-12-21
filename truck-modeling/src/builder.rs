@@ -45,10 +45,7 @@ pub fn vertex<P: Into<Point3>>(p: P) -> Vertex { Vertex::new(p.into()) }
 /// ```
 #[inline(always)]
 pub fn vertices<P: Into<Point3>>(points: impl IntoIterator<Item = P>) -> Vec<Vertex> {
-    points
-        .into_iter()
-        .map(|p| Vertex::new(p.into()))
-        .collect()
+    points.into_iter().map(|p| Vertex::new(p.into())).collect()
 }
 
 /// Returns a line from `vertex0` to `vertex1`.

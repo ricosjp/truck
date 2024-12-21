@@ -71,8 +71,8 @@ impl ToSameGeometry<Surface> for RevolutedCurve<Curve3D> {
 
 #[test]
 fn builder() {
-    use truck_modeling::builder;
     use truck_meshalgo::prelude::*;
+    use truck_modeling::builder;
     truck_topology::prelude!(Point3, Curve3D, Surface);
 
     // cube

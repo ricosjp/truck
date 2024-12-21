@@ -14,7 +14,7 @@ where
     /// ```
     /// truck_topology::prelude!(usize, isize, ());
     /// use truck_modeling::topo_traits::*;
-    /// 
+    ///
     /// let v = Vertex::new(1);
     /// let edge = v.sweep(
     ///     (|i| i + 1) as fn(&usize) -> usize,
@@ -45,7 +45,7 @@ where
     /// ```
     /// truck_topology::prelude!(usize, isize, i64);
     /// use truck_modeling::topo_traits::*;
-    /// 
+    ///
     /// #[derive(Clone, Copy)]
     /// struct Mapping;
     /// impl GeometricMapping<usize> for Mapping {
@@ -108,7 +108,7 @@ where
     /// ```
     /// truck_topology::prelude!(usize, isize, i64);
     /// use truck_modeling::topo_traits::*;
-    /// 
+    ///
     /// #[derive(Clone, Copy)]
     /// struct Mapping;
     /// impl GeometricMapping<usize> for Mapping {
@@ -117,7 +117,7 @@ where
     /// impl GeometricMapping<isize> for Mapping {
     ///     fn mapping(self) -> impl Fn(&isize) -> isize { |j| *j + 100 }
     /// }
-    /// 
+    ///
     /// let v = Vertex::news(&[1, 2, 3, 4]);
     /// let wire = Wire::from(vec![
     ///     Edge::new(&v[0], &v[1], 100),
@@ -183,7 +183,7 @@ where
     /// ```
     /// truck_topology::prelude!(usize, isize, i64);
     /// use truck_modeling::topo_traits::*;
-    /// 
+    ///
     /// #[derive(Clone, Copy)]
     /// struct Mapping(usize, isize, i64);
     /// impl GeometricMapping<usize> for Mapping {
@@ -195,10 +195,10 @@ where
     /// impl GeometricMapping<i64> for Mapping {
     ///     fn mapping(self) -> impl Fn(&i64) -> i64 { move |i| *i + self.2 }
     /// }
-    /// 
+    ///
     /// let connect_points: fn(&usize, &usize) -> isize = |i, j| (*i * 10 + *j) as isize;
     /// let connect_curves: fn(&isize, &isize) -> i64 = |i, j| (*i * 100 + *j) as i64;
-    /// 
+    ///
     /// let v = Vertex::news(&[1, 2]);
     /// let edge = Edge::new(&v[0], &v[1], 12);
     /// let face = edge.sweep(Mapping(2, 22, 0), connect_points, connect_curves);

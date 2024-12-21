@@ -109,7 +109,7 @@ impl IncludeCurve<Line<Point3>> for Plane {
     #[inline(always)]
     fn include(&self, line: &Line<Point3>) -> bool {
         self.search_parameter(line.0, None, 1).is_some()
-        && self.search_parameter(line.1, None, 1).is_some()
+            && self.search_parameter(line.1, None, 1).is_some()
     }
 }
 

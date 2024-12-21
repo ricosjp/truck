@@ -279,16 +279,16 @@ pub struct TrimmedCurve<C> {
 }
 
 /// homotopy surface connecting two curves.
-/// 
+///
 /// # Examples
 /// ```
 /// use truck_geometry::prelude::*;
-/// 
+///
 /// // create homotopy between two lines
 /// let line0 = Line(Point3::new(-1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0));
 /// let line1 = Line(Point3::new(0.0, -1.0, 1.0), Point3::new(0.0, 1.0, 1.0));
 /// let homotopy = HomotopySurface::new(line0, line1);
-/// 
+///
 /// // explicit definition
 /// let surface = |u: f64, v: f64| {
 ///     Point3::new((2.0 * u - 1.0) * (1.0 - v), (2.0 * u - 1.0) * v, v)
@@ -317,9 +317,9 @@ pub struct HomotopySurface<C0, C1> {
 }
 
 mod extruded_curve;
+mod homotopy;
 mod intersection_curve;
 mod pcurve;
 mod processor;
 mod revolved_curve;
 mod trimmied_curve;
-mod homotopy;

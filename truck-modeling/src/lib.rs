@@ -65,12 +65,7 @@ pub mod topo_traits {
     /// Abstract sweeping, builds a circle-arc, a prism, a half torus, and so on.
     pub trait Sweep<T, Pc, Cc, Swept> {
         /// Transform topologies and connect vertices and edges in boundaries.
-        fn sweep(
-            &self,
-            trans: T,
-            point_connector: Pc,
-            curve_connector: Cc,
-        ) -> Swept;
+        fn sweep(&self, trans: T, point_connector: Pc, curve_connector: Cc) -> Swept;
     }
 
     /// Abstract multi sweeping, builds a circle-arc, a prism, a half torus, and so on.
@@ -86,7 +81,7 @@ pub mod topo_traits {
     }
 
     /// closed sweep, builds a closed torus, and so on.
-    pub trait ClosedSweep<T, Pc, Cc, Swept> : MultiSweep<T, Pc, Cc, Swept>  {
+    pub trait ClosedSweep<T, Pc, Cc, Swept>: MultiSweep<T, Pc, Cc, Swept> {
         /// Transform topologies and connect vertices and edges in boundaries.
         fn closed_sweep(
             &self,

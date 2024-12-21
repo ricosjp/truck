@@ -1312,5 +1312,6 @@ pub fn derive_self_same_geometry(input: TokenStream) -> TokenStream {
             #[inline(always)]
             fn to_same_geometry(&self) -> Self { self.clone() }
         }
-    }.into()
+    }
+    .into()
 }
