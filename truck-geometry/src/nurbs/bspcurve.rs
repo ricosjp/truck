@@ -335,7 +335,7 @@ where P: ControlPoint<f64> + MetricSpace<Metric = f64> + HashGen<f64>
     /// use std::f64::consts::PI;
     /// let circle = UnitCircle::<Point2>::new();
     /// let bspcurve = BSplineCurve::quadratic_approximation(&circle, (-PI, PI), 0.01, 10).unwrap();
-    /// println!("{bspcurve:?}");
+    /// # println!("{bspcurve:?}");
     ///
     /// const N: usize = 100;
     /// for i in 0..N {
@@ -1406,7 +1406,7 @@ where
     /// use std::f64::consts::PI;
     /// let circle = UnitCircle::<Point2>::new();
     /// let bspcurve = BSplineCurve::cubic_approximation(&circle, (-PI, PI), 0.01, 0.01, 10).unwrap();
-    /// println!("{bspcurve:?}");
+    /// # println!("{bspcurve:?}");
     ///
     /// const N: usize = 100;
     /// for i in 0..N {
