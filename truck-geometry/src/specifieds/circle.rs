@@ -147,13 +147,17 @@ impl ToSameGeometry<NurbsCurve<Vector4>> for TrimmedCurve<UnitCircle<Point3>> {
         let bsp: NurbsCurve<Vector3> =
             TrimmedCurve::new(UnitCircle::<Point2>::new(), (t0, t1)).to_same_geometry();
         let (knot_vec, pts) = bsp.into_non_rationalized().destruct();
-        NurbsCurve::new(BSplineCurve::new_unchecked(
+        let mut curve = NurbsCurve::new(BSplineCurve::new_unchecked(
             knot_vec,
             vec![
                 Vector4::new(pts[0].x, pts[0].y, 0.0, pts[0].z),
                 Vector4::new(pts[1].x, pts[1].y, 0.0, pts[1].z),
                 Vector4::new(pts[2].x, pts[2].y, 0.0, pts[2].z),
             ],
-        ))
+        ));
+        curve.add_knot(0.25);
+        curve.add_knot(0.5);
+        curve.add_knot(0.75);
+        curve
     }
 }

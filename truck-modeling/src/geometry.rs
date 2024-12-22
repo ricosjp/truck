@@ -286,8 +286,25 @@ impl ToSameGeometry<Surface> for HomotopySurface<Curve, Curve> {
 
 impl ToSameGeometry<Surface> for ExtrudedCurve<Curve, Vector3> {
     fn to_same_geometry(&self) -> Surface {
-        let trsl = Matrix4::from_translation(self.extruding_vector());
-        let curve = self.entity_curve().transformed(trsl);
-        HomotopySurface::new(self.entity_curve().clone(), curve).to_same_geometry()
+        let (curve0, vector) = (self.entity_curve(), self.extruding_vector());
+        let trsl = Matrix4::from_translation(vector);
+        let curve1 = self.entity_curve().transformed(trsl);
+        match (curve0, curve1) {
+            (Curve::Line(line), Curve::Line(_)) => {
+                Plane::new(line.0, line.1, line.0 + vector).into()
+            }
+            (Curve::BSplineCurve(curve0), Curve::BSplineCurve(curve1)) => {
+                BSplineSurface::homotopy(curve0.clone(), curve1.clone()).into()
+            }
+            (Curve::NurbsCurve(curve0), Curve::NurbsCurve(curve1)) => {
+                NurbsSurface::new(BSplineSurface::homotopy(
+                    curve0.non_rationalized().clone(),
+                    curve1.non_rationalized().clone(),
+                ))
+                .into()
+            }
+            (Curve::IntersectionCurve(_), Curve::IntersectionCurve(_)) => unimplemented!(),
+            _ => unreachable!(),
+        }
     }
 }
