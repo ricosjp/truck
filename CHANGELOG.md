@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Generalize `truck_modeling::builder` for apply step parsed geometries.
 - Review of the specifications for `IntersectionCurve`.
 - Fix STEP header description.
 - Fix some typos.

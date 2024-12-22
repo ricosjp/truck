@@ -15,9 +15,9 @@ use std::{collections::HashMap, f64::consts::PI};
 use truck_geometry::prelude as truck;
 use truck_topology::compress::*;
 
-/// type alias
-pub mod alias;
-use alias::*;
+/// Geometry parsed from STEP that can be handled by truck
+pub mod step_geometry;
+use step_geometry::*;
 
 /// the exchange structure corresponds to a graph in STEP file
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -1277,7 +1277,7 @@ pub struct Circle {
     pub radius: f64,
 }
 
-impl TryFrom<&Circle> for alias::Ellipse<Point2, Matrix3> {
+impl TryFrom<&Circle> for step_geometry::Ellipse<Point2, Matrix3> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(circle: &Circle) -> Result<Self, Self::Error> {
@@ -1289,7 +1289,7 @@ impl TryFrom<&Circle> for alias::Ellipse<Point2, Matrix3> {
     }
 }
 
-impl TryFrom<&Circle> for alias::Ellipse<Point3, Matrix4> {
+impl TryFrom<&Circle> for step_geometry::Ellipse<Point3, Matrix4> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(circle: &Circle) -> Result<Self, Self::Error> {
@@ -1314,7 +1314,7 @@ pub struct Ellipse {
     pub semi_axis_2: f64,
 }
 
-impl TryFrom<&Ellipse> for alias::Ellipse<Point2, Matrix3> {
+impl TryFrom<&Ellipse> for step_geometry::Ellipse<Point2, Matrix3> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(ellipse: &Ellipse) -> Result<Self, Self::Error> {
@@ -1328,7 +1328,7 @@ impl TryFrom<&Ellipse> for alias::Ellipse<Point2, Matrix3> {
     }
 }
 
-impl TryFrom<&Ellipse> for alias::Ellipse<Point3, Matrix4> {
+impl TryFrom<&Ellipse> for step_geometry::Ellipse<Point3, Matrix4> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(ellipse: &Ellipse) -> Result<Self, Self::Error> {
@@ -1355,7 +1355,7 @@ pub struct Hyperbola {
     pub semi_imag_axis: f64,
 }
 
-impl TryFrom<&Hyperbola> for alias::Hyperbola<Point2, Matrix3> {
+impl TryFrom<&Hyperbola> for step_geometry::Hyperbola<Point2, Matrix3> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(hyperbola: &Hyperbola) -> Result<Self, Self::Error> {
@@ -1369,7 +1369,7 @@ impl TryFrom<&Hyperbola> for alias::Hyperbola<Point2, Matrix3> {
     }
 }
 
-impl TryFrom<&Hyperbola> for alias::Hyperbola<Point3, Matrix4> {
+impl TryFrom<&Hyperbola> for step_geometry::Hyperbola<Point3, Matrix4> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(hyperbola: &Hyperbola) -> Result<Self, Self::Error> {
@@ -1395,7 +1395,7 @@ pub struct Parabola {
     pub focal_dist: f64,
 }
 
-impl TryFrom<&Parabola> for alias::Parabola<Point2, Matrix3> {
+impl TryFrom<&Parabola> for step_geometry::Parabola<Point2, Matrix3> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(parabola: &Parabola) -> Result<Self, Self::Error> {
@@ -1408,7 +1408,7 @@ impl TryFrom<&Parabola> for alias::Parabola<Point2, Matrix3> {
     }
 }
 
-impl TryFrom<&Parabola> for alias::Parabola<Point3, Matrix4> {
+impl TryFrom<&Parabola> for step_geometry::Parabola<Point3, Matrix4> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(parabola: &Parabola) -> Result<Self, Self::Error> {
@@ -1458,7 +1458,10 @@ impl TryFrom<&Pcurve> for PCurve {
             .first()
             .ok_or("no representation item")?
             .try_into()?;
-        Ok(alias::PCurve::new(Box::new(curve), Box::new(surface)))
+        Ok(step_geometry::PCurve::new(
+            Box::new(curve),
+            Box::new(surface),
+        ))
     }
 }
 
@@ -1549,9 +1552,9 @@ impl TryFrom<&SurfaceAny> for Surface {
     fn try_from(x: &SurfaceAny) -> Result<Self, Self::Error> {
         use SurfaceAny::*;
         Ok(match x {
-            ElementarySurface(x) => Self::ElementarySurface(Box::new(x.as_ref().into())),
+            ElementarySurface(x) => Self::ElementarySurface(x.as_ref().into()),
             BSplineSurface(x) => x.as_ref().try_into()?,
-            SweptSurface(x) => Self::SweptCurve(Box::new(x.as_ref().try_into()?)),
+            SweptSurface(x) => Self::SweptCurve(x.as_ref().try_into()?),
         })
     }
 }
@@ -1621,7 +1624,7 @@ pub struct SphericalSurface {
     radius: f64,
 }
 
-impl From<&SphericalSurface> for alias::SphericalSurface {
+impl From<&SphericalSurface> for step_geometry::SphericalSurface {
     #[inline(always)]
     fn from(ss: &SphericalSurface) -> Self {
         let mat = Matrix4::from(&ss.position);
@@ -1642,7 +1645,7 @@ pub struct CylindricalSurface {
     radius: f64,
 }
 
-impl From<&CylindricalSurface> for alias::CylindricalSurface {
+impl From<&CylindricalSurface> for step_geometry::CylindricalSurface {
     #[inline(always)]
     fn from(cs: &CylindricalSurface) -> Self {
         let mat = Matrix4::from(&cs.position);
@@ -1670,7 +1673,7 @@ pub struct ToroidalSurface {
     minor_radius: f64,
 }
 
-impl From<&ToroidalSurface> for alias::ToroidalSurface {
+impl From<&ToroidalSurface> for step_geometry::ToroidalSurface {
     #[inline(always)]
     fn from(
         ToroidalSurface {
@@ -1699,7 +1702,7 @@ pub struct ConicalSurface {
     semi_angle: f64,
 }
 
-impl From<&ConicalSurface> for alias::ConicalSurface {
+impl From<&ConicalSurface> for step_geometry::ConicalSurface {
     fn from(
         ConicalSurface {
             position,
@@ -1737,8 +1740,8 @@ impl TryFrom<&BSplineSurfaceAny> for Surface {
     fn try_from(value: &BSplineSurfaceAny) -> Result<Self, Self::Error> {
         use BSplineSurfaceAny::*;
         Ok(match value {
-            NonRationalBSplineSurface(bsp) => Surface::BSplineSurface(Box::new(bsp.try_into()?)),
-            RationalBSplineSurface(bsp) => Surface::NurbsSurface(Box::new(bsp.try_into()?)),
+            NonRationalBSplineSurface(bsp) => Surface::BSplineSurface(bsp.try_into()?),
+            RationalBSplineSurface(bsp) => Surface::NurbsSurface(bsp.try_into()?),
         })
     }
 }
@@ -2751,7 +2754,7 @@ impl Table {
     /// construct `CompressedShell` of `truck` from `Shell` in STEP file
     /// # Example
     /// ```
-    /// use truck_stepio::r#in::{*, alias::*};
+    /// use truck_stepio::r#in::{*, step_geometry::*};
     /// use ruststep::tables::EntityTable;
     /// // read file
     /// let step_string = include_str!(concat!(

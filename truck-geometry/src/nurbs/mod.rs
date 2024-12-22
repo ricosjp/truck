@@ -40,7 +40,7 @@ pub struct KnotVec(Vec<f64>);
 ///     assert_near2!(c, 1.0);
 /// }
 /// ```
-#[derive(Clone, PartialEq, Debug, Serialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, SelfSameGeometry)]
 pub struct BSplineCurve<P> {
     knot_vec: KnotVec,      // the knot vector
     control_points: Vec<P>, // the indices of control points
@@ -104,18 +104,18 @@ pub struct BSplineCurve<P> {
 ///     }
 /// }
 /// ```
-#[derive(Clone, PartialEq, Debug, Serialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, SelfSameGeometry)]
 pub struct BSplineSurface<P> {
     knot_vecs: (KnotVec, KnotVec),
     control_points: Vec<Vec<P>>,
 }
 
 /// NURBS curve
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, SelfSameGeometry)]
 pub struct NurbsCurve<V>(BSplineCurve<V>);
 
 /// NURBS surface
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, SelfSameGeometry)]
 pub struct NurbsSurface<V>(BSplineSurface<V>);
 
 mod bspcurve;

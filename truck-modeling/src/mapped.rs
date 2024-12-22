@@ -1,81 +1,67 @@
 use crate::topo_traits::*;
 use truck_topology::*;
 
-impl<P: Clone, C: Clone, S: Clone> Mapped<P, C, S> for Vertex<P> {
+impl<P, T> Mapped<T> for Vertex<P>
+where T: GeometricMapping<P> + Copy
+{
     #[inline(always)]
-    fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-        &self,
-        point_mapping: &FP,
-        _: &FC,
-        _: &FS,
-    ) -> Self {
-        self.mapped(point_mapping)
-    }
+    fn mapped(&self, trans: T) -> Self { self.mapped(trans.mapping()) }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Mapped<P, C, S> for Edge<P, C> {
+impl<P, C, T> Mapped<T> for Edge<P, C>
+where T: GeometricMapping<P> + GeometricMapping<C> + Copy
+{
     #[inline(always)]
-    fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        _: &FS,
-    ) -> Self {
+    fn mapped(&self, trans: T) -> Self {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
         self.mapped(point_mapping, curve_mapping)
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Mapped<P, C, S> for Wire<P, C> {
+impl<P, C, T> Mapped<T> for Wire<P, C>
+where T: GeometricMapping<P> + GeometricMapping<C> + Copy
+{
     #[inline(always)]
-    fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        _: &FS,
-    ) -> Self {
+    fn mapped(&self, trans: T) -> Self {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
         self.mapped(point_mapping, curve_mapping)
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Mapped<P, C, S> for Face<P, C, S> {
+impl<P, C, S, T> Mapped<T> for Face<P, C, S>
+where T: GeometricMapping<P> + GeometricMapping<C> + GeometricMapping<S> + Copy
+{
     #[inline(always)]
-    fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-    ) -> Self {
+    fn mapped(&self, trans: T) -> Self {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
+        let surface_mapping = GeometricMapping::<S>::mapping(trans);
         self.mapped(point_mapping, curve_mapping, surface_mapping)
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Mapped<P, C, S> for Shell<P, C, S> {
+impl<P, C, S, T> Mapped<T> for Shell<P, C, S>
+where T: GeometricMapping<P> + GeometricMapping<C> + GeometricMapping<S> + Copy
+{
     #[inline(always)]
-    fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-    ) -> Self {
+    fn mapped(&self, trans: T) -> Self {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
+        let surface_mapping = GeometricMapping::<S>::mapping(trans);
         self.mapped(point_mapping, curve_mapping, surface_mapping)
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> Mapped<P, C, S> for Solid<P, C, S> {
-    /// Returns a new solid whose surfaces are mapped by `surface_mapping`,
-    /// curves are mapped by `curve_mapping` and points are mapped by `point_mapping`.
+impl<P, C, S, T> Mapped<T> for Solid<P, C, S>
+where T: GeometricMapping<P> + GeometricMapping<C> + GeometricMapping<S> + Copy
+{
     #[inline(always)]
-    fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-        &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-    ) -> Self {
-        Solid::debug_new(
-            self.boundaries()
-                .iter()
-                .map(|shell| shell.mapped(point_mapping, curve_mapping, surface_mapping))
-                .collect(),
-        )
+    fn mapped(&self, trans: T) -> Self {
+        let point_mapping = GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = GeometricMapping::<C>::mapping(trans);
+        let surface_mapping = GeometricMapping::<S>::mapping(trans);
+        self.mapped(point_mapping, curve_mapping, surface_mapping)
     }
 }
