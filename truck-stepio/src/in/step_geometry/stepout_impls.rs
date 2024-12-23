@@ -1,5 +1,3 @@
-use crate::out::FloatDisplay;
-
 use super::{*, truck_stepio::out};
 
 impl out::ConstStepLength for Processor<Sphere, Matrix4> {
@@ -51,8 +49,8 @@ impl out::DisplayByStep for ElementarySurface {
                 let p = line.0;
                 let v = line.1 - p;
 
-                let radius = FloatDisplay(p.x);
-                let semi_angle = FloatDisplay(f64::atan(v.x));
+                let radius = out::FloatDisplay(p.x);
+                let semi_angle = out::FloatDisplay(f64::atan(v.x));
 
                 let position_idx = idx + 1;
                 let location_idx = idx + 2;
