@@ -166,7 +166,6 @@ pub enum Curve3D {
     TransformedM4,
     SelfSameGeometry,
     StepLength,
-    DisplayByStep,
     StepSurface,
 )]
 pub enum ElementarySurface {
@@ -249,20 +248,6 @@ impl truck_stepio::out::StepSurface for Processor<Sphere, Matrix4> {
 
 mod sphere;
 
-impl truck_stepio::out::ConstStepLength for Processor<Sphere, Matrix4> {
-    const LENGTH: usize = Processor::<truck_geometry::prelude::Sphere, Matrix4>::LENGTH;
-}
-impl truck_stepio::out::StepLength for Processor<Sphere, Matrix4> {
-    fn step_length(&self) -> usize { <Self as truck_stepio::out::ConstStepLength>::LENGTH }
-}
-impl truck_stepio::out::DisplayByStep for Processor<Sphere, Matrix4> {
-    fn fmt(&self, idx: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Processor::new(self.entity().0)
-            .transformed(*self.transform())
-            .fmt(idx, f)
-    }
-}
-
 /// Implementation required to apply a closed surface division to a shape parsed from a STEP file.
 mod from_pcurve {
     use super::{Curve2D, Curve3D, Surface};
@@ -276,5 +261,7 @@ mod from_pcurve {
     }
 }
 
-// implementation for trait `truck_modeling::builder`.
+/// implementation for trait `truck_modeling::builder`.
 mod geom_impls;
+/// implementation for output STEP format.
+mod stepout_impls;

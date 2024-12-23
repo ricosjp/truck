@@ -1010,7 +1010,7 @@ fn exec_cylindrical_surface(
         false => v.normalize(),
     };
     let x = y.cross(z).normalize();
-    let step_str = format!(
+    let step_str0 = format!(
         "DATA;
 #1 = CYLINDRICAL_SURFACE('', #2, {radius});
 #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
@@ -1019,8 +1019,14 @@ fn exec_cylindrical_surface(
         StepDisplay::new(VectorAsDirection(z), 4),
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
-    let step_cylinder = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
-    let cylinder: step_geometry::ElementarySurface = (&step_cylinder).into();
+    let step_cylinder0 = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str0);
+    let cylinder0: step_geometry::ElementarySurface = (&step_cylinder0).into();
+
+    // It has its own output, so test it accordingly.
+    let step_str1 = format!("DATA;\n{}ENDSEC;", StepDisplay::new(&cylinder0, 1));
+    let step_cylinder1 = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str1);
+    let cylinder1: step_geometry::ElementarySurface = (&step_cylinder1).into();
+
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -1032,10 +1038,12 @@ fn exec_cylindrical_surface(
         .for_each(|(i, j)| {
             let u = 2.0 * PI * i as f64 / 10.0;
             let v = j as f64;
-            let res = cylinder.subs(u, v);
+            let res0 = cylinder0.subs(u, v);
+            let res1 = cylinder1.subs(u, v);
             let ans =
                 mat.transform_point(Point3::new(radius * f64::cos(u), radius * f64::sin(u), v));
-            assert_near!(res, ans, "u:{u} v:{v} res:{res:?} ans:{ans:?}");
+            assert_near!(res0, ans, "u:{u} v:{v} res:{res0:?} ans:{ans:?}");
+            assert_near!(res1, ans, "u:{u} v:{v} res:{res1:?} ans:{ans:?}");
         })
 }
 
@@ -1137,8 +1145,14 @@ fn exec_conical_surface(
         StepDisplay::new(VectorAsDirection(z), 4),
         StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
-    let step_conical = step_to_entity::<ConicalSurfaceHolder>(&step_str);
-    let conical: step_geometry::ConicalSurface = (&step_conical).into();
+    let step_conical = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
+    let conical: step_geometry::ElementarySurface = (&step_conical).into();
+
+    // It has its own output, so test it accordingly.
+    let step_str1 = format!("DATA;\n{}ENDSEC;", StepDisplay::new(conical, 1));
+    let step_cylinder1 = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str1);
+    let conical1: step_geometry::ElementarySurface = (&step_cylinder1).into();
+
     let mat = Matrix4::from_cols(
         x.extend(0.0),
         y.extend(0.0),
@@ -1152,12 +1166,14 @@ fn exec_conical_surface(
             let v = j as f64 / 10.0;
             let tan = f64::tan(semi_angle);
             let res = conical.subs(u, v);
+            let res1 = conical1.subs(u, v);
             let ans = mat.transform_point(Point3::new(
                 (radius + v * tan) * f64::cos(u),
                 (radius + v * tan) * f64::sin(u),
                 v,
             ));
             assert_near!(res, ans, "u:{u} v:{v} res:{res:?} ans:{ans:?}");
+            assert_near!(res1, ans, "u:{u} v:{v} res:{res1:?} ans:{ans:?}");
         })
 }
 
