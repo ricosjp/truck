@@ -1,4 +1,4 @@
-use super::{*, truck_stepio::out};
+use super::{truck_stepio::out, *};
 
 impl out::ConstStepLength for Processor<Sphere, Matrix4> {
     const LENGTH: usize = Processor::<truck_geometry::prelude::Sphere, Matrix4>::LENGTH;
