@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Step output for specified revoluted surface.
 - Remove `println` for debugging.
 - Generalize `truck_modeling::builder` for apply step parsed geometries.
 - Review of the specifications for `IntersectionCurve`.
