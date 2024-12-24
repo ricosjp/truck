@@ -18,7 +18,7 @@ vtk = ["vtkio"]
 default = ["analyzers", "filters", "tessellation", "vtk"]
 
 [dependencies]
-derive_more = "0.99.18"
+derive_more = { version = "1.0.0", features = ["full"] }
 rustc-hash = "2.1.0"
 array-macro = "2.1.8"
 itertools = "0.13.0"

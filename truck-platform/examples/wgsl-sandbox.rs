@@ -169,7 +169,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                         layout: Some(layout),
                         vertex: VertexState {
                             module: &self.module,
-                            entry_point: "vs_main",
+                            entry_point: Some("vs_main"),
                             buffers: &[VertexBufferLayout {
                                 array_stride: std::mem::size_of::<u32>() as BufferAddress,
                                 step_mode: VertexStepMode::Vertex,
@@ -183,7 +183,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                         },
                         fragment: Some(FragmentState {
                             module: &self.module,
-                            entry_point: "fs_main",
+                            entry_point: Some("fs_main"),
                             targets: &[Some(ColorTargetState {
                                 format: render_texture.format,
                                 blend: Some(BlendState::REPLACE),

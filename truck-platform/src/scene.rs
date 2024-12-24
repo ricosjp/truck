@@ -254,13 +254,13 @@ impl SceneDescriptor {
 #[derive(Debug)]
 pub struct SceneDescriptorMut<'a>(&'a mut Scene);
 
-impl std::ops::Deref for SceneDescriptorMut<'_> {
+impl Deref for SceneDescriptorMut<'_> {
     type Target = SceneDescriptor;
     #[inline(always)]
     fn deref(&self) -> &SceneDescriptor { &self.0.scene_desc }
 }
 
-impl std::ops::DerefMut for SceneDescriptorMut<'_> {
+impl DerefMut for SceneDescriptorMut<'_> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut SceneDescriptor { &mut self.0.scene_desc }
 }
@@ -719,7 +719,7 @@ impl Scene {
                     continue;
                 }
                 rpass.set_pipeline(&object.pipeline);
-                rpass.set_bind_group(1, &object.bind_group, &[]);
+                rpass.set_bind_group(1, Some(object.bind_group.as_ref()), &[]);
                 rpass.set_vertex_buffer(0, object.vertex_buffer.buffer.slice(..));
                 match object.index_buffer {
                     Some(ref index_buffer) => {

@@ -1,5 +1,5 @@
 use super::*;
-use derive_more::*;
+use derive_more::{From, TryInto};
 use serde::{Deserialize, Serialize};
 #[doc(hidden)]
 pub use truck_geometry::prelude::{algo, inv_or_zero};
