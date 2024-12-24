@@ -65,7 +65,31 @@ impl ToSameGeometry<Surface> for ExtrudedCurve<Curve3D, Vector3> {
 impl ToSameGeometry<Surface> for RevolutedCurve<Curve3D> {
     #[inline]
     fn to_same_geometry(&self) -> Surface {
-        Surface::SweptCurve(SweptCurve::RevolutedCurve(Processor::new(self.clone())))
+        let default = || {
+            let (curve, origin, axis) = (self.entity_curve().inverse(), self.origin(), self.axis());
+            let mut processor = Processor::new(RevolutedCurve::by_revolution(curve, origin, axis));
+            processor.invert();
+            Surface::SweptCurve(SweptCurve::RevolutedCurve(processor))
+        };
+        match self.entity_curve() {
+            Curve3D::Line(line) => {
+                let &Line(p, q) = line;
+                let v = q - p;
+                let axis = self.axis();
+                if v.cross(axis).so_small() {
+                    let o = self.origin();
+                    let origin = o + (p - o).dot(axis) * axis;
+                    let line = Line(q, q - v.normalize());
+                    let revo = RevolutedCurve::by_revolution(line, origin, axis);
+                    let mut processor = Processor::new(revo);
+                    processor.invert();
+                    Surface::ElementarySurface(ElementarySurface::CylindricalSurface(processor))
+                } else {
+                    default()
+                }
+            }
+            _ => default(),
+        }
     }
 }
 
