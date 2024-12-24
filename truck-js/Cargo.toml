@@ -15,7 +15,7 @@ categories = ["graphics"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-derive_more = "0.99.18"
+derive_more = { version = "1.0.0", features = ["full"] }
 serde_json = "1.0.134"
 
 truck-meshalgo = { version = "0.4.0", path = "../truck-meshalgo" }

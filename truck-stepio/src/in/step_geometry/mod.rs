@@ -1,5 +1,5 @@
 use crate::{self as truck_stepio};
-use derive_more::*;
+use derive_more::From;
 use serde::{Deserialize, Serialize};
 use truck_derivers::{DisplayByStep, StepCurve, StepLength, StepSurface};
 

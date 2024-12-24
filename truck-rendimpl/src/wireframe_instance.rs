@@ -100,7 +100,7 @@ impl Rendered for WireFrameInstance {
             layout: Some(layout),
             vertex: VertexState {
                 module: &self.shaders.vertex_module,
-                entry_point: self.shaders.vertex_entry,
+                entry_point: Some(self.shaders.vertex_entry),
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<[f32; 3]>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
@@ -114,7 +114,7 @@ impl Rendered for WireFrameInstance {
             },
             fragment: Some(FragmentState {
                 module: &self.shaders.fragment_module,
-                entry_point: self.shaders.fragment_entry,
+                entry_point: Some(self.shaders.fragment_entry),
                 targets: &[Some(ColorTargetState {
                     format: scene_desc.render_texture.format,
                     blend: Some(BlendState::REPLACE),

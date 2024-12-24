@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use algo::curve::search_closest_parameter;
-use derive_more::*;
+use derive_more::From;
 use itertools::Itertools;
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;

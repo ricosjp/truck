@@ -138,7 +138,7 @@ impl Rendered for PolygonInstance {
             layout: Some(layout),
             vertex: VertexState {
                 module: &self.shaders.vertex_module,
-                entry_point: self.shaders.vertex_entry,
+                entry_point: Some(self.shaders.vertex_entry),
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<AttrVertex>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
@@ -164,7 +164,7 @@ impl Rendered for PolygonInstance {
             },
             fragment: Some(FragmentState {
                 module: fragment_module,
-                entry_point: fragment_entry,
+                entry_point: Some(fragment_entry),
                 targets: &[Some(ColorTargetState {
                     format: scene_desc.render_texture.format,
                     blend,
