@@ -13,7 +13,7 @@
     unused_qualifications
 )]
 
-use derive_more::{From, Into, Deref, DerefMut, AsRef};
+use derive_more::{AsRef, Deref, DerefMut, From, Into};
 use wasm_bindgen::prelude::*;
 
 /// truck struct wrapped by wasm
