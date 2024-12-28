@@ -17,7 +17,7 @@ array-macro = "2.1.8"
 bytemuck = { version = "1.21.0", features = ["derive"] }
 itertools = "0.13.0"
 rustc-hash = "2.1.0"
-serde = { version = "1.0.216", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
 thiserror = "2.0.9"
