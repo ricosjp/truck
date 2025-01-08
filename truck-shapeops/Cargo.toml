@@ -25,7 +25,7 @@ truck-stepio = { version = "0.3.0", path = "../truck-stepio", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
-serde_json = "1.0.134"
+serde_json = "1.0.135"
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 proptest = "1.6.0"
 
