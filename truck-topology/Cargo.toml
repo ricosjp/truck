@@ -17,7 +17,7 @@ rayon = "1.10.0"
 rustc-hash = "2.1.0"
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
-thiserror = "2.0.10"
+thiserror = "2.0.11"
 parking_lot = "0.12.3"
 rclite = { version = "0.2.4", optional = true }
 
