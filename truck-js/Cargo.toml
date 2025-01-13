@@ -24,6 +24,6 @@ truck-shapeops = { version = "0.4.0", path = "../truck-shapeops" }
 truck-stepio = { version = "0.3.0", path = "../truck-stepio" }
 truck-topology = { version = "0.6.0", path = "../truck-topology" }
 
-wasm-bindgen = "0.2.99"
-js-sys = "0.3.76"
+wasm-bindgen = "0.2.100"
+js-sys = "0.3.77"
 gloo = "0.11.0"
