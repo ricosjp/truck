@@ -25,4 +25,4 @@ truck-topology = { version = "0.6.0", path = "../truck-topology" }
 
 [dev-dependencies]
 proptest = "1.6.0"
-serde_json = "1.0.135"
+serde_json = "1.0.136"
