@@ -78,7 +78,7 @@ impl ToSameGeometry<Surface> for RevolutedCurve<Curve3D> {
                 let axis = self.axis();
                 if v.cross(axis).so_small() {
                     let o = self.origin();
-                    let origin = o + (p - o).dot(axis) * axis;
+                    let origin = o + (q - o).dot(axis) * axis;
                     let line = Line(q, q - v.normalize());
                     let revo = RevolutedCurve::by_revolution(line, origin, axis);
                     let mut processor = Processor::new(revo);
@@ -127,6 +127,32 @@ fn builder() {
     let f = builder::try_attach_plane([w]).unwrap();
     let torus: Solid = builder::rsweep(&f, Point3::origin(), Vector3::unit_z(), Rad(7.0));
     let mut poly = torus.triangulation(0.1).to_polygon();
+    poly.put_together_same_attrs(1.0e-3).remove_unused_attrs();
+    assert_eq!(poly.shell_condition(), ShellCondition::Closed);
+
+    // cylinder hole
+    let v = builder::vertex((-1.0, -1.0, -1.0));
+    let e = builder::tsweep(&v, 2.0 * Vector3::unit_x());
+    let f = builder::tsweep(&e, 2.0 * Vector3::unit_y());
+    let s: Solid = builder::tsweep(&f, 2.0 * Vector3::unit_z());
+    let mut shell = s.into_boundaries().pop().unwrap();
+    let line = builder::line(
+        &builder::vertex((0.5, 0.0, 1.0)),
+        &builder::vertex((0.5, 0.0, -1.0)),
+    );
+    let hole = builder::rsweep(&line, Point3::origin(), -Vector3::unit_z(), Rad(7.0));
+    let boundary = hole.extract_boundaries();
+    assert_eq!(boundary.len(), 2);
+    if boundary[0][0].front().point().z < 0.0 {
+        shell[0].add_boundary(boundary[0].inverse());
+        shell[5].add_boundary(boundary[1].inverse());
+    } else {
+        shell[0].add_boundary(boundary[1].inverse());
+        shell[5].add_boundary(boundary[0].inverse());
+    }
+    shell.extend(hole);
+    let solid = Solid::new(vec![shell]);
+    let mut poly = solid.triangulation(0.1).to_polygon();
     poly.put_together_same_attrs(1.0e-3).remove_unused_attrs();
     assert_eq!(poly.shell_condition(), ShellCondition::Closed);
 }

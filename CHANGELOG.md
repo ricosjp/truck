@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix some step output.
 - `cargo upgrade -i`
 - Create `CYLINDRICAL_SURFACE` by `builder::rsweep`.
 - Step output for specified revoluted surface.
