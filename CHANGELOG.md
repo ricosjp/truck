@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implement `Transformed<Matrix4>` for `PolygonMesh`.
 - Fix some step output.
 - `cargo upgrade -i`
 - Create `CYLINDRICAL_SURFACE` by `builder::rsweep`.

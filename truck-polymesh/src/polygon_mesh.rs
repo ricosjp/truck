@@ -253,6 +253,18 @@ where
     }
 }
 
+impl<V: Clone, A: TransformedAttributes> Transformed<Matrix4> for PolygonMesh<V, A> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) { self.attributes.transform_by(trans); }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix4) -> Self {
+        Self {
+            attributes: self.attributes.transformed(trans),
+            faces: self.faces.clone(),
+        }
+    }
+}
+
 /// Editor of polygon mesh
 ///
 /// It has mutable references to all member variables of the polygon mesh as public variables,
