@@ -19,7 +19,7 @@ webgl = ["wgpu/webgl"]
 bytemuck = { version = "1.21.0", features = ["derive"] }
 derive_more = { version = "1.0.0", features = ["full"] }
 futures-intrusive = "0.5.0"
-rustc-hash = "2.1.0"
+rustc-hash = "2.1.1"
 truck-base = { version = "0.5.0", path = "../truck-base" }
 wgpu = "23.0.1"
 winit = "0.30.8"
