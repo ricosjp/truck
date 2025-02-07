@@ -16,9 +16,13 @@ type MeshedShell = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
 type MeshedCShell = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
 
 pub(super) trait SP<S>:
-    Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable {
+    Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable
+{
 }
-impl<S, F> SP<S> for F where F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable {}
+impl<S, F> SP<S> for F where
+    F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable
+{
+}
 
 pub(super) fn by_search_parameter<S>(
     surface: &S,
@@ -178,10 +182,10 @@ where
             PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
         };
         let preboundary: Option<Vec<_>> = boundaries.iter().map(create_boundary).collect();
-        let polygon: Option<PolygonMesh> = (|| {
-            let boundary = PolyBoundary::new(preboundary?, &surface, tol);
+        let polygon: Option<PolygonMesh> = preboundary.and_then(|preboundary| {
+            let boundary = PolyBoundary::new(preboundary, &surface, tol);
             Some(trimming_tessellation(&surface, &boundary, tol))
-        })();
+        });
         CompressedFace {
             boundaries,
             orientation: face.orientation,
@@ -213,10 +217,10 @@ fn shell_create_polygon<S: PreMeshableSurface>(
             PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
         })
         .collect::<Option<Vec<_>>>();
-    let polygon: Option<PolygonMesh> = (|| {
-        let boundary = PolyBoundary::new(preboundary?, &surface, tol);
+    let polygon: Option<PolygonMesh> = preboundary.and_then(|preboundary| {
+        let boundary = PolyBoundary::new(preboundary, &surface, tol);
         Some(trimming_tessellation(surface, &boundary, tol))
-    })();
+    });
     let mut new_face = Face::debug_new(wires, polygon);
     if !orientation {
         new_face.invert();
@@ -256,7 +260,7 @@ impl PolyBoundaryPiece {
                 if let (Some(vp), Some((_, v0))) = (vp, previous) {
                     v = get_mindiff(v, v0, vp);
                 }
-                let res = (|| {
+                let res = {
                     if let Some((u0, v0)) = previous {
                         if !u0.near(&u) && surface.uder(u0, v0).so_small() {
                             return vec![Some(Point2::new(u, v0)), Some(Point2::new(u, v))];
@@ -265,7 +269,7 @@ impl PolyBoundaryPiece {
                         }
                     }
                     vec![Some(Point2::new(u, v))]
-                })();
+                };
                 previous = Some((u, v));
                 res
             })
@@ -405,7 +409,9 @@ impl PolyBoundary {
             2 => {
                 let mut curve1 = open.pop().unwrap();
                 let mut curve0 = open.pop().unwrap();
-                fn end_pts<T: Copy>(vec: &[T]) -> (T, T) { (vec[0], vec[vec.len() - 1]) }
+                fn end_pts<T: Copy>(vec: &[T]) -> (T, T) {
+                    (vec[0], vec[vec.len() - 1])
+                }
                 let ((p0, p1), (q0, q1)) = (end_pts(&curve0), end_pts(&curve1));
                 if !p0.x.near(&p1.x) && !q0.x.near(&q1.x) {
                     if let (Some(urange), _) = surface.try_range_tuple() {
@@ -521,7 +527,9 @@ fn spade_round(x: f64) -> f64 {
 
 /// Tessellates one surface trimmed by polyline.
 fn trimming_tessellation<S>(surface: &S, polyboundary: &PolyBoundary, tol: f64) -> PolygonMesh
-where S: PreMeshableSurface {
+where
+    S: PreMeshableSurface,
+{
     let mut triangulation = Cdt::new();
     polyboundary.insert_to(&mut triangulation);
     insert_surface(&mut triangulation, surface, polyboundary, tol);
@@ -604,7 +612,9 @@ fn triangulation_into_polymesh<'a>(
     let tri_faces: Vec<[StandardVertex; 3]> = triangles
         .map(|tri| tri.vertices())
         .filter(|tri| {
-            fn sp2cg(p: SPoint2) -> Point2 { Point2::new(p.x, p.y) }
+            fn sp2cg(p: SPoint2) -> Point2 {
+                Point2::new(p.x, p.y)
+            }
             let tri = array![i => sp2cg(*tri[i].as_ref()); 3];
             let (a, b) = (tri[1] - tri[0], tri[2] - tri[0]);
             let c = tri[0] + (a + b) / 3.0;
