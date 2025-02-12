@@ -99,6 +99,8 @@ pub type Result<T> = std::result::Result<T, errors::Error>;
 
 /// the building model utility API
 pub mod builder;
+/// primitive shapes
+pub mod primitive;
 mod closed_sweep;
 /// declare errors
 pub mod errors;

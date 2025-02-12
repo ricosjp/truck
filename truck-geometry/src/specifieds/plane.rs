@@ -58,6 +58,33 @@ impl Plane {
         let mat = Matrix3::from_cols(a, b, c).invert().unwrap();
         mat * (pt - self.o)
     }
+    /// xy-plane
+    #[inline(always)]
+    pub const fn xy() -> Self {
+        Self {
+            o: Point3::new(0.0, 0.0, 0.0),
+            p: Point3::new(1.0, 0.0, 0.0),
+            q: Point3::new(0.0, 1.0, 0.0),
+        }
+    }
+    /// yz-plane
+    #[inline(always)]
+    pub const fn yz() -> Self {
+        Self {
+            o: Point3::new(0.0, 0.0, 0.0),
+            p: Point3::new(0.0, 1.0, 0.0),
+            q: Point3::new(0.0, 0.0, 1.0),
+        }
+    }
+    /// zx-plane
+    #[inline(always)]
+    pub const fn zx() -> Self {
+        Self {
+            o: Point3::new(0.0, 0.0, 0.0),
+            p: Point3::new(0.0, 0.0, 1.0),
+            q: Point3::new(1.0, 0.0, 0.0),
+        }
+    }
 }
 
 impl ParametricSurface for Plane {
