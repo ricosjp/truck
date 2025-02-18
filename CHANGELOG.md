@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Closed mesh with `robust_triangluation`.
 - Implement `Transformed<Matrix4>` for `PolygonMesh`.
 - Fix some step output.
 - `cargo upgrade -i`
