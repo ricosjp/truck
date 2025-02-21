@@ -34,7 +34,7 @@ vtkio = { version = "0.6.3", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
-serde_json = "1.0.138"
+serde_json = "1.0.139"
 proptest = "1.6.0"
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 
