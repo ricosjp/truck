@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Minor change.
 - Fix some typos.
 - Saving memory of `put_together_same_attrs`.
 - Closed mesh with `robust_triangluation`.
