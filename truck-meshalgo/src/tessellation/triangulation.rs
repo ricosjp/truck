@@ -179,10 +179,10 @@ where
             PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
         };
         let preboundary: Option<Vec<_>> = boundaries.iter().map(create_boundary).collect();
-        let polygon: Option<PolygonMesh> = (|| {
-            let boundary = PolyBoundary::new(preboundary?, &surface, tol);
-            Some(trimming_tessellation(&surface, &boundary, tol))
-        })();
+        let polygon: Option<PolygonMesh> = preboundary.map(|preboundary| {
+            let boundary = PolyBoundary::new(preboundary, &surface, tol);
+            trimming_tessellation(&surface, &boundary, tol)
+        });
         CompressedFace {
             boundaries,
             orientation: face.orientation,
@@ -214,10 +214,10 @@ fn shell_create_polygon<S: PreMeshableSurface>(
             PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
         })
         .collect::<Option<Vec<_>>>();
-    let polygon: Option<PolygonMesh> = (|| {
-        let boundary = PolyBoundary::new(preboundary?, &surface, tol);
-        Some(trimming_tessellation(surface, &boundary, tol))
-    })();
+    let polygon: Option<PolygonMesh> = preboundary.map(|preboundary| {
+        let boundary = PolyBoundary::new(preboundary, &surface, tol);
+        trimming_tessellation(surface, &boundary, tol)
+    });
     let mut new_face = Face::debug_new(wires, polygon);
     if !orientation {
         new_face.invert();
