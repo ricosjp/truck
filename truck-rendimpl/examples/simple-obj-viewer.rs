@@ -7,8 +7,8 @@
 //! - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
 //! - Enter "Space" on the keyboard to switch the rendering mode for the wireframe and surface.
 
-use std::io::Read;
 use std::sync::Arc;
+use std::{borrow::BorrowMut, io::Read};
 use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -170,7 +170,9 @@ impl App for MyApp {
         app
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("simple obj viewer") }
+    fn app_title<'a>() -> Option<&'a str> {
+        Some("simple obj viewer")
+    }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         let file = std::fs::File::open(path).unwrap();
@@ -211,10 +213,12 @@ impl App for MyApp {
     }
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
-            MouseScrollDelta::LineDelta(_, y) => {
-                let camera = &mut self.scene.studio_config_mut().camera;
-                let trans_vec = camera.eye_direction() * 0.2 * y as f64;
-                camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
+            MouseScrollDelta::LineDelta(_, d) => {
+                let camera = self.scene.studio_config_mut().camera.borrow_mut();
+                let d = d as f64;
+                let d_scaled = d * 0.2;
+                let t = camera.eye_direction() * d_scaled;
+                camera.matrix[3] += Vector4::new(t.x, t.y, t.z, d_scaled);
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
@@ -302,7 +306,11 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self) { self.scene.render_frame(); }
+    fn render(&mut self) {
+        self.scene.render_frame();
+    }
 }
 
-fn main() { MyApp::run(); }
+fn main() {
+    MyApp::run();
+}
