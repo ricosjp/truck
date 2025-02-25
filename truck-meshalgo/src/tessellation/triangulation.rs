@@ -269,7 +269,7 @@ impl PolyBoundaryPiece {
                 if let (Some(vp), Some((_, v0))) = (vp, previous) {
                     v = get_mindiff(v, v0, vp);
                 }
-                let res = {
+                let res = (|| {
                     if let Some((u0, v0)) = previous {
                         if !u0.near(&u) && surface.uder(u0, v0).so_small() {
                             return vec![
@@ -284,7 +284,7 @@ impl PolyBoundaryPiece {
                         }
                     }
                     vec![Some((Point2::new(u, v), pt).into())]
-                };
+                })();
                 previous = Some((u, v));
                 res
             })
