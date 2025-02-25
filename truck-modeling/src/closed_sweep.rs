@@ -2,22 +2,16 @@ use crate::topo_impls::*;
 use crate::topo_traits::*;
 use truck_topology::*;
 
-impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Vertex<P> {
-    fn closed_sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CE: Fn(&C, &C) -> S,
-    >(
-        &self,
-        point_mapping: &FP,
-        _: &FC,
-        _: &FS,
-        connect_points: &CP,
-        _: &CE,
-        division: usize,
-    ) -> Self::Swept {
+impl<P, C, T, Pc, Cc> ClosedSweep<T, Pc, Cc, Wire<P, C>> for Vertex<P>
+where
+    P: Clone,
+    C: Clone,
+    T: GeometricMapping<P> + Copy,
+    Pc: Connector<P, C>,
+{
+    fn closed_sweep(&self, trans: T, point_connector: Pc, _: Cc, division: usize) -> Wire<P, C> {
+        let point_mapping = &trans.mapping();
+        let connect_points = &point_connector.connector();
         let mut vertex = self.clone();
         let mut wire: Wire<P, C> = (1..division)
             .map(|_| {
@@ -32,22 +26,26 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Vertex<P> {
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Edge<P, C> {
-    fn closed_sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CE: Fn(&C, &C) -> S,
-    >(
+impl<P, C, S, T, Pc, Cc> ClosedSweep<T, Pc, Cc, Shell<P, C, S>> for Edge<P, C>
+where
+    P: Clone,
+    C: Clone,
+    S: Clone,
+    T: GeometricMapping<P> + GeometricMapping<C> + Copy,
+    Pc: Connector<P, C>,
+    Cc: Connector<C, S>,
+{
+    fn closed_sweep(
         &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        _: &FS,
-        connect_points: &CP,
-        connect_curves: &CE,
+        trans: T,
+        point_connector: Pc,
+        curve_connector: Cc,
         division: usize,
-    ) -> Self::Swept {
+    ) -> Shell<P, C, S> {
+        let point_mapping = &GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = &GeometricMapping::<C>::mapping(trans);
+        let connect_points = &point_connector.connector();
+        let connect_curves = &curve_connector.connector();
         let mut edge = self.clone();
         let mut shell: Shell<P, C, S> = (1..division)
             .map(|_| {
@@ -62,22 +60,26 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Edge<P, C> {
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Wire<P, C> {
-    fn closed_sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CE: Fn(&C, &C) -> S,
-    >(
+impl<P, C, S, T, Pc, Cc> ClosedSweep<T, Pc, Cc, Shell<P, C, S>> for Wire<P, C>
+where
+    P: Clone,
+    C: Clone,
+    S: Clone,
+    T: GeometricMapping<P> + GeometricMapping<C> + Copy,
+    Pc: Connector<P, C>,
+    Cc: Connector<C, S>,
+{
+    fn closed_sweep(
         &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        _: &FS,
-        connect_points: &CP,
-        connect_curves: &CE,
+        trans: T,
+        point_connector: Pc,
+        curve_connector: Cc,
         division: usize,
-    ) -> Self::Swept {
+    ) -> Shell<P, C, S> {
+        let point_mapping = &GeometricMapping::<P>::mapping(trans);
+        let curve_mapping = &GeometricMapping::<C>::mapping(trans);
+        let connect_points = &point_connector.connector();
+        let connect_curves = &curve_connector.connector();
         let mut wire = self.clone();
         let mut shell: Shell<P, C, S> = (1..division)
             .flat_map(|_| {
@@ -93,56 +95,49 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Wire<P, C> {
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Face<P, C, S> {
-    fn closed_sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CE: Fn(&C, &C) -> S,
-    >(
+impl<P, C, S, T, Pc, Cc> ClosedSweep<T, Pc, Cc, Solid<P, C, S>> for Face<P, C, S>
+where
+    P: Clone,
+    C: Clone,
+    S: Clone,
+    T: GeometricMapping<P> + GeometricMapping<C> + GeometricMapping<S> + Copy,
+    Pc: Connector<P, C>,
+    Cc: Connector<C, S>,
+{
+    fn closed_sweep(
         &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-        connect_points: &CP,
-        connect_curves: &CE,
+        trans: T,
+        point_connector: Pc,
+        curve_connector: Cc,
         division: usize,
-    ) -> Self::Swept {
+    ) -> Solid<P, C, S> {
         Solid::debug_new(
             self.boundaries()
                 .iter()
                 .map(move |wire| {
-                    wire.closed_sweep(
-                        point_mapping,
-                        curve_mapping,
-                        surface_mapping,
-                        connect_points,
-                        connect_curves,
-                        division,
-                    )
+                    wire.closed_sweep(trans, point_connector, curve_connector, division)
                 })
                 .collect(),
         )
     }
 }
 
-impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Shell<P, C, S> {
-    fn closed_sweep<
-        FP: Fn(&P) -> P,
-        FC: Fn(&C) -> C,
-        FS: Fn(&S) -> S,
-        CP: Fn(&P, &P) -> C,
-        CE: Fn(&C, &C) -> S,
-    >(
+impl<P, C, S, T, Pc, Cc> ClosedSweep<T, Pc, Cc, Vec<Result<Solid<P, C, S>>>> for Shell<P, C, S>
+where
+    P: Clone,
+    C: Clone,
+    S: Clone,
+    T: GeometricMapping<P> + GeometricMapping<C> + GeometricMapping<S> + Copy,
+    Pc: Connector<P, C>,
+    Cc: Connector<C, S>,
+{
+    fn closed_sweep(
         &self,
-        point_mapping: &FP,
-        curve_mapping: &FC,
-        surface_mapping: &FS,
-        connect_points: &CP,
-        connect_curves: &CE,
+        trans: T,
+        point_connector: Pc,
+        curve_connector: Cc,
         division: usize,
-    ) -> Self::Swept {
+    ) -> Vec<Result<Solid<P, C, S>>> {
         self.connected_components()
             .into_iter()
             .map(move |shell| {
@@ -151,14 +146,7 @@ impl<P: Clone, C: Clone, S: Clone> ClosedSweep<P, C, S> for Shell<P, C, S> {
                         .extract_boundaries()
                         .iter()
                         .map(|wire| {
-                            wire.closed_sweep(
-                                point_mapping,
-                                curve_mapping,
-                                surface_mapping,
-                                connect_points,
-                                connect_curves,
-                                division,
-                            )
+                            wire.closed_sweep(trans, point_connector, curve_connector, division)
                         })
                         .collect(),
                 )

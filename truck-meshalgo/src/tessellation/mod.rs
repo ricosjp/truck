@@ -147,14 +147,14 @@ pub trait MeshableShape {
     /// # Examples
     /// ```
     /// use truck_meshalgo::prelude::*;
-    /// use truck_modeling::builder;
+    /// use truck_modeling::*;
     /// use truck_topology::shell::ShellCondition;
     ///
     /// // modeling a unit cube
     /// let v = builder::vertex(Point3::origin());
     /// let e = builder::tsweep(&v, Vector3::unit_x());
     /// let f = builder::tsweep(&e, Vector3::unit_y());
-    /// let cube = builder::tsweep(&f, Vector3::unit_z());
+    /// let cube: Solid = builder::tsweep(&f, Vector3::unit_z());
     ///
     /// // cube is Solid, however, the tessellated mesh is not closed.
     /// let mut mesh = cube.triangulation(0.01).to_polygon();

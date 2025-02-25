@@ -127,7 +127,7 @@ fn oi() {
             ],
         ),
     ));
-    oitest_tryfrom::<alias::Ellipse<Point2, Matrix3>, CircleHolder>(
+    oitest_tryfrom::<step_geometry::Ellipse<Point2, Matrix3>, CircleHolder>(
         Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI))).transformed(
             Matrix3::from_cols(
                 Vector3::new(0.0, 3.0, 0.0),
@@ -136,7 +136,7 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<alias::Ellipse<Point2, Matrix3>, EllipseHolder>(
+    oitest_tryfrom::<step_geometry::Ellipse<Point2, Matrix3>, EllipseHolder>(
         Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI))).transformed(
             Matrix3::from_cols(
                 Vector3::new(0.0, 3.0, 0.0),
@@ -145,7 +145,7 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<alias::Ellipse<Point3, Matrix4>, CircleHolder>(
+    oitest_tryfrom::<step_geometry::Ellipse<Point3, Matrix4>, CircleHolder>(
         Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI))).transformed(
             Matrix4::from_cols(
                 Vector4::new(0.0, 3.0, 0.0, 0.0),
@@ -155,7 +155,7 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<alias::Ellipse<Point3, Matrix4>, EllipseHolder>(
+    oitest_tryfrom::<step_geometry::Ellipse<Point3, Matrix4>, EllipseHolder>(
         Processor::new(TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI))).transformed(
             Matrix4::from_cols(
                 Vector4::new(0.0, 3.0, 0.0, 0.0),
@@ -165,7 +165,7 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<alias::Hyperbola<Point2, Matrix3>, HyperbolaHolder>(
+    oitest_tryfrom::<step_geometry::Hyperbola<Point2, Matrix3>, HyperbolaHolder>(
         Processor::new(TrimmedCurve::new(UnitHyperbola::new(), (-1.0, 1.0))).transformed(
             Matrix3::from_cols(
                 Vector3::new(0.0, 3.0, 0.0),
@@ -174,7 +174,7 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<alias::Hyperbola<Point3, Matrix4>, HyperbolaHolder>(
+    oitest_tryfrom::<step_geometry::Hyperbola<Point3, Matrix4>, HyperbolaHolder>(
         Processor::new(TrimmedCurve::new(UnitHyperbola::new(), (-1.0, 1.0))).transformed(
             Matrix4::from_cols(
                 Vector4::new(0.0, 3.0, 0.0, 0.0),
@@ -184,7 +184,7 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<alias::Parabola<Point2, Matrix3>, ParabolaHolder>(
+    oitest_tryfrom::<step_geometry::Parabola<Point2, Matrix3>, ParabolaHolder>(
         Processor::new(TrimmedCurve::new(UnitParabola::new(), (-1.0, 1.0))).transformed(
             Matrix3::from_cols(
                 Vector3::new(0.0, 2.0, 0.0),
@@ -193,7 +193,7 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<alias::Parabola<Point3, Matrix4>, ParabolaHolder>(
+    oitest_tryfrom::<step_geometry::Parabola<Point3, Matrix4>, ParabolaHolder>(
         Processor::new(TrimmedCurve::new(UnitParabola::new(), (-1.0, 1.0))).transformed(
             Matrix4::from_cols(
                 Vector4::new(0.0, 3.0, 0.0, 0.0),
@@ -211,8 +211,8 @@ fn oi() {
         Point3::new(2.0, 2.0, 3.0),
         Point3::new(1.0, 3.0, 3.0),
     ));
-    oitest::<Processor<alias::Sphere, Matrix4>, SphericalSurfaceHolder>(
-        Processor::new(alias::Sphere(truck::Sphere::new(
+    oitest::<Processor<step_geometry::Sphere, Matrix4>, SphericalSurfaceHolder>(
+        Processor::new(step_geometry::Sphere(truck::Sphere::new(
             Point3::new(0.0, 0.0, 0.0),
             15.0,
         )))
@@ -233,19 +233,21 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<PCurve<Box<alias::Curve2D>, Box<alias::Surface>>, PcurveHolder>(PCurve::new(
-        Box::new(alias::Curve2D::Line(Line(
-            Point2::new(0.0, 0.0),
-            Point2::new(1.0, 1.0),
-        ))),
-        Box::new(alias::Surface::ElementarySurface(Box::new(
-            alias::ElementarySurface::Plane(truck::Plane::new(
-                Point3::new(1.0, 2.0, 3.0),
-                Point3::new(1.0, 2.0, 4.0),
-                Point3::new(1.0, 1.0, 3.0),
+    oitest_tryfrom::<PCurve<Box<step_geometry::Curve2D>, Box<step_geometry::Surface>>, PcurveHolder>(
+        PCurve::new(
+            Box::new(step_geometry::Curve2D::Line(Line(
+                Point2::new(0.0, 0.0),
+                Point2::new(1.0, 1.0),
+            ))),
+            Box::new(step_geometry::Surface::ElementarySurface(
+                step_geometry::ElementarySurface::Plane(truck::Plane::new(
+                    Point3::new(1.0, 2.0, 3.0),
+                    Point3::new(1.0, 2.0, 4.0),
+                    Point3::new(1.0, 1.0, 3.0),
+                )),
             )),
-        ))),
-    ));
+        ),
+    );
     oitest_tryfrom::<BSplineSurface<Point3>, BSplineSurfaceWithKnotsHolder>(BSplineSurface::new(
         (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2)),
         vec![

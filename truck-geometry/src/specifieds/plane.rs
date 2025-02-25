@@ -58,70 +58,6 @@ impl Plane {
         let mat = Matrix3::from_cols(a, b, c).invert().unwrap();
         mat * (pt - self.o)
     }
-    /// into B-spline surface
-    /// # Examples
-    /// ```
-    /// use truck_geometry::prelude::*;
-    /// let pt0 = Point3::new(0.0, 1.0, 2.0);
-    /// let pt1 = Point3::new(1.0, 1.0, 3.0);
-    /// let pt2 = Point3::new(0.0, 2.0, 3.0);
-    /// let plane: Plane = Plane::new(pt0, pt1, pt2);
-    /// let surface: BSplineSurface<Point3> = plane.into_bspline();
-    /// assert_eq!(surface.range_tuple(), ((0.0, 1.0), (0.0, 1.0)));
-    ///
-    /// const N: usize = 100;
-    /// for i in 0..=N {
-    ///     for j in 0..=N {
-    ///         let u = i as f64 / N as f64;
-    ///         let v = j as f64 / N as f64;
-    ///         let res = surface.subs(u, v);
-    ///         let ans = plane.subs(u, v);
-    ///         assert_near!(ans, res);
-    ///     }
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn into_bspline(&self) -> BSplineSurface<Point3> {
-        let o = self.o;
-        let p = self.p;
-        let q = self.q;
-        BSplineSurface::debug_new(
-            (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
-            vec![vec![o, q], vec![p, p + (q - o)]],
-        )
-    }
-    /// into NURBS surface
-    /// # Examples
-    /// ```
-    /// use truck_geometry::prelude::*;
-    /// let pt0 = Point3::new(0.0, 1.0, 2.0);
-    /// let pt1 = Point3::new(1.0, 1.0, 3.0);
-    /// let pt2 = Point3::new(0.0, 2.0, 3.0);
-    /// let plane: Plane = Plane::new(pt0, pt1, pt2);
-    /// let surface: NurbsSurface<Vector4> = plane.into_nurbs();
-    /// assert_eq!(surface.range_tuple(), ((0.0, 1.0), (0.0, 1.0)));
-    ///
-    /// const N: usize = 100;
-    /// for i in 0..=N {
-    ///     for j in 0..=N {
-    ///         let u = i as f64 / N as f64;
-    ///         let v = j as f64 / N as f64;
-    ///         let res = surface.subs(u, v);
-    ///         let ans = plane.subs(u, v);
-    ///         assert_near!(ans, res);
-    ///     }
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn into_nurbs(&self) -> NurbsSurface<Vector4> {
-        let o = self.o.to_homogeneous();
-        let p = self.p.to_homogeneous();
-        let q = self.q.to_homogeneous();
-        NurbsSurface::new(BSplineSurface::debug_new(
-            (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
-            vec![vec![o, q], vec![p, p + q - o]],
-        ))
-    }
 }
 
 impl ParametricSurface for Plane {
@@ -167,6 +103,14 @@ impl Invertible for Plane {
     }
     #[inline(always)]
     fn invert(&mut self) { *self = self.inverse(); }
+}
+
+impl IncludeCurve<Line<Point3>> for Plane {
+    #[inline(always)]
+    fn include(&self, line: &Line<Point3>) -> bool {
+        self.search_parameter(line.0, None, 1).is_some()
+            && self.search_parameter(line.1, None, 1).is_some()
+    }
 }
 
 impl IncludeCurve<BSplineCurve<Point3>> for Plane {
@@ -253,4 +197,17 @@ impl SearchNearestParameter<D2> for Plane {
         let v = self.get_parameter(point);
         Some((v[0], v[1]))
     }
+}
+
+impl From<Plane> for BSplineSurface<Point3> {
+    fn from(Plane { o, p, q }: Plane) -> Self {
+        BSplineSurface::debug_new(
+            (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
+            vec![vec![o, q], vec![p, p + (q - o)]],
+        )
+    }
+}
+
+impl ToSameGeometry<BSplineSurface<Point3>> for Plane {
+    fn to_same_geometry(&self) -> BSplineSurface<Point3> { (*self).into() }
 }

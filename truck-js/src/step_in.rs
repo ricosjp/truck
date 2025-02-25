@@ -1,6 +1,6 @@
 use crate::*;
 use truck_meshalgo::tessellation::*;
-use truck_stepio::r#in::alias::*;
+use truck_stepio::r#in::step_geometry::*;
 use truck_topology::compress::*;
 
 /// step parse table

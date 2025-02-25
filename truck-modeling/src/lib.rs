@@ -41,90 +41,55 @@ pub use topology::*;
 /// [`Sweep`]: ./topo_traits/trait.Sweep.html
 /// [`ClosedSweep`]: ./topo_traits/trait.ClosedSweep.html
 pub mod topo_traits {
+    /// Creates closure for transformation
+    pub trait GeometricMapping<T>: Copy {
+        /// Creates closure for transformation
+        fn mapping(self) -> impl Fn(&T) -> T;
+    }
+
+    /// Creates closure for connect two geometries
+    pub trait Connector<T, H>: Copy {
+        /// Creates closure for connect two geometries
+        fn connector(self) -> impl Fn(&T, &T) -> H;
+    }
+
     /// Mapping, duplicates and moves a topological element.
-    pub trait Mapped<P, C, S>: Sized {
+    pub trait Mapped<T>: Sized {
         /// Returns a new topology whose points are mapped by `point_closure`,
         /// curves are mapped by `curve_closure`,
         /// and surfaces are mapped by `surface_closure`.
         #[doc(hidden)]
-        fn mapped<FP: Fn(&P) -> P, FC: Fn(&C) -> C, FS: Fn(&S) -> S>(
-            &self,
-            point_mapping: &FP,
-            curve_mapping: &FC,
-            surface_mapping: &FS,
-        ) -> Self;
-
-        /// Returns another topology whose points, curves, and surfaces are cloned.
-        fn topological_clone(&self) -> Self
-        where
-            P: Clone,
-            C: Clone,
-            S: Clone, {
-            self.mapped(&Clone::clone, &Clone::clone, &Clone::clone)
-        }
+        fn mapped(&self, trans: T) -> Self;
     }
 
     /// Abstract sweeping, builds a circle-arc, a prism, a half torus, and so on.
-    pub trait Sweep<P, C, S> {
-        /// The struct of sweeped topology.
-        type Swept;
+    pub trait Sweep<T, Pc, Cc, Swept> {
         /// Transform topologies and connect vertices and edges in boundaries.
-        fn sweep<
-            FP: Fn(&P) -> P,
-            FC: Fn(&C) -> C,
-            FS: Fn(&S) -> S,
-            CP: Fn(&P, &P) -> C,
-            CE: Fn(&C, &C) -> S,
-        >(
-            &self,
-            point_mapping: &FP,
-            curve_mapping: &FC,
-            surface_mapping: &FS,
-            connect_points: &CP,
-            connect_curve: &CE,
-        ) -> Self::Swept;
+        fn sweep(&self, trans: T, point_connector: Pc, curve_connector: Cc) -> Swept;
     }
 
     /// Abstract multi sweeping, builds a circle-arc, a prism, a half torus, and so on.
-    pub trait MultiSweep<P, C, S> {
-        /// The struct of sweeped topology.
-        type Swept;
+    pub trait MultiSweep<T, Pc, Cc, Swept> {
         /// Transform topologies and connect vertices and edges in boundaries.
-        fn multi_sweep<
-            FP: Fn(&P) -> P,
-            FC: Fn(&C) -> C,
-            FS: Fn(&S) -> S,
-            CP: Fn(&P, &P) -> C,
-            CE: Fn(&C, &C) -> S,
-        >(
+        fn multi_sweep(
             &self,
-            point_mapping: &FP,
-            curve_mapping: &FC,
-            surface_mapping: &FS,
-            connect_points: &CP,
-            connect_curve: &CE,
+            trans: T,
+            point_connector: Pc,
+            curve_connector: Cc,
             division: usize,
-        ) -> Self::Swept;
+        ) -> Swept;
     }
 
     /// closed sweep, builds a closed torus, and so on.
-    pub trait ClosedSweep<P, C, S>: MultiSweep<P, C, S> {
+    pub trait ClosedSweep<T, Pc, Cc, Swept>: MultiSweep<T, Pc, Cc, Swept> {
         /// Transform topologies and connect vertices and edges in boundaries.
-        fn closed_sweep<
-            FP: Fn(&P) -> P,
-            FC: Fn(&C) -> C,
-            FS: Fn(&S) -> S,
-            CP: Fn(&P, &P) -> C,
-            CE: Fn(&C, &C) -> S,
-        >(
+        fn closed_sweep(
             &self,
-            point_mapping: &FP,
-            curve_mapping: &FC,
-            surface_mapping: &FS,
-            connect_points: &CP,
-            connect_curves: &CE,
+            trans: T,
+            point_connector: Pc,
+            curve_connector: Cc,
             division: usize,
-        ) -> Self::Swept;
+        ) -> Swept;
     }
 }
 pub use topo_traits::*;

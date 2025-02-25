@@ -22,7 +22,7 @@
 /// STEP input module
 /// # Example
 /// ```
-/// use truck_stepio::r#in::{*, alias::*};
+/// use truck_stepio::r#in::{*, step_geometry::*};
 /// use ruststep::tables::EntityTable;
 /// // read file
 /// let step_string = include_str!(concat!(

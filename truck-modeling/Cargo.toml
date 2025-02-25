@@ -12,10 +12,11 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-derive_more = "0.99.18"
-rustc-hash = "2.1.0"
-serde = { version = "1.0.216", features = ["derive"] }
-thiserror = "1.0.69"
+derive_more = { version = "1.0.0", features = ["full"] }
+itertools = "0.13.0"
+rustc-hash = "2.1.1"
+serde = { version = "1.0.218", features = ["derive"] }
+thiserror = "2.0.11"
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive"] }
 truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
@@ -24,4 +25,4 @@ truck-topology = { version = "0.6.0", path = "../truck-topology" }
 
 [dev-dependencies]
 proptest = "1.6.0"
-serde_json = "1.0.133"
+serde_json = "1.0.139"

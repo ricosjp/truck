@@ -72,7 +72,7 @@ impl Rendered for Plane<'_> {
                     layout: Some(layout),
                     vertex: VertexState {
                         module: &module,
-                        entry_point: self.vs_entpt,
+                        entry_point: Some(self.vs_entpt),
                         buffers: &[VertexBufferLayout {
                             array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: VertexStepMode::Vertex,
@@ -86,7 +86,7 @@ impl Rendered for Plane<'_> {
                     },
                     fragment: Some(FragmentState {
                         module: &module,
-                        entry_point: self.fs_entpt,
+                        entry_point: Some(self.fs_entpt),
                         targets: &[Some(ColorTargetState {
                             format: scene_desc.render_texture.format,
                             blend: Some(BlendState::REPLACE),

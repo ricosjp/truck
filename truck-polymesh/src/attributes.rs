@@ -73,3 +73,66 @@ impl StandardAttributes {
         self.normals.extend(iter)
     }
 }
+
+impl TransformedAttributes for Vec<Point3> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.iter_mut().for_each(|p| {
+            *p = trans.transform_point(*p);
+        });
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix4) -> Self {
+        self.iter().map(|p| trans.transform_point(*p)).collect()
+    }
+}
+
+impl TransformedAttributes for Vec<StandardAttribute> {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.iter_mut().for_each(|attr| {
+            attr.position = trans.transform_point(attr.position);
+            if let Some(n) = &mut attr.normal {
+                *n = trans.transform_vector(*n);
+            }
+        })
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix4) -> Self {
+        self.iter()
+            .map(|attr| StandardAttribute {
+                position: trans.transform_point(attr.position),
+                uv_coord: attr.uv_coord,
+                normal: attr.normal.map(|n| trans.transform_vector(n)),
+            })
+            .collect()
+    }
+}
+
+impl TransformedAttributes for StandardAttributes {
+    #[inline(always)]
+    fn transform_by(&mut self, trans: Matrix4) {
+        self.positions_mut().iter_mut().for_each(|p| {
+            *p = trans.transform_point(*p);
+        });
+        self.normals_mut().iter_mut().for_each(|n| {
+            *n = trans.transform_vector(*n);
+        });
+    }
+    #[inline(always)]
+    fn transformed(&self, trans: Matrix4) -> Self {
+        Self {
+            positions: self
+                .positions()
+                .iter()
+                .map(|&p| trans.transform_point(p))
+                .collect(),
+            uv_coords: self.uv_coords().clone(),
+            normals: self
+                .normals()
+                .iter()
+                .map(|&n| trans.transform_vector(n))
+                .collect(),
+        }
+    }
+}

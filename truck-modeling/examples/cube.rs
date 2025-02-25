@@ -8,7 +8,7 @@ fn main() {
     let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
     let e = builder::tsweep(&v, Vector3::unit_x());
     let f = builder::tsweep(&e, Vector3::unit_y());
-    let cube = builder::tsweep(&f, Vector3::unit_z());
+    let cube: Solid = builder::tsweep(&f, Vector3::unit_z());
     let json = serde_json::to_vec_pretty(&cube).unwrap();
     std::fs::write("cube.json", json).unwrap();
 }

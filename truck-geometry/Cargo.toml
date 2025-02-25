@@ -12,10 +12,10 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-serde = { version = "1.0.216", features = ["derive"] }
-thiserror = "1.0.69"
+serde = { version = "1.0.218", features = ["derive"] }
+thiserror = "2.0.11"
 truck-base = { version = "0.5.0", path = "../truck-base" }
-truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
+truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive"] }
 
 [dev-dependencies]
 proptest = "1.6.0"

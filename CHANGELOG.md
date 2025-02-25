@@ -4,6 +4,15 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Saving memory of `put_together_same_attrs`.
+- Closed mesh with `robust_triangluation`.
+- Implement `Transformed<Matrix4>` for `PolygonMesh`.
+- Fix some step output.
+- `cargo upgrade -i`
+- Create `CYLINDRICAL_SURFACE` by `builder::rsweep`.
+- Step output for specified revoluted surface.
+- Remove `println` for debugging.
+- Generalize `truck_modeling::builder` for apply step parsed geometries.
 - Review of the specifications for `IntersectionCurve`.
 - Fix STEP header description.
 - Fix some typos.
@@ -21,7 +30,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2024-12-16
+2025-02-25
 
 ## v0.6
 

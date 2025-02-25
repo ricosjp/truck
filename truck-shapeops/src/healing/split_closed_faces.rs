@@ -675,10 +675,6 @@ where
     C: TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D,
 {
-    vertices_on_divisor
-        .iter()
-        .for_each(|(_, (_, uv))| print!("{:?} ", surface.subs(uv.x, uv.y)));
-    println!();
     let make_edge = move |p: &[(f64, (usize, Point2))]| {
         let ((_, (v0, uv0)), (_, (v1, uv1))) = (p[0], p[1]);
         let pcurve = PCurve::new(Line(uv0, uv1), surface.clone());

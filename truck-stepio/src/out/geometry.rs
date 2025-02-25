@@ -672,7 +672,7 @@ where C: StepLength + DisplayByStep
         let vector_idx = idx + 1 + curve.step_length();
         let vector = self.extruding_vector();
         f.write_fmt(format_args!(
-            "#{idx} = SURFACE_OF_LINEAR_EXTRUSION('', #{curve_idx}, #{vector_idx});{}{}",
+            "#{idx} = SURFACE_OF_LINEAR_EXTRUSION('', #{curve_idx}, #{vector_idx});\n{}{}",
             StepDisplay::new(curve, curve_idx),
             StepDisplay::new(vector, vector_idx),
         ))

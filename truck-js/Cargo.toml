@@ -15,8 +15,8 @@ categories = ["graphics"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-derive_more = "0.99.18"
-serde_json = "1.0.133"
+derive_more = { version = "1.0.0", features = ["full"] }
+serde_json = "1.0.139"
 
 truck-meshalgo = { version = "0.4.0", path = "../truck-meshalgo" }
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
@@ -24,6 +24,6 @@ truck-shapeops = { version = "0.4.0", path = "../truck-shapeops" }
 truck-stepio = { version = "0.3.0", path = "../truck-stepio" }
 truck-topology = { version = "0.6.0", path = "../truck-topology" }
 
-wasm-bindgen = "0.2.99"
-js-sys = "0.3.76"
+wasm-bindgen = "0.2.100"
+js-sys = "0.3.77"
 gloo = "0.11.0"

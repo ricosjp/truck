@@ -33,6 +33,14 @@ pub trait Attributes<V> {
     fn get(&self, vertex: V) -> Option<Self::Output>;
 }
 
+/// transform attributions
+pub trait TransformedAttributes: Clone {
+    /// transform by `trans`.
+    fn transform_by(&mut self, trans: Matrix4);
+    /// transformed attributions by `trans`.
+    fn transformed(&self, trans: Matrix4) -> Self;
+}
+
 /// standard attributions
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct StandardAttributes {

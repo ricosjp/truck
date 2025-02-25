@@ -43,7 +43,7 @@
 )]
 
 use bytemuck::{Pod, Zeroable};
-use derive_more::*;
+use derive_more::{Deref, DerefMut};
 use std::sync::Arc;
 use truck_base::cgmath64::*;
 pub use wgpu;

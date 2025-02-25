@@ -34,7 +34,7 @@ proptest! {
         let v = Vertex::news(p);
         let edge = array![i => builder::line(&v[i], &v[(i + 1) % 3]); 3];
         let face = builder::try_attach_plane(&[edge.to_vec().into()]).unwrap();
-        let base_solid = builder::tsweep(&face, h * Vector3::unit_z());
+        let base_solid: Solid = builder::tsweep(&face, h * Vector3::unit_z());
         let axis = dir_from_array(dir_array);
         let trans = Matrix4::from_translation(vec.into()) * Matrix4::from_axis_angle(axis, Rad(angle));
         let solid = builder::transformed(&base_solid, trans);
