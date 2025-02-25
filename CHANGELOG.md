@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix some typos.
 - Saving memory of `put_together_same_attrs`.
 - Closed mesh with `robust_triangluation`.
 - Implement `Transformed<Matrix4>` for `PolygonMesh`.

@@ -64,7 +64,7 @@ impl<E, T: One> Processor<E, T> {
     }
 
     /// apply the transform and inverse
-    pub fn constract(self) -> E
+    pub fn contract(self) -> E
     where E: Transformed<T> + Invertible {
         let mut res = self.entity;
         res.transform_by(self.transform);
