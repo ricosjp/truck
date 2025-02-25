@@ -198,8 +198,8 @@ impl<P, C, S> Shell<P, C, S> {
 
     /// Returns the adjacency matrix of vertices in the shell.
     ///
-    /// For the returned hashmap `map` and each vertex `v`,
-    /// the vector `map[&v]` cosists all vertices which is adjacent to `v`.
+    /// For the returned hashmap `map` and each vertex `v`, the
+    /// vector `map[&v]` consists of all vertices which is adjacent to `v`.
     /// # Examples
     /// ```
     /// use truck_topology::*;

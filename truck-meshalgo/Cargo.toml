@@ -22,7 +22,7 @@ derive_more = { version = "1.0.0", features = ["full"] }
 rustc-hash = "2.1.1"
 array-macro = "2.1.8"
 itertools = "0.13.0"
-spade = { version = "2.12.1", optional = true }
+spade = { version = "2.13.0", optional = true }
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
 truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
@@ -34,7 +34,7 @@ vtkio = { version = "0.6.3", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
-serde_json = "1.0.138"
+serde_json = "1.0.139"
 proptest = "1.6.0"
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 

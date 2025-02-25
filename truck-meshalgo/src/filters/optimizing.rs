@@ -1,5 +1,5 @@
 use super::*;
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::iter::Iterator;
 use std::ops::{Div, Mul};
 
@@ -235,20 +235,22 @@ fn create_blocks<T: SameAttr>(attrs: &[T], tol: f64) -> BlockMap<'_, T> {
 }
 
 fn create_adjacency<T: SameAttr>(map: BlockMap<'_, T>, attrs: &[T], tol: f64) -> Vec<Vec<usize>> {
-    let mut adj = vec![Vec::new(); attrs.len()];
+    let mut adj = vec![HashSet::default(); attrs.len()];
     map.into_iter().for_each(|(_, vec)| {
         if vec.len() > 1 {
             vec.iter().copied().enumerate().for_each(|(k, i)| {
                 vec[(k + 1)..].iter().copied().for_each(|j| {
                     if attrs[i].distance2(attrs[j]) < tol * tol {
-                        adj[i].push(j);
-                        adj[j].push(i);
+                        adj[i].insert(j);
+                        adj[j].insert(i);
                     }
                 });
             });
         }
     });
-    adj
+    adj.into_iter()
+        .map(|set| set.into_iter().collect())
+        .collect()
 }
 
 fn create_components<T: SameAttr>(
