@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- The zoom of the parallel camera has been made to work.
 - Minor change.
 - Fix some typos.
 - Saving memory of `put_together_same_attrs`.
