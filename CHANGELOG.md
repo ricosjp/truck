@@ -4,6 +4,10 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Minor change.
+- Fix some typos.
+- Saving memory of `put_together_same_attrs`.
+- Closed mesh with `robust_triangluation`.
 - Implement `Transformed<Matrix4>` for `PolygonMesh`.
 - Fix some step output.
 - `cargo upgrade -i`
@@ -28,7 +32,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2025-02-12
+2025-02-25
 
 ## v0.6
 
