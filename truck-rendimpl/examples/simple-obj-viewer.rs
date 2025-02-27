@@ -170,7 +170,9 @@ impl App for MyApp {
         app
     }
 
-    fn app_title<'a>() -> Option<&'a str> { Some("simple obj viewer") }
+    fn app_title<'a>() -> Option<&'a str> {
+        Some("simple obj viewer")
+    }
 
     fn dropped_file(&mut self, path: std::path::PathBuf) -> ControlFlow {
         let file = std::fs::File::open(path).unwrap();
@@ -211,10 +213,25 @@ impl App for MyApp {
     }
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
-            MouseScrollDelta::LineDelta(_, y) => {
+            MouseScrollDelta::LineDelta(_, d) => {
                 let camera = &mut self.scene.studio_config_mut().camera;
-                let trans_vec = camera.eye_direction() * 0.2 * y as f64;
-                camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
+                let d = d as f64;
+                let factor = 0.2;
+                match camera.projection_type() {
+                    ProjectionType::Perspective => {
+                        let t = camera.eye_direction() * factor * d;
+                        camera.matrix.w += t.extend(0.)
+                    }
+                    ProjectionType::Parallel => {
+                        let mut scale = 1.0;
+                        if d > 0. {
+                            scale += factor
+                        } else {
+                            scale -= factor
+                        }
+                        camera.matrix.w[3] *= scale;
+                    }
+                }
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
@@ -302,7 +319,11 @@ impl App for MyApp {
         Self::default_control_flow()
     }
 
-    fn render(&mut self) { self.scene.render_frame(); }
+    fn render(&mut self) {
+        self.scene.render_frame();
+    }
 }
 
-fn main() { MyApp::run(); }
+fn main() {
+    MyApp::run();
+}
