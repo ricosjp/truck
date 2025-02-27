@@ -7,8 +7,8 @@
 //! - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
 //! - Enter "Space" on the keyboard to switch the rendering mode for the wireframe and surface.
 
+use std::io::Read;
 use std::sync::Arc;
-use std::{borrow::BorrowMut, io::Read};
 use truck_meshalgo::prelude::*;
 use truck_platform::*;
 use truck_rendimpl::*;
@@ -214,11 +214,24 @@ impl App for MyApp {
     fn mouse_wheel(&mut self, delta: MouseScrollDelta, _: TouchPhase) -> ControlFlow {
         match delta {
             MouseScrollDelta::LineDelta(_, d) => {
-                let camera = self.scene.studio_config_mut().camera.borrow_mut();
+                let camera = &mut self.scene.studio_config_mut().camera;
                 let d = d as f64;
-                let d_scaled = d * 0.2;
-                let t = camera.eye_direction() * d_scaled;
-                camera.matrix[3] += Vector4::new(t.x, t.y, t.z, d_scaled);
+                let factor = 0.2;
+                match camera.projection_type() {
+                    ProjectionType::Perspective => {
+                        let t = camera.eye_direction() * factor * d;
+                        camera.matrix.w += t.extend(0.)
+                    }
+                    ProjectionType::Parallel => {
+                        let mut scale = 1.0;
+                        if d > 0. {
+                            scale += factor
+                        } else {
+                            scale -= factor
+                        }
+                        camera.matrix.w[3] *= scale;
+                    }
+                }
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
