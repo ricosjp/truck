@@ -122,10 +122,10 @@ where Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C> {
 /// use truck_modeling::*;
 /// let p = Point3::new(-1.0, 2.0, -3.0);
 /// let q = Point3::new(10.0, -5.0, 4.0);
-/// 
+///
 /// let bbd = BoundingBox::from_iter([p, q]);
 /// let solid: Solid = primitive::cuboid(bbd);
-/// 
+///
 /// for v in solid.vertex_iter() {
 ///     let x = v.point();
 ///     assert!(x.x.near(&p.x) || x.x.near(&q.x));
