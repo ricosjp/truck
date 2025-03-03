@@ -19,10 +19,10 @@ webgl = ["wgpu/webgl"]
 bytemuck = { version = "1.21.0", features = ["derive"] }
 derive_more = { version = "1.0.0", features = ["full"] }
 futures-intrusive = "0.5.0"
-rustc-hash = "2.1.0"
+rustc-hash = "2.1.1"
 truck-base = { version = "0.5.0", path = "../truck-base" }
 wgpu = "23.0.1"
-winit = "0.30.8"
+winit = "0.30.9"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-time = "1.1.0"
@@ -34,7 +34,7 @@ rayon = "1.10.0"
 env_logger = "0.11.6"
 naga = { version = "23.1.0", features = ["wgsl-in"] }
 pollster = "0.4.0"
-log = "0.4.25"
+log = "0.4.26"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-futures = "0.4.50"

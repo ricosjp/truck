@@ -235,8 +235,8 @@ impl App for MyApp {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let camera = &mut self.scene.studio_config_mut().camera;
-                let trans_vec = camera.eye_direction() * 0.2 * y as f64;
-                camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
+                let trans_vec = camera.eye_direction().extend(1.0) * y as f64 * 0.2;
+                camera.matrix[3] += trans_vec;
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
