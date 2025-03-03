@@ -105,5 +105,7 @@ pub mod errors;
 mod geom_impls;
 mod mapped;
 mod multi_sweep;
+/// primitive shapes
+pub mod primitive;
 mod sweep;
 mod topo_impls;
