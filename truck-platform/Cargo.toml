@@ -16,7 +16,7 @@ default = []
 webgl = ["wgpu/webgl"]
 
 [dependencies]
-bytemuck = { version = "1.21.0", features = ["derive"] }
+bytemuck = { version = "1.22.0", features = ["derive"] }
 derive_more = { version = "1.0.0", features = ["full"] }
 futures-intrusive = "0.5.0"
 rustc-hash = "2.1.1"

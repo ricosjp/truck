@@ -14,10 +14,10 @@ exclude = ["examples/**/*.obj"]
 
 [dependencies]
 array-macro = "2.1.8"
-bytemuck = { version = "1.21.0", features = ["derive"] }
+bytemuck = { version = "1.22.0", features = ["derive"] }
 itertools = "0.13.0"
 rustc-hash = "2.1.1"
 serde = { version = "1.0.218", features = ["derive"] }
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
-thiserror = "2.0.11"
+thiserror = "2.0.12"
