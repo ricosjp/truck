@@ -1,7 +1,12 @@
 use proptest::prelude::*;
 use truck_geometry::prelude::*;
 
-fn exec_concat_positive_test(v0: [[f64; 3]; 8], v1: [f64; 8], t: f64, w: f64) {
+fn exec_concat_positive_test(
+    v0: [[f64; 3]; 8],
+    v1: [f64; 8],
+    t: f64,
+    w: f64,
+) -> std::result::Result<(), TestCaseError> {
     let mut part0 = NurbsCurve::new(BSplineCurve::new(
         KnotVec::uniform_knot(4, 4),
         v0.into_iter()
@@ -11,8 +16,9 @@ fn exec_concat_positive_test(v0: [[f64; 3]; 8], v1: [f64; 8], t: f64, w: f64) {
     ));
     let mut part1 = part0.cut(t);
     part1.transform_control_points(|vec| *vec *= w);
-    assert_near!(part0.back(), part1.front());
+    prop_assert_near!(part0.back(), part1.front());
     concat_random_test(&part0, &part1, 10);
+    Ok(())
 }
 
 proptest! {
@@ -23,7 +29,7 @@ proptest! {
         t in 0f64..=1f64,
         w in -10f64..=10f64,
     ) {
-        exec_concat_positive_test(v0, v1, t, w);
+        exec_concat_positive_test(v0, v1, t, w)?;
     }
 }
 

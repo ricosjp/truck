@@ -22,11 +22,10 @@ const PRESEARCH_DIVISION: usize = 50;
 
 /// re-export `truck_base`
 pub mod base {
-    pub use truck_base::bounding_box::BoundingBox;
-    pub use truck_base::cgmath64::*;
-    pub use truck_base::tolerance::*;
-    pub use truck_base::{assert_near, assert_near2};
-    pub use truck_base::{hash, hash::HashGen};
+    pub use truck_base::{
+        assert_near, assert_near2, bounding_box::BoundingBox, cgmath64::*, hash, hash::HashGen,
+        prop_assert_near, prop_assert_near2, tolerance::*,
+    };
     pub use truck_geotrait::*;
 }
 /// Declares the nurbs

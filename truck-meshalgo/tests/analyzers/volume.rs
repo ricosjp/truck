@@ -1,6 +1,6 @@
 use super::*;
 use array_macro::array;
-use proptest::*;
+use proptest::prelude::*;
 use std::f64::consts::PI;
 use truck_modeling::*;
 
@@ -15,11 +15,11 @@ fn dir_from_array(arr: [f64; 2]) -> Vector3 {
 proptest! {
     #[test]
     fn triangle_prism(
-        p in array::uniform3(array::uniform2(-100.0f64..100.0f64)),
+        p in prop::array::uniform3(prop::array::uniform2(-100.0f64..100.0f64)),
         h in 0.1f64..100.0f64,
-        dir_array in array::uniform2(0.0f64..1.0f64),
+        dir_array in prop::array::uniform2(0.0f64..1.0f64),
         angle in 0.0..PI * 2.0,
-        vec in array::uniform3(-100.0f64..100.0f64),
+        vec in prop::array::uniform3(-100.0f64..100.0f64),
     ) {
         let p = array![i => Point3::new(p[i][0], p[i][1], -h / 2.0); 3];
         let (a, b) = (p[1] - p[0], p[2] - p[0]);
@@ -27,9 +27,7 @@ proptest! {
         let mut grav = p[0] + a / 3.0 + b / 3.0;
         grav.z = 0.0;
 
-        if volume.is_zero() {
-            return Ok(());
-        }
+        prop_assume!(!volume.is_zero());
 
         let v = Vertex::news(p);
         let edge = array![i => builder::line(&v[i], &v[(i + 1) % 3]); 3];
@@ -40,7 +38,7 @@ proptest! {
         let solid = builder::transformed(&base_solid, trans);
         let msolid = solid.triangulation(0.05).collect_option().unwrap();
 
-        assert_near!(msolid.volume(), volume);
-        assert_near!(msolid.center_of_gravity().to_point(), trans.transform_point(grav));
+        prop_assert_near!(msolid.volume(), volume);
+        prop_assert_near!(msolid.center_of_gravity().to_point(), trans.transform_point(grav));
     }
 }

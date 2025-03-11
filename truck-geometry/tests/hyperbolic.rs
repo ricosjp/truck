@@ -6,7 +6,7 @@ proptest! {
     fn sp_test(t in -50f64..=50f64) {
         let curve = UnitHyperbola::<Point2>::new();
         let p = curve.subs(t);
-        assert_near!(curve.search_parameter(p, None, 0).unwrap(), t);
+        prop_assert_near!(curve.search_parameter(p, None, 0).unwrap(), t);
     }
 }
 
