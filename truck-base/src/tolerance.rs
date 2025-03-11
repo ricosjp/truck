@@ -19,7 +19,7 @@ pub trait Tolerance: AbsDiffEq<Epsilon = f64> + Debug {
 
 impl<T: AbsDiffEq<Epsilon = f64> + Debug> Tolerance for T {}
 
-/// assert near
+/// Asserts that `left.near(&right)` (using `Tolerance`).
 #[macro_export]
 macro_rules! assert_near {
     ($left: expr, $right: expr $(,)?) => {
@@ -29,6 +29,21 @@ right: {:?}", $left, $right)
     };
     ($left: expr, $right: expr, $($arg: tt)+) => {
         assert!($crate::tolerance::Tolerance::near(&$left, &$right), "assertion failed: `left` is near `right`
+left: {:?},
+right: {:?}: {}", $left, $right, format_args!($($arg)+))
+    };
+}
+
+/// Similar to `assert_near!`, but returns a test failure instead of panicking if the condition fails.
+#[macro_export]
+macro_rules! prop_assert_near {
+    ($left: expr, $right: expr $(,)?) => {
+        prop_assert!($crate::tolerance::Tolerance::near(&$left, &$right), "assertion failed: `left` is near `right`
+left: {:?},
+right: {:?}", $left, $right)
+    };
+    ($left: expr, $right: expr, $($arg: tt)+) => {
+        prop_assert!($crate::tolerance::Tolerance::near(&$left, &$right), "assertion failed: `left` is near `right`
 left: {:?},
 right: {:?}: {}", $left, $right, format_args!($($arg)+))
     };
@@ -46,7 +61,7 @@ fn assert_near_with_msg() {
     assert_near!(1.0, 2.0, "{}", "test OK");
 }
 
-/// assert_near2
+/// Asserts that `left.near2(&right)` (using `Tolerance`).
 #[macro_export]
 macro_rules! assert_near2 {
     ($left: expr, $right: expr $(,)?) => {
@@ -56,6 +71,21 @@ right: {:?}", $left, $right)
     };
     ($left: expr, $right: expr, $($arg: tt)+) => {
         assert!($crate::tolerance::Tolerance::near2(&$left, &$right), "assertion failed: `left` is near `right`
+left: {:?},
+right: {:?}: {}", $left, $right, format_args!($($arg)+))
+    };
+}
+
+/// Similar to `assert_near2!`, but returns a test failure instead of panicking if the condition fails.
+#[macro_export]
+macro_rules! prop_assert_near2 {
+    ($left: expr, $right: expr $(,)?) => {
+        prop_assert!($crate::tolerance::Tolerance::near2(&$left, &$right), "assertion failed: `left` is near `right`
+left: {:?},
+right: {:?}", $left, $right)
+    };
+    ($left: expr, $right: expr, $($arg: tt)+) => {
+        prop_assert!($crate::tolerance::Tolerance::near2(&$left, &$right), "assertion failed: `left` is near `right`
 left: {:?},
 right: {:?}: {}", $left, $right, format_args!($($arg)+))
     };

@@ -177,7 +177,7 @@ mod test_geom_impl {
             let d0 = c.distance2(p0);
             let d1 = c.distance2(p1);
             let d2 = c.distance2(p2);
-            assert!(d0.near(&d1) && d1.near(&d2) && d2.near(&d0));
+            prop_assert!(d0.near(&d1) && d1.near(&d2) && d2.near(&d0));
         }
 
         #[test]
@@ -193,8 +193,8 @@ mod test_geom_impl {
             let curve = circle_arc_by_three_points(p0, p1, p2);
 
             // The curve `curve` is from `p0` to `p1`.
-            assert_near!(curve.front(), p0);
-            assert_near!(curve.back(), p1);
+            prop_assert_near!(curve.front(), p0);
+            prop_assert_near!(curve.back(), p1);
 
             // Any point on the curve is on the same side as point `p2`.
             // Check by the circular angle theorem.
@@ -202,7 +202,7 @@ mod test_geom_impl {
             let p3 = curve.subs((1.0 - t) * t0 + t * t1);
             let angle2 = (p2 - p1).angle(p2 - p0);
             let angle3 = (p3 - p1).angle(p3 - p0);
-            assert_near!(angle2, angle3);
+            prop_assert_near!(angle2, angle3);
         }
 
         #[test]
@@ -224,27 +224,27 @@ mod test_geom_impl {
                 * Matrix4::from_axis_angle(axis, angle)
                 * Matrix4::from_translation(-origin.to_vec());
             let pt1 = trans.transform_point(pt0);
-            assert_near!(curve.front(), pt0);
-            assert_near!(curve.back(), pt1);
+            prop_assert_near!(curve.front(), pt0);
+            prop_assert_near!(curve.back(), pt1);
 
             // Any point on the curve lies in the same plane perpendicular to the axis.
             let (t0, t1) = curve.range_tuple();
             let pt2 = curve.subs((1.0 - t) * t0 + t * t1);
             let vec0 = pt0 - origin;
             let vec2 = pt2 - origin;
-            assert_near!(vec0.dot(axis), vec2.dot(axis));
+            prop_assert_near!(vec0.dot(axis), vec2.dot(axis));
 
             // Any point on the curve lies in the circle arc from `p0` to `p1`.
             // Check by the circular angle theorem.
             let angle0 = (pt2 - pt1).angle(pt2 - pt0);
-            assert_near!(angle0 * 2.0, Rad(2.0 * PI) - angle);
+            prop_assert_near!(angle0 * 2.0, Rad(2.0 * PI) - angle);
         }
 
         #[test]
         fn test_take_one_axis_by_normal(normal in array::uniform3(-100.0f64..100.0)) {
             let normal = Vector3::from(normal);
             let axis = take_one_axis_by_normal(normal);
-            assert!(normal.so_small() || (!axis.so_small() && axis.dot(normal).so_small()));
+            prop_assert!(normal.so_small() || (!axis.so_small() && axis.dot(normal).so_small()));
         }
 
         #[test]
@@ -267,7 +267,7 @@ mod test_geom_impl {
                 .map(|p| trsf.transform_point(p))
                 .collect();
             let plane = attach_plane(vec![boundary]).unwrap();
-            assert_near!(plane.normal(), axis);
+            prop_assert_near!(plane.normal(), axis);
         }
 
         #[test]
@@ -298,7 +298,7 @@ mod test_geom_impl {
                 .flatten()
                 .for_each(|p| *p = trsf.transform_point(*p));
             let plane = attach_plane(multiple_boundary).unwrap();
-            assert_near!(plane.normal(), axis);
+            prop_assert_near!(plane.normal(), axis);
         }
     }
 }

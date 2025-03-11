@@ -1,6 +1,6 @@
 use proptest::prelude::*;
 use std::f64::consts::PI;
-use truck_base::{assert_near, cgmath64::*, newton::*, tolerance::*};
+use truck_base::{cgmath64::*, newton::*, prop_assert_near, tolerance::*};
 
 proptest! {
     #[test]
@@ -15,8 +15,8 @@ proptest! {
             derivation: a[1] + 2.0 * a[2] * x + 3.0 * a[3] * x * x,
         };
         match solve(function, x0 + delta, 100) {
-            Ok(res) => assert_near!(function(res).value, 0.0),
-            Err(log) => assert!(log.degenerate(), "{log}"),
+            Ok(res) => prop_assert_near!(function(res).value, 0.0),
+            Err(log) => prop_assert!(log.degenerate(), "{log}"),
         }
     }
 
@@ -36,8 +36,8 @@ proptest! {
         };
         let hint = Matrix2::from_angle(-Rad(PI / 2.0)) * n + Vector2::from(delta);
         match solve(function, hint, 10) {
-            Ok(res) => assert_near!(function(res).value, Vector2::zero()),
-            Err(log) => assert!(log.degenerate(), "{log}"),
+            Ok(res) => prop_assert_near!(function(res).value, Vector2::zero()),
+            Err(log) => prop_assert!(log.degenerate(), "{log}"),
         }
     }
 }

@@ -8,12 +8,12 @@ fn exec_search_parameter_test(
     (u, v): (f64, f64),
     disp: [f64; 3],
     sign: [bool; 3],
-) {
+) -> std::result::Result<(), TestCaseError> {
     let center = Point3::from(center);
     let sphere = Sphere::new(center, radius);
     let pt = sphere.subs(u, v);
     let (u0, v0) = sphere.search_parameter(pt, None, 100).unwrap();
-    assert_near!(Vector2::new(u, v), Vector2::new(u0, v0));
+    prop_assert_near!(Vector2::new(u, v), Vector2::new(u0, v0));
     let boolnum = |t: bool| if t { 1.0 } else { -1.0 };
     let pt = pt
         + Vector3::new(
@@ -21,12 +21,13 @@ fn exec_search_parameter_test(
             disp[1] * boolnum(sign[1]),
             disp[2] * boolnum(sign[2]),
         );
-    assert!(sphere.search_parameter(pt, None, 100).is_none());
+    prop_assert!(sphere.search_parameter(pt, None, 100).is_none());
     let (u, v) = sphere.search_nearest_parameter(pt, None, 100).unwrap();
-    assert_near!(
+    prop_assert_near!(
         sphere.subs(u, v),
         center + (pt - center).normalize() * radius
     );
+    Ok(())
 }
 
 proptest! {
@@ -38,7 +39,7 @@ proptest! {
         disp in prop::array::uniform3(0.01f64..0.1f64),
         sign in prop::array::uniform3(prop::bool::ANY),
     ) {
-        exec_search_parameter_test(center, radius, (u, v), disp, sign);
+        exec_search_parameter_test(center, radius, (u, v), disp, sign)?;
     }
 
 }

@@ -297,6 +297,7 @@ mod double_projection_tests {
     use super::*;
     use proptest::prelude::*;
     use std::f64::consts::PI;
+    type PResult = std::result::Result<(), TestCaseError>;
 
     fn get_one_vector(u: [f64; 2]) -> Vector3 {
         let angle = 2.0 * PI * u[0];
@@ -313,7 +314,7 @@ mod double_projection_tests {
         (x, n.cross(x))
     }
 
-    fn exec_plane_case(c0: [f64; 3], n0: [f64; 2], c1: [f64; 3], n1: [f64; 2]) {
+    fn exec_plane_case(c0: [f64; 3], n0: [f64; 2], c1: [f64; 3], n1: [f64; 2]) -> PResult {
         let c0 = Point3::from(c0);
         let n0 = get_one_vector(n0);
         let (x, y) = create_axis(n0);
@@ -329,14 +330,15 @@ mod double_projection_tests {
             let p = Point3::origin() + t * n;
             let (q, p0, p1) = double_projection(&plane0, None, &plane1, None, p, n, 100)
                 .unwrap_or_else(|| panic!("plane0: {plane0:?}\nplane1: {plane1:?}\n p: {p:?}"));
-            assert_near!(q, plane0.subs(p0.x, p0.y));
-            assert_near!(q, plane1.subs(p1.x, p1.y));
+            prop_assert_near!(q, plane0.subs(p0.x, p0.y));
+            prop_assert_near!(q, plane1.subs(p1.x, p1.y));
             if let Some(o) = o {
-                assert_near!(q.distance2(o), t * t);
+                prop_assert_near!(q.distance2(o), t * t);
             } else {
                 o = Some(q);
             }
         }
+        Ok(())
     }
 
     proptest! {
@@ -347,26 +349,27 @@ mod double_projection_tests {
             c1 in prop::array::uniform3(-1f64..=1f64),
             n1 in prop::array::uniform2(0f64..=1f64),
         ) {
-            exec_plane_case(c0, n0, c1, n1);
+            exec_plane_case(c0, n0, c1, n1)?;
         }
     }
 
-    fn exec_sphere_case(t: f64, r: f64) {
+    fn exec_sphere_case(t: f64, r: f64) -> PResult {
         let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), f64::sqrt(2.0));
         let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
         let p = Point3::new(r * f64::cos(t), r * f64::sin(t), 0.0);
         let n = Vector3::new(-f64::sin(t), f64::cos(t), 0.0);
         let (q, p0, p1) = double_projection(&sphere0, None, &sphere1, None, p, n, 100)
             .unwrap_or_else(|| panic!("p: {p:?}"));
-        assert_near!(q, sphere0.subs(p0.x, p0.y));
-        assert_near!(q, sphere1.subs(p1.x, p1.y));
-        assert_near!(q, Point3::new(f64::cos(t), f64::sin(t), 0.0));
+        prop_assert_near!(q, sphere0.subs(p0.x, p0.y));
+        prop_assert_near!(q, sphere1.subs(p1.x, p1.y));
+        prop_assert_near!(q, Point3::new(f64::cos(t), f64::sin(t), 0.0));
+        Ok(())
     }
 
     proptest! {
         #[test]
         fn sphere_case(t in 0f64..=(2.0 * PI), r in 0.5f64..=1.5f64) {
-            exec_sphere_case(t, r);
+            exec_sphere_case(t, r)?;
         }
     }
 }

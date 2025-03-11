@@ -11,6 +11,8 @@ use std::f64::consts::PI;
 use truck_geometry::prelude::*;
 
 #[cfg(test)]
+use proptest::prelude::*;
+#[cfg(test)]
 use truck_meshalgo::prelude::*;
 
 type PCurveLns = PCurve<Line<Point2>, NurbsSurface<Vector4>>;
@@ -179,7 +181,7 @@ fn unit_circle_info() {
 }
 
 #[cfg(test)]
-proptest::proptest! {
+proptest! {
     #[test]
     fn test_unit_circle(
         angle in 0.1f64..(1.5 * PI),
@@ -192,12 +194,12 @@ proptest::proptest! {
             let t = i as f64 / N as f64;
             let p = uc.subs(t).to_vec();
             let v = uc.der(t);
-            assert_near!(p.magnitude2(), 1.0, "{w0} {w1} {p:?} {angle}");
-            assert!(p.z.so_small2());
-            assert!(p.x * v.y - p.y * v.x > 0.0, "minus area {:?}", uc.control_point(1));
+            prop_assert_near!(p.magnitude2(), 1.0, "{w0} {w1} {p:?} {angle}");
+            prop_assert!(p.z.so_small2());
+            prop_assert!(p.x * v.y - p.y * v.x > 0.0, "minus area {:?}", uc.control_point(1));
         }
-        assert_near!(uc.subs(0.0), Point3::new(1.0, 0.0, 0.0));
-        assert_near!(uc.subs(1.0), Point3::new(f64::cos(angle), f64::sin(angle), 0.0));
+        prop_assert_near!(uc.subs(0.0), Point3::new(1.0, 0.0, 0.0));
+        prop_assert_near!(uc.subs(1.0), Point3::new(f64::cos(angle), f64::sin(angle), 0.0));
     }
 }
 

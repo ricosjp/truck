@@ -8,7 +8,7 @@ proptest! {
         let circle = UnitCircle::<Point2>::new();
         let p = circle.subs(t);
         let s = circle.search_nearest_parameter(p, None, 1).unwrap();
-        assert_near!(s, t);
+        prop_assert_near!(s, t);
     }
     #[test]
     fn search_nearest_parameter(t in 0f64..=(2.0 * PI), a in 0.1f64..=5f64) {
@@ -16,7 +16,7 @@ proptest! {
         let p = a * circle.subs(t);
         let s = circle.search_nearest_parameter(p, None, 1).unwrap();
         let q = a * circle.subs(s);
-        assert_near!(p, q);
+        prop_assert_near!(p, q);
     }
 
     #[test]
@@ -24,14 +24,14 @@ proptest! {
         let circle = UnitCircle::<Point2>::new();
         let arc = TrimmedCurve::new(circle, (t0, t1));
         let bsp: NurbsCurve<_> = arc.to_same_geometry();
-        assert_near!(bsp.front(), arc.front());
-        assert_near!(bsp.back(), arc.back());
+        prop_assert_near!(bsp.front(), arc.front());
+        prop_assert_near!(bsp.back(), arc.back());
         for i in 0..=10 {
             let t = i as f64 / 10.0;
             let p = bsp.subs(t).to_vec();
             let der = bsp.der(t);
-            assert_near!(p.magnitude2(), 1.0);
-            assert!(der.dot(p).so_small());
+            prop_assert_near!(p.magnitude2(), 1.0);
+            prop_assert!(der.dot(p).so_small());
         }
     }
 }
