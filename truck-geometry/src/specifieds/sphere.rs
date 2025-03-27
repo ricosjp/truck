@@ -64,6 +64,18 @@ impl ParametricSurface3D for Sphere {
             f64::cos(u),
         )
     }
+    #[inline(always)]
+    fn normal_uder(&self, u: f64, v: f64) -> Vector3 {
+        Vector3::new(
+            f64::cos(u) * f64::cos(v),
+            f64::cos(u) * f64::sin(v),
+            -f64::sin(u),
+        )
+    }
+    #[inline(always)]
+    fn normal_vder(&self, u: f64, v: f64) -> Vector3 {
+        Vector3::new(-f64::sin(u) * f64::sin(v), f64::sin(u) * f64::cos(v), 0.0)
+    }
 }
 
 impl BoundedSurface for Sphere {}

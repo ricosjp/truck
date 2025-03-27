@@ -316,10 +316,28 @@ pub struct HomotopySurface<C0, C1> {
     curve1: C1,
 }
 
+/// rolling ball fillet surface, along one edge, between two surfaces
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
+pub struct RbfSurface<C, S0, S1, R> {
+    edge_curve: C,
+    surface0: S0,
+    surface1: S1,
+    radius: R,
+}
+
+/// the orbit curve of contact point of rolling ball fillet surface
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
+pub struct RbfContactCurve<C, S0, S1, R> {
+    surface: RbfSurface<C, S0, S1, R>,
+    index: usize,
+}
+
 mod extruded_curve;
 mod homotopy;
 mod intersection_curve;
 mod pcurve;
 mod processor;
+/// structure and trait, associated with rolling ball fillet surface
+pub mod rbf_surface;
 mod revolved_curve;
 mod trimmied_curve;

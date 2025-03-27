@@ -38,6 +38,16 @@ fn polysurface() {
             assert_eq!(poly.vvder(u, v)[0], (2.0 * u * u + 3.0 * u + 1.0) * 8.0);
             assert!(poly.normal(u, v).dot(poly.uder(u, v)).so_small());
             assert!(poly.normal(u, v).dot(poly.vder(u, v)).so_small());
+
+            let eps = 1.0e-4;
+            let normal_uder_approx =
+                (poly.normal(u + eps, v) - poly.normal(u - eps, v)) / (2.0 * eps);
+            let normal_uder = poly.normal_uder(u, v);
+            assert!((normal_uder - normal_uder_approx).magnitude() < eps);
+            let normal_vder_approx =
+                (poly.normal(u, v + eps) - poly.normal(u, v - eps)) / (2.0 * eps);
+            let normal_vder = poly.normal_vder(u, v);
+            assert!((normal_vder - normal_vder_approx).magnitude() < eps);
         }
     }
 }

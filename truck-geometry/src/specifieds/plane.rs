@@ -115,6 +115,10 @@ impl ParametricSurface for Plane {
 impl ParametricSurface3D for Plane {
     #[inline(always)]
     fn normal(&self, _: f64, _: f64) -> Vector3 { self.normal() }
+    #[inline(always)]
+    fn normal_uder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
+    #[inline(always)]
+    fn normal_vder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
 }
 
 impl BoundedSurface for Plane {}
