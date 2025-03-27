@@ -77,8 +77,19 @@ impl ParametricSurface for Torus {
 }
 
 impl ParametricSurface3D for Torus {
+    #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         let sv = Vector2::new(f64::cos(v), f64::sin(v));
+        Vector3::new(sv.x * f64::cos(u), sv.x * f64::sin(u), sv.y)
+    }
+    #[inline(always)]
+    fn normal_uder(&self, u: f64, v: f64) -> Vector3 {
+        let sv = Vector2::new(f64::cos(v), f64::sin(v));
+        Vector3::new(-sv.x * f64::sin(u), sv.x * f64::cos(u), sv.y)
+    }
+    #[inline(always)]
+    fn normal_vder(&self, u: f64, v: f64) -> Vector3 {
+        let sv = Vector2::new(-f64::sin(v), f64::cos(v));
         Vector3::new(sv.x * f64::cos(u), sv.x * f64::sin(u), sv.y)
     }
 }

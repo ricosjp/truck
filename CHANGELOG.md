@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add `RbfSurface`.
 - Add `prop_assert_near` for `proptest` integration.
 - Primitives: rect, circle, and cuboid.
 - The zoom of the parallel camera has been made to work.

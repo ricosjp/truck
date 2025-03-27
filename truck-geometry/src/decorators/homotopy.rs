@@ -1,7 +1,6 @@
+use super::*;
 use algo::surface::SspVector;
 use control_point::ControlPoint;
-
-use super::*;
 use std::ops::RangeBounds;
 
 impl<C0, C1> HomotopySurface<C0, C1> {
