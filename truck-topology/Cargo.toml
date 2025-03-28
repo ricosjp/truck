@@ -19,7 +19,7 @@ truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
 thiserror = "2.0.12"
 parking_lot = "0.12.3"
-rclite = { version = "0.2.6", optional = true }
+rclite = { version = "0.2.7", optional = true }
 
 [features]
 default = ["rclite"]
