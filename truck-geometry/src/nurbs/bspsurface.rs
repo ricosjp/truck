@@ -1,6 +1,6 @@
 use super::*;
 use crate::errors::Error;
-use algo::surface::SspVector;
+use algo::surface::{SsnpVector, SspVector};
 use std::iter::FusedIterator;
 use std::ops::*;
 
@@ -1909,7 +1909,7 @@ where
     P: ControlPoint<f64>
         + EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
         + MetricSpace<Metric = f64>,
-    <P as ControlPoint<f64>>::Diff: SspVector<Point = P>,
+    <P as ControlPoint<f64>>::Diff: SsnpVector<Point = P>,
 {
     type Point = P;
     fn search_nearest_parameter<H: Into<SPHint2D>>(
