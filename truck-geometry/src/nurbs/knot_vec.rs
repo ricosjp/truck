@@ -496,7 +496,7 @@ impl KnotVec {
     /// ```
     pub fn bezier_knot(degree: usize) -> KnotVec {
         let mut vec = vec![0.0; degree + 1];
-        vec.extend(std::iter::repeat(1.0).take(degree + 1));
+        vec.extend(std::iter::repeat_n(1.0, degree + 1));
         KnotVec(vec)
     }
 
@@ -512,7 +512,7 @@ impl KnotVec {
     pub fn uniform_knot(degree: usize, division: usize) -> KnotVec {
         let mut vec = vec![0.0; degree + 1];
         vec.extend((1..division).map(|i| i as f64 / division as f64));
-        vec.extend(std::iter::repeat(1.0).take(degree + 1));
+        vec.extend(std::iter::repeat_n(1.0, degree + 1));
         KnotVec(vec)
     }
 }
