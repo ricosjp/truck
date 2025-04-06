@@ -1,5 +1,5 @@
 use super::*;
-use algo::surface::SspVector;
+use algo::surface::{SsnpVector, SspVector};
 use control_point::ControlPoint;
 use std::ops::RangeBounds;
 
@@ -102,7 +102,7 @@ where
     C0: BoundedCurve,
     C1: BoundedCurve<Point = C0::Point, Vector = C0::Vector>,
     C0::Point: EuclideanSpace<Scalar = f64, Diff = C0::Vector> + MetricSpace<Metric = f64>,
-    C0::Vector: SspVector<Point = C0::Point>,
+    C0::Vector: SsnpVector<Point = C0::Point>,
 {
     type Point = C0::Point;
     fn search_nearest_parameter<H: Into<SPHint2D>>(

@@ -33,8 +33,8 @@ where
     res
 }
 
-/// Vectors whose points returned by the surface that can be the target of [`search_parameter`].
-pub trait SspVector: InnerSpace<Scalar = f64> + Tolerance {
+/// Vectors whose points returned by the surface that can be the target of [`search_nearest_parameter`].
+pub trait SsnpVector: InnerSpace<Scalar = f64> + Tolerance {
     #[doc(hidden)]
     type Point;
     #[doc(hidden)]
@@ -48,7 +48,7 @@ pub trait SspVector: InnerSpace<Scalar = f64> + Tolerance {
     fn from_param(param: (f64, f64)) -> Self;
 }
 
-impl SspVector for Vector2 {
+impl SsnpVector for Vector2 {
     type Point = Point2;
     type Matrix = Matrix2;
     fn subs<S>(
@@ -68,7 +68,7 @@ impl SspVector for Vector2 {
     fn from_param(param: (f64, f64)) -> Self { param.into() }
 }
 
-impl SspVector for Vector3 {
+impl SsnpVector for Vector3 {
     type Point = Point3;
     type Matrix = Matrix3;
     fn subs<S>(
@@ -109,12 +109,63 @@ pub fn search_nearest_parameter<P, S>(
 ) -> Option<(f64, f64)>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    P::Diff: SspVector<Point = P>,
+    P::Diff: SsnpVector<Point = P>,
     S: ParametricSurface<Point = P, Vector = P::Diff>,
 {
-    let function = move |param: P::Diff| SspVector::subs(surface, point, param);
+    let function = move |param: P::Diff| SsnpVector::subs(surface, point, param);
     let res = newton::solve(function, P::Diff::from_param(hint), trials);
     res.ok().map(P::Diff::into_param)
+}
+
+/// Vectors whose points returned by the surface that can be the target of [`search_parameter`].
+pub trait SspVector: InnerSpace<Scalar = f64> + Tolerance {
+    #[doc(hidden)]
+    type Point;
+    #[doc(hidden)]
+    fn subs<S>(surface: &S, point: Self::Point, param: Vector2) -> CalcOutput<Vector2, Matrix2>
+    where S: ParametricSurface<Point = Self::Point, Vector = Self>;
+}
+
+impl SspVector for Vector2 {
+    type Point = Point2;
+    fn subs<S>(
+        surface: &S,
+        point: Point2,
+        Vector2 { x: u, y: v }: Vector2,
+    ) -> CalcOutput<Vector2, Matrix2>
+    where
+        S: ParametricSurface<Point = Point2, Vector = Vector2>,
+    {
+        CalcOutput {
+            value: surface.subs(u, v) - point,
+            derivation: Matrix2::from_cols(surface.uder(u, v), surface.vder(u, v)),
+        }
+    }
+}
+
+impl SspVector for Vector3 {
+    type Point = Point3;
+    fn subs<S>(
+        surface: &S,
+        point: Self::Point,
+        Vector2 { x: u, y: v }: Vector2,
+    ) -> CalcOutput<Vector2, Matrix2>
+    where
+        S: ParametricSurface<Point = Self::Point, Vector = Self>,
+    {
+        let diff = surface.subs(u, v) - point;
+        let uder = surface.uder(u, v);
+        let vder = surface.vder(u, v);
+        CalcOutput {
+            value: Vector2::new(uder.dot(diff), vder.dot(diff)),
+            derivation: Matrix2::new(
+                uder.dot(uder),
+                uder.dot(vder),
+                uder.dot(vder),
+                vder.dot(vder),
+            ),
+        }
+    }
 }
 
 /// Searches the parameter by Newton's method.
@@ -130,12 +181,14 @@ where
     P::Diff: SspVector<Point = P>,
     S: ParametricSurface<Point = P, Vector = P::Diff>,
 {
-    search_nearest_parameter(surface, point, hint, trials).and_then(|(u, v)| {
-        match surface.subs(u, v).near(&point) {
+    let function = move |param: Vector2| SspVector::subs(surface, point, param);
+    let res = newton::solve(function, hint.into(), trials);
+    res.ok().and_then(
+        |Vector2 { x: u, y: v }| match surface.subs(u, v).near(&point) {
             true => Some((u, v)),
             false => None,
-        }
-    })
+        },
+    )
 }
 
 /// Searches the parameters of the intersection point of `surface` and `curve`.

@@ -1,6 +1,5 @@
-use surface::SspVector;
-
 use super::*;
+use surface::{SsnpVector, SspVector};
 
 /// Divides the domain into equal parts, examines all the values, and returns `t` such that `curve.subs(t)` is closest to `point`.
 /// This method is useful to get an efficient hint of [`search_nearest_parameter`].
@@ -53,8 +52,16 @@ where
     C: ParametricCurve,
     C::Point: EuclideanSpace<Scalar = f64, Diff = C::Vector>,
     C::Vector: InnerSpace<Scalar = f64> + Tolerance, {
-    search_nearest_parameter(curve, point, hint, trials).and_then(|t| {
-        match point.to_vec().near(&curve.subs(t).to_vec()) {
+    let function = move |t: f64| {
+        let diff = curve.subs(t) - point;
+        let der = curve.der(t);
+        CalcOutput {
+            value: der.dot(diff),
+            derivation: der.magnitude2(),
+        }
+    };
+    newton::solve(function, hint, trials).ok().and_then(|t| {
+        match curve.subs(t).to_vec().near(&point.to_vec()) {
             true => Some(t),
             false => None,
         }
@@ -201,7 +208,7 @@ pub fn search_closest_parameter<P, C0, C1>(
 ) -> Option<(f64, f64)>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    P::Diff: SspVector<Point = P> + Tolerance,
+    P::Diff: SsnpVector<Point = P> + Tolerance,
     C0: ParametricCurve<Point = P, Vector = P::Diff>,
     C1: ParametricCurve<Point = P, Vector = P::Diff>,
 {

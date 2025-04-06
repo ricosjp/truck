@@ -104,7 +104,7 @@ fn non_simple_wire_divisor<C>(
         .find_map(find_loop())
         .unwrap_or((j0, boundary.len()));
 
-    let (k0, k1) = ((j0 + 1) / 2, (i1 + j1 + 1) / 2);
+    let (k0, k1) = (j0.div_ceil(2), (i1 + j1).div_ceil(2));
     let f = closure_take_front(edges);
     let pre_divisor = (f(boundary[k0]), f(boundary[k1]));
     nearest_correction(
