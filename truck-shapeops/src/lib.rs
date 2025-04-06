@@ -19,3 +19,4 @@ mod transversal;
 pub use transversal::{and, or, ShapeOpsCurve, ShapeOpsSurface};
 mod alternative;
 mod fillet;
+pub use fillet::*;

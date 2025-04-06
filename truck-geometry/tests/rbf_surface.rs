@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use truck_geometry::prelude::{rbf_surface::RadiusFunction, *};
+use truck_geometry::prelude::{rbf_surface::{InvertibleRadiusFunction, RadiusFunction}, *};
 
 #[test]
 fn contact_circle_as_curve() {
@@ -34,16 +34,26 @@ fn fillet_between_two_sphere() {
     );
 
     #[derive(Clone, Copy, Debug)]
-    struct Radius;
+    struct Radius(f64);
     impl RadiusFunction for Radius {
-        fn subs(&self, t: f64) -> f64 { 1.0 + 0.2 * f64::cos(t) }
-        fn der(&self, t: f64) -> f64 { -0.2 * f64::sin(t) }
-        fn der2(&self, t: f64) -> f64 { -0.2 * f64::cos(t) }
+        fn subs(&self, t: f64) -> f64 { 1.0 + 0.2 * f64::cos(self.0 * t) }
+        fn der(&self, t: f64) -> f64 { -0.2 * f64::sin(self.0 * t) }
+        fn der2(&self, t: f64) -> f64 { -0.2 * f64::cos(self.0 * t) }
+    }
+    impl InvertibleRadiusFunction for Radius {
+        fn inverse(&self) -> Self {
+            Self(-self.0)
+        }
+        fn invert(&mut self) {
+            self.0 *= -1.0;
+        }
     }
 
-    let fillet = RbfSurface::new(edge_circle, sphere0, sphere1, Radius);
+    let fillet = RbfSurface::new(edge_circle, sphere0, sphere1, Radius(1.0));
     let cp_curve0 = fillet.contact_curve0();
+    let cp_curve0_inv = cp_curve0.inverse();
     let cp_curve1 = fillet.contact_curve1();
+    let cp_curve1_inv = cp_curve1.inverse();
 
     let uc = UnitCircle::<Point3>::new();
     const N: usize = 20;
@@ -51,7 +61,7 @@ fn fillet_between_two_sphere() {
         let t = 2.0 * PI * i as f64 / N as f64;
         let cc = fillet.contact_circle(t).unwrap();
 
-        let r = Radius.subs(t);
+        let r = Radius(1.0).subs(t);
         let center_radius = ((r + 2.0).powi(2) - 1.0).sqrt();
         assert_near!(cc.center(), center_radius * uc.subs(t));
 
@@ -87,10 +97,12 @@ fn fillet_between_two_sphere() {
             .search_parameter(cc.contact_point0().point, None, 10)
             .unwrap();
         assert_near!(cp_curve0.subs(t0), cc.contact_point0().point);
+        assert_near!(cp_curve0_inv.subs(2.0 * PI - t0), cc.contact_point0().point);
         let t1 = cp_curve1
             .search_parameter(cc.contact_point1().point, None, 10)
             .unwrap();
         assert_near!(cp_curve1.subs(t1), cc.contact_point1().point);
+        assert_near!(cp_curve1_inv.subs(2.0 * PI - t1), cc.contact_point1().point);
 
         for j in 0..=N {
             let (u, v) = (j as f64 / N as f64, t);

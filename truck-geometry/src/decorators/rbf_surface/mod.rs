@@ -80,6 +80,21 @@ macro_rules! impl_radius_1dim {
 impl_radius_1dim!(BSplineCurve<Point1>);
 impl_radius_1dim!(NurbsCurve<Vector2>);
 
+/// Oriented and reversible
+pub trait InvertibleRadiusFunction: RadiusFunction {
+    /// Inverts `self`
+    fn inverse(&self) -> Self;
+    /// Returns the inverse.
+    fn invert(&mut self);
+}
+
+impl InvertibleRadiusFunction for f64 {
+    #[inline(always)]
+    fn inverse(&self) -> Self { *self }
+    #[inline(always)]
+    fn invert(&mut self) {}
+}
+
 /// Contact point of the rolling ball and surface
 #[derive(Clone, Copy, Debug)]
 pub struct ContactPoint {
@@ -209,6 +224,17 @@ where
     }
 }
 
+impl<C, S0, S1, R> From<RbfSurface<C, S0, S1, R>> for RbfSurface<Box<C>, Box<S0>, Box<S1>, R> {
+    fn from(value: RbfSurface<C, S0, S1, R>) -> Self {
+        Self {
+            edge_curve: Box::new(value.edge_curve),
+            surface0: Box::new(value.surface0),
+            surface1: Box::new(value.surface1),
+            radius: value.radius,
+        }
+    }
+}
+
 impl<C, S0, S1, R> RbfContactCurve<C, S0, S1, R> {
     /// original fillet surface
     #[inline]
@@ -241,7 +267,9 @@ where
             _ => self.surface.contact_point1_der(cc),
         }
     }
-    fn der2(&self, _t: f64) -> Self::Vector { unimplemented!() }
+    fn der2(&self, t: f64) -> Self::Vector {
+        (self.der(t + TOLERANCE) - self.der(t - TOLERANCE)) / (2.0 * TOLERANCE)
+    }
     #[inline]
     fn parameter_range(&self) -> ParameterRange { self.surface.edge_curve.parameter_range() }
     #[inline]
@@ -255,6 +283,52 @@ where
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     R: RadiusFunction,
 {
+}
+
+impl<C, S0, S1, R> Cut for RbfContactCurve<C, S0, S1, R>
+where
+    C: ParametricCurve3D + Cut,
+    S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    R: RadiusFunction,
+{
+    fn cut(&mut self, t: f64) -> Self {
+        let edge_curve = self.surface.edge_curve.cut(t);
+        Self {
+            surface: RbfSurface {
+                edge_curve,
+                surface0: self.surface.surface0.clone(),
+                surface1: self.surface.surface1.clone(),
+                radius: self.surface.radius.clone(),
+            },
+            index: self.index,
+        }
+    }
+}
+
+impl<C, S, R> Invertible for RbfContactCurve<C, S, S, R>
+where
+    C: ParametricCurve3D + Invertible,
+    S: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    R: InvertibleRadiusFunction,
+{
+    fn inverse(&self) -> Self {
+        Self {
+            surface: RbfSurface {
+                edge_curve: self.surface.edge_curve.inverse(),
+                surface0: self.surface.surface1.clone(),
+                surface1: self.surface.surface0.clone(),
+                radius: self.surface.radius.inverse(),
+            },
+            index: 1 - self.index,
+        }
+    }
+    fn invert(&mut self) {
+        self.surface.edge_curve.invert();
+        std::mem::swap(&mut self.surface.surface0, &mut self.surface.surface1);
+        self.surface.radius.invert();
+        self.index = 1 - self.index;
+    }
 }
 
 impl<C, S0, S1, R> ParameterDivision1D for RbfContactCurve<C, S0, S1, R>
@@ -294,6 +368,50 @@ where
         match point.near(&q) {
             true => Some(t),
             false => None,
+        }
+    }
+}
+
+impl<C, S0, S1, R> SearchNearestParameter<D1> for RbfContactCurve<C, S0, S1, R>
+where
+    C: ParametricCurve3D + BoundedCurve,
+    S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    R: RadiusFunction,
+{
+    type Point = Point3;
+    fn search_nearest_parameter<H: Into<<D1 as SPDimension>::Hint>>(
+        &self,
+        point: Self::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<<D1 as SPDimension>::Parameter> {
+        use truck_geotrait::algo;
+        let hint = match hint.into() {
+            SPHint1D::Parameter(hint) => hint,
+            SPHint1D::Range(x, y) => {
+                algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
+            }
+            SPHint1D::None => {
+                algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
+            }
+        };
+        algo::curve::search_nearest_parameter(self, point, hint, trials)
+    }
+}
+
+impl<C, S0, S1, R> From<RbfContactCurve<C, S0, S1, R>>
+    for RbfContactCurve<Box<C>, Box<S0>, Box<S1>, R>
+{
+    fn from(value: RbfContactCurve<C, S0, S1, R>) -> Self {
+        Self {
+            surface: RbfSurface {
+                edge_curve: value.surface.edge_curve.into(),
+                surface0: value.surface.surface0.into(),
+                surface1: value.surface.surface1.into(),
+                radius: value.surface.radius,
+            },
+            index: value.index,
         }
     }
 }
