@@ -80,6 +80,15 @@ macro_rules! impl_radius_1dim {
 impl_radius_1dim!(BSplineCurve<Point1>);
 impl_radius_1dim!(NurbsCurve<Vector2>);
 
+impl<T: RadiusFunction> RadiusFunction for &T {
+    #[inline(always)]
+    fn subs(&self, t: f64) -> f64 { (**self).subs(t) }
+    #[inline(always)]
+    fn der(&self, t: f64) -> f64 { (**self).der(t) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> f64 { (**self).der2(t) }
+}
+
 /// Oriented and reversible
 pub trait InvertibleRadiusFunction: RadiusFunction {
     /// Inverts `self`
@@ -347,8 +356,12 @@ where
 impl<C, S0, S1, R> SearchParameter<D1> for RbfContactCurve<C, S0, S1, R>
 where
     C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
-    S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>,
     R: RadiusFunction,
 {
     type Point = Point3;
@@ -358,16 +371,17 @@ where
         hint: H,
         trials: usize,
     ) -> Option<f64> {
-        let edge_curve = &self.surface.edge_curve;
-        let t = edge_curve.search_nearest_parameter(point, hint, trials)?;
-        let cc = self.surface.contact_circle(t)?;
-        let q = match self.index {
-            0 => cc.contact_point0.point,
-            _ => cc.contact_point1.point,
-        };
-        match point.near(&q) {
-            true => Some(t),
-            false => None,
+        match self.index {
+            0 => self
+                .surface
+                .search_contact_curve0_parameter(point, hint, trials, true),
+            _ => RbfSurface {
+                edge_curve: &self.surface.edge_curve,
+                surface0: &self.surface.surface1,
+                surface1: &self.surface.surface0,
+                radius: &self.surface.radius,
+            }
+            .search_contact_curve0_parameter(point, hint, trials, false),
         }
     }
 }

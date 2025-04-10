@@ -4,8 +4,13 @@ use truck_geometry::prelude::{rbf_surface::*, *};
 use truck_topology::*;
 
 /// condition of curves to attach fillet
-pub trait FilletedCurve<S, R>: ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug {}
-impl<C: ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug, S, R> FilletedCurve<S, R> for C {}
+pub trait FilletedCurve<S, R>:
+    ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug {
+}
+impl<C: ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug, S, R>
+    FilletedCurve<S, R> for C
+{
+}
 
 /// condition of sufaces to attach fillet
 pub trait FilletedSurface<C, R>:
@@ -41,12 +46,11 @@ where
 
     let new_front_edge = {
         let front_curve = front_edge.curve();
-        let hint = algo::curve::presearch_closest_point(
-            &curve,
-            &front_curve,
-            (curve.range_tuple(), front_curve.range_tuple()),
-            10,
-        );
+        let front_curve_hint = match front_edge.orientation() {
+            true => front_curve.range_tuple().1,
+            false => front_curve.range_tuple().0,
+        };
+        let hint = (curve.range_tuple().0, front_curve_hint);
         let (t0, t1) = search_intersection_parameter(&curve, &front_curve, hint, 100)?;
         let v0 = Vertex::new(curve.subs(t0));
         curve = curve.cut(t0);
@@ -54,13 +58,12 @@ where
     };
 
     let new_back_edge = {
-        let back_curve = back_edge.curve();
-        let hint = algo::curve::presearch_closest_point(
-            &curve,
-            &back_curve,
-            (curve.range_tuple(), back_curve.range_tuple()),
-            10,
-        );
+        let back_curve = back_edge.oriented_curve();
+        let back_curve_hint = match back_edge.orientation() {
+            true => back_curve.range_tuple().0,
+            false => back_curve.range_tuple().1,
+        };
+        let hint = (curve.range_tuple().1, back_curve_hint);
         let (t0, t1) = search_intersection_parameter(&curve, &back_curve, hint, 100)?;
         let v1 = Vertex::new(curve.subs(t0));
         curve.cut(t0);

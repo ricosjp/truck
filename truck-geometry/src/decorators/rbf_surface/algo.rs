@@ -166,12 +166,10 @@ fn sub_contact_point_der(
     let vvder = surface.vvder(u, v);
     let h = contact_point.point - center;
 
-    let mat = Matrix2::new(
-        h.dot(uuder) + uder.dot(uder),
-        h.dot(uvder) + uder.dot(vder),
-        h.dot(uvder) + uder.dot(vder),
-        h.dot(vvder) + vder.dot(vder),
-    );
+    let uu = h.dot(uuder) + uder.dot(uder);
+    let uv = h.dot(uvder) + uder.dot(vder);
+    let vv = h.dot(vvder) + vder.dot(vder);
+    let mat = Matrix2::new(uu, uv, uv, vv);
     let dc = center_der;
     let vec = Vector2::new(uder.dot(dc), vder.dot(dc));
     let duv = mat.invert().unwrap() * vec;
@@ -318,5 +316,67 @@ pub(super) fn v_parameter_division_for_fillet<S>(
     if vdiv.len() != new_vdiv.len() {
         *vdiv = new_vdiv;
         v_parameter_division_for_fillet(surface, udiv, vdiv, tol);
+    }
+}
+
+impl<C, S0, S1, R> RbfSurface<C, S0, S1, R>
+where
+    C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
+    S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>,
+    R: RadiusFunction,
+{
+    pub(super) fn search_contact_curve0_parameter(
+        &self,
+        point: Point3,
+        hint: impl Into<SPHint1D>,
+        trials: usize,
+        orientation: bool,
+    ) -> Option<f64> {
+        use truck_base::newton::{self, CalcOutput};
+        let RbfSurface {
+            edge_curve,
+            surface0,
+            surface1,
+            radius,
+        } = &self;
+
+        let t0 = edge_curve.search_nearest_parameter(point, hint, trials)?;
+        let p0 = edge_curve.subs(t0);
+        let ((u00, v00), (u10, v10)) = (
+            surface0.search_parameter(p0, None, trials)?,
+            surface1.search_parameter(p0, None, trials)?,
+        );
+        let (n0, n1) = (surface0.normal(u00, v00), surface1.normal(u10, v10));
+        let sign = -f64::signum(n0.cross(n1).dot(edge_curve.der(t0)))
+            * if orientation { 1.0 } else { -1.0 };
+
+        let (u0, v0) = surface0.search_parameter(point, (u00, v00), trials)?;
+        let n = sign * surface0.normal(u0, v0);
+
+        let function = |t: f64| {
+            let p = edge_curve.subs(t);
+            let der = edge_curve.der(t);
+            let der2 = edge_curve.der2(t);
+            let r = radius.subs(t);
+            let r_der = radius.der(t);
+            let po = point + r * n - p;
+            CalcOutput {
+                value: der.dot(po),
+                derivation: der2.dot(po) + der.dot(r_der * n - der),
+            }
+        };
+        let t = newton::solve(function, t0, trials).ok()?;
+
+        let r = radius.subs(t);
+        let o = point + r * n;
+        let (u1, v1) = surface1.search_nearest_parameter(o, (u10, v10), trials)?;
+        let dist2 = surface1.subs(u1, v1).distance2(o);
+        match dist2.near(&(r * r)) {
+            true => Some(t),
+            false => None,
+        }
     }
 }

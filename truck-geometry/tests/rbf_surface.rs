@@ -94,12 +94,12 @@ fn fillet_between_two_sphere() {
         assert!((fillet.angle_der(cc) - angle_der_approx).abs() < eps);
 
         let t0 = cp_curve0
-            .search_parameter(cc.contact_point0().point, None, 10)
+            .search_parameter(cc.contact_point0().point, None, 100)
             .unwrap();
         assert_near!(cp_curve0.subs(t0), cc.contact_point0().point);
         assert_near!(cp_curve0_inv.subs(2.0 * PI - t0), cc.contact_point0().point);
         let t1 = cp_curve1
-            .search_parameter(cc.contact_point1().point, None, 10)
+            .search_parameter(cc.contact_point1().point, None, 100)
             .unwrap();
         assert_near!(cp_curve1.subs(t1), cc.contact_point1().point);
         assert_near!(cp_curve1_inv.subs(2.0 * PI - t1), cc.contact_point1().point);
