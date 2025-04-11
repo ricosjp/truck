@@ -16,11 +16,11 @@ use truck_meshalgo::prelude::*;
 enum Curve {
     Line(Line<Point3>),
     Nurbs(NurbsCurve<Vector4>),
-    Parametric(PCurve<Line<Point2>, Box<Surface>>),
+    Parametric(PCurve<BSplineCurve<Point2>, Box<Surface>>),
     FilletSide(RbfContactCurve<Box<Curve>, Box<Surface>, Box<Surface>, f64>),
 }
 
-impl ToSameGeometry<Curve> for PCurve<Line<Point2>, Surface> {
+impl ToSameGeometry<Curve> for PCurve<BSplineCurve<Point2>, Surface> {
     fn to_same_geometry(&self) -> Curve {
         let (curve, surface) = self.clone().decompose();
         Curve::Parametric(PCurve::new(curve, Box::new(surface)))

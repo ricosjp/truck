@@ -493,7 +493,7 @@ where
                 );
                 mat.invert().unwrap() * (c_next - PointVector3(p0 + r * n0, r_der * n0))
             };
-            debug_assert!(duv0.0.z.so_small() && duv0.1.z.so_small());
+            debug_assert!(duv0.0.z.so_small() && duv0.1.z.so_small(), "{duv0:?}");
 
             let duv1 = {
                 let mat = Matrix3::from_cols(
@@ -503,7 +503,7 @@ where
                 );
                 mat.invert().unwrap() * (c_next - PointVector3(p1 + r * n1, r_der * n1))
             };
-            debug_assert!(duv1.0.z.so_small() && duv1.1.z.so_small());
+            debug_assert!(duv1.0.z.so_small() && duv1.1.z.so_small(), "{duv1:?}");
 
             let dp0 = Matrix3::from_cols(uder0, vder0, n0) * duv0;
             let dp1 = Matrix3::from_cols(uder1, vder1, n1) * duv1;
