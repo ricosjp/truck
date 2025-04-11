@@ -14,6 +14,7 @@ use truck_meshalgo::prelude::*;
     From,
 )]
 enum Curve {
+    Line(Line<Point3>),
     Nurbs(NurbsCurve<Vector4>),
     Parametric(PCurve<Line<Point2>, Box<Surface>>),
     FilletSide(RbfContactCurve<Box<Curve>, Box<Surface>, Box<Surface>, f64>),
@@ -35,6 +36,21 @@ enum Surface {
     Nurbs(NurbsSurface<Vector4>),
     Fillet(RbfSurface<Box<Curve>, Box<Self>, Box<Self>, f64>),
     Processor(Processor<Box<Self>, Matrix4>),
+}
+
+impl SearchNearestParameter<D2> for Surface {
+    type Point = Point3;
+    fn search_nearest_parameter<H: Into<<D2 as SPDimension>::Hint>>(
+            &self,
+            point: Self::Point,
+            hint: H,
+            trials: usize,
+        ) -> Option<<D2 as SPDimension>::Parameter> {
+        match self {
+            Self::Nurbs(nurbs) => nurbs.search_nearest_parameter(point, hint, trials),
+            _ => unimplemented!(),
+        }
+    }
 }
 
 impl ToSameGeometry<Surface> for RbfSurface<Curve, Surface, Surface, f64> {
@@ -63,9 +79,9 @@ fn create_simple_fillet() {
     let surface0: NurbsSurface<_> = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
         vec![
-            vec![Point3::new(-1.0, 0.0, 0.0), Point3::new(-0.8, 0.5, 0.0), Point3::new(-1.0, 1.0, 1.0)],
+            vec![Point3::new(-1.0, 0.0, 0.0), Point3::new(-1.0, 0.5, 0.0), Point3::new(-1.0, 1.0, 1.0)],
             vec![Point3::new(0.0, 0.0, 0.0),  Point3::new(0.0, 0.5, 0.0),  Point3::new(0.0, 1.0, 1.0)],
-            vec![Point3::new(1.0, 0.0, 0.0),  Point3::new(0.8, 0.5, 0.0),  Point3::new(1.0, 1.0, 1.0)],
+            vec![Point3::new(1.0, 0.0, 0.0),  Point3::new(1.0, 0.5, 0.0),  Point3::new(1.0, 1.0, 1.0)],
         ],
     )
     .into();
@@ -73,9 +89,9 @@ fn create_simple_fillet() {
     let surface1: NurbsSurface<_> = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
         vec![
-            vec![Point3::new(1.0, 0.0, 0.0),  Point3::new(0.8, 0.0, -0.5),  Point3::new(1.0, 1.0, -1.0)],
+            vec![Point3::new(1.0, 0.0, 0.0),  Point3::new(1.0, 0.0, -0.5),  Point3::new(1.0, 1.0, -1.0)],
             vec![Point3::new(0.0, 0.0, 0.0),  Point3::new(0.0, 0.5, -0.5),  Point3::new(0.0, 1.0, -1.0)],
-            vec![Point3::new(-1.0, 0.0, 0.0), Point3::new(-0.8, 0.0, -0.5), Point3::new(-1.0, 1.0, -1.0)],
+            vec![Point3::new(-1.0, 0.0, 0.0), Point3::new(-1.0, 0.0, -0.5), Point3::new(-1.0, 1.0, -1.0)],
         ],
     )
     .into();
@@ -93,7 +109,7 @@ fn create_simple_fillet() {
     let boundary1 = surface1.splitted_boundary();
 
     let wire0: Wire = [
-        Edge::new(&v[0], &v[1], boundary0[0].clone().into()),
+        Edge::new(&v[0], &v[1], Line(v[0].point(), v[1].point()).into()),
         Edge::new(&v[1], &v[2], boundary0[1].clone().into()),
         Edge::new(&v[2], &v[3], boundary0[2].clone().into()),
         Edge::new(&v[3], &v[0], boundary0[3].clone().into()),
@@ -120,7 +136,9 @@ fn create_simple_fillet() {
     let (face0, face1, fillet) = simple_fillet(&face0, &face1, shared_edge_id, 0.3).unwrap();
 
     let shell: Shell = [face0, face1, fillet].into();
-    let poly = shell.triangulation(0.001).to_polygon();
+    let pshell = shell.triangulation(0.005);
+    assert!(pshell.iter().all(|face| face.surface().is_some()));
+    let poly = pshell.to_polygon();
     let file = std::fs::File::create("fillet-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }

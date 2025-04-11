@@ -52,7 +52,8 @@ where
         };
         let hint = (curve.range_tuple().0, front_curve_hint);
         let (t0, t1) = search_intersection_parameter(&curve, &front_curve, hint, 100)?;
-        let v0 = Vertex::new(curve.subs(t0));
+        let p = curve.subs(t0).midpoint(front_curve.subs(t1));
+        let v0 = Vertex::new(p);
         curve = curve.cut(t0);
         front_edge.cut_with_parameter(&v0, t1)?.0
     };
@@ -65,7 +66,8 @@ where
         };
         let hint = (curve.range_tuple().1, back_curve_hint);
         let (t0, t1) = search_intersection_parameter(&curve, &back_curve, hint, 100)?;
-        let v1 = Vertex::new(curve.subs(t0));
+        let p = curve.subs(t0).midpoint(back_curve.subs(t1));
+        let v1 = Vertex::new(p);
         curve.cut(t0);
         back_edge.cut_with_parameter(&v1, t1)?.1
     };

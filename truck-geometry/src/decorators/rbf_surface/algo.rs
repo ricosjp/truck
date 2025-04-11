@@ -14,10 +14,7 @@ where
     /// - the radius of the circle is `radius.subs(t)`.
     /// # Examples
     /// ```
-    /// use truck_geometry::{
-    ///     prelude::*,
-    ///     decorators::rbf_surface::ContactCircle,
-    /// };
+    /// use truck_geometry::prelude::*;
     /// let line = Line(Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0));
     /// let plane0 = Plane::xy();
     /// let plane1 = Plane::zx();
@@ -376,6 +373,164 @@ where
         let dist2 = surface1.subs(u1, v1).distance2(o);
         match dist2.near(&(r * r)) {
             true => Some(t),
+            false => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct PointVector3(Point3, Vector3);
+
+impl Mul<PointVector3> for Matrix3 {
+    type Output = PointVector3;
+    #[inline(always)]
+    fn mul(self, rhs: PointVector3) -> Self::Output {
+        PointVector3(self.transform_point(rhs.0), self * rhs.1)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct VectorVector3(Vector3, Vector3);
+
+impl Mul<VectorVector3> for Matrix3 {
+    type Output = VectorVector3;
+    #[inline(always)]
+    fn mul(self, rhs: VectorVector3) -> Self::Output { VectorVector3(self * rhs.0, self * rhs.1) }
+}
+
+impl std::ops::Sub<PointVector3> for PointVector3 {
+    type Output = VectorVector3;
+    #[inline(always)]
+    fn sub(self, rhs: PointVector3) -> Self::Output {
+        VectorVector3(self.0 - rhs.0, self.1 - rhs.1)
+    }
+}
+
+impl<C, S0, S1, R> SearchParameter<D2> for RbfSurface<C, S0, S1, R>
+where
+    C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
+    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3> + SearchParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3> + SearchParameter<D2, Point = Point3>,
+    R: RadiusFunction,
+{
+    type Point = Point3;
+    fn search_parameter<H: Into<SPHint2D>>(
+        &self,
+        point: Self::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
+        let Self {
+            edge_curve,
+            surface0,
+            surface1,
+            radius,
+        } = self;
+        let curve_hint = match hint.into() {
+            SPHint2D::Parameter(_, v) => SPHint1D::Parameter(v),
+            SPHint2D::Range(_, (v0, v1)) => SPHint1D::Range(v0, v1),
+            SPHint2D::None => SPHint1D::None,
+        };
+        let mut t = edge_curve.search_nearest_parameter(point, curve_hint, trials)?;
+        let mut c = edge_curve.subs(t);
+        let ((mut u0, mut v0), (mut u1, mut v1)) = (
+            surface0.search_nearest_parameter(point, None, trials)?,
+            surface1.search_nearest_parameter(point, None, trials)?,
+        );
+        let (mut p0, mut p1) = (surface0.subs(u0, v0), surface1.subs(u1, v1));
+
+        let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
+        let sign = -f64::signum(n0.cross(n1).dot(edge_curve.der(t)));
+
+        let _ = (0..=trials).find_map(|_i| {
+            let (p, der, der2) = (edge_curve.subs(t), edge_curve.der(t), edge_curve.der2(t));
+            let (r, r_der) = (sign * radius.subs(t), sign * radius.der(t));
+            let (uder0, vder0) = (surface0.uder(u0, v0), surface0.vder(u0, v0));
+            let (uder1, vder1) = (surface1.uder(u1, v1), surface1.vder(u1, v1));
+            let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
+
+            let (pp0, pp1, pc) = (p0 - point, p1 - point, c - point);
+
+            if pp0.so_small() {
+                let cc0 = self.contact_curve0();
+                t = cc0.search_parameter(point, t, trials)?;
+                c = p0 + sign * radius.subs(t) * n0;
+                (u1, v1) = surface1.search_nearest_parameter(c, (u1, v1), trials)?;
+                p1 = surface1.subs(u1, v1);
+                return Some(())
+            }
+            if pp1.so_small() {
+                let cc1 = self.contact_curve1();
+                t = cc1.search_parameter(point, t, trials)?;
+                c = p1 + sign * radius.subs(t) * n1;
+                (u0, v0) = surface0.search_nearest_parameter(c, (u0, v0), trials)?;
+                p0 = surface0.subs(u0, v0);
+                return Some(())
+            }
+            let center_contact0 = (p0 + r * n0).near(&c);
+            let center_contact1 = (p1 + r * n1).near(&c);
+            let same_plane = pp0.cross(pp1).dot(pc).so_small2();
+            if center_contact0 && center_contact1 && same_plane {
+                return Some(());
+            }
+
+            let c_next = {
+                let mat = Matrix3::from_cols(der, n0, n1).transpose();
+                let c_next0 = Point3::new(
+                    der.dot(p.to_vec()),
+                    n0.dot(p0.to_vec()) + r,
+                    n1.dot(p1.to_vec()) + r,
+                );
+                let c_next1 = Vector3::new(der.dot(der) - der2.dot(pc), r_der, r_der);
+                mat.invert().unwrap() * PointVector3(c_next0, c_next1)
+            };
+
+            let duv0 = {
+                let mat = Matrix3::from_cols(
+                    uder0 + r * surface0.normal_uder(u0, v0),
+                    vder0 + r * surface0.normal_vder(u0, v0),
+                    n0,
+                );
+                mat.invert().unwrap() * (c_next - PointVector3(p0 + r * n0, r_der * n0))
+            };
+            debug_assert!(duv0.0.z.so_small() && duv0.1.z.so_small());
+
+            let duv1 = {
+                let mat = Matrix3::from_cols(
+                    uder1 + r * surface1.normal_uder(u1, v1),
+                    vder1 + r * surface1.normal_vder(u1, v1),
+                    n1,
+                );
+                mat.invert().unwrap() * (c_next - PointVector3(p1 + r * n1, r_der * n1))
+            };
+            debug_assert!(duv1.0.z.so_small() && duv1.1.z.so_small());
+
+            let dp0 = Matrix3::from_cols(uder0, vder0, n0) * duv0;
+            let dp1 = Matrix3::from_cols(uder1, vder1, n1) * duv1;
+
+            let x = Matrix3::from_cols(dp0.0, pp1, pc).determinant()
+                + Matrix3::from_cols(pp0, dp1.0, pc).determinant()
+                + Matrix3::from_cols(pp0, pp1, c_next.0 - point).determinant();
+            let y = Matrix3::from_cols(dp0.1, pp1, pc).determinant()
+                + Matrix3::from_cols(pp0, dp1.1, pc).determinant()
+                + Matrix3::from_cols(pp0, pp1, c_next.1).determinant();
+            let dt = -x / y;
+
+            t += dt;
+            c = c_next.0 + c_next.1 * dt;
+            let duv0 = duv0.0 + duv0.1 * dt;
+            (u0, v0) = (u0 + duv0.x, v0 + duv0.y);
+            let duv1 = duv1.0 + duv1.1 * dt;
+            (u1, v1) = (u1 + duv1.x, v1 + duv1.y);
+            (p0, p1) = (surface0.subs(u0, v0), surface1.subs(u1, v1));
+            None
+        })?;
+
+        let (cp0, cp1, cp) = (p0 - c, p1 - c, point - c);
+        let theta = cp.angle(cp0);
+        let rot = Matrix3::from_axis_angle(cp0.cross(cp1).normalize(), theta);
+        match (rot * cp0).near(&cp) {
+            true => Some((theta.0 / cp0.angle(cp1).0, t)),
             false => None,
         }
     }

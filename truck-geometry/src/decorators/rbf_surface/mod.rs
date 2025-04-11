@@ -200,39 +200,6 @@ where
     }
 }
 
-impl<C, S0, S1, R> SearchParameter<D2> for RbfSurface<C, S0, S1, R>
-where
-    C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
-    S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
-{
-    type Point = Point3;
-    fn search_parameter<H: Into<SPHint2D>>(
-        &self,
-        point: Self::Point,
-        hint: H,
-        trials: usize,
-    ) -> Option<(f64, f64)> {
-        let curve_hint = match hint.into() {
-            SPHint2D::Parameter(_, v) => SPHint1D::Parameter(v),
-            SPHint2D::Range(_, (v0, v1)) => SPHint1D::Range(v0, v1),
-            SPHint2D::None => SPHint1D::None,
-        };
-        let edge_curve = &self.edge_curve;
-        let v = edge_curve.search_nearest_parameter(point, curve_hint, trials)?;
-        let cc = self.contact_circle(v)?;
-
-        let cp0 = cc.contact_point0.point - cc.center;
-        let cp = point - cc.center;
-        let u = cp.angle(cp0).0 / cc.angle.0;
-        match cp.magnitude2().near(&cp0.magnitude2()) {
-            true => Some((u, v)),
-            false => None,
-        }
-    }
-}
-
 impl<C, S0, S1, R> From<RbfSurface<C, S0, S1, R>> for RbfSurface<Box<C>, Box<S0>, Box<S1>, R> {
     fn from(value: RbfSurface<C, S0, S1, R>) -> Self {
         Self {
