@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Constant allocation for faster B-spline basis function.
 - New implementation for `search_parameter`.
 - Add `RbfSurface`.
 - Add `prop_assert_near` for `proptest` integration.
