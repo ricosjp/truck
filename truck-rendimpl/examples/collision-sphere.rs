@@ -36,12 +36,12 @@ impl App for MyApp {
             Point3::origin(),
             Vector3::unit_y(),
         );
-        let camera = Camera::perspective_camera(
-            matrix.invert().unwrap(),
-            Rad(std::f64::consts::PI / 4.0),
-            0.1,
-            40.0,
-        );
+        let camera = Camera {
+            matrix: matrix.invert().unwrap(),
+            method: ProjectionMethod::perspective(Rad(std::f64::consts::PI / 4.0)),
+            near_clip: 0.1,
+            far_clip: 40.0,
+        };
         let scene_desc = WindowSceneDescriptor {
             studio: StudioConfig {
                 camera,

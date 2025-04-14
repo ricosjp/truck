@@ -41,12 +41,12 @@ impl MyRender {
             Point3::origin(),
             Vector3::unit_y(),
         );
-        Camera::perspective_camera(
-            mat.invert().unwrap(),
-            Rad(std::f64::consts::PI / 8.0),
-            0.1,
-            40.0,
-        )
+        Camera {
+            matrix: mat.invert().unwrap(),
+            method: ProjectionMethod::perspective(Rad(PI / 4.0)),
+            near_clip: 0.1,
+            far_clip: 40.0,
+        }
     }
 
     fn load_obj<R: Read>(&mut self, reader: R) {
@@ -230,16 +230,11 @@ impl App for MyRender {
                 }
                 let camera = &mut self.scene.studio_config_mut().camera;
                 self.camera_changed = Some(std::time::Instant::now());
-                *camera = match camera.projection_type() {
-                    ProjectionType::Parallel => Camera::perspective_camera(
-                        camera.matrix,
-                        Rad(std::f64::consts::PI / 8.0),
-                        0.1,
-                        40.0,
-                    ),
-                    ProjectionType::Perspective => {
-                        Camera::parallel_camera(camera.matrix, 10.0, 0.1, 40.0)
+                camera.method = match camera.method {
+                    ProjectionMethod::Parallel { .. } => {
+                        ProjectionMethod::perspective(Rad(PI / 8.0))
                     }
+                    ProjectionMethod::Perspective { .. } => ProjectionMethod::parallel(10.0),
                 }
             }
             KeyCode::KeyL => {

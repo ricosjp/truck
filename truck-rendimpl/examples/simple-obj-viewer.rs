@@ -7,6 +7,7 @@
 //! - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
 //! - Enter "Space" on the keyboard to switch the rendering mode for the wireframe and surface.
 
+use std::f64::consts::PI;
 use std::io::Read;
 use std::sync::Arc;
 use truck_meshalgo::prelude::*;
@@ -46,12 +47,12 @@ impl MyApp {
             Point3::origin(),
             Vector3::unit_y(),
         );
-        Camera::perspective_camera(
-            matrix.invert().unwrap(),
-            Rad(std::f64::consts::PI / 4.0),
-            0.1,
-            40.0,
-        )
+        Camera {
+            matrix: matrix.invert().unwrap(),
+            method: ProjectionMethod::perspective(Rad(PI / 4.0)),
+            near_clip: 0.1,
+            far_clip: 40.0,
+        }
     }
 
     fn update_render_mode(&mut self) {
@@ -251,16 +252,11 @@ impl App for MyApp {
         match keycode {
             KeyCode::KeyP => {
                 let camera = &mut self.scene.studio_config_mut().camera;
-                *camera = match camera.projection_type() {
-                    ProjectionType::Parallel => Camera::perspective_camera(
-                        camera.matrix,
-                        Rad(std::f64::consts::PI / 4.0),
-                        0.1,
-                        40.0,
-                    ),
-                    ProjectionType::Perspective => {
-                        Camera::parallel_camera(camera.matrix, 1.0, 0.1, 40.0)
+                camera.method = match camera.method {
+                    ProjectionMethod::Parallel { .. } => {
+                        ProjectionMethod::perspective(Rad(PI / 4.0))
                     }
+                    ProjectionMethod::Perspective { .. } => ProjectionMethod::parallel(1.0),
                 };
             }
             KeyCode::KeyL => {

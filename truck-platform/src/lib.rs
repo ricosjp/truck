@@ -146,26 +146,76 @@ pub struct RenderObject {
     visible: bool,
 }
 
-/// the projection type of camera
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ProjectionType {
-    /// perspective camera
-    Perspective,
-    /// parallel camera
-    Parallel,
+/// setting of camera
+#[derive(Clone, Copy, Debug, PartialEq, derive_more::From)]
+pub enum ProjectionMethod {
+    /// perspective projection
+    Perspective {
+        /// field of view
+        fov: Rad<f64>,
+    },
+    /// parallel projection
+    Parallel {
+        /// the size of screen
+        screen_size: f64,
+    },
 }
 
 /// Camera
 ///
 /// A [`Scene`](./struct.Scene.html) holds only one `Camera`.
+/// # Examples
+/// ## Perspective camera
+/// ```
+/// use std::f64::consts::PI;
+/// use truck_base::{cgmath64::*, tolerance::Tolerance};
+/// use truck_platform::*;
+/// let matrix = Matrix4::look_at_rh(
+///     Point3::new(1.0, 1.0, 1.0),
+///     Point3::origin(),
+///     Vector3::new(0.0, 1.0, 0.0),
+/// );
+/// let camera = Camera {
+///     // depends on the difference of the style with cgmath,
+///     // the matrix must be inverted
+///     matrix: matrix.invert().unwrap(),
+///     method: ProjectionMethod::perspective(Rad(PI / 4.0)),
+///     near_clip: 0.1,
+///     far_clip: 1.0,
+/// };
+/// assert!(camera.eye_direction().near(&-Vector3::new(1.0, 1.0, 1.0).normalize()));
+/// ```
+/// ## Parallel camera
+/// ```
+/// use truck_base::{cgmath64::*, tolerance::Tolerance};
+/// use truck_platform::*;
+/// let matrix = Matrix4::look_at_rh(
+///     Point3::new(1.0, 1.0, 1.0),
+///     Point3::origin(),
+///     Vector3::new(0.0, 1.0, 0.0),
+/// );
+/// let camera = Camera {
+///     // depends on the difference of the style with cgmath,
+///     // the matrix must be inverted
+///     matrix: matrix.invert().unwrap(),
+///     method: ProjectionMethod::parallel(1.0),
+///     near_clip: 0.1,
+///     far_clip: 1.0,
+/// };
+/// assert!(camera.head_direction().near(&Vector3::new(-0.5, 1.0, -0.5).normalize()));
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct Camera {
     /// camera matrix
     ///
     /// This matrix must be in the Euclidean momentum group, the semi-direct product of O(3) and R^3.
     pub matrix: Matrix4,
-    projection: Matrix4,
-    projection_type: ProjectionType,
+    /// projection method: perspective or parallel
+    pub method: ProjectionMethod,
+    /// distance from near clipping plane
+    pub near_clip: f64,
+    /// distance from far clipping plane
+    pub far_clip: f64,
 }
 
 /// Rays corresponding to a point on the screen, defined by the camera.

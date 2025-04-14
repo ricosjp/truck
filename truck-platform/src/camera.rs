@@ -9,6 +9,27 @@ impl Ray {
     pub const fn direction(&self) -> Vector3 { self.direction }
 }
 
+const fn parallel(screen_size: f64, near_clip: f64, far_clip: f64) -> Matrix4 {
+    let a = 2.0 / screen_size;
+    let b = -1.0 / (far_clip - near_clip);
+    let c = -near_clip / (far_clip - near_clip);
+    Matrix4::from_cols(
+        Vector4::new(a, 0.0, 0.0, 0.0),
+        Vector4::new(0.0, a, 0.0, 0.0),
+        Vector4::new(0.0, 0.0, b, 0.0),
+        Vector4::new(0.0, 0.0, c, 1.0),
+    )
+}
+
+impl ProjectionMethod {
+    /// Returns `ProjectionMethod::Perspective { fov }`.
+    #[inline(always)]
+    pub const fn perspective(fov: Rad<f64>) -> Self { Self::Perspective { fov } }
+    /// Returns `ProjectionMethod::Parallel { screen_size }`.
+    #[inline(always)]
+    pub const fn parallel(screen_size: f64) -> Self { Self::Parallel { screen_size } }
+}
+
 impl Camera {
     /// Returns the position of camera,
     /// the forth column of the camera matrix.
@@ -58,117 +79,6 @@ impl Camera {
     #[inline(always)]
     pub fn head_direction(&self) -> Vector3 { self.matrix[1].truncate() }
 
-    /// Returns the projection type of the camera.
-    /// # Examples
-    /// ```
-    /// use truck_platform::*;
-    /// // the projection type of the default camera is perspective.
-    /// assert_eq!(Camera::default().projection_type(), ProjectionType::Perspective);
-    /// ```
-    #[inline(always)]
-    pub const fn projection_type(&self) -> ProjectionType { self.projection_type }
-
-    /// Creates a perspective camera.
-    /// # Arguments
-    /// * `matrix`:  camera matrix
-    /// * `field_of_view`: FOV, based on the vertical direction of the screen.
-    /// * `near_clip`: distance to the nearest face of the view volume
-    /// * `far_clip`: distance to the farthest face of the view volume
-    /// # Examples
-    /// ```
-    /// use std::f64::consts::PI;
-    /// use truck_base::{cgmath64::*, tolerance::Tolerance};
-    /// use truck_platform::*;
-    /// let matrix = Matrix4::look_at_rh(
-    ///     Point3::new(1.0, 1.0, 1.0),
-    ///     Point3::origin(),
-    ///     Vector3::new(0.0, 1.0, 0.0),
-    /// );
-    /// let camera = Camera::perspective_camera(
-    ///     // depends on the difference of the style with cgmath,
-    ///     // the matrix must be inverted
-    ///     matrix.invert().unwrap(),
-    ///     Rad(PI / 4.0),
-    ///     0.1,
-    ///     1.0,
-    /// );
-    /// assert!(camera.eye_direction().near(&-Vector3::new(1.0, 1.0, 1.0).normalize()));
-    /// assert_eq!(camera.projection_type(), ProjectionType::Perspective);
-    /// ```
-    #[inline(always)]
-    pub fn perspective_camera<R: Into<Rad<f64>>>(
-        matrix: Matrix4,
-        field_of_view: R,
-        near_clip: f64,
-        far_clip: f64,
-    ) -> Camera {
-        let projection = perspective(field_of_view.into(), 1.0, near_clip, far_clip);
-        Camera {
-            matrix,
-            projection,
-            projection_type: ProjectionType::Perspective,
-        }
-    }
-
-    /// Creates a parallel camera.
-    /// # Arguments
-    /// * `matrix`:  camera matrix
-    /// * `screen_size`: screen size, based on the vertical direction of the screen.
-    /// * `near_clip`: distance to the nearest face of the view volume
-    /// * `far_clip`: distance to the farthest face of the view volume
-    /// # Examples
-    /// ```
-    /// use truck_base::{cgmath64::*, tolerance::Tolerance};
-    /// use truck_platform::*;
-    /// let matrix = Matrix4::look_at_rh(
-    ///     Point3::new(1.0, 1.0, 1.0),
-    ///     Point3::origin(),
-    ///     Vector3::new(0.0, 1.0, 0.0),
-    /// );
-    /// let camera = Camera::parallel_camera(
-    ///     // depends on the difference of the style with cgmath,
-    ///     // the matrix must be inverted
-    ///     matrix.invert().unwrap(),
-    ///     1.0,
-    ///     0.1,
-    ///     1.0,
-    /// );
-    /// assert!(camera.head_direction().near(&Vector3::new(-0.5, 1.0, -0.5).normalize()));
-    /// assert_eq!(camera.projection_type(), ProjectionType::Parallel);
-    /// ```
-    #[inline(always)]
-    pub fn parallel_camera(
-        matrix: Matrix4,
-        screen_size: f64,
-        near_clip: f64,
-        far_clip: f64,
-    ) -> Camera {
-        let a = screen_size / 2.0;
-        let projection = Matrix4::new(
-            1.0 / a,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0 / a,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            -1.0 / (far_clip - near_clip),
-            0.0,
-            0.0,
-            0.0,
-            -near_clip / (far_clip - near_clip),
-            1.0,
-        );
-        Camera {
-            matrix,
-            projection,
-            projection_type: ProjectionType::Parallel,
-        }
-    }
-
     /// Returns the projection matrix into the normalized view volume.
     /// # Arguments
     /// `as_rat`: the aspect ratio, x-resolution / y-resolution.
@@ -186,12 +96,12 @@ impl Camera {
     ///     Point3::origin(),
     ///     Vector3::new(0.0, 1.0, 0.0),
     /// );
-    /// let camera = Camera::perspective_camera(
-    ///     matrix.invert().unwrap(),
-    ///     Rad(fov),
-    ///     0.1,
-    ///     10.0,
-    /// );
+    /// let camera = Camera {
+    ///     matrix: matrix.invert().unwrap(),
+    ///     method: ProjectionMethod::perspective(Rad(fov)),
+    ///     near_clip: 0.1,
+    ///     far_clip: 10.0,
+    /// };
     ///
     /// // calculation by the ray-tracing
     /// let pt = Point3::new(-1.5, -1.4, -2.5);
@@ -222,12 +132,12 @@ impl Camera {
     ///     Point3::origin(),
     ///     Vector3::new(0.0, 1.0, 0.0),
     /// );
-    /// let camera = Camera::parallel_camera(
-    ///     matrix.invert().unwrap(),
-    ///     size,
-    ///     0.1,
-    ///     10.0,
-    /// );
+    /// let camera = Camera {
+    ///     matrix: matrix.invert().unwrap(),
+    ///     method: ProjectionMethod::parallel(size),
+    ///     near_clip: 0.1,
+    ///     far_clip: 10.0,
+    /// };
     ///
     /// // calculation by the ray-tracing
     /// let pt = Point3::new(-1.5, -1.4, -2.5);
@@ -246,8 +156,13 @@ impl Camera {
     /// ```
     #[inline(always)]
     pub fn projection(&self, as_rat: f64) -> Matrix4 {
+        let (near, far) = (self.near_clip, self.far_clip);
+        let normal_projection = match self.method {
+            ProjectionMethod::Perspective { fov } => perspective(fov, 1.0, near, far),
+            ProjectionMethod::Parallel { screen_size } => parallel(screen_size, near, far),
+        };
         Matrix4::from_nonuniform_scale(1.0 / as_rat, 1.0, 1.0)
-            * self.projection
+            * normal_projection
             * self.matrix.invert().unwrap()
     }
 
@@ -288,14 +203,14 @@ impl Camera {
     ///     Point3::origin(),
     ///     Vector3::new(0.0, 1.0, 0.0),
     /// );
-    /// let camera = Camera::perspective_camera(
+    /// let camera = Camera {
     ///     // depends on the difference of the style with cgmath,
     ///     // the matrix must be inverted
-    ///     matrix.invert().unwrap(),
-    ///     Rad(PI / 4.0),
-    ///     0.1,
-    ///     1.0,
-    /// );
+    ///     matrix: matrix.invert().unwrap(),
+    ///     method: ProjectionMethod::perspective(Rad(PI / 4.0)),
+    ///     near_clip: 0.1,
+    ///     far_clip: 1.0,
+    /// };
     ///
     /// // take a point in the 3D space
     /// let point = Point3::new(0.1, 0.15, 0.0);
@@ -320,12 +235,12 @@ impl Camera {
     ///     Point3::origin(),
     ///     Vector3::new(0.0, 1.0, 0.0),
     /// );
-    /// let camera = Camera::parallel_camera(
-    ///     matrix.invert().unwrap(),
-    ///     3.0,
-    ///     0.1,
-    ///     10.0,
-    /// );
+    /// let camera = Camera {
+    ///     matrix: matrix.invert().unwrap(),
+    ///     method: ProjectionMethod::parallel(3.0),
+    ///     near_clip: 0.1,
+    ///     far_clip: 10.0,
+    /// };
     ///
     /// // take a point in the 3D space
     /// let point = Point3::new(0.1, 0.15, 0.0);
@@ -344,8 +259,8 @@ impl Camera {
     /// assert_near!(ray.direction(), camera.eye_direction());
     /// ```
     pub fn ray(&self, coord: Point2) -> Ray {
-        match self.projection_type {
-            ProjectionType::Perspective => {
+        match self.method {
+            ProjectionMethod::Perspective { .. } => {
                 let mat = self
                     .projection(1.0)
                     .invert()
@@ -357,10 +272,10 @@ impl Camera {
                     direction: (y - x).normalize(),
                 }
             }
-            ProjectionType::Parallel => {
-                let a = self.projection[0][0];
-                let axis_x = self.matrix[0].truncate() / a;
-                let axis_y = self.matrix[1].truncate() / a;
+            ProjectionMethod::Parallel { screen_size } => {
+                let a = screen_size / 2.0;
+                let axis_x = self.matrix[0].truncate() * a;
+                let axis_y = self.matrix[1].truncate() * a;
                 Ray {
                     origin: self.position() + coord.x * axis_x + coord.y * axis_y,
                     direction: self.eye_direction(),
@@ -372,12 +287,12 @@ impl Camera {
 
 impl Default for Camera {
     #[inline(always)]
-    fn default() -> Camera {
-        Camera::perspective_camera(
-            Matrix4::identity(),
-            Rad(std::f64::consts::PI / 4.0),
-            0.1,
-            10.0,
-        )
+    fn default() -> Self {
+        Self {
+            matrix: Matrix4::identity(),
+            method: ProjectionMethod::perspective(Rad(std::f64::consts::PI / 4.0)),
+            near_clip: 0.1,
+            far_clip: 10.0,
+        }
     }
 }
