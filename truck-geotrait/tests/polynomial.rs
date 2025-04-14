@@ -9,33 +9,21 @@ pub struct PolyCurve<P: EuclideanSpace<Scalar = f64>>(pub Vec<P::Diff>);
 impl<P: EuclideanSpace<Scalar = f64>> ParametricCurve for PolyCurve<P> {
     type Point = P;
     type Vector = P::Diff;
+    fn der_n(&self, t: f64, n: usize) -> P::Diff {
+        let iter = self.0.iter().enumerate().skip(n);
+        let closure = |(s, res): (f64, P::Diff), (deg, a): (usize, &P::Diff)| {
+            let p = (0..n).fold(1, |p, i| p * (deg - i));
+            (s * t, res + *a * s * p as f64)
+        };
+        iter.fold((1.0, P::Diff::zero()), closure).1
+    }
     #[inline(always)]
-    fn subs(&self, t: f64) -> P {
-        self.0
-            .iter()
-            .fold((1.0, P::origin()), |(s, res), a| (s * t, res + *a * s))
-            .1
-    }
-    fn der(&self, t: f64) -> P::Diff {
-        self.0
-            .iter()
-            .enumerate()
-            .skip(1)
-            .fold((1.0, P::Diff::zero()), |(s, res), (deg, a)| {
-                (s * t, res + *a * s * deg as f64)
-            })
-            .1
-    }
-    fn der2(&self, t: f64) -> P::Diff {
-        self.0
-            .iter()
-            .enumerate()
-            .skip(2)
-            .fold((1.0, P::Diff::zero()), |(s, res), (deg, a)| {
-                (s * t, res + *a * s * (deg * (deg - 1)) as f64)
-            })
-            .1
-    }
+    fn subs(&self, t: f64) -> P { P::from_vec(self.der_n(t, 0)) }
+    #[inline(always)]
+    fn der(&self, t: f64) -> P::Diff { self.der_n(t, 1) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> P::Diff { self.der_n(t, 2) }
+    #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
         (Bound::Included(-100.0), Bound::Included(100.0))
     }
@@ -60,25 +48,21 @@ impl ParametricSurface for PolySurface {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 { self.0.subs(u).mul_element_wise(self.1.subs(v)) }
-    #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector3 {
-        self.0.der(u).mul_element_wise(self.1.subs(v).to_vec())
+    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+        self.0.der_n(u, m).mul_element_wise(self.1.der_n(v, n))
     }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector3 {
-        self.0.subs(u).to_vec().mul_element_wise(self.1.der(v))
-    }
+    fn subs(&self, u: f64, v: f64) -> Point3 { Point3::from_vec(self.der_mn(u, v, 0, 0)) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 {
-        self.0.der2(u).mul_element_wise(self.1.subs(v).to_vec())
-    }
+    fn uder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(u, v, 1, 0) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 { self.0.der(u).mul_element_wise(self.1.der(v)) }
+    fn vder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(u, v, 0, 1) }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 {
-        self.0.subs(u).to_vec().mul_element_wise(self.1.der2(v))
-    }
+    fn uuder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(u, v, 2, 0) }
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(u, v, 1, 1) }
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(u, v, 0, 2) }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (

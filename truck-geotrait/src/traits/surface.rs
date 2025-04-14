@@ -19,6 +19,17 @@ pub trait ParametricSurface: Clone {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation by `v`.
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns $\partial^{m + n} S / \partial u^m \partial v^n$.
+    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+        match (m, n) {
+            (1, 0) => self.uder(u, v),
+            (0, 1) => self.vder(u, v),
+            (2, 0) => self.uuder(u, v),
+            (1, 1) => self.uvder(u, v),
+            (0, 2) => self.vvder(u, v),
+            _ => unimplemented!(),
+        }
+    }
     /// The range of the parameter of the surface.
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
@@ -59,6 +70,8 @@ impl<S: ParametricSurface> ParametricSurface for &S {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
     #[inline(always)]
+    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector { (*self).der_mn(u, v, m, n) }
+    #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (*self).parameter_range() }
     #[inline(always)]
     fn u_period(&self) -> Option<f64> { (*self).u_period() }
@@ -81,6 +94,8 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector { (**self).uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
+    #[inline(always)]
+    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector { (**self).der_mn(u, v, m, n) }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (**self).parameter_range() }
     #[inline(always)]

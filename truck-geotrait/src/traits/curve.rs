@@ -19,6 +19,14 @@ pub trait ParametricCurve: Clone {
     fn der(&self, t: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation.
     fn der2(&self, t: f64) -> Self::Vector;
+    /// Returns the `n`th-order derivation.
+    fn der_n(&self, t: f64, n: usize) -> Self::Vector {
+        match n {
+            1 => self.der(t),
+            2 => self.der2(t),
+            _ => unimplemented!(),
+        }
+    }
     /// Returns default parameter range
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (Bound::Unbounded, Bound::Unbounded) }
@@ -92,6 +100,8 @@ impl<C: ParametricCurve> ParametricCurve for &C {
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
     #[inline(always)]
+    fn der_n(&self, t: f64, n: usize) -> Self::Vector { (*self).der_n(t, n) }
+    #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (*self).parameter_range() }
     #[inline(always)]
     fn period(&self) -> Option<f64> { (*self).period() }
@@ -112,6 +122,8 @@ impl<C: ParametricCurve> ParametricCurve for Box<C> {
     fn der(&self, t: f64) -> Self::Vector { (**self).der(t) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector { (**self).der2(t) }
+    #[inline(always)]
+    fn der_n(&self, t: f64, n: usize) -> Self::Vector { (**self).der_n(t, n) }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (**self).parameter_range() }
     #[inline(always)]
