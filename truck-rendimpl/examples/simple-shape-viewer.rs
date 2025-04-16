@@ -236,8 +236,15 @@ impl App for MyApp {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let camera = &mut self.scene.studio_config_mut().camera;
-                let trans_vec = camera.eye_direction().extend(1.0) * y as f64 * 0.2;
-                camera.matrix[3] += trans_vec;
+                match &mut camera.method {
+                    ProjectionMethod::Parallel { screen_size } => {
+                        *screen_size *= 0.9f64.powf(y as f64);
+                    }
+                    ProjectionMethod::Perspective { .. } => {
+                        let trans_vec = camera.eye_direction() * y as f64 * 0.2;
+                        camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
+                    }
+                }
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };
