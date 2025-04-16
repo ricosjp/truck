@@ -45,7 +45,7 @@
 use bytemuck::{Pod, Zeroable};
 use derive_more::{Deref, DerefMut};
 use std::sync::Arc;
-use truck_base::cgmath64::*;
+use truck_base::{bounding_box::*, cgmath64::*};
 pub use wgpu;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;

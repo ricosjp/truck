@@ -3,8 +3,8 @@
 // The texture is referenced by:
 // https://cc0textures.com/view?id=WoodFloor024
 
-use std::sync::Arc;
 use std::f64::consts::PI;
+use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 use truck_platform::*;
