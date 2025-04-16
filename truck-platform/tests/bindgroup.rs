@@ -43,8 +43,12 @@ fn save_buffer<P: AsRef<std::path::Path>>(path: P, vec: &[u8]) {
 fn exec_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = String::from(out_dir);
     std::fs::create_dir_all(&out_dir).unwrap();
-    let camera =
-        Camera::perspective_camera(CAMERA_MATRIX, CAMERA_FOV, CAMERA_NEARCLIP, CAMERA_FARCLIP);
+    let camera = Camera {
+        matrix: CAMERA_MATRIX,
+        method: ProjectionMethod::perspective(CAMERA_FOV),
+        near_clip: CAMERA_NEARCLIP,
+        far_clip: CAMERA_FARCLIP,
+    };
     println!("camera projection:\n{:?}", camera.projection(PICTURE_ASP));
     let lights = vec![POINT_LIGHT, UNIFORM_LIGHT];
     let desc = SceneDescriptor {

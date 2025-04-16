@@ -35,12 +35,12 @@ impl App for MyApp {
         let sample_count = 4;
         let scene_desc = WindowSceneDescriptor {
             studio: StudioConfig {
-                camera: Camera::perspective_camera(
-                    Matrix4::from_translation(camera_dist * Vector3::unit_z()),
-                    Rad(PI / 4.0),
-                    0.1,
-                    100.0,
-                ),
+                camera: Camera {
+                    matrix: Matrix4::from_translation(camera_dist * Vector3::unit_z()),
+                    method: ProjectionMethod::perspective(Rad(PI / 4.0)),
+                    near_clip: 0.1,
+                    far_clip: 100.0,
+                },
                 lights: vec![
                     Light {
                         position: Point3::new(-a, -a, b),
