@@ -1,3 +1,5 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 use proptest::prelude::*;
 use std::f64::consts::PI;
 use truck_base::{bounding_box::*, cgmath64::*, prop_assert_near, tolerance::*};
