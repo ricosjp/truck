@@ -25,18 +25,18 @@ fn test_scene(backend: Backends) -> Scene {
         handler,
         &SceneDescriptor {
             studio: StudioConfig {
-                camera: Camera::perspective_camera(
-                    Matrix4::look_at_rh(
+                camera: Camera {
+                    matrix: Matrix4::look_at_rh(
                         Point3::new(-1.0, 2.5, 2.0),
                         Point3::new(0.25, 0.25, 0.25),
                         Vector3::unit_y(),
                     )
                     .invert()
                     .unwrap(),
-                    Rad(std::f64::consts::PI / 4.0),
-                    0.1,
-                    100.0,
-                ),
+                    method: ProjectionMethod::perspective(Rad(std::f64::consts::PI / 4.0)),
+                    near_clip: 0.1,
+                    far_clip: 100.0,
+                },
                 lights: vec![Light {
                     position: Point3::new(-3.0, 4.0, -2.0),
                     color: Vector3::new(1.0, 1.0, 1.0),

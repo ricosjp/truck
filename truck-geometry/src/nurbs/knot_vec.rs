@@ -210,24 +210,34 @@ impl KnotVec {
                 idx
             }
         };
-        let mut res = vec![0.0; n];
-        res[idx] = 1.0;
+
+        if n < 32 {
+            let mut eval = [0.0; 32];
+            self.sub_bspline_basis_functions(degree, t, idx, &mut eval);
+            Ok(eval[..n - degree].to_vec())
+        } else {
+            let mut eval = vec![0.0; n];
+            self.sub_bspline_basis_functions(degree, t, idx, &mut eval);
+            eval.truncate(n - degree);
+            Ok(eval)
+        }
+    }
+
+    fn sub_bspline_basis_functions(&self, degree: usize, t: f64, idx: usize, eval: &mut [f64]) {
+        let n = self.len() - 1;
+        eval[idx] = 1.0;
 
         for k in 1..=degree {
             let base = idx.saturating_sub(k);
             let delta = self[base + k] - self[base];
-            let max = if idx + k < n { idx } else { n - k - 1 };
             let mut a = inv_or_zero(delta) * (t - self[base]);
-            for i in base..=max {
+            for i in base..=usize::min(idx, n - k - 1) {
                 let delta = self[i + k + 1] - self[i + 1];
                 let b = inv_or_zero(delta) * (self[i + k + 1] - t);
-                res[i] = a * res[i] + b * res[i + 1];
+                eval[i] = a * eval[i] + b * eval[i + 1];
                 a = 1.0 - b;
             }
         }
-
-        res.truncate(n - degree);
-        Ok(res)
     }
 
     #[doc(hidden)]
