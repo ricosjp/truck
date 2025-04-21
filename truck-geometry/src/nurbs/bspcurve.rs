@@ -120,28 +120,6 @@ impl<P> BSplineCurve<P> {
     /// ```
     #[inline(always)]
     pub fn degree(&self) -> usize { self.knot_vec.len() - self.control_points.len() - 1 }
-    /// Inverts a curve
-    /// # Examples
-    /// ```
-    /// use truck_geometry::prelude::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![Vector2::new(1.0, 2.0), Vector2::new(2.0, 3.0), Vector2::new(3.0, 4.0), Vector2::new(4.0, 5.0)];
-    /// let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
-    /// let mut bspcurve1 = bspcurve0.clone();
-    /// bspcurve1.invert();
-    ///
-    /// const N: usize = 100; // sample size
-    /// for i in 0..=N {
-    ///     let t = (i as f64) / (N as f64);
-    ///     assert_near2!(bspcurve0.subs(t), bspcurve1.subs(1.0 - t));
-    /// }
-    /// ```
-    #[inline(always)]
-    pub fn invert(&mut self) -> &mut Self {
-        self.knot_vec.invert();
-        self.control_points.reverse();
-        self
-    }
 
     /// Returns whether the knot vector is clamped or not.
     #[inline(always)]
@@ -188,22 +166,6 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
             self.control_points[i - 1].to_vec() * (-1.0)
         } else {
             self.control_points[i] - self.control_points[i - 1]
-        }
-    }
-    #[inline(always)]
-    fn delta2_control_points(&self, i: usize) -> P::Diff {
-        let k = self.degree();
-        let knot_vec = self.knot_vec();
-        if i == 0 {
-            let coef = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
-            self.delta_control_points(i) * coef
-        } else if i == self.control_points.len() + 1 {
-            let coef = inv_or_zero(knot_vec[i - 1 + k] - knot_vec[i - 1]);
-            self.delta_control_points(i - 1) * (-coef)
-        } else {
-            let coef0 = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
-            let coef1 = inv_or_zero(knot_vec[i - 1 + k] - knot_vec[i - 1]);
-            self.delta_control_points(i) * coef0 - self.delta_control_points(i - 1) * coef1
         }
     }
     /// Returns the derived B-spline curve.
@@ -300,7 +262,7 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
 
         let rows = parameter_points
             .iter()
-            .map(|(t, _)| knot_vec.try_bspline_basis_functions(degree, *t))
+            .map(|(t, _)| knot_vec.try_bspline_basis_functions(degree, 0, *t))
             .collect::<Result<Vec<_>>>()?;
 
         for i in 0..P::DIM {
@@ -393,101 +355,19 @@ impl<V: Homogeneous<f64>> BSplineCurve<V> {
 impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     type Point = P;
     type Vector = P::Diff;
-    /// Substitutes to B-spline curve.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::prelude::*;
-    /// let knot_vec = KnotVec::from(vec![-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
-    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// // bspcurve coincides with (t, t * t) in the range [-1.0..1.0].
-    /// const N: usize = 100; // sample size
-    /// for i in 0..=N {
-    ///     let t = -1.0 + 2.0 * (i as f64) / (N as f64);
-    ///     assert_near2!(bspcurve.subs(t), Vector2::new(t, t * t));
-    /// }
-    /// ```
     #[inline(always)]
-    fn subs(&self, t: f64) -> P {
-        let basis = self
-            .knot_vec
-            .try_bspline_basis_functions(self.degree(), t)
-            .unwrap();
+    fn der_n(&self, t: f64, n: usize) -> P::Diff {
         self.control_points
             .iter()
-            .zip(basis)
-            .fold(P::origin(), |sum, (pt, basis)| sum + pt.to_vec() * basis)
+            .zip(self.knot_vec.bspline_basis_functions(self.degree(), n, t))
+            .fold(P::Diff::zero(), |sum, (p, b)| sum + p.to_vec() * b)
     }
-    /// Substitutes to the derived B-spline curve.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::prelude::*;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(0.5, 0.0), Vector2::new(1.0, 1.0)];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// // `bpscurve = (t, t^2), derived = (1, 2t)`
-    /// const N : usize = 100; // sample size
-    /// for i in 0..=N {
-    ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     assert_near2!(bspcurve.der(t), Vector2::new(1.0, 2.0 * t));
-    /// }
-    /// ```
     #[inline(always)]
-    fn der(&self, t: f64) -> P::Diff {
-        let k = self.degree();
-        let knot_vec = self.knot_vec();
-        let closure = move |sum: P::Diff, (i, b): (usize, f64)| {
-            let coef = inv_or_zero(knot_vec[i + k] - knot_vec[i]);
-            sum + self.delta_control_points(i) * b * coef
-        };
-        knot_vec
-            .bspline_basis_functions(k - 1, t)
-            .into_iter()
-            .enumerate()
-            .fold(P::Diff::zero(), closure)
-            * k as f64
-    }
-    /// Substitutes to the 2nd-ord derived B-spline curve.
-    /// # Examples
-    /// ```
-    /// use truck_geometry::prelude::*;
-    /// let knot_vec = KnotVec::bezier_knot(3);
-    /// let ctrl_pts = vec![
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 1.0),
-    ///     Vector2::new(0.0, 1.0),
-    ///     Vector2::new(1.0, 0.0),
-    /// ];
-    /// let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
-    ///
-    /// // bpscurve = (4t^3 - 6t^2 + 3t, -3t^2 + 3t), derived2 = (24t - 12, -6)
-    /// const N : usize = 100; // sample size
-    /// for i in 0..=N {
-    ///     let t = 1.0 / (N as f64) * (i as f64);
-    ///     assert_near2!(bspcurve.der2(t), Vector2::new(24.0 * t - 12.0, -6.0));
-    /// }
-    /// ```
+    fn subs(&self, t: f64) -> P { P::from_vec(self.der_n(t, 0)) }
     #[inline(always)]
-    fn der2(&self, t: f64) -> P::Diff {
-        let k = self.degree();
-        if k < 2 {
-            return P::Diff::zero();
-        }
-        let knot_vec = self.knot_vec();
-        let closure = move |sum: P::Diff, (i, b): (usize, f64)| {
-            let coef = inv_or_zero(knot_vec[i + k - 1] - knot_vec[i]);
-            sum + self.delta2_control_points(i) * b * coef
-        };
-        knot_vec
-            .bspline_basis_functions(k - 2, t)
-            .into_iter()
-            .enumerate()
-            .fold(P::Diff::zero(), closure)
-            * k as f64
-            * (k - 1) as f64
-    }
+    fn der(&self, t: f64) -> P::Diff { self.der_n(t, 1) }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> P::Diff { self.der_n(t, 2) }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
         (
@@ -1284,7 +1164,10 @@ impl<P: Bounded> BSplineCurve<P> {
 
 impl<P: Clone> Invertible for BSplineCurve<P> {
     #[inline(always)]
-    fn invert(&mut self) { self.invert(); }
+    fn invert(&mut self) {
+        self.knot_vec.invert();
+        self.control_points.reverse();
+    }
 }
 
 impl<M, P> Transformed<M> for BSplineCurve<P>

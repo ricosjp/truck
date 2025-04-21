@@ -1,6 +1,52 @@
 use proptest::prelude::*;
 use truck_geometry::prelude::*;
 
+#[test]
+fn nurbs_circle() {
+    let knot_vec = KnotVec::bezier_knot(2);
+    let control_points = vec![
+        Vector3::new(1.0, 0.0, 1.0),
+        Vector3::new(1.0, 1.0, 1.0),
+        Vector3::new(0.0, 2.0, 2.0),
+    ];
+    let curve = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
+
+    const N: usize = 10;
+    for i in 0..=N {
+        let t = i as f64 / N as f64;
+        let p = curve.subs(t).to_vec();
+        assert_near!(p.magnitude(), 1.0);
+        let der = curve.der(t);
+        assert!(p.dot(der).so_small());
+    }
+}
+
+proptest! {
+    #[test]
+    fn test_der_n(
+        t in 0f64..=1.0,
+        n in 0usize..=4,
+        degree in 2usize..=6,
+        div in 1usize..=10,
+        pts in prop::array::uniform16(prop::array::uniform3(-10f64..=10.0)),
+        weights in prop::array::uniform16(0.5f64..=10.0),
+    ) {
+        prop_assume!(degree > n + 1);
+        let knot_vec = KnotVec::uniform_knot(degree, div);
+        let control_points = pts[0..degree + div]
+            .iter()
+            .zip(weights)
+            .map(|(&p, w)| Vector4::new(p[0], p[1], p[2], w))
+            .collect::<Vec<_>>();
+        let bsp = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
+
+        const EPS: f64 = 1.0e-4;
+        let der0 = bsp.der_n(t, n + 1);
+        let der1 = (bsp.der_n(t + EPS, n) - bsp.der_n(t - EPS, n)) / (2.0 * EPS);
+        prop_assert!((der0 - der1).magnitude() <= 0.01 * der0.magnitude());
+    }
+}
+
 fn exec_concat_positive_test(
     v0: [[f64; 3]; 8],
     v1: [f64; 8],

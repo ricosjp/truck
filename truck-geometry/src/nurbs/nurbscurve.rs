@@ -51,13 +51,6 @@ impl<V> NurbsCurve<V> {
     #[inline(always)]
     pub fn degree(&self) -> usize { self.0.degree() }
 
-    /// Inverts a curve. cf.[`BSplineCurve::invert`]
-    #[inline(always)]
-    pub fn invert(&mut self) -> &mut Self {
-        self.0.invert();
-        self
-    }
-
     /// Returns whether the knot vector is clamped or not. cf.[`BSplineCurve::is_clamped`]
     #[inline(always)]
     pub fn is_clamped(&self) -> bool { self.0.knot_vec.is_clamped(self.0.degree()) }
@@ -507,19 +500,22 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for Nurb
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
-    fn subs(&self, t: f64) -> Self::Point { self.0.subs(t).to_point() }
-    #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector {
-        let pt = self.0.subs(t);
-        let der = self.0.der(t);
-        pt.rat_der(der)
+    fn der_n(&self, t: f64, n: usize) -> Self::Vector {
+        if n < 7 {
+            let mut ders = [V::zero(); 8];
+            (0..=n).for_each(|i| ders[i] = self.0.der_n(t, i));
+            rat_der(&ders[..=n])
+        } else {
+            rat_der(&(0..=n).map(|i| self.0.der_n(t, i)).collect::<Vec<_>>())
+        }
     }
     #[inline(always)]
+    fn subs(&self, t: f64) -> Self::Point { self.0.subs(t).to_point() }
+    #[inline(always)]
+    fn der(&self, t: f64) -> Self::Vector { rat_der(&[self.0.subs(t), self.0.der(t)]) }
+    #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
-        let pt = self.0.subs(t);
-        let der = self.0.der(t);
-        let der2 = self.0.der2(t);
-        pt.rat_der2(der, der2)
+        rat_der(&[self.0.subs(t), self.0.der(t), self.0.der2(t)])
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
@@ -534,7 +530,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCu
 
 impl<V: Clone> Invertible for NurbsCurve<V> {
     #[inline(always)]
-    fn invert(&mut self) { self.invert(); }
+    fn invert(&mut self) { self.0.invert(); }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.0.clone();
