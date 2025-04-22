@@ -9,30 +9,8 @@ impl Revolution {
         }
     }
     #[inline(always)]
-    fn point_rotation_matrix(self, v: f64) -> Matrix4 {
-        Matrix4::from_translation(self.origin.to_vec())
-            * Matrix4::from_axis_angle(self.axis, Rad(v))
-            * Matrix4::from_translation(-self.origin.to_vec())
-    }
-    #[inline(always)]
-    fn vector_rotation_matrix(self, v: f64) -> Matrix4 {
-        Matrix4::from_axis_angle(self.axis, Rad(v))
-    }
-    #[inline(always)]
-    fn derivation_rotation_matrix(self, v: f64) -> Matrix4 {
-        let n = self.axis;
-        Matrix3::new(
-            n[0] * n[0] * f64::sin(v) - f64::sin(v),
-            n[0] * n[1] * f64::sin(v) + n[2] * f64::cos(v),
-            n[0] * n[2] * f64::sin(v) - n[1] * f64::cos(v),
-            n[0] * n[1] * f64::sin(v) - n[2] * f64::cos(v),
-            n[1] * n[1] * f64::sin(v) - f64::sin(v),
-            n[1] * n[2] * f64::sin(v) + n[0] * f64::cos(v),
-            n[0] * n[2] * f64::sin(v) + n[1] * f64::cos(v),
-            n[1] * n[2] * f64::sin(v) - n[0] * f64::cos(v),
-            n[2] * n[2] * f64::sin(v) - f64::sin(v),
-        )
-        .into()
+    fn rotation_matrix(self, v: f64) -> Matrix3 {
+        Matrix3::from_axis_angle(self.axis, Rad(v))
     }
     #[inline(always)]
     fn invert(&mut self) { self.axis *= -1.0; }
@@ -86,39 +64,49 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
+    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Vector3 {
+        let center = match (m, n) {
+            (0, 0) => self.origin().to_vec(),
+            _ => Vector3::zero(),
+        };
+        let u_part = match m {
+            0 => self.curve.subs(u) - self.origin(),
+            _ => self.curve.der_n(u, m),
+        };
+        let v_part = from_axis_angle_derivation(n, self.axis(), Rad(v));
+        v_part * u_part + center
+    }
+    #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Point3 {
-        let mat = self.revolution.point_rotation_matrix(v);
-        mat.transform_point(self.curve.subs(u))
+        let mat = self.revolution.rotation_matrix(v);
+        let (p, o) = (self.curve.subs(u), self.origin());
+        o + mat * (p - o)
     }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Vector3 {
-        let mat = self.revolution.vector_rotation_matrix(v);
-        mat.transform_vector(self.curve.der(u))
+        self.revolution.rotation_matrix(v) * self.curve.der(u)
     }
     #[inline(always)]
     fn vder(&self, u: f64, v: f64) -> Vector3 {
-        let pt = self.curve.subs(u);
-        let radius = self.axis().cross(pt - self.origin());
-        let mat = self.revolution.vector_rotation_matrix(v);
-        mat.transform_vector(radius)
+        let u_part = self.curve.subs(u) - self.origin();
+        let v_part = from_axis_angle_derivation(1, self.axis(), Rad(v));
+        v_part * u_part
     }
     #[inline(always)]
     fn uuder(&self, u: f64, v: f64) -> Vector3 {
-        let mat = self.revolution.vector_rotation_matrix(v);
-        mat.transform_vector(self.curve.der2(u))
+        self.revolution.rotation_matrix(v) * self.curve.der2(u)
     }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Vector3 {
-        let pt = self.curve.subs(u);
-        let z = self.revolution.proj_point(pt).x;
-        let radius = pt - self.origin() - z * self.axis();
-        let mat = self.revolution.vector_rotation_matrix(v);
-        -mat.transform_vector(radius)
+        let u_part = self.curve.subs(u) - self.origin();
+        let v_part = from_axis_angle_derivation(2, self.axis(), Rad(v));
+        v_part * u_part
     }
     #[inline(always)]
     fn uvder(&self, u: f64, v: f64) -> Vector3 {
-        let mat = self.revolution.derivation_rotation_matrix(v);
-        mat.transform_vector(self.curve.der(u))
+        let u_part = self.curve.der(u);
+        let v_part = from_axis_angle_derivation(1, self.axis(), Rad(v));
+        v_part * u_part
     }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
@@ -510,4 +498,33 @@ where C: ParametricCurve3D + ParameterDivision1D<Point = Point3>
             .collect();
         (curve_division.0, circle_division)
     }
+}
+
+fn from_axis_angle_derivation(n: usize, axis: Vector3, angle: Rad<f64>) -> Matrix3 {
+    let (s, c) = Rad::sin_cos(angle.into());
+    let (s, c) = match n % 4 {
+        0 => (s, c),
+        1 => (c, -s),
+        2 => (-s, -c),
+        _ => (-c, s),
+    };
+    let _1subc = match n {
+        0 => 1.0 - c,
+        _ => -c,
+    };
+
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    Matrix3::new(
+        _1subc * axis.x * axis.x + c,
+        _1subc * axis.x * axis.y + s * axis.z,
+        _1subc * axis.x * axis.z - s * axis.y,
+
+        _1subc * axis.x * axis.y - s * axis.z,
+        _1subc * axis.y * axis.y + c,
+        _1subc * axis.y * axis.z + s * axis.x,
+
+        _1subc * axis.x * axis.z + s * axis.y,
+        _1subc * axis.y * axis.z - s * axis.x,
+        _1subc * axis.z * axis.z + c,
+    )
 }

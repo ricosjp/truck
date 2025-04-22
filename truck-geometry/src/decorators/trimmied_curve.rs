@@ -16,6 +16,8 @@ impl<C: ParametricCurve> ParametricCurve for TrimmedCurve<C> {
     type Point = C::Point;
     type Vector = C::Vector;
     #[inline(always)]
+    fn der_n(&self, t: f64, n: usize) -> Self::Vector { self.curve.der_n(t, n) }
+    #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point { self.curve.subs(t) }
     #[inline(always)]
     fn der(&self, t: f64) -> Self::Vector { self.curve.der(t) }
