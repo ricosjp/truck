@@ -27,11 +27,11 @@ where
     type Point = C::Point;
     type Vector = C::Vector;
     #[inline(always)]
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         match (m, n) {
             (0, 0) => self.subs(u, v).to_vec(),
             (0, 1) => self.vector,
-            (_, 0) => self.curve.der_n(u, m),
+            (_, 0) => self.curve.der_n(m, u),
             _ => C::Vector::zero(),
         }
     }

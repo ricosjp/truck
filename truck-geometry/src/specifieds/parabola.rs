@@ -10,7 +10,7 @@ impl ParametricCurve for UnitParabola<Point2> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline]
-    fn der_n(&self, t: f64, n: usize) -> Self::Vector {
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
             0 => Vector2::new(t * t, 2.0 * t),
             1 => Vector2::new(2.0 * t, 2.0),
@@ -19,17 +19,17 @@ impl ParametricCurve for UnitParabola<Point2> {
         }
     }
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { Self::Point::from_vec(self.der_n(t, 0)) }
+    fn subs(&self, t: f64) -> Self::Point { Self::Point::from_vec(self.der_n(0, t)) }
     #[inline]
-    fn der(&self, t: f64) -> Self::Vector { self.der_n(t, 1) }
+    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
     #[inline]
-    fn der2(&self, t: f64) -> Self::Vector { self.der_n(t, 2) }
+    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
 }
 
 impl ParametricCurve for UnitParabola<Point3> {
     type Point = Point3;
     type Vector = Vector3;
-    fn der_n(&self, t: f64, n: usize) -> Self::Vector {
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
             0 => Vector3::new(t * t, 2.0 * t, 0.0),
             1 => Vector3::new(2.0 * t, 2.0, 0.0),
@@ -38,11 +38,11 @@ impl ParametricCurve for UnitParabola<Point3> {
         }
     }
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { Self::Point::from_vec(self.der_n(t, 0)) }
+    fn subs(&self, t: f64) -> Self::Point { Self::Point::from_vec(self.der_n(0, t)) }
     #[inline]
-    fn der(&self, t: f64) -> Self::Vector { self.der_n(t, 1) }
+    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
     #[inline]
-    fn der2(&self, t: f64) -> Self::Vector { self.der_n(t, 2) }
+    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
 }
 
 impl<P> ParameterDivision1D for UnitParabola<P>

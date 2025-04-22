@@ -41,8 +41,8 @@ proptest! {
         let bsp = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
 
         const EPS: f64 = 1.0e-4;
-        let der0 = bsp.der_n(t, n + 1);
-        let der1 = (bsp.der_n(t + EPS, n) - bsp.der_n(t - EPS, n)) / (2.0 * EPS);
+        let der0 = bsp.der_n(n + 1, t);
+        let der1 = (bsp.der_n(n, t + EPS) - bsp.der_n(n, t - EPS)) / (2.0 * EPS);
         prop_assert!((der0 - der1).magnitude() <= 0.01 * der0.magnitude());
     }
 }

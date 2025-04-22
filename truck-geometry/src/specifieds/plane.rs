@@ -91,7 +91,7 @@ impl ParametricSurface for Plane {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         match (m, n) {
             (0, 0) => self.subs(u, v).to_vec(),
             (1, 0) => self.p - self.o,

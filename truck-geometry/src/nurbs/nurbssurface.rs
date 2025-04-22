@@ -558,15 +558,15 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for Nu
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         if m < 7 && n < 7 {
             let mut ders = [[V::zero(); 8]; 8];
-            (0..=m).for_each(|i| (0..=n).for_each(|j| ders[i][j] = self.0.der_mn(u, v, i, j)));
+            (0..=m).for_each(|i| (0..=n).for_each(|j| ders[i][j] = self.0.der_mn(i, j, u, v)));
             let ders = array_macro::array![i => &ders[i][..=n]; 8];
             multi_rat_der(&ders[..=m])
         } else {
             let ders = (0..=m)
-                .map(|i| (0..=n).map(|j| self.0.der_mn(u, v, i, j)).collect())
+                .map(|i| (0..=n).map(|j| self.0.der_mn(i, j, u, v)).collect())
                 .collect::<Vec<Vec<_>>>();
             multi_rat_der(&ders)
         }

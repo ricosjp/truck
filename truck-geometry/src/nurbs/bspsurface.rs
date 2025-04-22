@@ -528,7 +528,7 @@ impl<V: Homogeneous<f64>> BSplineSurface<V> {
 impl<P: ControlPoint<f64>> ParametricSurface for BSplineSurface<P> {
     type Point = P;
     type Vector = P::Diff;
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         let (degree0, degree1) = self.degrees();
         let BSplineSurface {
             knot_vecs: (ref uknot_vec, ref vknot_vec),
@@ -545,17 +545,17 @@ impl<P: ControlPoint<f64>> ParametricSurface for BSplineSurface<P> {
         sum
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> P { P::from_vec(self.der_mn(u, v, 0, 0)) }
+    fn subs(&self, u: f64, v: f64) -> P { P::from_vec(self.der_mn(0, 0, u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(u, v, 1, 0) }
+    fn uder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(1, 0, u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(u, v, 0, 1) }
+    fn vder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(0, 1, u, v) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(u, v, 2, 0) }
+    fn uuder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(2, 0, u, v) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(u, v, 1, 1) }
+    fn uvder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(1, 1, u, v) }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(u, v, 0, 2) }
+    fn vvder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(0, 2, u, v) }
 
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { self.parameter_range() }

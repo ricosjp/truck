@@ -64,14 +64,14 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Vector3 {
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
         let center = match (m, n) {
             (0, 0) => self.origin().to_vec(),
             _ => Vector3::zero(),
         };
         let u_part = match m {
             0 => self.curve.subs(u) - self.origin(),
-            _ => self.curve.der_n(u, m),
+            _ => self.curve.der_n(m, u),
         };
         let v_part = from_axis_angle_derivation(n, self.axis(), Rad(v));
         v_part * u_part + center

@@ -20,7 +20,7 @@ pub trait ParametricSurface: Clone {
     /// Returns the 2nd-order derivation by `v`.
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns $\partial^{m + n} S / \partial u^m \partial v^n$.
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         match (m, n) {
             (1, 0) => self.uder(u, v),
             (0, 1) => self.vder(u, v),
@@ -70,7 +70,7 @@ impl<S: ParametricSurface> ParametricSurface for &S {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
     #[inline(always)]
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector { (*self).der_mn(u, v, m, n) }
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector { (*self).der_mn(m, n, u, v) }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (*self).parameter_range() }
     #[inline(always)]
@@ -95,7 +95,7 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
     #[inline(always)]
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector { (**self).der_mn(u, v, m, n) }
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector { (**self).der_mn(m, n, u, v) }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (**self).parameter_range() }
     #[inline(always)]

@@ -16,7 +16,7 @@ pub enum Error {
     /// use truck_geometry::errors::Error;
     /// let mut knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 0.0]);
     /// assert_eq!(knot_vec.try_normalize(), Err(Error::ZeroRange));
-    /// assert_eq!(knot_vec.try_bspline_basis_functions(1, 0.0), Err(Error::ZeroRange));
+    /// assert_eq!(knot_vec.try_bspline_basis_functions(1, 0, 0.0), Err(Error::ZeroRange));
     ///
     /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
     /// assert!(matches!(BSplineCurve::try_new(knot_vec, ctrl_pts), Err(Error::ZeroRange)));
@@ -75,7 +75,7 @@ the front of the second knot vector: {1}")]
     /// // a knot vector with length = 4.
     /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// assert!(matches!(
-    ///     knot_vec.try_bspline_basis_functions(5, 0.5),
+    ///     knot_vec.try_bspline_basis_functions(5, 0, 0.5),
     ///     Err(Error::TooLargeDegree(4, 5)),
     /// ));
     /// ```

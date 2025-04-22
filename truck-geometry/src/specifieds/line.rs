@@ -98,7 +98,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for Line<P> {
     type Point = P;
     type Vector = P::Diff;
     #[inline]
-    fn der_n(&self, t: f64, n: usize) -> Self::Vector {
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
             0 => self.subs(t).to_vec(),
             1 => self.1 - self.0,

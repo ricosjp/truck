@@ -356,18 +356,18 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     type Point = P;
     type Vector = P::Diff;
     #[inline(always)]
-    fn der_n(&self, t: f64, n: usize) -> P::Diff {
+    fn der_n(&self, n: usize, t: f64) -> P::Diff {
         self.control_points
             .iter()
             .zip(self.knot_vec.bspline_basis_functions(self.degree(), n, t))
             .fold(P::Diff::zero(), |sum, (p, b)| sum + p.to_vec() * b)
     }
     #[inline(always)]
-    fn subs(&self, t: f64) -> P { P::from_vec(self.der_n(t, 0)) }
+    fn subs(&self, t: f64) -> P { P::from_vec(self.der_n(0, t)) }
     #[inline(always)]
-    fn der(&self, t: f64) -> P::Diff { self.der_n(t, 1) }
+    fn der(&self, t: f64) -> P::Diff { self.der_n(1, t) }
     #[inline(always)]
-    fn der2(&self, t: f64) -> P::Diff { self.der_n(t, 2) }
+    fn der2(&self, t: f64) -> P::Diff { self.der_n(2, t) }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
         (

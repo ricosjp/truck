@@ -85,12 +85,12 @@ proptest! {
 
         const EPS: f64 = 1.0e-4;
         let (der0, der1) = if u_derivate {
-            let der0 = torus.der_mn(u, v, m + 1, n);
-            let der1 = (torus.der_mn(u + EPS, v, m, n) - torus.der_mn(u - EPS, v, m, n)) / (2.0 * EPS);
+            let der0 = torus.der_mn(m + 1, n, u, v);
+            let der1 = (torus.der_mn(m, n, u + EPS, v) - torus.der_mn(m, n, u - EPS, v)) / (2.0 * EPS);
             (der0, der1)
         } else {
-            let der0 = torus.der_mn(u, v, m, n + 1);
-            let der1 = (torus.der_mn(u, v + EPS, m, n) - torus.der_mn(u, v - EPS, m, n)) / (2.0 * EPS);
+            let der0 = torus.der_mn(m, n + 1, u, v);
+            let der1 = (torus.der_mn(m, n, u, v + EPS) - torus.der_mn(m, n, u, v - EPS)) / (2.0 * EPS);
             (der0, der1)
         };
         prop_assert!((der0 - der1).magnitude() < 0.01 * der0.magnitude());

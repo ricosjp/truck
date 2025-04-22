@@ -500,13 +500,13 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for Nurb
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
-    fn der_n(&self, t: f64, n: usize) -> Self::Vector {
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
         if n < 7 {
             let mut ders = [V::zero(); 8];
-            (0..=n).for_each(|i| ders[i] = self.0.der_n(t, i));
+            (0..=n).for_each(|i| ders[i] = self.0.der_n(i, t));
             rat_der(&ders[..=n])
         } else {
-            rat_der(&(0..=n).map(|i| self.0.der_n(t, i)).collect::<Vec<_>>())
+            rat_der(&(0..=n).map(|i| self.0.der_n(i, t)).collect::<Vec<_>>())
         }
     }
     #[inline(always)]

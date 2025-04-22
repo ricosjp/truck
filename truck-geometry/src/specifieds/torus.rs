@@ -32,7 +32,7 @@ impl ParametricSurface for Torus {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         let ((su, cu), (sv, cv)) = (u.sin_cos(), v.sin_cos());
         let center = match (m, n) {
             (0, 0) => self.center.to_vec(),
