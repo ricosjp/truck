@@ -11,11 +11,20 @@ impl ParametricCurve for UnitCircle<Point2> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { Point2::new(f64::cos(t), f64::sin(t)) }
+    fn der_n(&self, t: f64, n: usize) -> Vector2 {
+        match n % 4 {
+            0 => Vector2::new(f64::cos(t), f64::sin(t)),
+            1 => Vector2::new(-f64::sin(t), f64::cos(t)),
+            2 => Vector2::new(-f64::cos(t), -f64::sin(t)),
+            _ => Vector2::new(f64::sin(t), -f64::cos(t)),
+        }
+    }
     #[inline]
-    fn der(&self, t: f64) -> Self::Vector { Vector2::new(-f64::sin(t), f64::cos(t)) }
+    fn subs(&self, t: f64) -> Point2 { Point2::from_vec(self.der_n(t, 0)) }
     #[inline]
-    fn der2(&self, t: f64) -> Self::Vector { Vector2::new(-f64::cos(t), -f64::sin(t)) }
+    fn der(&self, t: f64) -> Vector2 { self.der_n(t, 1) }
+    #[inline]
+    fn der2(&self, t: f64) -> Vector2 { self.der_n(t, 2) }
     #[inline]
     fn parameter_range(&self) -> ParameterRange {
         (Bound::Included(0.0), Bound::Excluded(2.0 * PI))
@@ -28,11 +37,20 @@ impl ParametricCurve for UnitCircle<Point3> {
     type Point = Point3;
     type Vector = Vector3;
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { Point3::new(f64::cos(t), f64::sin(t), 0.0) }
+    fn der_n(&self, t: f64, n: usize) -> Vector3 {
+        match n % 4 {
+            0 => Vector3::new(f64::cos(t), f64::sin(t), 0.0),
+            1 => Vector3::new(-f64::sin(t), f64::cos(t), 0.0),
+            2 => Vector3::new(-f64::cos(t), -f64::sin(t), 0.0),
+            _ => Vector3::new(f64::sin(t), -f64::cos(t), 0.0),
+        }
+    }
     #[inline]
-    fn der(&self, t: f64) -> Self::Vector { Vector3::new(-f64::sin(t), f64::cos(t), 0.0) }
+    fn subs(&self, t: f64) -> Point3 { Point3::from_vec(self.der_n(t, 0)) }
     #[inline]
-    fn der2(&self, t: f64) -> Self::Vector { Vector3::new(-f64::cos(t), -f64::sin(t), 0.0) }
+    fn der(&self, t: f64) -> Vector3 { self.der_n(t, 1) }
+    #[inline]
+    fn der2(&self, t: f64) -> Vector3 { self.der_n(t, 2) }
     #[inline]
     fn period(&self) -> Option<f64> { Some(2.0 * PI) }
     #[inline]

@@ -71,4 +71,28 @@ proptest! {
         prop_assert!(urange.contains(&u0) && vrange.contains(&v0), "{u0}, {v0}");
         prop_assert_near!(torus.subs(u0, v0), p);
     }
+
+    #[test]
+    fn test_der_mn(
+        (u, v) in (0f64..=PI, 0f64..=2.0 * PI),
+        (m, n) in (0usize..=4, 0usize..=4),
+        center in prop::array::uniform3(-100f64..=100.0),
+        large_radius in 6.0f64..=10.0,
+        small_radius in 0.1f64..=5.0,
+        u_derivate in prop::bool::ANY,
+    ) {
+        let torus = Torus::new(Point3::from(center), large_radius, small_radius);
+
+        const EPS: f64 = 1.0e-4;
+        let (der0, der1) = if u_derivate {
+            let der0 = torus.der_mn(u, v, m + 1, n);
+            let der1 = (torus.der_mn(u + EPS, v, m, n) - torus.der_mn(u - EPS, v, m, n)) / (2.0 * EPS);
+            (der0, der1)
+        } else {
+            let der0 = torus.der_mn(u, v, m, n + 1);
+            let der1 = (torus.der_mn(u, v + EPS, m, n) - torus.der_mn(u, v - EPS, m, n)) / (2.0 * EPS);
+            (der0, der1)
+        };
+        prop_assert!((der0 - der1).magnitude() < 0.01 * der0.magnitude());
+    }
 }

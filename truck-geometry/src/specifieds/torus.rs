@@ -32,6 +32,31 @@ impl ParametricSurface for Torus {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
+    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+        let ((su, cu), (sv, cv)) = (u.sin_cos(), v.sin_cos());
+        let center = match (m, n) {
+            (0, 0) => self.center.to_vec(),
+            _ => Vector3::zero(),
+        };
+        let u_z = if m == 0 { 1.0 } else { 0.0 };
+        let u_part = match m % 4 {
+            0 => Vector3::new(cu, su, u_z),
+            1 => Vector3::new(-su, cu, 0.0),
+            2 => Vector3::new(-cu, -su, 0.0),
+            _ => Vector3::new(su, -cu, 0.0),
+        };
+        let r0 = if n == 0 { self.large_radius } else { 0.0 };
+        let r1 = self.small_radius;
+        let v_part_d2 = match n % 4 {
+            0 => Vector2::new(r0 + r1 * cv, r1 * sv),
+            1 => Vector2::new(-r1 * sv, r1 * cv),
+            2 => Vector2::new(-r1 * cv, -r1 * sv),
+            _ => Vector2::new(r1 * sv, -r1 * cv),
+        };
+        let v_part = Vector3::new(v_part_d2.x, v_part_d2.x, v_part_d2.y);
+        center + u_part.mul_element_wise(v_part)
+    }
+    #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Point3 {
         let sr = self.small_radius() * Vector2::new(f64::cos(v), f64::sin(v));
         let lr = (self.large_radius() + sr.x) * Vector2::new(f64::cos(u), f64::sin(u));

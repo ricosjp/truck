@@ -20,6 +20,28 @@ impl ParametricSurface for Sphere {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
+    fn der_mn(&self, u: f64, v: f64, m: usize, n: usize) -> Self::Vector {
+        let ((su, cu), (sv, cv)) = (u.sin_cos(), v.sin_cos());
+        let center = match (m, n) {
+            (0, 0) => self.center().to_vec(),
+            _ => Vector3::zero(),
+        };
+        let u_part = match m % 4 {
+            0 => Vector3::new(su, su, cu),
+            1 => Vector3::new(cu, cu, -su),
+            2 => Vector3::new(-su, -su, -cu),
+            _ => Vector3::new(-cu, -cu, su),
+        };
+        let v_z = if n == 0 { 1.0 } else { 0.0 };
+        let v_part = match n % 4 {
+            0 => Vector3::new(cv, sv, v_z),
+            1 => Vector3::new(-sv, cv, 0.0),
+            2 => Vector3::new(-cv, -sv, 0.0),
+            _ => Vector3::new(sv, -cv, 0.0),
+        };
+        center + u_part.mul_element_wise(v_part)
+    }
+    #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Point3 { self.center() + self.radius * self.normal(u, v) }
     #[inline(always)]
     fn uder(&self, u: f64, v: f64) -> Vector3 {

@@ -10,22 +10,36 @@ impl ParametricCurve for UnitHyperbola<Point2> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { Point2::new(f64::cosh(t), f64::sinh(t)) }
+    fn der_n(&self, t: f64, n: usize) -> Vector2 {
+        match n % 2 {
+            0 => Vector2::new(f64::cosh(t), f64::sinh(t)),
+            _ => Vector2::new(f64::sinh(t), f64::cosh(t)),
+        }
+    }
     #[inline]
-    fn der(&self, t: f64) -> Self::Vector { Vector2::new(f64::sinh(t), f64::cosh(t)) }
+    fn subs(&self, t: f64) -> Self::Point { Point2::from_vec(self.der_n(t, 0)) }
     #[inline]
-    fn der2(&self, t: f64) -> Self::Vector { Vector2::new(f64::cosh(t), f64::sinh(t)) }
+    fn der(&self, t: f64) -> Self::Vector { self.der_n(t, 1) }
+    #[inline]
+    fn der2(&self, t: f64) -> Self::Vector { self.der_n(t, 2) }
 }
 
 impl ParametricCurve for UnitHyperbola<Point3> {
     type Point = Point3;
     type Vector = Vector3;
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { Point3::new(f64::cosh(t), f64::sinh(t), 0.0) }
+    fn der_n(&self, t: f64, n: usize) -> Vector3 {
+        match n % 2 {
+            0 => Vector3::new(f64::cosh(t), f64::sinh(t), 0.0),
+            _ => Vector3::new(f64::sinh(t), f64::cosh(t), 0.0),
+        }
+    }
     #[inline]
-    fn der(&self, t: f64) -> Self::Vector { Vector3::new(f64::sinh(t), f64::cosh(t), 0.0) }
+    fn subs(&self, t: f64) -> Self::Point { Point3::from_vec(self.der_n(t, 0)) }
     #[inline]
-    fn der2(&self, t: f64) -> Self::Vector { Vector3::new(f64::cosh(t), f64::sinh(t), 0.0) }
+    fn der(&self, t: f64) -> Self::Vector { self.der_n(t, 1) }
+    #[inline]
+    fn der2(&self, t: f64) -> Self::Vector { self.der_n(t, 2) }
 }
 
 impl<P> ParameterDivision1D for UnitHyperbola<P>
