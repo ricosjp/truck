@@ -521,6 +521,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
             let methods = methods!(
                 variants,
                 trait_name,
+                fn der_n(&self, t: f64, n: usize) -> Self::Vector,
                 fn subs(&self, t: f64) -> Self::Point,
                 fn der(&self, t: f64) -> Self::Vector,
                 fn der2(&self, t: f64) -> Self::Vector,
@@ -553,6 +554,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                       Self: Clone, {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
+                    fn der_n(&self, t: f64, n: usize) -> Self::Vector { self.0.der_n(t, n) }
                     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t) }
                     fn der(&self, t: f64) -> Self::Vector { self.0.der(t) }
                     fn der2(&self, t: f64) -> Self::Vector { self.0.der2(t) }
@@ -583,6 +585,7 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
             let methods = methods!(
                 variants,
                 trait_name,
+                fn der_mn(&self, s: f64, t: f64, m: usize, n: usize) -> Self::Vector,
                 fn subs(&self, s: f64, t: f64) -> Self::Point,
                 fn uder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vder(&self, s: f64, t: f64) -> Self::Vector,
@@ -619,6 +622,7 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                     #field_type: #trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
+                    fn der_mn(&self, s: f64, t: f64, m: usize, n: usize) -> Self::Vector { self.0.der_mn(s, t, m, n) }
                     fn subs(&self, s: f64, t: f64) -> Self::Point { self.0.subs(s, t) }
                     fn uder(&self, s: f64, t: f64) -> Self::Vector { self.0.uder(s, t) }
                     fn vder(&self, s: f64, t: f64) -> Self::Vector { self.0.vder(s, t) }
