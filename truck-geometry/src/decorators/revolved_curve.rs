@@ -9,9 +9,7 @@ impl Revolution {
         }
     }
     #[inline(always)]
-    fn rotation_matrix(self, v: f64) -> Matrix3 {
-        Matrix3::from_axis_angle(self.axis, Rad(v))
-    }
+    fn rotation_matrix(self, v: f64) -> Matrix3 { Matrix3::from_axis_angle(self.axis, Rad(v)) }
     #[inline(always)]
     fn invert(&mut self) { self.axis *= -1.0; }
     #[inline(always)]

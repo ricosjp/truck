@@ -1,5 +1,5 @@
-use truck_geometry::prelude::*;
 use proptest::prelude::*;
+use truck_geometry::prelude::*;
 
 #[test]
 fn nurbs_sphere() {
@@ -82,4 +82,3 @@ proptest! {
         prop_assert!((der0 - der1).magnitude() < 0.01 * der0.magnitude());
     }
 }
-

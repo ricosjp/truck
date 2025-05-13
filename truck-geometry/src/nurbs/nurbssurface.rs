@@ -562,7 +562,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for Nu
         if m < 7 && n < 7 {
             let mut ders = [[V::zero(); 8]; 8];
             (0..=m).for_each(|i| (0..=n).for_each(|j| ders[i][j] = self.0.der_mn(i, j, u, v)));
-            let ders = array_macro::array![i => &ders[i][..=n]; 8];
+            let ders = std::array::from_fn::<_, 8, _>(|i| &ders[i][..=n]);
             multi_rat_der(&ders[..=m])
         } else {
             let ders = (0..=m)

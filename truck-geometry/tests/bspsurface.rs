@@ -1,5 +1,5 @@
-use truck_geometry::prelude::*;
 use proptest::prelude::*;
+use truck_geometry::prelude::*;
 
 #[test]
 fn test_substitution() {

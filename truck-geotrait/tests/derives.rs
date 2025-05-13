@@ -1,37 +1,39 @@
 #![cfg(feature = "derive")]
+#![allow(dead_code)]
 
+use polynomial::{PolynomialCurve, PolynomialSurface};
 use truck_base::{cgmath64::*, hash::HashGen};
 use truck_geotrait::*;
-mod polynomial;
-use polynomial::{PolyCurve, PolySurface};
 
 #[test]
 fn derive_build_test_is_running() {}
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, ParametricCurve, BoundedCurve, ParameterDivision1D)]
 enum DerivedCurve<P>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
     P::Diff: std::fmt::Debug, {
-    CurveA(PolyCurve<P>),
-    CurveB { polycurve: PolyCurve<P> },
+    CurveA(PolynomialCurve<P>),
+    CurveB { polycurve: PolynomialCurve<P> },
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, ParametricSurface, BoundedSurface, ParameterDivision2D)]
-enum DeriveSurface {
-    SurfaceA(PolySurface),
-    SurfaceB { polysurface: PolySurface },
+enum DeriveSurface<P>
+where
+    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
+    P::Diff: std::fmt::Debug, {
+    SurfaceA(PolynomialSurface<P>),
+    SurfaceB { polysurface: PolynomialSurface<P> },
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, ParametricCurve, BoundedCurve, ParameterDivision1D)]
-struct TupledCurve<P>(PolyCurve<P>)
+struct TupledCurve<P>(PolynomialCurve<P>)
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
     P::Diff: std::fmt::Debug;
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, ParametricSurface, BoundedSurface, ParameterDivision2D)]
-struct TupledSurface(PolySurface);
+struct TupledSurface<P>(PolynomialSurface<P>)
+where
+    P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
+    P::Diff: std::fmt::Debug;

@@ -202,7 +202,7 @@ impl KnotVec {
     ///         1.0 * t * t * t,
     ///     ];
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
-    /// 
+    ///
     ///     // 2nd-order derivation
     ///     let res = knot_vec.try_bspline_basis_functions(degree, 2, t).unwrap();
     ///     let ans = [
@@ -214,7 +214,12 @@ impl KnotVec {
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     /// }
     /// ```
-    pub fn try_bspline_basis_functions(&self, degree: usize, der_rank: usize, t: f64) -> Result<Vec<f64>> {
+    pub fn try_bspline_basis_functions(
+        &self,
+        degree: usize,
+        der_rank: usize,
+        t: f64,
+    ) -> Result<Vec<f64>> {
         let n = self.len() - 1;
         if self[0].near(&self[n]) {
             return Err(Error::ZeroRange);

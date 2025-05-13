@@ -70,7 +70,9 @@ impl<S: ParametricSurface> ParametricSurface for &S {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector { (*self).der_mn(m, n, u, v) }
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        (*self).der_mn(m, n, u, v)
+    }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (*self).parameter_range() }
     #[inline(always)]
@@ -95,7 +97,9 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector { (**self).der_mn(m, n, u, v) }
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        (**self).der_mn(m, n, u, v)
+    }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (**self).parameter_range() }
     #[inline(always)]
