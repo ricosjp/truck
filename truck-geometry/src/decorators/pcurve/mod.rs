@@ -1,4 +1,5 @@
 use super::*;
+pub(crate) mod composition;
 
 impl<C, S> PCurve<C, S> {
     /// Creates composited
@@ -22,10 +23,39 @@ impl<C, S> ParametricCurve for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Vector: VectorSpace<Scalar = f64>,
+    S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
     type Vector = S::Vector;
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+        use composition::*;
+        if n >= 32 {
+            panic!("the order of derivation must be under 32.");
+        }
+        match n {
+            0 => return self.subs(t).to_vec(),
+            1 => return self.der(t),
+            2 => return self.der2(t),
+            _ => {}
+        }
+        let mut cder = [Vector2::zero(); 32];
+        (0..=n).for_each(|i| cder[i] = self.curve.der_n(i, t));
+        let Vector2 { x: u, y: v } = cder[0];
+
+        let mut sder = [[S::Vector::zero(); 32]; 32];
+        (0..=n).for_each(|i| {
+            (0..=(n - i)).for_each(|j| sder[i][j] = self.surface.der_mn(i, j, u, v));
+        });
+
+        (1..=n).fold(S::Vector::zero(), |sum, len| {
+            let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+            iter.fold(sum, |sum, idx| {
+                let idx = &idx[..len];
+                sum + tensor(&sder, &cder, idx) * multiplicity(idx) as f64
+            })
+        })
+    }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point {
         let pt = self.curve.subs(t);
@@ -38,8 +68,6 @@ where
         self.surface.uder(pt[0], pt[1]) * der[0] + self.surface.vder(pt[0], pt[1]) * der[1]
     }
     #[inline(always)]
-    fn parameter_range(&self) -> ParameterRange { self.curve.parameter_range() }
-    #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
         let pt = self.curve.subs(t);
         let der = self.curve.der(t);
@@ -50,6 +78,10 @@ where
             + self.surface.uder(pt[0], pt[1]) * der2[0]
             + self.surface.vder(pt[0], pt[1]) * der2[1]
     }
+    #[inline(always)]
+    fn parameter_range(&self) -> ParameterRange { self.curve.parameter_range() }
+    #[inline(always)]
+    fn period(&self) -> Option<f64> { self.curve.period() }
 }
 
 impl<C, S> BoundedCurve for PCurve<C, S>
@@ -145,8 +177,9 @@ impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
-    S::Vector: VectorSpace<Scalar = f64>,
+    S::Point:
+        EuclideanSpace<Scalar = f64, Diff = S::Vector> + MetricSpace<Metric = f64> + HashGen<f64>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<S::Point>) {
