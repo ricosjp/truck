@@ -1,3 +1,5 @@
+use truck_base::cgmath64::control_point::ControlPoint;
+
 use super::*;
 pub(crate) mod composition;
 
@@ -23,7 +25,7 @@ impl<C, S> ParametricCurve for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>,
+    S::Point: ControlPoint<f64, Diff = S::Vector>,
     S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
@@ -177,8 +179,10 @@ impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Point:
-        EuclideanSpace<Scalar = f64, Diff = S::Vector> + MetricSpace<Metric = f64> + HashGen<f64>,
+    S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>
+        + MetricSpace<Metric = f64>
+        + HashGen<f64>
+        + ControlPoint<f64, Diff = S::Vector>,
     S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
