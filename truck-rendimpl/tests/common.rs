@@ -167,15 +167,13 @@ pub fn init_device(instance: &Instance) -> DeviceHandler {
             .unwrap();
         writeln!(&mut std::io::stderr(), "{:?}", adapter.get_info()).unwrap();
         let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    required_features: Default::default(),
-                    required_limits: Limits::default(),
-                    memory_hints: Default::default(),
-                    label: None,
-                },
-                None,
-            )
+            .request_device(&DeviceDescriptor {
+                required_features: Default::default(),
+                required_limits: Limits::default(),
+                memory_hints: Default::default(),
+                label: None,
+                trace: Default::default(),
+            })
             .await
             .unwrap();
         DeviceHandler::new(Arc::new(adapter), Arc::new(device), Arc::new(queue))
