@@ -123,6 +123,7 @@ args = ["run", "--bin", "example-pages-generator"]
 
 [tasks.js-test]
 description = "test for js"
+env = { "RUSTFLAGS" = "--cfg=getrandom_backend=\"wasm_js\"" }
 script = [
 	"cd truck-js",
 	"wasm-pack build --target web",
