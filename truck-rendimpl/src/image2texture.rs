@@ -35,14 +35,14 @@ where
         usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
     });
     queue.write_texture(
-        ImageCopyTexture {
+        TexelCopyTextureInfo {
             texture: &texture,
             mip_level: 0,
             origin: Origin3d::ZERO,
             aspect: TextureAspect::All,
         },
         bytemuck::cast_slice(image_buffer),
-        ImageDataLayout {
+        TexelCopyBufferLayout {
             offset: 0,
             bytes_per_row: Some(size.width * size_of::<P>() as u32),
             rows_per_image: Some(size.height),

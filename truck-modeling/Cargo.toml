@@ -12,8 +12,8 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-derive_more = { version = "1.0.0", features = ["full"] }
-itertools = "0.13.0"
+derive_more = { version = "2.0.1", features = ["full"] }
+itertools = "0.14.0"
 rustc-hash = "2.1.1"
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"

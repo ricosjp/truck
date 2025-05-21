@@ -16,9 +16,9 @@ derive = ["truck-derivers"]
 
 [dependencies]
 truck-base = { version = "0.5.0", path = "../truck-base" }
-rand = "0.8.5"
+rand = "0.9.1"
 thiserror = "2.0.12"
 truck-derivers = { version = "0.1.0", path = "../truck-derivers", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.16", features = ["js"] }
+getrandom = { version = "0.3.3", features = ["wasm_js"] }
