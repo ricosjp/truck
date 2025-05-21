@@ -1,6 +1,5 @@
-use truck_base::cgmath64::control_point::ControlPoint;
-
 use super::*;
+use truck_base::cgmath64::control_point::ControlPoint;
 pub(crate) mod composition;
 
 impl<C, S> PCurve<C, S> {
@@ -21,6 +20,30 @@ impl<C, S> PCurve<C, S> {
     pub fn decompose(self) -> (C, S) { (self.curve, self.surface) }
 }
 
+impl<C, S> PCurve<C, S>
+where
+    C: ParametricCurve2D,
+    S: ParametricSurface,
+    S::Point: ControlPoint<f64, Diff = S::Vector>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
+{
+    fn der3(&self, t: f64) -> S::Vector {
+        let Point2 { x: u, y: v } = self.curve.subs(t);
+        let der = self.curve.der(t);
+        let der2 = self.curve.der2(t);
+        let der3 = self.curve.der_n(3, t);
+        let surface = self.surface();
+        surface.der_mn(3, 0, u, v) * (der[0] * der[0] * der[0])
+            + surface.der_mn(2, 1, u, v) * (der[0] * der[0] * der[1] * 3.0)
+            + surface.der_mn(1, 2, u, v) * (der[0] * der[1] * der[1] * 3.0)
+            + surface.der_mn(0, 3, u, v) * (der[1] * der[1] * der[1])
+            + surface.uuder(u, v) * (der2[0] * der[0] * 3.0)
+            + surface.uvder(u, v) * ((der2[0] * der[1] + der2[1] * der[0]) * 3.0)
+            + surface.vvder(u, v) * (der2[1] * der[1] * 3.0)
+            + surface.uder(u, v) * der3[0]
+            + surface.vder(u, v) * der3[1]
+    }
+}
 impl<C, S> ParametricCurve for PCurve<C, S>
 where
     C: ParametricCurve2D,
@@ -39,6 +62,7 @@ where
             0 => return self.subs(t).to_vec(),
             1 => return self.der(t),
             2 => return self.der2(t),
+            3 => return self.der3(t),
             _ => {}
         }
         let mut cder = [Vector2::zero(); 32];
@@ -74,9 +98,9 @@ where
         let pt = self.curve.subs(t);
         let der = self.curve.der(t);
         let der2 = self.curve.der2(t);
-        self.surface.uuder(pt[0], pt[1]) * der[0] * der[0]
-            + self.surface.uvder(pt[0], pt[1]) * der[0] * der[1] * 2.0
-            + self.surface.vvder(pt[0], pt[1]) * der[1] * der[1]
+        self.surface.uuder(pt[0], pt[1]) * (der[0] * der[0])
+            + self.surface.uvder(pt[0], pt[1]) * (der[0] * der[1] * 2.0)
+            + self.surface.vvder(pt[0], pt[1]) * (der[1] * der[1])
             + self.surface.uder(pt[0], pt[1]) * der2[0]
             + self.surface.vder(pt[0], pt[1]) * der2[1]
     }
