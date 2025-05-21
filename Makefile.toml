@@ -132,6 +132,7 @@ script = [
 
 [tasks.adhoc-viewer]
 description = "build adhoc viewer"
+env = { "RUSTFLAGS" = "--cfg=getrandom_backend=\"wasm_js\"" }
 script_runner = "@shell"
 script = [
 	"cd truck-js",
