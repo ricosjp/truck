@@ -100,7 +100,7 @@ fn exec_polygon_bgtest(
 fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = wgpu::Instance::new(InstanceDescriptor {
+    let instance = wgpu::Instance::new(&InstanceDescriptor {
         backends: backend,
         ..Default::default()
     });
@@ -156,7 +156,7 @@ fn polymesh_nontex_bind_group_test() {
 fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = wgpu::Instance::new(InstanceDescriptor {
+    let instance = wgpu::Instance::new(&InstanceDescriptor {
         backends: backend,
         ..Default::default()
     });
