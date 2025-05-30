@@ -45,8 +45,8 @@ impl BufferHandler {
     #[inline(always)]
     pub fn copy_buffer(&self, encoder: &mut CommandEncoder, dest: &BufferHandler) {
         assert!(
-            self.size < dest.size,
-            "The destination buffer size must be shorter than the source buffer size."
+            self.size <= dest.size,
+            "The destination buffer size must be no less than the source buffer size."
         );
         encoder.copy_buffer_to_buffer(&self.buffer, 0, &dest.buffer, 0, self.size);
     }

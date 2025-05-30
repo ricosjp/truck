@@ -72,7 +72,7 @@ where
 ///
 /// # Panics
 ///
-/// `tol` must be more than `TOLERANCE`.
+/// `tol` must be greater than or equal to `TOLERANCE`.
 pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<C::Point>)
 where
     C: ParametricCurve,
