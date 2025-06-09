@@ -35,4 +35,4 @@ itertools = "0.14.0"
 serde_json = "1.0.140"
 truck-meshalgo = { version = "0.4.0", path = "../truck-meshalgo" }
 truck-shapeops = { path = "../truck-shapeops" }
-proptest = "1.6.0"
+proptest = "1.7.0"
