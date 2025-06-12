@@ -11,7 +11,7 @@ impl<P> BSplineSurface<P> {
     /// * `control_points` - the vector of the control points
     /// # Panics
     /// There are 3 rules for construct B-spline curve.
-    /// * The number of knots is more than the one of control points.
+    /// * The number of knots is less than or equal to the one of control points.
     /// * There exist at least two different knots.
     /// * There are at least one control point.
     #[inline(always)]
@@ -25,7 +25,7 @@ impl<P> BSplineSurface<P> {
     /// * `control_points` - the vector of the control points
     /// # Failures
     /// There are 3 rules for construct B-spline curve.
-    /// * The number of knots is more than the one of control points.
+    /// * The number of knots is less than or equal to the one of control points.
     /// * There exist at least two different knots.
     /// * There are at least one control point.
     #[inline(always)]
