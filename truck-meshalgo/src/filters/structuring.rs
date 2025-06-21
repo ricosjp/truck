@@ -50,7 +50,7 @@ pub trait StructuringFilter {
     /// 1. take a pair of triangles in order from the top of the list and register a new one
     ///    if it doesn't conflict with the one has been already registered.
     /// # Panics
-    /// `plane_tol` and `score_tol` must be more than `TOLERANCE`.
+    /// `plane_tol` and `score_tol` must be greater than or equal to `0.0`.
     /// # Examples
     /// ```
     /// use truck_polymesh::*;
