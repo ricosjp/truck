@@ -79,8 +79,8 @@ pub fn multiplicity(array: &[usize]) -> u128 {
     res / factorial(mult)
 }
 
-pub fn tensor<V>(sder: &[[V; 32]; 32], cder: &[Vector2; 32], idx: &[usize]) -> V
-where V: VectorSpace<Scalar = f64> + ElementWise {
+pub fn tensor<V, A>(sder: &[A], cder: &[Vector2], idx: &[usize]) -> V
+where V: VectorSpace<Scalar = f64> + ElementWise, A: AsRef<[V]> {
     let n: u128 = 2u128.pow(idx.len() as u32);
     (0..n).fold(V::zero(), |sum, mut i| {
         let (t, mult) = idx.iter().fold((0, 1.0), |(t, mult), &j| {
@@ -88,7 +88,7 @@ where V: VectorSpace<Scalar = f64> + ElementWise {
             i /= 2;
             (t + k, mult * cder[j][k])
         });
-        sum + sder[idx.len() - t][t] * mult
+        sum + sder[idx.len() - t].as_ref()[t] * mult
     })
 }
 
