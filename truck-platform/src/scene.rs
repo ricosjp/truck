@@ -17,7 +17,7 @@ async fn init_default_device(
     let backends = Backends::PRIMARY;
     #[cfg(feature = "webgl")]
     let backends = Backends::all();
-    let instance = Instance::new(InstanceDescriptor {
+    let instance = Instance::new(&InstanceDescriptor {
         backends,
         ..Default::default()
     });
@@ -41,18 +41,16 @@ async fn init_default_device(
         .expect("Failed to find an appropriate adapter");
 
     let (device, queue) = adapter
-        .request_device(
-            &DeviceDescriptor {
-                required_features: Default::default(),
-                memory_hints: MemoryHints::Performance,
-                #[cfg(not(feature = "webgl"))]
-                required_limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
-                #[cfg(feature = "webgl")]
-                required_limits: Limits::downlevel_webgl2_defaults(),
-                label: None,
-            },
-            None,
-        )
+        .request_device(&DeviceDescriptor {
+            required_features: Default::default(),
+            memory_hints: MemoryHints::Performance,
+            #[cfg(not(feature = "webgl"))]
+            required_limits: Limits::downlevel_defaults().using_resolution(adapter.limits()),
+            #[cfg(feature = "webgl")]
+            required_limits: Limits::downlevel_webgl2_defaults(),
+            label: None,
+            trace: Default::default(),
+        })
         .await
         .expect("Failed to create device");
     let device_handler = DeviceHandler {
@@ -254,13 +252,13 @@ impl SceneDescriptor {
 #[derive(Debug)]
 pub struct SceneDescriptorMut<'a>(&'a mut Scene);
 
-impl Deref for SceneDescriptorMut<'_> {
+impl std::ops::Deref for SceneDescriptorMut<'_> {
     type Target = SceneDescriptor;
     #[inline(always)]
     fn deref(&self) -> &SceneDescriptor { &self.0.scene_desc }
 }
 
-impl DerefMut for SceneDescriptorMut<'_> {
+impl std::ops::DerefMut for SceneDescriptorMut<'_> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut SceneDescriptor { &mut self.0.scene_desc }
 }
@@ -754,15 +752,15 @@ impl Scene {
         });
         let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
         encoder.copy_texture_to_buffer(
-            ImageCopyTexture {
+            TexelCopyTextureInfo {
                 texture: &texture,
                 mip_level: 0,
                 origin: Origin3d::ZERO,
                 aspect: TextureAspect::All,
             },
-            ImageCopyBuffer {
+            TexelCopyBufferInfo {
                 buffer: &buffer,
-                layout: ImageDataLayout {
+                layout: TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(width * 4),
                     rows_per_image: Some(height),
@@ -778,7 +776,7 @@ impl Scene {
         let buffer_slice = buffer.slice(..);
         let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
         buffer_slice.map_async(MapMode::Read, move |v| sender.send(v).unwrap());
-        device.poll(Maintain::Wait);
+        device.poll(PollType::Wait).unwrap();
         match receiver.receive().await {
             Some(Ok(_)) => buffer_slice.get_mapped_range().iter().copied().collect(),
             Some(Err(e)) => panic!("{}", e),

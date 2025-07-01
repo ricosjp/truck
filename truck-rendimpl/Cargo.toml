@@ -17,8 +17,8 @@ default = []
 webgl = ["truck-platform/webgl"]
 
 [dependencies]
-itertools = "0.13.0"
-bytemuck = { version = "1.22.0", features = ["derive"] }
+itertools = "0.14.0"
+bytemuck = { version = "1.23.1", features = ["derive"] }
 image = "0.25.6"
 truck-platform = { version = "0.6.0", path = "../truck-platform" }
 truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
@@ -31,7 +31,7 @@ rayon = "1.10.0"
 serde_json = "1.0.140"
 truck-meshalgo = { version = "0.4.0", path = "../truck-meshalgo" }
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
-winit = "0.30.9"
+winit = "0.30.11"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 web-time = "1.1.0"

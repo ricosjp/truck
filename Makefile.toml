@@ -103,13 +103,13 @@ dependencies = ["clean", "gpu-release-build-test", "collect-gpu-artifacts"]
 
 [tasks.wasm-build]
 description = "Build to wasm-target"
-env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis --cfg=getrandom_backend=\"wasm_js\"" }
 command = "cargo"
 args = ["build", "--target=wasm32-unknown-unknown"]
 
 [tasks.webgl-build]
 description = "Build to wasm-target with webgl feature"
-env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis --cfg=getrandom_backend=\"wasm_js\"" }
 command = "cargo"
 args = [
 	"build",
@@ -119,12 +119,13 @@ args = [
 
 [tasks.build-wgpu-examples]
 description = "Build wasms"
-env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis" }
+env = { "RUSTFLAGS" = "--cfg=web_sys_unstable_apis --cfg=getrandom_backend=\"wasm_js\"" }
 command = "cargo"
 args = ["run", "--bin", "example-pages-generator"]
 
 [tasks.js-test]
 description = "test for js"
+env = { "RUSTFLAGS" = "--cfg=getrandom_backend=\"wasm_js\"" }
 script = [
 	"cd truck-js",
 	"wasm-pack build --target web",
@@ -133,6 +134,7 @@ script = [
 
 [tasks.adhoc-viewer]
 description = "build adhoc viewer"
+env = { "RUSTFLAGS" = "--cfg=getrandom_backend=\"wasm_js\"" }
 script_runner = "@shell"
 script = [
 	"cd truck-js",
