@@ -499,15 +499,35 @@ where V::Point: Bounded<Scalar = f64>
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NurbsCurve<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
-    #[inline(always)]
     fn der_n(&self, n: usize, t: f64) -> Self::Vector {
         if n < 7 {
             let mut ders = [V::zero(); 8];
-            (0..=n).for_each(|i| ders[i] = self.0.der_n(i, t));
+            self.0.ders(t, &mut ders[0..=n]);
             rat_der(&ders[..=n])
         } else {
-            rat_der(&(0..=n).map(|i| self.0.der_n(i, t)).collect::<Vec<_>>())
+            rat_der(&self.0.ders_vec(n, t))
         }
+    }
+    fn ders(&self, t: f64, out: &mut [Self::Vector]) {
+        let n = out.len() - 1;
+        if n < 7 {
+            let mut ders = [V::zero(); 8];
+            self.0.ders(t, &mut ders[0..=n]);
+            rat_ders(&ders[..=n], out)
+        } else {
+            rat_ders(&self.0.ders_vec(n, t), out)
+        }
+    }
+    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
+        let mut out = vec![Self::Vector::zero(); n + 1];
+        if n < 7 {
+            let mut ders = [V::zero(); 8];
+            self.0.ders(t, &mut ders[0..=n]);
+            rat_ders(&ders[..=n], &mut out)
+        } else {
+            rat_ders(&self.0.ders_vec(n, t), &mut out)
+        }
+        out
     }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t).to_point() }

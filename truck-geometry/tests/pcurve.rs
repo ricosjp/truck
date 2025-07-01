@@ -22,6 +22,23 @@ fn exec_pcurve_derivation(
     let pcurve1 = pcurve0.surface().composite(pcurve0.curve());
 
     prop_assert_near!(pcurve0.der_n(n, t), pcurve1.der_n(n, t));
+
+    let ders0 = (0..=n).map(|i| pcurve0.der_n(i, t)).collect::<Vec<_>>();
+
+    let mut ders1 = vec![Vector3::zero(); n + 1];
+    pcurve0.ders(t, &mut ders1);
+
+    let ders2 = pcurve0.ders_vec(n, t);
+
+    prop_assert_eq!(ders0.len(), ders1.len());
+    prop_assert_eq!(ders1.len(), ders2.len());
+
+    let mut iter = ders0.into_iter().zip(ders1).zip(ders2);
+    iter.try_for_each(|((v0, v1), v2)| {
+        prop_assert_near!(v0, v1);
+        prop_assert_near!(v1, v2);
+        Ok(())
+    })?;
     Ok(())
 }
 

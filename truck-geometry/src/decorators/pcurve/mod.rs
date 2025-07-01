@@ -66,13 +66,16 @@ where
             _ => {}
         }
         let mut cder = [Vector2::zero(); 32];
-        (0..=n).for_each(|i| cder[i] = self.curve.der_n(i, t));
+        self.curve.ders(t, &mut cder[..=n]);
         let Vector2 { x: u, y: v } = cder[0];
 
         let mut sder = [[S::Vector::zero(); 32]; 32];
-        (0..=n).for_each(|i| {
-            (0..=(n - i)).for_each(|j| sder[i][j] = self.surface.der_mn(i, j, u, v));
-        });
+        let mut sder_mut = sder[0..=n]
+            .iter_mut()
+            .enumerate()
+            .map(|(i, slice)| &mut slice[0..=(n - i)])
+            .collect::<Vec<_>>();
+        self.surface.ders(u, v, &mut sder_mut);
 
         (1..=n).fold(S::Vector::zero(), |sum, len| {
             let iter = CompositionIter::<32>::try_new(n, len).unwrap();
@@ -81,6 +84,44 @@ where
                 sum + tensor(&sder, &cder, idx) * multiplicity(idx) as f64
             })
         })
+    }
+    fn ders(&self, t: f64, out: &mut [Self::Vector]) {
+        use composition::*;
+
+        if out.is_empty() {
+            return;
+        }
+        let n = out.len() - 1;
+        if n >= 32 {
+            panic!("the order of derivation must be under 32.");
+        }
+        let mut cder = [Vector2::zero(); 32];
+        self.curve.ders(t, &mut cder[..=n]);
+        let Vector2 { x: u, y: v } = cder[0];
+
+        let mut sder = [[S::Vector::zero(); 32]; 32];
+        let mut sder_mut = sder[0..=n]
+            .iter_mut()
+            .enumerate()
+            .map(|(i, slice)| &mut slice[0..=(n - i)])
+            .collect::<Vec<_>>();
+        self.surface.ders(u, v, &mut sder_mut);
+        out[0] = sder[0][0];
+
+        (1..=n).for_each(|m| {
+            out[m] = (1..=m).fold(S::Vector::zero(), |sum, len| {
+                let iter = CompositionIter::<32>::try_new(m, len).unwrap();
+                iter.fold(sum, |sum, idx| {
+                    let idx = &idx[..len];
+                    sum + tensor(&sder, &cder, idx) * multiplicity(idx) as f64
+                })
+            });
+        });
+    }
+    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
+        let mut res = vec![Self::Vector::zero(); n + 1];
+        self.ders(t, &mut res);
+        res
     }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point {

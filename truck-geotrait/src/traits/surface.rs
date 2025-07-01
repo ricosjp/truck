@@ -30,6 +30,21 @@ pub trait ParametricSurface: Clone {
             _ => unimplemented!(),
         }
     }
+    /// Calculates higher degree derivations at the parameter `(u, v)` and assign them to `out`.
+    fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) {
+        out.iter_mut().enumerate().for_each(|(i, out)| {
+            out.as_mut()
+                .iter_mut()
+                .enumerate()
+                .for_each(|(j, out)| *out = self.der_mn(i, j, u, v))
+        })
+    }
+    /// Returns derivations with order `(0..=m, 0..=n)` at the parameter `(u, v)`.
+    fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>> {
+        (0..=m)
+            .map(|i| (0..=n).map(|j| self.der_mn(i, j, u, v)).collect())
+            .collect()
+    }
     /// The range of the parameter of the surface.
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
@@ -74,6 +89,14 @@ impl<S: ParametricSurface> ParametricSurface for &S {
         (*self).der_mn(m, n, u, v)
     }
     #[inline(always)]
+    fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) {
+        (*self).ders(u, v, out)
+    }
+    #[inline(always)]
+    fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>> {
+        (*self).ders_vec(m, n, u, v)
+    }
+    #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (*self).parameter_range() }
     #[inline(always)]
     fn u_period(&self) -> Option<f64> { (*self).u_period() }
@@ -99,6 +122,14 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     #[inline(always)]
     fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         (**self).der_mn(m, n, u, v)
+    }
+    #[inline(always)]
+    fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) {
+        (**self).ders(u, v, out)
+    }
+    #[inline(always)]
+    fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>> {
+        (**self).ders_vec(m, n, u, v)
     }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (**self).parameter_range() }

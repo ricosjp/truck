@@ -217,6 +217,21 @@ where
             1 => return self.der(t),
             _ => {}
         }
+        let mut cders = [Vector3::zero(); 32];
+        self.ders(t, &mut cders[0..=n]);
+        cders[n]
+    }
+    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
+        let mut res = vec![Vector3::zero(); n + 1];
+        self.ders(t, &mut res);
+        res
+    }
+    #[inline(always)]
+    fn ders(&self, t: f64, cders: &mut [Vector3]){
+        if cders.is_empty() {
+            return;
+        }
+        let n = cders.len() - 1;
         let IntersectionCurve {
             surface0,
             surface1,
@@ -225,25 +240,31 @@ where
         let (c, uv0, uv1) = self.search_triple(t, 100).unwrap();
 
         let mut s0ders = [[Vector3::zero(); 32]; 32];
-        (0..=n).for_each(|i| {
-            (0..=n - i).for_each(|j| s0ders[i][j] = surface0.der_mn(i, j, uv0.x, uv0.y))
-        });
+        let mut s0ders_mut = s0ders[0..=n]
+            .iter_mut()
+            .enumerate()
+            .map(|(i, slice)| &mut slice[0..=n - i])
+            .collect::<Vec<_>>();
+        surface0.ders(uv0.x, uv0.y, &mut s0ders_mut);
         let s0normal = surface0.normal(uv0.x, uv0.y);
         let mut uv0ders = [Vector2::zero(); 32];
         uv0ders[0] = uv0.to_vec();
 
         let mut s1ders = [[Vector3::zero(); 32]; 32];
-        (0..=n).for_each(|i| {
-            (0..=n - i).for_each(|j| s1ders[i][j] = surface1.der_mn(i, j, uv1.x, uv1.y))
-        });
+        let mut s1ders_mut = s1ders[0..=n]
+            .iter_mut()
+            .enumerate()
+            .map(|(i, slice)| &mut slice[0..=n - i])
+            .collect::<Vec<_>>();
+        surface1.ders(uv1.x, uv1.y, &mut s1ders_mut);
         let s1normal = surface1.normal(uv1.x, uv1.y);
         let mut uv1ders = [Vector2::zero(); 32];
         uv1ders[0] = uv1.to_vec();
 
         let mut leaders = [Vector3::zero(); 32];
-        (0..=n + 1).for_each(|i| leaders[i] = leader.der_n(i, t));
+        leader.ders(t, &mut leaders[0..=n + 1]);
 
-        let mut cders = [Vector3::zero(); 32];
+        cders.iter_mut().for_each(|c| *c = Vector3::zero());
         cders[0] = c.to_vec();
 
         (1..=n).for_each(|i| {
@@ -255,12 +276,10 @@ where
                 s1normal,
                 &mut uv1ders,
                 &leaders,
-                &mut cders,
+                cders,
                 i,
             )
         });
-
-        cders[n]
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.leader.parameter_range() }
