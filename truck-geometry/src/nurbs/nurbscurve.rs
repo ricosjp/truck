@@ -529,6 +529,12 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for Nurb
         }
         out
     }
+    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] {
+        let mut ders = [Self::Vector::zero(); LEN];
+        let lift_ders = self.0.ders_array::<LEN>(t);
+        rat_ders(&lift_ders, &mut ders);
+        ders
+    }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t).to_point() }
     #[inline(always)]

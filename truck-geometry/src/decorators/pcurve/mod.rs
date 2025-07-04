@@ -123,6 +123,11 @@ where
         self.ders(t, &mut res);
         res
     }
+    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] {
+        let mut res = [Self::Vector::zero(); LEN];
+        self.ders(t, &mut res);
+        res
+    }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point {
         let pt = self.curve.subs(t);
@@ -130,15 +135,12 @@ where
     }
     #[inline(always)]
     fn der(&self, t: f64) -> Self::Vector {
-        let pt = self.curve.subs(t);
-        let der = self.curve.der(t);
+        let [pt, der] = self.curve.ders_array(t);
         self.surface.uder(pt[0], pt[1]) * der[0] + self.surface.vder(pt[0], pt[1]) * der[1]
     }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
-        let pt = self.curve.subs(t);
-        let der = self.curve.der(t);
-        let der2 = self.curve.der2(t);
+        let [pt, der, der2] = self.curve.ders_array(t);
         self.surface.uuder(pt[0], pt[1]) * (der[0] * der[0])
             + self.surface.uvder(pt[0], pt[1]) * (der[0] * der[1] * 2.0)
             + self.surface.vvder(pt[0], pt[1]) * (der[1] * der[1])

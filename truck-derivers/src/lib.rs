@@ -127,14 +127,14 @@ macro_rules! methods {
     };
     (
         $variants: ident, $trait_name: ident,
-        $(fn $name: ident <$($gen: ident: $path: path),*> (
+        $(fn $name: ident <$($(($const: tt))? $gen: ident: $path: path),*> (
             $self_field: expr,
             $($var: ident: $ty: ty),*$(,)?
         ) -> $return_type: ty),*$(,)?
     ) => {
         vec![$(Method {
             name: quote! { $name },
-            generics: Some(quote! { <$($gen: $path),*> }),
+            generics: Some(quote! { <$($($const)? $gen: $path),*> }),
             self_field: quote! { $self_field, },
             fields: fields!($($var: $ty),*),
             return_type: quote! { $return_type },
@@ -530,6 +530,11 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                 fn parameter_range(&self,) -> ParameterRange,
                 fn period(&self,) -> Option<f64>,
             );
+            let array = methods! {
+                variants,
+                trait_name,
+                fn ders_array<(const) LEN: usize>(&self, t: f64) -> [Self::Vector; LEN],
+            };
             quote! {
                 #[automatically_derived]
                 impl #gen #trait_name for #ty #gen
@@ -539,6 +544,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                     type Point = <#top_ty as #trait_name>::Point;
                     type Vector = <#top_ty as #trait_name>::Vector;
                     #(#methods)*
+                    #(#array)*
                 }
             }
         }
@@ -562,6 +568,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                     fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.0.der_n(n, t) }
                     fn ders(&self, t: f64, out: &mut [Self::Vector]) -> () { self.0.ders(t, out) }
                     fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> { self.0.ders_vec(n, t) }
+                    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] { self.0.ders_array(t) }
                     fn parameter_range(&self) -> ParameterRange { self.0.parameter_range() }
                     fn period(&self) -> Option<f64> { self.0.period() }
                 }

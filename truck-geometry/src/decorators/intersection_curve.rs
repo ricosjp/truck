@@ -201,7 +201,7 @@ where
             surface1,
             leader,
         } = self;
-        let (l, l_der, l_der2) = (leader.subs(t), leader.der(t), leader.der2(t));
+        let [l, l_der, l_der2] = leader.ders_array(t);
         let (c, uv0, uv1) = self.search_triple(t, 100).unwrap();
         let (n0, n1) = (surface0.normal(uv0.x, uv0.y), surface1.normal(uv1.x, uv1.y));
         let n = n0.cross(n1);
