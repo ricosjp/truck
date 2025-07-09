@@ -152,6 +152,250 @@ where
     }
 }
 
+fn der_routine<A: AsRef<[Vector3]>>(
+    s0ders: &[A],
+    s0tders: &mut [Vector3],
+    s0uderders: &mut [Vector3],
+    s0vderders: &mut [Vector3],
+    cross0ders: &mut [Vector3],
+    abs_cross0ders: &mut [f64],
+    n0ders: &mut [Vector3],
+    uv0ders: &mut [Vector2],
+    s1ders: &[A],
+    s1tders: &mut [Vector3],
+    s1uderders: &mut [Vector3],
+    s1vderders: &mut [Vector3],
+    cross1ders: &mut [Vector3],
+    abs_cross1ders: &mut [f64],
+    n1ders: &mut [Vector3],
+    uv1ders: &mut [Vector2],
+    cders: &[Vector3],
+    rders: &[f64],
+    ders: &mut [Vector3],
+    n: usize,
+) {
+    use pcurve::composition::*;
+    let mut c = 1;
+    let c_comp = (0..=n).fold(0.0, |sum, i| {
+        let sum = sum + cders[i + 1].dot(cders[n - i] - ders[n - i]) * c as f64;
+        c = c * (n - i) / (i + 1);
+        sum
+    });
+
+    let mut c = 1;
+    let n0_comp = rders[n]
+        - (0..n).fold(0.0, |sum, i| {
+            let sum = sum + ders[i + 1].dot(n0ders[n - 1 - i]) * c as f64;
+            c = c * (n - 1 - i) / (i + 1);
+            sum
+        });
+
+    let mut c = 1;
+    let n1_comp = rders[n]
+        - (0..n).fold(0.0, |sum, i| {
+            let sum = sum + ders[i + 1].dot(n1ders[n - 1 - i]) * c as f64;
+            c = c * (n - 1 - i) / (i + 1);
+            sum
+        });
+
+    let mat = Matrix3::from_cols(cders[1], n0ders[0], n1ders[0]).transpose();
+    ders[n] = mat.invert().unwrap() * Vector3::new(c_comp, n0_comp, n1_comp);
+
+    let s0der_n_prime = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(s0ders, uv0ders, idx) * multiplicity(idx) as f64
+        })
+    });
+
+    let mut c = 1;
+    let mut lhs_u = (0..=n).fold(0.0, |sum, i| {
+        let sum = sum + s0uderders[i].dot(s0tders[n - i] - ders[n - i]) * c as f64;
+        c = c * (n - i) / (i + 1);
+        sum
+    });
+    let s0uder_n_prime = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(&s0ders[1..], uv0ders, idx) * multiplicity(idx) as f64
+        })
+    });
+    lhs_u += s0uderders[0].dot(s0der_n_prime - ders[n]) + s0uder_n_prime.dot(s0tders[0] - ders[0]);
+
+    let mut c = 1;
+    let mut lhs_v = (0..=n).fold(0.0, |sum, i| {
+        let sum = sum + s0vderders[i].dot(s0tders[n - i] - ders[n - i]) * c as f64;
+        c = c * (n - i) / (i + 1);
+        sum
+    });
+    let s0vders = s0ders
+        .iter()
+        .map(|vec| &vec.as_ref()[1..])
+        .collect::<Vec<_>>();
+    let s0vder_n_prime = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(&s0vders, uv0ders, idx) * multiplicity(idx) as f64
+        })
+    });
+    lhs_v += s0vderders[0].dot(s0der_n_prime - ders[n]) + s0vder_n_prime.dot(s0tders[0] - ders[0]);
+
+    let mat = Matrix2::new(
+        s0ders[1].as_ref()[0].dot(s0ders[n].as_ref()[0])
+            + s0ders[n + 1].as_ref()[0].dot(s0ders[0].as_ref()[0] - ders[0]),
+        s0ders[0].as_ref()[1].dot(s0ders[n].as_ref()[0])
+            + s0ders[1].as_ref()[n].dot(s0ders[0].as_ref()[0] - ders[0]),
+        s0ders[1].as_ref()[0].dot(s0ders[0].as_ref()[n])
+            + s0ders[n].as_ref()[1].dot(s0ders[0].as_ref()[0] - ders[0]),
+        s0ders[0].as_ref()[1].dot(s0ders[0].as_ref()[n])
+            + s0ders[0].as_ref()[n + 1].dot(s0ders[0].as_ref()[0] - ders[0]),
+    );
+    uv0ders[n] = -mat.invert().unwrap() * Vector2::new(lhs_u, lhs_v);
+    s0tders[n] = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(s0ders, uv0ders, idx) * multiplicity(idx) as f64
+        })
+    });
+    s0uderders[n] = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(&s0ders[1..], uv0ders, idx) * multiplicity(idx) as f64
+        })
+    });
+    s0vderders[n] = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(&s0vders, uv0ders, idx) * multiplicity(idx) as f64
+        })
+    });
+
+    let mut c = 1;
+    cross0ders[n] = (0..=n).fold(Vector3::zero(), |mut sum, i| {
+        sum += s0uderders[i].cross(s0vderders[n - i]) * c as f64;
+        c = c * (n - i) / (i + 1);
+        sum
+    });
+    let mut c = 1;
+    let sum0 = (0..n).fold(0.0, |mut sum, i| {
+        let x = cross0ders[i + 1].dot(cross0ders[n - i - 1]);
+        let y = abs_cross0ders[i + 1] * abs_cross0ders[n - i - 1];
+        sum += (y - x) * c as f64;
+        c = c * (n - i - 1) / (i + 1);
+        sum
+    });
+    abs_cross0ders[n] = sum0 / abs_cross0ders[0];
+    let homog0 = cross0ders[..=n]
+        .iter()
+        .zip(&abs_cross0ders[..=n])
+        .map(|(v, w)| v.extend(*w))
+        .collect::<Vec<_>>();
+    n0ders[n] = rat_der(&homog0);
+
+    let s1der_n_prime = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(s1ders, uv1ders, idx) * multiplicity(idx) as f64
+        })
+    });
+
+    let mut c = 1;
+    let mut lhs_u = (0..=n).fold(0.0, |sum, i| {
+        let sum = sum + s1uderders[i].dot(s1tders[n - i] - ders[n - i]) * c as f64;
+        c = c * (n - i) / (i + 1);
+        sum
+    });
+    let s1uder_n_prime = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(&s1ders[1..], uv1ders, idx) * multiplicity(idx) as f64
+        })
+    });
+    lhs_u += s1uderders[0].dot(s1der_n_prime - ders[n]) + s1uder_n_prime.dot(s1tders[0] - ders[0]);
+
+    let mut c = 1;
+    let mut lhs_v = (0..=n).fold(0.0, |sum, i| {
+        let sum = sum + s1vderders[i].dot(s1tders[n - i] - ders[n - i]) * c as f64;
+        c = c * (n - i) / (i + 1);
+        sum
+    });
+    let s1vders = s1ders
+        .iter()
+        .map(|vec| &vec.as_ref()[1..])
+        .collect::<Vec<_>>();
+    let s1vder_n_prime = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(&s1vders, uv1ders, idx) * multiplicity(idx) as f64
+        })
+    });
+    lhs_v += s1vderders[0].dot(s1der_n_prime - ders[n]) + s1vder_n_prime.dot(s1tders[0] - ders[0]);
+
+    let mat = Matrix2::new(
+        s1ders[1].as_ref()[0].dot(s1ders[n].as_ref()[0])
+            + s1ders[n + 1].as_ref()[0].dot(s1ders[0].as_ref()[0] - ders[0]),
+        s1ders[0].as_ref()[1].dot(s1ders[n].as_ref()[0])
+            + s1ders[1].as_ref()[n].dot(s1ders[0].as_ref()[0] - ders[0]),
+        s1ders[1].as_ref()[0].dot(s1ders[0].as_ref()[n])
+            + s1ders[n].as_ref()[1].dot(s1ders[0].as_ref()[0] - ders[0]),
+        s1ders[0].as_ref()[1].dot(s1ders[0].as_ref()[n])
+            + s1ders[0].as_ref()[n + 1].dot(s1ders[0].as_ref()[0] - ders[0]),
+    );
+    uv1ders[n] = -mat.invert().unwrap() * Vector2::new(lhs_u, lhs_v);
+    s1tders[n] = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(s1ders, uv1ders, idx) * multiplicity(idx) as f64
+        })
+    });
+    s1uderders[n] = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(&s1ders[1..], uv1ders, idx) * multiplicity(idx) as f64
+        })
+    });
+    s1vderders[n] = (1..=n).fold(Vector3::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(&s1vders, uv1ders, idx) * multiplicity(idx) as f64
+        })
+    });
+
+    let mut c = 1;
+    cross1ders[n] = (0..=n).fold(Vector3::zero(), |mut sum, i| {
+        sum += s1uderders[i].cross(s1vderders[n - i]) * c as f64;
+        c = c * (n - i) / (i + 1);
+        sum
+    });
+    let mut c = 1;
+    let sum0 = (0..n).fold(0.0, |mut sum, i| {
+        let x = cross1ders[i + 1].dot(cross1ders[n - i - 1]);
+        let y = abs_cross1ders[i + 1] * abs_cross1ders[n - i - 1];
+        sum += (y - x) * c as f64;
+        c = c * (n - i - 1) / (i + 1);
+        sum
+    });
+    abs_cross1ders[n] = sum0 / abs_cross1ders[0];
+    let homog0 = cross1ders[..=n]
+        .iter()
+        .zip(&abs_cross1ders[..=n])
+        .map(|(v, w)| v.extend(*w))
+        .collect::<Vec<_>>();
+    n1ders[n] = rat_der(&homog0);
+}
+
 fn sub_contact_point_der(
     surface: &impl ParametricSurface3D,
     contact_point: ContactPoint,
@@ -176,6 +420,64 @@ fn sub_contact_point_der(
     let vec = Vector2::new(uder.dot(dc), vder.dot(dc));
     let duv = mat.invert().unwrap() * vec;
     duv.x * uder + duv.y * vder
+}
+
+fn rot_der_n(orders: [usize; 4], axis: Vector3, angle: f64) -> Matrix3 {
+    let (s, c) = (angle + PI / 2.0 * orders[3] as f64).sin_cos();
+    let k = -c + if orders[3] == 0 { 1.0 } else { 0.0 };
+    match orders {
+        [0, 0, 0, _] => Matrix3::new(
+            k * axis.x * axis.x + c,
+            k * axis.x * axis.y + s * axis.z,
+            k * axis.x * axis.z - s * axis.y,
+            k * axis.x * axis.y - s * axis.z,
+            k * axis.y * axis.y + c,
+            k * axis.y * axis.z + s * axis.x,
+            k * axis.x * axis.z + s * axis.y,
+            k * axis.y * axis.z - s * axis.x,
+            k * axis.z * axis.z + c,
+        ),
+        [1, 0, 0, _] => Matrix3::new(
+            2.0 * axis.x * k,
+            axis.y * k,
+            axis.z * k,
+            axis.y * k,
+            0.0,
+            s,
+            axis.z * k,
+            -s,
+            0.0,
+        ),
+        [0, 1, 0, _] => Matrix3::new(
+            0.0,
+            axis.x * k,
+            -s,
+            axis.x * k,
+            2.0 * axis.y * k,
+            axis.z * k,
+            s,
+            axis.z * k,
+            0.0,
+        ),
+        [0, 0, 1, _] => Matrix3::new(
+            0.0,
+            s,
+            axis.x * k,
+            -s,
+            0.0,
+            axis.y * k,
+            axis.x * k,
+            axis.y * k,
+            2.0 * axis.z * k,
+        ),
+        [2, 0, 0, _] => Matrix3::new(2.0 * k, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+        [0, 2, 0, _] => Matrix3::new(0.0, 0.0, 0.0, 0.0, 2.0 * k, 0.0, 0.0, 0.0, 0.0),
+        [0, 0, 2, _] => Matrix3::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0 * k),
+        [0, 1, 1, _] => Matrix3::new(0.0, 0.0, 0.0, 0.0, 0.0, k, 0.0, k, 0.0),
+        [1, 0, 1, _] => Matrix3::new(0.0, 0.0, k, 0.0, 0.0, 0.0, k, 0.0, 0.0),
+        [1, 1, 0, _] => Matrix3::new(0.0, k, 0.0, k, 0.0, 0.0, 0.0, 0.0, 0.0),
+        _ => Matrix3::zero(),
+    }
 }
 
 fn rot_der(axis: Vector3, angle: f64) -> [Matrix3; 4] {
@@ -263,6 +565,39 @@ proptest! {
             assert!((dm2[i] - ans2[i]).magnitude() < EPS);
             assert!((dm3[i] - ans3[i]).magnitude() < EPS);
         });
+    }
+    #[test]
+    fn rot_der_n_test(
+        (u, v) in (0.0f64..2.0 * PI, -1.0f64..=1.0),
+        angle in 0.0f64..2.0 * PI,
+        orders in prop::array::uniform4(0usize..=4usize),
+        index in 0..4usize,
+    ) {
+        const EPS: f64 = 1.0e-4;
+        let (r, z) = ((1.0 - v * v).sqrt(), v);
+        let (s, c) = u.sin_cos();
+        let axis = Vector3::new(r * c, r * s, z);
+
+        let mut orders0 = orders;
+        orders0[index] += 1;
+        let mat0 = rot_der_n(orders0, axis, angle);
+
+        let (mut axis_p, mut angle_p) = (axis, angle);
+        if index < 3 {
+            axis_p[index] += EPS;
+        } else {
+            angle_p += EPS;
+        }
+        let (mut axis_m, mut angle_m) = (axis, angle);
+        if index < 3 {
+            axis_m[index] -= EPS;
+        } else {
+            angle_m -= EPS;
+        }
+        let mat1 =
+            (rot_der_n(orders, axis_p, angle_p) - rot_der_n(orders, axis_m, angle_m)) / (2.0 * EPS);
+
+        prop_assert!((0..3).all(|i| (mat0[i] - mat1[i]).magnitude() < EPS));
     }
 }
 

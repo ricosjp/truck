@@ -62,21 +62,16 @@ impl ContactCircle {
 impl ParametricCurve for ContactCircle {
     type Point = Point3;
     type Vector = Vector3;
-    fn subs(&self, t: f64) -> Self::Point {
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
         let radius = self.contact_point0.point - self.center;
-        let rot = Matrix3::from_axis_angle(self.axis, self.angle * t);
-        self.center + rot * radius
+        let angle = Rad(PI / 2.0) * n as f64 + self.angle * t;
+        let rot = Matrix3::from_axis_angle(self.axis, angle);
+        let c = self.center.to_vec() * if n == 0 { 1.0 } else { 0.0 };
+        c + rot * radius * self.angle.0.powi(n as i32)
     }
-    fn der(&self, t: f64) -> Self::Vector {
-        let radius = self.contact_point0.point - self.center;
-        let angle = Rad(PI / 2.0) + self.angle * t;
-        Matrix3::from_axis_angle(self.axis, angle) * radius * self.angle.0
-    }
-    fn der2(&self, t: f64) -> Self::Vector {
-        let minus_radius = self.center - self.contact_point0.point;
-        let rot = Matrix3::from_axis_angle(self.axis, self.angle * t);
-        rot * minus_radius * self.angle.0.powi(2)
-    }
+    fn subs(&self, t: f64) -> Self::Point { Point3::from_vec(self.der_n(0, t)) }
+    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
+    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
     fn parameter_range(&self) -> ParameterRange {
         use std::ops::Bound;
         (Bound::Included(0.0), Bound::Included(1.0))

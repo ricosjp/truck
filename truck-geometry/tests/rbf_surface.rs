@@ -36,9 +36,16 @@ fn fillet_between_two_sphere() {
     #[derive(Clone, Copy, Debug)]
     struct Radius;
     impl RadiusFunction for Radius {
-        fn subs(&self, t: f64) -> f64 { 1.0 + 0.2 * f64::cos(t) }
-        fn der(&self, t: f64) -> f64 { -0.2 * f64::sin(t) }
-        fn der2(&self, t: f64) -> f64 { -0.2 * f64::cos(t) }
+        fn der_n(&self, n: usize, t: f64) -> f64 {
+            let o = if n == 0 { 1.0 } else { 0.0 };
+            let x = match n % 4 {
+                0 => f64::cos(t),
+                1 => -f64::sin(t),
+                2 => -f64::cos(t),
+                _ => f64::sin(t),
+            };
+            o + 0.2 * x
+        }
     }
 
     let fillet = RbfSurface::new(edge_circle, sphere0, sphere1, Radius);

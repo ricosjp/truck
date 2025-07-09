@@ -48,32 +48,32 @@ impl<C, S0, S1, R> RbfSurface<C, S0, S1, R> {
 
 /// trait for radius function
 pub trait RadiusFunction: Clone {
+    /// Returns the `n`th order derivation.
+    fn der_n(&self, n: usize, t: f64) -> f64;
     /// Substitutes the parameter `t`.
-    fn subs(&self, t: f64) -> f64;
+    #[inline]
+    fn subs(&self, t: f64) -> f64 { self.der_n(0, t) }
     /// Returns the derivation.
-    fn der(&self, t: f64) -> f64;
+    #[inline]
+    fn der(&self, t: f64) -> f64 { self.der_n(1, t) }
     /// Returns the 2nd-order derivation.
-    fn der2(&self, t: f64) -> f64;
+    #[inline]
+    fn der2(&self, t: f64) -> f64 { self.der_n(2, t) }
 }
 
 impl RadiusFunction for f64 {
     #[inline]
-    fn subs(&self, _: f64) -> f64 { *self }
-    #[inline]
-    fn der(&self, _: f64) -> f64 { 0.0 }
-    #[inline]
-    fn der2(&self, _: f64) -> f64 { 0.0 }
+    fn der_n(&self, n: usize, _: f64) -> f64 {
+        let x = if n == 0 { *self } else { 0.0 };
+        x
+    }
 }
 
 macro_rules! impl_radius_1dim {
     ($ty: ty) => {
         impl RadiusFunction for $ty {
             #[inline]
-            fn subs(&self, t: f64) -> f64 { ParametricCurve::subs(self, t).x }
-            #[inline]
-            fn der(&self, t: f64) -> f64 { ParametricCurve::der(self, t).x }
-            #[inline]
-            fn der2(&self, t: f64) -> f64 { ParametricCurve::der2(self, t).x }
+            fn der_n(&self, n: usize, t: f64) -> f64 { ParametricCurve::der_n(self, n, t).x }
         }
     };
 }
