@@ -43,9 +43,7 @@ where
 
     /// the derivation of the orbit of the contact circle
     pub fn center_der(&self, cc: ContactCircle) -> Vector3 {
-        let p = self.edge_curve.subs(cc.t);
-        let der = self.edge_curve.der(cc.t);
-        let der2 = self.edge_curve.der2(cc.t);
+        let [p, der, der2] = self.edge_curve.ders_array::<3>(cc.t);
 
         let (u0, v0) = cc.contact_point0.uv.into();
         let n0 = self.surface0.normal(u0, v0);
@@ -59,7 +57,7 @@ where
 
         let mat = Matrix3::from_cols(der, n0, n1).transpose();
         let vec = Vector3::new(
-            der.magnitude2() + der2.dot(p - cc.center),
+            der.magnitude2() + der2.dot(p - cc.center.to_vec()),
             -sign * dr,
             -sign * dr,
         );
@@ -127,7 +125,11 @@ where
         let dp0 = self.contact_point0_der(cc);
         let daxis = self.axis_der(cc);
         let dangle = self.angle_der(cc) * u;
-        let dm = rot_der(cc.axis, cc.angle.0 * u);
+        let dm = std::array::from_fn::<_, 4, _>(|index| {
+            let mut orders = [0; 4];
+            orders[index] = 1;
+            rot_der_n(orders, cc.axis, cc.angle.0 * u)
+        });
         let drot = daxis.x * dm[0] + daxis.y * dm[1] + daxis.z * dm[2] + dangle * dm[3];
         dc + drot * cp0 + rot * (dp0 - dc)
     }
@@ -152,7 +154,7 @@ where
     }
 }
 
-fn der_routine<A: AsRef<[Vector3]>>(
+fn _der_routine<A: AsRef<[Vector3]>>(
     s0ders: &[A],
     s0tders: &mut [Vector3],
     s0uderders: &mut [Vector3],
@@ -480,93 +482,12 @@ fn rot_der_n(orders: [usize; 4], axis: Vector3, angle: f64) -> Matrix3 {
     }
 }
 
-fn rot_der(axis: Vector3, angle: f64) -> [Matrix3; 4] {
-    let (s, c) = angle.sin_cos();
-    let k = 1.0 - c;
-    [
-        Matrix3::new(
-            2.0 * axis.x * k,
-            axis.y * k,
-            axis.z * k,
-            axis.y * k,
-            0.0,
-            s,
-            axis.z * k,
-            -s,
-            0.0,
-        ),
-        Matrix3::new(
-            0.0,
-            axis.x * k,
-            -s,
-            axis.x * k,
-            2.0 * axis.y * k,
-            axis.z * k,
-            s,
-            axis.z * k,
-            0.0,
-        ),
-        Matrix3::new(
-            0.0,
-            s,
-            axis.x * k,
-            -s,
-            0.0,
-            axis.y * k,
-            axis.x * k,
-            axis.y * k,
-            2.0 * axis.z * k,
-        ),
-        Matrix3::new(
-            (axis.x * axis.x - 1.0) * s,
-            axis.x * axis.y * s + axis.z * c,
-            axis.z * axis.x * s - axis.y * c,
-            axis.x * axis.y * s - axis.z * c,
-            (axis.y * axis.y - 1.0) * s,
-            axis.y * axis.z * s + axis.x * c,
-            axis.z * axis.x * s + axis.y * c,
-            axis.y * axis.z * s - axis.x * c,
-            (axis.z * axis.z - 1.0) * s,
-        ),
-    ]
-}
-
 #[cfg(test)]
 use proptest::prelude::*;
 
 #[cfg(test)]
 proptest! {
-    #[test]
-    fn rot_der_test(
-        (u, v) in (0.0f64..2.0 * PI, -1.0f64..=1.0),
-        angle in 0.0f64..2.0 * PI
-    ) {
-        const EPS: f64 = 1.0e-4;
-        let (r, z) = ((1.0 - v * v).sqrt(), v);
-        let (s, c) = u.sin_cos();
-        let axis = Vector3::new(r * c, r * s, z);
-
-        let [dm0, dm1, dm2, dm3] = rot_der(axis, angle);
-        let ans0 = (Matrix3::from_axis_angle(axis + EPS * Vector3::unit_x(), Rad(angle))
-            - Matrix3::from_axis_angle(axis - EPS * Vector3::unit_x(), Rad(angle)))
-            / (2.0 * EPS);
-        let ans1 = (Matrix3::from_axis_angle(axis + EPS * Vector3::unit_y(), Rad(angle))
-            - Matrix3::from_axis_angle(axis - EPS * Vector3::unit_y(), Rad(angle)))
-            / (2.0 * EPS);
-        let ans2 = (Matrix3::from_axis_angle(axis + EPS * Vector3::unit_z(), Rad(angle))
-            - Matrix3::from_axis_angle(axis - EPS * Vector3::unit_z(), Rad(angle)))
-            / (2.0 * EPS);
-        let ans3 = (Matrix3::from_axis_angle(axis, Rad(angle + EPS))
-            - Matrix3::from_axis_angle(axis, Rad(angle - EPS)))
-            / (2.0 * EPS);
-        (0..3).for_each(|i| {
-            assert!((dm0[i] - ans0[i]).magnitude() < EPS);
-            assert!((dm1[i] - ans1[i]).magnitude() < EPS);
-            assert!((dm2[i] - ans2[i]).magnitude() < EPS);
-            assert!((dm3[i] - ans3[i]).magnitude() < EPS);
-        });
-    }
-    #[test]
+   #[test]
     fn rot_der_n_test(
         (u, v) in (0.0f64..2.0 * PI, -1.0f64..=1.0),
         angle in 0.0f64..2.0 * PI,

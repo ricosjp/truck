@@ -1493,7 +1493,8 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         let curve1 = BSplineCurve::new_unchecked(vknot_vec.clone(), control_points1);
         let mut curve2 = BSplineCurve::new_unchecked(uknot_vec, control_points2);
         let mut curve3 = BSplineCurve::new_unchecked(vknot_vec, control_points3);
-        (curve2.invert(), curve3.invert());
+        curve2.invert();
+        curve3.invert();
         [curve0, curve1, curve2, curve3]
     }
 
@@ -1502,7 +1503,8 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
         let (uknot_vec, vknot_vec) = self.knot_vecs.clone();
         let (range0, range1) = (uknot_vec.range_length(), vknot_vec.range_length());
         let [bspline0, mut bspline1, mut bspline2, mut bspline3] = self.splitted_boundary();
-        (bspline2.invert(), bspline3.invert());
+        bspline2.invert();
+        bspline3.invert();
         bspline0
             .concat(bspline1.knot_translate(range0))
             .concat(bspline2.knot_translate(range0 + range1))

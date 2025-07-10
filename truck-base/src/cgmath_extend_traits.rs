@@ -172,22 +172,23 @@ where
     V: Homogeneous<S>,
     V::Point: EuclideanSpace<Diff = Diff>,
     Diff: VectorSpace<Scalar = S>, {
-    if ders.len() == 0 {
+    let len = ders.len();
+    if len == 0 {
         Diff::zero()
-    } else if ders.len() == 1 {
+    } else if len == 1 {
         ders[0].to_point().to_vec()
-    } else if ders.len() == 2 {
+    } else if len == 2 {
         let (s, sw) = (ders[0].truncate(), ders[0].weight());
         let (d, dw) = (ders[1].truncate(), ders[1].weight());
         (d * sw - s * dw) / (sw * sw)
-    } else if ders.len() == 3 {
+    } else if len == 3 {
         let (s, sw) = (ders[0].truncate(), ders[0].weight());
         let (d, dw) = (ders[1].truncate(), ders[1].weight());
         let (d2, d2w) = (ders[2].truncate(), ders[2].weight());
         let two = S::from(2).unwrap();
         let sw2 = sw * sw;
         d2 / sw - d * (dw / sw2 * two) + s * (dw * dw * two / (sw2 * sw) - d2w / sw2)
-    } else if ders.len() < 32 {
+    } else if len < 32 {
         let mut evals = [Diff::zero(); 32];
         rat_ders(ders, &mut evals);
         evals[ders.len() - 1]
@@ -284,7 +285,7 @@ where
     V::Point: EuclideanSpace<Diff = Diff>,
     Diff: VectorSpace<Scalar = S>,
     A: AsRef<[V]>, {
-    if ders.len() == 0 {
+    if ders.is_empty() {
         return Diff::zero();
     }
     let (m, n) = (ders.len(), ders[0].as_ref().len());

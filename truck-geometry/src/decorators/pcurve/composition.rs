@@ -3,7 +3,7 @@ use super::*;
 fn can_init(len: usize, n: usize, max: usize) -> bool { !(len > n || max * len < n) }
 
 fn init(array: &mut [usize], n: usize, max: usize) {
-    if array.len() == 0 {
+    if array.is_empty() {
         return;
     }
     array[0] = (n - array.len() + 1).min(max);
@@ -80,7 +80,7 @@ pub fn multiplicity(array: &[usize]) -> u128 {
 }
 
 pub fn tensor<V, A>(sder: &[A], cder: &[Vector2], idx: &[usize]) -> V
-where V: VectorSpace<Scalar = f64> + ElementWise, A: AsRef<[V]> {
+where V: VectorSpace<Scalar = f64>, A: AsRef<[V]> {
     let n: u128 = 2u128.pow(idx.len() as u32);
     (0..n).fold(V::zero(), |sum, mut i| {
         let (t, mult) = idx.iter().fold((0, 1.0), |(t, mult), &j| {

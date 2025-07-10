@@ -64,8 +64,10 @@ pub trait RadiusFunction: Clone {
 impl RadiusFunction for f64 {
     #[inline]
     fn der_n(&self, n: usize, _: f64) -> f64 {
-        let x = if n == 0 { *self } else { 0.0 };
-        x
+        match n {
+            0 => *self,
+            _ => 0.0,
+        }
     }
 }
 

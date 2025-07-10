@@ -44,6 +44,21 @@ where
             + surface.vder(u, v) * der3[1]
     }
 }
+
+pub(super) fn raw_der_n<V, A>(surface_ders: &[A], curve_ders: &[Vector2], n: usize) -> V
+where
+    V: VectorSpace<Scalar = f64>,
+    A: AsRef<[V]>, {
+    use composition::*;
+    (1..=n).fold(V::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(surface_ders, curve_ders, idx) * multiplicity(idx) as f64
+        })
+    })
+}
+
 impl<C, S> ParametricCurve for PCurve<C, S>
 where
     C: ParametricCurve2D,
@@ -54,7 +69,6 @@ where
     type Point = S::Point;
     type Vector = S::Vector;
     fn der_n(&self, n: usize, t: f64) -> Self::Vector {
-        use composition::*;
         if n >= 32 {
             panic!("the order of derivation must be under 32.");
         }
@@ -76,18 +90,9 @@ where
             .map(|(i, slice)| &mut slice[0..=(n - i)])
             .collect::<Vec<_>>();
         self.surface.ders(u, v, &mut sder_mut);
-
-        (1..=n).fold(S::Vector::zero(), |sum, len| {
-            let iter = CompositionIter::<32>::try_new(n, len).unwrap();
-            iter.fold(sum, |sum, idx| {
-                let idx = &idx[..len];
-                sum + tensor(&sder, &cder, idx) * multiplicity(idx) as f64
-            })
-        })
+        raw_der_n(&sder, &cder, n)
     }
     fn ders(&self, t: f64, out: &mut [Self::Vector]) {
-        use composition::*;
-
         if out.is_empty() {
             return;
         }
@@ -108,14 +113,8 @@ where
         self.surface.ders(u, v, &mut sder_mut);
         out[0] = sder[0][0];
 
-        (1..=n).for_each(|m| {
-            out[m] = (1..=m).fold(S::Vector::zero(), |sum, len| {
-                let iter = CompositionIter::<32>::try_new(m, len).unwrap();
-                iter.fold(sum, |sum, idx| {
-                    let idx = &idx[..len];
-                    sum + tensor(&sder, &cder, idx) * multiplicity(idx) as f64
-                })
-            });
+        out.iter_mut().enumerate().skip(1).for_each(|(m, o)| {
+            *o = raw_der_n(&sder, &cder, m)
         });
     }
     fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {

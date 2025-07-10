@@ -499,7 +499,7 @@ where C: ParametricCurve3D + ParameterDivision1D<Point = Point3>
 }
 
 fn from_axis_angle_derivation(n: usize, axis: Vector3, angle: Rad<f64>) -> Matrix3 {
-    let (s, c) = Rad::sin_cos(angle.into());
+    let (s, c) = Rad::sin_cos(angle);
     let (s, c) = match n % 4 {
         0 => (s, c),
         1 => (c, -s),

@@ -137,32 +137,24 @@ where
     }
 }
 
-fn der_routine<A: AsRef<[Vector3]>>(
-    s0ders: &[A],
+#[derive(Clone, Copy, Debug)]
+struct DerRoutineImmutableArgs<'a, A> {
+    s0ders: &'a [A],
     s0normal: Vector3,
-    uv0ders: &mut [Vector2],
-    s1ders: &[A],
+    s1ders: &'a [A],
     s1normal: Vector3,
-    uv1ders: &mut [Vector2],
+    leaders: &'a [Vector3],
+}
+
+fn curve_der_n(
+    sum0: Vector3,
+    s0normal: Vector3,
+    sum1: Vector3,
+    s1normal: Vector3,
     leaders: &[Vector3],
-    cders: &mut [Vector3],
+    cders: &[Vector3],
     n: usize,
-) {
-    use pcurve::composition::*;
-    let sum0 = (1..=n).fold(Vector3::zero(), |sum, len| {
-        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
-        iter.fold(sum, |sum, idx| {
-            let idx = &idx[..len];
-            sum + tensor(s0ders, uv0ders, idx) * multiplicity(idx) as f64
-        })
-    });
-    let sum1 = (1..=n).fold(Vector3::zero(), |sum, len| {
-        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
-        iter.fold(sum, |sum, idx| {
-            let idx = &idx[..len];
-            sum + tensor(s1ders, uv1ders, idx) * multiplicity(idx) as f64
-        })
-    });
+) -> Vector3 {
     let mut c = 1;
     let suml = (0..=n).fold(0.0, |sum, i| {
         let sum = sum + leaders[i + 1].dot(leaders[n - i] - cders[n - i]) * c as f64;
@@ -171,19 +163,43 @@ fn der_routine<A: AsRef<[Vector3]>>(
     });
     let mat = Matrix3::from_cols(s0normal, s1normal, leaders[1]).transpose();
     let b = Vector3::new(s0normal.dot(sum0), s1normal.dot(sum1), suml);
-    cders[n] = mat.invert().unwrap() * b;
+    mat.invert().unwrap() * b
+}
 
-    let mat = Matrix3::from_cols(s0ders[1].as_ref()[0], s0ders[0].as_ref()[1], s0normal);
-    let b = cders[n] - sum0;
-    let uv0der_n = mat.invert().unwrap() * b;
-    debug_assert!(uv0der_n.z.abs() < 1.0e-4, "{}", uv0der_n.z.abs());
-    uv0ders[n] = Vector2::new(uv0der_n.x, uv0der_n.y);
+fn uv_der_n(
+    uder: Vector3,
+    vder: Vector3,
+    sum: Vector3,
+    normal: Vector3,
+    cder_n: Vector3,
+) -> Vector2 {
+    let mat = Matrix3::from_cols(uder, vder, normal);
+    let b = cder_n - sum;
+    let uv_der_n = mat.invert().unwrap() * b;
+    debug_assert!(uv_der_n.z.abs() < 1.0e-4, "{}", uv_der_n.z.abs());
+    Vector2::new(uv_der_n.x, uv_der_n.y)
+}
 
-    let mat = Matrix3::from_cols(s1ders[1].as_ref()[0], s1ders[0].as_ref()[1], s1normal);
-    let b = cders[n] - sum1;
-    let uv1der_n = mat.invert().unwrap() * b;
-    debug_assert!(uv1der_n.z.abs() < 1.0e-4, "{}", uv1der_n.z.abs());
-    uv1ders[n] = Vector2::new(uv1der_n.x, uv1der_n.y);
+fn der_routine<A: AsRef<[Vector3]>>(
+    DerRoutineImmutableArgs {
+        s0ders,
+        s0normal,
+        s1ders,
+        s1normal,
+        leaders,
+    }: DerRoutineImmutableArgs<'_, A>,
+    uv0ders: &mut [Vector2],
+    uv1ders: &mut [Vector2],
+    cders: &mut [Vector3],
+    n: usize,
+) {
+    let sum0 = pcurve::raw_der_n(s0ders, uv0ders, n);
+    let sum1 = pcurve::raw_der_n(s1ders, uv1ders, n);
+    cders[n] = curve_der_n(sum0, s0normal, sum1, s1normal, leaders, cders, n);
+    let (uder0, vder0) = (s0ders[1].as_ref()[0], s0ders[0].as_ref()[1]);
+    uv0ders[n] = uv_der_n(uder0, vder0, sum0, s0normal, cders[n]);
+    let (uder1, vder1) = (s1ders[1].as_ref()[0], s1ders[0].as_ref()[1]);
+    uv1ders[n] = uv_der_n(uder1, vder1, sum1, s1normal, cders[n]);
 }
 
 impl<C, S0, S1> ParametricCurve for IntersectionCurve<C, S0, S1>
@@ -221,13 +237,19 @@ where
         self.ders(t, &mut cders[0..=n]);
         cders[n]
     }
+    #[inline(always)]
     fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
         let mut res = vec![Vector3::zero(); n + 1];
         self.ders(t, &mut res);
         res
     }
     #[inline(always)]
-    fn ders(&self, t: f64, cders: &mut [Vector3]){
+    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] {
+        let mut res = [Vector3::zero(); LEN];
+        self.ders(t, &mut res);
+        res
+    }
+    fn ders(&self, t: f64, cders: &mut [Vector3]) {
         if cders.is_empty() {
             return;
         }
@@ -239,50 +261,48 @@ where
         } = self;
         let (c, uv0, uv1) = self.search_triple(t, 100).unwrap();
 
-        let mut s0ders = [[Vector3::zero(); 32]; 32];
-        let mut s0ders_mut = s0ders[0..=n]
-            .iter_mut()
-            .enumerate()
-            .map(|(i, slice)| &mut slice[0..=n - i])
-            .collect::<Vec<_>>();
-        surface0.ders(uv0.x, uv0.y, &mut s0ders_mut);
-        let s0normal = surface0.normal(uv0.x, uv0.y);
+        let s0ders = &mut [[Vector3::zero(); 32]; 32];
+        let s0normal = surface_info(surface0, uv0, s0ders, n);
         let mut uv0ders = [Vector2::zero(); 32];
         uv0ders[0] = uv0.to_vec();
 
-        let mut s1ders = [[Vector3::zero(); 32]; 32];
-        let mut s1ders_mut = s1ders[0..=n]
-            .iter_mut()
-            .enumerate()
-            .map(|(i, slice)| &mut slice[0..=n - i])
-            .collect::<Vec<_>>();
-        surface1.ders(uv1.x, uv1.y, &mut s1ders_mut);
-        let s1normal = surface1.normal(uv1.x, uv1.y);
+        let s1ders = &mut [[Vector3::zero(); 32]; 32];
+        let s1normal = surface_info(surface1, uv1, s1ders, n);
         let mut uv1ders = [Vector2::zero(); 32];
         uv1ders[0] = uv1.to_vec();
 
-        let mut leaders = [Vector3::zero(); 32];
+        let leaders = &mut [Vector3::zero(); 32];
         leader.ders(t, &mut leaders[0..=n + 1]);
 
         cders.iter_mut().for_each(|c| *c = Vector3::zero());
         cders[0] = c.to_vec();
 
-        (1..=n).for_each(|i| {
-            der_routine(
-                &s0ders,
-                s0normal,
-                &mut uv0ders,
-                &s1ders,
-                s1normal,
-                &mut uv1ders,
-                &leaders,
-                cders,
-                i,
-            )
-        });
+        let info = DerRoutineImmutableArgs {
+            s0ders,
+            s0normal,
+            s1ders: s1ders,
+            s1normal,
+            leaders,
+        };
+        (1..=n).for_each(move |i| der_routine(info, &mut uv0ders, &mut uv1ders, cders, i));
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.leader.parameter_range() }
+}
+
+fn surface_info<S: ParametricSurface3D>(
+    surface: S,
+    uv: Point2,
+    ders: &mut [[Vector3; 32]; 32],
+    n: usize,
+) -> Vector3 {
+    let mut ders_mut = ders[0..=n]
+        .iter_mut()
+        .enumerate()
+        .map(|(i, slice)| &mut slice[0..=n - i])
+        .collect::<Vec<_>>();
+    surface.ders(uv.x, uv.y, &mut ders_mut);
+    surface.normal(uv.x, uv.y)
 }
 
 impl<C, S0, S1> BoundedCurve for IntersectionCurve<C, S0, S1>
