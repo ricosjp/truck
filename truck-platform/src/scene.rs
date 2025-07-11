@@ -705,6 +705,7 @@ impl Scene {
                         load: LoadOp::Clear(self.scene_desc.studio.background),
                         store: StoreOp::Store,
                     },
+                    depth_slice: None,
                 })],
                 depth_stencil_attachment: depth_view
                     .as_ref()
