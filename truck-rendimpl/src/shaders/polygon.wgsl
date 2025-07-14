@@ -23,6 +23,7 @@ var<uniform> lights: Lights;
 
 struct SceneInfo {
     bk_color: vec4<f32>,
+    resolution: vec2f,
     time: f32,
     nlights: u32,
 }
