@@ -113,9 +113,10 @@ where
         self.surface.ders(u, v, &mut sder_mut);
         out[0] = sder[0][0];
 
-        out.iter_mut().enumerate().skip(1).for_each(|(m, o)| {
-            *o = raw_der_n(&sder, &cder, m)
-        });
+        out.iter_mut()
+            .enumerate()
+            .skip(1)
+            .for_each(|(m, o)| *o = raw_der_n(&sder, &cder, m));
     }
     fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
         let mut res = vec![Self::Vector::zero(); n + 1];

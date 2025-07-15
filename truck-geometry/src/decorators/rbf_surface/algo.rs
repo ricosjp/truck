@@ -61,7 +61,7 @@ where
         let mut ders = [Vector3::zero(); 32];
         ders[0] = cc.center.to_vec();
 
-        (1..=n).for_each(|m| der_routine(&mut s0info, &mut s1info, &cders, &rders, &mut ders, m));
+        (1..=n).for_each(|m| der_routine(&mut s0info, &mut s1info, &cders, rders, &mut ders, m));
 
         CenterContactDers {
             center_ders: ders,
@@ -372,8 +372,8 @@ fn der_routine(
     );
     ders[n] = mat.invert().unwrap() * b;
 
-    s0info.routine(&ders, n);
-    s1info.routine(&ders, n);
+    s0info.routine(ders, n);
+    s1info.routine(ders, n);
 }
 
 fn rot_der_n(orders: [usize; 4], axis: Vector3, angle: f64) -> Matrix3 {

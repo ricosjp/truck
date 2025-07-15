@@ -511,6 +511,7 @@ fn from_axis_angle_derivation(n: usize, axis: Vector3, angle: Rad<f64>) -> Matri
         _ => -c,
     };
 
+    #[allow(clippy::deprecated_cfg_attr)]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     Matrix3::new(
         _1subc * axis.x * axis.x + c,

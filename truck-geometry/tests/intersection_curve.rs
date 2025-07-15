@@ -44,11 +44,11 @@ proptest! {
             Matrix4::from_translation(z * Vector3::unit_z()),
         );
         let curve = IntersectionCurve::new(cylinder0, cylinder1, lead_circle);
-    
+
         let p = curve.subs(t);
         prop_assert_near!(p.x * p.x + p.y * p.y, 1.0);
         prop_assert_near!(p.z * p.z + p.y * p.y, 4.0);
-    
+
         let t0 = match curve.search_parameter(p, None, 100) {
             Some(t0) => t0,
             None => {
@@ -58,7 +58,7 @@ proptest! {
         };
         let diff = (t - t0).abs();
         prop_assert!(diff.near(&0.0) || diff.near(&(2.0 * PI)));
-    
+
         const EPS: f64 = 1.0e-4;
         let v0 = curve.der_n(n + 1, t);
         let v1 = (curve.der_n(n, t + EPS) - curve.der_n(n, t - EPS)) / (2.0 * EPS);
@@ -70,7 +70,7 @@ proptest! {
         curve.ders(t, &mut ders1);
 
         let ders2 = curve.ders_vec(n, t);
-        
+
         prop_assert_eq!(ders0.len(), ders1.len());
         prop_assert_eq!(ders1.len(), ders2.len());
 

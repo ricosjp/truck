@@ -1,5 +1,5 @@
 use crate::{prelude::*, *};
-use std::ops::{Deref, DerefMut, Mul, Add};
+use std::ops::{Add, Deref, DerefMut, Mul};
 
 /// revolution
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]

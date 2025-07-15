@@ -80,7 +80,9 @@ pub fn multiplicity(array: &[usize]) -> u128 {
 }
 
 pub fn tensor<V, A>(sder: &[A], cder: &[Vector2], idx: &[usize]) -> V
-where V: VectorSpace<Scalar = f64>, A: AsRef<[V]> {
+where
+    V: VectorSpace<Scalar = f64>,
+    A: AsRef<[V]>, {
     let n: u128 = 2u128.pow(idx.len() as u32);
     (0..n).fold(V::zero(), |sum, mut i| {
         let (t, mult) = idx.iter().fold((0, 1.0), |(t, mult), &j| {

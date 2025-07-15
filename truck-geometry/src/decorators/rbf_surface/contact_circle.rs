@@ -1,7 +1,9 @@
 use super::*;
 
 /// trait for attach rolling fillet
-pub(super) trait FilletableSurface: ParametricSurface3D + SearchParameter<D2, Point = Point3> {}
+pub(super) trait FilletableSurface:
+    ParametricSurface3D + SearchParameter<D2, Point = Point3> {
+}
 impl<S: ParametricSurface3D + SearchParameter<D2, Point = Point3>> FilletableSurface for S {}
 
 impl ContactCircle {

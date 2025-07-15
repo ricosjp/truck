@@ -91,17 +91,11 @@ fn fillet_between_two_spheres() {
             let mut ders = [a.as_mut_slice(), &mut b, &mut c];
             fillet.ders(u, v, &mut ders);
 
-            let (mut a, mut b) = (
-                [Vector3::zero(); 2],
-                [Vector3::zero(); 1],
-            );
+            let (mut a, mut b) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
             let mut ders_plus = [a.as_mut_slice(), &mut b];
             fillet.ders(u + eps, v, &mut ders_plus);
-            
-            let (mut a, mut b) = (
-                [Vector3::zero(); 2],
-                [Vector3::zero(); 1],
-            );
+
+            let (mut a, mut b) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
             let mut ders_minus = [a.as_mut_slice(), &mut b];
             fillet.ders(u - eps, v, &mut ders_minus);
 
@@ -112,17 +106,11 @@ fn fillet_between_two_spheres() {
             let uuder_approx = (ders_plus[1][0] - ders_minus[1][0]) / (2.0 * eps);
             assert!((ders[2][0] - uuder_approx).magnitude() < eps);
 
-            let (mut a, mut b) = (
-                [Vector3::zero(); 2],
-                [Vector3::zero(); 1],
-            );
+            let (mut a, mut b) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
             let mut ders_plus = [a.as_mut_slice(), &mut b];
             fillet.ders(u, v + eps, &mut ders_plus);
-            
-            let (mut a, mut b) = (
-                [Vector3::zero(); 2],
-                [Vector3::zero(); 1],
-            );
+
+            let (mut a, mut b) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
             let mut ders_minus = [a.as_mut_slice(), &mut b];
             fillet.ders(u, v - eps, &mut ders_minus);
 

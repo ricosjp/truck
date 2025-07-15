@@ -276,7 +276,7 @@ where
         let info = DerRoutineImmutableArgs {
             s0ders,
             s0normal,
-            s1ders: s1ders,
+            s1ders,
             s1normal,
             leaders,
         };
