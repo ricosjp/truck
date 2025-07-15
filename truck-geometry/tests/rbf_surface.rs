@@ -69,27 +69,6 @@ fn fillet_between_two_spheres() {
         let contact_point1 = contact_radius * uc.subs(t) - contact_z * Vector3::unit_z();
         assert_near!(cp_curve1.subs(t), contact_point1);
 
-        let eps = 1.0e-4;
-        let cc_plus = fillet.contact_circle(t + eps).unwrap();
-        let cc_minus = fillet.contact_circle(t - eps).unwrap();
-
-        let center_der_approx = (cc_plus.center() - cc_minus.center()) / (2.0 * eps);
-        assert!((fillet.center_der(cc) - center_der_approx).magnitude() < eps);
-
-        let cp0_der_approx =
-            (cc_plus.contact_point0().point - cc_minus.contact_point0().point) / (2.0 * eps);
-        assert!((cp_curve0.der(t) - cp0_der_approx).magnitude() < eps);
-
-        let cp1_der_approx =
-            (cc_plus.contact_point1().point - cc_minus.contact_point1().point) / (2.0 * eps);
-        assert!((cp_curve1.der(t) - cp1_der_approx).magnitude() < eps);
-
-        let axis_der_approx = (cc_plus.axis() - cc_minus.axis()) / (2.0 * eps);
-        assert!((fillet.axis_der(cc) - axis_der_approx).magnitude() < eps);
-
-        let angle_der_approx = (cc_plus.angle() - cc_minus.angle()).0 / (2.0 * eps);
-        assert!((fillet.angle_der(cc) - angle_der_approx).abs() < eps);
-
         let t0 = cp_curve0
             .search_parameter(cc.contact_point0().point, None, 10)
             .unwrap();
@@ -101,8 +80,58 @@ fn fillet_between_two_spheres() {
 
         for j in 0..=N {
             let (u, v) = (j as f64 / N as f64, t);
-            let vder_approx = (cc_plus.subs(u) - cc_minus.subs(u)) / (2.0 * eps);
-            assert!((fillet.vder(u, v) - vder_approx).magnitude() < eps);
+
+            let eps = 1.0e-4;
+
+            let (mut a, mut b, mut c) = (
+                [Vector3::zero(); 3],
+                [Vector3::zero(); 2],
+                [Vector3::zero(); 1],
+            );
+            let mut ders = [a.as_mut_slice(), &mut b, &mut c];
+            fillet.ders(u, v, &mut ders);
+
+            let (mut a, mut b) = (
+                [Vector3::zero(); 2],
+                [Vector3::zero(); 1],
+            );
+            let mut ders_plus = [a.as_mut_slice(), &mut b];
+            fillet.ders(u + eps, v, &mut ders_plus);
+            
+            let (mut a, mut b) = (
+                [Vector3::zero(); 2],
+                [Vector3::zero(); 1],
+            );
+            let mut ders_minus = [a.as_mut_slice(), &mut b];
+            fillet.ders(u - eps, v, &mut ders_minus);
+
+            let uder_approx = (ders_plus[0][0] - ders_minus[0][0]) / (2.0 * eps);
+            assert!((ders[1][0] - uder_approx).magnitude() < eps);
+            let uvder_approx = (ders_plus[0][1] - ders_minus[0][1]) / (2.0 * eps);
+            assert!((ders[1][1] - uvder_approx).magnitude() < eps);
+            let uuder_approx = (ders_plus[1][0] - ders_minus[1][0]) / (2.0 * eps);
+            assert!((ders[2][0] - uuder_approx).magnitude() < eps);
+
+            let (mut a, mut b) = (
+                [Vector3::zero(); 2],
+                [Vector3::zero(); 1],
+            );
+            let mut ders_plus = [a.as_mut_slice(), &mut b];
+            fillet.ders(u, v + eps, &mut ders_plus);
+            
+            let (mut a, mut b) = (
+                [Vector3::zero(); 2],
+                [Vector3::zero(); 1],
+            );
+            let mut ders_minus = [a.as_mut_slice(), &mut b];
+            fillet.ders(u, v - eps, &mut ders_minus);
+
+            let vder_approx = (ders_plus[0][0] - ders_minus[0][0]) / (2.0 * eps);
+            assert!((ders[0][1] - vder_approx).magnitude() < eps);
+            let uvder_approx = (ders_plus[1][0] - ders_minus[1][0]) / (2.0 * eps);
+            assert!((ders[1][1] - uvder_approx).magnitude() < eps);
+            let vvder_approx = (ders_plus[0][1] - ders_minus[0][1]) / (2.0 * eps);
+            assert!((ders[0][2] - vvder_approx).magnitude() < eps);
 
             let p = cc.subs(u);
             let (u0, v0) = fillet

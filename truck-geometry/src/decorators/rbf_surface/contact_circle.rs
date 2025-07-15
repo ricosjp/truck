@@ -38,7 +38,6 @@ impl ContactCircle {
         let center = (0..100).find_map(|_| {
             let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
             let (c, q0, q1) = contact_points((p, der), (p0, n0), (p1, n1), radius);
-            println!("{p0:?} {q0:?}\n{p1:?} {q1:?}\n");
             if p0.near(&q0) && p1.near(&q1) {
                 Some(c)
             } else {
@@ -111,7 +110,7 @@ fn next_point(
     let (mut x, mut y) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
     let mut ders = [x.as_mut_slice(), &mut y];
     surface.ders(u, v, &mut ders);
-    let (pt, uder, vder) = (ders[0][0], ders[1][0], ders[0][1]);
+    let (uder, vder) = (ders[1][0], ders[0][1]);
     let d = q - p;
     let uu = uder.dot(uder);
     let uv = uder.dot(vder);
@@ -120,5 +119,5 @@ fn next_point(
     let vec = Vector2::new(uder.dot(d), vder.dot(d));
     let del = mat.invert().unwrap() * vec;
     let (u, v) = (u + del.x, v + del.y);
-    (Point3::from_vec(pt), (u, v))
+    (surface.subs(u, v), (u, v))
 }

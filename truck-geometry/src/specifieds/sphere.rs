@@ -39,7 +39,7 @@ impl ParametricSurface for Sphere {
             2 => Vector3::new(-cv, -sv, 0.0),
             _ => Vector3::new(sv, -cv, 0.0),
         };
-        center + u_part.mul_element_wise(v_part)
+        center + self.radius * u_part.mul_element_wise(v_part)
     }
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Point3 { self.center() + self.radius * self.normal(u, v) }
