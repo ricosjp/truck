@@ -20,16 +20,7 @@ pub trait ParametricSurface: Clone {
     /// Returns the 2nd-order derivation by `v`.
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns $\partial^{m + n} S / \partial u^m \partial v^n$.
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
-        match (m, n) {
-            (1, 0) => self.uder(u, v),
-            (0, 1) => self.vder(u, v),
-            (2, 0) => self.uuder(u, v),
-            (1, 1) => self.uvder(u, v),
-            (0, 2) => self.vvder(u, v),
-            _ => unimplemented!(),
-        }
-    }
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector;
     /// Calculates higher degree derivations at the parameter `(u, v)` and assign them to `out`.
     fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) {
         out.iter_mut().enumerate().for_each(|(i, out)| {
@@ -250,6 +241,7 @@ impl ParametricSurface for () {
     fn uuder(&self, _: f64, _: f64) -> Self::Vector {}
     fn uvder(&self, _: f64, _: f64) -> Self::Vector {}
     fn vvder(&self, _: f64, _: f64) -> Self::Vector {}
+    fn der_mn(&self, _: usize, _: usize, _: f64, _: f64) -> Self::Vector {}
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
             (Bound::Included(0.0), Bound::Included(1.0)),

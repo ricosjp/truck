@@ -172,6 +172,15 @@ impl<C: ParametricCurve3D> ParametricCurve for ProjectedCurve<C> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline(always)]
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+        match n {
+            0 => self.subs(t).to_vec(),
+            1 => self.der(t),
+            2 => self.der2(t),
+            _ => unimplemented!(),
+        }
+    }
+    #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point { self.revolution.proj_point(self.curve.subs(t)) }
     #[inline(always)]
     fn der(&self, t: f64) -> Self::Vector {

@@ -20,13 +20,7 @@ pub trait ParametricCurve: Clone {
     /// Returns the 2nd-order derivation.
     fn der2(&self, t: f64) -> Self::Vector;
     /// Returns the `n`th-order derivation.
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
-        match n {
-            1 => self.der(t),
-            2 => self.der2(t),
-            _ => unimplemented!(),
-        }
-    }
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector;
     /// Calculates derivations at the parameter `t` with order `0..out.len()` and assign them to `out`.
     fn ders(&self, t: f64, out: &mut [Self::Vector]) {
         out.iter_mut()
@@ -82,6 +76,7 @@ impl ParametricCurve for () {
     fn subs(&self, _: f64) -> Self::Point {}
     fn der(&self, _: f64) -> Self::Vector {}
     fn der2(&self, _: f64) -> Self::Vector {}
+    fn der_n(&self, _: usize, _: f64) -> Self::Vector {}
     fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Included(1.0)) }
 }
 
@@ -91,6 +86,7 @@ impl BoundedCurve for () {}
 impl ParametricCurve for (usize, usize) {
     type Point = usize;
     type Vector = usize;
+    fn der_n(&self, _: usize, _: f64) -> Self::Vector { self.1 - self.0 }
     fn subs(&self, t: f64) -> Self::Point {
         match t < 0.5 {
             true => self.0,

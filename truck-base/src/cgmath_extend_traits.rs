@@ -466,7 +466,7 @@ impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
 /// # Examples
 /// ```
 /// use truck_base::{assert_near, cgmath64::*};
-/// 
+///
 /// let t = 0.3;
 ///
 /// // c(t) = (2t, 1 - t^2) -> |c(t)| = 1 + t^2
@@ -479,7 +479,7 @@ impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
 /// let mut evals = [0.0; 4];
 ///
 /// abs_ders(&ders, &mut evals);
-/// 
+///
 /// assert_near!(evals[0], 1.0 + t * t);
 /// assert_near!(evals[1], 2.0 * t);
 /// assert_near!(evals[2], 2.0);
