@@ -155,13 +155,9 @@ fn curve_der_n(
     cders: &[Vector3],
     n: usize,
 ) -> Vector3 {
-    let mut c = 1;
-    let suml = (0..=n).fold(0.0, |sum, i| {
-        let sum = sum + leaders[i + 1].dot(leaders[n - i] - cders[n - i]) * c as f64;
-        c = c * (n - i) / (i + 1);
-        sum
-    });
     let mat = Matrix3::from_cols(s0normal, s1normal, leaders[1]).transpose();
+    let (f0, f1) = (|i| leaders[i + 1], |i| leaders[i] - cders[i]);
+    let suml = comp_sum(n, f0, f1, Vector3::dot);
     let b = Vector3::new(s0normal.dot(sum0), s1normal.dot(sum1), suml);
     mat.invert().unwrap() * b
 }

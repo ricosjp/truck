@@ -59,6 +59,13 @@ pub trait RadiusFunction: Clone {
     /// Returns the 2nd-order derivation.
     #[inline]
     fn der2(&self, t: f64) -> f64 { self.der_n(2, t) }
+    /// Substitutes the higher-order derivations to `out`.
+    #[inline]
+    fn ders(&self, t: f64, out: &mut [f64]) {
+        out.iter_mut()
+            .enumerate()
+            .for_each(|(i, o)| *o = self.der_n(i, t))
+    }
 }
 
 impl RadiusFunction for f64 {
@@ -127,7 +134,7 @@ where
     fn subs(&self, u: f64, v: f64) -> Point3 { self.contact_circle(v).unwrap().subs(u) }
     fn uder(&self, u: f64, v: f64) -> Vector3 { self.contact_circle(v).unwrap().der(u) }
     fn vder(&self, u: f64, v: f64) -> Vector3 { self.vder(u, self.contact_circle(v).unwrap()) }
-    fn uuder(&self, _u: f64, _v: f64) -> Self::Vector { unimplemented!() }
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.contact_circle(v).unwrap().der2(u) }
     fn uvder(&self, _u: f64, _v: f64) -> Self::Vector { unimplemented!() }
     fn vvder(&self, _u: f64, _v: f64) -> Self::Vector { unimplemented!() }
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {

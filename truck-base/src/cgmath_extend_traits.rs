@@ -231,6 +231,10 @@ where
     V: Homogeneous<S>,
     V::Point: EuclideanSpace<Diff = Diff>,
     Diff: VectorSpace<Scalar = S>, {
+    assert!(
+        evals.len() >= ders.len(),
+        "evals must be no shorter than ders."
+    );
     for i in 0..ders.len() {
         let mut c = 1;
         let sum = (1..i).fold(evals[0] * ders[i].weight(), |sum, j| {
@@ -456,4 +460,53 @@ impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
     fn weight(self) -> S { self[3] }
     #[inline(always)]
     fn from_point(point: Self::Point) -> Self { point.to_homogeneous() }
+}
+
+/// Store the multi-orders derivations of the magnitude of the curve of vector.
+/// # Examples
+/// ```
+/// use truck_base::{assert_near, cgmath64::*};
+/// 
+/// let t = 0.3;
+///
+/// // c(t) = (2t, 1 - t^2) -> |c(t)| = 1 + t^2
+/// let ders = [
+///     Vector2::new(2.0 * t, 1.0 - t * t),
+///     Vector2::new(2.0, -2.0 * t),
+///     Vector2::new(0.0, -2.0),
+///     Vector2::new(0.0, 0.0),
+/// ];
+/// let mut evals = [0.0; 4];
+///
+/// abs_ders(&ders, &mut evals);
+/// 
+/// assert_near!(evals[0], 1.0 + t * t);
+/// assert_near!(evals[1], 2.0 * t);
+/// assert_near!(evals[2], 2.0);
+/// assert_near!(evals[3], 0.0);
+/// ```
+pub fn abs_ders<V>(ders: &[V], evals: &mut [f64])
+where V: InnerSpace<Scalar = f64> {
+    assert!(
+        evals.len() >= ders.len(),
+        "evals must be no shorter than ders."
+    );
+    let n = ders.len();
+    evals.iter_mut().for_each(|o| *o = 0.0);
+
+    if n == 0 {
+        return;
+    }
+    evals[0] = ders[0].magnitude();
+    (1..n).for_each(|m| {
+        let mut c = 1;
+        let sum = (0..m).fold(0.0, |mut sum, i| {
+            let x = ders[i + 1].dot(ders[m - 1 - i]);
+            let y = evals[i + 1] * evals[m - 1 - i];
+            sum += (x - y) * c as f64;
+            c = c * (m - 1 - i) / (i + 1);
+            sum
+        });
+        evals[m] = sum / evals[0];
+    });
 }

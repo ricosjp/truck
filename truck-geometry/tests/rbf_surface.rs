@@ -25,7 +25,7 @@ fn contact_circle_as_curve() {
 }
 
 #[test]
-fn fillet_between_two_sphere() {
+fn fillet_between_two_spheres() {
     let sphere0 = Sphere::new(Point3::new(0.0, 0.0, 1.0), 2.0);
     let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), 2.0);
     let edge_circle = Processor::with_transform(

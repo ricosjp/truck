@@ -1,7 +1,7 @@
 use super::*;
 
 /// trait for attach rolling fillet
-trait FilletableSurface: ParametricSurface3D + SearchParameter<D2, Point = Point3> {}
+pub(super) trait FilletableSurface: ParametricSurface3D + SearchParameter<D2, Point = Point3> {}
 impl<S: ParametricSurface3D + SearchParameter<D2, Point = Point3>> FilletableSurface for S {}
 
 impl ContactCircle {
@@ -24,7 +24,6 @@ impl ContactCircle {
     #[inline]
     pub const fn contact_point1(self) -> ContactPoint { self.contact_point1 }
 
-    #[allow(private_bounds)]
     pub(super) fn try_new(
         point_on_curve: (Point3, Vector3),
         t: f64,
@@ -39,6 +38,7 @@ impl ContactCircle {
         let center = (0..100).find_map(|_| {
             let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
             let (c, q0, q1) = contact_points((p, der), (p0, n0), (p1, n1), radius);
+            println!("{p0:?} {q0:?}\n{p1:?} {q1:?}\n");
             if p0.near(&q0) && p1.near(&q1) {
                 Some(c)
             } else {
@@ -108,8 +108,10 @@ fn next_point(
     (u, v): (f64, f64),
     (p, q): (Point3, Point3),
 ) -> (Point3, (f64, f64)) {
-    let uder = surface.uder(u, v);
-    let vder = surface.vder(u, v);
+    let (mut x, mut y) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
+    let mut ders = [x.as_mut_slice(), &mut y];
+    surface.ders(u, v, &mut ders);
+    let (pt, uder, vder) = (ders[0][0], ders[1][0], ders[0][1]);
     let d = q - p;
     let uu = uder.dot(uder);
     let uv = uder.dot(vder);
@@ -118,5 +120,5 @@ fn next_point(
     let vec = Vector2::new(uder.dot(d), vder.dot(d));
     let del = mat.invert().unwrap() * vec;
     let (u, v) = (u + del.x, v + del.y);
-    (surface.subs(u, v), (u, v))
+    (Point3::from_vec(pt), (u, v))
 }
