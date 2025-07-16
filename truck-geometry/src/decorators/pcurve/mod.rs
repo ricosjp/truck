@@ -1,4 +1,6 @@
 use super::*;
+use truck_base::cgmath64::control_point::ControlPoint;
+pub(crate) mod composition;
 
 impl<C, S> PCurve<C, S> {
     /// Creates composited
@@ -18,14 +20,114 @@ impl<C, S> PCurve<C, S> {
     pub fn decompose(self) -> (C, S) { (self.curve, self.surface) }
 }
 
+impl<C, S> PCurve<C, S>
+where
+    C: ParametricCurve2D,
+    S: ParametricSurface,
+    S::Point: ControlPoint<f64, Diff = S::Vector>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
+{
+    fn der3(&self, t: f64) -> S::Vector {
+        let Point2 { x: u, y: v } = self.curve.subs(t);
+        let der = self.curve.der(t);
+        let der2 = self.curve.der2(t);
+        let der3 = self.curve.der_n(3, t);
+        let surface = self.surface();
+        surface.der_mn(3, 0, u, v) * (der[0] * der[0] * der[0])
+            + surface.der_mn(2, 1, u, v) * (der[0] * der[0] * der[1] * 3.0)
+            + surface.der_mn(1, 2, u, v) * (der[0] * der[1] * der[1] * 3.0)
+            + surface.der_mn(0, 3, u, v) * (der[1] * der[1] * der[1])
+            + surface.uuder(u, v) * (der2[0] * der[0] * 3.0)
+            + surface.uvder(u, v) * ((der2[0] * der[1] + der2[1] * der[0]) * 3.0)
+            + surface.vvder(u, v) * (der2[1] * der[1] * 3.0)
+            + surface.uder(u, v) * der3[0]
+            + surface.vder(u, v) * der3[1]
+    }
+}
+
+pub(super) fn raw_der_n<V, A>(surface_ders: &[A], curve_ders: &[Vector2], n: usize) -> V
+where
+    V: VectorSpace<Scalar = f64>,
+    A: AsRef<[V]>, {
+    use composition::*;
+    (1..=n).fold(V::zero(), |sum, len| {
+        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
+        iter.fold(sum, |sum, idx| {
+            let idx = &idx[..len];
+            sum + tensor(surface_ders, curve_ders, idx) * multiplicity(idx) as f64
+        })
+    })
+}
+
 impl<C, S> ParametricCurve for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Vector: VectorSpace<Scalar = f64>,
+    S::Point: ControlPoint<f64, Diff = S::Vector>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
     type Vector = S::Vector;
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+        if n >= 32 {
+            panic!("the order of derivation must be under 32.");
+        }
+        match n {
+            0 => return self.subs(t).to_vec(),
+            1 => return self.der(t),
+            2 => return self.der2(t),
+            3 => return self.der3(t),
+            _ => {}
+        }
+        let mut cder = [Vector2::zero(); 32];
+        self.curve.ders(t, &mut cder[..=n]);
+        let Vector2 { x: u, y: v } = cder[0];
+
+        let mut sder = [[S::Vector::zero(); 32]; 32];
+        let mut sder_mut = sder[0..=n]
+            .iter_mut()
+            .enumerate()
+            .map(|(i, slice)| &mut slice[0..=(n - i)])
+            .collect::<Vec<_>>();
+        self.surface.ders(u, v, &mut sder_mut);
+        raw_der_n(&sder, &cder, n)
+    }
+    fn ders(&self, t: f64, out: &mut [Self::Vector]) {
+        if out.is_empty() {
+            return;
+        }
+        let n = out.len() - 1;
+        if n >= 32 {
+            panic!("the order of derivation must be under 32.");
+        }
+        let mut cder = [Vector2::zero(); 32];
+        self.curve.ders(t, &mut cder[..=n]);
+        let Vector2 { x: u, y: v } = cder[0];
+
+        let mut sder = [[S::Vector::zero(); 32]; 32];
+        let mut sder_mut = sder[0..=n]
+            .iter_mut()
+            .enumerate()
+            .map(|(i, slice)| &mut slice[0..=(n - i)])
+            .collect::<Vec<_>>();
+        self.surface.ders(u, v, &mut sder_mut);
+        out[0] = sder[0][0];
+
+        out.iter_mut()
+            .enumerate()
+            .skip(1)
+            .for_each(|(m, o)| *o = raw_der_n(&sder, &cder, m));
+    }
+    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
+        let mut res = vec![Self::Vector::zero(); n + 1];
+        self.ders(t, &mut res);
+        res
+    }
+    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] {
+        let mut res = [Self::Vector::zero(); LEN];
+        self.ders(t, &mut res);
+        res
+    }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point {
         let pt = self.curve.subs(t);
@@ -33,23 +135,22 @@ where
     }
     #[inline(always)]
     fn der(&self, t: f64) -> Self::Vector {
-        let pt = self.curve.subs(t);
-        let der = self.curve.der(t);
+        let [pt, der] = self.curve.ders_array(t);
         self.surface.uder(pt[0], pt[1]) * der[0] + self.surface.vder(pt[0], pt[1]) * der[1]
+    }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector {
+        let [pt, der, der2] = self.curve.ders_array(t);
+        self.surface.uuder(pt[0], pt[1]) * (der[0] * der[0])
+            + self.surface.uvder(pt[0], pt[1]) * (der[0] * der[1] * 2.0)
+            + self.surface.vvder(pt[0], pt[1]) * (der[1] * der[1])
+            + self.surface.uder(pt[0], pt[1]) * der2[0]
+            + self.surface.vder(pt[0], pt[1]) * der2[1]
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.curve.parameter_range() }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector {
-        let pt = self.curve.subs(t);
-        let der = self.curve.der(t);
-        let der2 = self.curve.der2(t);
-        self.surface.uuder(pt[0], pt[1]) * der[0] * der[0]
-            + self.surface.uvder(pt[0], pt[1]) * der[0] * der[1] * 2.0
-            + self.surface.vvder(pt[0], pt[1]) * der[1] * der[1]
-            + self.surface.uder(pt[0], pt[1]) * der2[0]
-            + self.surface.vder(pt[0], pt[1]) * der2[1]
-    }
+    fn period(&self) -> Option<f64> { self.curve.period() }
 }
 
 impl<C, S> BoundedCurve for PCurve<C, S>
@@ -145,8 +246,11 @@ impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
-    S::Vector: VectorSpace<Scalar = f64>,
+    S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>
+        + MetricSpace<Metric = f64>
+        + HashGen<f64>
+        + ControlPoint<f64, Diff = S::Vector>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<S::Point>) {

@@ -1,7 +1,9 @@
 use super::*;
 
 /// trait for attach rolling fillet
-trait FilletableSurface: ParametricSurface3D + SearchParameter<D2, Point = Point3> {}
+pub(super) trait FilletableSurface:
+    ParametricSurface3D + SearchParameter<D2, Point = Point3> {
+}
 impl<S: ParametricSurface3D + SearchParameter<D2, Point = Point3>> FilletableSurface for S {}
 
 impl ContactCircle {
@@ -24,7 +26,6 @@ impl ContactCircle {
     #[inline]
     pub const fn contact_point1(self) -> ContactPoint { self.contact_point1 }
 
-    #[allow(private_bounds)]
     pub(super) fn try_new(
         point_on_curve: (Point3, Vector3),
         t: f64,
@@ -62,21 +63,16 @@ impl ContactCircle {
 impl ParametricCurve for ContactCircle {
     type Point = Point3;
     type Vector = Vector3;
-    fn subs(&self, t: f64) -> Self::Point {
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
         let radius = self.contact_point0.point - self.center;
-        let rot = Matrix3::from_axis_angle(self.axis, self.angle * t);
-        self.center + rot * radius
+        let angle = Rad(PI / 2.0) * n as f64 + self.angle * t;
+        let rot = Matrix3::from_axis_angle(self.axis, angle);
+        let c = self.center.to_vec() * if n == 0 { 1.0 } else { 0.0 };
+        c + rot * radius * self.angle.0.powi(n as i32)
     }
-    fn der(&self, t: f64) -> Self::Vector {
-        let radius = self.contact_point0.point - self.center;
-        let angle = Rad(PI / 2.0) + self.angle * t;
-        Matrix3::from_axis_angle(self.axis, angle) * radius * self.angle.0
-    }
-    fn der2(&self, t: f64) -> Self::Vector {
-        let minus_radius = self.center - self.contact_point0.point;
-        let rot = Matrix3::from_axis_angle(self.axis, self.angle * t);
-        rot * minus_radius * self.angle.0.powi(2)
-    }
+    fn subs(&self, t: f64) -> Self::Point { Point3::from_vec(self.der_n(0, t)) }
+    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
+    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
     fn parameter_range(&self) -> ParameterRange {
         use std::ops::Bound;
         (Bound::Included(0.0), Bound::Included(1.0))
@@ -113,8 +109,10 @@ fn next_point(
     (u, v): (f64, f64),
     (p, q): (Point3, Point3),
 ) -> (Point3, (f64, f64)) {
-    let uder = surface.uder(u, v);
-    let vder = surface.vder(u, v);
+    let (mut x, mut y) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
+    let mut ders = [x.as_mut_slice(), &mut y];
+    surface.ders(u, v, &mut ders);
+    let (uder, vder) = (ders[1][0], ders[0][1]);
     let d = q - p;
     let uu = uder.dot(uder);
     let uv = uder.dot(vder);

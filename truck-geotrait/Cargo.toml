@@ -13,6 +13,7 @@ license = "Apache-2.0"
 [features]
 default = []
 derive = ["truck-derivers"]
+polynomial = []
 
 [dependencies]
 truck-base = { version = "0.5.0", path = "../truck-base" }

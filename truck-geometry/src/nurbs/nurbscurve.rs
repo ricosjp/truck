@@ -51,13 +51,6 @@ impl<V> NurbsCurve<V> {
     #[inline(always)]
     pub fn degree(&self) -> usize { self.0.degree() }
 
-    /// Inverts a curve. cf.[`BSplineCurve::invert`]
-    #[inline(always)]
-    pub fn invert(&mut self) -> &mut Self {
-        self.0.invert();
-        self
-    }
-
     /// Returns whether the knot vector is clamped or not. cf.[`BSplineCurve::is_clamped`]
     #[inline(always)]
     pub fn is_clamped(&self) -> bool { self.0.knot_vec.is_clamped(self.0.degree()) }
@@ -506,20 +499,49 @@ where V::Point: Bounded<Scalar = f64>
 impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NurbsCurve<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+        if n < 7 {
+            let mut ders = [V::zero(); 8];
+            self.0.ders(t, &mut ders[0..=n]);
+            rat_der(&ders[..=n])
+        } else {
+            rat_der(&self.0.ders_vec(n, t))
+        }
+    }
+    fn ders(&self, t: f64, out: &mut [Self::Vector]) {
+        let n = out.len() - 1;
+        if n < 7 {
+            let mut ders = [V::zero(); 8];
+            self.0.ders(t, &mut ders[0..=n]);
+            rat_ders(&ders[..=n], out)
+        } else {
+            rat_ders(&self.0.ders_vec(n, t), out)
+        }
+    }
+    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
+        let mut out = vec![Self::Vector::zero(); n + 1];
+        if n < 7 {
+            let mut ders = [V::zero(); 8];
+            self.0.ders(t, &mut ders[0..=n]);
+            rat_ders(&ders[..=n], &mut out)
+        } else {
+            rat_ders(&self.0.ders_vec(n, t), &mut out)
+        }
+        out
+    }
+    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] {
+        let mut ders = [Self::Vector::zero(); LEN];
+        let lift_ders = self.0.ders_array::<LEN>(t);
+        rat_ders(&lift_ders, &mut ders);
+        ders
+    }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t).to_point() }
     #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector {
-        let pt = self.0.subs(t);
-        let der = self.0.der(t);
-        pt.rat_der(der)
-    }
+    fn der(&self, t: f64) -> Self::Vector { rat_der(&[self.0.subs(t), self.0.der(t)]) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
-        let pt = self.0.subs(t);
-        let der = self.0.der(t);
-        let der2 = self.0.der2(t);
-        pt.rat_der2(der, der2)
+        rat_der(&[self.0.subs(t), self.0.der(t), self.0.der2(t)])
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
@@ -534,7 +556,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCu
 
 impl<V: Clone> Invertible for NurbsCurve<V> {
     #[inline(always)]
-    fn invert(&mut self) { self.invert(); }
+    fn invert(&mut self) { self.0.invert(); }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.0.clone();
