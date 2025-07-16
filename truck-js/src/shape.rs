@@ -16,7 +16,7 @@ macro_rules! toporedef {
         #[wasm_bindgen]
         impl $type {
             /// upcast to abstract shape
-            #[inline(always)]
+
             pub fn upcast(self) -> AbstractShape {
                 AbstractShape(SubAbstractShape::$type(self))
             }
@@ -28,7 +28,6 @@ macro_rules! toporedef {
         impl AbstractShape {
             $(
                 /// check the type
-                #[inline(always)]
                 pub fn $is(&self) -> bool {
                     match &self.0 {
                         SubAbstractShape::$type(_) => true,
@@ -37,7 +36,6 @@ macro_rules! toporedef {
                 }
 
                 /// downcast
-                #[inline(always)]
                 pub fn $into(self) -> Option<$type> {
                     match self.0 {
                         SubAbstractShape::$type(got) => Some(got),
@@ -51,7 +49,6 @@ macro_rules! toporedef {
         impl AbstractShape {
             $(
                 /// reference downcast
-                #[inline(always)]
                 pub fn $to(&self) -> Option<&$type> {
                     match &self.0 {
                         SubAbstractShape::$type(got) => Some(got),
