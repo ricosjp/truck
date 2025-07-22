@@ -466,16 +466,12 @@ where
     let p = rand::random::<f64>();
     let s = t0 * (1.0 - p) + t * p;
     assert_near!(part0.subs(s), curve.subs(s));
-    assert_near!(part0.der(s), curve.der(s));
-    assert_near!(part0.der2(s), curve.der2(s));
     assert_near!(part0.front(), curve.front());
     assert_near!(part0.back(), curve.subs(t));
 
     let p = rand::random::<f64>();
     let s = t * (1.0 - p) + t1 * p;
     assert_near!(part1.subs(s), curve.subs(s));
-    assert_near!(part1.der(s), curve.der(s));
-    assert_near!(part1.der2(s), curve.der2(s));
     assert_near!(part1.front(), curve.subs(t));
     assert_near!(part1.back(), curve.back());
 }

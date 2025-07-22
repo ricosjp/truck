@@ -82,10 +82,10 @@ proptest! {
 
 proptest! {
     #[test]
-    fn parameter_random_tests(c in prop::array::uniform3(-10f64..10f64)) {
+    fn parameter_random_tests(c in prop::array::uniform8(prop::array::uniform3(-10f64..10f64))) {
         let curve = BSplineCurve::new(
             KnotVec::uniform_knot(4, 4),
-            (0..8).map(|_| Point3::from(c)).collect(),
+            c.into_iter().map(Point3::from).collect(),
         );
         truck_geotrait::parameter_transform_random_test(&curve, 10);
         truck_geotrait::cut_random_test(&curve, 10);
