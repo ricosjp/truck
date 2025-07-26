@@ -1,6 +1,5 @@
 use super::*;
 use truck_base::cgmath64::control_point::ControlPoint;
-pub(crate) mod composition;
 
 impl<C, S> PCurve<C, S> {
     /// Creates composited
@@ -28,10 +27,8 @@ where
     S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     fn der3(&self, t: f64) -> S::Vector {
-        let Point2 { x: u, y: v } = self.curve.subs(t);
-        let der = self.curve.der(t);
-        let der2 = self.curve.der2(t);
-        let der3 = self.curve.der_n(3, t);
+        let cders = self.curve.ders(3, t);
+        let [Vector2 { x: u, y: v }, der, der2, der3] = cders.to_array::<4>();
         let surface = self.surface();
         surface.der_mn(3, 0, u, v) * (der[0] * der[0] * der[0])
             + surface.der_mn(2, 1, u, v) * (der[0] * der[0] * der[1] * 3.0)
@@ -43,20 +40,6 @@ where
             + surface.uder(u, v) * der3[0]
             + surface.vder(u, v) * der3[1]
     }
-}
-
-pub(super) fn raw_der_n<V, A>(surface_ders: &[A], curve_ders: &[Vector2], n: usize) -> V
-where
-    V: VectorSpace<Scalar = f64>,
-    A: AsRef<[V]>, {
-    use composition::*;
-    (1..=n).fold(V::zero(), |sum, len| {
-        let iter = CompositionIter::<32>::try_new(n, len).unwrap();
-        iter.fold(sum, |sum, idx| {
-            let idx = &idx[..len];
-            sum + tensor(surface_ders, curve_ders, idx) * multiplicity(idx) as f64
-        })
-    })
 }
 
 impl<C, S> ParametricCurve for PCurve<C, S>
@@ -79,54 +62,20 @@ where
             3 => return self.der3(t),
             _ => {}
         }
-        let mut cder = [Vector2::zero(); 32];
-        self.curve.ders(t, &mut cder[..=n]);
-        let Vector2 { x: u, y: v } = cder[0];
+        let cders = self.curve.ders(n, t);
+        let Vector2 { x: u, y: v } = cders[0];
 
-        let mut sder = [[S::Vector::zero(); 32]; 32];
-        let mut sder_mut = sder[0..=n]
-            .iter_mut()
-            .enumerate()
-            .map(|(i, slice)| &mut slice[0..=(n - i)])
-            .collect::<Vec<_>>();
-        self.surface.ders(u, v, &mut sder_mut);
-        raw_der_n(&sder, &cder, n)
+        let sders = self.surface.ders(n, u, v);
+        sders.composite_der(&cders, n)
     }
-    fn ders(&self, t: f64, out: &mut [Self::Vector]) {
-        if out.is_empty() {
-            return;
+    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> {
+        if n > MAX_DER_ORDER {
+            panic!("the order of derivation must be under {MAX_DER_ORDER}.");
         }
-        let n = out.len() - 1;
-        if n >= 32 {
-            panic!("the order of derivation must be under 32.");
-        }
-        let mut cder = [Vector2::zero(); 32];
-        self.curve.ders(t, &mut cder[..=n]);
-        let Vector2 { x: u, y: v } = cder[0];
-
-        let mut sder = [[S::Vector::zero(); 32]; 32];
-        let mut sder_mut = sder[0..=n]
-            .iter_mut()
-            .enumerate()
-            .map(|(i, slice)| &mut slice[0..=(n - i)])
-            .collect::<Vec<_>>();
-        self.surface.ders(u, v, &mut sder_mut);
-        out[0] = sder[0][0];
-
-        out.iter_mut()
-            .enumerate()
-            .skip(1)
-            .for_each(|(m, o)| *o = raw_der_n(&sder, &cder, m));
-    }
-    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
-        let mut res = vec![Self::Vector::zero(); n + 1];
-        self.ders(t, &mut res);
-        res
-    }
-    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] {
-        let mut res = [Self::Vector::zero(); LEN];
-        self.ders(t, &mut res);
-        res
+        let cders = self.curve.ders(n, t);
+        let Vector2 { x: u, y: v } = cders[0];
+        let sders = self.surface.ders(n, u, v);
+        sders.composite_ders(&cders)
     }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point {
@@ -135,12 +84,12 @@ where
     }
     #[inline(always)]
     fn der(&self, t: f64) -> Self::Vector {
-        let [pt, der] = self.curve.ders_array(t);
+        let [pt, der] = self.curve.ders(1, t).to_array::<2>();
         self.surface.uder(pt[0], pt[1]) * der[0] + self.surface.vder(pt[0], pt[1]) * der[1]
     }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
-        let [pt, der, der2] = self.curve.ders_array(t);
+        let [pt, der, der2] = self.curve.ders(2, t).to_array::<3>();
         self.surface.uuder(pt[0], pt[1]) * (der[0] * der[0])
             + self.surface.uvder(pt[0], pt[1]) * (der[0] * der[1] * 2.0)
             + self.surface.vvder(pt[0], pt[1]) * (der[1] * der[1])

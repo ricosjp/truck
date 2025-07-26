@@ -12,7 +12,7 @@ pub trait ParametricCurve: Clone {
     /// The curve is in the space of `Self::Point`.
     type Point;
     /// The derivation vector of the curve.
-    type Vector;
+    type Vector: Zero + Copy;
     /// Substitutes the parameter `t`.
     fn subs(&self, t: f64) -> Self::Point;
     /// Returns the derivation.
@@ -21,19 +21,9 @@ pub trait ParametricCurve: Clone {
     fn der2(&self, t: f64) -> Self::Vector;
     /// Returns the `n`th-order derivation.
     fn der_n(&self, n: usize, t: f64) -> Self::Vector;
-    /// Calculates derivations at the parameter `t` with order `0..out.len()` and assign them to `out`.
-    fn ders(&self, t: f64, out: &mut [Self::Vector]) {
-        out.iter_mut()
-            .enumerate()
-            .for_each(|(i, vec)| *vec = self.der_n(i, t))
-    }
     /// Returns derivations at the parameter `t` with order `0..=n`.
-    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> {
+    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> {
         (0..=n).map(|i| self.der_n(i, t)).collect()
-    }
-    /// Returns derivations at the parameter `t` with order `0..LEN`.
-    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] {
-        std::array::from_fn(|i| self.der_n(i, t))
     }
     /// Returns default parameter range
     #[inline(always)]
@@ -70,19 +60,6 @@ pub trait BoundedCurve: ParametricCurve {
 }
 
 /// Implementation for the test of topological methods.
-impl ParametricCurve for () {
-    type Point = ();
-    type Vector = ();
-    fn subs(&self, _: f64) -> Self::Point {}
-    fn der(&self, _: f64) -> Self::Vector {}
-    fn der2(&self, _: f64) -> Self::Vector {}
-    fn der_n(&self, _: usize, _: f64) -> Self::Vector {}
-    fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Included(1.0)) }
-}
-
-impl BoundedCurve for () {}
-
-/// Implementation for the test of topological methods.
 impl ParametricCurve for (usize, usize) {
     type Point = usize;
     type Vector = usize;
@@ -112,11 +89,7 @@ impl<C: ParametricCurve> ParametricCurve for &C {
     #[inline(always)]
     fn der_n(&self, n: usize, t: f64) -> Self::Vector { (*self).der_n(n, t) }
     #[inline(always)]
-    fn ders(&self, t: f64, out: &mut [Self::Vector]) { (*self).ders(t, out) }
-    #[inline(always)]
-    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> { (*self).ders_vec(n, t) }
-    #[inline(always)]
-    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] { (*self).ders_array(t) }
+    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { (*self).ders(n, t) }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (*self).parameter_range() }
     #[inline(always)]
@@ -141,11 +114,7 @@ impl<C: ParametricCurve> ParametricCurve for Box<C> {
     #[inline(always)]
     fn der_n(&self, n: usize, t: f64) -> Self::Vector { (**self).der_n(n, t) }
     #[inline(always)]
-    fn ders(&self, t: f64, out: &mut [Self::Vector]) { (**self).ders(t, out) }
-    #[inline(always)]
-    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> { (**self).ders_vec(n, t) }
-    #[inline(always)]
-    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] { (**self).ders_array(t) }
+    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { (**self).ders(n, t) }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (**self).parameter_range() }
     #[inline(always)]

@@ -6,7 +6,7 @@ pub trait ParametricSurface: Clone {
     /// The surface is in the space of `Self::Point`.
     type Point;
     /// The derivation vector of the curve.
-    type Vector;
+    type Vector: Zero + Copy;
     /// Substitutes the parameter `(u, v)`.
     fn subs(&self, u: f64, v: f64) -> Self::Point;
     /// Returns the derivation by `u`.
@@ -21,20 +21,12 @@ pub trait ParametricSurface: Clone {
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns $\partial^{m + n} S / \partial u^m \partial v^n$.
     fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector;
-    /// Calculates higher degree derivations at the parameter `(u, v)` and assign them to `out`.
-    fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) {
-        out.iter_mut().enumerate().for_each(|(i, out)| {
-            out.as_mut()
-                .iter_mut()
-                .enumerate()
-                .for_each(|(j, out)| *out = self.der_mn(i, j, u, v))
-        })
-    }
-    /// Returns derivations with order `(0..=m, 0..=n)` at the parameter `(u, v)`.
-    fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>> {
-        (0..=m)
-            .map(|i| (0..=n).map(|j| self.der_mn(i, j, u, v)).collect())
-            .collect()
+    /// Calculates higher degree derivations at the parameter `(u, v)`.
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+        let mut ders = SurfaceDers::new(max_order);
+        (0..=max_order)
+            .for_each(|m| (0..=max_order - m).for_each(|n| ders[m][n] = self.der_mn(m, n, u, v)));
+        ders
     }
     /// The range of the parameter of the surface.
     #[inline(always)]
@@ -80,12 +72,8 @@ impl<S: ParametricSurface> ParametricSurface for &S {
         (*self).der_mn(m, n, u, v)
     }
     #[inline(always)]
-    fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) {
-        (*self).ders(u, v, out)
-    }
-    #[inline(always)]
-    fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>> {
-        (*self).ders_vec(m, n, u, v)
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+        (*self).ders(max_order, u, v)
     }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (*self).parameter_range() }
@@ -115,12 +103,8 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
         (**self).der_mn(m, n, u, v)
     }
     #[inline(always)]
-    fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) {
-        (**self).ders(u, v, out)
-    }
-    #[inline(always)]
-    fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>> {
-        (**self).ders_vec(m, n, u, v)
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+        (**self).ders(max_order, u, v)
     }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (**self).parameter_range() }
@@ -229,31 +213,4 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Box<S> {
     ) -> (Vec<f64>, Vec<f64>) {
         (**self).parameter_division(range, tol)
     }
-}
-
-/// Implementation for the test of topological methods.
-impl ParametricSurface for () {
-    type Point = ();
-    type Vector = ();
-    fn subs(&self, _: f64, _: f64) -> Self::Point {}
-    fn uder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn vder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn uuder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn uvder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn vvder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn der_mn(&self, _: usize, _: usize, _: f64, _: f64) -> Self::Vector {}
-    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
-        (
-            (Bound::Included(0.0), Bound::Included(1.0)),
-            (Bound::Included(0.0), Bound::Included(1.0)),
-        )
-    }
-}
-
-/// Implementation for the test of topological methods.
-impl BoundedSurface for () {}
-
-/// Implementation for the test of topological methods.
-impl IncludeCurve<()> for () {
-    fn include(&self, _: &()) -> bool { true }
 }

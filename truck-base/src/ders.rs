@@ -30,6 +30,24 @@ impl<V> CurveDers<V> {
         self.max_order += 1;
         self.array[self.max_order] = value;
     }
+    /// Returns CurveDers of derivative.
+    /// # Examples
+    /// ```
+    /// use truck_base::ders::*;
+    /// let ders = CurveDers::try_from([0.0, 1.0, 2.0]).unwrap();
+    /// let derders = ders.der();
+    /// assert_eq!(&*derders, &[1.0, 2.0]);
+    /// ```
+    #[inline]
+    pub fn der(&self) -> Self
+    where V: Zero + Copy {
+        let mut array = [V::zero(); MAX_DER_ORDER + 1];
+        array[..MAX_DER_ORDER].copy_from_slice(&self.array[1..]);
+        Self {
+            array,
+            max_order: self.max_order - 1,
+        }
+    }
 
     /// Returns the multi-orders derivations of the rational curve.
     /// # Examples
@@ -124,6 +142,21 @@ impl<V> CurveDers<V> {
             max_order: self.max_order,
         }
     }
+    /// Converts to an array
+    /// # Examples
+    /// ```
+    /// use truck_base::cgmath64::*;
+    /// let ders = CurveDers::try_from([0.0, 1.0, 2.0]).unwrap();
+    /// let arr = ders.to_array::<2>();
+    /// assert_eq!(arr, [0.0, 1.0]);
+    /// ```
+    pub fn to_array<const LEN: usize>(&self) -> [V; LEN]
+    where V: Copy {
+        if self.max_order > LEN {
+            panic!("length of the returned array is longer than given CurveDers");
+        }
+        <[V; LEN]>::try_from(&self[..LEN]).unwrap()
+    }
 }
 
 impl<V> std::ops::Deref for CurveDers<V> {
@@ -164,11 +197,26 @@ impl<V: Zero + Copy> TryFrom<&[V]> for CurveDers<V> {
             Err("the length of CurveDers must be less than MAX_DER_ORDER + 1.")
         } else {
             let mut array = [V::zero(); MAX_DER_ORDER + 1];
-            array[..value.len()].copy_from_slice(&value);
+            array[..value.len()].copy_from_slice(value);
             Ok(Self {
                 array,
                 max_order: value.len() - 1,
             })
+        }
+    }
+}
+
+impl<V: Zero + Copy> FromIterator<V> for CurveDers<V> {
+    fn from_iter<T: IntoIterator<Item = V>>(iter: T) -> Self {
+        let mut array = [V::zero(); MAX_DER_ORDER + 1];
+        let mut iter = iter.into_iter();
+        let len = array.iter_mut().zip(&mut iter).map(|(o, v)| *o = v).count();
+        if iter.next().is_some() {
+            panic!("too long iterator");
+        }
+        Self {
+            array,
+            max_order: len - 1,
         }
     }
 }
@@ -237,6 +285,79 @@ impl<V> SurfaceDers<V> {
             .map(|(i, arr)| &mut arr[..=self.max_order - i])
             .collect()
     }
+
+    /// Returns SurfaceDers of u-derivative.
+    /// # Examples
+    /// ```
+    /// use truck_base::ders::*;
+    /// let ders = SurfaceDers::try_from(
+    ///     [
+    ///         [0.0, 1.0, 2.0].as_slice(),
+    ///         &[3.0, 4.0],
+    ///         &[5.0],
+    ///     ]
+    ///     .as_slice()
+    /// )
+    /// .unwrap();
+    /// let derders = ders.uder();
+    /// let ans_ders = SurfaceDers::try_from(
+    ///     [
+    ///         [3.0, 4.0].as_slice(),
+    ///         &[5.0],
+    ///     ]
+    ///     .as_slice()
+    /// )
+    /// .unwrap();
+    /// assert_eq!(derders, ans_ders);
+    /// ```
+    #[inline]
+    pub fn uder(&self) -> Self
+    where V: Zero + Copy {
+        let mut array = [[V::zero(); MAX_DER_ORDER + 1]; MAX_DER_ORDER + 1];
+        array[..MAX_DER_ORDER].copy_from_slice(&self.array[1..]);
+        Self {
+            array,
+            max_order: self.max_order - 1,
+        }
+    }
+
+    /// Returns SurfaceDers of v-derivative.
+    /// # Examples
+    /// ```
+    /// use truck_base::ders::*;
+    /// let ders = SurfaceDers::try_from(
+    ///     [
+    ///         [0.0, 1.0, 2.0].as_slice(),
+    ///         &[3.0, 4.0],
+    ///         &[5.0],
+    ///     ]
+    ///     .as_slice()
+    /// )
+    /// .unwrap();
+    /// let derders = ders.vder();
+    /// let ans_ders = SurfaceDers::try_from(
+    ///     [
+    ///         [1.0, 2.0].as_slice(),
+    ///         &[4.0],
+    ///     ]
+    ///     .as_slice()
+    /// )
+    /// .unwrap();
+    /// assert_eq!(derders, ans_ders);
+    /// ```
+    #[inline]
+    pub fn vder(&self) -> Self
+    where V: Zero + Copy {
+        let mut array = [[V::zero(); MAX_DER_ORDER + 1]; MAX_DER_ORDER + 1];
+        array.iter_mut().zip(&self.array).for_each(|(arr, sarr)| {
+            arr[..MAX_DER_ORDER].copy_from_slice(&sarr[1..]);
+        });
+        Self {
+            array,
+            max_order: self.max_order - 1,
+        }
+    }
+
     /// Returns the multi-orders derivations of the rational surface.
     /// # Examples
     /// ```

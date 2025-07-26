@@ -55,10 +55,9 @@ where
         let Point2 { x: u1, y: v1 } = cc.contact_point1.uv;
         let mut s1info = SurfaceInfo::new(&self.surface1, (u1, v1), n + 1);
 
-        let mut cders = [Vector3::zero(); 32];
-        self.edge_curve.ders(cc.t, &mut cders[..=n + 1]);
+        let cders = self.edge_curve.ders(n + 1, cc.t);
 
-        let mut ders = [Vector3::zero(); 32];
+        let mut ders = CurveDers::new(n);
         ders[0] = cc.center.to_vec();
 
         (1..=n).for_each(|m| der_routine(&mut s0info, &mut s1info, &cders, rders, &mut ders, m));
@@ -99,9 +98,9 @@ where
 
 #[derive(Clone, Copy, Debug)]
 pub(super) struct CenterContactDers {
-    pub center_ders: [Vector3; 32],
-    pub contact0_ders: [Vector3; 32],
-    pub contact1_ders: [Vector3; 32],
+    pub center_ders: CurveDers<Vector3>,
+    pub contact0_ders: CurveDers<Vector3>,
+    pub contact1_ders: CurveDers<Vector3>,
 }
 
 impl CenterContactDers {
@@ -254,45 +253,39 @@ impl VderInfo {
 
 #[derive(Clone, Copy, Debug)]
 struct SurfaceInfo {
-    ders: [[Vector3; 32]; 32],
-    tders: [Vector3; 32],
-    uderders: [Vector3; 32],
-    vderders: [Vector3; 32],
-    crossders: [Vector3; 32],
-    abs_crossders: [f64; 32],
-    nders: [Vector3; 32],
-    uvders: [Vector2; 32],
+    ders: SurfaceDers<Vector3>,
+    tders: CurveDers<Vector3>,
+    uderders: CurveDers<Vector3>,
+    vderders: CurveDers<Vector3>,
+    crossders: CurveDers<Vector3>,
+    abs_crossders: CurveDers<f64>,
+    nders: CurveDers<Vector3>,
+    uvders: CurveDers<Vector2>,
 }
 
 impl SurfaceInfo {
     fn new(surface: &impl ParametricSurface3D, (u, v): (f64, f64), n: usize) -> Self {
-        let mut ders = [[Vector3::zero(); 32]; 32];
-        let mut ders_mut = ders[..=n]
-            .iter_mut()
-            .enumerate()
-            .map(|(i, slice)| &mut slice[..=n - i])
-            .collect::<Vec<_>>();
-        surface.ders(u, v, &mut ders_mut);
+        let ders = surface.ders(n, u, v);
 
-        let mut tders = [Vector3::zero(); 32];
+        let mut tders = CurveDers::new(n);
         tders[0] = ders[0][0];
 
-        let mut uderders = [Vector3::zero(); 32];
+        let mut uderders = CurveDers::new(n);
         uderders[0] = ders[1][0];
 
-        let mut vderders = [Vector3::zero(); 32];
+        let mut vderders = CurveDers::new(n);
         vderders[0] = ders[0][1];
 
-        let mut crossders = [Vector3::zero(); 32];
+        let mut crossders = CurveDers::new(n);
         crossders[0] = uderders[0].cross(vderders[0]);
 
-        let mut abs_crossders = [0.0; 32];
+        let mut abs_crossders = CurveDers::new(n);
         abs_crossders[0] = crossders[0].magnitude();
 
-        let mut nders = [Vector3::zero(); 32];
+        let mut nders = CurveDers::new(n);
         nders[0] = surface.normal(u, v);
 
-        let mut uvders = [Vector2::zero(); 32];
+        let mut uvders = CurveDers::new(n);
         uvders[0] = Vector2::new(u, v);
 
         Self {
@@ -318,18 +311,14 @@ impl SurfaceInfo {
             abs_crossders,
             nders,
         } = self;
-        let sder_n_prime = pcurve::raw_der_n(sders, uvders, n);
+        let sder_n_prime = sders.composite_der(uvders, n);
 
         let mut lhs_u = comp_sum(n, |i| uderders[i], |i| tders[i] - ders[i], DOT);
-        let uder_n_prime = pcurve::raw_der_n(&sders[1..], uvders, n);
+        let uder_n_prime = sders.uder().composite_der(uvders, n);
         lhs_u += uderders[0].dot(sder_n_prime) + uder_n_prime.dot(tders[0] - ders[0]);
 
         let mut lhs_v = comp_sum(n, |i| vderders[i], |i| tders[i] - ders[i], DOT);
-        let vders = sders
-            .iter()
-            .map(|vec| &vec.as_ref()[1..])
-            .collect::<Vec<_>>();
-        let vder_n_prime = pcurve::raw_der_n(&vders, uvders, n);
+        let vder_n_prime = sders.vder().composite_der(uvders, n);
         lhs_v += vderders[0].dot(sder_n_prime) + vder_n_prime.dot(tders[0] - ders[0]);
 
         let cp = tders[0] - ders[0];
@@ -338,9 +327,9 @@ impl SurfaceInfo {
         let vv = sders[0].as_ref()[1].magnitude2() + sders[0].as_ref()[2].dot(cp);
         let mat = Matrix2::new(uu, uv, uv, vv);
         uvders[n] = -mat.invert().unwrap() * Vector2::new(lhs_u, lhs_v);
-        tders[n] = pcurve::raw_der_n(sders, uvders, n);
-        uderders[n] = pcurve::raw_der_n(&sders[1..], uvders, n);
-        vderders[n] = pcurve::raw_der_n(&vders, uvders, n);
+        tders[n] = sders.composite_der(uvders, n);
+        uderders[n] = sders.uder().composite_der(uvders, n);
+        vderders[n] = sders.vder().composite_der(uvders, n);
 
         crossders[n] = comp_sum(n, |i| uderders[i], |i| vderders[i], CROSS);
         let sum = comp_sum(n - 1, |i| crossders[i + 1], |i| crossders[i], DOT)

@@ -149,13 +149,15 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn ders<A: AsMut<[Vector3]>>(&self, u: f64, v: f64, out: &mut [A]) {
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Vector3> {
         let cc = self.contact_circle(v).unwrap();
-        out.iter_mut().enumerate().for_each(|(i, out)| {
-            out.as_mut().iter_mut().enumerate().for_each(|(j, o)| {
-                *o = self.sub_der_mn(i, j, u, cc);
+        let mut out = SurfaceDers::new(max_order);
+        (0..=max_order).for_each(|i| {
+            (0..=max_order - i).for_each(|j| {
+                out[i][j] = self.sub_der_mn(i, j, u, cc);
             });
         });
+        out
     }
     fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
         self.sub_der_mn(m, n, u, self.contact_circle(v).unwrap())
