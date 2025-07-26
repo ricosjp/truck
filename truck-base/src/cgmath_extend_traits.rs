@@ -97,22 +97,6 @@ pub mod control_point {
     }
 }
 
-/// Tangent spaces of euclidean spaces
-/// The inverse of [`EuclideanSpace::Diff`](../cgmath/trait.EuclideanSpace.html)
-pub trait TangentSpace<S: BaseFloat>: VectorSpace<Scalar = S> {
-    /// The Euclidean space whose tangent space is `Self`.
-    type Space: EuclideanSpace<Scalar = S, Diff = Self>;
-}
-impl<S: BaseFloat> TangentSpace<S> for Vector1<S> {
-    type Space = Point1<S>;
-}
-impl<S: BaseFloat> TangentSpace<S> for Vector2<S> {
-    type Space = Point2<S>;
-}
-impl<S: BaseFloat> TangentSpace<S> for Vector3<S> {
-    type Space = Point3<S>;
-}
-
 /// Homogeneous coordinate of an Euclidean space and a vector space.
 /// # Examples
 /// ```
