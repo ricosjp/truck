@@ -151,13 +151,13 @@ fn curve_der_n(
     s0normal: Vector3,
     sum1: Vector3,
     s1normal: Vector3,
-    leaders: &[Vector3],
-    cders: &[Vector3],
+    leaders: &CurveDers<Vector3>,
+    cders: &CurveDers<Vector3>,
     n: usize,
 ) -> Vector3 {
     let mat = Matrix3::from_cols(s0normal, s1normal, leaders[1]).transpose();
-    let (f0, f1) = (|i| leaders[i + 1], |i| leaders[i] - cders[i]);
-    let suml = comp_sum(n, f0, f1, Vector3::dot);
+    let sub = leaders.element_wise_ders(&cders, |x, y| x - y);
+    let suml = leaders.der().combinatorial_der(&sub, Vector3::dot, n);
     let b = Vector3::new(s0normal.dot(sum0), s1normal.dot(sum1), suml);
     mat.invert().unwrap() * b
 }
@@ -186,7 +186,7 @@ fn der_routine(
     }: &DerRoutineImmutableArgs,
     uv0ders: &mut CurveDers<Vector2>,
     uv1ders: &mut CurveDers<Vector2>,
-    cders: &mut [Vector3],
+    cders: &mut CurveDers<Vector3>,
     n: usize,
 ) {
     let sum0 = s0ders.composite_der(uv0ders, n);

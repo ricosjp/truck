@@ -640,7 +640,9 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                     #[inline(always)]
                     fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.der_mn(m, n, s, t) }
                     #[inline(always)]
-                    fn ders(&self, max_order: usize, s: f64, t: f64) { self.0.ders(max_order, s, t) }
+                    fn ders(&self, max_order: usize, s: f64, t: f64) -> SurfaceDers<Self::Vector> {
+                        self.0.ders(max_order, s, t)
+                    }
                     #[inline(always)]
                     fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)) {
                         self.0.parameter_range()

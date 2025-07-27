@@ -11,6 +11,22 @@ pub struct CurveDers<V> {
     max_order: usize,
 }
 
+impl<V> AbsDiffEq for CurveDers<V>
+where
+    V: AbsDiffEq,
+    V::Epsilon: Copy,
+{
+    type Epsilon = V::Epsilon;
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.max_order == other.max_order
+            && self
+                .iter()
+                .zip(other.iter())
+                .all(|(v, w)| v.abs_diff_eq(w, epsilon))
+    }
+    fn default_epsilon() -> Self::Epsilon { V::default_epsilon() }
+}
+
 impl<V> CurveDers<V> {
     /// Construct zeroed `CurveDers` with maximum order = `max_order`.
     #[inline]
@@ -52,7 +68,7 @@ impl<V> CurveDers<V> {
     /// Returns the multi-orders derivations of the rational curve.
     /// # Examples
     /// ```
-    /// use truck_base::cgmath64::*;
+    /// use truck_base::{cgmath64::*, assert_near2};
     /// // calculate the derivation at t = 1.5
     /// let t = 1.5;
     ///
@@ -74,7 +90,7 @@ impl<V> CurveDers<V> {
     ///     Vector3::new(0.0, 0.0, 6.0), // 3rd-order
     /// ];
     /// let ans = CurveDers::try_from(raw_ans).unwrap();
-    /// assert_eq!(rat_ders, ans);
+    /// assert_near2!(rat_ders, ans);
     /// ```
     pub fn rat_ders<S>(&self) -> CurveDers<<V::Point as EuclideanSpace>::Diff>
     where
@@ -142,6 +158,116 @@ impl<V> CurveDers<V> {
             max_order: self.max_order,
         }
     }
+
+    /// Returns the `order`-order derivation of multiple function.
+    /// # Examples
+    /// ```
+    /// use truck_base::{cgmath64::*, assert_near2};
+    ///
+    /// let t = 1.5;
+    ///
+    /// // curve0(t) = (cos(t), sin(t))
+    /// let raw_ders0: [Vector2; 3] = [
+    ///     (f64::cos(t), f64::sin(t)).into(),
+    ///     (-f64::sin(t), f64::cos(t)).into(),
+    ///     (-f64::cos(t), -f64::sin(t)).into(),
+    /// ];
+    /// let ders0 = CurveDers::try_from(raw_ders0).unwrap();
+    ///
+    /// // curve1(t) = cos(t) * (cos(t), sin(t))
+    /// let raw_ders1: [Vector2; 3] = [
+    ///     ((1.0 + f64::cos(2.0 * t)) / 2.0, f64::sin(2.0 * t) / 2.0).into(),
+    ///     (-f64::sin(2.0 * t), f64::cos(2.0 * t)).into(),
+    ///     (-2.0 * f64::cos(2.0 * t), -2.0 * f64::sin(2.0 * t)).into(),
+    /// ];
+    /// let ders1 = CurveDers::try_from(raw_ders1).unwrap();
+    ///
+    /// // curve0(t).dot(curve1(t)) = cos(t)
+    /// let res = ders0.combinatorial_der(&ders1, Vector2::dot, 2);
+    /// let ans = -f64::cos(t);
+    ///
+    /// assert_near2!(res, ans);
+    /// ```
+    pub fn combinatorial_der<W, U, B>(&self, other: &CurveDers<W>, binomial: B, order: usize) -> U
+    where
+        V: Copy,
+        W: Copy,
+        U: std::ops::Add + std::ops::Mul<f64, Output = U> + Zero,
+        B: Fn(V, W) -> U, {
+        let mut c = 1;
+        (0..=order).fold(U::zero(), |sum, i| {
+            let c_mult = c as f64;
+            c = c * (order - i) / (i + 1);
+            sum + binomial(self[i], other[order - i]) * c_mult
+        })
+    }
+
+    /// Returns the ders of multiple function.
+    /// # Examples
+    /// ```
+    /// use truck_base::{cgmath64::*, assert_near2};
+    ///
+    /// let t = 1.5;
+    ///
+    /// // curve0(t) = (cos(t), sin(t))
+    /// let raw_ders0: [Vector2; 3] = [
+    ///     (f64::cos(t), f64::sin(t)).into(),
+    ///     (-f64::sin(t), f64::cos(t)).into(),
+    ///     (-f64::cos(t), -f64::sin(t)).into(),
+    /// ];
+    /// let ders0 = CurveDers::try_from(raw_ders0).unwrap();
+    ///
+    /// // curve1(t) = cos(t) * (cos(t), sin(t))
+    /// let raw_ders1: [Vector2; 3] = [
+    ///     ((1.0 + f64::cos(2.0 * t)) / 2.0, f64::sin(2.0 * t) / 2.0).into(),
+    ///     (-f64::sin(2.0 * t), f64::cos(2.0 * t)).into(),
+    ///     (-2.0 * f64::cos(2.0 * t), -2.0 * f64::sin(2.0 * t)).into(),
+    /// ];
+    /// let ders1 = CurveDers::try_from(raw_ders1).unwrap();
+    ///
+    /// // curve0(t).dot(curve1(t)) = cos(t)
+    /// let res = ders0.combinatorial_ders(&ders1, Vector2::dot);
+    /// let raw_ans: [f64; 3] = [f64::cos(t), -f64::sin(t), -f64::cos(t)];
+    /// let ans = CurveDers::try_from(raw_ans).unwrap();
+    ///
+    /// assert_near2!(res, ans);
+    /// ```
+    pub fn combinatorial_ders<W, U, B>(&self, other: &CurveDers<W>, binomial: B) -> CurveDers<U>
+    where
+        V: Copy,
+        W: Copy,
+        U: std::ops::Add + std::ops::Mul<f64, Output = U> + Zero + Copy,
+        B: Fn(V, W) -> U, {
+        let max_order = self.max_order.min(other.max_order);
+        (0..=max_order)
+            .map(|n| self.combinatorial_der(other, &binomial, n))
+            .collect()
+    }
+
+    /// Returns the result of element-wise operation.
+    /// # Examples
+    /// ```
+    /// use truck_base::cgmath64::*;
+    /// let ders0 = CurveDers::try_from([0.0, 1.0, 2.0, 100.0]).unwrap();
+    /// let ders1 = CurveDers::try_from([4.0, 5.0, 6.0]).unwrap();
+    /// let res = ders0.element_wise_ders(&ders1, |x, y| x + y);
+    /// 
+    /// // the order will arrange to lower one
+    /// let ans = CurveDers::try_from([4.0, 6.0, 8.0]).unwrap();
+    /// assert_eq!(res, ans);
+    /// ```
+    pub fn element_wise_ders<W, U, B>(&self, other: &CurveDers<W>, binomial: B) -> CurveDers<U>
+    where
+        V: Copy,
+        W: Copy,
+        U: Copy + Zero,
+        B: Fn(V, W) -> U, {
+        self.iter()
+            .zip(other.iter())
+            .map(|(&v, &w)| binomial(v, w))
+            .collect()
+    }
+
     /// Converts to an array
     /// # Examples
     /// ```

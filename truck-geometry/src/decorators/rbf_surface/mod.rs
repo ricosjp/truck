@@ -61,10 +61,8 @@ pub trait RadiusFunction: Clone {
     fn der2(&self, t: f64) -> f64 { self.der_n(2, t) }
     /// Substitutes the higher-order derivations to `out`.
     #[inline]
-    fn ders(&self, t: f64, out: &mut [f64]) {
-        out.iter_mut()
-            .enumerate()
-            .for_each(|(i, o)| *o = self.der_n(i, t))
+    fn ders(&self, max_order: usize, t: f64) -> CurveDers<f64> {
+        (0..=max_order).map(|n| self.der_n(n, t)).collect()
     }
 }
 
@@ -278,8 +276,7 @@ where
             return self.subs(t).to_vec();
         }
         let cc = self.surface.contact_circle(t).unwrap();
-        let mut rders = [0.0; 32];
-        self.surface.radius.ders(t, &mut rders[0..=n]);
+        let rders = self.surface.radius.ders(n, t);
         let cc_ders = self.surface.center_contacts_ders(cc, &rders, n);
         match self.index {
             0 => cc_ders.contact0_ders[n],
