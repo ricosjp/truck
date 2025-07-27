@@ -109,9 +109,7 @@ fn next_point(
     (u, v): (f64, f64),
     (p, q): (Point3, Point3),
 ) -> (Point3, (f64, f64)) {
-    let (mut x, mut y) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
-    let mut ders = [x.as_mut_slice(), &mut y];
-    surface.ders(u, v, &mut ders);
+    let ders = surface.ders(2, u, v);
     let (uder, vder) = (ders[1][0], ders[0][1]);
     let d = q - p;
     let uu = uder.dot(uder);
