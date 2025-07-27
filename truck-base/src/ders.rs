@@ -251,7 +251,7 @@ impl<V> CurveDers<V> {
     /// let ders0 = CurveDers::try_from([0.0, 1.0, 2.0, 100.0]).unwrap();
     /// let ders1 = CurveDers::try_from([4.0, 5.0, 6.0]).unwrap();
     /// let res = ders0.element_wise_ders(&ders1, |x, y| x + y);
-    /// 
+    ///
     /// // the order will arrange to lower one
     /// let ans = CurveDers::try_from([4.0, 6.0, 8.0]).unwrap();
     /// assert_eq!(res, ans);

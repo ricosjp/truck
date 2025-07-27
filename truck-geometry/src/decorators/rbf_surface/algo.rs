@@ -70,7 +70,7 @@ where
     }
 
     pub(super) fn vder_info(&self, cc: ContactCircle, n: usize) -> VderInfo {
-        let rders = self.radius.ders(n, cc.t);
+        let rders = self.radius.ders(n + 1, cc.t);
         let cc_ders = self.center_contacts_ders(cc, &rders, n);
         cc_ders.vder_info(&rders)
     }
@@ -123,7 +123,7 @@ impl CenterContactDers {
         abs_cross_ders: &CurveDers<f64>,
         rders: &CurveDers<f64>,
     ) -> CurveDers<f64> {
-        let n = rders.max_order() - 2;
+        let n = rders.max_order() - 1;
         let mut r_rat_ders = CurveDers::<f64>::new(n);
         r_rat_ders[0] = rders[1] / rders[0];
         (1..=n).for_each(|m| {
@@ -353,7 +353,7 @@ fn der_routine(
     let (n0ders, n1ders) = (&s0info.nders, &s1info.nders);
     let mat = Matrix3::from_cols(cders[1], n0ders[0], n1ders[0]).transpose();
     let (der_cders, der_ders) = (cders.der(), ders.der());
-    let sub = cders.element_wise_ders(&ders, |x, y| x - y);
+    let sub = cders.element_wise_ders(ders, |x, y| x - y);
     let b = Vector3::new(
         der_cders.combinatorial_der(&sub, DOT, n),
         rders[n] - der_ders.combinatorial_der(n0ders, DOT, n - 1),
@@ -549,14 +549,14 @@ fn fillet_between_two_spheres_deralgo() {
         let t = 2.0 * PI * i as f64 / N as f64;
         let cc = fillet.contact_circle(t).unwrap();
 
-        let rders = fillet.radius.ders(6, t);
+        let rders = fillet.radius.ders(5, t);
 
         let eps = 1.0e-4;
         let cc_plus = fillet.contact_circle(t + eps).unwrap();
-        let rders_plus = fillet.radius.ders(5, t + eps);
+        let rders_plus = fillet.radius.ders(4, t + eps);
 
         let cc_minus = fillet.contact_circle(t - eps).unwrap();
-        let rders_minus = fillet.radius.ders(5, t - eps);
+        let rders_minus = fillet.radius.ders(4, t - eps);
 
         let cc_ders = fillet.center_contacts_ders(cc, &rders, 4);
         let cc_ders_plus = fillet.center_contacts_ders(cc_plus, &rders_plus, 3);

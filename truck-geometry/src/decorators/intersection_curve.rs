@@ -156,7 +156,7 @@ fn curve_der_n(
     n: usize,
 ) -> Vector3 {
     let mat = Matrix3::from_cols(s0normal, s1normal, leaders[1]).transpose();
-    let sub = leaders.element_wise_ders(&cders, |x, y| x - y);
+    let sub = leaders.element_wise_ders(cders, |x, y| x - y);
     let suml = leaders.der().combinatorial_der(&sub, Vector3::dot, n);
     let b = Vector3::new(s0normal.dot(sum0), s1normal.dot(sum1), suml);
     mat.invert().unwrap() * b
