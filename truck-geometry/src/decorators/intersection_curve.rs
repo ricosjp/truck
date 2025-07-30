@@ -1,13 +1,6 @@
 use super::*;
 use truck_base::newton::{self, CalcOutput};
 
-fn subs_tuple<S: ParametricSurface>(
-    surface: &S,
-    (u, v): (f64, f64),
-) -> (S::Point, S::Vector, S::Vector) {
-    (surface.subs(u, v), surface.uder(u, v), surface.vder(u, v))
-}
-
 fn double_projection<S0, S1>(
     surface0: &S0,
     hint0: Option<(f64, f64)>,
@@ -22,10 +15,12 @@ where
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     let function = move |Vector4 { x, y, z, w }| {
-        let (pt0, uder0, vder0) = subs_tuple(surface0, (x, y));
-        let (pt1, uder1, vder1) = subs_tuple(surface1, (z, w));
+        let ders0 = surface0.ders(1, x, y);
+        let (pt0, uder0, vder0) = (ders0[0][0], ders0[1][0], ders0[0][1]);
+        let ders1 = surface1.ders(1, z, w);
+        let (pt1, uder1, vder1) = (ders1[0][0], ders1[1][0], ders1[0][1]);
         CalcOutput {
-            value: (pt0 - pt1).extend(plane_normal.dot(pt0.midpoint(pt1) - plane_point)),
+            value: (pt0 - pt1).extend(plane_normal.dot((pt0 + pt1) / 2.0 - plane_point.to_vec())),
             derivation: Matrix4::from_cols(
                 uder0.extend(plane_normal.dot(uder0) / 2.0),
                 vder0.extend(plane_normal.dot(vder0) / 2.0),
@@ -109,9 +104,25 @@ where
     ) -> Option<(Point3, Point2, Point2)> {
         let (surface0, surface1) = (self.surface0(), self.surface1());
         let function = |Vector4 { x, y, z, w }| {
-            let (pt0, uder0, vder0, uuder0, uvder0, vvder0) = subs_tuple_der2(surface0, (x, y));
-            let (pt1, uder1, vder1, uuder1, uvder1, vvder1) = subs_tuple_der2(surface1, (z, w));
-            let diff = pt0.midpoint(pt1) - point;
+            let ders0 = surface0.ders(2, x, y);
+            let (pt0, uder0, vder0, uuder0, uvder0, vvder0) = (
+                ders0[0][0],
+                ders0[1][0],
+                ders0[0][1],
+                ders0[2][0],
+                ders0[1][1],
+                ders0[0][2],
+            );
+            let ders1 = surface1.ders(2, z, w);
+            let (pt1, uder1, vder1, uuder1, uvder1, vvder1) = (
+                ders1[0][0],
+                ders1[1][0],
+                ders1[0][1],
+                ders1[2][0],
+                ders1[1][1],
+                ders1[0][2],
+            );
+            let diff = (pt0 + pt1) / 2.0 - point.to_vec();
             let (n0, n1) = (uder0.cross(vder0), uder1.cross(vder1));
             let n = n0.cross(n1);
             let n_xder = (uuder0.cross(vder0) + uder0.cross(uvder0)).cross(n1);
@@ -322,26 +333,6 @@ where
             false => None,
         }
     }
-}
-
-type DersSubsTuple<S> = (
-    <S as ParametricSurface>::Point,
-    <S as ParametricSurface>::Vector,
-    <S as ParametricSurface>::Vector,
-    <S as ParametricSurface>::Vector,
-    <S as ParametricSurface>::Vector,
-    <S as ParametricSurface>::Vector,
-);
-
-fn subs_tuple_der2<S: ParametricSurface>(surface: &S, (u, v): (f64, f64)) -> DersSubsTuple<S> {
-    (
-        surface.subs(u, v),
-        surface.uder(u, v),
-        surface.vder(u, v),
-        surface.uuder(u, v),
-        surface.uvder(u, v),
-        surface.vvder(u, v),
-    )
 }
 
 impl<C, S0, S1> SearchNearestParameter<D1> for IntersectionCurve<C, S0, S1>
