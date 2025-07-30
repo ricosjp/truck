@@ -106,18 +106,20 @@ pub mod control_point {
 /// assert_eq!(Vector4::new(8.0, 6.0, 4.0, 2.0).to_point(), Point3::new(4.0, 3.0, 2.0));
 /// assert_eq!(Vector4::from_point(Point3::new(4.0, 3.0, 2.0)), Vector4::new(4.0, 3.0, 2.0, 1.0));
 /// ```
-pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
+pub trait Homogeneous: VectorSpace {
     /// The point expressed by homogeneous coordinate
-    type Point: EuclideanSpace<Scalar = S>;
+    type Point: EuclideanSpace<Scalar = Self::Scalar>;
     /// Returns the first dim - 1 components.
     fn truncate(self) -> <Self::Point as EuclideanSpace>::Diff;
     /// Returns the last component.
-    fn weight(self) -> S;
+    fn weight(self) -> Self::Scalar;
     /// Returns homogeneous coordinate.
     fn from_point(point: Self::Point) -> Self;
     /// Returns homogeneous coordinate from point and weight.
     #[inline(always)]
-    fn from_point_weight(point: Self::Point, weight: S) -> Self { Self::from_point(point) * weight }
+    fn from_point_weight(point: Self::Point, weight: Self::Scalar) -> Self {
+        Self::from_point(point) * weight
+    }
     /// Returns the projection to the plane whose the last component is `1.0`.
     #[inline(always)]
     fn to_point(self) -> Self::Point { Self::Point::from_vec(self.truncate() / self.weight()) }
@@ -150,15 +152,11 @@ pub trait Homogeneous<S: BaseFloat>: VectorSpace<Scalar = S> {
 /// let ans_der3 = Vector3::new(0.0, 0.0, 6.0);
 /// assert_eq!(rat_der(&[pt, der, der2, der3]), ans_der3);
 /// ```
-pub fn rat_der<S, V, Diff>(ders: &[V]) -> Diff
-where
-    S: BaseFloat,
-    V: Homogeneous<S>,
-    V::Point: EuclideanSpace<Diff = Diff>,
-    Diff: VectorSpace<Scalar = S>, {
+pub fn rat_der<V: Homogeneous>(ders: &[V]) -> <V::Point as EuclideanSpace>::Diff {
+    let zero = <V::Point as EuclideanSpace>::Diff::zero();
     let len = ders.len();
     if len == 0 {
-        Diff::zero()
+        zero
     } else if len == 1 {
         ders[0].to_point().to_vec()
     } else if len == 2 {
@@ -169,15 +167,15 @@ where
         let (s, sw) = (ders[0].truncate(), ders[0].weight());
         let (d, dw) = (ders[1].truncate(), ders[1].weight());
         let (d2, d2w) = (ders[2].truncate(), ders[2].weight());
-        let two = S::from(2).unwrap();
+        let two = <V::Scalar as num_traits::NumCast>::from(2).unwrap();
         let sw2 = sw * sw;
         d2 / sw - d * (dw / sw2 * two) + s * (dw * dw * two / (sw2 * sw) - d2w / sw2)
     } else if len < 32 {
-        let mut evals = [Diff::zero(); 32];
+        let mut evals = [zero; 32];
         rat_ders(ders, &mut evals);
         evals[ders.len() - 1]
     } else {
-        let mut evals = vec![Diff::zero(); ders.len()];
+        let mut evals = vec![zero; ders.len()];
         rat_ders(ders, &mut evals);
         evals[ders.len() - 1]
     }
@@ -209,21 +207,17 @@ where
 /// ];
 /// assert_eq!(evals, ans);
 /// ```
-pub fn rat_ders<S, V, Diff>(ders: &[V], evals: &mut [Diff])
-where
-    S: BaseFloat,
-    V: Homogeneous<S>,
-    V::Point: EuclideanSpace<Diff = Diff>,
-    Diff: VectorSpace<Scalar = S>, {
+pub fn rat_ders<V: Homogeneous>(ders: &[V], evals: &mut [<V::Point as EuclideanSpace>::Diff]) {
     assert!(
         evals.len() >= ders.len(),
         "evals must be no shorter than ders."
     );
+    let from = <V::Scalar as num_traits::NumCast>::from;
     for i in 0..ders.len() {
         let mut c = 1;
         let sum = (1..i).fold(evals[0] * ders[i].weight(), |sum, j| {
             c = c * (i - j + 1) / j;
-            sum + evals[j] * (ders[i - j].weight() * S::from(c).unwrap())
+            sum + evals[j] * (ders[i - j].weight() * from(c).unwrap())
         });
         evals[i] = (ders[i].truncate() - sum) / ders[0].weight();
     }
@@ -266,19 +260,17 @@ where
 /// // the projected surface: \bar{s}(u, v) = (u^2 v^2, u v^3, v)
 /// assert_eq!(multi_rat_der(&ders), Vector3::new(4.0, 0.0, 0.0));
 /// ```
-pub fn multi_rat_der<S, V, Diff, A>(ders: &[A]) -> Diff
+pub fn multi_rat_der<V, A>(ders: &[A]) -> <V::Point as EuclideanSpace>::Diff
 where
-    S: BaseFloat,
-    V: Homogeneous<S>,
-    V::Point: EuclideanSpace<Diff = Diff>,
-    Diff: VectorSpace<Scalar = S>,
+    V: Homogeneous,
     A: AsRef<[V]>, {
+    let zero = <V::Point as EuclideanSpace>::Diff::zero();
     if ders.is_empty() {
-        return Diff::zero();
+        return zero;
     }
     let (m, n) = (ders.len(), ders[0].as_ref().len());
     if n == 0 {
-        Diff::zero()
+        zero
     } else if (m, n) == (1, 1) {
         ders[0].as_ref()[0].to_point().to_vec()
     } else if m == 1 {
@@ -298,7 +290,7 @@ where
         }
         rat_der(&vders)
     } else if (m, n) == (2, 2) {
-        let two = S::from(2).unwrap();
+        let two = <V::Scalar as num_traits::NumCast>::from(2).unwrap();
         let (der0, der1) = (ders[0].as_ref(), ders[1].as_ref());
         let (s, u, v, uv) = (der0[0], der1[0], der0[1], der1[1]);
         let (s, sw) = (s.truncate(), s.weight());
@@ -308,11 +300,11 @@ where
         let sw2 = sw * sw;
         uv / sw - u * (vw / sw2) - v * (uw / sw2) + s * (uw * vw * two / (sw2 * sw) - uvw / sw2)
     } else if m < 8 && n < 8 {
-        let mut evals = [[Diff::zero(); 8]; 8];
+        let mut evals = [[zero; 8]; 8];
         multi_rat_ders(ders, &mut evals);
         evals[m - 1][n - 1]
     } else {
-        let mut evals = vec![vec![Diff::zero(); m]; n];
+        let mut evals = vec![vec![zero; m]; n];
         multi_rat_ders(ders, &mut evals);
         evals[m - 1][n - 1]
     }
@@ -387,24 +379,22 @@ where
 /// ];
 /// assert_eq!(evals, ans);
 /// ```
-pub fn multi_rat_ders<S, V, Diff, A0, A1>(ders: &[A0], evals: &mut [A1])
+pub fn multi_rat_ders<V, A0, A1>(ders: &[A0], evals: &mut [A1])
 where
-    S: BaseFloat,
-    V: Homogeneous<S>,
-    V::Point: EuclideanSpace<Diff = Diff>,
-    Diff: VectorSpace<Scalar = S>,
+    V: Homogeneous,
     A0: AsRef<[V]>,
-    A1: AsMut<[Diff]>, {
+    A1: AsMut<[<V::Point as EuclideanSpace>::Diff]>, {
+    let from = <V::Scalar as num_traits::NumCast>::from;
     let (m_max, n_max) = (ders.len(), ders[0].as_ref().len());
     for m in 0..m_max {
         for n in 0..n_max {
-            let mut sum = Diff::zero();
+            let mut sum = <V::Point as EuclideanSpace>::Diff::zero();
             let mut c0 = 1;
             for i in 0..=m {
                 let mut c1 = 1;
                 let (evals, ders) = (evals[i].as_mut(), ders[m - i].as_ref());
                 for j in 0..=n {
-                    let (c0_s, c1_s) = (S::from(c0).unwrap(), S::from(c1).unwrap());
+                    let (c0_s, c1_s) = (from(c0).unwrap(), from(c1).unwrap());
                     sum = sum + evals[j] * (ders[n - j].weight() * c0_s * c1_s);
                     c1 = c1 * (n - j) / (j + 1);
                 }
@@ -416,7 +406,7 @@ where
     }
 }
 
-impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
+impl<S: BaseFloat> Homogeneous for Vector2<S> {
     type Point = Point1<S>;
     #[inline(always)]
     fn truncate(self) -> Vector1<S> { Vector1::new(self[0]) }
@@ -426,7 +416,7 @@ impl<S: BaseFloat> Homogeneous<S> for Vector2<S> {
     fn from_point(point: Self::Point) -> Self { Vector2::new(point[0], S::one()) }
 }
 
-impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
+impl<S: BaseFloat> Homogeneous for Vector3<S> {
     type Point = Point2<S>;
     #[inline(always)]
     fn truncate(self) -> Vector2<S> { self.truncate() }
@@ -436,7 +426,7 @@ impl<S: BaseFloat> Homogeneous<S> for Vector3<S> {
     fn from_point(point: Self::Point) -> Self { Vector3::new(point[0], point[1], S::one()) }
 }
 
-impl<S: BaseFloat> Homogeneous<S> for Vector4<S> {
+impl<S: BaseFloat> Homogeneous for Vector4<S> {
     type Point = Point3<S>;
     #[inline(always)]
     fn truncate(self) -> Vector3<S> { self.truncate() }
