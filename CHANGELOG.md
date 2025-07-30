@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Refactoring: `intersection_curve` and `Homogeneous`.
 - Implement `CurveDers` and `SurfaceDers`.
 - Loosened `cut_random_test` requirements.
 - Higher order derivations.

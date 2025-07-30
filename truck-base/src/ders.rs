@@ -1,5 +1,6 @@
 use crate::cgmath_extend_traits::*;
 use cgmath::*;
+use num_traits::NumCast;
 
 /// Maximum order that guarantees differential calculations
 pub const MAX_DER_ORDER: usize = 31;
@@ -92,17 +93,15 @@ impl<V> CurveDers<V> {
     /// let ans = CurveDers::try_from(raw_ans).unwrap();
     /// assert_near2!(rat_ders, ans);
     /// ```
-    pub fn rat_ders<S>(&self) -> CurveDers<<V::Point as EuclideanSpace>::Diff>
-    where
-        S: BaseFloat,
-        V: Homogeneous<S>,
-        V::Point: EuclideanSpace<Scalar = V::Scalar>, {
+    pub fn rat_ders(&self) -> CurveDers<<V::Point as EuclideanSpace>::Diff>
+    where V: Homogeneous {
+        let from = <V::Scalar as NumCast>::from;
         let mut evals = [<V::Point as EuclideanSpace>::Diff::zero(); MAX_DER_ORDER + 1];
         for i in 0..=self.max_order {
             let mut c = 1;
             let sum = (1..i).fold(evals[0] * self[i].weight(), |sum, j| {
                 c = c * (i - j + 1) / j;
-                sum + evals[j] * (self[i - j].weight() * S::from(c).unwrap())
+                sum + evals[j] * (self[i - j].weight() * from(c).unwrap())
             });
             evals[i] = (self[i].truncate() - sum) / self[0].weight();
         }
@@ -138,7 +137,6 @@ impl<V> CurveDers<V> {
     where
         V: InnerSpace,
         V::Scalar: BaseFloat, {
-        use cgmath::num_traits::NumCast;
         let mut evals = [V::Scalar::zero(); MAX_DER_ORDER + 1];
         evals[0] = self[0].magnitude();
         (1..=self.max_order).for_each(|m| {
@@ -539,12 +537,10 @@ impl<V> SurfaceDers<V> {
     ///
     /// assert_eq!(rat_ders, ans_ders);
     /// ```
-    pub fn rat_ders<S>(&self) -> SurfaceDers<<V::Point as EuclideanSpace>::Diff>
-    where
-        S: BaseFloat,
-        V: Homogeneous<S>,
-        V::Point: EuclideanSpace<Scalar = V::Scalar>, {
+    pub fn rat_ders(&self) -> SurfaceDers<<V::Point as EuclideanSpace>::Diff>
+    where V: Homogeneous {
         let zero = <V::Point as EuclideanSpace>::Diff::zero();
+        let from = <V::Scalar as NumCast>::from;
         let mut evals = [[zero; MAX_DER_ORDER + 1]; MAX_DER_ORDER + 1];
         for m in 0..=self.max_order {
             for n in 0..=self.max_order - m {
@@ -554,7 +550,7 @@ impl<V> SurfaceDers<V> {
                     let mut c1 = 1;
                     let (evals, ders) = (evals[i].as_mut(), &self[m - i]);
                     for j in 0..=n {
-                        let (c0_s, c1_s) = (S::from(c0).unwrap(), S::from(c1).unwrap());
+                        let (c0_s, c1_s) = (from(c0).unwrap(), from(c1).unwrap());
                         sum = sum + evals[j] * (ders[n - j].weight() * c0_s * c1_s);
                         c1 = c1 * (n - j) / (j + 1);
                     }
@@ -601,7 +597,6 @@ impl<V> SurfaceDers<V> {
     where
         V: VectorSpace,
         V::Scalar: BaseFloat, {
-        use cgmath::num_traits::NumCast;
         if order > self.max_order || order > curve_ders.max_order {
             panic!("calculating derivative with order={order}, but the orders of given derivatives are less than {order}.");
         }

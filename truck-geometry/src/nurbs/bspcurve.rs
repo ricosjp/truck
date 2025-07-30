@@ -340,7 +340,7 @@ where P: ControlPoint<f64> + MetricSpace<Metric = f64> + HashGen<f64>
     }
 }
 
-impl<V: Homogeneous<f64>> BSplineCurve<V> {
+impl<V: Homogeneous> BSplineCurve<V> {
     /// lift up control points to homogeneous coordinate.
     pub fn lift_up(curve: BSplineCurve<V::Point>) -> Self {
         let control_points = curve
