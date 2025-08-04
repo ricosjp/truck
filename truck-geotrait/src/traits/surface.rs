@@ -190,7 +190,7 @@ pub trait ParameterDivision2D {
     ///
     /// # Panics
     ///
-    /// `tol` must be more than `TOLERANCE`.
+    /// `tol` must be greater than or equal to `TOLERANCE`.
     fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64)
         -> (Vec<f64>, Vec<f64>);
 }

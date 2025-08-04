@@ -10,7 +10,7 @@ impl<P> BSplineCurve<P> {
     /// # Panics
     /// Panics occurs if:
     /// * There are no control points.
-    /// * The number of knots is more than the one of control points.
+    /// * The number of knots is less than or equal to the one of control points.
     /// * The range of the knot vector is zero.
     pub fn new(knot_vec: KnotVec, control_points: Vec<P>) -> BSplineCurve<P> {
         BSplineCurve::try_new(knot_vec, control_points).unwrap_or_else(|e| panic!("{}", e))
@@ -22,7 +22,7 @@ impl<P> BSplineCurve<P> {
     /// * `control_points` - the vector of the control points
     /// # Failures
     /// * If there are no control points, returns [`Error::EmptyControlPoint<f64>s`].
-    /// * If the number of knots is more than the one of control points, returns [`Error::TooShortKnotVector`].
+    /// * If the number of knots is less than or equal to the one of control points, returns [`Error::TooShortKnotVector`].
     /// * If the range of the knot vector is zero, returns [`Error::ZeroRange`].
     ///
     /// [`Error::EmptyControlPoint<f64>s`]: errors/enum.Error.html#variant.EmptyControlPoint<f64>s
