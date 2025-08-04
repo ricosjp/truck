@@ -186,7 +186,7 @@ impl<V> NurbsSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64>> NurbsSurface<V> {
+impl<V: Homogeneous<Scalar = f64>> NurbsSurface<V> {
     /// Constructs a rationalization surface from the non-rationalized surface and weights.
     /// # Failures
     /// the length of `surface.control_points()` and `weights` must be the same.
@@ -223,13 +223,13 @@ impl<V: Homogeneous<f64>> NurbsSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsSurface<V> {
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> NurbsSurface<V> {
     /// Returns the closure of substitution.
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64, f64) -> V::Point + '_ { move |u, v| self.subs(u, v) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsSurface<V>
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> NurbsSurface<V>
 where V::Point: Tolerance
 {
     /// Returns whether constant curve or not, i.e. all control points are same or not.
@@ -317,7 +317,7 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface<V> {
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface<V> {
     /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.
     #[inline(always)]
     pub fn add_uknot(&mut self, x: f64) -> &mut Self {
@@ -481,7 +481,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface
     pub fn boundary(&self) -> NurbsCurve<V> { NurbsCurve::new(self.0.boundary()) }
 }
 
-impl<V: Homogeneous<f64>> SearchNearestParameter<D2> for NurbsSurface<V>
+impl<V: Homogeneous<Scalar = f64>> SearchNearestParameter<D2> for NurbsSurface<V>
 where
     Self: ParametricSurface<Point = V::Point, Vector = <V::Point as EuclideanSpace>::Diff>,
     V::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
@@ -528,7 +528,7 @@ where
     }
 }
 
-impl<V: Homogeneous<f64>> NurbsSurface<V>
+impl<V: Homogeneous<Scalar = f64>> NurbsSurface<V>
 where V::Point: Bounded<Scalar = f64>
 {
     /// Returns the bounding box including all control points.
@@ -554,7 +554,9 @@ impl<V: Clone> Invertible for NurbsSurface<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricSurface for NurbsSurface<V> {
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricSurface
+    for NurbsSurface<V>
+{
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
@@ -610,7 +612,8 @@ impl ParametricSurface3D for NurbsSurface<Vector4> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D for NurbsSurface<V>
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D
+    for NurbsSurface<V>
 where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
 {
     #[inline(always)]
@@ -743,16 +746,15 @@ where M: Copy + std::ops::Mul<V, Output = V>
     }
 }
 
-impl<Homog, P, V> SearchParameter<D2> for NurbsSurface<Homog>
+impl<V> SearchParameter<D2> for NurbsSurface<V>
 where
-    Homog: Homogeneous<f64, Point = P> + ControlPoint<f64, Diff = Homog>,
-    P: ControlPoint<f64, Diff = V>
-        + EuclideanSpace<Scalar = f64, Diff = V>
+    V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>,
+    V::Point: ControlPoint<f64, Diff = <V::Point as EuclideanSpace>::Diff>
         + MetricSpace<Metric = f64>
         + Tolerance,
-    V: SspVector<Point = P>,
+    <V::Point as EuclideanSpace>::Diff: SspVector<Point = V::Point>,
 {
-    type Point = P;
+    type Point = V::Point;
     /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
     /// If cannot find, then return `None`.
     /// # Examples
@@ -774,7 +776,7 @@ where
     /// ```
     fn search_parameter<H: Into<SPHint2D>>(
         &self,
-        point: P,
+        point: V::Point,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
@@ -791,7 +793,7 @@ where
     }
 }
 
-impl<V: Homogeneous<f64>> From<BSplineSurface<V::Point>> for NurbsSurface<V> {
+impl<V: Homogeneous<Scalar = f64>> From<BSplineSurface<V::Point>> for NurbsSurface<V> {
     fn from(bsp: BSplineSurface<V::Point>) -> Self {
         let control_points = bsp
             .control_points

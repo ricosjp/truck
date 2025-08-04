@@ -525,16 +525,10 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                 fn der(&self, t: f64) -> Self::Vector,
                 fn der2(&self, t: f64) -> Self::Vector,
                 fn der_n(&self, n: usize, t: f64) -> Self::Vector,
-                fn ders(&self, t: f64, out: &mut [Self::Vector]) -> (),
-                fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector>,
+                fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector>,
                 fn parameter_range(&self,) -> ParameterRange,
                 fn period(&self,) -> Option<f64>,
             );
-            let array = methods! {
-                variants,
-                trait_name,
-                fn ders_array<(const) LEN: usize>(&self, t: f64) -> [Self::Vector; LEN],
-            };
             quote! {
                 #[automatically_derived]
                 impl #gen #trait_name for #ty #gen
@@ -544,7 +538,6 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                     type Point = <#top_ty as #trait_name>::Point;
                     type Vector = <#top_ty as #trait_name>::Vector;
                     #(#methods)*
-                    #(#array)*
                 }
             }
         }
@@ -566,9 +559,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                     fn der(&self, t: f64) -> Self::Vector { self.0.der(t) }
                     fn der2(&self, t: f64) -> Self::Vector { self.0.der2(t) }
                     fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.0.der_n(n, t) }
-                    fn ders(&self, t: f64, out: &mut [Self::Vector]) -> () { self.0.ders(t, out) }
-                    fn ders_vec(&self, n: usize, t: f64) -> Vec<Self::Vector> { self.0.ders_vec(n, t) }
-                    fn ders_array<const LEN: usize>(&self, t: f64) -> [Self::Vector; LEN] { self.0.ders_array(t) }
+                    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { self.0.ders(n, t) }
                     fn parameter_range(&self) -> ParameterRange { self.0.parameter_range() }
                     fn period(&self) -> Option<f64> { self.0.period() }
                 }
@@ -603,16 +594,11 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector,
-                fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>>,
+                fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector>,
                 fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
             );
-            let ders = methods! {
-                variants,
-                trait_name,
-                fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) -> (),
-            };
             quote! {
                 #[automatically_derived]
                 impl #gen #trait_name for #ty #gen
@@ -622,7 +608,6 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                     type Point = <#top_ty as #trait_name>::Point;
                     type Vector = <#top_ty as #trait_name>::Vector;
                     #(#methods)*
-                    #(#ders)*
                 }
             }
         }
@@ -655,9 +640,9 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                     #[inline(always)]
                     fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.der_mn(m, n, s, t) }
                     #[inline(always)]
-                    fn ders_vec(&self, m: usize, n: usize, s: f64, t: f64) -> Vec<Vec<Self::Vector>> { self.0.ders_vec(m, n, s, t) }
-                    #[inline(always)]
-                    fn ders<A: AsMut<[Self::Vector]>>(&self, s: f64, t: f64, out: &mut [A]) { self.0.ders(s, t, out) }
+                    fn ders(&self, max_order: usize, s: f64, t: f64) -> SurfaceDers<Self::Vector> {
+                        self.0.ders(max_order, s, t)
+                    }
                     #[inline(always)]
                     fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)) {
                         self.0.parameter_range()
@@ -702,16 +687,11 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector,
-                fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>>,
+                fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector>,
                 fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
             );
-            let ders = methods! {
-                variants,
-                trait_name0,
-                fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) -> (),
-            };
             let methods1 = methods!(
                 variants,
                 trait_name1,
@@ -726,7 +706,6 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     type Point = Point3;
                     type Vector = Vector3;
                     #(#methods0)*
-                    #(#ders)*
                 }
 
                 #[automatically_derived]
@@ -759,8 +738,9 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
                     fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.der_mn(m, n, u, v) }
-                    fn ders_vec(&self, m: usize, n: usize, u: f64, v: f64) -> Vec<Vec<Self::Vector>> { self.0.ders_vec(m, n, u, v) }
-                    fn ders<A: AsMut<[Self::Vector]>>(&self, u: f64, v: f64, out: &mut [A]) { self.0.ders(u, v, out) }
+                    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+                        self.0.ders(max_order, u, v)
+                    }
                     fn parameter_range(&self,) -> (truck_geotrait::ParmaterRange, truck_geotrait::ParameterRange) {
                         self.0.parameter_range()
                     }

@@ -65,19 +65,12 @@ proptest! {
         prop_assert!((v0 - v1).magnitude() < EPS * 10.0, "{v0:?} {v1:?}");
 
         let ders0 = (0..=n).map(|i| curve.der_n(i, t)).collect::<Vec<_>>();
-
-        let mut ders1 = vec![Vector3::zero(); n + 1];
-        curve.ders(t, &mut ders1);
-
-        let ders2 = curve.ders_vec(n, t);
+        let ders1 = curve.ders(n, t);
 
         prop_assert_eq!(ders0.len(), ders1.len());
-        prop_assert_eq!(ders1.len(), ders2.len());
-
-        let mut iter = ders0.into_iter().zip(ders1).zip(ders2);
-        iter.try_for_each(|((v0, v1), v2)| {
+        let mut iter = ders0.into_iter().zip(&*ders1);
+        iter.try_for_each(|(v0, v1)| {
             prop_assert_near!(v0, v1);
-            prop_assert_near!(v1, v2);
             Ok(())
         })?;
     }

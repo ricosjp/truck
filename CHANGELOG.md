@@ -4,6 +4,9 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Refactoring: `intersection_curve` and `Homogeneous`.
+- Implement `CurveDers` and `SurfaceDers`.
+- Loosened `cut_random_test` requirements.
 - Higher order derivations.
 - Renew `Camera`.
 - Constant allocation for faster B-spline basis function.
@@ -40,7 +43,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2025-07-14
+2025-08-04
 
 ## v0.6
 

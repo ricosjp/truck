@@ -1,5 +1,5 @@
 use crate::{prelude::*, *};
-use std::ops::{Add, Deref, DerefMut, Mul};
+use std::ops::{Deref, DerefMut, Mul};
 
 /// revolution
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -355,17 +355,3 @@ mod processor;
 pub mod rbf_surface;
 mod revolved_curve;
 mod trimmied_curve;
-
-fn comp_sum<V, W, F0, F1, D>(n: usize, f0: F0, f1: F1, dot: D) -> W
-where
-    W: Zero + Add + Mul<f64, Output = W>,
-    F0: Fn(usize) -> V,
-    F1: Fn(usize) -> V,
-    D: Fn(V, V) -> W, {
-    let mut c = 1;
-    (0..=n).fold(W::zero(), |sum, i| {
-        let sum = sum + dot(f0(i), f1(n - i)) * c as f64;
-        c = c * (n - i) / (i + 1);
-        sum
-    })
-}

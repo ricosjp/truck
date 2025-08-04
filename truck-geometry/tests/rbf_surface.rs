@@ -83,22 +83,10 @@ fn fillet_between_two_spheres() {
 
             let eps = 1.0e-4;
 
-            let (mut a, mut b, mut c) = (
-                [Vector3::zero(); 3],
-                [Vector3::zero(); 2],
-                [Vector3::zero(); 1],
-            );
-            let mut ders = [a.as_mut_slice(), &mut b, &mut c];
-            fillet.ders(u, v, &mut ders);
+            let ders = fillet.ders(2, u, v);
 
-            let (mut a, mut b) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
-            let mut ders_plus = [a.as_mut_slice(), &mut b];
-            fillet.ders(u + eps, v, &mut ders_plus);
-
-            let (mut a, mut b) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
-            let mut ders_minus = [a.as_mut_slice(), &mut b];
-            fillet.ders(u - eps, v, &mut ders_minus);
-
+            let ders_plus = fillet.ders(1, u + eps, v);
+            let ders_minus = fillet.ders(1, u - eps, v);
             let uder_approx = (ders_plus[0][0] - ders_minus[0][0]) / (2.0 * eps);
             assert!((ders[1][0] - uder_approx).magnitude() < eps);
             let uvder_approx = (ders_plus[0][1] - ders_minus[0][1]) / (2.0 * eps);
@@ -106,14 +94,8 @@ fn fillet_between_two_spheres() {
             let uuder_approx = (ders_plus[1][0] - ders_minus[1][0]) / (2.0 * eps);
             assert!((ders[2][0] - uuder_approx).magnitude() < eps);
 
-            let (mut a, mut b) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
-            let mut ders_plus = [a.as_mut_slice(), &mut b];
-            fillet.ders(u, v + eps, &mut ders_plus);
-
-            let (mut a, mut b) = ([Vector3::zero(); 2], [Vector3::zero(); 1]);
-            let mut ders_minus = [a.as_mut_slice(), &mut b];
-            fillet.ders(u, v - eps, &mut ders_minus);
-
+            let ders_plus = fillet.ders(1, u, v + eps);
+            let ders_minus = fillet.ders(1, u, v - eps);
             let vder_approx = (ders_plus[0][0] - ders_minus[0][0]) / (2.0 * eps);
             assert!((ders[0][1] - vder_approx).magnitude() < eps);
             let uvder_approx = (ders_plus[1][0] - ders_minus[1][0]) / (2.0 * eps);

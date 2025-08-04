@@ -513,7 +513,7 @@ impl<P: ControlPoint<f64>> BSplineSurface<P> {
     }
 }
 
-impl<V: Homogeneous<f64>> BSplineSurface<V> {
+impl<V: Homogeneous> BSplineSurface<V> {
     /// lift up control points to homogeneous coordinate.
     pub fn lift_up(surface: BSplineSurface<V::Point>) -> Self {
         let control_points = surface
