@@ -1,31 +1,16 @@
 use crate::cgmath_extend_traits::*;
 use cgmath::*;
 use num_traits::NumCast;
+use std::fmt::Debug;
 
 /// Maximum order that guarantees differential calculations
 pub const MAX_DER_ORDER: usize = 31;
 
 /// Calculation results of curve differentiation
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct CurveDers<V> {
     array: [V; MAX_DER_ORDER + 1],
     max_order: usize,
-}
-
-impl<V> AbsDiffEq for CurveDers<V>
-where
-    V: AbsDiffEq,
-    V::Epsilon: Copy,
-{
-    type Epsilon = V::Epsilon;
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.max_order == other.max_order
-            && self
-                .iter()
-                .zip(other.iter())
-                .all(|(v, w)| v.abs_diff_eq(w, epsilon))
-    }
-    fn default_epsilon() -> Self::Epsilon { V::default_epsilon() }
 }
 
 impl<V> CurveDers<V> {
@@ -345,8 +330,54 @@ impl<V: Zero + Copy> FromIterator<V> for CurveDers<V> {
     }
 }
 
+impl<V: VectorSpace> std::ops::Mul<V::Scalar> for CurveDers<V> {
+    type Output = Self;
+    fn mul(self, rhs: V::Scalar) -> Self::Output {
+        let mut array = self.array;
+        array.iter_mut().for_each(|a| *a = *a * rhs);
+        Self {
+            array,
+            max_order: self.max_order,
+        }
+    }
+}
+
+impl<V: VectorSpace> std::ops::Div<V::Scalar> for CurveDers<V> {
+    type Output = Self;
+    fn div(self, rhs: V::Scalar) -> Self::Output {
+        let mut array = self.array;
+        array.iter_mut().for_each(|a| *a = *a / rhs);
+        Self {
+            array,
+            max_order: self.max_order,
+        }
+    }
+}
+
+impl<V> AbsDiffEq for CurveDers<V>
+where
+    V: AbsDiffEq,
+    V::Epsilon: Copy,
+{
+    type Epsilon = V::Epsilon;
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.max_order == other.max_order
+            && self
+                .iter()
+                .zip(other.iter())
+                .all(|(v, w)| v.abs_diff_eq(w, epsilon))
+    }
+    fn default_epsilon() -> Self::Epsilon { V::default_epsilon() }
+}
+
+impl<V: Debug> Debug for CurveDers<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.array[..=self.max_order].fmt(f)
+    }
+}
+
 /// Calculation results of surface differentiation
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct SurfaceDers<V> {
     array: [[V; MAX_DER_ORDER + 1]; MAX_DER_ORDER + 1],
     max_order: usize,
@@ -365,12 +396,13 @@ impl<V> SurfaceDers<V> {
     /// Returns maximum order
     #[inline]
     pub const fn max_order(&self) -> usize { self.max_order }
-    /// Returns the vector of slices
+
+    /// Returns the iterator of slices
     /// # Examples
     /// ```
     /// use truck_base::ders::*;
     /// let ders = SurfaceDers::<f64>::new(5);
-    /// let slices = ders.slice_vec();
+    /// let slices = ders.slice_iter().collect::<Vec<_>>();
     /// assert_eq!(slices.len(), 6);
     /// assert_eq!(slices[0].len(), 6);
     /// assert_eq!(slices[1].len(), 5);
@@ -380,19 +412,19 @@ impl<V> SurfaceDers<V> {
     /// assert_eq!(slices[5].len(), 1);
     /// ```
     #[inline]
-    pub fn slice_vec(&self) -> Vec<&[V]> {
+    pub fn slice_iter(&self) -> impl Iterator<Item = &[V]> {
         self.array[..=self.max_order]
             .iter()
             .enumerate()
-            .map(|(i, arr)| &arr[..=self.max_order - i])
-            .collect()
+            .map(|(i, v)| &v[..=self.max_order - i])
     }
-    /// Returns the vector of slices
+
+    /// Returns the iterator of mutable slices
     /// # Examples
     /// ```
     /// use truck_base::ders::*;
-    /// let mut ders = SurfaceDers::<f64>::new(5);
-    /// let slices = ders.slice_mut_vec();
+    /// let ders = SurfaceDers::<f64>::new(5);
+    /// let slices = ders.slice_iter_mut().collect::<Vec<_>>();
     /// assert_eq!(slices.len(), 6);
     /// assert_eq!(slices[0].len(), 6);
     /// assert_eq!(slices[1].len(), 5);
@@ -402,12 +434,11 @@ impl<V> SurfaceDers<V> {
     /// assert_eq!(slices[5].len(), 1);
     /// ```
     #[inline]
-    pub fn slice_mut_vec(&mut self) -> Vec<&mut [V]> {
+    pub fn slice_iter_mut(&mut self) -> impl Iterator<Item = &mut [V]> {
         self.array[..=self.max_order]
             .iter_mut()
             .enumerate()
-            .map(|(i, arr)| &mut arr[..=self.max_order - i])
-            .collect()
+            .map(|(i, v)| &mut v[..=self.max_order - i])
     }
 
     /// Returns SurfaceDers of u-derivative.
@@ -565,6 +596,7 @@ impl<V> SurfaceDers<V> {
             max_order: self.max_order,
         }
     }
+
     /// Returns the derivation of composite curve.
     /// # Example
     /// ```
@@ -609,6 +641,7 @@ impl<V> SurfaceDers<V> {
             })
         })
     }
+
     /// Returns the derivation of composite curve.
     /// # Example
     /// ```
@@ -641,14 +674,73 @@ impl<V> SurfaceDers<V> {
     /// ];
     /// let ans = CurveDers::try_from(raw_ans).unwrap();
     /// assert_eq!(ders, ans);
+    /// ```
     pub fn composite_ders(&self, curve_ders: &CurveDers<Vector2<V::Scalar>>) -> CurveDers<V>
     where
         V: VectorSpace,
         V::Scalar: BaseFloat, {
-        let mut res = CurveDers::new(curve_ders.max_order);
+        let max_order = self.max_order.min(curve_ders.max_order);
+        let mut res = CurveDers::new(max_order);
         res[0] = self[0][0];
         let iter = res[1..].iter_mut().enumerate();
         iter.for_each(|(i, o)| *o = self.composite_der(curve_ders, i + 1));
+        res
+    }
+    /// Returns the result of element-wise operation.
+    /// # Examples
+    /// ```
+    /// use truck_base::ders::*;
+    /// let ders0 = SurfaceDers::try_from(
+    ///     [
+    ///         [0.0, 1.0, 2.0].as_slice(),
+    ///         &[3.0, 4.0],
+    ///         &[5.0],
+    ///     ]
+    ///     .as_slice()
+    /// )
+    /// .unwrap();
+    /// let ders1 = SurfaceDers::try_from(
+    ///     [
+    ///         [3.0, 4.0, 5.0].as_slice(),
+    ///         &[6.0, 7.0],
+    ///         &[8.0],
+    ///     ]
+    ///     .as_slice()
+    /// )
+    /// .unwrap();
+    /// let ans_ders = SurfaceDers::try_from(
+    ///     [
+    ///         [3.0, 5.0, 7.0].as_slice(),
+    ///         &[9.0, 11.0],
+    ///         &[13.0],
+    ///     ]
+    ///     .as_slice()
+    /// )
+    /// .unwrap();
+    /// assert_eq!(ders0.element_wise_ders(&ders1, |x, y| x + y), ans_ders);
+    /// ```
+    pub fn element_wise_ders<W, B, U>(
+        &self,
+        other: &SurfaceDers<W>,
+        binomial: B,
+    ) -> SurfaceDers<U>
+    where
+        V: Copy,
+        W: Copy,
+        B: Fn(V, W) -> U,
+        U: Copy + Zero,
+    {
+        let max_order = self.max_order.min(other.max_order);
+        let mut res = SurfaceDers::new(max_order);
+        res.slice_iter_mut()
+            .zip(self.slice_iter())
+            .zip(other.slice_iter())
+            .for_each(|((o, a), b)| {
+                o.iter_mut()
+                    .zip(a)
+                    .zip(b)
+                    .for_each(|((o, &a), &b)| *o = binomial(a, b))
+            });
         res
     }
 }
@@ -693,6 +785,71 @@ impl<V: Zero + Copy> TryFrom<&[&[V]]> for SurfaceDers<V> {
 
         Ok(Self { array, max_order })
     }
+}
+
+impl<V: VectorSpace> std::ops::Mul<V::Scalar> for SurfaceDers<V> {
+    type Output = Self;
+    fn mul(self, rhs: V::Scalar) -> Self::Output {
+        let mut array = self.array;
+        array.iter_mut().flatten().for_each(|a| *a = *a * rhs);
+        Self {
+            array,
+            max_order: self.max_order,
+        }
+    }
+}
+
+impl<V: VectorSpace> std::ops::Div<V::Scalar> for SurfaceDers<V> {
+    type Output = Self;
+    fn div(self, rhs: V::Scalar) -> Self::Output {
+        let mut array = self.array;
+        array.iter_mut().flatten().for_each(|a| *a = *a / rhs);
+        Self {
+            array,
+            max_order: self.max_order,
+        }
+    }
+}
+
+impl<V> AbsDiffEq for SurfaceDers<V>
+where
+    V: AbsDiffEq,
+    V::Epsilon: Copy,
+{
+    type Epsilon = V::Epsilon;
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.max_order == other.max_order
+            && self
+                .slice_iter()
+                .zip(other.slice_iter())
+                .all(|(slice0, slice1)| {
+                    slice0
+                        .iter()
+                        .zip(slice1)
+                        .all(|(v, w)| v.abs_diff_eq(w, epsilon))
+                })
+    }
+    fn default_epsilon() -> Self::Epsilon { V::default_epsilon() }
+}
+
+impl<V: Debug> Debug for SurfaceDers<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.pad("[")?;
+        for (i, a) in self.slice_iter().enumerate() {
+            a[..=self.max_order - i].fmt(f)?;
+            if self.max_order != i {
+                f.pad(", ")?;
+            }
+        }
+        f.pad("]")
+    }
+}
+
+#[test]
+fn surface_ders_debug() {
+    let ders = SurfaceDers::<f64>::new(2);
+    let string = format!("{ders:?}");
+    assert_eq!(string, "[[0.0, 0.0, 0.0], [0.0, 0.0], [0.0]]");
 }
 
 fn can_init(len: usize, n: usize, max: usize) -> bool { !(len > n || max * len < n) }

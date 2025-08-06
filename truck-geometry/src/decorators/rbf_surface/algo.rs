@@ -337,7 +337,7 @@ impl SurfaceInfo {
                 .der()
                 .combinatorial_der(abs_crossders, MUL, n - 1);
         abs_crossders[n] = sum / abs_crossders[0];
-        let homog = crossders.element_wise_ders(abs_crossders, |v, w| v.extend(w));
+        let homog = crossders.element_wise_ders(abs_crossders, Vector3::extend);
         nders[n] = homog.rat_ders()[n];
     }
 }
