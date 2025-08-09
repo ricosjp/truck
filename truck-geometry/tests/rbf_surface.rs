@@ -1,5 +1,4 @@
 use std::f64::consts::PI;
-
 use truck_geometry::prelude::{rbf_surface::RadiusFunction, *};
 
 #[test]
@@ -12,6 +11,12 @@ fn contact_circle_as_curve() {
 
     assert_near!(cc.subs(0.0), cc.contact_point0().point);
     assert_near!(cc.subs(1.0), cc.contact_point1().point);
+
+    let nurbs: NurbsCurve<Vector4> = cc.to_same_geometry();
+    assert_near!(cc.subs(0.0), nurbs.subs(0.0));
+    assert_near!(cc.subs(0.5), nurbs.subs(0.5));
+    assert_near!(cc.subs(1.0), nurbs.subs(1.0));
+    assert_near!((nurbs.subs(0.2) - cc.center()).magnitude(), r);
 
     const EPS: f64 = 1.0e-4;
     for i in 1..=9 {

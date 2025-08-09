@@ -1242,24 +1242,22 @@ where
         let gen = ends.0.midpoint(ends.1);
         let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
         let t = range.0 * (1.0 - p) + range.1 * p;
-        let pt0 = bezier.subs(t);
-        let pt1 = curve.subs(t);
-        let der0 = bezier.der(t);
-        let der1 = curve.der(t);
-        let pt_dist2 = pt0.distance2(pt1);
-        let der_dist2 = (der0 - der1).magnitude2();
+        let ders0 = bezier.ders(1, t);
+        let ders1 = curve.ders(1, t);
+        let pt_dist2 = (ders0[0] - ders1[0]).magnitude2();
+        let der_dist2 = (ders0[1] - ders1[1]).magnitude2();
         if pt_dist2 > p_tol * p_tol || der_dist2 > d_tol * d_tol {
             if trialis == 0 {
                 return None;
             }
             let t = (range.0 + range.1) / 2.0;
-            let pt = curve.subs(t);
-            let der = curve.der(t);
+            let ders = curve.ders(1, t);
+            let pt = <P as EuclideanSpace>::from_vec(ders[0]);
             let bspcurve0 = Self::sub_cubic_approximation(
                 curve,
                 (range.0, t),
                 (ends.0, pt),
-                (enders.0, der),
+                (enders.0, ders[1]),
                 p_tol,
                 d_tol,
                 trialis - 1,
@@ -1268,7 +1266,7 @@ where
                 curve,
                 (t, range.1),
                 (pt, ends.1),
-                (der, enders.1),
+                (ders[1], enders.1),
                 p_tol,
                 d_tol,
                 trialis - 1,

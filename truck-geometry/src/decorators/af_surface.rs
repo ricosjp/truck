@@ -1,10 +1,12 @@
-use super::*;
+use super::{rbf_surface::RadiusFunction, *};
 
 impl<S0, S1> ApproxFilletSurface<S0, S1> {
     /// Returns the first surface.
     pub const fn surface0(&self) -> &S0 { &self.surface0 }
     /// Returns the second surface.
     pub const fn surface1(&self) -> &S1 { &self.surface1 }
+    /// Returns the knot vector for the parameter `v`.
+    pub const fn vknot_vec(&self) -> &KnotVec { &self.knot_vec }
     /// Returns side curve on the first surface.
     pub fn side_pcurve0(&self) -> PCurve<BSplineCurve<Point2>, S0>
     where S0: Clone {
@@ -203,6 +205,148 @@ where
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         let ders = self.ders(1, u, v);
         ders[1][0].cross(ders[0][1]).normalize()
+    }
+}
+
+impl<S0, S1> ParameterDivision2D for ApproxFilletSurface<S0, S1>
+where
+    S0: ParametricSurface3D,
+    S1: ParametricSurface3D,
+{
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, range, tol)
+    }
+}
+
+impl<S0, S1> ApproxFilletSurface<S0, S1>
+where
+    S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+{
+    /// approx fillet by `ApproxFilletSurface`.
+    pub fn approx_rolling_ball_fillet<C, R>(
+        fillet_surface: &RbfSurface<C, S0, S1, R>,
+        edge_parameter_range: (f64, f64),
+        tol: f64,
+    ) -> Option<Self>
+    where
+        C: ParametricCurve3D,
+        R: RadiusFunction,
+    {
+        let (v0, v1) = edge_parameter_range;
+        let v_5 = (v0 + v1) / 2.0;
+        let cc0 = fillet_surface.contact_circle(v0)?;
+        let cc_5 = fillet_surface.contact_circle(v_5)?;
+        let cc1 = fillet_surface.contact_circle(v1)?;
+        let mut ccs = vec![(v0, cc0), (v_5, cc_5), (v1, cc1)];
+
+        for _i in 0..16 {
+            let mut knot_vec = KnotVec::uniform_knot(2, ccs.len() - 2);
+            knot_vec.transform(v1 - v0, v0);
+            let uv0s = ccs
+                .iter()
+                .map(|&(v, cc)| (v, cc.contact_point0().uv))
+                .collect::<Vec<_>>();
+            let parameter_curve0 = BSplineCurve::interpole(knot_vec.clone(), uv0s);
+            let pcurve0 = PCurve::new(&parameter_curve0, fillet_surface.surface0());
+
+            let uv1s = ccs
+                .iter()
+                .map(|&(v, cc)| (v, cc.contact_point1().uv))
+                .collect::<Vec<_>>();
+            let parameter_curve1 = BSplineCurve::interpole(knot_vec.clone(), uv1s);
+            let pcurve1 = PCurve::new(&parameter_curve1, fillet_surface.surface1());
+
+            let mut raw_tangent_vecs0 = Vec::new();
+            let mut raw_tangent_vecs1 = Vec::new();
+            let mut raw_weights = Vec::new();
+            for &(v, cc) in &ccs {
+                let mut nurbs: NurbsCurve<Vector4> = cc.to_same_geometry();
+                nurbs.elevate_degree();
+                raw_weights.push((v, Point1::new(nurbs.control_point(1).w)));
+
+                let der0 = nurbs.der(0.0);
+                let cder0 = pcurve0.der(v).normalize();
+                let uv0 = cc.contact_point0().uv;
+                let n0 = fillet_surface.surface0.normal(uv0.x, uv0.y);
+                let handle0 = cder0.cross(n0);
+                let mat0 = Matrix3::from_cols(handle0, cder0, n0);
+                let vec0 = mat0.invert().unwrap() * der0;
+                raw_tangent_vecs0.push((v, vec0.truncate()));
+
+                let der1 = -nurbs.der(1.0);
+                let cder1 = pcurve1.der(v).normalize();
+                let uv1 = cc.contact_point1().uv;
+                let n1 = fillet_surface.surface0.normal(uv1.x, uv1.y);
+                let handle1 = cder1.cross(n1);
+                let mat1 = Matrix3::from_cols(handle1, cder1, n1);
+                let vec1 = mat1.invert().unwrap() * der1;
+                raw_tangent_vecs1.push((v, vec1.truncate()));
+            }
+
+            let tangent_curve0 = BSplineCurve::interpole(knot_vec.clone(), raw_tangent_vecs0);
+            let tangent_curve1 = BSplineCurve::interpole(knot_vec.clone(), raw_tangent_vecs1);
+            let weights_curve = BSplineCurve::interpole(knot_vec.clone(), raw_weights);
+            let weights = weights_curve
+                .destruct()
+                .1
+                .into_iter()
+                .map(|x| x.x)
+                .collect();
+
+            let approx = ApproxFilletSurface {
+                knot_vec,
+                surface0: fillet_surface.surface0(),
+                side_control_points0: parameter_curve0.destruct().1,
+                tangent_vecs0: tangent_curve0.destruct().1,
+                surface1: fillet_surface.surface1(),
+                side_control_points1: parameter_curve1.destruct().1,
+                tangent_vecs1: tangent_curve1.destruct().1,
+                weights,
+            };
+            let added_ccs = ccs
+                .windows(2)
+                .filter_map(|window| {
+                    let ((v0, _), (v1, _)) = (window[0], window[1]);
+                    let v = (v0 + v1) / 2.0;
+                    let cc = fillet_surface.contact_circle(v).unwrap();
+                    let p = [
+                        approx.subs(0.0, v),
+                        approx.subs(0.5, v),
+                        approx.subs(1.0, v),
+                    ];
+                    let q = [cc.subs(0.0), cc.subs(0.5), cc.subs(1.0)];
+                    match p
+                        .into_iter()
+                        .zip(q)
+                        .all(|(p, q)| p.distance2(q) < tol * tol)
+                    {
+                        true => None,
+                        false => Some((v, cc)),
+                    }
+                })
+                .collect::<Vec<_>>();
+            if added_ccs.is_empty() {
+                return Some(Self {
+                    knot_vec: approx.knot_vec,
+                    surface0: S0::clone(approx.surface0),
+                    side_control_points0: approx.side_control_points0,
+                    tangent_vecs0: approx.tangent_vecs0,
+                    surface1: S1::clone(approx.surface1),
+                    side_control_points1: approx.side_control_points1,
+                    tangent_vecs1: approx.tangent_vecs1,
+                    weights: approx.weights,
+                });
+            }
+            ccs.extend(added_ccs);
+            ccs.sort_by(|(x, _), (y, _)| x.partial_cmp(y).unwrap());
+        }
+
+        None
     }
 }
 
