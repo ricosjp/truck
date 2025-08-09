@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Align mesh aspects of general surfaces tessellation.
 - Refactoring: `intersection_curve` and `Homogeneous`.
 - Implement `CurveDers` and `SurfaceDers`.
 - Loosened `cut_random_test` requirements.
@@ -43,7 +44,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2025-08-04
+2025-08-08
 
 ## v0.6
 
