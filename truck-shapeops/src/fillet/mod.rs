@@ -32,6 +32,7 @@ fn find_adjacent_edge<P: Clone, C: Clone, S>(
         .map(|(x, _, y)| (x, y))
 }
 
+#[allow(clippy::type_complexity)]
 fn cut_face_by_curve<C, S>(
     face: &Face<Point3, C, S>,
     mut curve: C,
@@ -81,7 +82,7 @@ where
         }
     };
 
-    let fillet_edge = Edge::new(new_front_edge.back(), new_back_edge.front(), curve.into());
+    let fillet_edge = Edge::new(new_front_edge.back(), new_back_edge.front(), curve);
     let new_boundaries = face
         .absolute_boundaries()
         .iter()

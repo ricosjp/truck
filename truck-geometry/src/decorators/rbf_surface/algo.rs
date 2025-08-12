@@ -652,7 +652,7 @@ where
         let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
         let sign = -f64::signum(n0.cross(n1).dot(edge_curve.der(t)));
 
-        let _ = (0..=trials).find_map(|_i| {
+        (0..=trials).find_map(|_i| {
             let (p, der, der2) = (edge_curve.subs(t), edge_curve.der(t), edge_curve.der2(t));
             let (r, r_der) = (sign * radius.subs(t), sign * radius.der(t));
             let (uder0, vder0) = (surface0.uder(u0, v0), surface0.vder(u0, v0));
