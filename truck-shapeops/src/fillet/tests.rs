@@ -17,7 +17,6 @@ enum Curve {
     Line(Line<Point3>),
     Nurbs(NurbsCurve<Vector4>),
     Parametric(PCurve<BSplineCurve<Point2>, Box<Surface>>),
-    FilletSide(RbfContactCurve<Box<Self>, Box<Surface>, Box<Surface>, f64>),
     Intersection(IntersectionCurve<Box<Self>, Box<Surface>, Box<Surface>>),
 }
 
@@ -39,34 +38,22 @@ impl ToSameGeometry<Curve> for PCurve<BSplineCurve<Point2>, Surface> {
     }
 }
 
-impl ToSameGeometry<Curve> for RbfContactCurve<Curve, Surface, Surface, f64> {
-    fn to_same_geometry(&self) -> Curve { Curve::FilletSide(self.clone().into()) }
-}
-
-#[derive(Clone, Debug, ParametricSurface3D, SearchParameterD2, ParameterDivision2D, From)]
+#[derive(
+    Clone,
+    Debug,
+    ParametricSurface3D,
+    SearchParameterD2,
+    SearchNearestParameterD2,
+    ParameterDivision2D,
+    From,
+)]
 enum Surface {
     Nurbs(NurbsSurface<Vector4>),
-    Fillet(RbfSurface<Box<Curve>, Box<Self>, Box<Self>, f64>),
+    Fillet(ApproxFilletSurface<Box<Self>, Box<Self>>),
     Processor(Processor<Box<Self>, Matrix4>),
 }
 
-impl SearchNearestParameter<D2> for Surface {
-    type Point = Point3;
-    fn search_nearest_parameter<H: Into<<D2 as SPDimension>::Hint>>(
-        &self,
-        point: Self::Point,
-        hint: H,
-        trials: usize,
-    ) -> Option<<D2 as SPDimension>::Parameter> {
-        match self {
-            Self::Nurbs(nurbs) => nurbs.search_nearest_parameter(point, hint, trials),
-            Self::Processor(processor) => processor.search_nearest_parameter(point, hint, trials),
-            _ => unimplemented!(),
-        }
-    }
-}
-
-impl ToSameGeometry<Surface> for RbfSurface<Curve, Surface, Surface, f64> {
+impl ToSameGeometry<Surface> for ApproxFilletSurface<Surface, Surface> {
     fn to_same_geometry(&self) -> Surface { Surface::Fillet(self.clone().into()) }
 }
 
@@ -142,11 +129,11 @@ fn create_simple_fillet() {
     let face1 = Face::new(vec![wire1], surface1.into());
 
     let shell: Shell = [face0.clone(), face1.clone()].into();
-    let poly = shell.triangulation(0.001).to_polygon();
+    let poly = shell.triangulation(0.005).to_polygon();
     let file = std::fs::File::create("edged-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
 
-    let res = simple_fillet(&face0, &face1, shared_edge_id, 0.3).unwrap();
+    let res = simple_fillet(&face0, &face1, shared_edge_id, 0.3, 0.001).unwrap();
 
     let shell: Shell = [res.face0, res.face1, res.fillet].into();
     let pshell = shell.triangulation(0.005);
@@ -218,7 +205,6 @@ fn create_fillet_with_side() {
 
     let face = [plane(0, 1, 2, 3), plane(0, 3, 7, 4), plane(0, 4, 5, 1)];
 
-    /*
     #[derive(Clone, Copy, Debug)]
     struct Radius;
     impl RadiusFunction for Radius {
@@ -230,7 +216,6 @@ fn create_fillet_with_side() {
             }
         }
     }
-    */
 
     let FilletWithSide {
         simple_fillet:
@@ -241,11 +226,20 @@ fn create_fillet_with_side() {
             },
         side1,
         ..
-    } = fillet_with_side(&face[0], &face[1], edge[3].id(), None, Some(&face[2]), 0.3).unwrap();
+    } = fillet_with_side(
+        &face[0],
+        &face[1],
+        edge[3].id(),
+        None,
+        Some(&face[2]),
+        Radius,
+        0.001,
+    )
+    .unwrap();
 
     let shell: Shell = vec![face0, face1, fillet, side1.unwrap()].into();
 
-    let poly = shell.robust_triangulation(0.001).to_polygon();
-    let file = std::fs::File::create("fillet-with-edge.obj").unwrap();
+    let poly = shell.triangulation(0.005).to_polygon();
+    let file = std::fs::File::create("fillet-with-side.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }

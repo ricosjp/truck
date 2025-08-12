@@ -197,6 +197,13 @@ where
     }
 }
 
+impl<S0, S1> BoundedSurface for ApproxFilletSurface<S0, S1>
+where
+    S0: ParametricSurface3D,
+    S1: ParametricSurface3D,
+{
+}
+
 impl<S0, S1> ParametricSurface3D for ApproxFilletSurface<S0, S1>
 where
     S0: ParametricSurface3D,
@@ -219,6 +226,82 @@ where
         tol: f64,
     ) -> (Vec<f64>, Vec<f64>) {
         algo::surface::parameter_division(self, range, tol)
+    }
+}
+
+impl<S0, S1> SearchParameter<D2> for ApproxFilletSurface<S0, S1>
+where
+    S0: ParametricSurface3D,
+    S1: ParametricSurface3D,
+{
+    type Point = Point3;
+    fn search_parameter<H: Into<SPHint2D>>(
+        &self,
+        point: Point3,
+        hint: H,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
+            }
+        };
+        algo::surface::search_parameter(self, point, hint, trials)
+    }
+}
+
+impl<S0, S1> SearchNearestParameter<D2> for ApproxFilletSurface<S0, S1>
+where
+    S0: ParametricSurface3D,
+    S1: ParametricSurface3D,
+{
+    type Point = Point3;
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
+        &self,
+        point: Point3,
+        hint: H,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
+            }
+        };
+        algo::surface::search_nearest_parameter(self, point, hint, trials)
+    }
+}
+
+impl<S0, S1> From<ApproxFilletSurface<S0, S1>> for ApproxFilletSurface<Box<S0>, Box<S1>> {
+    fn from(
+        ApproxFilletSurface {
+            knot_vec,
+            surface0,
+            side_control_points0,
+            tangent_vecs0,
+            surface1,
+            side_control_points1,
+            tangent_vecs1,
+            weights,
+        }: ApproxFilletSurface<S0, S1>,
+    ) -> Self {
+        Self {
+            knot_vec,
+            surface0: Box::new(surface0),
+            side_control_points0,
+            tangent_vecs0,
+            surface1: Box::new(surface1),
+            side_control_points1,
+            tangent_vecs1,
+            weights,
+        }
     }
 }
 

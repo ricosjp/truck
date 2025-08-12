@@ -162,14 +162,14 @@ pub fn simple_fillet<C, S, R>(
     face1: &Face<Point3, C, S>,
     filleted_edge_id: EdgeID<C>,
     radius: R,
+    tol: f64,
 ) -> Option<SimpleFillet<C, S>>
 where
     C: FilletedCurve<S>,
     S: FilletedSurface<C>,
     R: RadiusFunction,
-    RbfContactCurve<C, S, S, R>: ToSameGeometry<C>,
     PCurve<BSplineCurve<Point2>, S>: ToSameGeometry<C>,
-    RbfSurface<C, S, S, R>: ToSameGeometry<S>,
+    ApproxFilletSurface<S, S>: ToSameGeometry<S>,
 {
     let is_filleted_edge = move |edge: &Edge<Point3, C>| edge.id() == filleted_edge_id;
     let filleted_edge = face0.edge_iter().find(is_filleted_edge)?;
@@ -178,15 +178,20 @@ where
         let surface0 = face0.oriented_surface();
         let surface1 = face1.oriented_surface();
         let curve = filleted_edge.oriented_curve();
-        RbfSurface::new(curve, surface0, surface1, radius)
+        let strict_fillet = RbfSurface::new(curve, surface0, surface1, radius);
+        ApproxFilletSurface::approx_rolling_ball_fillet(
+            &strict_fillet,
+            strict_fillet.edge_curve().range_tuple(),
+            tol,
+        )?
     };
 
     let (new_face0, fillet_edge0, (front_der0, back_der0)) = {
-        let contact_curve = fillet_surface.contact_curve0().to_same_geometry();
+        let contact_curve = fillet_surface.side_pcurve0().to_same_geometry();
         cut_face_by_curve(face0, contact_curve, filleted_edge.id())?
     };
     let (new_face1, fillet_edge1, (front_der1, back_der1)) = {
-        let contact_curve = fillet_surface.contact_curve1().to_same_geometry();
+        let contact_curve = fillet_surface.side_pcurve1().to_same_geometry();
         cut_face_by_curve(face1, contact_curve.inverse(), filleted_edge.id())?
     };
 
@@ -287,17 +292,17 @@ pub fn fillet_with_side<C, S, R>(
     side0: Option<&Face<Point3, C, S>>,
     side1: Option<&Face<Point3, C, S>>,
     radius: R,
+    tol: f64,
 ) -> Option<FilletWithSide<C, S>>
 where
     C: FilletedCurve<S>,
     S: FilletedSurface<C>,
     R: RadiusFunction,
-    RbfContactCurve<C, S, S, R>: ToSameGeometry<C>,
     PCurve<BSplineCurve<Point2>, S>: ToSameGeometry<C>,
     IntersectionCurve<C, S, S>: ToSameGeometry<C>,
-    RbfSurface<C, S, S, R>: ToSameGeometry<S>,
+    ApproxFilletSurface<S, S>: ToSameGeometry<S>,
 {
-    let simple_fillet = simple_fillet(face0, face1, filleted_edge_id, radius)?;
+    let simple_fillet = simple_fillet(face0, face1, filleted_edge_id, radius, tol)?;
 
     let (front_edge0, back_edge0) = {
         let fillet_edge_id = simple_fillet.fillet.absolute_boundaries()[0][0].id();
