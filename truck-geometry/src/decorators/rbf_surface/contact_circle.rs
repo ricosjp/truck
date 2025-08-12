@@ -79,6 +79,29 @@ impl ParametricCurve for ContactCircle {
     }
 }
 
+impl ToSameGeometry<NurbsCurve<Vector4>> for ContactCircle {
+    fn to_same_geometry(&self) -> NurbsCurve<Vector4> {
+        let (sin2, cos2) = (self.angle / 2.0).sin_cos();
+        let x_axis = self.contact_point0.point - self.center;
+        let z_axis = self.axis;
+        let y_axis = z_axis.cross(x_axis);
+        let mat = Matrix4::from_cols(
+            x_axis.extend(0.0),
+            y_axis.extend(0.0),
+            z_axis.extend(0.0),
+            self.center.to_homogeneous(),
+        );
+        NurbsCurve::new(BSplineCurve::new_unchecked(
+            KnotVec::bezier_knot(2),
+            vec![
+                mat * Vector4::new(1.0, 0.0, 0.0, 1.0),
+                mat * Vector4::new(cos2, sin2, 0.0, cos2),
+                mat * Vector4::new(self.angle.cos(), self.angle.sin(), 0.0, 1.0),
+            ],
+        ))
+    }
+}
+
 /// contact point on planes and sphere with radius `radius`.
 /// Returns `(center, contact_point0, contact_point1)`.
 fn contact_points(

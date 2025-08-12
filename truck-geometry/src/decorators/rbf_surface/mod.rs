@@ -271,18 +271,19 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn ders(&self, n: usize, t: f64) -> CurveDers<Vector3> {
         if n == 0 {
-            return self.subs(t).to_vec();
+            return CurveDers::try_from([self.subs(t).to_vec()]).unwrap();
         }
         let cc = self.surface.contact_circle(t).unwrap();
         let rders = self.surface.radius.ders(n, t);
-        let cc_ders = self.surface.center_contacts_ders(cc, &rders, n);
+        let cc_ders = self.surface.sub_center_contacts_ders(cc, &rders, n);
         match self.index {
-            0 => cc_ders.contact0_ders[n],
-            _ => cc_ders.contact1_ders[n],
+            0 => cc_ders.contact0_ders,
+            _ => cc_ders.contact1_ders,
         }
     }
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.ders(n, t)[n] }
     fn subs(&self, t: f64) -> Self::Point {
         let cc = self.surface.contact_circle(t).unwrap();
         match self.index {

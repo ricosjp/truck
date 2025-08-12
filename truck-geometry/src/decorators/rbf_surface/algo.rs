@@ -10,7 +10,7 @@ where
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     R: RadiusFunction,
 {
-    /// calculate contact circle corresponding to the parameter `t`, i.e.
+    /// Calculate contact circle corresponding to the parameter `t`, i.e.
     /// - the circle contact to the surfaces, `surface0` and `surface1`,
     /// - the center of the circle is on the plane with the origin = `edge_curve.subs(t)` and
     ///   the normal = `edge_curve.der(t)`.
@@ -44,7 +44,13 @@ where
         ContactCircle::try_new(poc, t, &self.surface0, &self.surface1, radius)
     }
 
-    pub(super) fn center_contacts_ders(
+    /// Calculate higher-order derivatives of the center curve and the contact curves.
+    pub fn center_contact_ders(&self, cc: ContactCircle, n: usize) -> CenterContactDers {
+        let rders = self.radius.ders(n + 1, cc.t);
+        self.sub_center_contacts_ders(cc, &rders, n)
+    }
+
+    pub(super) fn sub_center_contacts_ders(
         &self,
         cc: ContactCircle,
         rders: &CurveDers<f64>,
@@ -66,12 +72,14 @@ where
             center_ders: ders,
             contact0_ders: s0info.tders,
             contact1_ders: s1info.tders,
+            uv0_ders: s0info.uvders,
+            uv1_ders: s1info.uvders,
         }
     }
 
     pub(super) fn vder_info(&self, cc: ContactCircle, n: usize) -> VderInfo {
         let rders = self.radius.ders(n + 1, cc.t);
-        let cc_ders = self.center_contacts_ders(cc, &rders, n);
+        let cc_ders = self.sub_center_contacts_ders(cc, &rders, n);
         cc_ders.vder_info(&rders)
     }
 
@@ -95,11 +103,14 @@ where
     }
 }
 
+/// Derivations of centers and contact points
 #[derive(Clone, Copy, Debug)]
-pub(super) struct CenterContactDers {
+pub struct CenterContactDers {
     pub center_ders: CurveDers<Vector3>,
     pub contact0_ders: CurveDers<Vector3>,
     pub contact1_ders: CurveDers<Vector3>,
+    pub uv0_ders: CurveDers<Vector2>,
+    pub uv1_ders: CurveDers<Vector2>,
 }
 
 impl CenterContactDers {
@@ -337,7 +348,7 @@ impl SurfaceInfo {
                 .der()
                 .combinatorial_der(abs_crossders, MUL, n - 1);
         abs_crossders[n] = sum / abs_crossders[0];
-        let homog = crossders.element_wise_ders(abs_crossders, |v, w| v.extend(w));
+        let homog = crossders.element_wise_ders(abs_crossders, Vector3::extend);
         nders[n] = homog.rat_ders()[n];
     }
 }
@@ -558,9 +569,9 @@ fn fillet_between_two_spheres_deralgo() {
         let cc_minus = fillet.contact_circle(t - eps).unwrap();
         let rders_minus = fillet.radius.ders(4, t - eps);
 
-        let cc_ders = fillet.center_contacts_ders(cc, &rders, 4);
-        let cc_ders_plus = fillet.center_contacts_ders(cc_plus, &rders_plus, 3);
-        let cc_ders_minus = fillet.center_contacts_ders(cc_minus, &rders_minus, 3);
+        let cc_ders = fillet.sub_center_contacts_ders(cc, &rders, 4);
+        let cc_ders_plus = fillet.sub_center_contacts_ders(cc_plus, &rders_plus, 3);
+        let cc_ders_minus = fillet.sub_center_contacts_ders(cc_minus, &rders_minus, 3);
 
         let cross_ders = cc_ders.cross_ders();
         let cross_ders_plus = cc_ders_plus.cross_ders();
