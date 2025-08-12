@@ -338,7 +338,7 @@ pub struct ApproxFilletSurface<S0, S1> {
     knot_vec: KnotVec,
     surface0: S0,
     side_control_points0: Vec<Point2>,
-    tangent_vecs0: Vec<Vector2>, 
+    tangent_vecs0: Vec<Vector2>,
     surface1: S1,
     side_control_points1: Vec<Point2>,
     tangent_vecs1: Vec<Vector2>,

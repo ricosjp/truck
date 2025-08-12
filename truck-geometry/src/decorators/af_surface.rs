@@ -77,8 +77,8 @@ mod subders {
         homog_ders.rat_ders()
     }
     fn n_ders(s_ders: &SurfaceDers<Vector3>, uv_ders: &CurveDers<Vector2>) -> CurveDers<Vector3> {
-        let uders = s_ders.uder().composite_ders(&uv_ders);
-        let vders = s_ders.vder().composite_ders(&uv_ders);
+        let uders = s_ders.uder().composite_ders(uv_ders);
+        let vders = s_ders.vder().composite_ders(uv_ders);
         let lnders = uders.combinatorial_ders(&vders, Vector3::cross);
         let homog = lnders.element_wise_ders(&lnders.abs_ders(), Vector3::extend);
         homog.rat_ders()
@@ -90,8 +90,8 @@ mod subders {
         n_ders: &CurveDers<Vector3>,
     ) -> CurveDers<Vector3> {
         use std::ops::Add;
-        let v_axis_ders = v_axis_ders(&p_ders);
-        let u_axis_ders = v_axis_ders.combinatorial_ders(&n_ders, Vector3::cross);
+        let v_axis_ders = v_axis_ders(p_ders);
+        let u_axis_ders = v_axis_ders.combinatorial_ders(n_ders, Vector3::cross);
         let wp_ders = w_ders.combinatorial_ders(p_ders, |w, p| w * p);
         let aders = b_ders.combinatorial_ders(&u_axis_ders, |v, p| v[0] * p) / 3.0;
         let bders = b_ders.combinatorial_ders(&v_axis_ders, |v, p| v[1] * p) / 3.0;
@@ -113,7 +113,7 @@ mod subders {
         let p_ders = s_ders.composite_ders(uv_ders);
         let lift_p_ders = lift_p_ders(&p_ders);
         let wq_ders = wq_ders(w_ders, &p_ders, b_ders, &n_ders(s_ders, uv_ders));
-        let lift_q_ders = wq_ders.element_wise_ders(&w_ders, |x, y| x.extend(y));
+        let lift_q_ders = wq_ders.element_wise_ders(w_ders, |x, y| x.extend(y));
         (lift_p_ders, lift_q_ders)
     }
 }

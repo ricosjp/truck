@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Approximation of `RbfSurface` by `ApproxFilletSurface`.
 - Align mesh aspects of general surfaces tessellation.
 - Refactoring: `intersection_curve` and `Homogeneous`.
 - Implement `CurveDers` and `SurfaceDers`.

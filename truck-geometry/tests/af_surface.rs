@@ -35,9 +35,15 @@ fn approx_fillet_between_two_spheres() {
 
     let instance = std::time::Instant::now();
     let _ = fillet.parameter_division(((0.0, 1.0), (PI * 0.1, PI * 1.9)), 0.005);
-    println!("tessellate strict fillet: {}ms", instance.elapsed().as_millis());
-    
+    println!(
+        "tessellate strict fillet: {}ms",
+        instance.elapsed().as_millis()
+    );
+
     let instance = std::time::Instant::now();
     let _ = approx.parameter_division(((0.0, 1.0), (PI * 0.1, PI * 1.9)), 0.005);
-    println!("tessellate fillet approx: {}ms", instance.elapsed().as_millis());
+    println!(
+        "tessellate fillet approx: {}ms",
+        instance.elapsed().as_millis()
+    );
 }
