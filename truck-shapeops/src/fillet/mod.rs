@@ -4,20 +4,20 @@ use truck_geometry::prelude::{rbf_surface::*, *};
 use truck_topology::*;
 
 /// condition of curves to attach fillet
-pub trait FilletedCurve<S, R>:
+pub trait FilletedCurve<S>:
     ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug {
 }
-impl<C: ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug, S, R>
-    FilletedCurve<S, R> for C
+impl<C: ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug, S> FilletedCurve<S>
+    for C
 {
 }
 
 /// condition of sufaces to attach fillet
-pub trait FilletedSurface<C, R>:
+pub trait FilletedSurface<C>:
     ParametricSurface3D + SearchParameter<D2, Point = Point3> + Invertible {
 }
-impl<C, S: ParametricSurface3D + SearchParameter<D2, Point = Point3> + Invertible, R>
-    FilletedSurface<C, R> for S
+impl<C, S: ParametricSurface3D + SearchParameter<D2, Point = Point3> + Invertible>
+    FilletedSurface<C> for S
 {
 }
 
@@ -32,15 +32,14 @@ fn find_adjacent_edge<P: Clone, C: Clone, S>(
         .map(|(x, _, y)| (x, y))
 }
 
-fn cut_face_by_curve<C, S, R>(
+fn cut_face_by_curve<C, S>(
     face: &Face<Point3, C, S>,
     mut curve: C,
     filleted_edge_id: EdgeID<C>,
 ) -> Option<(Face<Point3, C, S>, Edge<Point3, C>, (Vector3, Vector3))>
 where
-    C: FilletedCurve<S, R>,
+    C: FilletedCurve<S>,
     S: Clone,
-    R: RadiusFunction,
 {
     let (front_edge, back_edge) = find_adjacent_edge(face, filleted_edge_id)?;
 
@@ -133,7 +132,7 @@ where
     let uvder0 = Matrix3::from_cols(uder0, vder0, n0).invert().unwrap() * der0;
     //debug_assert!(uvder0.z.so_small(), "{:?}", uvder0);
     let cp1 = uv0 + dist / 3.0 * uvder0.truncate().normalize();
-    
+
     let uder1 = fillet_surface.uder(uv1.x, uv1.y);
     let vder1 = fillet_surface.vder(uv1.x, uv1.y);
     let n1 = uder1.cross(vder1).normalize();
@@ -146,16 +145,27 @@ where
     Some(Edge::new(v0, v1, curve.to_same_geometry()))
 }
 
+/// result of [`simple_fillet`]
+#[derive(Clone, Debug)]
+pub struct SimpleFillet<C, S> {
+    /// the trimmed first face
+    pub face0: Face<Point3, C, S>,
+    /// the trimmed second face
+    pub face1: Face<Point3, C, S>,
+    /// the added new fillet face
+    pub fillet: Face<Point3, C, S>,
+}
+
 /// create simple fillet
 pub fn simple_fillet<C, S, R>(
     face0: &Face<Point3, C, S>,
     face1: &Face<Point3, C, S>,
     filleted_edge_id: EdgeID<C>,
     radius: R,
-) -> Option<(Face<Point3, C, S>, Face<Point3, C, S>, Face<Point3, C, S>)>
+) -> Option<SimpleFillet<C, S>>
 where
-    C: FilletedCurve<S, R>,
-    S: FilletedSurface<C, R>,
+    C: FilletedCurve<S>,
+    S: FilletedSurface<C>,
     R: RadiusFunction,
     RbfContactCurve<C, S, S, R>: ToSameGeometry<C>,
     PCurve<BSplineCurve<Point2>, S>: ToSameGeometry<C>,
@@ -198,7 +208,138 @@ where
         Face::new(vec![fillet_boundary.into()], surface)
     };
 
-    Some((new_face0, new_face1, fillet))
+    Some(SimpleFillet {
+        face0: new_face0,
+        face1: new_face1,
+        fillet,
+    })
+}
+
+/// result of [`fillet_with_side`].
+#[derive(Clone, Debug)]
+pub struct FilletWithSide<C, S> {
+    /// simple fillet part
+    pub simple_fillet: SimpleFillet<C, S>,
+    /// the trimmed first side face
+    pub side0: Option<Face<Point3, C, S>>,
+    /// the trimmed second side face
+    pub side1: Option<Face<Point3, C, S>>,
+}
+
+fn create_new_side<C, S>(
+    side: &Face<Point3, C, S>,
+    fillet_edge: &Edge<Point3, C>,
+    fillet_surface: &S,
+    corner_vertex_id: VertexID<Point3>,
+    left_face_front_edge: &Edge<Point3, C>,
+    right_face_back_edge: &Edge<Point3, C>,
+) -> Option<Face<Point3, C, S>>
+where
+    C: FilletedCurve<S>,
+    S: FilletedSurface<C>,
+    IntersectionCurve<C, S, S>: ToSameGeometry<C>,
+{
+    let (boundary_idx, edge_idx) = side.boundary_iters().into_iter().enumerate().find_map(
+        |(boundary_idx, boundary_iter)| {
+            boundary_iter
+                .enumerate()
+                .find(|(_, edge)| edge.back().id() == corner_vertex_id)
+                .map(move |(edge_idx, _)| (boundary_idx, edge_idx))
+        },
+    )?;
+    let new_boundaries = side
+        .absolute_boundaries()
+        .iter()
+        .enumerate()
+        .map(|(idx, boundary)| {
+            let mut new_boundary = boundary.clone();
+            if idx == boundary_idx {
+                let len = new_boundary.len();
+                if side.orientation() {
+                    new_boundary[edge_idx] = right_face_back_edge.inverse();
+                    new_boundary[(edge_idx + 1) % len] = left_face_front_edge.inverse();
+                    new_boundary.insert(edge_idx + 1, fillet_edge.inverse());
+                } else {
+                    new_boundary[len - edge_idx - 1] = right_face_back_edge.clone();
+                    new_boundary[(2 * len - edge_idx - 2) % len] = left_face_front_edge.clone();
+                    new_boundary.insert(len - edge_idx, fillet_edge.clone());
+                }
+            }
+            new_boundary
+        })
+        .collect();
+    let side_surface = side.oriented_surface();
+    let fillet_surface = fillet_surface.clone();
+    let new_curve = IntersectionCurve::new(side_surface, fillet_surface, fillet_edge.curve());
+    fillet_edge.set_curve(new_curve.to_same_geometry());
+    let mut new_face = Face::new(new_boundaries, side.surface());
+    if !side.orientation() {
+        new_face.invert();
+    }
+    Some(new_face)
+}
+
+/// Create fillet with side faces
+pub fn fillet_with_side<C, S, R>(
+    face0: &Face<Point3, C, S>,
+    face1: &Face<Point3, C, S>,
+    filleted_edge_id: EdgeID<C>,
+    side0: Option<&Face<Point3, C, S>>,
+    side1: Option<&Face<Point3, C, S>>,
+    radius: R,
+) -> Option<FilletWithSide<C, S>>
+where
+    C: FilletedCurve<S>,
+    S: FilletedSurface<C>,
+    R: RadiusFunction,
+    RbfContactCurve<C, S, S, R>: ToSameGeometry<C>,
+    PCurve<BSplineCurve<Point2>, S>: ToSameGeometry<C>,
+    IntersectionCurve<C, S, S>: ToSameGeometry<C>,
+    RbfSurface<C, S, S, R>: ToSameGeometry<S>,
+{
+    let simple_fillet = simple_fillet(face0, face1, filleted_edge_id, radius)?;
+
+    let (front_edge0, back_edge0) = {
+        let fillet_edge_id = simple_fillet.fillet.absolute_boundaries()[0][0].id();
+        find_adjacent_edge(&simple_fillet.face0, fillet_edge_id)?
+    };
+    let (front_edge1, back_edge1) = {
+        let fillet_edge_id = simple_fillet.fillet.absolute_boundaries()[0][2].id();
+        find_adjacent_edge(&simple_fillet.face1, fillet_edge_id)?
+    };
+
+    let is_filleted_edge = |edge: &Edge<Point3, C>| edge.id() == filleted_edge_id;
+    let filleted_edge = face0.edge_iter().find(is_filleted_edge)?;
+    let (v0, v1) = filleted_edge.ends();
+
+    let fillet_surface = simple_fillet.fillet.surface();
+    let new_side0 = side0.and_then(|side0| {
+        let fillet_edge = &simple_fillet.fillet.absolute_boundaries()[0][1];
+        create_new_side(
+            side0,
+            fillet_edge,
+            &fillet_surface,
+            v0.id(),
+            &front_edge0,
+            &back_edge1,
+        )
+    });
+    let new_side1 = side1.and_then(|side1| {
+        let fillet_edge = &simple_fillet.fillet.absolute_boundaries()[0][3];
+        create_new_side(
+            side1,
+            fillet_edge,
+            &fillet_surface,
+            v1.id(),
+            &front_edge1,
+            &back_edge0,
+        )
+    });
+    Some(FilletWithSide {
+        simple_fillet,
+        side0: new_side0,
+        side1: new_side1,
+    })
 }
 
 //mod experiment;

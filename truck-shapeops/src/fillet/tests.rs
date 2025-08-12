@@ -17,7 +17,19 @@ enum Curve {
     Line(Line<Point3>),
     Nurbs(NurbsCurve<Vector4>),
     Parametric(PCurve<BSplineCurve<Point2>, Box<Surface>>),
-    FilletSide(RbfContactCurve<Box<Curve>, Box<Surface>, Box<Surface>, f64>),
+    FilletSide(RbfContactCurve<Box<Self>, Box<Surface>, Box<Surface>, f64>),
+    Intersection(IntersectionCurve<Box<Self>, Box<Surface>, Box<Surface>>),
+}
+
+impl ToSameGeometry<Curve> for IntersectionCurve<Curve, Surface, Surface> {
+    fn to_same_geometry(&self) -> Curve {
+        let (surface0, surface1, leader) = self.clone().destruct();
+        Curve::Intersection(IntersectionCurve::new(
+            Box::new(surface0),
+            Box::new(surface1),
+            Box::new(leader),
+        ))
+    }
 }
 
 impl ToSameGeometry<Curve> for PCurve<BSplineCurve<Point2>, Surface> {
@@ -41,13 +53,14 @@ enum Surface {
 impl SearchNearestParameter<D2> for Surface {
     type Point = Point3;
     fn search_nearest_parameter<H: Into<<D2 as SPDimension>::Hint>>(
-            &self,
-            point: Self::Point,
-            hint: H,
-            trials: usize,
-        ) -> Option<<D2 as SPDimension>::Parameter> {
+        &self,
+        point: Self::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<<D2 as SPDimension>::Parameter> {
         match self {
             Self::Nurbs(nurbs) => nurbs.search_nearest_parameter(point, hint, trials),
+            Self::Processor(processor) => processor.search_nearest_parameter(point, hint, trials),
             _ => unimplemented!(),
         }
     }
@@ -133,12 +146,106 @@ fn create_simple_fillet() {
     let file = std::fs::File::create("edged-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
 
-    let (face0, face1, fillet) = simple_fillet(&face0, &face1, shared_edge_id, 0.3).unwrap();
+    let res = simple_fillet(&face0, &face1, shared_edge_id, 0.3).unwrap();
 
-    let shell: Shell = [face0, face1, fillet].into();
+    let shell: Shell = [res.face0, res.face1, res.fillet].into();
     let pshell = shell.triangulation(0.005);
     assert!(pshell.iter().all(|face| face.surface().is_some()));
     let poly = pshell.to_polygon();
     let file = std::fs::File::create("fillet-shell.obj").unwrap();
+    obj::write(&poly, file).unwrap();
+}
+
+#[test]
+fn create_fillet_with_side() {
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.3, 1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+    ];
+    let v = Vertex::news(p);
+
+    let line = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+
+    let edge = [
+        line(0, 1),
+        line(1, 2),
+        line(2, 3),
+        line(3, 0),
+        line(0, 4),
+        line(1, 5),
+        line(2, 6),
+        line(3, 7),
+        line(4, 5),
+        line(5, 6),
+        line(6, 7),
+        line(7, 4),
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let knot_vecs = (knot_vec.clone(), knot_vec);
+        let bsp: NurbsSurface<Vector4> = BSplineSurface::new(knot_vecs, control_points).into();
+
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(i, j)| {
+                edge.iter()
+                    .find_map(|edge| {
+                        if edge.front() == &v[i] && edge.back() == &v[j] {
+                            Some(edge.clone())
+                        } else if edge.back() == &v[i] && edge.front() == &v[j] {
+                            Some(edge.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let face = [plane(0, 1, 2, 3), plane(0, 3, 7, 4), plane(0, 4, 5, 1)];
+
+    /*
+    #[derive(Clone, Copy, Debug)]
+    struct Radius;
+    impl RadiusFunction for Radius {
+        fn der_n(&self, n: usize, t: f64) -> f64 {
+            match n {
+                0 => 0.3 + 0.3 * t,
+                1 => 0.3,
+                _ => 0.0,
+            }
+        }
+    }
+    */
+
+    let FilletWithSide {
+        simple_fillet:
+            SimpleFillet {
+                face0,
+                face1,
+                fillet,
+            },
+        side1,
+        ..
+    } = fillet_with_side(&face[0], &face[1], edge[3].id(), None, Some(&face[2]), 0.3).unwrap();
+
+    let shell: Shell = vec![face0, face1, fillet, side1.unwrap()].into();
+
+    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let file = std::fs::File::create("fillet-with-edge.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }
