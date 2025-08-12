@@ -423,7 +423,7 @@ impl<V> SurfaceDers<V> {
     /// # Examples
     /// ```
     /// use truck_base::ders::*;
-    /// let ders = SurfaceDers::<f64>::new(5);
+    /// let mut ders = SurfaceDers::<f64>::new(5);
     /// let slices = ders.slice_iter_mut().collect::<Vec<_>>();
     /// assert_eq!(slices.len(), 6);
     /// assert_eq!(slices[0].len(), 6);
