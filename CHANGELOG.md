@@ -44,7 +44,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2025-08-08
+2025-08-12
 
 ## v0.6
 
