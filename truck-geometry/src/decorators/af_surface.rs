@@ -1,4 +1,4 @@
-use super::{rbf_surface::RadiusFunction, *};
+use super::{rbf_surface::*, *};
 
 impl<S0, S1> ApproxFilletSurface<S0, S1> {
     /// Returns the first surface.
@@ -245,19 +245,22 @@ where
         let mut ccs = vec![(v0, cc0), (v_5, cc_5), (v1, cc1)];
 
         for _i in 0..16 {
-            let mut knot_vec = KnotVec::uniform_knot(2, ccs.len() - 2);
-            knot_vec.transform(v1 - v0, v0);
-            let uv0s = ccs
-                .iter()
-                .map(|&(v, cc)| (v, cc.contact_point0().uv))
-                .collect::<Vec<_>>();
+            let mut vec = Vec::with_capacity(ccs.len() + 3);
+            vec.extend([v0, v0, v0]);
+            vec.extend({
+                let n = ccs.len() - 1;
+                ccs[1..n].windows(2).map(move |v| (v[0].0 + v[1].0) / 2.0)
+            });
+            vec.extend([v1, v1, v1]);
+            let knot_vec = KnotVec::try_from(vec).unwrap();
+
+            let make_uv0 = move |&(v, cc): &(f64, ContactCircle)| (v, cc.contact_point0().uv);
+            let uv0s = ccs.iter().map(make_uv0).collect::<Vec<_>>();
             let parameter_curve0 = BSplineCurve::interpole(knot_vec.clone(), uv0s);
             let pcurve0 = PCurve::new(&parameter_curve0, fillet_surface.surface0());
 
-            let uv1s = ccs
-                .iter()
-                .map(|&(v, cc)| (v, cc.contact_point1().uv))
-                .collect::<Vec<_>>();
+            let make_uv1 = move |&(v, cc): &(f64, ContactCircle)| (v, cc.contact_point1().uv);
+            let uv1s = ccs.iter().map(make_uv1).collect::<Vec<_>>();
             let parameter_curve1 = BSplineCurve::interpole(knot_vec.clone(), uv1s);
             let pcurve1 = PCurve::new(&parameter_curve1, fillet_surface.surface1());
 
@@ -281,7 +284,7 @@ where
                 let der1 = -nurbs.der(1.0);
                 let cder1 = pcurve1.der(v).normalize();
                 let uv1 = cc.contact_point1().uv;
-                let n1 = fillet_surface.surface0.normal(uv1.x, uv1.y);
+                let n1 = fillet_surface.surface1.normal(uv1.x, uv1.y);
                 let handle1 = cder1.cross(n1);
                 let mat1 = Matrix3::from_cols(handle1, cder1, n1);
                 let vec1 = mat1.invert().unwrap() * der1;
@@ -291,12 +294,8 @@ where
             let tangent_curve0 = BSplineCurve::interpole(knot_vec.clone(), raw_tangent_vecs0);
             let tangent_curve1 = BSplineCurve::interpole(knot_vec.clone(), raw_tangent_vecs1);
             let weights_curve = BSplineCurve::interpole(knot_vec.clone(), raw_weights);
-            let weights = weights_curve
-                .destruct()
-                .1
-                .into_iter()
-                .map(|x| x.x)
-                .collect();
+            let weights_points = weights_curve.destruct().1;
+            let weights = weights_points.into_iter().map(|x| x.x).collect();
 
             let approx = ApproxFilletSurface {
                 knot_vec,
@@ -310,21 +309,11 @@ where
             };
             let added_ccs = ccs
                 .windows(2)
-                .filter_map(|window| {
-                    let ((v0, _), (v1, _)) = (window[0], window[1]);
-                    let v = (v0 + v1) / 2.0;
+                .filter_map(|v| {
+                    let v = (v[0].0 + v[1].0) / 2.0;
                     let cc = fillet_surface.contact_circle(v).unwrap();
-                    let p = [
-                        approx.subs(0.0, v),
-                        approx.subs(0.5, v),
-                        approx.subs(1.0, v),
-                    ];
-                    let q = [cc.subs(0.0), cc.subs(0.5), cc.subs(1.0)];
-                    match p
-                        .into_iter()
-                        .zip(q)
-                        .all(|(p, q)| p.distance2(q) < tol * tol)
-                    {
+                    let is_far = |t: f64| approx.subs(t, v).distance2(cc.subs(t)) < tol * tol;
+                    match [0.0, 0.5, 1.0].into_iter().all(is_far) {
                         true => None,
                         false => Some((v, cc)),
                     }
