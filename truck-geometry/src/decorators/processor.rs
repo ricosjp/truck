@@ -109,6 +109,15 @@ where
     type Point = C::Point;
     type Vector = C::Vector;
     #[inline(always)]
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+        if n == 0 {
+            self.subs(t).to_vec()
+        } else {
+            let t = self.get_curve_parameter(t);
+            self.transform.transform_vector(self.entity.der_n(n, t))
+        }
+    }
+    #[inline(always)]
     fn subs(&self, t: f64) -> C::Point {
         let t = self.get_curve_parameter(t);
         self.transform.transform_point(self.entity.subs(t))
@@ -167,6 +176,21 @@ where
 {
     type Point = S::Point;
     type Vector = S::Vector;
+    #[inline(always)]
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        if (m, n) == (0, 0) {
+            self.subs(u, v).to_vec()
+        } else {
+            match self.orientation {
+                true => self
+                    .transform
+                    .transform_vector(self.entity.der_mn(m, n, u, v)),
+                false => self
+                    .transform
+                    .transform_vector(self.entity.der_mn(n, m, v, u)),
+            }
+        }
+    }
     #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point {
         match self.orientation {

@@ -8,7 +8,7 @@ const PICTURE_SIZE: (u32, u32) = (256, 256);
 fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = Instance::new(InstanceDescriptor {
+    let instance = Instance::new(&InstanceDescriptor {
         backends: backend,
         ..Default::default()
     });

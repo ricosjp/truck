@@ -126,8 +126,8 @@ mod nurbssurface;
 
 #[doc(hidden)]
 #[inline(always)]
-pub fn inv_or_zero(delta: f64) -> f64 {
-    if delta.so_small() {
+pub const fn inv_or_zero(delta: f64) -> f64 {
+    if delta.abs() <= TOLERANCE {
         0.0
     } else {
         1.0 / delta

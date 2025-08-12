@@ -6,7 +6,7 @@ pub trait ParametricSurface: Clone {
     /// The surface is in the space of `Self::Point`.
     type Point;
     /// The derivation vector of the curve.
-    type Vector;
+    type Vector: Zero + Copy;
     /// Substitutes the parameter `(u, v)`.
     fn subs(&self, u: f64, v: f64) -> Self::Point;
     /// Returns the derivation by `u`.
@@ -19,6 +19,15 @@ pub trait ParametricSurface: Clone {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector;
     /// Returns the 2nd-order derivation by `v`.
     fn vvder(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns $\partial^{m + n} S / \partial u^m \partial v^n$.
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector;
+    /// Calculates higher degree derivations at the parameter `(u, v)`.
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+        let mut ders = SurfaceDers::new(max_order);
+        (0..=max_order)
+            .for_each(|m| (0..=max_order - m).for_each(|n| ders[m][n] = self.der_mn(m, n, u, v)));
+        ders
+    }
     /// The range of the parameter of the surface.
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
@@ -59,6 +68,14 @@ impl<S: ParametricSurface> ParametricSurface for &S {
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
     #[inline(always)]
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        (*self).der_mn(m, n, u, v)
+    }
+    #[inline(always)]
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+        (*self).ders(max_order, u, v)
+    }
+    #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (*self).parameter_range() }
     #[inline(always)]
     fn u_period(&self) -> Option<f64> { (*self).u_period() }
@@ -81,6 +98,14 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     fn uvder(&self, u: f64, v: f64) -> Self::Vector { (**self).uvder(u, v) }
     #[inline(always)]
     fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
+    #[inline(always)]
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        (**self).der_mn(m, n, u, v)
+    }
+    #[inline(always)]
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+        (**self).ders(max_order, u, v)
+    }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (**self).parameter_range() }
     #[inline(always)]
@@ -188,30 +213,4 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Box<S> {
     ) -> (Vec<f64>, Vec<f64>) {
         (**self).parameter_division(range, tol)
     }
-}
-
-/// Implementation for the test of topological methods.
-impl ParametricSurface for () {
-    type Point = ();
-    type Vector = ();
-    fn subs(&self, _: f64, _: f64) -> Self::Point {}
-    fn uder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn vder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn uuder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn uvder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn vvder(&self, _: f64, _: f64) -> Self::Vector {}
-    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
-        (
-            (Bound::Included(0.0), Bound::Included(1.0)),
-            (Bound::Included(0.0), Bound::Included(1.0)),
-        )
-    }
-}
-
-/// Implementation for the test of topological methods.
-impl BoundedSurface for () {}
-
-/// Implementation for the test of topological methods.
-impl IncludeCurve<()> for () {
-    fn include(&self, _: &()) -> bool { true }
 }

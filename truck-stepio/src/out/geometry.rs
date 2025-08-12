@@ -150,7 +150,7 @@ impl<P> StepCurve for BSplineCurve<P> {}
 
 impl<V> DisplayByStep for NurbsCurve<V>
 where
-    V: Homogeneous<f64>,
+    V: Homogeneous<Scalar = f64>,
     V::Point: ConstStepLength + DisplayByStep,
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
@@ -603,7 +603,7 @@ impl<P> StepSurface for BSplineSurface<P> {}
 
 impl<V> DisplayByStep for NurbsSurface<V>
 where
-    V: Homogeneous<f64>,
+    V: Homogeneous<Scalar = f64>,
     V::Point: Copy + DisplayByStep,
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {

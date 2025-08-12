@@ -41,3 +41,6 @@ pub use truck_derivers::{
     SearchNearestParameterD2, SearchParameterD1, SearchParameterD2, SelfSameGeometry,
     TransformedM3, TransformedM4,
 };
+#[cfg(feature = "polynomial")]
+/// Implementation sample using polynomials as an example
+pub mod polynomial;

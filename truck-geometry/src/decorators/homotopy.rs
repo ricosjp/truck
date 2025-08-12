@@ -31,6 +31,22 @@ where
     type Point = C0::Point;
     type Vector = C0::Vector;
     #[inline(always)]
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        match (m, n) {
+            (_, 0) => {
+                let v0 = self.curve0.der_n(m, u);
+                let v1 = self.curve1.der_n(m, u);
+                v0 + (v1 - v0) * v
+            }
+            (_, 1) => {
+                let v0 = self.curve0.der_n(m, u);
+                let v1 = self.curve1.der_n(m, u);
+                v1 - v0
+            }
+            _ => Self::Vector::zero(),
+        }
+    }
+    #[inline(always)]
     fn subs(&self, u: f64, v: f64) -> Self::Point {
         let p0 = self.curve0.subs(u);
         let p1 = self.curve1.subs(u);

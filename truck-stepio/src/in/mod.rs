@@ -1176,7 +1176,7 @@ pub struct RationalBSplineCurve {
 }
 impl<V> TryFrom<&RationalBSplineCurve> for NurbsCurve<V>
 where
-    V: Homogeneous<f64>,
+    V: Homogeneous<Scalar = f64>,
     V::Point: for<'a> From<&'a CartesianPoint>,
 {
     type Error = StepConvertingError;

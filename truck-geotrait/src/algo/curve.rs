@@ -145,9 +145,16 @@ where
     type Point = P;
     type Vector = P::Diff;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point {
-        P::from_vec(self.curve0.subs(u) - self.curve1.subs(v))
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        match (m, n) {
+            (0, 0) => self.curve0.subs(u) - self.curve1.subs(v),
+            (_, 0) => self.curve0.der_n(m, u),
+            (0, _) => self.curve1.der_n(n, v) * (-1.0),
+            _ => Self::Vector::zero(),
+        }
     }
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Self::Point { P::from_vec(self.der_mn(0, 0, u, v)) }
     #[inline(always)]
     fn uder(&self, u: f64, _: f64) -> Self::Vector { self.curve0.der(u) }
     #[inline(always)]

@@ -36,12 +36,12 @@ impl App for MyApp {
             Point3::origin(),
             Vector3::unit_y(),
         );
-        let camera = Camera::perspective_camera(
-            matrix.invert().unwrap(),
-            Rad(std::f64::consts::PI / 4.0),
-            0.1,
-            40.0,
-        );
+        let camera = Camera {
+            matrix: matrix.invert().unwrap(),
+            method: ProjectionMethod::perspective(Rad(std::f64::consts::PI / 4.0)),
+            near_clip: 0.1,
+            far_clip: 40.0,
+        };
         let scene_desc = WindowSceneDescriptor {
             studio: StudioConfig {
                 camera,
@@ -139,8 +139,15 @@ impl App for MyApp {
         match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let camera = &mut self.scene.studio_config_mut().camera;
-                let trans_vec = camera.eye_direction() * 0.2 * y as f64;
-                camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
+                match &mut camera.method {
+                    ProjectionMethod::Parallel { screen_size } => {
+                        *screen_size *= 0.9f64.powf(y as f64);
+                    }
+                    ProjectionMethod::Perspective { .. } => {
+                        let trans_vec = camera.eye_direction() * y as f64 * 0.2;
+                        camera.matrix = Matrix4::from_translation(trans_vec) * camera.matrix;
+                    }
+                }
             }
             MouseScrollDelta::PixelDelta(_) => {}
         };

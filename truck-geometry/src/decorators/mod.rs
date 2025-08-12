@@ -332,6 +332,20 @@ pub struct RbfContactCurve<C, S0, S1, R> {
     index: usize,
 }
 
+/// Approximation surface of fillets
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
+pub struct ApproxFilletSurface<S0, S1> {
+    knot_vec: KnotVec,
+    surface0: S0,
+    side_control_points0: Vec<Point2>,
+    tangent_vecs0: Vec<Vector2>,
+    surface1: S1,
+    side_control_points1: Vec<Point2>,
+    tangent_vecs1: Vec<Vector2>,
+    weights: Vec<f64>,
+}
+
+mod af_surface;
 mod extruded_curve;
 mod homotopy;
 mod intersection_curve;

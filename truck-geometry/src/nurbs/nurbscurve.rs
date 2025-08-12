@@ -51,13 +51,6 @@ impl<V> NurbsCurve<V> {
     #[inline(always)]
     pub fn degree(&self) -> usize { self.0.degree() }
 
-    /// Inverts a curve. cf.[`BSplineCurve::invert`]
-    #[inline(always)]
-    pub fn invert(&mut self) -> &mut Self {
-        self.0.invert();
-        self
-    }
-
     /// Returns whether the knot vector is clamped or not. cf.[`BSplineCurve::is_clamped`]
     #[inline(always)]
     pub fn is_clamped(&self) -> bool { self.0.knot_vec.is_clamped(self.0.degree()) }
@@ -77,7 +70,7 @@ impl<V> NurbsCurve<V> {
     }
 }
 
-impl<V: Homogeneous<f64>> NurbsCurve<V> {
+impl<V: Homogeneous<Scalar = f64>> NurbsCurve<V> {
     /// Constructs a rationalization curve from the non-rationalized curve and weights.
     /// # Failures
     /// the length of `curve.control_points()` and `weights` must be the same.
@@ -102,13 +95,13 @@ impl<V: Homogeneous<f64>> NurbsCurve<V> {
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsCurve<V> {
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> NurbsCurve<V> {
     /// Returns the closure of substitution.
     #[inline(always)]
     pub fn get_closure(&self) -> impl Fn(f64) -> V::Point + '_ { move |t| self.subs(t) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> NurbsCurve<V>
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> NurbsCurve<V>
 where V::Point: Tolerance
 {
     /// Returns whether all control points are the same or not.
@@ -214,7 +207,7 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V> {
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V> {
     /// Adds a knot `x`, and do not change `self` as a curve. cf.[`BSplineCurve::add_knot`]
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
         self.0.add_knot(x);
@@ -272,7 +265,7 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V
     pub fn syncro_knots(&mut self, other: &mut Self) { self.0.syncro_knots(&mut other.0) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> ParameterTransform
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> ParameterTransform
     for NurbsCurve<V>
 {
     #[inline(always)]
@@ -282,20 +275,20 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> ParameterTra
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> Cut for NurbsCurve<V> {
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> Cut for NurbsCurve<V> {
     #[inline(always)]
     fn cut(&mut self, t: f64) -> Self { NurbsCurve(self.0.cut(t)) }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> Concat<NurbsCurve<V>>
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> Concat<NurbsCurve<V>>
     for NurbsCurve<V>
-where <V as Homogeneous<f64>>::Point: Debug
+where <V as Homogeneous>::Point: Debug
 {
     type Output = NurbsCurve<V>;
     fn try_concat(
         &self,
         other: &Self,
-    ) -> std::result::Result<Self, ConcatError<<V as Homogeneous<f64>>::Point>> {
+    ) -> std::result::Result<Self, ConcatError<<V as Homogeneous>::Point>> {
         let curve0 = self.clone();
         let mut curve1 = other.clone();
         let w0 = curve0.0.control_points.last().unwrap().weight();
@@ -308,7 +301,7 @@ where <V as Homogeneous<f64>>::Point: Debug
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V>
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsCurve<V>
 where V::Point: Tolerance
 {
     /// Makes the rational curve locally injective.
@@ -393,7 +386,8 @@ where V::Point: Tolerance
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParameterDivision1D for NurbsCurve<V>
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParameterDivision1D
+    for NurbsCurve<V>
 where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
 {
     type Point = V::Point;
@@ -403,7 +397,8 @@ where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter<D1> for NurbsCurve<V>
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> SearchNearestParameter<D1>
+    for NurbsCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
@@ -467,7 +462,8 @@ where
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> SearchParameter<D1> for NurbsCurve<V>
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> SearchParameter<D1>
+    for NurbsCurve<V>
 where
     V::Point: MetricSpace<Metric = f64>,
     <V::Point as EuclideanSpace>::Diff: InnerSpace + Tolerance,
@@ -493,7 +489,7 @@ where
     }
 }
 
-impl<V: Homogeneous<f64>> NurbsCurve<V>
+impl<V: Homogeneous<Scalar = f64>> NurbsCurve<V>
 where V::Point: Bounded<Scalar = f64>
 {
     /// Returns the bounding box including all control points.
@@ -503,23 +499,18 @@ where V::Point: Bounded<Scalar = f64>
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NurbsCurve<V> {
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricCurve for NurbsCurve<V> {
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.0.ders(n, t).rat_ders()[n] }
+    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { self.0.ders(n, t).rat_ders() }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t).to_point() }
     #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector {
-        let pt = self.0.subs(t);
-        let der = self.0.der(t);
-        pt.rat_der(der)
-    }
+    fn der(&self, t: f64) -> Self::Vector { rat_der(&[self.0.subs(t), self.0.der(t)]) }
     #[inline(always)]
     fn der2(&self, t: f64) -> Self::Vector {
-        let pt = self.0.subs(t);
-        let der = self.0.der(t);
-        let der2 = self.0.der2(t);
-        pt.rat_der2(der, der2)
+        rat_der(&[self.0.subs(t), self.0.der(t), self.0.der2(t)])
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
@@ -530,11 +521,11 @@ impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> ParametricCurve for Nurb
     }
 }
 
-impl<V: Homogeneous<f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCurve<V> {}
+impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> BoundedCurve for NurbsCurve<V> {}
 
 impl<V: Clone> Invertible for NurbsCurve<V> {
     #[inline(always)]
-    fn invert(&mut self) { self.invert(); }
+    fn invert(&mut self) { self.0.invert(); }
     #[inline(always)]
     fn inverse(&self) -> Self {
         let mut curve = self.0.clone();
@@ -555,7 +546,7 @@ where M: Copy + std::ops::Mul<V, Output = V>
     }
 }
 
-impl<V: Homogeneous<f64>> From<BSplineCurve<V::Point>> for NurbsCurve<V> {
+impl<V: Homogeneous<Scalar = f64>> From<BSplineCurve<V::Point>> for NurbsCurve<V> {
     #[inline(always)]
     fn from(bspcurve: BSplineCurve<V::Point>) -> NurbsCurve<V> {
         NurbsCurve::new(BSplineCurve::new_unchecked(

@@ -97,8 +97,10 @@ fn ray_tracing(ray: Ray) -> RayTraceResult {
     for (var i: u32 = 0u; i < 3u; i = i + 1u) {
         let tmp = -ray.origin[i] / ray.direction[i];
         let pos = ray.origin + tmp * ray.direction;
-        let flag = vec3<f32>(-EPS) <= pos && pos < vec3<f32>(1.0 + EPS);
-        if (0.0 < tmp && tmp < t && all(flag)) {
+        let flag = -EPS <= pos.x && pos.x < 1.0 + EPS
+            && -EPS <= pos.y && pos.y < 1.0 + EPS
+            && -EPS <= pos.z && pos.z < 1.0 + EPS;
+        if (0.0 < tmp && tmp < t && flag) {
             t = tmp;
             position = pos;
             normal = vec3<f32>(0.0);
@@ -108,8 +110,10 @@ fn ray_tracing(ray: Ray) -> RayTraceResult {
     for (var i: u32 = 0u; i < 3u; i = i + 1u) {
         let tmp = (1.0 - ray.origin[i]) / ray.direction[i];
         let pos = ray.origin + tmp * ray.direction;
-        let flag = vec3<f32>(-EPS) <= pos && pos < vec3<f32>(1.0 + EPS);
-        if (0.0 < tmp && tmp < t && all(flag)) {
+        let flag = -EPS <= pos.x && pos.x < 1.0 + EPS
+            && -EPS <= pos.y && pos.y < 1.0 + EPS
+            && -EPS <= pos.z && pos.z < 1.0 + EPS;
+        if (0.0 < tmp && tmp < t && flag) {
             t = tmp;
             position = pos;
             normal = vec3<f32>(0.0);

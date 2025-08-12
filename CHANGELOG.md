@@ -4,6 +4,14 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Approximation of `RbfSurface` by `ApproxFilletSurface`.
+- Align mesh aspects of general surfaces tessellation.
+- Refactoring: `intersection_curve` and `Homogeneous`.
+- Implement `CurveDers` and `SurfaceDers`.
+- Loosened `cut_random_test` requirements.
+- Higher order derivations.
+- Renew `Camera`.
+- Constant allocation for faster B-spline basis function.
 - New implementation for `search_parameter`.
 - Add `RbfSurface`.
 - Add `prop_assert_near` for `proptest` integration.
@@ -37,7 +45,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2025-04-03
+2025-08-12
 
 ## v0.6
 

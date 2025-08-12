@@ -1,8 +1,8 @@
+#![cfg(feature = "polynomial")]
+
 use algo::surface;
-use truck_base::{cgmath64::*, tolerance::*};
-use truck_geotrait::*;
-mod polynomial;
-use polynomial::{PolyCurve, PolySurface};
+use truck_base::{cgmath64::*, tolerance::*, *};
+use truck_geotrait::{polynomial::*, *};
 
 #[test]
 fn polysurface() {
@@ -16,7 +16,9 @@ fn polysurface() {
         Vector3::new(-6.0, 0.0, 1.0),
         Vector3::new(4.0, 0.0, 0.0),
     ];
-    let poly = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
+    let curve0 = PolynomialCurve::<Point3>(coef0);
+    let curve1 = PolynomialCurve::<Point3>(coef1);
+    let poly = PolynomialSurface::by_tensor(curve0, curve1);
     for i in 0..5 {
         let u = i as f64;
         for j in 0..5 {
@@ -56,7 +58,9 @@ fn polysurface() {
 fn polysurface_presearch() {
     let coef0 = vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 0.0, 0.0)];
     let coef1 = vec![Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 0.0)];
-    let poly = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
+    let curve0 = PolynomialCurve::<Point3>(coef0);
+    let curve1 = PolynomialCurve::<Point3>(coef1);
+    let poly = PolynomialSurface::by_tensor(curve0, curve1);
     let pt = Point3::new(0.2, 0.3, 1.0);
     let (u, v) = algo::surface::presearch(&poly, pt, ((0.0, 1.0), (0.0, 1.0)), 100);
     assert_eq!(u, 0.2);
@@ -74,7 +78,9 @@ fn exec_polysurface_snp_on_surface() -> bool {
         Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
         Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
     ];
-    let poly = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
+    let curve0 = PolynomialCurve::<Point3>(coef0);
+    let curve1 = PolynomialCurve::<Point3>(coef1);
+    let poly = PolynomialSurface::by_tensor(curve0, curve1);
     let u = 10.0 * rand::random::<f64>() - 5.0;
     let v = 10.0 * rand::random::<f64>() - 5.0;
     let pt = poly.subs(u, v);
@@ -133,7 +139,9 @@ fn exec_polysurface_sp_on_surface() -> bool {
         Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
         Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
     ];
-    let poly = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
+    let curve0 = PolynomialCurve::<Point3>(coef0);
+    let curve1 = PolynomialCurve::<Point3>(coef1);
+    let poly = PolynomialSurface::by_tensor(curve0, curve1);
     let u = 10.0 * rand::random::<f64>() - 5.0;
     let v = 10.0 * rand::random::<f64>() - 5.0;
     let pt = poly.subs(u, v);
@@ -191,9 +199,11 @@ fn exec_polysurface_intersection_point() -> bool {
         Vector3::new(0.0, 1.0, 0.0),
         Vector3::new(0.0, 0.0, 1.0),
     ];
-    let surface = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
+    let curve0 = PolynomialCurve::<Point3>(coef0);
+    let curve1 = PolynomialCurve::<Point3>(coef1);
+    let surface = PolynomialSurface::by_tensor(curve0, curve1);
     let coef = vec![Vector3::new(a, b, 0.0), Vector3::new(0.0, 0.0, 1.0)];
-    let curve = PolyCurve::<Point3>(coef);
+    let curve = PolynomialCurve::<Point3>(coef);
 
     match surface::search_intersection_parameter(&surface, (0.5, 0.5), &curve, 0.0, 100) {
         Some(((x, y), z)) => {
@@ -223,7 +233,9 @@ fn exec_polysurface_division() -> bool {
         Vector3::new(0.0, 1.0, 10.0 * rand::random::<f64>() - 5.0),
         Vector3::new(0.0, 0.0, 10.0 * rand::random::<f64>() - 5.0),
     ];
-    let poly = PolySurface(PolyCurve(coef0), PolyCurve(coef1));
+    let curve0 = PolynomialCurve::<Point3>(coef0);
+    let curve1 = PolynomialCurve::<Point3>(coef1);
+    let poly = PolynomialSurface::by_tensor(curve0, curve1);
     let (udiv, vdiv) = algo::surface::parameter_division(&poly, ((-1.0, 1.0), (-1.0, 1.0)), 0.1);
     for (i, u) in udiv
         .windows(2)
@@ -256,4 +268,31 @@ fn exec_polysurface_division() -> bool {
 fn polysurface_division() {
     let count = (0..10).filter(|_| exec_polysurface_division()).count();
     assert!(count > 8, "wrong answer: {:?}", 10 - count);
+}
+
+#[test]
+fn test_composite() {
+    let curve_vec = vec![
+        Vector2::new(1.0, 0.0),
+        Vector2::new(0.0, 2.0),
+        Vector2::new(1.0, 0.0),
+    ];
+    let curve = PolynomialCurve::<Point2>(curve_vec);
+
+    let surface_vec = vec![
+        vec![
+            Vector2::new(0.0, 0.0),
+            Vector2::new(0.0, 1.0),
+            Vector2::new(1.0, 0.0),
+        ],
+        vec![Vector2::new(0.0, 1.0), Vector2::new(1.0, 0.0)],
+    ];
+    let surface = PolynomialSurface::<Point2>(surface_vec);
+
+    let res = surface.composite(&curve);
+    assert_near2!(res.0[0], Vector2::new(0.0, 1.0));
+    assert_near2!(res.0[1], Vector2::new(2.0, 2.0));
+    assert_near2!(res.0[2], Vector2::new(4.0, 1.0));
+    assert_near2!(res.0[3], Vector2::new(2.0, 0.0));
+    res.0.iter().skip(4).for_each(|&p| assert!(p.so_small2()));
 }

@@ -19,6 +19,8 @@ pub mod bounding_box;
 pub mod cgmath64;
 /// Additional traits for cgmath
 pub mod cgmath_extend_traits;
+/// Utilities for performing calculations related to differentiation
+pub mod ders;
 /// Utility
 pub mod entry_map;
 /// Deterministic hash functions

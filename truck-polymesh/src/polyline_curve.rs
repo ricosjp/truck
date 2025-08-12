@@ -207,6 +207,14 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
     type Point = P;
     type Vector = P::Diff;
     #[inline(always)]
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+        match n {
+            0 => self.subs(t).to_vec(),
+            1 => self.der(t),
+            _ => Self::Vector::zero(),
+        }
+    }
+    #[inline(always)]
     fn subs(&self, t: f64) -> P {
         if self.is_empty() {
             P::origin()
