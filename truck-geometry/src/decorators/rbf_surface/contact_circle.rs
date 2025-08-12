@@ -137,14 +137,13 @@ fn next_point(
     (p, q): (Point3, Point3),
     signed_radius: f64,
 ) -> (Point3, (f64, f64)) {
-    let ders = surface.ders(2, u, v);
+    let ders = surface.ders(1, u, v);
     let (uder, vder) = (ders[1][0], ders[0][1]);
-    let d = q - p;
-    let uu = uder.dot(uder);
-    let uv = uder.dot(vder);
-    let vv = vder.dot(vder);
-    let mat = Matrix2::new(uu, uv, uv, vv);
-    let vec = Vector2::new(uder.dot(d), vder.dot(d));
+    let n = uder.cross(vder);
+    let n_uder = signed_radius * surface.normal_uder(u, v);
+    let n_vder = signed_radius * surface.normal_uder(u, v);
+    let mat = Matrix3::from_cols(uder + n_uder, vder + n_vder, n);
+    let vec = q - p;
     let del = mat.invert().unwrap() * vec;
     debug_assert!(del.z.so_small());
     let (u, v) = (u + del.x, v + del.y);

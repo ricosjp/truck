@@ -89,11 +89,7 @@ impl_radius_1dim!(NurbsCurve<Vector2>);
 
 impl<T: RadiusFunction> RadiusFunction for &T {
     #[inline(always)]
-    fn subs(&self, t: f64) -> f64 { (**self).subs(t) }
-    #[inline(always)]
-    fn der(&self, t: f64) -> f64 { (**self).der(t) }
-    #[inline(always)]
-    fn der2(&self, t: f64) -> f64 { (**self).der2(t) }
+    fn der_n(&self, n: usize, t: f64) -> f64 { (**self).der_n(n, t) }
 }
 
 /// Oriented and reversible
