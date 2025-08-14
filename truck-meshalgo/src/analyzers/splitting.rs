@@ -51,7 +51,7 @@ pub trait Splitting {
     /// - The first polygon consists the faces included in planes.
     /// - The second polygon is the extracted remainder.
     /// # Panics
-    /// `tol` must be more than `TOLERANCE`.
+    /// `tol` must be greater than or equal to `0.0`.
     /// # Examples
     /// ```
     /// use truck_polymesh::*;

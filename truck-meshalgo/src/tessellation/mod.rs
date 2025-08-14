@@ -134,7 +134,7 @@ pub trait MeshableShape {
     ///
     /// # Panics
     ///
-    /// `tol` must be more than `TOLERANCE`.
+    /// `tol` must be greater than or equal to `TOLERANCE`.
     ///
     /// # Remarks
     ///
@@ -176,7 +176,7 @@ pub trait RobustMeshableShape {
     ///
     /// # Panics
     ///
-    /// `tol` must be more than `TOLERANCE`.
+    /// `tol` must be greater than or equal to `TOLERANCE`.
     ///
     /// # Remarks
     ///

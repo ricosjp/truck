@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix comparative phrasing.
 - Fix `SceneInfo` in `polygon.wgsl`.
 - Upgrade wgpu v26.
 - Approximation of `RbfSurface` by `ApproxFilletSurface`.
