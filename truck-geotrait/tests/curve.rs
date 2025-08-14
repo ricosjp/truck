@@ -1,7 +1,7 @@
+#![cfg(feature = "polynomial")]
+
 use truck_base::{cgmath64::*, tolerance::*};
-use truck_geotrait::*;
-mod polynomial;
-use polynomial::PolyCurve;
+use truck_geotrait::{polynomial::PolynomialCurve, *};
 
 #[test]
 fn polycurve_test() {
@@ -11,7 +11,7 @@ fn polycurve_test() {
         Vector1::new(2.0),
         Vector1::new(1.0),
     ];
-    let poly = PolyCurve::<Point1>(coef);
+    let poly = PolynomialCurve::<Point1>(coef);
     for i in 0..10 {
         let t = i as f64;
         let res = poly.subs(t);
@@ -33,7 +33,7 @@ fn polycurve_presearch() {
         Vector2::new(1.0, -2.0),
         Vector2::new(0.0, 1.0),
     ];
-    let poly = PolyCurve::<Point2>(coef);
+    let poly = PolynomialCurve::<Point2>(coef);
     let t = algo::curve::presearch(&poly, Point2::new(0.0, -1.0), poly.range_tuple(), 100);
     assert_eq!(t, 0.0);
 }
@@ -48,7 +48,7 @@ fn exec_polycurve_snp_on_curve() -> bool {
             )
         })
         .collect();
-    let poly = PolyCurve::<Point3>(coef);
+    let poly = PolynomialCurve::<Point3>(coef);
     let t = 20.0 * rand::random::<f64>() - 10.0;
     let pt = poly.subs(t);
     let hint = t + 1.0 * rand::random::<f64>() - 0.5;
@@ -85,7 +85,7 @@ fn exec_polycurve_division() -> bool {
             )
         })
         .collect();
-    let poly = PolyCurve::<Point3>(coef);
+    let poly = PolynomialCurve::<Point3>(coef);
     let (division, pts) = algo::curve::parameter_division(&poly, (-10.0, 10.0), 0.05);
     division.windows(2).zip(pts).all(|(a, pt)| {
         let pt0 = poly.subs(a[0]);
@@ -125,8 +125,8 @@ fn exec_polycurve_closest_point() -> bool {
         Vector3::new(4.0 * a[2] - 3.0, 4.0 * a[3] - 1.0, 0.0),
         Vector3::new(2.0 - 4.0 * a[2], 2.0 - 4.0 * a[3], 0.0),
     ];
-    let poly0 = PolyCurve::<Point3>(coef0);
-    let poly1 = PolyCurve::<Point3>(coef1);
+    let poly0 = PolynomialCurve::<Point3>(coef0);
+    let poly1 = PolynomialCurve::<Point3>(coef1);
     let res = algo::curve::search_closest_parameter(&poly0, &poly1, (0.5, 0.5), 100);
     let (t0, t1) = match res {
         Some(res) => res,
@@ -165,8 +165,8 @@ fn exec_polycurve_intersection_point() -> bool {
         Vector2::new(2.0, 4.0 * a[2]),
         Vector2::new(0.0, -4.0 * a[2]),
     ];
-    let poly0 = PolyCurve::<Point2>(coef0);
-    let poly1 = PolyCurve::<Point2>(coef1);
+    let poly0 = PolynomialCurve::<Point2>(coef0);
+    let poly1 = PolynomialCurve::<Point2>(coef1);
     let res = algo::curve::search_intersection_parameter(&poly0, &poly1, (0.5, 0.5), 100);
     let (t0, t1) = match res {
         Some(res) => res,

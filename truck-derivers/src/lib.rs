@@ -127,14 +127,14 @@ macro_rules! methods {
     };
     (
         $variants: ident, $trait_name: ident,
-        $(fn $name: ident <$($gen: ident: $path: path),*> (
+        $(fn $name: ident <$($(($const: tt))? $gen: ident: $path: path),*> (
             $self_field: expr,
             $($var: ident: $ty: ty),*$(,)?
         ) -> $return_type: ty),*$(,)?
     ) => {
         vec![$(Method {
             name: quote! { $name },
-            generics: Some(quote! { <$($gen: $path),*> }),
+            generics: Some(quote! { <$($($const)? $gen: $path),*> }),
             self_field: quote! { $self_field, },
             fields: fields!($($var: $ty),*),
             return_type: quote! { $return_type },
@@ -524,6 +524,8 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                 fn subs(&self, t: f64) -> Self::Point,
                 fn der(&self, t: f64) -> Self::Vector,
                 fn der2(&self, t: f64) -> Self::Vector,
+                fn der_n(&self, n: usize, t: f64) -> Self::Vector,
+                fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector>,
                 fn parameter_range(&self,) -> ParameterRange,
                 fn period(&self,) -> Option<f64>,
             );
@@ -556,6 +558,8 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                     fn subs(&self, t: f64) -> Self::Point { self.0.subs(t) }
                     fn der(&self, t: f64) -> Self::Vector { self.0.der(t) }
                     fn der2(&self, t: f64) -> Self::Vector { self.0.der2(t) }
+                    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.0.der_n(n, t) }
+                    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { self.0.ders(n, t) }
                     fn parameter_range(&self) -> ParameterRange { self.0.parameter_range() }
                     fn period(&self) -> Option<f64> { self.0.period() }
                 }
@@ -589,6 +593,8 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                 fn uuder(&self, s: f64, t: f64) -> Self::Vector,
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
+                fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector,
+                fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector>,
                 fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
@@ -619,16 +625,31 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                     #field_type: #trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
+                    #[inline(always)]
                     fn subs(&self, s: f64, t: f64) -> Self::Point { self.0.subs(s, t) }
+                    #[inline(always)]
                     fn uder(&self, s: f64, t: f64) -> Self::Vector { self.0.uder(s, t) }
+                    #[inline(always)]
                     fn vder(&self, s: f64, t: f64) -> Self::Vector { self.0.vder(s, t) }
+                    #[inline(always)]
                     fn uuder(&self, s: f64, t: f64) -> Self::Vector { self.0.uuder(s, t) }
+                    #[inline(always)]
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
+                    #[inline(always)]
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
+                    #[inline(always)]
+                    fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.der_mn(m, n, s, t) }
+                    #[inline(always)]
+                    fn ders(&self, max_order: usize, s: f64, t: f64) -> SurfaceDers<Self::Vector> {
+                        self.0.ders(max_order, s, t)
+                    }
+                    #[inline(always)]
                     fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)) {
                         self.0.parameter_range()
                     }
+                    #[inline(always)]
                     fn u_period(&self) -> Option<f64> { self.0.u_period() }
+                    #[inline(always)]
                     fn v_period(&self) -> Option<f64> { self.0.v_period() }
                 }
             }
@@ -665,6 +686,8 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                 fn uuder(&self, s: f64, t: f64) -> Self::Vector,
                 fn uvder(&self, s: f64, t: f64) -> Self::Vector,
                 fn vvder(&self, s: f64, t: f64) -> Self::Vector,
+                fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector,
+                fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector>,
                 fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
@@ -714,6 +737,10 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     fn uuder(&self, s: f64, t: f64) -> Self::Vector { self.0.uuder(s, t) }
                     fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
                     fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
+                    fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.der_mn(m, n, u, v) }
+                    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+                        self.0.ders(max_order, u, v)
+                    }
                     fn parameter_range(&self,) -> (truck_geotrait::ParmaterRange, truck_geotrait::ParameterRange) {
                         self.0.parameter_range()
                     }

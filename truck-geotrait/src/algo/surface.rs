@@ -265,10 +265,17 @@ where
                     + pt10.to_vec() * p * (1.0 - q)
                     + pt11.to_vec() * p * q,
             );
-            let far = p0.distance2(pt) > tol * tol;
-
-            *ub = *ub || far;
-            *vb = *vb || far;
+            if p0.distance2(pt) > tol * tol {
+                let delu = pt00.midpoint(pt01).distance(p0) + pt10.midpoint(pt11).distance(p0);
+                let delv = pt00.midpoint(pt10).distance(p0) + pt01.midpoint(pt11).distance(p0);
+                if delu > delv * 2.0 {
+                    *ub = true;
+                } else if delv > delu * 2.0 {
+                    *vb = true;
+                } else {
+                    (*ub, *vb) = (true, true);
+                }
+            }
         }
     }
 
