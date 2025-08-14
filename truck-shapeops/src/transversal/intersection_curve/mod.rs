@@ -59,6 +59,8 @@ where
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.ic.der_n(n, t) }
+    #[inline(always)]
     fn subs(&self, t: f64) -> Point3 { self.ic.subs(t) }
     #[inline(always)]
     fn der(&self, t: f64) -> Vector3 { self.ic.der(t) }

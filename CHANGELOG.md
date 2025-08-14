@@ -4,6 +4,14 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix `SceneInfo` in `polygon.wgsl`.
+- Upgrade wgpu v26.
+- Approximation of `RbfSurface` by `ApproxFilletSurface`.
+- Align mesh aspects of general surfaces tessellation.
+- Refactoring: `intersection_curve` and `Homogeneous`.
+- Implement `CurveDers` and `SurfaceDers`.
+- Loosened `cut_random_test` requirements.
+- Higher order derivations.
 - Renew `Camera`.
 - Constant allocation for faster B-spline basis function.
 - New implementation for `search_parameter`.
@@ -39,7 +47,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2025-05-30
+2025-08-14
 
 ## v0.6
 

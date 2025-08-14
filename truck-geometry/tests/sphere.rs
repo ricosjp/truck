@@ -2,6 +2,31 @@ use proptest::prelude::*;
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;
 
+proptest! {
+    #[test]
+    fn test_der_mn(
+        (u, v) in (0f64..=PI, 0f64..=2.0 * PI),
+        (m, n) in (0usize..=4, 0usize..=4),
+        center in prop::array::uniform3(-100f64..=100.0),
+        radius in 0.1f64..=10.0,
+        u_derivate in prop::bool::ANY,
+    ) {
+        let sphere = Sphere::new(Point3::from(center), radius);
+
+        const EPS: f64 = 1.0e-4;
+        let (der0, der1) = if u_derivate {
+            let der0 = sphere.der_mn(m + 1, n, u, v);
+            let der1 = (sphere.der_mn(m, n, u + EPS, v) - sphere.der_mn(m, n, u - EPS, v)) / (2.0 * EPS);
+            (der0, der1)
+        } else {
+            let der0 = sphere.der_mn(m, n + 1, u, v);
+            let der1 = (sphere.der_mn(m, n, u, v + EPS) - sphere.der_mn(m, n, u, v - EPS)) / (2.0 * EPS);
+            (der0, der1)
+        };
+        prop_assert!((der0 - der1).magnitude() < 0.01 * der0.magnitude());
+    }
+}
+
 fn exec_search_parameter_test(
     center: [f64; 3],
     radius: f64,

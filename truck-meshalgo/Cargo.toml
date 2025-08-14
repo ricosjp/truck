@@ -22,20 +22,20 @@ derive_more = { version = "2.0.1", features = ["full"] }
 rustc-hash = "2.1.1"
 array-macro = "2.1.8"
 itertools = "0.14.0"
-spade = { version = "2.13.1", optional = true }
+spade = { version = "2.14.0", optional = true }
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
 truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
 truck-topology = { version = "0.6.0", path = "../truck-topology" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rayon = "1.10.0"
+rayon = "1.11.0"
 vtkio = { version = "0.6.3", optional = true }
 
 [dev-dependencies]
-rand = "0.9.1"
-serde_json = "1.0.140"
-proptest = "1.6.0"
+rand = "0.9.2"
+serde_json = "1.0.142"
+proptest = "1.7.0"
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
