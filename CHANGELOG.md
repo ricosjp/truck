@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Upgrade wgpu v26.
 - Approximation of `RbfSurface` by `ApproxFilletSurface`.
 - Align mesh aspects of general surfaces tessellation.
 - Refactoring: `intersection_curve` and `Homogeneous`.
