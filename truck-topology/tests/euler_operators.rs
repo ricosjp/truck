@@ -21,6 +21,13 @@ impl Segment {
 impl ParametricCurve for Segment {
     type Point = Point3;
     type Vector = Vector3;
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+        match n {
+            0 => self.subs(t).to_vec(),
+            1 => self.der(t),
+            _ => Vector3::zero(),
+        }
+    }
     #[inline(always)]
     fn subs(&self, t: f64) -> Point3 {
         self.ends.0

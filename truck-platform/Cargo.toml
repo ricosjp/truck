@@ -16,13 +16,13 @@ default = []
 webgl = ["wgpu/webgl"]
 
 [dependencies]
-bytemuck = { version = "1.23.1", features = ["derive"] }
+bytemuck = { version = "1.23.2", features = ["derive"] }
 derive_more = { version = "2.0.1", features = ["full"] }
 futures-intrusive = "0.5.0"
 rustc-hash = "2.1.1"
 truck-base = { version = "0.5.0", path = "../truck-base" }
-wgpu = "25.0.2"
-winit = "0.30.11"
+wgpu = "26.0.1"
+winit = "0.30.12"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-time = "1.1.0"
@@ -30,9 +30,9 @@ web-sys = "0.3.77"
 
 [dev-dependencies]
 image = "0.25.6"
-rayon = "1.10.0"
+rayon = "1.11.0"
 env_logger = "0.11.8"
-naga = { version = "25.0.1", features = ["wgsl-in"] }
+naga = { version = "26.0.0", features = ["wgsl-in"] }
 pollster = "0.4.0"
 log = "0.4.27"
 

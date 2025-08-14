@@ -48,32 +48,39 @@ impl<C, S0, S1, R> RbfSurface<C, S0, S1, R> {
 
 /// trait for radius function
 pub trait RadiusFunction: Clone {
+    /// Returns the `n`th order derivation.
+    fn der_n(&self, n: usize, t: f64) -> f64;
     /// Substitutes the parameter `t`.
-    fn subs(&self, t: f64) -> f64;
+    #[inline]
+    fn subs(&self, t: f64) -> f64 { self.der_n(0, t) }
     /// Returns the derivation.
-    fn der(&self, t: f64) -> f64;
+    #[inline]
+    fn der(&self, t: f64) -> f64 { self.der_n(1, t) }
     /// Returns the 2nd-order derivation.
-    fn der2(&self, t: f64) -> f64;
+    #[inline]
+    fn der2(&self, t: f64) -> f64 { self.der_n(2, t) }
+    /// Substitutes the higher-order derivations to `out`.
+    #[inline]
+    fn ders(&self, max_order: usize, t: f64) -> CurveDers<f64> {
+        (0..=max_order).map(|n| self.der_n(n, t)).collect()
+    }
 }
 
 impl RadiusFunction for f64 {
     #[inline]
-    fn subs(&self, _: f64) -> f64 { *self }
-    #[inline]
-    fn der(&self, _: f64) -> f64 { 0.0 }
-    #[inline]
-    fn der2(&self, _: f64) -> f64 { 0.0 }
+    fn der_n(&self, n: usize, _: f64) -> f64 {
+        match n {
+            0 => *self,
+            _ => 0.0,
+        }
+    }
 }
 
 macro_rules! impl_radius_1dim {
     ($ty: ty) => {
         impl RadiusFunction for $ty {
             #[inline]
-            fn subs(&self, t: f64) -> f64 { ParametricCurve::subs(self, t).x }
-            #[inline]
-            fn der(&self, t: f64) -> f64 { ParametricCurve::der(self, t).x }
-            #[inline]
-            fn der2(&self, t: f64) -> f64 { ParametricCurve::der2(self, t).x }
+            fn der_n(&self, n: usize, t: f64) -> f64 { ParametricCurve::der_n(self, n, t).x }
         }
     };
 }
@@ -113,6 +120,24 @@ pub struct ContactCircle {
 mod algo;
 mod contact_circle;
 
+impl<C, S0, S1, R> RbfSurface<C, S0, S1, R>
+where
+    C: ParametricCurve3D,
+    S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
+    R: RadiusFunction,
+{
+    fn sub_der_mn(&self, m: usize, n: usize, u: f64, cc: ContactCircle) -> Vector3 {
+        match (m, n) {
+            (_, 0) => cc.der_n(m, u),
+            (0, 1) => self.vder_info(cc, 1).vder(u),
+            (1, 1) => self.vder_info(cc, 1).uvder(u),
+            (0, 2) => self.vder_info(cc, 2).vvder(u),
+            _ => unimplemented!("higher order derivation of RbfSurface is not implemented."),
+        }
+    }
+}
+
 impl<C, S0, S1, R> ParametricSurface for RbfSurface<C, S0, S1, R>
 where
     C: ParametricCurve3D,
@@ -122,12 +147,31 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Vector3> {
+        let cc = self.contact_circle(v).unwrap();
+        let mut out = SurfaceDers::new(max_order);
+        (0..=max_order).for_each(|i| {
+            (0..=max_order - i).for_each(|j| {
+                out[i][j] = self.sub_der_mn(i, j, u, cc);
+            });
+        });
+        out
+    }
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
+        self.sub_der_mn(m, n, u, self.contact_circle(v).unwrap())
+    }
     fn subs(&self, u: f64, v: f64) -> Point3 { self.contact_circle(v).unwrap().subs(u) }
     fn uder(&self, u: f64, v: f64) -> Vector3 { self.contact_circle(v).unwrap().der(u) }
-    fn vder(&self, u: f64, v: f64) -> Vector3 { self.vder(u, self.contact_circle(v).unwrap()) }
-    fn uuder(&self, _u: f64, _v: f64) -> Self::Vector { unimplemented!() }
-    fn uvder(&self, _u: f64, _v: f64) -> Self::Vector { unimplemented!() }
-    fn vvder(&self, _u: f64, _v: f64) -> Self::Vector { unimplemented!() }
+    fn vder(&self, u: f64, v: f64) -> Vector3 {
+        self.vder_info(self.contact_circle(v).unwrap(), 1).vder(u)
+    }
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.contact_circle(v).unwrap().der2(u) }
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector {
+        self.vder_info(self.contact_circle(v).unwrap(), 1).uvder(u)
+    }
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector {
+        self.vder_info(self.contact_circle(v).unwrap(), 2).vvder(u)
+    }
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         use std::ops::Bound::*;
         (
@@ -227,6 +271,19 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
+    fn ders(&self, n: usize, t: f64) -> CurveDers<Vector3> {
+        if n == 0 {
+            return CurveDers::try_from([self.subs(t).to_vec()]).unwrap();
+        }
+        let cc = self.surface.contact_circle(t).unwrap();
+        let rders = self.surface.radius.ders(n, t);
+        let cc_ders = self.surface.sub_center_contacts_ders(cc, &rders, n);
+        match self.index {
+            0 => cc_ders.contact0_ders,
+            _ => cc_ders.contact1_ders,
+        }
+    }
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.ders(n, t)[n] }
     fn subs(&self, t: f64) -> Self::Point {
         let cc = self.surface.contact_circle(t).unwrap();
         match self.index {
@@ -234,14 +291,8 @@ where
             _ => cc.contact_point1.point,
         }
     }
-    fn der(&self, t: f64) -> Self::Vector {
-        let cc = self.surface.contact_circle(t).unwrap();
-        match self.index {
-            0 => self.surface.contact_point0_der(cc),
-            _ => self.surface.contact_point1_der(cc),
-        }
-    }
-    fn der2(&self, _t: f64) -> Self::Vector { unimplemented!() }
+    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
+    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
     #[inline]
     fn parameter_range(&self) -> ParameterRange { self.surface.edge_curve.parameter_range() }
     #[inline]

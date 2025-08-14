@@ -1,4 +1,5 @@
 use super::*;
+use truck_base::cgmath64::control_point::ControlPoint;
 
 impl<C, S> PCurve<C, S> {
     /// Creates composited
@@ -18,14 +19,64 @@ impl<C, S> PCurve<C, S> {
     pub fn decompose(self) -> (C, S) { (self.curve, self.surface) }
 }
 
+impl<C, S> PCurve<C, S>
+where
+    C: ParametricCurve2D,
+    S: ParametricSurface,
+    S::Point: ControlPoint<f64, Diff = S::Vector>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
+{
+    fn der3(&self, t: f64) -> S::Vector {
+        let cders = self.curve.ders(3, t);
+        let [Vector2 { x: u, y: v }, der, der2, der3] = cders.to_array::<4>();
+        let surface = self.surface();
+        surface.der_mn(3, 0, u, v) * (der[0] * der[0] * der[0])
+            + surface.der_mn(2, 1, u, v) * (der[0] * der[0] * der[1] * 3.0)
+            + surface.der_mn(1, 2, u, v) * (der[0] * der[1] * der[1] * 3.0)
+            + surface.der_mn(0, 3, u, v) * (der[1] * der[1] * der[1])
+            + surface.uuder(u, v) * (der2[0] * der[0] * 3.0)
+            + surface.uvder(u, v) * ((der2[0] * der[1] + der2[1] * der[0]) * 3.0)
+            + surface.vvder(u, v) * (der2[1] * der[1] * 3.0)
+            + surface.uder(u, v) * der3[0]
+            + surface.vder(u, v) * der3[1]
+    }
+}
+
 impl<C, S> ParametricCurve for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Vector: VectorSpace<Scalar = f64>,
+    S::Point: ControlPoint<f64, Diff = S::Vector>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
     type Vector = S::Vector;
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+        if n >= 32 {
+            panic!("the order of derivation must be under 32.");
+        }
+        match n {
+            0 => return self.subs(t).to_vec(),
+            1 => return self.der(t),
+            2 => return self.der2(t),
+            3 => return self.der3(t),
+            _ => {}
+        }
+        let cders = self.curve.ders(n, t);
+        let Vector2 { x: u, y: v } = cders[0];
+
+        let sders = self.surface.ders(n, u, v);
+        sders.composite_der(&cders, n)
+    }
+    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> {
+        if n > MAX_DER_ORDER {
+            panic!("the order of derivation must be under {MAX_DER_ORDER}.");
+        }
+        let cders = self.curve.ders(n, t);
+        let Vector2 { x: u, y: v } = cders[0];
+        let sders = self.surface.ders(n, u, v);
+        sders.composite_ders(&cders)
+    }
     #[inline(always)]
     fn subs(&self, t: f64) -> Self::Point {
         let pt = self.curve.subs(t);
@@ -33,23 +84,22 @@ where
     }
     #[inline(always)]
     fn der(&self, t: f64) -> Self::Vector {
-        let pt = self.curve.subs(t);
-        let der = self.curve.der(t);
+        let [pt, der] = self.curve.ders(1, t).to_array::<2>();
         self.surface.uder(pt[0], pt[1]) * der[0] + self.surface.vder(pt[0], pt[1]) * der[1]
+    }
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector {
+        let [pt, der, der2] = self.curve.ders(2, t).to_array::<3>();
+        self.surface.uuder(pt[0], pt[1]) * (der[0] * der[0])
+            + self.surface.uvder(pt[0], pt[1]) * (der[0] * der[1] * 2.0)
+            + self.surface.vvder(pt[0], pt[1]) * (der[1] * der[1])
+            + self.surface.uder(pt[0], pt[1]) * der2[0]
+            + self.surface.vder(pt[0], pt[1]) * der2[1]
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.curve.parameter_range() }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector {
-        let pt = self.curve.subs(t);
-        let der = self.curve.der(t);
-        let der2 = self.curve.der2(t);
-        self.surface.uuder(pt[0], pt[1]) * der[0] * der[0]
-            + self.surface.uvder(pt[0], pt[1]) * der[0] * der[1] * 2.0
-            + self.surface.vvder(pt[0], pt[1]) * der[1] * der[1]
-            + self.surface.uder(pt[0], pt[1]) * der2[0]
-            + self.surface.vder(pt[0], pt[1]) * der2[1]
-    }
+    fn period(&self) -> Option<f64> { self.curve.period() }
 }
 
 impl<C, S> BoundedCurve for PCurve<C, S>
@@ -145,8 +195,11 @@ impl<C, S> ParameterDivision1D for PCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
-    S::Vector: VectorSpace<Scalar = f64>,
+    S::Point: EuclideanSpace<Scalar = f64, Diff = S::Vector>
+        + MetricSpace<Metric = f64>
+        + HashGen<f64>
+        + ControlPoint<f64, Diff = S::Vector>,
+    S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<S::Point>) {

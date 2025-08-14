@@ -13,12 +13,13 @@ categories = ["graphics"]
 
 [dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
-thiserror = "2.0.12"
+thiserror = "2.0.14"
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive"] }
 
 [dev-dependencies]
-proptest = "1.7.0"
+truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive", "polynomial"] }
+proptest = { version = "1.7.0", features = ["attr-macro"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.3.3", features = ["wasm_js"] }
