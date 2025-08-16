@@ -24,7 +24,7 @@ truck-platform = { version = "0.6.0", path = "../truck-platform" }
 truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
 
 [dev-dependencies]
-async-trait = "0.1.88"
+async-trait = "0.1.89"
 env_logger = "0.11.8"
 pollster = "0.4.0"
 rayon = "1.11.0"
