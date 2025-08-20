@@ -19,6 +19,34 @@ impl<S0, S1> ApproxFilletSurface<S0, S1> {
         let bsp = BSplineCurve::new(self.knot_vec.clone(), self.side_control_points1.clone());
         PCurve::new(bsp, self.surface1.clone())
     }
+    /// Returns fillet curve
+    pub fn fillet_bezier(&self, v: f64) -> NurbsCurve<Vector4>
+    where
+        S0: ParametricSurface3D,
+        S1: ParametricSurface3D, {
+        let Self {
+            knot_vec,
+            surface0,
+            surface1,
+            side_control_points0,
+            side_control_points1,
+            tangent_vecs0,
+            tangent_vecs1,
+            weights,
+        } = self;
+        let degree = self.vdegree();
+        let basis = knot_vec.bspline_basis_functions(degree, 0, v);
+        let dbasis = knot_vec.bspline_basis_functions(degree, 1, v);
+        let weight: f64 = basis.iter().zip(weights).map(|(&b, &w)| b * w).sum();
+        let striple0 = (surface0, side_control_points0, tangent_vecs0);
+        let striple1 = (surface1, side_control_points1, tangent_vecs1);
+        let (pt0, pt1) = u_control_points(&basis, &dbasis, striple0, weight);
+        let (pt3, pt2) = u_control_points(&basis, &dbasis, striple1, weight);
+        NurbsCurve::new(BSplineCurve::new(
+            KnotVec::bezier_knot(3),
+            vec![pt0, pt1, pt2, pt3],
+        ))
+    }
     fn vdegree(&self) -> usize { self.knot_vec.len() - self.weights.len() - 1 }
 }
 

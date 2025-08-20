@@ -1,5 +1,5 @@
 use std::f64::consts::PI;
-use truck_geometry::prelude::{rbf_surface::*, *};
+use truck_geometry::prelude::*;
 
 #[test]
 fn contact_circle_as_curve() {

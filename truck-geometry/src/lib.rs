@@ -48,4 +48,5 @@ pub mod prelude {
     pub use errors::*;
     pub use nurbs::*;
     pub use specifieds::*;
+    pub use rbf_surface::*;
 }
