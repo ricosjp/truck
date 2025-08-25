@@ -141,7 +141,7 @@ fn next_point(
     let (uder, vder) = (ders[1][0], ders[0][1]);
     let n = uder.cross(vder);
     let n_uder = signed_radius * surface.normal_uder(u, v);
-    let n_vder = signed_radius * surface.normal_uder(u, v);
+    let n_vder = signed_radius * surface.normal_vder(u, v);
     let mat = Matrix3::from_cols(uder + n_uder, vder + n_vder, n);
     let vec = q - p;
     let del = mat.invert().unwrap() * vec;

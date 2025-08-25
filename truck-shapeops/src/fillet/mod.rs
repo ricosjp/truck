@@ -510,6 +510,7 @@ where
 }
 
 //mod experiment;
+mod extend_intersection_curve;
 
 #[cfg(test)]
 mod tests;

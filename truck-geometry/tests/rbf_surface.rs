@@ -53,12 +53,8 @@ fn fillet_between_two_spheres() {
         }
     }
     impl InvertibleRadiusFunction for Radius {
-        fn inverse(&self) -> Self {
-            Self(-self.0)
-        }
-        fn invert(&mut self) {
-            self.0 *= -1.0;
-        }
+        fn inverse(&self) -> Self { Self(-self.0) }
+        fn invert(&mut self) { self.0 *= -1.0; }
     }
 
     let fillet = RbfSurface::new(edge_circle, sphere0, sphere1, Radius(1.0));
@@ -127,4 +123,72 @@ fn fillet_between_two_spheres() {
             assert_near!(fillet.subs(u0, v0), p);
         }
     }
+}
+
+// cross point with adjacent edge
+#[test]
+fn test_cpwae_plane() {
+    let surface0 = Plane::xy();
+    let surface1 = Plane::yz();
+    let edge_curve = Line(Point3::origin(), Point3::new(0.0, 1.0, 0.0));
+    let adjacent_curve = Line(Point3::new(0.0, 1.0, 0.0), Point3::new(-1.0, 2.0, 0.0));
+    let rbf_surface = RbfSurface::new(edge_curve, surface0, surface1, 0.5);
+    let (cp0, cp1, t, s) = rbf_surface.search_contact_curve0_cross_point_with_adjacent_edge(1.0, adjacent_curve, 0.0, 10).unwrap();
+    assert_near!(cp0.point, Point3::new(-0.5, 1.5, 0.0));
+    assert_near!(cp1.point, Point3::new(0.0, 1.5, -0.5));
+    assert_near!(t, 1.5);
+    assert_near!(s, 0.5);
+}
+
+#[test]
+fn test_cpwae() {
+    #[rustfmt::skip]
+    let surface0: NurbsSurface<Vector4> = BSplineSurface::new(
+        (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
+        vec![
+            vec![Point3::new(-1.0, 0.0, 0.0), Point3::new(-1.0, 0.5, 0.0), Point3::new(-1.0, 1.0, 1.0)],
+            vec![Point3::new(0.0, 0.0, 0.0),  Point3::new(0.0, 0.5, 0.0),  Point3::new(0.0, 1.0, 1.0)],
+            vec![Point3::new(1.0, 0.0, 0.0),  Point3::new(1.0, 0.5, 0.0),  Point3::new(1.0, 1.0, 1.0)],
+        ],
+    )
+    .into();
+    #[rustfmt::skip]
+    let surface1: NurbsSurface<Vector4> = BSplineSurface::new(
+        (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
+        vec![
+            vec![Point3::new(1.0, 0.0, 0.0),  Point3::new(1.0, 0.0, -0.5),  Point3::new(1.0, 1.0, -1.0)],
+            vec![Point3::new(0.0, 0.0, 0.0),  Point3::new(0.0, 0.5, -0.5),  Point3::new(0.0, 1.0, -1.0)],
+            vec![Point3::new(-1.0, 0.0, 0.0), Point3::new(-1.0, 0.0, -0.5), Point3::new(-1.0, 1.0, -1.0)],
+        ],
+    )
+    .into();
+
+    let line = Line(Point3::new(-1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0));
+
+    #[derive(Clone, Copy, Debug)]
+    struct Radius;
+    impl RadiusFunction for Radius {
+        fn der_n(&self, n: usize, t: f64) -> f64 {
+            match n {
+                0 => 0.3 + 0.3 * t,
+                1 => 0.3,
+                _ => 0.0,
+            }
+        }
+    }
+
+    let boundary0 = surface0.splitted_boundary();
+    let adjacent_curve = boundary0[1].clone();
+
+    let rbf_surface = RbfSurface::new(line, &surface0, &surface1, Radius);
+
+    let (contact0, _, t, s) = rbf_surface
+        .search_contact_curve0_cross_point_with_adjacent_edge(1.0, &adjacent_curve, 0.0, 100)
+        .unwrap();
+    println!("{contact0:?}, {t}, {s}");
+
+    let (u0, v0) = contact0.uv.into();
+    assert_near!(contact0.point, surface0.subs(u0, v0));
+    assert_near!(contact0.point, rbf_surface.subs(0.0, t));
+    assert_near!(contact0.point, adjacent_curve.subs(s));
 }
