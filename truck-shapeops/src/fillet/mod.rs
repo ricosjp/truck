@@ -5,10 +5,22 @@ use truck_topology::*;
 
 /// condition of curves to attach fillet
 pub trait FilletedCurve<S>:
-    ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug {
+    ParametricCurve3D
+    + SearchNearestParameter<D1, Point = Point3>
+    + BoundedCurve
+    + Cut
+    + Invertible
+    + std::fmt::Debug {
 }
-impl<C: ParametricCurve3D + BoundedCurve + Cut + Invertible + std::fmt::Debug, S> FilletedCurve<S>
-    for C
+impl<
+        C: ParametricCurve3D
+            + SearchNearestParameter<D1, Point = Point3>
+            + BoundedCurve
+            + Cut
+            + Invertible
+            + std::fmt::Debug,
+        S,
+    > FilletedCurve<S> for C
 {
 }
 
@@ -181,17 +193,49 @@ where
     let is_filleted_edge = move |edge: &Edge<Point3, C>| edge.id() == filleted_edge_id;
     let filleted_edge = face0.edge_iter().find(is_filleted_edge)?;
 
-    let fillet_surface = {
+    let strict_surface = {
         let surface0 = face0.oriented_surface();
         let surface1 = face1.oriented_surface();
         let curve = filleted_edge.oriented_curve();
-        let strict_fillet = RbfSurface::new(curve, surface0, surface1, radius);
-        ApproxFilletSurface::approx_rolling_ball_fillet(
-            &strict_fillet,
-            strict_fillet.edge_curve().range_tuple(),
-            tol,
-        )?
+        RbfSurface::new(curve, surface0, surface1, radius)
     };
+
+    let vrange = {
+        let (t0, t1) = strict_surface.edge_curve().range_tuple();
+
+        let (front_edge0, back_edge0) = find_adjacent_edge(face0, filleted_edge_id)?;
+
+        let curve00 = front_edge0.oriented_curve();
+        let (_, s00_hint) = curve00.range_tuple();
+        let (_, _, v00, _) = strict_surface
+            .search_contact_curve0_cross_point_with_adjacent_edge(t0, &curve00, s00_hint, 100)
+            .unwrap();
+
+        let curve10 = back_edge0.oriented_curve();
+        let (s10_hint, _) = curve10.range_tuple();
+        let (_, _, v10, _) = strict_surface
+            .search_contact_curve0_cross_point_with_adjacent_edge(t1, &curve10, s10_hint, 100)
+            .unwrap();
+
+        let (front_edge1, back_edge1) = find_adjacent_edge(face1, filleted_edge_id)?;
+
+        let curve11 = front_edge1.oriented_curve();
+        let (_, s11_hint) = curve11.range_tuple();
+        let (_, _, v11, _) = strict_surface
+            .search_contact_curve1_cross_point_with_adjacent_edge(t1, &curve11, s11_hint, 100)
+            .unwrap();
+
+        let curve01 = back_edge1.oriented_curve();
+        let (s01_hint, _) = curve01.range_tuple();
+        let (_, _, v01, _) = strict_surface
+            .search_contact_curve1_cross_point_with_adjacent_edge(t0, &curve01, s01_hint, 100)
+            .unwrap();
+
+        (v00.min(v01), v10.max(v11))
+    };
+
+    let fillet_surface =
+        ApproxFilletSurface::approx_rolling_ball_fillet(&strict_surface, vrange, tol)?;
 
     let (new_face0, fillet_edge0, (front_der0, back_der0)) = {
         let contact_curve = fillet_surface.side_pcurve0().to_same_geometry();

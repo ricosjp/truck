@@ -131,9 +131,21 @@ fn test_cpwae_plane() {
     let surface0 = Plane::xy();
     let surface1 = Plane::yz();
     let edge_curve = Line(Point3::origin(), Point3::new(0.0, 1.0, 0.0));
-    let adjacent_curve = Line(Point3::new(0.0, 1.0, 0.0), Point3::new(-1.0, 2.0, 0.0));
     let rbf_surface = RbfSurface::new(edge_curve, surface0, surface1, 0.5);
-    let (cp0, cp1, t, s) = rbf_surface.search_contact_curve0_cross_point_with_adjacent_edge(1.0, adjacent_curve, 0.0, 10).unwrap();
+    
+    let adjacent_curve = Line(Point3::new(0.0, 1.0, 0.0), Point3::new(-1.0, 2.0, 0.0));
+    let (cp0, cp1, t, s) = rbf_surface
+        .search_contact_curve0_cross_point_with_adjacent_edge(1.0, adjacent_curve, 0.0, 10)
+        .unwrap();
+    assert_near!(cp0.point, Point3::new(-0.5, 1.5, 0.0));
+    assert_near!(cp1.point, Point3::new(0.0, 1.5, -0.5));
+    assert_near!(t, 1.5);
+    assert_near!(s, 0.5);
+    
+    let adjacent_curve = Line(Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 2.0, -1.0));
+    let (cp0, cp1, t, s) = rbf_surface
+        .search_contact_curve1_cross_point_with_adjacent_edge(1.0, adjacent_curve, 0.0, 10)
+        .unwrap();
     assert_near!(cp0.point, Point3::new(-0.5, 1.5, 0.0));
     assert_near!(cp1.point, Point3::new(0.0, 1.5, -0.5));
     assert_near!(t, 1.5);

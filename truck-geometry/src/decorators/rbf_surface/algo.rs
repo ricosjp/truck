@@ -867,6 +867,116 @@ where
 
         None
     }
+    /// Returns the cross point of contact curve and other edge.
+    pub fn search_contact_curve1_cross_point_with_adjacent_edge<C0>(
+        &self,
+        edge_hint: f64,
+        adjacent_curve: C0,
+        adjacent_hint: f64,
+        trials: usize,
+    ) -> Option<(ContactPoint, ContactPoint, f64, f64)>
+    where
+        C0: ParametricCurve3D,
+    {
+        let Self {
+            edge_curve,
+            surface0,
+            surface1,
+            radius,
+        } = self;
+        let (mut t, mut s, mut w) = (edge_hint, adjacent_hint, 0.0);
+        let mut c = edge_curve.subs(t);
+        let ((mut u0, mut v0), (mut u1, mut v1)) = (
+            surface0.search_parameter(c, None, trials)?,
+            surface1.search_parameter(c, None, trials)?,
+        );
+
+        let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
+        let sign = -f64::signum(n0.cross(n1).dot(edge_curve.der(t)));
+
+        for _i in 0..=trials {
+            let cders = edge_curve.ders(2, t);
+            let (p, der, der2) = (Point3::from_vec(cders[0]), cders[1], cders[2]);
+
+            let rders = radius.ders(1, t);
+            let (r, r_der) = (rders[0] * sign, rders[1] * sign);
+
+            let ders0 = surface0.ders(1, u0, v0);
+            let (p0, uder0, vder0) = (Point3::from_vec(ders0[0][0]), ders0[1][0], ders0[0][1]);
+            let n0 = uder0.cross(vder0).normalize();
+
+            let ders1 = surface1.ders(1, u1, v1);
+            let (p1, uder1, vder1) = (Point3::from_vec(ders1[0][0]), ders1[1][0], ders1[0][1]);
+            let n1 = uder1.cross(vder1).normalize();
+
+            let aders = adjacent_curve.ders(1, s);
+            let (e, eder) = (Point3::from_vec(aders[0]), aders[1]);
+
+            let pc = c - p;
+
+            let c_next = {
+                let mat = Matrix3::from_cols(der, n0, n1).transpose();
+                let c_next0 = Point3::new(
+                    der.dot(p.to_vec()),
+                    n0.dot(p0.to_vec()) + r,
+                    n1.dot(p1.to_vec()) + r,
+                );
+                let c_next1 = Vector3::new(der.dot(der) - der2.dot(pc), r_der, r_der);
+                mat.invert().unwrap() * PointVector3(c_next0, c_next1)
+            };
+
+            let duv0 = {
+                let mat = Matrix3::from_cols(
+                    uder0 + r * surface0.normal_uder(u0, v0),
+                    vder0 + r * surface0.normal_vder(u0, v0),
+                    n0,
+                );
+                mat.invert().unwrap() * (c_next - PointVector3(p0 + r * n0, r_der * n0))
+            };
+            debug_assert!(duv0.0.z.so_small() && duv0.1.z.so_small(), "{duv0:?}");
+
+            let duv1 = {
+                let mat = Matrix3::from_cols(
+                    uder1 + r * surface1.normal_uder(u1, v1),
+                    vder1 + r * surface1.normal_vder(u1, v1),
+                    n1,
+                );
+                mat.invert().unwrap() * (c_next - PointVector3(p1 + r * n1, r_der * n1))
+            };
+            debug_assert!(duv1.0.z.so_small() && duv1.1.z.so_small(), "{duv1:?}");
+
+            let dp1 = Matrix3::from_cols(uder1, vder1, n1) * duv1;
+
+            let mat = Matrix3::from_cols(dp1.1, n1, -eder);
+            let vec = (e - p1) - w * n1 - dp1.0;
+
+            let Vector3 {
+                x: dt,
+                y: dw,
+                z: ds,
+            } = mat.invert().unwrap() * vec;
+
+            if p1.near(&e) && dt.so_small2() && ds.so_small2() && dw.so_small2() {
+                let contact_point0 = ContactPoint {
+                    point: p0,
+                    uv: (u0, v0).into(),
+                };
+                let contact_point1 = ContactPoint {
+                    point: p1,
+                    uv: (u1, v1).into(),
+                };
+                return Some((contact_point0, contact_point1, t, s));
+            }
+
+            (t, s, w) = (t + dt, s + ds, w + dw);
+            c = c_next.0 + c_next.1 * dt;
+            let (duv0, duv1) = (duv0.0 + duv0.1 * dt, duv1.0 + duv1.1 * dt);
+            (u0, v0) = (u0 + duv0.x, v0 + duv0.y);
+            (u1, v1) = (u1 + duv1.x, v1 + duv1.y);
+        }
+
+        None
+    }
 }
 #[test]
 fn fillet_between_two_spheres_deralgo() {
