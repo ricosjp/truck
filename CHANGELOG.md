@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implement `From` and `ToSameGeometry` from `ExtrudeCurve<Line<Point3>, Vector3>` to `Plane`.
 - Fix comparative phrasing.
 - Fix `SceneInfo` in `polygon.wgsl`.
 - Upgrade wgpu v26.
