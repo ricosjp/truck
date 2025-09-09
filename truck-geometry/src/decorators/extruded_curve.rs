@@ -159,3 +159,29 @@ impl<C: Transformed<Matrix4>> Transformed<Matrix4> for ExtrudedCurve<C, Vector3>
         }
     }
 }
+
+impl From<ExtrudedCurve<Line<Point3>, Vector3>> for Plane {
+    fn from(
+        ExtrudedCurve {
+            curve: Line(o, p),
+            vector,
+        }: ExtrudedCurve<Line<Point3>, Vector3>,
+    ) -> Self {
+        Self::new(o, p, o + vector)
+    }
+}
+
+impl ToSameGeometry<Plane> for ExtrudedCurve<Line<Point3>, Vector3> {
+    fn to_same_geometry(&self) -> Plane { (*self).into() }
+}
+
+#[test]
+fn extrude_line() {
+    let p = Point3::new(1.0, 2.0, 3.0);
+    let q = Point3::new(2.0, 3.0, 4.0);
+    let v = Vector3::new(-1.0, 1.0, -4.0);
+    let line = Line(p, q);
+    let extruded = ExtrudedCurve::by_extrusion(line, v);
+    let plane = Plane::new(p, q, p + v);
+    assert_near!(extruded.subs(0.3, 0.6), plane.subs(0.3, 0.6));
+}
