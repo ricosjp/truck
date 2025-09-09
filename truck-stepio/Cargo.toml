@@ -17,7 +17,7 @@ in = ["derive_more", "ruststep", "serde", "truck-geotrait"]
 derive = ["truck-derivers"]
 
 [dependencies]
-chrono = { version = "0.4.41", features = ["wasmbind"] }
+chrono = { version = "0.4.42", features = ["wasmbind"] }
 derive_more = { version = "2.0.1", features = ["full"], optional = true }
 ruststep = { version = "0.4.0", optional = true }
 serde = { version = "1.0.219", features = ["derive"], optional = true }
@@ -29,10 +29,10 @@ truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
 truck-topology = { version = "0.6.0", path = "../truck-topology" }
 
 [dev-dependencies]
-clap = { version = "4.5.45", features = ["derive"] }
+clap = { version = "4.5.47", features = ["derive"] }
 espr-derive = "0.4.0"
 itertools = "0.14.0"
-serde_json = "1.0.142"
+serde_json = "1.0.143"
 truck-meshalgo = { version = "0.4.0", path = "../truck-meshalgo" }
 truck-shapeops = { path = "../truck-shapeops" }
 proptest = "1.7.0"
