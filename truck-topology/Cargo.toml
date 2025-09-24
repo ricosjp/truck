@@ -12,7 +12,7 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-serde = { version = "1.0.224", features = ["derive"] }
+serde = { version = "1.0.226", features = ["derive"] }
 rayon = "1.11.0"
 rustc-hash = "2.1.1"
 truck-base = { version = "0.5.0", path = "../truck-base" }
