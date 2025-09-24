@@ -31,7 +31,7 @@ pub fn circle_arc(vertex0: &Vertex, vertex1: &Vertex, transit: &[f64]) -> Edge {
 #[wasm_bindgen]
 pub fn bezier(vertex0: &Vertex, vertex1: &Vertex, inter_points: &[f64]) -> Edge {
     assert!(
-        inter_points.len() % 3 == 0,
+        inter_points.len().is_multiple_of(3),
         "inter_points cannot convert to 3-dimensional points!"
     );
     let inter_points = inter_points
