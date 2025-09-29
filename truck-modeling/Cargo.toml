@@ -16,7 +16,7 @@ derive_more = { version = "2.0.1", features = ["full"] }
 itertools = "0.14.0"
 rustc-hash = "2.1.1"
 serde = { version = "1.0.228", features = ["derive"] }
-thiserror = "2.0.16"
+thiserror = "2.0.17"
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive"] }
 truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
