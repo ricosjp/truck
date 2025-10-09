@@ -1,3 +1,4 @@
+use truck_geotrait::algo::TesselationSplitMethod;
 use truck_meshalgo::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -112,10 +113,10 @@ where
 {
     type Point = C0::Point;
     derive_method!(
-        parameter_division,
+        parameter_division<T: TesselationSplitMethod>,
         (Vec<f64>, Vec<C0::Point>),
         range: (f64, f64),
-        tol: f64
+        split: T
     );
 }
 
@@ -125,10 +126,10 @@ where
     S1: ParameterDivision2D,
 {
     derive_method!(
-        parameter_division,
+        parameter_division<T: TesselationSplitMethod>,
         (Vec<f64>, Vec<f64>),
         range: ((f64, f64), (f64, f64)),
-        tol: f64
+        split: T
     );
 }
 

@@ -1,6 +1,7 @@
 use super::*;
 use array_macro::array;
 use proptest::prelude::*;
+use truck_polymesh::algo::DefaultSplitParams;
 use std::f64::consts::PI;
 use truck_modeling::*;
 
@@ -36,7 +37,7 @@ proptest! {
         let axis = dir_from_array(dir_array);
         let trans = Matrix4::from_translation(vec.into()) * Matrix4::from_axis_angle(axis, Rad(angle));
         let solid = builder::transformed(&base_solid, trans);
-        let msolid = solid.triangulation(0.05).collect_option().unwrap();
+        let msolid = solid.triangulation(DefaultSplitParams::new(0.05)).collect_option().unwrap();
 
         prop_assert_near!(msolid.volume(), volume);
         prop_assert_near!(msolid.center_of_gravity().to_point(), trans.transform_point(grav));

@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 use std::f64::consts::PI;
 
@@ -207,15 +209,14 @@ where
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     R: RadiusFunction,
 {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
-        nonpositive_tolerance!(tol);
-        let udiv = self.u_parameter_division(range, tol).unwrap();
+        let udiv = self.u_parameter_division(range, split.tol()).unwrap();
         let mut vdiv = vec![range.1 .0, range.1 .1];
-        algo::v_parameter_division_for_fillet(self, &udiv, &mut vdiv, tol);
+        algo::v_parameter_division_for_fillet(self, &udiv, &mut vdiv, split.tol());
         (udiv, vdiv)
     }
 }
@@ -316,8 +317,12 @@ where
     R: RadiusFunction,
 {
     type Point = Point3;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
-        truck_geotrait::algo::curve::parameter_division(self, range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>) {
+        truck_geotrait::algo::curve::parameter_division(self, range, split)
     }
 }
 

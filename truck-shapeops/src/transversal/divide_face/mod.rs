@@ -3,15 +3,16 @@
 use super::faces_classification::FacesClassification;
 use super::loops_store::*;
 use rustc_hash::FxHashMap as HashMap;
+use truck_geotrait::algo::TesselationSplitMethod;
 use std::ops::Deref;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 
-fn create_parameter_boundary<P, C, S>(
+fn create_parameter_boundary<P, C, S, T: TesselationSplitMethod>(
     face: &Face<P, C, S>,
     wire: &Wire<P, C>,
     polys: &mut HashMap<EdgeID<C>, PolylineCurve<P>>,
-    tol: f64,
+    split: T,
 ) -> Option<PolylineCurve<Point2>>
 where
     P: Copy,
@@ -24,7 +25,7 @@ where
     let vec = wire.edge_iter().try_fold(vec![p], |mut vec, edge| {
         let poly = polys.entry(edge.id()).or_insert_with(|| {
             let curve = edge.curve();
-            let div = curve.parameter_division(curve.range_tuple(), tol).1;
+            let div = curve.parameter_division(curve.range_tuple(), split).1;
             PolylineCurve(div)
         });
         let mut p = *vec.last().unwrap();
@@ -49,10 +50,10 @@ struct WireChunk<'a, C> {
 }
 
 type FaceWithShapesOpStatus<C, S> = (Face<Point3, C, S>, ShapesOpStatus);
-fn divide_one_face<C, S>(
+fn divide_one_face<C, S, T: TesselationSplitMethod>(
     face: &Face<Point3, C, S>,
     loops: &Loops<Point3, C>,
-    tol: f64,
+    split: T,
 ) -> Option<Vec<FaceWithShapesOpStatus<C, S>>>
 where
     C: BoundedCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
@@ -61,7 +62,7 @@ where
     let (mut pre_faces, mut negative_wires) = (Vec::new(), Vec::new());
     let mut map = HashMap::default();
     loops.iter().try_for_each(|wire| {
-        let poly = create_parameter_boundary(face, wire, &mut map, tol)?;
+        let poly = create_parameter_boundary(face, wire, &mut map, split)?;
         match poly.area() > 0.0 {
             true => pre_faces.push(vec![WireChunk { poly, wire }]),
             false => negative_wires.push(WireChunk { poly, wire }),
@@ -99,10 +100,10 @@ where
     Some(vec)
 }
 
-pub fn divide_faces<C, S>(
+pub fn divide_faces<C, S, T: TesselationSplitMethod>(
     shell: &Shell<Point3, C, S>,
     loops_store: &LoopsStore<Point3, C>,
-    tol: f64,
+    split: T,
 ) -> Option<FacesClassification<Point3, C, S>>
 where
     C: BoundedCurve<Point = Point3> + ParameterDivision1D<Point = Point3>,
@@ -119,7 +120,7 @@ where
             {
                 res.push(face.clone(), ShapesOpStatus::Unknown);
             } else {
-                let vec = divide_one_face(face, loops, tol)?;
+                let vec = divide_one_face(face, loops, split)?;
                 vec.into_iter()
                     .for_each(|(face, status)| res.push(face, status));
             }

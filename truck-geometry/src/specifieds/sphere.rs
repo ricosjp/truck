@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 use std::f64::consts::PI;
 
@@ -126,11 +128,12 @@ impl IncludeCurve<NurbsCurve<Vector4>> for Sphere {
 
 impl ParameterDivision2D for Sphere {
     #[inline(always)]
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         (urange, vrange): ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
+        let tol = split.tol();
         nonpositive_tolerance!(tol);
         assert!(
             tol < self.radius,

@@ -1,5 +1,5 @@
 use super::*;
-use algo::surface::SsnpVector;
+use algo::{TesselationSplitMethod, surface::SsnpVector};
 
 impl<E, T: One> Processor<E, T> {
     /// Creates new processor
@@ -332,7 +332,7 @@ impl<C> ParameterDivision1D for Processor<C, Matrix3>
 where C: ParameterDivision1D<Point = Point2> + BoundedCurve<Point = Point2>
 {
     type Point = Point2;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: (f64, f64), split: T) -> (Vec<f64>, Vec<Self::Point>) {
         let a = self.transform;
         let range = match self.orientation {
             true => range,
@@ -347,7 +347,7 @@ where C: ParameterDivision1D<Point = Point2> + BoundedCurve<Point = Point2>
         let n = f64::abs(k[0][0])
             .max(f64::abs(k[1][1]))
             .max(f64::abs(k[2][2]));
-        let (mut params, mut points) = self.entity.parameter_division(range, tol / n);
+        let (mut params, mut points) = self.entity.parameter_division(range, split.scale(1.0 / n));
         points
             .iter_mut()
             .for_each(|pt| *pt = a.transform_point(*pt));
@@ -365,7 +365,7 @@ impl<C> ParameterDivision1D for Processor<C, Matrix4>
 where C: ParameterDivision1D<Point = Point3> + BoundedCurve<Point = Point3>
 {
     type Point = Point3;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: (f64, f64), split: T) -> (Vec<f64>, Vec<Self::Point>) {
         let a = self.transform;
         let range = match self.orientation {
             true => range,
@@ -381,7 +381,7 @@ where C: ParameterDivision1D<Point = Point3> + BoundedCurve<Point = Point3>
             .max(f64::abs(k[1][1]))
             .max(f64::abs(k[2][2]))
             / f64::abs(k[3][3]);
-        let (mut params, mut points) = self.entity.parameter_division(range, tol / n);
+        let (mut params, mut points) = self.entity.parameter_division(range, split.scale(1.0 / n));
         points
             .iter_mut()
             .for_each(|pt| *pt = a.transform_point(*pt));
@@ -396,10 +396,10 @@ where C: ParameterDivision1D<Point = Point3> + BoundedCurve<Point = Point3>
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
         let range = match self.orientation {
@@ -412,7 +412,7 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
         let n = f64::abs(k[0][0])
             .max(f64::abs(k[1][1]))
             .max(f64::abs(k[2][2]));
-        let (udiv, vdiv) = self.entity.parameter_division(range, tol / n);
+        let (udiv, vdiv) = self.entity.parameter_division(range, split.scale(1.0 / n));
         match self.orientation {
             true => (udiv, vdiv),
             false => (vdiv, udiv),
@@ -421,10 +421,10 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix3> {
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
         let a = self.transform;
         let range = match self.orientation {
@@ -438,7 +438,7 @@ impl<S: ParameterDivision2D> ParameterDivision2D for Processor<S, Matrix4> {
             .max(f64::abs(k[1][1]))
             .max(f64::abs(k[2][2]))
             / f64::abs(k[3][3]);
-        let (udiv, vdiv) = self.entity.parameter_division(range, tol / n);
+        let (udiv, vdiv) = self.entity.parameter_division(range, split.scale(1.0 / n));
         match self.orientation {
             true => (udiv, vdiv),
             false => (vdiv, udiv),

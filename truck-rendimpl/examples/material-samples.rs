@@ -8,6 +8,7 @@
 
 mod app;
 use app::*;
+use truck_polymesh::algo::DefaultSplitParams;
 use std::f64::consts::PI;
 use std::sync::Arc;
 use truck_meshalgo::prelude::*;
@@ -80,7 +81,7 @@ impl App for MyApp {
         let e = builder::tsweep(&v, Vector3::unit_x());
         let f = builder::tsweep(&e, Vector3::unit_y());
         let cube: Solid = builder::tsweep(&f, Vector3::unit_z());
-        let mesh = cube.triangulation(0.01).to_polygon();
+        let mesh = cube.triangulation(DefaultSplitParams::new(0.01)).to_polygon();
         let instance: PolygonInstance = scene
             .instance_creator()
             .create_instance(&mesh, &Default::default());

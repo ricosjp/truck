@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::{rbf_surface::*, *};
 
 impl<S0, S1> ApproxFilletSurface<S0, S1> {
@@ -213,12 +215,12 @@ where
     S0: ParametricSurface3D,
     S1: ParametricSurface3D,
 {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, range, tol)
+        algo::surface::parameter_division(self, range, split)
     }
 }
 

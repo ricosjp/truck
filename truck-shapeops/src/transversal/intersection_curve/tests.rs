@@ -1,3 +1,5 @@
+use truck_geotrait::algo::DefaultSplitParams;
+
 use super::*;
 use std::f64::consts::PI;
 
@@ -82,8 +84,8 @@ fn collide_parabola() {
 
     // meshing surface
     let instant = std::time::Instant::now();
-    let polygon0 = StructuredMesh::from_surface(&surface0, surface0.range_tuple(), TOL).destruct();
-    let polygon1 = StructuredMesh::from_surface(&surface1, surface1.range_tuple(), TOL).destruct();
+    let polygon0 = StructuredMesh::from_surface(&surface0, surface0.range_tuple(), DefaultSplitParams::new(TOL)).destruct();
+    let polygon1 = StructuredMesh::from_surface(&surface1, surface1.range_tuple(), DefaultSplitParams::new(TOL)).destruct();
     println!("Meshing Surfaces: {}s", instant.elapsed().as_secs_f64());
     // extract intersection curves
     let instant = std::time::Instant::now();
