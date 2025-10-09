@@ -1,7 +1,7 @@
 #![cfg(feature = "polynomial")]
 
 use truck_base::{cgmath64::*, tolerance::*};
-use truck_geotrait::{polynomial::PolynomialCurve, *};
+use truck_geotrait::{algo::DefaultSplitParams, polynomial::PolynomialCurve, *};
 
 #[test]
 fn polycurve_test() {
@@ -86,7 +86,7 @@ fn exec_polycurve_division() -> bool {
         })
         .collect();
     let poly = PolynomialCurve::<Point3>(coef);
-    let (division, pts) = algo::curve::parameter_division(&poly, (-10.0, 10.0), 0.05);
+    let (division, pts) = algo::curve::parameter_division(&poly, (-10.0, 10.0), DefaultSplitParams::new(0.05));
     division.windows(2).zip(pts).all(|(a, pt)| {
         let pt0 = poly.subs(a[0]);
         assert_eq!(pt0, pt);

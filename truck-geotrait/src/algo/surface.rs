@@ -221,25 +221,28 @@ where
 ///
 /// `tol` must be more than `TOLERANCE`.
 #[inline(always)]
-pub fn parameter_division<S>(
+pub fn parameter_division<S, T: TesselationSplitMethod>(
     surface: &S,
     (urange, vrange): ((f64, f64), (f64, f64)),
-    tol: f64,
+    split: T,
 ) -> (Vec<f64>, Vec<f64>)
 where
     S: ParametricSurface,
     S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
 {
-    nonpositive_tolerance!(tol);
     let (mut udiv, mut vdiv) = (vec![urange.0, urange.1], vec![vrange.0, vrange.1]);
-    sub_parameter_division(surface, (&mut udiv, &mut vdiv), tol);
+    sub_parameter_division(surface, (&mut udiv, &mut vdiv), split);
     (udiv, vdiv)
 }
 
-fn sub_parameter_division<S>(surface: &S, (udiv, vdiv): (&mut Vec<f64>, &mut Vec<f64>), tol: f64)
-where
+fn sub_parameter_division<S, T: TesselationSplitMethod>(
+    surface: &S,
+    (udiv, vdiv): (&mut Vec<f64>, &mut Vec<f64>),
+    split: T,
+) where
     S: ParametricSurface,
-    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>, {
+    S::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
+{
     let mut divide_flag0 = vec![false; udiv.len() - 1];
     let mut divide_flag1 = vec![false; vdiv.len() - 1];
 
@@ -248,34 +251,9 @@ where
             if *ub && *vb {
                 continue;
             }
-            let (u_gen, v_gen) = ((u[0] + u[1]) / 2.0, (v[0] + v[1]) / 2.0);
-            let gen = surface.subs(u_gen, v_gen);
-            let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
-            let q = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
-            let u0 = u[0] * (1.0 - p) + u[1] * p;
-            let v0 = v[0] * (1.0 - q) + v[1] * q;
-            let p0 = surface.subs(u0, v0);
-            let pt00 = surface.subs(u[0], v[0]);
-            let pt01 = surface.subs(u[0], v[1]);
-            let pt10 = surface.subs(u[1], v[0]);
-            let pt11 = surface.subs(u[1], v[1]);
-            let pt = S::Point::from_vec(
-                pt00.to_vec() * (1.0 - p) * (1.0 - q)
-                    + pt01.to_vec() * (1.0 - p) * q
-                    + pt10.to_vec() * p * (1.0 - q)
-                    + pt11.to_vec() * p * q,
-            );
-            if p0.distance2(pt) > tol * tol {
-                let delu = pt00.midpoint(pt01).distance(p0) + pt10.midpoint(pt11).distance(p0);
-                let delv = pt00.midpoint(pt10).distance(p0) + pt01.midpoint(pt11).distance(p0);
-                if delu > delv * 2.0 {
-                    *ub = true;
-                } else if delv > delu * 2.0 {
-                    *vb = true;
-                } else {
-                    (*ub, *vb) = (true, true);
-                }
-            }
+            let (split_u, split_v) = split.split_surface(surface, (u[0], u[1]), (v[0], v[1]));
+            *ub = *ub || split_u;
+            *vb = *vb || split_v;
         }
     }
 
@@ -298,6 +276,6 @@ where
     if udiv.len() != new_udiv.len() || vdiv.len() != new_vdiv.len() {
         *udiv = new_udiv;
         *vdiv = new_vdiv;
-        sub_parameter_division(surface, (udiv, vdiv), tol);
+        sub_parameter_division(surface, (udiv, vdiv), split);
     }
 }

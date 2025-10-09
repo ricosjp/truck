@@ -8,6 +8,7 @@ use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 use truck_platform::*;
+use truck_polymesh::algo::DefaultSplitParams;
 use truck_rendimpl::*;
 use winit::{dpi::*, event::*, keyboard::*};
 mod app;
@@ -84,7 +85,7 @@ impl App for MyApp {
             texture: Some(std::sync::Arc::new(texture)),
             backface_culling: true,
         };
-        let mesh = Self::create_cube().triangulation(0.05).to_polygon();
+        let mesh = Self::create_cube().triangulation(DefaultSplitParams::new(0.05)).to_polygon();
         let shape: PolygonInstance = scene.instance_creator().create_instance(&mesh, &state);
         scene.add_object(&shape);
         MyApp {

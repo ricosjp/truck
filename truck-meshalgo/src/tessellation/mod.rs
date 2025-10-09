@@ -1,5 +1,6 @@
 use crate::*;
 use spade::{iterators::*, *};
+use truck_polymesh::algo::TesselationSplitMethod;
 use truck_topology::{compress::*, *};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -164,7 +165,7 @@ pub trait MeshableShape {
     /// mesh.put_together_same_attrs(TOLERANCE);
     /// assert_eq!(mesh.shell_condition(), ShellCondition::Closed);
     /// ```
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape;
+    fn triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape;
 }
 
 /// Trait for tessellating `Shell` and `Solid` in `truck-modeling`.
@@ -250,19 +251,18 @@ pub trait RobustMeshableShape {
     /// let poly = poly_shell[0].surface().unwrap();
     /// assert!(!poly.positions().is_empty());
     /// ```
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape;
+    fn robust_triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape;
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C, S> {
     type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
-        nonpositive_tolerance!(tol);
+    fn triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape {
         #[cfg(not(target_arch = "wasm32"))]
-        let res = triangulation::shell_tessellation(self, tol, triangulation::by_search_parameter);
+        let res = triangulation::shell_tessellation(self, split, triangulation::by_search_parameter);
         #[cfg(target_arch = "wasm32")]
         let res = triangulation::shell_tessellation_single_thread(
             self,
-            tol,
+            split,
             triangulation::by_search_parameter,
         );
         res
@@ -271,18 +271,17 @@ impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C
 
 impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Shell<Point3, C, S> {
     type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
-        nonpositive_tolerance!(tol);
+    fn robust_triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape {
         #[cfg(not(target_arch = "wasm32"))]
         let res = triangulation::shell_tessellation(
             self,
-            tol,
+            split,
             triangulation::by_search_nearest_parameter,
         );
         #[cfg(target_arch = "wasm32")]
         let res = triangulation::shell_tessellation_single_thread(
             self,
-            tol,
+            split,
             triangulation::by_search_nearest_parameter,
         );
         res
@@ -291,11 +290,11 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for She
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C, S> {
     type MeshedShape = Solid<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
+    fn triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape {
         let boundaries = self
             .boundaries()
             .iter()
-            .map(|shell| shell.triangulation(tol))
+            .map(|shell| shell.triangulation(split))
             .collect::<Vec<_>>();
         Solid::new(boundaries)
     }
@@ -303,11 +302,11 @@ impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C
 
 impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Solid<Point3, C, S> {
     type MeshedShape = Solid<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
+    fn robust_triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape {
         let boundaries = self
             .boundaries()
             .iter()
-            .map(|shell| shell.robust_triangulation(tol))
+            .map(|shell| shell.robust_triangulation(split))
             .collect::<Vec<_>>();
         Solid::new(boundaries)
     }
@@ -315,9 +314,8 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Sol
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedShell<Point3, C, S> {
     type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
-        nonpositive_tolerance!(tol);
-        triangulation::cshell_tessellation(self, tol, triangulation::by_search_parameter)
+    fn triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape {
+        triangulation::cshell_tessellation(self, split, triangulation::by_search_parameter)
     }
 }
 
@@ -325,19 +323,18 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape
     for CompressedShell<Point3, C, S>
 {
     type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
-        nonpositive_tolerance!(tol);
-        triangulation::cshell_tessellation(self, tol, triangulation::by_search_nearest_parameter)
+    fn robust_triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape {
+        triangulation::cshell_tessellation(self, split, triangulation::by_search_nearest_parameter)
     }
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedSolid<Point3, C, S> {
     type MeshedShape = CompressedSolid<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
+    fn triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape {
         let boundaries = self
             .boundaries
             .iter()
-            .map(|shell| shell.triangulation(tol))
+            .map(|shell| shell.triangulation(split))
             .collect::<Vec<_>>();
         CompressedSolid { boundaries }
     }
@@ -347,11 +344,11 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape
     for CompressedSolid<Point3, C, S>
 {
     type MeshedShape = CompressedSolid<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
+    fn robust_triangulation<T: TesselationSplitMethod>(&self, split: T) -> Self::MeshedShape {
         let boundaries = self
             .boundaries
             .iter()
-            .map(|shell| shell.robust_triangulation(tol))
+            .map(|shell| shell.robust_triangulation(split))
             .collect::<Vec<_>>();
         CompressedSolid { boundaries }
     }

@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 
 impl<C> TrimmedCurve<C> {
@@ -69,7 +71,7 @@ impl<C: SearchParameter<D1>> SearchParameter<D1> for TrimmedCurve<C> {
 
 impl<C: ParameterDivision1D> ParameterDivision1D for TrimmedCurve<C> {
     type Point = C::Point;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
-        self.curve.parameter_division(range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: (f64, f64), split: T) -> (Vec<f64>, Vec<Self::Point>) {
+        self.curve.parameter_division(range, split)
     }
 }

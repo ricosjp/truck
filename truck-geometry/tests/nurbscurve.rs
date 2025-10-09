@@ -1,5 +1,6 @@
 use proptest::prelude::*;
 use truck_geometry::prelude::*;
+use truck_geotrait::algo::DefaultSplitParams;
 
 #[test]
 fn nurbs_circle() {
@@ -122,7 +123,7 @@ fn test_parameter_division() {
     ];
     let curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
     let tol = 0.01;
-    let (div, pts) = curve.parameter_division(curve.range_tuple(), tol * 0.5);
+    let (div, pts) = curve.parameter_division(curve.range_tuple(), DefaultSplitParams::new(tol * 0.5));
     let knot_vec = curve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);

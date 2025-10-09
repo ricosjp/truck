@@ -1,5 +1,6 @@
 use super::*;
 use algo::surface::SspVector;
+use truck_geotrait::algo::TesselationSplitMethod;
 
 impl<C, V: Copy> ExtrudedCurve<C, V> {
     /// Creates a linear extruded curve by extrusion.
@@ -74,13 +75,13 @@ where
 
 impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
     #[inline(always)]
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         (urange, vrange): ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
         (
-            self.curve.parameter_division(urange, tol).0,
+            self.curve.parameter_division(urange, split).0,
             vec![vrange.0, vrange.1],
         )
     }

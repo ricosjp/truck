@@ -1,5 +1,6 @@
 use super::*;
 use truck_base::newton::{self, CalcOutput};
+use truck_geotrait::algo::TesselationSplitMethod;
 
 fn double_projection<S0, S1>(
     surface0: &S0,
@@ -286,8 +287,12 @@ where
 {
     type Point = Point3;
     #[inline(always)]
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Point3>) {
-        algo::curve::parameter_division(self, range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>) {
+        algo::curve::parameter_division(self, range, split)
     }
 }
 
