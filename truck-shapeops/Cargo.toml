@@ -30,4 +30,4 @@ truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 proptest = "1.8.0"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.3.3", features = ["wasm_js"] }
+getrandom = { version = "0.3.4", features = ["wasm_js"] }
