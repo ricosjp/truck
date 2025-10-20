@@ -50,6 +50,7 @@ async fn init_default_device(
             required_limits: Limits::downlevel_webgl2_defaults(),
             label: None,
             trace: Default::default(),
+            experimental_features: ExperimentalFeatures::disabled(),
         })
         .await
         .expect("Failed to create device");
@@ -777,7 +778,11 @@ impl Scene {
         let buffer_slice = buffer.slice(..);
         let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
         buffer_slice.map_async(MapMode::Read, move |v| sender.send(v).unwrap());
-        device.poll(PollType::Wait).unwrap();
+        let poll_type = PollType::Wait {
+            submission_index: None,
+            timeout: None,
+        };
+        device.poll(poll_type).unwrap();
         match receiver.receive().await {
             Some(Ok(_)) => buffer_slice.get_mapped_range().iter().copied().collect(),
             Some(Err(e)) => panic!("{}", e),

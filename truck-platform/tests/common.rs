@@ -141,8 +141,9 @@ pub fn init_device(backends: Backends) -> DeviceHandler {
                 required_features: Default::default(),
                 required_limits: Default::default(),
                 memory_hints: Default::default(),
-                label: None,
+                experimental_features: ExperimentalFeatures::disabled(),
                 trace: Default::default(),
+                label: None,
             })
             .await
             .unwrap();
