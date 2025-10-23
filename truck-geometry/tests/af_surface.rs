@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 use truck_geometry::prelude::{rbf_surface::RadiusFunction, *};
+use truck_geotrait::algo::DefaultSplitParams;
 
 #[test]
 fn approx_fillet_between_two_spheres() {
@@ -34,14 +35,14 @@ fn approx_fillet_between_two_spheres() {
     println!("fillet approximation: {}ms", instance.elapsed().as_millis());
 
     let instance = std::time::Instant::now();
-    let _ = fillet.parameter_division(((0.0, 1.0), (PI * 0.1, PI * 1.9)), 0.005);
+    let _ = fillet.parameter_division(((0.0, 1.0), (PI * 0.1, PI * 1.9)), DefaultSplitParams::new(0.005));
     println!(
         "tessellate strict fillet: {}ms",
         instance.elapsed().as_millis()
     );
 
     let instance = std::time::Instant::now();
-    let _ = approx.parameter_division(((0.0, 1.0), (PI * 0.1, PI * 1.9)), 0.005);
+    let _ = approx.parameter_division(((0.0, 1.0), (PI * 0.1, PI * 1.9)), DefaultSplitParams::new(0.005));
     println!(
         "tessellate fillet approx: {}ms",
         instance.elapsed().as_millis()

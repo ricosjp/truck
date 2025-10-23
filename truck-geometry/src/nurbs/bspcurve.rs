@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 use crate::errors::Error;
 use std::ops::*;
@@ -993,8 +995,12 @@ where P: ControlPoint<f64>
         + HashGen<f64>
 {
     type Point = P;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<P>) {
-        algo::curve::parameter_division(self, range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>) {
+        algo::curve::parameter_division(self, range, split)
     }
 }
 

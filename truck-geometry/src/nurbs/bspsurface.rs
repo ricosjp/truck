@@ -1,6 +1,7 @@
 use super::*;
 use crate::errors::Error;
 use algo::surface::{SsnpVector, SspVector};
+use truck_geotrait::algo::TesselationSplitMethod;
 use std::iter::FusedIterator;
 use std::ops::*;
 
@@ -1578,12 +1579,12 @@ where P: EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
         + HashGen<f64>
 {
     #[inline(always)]
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, range, tol)
+        algo::surface::parameter_division(self, range, split)
     }
 }
 

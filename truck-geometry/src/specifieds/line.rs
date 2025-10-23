@@ -1,5 +1,6 @@
 use super::*;
 use truck_base::cgmath64::control_point::ControlPoint;
+use truck_geotrait::algo::TesselationSplitMethod;
 
 impl<P: Copy> Line<P> {
     /// initialize line from vector
@@ -131,7 +132,7 @@ impl<P: ControlPoint<f64>> Cut for Line<P> {
 impl<P: ControlPoint<f64>> ParameterDivision1D for Line<P> {
     type Point = P;
     #[inline]
-    fn parameter_division(&self, range: (f64, f64), _: f64) -> (Vec<f64>, Vec<P>) {
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: (f64, f64), _: T) -> (Vec<f64>, Vec<P>) {
         (
             vec![range.0, range.1],
             vec![self.subs(range.0), self.subs(range.1)],
