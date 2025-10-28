@@ -35,7 +35,7 @@ vtkio = { version = "0.6.3", optional = true }
 [dev-dependencies]
 rand = "0.9.2"
 serde_json = "1.0.145"
-proptest = "1.8.0"
+proptest = "1.9.0"
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
