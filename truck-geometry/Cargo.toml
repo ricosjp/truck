@@ -19,7 +19,7 @@ truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["d
 
 [dev-dependencies]
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive", "polynomial"] }
-proptest = { version = "1.8.0", features = ["attr-macro"] }
+proptest = { version = "1.9.0", features = ["attr-macro"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.3.4", features = ["wasm_js"] }
