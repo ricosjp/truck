@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Remove `Arc` from the members of `DeviceHandler`.
 - Implement `border_wires` for `Face`.
 - Implement `From` and `ToSameGeometry` from `ExtrudeCurve<Line<Point3>, Vector3>` to `Plane`.
 - Fix comparative phrasing.

@@ -54,11 +54,7 @@ async fn init_default_device(
         })
         .await
         .expect("Failed to create device");
-    let device_handler = DeviceHandler {
-        adapter: Arc::new(adapter),
-        device: Arc::new(device),
-        queue: Arc::new(queue),
-    };
+    let device_handler = DeviceHandler::new(adapter, device, queue);
     let window_handler = window.map(|window| WindowHandler {
         window,
         surface: Arc::new(surface.unwrap()),
@@ -69,11 +65,7 @@ async fn init_default_device(
 impl DeviceHandler {
     /// constructor
     #[inline(always)]
-    pub const fn new(
-        adapter: Arc<Adapter>,
-        device: Arc<Device>,
-        queue: Arc<Queue>,
-    ) -> DeviceHandler {
+    pub const fn new(adapter: Adapter, device: Device, queue: Queue) -> DeviceHandler {
         DeviceHandler {
             adapter,
             device,
@@ -82,13 +74,13 @@ impl DeviceHandler {
     }
     /// Returns the reference of the adapter.
     #[inline(always)]
-    pub const fn adapter(&self) -> &Arc<Adapter> { &self.adapter }
+    pub const fn adapter(&self) -> &Adapter { &self.adapter }
     /// Returns the reference of the device.
     #[inline(always)]
-    pub const fn device(&self) -> &Arc<Device> { &self.device }
+    pub const fn device(&self) -> &Device { &self.device }
     /// Returns the reference of the queue.
     #[inline(always)]
-    pub const fn queue(&self) -> &Arc<Queue> { &self.queue }
+    pub const fn queue(&self) -> &Queue { &self.queue }
 
     /// Creates default device handler.
     pub async fn default_device() -> Self { init_default_device(None).await.0 }
@@ -377,13 +369,17 @@ impl Scene {
     #[inline(always)]
     pub const fn device_handler(&self) -> &DeviceHandler { &self.device_handler }
 
+    /// Returns the reference of the adapter.
+    #[inline(always)]
+    pub const fn dapter(&self) -> &Adapter { &self.device_handler.adapter }
+
     /// Returns the reference of the device.
     #[inline(always)]
-    pub const fn device(&self) -> &Arc<Device> { &self.device_handler.device }
+    pub const fn device(&self) -> &Device { &self.device_handler.device }
 
     /// Returns the reference of the queue.
     #[inline(always)]
-    pub const fn queue(&self) -> &Arc<Queue> { &self.device_handler.queue }
+    pub const fn queue(&self) -> &Queue { &self.device_handler.queue }
 
     /// Returns the elapsed time since the scene was created.
     #[inline(always)]

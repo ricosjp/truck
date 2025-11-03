@@ -147,7 +147,7 @@ pub fn init_device(backends: Backends) -> DeviceHandler {
             })
             .await
             .unwrap();
-        DeviceHandler::new(Arc::new(adapter), Arc::new(device), Arc::new(queue))
+        DeviceHandler::new(adapter, device, queue)
     })
 }
 

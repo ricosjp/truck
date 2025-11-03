@@ -261,12 +261,12 @@ pub struct Light {
 /// [`Scene`]: ./struct.Scene.html
 #[derive(Debug, Clone)]
 pub struct DeviceHandler {
-    adapter: Arc<Adapter>,
-    device: Arc<Device>,
-    queue: Arc<Queue>,
+    adapter: Adapter,
+    device: Device,
+    queue: Queue,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct WindowHandler {
     window: Arc<winit::window::Window>,
     surface: Arc<Surface<'static>>,
@@ -342,7 +342,7 @@ pub struct WindowSceneDescriptor {
 /// `Scene` is the most important in `truck-platform`.
 /// This structure holds information about rendering and
 /// serves as a bridge to the actual rendering of `Rendered` objects.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Scene {
     device_handler: DeviceHandler,
     objects: SliceHashMap<RenderID, RenderObject>,
@@ -354,7 +354,7 @@ pub struct Scene {
 }
 
 /// Utility for wrapper
-#[derive(Debug, Deref, DerefMut)]
+#[derive(Clone, Debug, Deref, DerefMut)]
 pub struct WindowScene {
     #[deref]
     #[deref_mut]
