@@ -27,11 +27,14 @@ impl out::DisplayByStep for ElementarySurface {
                 let ref_direction_idx = idx + 4;
 
                 let revo = processor.entity();
-                let o = revo.origin();
-                let Line(p, _) = revo.entity_curve();
+                let trans = processor.transform();
+                let o = trans.transform_point(revo.origin());
+                let p = trans.transform_point(revo.entity_curve().0);
+                let axis = trans.transform_vector(revo.axis());
+
                 let location = out::StepDisplay::new(o, location_idx);
-                let raw_axis = out::VectorAsDirection(revo.axis());
-                let axis = out::StepDisplay::new(raw_axis, axis_idx);
+                let direction_axis = out::VectorAsDirection(axis);
+                let axis = out::StepDisplay::new(direction_axis, axis_idx);
                 let raw_ref_direction = out::VectorAsDirection((p - o).normalize());
                 let ref_direction = out::StepDisplay::new(raw_ref_direction, ref_direction_idx);
                 let radius = (p - o).magnitude();
