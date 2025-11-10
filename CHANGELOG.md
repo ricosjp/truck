@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Update docker container `gpu-test`
 - Fix step output of `CylindricalSurface`.
 - Remove `Arc` from the members of `DeviceHandler`.
 - Implement `border_wires` for `Face`.

@@ -1,13 +1,6 @@
-FROM nvidia/vulkan:1.2.133-450 AS gpu-test
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
-RUN apt-get update && apt-get install -y apt-utils tzdata && apt-get -y dist-upgrade
-RUN apt-get install -y curl git gcc g++ libssl-dev pkg-config cmake libfreetype6-dev libfontconfig1-dev xclip
-ENV RUST_HOME /usr/local/lib/rust
-ENV RUSTUP_HOME ${RUST_HOME}/rustup
-ENV CARGO_HOME ${RUST_HOME}/cargo
-RUN mkdir /usr/local/lib/rust && chmod 0755 $RUST_HOME
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > ${RUST_HOME}/rustup.sh \
-    && chmod +x ${RUST_HOME}/rustup.sh \
-    && ${RUST_HOME}/rustup.sh -y --no-modify-path
-ENV PATH $PATH:$CARGO_HOME/bin
+FROM rust:latest AS gpu-test
+ENV NVIDIA_DRIVER_CAPABILITIES "compute,graphics,utilities"
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
+    && dpkg -i cuda-keyring_1.1-1_all.deb
+RUN apt-get update && apt-get dist-upgrade -y && apt-get install nvidia-driver -y
 RUN cargo install cargo-make
