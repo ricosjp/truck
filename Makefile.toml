@@ -73,16 +73,6 @@ args = [
 	"--", "--nocapture", "--test-threads=1",
 ]
 
-[tasks.gpu-release-build-test]
-description = "Tests using GPU"
-command = "cargo"
-args = [
-	"test", "--release",
-	"-p", "truck-platform",
-	"-p", "truck-rendimpl",
-	"--", "--nocapture", "--test-threads=1",
-]
-
 [tasks.collect-gpu-artifacts]
 description = "Collects artifacts for gpu tests"
 script_runner = "@shell"
@@ -99,7 +89,7 @@ dependencies = ["clean", "cpu-test"]
 dependencies = ["clean", "cpu-nightly-test"]
 
 [tasks.ci-gpu-test]
-dependencies = ["clean", "gpu-release-build-test", "collect-gpu-artifacts"]
+dependencies = ["clean", "gpu-test", "collect-gpu-artifacts"]
 
 [tasks.wasm-build]
 description = "Build to wasm-target"

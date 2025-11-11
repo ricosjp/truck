@@ -37,8 +37,6 @@ gpu-test:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
         - cargo make ci-gpu-test
-    tags:
-        - gpu
     artifacts:
         paths:
             - images
