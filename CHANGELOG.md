@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Downgrade `cargo` for `cargo doc`. cf: https://github.com/rust-lang/rust/issues/148431
 - Update docker container and `Makefile.toml` for `gpu-test`.
 - Update docker container `gpu-test`
 - Fix step output of `CylindricalSurface`.
