@@ -2,7 +2,7 @@
 
 use algo::surface;
 use truck_base::{cgmath64::*, tolerance::*, *};
-use truck_geotrait::{polynomial::*, *};
+use truck_geotrait::{algo::DefaultSplitParams, polynomial::*, *};
 
 #[test]
 fn polysurface() {
@@ -236,7 +236,7 @@ fn exec_polysurface_division() -> bool {
     let curve0 = PolynomialCurve::<Point3>(coef0);
     let curve1 = PolynomialCurve::<Point3>(coef1);
     let poly = PolynomialSurface::by_tensor(curve0, curve1);
-    let (udiv, vdiv) = algo::surface::parameter_division(&poly, ((-1.0, 1.0), (-1.0, 1.0)), 0.1);
+    let (udiv, vdiv) = algo::surface::parameter_division(&poly, ((-1.0, 1.0), (-1.0, 1.0)), DefaultSplitParams::new(0.1));
     for (i, u) in udiv
         .windows(2)
         .flat_map(move |u| (1..3).map(move |i| (i, u)))

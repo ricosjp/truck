@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 
 impl<P> UnitParabola<P> {
@@ -51,8 +53,8 @@ where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
 {
     type Point = P;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<P>) {
-        algo::curve::parameter_division(self, range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: (f64, f64), split: T) -> (Vec<f64>, Vec<P>) {
+        algo::curve::parameter_division(self, range, split)
     }
 }
 

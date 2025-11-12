@@ -3,6 +3,7 @@ use super::{
     *,
 };
 use truck_geometry::prelude::*;
+use truck_geotrait::algo::DefaultSplitParams;
 use truck_meshalgo::prelude::*;
 use truck_topology::{shell::ShellCondition, Vertex};
 const TOL: f64 = 0.05;
@@ -105,17 +106,17 @@ fn independent_intersection() {
     ]
     .into();
     assert_eq!(shell1.shell_condition(), ShellCondition::Closed);
-    let poly_shell0 = shell0.triangulation(TOL);
-    let poly_shell1 = shell1.triangulation(TOL);
+    let poly_shell0 = shell0.triangulation(DefaultSplitParams::new(TOL));
+    let poly_shell1 = shell1.triangulation(DefaultSplitParams::new(TOL));
 
     let loops_store::LoopsStoreQuadruple {
         geom_loops_store0: loops_store0,
         geom_loops_store1: loops_store1,
         ..
     } = loops_store::create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1).unwrap();
-    let mut cls0 = divide_face::divide_faces(&shell0, &loops_store0, TOL).unwrap();
+    let mut cls0 = divide_face::divide_faces(&shell0, &loops_store0, DefaultSplitParams::new(TOL)).unwrap();
     cls0.integrate_by_component();
-    let mut cls1 = divide_face::divide_faces(&shell1, &loops_store1, TOL).unwrap();
+    let mut cls1 = divide_face::divide_faces(&shell1, &loops_store1, DefaultSplitParams::new(TOL)).unwrap();
     cls1.integrate_by_component();
 
     let [mut and, mut or, _] = cls0.and_or_unknown();

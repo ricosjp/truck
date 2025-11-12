@@ -1,3 +1,5 @@
+use crate::algo::TesselationSplitMethod;
+
 use super::*;
 
 type Tuple = (f64, f64);
@@ -191,26 +193,26 @@ pub trait ParameterDivision2D {
     /// # Panics
     ///
     /// `tol` must be greater than or equal to `TOLERANCE`.
-    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64)
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: ((f64, f64), (f64, f64)), split: T)
         -> (Vec<f64>, Vec<f64>);
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for &S {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+         split: T,
     ) -> (Vec<f64>, Vec<f64>) {
-        (*self).parameter_division(range, tol)
+        (*self).parameter_division(range, split)
     }
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for Box<S> {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+         split: T,
     ) -> (Vec<f64>, Vec<f64>) {
-        (**self).parameter_division(range, tol)
+        (**self).parameter_division(range, split)
     }
 }
