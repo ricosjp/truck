@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Developer Docs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #030712;
+      --fg: #f8fafc;
+      --fg-muted: #94a3b8;
+      --accent: #38bdf8;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #0f172a 0%, #030712 60%, #000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 3rem 2rem 2rem;
+      text-align: center;
+    }
+
+    h1 { font-size: 2.5rem; margin-bottom: 0.4rem; }
+    p.tagline { color: var(--fg-muted); font-size: 1.05rem; margin: 0 auto; max-width: 720px; }
+
+    .badge-row {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .badge {
+      font-size: 0.85rem;
+      padding: 0.25rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: var(--fg-muted);
+    }
+    .badge span { color: #e0f2fe; font-weight: 500; }
+
+    main {
+      flex: 1;
+      padding: 1rem 2rem 3rem;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .card {
+      padding: 1.25rem 1.35rem;
+      background: var(--card-bg);
+      border-radius: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      transition: border 0.2s ease, transform 0.2s ease;
+    }
+    .card:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #e2e8f0;
+    }
+    .card p {
+      margin: 0;
+      color: var(--fg-muted);
+      line-height: 1.55;
+      font-size: 0.92rem;
+    }
+
+    .card a {
+      margin-top: 0.5rem;
+      text-decoration: none;
+      color: var(--accent);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+    }
+
+    @media (max-width: 640px) {
+      header { padding: 2.2rem 1rem 1.5rem; }
+      main { padding: 0.5rem 1rem 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Truck Developer Docs</h1>
+    <p class="tagline">
+      A curated reference for the Truck CAD kernel. Dive into coordinate conventions, geometry traits, topology, modeling,
+      booleans, tessellation, rendering, and STEP interoperability—all in one place.
+    </p>
+    <div class="badge-row">
+      <div class="badge"><span>Updated:</span> Continuous</div>
+      <div class="badge"><span>Audience:</span> Kernel & tooling engineers</div>
+      <div class="badge"><span>Stack:</span> Rust · WGPU · STEP</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <div class="card">
+        <h2>truck-base<span>Geometry rules</span></h2>
+        <p>Coordinate conventions, tolerance strategy, point/vector semantics, and transform guidelines that every crate must obey.</p>
+        <a href="truck-base.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-geotrait<span>Geometry traits</span></h2>
+        <p>Parametric curves/surfaces, parameter search, and shared helpers that define the contract between geometry and topology.</p>
+        <a href="truck-geotrait.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-geometry<span>Splines & NURBS</span></h2>
+        <p>Knot vectors, curve/surface evaluation, control nets, and refinement operations powering Truck’s analytic geometry.</p>
+        <a href="truck-geometry.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-topology<span>B-rep data model</span></h2>
+        <p>Vertices, edges, wires, faces, shells, and orientation rules that form Truck’s boundary representation.</p>
+        <a href="truck-topology.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-modeling<span>Sweeps & shells</span></h2>
+        <p>Extrude, revolve, sweep-along-path, edge propagation, and shell assembly that produce solids for downstream ops.</p>
+        <a href="truck-modeling.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-shapeops<span>Booleans & healing</span></h2>
+        <p>Intersection, classification, rebuild pipeline, and diagnostics for performing CSG on Truck solids.</p>
+        <a href="truck-shapeops.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-meshalgo<span>Tessellation</span></h2>
+        <p>Tessellation, quadrangulation, subdivision, and smoothing algorithms that turn trimmed surfaces into meshes.</p>
+        <a href="truck-meshalgo.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-polymesh<span>Half-edge core</span></h2>
+        <p>The mesh data structure shared by tessellation, rendering, and experimental mesh-processing tools.</p>
+        <a href="truck-polymesh.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-platform<span>WGPU runtime</span></h2>
+        <p>Rendered trait, WGSL sandbox, and scene utilities that underpin all Truck viewers.</p>
+        <a href="truck-platform.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-rendimpl<span>Renderer</span></h2>
+        <p>CAD-specific pipelines (forward shading, wireframe, selection) built on truck-platform.</p>
+        <a href="truck-rendimpl.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-derivers<span>Proc macros</span></h2>
+        <p>Procedural derives generating geometry trait impls, STEP traits, and transform helpers with zero boilerplate.</p>
+        <a href="truck-derivers.html">Read guide →</a>
+      </div>
+      <div class="card">
+        <h2>truck-stepio<span>STEP I/O</span></h2>
+        <p>Import/export pipelines for ISO 10303, mapping STEP entities to Truck geometry and back.</p>
+        <a href="truck-stepio.html">Read guide →</a>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Truck Developer Docs · Built with ❤️ for kernel engineers
+  </footer>
+</body>
+</html>

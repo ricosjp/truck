@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Polymesh – Half-edge Mesh Core</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #04060f;
+      --fg: #f8fafc;
+      --fg-muted: #a3b0c7;
+      --accent: #f472b6;
+      --accent-soft: rgba(244, 114, 182, 0.18);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #141824 0%, #04060f 55%, #000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    body { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 275px;
+      padding: 1.75rem 1.9rem;
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #050713 0%, #050515 60%, #030311 100%);
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 0.4rem; }
+    .sidebar-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 0.2rem; }
+    .sidebar-subtitle { font-size: 0.85rem; color: var(--fg-muted); margin-bottom: 1.2rem; }
+    .toc-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin: 1.3rem 0 0.45rem; }
+
+    .toc { list-style: none; padding: 0; margin: 0; font-size: 0.94rem; }
+    .toc li { margin: 0.2rem 0; }
+    .toc a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .toc a::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border-subtle);
+    }
+    .toc a:hover { color: var(--accent); background: rgba(15, 23, 42, 0.9); }
+    .toc .toc-sub { margin-left: 0.9rem; margin-top: 0.12rem; }
+    .toc .toc-sub a { font-size: 0.84rem; padding-inline: 0.7rem; }
+
+    .main { flex: 1; padding: 2.3rem 3.6rem 3.5rem; max-width: 980px; margin: 0 auto; }
+    h1, h2, h3 { font-weight: 650; scroll-margin-top: 1.6rem; }
+    h1 { font-size: 2.2rem; margin-bottom: 0.3rem; }
+    .tagline { color: var(--fg-muted); font-size: 0.95rem; margin-bottom: 1.35rem; }
+    h2 { font-size: 1.5rem; margin-top: 2.2rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(31, 41, 55, 0.55); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; margin-top: 1.35rem; margin-bottom: 0.4rem; }
+    p { line-height: 1.65; font-size: 0.98rem; color: #e2e8f0; margin: 0.4rem 0 0.75rem; }
+    ul { padding-left: 1.15rem; margin: 0.35rem 0 0.75rem; }
+    li { margin: 0.2rem 0; line-height: 1.55; }
+    code { font-family: var(--font-mono); font-size: 0.86rem; background: rgba(15, 23, 42, 0.95); padding: 0.12rem 0.35rem; border-radius: 0.3rem; border: 1px solid rgba(244, 114, 182, 0.35); color: #ffe4f1; }
+    .pill { display: inline-flex; gap: 0.45rem; align-items: center; padding: 0.18rem 0.75rem; border-radius: 999px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(244, 114, 182, 0.4); margin-bottom: 0.7rem; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.15rem; }
+    .badge { font-size: 0.8rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(39, 39, 47, 0.92); border: 1px solid rgba(63, 63, 70, 0.85); color: var(--fg-muted); }
+    .badge span { color: #f8fafc; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Truck Docs</div>
+    <div class="sidebar-title">truck-polymesh</div>
+    <div class="sidebar-subtitle">Half-edge mesh & tess data model</div>
+
+    <div class="toc-title">On this page</div>
+    <ul class="toc">
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#halfedge">1. Half-edge basics</a></li>
+      <li>
+        <a href="#data-structures">2. Data structures</a>
+        <ul class="toc-sub">
+          <li><a href="#vertices">2.1 Vertices</a></li>
+          <li><a href="#half-edges">2.2 Half-edges</a></li>
+          <li><a href="#faces">2.3 Faces & loops</a></li>
+        </ul>
+      </li>
+      <li><a href="#tessellation">3. Feeding tessellation</a></li>
+      <li><a href="#algorithms">4. Algorithms & utilities</a></li>
+      <li><a href="#integration">5. Integration points</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div id="intro">
+      <div class="pill">Module Guide</div>
+      <h1>Truck Polymesh</h1>
+      <p class="tagline">
+        Defines the half-edge mesh representation used throughout Truck for tessellation, rendering, and mesh-processing
+        algorithms.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-polymesh</div>
+        <div class="badge"><span>Kernel role:</span> Mesh data model</div>
+        <div class="badge"><span>Highlights:</span> Half-edge structure, tess integration, mesh algorithms</div>
+      </div>
+    </div>
+
+    <section id="halfedge">
+      <h2>1. Half-edge basics</h2>
+      <p>
+        The half-edge structure splits every edge into two directed half-edges. Each half-edge knows:
+      </p>
+      <ul>
+        <li>Its origin vertex.</li>
+        <li>The adjacent face.</li>
+        <li>The opposite half-edge (twin).</li>
+        <li>The next/prev half-edge around its face loop.</li>
+      </ul>
+      <p>
+        This design makes neighborhood queries (one-ring, star, opposite faces) constant time, and supports operations such
+        as edge flips, collapses, and propagation of attributes like UVs.
+      </p>
+    </section>
+
+    <section id="data-structures">
+      <h2>2. Data structures</h2>
+      <h3 id="vertices">2.1 Vertices</h3>
+      <p>Vertices store positions, optional normals, and a pointer to one outgoing half-edge. You can traverse all incident faces/edges by following <code>half_edge → twin → next</code>.</p>
+
+      <h3 id="half-edges">2.2 Half-edges</h3>
+      <p>
+        Each half-edge holds indices for <code>origin</code>, <code>twin</code>, <code>next</code>, <code>prev</code>, and its
+        incident face. Attribute storage (boundary flags, UV direction) lives here too, making it easy to propagate data
+        during tessellation or boolean operations.
+      </p>
+
+      <h3 id="faces">2.3 Faces &amp; loops</h3>
+      <p>
+        Faces reference one of their bounding half-edges. Since loops can contain holes, inner loops are represented by
+        chains of half-edges whose face pointers all reference the outer face. Traversal follows the standard half-edge
+        “next” pointers.
+      </p>
+    </section>
+
+    <section id="tessellation">
+      <h2>3. Feeding tessellation</h2>
+      <p>
+        Results from <code>truck-meshalgo</code> or analytic meshing pipelines emit vertices/faces in the <code>truck-polymesh</code>
+        format:
+      </p>
+      <ul>
+        <li>Vertices store world-space positions and optional UVs or normals.</li>
+        <li>Edges capture adjacency so shading and boolean operations remain watertight.</li>
+        <li>Supports both triangle and quad faces; higher valence polygons can be stored or triangulated later.</li>
+      </ul>
+    </section>
+
+    <section id="algorithms">
+      <h2>4. Algorithms &amp; utilities</h2>
+      <p>While most algorithms live in <code>truck-meshalgo</code>, this crate provides utility functions:</p>
+      <ul>
+        <li>Traversal helpers (neighbors, loops, boundary detection).</li>
+        <li>Attribute propagation (copy normals/UVs along shared edges).</li>
+        <li>Conversion helpers (OBJ import/export for debug, used by the sample tools).</li>
+      </ul>
+    </section>
+
+    <section id="integration">
+      <h2>5. Integration points</h2>
+      <ul>
+        <li><strong>truck-modeling</strong> → <strong>truck-meshalgo</strong> → <strong>truck-polymesh</strong>: shapes are tessellated into meshes.</li>
+        <li><strong>truck-platform/truck-rendimpl</strong> consume <code>truck-polymesh</code> for rendering.</li>
+        <li>Mesh-processing examples (loop subdivision, smoothing) manipulate this data structure directly.</li>
+      </ul>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Keep half-edge invariants</strong> – whenever you edit a face/edge, update twin/next/prev pointers.</li>
+        <li><strong>Store UVs</strong> – tessellation should capture UV coordinates so trimming and texturing remain possible.</li>
+        <li><strong>Use consistent winding</strong> – follow Truck’s orientation rules (usually CCW for outward normals).</li>
+        <li><strong>Validate</strong> – run manifold/boundary checks after editing meshes to catch topology errors early.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-polymesh</code> provides a robust half-edge mesh that underpins tessellation, rendering, and experimental mesh-processing tools. Understanding its structure makes it easier to integrate new algorithms or diagnostics into the Truck pipeline.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li>Use half-edge helpers when adding/removing faces to avoid pointer mistakes.</li>
+        <li>Ensure tessellated data includes normals and UVs if downstream consumers need them.</li>
+        <li>When exporting, preserve vertex order and attributes (OBJ helpers are provided).</li>
+        <li>Document new mesh utilities or attribute conventions in the README and this guide.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Rendimpl – CAD Renderer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #02060f;
+      --fg: #f8fafc;
+      --fg-muted: #9ca3af;
+      --accent: #4ade80;
+      --accent-soft: rgba(74, 222, 128, 0.2);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #0c1424 0%, #02060f 55%, #000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    body { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 275px;
+      padding: 1.75rem 1.9rem;
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #030a19 0%, #040c18 45%, #020610 100%);
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 0.4rem; }
+    .sidebar-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 0.2rem; }
+    .sidebar-subtitle { font-size: 0.85rem; color: var(--fg-muted); margin-bottom: 1.2rem; }
+    .toc-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin: 1.3rem 0 0.45rem; }
+
+    .toc { list-style: none; padding: 0; margin: 0; font-size: 0.94rem; }
+    .toc li { margin: 0.2rem 0; }
+    .toc a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .toc a::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border-subtle);
+    }
+    .toc a:hover { color: var(--accent); background: rgba(15, 23, 42, 0.9); }
+    .toc .toc-sub { margin-left: 0.95rem; margin-top: 0.12rem; }
+    .toc .toc-sub a { font-size: 0.84rem; padding-inline: 0.7rem; }
+
+    .main { flex: 1; padding: 2.3rem 3.6rem 3.5rem; max-width: 980px; margin: 0 auto; }
+    h1, h2, h3 { font-weight: 650; scroll-margin-top: 1.6rem; }
+    h1 { font-size: 2.2rem; margin-bottom: 0.3rem; }
+    .tagline { color: var(--fg-muted); font-size: 0.95rem; margin-bottom: 1.35rem; }
+    h2 { font-size: 1.5rem; margin-top: 2.2rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(31, 41, 55, 0.55); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; margin-top: 1.35rem; margin-bottom: 0.4rem; }
+    p { line-height: 1.65; font-size: 0.98rem; color: #e2e8f0; margin: 0.4rem 0 0.75rem; }
+    ul { padding-left: 1.15rem; margin: 0.35rem 0 0.75rem; }
+    li { margin: 0.2rem 0; line-height: 1.55; }
+    code { font-family: var(--font-mono); font-size: 0.86rem; background: rgba(15, 23, 42, 0.95); padding: 0.12rem 0.35rem; border-radius: 0.3rem; border: 1px solid rgba(74, 222, 128, 0.35); color: #dcfce7; }
+    pre { margin: 0.9rem 0 1.1rem; padding: 0.95rem 1rem; background: rgba(15, 23, 42, 0.85); border-radius: 0.75rem; border: 1px solid rgba(74, 222, 128, 0.35); overflow-x: auto; }
+    pre code { background: transparent; border: none; color: #dcfce7; font-size: 0.88rem; line-height: 1.5; }
+    .pill { display: inline-flex; gap: 0.45rem; align-items: center; padding: 0.18rem 0.75rem; border-radius: 999px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(74, 222, 128, 0.4); margin-bottom: 0.7rem; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.15rem; }
+    .badge { font-size: 0.8rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(39, 39, 47, 0.92); border: 1px solid rgba(63, 63, 70, 0.85); color: var(--fg-muted); }
+    .badge span { color: #f8fafc; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Truck Docs</div>
+    <div class="sidebar-title">truck-rendimpl</div>
+    <div class="sidebar-subtitle">CAD renderer built on truck-platform</div>
+
+    <div class="toc-title">On this page</div>
+    <ul class="toc">
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#layers">1. Renderer layers</a></li>
+      <li>
+        <a href="#pipelines">2. Render pipelines</a>
+        <ul class="toc-sub">
+          <li><a href="#forward">2.1 Forward shading</a></li>
+          <li><a href="#wireframe">2.2 Wireframe overlay</a></li>
+          <li><a href="#selection">2.3 Selection buffer</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#mesh-upload">3. Mesh upload</a>
+        <ul class="toc-sub">
+          <li><a href="#tess">3.1 From tessellation</a></li>
+          <li><a href="#instancing">3.2 Instancing</a></li>
+        </ul>
+      </li>
+      <li><a href="#interactivity">4. Interactivity & camera</a></li>
+      <li><a href="#integration">5. Integration with other crates</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div id="intro">
+      <div class="pill">Module Guide</div>
+      <h1>Truck Rendimpl</h1>
+      <p class="tagline">
+        The high-level renderer for Truck geometry. Builds on <code>truck-platform</code> to provide CAD-friendly shading,
+        selection, and camera control out of the box.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-rendimpl</div>
+        <div class="badge"><span>Backend:</span> WGPU via truck-platform</div>
+        <div class="badge"><span>Highlights:</span> Tess mesh upload, forward shading, selection buffers</div>
+      </div>
+    </div>
+
+    <section id="layers">
+      <h2>1. Renderer layers</h2>
+      <p>Rendimpl sits above truck-platform:</p>
+      <ul>
+        <li><strong>truck-platform</strong> – device/queue/context + <code>Rendered</code> trait</li>
+        <li><strong>truck-rendimpl</strong> – defines concrete rendered objects for CAD (meshes, wires, selection, axes)</li>
+        <li><strong>Samples/viewers</strong> – use <code>truck-rendimpl</code> to visualize modeling/tessellation output</li>
+      </ul>
+    </section>
+
+    <section id="pipelines">
+      <h2>2. Render pipelines</h2>
+      <h3 id="forward">2.1 Forward shading</h3>
+      <p>Implements a configurable forward renderer:</p>
+      <ul>
+        <li>Supports multiple lights, toon/PBR-ish shading toggles.</li>
+        <li>Handles per-face/vertex colors and normals from tessellation.</li>
+        <li>Exposes uniform buffers for camera, lighting, and selection state.</li>
+      </ul>
+
+      <h3 id="wireframe">2.2 Wireframe overlay</h3>
+      <p>Draws mesh edges with optional depth offset to visualize topology.</p>
+
+      <h3 id="selection">2.3 Selection buffer</h3>
+      <p>Rendimpl renders an off-screen buffer encoding IDs per primitive. Mouse picking reads this buffer to determine which face/edge/vertex is under the cursor.</p>
+    </section>
+
+    <section id="mesh-upload">
+      <h2>3. Mesh upload</h2>
+      <h3 id="tess">3.1 From tessellation</h3>
+      <p>Meshes from <code>truck-meshalgo</code> are converted into GPU buffers:</p>
+      <ul>
+        <li>Vertex positions, normals, UVs.</li>
+        <li>Index buffers for triangles/quads.</li>
+        <li>Instance data for repeated geometry (see below).</li>
+      </ul>
+
+      <h3 id="instancing">3.2 Instancing</h3>
+      <p>Instances encode per-object transforms, colors, and selection flags. Rendimpl uses instancing to render large scenes efficiently.</p>
+    </section>
+
+    <section id="interactivity">
+      <h2>4. Interactivity &amp; camera</h2>
+      <p>Out-of-the-box camera controls (orbit/pan/zoom) and input handling integrate with the selection buffer and WGSL overlay. Viewers can focus on geometry and let rendimpl manage interaction plumbing.</p>
+    </section>
+
+    <section id="integration">
+      <h2>5. Integration with other crates</h2>
+      <ul>
+        <li><strong>truck-modeling / truck-shapeops</strong> – produce solids whose tessellated meshes are uploaded here.</li>
+        <li><strong>truck-platform</strong> – supplies device/context and <code>Rendered</code> trait implementations.</li>
+        <li><strong>truck-meshalgo / truck-polymesh</strong> – provide mesh data ready for upload.</li>
+      </ul>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Reuse GPU resources</strong> – avoid recreating buffers when meshes only change transforms.</li>
+        <li><strong>Synchronize selection state</strong> – keep CPU-side IDs in sync with the selection buffer.</li>
+        <li><strong>Coordinate conventions</strong> – maintain Truck’s right-handed Z-up view so modeling output matches expectations.</li>
+        <li><strong>Hot shader reload</strong> – reuse truck-platform’s shader reload utilities when iterating on WGSL.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-rendimpl</code> gives Truck a CAD-ready renderer: it understands tessellated meshes, draws wireframes, handles selection, and integrates seamlessly with the rest of the engine.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li><strong>Init</strong> – set up truck-platform context before constructing rendimpl objects.</li>
+        <li><strong>Mesh data</strong> – ensure tessellation outputs normals/UVs so shading works.</li>
+        <li><strong>Selection IDs</strong> – assign unique IDs per entity when uploading to selection buffer.</li>
+        <li><strong>Docs</strong> – update README/guide whenever new pipelines or viewer features are added.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

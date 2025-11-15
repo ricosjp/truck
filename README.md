@@ -99,3 +99,7 @@ There are some learning resources for using truck v0.6.x series.
 - [truck-tutorial](https://ricos.gitlab.io/truck-tutorial/v0.6/)
 - [truck-tutorial-ja](https://ricos.gitlab.io/truck-tutorial-ja/v0.6/) (Japanese version)
 - [truck-tutorial-code](https://github.com/ricosjp/truck-tutorial-code/tree/v0.6) (pre-created sample code)
+
+## Developer Documentation
+
+- [Geometry foundations (truck-base docs)](developer_docs)

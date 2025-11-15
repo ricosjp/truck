@@ -4,6 +4,52 @@
 
 Crate for operation shapes. Provides boolean operations to Solid, and shape healing for importing shapes from other CAD systems.
 
+## Boolean pipeline
+
+Shape-ops performs CSG on `truck-topology` solids backed by `truck-geometry`. The pipeline is similar to other B-rep kernels:
+
+1. **Intersections** – compute curve/surface intersections between faces of operand A and B.
+2. **Classification** – decide if each face/edge/vertex should be kept, discarded, or split based on the desired Boolean (AND, OR, XOR, SUBTRACT).
+3. **Rebuild** – create new faces, edges, and shells from the classified fragments.
+
+### Detecting intersections
+
+Intersections are found by pairing candidate faces/edges and solving:
+
+- Surface–surface intersections produce trimming curves and split both faces.
+- Edge–surface intersections ensure wires remain consistent if an edge pierces the other body without a face–face intersection.
+
+The kernel projects intersection curves back into each face’s UV domain, and uses `truck-geometry` evaluators to refine them until they meet global tolerance. Spatial partitioning trims the search space so we do not test every face against every other face.
+
+### Building new faces
+
+Once intersection curves split the input faces, the Boolean rebuilds new faces by:
+
+1. Clipping each face’s UV domain with the intersection loops.
+2. Keeping or discarding trimmed regions based on classification.
+3. Sewing adjacent regions to form shells for the result solid.
+
+Trim loops referencing the other operand become part of the resulting faces, so the output shell stays watertight.
+
+### Classification logic
+
+Every fragment (face region, edge segment) is classified by evaluating a representative point against the other solid:
+
+- Inside/outside tests use point-in-solid queries driven by ray casting or signed distance proxies.
+- Orientation of normals relative to the Boolean operator determines whether to keep the fragment.
+
+For example, an AND keeps regions where both operands classify as “inside,” while a SUBTRACT keeps regions of A that classify “outside” B but flips normals when necessary.
+
+### Failure cases
+
+B-rep Booleans are numerically delicate. Truck’s shape-ops can fail when:
+
+- Intersections are tangent or nearly coincident, leading to unstable trimming curves.
+- Input shells are non-manifold or have inconsistent orientation.
+- Tolerances between operands differ significantly (e.g., one mesh is much coarser).
+
+In such cases, the solver may drop fragments or leave holes. Healing tools in this crate (and alignment of tolerances before the Boolean) help mitigate these issues, but perfect robustness requires well-conditioned inputs.
+
 ## Sample Codes
 
 ### punched-cube-shapeops

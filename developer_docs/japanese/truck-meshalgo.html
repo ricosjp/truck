@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-meshalgo ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { margin:0; background:#040914; color:#e0f2fe; font-family:"Inter","Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.7; }
+    main { max-width:780px; margin:0 auto; padding:2rem 1.5rem 3rem; }
+    h1 { font-size:2rem; }
+    h2 { margin-top:2rem; border-bottom:1px solid rgba(255,255,255,0.25); padding-bottom:0.2rem; }
+    ul { padding-left:1.2rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>truck-meshalgo : テッセレーションとメッシュ処理</h1>
+    <p>曲面からポリゴンメッシュを生成し、四角化やサブディビジョン、スムージングを行うアルゴリズム群です。</p>
+
+    <section>
+      <h2>1. テッセレーション</h2>
+      <ul>
+        <li>曲面の曲率・トリム密度・ユーザ指定トレランスに基づく自動サンプリング。</li>
+        <li>トリムは UV 空間でクリップし、3D に戻して <code>truck-polymesh</code> へ変換。</li>
+        <li>出力は OBJ や JSON（例: <code>tessellate-shape</code>）にエクスポート可能。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. リファイン</h2>
+      <ul>
+        <li><strong>Loop サブディビジョン</strong> : 三角形メッシュを滑らかにするサンプル（<code>octahedron-subdivision</code>）。</li>
+        <li><strong>四角化</strong> : <code>requadrangulate-buddha</code> などで大規模メッシュを処理。</li>
+        <li><strong>領域分割</strong> : フィレット面や平面パッチに分割する実験的ツール。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. 法線・スムージング</h2>
+      <p>Stanford bunny 等のサンプルで面法線から頂点法線を再計算し、必要に応じて元の曲面へ投影してノイズを減らします。</p>
+    </section>
+
+    <section>
+      <h2>4. ベストプラクティス</h2>
+      <ul>
+        <li>メッシュを編集したらハーフエッジの一貫性を検証する。</li>
+        <li>テッセレーション後も UV / 法線属性を保持し、下流のレンダリングやテクスチャに備える。</li>
+        <li>大規模データでは BVH 等で高速化する（例: happy-buddha テスト）。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

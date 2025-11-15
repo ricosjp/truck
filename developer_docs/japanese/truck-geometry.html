@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-geometry ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      background: #060b15;
+      color: #f8fafc;
+      font-family: "Inter", "Hiragino Sans", "Noto Sans JP", sans-serif;
+      line-height: 1.7;
+    }
+    main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+    }
+    h1 { font-size: 2rem; }
+    h2 { margin-top: 2rem; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 0.2rem; }
+    ul { padding-left: 1.2rem; }
+    code { background: rgba(255,255,255,0.1); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>truck-geometry : NURBS / ノットベクトル</h1>
+    <p>
+      <code>truck-geometry</code> は Truck の曲線・曲面実装を提供します。ノットベクトル、B-spline、NURBS の評価や
+      コントロールポイント操作を行う際の注意事項を整理しました。
+    </p>
+
+    <section>
+      <h2>1. ノットベクトル</h2>
+      <ul>
+        <li>非減少列で保持し、通常は 0–1 に正規化します。</li>
+        <li>多重度が連続階数を決めるため、挿入・削除後は整合性を検証します。</li>
+        <li>提供されるユーティリティで clamp / insert / remove を行い、直接書き換えは避けます。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. 曲線評価</h2>
+      <p>
+        De Boor 型アルゴリズムで <code>evaluate(t)</code>、<code>der(t)</code>、<code>der2(t)</code> を計算します。
+        有効区間（例: <code>[knots[p], knots[n-p])</code>）を越えるパラメータは正規化後に評価します。
+        NURBS では重み付き同次座標で計算し、最後に正規化します。
+      </p>
+    </section>
+
+    <section>
+      <h2>3. 曲面</h2>
+      <ul>
+        <li>二方向のノットベクトルとコントロールネットからテンソル積で生成。</li>
+        <li><code>uder</code> / <code>vder</code> / <code>uvder</code> などの偏微分を備え、
+          <code>ParametricSurface3D</code> で法線を計算します。</li>
+        <li>トリム情報は <code>truck-topology</code> 側で管理されるため、UV 範囲を正確に返します。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. コントロールポイントとリファイン</h2>
+      <ul>
+        <li>ローカル編集のみが影響するよう、ポイント移動後は該当スパンの再計算のみを行います。</li>
+        <li>次数上げ、ノット挿入、再パラメトリ化のユーティリティが用意されています。</li>
+        <li>トレランスに依存する操作では <code>truck-base</code> の値を渡してください。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

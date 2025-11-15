@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck 開発ドキュメント</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #030712;
+      --fg: #f8fafc;
+      --fg-muted: #a1a1aa;
+      --accent: #38bdf8;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      background: radial-gradient(circle at top, #0f172a 0%, #030712 55%, #000 100%);
+      color: var(--fg);
+    }
+    header {
+      padding: 3rem 1.5rem 1.5rem;
+      text-align: center;
+    }
+    h1 { font-size: 2.4rem; margin-bottom: 0.5rem; }
+    .tagline { color: var(--fg-muted); max-width: 760px; margin: 0 auto; line-height: 1.6; }
+    main { padding: 0 1.5rem 3rem; }
+    .doc-grid {
+      list-style: none;
+      padding: 0;
+      margin: 0 auto;
+      max-width: 960px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .doc-grid li {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0.9rem;
+      padding: 1rem 1.1rem;
+    }
+    .doc-grid a {
+      text-decoration: none;
+      color: var(--fg);
+      font-weight: 600;
+      display: block;
+      line-height: 1.5;
+    }
+    .doc-grid span {
+      color: var(--accent);
+      display: block;
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Truck 開発ドキュメント</h1>
+    <p class="tagline">
+      Truck CAD カーネルの主要コンポーネントを俯瞰できるハブページです。座標系からトポロジ、NURBS、ブーリアン、レンダリング、STEP 連携まで、開発に必要な規約とベストプラクティスをまとめています。
+    </p>
+  </header>
+
+  <main>
+    <section>
+      <ul class="doc-grid">
+        <li><a href="truck-base.html"><span>truck-base</span> 幾何カーネルの基本規約</a></li>
+        <li><a href="truck-geotrait.html"><span>truck-geotrait</span> 曲線・曲面トレイト</a></li>
+        <li><a href="truck-geometry.html"><span>truck-geometry</span> NURBS / ノットベクトル</a></li>
+        <li><a href="truck-topology.html"><span>truck-topology</span> B-Rep トポロジ</a></li>
+        <li><a href="truck-modeling.html"><span>truck-modeling</span> スイープとソリッド生成</a></li>
+        <li><a href="truck-shapeops.html"><span>truck-shapeops</span> ブーリアン &amp; ヒーリング</a></li>
+        <li><a href="truck-meshalgo.html"><span>truck-meshalgo</span> テッセレーション &amp; メッシュ処理</a></li>
+        <li><a href="truck-polymesh.html"><span>truck-polymesh</span> ハーフエッジメッシュ</a></li>
+        <li><a href="truck-platform.html"><span>truck-platform</span> WGPU プラットフォーム</a></li>
+        <li><a href="truck-rendimpl.html"><span>truck-rendimpl</span> CAD 向けレンダラー</a></li>
+        <li><a href="truck-derivers.html"><span>truck-derivers</span> 派生マクロ</a></li>
+        <li><a href="truck-stepio.html"><span>truck-stepio</span> STEP I/O</a></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
