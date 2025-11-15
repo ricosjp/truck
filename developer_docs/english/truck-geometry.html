@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Geometry – Splines, Knots, NURBS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #030712;
+      --bg-alt: #0f172a;
+      --fg: #f8fafc;
+      --fg-muted: #a7b0c8;
+      --accent: #34d399;
+      --accent-soft: rgba(52, 211, 153, 0.15);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #0b1120 0%, #030712 55%, #000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    body { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 270px;
+      padding: 1.75rem 1.9rem;
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #020617 0%, #020617 40%, #030710 100%);
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 0.45rem; }
+    .sidebar-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 0.25rem; }
+    .sidebar-subtitle { font-size: 0.86rem; color: var(--fg-muted); margin-bottom: 1.25rem; }
+    .toc-title { font-size: 0.83rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin: 1.35rem 0 0.45rem; }
+
+    .toc { list-style: none; padding: 0; margin: 0; font-size: 0.94rem; }
+    .toc li { margin: 0.18rem 0; }
+    .toc a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .toc a::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border-subtle);
+    }
+    .toc a:hover { color: var(--accent); background: rgba(15, 23, 42, 0.85); }
+    .toc .toc-sub { margin-left: 0.85rem; margin-top: 0.15rem; }
+    .toc .toc-sub a { font-size: 0.85rem; padding-inline: 0.7rem; }
+
+    .main { flex: 1; padding: 2.35rem 3.6rem 3.6rem; max-width: 980px; margin: 0 auto; }
+    h1, h2, h3, h4 { font-weight: 650; scroll-margin-top: 1.6rem; }
+    h1 { font-size: 2.25rem; margin-bottom: 0.3rem; }
+    .tagline { color: var(--fg-muted); font-size: 0.96rem; margin-bottom: 1.35rem; }
+    h2 { font-size: 1.5rem; margin-top: 2.25rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(31, 41, 55, 0.6); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.16rem; margin-top: 1.5rem; margin-bottom: 0.45rem; }
+    p { line-height: 1.65; font-size: 0.99rem; color: #e2e8f0; margin: 0.4rem 0 0.75rem; }
+    ul { padding-left: 1.15rem; margin: 0.35rem 0 0.75rem; }
+    li { margin: 0.2rem 0; line-height: 1.55; }
+    code { font-family: var(--font-mono); font-size: 0.87rem; background: rgba(15, 23, 42, 0.92); padding: 0.12rem 0.35rem; border-radius: 0.3rem; border: 1px solid rgba(16, 185, 129, 0.35); color: #d1fae5; }
+    pre { margin: 0.9rem 0 1.1rem; padding: 0.95rem 1rem; background: rgba(15, 23, 42, 0.85); border-radius: 0.75rem; border: 1px solid rgba(16, 185, 129, 0.35); overflow-x: auto; }
+    pre code { background: transparent; border: none; color: #ecfdf5; font-size: 0.88rem; line-height: 1.5; }
+    .pill { display: inline-flex; gap: 0.45rem; align-items: center; padding: 0.18rem 0.75rem; border-radius: 999px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(16, 185, 129, 0.4); margin-bottom: 0.7rem; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.1rem; }
+    .badge { font-size: 0.8rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(39, 39, 47, 0.95); border: 1px solid rgba(63, 63, 70, 0.85); color: var(--fg-muted); }
+    .badge span { color: #f8fafc; font-weight: 500; }
+    .callout {
+      border-radius: 0.75rem;
+      border: 1px solid var(--border-subtle);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.98));
+      padding: 0.85rem 1rem;
+      margin: 1.1rem 0;
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+    }
+    .callout strong { color: #ecfccb; }
+
+    @media (max-width: 960px) {
+      body { flex-direction: column; }
+      .sidebar { position: relative; width: 100%; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .main { padding: 1.6rem 1.3rem 2.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Truck Docs</div>
+    <div class="sidebar-title">truck-geometry</div>
+    <div class="sidebar-subtitle">Spline/NURBS primitives for the kernel</div>
+
+    <div class="toc-title">On this page</div>
+    <ul class="toc">
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#foundations">1. Geometry foundations</a></li>
+      <li>
+        <a href="#knots">2. Knot vectors</a>
+        <ul class="toc-sub">
+          <li><a href="#knot-basics">2.1 Basics & terminology</a></li>
+          <li><a href="#knot-ops">2.2 Operations</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#curves">3. Curves & evaluation</a>
+        <ul class="toc-sub">
+          <li><a href="#evaluation">3.1 De Boor & derivatives</a></li>
+          <li><a href="#weights">3.2 Weights & normalization</a></li>
+          <li><a href="#domains">3.3 Parameter domains</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#surfaces">4. Surfaces</a>
+        <ul class="toc-sub">
+          <li><a href="#tensor-product">4.1 Tensor-product construction</a></li>
+          <li><a href="#surface-ops">4.2 Operations</a></li>
+        </ul>
+      </li>
+      <li><a href="#control-points">5. Control net management</a></li>
+      <li><a href="#integration">6. Integration with geotrait</a></li>
+      <li><a href="#advanced">7. Advanced operations</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+      <li><a href="#checklist">9. Implementation checklist</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div id="intro">
+      <div class="pill">Module Guide</div>
+      <h1>Truck Geometry</h1>
+      <p class="tagline">
+        Practical guidance for working with Truck’s knot vectors, B-splines, and NURBS
+        implementations—the building blocks behind curves, surfaces, and downstream modeling.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-geometry</div>
+        <div class="badge"><span>Precision:</span> f64, cgmath-backed</div>
+        <div class="badge"><span>Highlights:</span> Knot vectors, NURBS curves/surfaces, refinement</div>
+      </div>
+    </div>
+
+    <section id="foundations">
+      <h2>1. Geometry foundations</h2>
+      <p>
+        <code>truck-geometry</code> offers spline primitives that satisfy the traits defined in
+        <code>truck-geotrait</code>. You get:
+      </p>
+      <ul>
+        <li><strong>Knot vectors</strong> – normalized, with helper methods for insertion, removal, and clamping.</li>
+        <li><strong>B-spline / NURBS curves</strong> – parameter evaluation, derivatives, reparameterization.</li>
+        <li><strong>NURBS surfaces</strong> – tensor-product construction, partial derivatives, normals.</li>
+      </ul>
+      <p>
+        These components are used by modeling (sweeps, lofts), topology (edge trimming), and shape ops (Booleans).
+        Keeping them well-behaved is critical for kernel stability.
+      </p>
+    </section>
+
+    <section id="knots">
+      <h2>2. Knot vectors</h2>
+      <p>Knot vectors partition the parameter axis and dictate basis support.</p>
+
+      <h3 id="knot-basics">2.1 Basics &amp; terminology</h3>
+      <ul>
+        <li><strong>Degree (p)</strong> – polynomial degree of the B-spline basis.</li>
+        <li><strong>Order (p + 1)</strong> – number of control points influencing a span.</li>
+        <li><strong>Multiplicity</strong> – repeated knot values reduce continuity.</li>
+      </ul>
+      <p>Truck stores knots in <em>normalized</em> form (typically [0, 1]). Operators assume non-decreasing order.</p>
+
+      <h3 id="knot-ops">2.2 Operations</h3>
+      <p>Common helper methods:</p>
+      <ul>
+        <li><code>insert_knot(t)</code> – increases multiplicity while preserving shape.</li>
+        <li><code>remove_knot(t)</code> – if error tolerance is met.</li>
+        <li><code>clamp()</code> – forces start/end multiplicities = degree + 1.</li>
+      </ul>
+      <p>
+        Refinement algorithms (knot insertion/removal, degree elevation) rely on these utilities. Always re-normalize and
+        assert non-decreasing order after manual edits.
+      </p>
+    </section>
+
+    <section id="curves">
+      <h2>3. Curves &amp; evaluation</h2>
+      <p>Curves are represented via control points, optional weights, and a knot vector.</p>
+
+      <h3 id="evaluation">3.1 De Boor &amp; derivatives</h3>
+      <p>
+        Evaluation uses a De Boor-style algorithm. APIs are typically:
+      </p>
+      <pre><code>let p = curve.evaluate(t);
+let dp = curve.der(t);
+let d2 = curve.der2(t);</code></pre>
+      <p>
+        Derivatives follow the standard recursive basis derivative formulas. Keep parameters within the valid interval
+        (<code>[knots[p], knots[n-p])</code>) or normalize them before evaluating.
+      </p>
+
+      <h3 id="weights">3.2 Weights &amp; normalization</h3>
+      <p>
+        NURBS curves multiply control points by weights before performing the basis blend, then divide by the total
+        weight. When editing control points:
+      </p>
+      <ul>
+        <li>Use homogeneous coordinates internally (<code>[wx, wy, wz, w]</code>).</li>
+        <li>Expose only affine <code>Point3</code> values to consumers.</li>
+        <li>Normalize weights to avoid precision issues.</li>
+      </ul>
+
+      <h3 id="domains">3.3 Parameter domains</h3>
+      <p>
+        Public APIs default to normalized domains. When bridging to <code>truck-geotrait</code>,
+        ensure <code>parameter_range</code> matches the curve’s actual (non-normalized) span so
+        search/project algorithms behave correctly.
+      </p>
+    </section>
+
+    <section id="surfaces">
+      <h2>4. Surfaces</h2>
+      <p>NURBS surfaces are tensor products of two curve directions.</p>
+
+      <h3 id="tensor-product">4.1 Tensor-product construction</h3>
+      <p>
+        Define separate <code>u</code> and <code>v</code> knot vectors plus a grid of control points:
+      </p>
+      <pre><code>let surf = NurbsSurface::new(control_net, u_knots, v_knots, degree_u, degree_v);</code></pre>
+      <p>Evaluation recursively blends along one direction, then the other.</p>
+
+      <h3 id="surface-ops">4.2 Operations</h3>
+      <ul>
+        <li><strong>Partial derivatives</strong> – <code>uder</code>, <code>vder</code>, <code>uvder</code>, etc.</li>
+        <li><strong>Normals</strong> – computed as <code>uder × vder</code>; Truck normalizes them for integration with <code>ParametricSurface3D</code>.</li>
+        <li><strong>Trimming support</strong> – surfaces expose parameter ranges and can be paired with trim curves in <code>truck-topology</code>.</li>
+      </ul>
+    </section>
+
+    <section id="control-points">
+      <h2>5. Control net management</h2>
+      <p>Control points dictate curve/surface shape. Guidelines:</p>
+      <ul>
+        <li>Store them as <code>Point3</code> (and optionally weights) in row-major order for readability.</li>
+        <li>Use provided iterators/accessors for mutation—direct indexing risks mismatched nets.</li>
+        <li>Local edits propagate only through spans influenced by the edited point, enabling efficient modeling tools.</li>
+      </ul>
+    </section>
+
+    <section id="integration">
+      <h2>6. Integration with truck-geotrait</h2>
+      <p>
+        All curves/surfaces implement <code>ParametricCurve</code> / <code>ParametricSurface</code> and their bounded variants.
+        When adding new geometry types:
+      </p>
+      <ul>
+        <li>Ensure <code>parameter_range</code> returns proper <code>Bound::Included</code> values.</li>
+        <li>Hook into the search/division traits if you want projection and tessellation to work automatically.</li>
+        <li>Consider using <code>truck-derivers</code> to implement trait forwarding on wrapper structs or enums.</li>
+      </ul>
+    </section>
+
+    <section id="advanced">
+      <h2>7. Advanced operations</h2>
+      <p>Truck provides building blocks for classic spline editing:</p>
+      <ul>
+        <li><strong>Degree elevation</strong> – increases degree without changing shape.</li>
+        <li><strong>Knot refinement</strong> – insert multiple knots to gain local control.</li>
+        <li><strong>Reparameterization</strong> – rescale domains to match modeling requirements.</li>
+      </ul>
+      <p>These routines respect the global tolerance; always propagate tolerance parameters rather than hardcoding epsilons.</p>
+    </section>
+
+    <section id="summary">
+      <h2>8. Summary</h2>
+      <p><code>truck-geometry</code> delivers the low-level spline machinery the entire kernel depends on:</p>
+      <ul>
+        <li>Normalized knot vectors with utility operations.</li>
+        <li>B-spline / NURBS curve and surface evaluation with derivative support.</li>
+        <li>Control net management and refinement helpers.</li>
+      </ul>
+      <p>Mastering these primitives makes it easier to build modeling tools, run Booleans, and integrate with external CAD data.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>9. Implementation checklist</h2>
+      <ul>
+        <li><strong>Domains</strong> – keep parameter ranges normalized but expose true bounds via traits.</li>
+        <li><strong>Continuity</strong> – verify knot edits preserve non-decreasing order and target continuity.</li>
+        <li><strong>Derivatives</strong> – test <code>der</code>/<code>der2</code>/<code>der_mn</code> numerically.</li>
+        <li><strong>Weights</strong> – normalize and guard against division by zero.</li>
+        <li><strong>Integration</strong> – ensure new primitives implement or derive the required geotrait interfaces.</li>
+        <li><strong>Docs</strong> – update this guide / README whenever algorithms or APIs change.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

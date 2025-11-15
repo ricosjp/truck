@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-polymesh ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { margin:0; background:#05080f; color:#fce7f3; font-family:"Inter","Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.7; }
+    main { max-width:760px; margin:0 auto; padding:2rem 1.5rem 3rem; }
+    h1 { font-size:2rem; }
+    h2 { margin-top:2rem; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:0.2rem; }
+    ul { padding-left:1.2rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>truck-polymesh : ハーフエッジメッシュ</h1>
+    <p>Tess 結果やレンダリング用データを格納するハーフエッジメッシュ実装です。truck-meshalgo や truck-rendimpl から直接利用されます。</p>
+
+    <section>
+      <h2>1. 構造</h2>
+      <ul>
+        <li><strong>Vertex</strong> : 位置、法線、任意属性。そして出発ハーフエッジへのポインタ。</li>
+        <li><strong>HalfEdge</strong> : origin / twin / next / prev / face を保持。境界フラグや UV 方向などの属性もここに置きます。</li>
+        <li><strong>Face</strong> : 1 つのハーフエッジを参照し、ループを辿ることで面内のエッジを取得します。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. 典型的な操作</h2>
+      <ul>
+        <li>隣接頂点・隣接面の列挙（One-ring）。</li>
+        <li>境界検出、エッジのフリップ／折り畳み／分割。</li>
+        <li>OBJ などとの入出力（デバッグ用サンプルを同梱）。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. ベストプラクティス</h2>
+      <ul>
+        <li>ハーフエッジを編集する際は twin / next / prev の更新を忘れない。</li>
+        <li>テッセレーション属性（UV, 法線, マテリアル ID など）を Vertex/Face のメンバとして保持し、レンダリングに活用する。</li>
+        <li>向き（CCW）と一貫した winding を維持し、truck-meshalgo の出力をそのまま truck-rendimpl に渡せるようにする。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

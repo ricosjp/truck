@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Shapeops – Boolean & Healing Pipeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #08060d;
+      --fg: #f8fafc;
+      --fg-muted: #a3a3b3;
+      --accent: #fbbf24;
+      --accent-soft: rgba(251, 191, 36, 0.2);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #1a1326 0%, #08060d 55%, #000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    body { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 275px;
+      padding: 1.75rem 1.9rem;
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #090513 0%, #090412 45%, #08030f 100%);
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 0.4rem; }
+    .sidebar-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 0.2rem; }
+    .sidebar-subtitle { font-size: 0.85rem; color: var(--fg-muted); margin-bottom: 1.2rem; }
+    .toc-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin: 1.3rem 0 0.45rem; }
+
+    .toc { list-style: none; padding: 0; margin: 0; font-size: 0.94rem; }
+    .toc li { margin: 0.2rem 0; }
+    .toc a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .toc a::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border-subtle);
+    }
+    .toc a:hover { color: var(--accent); background: rgba(15, 23, 42, 0.9); }
+    .toc .toc-sub { margin-left: 0.95rem; margin-top: 0.12rem; }
+    .toc .toc-sub a { font-size: 0.84rem; padding-inline: 0.7rem; }
+
+    .main { flex: 1; padding: 2.3rem 3.6rem 3.5rem; max-width: 980px; margin: 0 auto; }
+    h1, h2, h3 { font-weight: 650; scroll-margin-top: 1.6rem; }
+    h1 { font-size: 2.2rem; margin-bottom: 0.3rem; }
+    .tagline { color: var(--fg-muted); font-size: 0.95rem; margin-bottom: 1.35rem; }
+    h2 { font-size: 1.5rem; margin-top: 2.2rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(31, 41, 55, 0.55); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; margin-top: 1.35rem; margin-bottom: 0.4rem; }
+    p { line-height: 1.65; font-size: 0.98rem; color: #e2e8f0; margin: 0.4rem 0 0.75rem; }
+    ul { padding-left: 1.15rem; margin: 0.35rem 0 0.75rem; }
+    li { margin: 0.2rem 0; line-height: 1.55; }
+    code { font-family: var(--font-mono); font-size: 0.86rem; background: rgba(15, 23, 42, 0.95); padding: 0.12rem 0.35rem; border-radius: 0.3rem; border: 1px solid rgba(251, 191, 36, 0.35); color: #fef3c7; }
+    .pill { display: inline-flex; gap: 0.45rem; align-items: center; padding: 0.18rem 0.75rem; border-radius: 999px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(251, 191, 36, 0.4); margin-bottom: 0.7rem; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.15rem; }
+    .badge { font-size: 0.8rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(39, 39, 47, 0.92); border: 1px solid rgba(63, 63, 70, 0.85); color: var(--fg-muted); }
+    .badge span { color: #f8fafc; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Truck Docs</div>
+    <div class="sidebar-title">truck-shapeops</div>
+    <div class="sidebar-subtitle">Boolean operations & healing</div>
+
+    <div class="toc-title">On this page</div>
+    <ul class="toc">
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#pipeline">1. Boolean pipeline</a></li>
+      <li>
+        <a href="#intersections">2. Intersection stage</a>
+        <ul class="toc-sub">
+          <li><a href="#face-face">2.1 Face-face</a></li>
+          <li><a href="#edge-face">2.2 Edge-face</a></li>
+        </ul>
+      </li>
+      <li><a href="#classification">3. Classification</a></li>
+      <li><a href="#rebuild">4. Rebuild & trimming</a></li>
+      <li><a href="#healing">5. Healing & diagnostics</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div id="intro">
+      <div class="pill">Module Guide</div>
+      <h1>Truck Shapeops</h1>
+      <p class="tagline">
+        Performs B-rep Boolean operations (AND/OR/XOR/Subtract) on shells and solids produced by <code>truck-modeling</code>,
+        and contains healing utilities to prepare imported CAD geometry.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-shapeops</div>
+        <div class="badge"><span>Inputs:</span> Solids from truck-modeling</div>
+        <div class="badge"><span>Highlights:</span> Intersection solvers, classification, rebuild, healing tools</div>
+      </div>
+    </div>
+
+    <section id="pipeline">
+      <h2>1. Boolean pipeline</h2>
+      <p>The pipeline mirrors classic B-rep kernels:</p>
+      <ol>
+        <li><strong>Intersections</strong> – find all face/edge intersections between operands.</li>
+        <li><strong>Classification</strong> – classify split faces/edges as inside/outside per Boolean op.</li>
+        <li><strong>Rebuild</strong> – assemble new shells from the kept fragments.</li>
+      </ol>
+    </section>
+
+    <section id="intersections">
+      <h2>2. Intersection stage</h2>
+      <h3 id="face-face">2.1 Face-face intersections</h3>
+      <p>Surface-surface intersections yield curves that split faces and become new trimming loops.</p>
+      <ul>
+        <li>Curves are represented in both UV spaces; clipping occurs before remapping to 3D.</li>
+        <li>Newton-style refinement ensures curves hit intersection tolerance (<code>truck-base::TOLERANCE</code>).</li>
+      </ul>
+
+      <h3 id="edge-face">2.2 Edge-face intersections</h3>
+      <p>Handles cases where an edge pierces the other solid without a clean face-face intersection; ensures loops remain consistent.</p>
+    </section>
+
+    <section id="classification">
+      <h2>3. Classification</h2>
+      <p>Each fragment (face region, edge segment) is classified via point-in-solid queries:</p>
+      <ul>
+        <li>Ray casting or signed distance proxies determine inside/outside.</li>
+        <li>Operator rules (AND/OR/XOR/SUBTRACT) pick which fragments survive; normals flip as needed.</li>
+      </ul>
+    </section>
+
+    <section id="rebuild">
+      <h2>4. Rebuild &amp; trimming</h2>
+      <p>After classification:</p>
+      <ul>
+        <li>Face trims are clipped to the kept regions.</li>
+        <li>Edges are sewn back into loops, respecting orientation.</li>
+        <li>Shells are formed and validated for watertightness before returning the resulting solid(s).</li>
+      </ul>
+    </section>
+
+    <section id="healing">
+      <h2>5. Healing &amp; diagnostics</h2>
+      <p>Shapeops also includes utilities for importing external CAD data:</p>
+      <ul>
+        <li>Welding vertices within tolerance.</li>
+        <li>Fixing small gap trims.</li>
+        <li>Reporting inconsistent orientations or non-manifold conditions.</li>
+      </ul>
+      <p>Run these tools before booleans when working with data from other kernels.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Consistent tolerances</strong> – align on <code>truck-base::tolerance</code> to avoid mismatched comparisons.</li>
+        <li><strong>Trim orientation</strong> – keep outer loops CCW (surface normal perspective) and inner loops CW.</li>
+        <li><strong>Intersection filtering</strong> – use bounding boxes / spatial partitioning to skip obvious non-intersections.</li>
+        <li><strong>Diagnostics</strong> – log when fragments fail classification to help debug kernel issues.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-shapeops</code> performs the heavy lifting for CSG in Truck, splitting, classifying, and rebuilding shells to produce watertight Booleans while also offering healing utilities for imported data.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li>Validate shells before entering the pipeline (orientation, manifoldness).</li>
+        <li>Tune intersection tolerances per operator and document defaults.</li>
+        <li>Ensure classification uses stable point-in-solid logic (avoid ray/geometry degeneracies).</li>
+        <li>Update README/guide when new operations or healing tools are added.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

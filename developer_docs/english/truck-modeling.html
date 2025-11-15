@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Modeling – Sweeps, Solids, & Face Construction</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #050710;
+      --fg: #f8fafc;
+      --fg-muted: #9aa5b8;
+      --accent: #fb7185;
+      --accent-soft: rgba(251, 113, 133, 0.15);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #11152a 0%, #050710 55%, #000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    body { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 275px;
+      padding: 1.75rem 1.9rem;
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #050710 0%, #040614 45%, #060912 100%);
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 0.4rem; }
+    .sidebar-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 0.2rem; }
+    .sidebar-subtitle { font-size: 0.85rem; color: var(--fg-muted); margin-bottom: 1.2rem; }
+    .toc-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin: 1.3rem 0 0.45rem; }
+
+    .toc { list-style: none; padding: 0; margin: 0; font-size: 0.94rem; }
+    .toc li { margin: 0.2rem 0; }
+    .toc a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .toc a::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border-subtle);
+    }
+    .toc a:hover { color: var(--accent); background: rgba(15, 23, 42, 0.85); }
+    .toc .toc-sub { margin-left: 0.95rem; margin-top: 0.12rem; }
+    .toc .toc-sub a { font-size: 0.84rem; padding-inline: 0.7rem; }
+
+    .main { flex: 1; padding: 2.3rem 3.6rem 3.5rem; max-width: 980px; margin: 0 auto; }
+    h1, h2, h3 { font-weight: 650; scroll-margin-top: 1.6rem; }
+    h1 { font-size: 2.25rem; margin-bottom: 0.3rem; }
+    .tagline { color: var(--fg-muted); font-size: 0.95rem; margin-bottom: 1.35rem; }
+    h2 { font-size: 1.5rem; margin-top: 2.2rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(31, 41, 55, 0.55); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; margin-top: 1.35rem; margin-bottom: 0.4rem; }
+    p { line-height: 1.65; font-size: 0.98rem; color: #e2e8f0; margin: 0.4rem 0 0.75rem; }
+    ul { padding-left: 1.15rem; margin: 0.35rem 0 0.75rem; }
+    li { margin: 0.2rem 0; line-height: 1.55; }
+    code { font-family: var(--font-mono); font-size: 0.86rem; background: rgba(15, 23, 42, 0.95); padding: 0.12rem 0.35rem; border-radius: 0.3rem; border: 1px solid rgba(251, 113, 133, 0.35); color: #ffe4e6; }
+    pre { margin: 0.9rem 0 1.1rem; padding: 0.95rem 1rem; background: rgba(15, 23, 42, 0.85); border-radius: 0.75rem; border: 1px solid rgba(251, 113, 133, 0.35); overflow-x: auto; }
+    pre code { background: transparent; border: none; color: #ffe4e6; font-size: 0.88rem; line-height: 1.5; }
+    .pill { display: inline-flex; gap: 0.45rem; align-items: center; padding: 0.18rem 0.75rem; border-radius: 999px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(251, 113, 133, 0.4); margin-bottom: 0.7rem; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.15rem; }
+    .badge { font-size: 0.8rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(39, 39, 47, 0.92); border: 1px solid rgba(63, 63, 70, 0.85); color: var(--fg-muted); }
+    .badge span { color: #f8fafc; font-weight: 500; }
+    .callout {
+      border-radius: 0.75rem;
+      border: 1px solid var(--border-subtle);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.98));
+      padding: 0.85rem 1rem;
+      margin: 1.1rem 0;
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+    }
+    .callout strong { color: #ffe4e6; }
+
+    @media (max-width: 960px) {
+      body { flex-direction: column; }
+      .sidebar { position: relative; width: 100%; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .main { padding: 1.6rem 1.3rem 2.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Truck Docs</div>
+    <div class="sidebar-title">truck-modeling</div>
+    <div class="sidebar-subtitle">Sweeps, solids, and kernel operations</div>
+
+    <div class="toc-title">On this page</div>
+    <ul class="toc">
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#stack">1. Modeling stack</a></li>
+      <li>
+        <a href="#sweeps">2. Sweep operators</a>
+        <ul class="toc-sub">
+          <li><a href="#extrude">2.1 Extrude</a></li>
+          <li><a href="#revolve">2.2 Revolve</a></li>
+          <li><a href="#sweep-path">2.3 Sweep-along-path</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#faces">3. Face generation</a>
+        <ul class="toc-sub">
+          <li><a href="#wire-to-face">3.1 Wires to faces</a></li>
+          <li><a href="#edge-propagation">3.2 Edge propagation</a></li>
+          <li><a href="#trim-management">3.3 Trim management</a></li>
+        </ul>
+      </li>
+      <li><a href="#solids">4. Shells & solids</a></li>
+      <li><a href="#integration">5. Integration with topology & booleans</a></li>
+      <li><a href="#examples">6. Example scripts</a></li>
+      <li><a href="#best-practices">7. Best practices</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+      <li><a href="#checklist">9. Implementation checklist</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div id="intro">
+      <div class="pill">Module Guide</div>
+      <h1>Truck Modeling</h1>
+      <p class="tagline">
+        Converts analytic geometry and wires into shells and solids using sweep-based operators (extrude, revolve, loft),
+        maintaining a consistent mapping between geometry and topology layers.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-modeling</div>
+        <div class="badge"><span>Inputs:</span> truck-geometry curves/surfaces, truck-topology wires</div>
+        <div class="badge"><span>Outputs:</span> shell/solid structures for booleans & tessellation</div>
+      </div>
+    </div>
+
+    <section id="stack">
+      <h2>1. Modeling stack</h2>
+      <p>Modeling sits above geometry but below booleans: it produces watertight shells that <code>truck-shapeops</code> and <code>truck-meshalgo</code> consume.</p>
+      <ul>
+        <li><strong>Geometry</strong> – curves/surfaces from <code>truck-geometry</code>.</li>
+        <li><strong>Topology</strong> – vertices/edges/wires/faces from <code>truck-topology</code>.</li>
+        <li><strong>Modeling</strong> – orchestrates surfaces + trims + new topology (faces, shells).</li>
+      </ul>
+      <p>The crate provides high-level APIs to create solids from wire profiles and reference surfaces, tracking orientation and parameterization throughout.</p>
+    </section>
+
+    <section id="sweeps">
+      <h2>2. Sweep operators</h2>
+      <h3 id="extrude">2.1 Extrude</h3>
+      <p>Extrusion takes planar wires and moves them along a vector:</p>
+      <ul>
+        <li>Generates ruled side faces by lofting between the source curve and its translated copy.</li>
+        <li>Optionally caps the start/end with planar faces if the wire is closed.</li>
+        <li>Records how each edge maps to new edges (generator, offset, rails) for downstream operations.</li>
+      </ul>
+
+      <h3 id="revolve">2.2 Revolve</h3>
+      <p>Revolves a profile around an axis:</p>
+      <ul>
+        <li>Handles angular spans > 2π by splitting faces into non-overlapping regions.</li>
+        <li>Detects axis intersections to avoid degeneracies (e.g., when a profile touches the axis).</li>
+        <li>Aligns trimmed regions with parameter space so tessellation and booleans remain stable.</li>
+      </ul>
+
+      <h3 id="sweep-path">2.3 Sweep-along-path</h3>
+      <p>Generalizes sweeps along arbitrary guide curves. The operator:</p>
+      <ul>
+        <li>Transport frames along the path (Frenet or custom frame) to orient cross-sections.</li>
+        <li>Keeps edges paired with their offset copies for consistent topology mapping.</li>
+        <li>Supports multi-section lofts (e.g., morphing between two profiles).</li>
+      </ul>
+    </section>
+
+    <section id="faces">
+      <h2>3. Face generation</h2>
+      <h3 id="wire-to-face">3.1 Wires to faces</h3>
+      <p>The modeling layer turns wires into trimmed faces:</p>
+      <ol>
+        <li>Select a support surface (planar, lofted, swept).</li>
+        <li>Use the wire as the outer loop, with optional inner loops for holes.</li>
+        <li>Attach the face to the shell, respecting orientation.</li>
+      </ol>
+      <p>This mirrors the B-rep definitions from <code>truck-topology</code>, ensuring compatibility.</p>
+
+      <h3 id="edge-propagation">3.2 Edge propagation</h3>
+      <p>Every sweep tracks edge provenance:</p>
+      <ul>
+        <li>Original edge → generator edge on the face.</li>
+        <li>Translated edge → offset edge.</li>
+        <li>Connecting rails close the loop.</li>
+      </ul>
+      <p>This mapping allows booleans and fillets to understand how new geometry derives from existing edges.</p>
+
+      <h3 id="trim-management">3.3 Trim management</h3>
+      <p>Trim curves are stored in surface parameter space. Modeling ensures:</p>
+      <ul>
+        <li>Loops are properly oriented (outer loops CCW, inner loops CW in UV space).</li>
+        <li>Edges carry both 3D curves and UV curves for trimming operations.</li>
+        <li>Faces reference their trimming data for tessellation and intersection.</li>
+      </ul>
+    </section>
+
+    <section id="solids">
+      <h2>4. Shells &amp; solids</h2>
+      <p>Once faces are built, they are sewn into shells with consistent normals. Modeling can:</p>
+      <ul>
+        <li>Build closed shells from a sweep (e.g., extruded solids, revolved bodies).</li>
+        <li>Generate multiple shells (outer + inner) for cavities.</li>
+        <li>Produce solids (collections of shells) ready for booleans or meshing.</li>
+      </ul>
+    </section>
+
+    <section id="integration">
+      <h2>5. Integration with topology &amp; booleans</h2>
+      <ul>
+        <li>Faces, edges, and vertices produced here comply with <code>truck-topology</code>’s orientation rules.</li>
+        <li>Booleans (<code>truck-shapeops</code>) expect shells created by modeling; modeling’s metadata about edge provenance aids classification.</li>
+        <li>Tessellation (<code>truck-meshalgo</code>) relies on trimmed surfaces created here for UV sampling.</li>
+      </ul>
+    </section>
+
+    <section id="examples">
+      <h2>6. Example scripts</h2>
+      <p>The repository contains reference scripts showcasing how to assemble solids:</p>
+      <ul>
+        <li><strong>bottle</strong> – replicates OCCT’s bottle tutorial using sweeps and revolutions.</li>
+        <li><strong>cube / cylinder / sphere</strong> – canonical primitives built via sweeps.</li>
+        <li><strong>punched-cube / torus-punched-cube</strong> – combines sweeps to make multi-shell solids.</li>
+        <li><strong>tsudumi</strong> – hyperboloid modeling example.</li>
+      </ul>
+      <p>Each script outputs JSON that <code>truck-rendimpl</code> examples can visualize.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>7. Best practices</h2>
+      <ul>
+        <li><strong>Orientation</strong> – wires should be consistently oriented before sweeping; use the <code>Invertible</code> trait to flip as needed.</li>
+        <li><strong>Parameter continuity</strong> – ensure surfaces generated by sweeps have well-behaved parameterization to avoid UV artifacts.</li>
+        <li><strong>Edge mapping</strong> – store metadata linking new edges to source edges for use by booleans/fillets.</li>
+        <li><strong>Tolerance</strong> – use <code>truck-base::tolerance</code> when snapping or checking closure.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>8. Summary</h2>
+      <p><code>truck-modeling</code> provides the high-level operators needed to construct solids from wires and surfaces:</p>
+      <ul>
+        <li>Sweep operators (extrude, revolve, sweep-along-path).</li>
+        <li>Face generation with trim management.</li>
+        <li>Shell/solid assembly ready for booleans and tessellation.</li>
+      </ul>
+      <p>Mastering this layer is key to authoring parametric modeling operations within Truck.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>9. Implementation checklist</h2>
+      <ul>
+        <li><strong>Wires</strong> – validate planarity/orientation before sweeping.</li>
+        <li><strong>Surfaces</strong> – choose the correct support surface (planar vs. loft vs. ruled) for each operation.</li>
+        <li><strong>Trims</strong> – ensure trim loops remain watertight in UV space.</li>
+        <li><strong>Edge provenance</strong> – record mapping from input edges to generated edges.</li>
+        <li><strong>Testing</strong> – cover simple cases (cube, cylinder) and complex ones (bottle) to guard against regressions.</li>
+        <li><strong>Docs</strong> – update README and this guide when adding new operators.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

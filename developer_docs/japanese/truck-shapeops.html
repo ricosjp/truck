@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-shapeops ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { margin:0; background:#09040d; color:#fff7ed; font-family:"Inter","Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.7; }
+    main { max-width:780px; margin:0 auto; padding:2rem 1.5rem 3rem; }
+    h1 { font-size:2rem; }
+    h2 { margin-top:2rem; border-bottom:1px solid rgba(255,255,255,0.3); padding-bottom:0.2rem; }
+    ul { padding-left:1.2rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>truck-shapeops : ブーリアン / ヒーリング</h1>
+    <p>このクレートは AND / OR / XOR / SUBTRACT などの B-rep ブーリアン演算と、外部 CAD から取り込んだ形状のヒーリング機能を提供します。</p>
+
+    <section>
+      <h2>1. パイプライン概要</h2>
+      <ol>
+        <li><strong>交差計算</strong> : 面–面、エッジ–面の交線を求め、両オペランドのトリムを分割。</li>
+        <li><strong>分類</strong> : 代表点を用いて内外判定し、演算種別に応じて保持/破棄を決定。</li>
+        <li><strong>再構築</strong> : 残ったトリム領域を縫い、新しいシェル/ソリッドを組み立てる。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>2. 交差計算時の注意</h2>
+      <ul>
+        <li>UV 空間で交点をクリップしてから 3D に戻すと安定します。</li>
+        <li>トレランスは <code>truck-base</code> の値を必ず使用し、入力ごとに勝手に変更しない。</li>
+        <li>バウンディングボックスなどで候補面を絞り、不要なペアの計算を避けます。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. ヒーリング</h2>
+      <p>インポート直後に以下の処理を行うと成功率が上がります。</p>
+      <ul>
+        <li>頂点のスナップ、トリムの隙間埋め。</li>
+        <li>向きの整合チェック（面法線、ワイヤ方向）。</li>
+        <li>非多様体条件の検出とログ出力。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. ベストプラクティス</h2>
+      <ul>
+        <li>演算前にシェルが閉じているか検証し、問題があれば modeling レイヤで修正する。</li>
+        <li>交差計算や分類で失敗したフラグメントは必ずログ化し、再現用データを残す。</li>
+        <li>複数のオペランドでトレランスが大きく異なる場合は事前に正規化する。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

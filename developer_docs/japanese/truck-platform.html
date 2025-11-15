@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-platform ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { margin:0; background:#020915; color:#e0f2fe; font-family:"Inter","Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.7; }
+    main { max-width:780px; margin:0 auto; padding:2rem 1.5rem 3rem; }
+    h1 { font-size:2rem; }
+    h2 { margin-top:2rem; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:0.2rem; }
+    ul { padding-left:1.2rem; }
+    code { background:rgba(255,255,255,0.1); padding:0.1rem 0.35rem; border-radius:0.3rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>truck-platform : WGPU ランタイム</h1>
+    <p>Truck のビューア全体を支える WGPU ベースのランタイム層です。デバイス管理、イベントループ、<code>Rendered</code> トレイトを提供し、上位の truck-rendimpl がこの上に構築されています。</p>
+
+    <section>
+      <h2>1. Rendered トレイト</h2>
+      <ul>
+        <li><code>new(ctx)</code> でパイプライン・バッファを初期化。</li>
+        <li><code>update(dt)</code> でユニフォームやアニメーションを更新。</li>
+        <li><code>render(pass)</code> で描画コマンドを発行。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. WGSL サンドボックス</h2>
+      <p>
+        <code>wgsl-sandbox</code> 例では <code>main_image(coord, env)</code> を実装したシェーダをドラッグ&ドロップでホットリロードし、Shadertoy 風に実験できます。
+      </p>
+      <pre><code>struct Environment {
+  resolution: vec2<f32>;
+  mouse: vec4<f32>;
+  time: f32;
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>3. シーンユーティリティ</h2>
+      <ul>
+        <li>インスタンスバッファ、マテリアル定義、カメラ制御など共通処理を提供。</li>
+        <li>truck-rendimpl でも同じ API を経由してメッシュをアップロードします。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. ベストプラクティス</h2>
+      <ul>
+        <li>GPU リソースは <code>Rendered::new</code> でまとめて作成し、フレームごとに再生成しない。</li>
+        <li>シェーダのホットリロードに失敗した場合でもアプリが落ちないように例外処理を入れる。</li>
+        <li>入力イベント（マウス・キーボード）を一定の形式で提供し、ビューアの挙動を統一する。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Stepio – STEP Import/Export</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #040b16;
+      --fg: #f8fafc;
+      --fg-muted: #94a3b8;
+      --accent: #60a5fa;
+      --accent-soft: rgba(96, 165, 250, 0.2);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #102240 0%, #040b16 55%, #000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    body { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 275px;
+      padding: 1.75rem 1.9rem;
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #030b18 0%, #030918 45%, #020612 100%);
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 0.4rem; }
+    .sidebar-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 0.2rem; }
+    .sidebar-subtitle { font-size: 0.85rem; color: var(--fg-muted); margin-bottom: 1.2rem; }
+    .toc-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin: 1.3rem 0 0.45rem; }
+    .toc { list-style: none; padding: 0; margin: 0; font-size: 0.94rem; }
+    .toc li { margin: 0.2rem 0; }
+    .toc a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .toc a::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border-subtle);
+    }
+    .toc a:hover { color: var(--accent); background: rgba(15, 23, 42, 0.9); }
+    .toc .toc-sub { margin-left: 0.95rem; margin-top: 0.12rem; }
+    .toc .toc-sub a { font-size: 0.84rem; padding-inline: 0.7rem; }
+
+    .main { flex: 1; padding: 2.3rem 3.6rem 3.5rem; max-width: 980px; margin: 0 auto; }
+    h1, h2, h3 { font-weight: 650; scroll-margin-top: 1.6rem; }
+    h1 { font-size: 2.2rem; margin-bottom: 0.3rem; }
+    .tagline { color: var(--fg-muted); font-size: 0.95rem; margin-bottom: 1.35rem; }
+    h2 { font-size: 1.5rem; margin-top: 2.2rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(31, 41, 55, 0.55); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; margin-top: 1.35rem; margin-bottom: 0.4rem; }
+    p { line-height: 1.65; font-size: 0.98rem; color: #e2e8f0; margin: 0.4rem 0 0.75rem; }
+    ul { padding-left: 1.15rem; margin: 0.35rem 0 0.75rem; }
+    li { margin: 0.2rem 0; line-height: 1.55; }
+    code { font-family: var(--font-mono); font-size: 0.86rem; background: rgba(15, 23, 42, 0.95); padding: 0.12rem 0.35rem; border-radius: 0.3rem; border: 1px solid rgba(96, 165, 250, 0.35); color: #bfdbfe; }
+    pre { margin: 0.9rem 0 1.1rem; padding: 0.95rem 1rem; background: rgba(15, 23, 42, 0.85); border-radius: 0.75rem; border: 1px solid rgba(96, 165, 250, 0.35); overflow-x: auto; }
+    pre code { background: transparent; border: none; color: #dbeafe; font-size: 0.88rem; line-height: 1.5; }
+    .pill { display: inline-flex; gap: 0.45rem; align-items: center; padding: 0.18rem 0.75rem; border-radius: 999px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(96, 165, 250, 0.4); margin-bottom: 0.7rem; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.15rem; }
+    .badge { font-size: 0.8rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(39, 39, 47, 0.92); border: 1px solid rgba(63, 63, 70, 0.85); color: var(--fg-muted); }
+    .badge span { color: #f8fafc; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Truck Docs</div>
+    <div class="sidebar-title">truck-stepio</div>
+    <div class="sidebar-subtitle">STEP (ISO 10303) import/export</div>
+
+    <div class="toc-title">On this page</div>
+    <ul class="toc">
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#architecture">1. Architecture</a></li>
+      <li>
+        <a href="#import">2. Import pipeline</a>
+        <ul class="toc-sub">
+          <li><a href="#parse">2.1 Parsing & dictionary</a></li>
+          <li><a href="#geometry-mapping">2.2 Geometry mapping</a></li>
+          <li><a href="#healing">2.3 Healing hooks</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#export">3. Export pipeline</a>
+        <ul class="toc-sub">
+          <li><a href="#encoding">3.1 Entity encoding</a></li>
+          <li><a href="#length">3.2 Record counts</a></li>
+        </ul>
+      </li>
+      <li><a href="#traits">4. Step traits</a></li>
+      <li><a href="#cli">5. CLI tools</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div id="intro">
+      <div class="pill">Module Guide</div>
+      <h1>Truck Stepio</h1>
+      <p class="tagline">
+        Bridges Truck solids with STEP files: parses ISO 10303 entities into Truck geometry/topology and exports back to STEP
+        for interoperability with external CAD systems.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-stepio</div>
+        <div class="badge"><span>Formats:</span> ISO 10303-21 (STEP Part 21)</div>
+        <div class="badge"><span>Tools:</span> shape-to-step, step-to-mesh</div>
+      </div>
+    </div>
+
+    <section id="architecture">
+      <h2>1. Architecture</h2>
+      <p>Stepio has three layers:</p>
+      <ul>
+        <li><strong>Parser</strong> – reads Part 21 syntax into an intermediate entity graph.</li>
+        <li><strong>Mapper</strong> – converts STEP entities to Truck geometry/topology (and vice versa).</li>
+        <li><strong>CLI</strong> – sample binaries to convert shapes and inspect output.</li>
+      </ul>
+    </section>
+
+    <section id="import">
+      <h2>2. Import pipeline</h2>
+      <h3 id="parse">2.1 Parsing &amp; dictionary</h3>
+      <p>Part 21 text is parsed into a dictionary keyed by entity ID (e.g., <code>#42 = EDGE_CURVE ...</code>). Relationships are resolved using references before geometry creation begins.</p>
+
+      <h3 id="geometry-mapping">2.2 Geometry mapping</h3>
+      <p>Each STEP entity maps to Truck types:</p>
+      <ul>
+        <li><code>EDGE_CURVE</code>, <code>B_SPLINE_CURVE_WITH_KNOTS</code> → <code>ParametricCurve</code>/<code>truck-geometry</code> splines.</li>
+        <li><code>B_SPLINE_SURFACE_WITH_KNOTS</code>, <code>ADVANCED_FACE</code> → surfaces + trimming loops.</li>
+        <li>Topological entities like <code>FACE_BOUND</code>, <code>SHELL_BASED_SURFACE_MODEL</code> → <code>truck-topology</code> faces/shells.</li>
+      </ul>
+
+      <h3 id="healing">2.3 Healing hooks</h3>
+      <p>Shape healing (snap vertices, align trim tolerances) will often run after import to handle noisy data from other CAD systems.</p>
+    </section>
+
+    <section id="export">
+      <h2>3. Export pipeline</h2>
+      <h3 id="encoding">3.1 Entity encoding</h3>
+      <p>When writing STEP, truck-stepio walks shells/faces and emits the corresponding STEP entities in Part 21 syntax. It relies on the STEP traits implemented across geometry types (see below).</p>
+
+      <h3 id="length">3.2 Record counts</h3>
+      <p>Derived traits like <code>StepLength</code> report how many entities a curve/surface produces, allowing the writer to pre-allocate IDs or validate file size.</p>
+    </section>
+
+    <section id="traits">
+      <h2>4. Step traits</h2>
+      <p>Geometry types implement traits from <code>truck-stepio</code> (often derived by <code>truck-derivers</code>):</p>
+      <ul>
+        <li><code>StepCurve</code>, <code>StepSurface</code> – format entity strings.</li>
+        <li><code>DisplayByStep</code> – render human-readable diagnostics.</li>
+        <li><code>StepLength</code> – entity counts.</li>
+      </ul>
+      <p>These traits ensure STEP export stays consistent across all geometry types.</p>
+    </section>
+
+    <section id="cli">
+      <h2>5. CLI tools</h2>
+      <ul>
+        <li><code>shape-to-step</code> – convert Truck JSON shapes to STEP.</li>
+        <li><code>step-to-mesh</code> – parse STEP into shapes and immediately tessellate.</li>
+      </ul>
+      <p>Use these binaries as references when building custom import/export pipelines.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Preserve tolerance</strong> – carry STEP-specified tolerances into Truck to avoid snapping artifacts.</li>
+        <li><strong>Log unknown entities</strong> – report STEP entity types that lack mappings so they can be implemented later.</li>
+        <li><strong>Validate loops</strong> – after import, ensure trim loops are oriented correctly and cover the intended region.</li>
+        <li><strong>Reuse traits</strong> – when adding new curve/surface types, derive the STEP traits to keep serialization consistent.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-stepio</code> handles STEP interoperability for Truck: parsing entity graphs, mapping to Truck geometry/topology, and exporting back to Part 21. It powers the CLI tools and underpins future CAD exchange features.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li>Test new entity mappings with both import and export.</li>
+        <li>Keep tolerance handling consistent with <code>truck-base</code>.</li>
+        <li>Document new STEP traits or CLI flags in README and this guide.</li>
+        <li>Run <code>shape-to-step</code> / <code>step-to-mesh</code> as smoke tests when making changes.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

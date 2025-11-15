@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Topology – B-rep Data Model</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #05050b;
+      --fg: #f8fafc;
+      --fg-muted: #a0aec0;
+      --accent: #c084fc;
+      --accent-soft: rgba(192, 132, 252, 0.2);
+      --border-subtle: #1f2937;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #181124 0%, #05050b 55%, #000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+
+    body { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 275px;
+      padding: 1.75rem 1.9rem;
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #070512 0%, #070314 50%, #04020d 100%);
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 0.4rem; }
+    .sidebar-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 0.2rem; }
+    .sidebar-subtitle { font-size: 0.85rem; color: var(--fg-muted); margin-bottom: 1.2rem; }
+    .toc-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin: 1.3rem 0 0.45rem; }
+    .toc { list-style: none; padding: 0; margin: 0; font-size: 0.94rem; }
+    .toc li { margin: 0.2rem 0; }
+    .toc a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .toc a::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border-subtle);
+    }
+    .toc a:hover { color: var(--accent); background: rgba(31, 41, 55, 0.8); }
+    .toc .toc-sub { margin-left: 0.95rem; margin-top: 0.12rem; }
+    .toc .toc-sub a { font-size: 0.84rem; padding-inline: 0.7rem; }
+
+    .main { flex: 1; padding: 2.3rem 3.6rem 3.5rem; max-width: 980px; margin: 0 auto; }
+    h1, h2, h3 { font-weight: 650; scroll-margin-top: 1.6rem; }
+    h1 { font-size: 2.2rem; margin-bottom: 0.3rem; }
+    .tagline { color: var(--fg-muted); font-size: 0.95rem; margin-bottom: 1.35rem; }
+    h2 { font-size: 1.5rem; margin-top: 2.2rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(31, 41, 55, 0.45); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; margin-top: 1.35rem; margin-bottom: 0.4rem; }
+    p { line-height: 1.65; font-size: 0.98rem; color: #e2e8f0; margin: 0.4rem 0 0.75rem; }
+    ul { padding-left: 1.15rem; margin: 0.35rem 0 0.75rem; }
+    li { margin: 0.2rem 0; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Truck Docs</div>
+    <div class="sidebar-title">truck-topology</div>
+    <div class="sidebar-subtitle">B-rep structures & orientation rules</div>
+
+    <div class="toc-title">On this page</div>
+    <ul class="toc">
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#stack">1. Topology stack</a></li>
+      <li>
+        <a href="#structures">2. Data structures</a>
+        <ul class="toc-sub">
+          <li><a href="#vertex">2.1 Vertex</a></li>
+          <li><a href="#edge">2.2 Edge</a></li>
+          <li><a href="#wire">2.3 Wire</a></li>
+          <li><a href="#face">2.4 Face</a></li>
+          <li><a href="#shell">2.5 Shell & solid</a></li>
+        </ul>
+      </li>
+      <li><a href="#orientation">3. Orientation & trims</a></li>
+      <li><a href="#integration">4. Integration with geometry & modeling</a></li>
+      <li><a href="#best-practices">5. Best practices</a></li>
+      <li><a href="#summary">6. Summary</a></li>
+      <li><a href="#checklist">7. Implementation checklist</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div id="intro">
+      <div class="pill" style="display:inline-flex;gap:0.45rem;align-items:center;padding:0.18rem 0.75rem;border-radius:999px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(192,132,252,0.4);margin-bottom:0.7rem;">Module Guide</div>
+      <h1>Truck Topology</h1>
+      <p class="tagline">
+        Defines boundary representation (B-rep) structures—vertices, edges, wires, faces, shells, and solids—and enforces the orientation rules used across the Truck kernel.
+      </p>
+      <div class="badge-row" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.15rem;">
+        <div class="badge" style="font-size:0.8rem;padding:0.2rem 0.55rem;border-radius:999px;background:rgba(39,39,47,0.92);border:1px solid rgba(63,63,70,0.85);color:var(--fg-muted);"><span style="color:#f8fafc;font-weight:500;">Crate:</span> truck-topology</div>
+        <div class="badge" style="font-size:0.8rem;padding:0.2rem 0.55rem;border-radius:999px;background:rgba(39,39,47,0.92);border:1px solid rgba(63,63,70,0.85);color:var(--fg-muted);"><span style="color:#f8fafc;font-weight:500;">Focus:</span> B-rep data model</div>
+        <div class="badge" style="font-size:0.8rem;padding:0.2rem 0.55rem;border-radius:999px;background:rgba(39,39,47,0.92);border:1px solid rgba(63,63,70,0.85);color:var(--fg-muted);"><span style="color:#f8fafc;font-weight:500;">Consumers:</span> modeling, booleans, tessellation</div>
+      </div>
+    </div>
+
+    <section id="stack">
+      <h2>1. Topology stack</h2>
+      <p>Truck’s topology sits between geometry and mesh layers:</p>
+      <ul>
+        <li><strong>Geometry</strong> – curves/surfaces from <code>truck-geotrait</code>/<code>truck-geometry</code>.</li>
+        <li><strong>Topology</strong> – organizes geometry into vertices, edges, wires, faces, shells, solids.</li>
+        <li><strong>Modeling/Booleans</strong> – operate on topology to create/manipulate solids.</li>
+        <li><strong>Tessellation</strong> – consumes topology’s trimmed surfaces to produce meshes.</li>
+      </ul>
+    </section>
+
+    <section id="structures">
+      <h2>2. Data structures</h2>
+
+      <h3 id="vertex">2.1 Vertex</h3>
+      <p>Stores a 3D point plus references to incident edges. Vertices may also cache parameter-space coordinates for associated edges/surfaces.</p>
+
+      <h3 id="edge">2.2 Edge</h3>
+      <p>Edges reference a parametric curve, two vertices, and an orientation. They may also store UV curves for trimming surfaces. Each edge has both 3D and parameter-space representations.</p>
+
+      <h3 id="wire">2.3 Wire</h3>
+      <p>A closed sequence of oriented edges forming a loop. Wires can serve as outer loops (defining the boundary of a face) or inner loops (holes). Consistent orientation (CCW for outer loops) is required.</p>
+
+      <h3 id="face">2.4 Face</h3>
+      <p>Faces reference a surface plus an outer wire and zero or more inner wires. They encapsulate trimmed surface patches.</p>
+
+      <h3 id="shell">2.5 Shell &amp; solid</h3>
+      <p>Shells are closed, oriented sets of faces. Solids consist of one outer shell and optional inner shells (voids). Booleans operate at the shell/solid level.</p>
+    </section>
+
+    <section id="orientation">
+      <h2>3. Orientation &amp; trims</h2>
+      <p>Orientation rules keep the data model consistent:</p>
+      <ul>
+        <li>Edges have a “forward” direction based on their parametric curve.</li>
+        <li>Wires are oriented so outer loops are CCW in UV space (relative to surface normal), inner loops CW.</li>
+        <li>Face orientation determines shell normals; consistent sewing ensures outward normals on shells.</li>
+      </ul>
+    </section>
+
+    <section id="integration">
+      <h2>4. Integration with geometry &amp; modeling</h2>
+      <p>Topology relies on geometry for actual shape evaluation:</p>
+      <ul>
+        <li>Edges reference <code>ParametricCurve</code> implementations.</li>
+        <li>Faces reference <code>ParametricSurface</code> plus wires that live in their parameter space.</li>
+        <li>Modeling operators (extrude, revolve) generate topology in this format, ensuring compatibility with booleans and tessellation.</li>
+      </ul>
+    </section>
+
+    <section id="best-practices">
+      <h2>5. Best practices</h2>
+      <ul>
+        <li>Ensure wires are closed and consistently oriented before constructing faces.</li>
+        <li>Maintain edge metadata linking to source curves for downstream operations (e.g., booleans, fillets).</li>
+        <li>Use the provided traversal utilities to navigate loops/shells instead of manual pointer chasing.</li>
+        <li>Validate shells for watertightness/orientation before running booleans or tessellation.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>6. Summary</h2>
+      <p><code>truck-topology</code> provides the B-rep backbone for Truck. It organizes geometry into a structured hierarchy that modeling, booleans, and tessellation can all consume.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>7. Implementation checklist</h2>
+      <ul>
+        <li>Verify edge orientations and wire closure before building faces.</li>
+        <li>Attach both 3D and UV representations to edges/faces when trimming surfaces.</li>
+        <li>When adding new topology features, update README/docs to explain orientation and traversal rules.</li>
+        <li>Use integration tests (e.g., modeling scripts) to confirm new topology constructs behave through the entire pipeline.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

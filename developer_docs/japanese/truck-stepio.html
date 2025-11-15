@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-stepio ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { margin:0; background:#030b18; color:#e0f2ff; font-family:"Inter","Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.7; }
+    main { max-width:780px; margin:0 auto; padding:2rem 1.5rem 3rem; }
+    h1 { font-size:2rem; }
+    h2 { margin-top:2rem; border-bottom:1px solid rgba(255,255,255,0.25); padding-bottom:0.2rem; }
+    ul { padding-left:1.2rem; }
+    code { background:rgba(255,255,255,0.1); padding:0.1rem 0.35rem; border-radius:0.3rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>truck-stepio : STEP 入出力</h1>
+    <p>ISO 10303 (STEP) ファイルを Truck のソリッドへ変換し、逆に STEP へエクスポートするためのクレートです。</p>
+
+    <section>
+      <h2>1. インポート</h2>
+      <ul>
+        <li>Part 21 テキストをパースしてエンティティ辞書を作成。</li>
+        <li><code>B_SPLINE_CURVE_WITH_KNOTS</code> などを <code>truck-geometry</code> の曲線へマッピング。</li>
+        <li><code>ADVANCED_FACE</code>、<code>FACE_BOUND</code> から <code>truck-topology</code> の face/wire を生成。</li>
+        <li>必要に応じて shapeops のヒーリングを適用し、トレランスを統一する。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. エクスポート</h2>
+      <p>Faces / Shells を辿って STEP エンティティを生成します。<code>StepCurve</code>, <code>StepSurface</code>, <code>StepLength</code> トレイトを実装したジオメトリ型が前提です。</p>
+    </section>
+
+    <section>
+      <h2>3. サンプル CLI</h2>
+      <ul>
+        <li><code>shape-to-step input.json output.step</code> : Truck JSON → STEP。</li>
+        <li><code>step-to-mesh input.step</code> : STEP → ソリッド → メッシュ（OBJ）。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. ベストプラクティス</h2>
+      <ul>
+        <li>未知のエンティティはログに残し、後でマッピングを追加する。</li>
+        <li>STEP 側のトレランス値を Truck の内部トレランスへ正規化する。</li>
+        <li>インポート後にワイヤの向きと閉合性を検証し、問題があれば修正またはヒーリングする。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
