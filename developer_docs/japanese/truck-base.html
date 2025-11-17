@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-base ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-base : 幾何カーネルの基礎</h1>
+    <p>truck-base : 幾何カーネルの基礎 に関する開発者向けガイドです。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#section-1">1. 座標系と単位</a></li>
+      <li><a href="#section-2">2. トレランス戦略</a></li>
+      <li><a href="#section-3">3. ポイント / ベクトルの慣習</a></li>
+      <li><a href="#section-4">4. 変換システム</a></li>
+      <li><a href="#section-5">5. 開発チェックリスト</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+<p>
+      Truck のすべてのクレートは <code>truck-base</code> が定義する座標系・トレランス・変換規約に従います。
+      ここでは開発時に確認しておくべきポイントを日本語でまとめました。詳細な説明や図版は
+      <code>developer_docs/english/truck-base.html</code> を参照してください。
+    </p>
+    </section>
+
+<section id="section-1">
+      <h2>1. 座標系と単位</h2>
+      <ul>
+        <li>右手系・Zアップのデカルト座標。<code>cgmath</code> と互換です。</li>
+        <li>標準単位はメートル／ラジアンを想定しますが、実際には <code>f64</code> 値のみが固定です。</li>
+        <li>局所フレーム（曲線のパラメータ空間、サブアセンブリの原点）は常にワールド変換を介して扱います。</li>
+      </ul>
+    </section>
+
+    <section id="section-2">
+      <h2>2. トレランス戦略</h2>
+      <p>
+        浮動小数の比較は <code>truck-base::tolerance</code> に定義されたグローバル値を使用します。
+        現在の基準は <code>TOLERANCE = 1e-6</code>（およそ 1µm）で、二乗値 <code>TOLERANCE2</code> も提供されています。
+        すべての比較・同値判定は <code>Tolerance::near</code> / <code>near2</code>、および
+        <code>assert_near!</code> マクロ類を使用してください。
+      </p>
+      <p>
+        入力品質が低い場合でもトレランスを緩めないのが原則です。必要であれば事前にヒーリングや正規化を行います。
+      </p>
+    </section>
+
+    <section id="section-3">
+      <h2>3. ポイント / ベクトルの慣習</h2>
+      <ul>
+        <li><code>Point3</code> は位置、<code>Vector3</code> は方向・差を表し、型で区別します。</li>
+        <li>法線は正規化済みの <code>Vector3</code> として扱い、<code>cgmath_extend_traits</code> で補助関数を利用します。</li>
+        <li>インデックスは <code>[x, y, z]</code>。同次座標の <code>w</code> はライブラリ内部のみで使用します。</li>
+      </ul>
+    </section>
+
+    <section id="section-4">
+      <h2>4. 変換システム</h2>
+      <p>
+        変換は <code>Matrix3</code> / <code>Matrix4</code> / <code>Quaternion</code>（すべて <code>cgmath64</code>）を使用します。
+        <code>Transform</code> / <code>EuclideanSpace</code> トレイトを使ってポイントとベクトルに適用し、親→子の順で合成します。
+        直列化は列優先（column-major）で統一します。
+      </p>
+    </section>
+
+    <section id="section-5">
+      <h2>5. 開発チェックリスト</h2>
+      <ul>
+        <li>フレーム変換が親→子で乗算されているか。</li>
+        <li>比較は <code>Tolerance</code> / <code>Origin</code> ヘルパを使っているか。</li>
+        <li>ポイント・ベクトル・法線が混在していないか。</li>
+        <li>行列表現は列優先で保存しているか。</li>
+        <li>規約を変えた場合は README / ドキュメントを必ず更新する。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

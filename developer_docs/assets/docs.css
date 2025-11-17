@@ -1,0 +1,173 @@
+:root {
+  color-scheme: dark light;
+  --bg: #04060d;
+  --fg: #f2f6fb;
+  --muted: rgba(255, 255, 255, 0.6);
+  --accent: #66d9ff;
+  --border: rgba(255, 255, 255, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  line-height: 1.7;
+}
+
+a {
+  color: var(--accent);
+}
+
+header {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+  padding: 2rem 1.5rem 1rem;
+}
+
+header h1 {
+  margin: 0 0 0.4rem;
+  font-size: 2rem;
+}
+
+header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+nav {
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.5rem 1rem;
+}
+
+nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.95rem;
+}
+
+nav a {
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+h2 {
+  margin-top: 2rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+  font-size: 1.4rem;
+}
+
+h3 {
+  margin-top: 1.3rem;
+  font-size: 1.05rem;
+}
+
+p {
+  margin-top: 0.8rem;
+}
+
+ul {
+  padding-left: 1.2rem;
+}
+
+code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
+  font-size: 0.95em;
+}
+
+.tagline {
+  color: var(--muted);
+  font-size: 0.96rem;
+  margin-top: 0.6rem;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.8rem 0 1.1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.badge {
+  font-size: 0.82rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(32, 32, 44, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+}
+
+.badge span {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.pill {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.18rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  margin-bottom: 0.6rem;
+}
+
+.callout {
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.8rem 1rem;
+  color: var(--muted);
+  margin: 1rem 0;
+}
+
+pre {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.85rem 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+}
+
+section + section {
+  margin-top: 2rem;
+}
+
+@media (max-width: 720px) {
+  header,
+  nav,
+  main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

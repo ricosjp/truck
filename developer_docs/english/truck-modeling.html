@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Modeling – Sweeps, Solids, & Face Construction</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Modeling</h1>
+    <p>Sweeps, solids, and kernel operations</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#stack">1. Modeling stack</a></li>
+      <li><a href="#sweeps">2. Sweep operators</a></li>
+      <li><a href="#faces">3. Face generation</a></li>
+      <li><a href="#solids">4. Shells &amp; solids</a></li>
+      <li><a href="#integration">5. Integration with topology &amp; booleans</a></li>
+      <li><a href="#examples">6. Example scripts</a></li>
+      <li><a href="#best-practices">7. Best practices</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+      <li><a href="#checklist">9. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Module Guide</div>
+      
+      <p class="tagline">
+        Converts analytic geometry and wires into shells and solids using sweep-based operators (extrude, revolve, loft),
+        maintaining a consistent mapping between geometry and topology layers.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-modeling</div>
+        <div class="badge"><span>Inputs:</span> truck-geometry curves/surfaces, truck-topology wires</div>
+        <div class="badge"><span>Outputs:</span> shell/solid structures for booleans & tessellation</div>
+      </div>
+    </section>
+
+    <section id="stack">
+      <h2>1. Modeling stack</h2>
+      <p>Modeling sits above geometry but below booleans: it produces watertight shells that <code>truck-shapeops</code> and <code>truck-meshalgo</code> consume.</p>
+      <ul>
+        <li><strong>Geometry</strong> – curves/surfaces from <code>truck-geometry</code>.</li>
+        <li><strong>Topology</strong> – vertices/edges/wires/faces from <code>truck-topology</code>.</li>
+        <li><strong>Modeling</strong> – orchestrates surfaces + trims + new topology (faces, shells).</li>
+      </ul>
+      <p>The crate provides high-level APIs to create solids from wire profiles and reference surfaces, tracking orientation and parameterization throughout.</p>
+    </section>
+
+    <section id="sweeps">
+      <h2>2. Sweep operators</h2>
+      <h3 id="extrude">2.1 Extrude</h3>
+      <p>Extrusion takes planar wires and moves them along a vector:</p>
+      <ul>
+        <li>Generates ruled side faces by lofting between the source curve and its translated copy.</li>
+        <li>Optionally caps the start/end with planar faces if the wire is closed.</li>
+        <li>Records how each edge maps to new edges (generator, offset, rails) for downstream operations.</li>
+      </ul>
+
+      <h3 id="revolve">2.2 Revolve</h3>
+      <p>Revolves a profile around an axis:</p>
+      <ul>
+        <li>Handles angular spans > 2π by splitting faces into non-overlapping regions.</li>
+        <li>Detects axis intersections to avoid degeneracies (e.g., when a profile touches the axis).</li>
+        <li>Aligns trimmed regions with parameter space so tessellation and booleans remain stable.</li>
+      </ul>
+
+      <h3 id="sweep-path">2.3 Sweep-along-path</h3>
+      <p>Generalizes sweeps along arbitrary guide curves. The operator:</p>
+      <ul>
+        <li>Transport frames along the path (Frenet or custom frame) to orient cross-sections.</li>
+        <li>Keeps edges paired with their offset copies for consistent topology mapping.</li>
+        <li>Supports multi-section lofts (e.g., morphing between two profiles).</li>
+      </ul>
+    </section>
+
+    <section id="faces">
+      <h2>3. Face generation</h2>
+      <h3 id="wire-to-face">3.1 Wires to faces</h3>
+      <p>The modeling layer turns wires into trimmed faces:</p>
+      <ol>
+        <li>Select a support surface (planar, lofted, swept).</li>
+        <li>Use the wire as the outer loop, with optional inner loops for holes.</li>
+        <li>Attach the face to the shell, respecting orientation.</li>
+      </ol>
+      <p>This mirrors the B-rep definitions from <code>truck-topology</code>, ensuring compatibility.</p>
+
+      <h3 id="edge-propagation">3.2 Edge propagation</h3>
+      <p>Every sweep tracks edge provenance:</p>
+      <ul>
+        <li>Original edge → generator edge on the face.</li>
+        <li>Translated edge → offset edge.</li>
+        <li>Connecting rails close the loop.</li>
+      </ul>
+      <p>This mapping allows booleans and fillets to understand how new geometry derives from existing edges.</p>
+
+      <h3 id="trim-management">3.3 Trim management</h3>
+      <p>Trim curves are stored in surface parameter space. Modeling ensures:</p>
+      <ul>
+        <li>Loops are properly oriented (outer loops CCW, inner loops CW in UV space).</li>
+        <li>Edges carry both 3D curves and UV curves for trimming operations.</li>
+        <li>Faces reference their trimming data for tessellation and intersection.</li>
+      </ul>
+    </section>
+
+    <section id="solids">
+      <h2>4. Shells &amp; solids</h2>
+      <p>Once faces are built, they are sewn into shells with consistent normals. Modeling can:</p>
+      <ul>
+        <li>Build closed shells from a sweep (e.g., extruded solids, revolved bodies).</li>
+        <li>Generate multiple shells (outer + inner) for cavities.</li>
+        <li>Produce solids (collections of shells) ready for booleans or meshing.</li>
+      </ul>
+    </section>
+
+    <section id="integration">
+      <h2>5. Integration with topology &amp; booleans</h2>
+      <ul>
+        <li>Faces, edges, and vertices produced here comply with <code>truck-topology</code>’s orientation rules.</li>
+        <li>Booleans (<code>truck-shapeops</code>) expect shells created by modeling; modeling’s metadata about edge provenance aids classification.</li>
+        <li>Tessellation (<code>truck-meshalgo</code>) relies on trimmed surfaces created here for UV sampling.</li>
+      </ul>
+    </section>
+
+    <section id="examples">
+      <h2>6. Example scripts</h2>
+      <p>The repository contains reference scripts showcasing how to assemble solids:</p>
+      <ul>
+        <li><strong>bottle</strong> – replicates OCCT’s bottle tutorial using sweeps and revolutions.</li>
+        <li><strong>cube / cylinder / sphere</strong> – canonical primitives built via sweeps.</li>
+        <li><strong>punched-cube / torus-punched-cube</strong> – combines sweeps to make multi-shell solids.</li>
+        <li><strong>tsudumi</strong> – hyperboloid modeling example.</li>
+      </ul>
+      <p>Each script outputs JSON that <code>truck-rendimpl</code> examples can visualize.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>7. Best practices</h2>
+      <ul>
+        <li><strong>Orientation</strong> – wires should be consistently oriented before sweeping; use the <code>Invertible</code> trait to flip as needed.</li>
+        <li><strong>Parameter continuity</strong> – ensure surfaces generated by sweeps have well-behaved parameterization to avoid UV artifacts.</li>
+        <li><strong>Edge mapping</strong> – store metadata linking new edges to source edges for use by booleans/fillets.</li>
+        <li><strong>Tolerance</strong> – use <code>truck-base::tolerance</code> when snapping or checking closure.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>8. Summary</h2>
+      <p><code>truck-modeling</code> provides the high-level operators needed to construct solids from wires and surfaces:</p>
+      <ul>
+        <li>Sweep operators (extrude, revolve, sweep-along-path).</li>
+        <li>Face generation with trim management.</li>
+        <li>Shell/solid assembly ready for booleans and tessellation.</li>
+      </ul>
+      <p>Mastering this layer is key to authoring parametric modeling operations within Truck.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>9. Implementation checklist</h2>
+      <ul>
+        <li><strong>Wires</strong> – validate planarity/orientation before sweeping.</li>
+        <li><strong>Surfaces</strong> – choose the correct support surface (planar vs. loft vs. ruled) for each operation.</li>
+        <li><strong>Trims</strong> – ensure trim loops remain watertight in UV space.</li>
+        <li><strong>Edge provenance</strong> – record mapping from input edges to generated edges.</li>
+        <li><strong>Testing</strong> – cover simple cases (cube, cylinder) and complex ones (bottle) to guard against regressions.</li>
+        <li><strong>Docs</strong> – update README and this guide when adding new operators.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

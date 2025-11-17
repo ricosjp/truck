@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Polymesh – Half-edge Mesh Core</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Polymesh</h1>
+    <p>Half-edge mesh & tess data model</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#halfedge">1. Half-edge basics</a></li>
+      <li><a href="#data-structures">2. Data structures</a></li>
+      <li><a href="#tessellation">3. Feeding tessellation</a></li>
+      <li><a href="#algorithms">4. Algorithms &amp; utilities</a></li>
+      <li><a href="#integration">5. Integration points</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Module Guide</div>
+      
+      <p class="tagline">
+        Defines the half-edge mesh representation used throughout Truck for tessellation, rendering, and mesh-processing
+        algorithms.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-polymesh</div>
+        <div class="badge"><span>Kernel role:</span> Mesh data model</div>
+        <div class="badge"><span>Highlights:</span> Half-edge structure, tess integration, mesh algorithms</div>
+      </div>
+    </section>
+
+    <section id="halfedge">
+      <h2>1. Half-edge basics</h2>
+      <p>
+        The half-edge structure splits every edge into two directed half-edges. Each half-edge knows:
+      </p>
+      <ul>
+        <li>Its origin vertex.</li>
+        <li>The adjacent face.</li>
+        <li>The opposite half-edge (twin).</li>
+        <li>The next/prev half-edge around its face loop.</li>
+      </ul>
+      <p>
+        This design makes neighborhood queries (one-ring, star, opposite faces) constant time, and supports operations such
+        as edge flips, collapses, and propagation of attributes like UVs.
+      </p>
+    </section>
+
+    <section id="data-structures">
+      <h2>2. Data structures</h2>
+      <h3 id="vertices">2.1 Vertices</h3>
+      <p>Vertices store positions, optional normals, and a pointer to one outgoing half-edge. You can traverse all incident faces/edges by following <code>half_edge → twin → next</code>.</p>
+
+      <h3 id="half-edges">2.2 Half-edges</h3>
+      <p>
+        Each half-edge holds indices for <code>origin</code>, <code>twin</code>, <code>next</code>, <code>prev</code>, and its
+        incident face. Attribute storage (boundary flags, UV direction) lives here too, making it easy to propagate data
+        during tessellation or boolean operations.
+      </p>
+
+      <h3 id="faces">2.3 Faces &amp; loops</h3>
+      <p>
+        Faces reference one of their bounding half-edges. Since loops can contain holes, inner loops are represented by
+        chains of half-edges whose face pointers all reference the outer face. Traversal follows the standard half-edge
+        “next” pointers.
+      </p>
+    </section>
+
+    <section id="tessellation">
+      <h2>3. Feeding tessellation</h2>
+      <p>
+        Results from <code>truck-meshalgo</code> or analytic meshing pipelines emit vertices/faces in the <code>truck-polymesh</code>
+        format:
+      </p>
+      <ul>
+        <li>Vertices store world-space positions and optional UVs or normals.</li>
+        <li>Edges capture adjacency so shading and boolean operations remain watertight.</li>
+        <li>Supports both triangle and quad faces; higher valence polygons can be stored or triangulated later.</li>
+      </ul>
+    </section>
+
+    <section id="algorithms">
+      <h2>4. Algorithms &amp; utilities</h2>
+      <p>While most algorithms live in <code>truck-meshalgo</code>, this crate provides utility functions:</p>
+      <ul>
+        <li>Traversal helpers (neighbors, loops, boundary detection).</li>
+        <li>Attribute propagation (copy normals/UVs along shared edges).</li>
+        <li>Conversion helpers (OBJ import/export for debug, used by the sample tools).</li>
+      </ul>
+    </section>
+
+    <section id="integration">
+      <h2>5. Integration points</h2>
+      <ul>
+        <li><strong>truck-modeling</strong> → <strong>truck-meshalgo</strong> → <strong>truck-polymesh</strong>: shapes are tessellated into meshes.</li>
+        <li><strong>truck-platform/truck-rendimpl</strong> consume <code>truck-polymesh</code> for rendering.</li>
+        <li>Mesh-processing examples (loop subdivision, smoothing) manipulate this data structure directly.</li>
+      </ul>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Keep half-edge invariants</strong> – whenever you edit a face/edge, update twin/next/prev pointers.</li>
+        <li><strong>Store UVs</strong> – tessellation should capture UV coordinates so trimming and texturing remain possible.</li>
+        <li><strong>Use consistent winding</strong> – follow Truck’s orientation rules (usually CCW for outward normals).</li>
+        <li><strong>Validate</strong> – run manifold/boundary checks after editing meshes to catch topology errors early.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-polymesh</code> provides a robust half-edge mesh that underpins tessellation, rendering, and experimental mesh-processing tools. Understanding its structure makes it easier to integrate new algorithms or diagnostics into the Truck pipeline.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li>Use half-edge helpers when adding/removing faces to avoid pointer mistakes.</li>
+        <li>Ensure tessellated data includes normals and UVs if downstream consumers need them.</li>
+        <li>When exporting, preserve vertex order and attributes (OBJ helpers are provided).</li>
+        <li>Document new mesh utilities or attribute conventions in the README and this guide.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

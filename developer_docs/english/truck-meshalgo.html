@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Meshalgo – Tessellation & Mesh Refinement</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Meshalgo</h1>
+    <p>Tessellation & mesh-processing algorithms</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#tessellation">2. Tessellation pipeline</a></li>
+      <li><a href="#refinement">3. Subdivision &amp; refinement</a></li>
+      <li><a href="#smoothing">4. Smoothing &amp; normal generation</a></li>
+      <li><a href="#integration">5. Integration with other crates</a></li>
+      <li><a href="#cli">6. CLI samples</a></li>
+      <li><a href="#best-practices">7. Best practices</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+      <li><a href="#checklist">9. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Module Guide</div>
+      
+      <p class="tagline">
+        Algorithms for tessellating trimmed NURBS, refining meshes, generating normals, and experimenting with mesh
+        decomposition before exporting to downstream consumers such as rendering and analysis tools.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-meshalgo</div>
+        <div class="badge"><span>Inputs:</span> truck-modeling / truck-topology shapes</div>
+        <div class="badge"><span>Outputs:</span> truck-polymesh meshes, OBJ samples</div>
+      </div>
+    </section>
+
+    <section id="overview">
+      <h2>1. Architecture overview</h2>
+      <p>Meshalgo sits between analytic CAD data and polygonal consumers:</p>
+      <ul>
+        <li>Receives analytic geometry via <code>truck-geometry</code> & <code>truck-modeling</code>.</li>
+        <li>Converts faces (with trims) into <code>truck-polymesh</code> half-edge meshes.</li>
+        <li>Runs refinement passes (subdivision, quadrangulation, smoothing) depending on the workflow.</li>
+        <li>Exports to file formats (OBJ, JSON) or directly to visualization crates.</li>
+      </ul>
+      <p>Each algorithm is exposed through the library API and mirrored by sample binaries demonstrating usage.</p>
+    </section>
+
+    <section id="tessellation">
+      <h2>2. Tessellation pipeline</h2>
+      <p>Tessellation is the main entry point for converting shapes to meshes.</p>
+
+      <h3 id="sampling">2.1 Sampling strategy</h3>
+      <ul>
+        <li>Adaptive sampling based on curvature, trimming density, and user-supplied tolerances.</li>
+        <li>Parameter domains come from <code>ParametricSurface</code> implementations; normalized domains are re-scaled to actual UV ranges.</li>
+        <li>Edge isolines guarantee that mesh boundaries align with face trims.</li>
+      </ul>
+      <p>Key tuning knobs include chordal deviation, angular tolerance, and maximum edge length. These mirror CAD tessellators, making it easier to match external kernels.</p>
+
+      <h3 id="trimming">2.2 Trimming & topology</h3>
+      <p>Trimming curves are evaluated in UV space and clipped via polygon boolean operations before being mapped back to 3D. The resulting tess is stitched into a watertight <code>truck-polymesh</code> and inherits edge orientation rules from <code>truck-topology</code>.</p>
+
+      <h3 id="export">2.3 Export formats</h3>
+      <p>
+        Tessellated meshes can be exported as OBJ/JSON (see <code>tessellate-shape</code> example) or passed directly to rendering.
+        Always preserve per-vertex normals / UVs if the downstream consumer expects them.
+      </p>
+    </section>
+
+    <section id="refinement">
+      <h2>3. Subdivision &amp; refinement</h2>
+      <h3 id="loop-subdivision">3.1 Loop subdivision</h3>
+      <p><code>octahedron-subdivision</code> demonstrates classic Loop subdivision: each triangle is split and vertex positions are averaged using Loop weights to create smooth approximations.</p>
+
+      <h3 id="quadrangulation">3.2 Quadrangulation</h3>
+      <p>Examples like <code>requadrangulate-buddha</code> and <code>teapot</code> show how the crate converts triangle soups into quad meshes using dual graph techniques plus smoothing passes. This is useful for downstream NURBS fitting or quad-based render pipelines.</p>
+
+      <h3 id="mesh-decomp">3.3 Mesh decomposition</h3>
+      <p>Experiments such as <code>filleted-cube</code> and <code>splitting-sample</code> decompose meshes into planar or curved patches to aid feature recognition (future NURBS reverse-engineering). Although these binaries are exploratory, they demonstrate how to walk the mesh graph and group faces by curvature.</p>
+    </section>
+
+    <section id="smoothing">
+      <h2>4. Smoothing &amp; normal generation</h2>
+      <p>Binaries like <code>smoothing-bunny</code> and <code>irregular-sphere</code> recompute vertex normals:</p>
+      <ul>
+        <li>Area-weighted or angle-weighted averaging for smooth shading.</li>
+        <li>Optional projection back onto analytic surfaces to eliminate noise.</li>
+      </ul>
+      <p>Use these routines when importing low-quality meshes or when tessellation produced per-face normals only.</p>
+    </section>
+
+    <section id="integration">
+      <h2>5. Integration with other crates</h2>
+      <ul>
+        <li><strong>truck-modeling / truck-shapeops</strong> – provide analytic shapes to tessellate.</li>
+        <li><strong>truck-polymesh</strong> – receives final meshes using the half-edge structure expected by visualization/rendering.</li>
+        <li><strong>truck-platform / truck-rendimpl</strong> – render tessellated results (see OBJ outputs used by sample viewers).</li>
+      </ul>
+      <p>Always keep consistency in tolerance usage: reuse <code>truck-base::tolerance</code> thresholds when snapping or welding vertices.</p>
+    </section>
+
+    <section id="cli">
+      <h2>6. CLI samples</h2>
+      <p>Sample binaries serve as living documentation. Highlights:</p>
+      <ul>
+        <li><code>tessellate-shape</code> – <code>tessellate-shape input.json output.obj</code></li>
+        <li><code>requadrangulate-buddha</code> – stress-tests quadrangulation + smoothing.</li>
+        <li><code>teapot</code> / <code>smoothing-bunny</code> – normal generation examples.</li>
+        <li><code>octahedron-subdivision</code> – minimal reproduction of Loop subdivision.</li>
+      </ul>
+      <p>Refer to the README for the full list and input/output expectations.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>7. Best practices</h2>
+      <ul>
+        <li><strong>Watertightness</strong> – weld vertices and check manifold conditions after tessellation.</li>
+        <li><strong>Parameter tracking</strong> – store UV coordinates per vertex when trimming; modeling/texture workflows depend on them.</li>
+        <li><strong>Curvature-aware sampling</strong> – tie tessellation density to <code>truck-geotrait</code> derivative magnitudes to avoid aliasing.</li>
+        <li><strong>Performance</strong> – use spatial subdivision (e.g., BVHs) when running operations on large meshes (see <code>requadrangulate-buddha</code>).</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>8. Summary</h2>
+      <p><code>truck-meshalgo</code> is the bridge from analytic geometry to polygonal representations:</p>
+      <ul>
+        <li>Robust tessellation with trimming support.</li>
+        <li>Subdivision, quadrangulation, and decomposition utilities.</li>
+        <li>Normal smoothing and experimentation tools for reverse engineering meshes.</li>
+      </ul>
+    </section>
+
+    <section id="checklist">
+      <h2>9. Implementation checklist</h2>
+      <ul>
+        <li><strong>Parameters</strong> – expose knobs for chordal/angle tolerances; document defaults.</li>
+        <li><strong>Normals</strong> – recompute and normalize after every refinement step.</li>
+        <li><strong>Metadata</strong> – propagate UVs, materials, and edge tags through tessellation.</li>
+        <li><strong>Validation</strong> – assert manifoldness or report diagnostics when a mesh operation fails.</li>
+        <li><strong>Docs</strong> – update README/examples plus this guide when new algorithms land.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

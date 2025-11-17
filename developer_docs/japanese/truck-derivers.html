@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-derivers ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-derivers : 派生マクロ集</h1>
+    <p>truck-derivers : 派生マクロ集 に関する開発者向けガイドです。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#section-1">1. 曲線・曲面トレイト</a></li>
+      <li><a href="#section-2">2. 変換・同一ジオメトリ</a></li>
+      <li><a href="#section-3">3. STEP 関連</a></li>
+      <li><a href="#section-4">4. 注意点</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+<p>多数のトレイト実装を自動生成するための procedural macro クレートです。<code>truck-geotrait</code> で <code>features = ["derive"]</code> を有効にすると自動的に利用されます。</p>
+    </section>
+
+<section id="section-1">
+      <h2>1. 曲線・曲面トレイト</h2>
+      <ul>
+        <li><code>#[derive(ParametricCurve, BoundedCurve)]</code></li>
+        <li><code>#[derive(ParameterDivision1D, SearchParameterD1)]</code></li>
+        <li><code>#[derive(ParametricSurface, ParametricSurface3D, ParameterDivision2D)]</code></li>
+        <li><code>#[derive(Cut, Invertible, ParameterTransform)]</code></li>
+      </ul>
+      <p>各バリアントが単一のラップ型（タプル構造体または 1 フィールド enum）である必要があります。</p>
+    </section>
+
+    <section id="section-2">
+      <h2>2. 変換・同一ジオメトリ</h2>
+      <ul>
+        <li><code>#[derive(TransformedM3)]</code>, <code>#[derive(TransformedM4)]</code></li>
+        <li><code>#[derive(SelfSameGeometry)]</code></li>
+      </ul>
+      <p>アセンブリ変換や幾何キャッシュで便利です。</p>
+    </section>
+
+    <section id="section-3">
+      <h2>3. STEP 関連</h2>
+      <ul>
+        <li><code>#[derive(StepCurve, StepSurface, StepLength, DisplayByStep)]</code></li>
+        <li><code>#[derive(StepCurve, StepSurface)]</code> は truck-stepio のエンコーダに必要です。</li>
+      </ul>
+    </section>
+
+    <section id="section-4">
+      <h2>4. 注意点</h2>
+      <ul>
+        <li>派生対象となる型の各フィールドが元トレイトを実装していること。</li>
+        <li>enum ではバリアントごとに 1 フィールドでなければなりません。</li>
+        <li>エラー時には panic するため、型構造が条件を満たしているか事前に確認します。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Topology – B-rep Data Model</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Topology</h1>
+    <p>B-rep structures & orientation rules</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#stack">1. Topology stack</a></li>
+      <li><a href="#structures">2. Data structures</a></li>
+      <li><a href="#orientation">3. Orientation &amp; trims</a></li>
+      <li><a href="#integration">4. Integration with geometry &amp; modeling</a></li>
+      <li><a href="#best-practices">5. Best practices</a></li>
+      <li><a href="#summary">6. Summary</a></li>
+      <li><a href="#checklist">7. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill" style="display:inline-flex;gap:0.45rem;align-items:center;padding:0.18rem 0.75rem;border-radius:999px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(192,132,252,0.4);margin-bottom:0.7rem;">Module Guide</div>
+      
+      <p class="tagline">
+        Defines boundary representation (B-rep) structures—vertices, edges, wires, faces, shells, and solids—and enforces the orientation rules used across the Truck kernel.
+      </p>
+      <div class="badge-row" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.15rem;">
+        <div class="badge" style="font-size:0.8rem;padding:0.2rem 0.55rem;border-radius:999px;background:rgba(39,39,47,0.92);border:1px solid rgba(63,63,70,0.85);color:var(--fg-muted);"><span style="color:#f8fafc;font-weight:500;">Crate:</span> truck-topology</div>
+        <div class="badge" style="font-size:0.8rem;padding:0.2rem 0.55rem;border-radius:999px;background:rgba(39,39,47,0.92);border:1px solid rgba(63,63,70,0.85);color:var(--fg-muted);"><span style="color:#f8fafc;font-weight:500;">Focus:</span> B-rep data model</div>
+        <div class="badge" style="font-size:0.8rem;padding:0.2rem 0.55rem;border-radius:999px;background:rgba(39,39,47,0.92);border:1px solid rgba(63,63,70,0.85);color:var(--fg-muted);"><span style="color:#f8fafc;font-weight:500;">Consumers:</span> modeling, booleans, tessellation</div>
+      </div>
+    </section>
+
+    <section id="stack">
+      <h2>1. Topology stack</h2>
+      <p>Truck’s topology sits between geometry and mesh layers:</p>
+      <ul>
+        <li><strong>Geometry</strong> – curves/surfaces from <code>truck-geotrait</code>/<code>truck-geometry</code>.</li>
+        <li><strong>Topology</strong> – organizes geometry into vertices, edges, wires, faces, shells, solids.</li>
+        <li><strong>Modeling/Booleans</strong> – operate on topology to create/manipulate solids.</li>
+        <li><strong>Tessellation</strong> – consumes topology’s trimmed surfaces to produce meshes.</li>
+      </ul>
+    </section>
+
+    <section id="structures">
+      <h2>2. Data structures</h2>
+
+      <h3 id="vertex">2.1 Vertex</h3>
+      <p>Stores a 3D point plus references to incident edges. Vertices may also cache parameter-space coordinates for associated edges/surfaces.</p>
+
+      <h3 id="edge">2.2 Edge</h3>
+      <p>Edges reference a parametric curve, two vertices, and an orientation. They may also store UV curves for trimming surfaces. Each edge has both 3D and parameter-space representations.</p>
+
+      <h3 id="wire">2.3 Wire</h3>
+      <p>A closed sequence of oriented edges forming a loop. Wires can serve as outer loops (defining the boundary of a face) or inner loops (holes). Consistent orientation (CCW for outer loops) is required.</p>
+
+      <h3 id="face">2.4 Face</h3>
+      <p>Faces reference a surface plus an outer wire and zero or more inner wires. They encapsulate trimmed surface patches.</p>
+
+      <h3 id="shell">2.5 Shell &amp; solid</h3>
+      <p>Shells are closed, oriented sets of faces. Solids consist of one outer shell and optional inner shells (voids). Booleans operate at the shell/solid level.</p>
+    </section>
+
+    <section id="orientation">
+      <h2>3. Orientation &amp; trims</h2>
+      <p>Orientation rules keep the data model consistent:</p>
+      <ul>
+        <li>Edges have a “forward” direction based on their parametric curve.</li>
+        <li>Wires are oriented so outer loops are CCW in UV space (relative to surface normal), inner loops CW.</li>
+        <li>Face orientation determines shell normals; consistent sewing ensures outward normals on shells.</li>
+      </ul>
+    </section>
+
+    <section id="integration">
+      <h2>4. Integration with geometry &amp; modeling</h2>
+      <p>Topology relies on geometry for actual shape evaluation:</p>
+      <ul>
+        <li>Edges reference <code>ParametricCurve</code> implementations.</li>
+        <li>Faces reference <code>ParametricSurface</code> plus wires that live in their parameter space.</li>
+        <li>Modeling operators (extrude, revolve) generate topology in this format, ensuring compatibility with booleans and tessellation.</li>
+      </ul>
+    </section>
+
+    <section id="best-practices">
+      <h2>5. Best practices</h2>
+      <ul>
+        <li>Ensure wires are closed and consistently oriented before constructing faces.</li>
+        <li>Maintain edge metadata linking to source curves for downstream operations (e.g., booleans, fillets).</li>
+        <li>Use the provided traversal utilities to navigate loops/shells instead of manual pointer chasing.</li>
+        <li>Validate shells for watertightness/orientation before running booleans or tessellation.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>6. Summary</h2>
+      <p><code>truck-topology</code> provides the B-rep backbone for Truck. It organizes geometry into a structured hierarchy that modeling, booleans, and tessellation can all consume.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>7. Implementation checklist</h2>
+      <ul>
+        <li>Verify edge orientations and wire closure before building faces.</li>
+        <li>Attach both 3D and UV representations to edges/faces when trimming surfaces.</li>
+        <li>When adding new topology features, update README/docs to explain orientation and traversal rules.</li>
+        <li>Use integration tests (e.g., modeling scripts) to confirm new topology constructs behave through the entire pipeline.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

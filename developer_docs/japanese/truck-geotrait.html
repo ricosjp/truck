@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-geotrait ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-geotrait : 幾何トレイト</h1>
+    <p>truck-geotrait : 幾何トレイト に関する開発者向けガイドです。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#section-1">1. 共有ヘルパー</a></li>
+      <li><a href="#section-2">2. 曲線トレイト</a></li>
+      <li><a href="#section-3">3. 曲面トレイト</a></li>
+      <li><a href="#section-4">4. 実装ヒントと derive</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+<p>
+      Truck の曲線・曲面クレートはすべて <code>truck-geotrait</code> が定義するトレイトを実装します。
+      ここでは主要トレイトと補助トレイトの概要をまとめました。
+    </p>
+    </section>
+
+<section id="section-1">
+      <h2>1. 共有ヘルパー</h2>
+      <ul>
+        <li><code>Invertible</code> : 方向を反転できるジオメトリ（エッジ、ワイヤ）用。</li>
+        <li><code>Transformed&lt;Matrix3/4&gt;</code> : 剛体・アフィン変換を適用するためのトレイト。</li>
+        <li><code>ToSameGeometry</code> : 具体型を隠蔽しつつ等価なジオメトリを取得。</li>
+      </ul>
+    </section>
+
+    <section id="section-2">
+      <h2>2. 曲線トレイト</h2>
+      <ul>
+        <li><code>ParametricCurve</code> : <code>subs(t)</code>、各階微分、パラメータレンジ。</li>
+        <li><code>BoundedCurve</code> : 有限区間の曲線。<code>front</code>/<code>back</code> を提供。</li>
+        <li><code>ParameterDivision1D</code> / <code>ParameterTransform</code> : 自動分割とパラメータ正規化。</li>
+        <li><code>SearchParameterD1</code> など : 最近点探索／射影。</li>
+      </ul>
+    </section>
+
+    <section id="section-3">
+      <h2>3. 曲面トレイト</h2>
+      <ul>
+        <li><code>ParametricSurface</code> : <code>subs(u,v)</code> と偏微分。</li>
+        <li><code>ParametricSurface3D</code> : 法線およびその微分を提供。</li>
+        <li><code>BoundedSurface</code> / <code>IncludeCurve</code> : UV 範囲とトリム検証。</li>
+        <li><code>ParameterDivision2D</code>, <code>SearchParameterD2</code> : 2D 分割と射影。</li>
+      </ul>
+    </section>
+
+    <section id="section-4">
+      <h2>4. 実装ヒントと derive</h2>
+      <p>
+        ラッパー型には <code>truck-derivers</code> の派生マクロ（<code>#[derive(ParametricCurve)]</code> など）を利用できます。
+        パラメータレンジは <code>Bound::Included</code> で返し、トレランスは <code>truck-base</code> に合わせます。
+      </p>
+    </section>
+  </main>
+</body>
+</html>

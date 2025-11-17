@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Rendimpl – CAD Renderer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Rendimpl</h1>
+    <p>CAD renderer built on truck-platform</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#layers">1. Renderer layers</a></li>
+      <li><a href="#pipelines">2. Render pipelines</a></li>
+      <li><a href="#mesh-upload">3. Mesh upload</a></li>
+      <li><a href="#interactivity">4. Interactivity &amp; camera</a></li>
+      <li><a href="#integration">5. Integration with other crates</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Module Guide</div>
+      
+      <p class="tagline">
+        The high-level renderer for Truck geometry. Builds on <code>truck-platform</code> to provide CAD-friendly shading,
+        selection, and camera control out of the box.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-rendimpl</div>
+        <div class="badge"><span>Backend:</span> WGPU via truck-platform</div>
+        <div class="badge"><span>Highlights:</span> Tess mesh upload, forward shading, selection buffers</div>
+      </div>
+    </section>
+
+    <section id="layers">
+      <h2>1. Renderer layers</h2>
+      <p>Rendimpl sits above truck-platform:</p>
+      <ul>
+        <li><strong>truck-platform</strong> – device/queue/context + <code>Rendered</code> trait</li>
+        <li><strong>truck-rendimpl</strong> – defines concrete rendered objects for CAD (meshes, wires, selection, axes)</li>
+        <li><strong>Samples/viewers</strong> – use <code>truck-rendimpl</code> to visualize modeling/tessellation output</li>
+      </ul>
+    </section>
+
+    <section id="pipelines">
+      <h2>2. Render pipelines</h2>
+      <h3 id="forward">2.1 Forward shading</h3>
+      <p>Implements a configurable forward renderer:</p>
+      <ul>
+        <li>Supports multiple lights, toon/PBR-ish shading toggles.</li>
+        <li>Handles per-face/vertex colors and normals from tessellation.</li>
+        <li>Exposes uniform buffers for camera, lighting, and selection state.</li>
+      </ul>
+
+      <h3 id="wireframe">2.2 Wireframe overlay</h3>
+      <p>Draws mesh edges with optional depth offset to visualize topology.</p>
+
+      <h3 id="selection">2.3 Selection buffer</h3>
+      <p>Rendimpl renders an off-screen buffer encoding IDs per primitive. Mouse picking reads this buffer to determine which face/edge/vertex is under the cursor.</p>
+    </section>
+
+    <section id="mesh-upload">
+      <h2>3. Mesh upload</h2>
+      <h3 id="tess">3.1 From tessellation</h3>
+      <p>Meshes from <code>truck-meshalgo</code> are converted into GPU buffers:</p>
+      <ul>
+        <li>Vertex positions, normals, UVs.</li>
+        <li>Index buffers for triangles/quads.</li>
+        <li>Instance data for repeated geometry (see below).</li>
+      </ul>
+
+      <h3 id="instancing">3.2 Instancing</h3>
+      <p>Instances encode per-object transforms, colors, and selection flags. Rendimpl uses instancing to render large scenes efficiently.</p>
+    </section>
+
+    <section id="interactivity">
+      <h2>4. Interactivity &amp; camera</h2>
+      <p>Out-of-the-box camera controls (orbit/pan/zoom) and input handling integrate with the selection buffer and WGSL overlay. Viewers can focus on geometry and let rendimpl manage interaction plumbing.</p>
+    </section>
+
+    <section id="integration">
+      <h2>5. Integration with other crates</h2>
+      <ul>
+        <li><strong>truck-modeling / truck-shapeops</strong> – produce solids whose tessellated meshes are uploaded here.</li>
+        <li><strong>truck-platform</strong> – supplies device/context and <code>Rendered</code> trait implementations.</li>
+        <li><strong>truck-meshalgo / truck-polymesh</strong> – provide mesh data ready for upload.</li>
+      </ul>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Reuse GPU resources</strong> – avoid recreating buffers when meshes only change transforms.</li>
+        <li><strong>Synchronize selection state</strong> – keep CPU-side IDs in sync with the selection buffer.</li>
+        <li><strong>Coordinate conventions</strong> – maintain Truck’s right-handed Z-up view so modeling output matches expectations.</li>
+        <li><strong>Hot shader reload</strong> – reuse truck-platform’s shader reload utilities when iterating on WGSL.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-rendimpl</code> gives Truck a CAD-ready renderer: it understands tessellated meshes, draws wireframes, handles selection, and integrates seamlessly with the rest of the engine.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li><strong>Init</strong> – set up truck-platform context before constructing rendimpl objects.</li>
+        <li><strong>Mesh data</strong> – ensure tessellation outputs normals/UVs so shading works.</li>
+        <li><strong>Selection IDs</strong> – assign unique IDs per entity when uploading to selection buffer.</li>
+        <li><strong>Docs</strong> – update README/guide whenever new pipelines or viewer features are added.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

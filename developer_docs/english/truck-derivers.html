@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Derivers – Procedural Trait Macros</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Derivers</h1>
+    <p>Procedural macros for geometric traits</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#setup">1. Getting started</a></li>
+      <li><a href="#curve-derives">2. Curve trait derives</a></li>
+      <li><a href="#surface-derives">3. Surface trait derives</a></li>
+      <li><a href="#transform-derives">4. Transform &amp; geometry derives</a></li>
+      <li><a href="#step-derives">5. STEP / export derives</a></li>
+      <li><a href="#debugging">6. Debugging derived impls</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Macro Guide</div>
+      
+      <p class="tagline">
+        Procedural macros that implement the repetitive, boilerplate-heavy traits from
+        <code>truck-geotrait</code>, keeping curve and surface types small and easy to maintain.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-derivers</div>
+        <div class="badge"><span>Consumers:</span> truck-geotrait (feature = "derive")</div>
+        <div class="badge"><span>Targets:</span> Parametric curves & surfaces, search helpers, STEP IO</div>
+      </div>
+      <p>
+        These macros derive entire trait impls for wrapper enums or tuple structs. They are
+        primarily invoked by <code>truck-geotrait</code> when you enable the
+        <code>derive</code> feature, but you can reference them directly if your crate defines custom
+        curve/surface types that still follow Truck’s trait contracts.
+      </p>
+    </section>
+
+    <section id="setup">
+      <h2>1. Getting started</h2>
+      <p>Most users only need to flip on the derive feature in <code>truck-geotrait</code>:</p>
+      <pre><code>[dependencies]
+truck-geotrait = { version = "0.4", features = ["derive"] }</code></pre>
+      <p>Doing so exposes the <code>#[derive(...)]</code> macros listed below.</p>
+      <h3>Wrapper pattern</h3>
+      <p>Derives expect simple data shapes:</p>
+      <ul>
+        <li>Tuple structs wrapping a single field (e.g. <code>struct NurbsCurve(pub MyImpl);</code>)</li>
+        <li>Enums whose variants each hold exactly one field (common for shape unions)</li>
+      </ul>
+      <p>All variants must contain types that already implement the underlying trait. The macro simply forwards the trait methods to the inner type and re-wraps the result when necessary.</p>
+    </section>
+
+    <section id="curve-derives">
+      <h2>2. Curve trait derives</h2>
+      <p>Derived curves typically wrap low-level implementations from <code>truck-geometry</code>.</p>
+
+      <h3 id="bounded-curve">2.1 Bounded &amp; parametric</h3>
+      <ul>
+        <li><code>#[derive(ParametricCurve)]</code> – forwards evaluation (<code>subs</code>, <code>der</code>, etc.) and parameter metadata.</li>
+        <li><code>#[derive(BoundedCurve)]</code> – adds <code>range_tuple</code>, <code>front</code>, <code>back</code> while panicking if any variant exposes an unbounded range.</li>
+        <li><code>#[derive(ParametricCurve3D)]</code> is implied once the point/vector types are <code>Point3/Vector3</code>.</li>
+      </ul>
+      <p>Use these derives whenever you are building high-level curve types (e.g. enums of line/arc/spline) that simply dispatch to concrete primitives.</p>
+
+      <h3 id="curve-division">2.2 Parameter division</h3>
+      <p><code>#[derive(ParameterDivision1D)]</code> forwards adaptive sampling logic. Each variant’s inner type must already implement <code>ParameterDivision1D</code>. The derive simply returns the inner tuple of parameters and evaluated points.</p>
+
+      <h3 id="curve-search">2.3 Parameter search</h3>
+      <p>Truck uses dedicated traits for nearest-parameter queries:</p>
+      <ul>
+        <li><code>SearchParameterD1</code>, <code>SearchNearestParameterD1</code> for 1D curves.</li>
+        <li>The <code>D2</code> variants operate on 2D parameter spaces (useful for trimming curves on surfaces).</li>
+      </ul>
+      <p>Derives (<code>#[derive(SearchParameterD1)]</code>, etc.) automatically dispatch to the inner solver, preserving diagnostics from <code>truck-geotrait::algo</code>.</p>
+
+      <h3 id="curve-utilities">2.4 Utilities</h3>
+      <ul>
+        <li><code>#[derive(Cut)]</code> – splits a bounded curve at a parameter and returns the trailing segment.</li>
+        <li><code>#[derive(Invertible)]</code> – flips orientation for each variant/tuple struct, using <code>Invertible::invert</code>.</li>
+      </ul>
+      <p>These utilities keep topological algorithms simple: edges can reverse orientation or be trimmed without re-implementing the math per variant.</p>
+    </section>
+
+    <section id="surface-derives">
+      <h2>3. Surface trait derives</h2>
+      <p>Surface derives mirror their curve counterparts but operate on two parameters.</p>
+
+      <h3 id="parametric-surface">3.1 Parametric &amp; bounded</h3>
+      <ul>
+        <li><code>#[derive(ParametricSurface)]</code> – forwards all partial derivatives and range metadata.</li>
+        <li><code>#[derive(ParametricSurface3D)]</code> – adds normal computations and derivatives of normals.</li>
+        <li><code>#[derive(BoundedSurface)]</code> – exposes finite <code>u</code> and <code>v</code> ranges.</li>
+      </ul>
+
+      <h3 id="surface-division">3.2 UV division</h3>
+      <p><code>#[derive(ParameterDivision2D)]</code> forwards two-dimensional sampling (used for tessellation and adaptive evaluation).</p>
+
+      <h3 id="surface-search">3.3 UV search</h3>
+      <p>The <code>SearchParameterD2</code> and <code>SearchNearestParameterD2</code> derives funnel Newton-based projection routines from <code>truck-geotrait::algo</code> to all variants.</p>
+    </section>
+
+    <section id="transform-derives">
+      <h2>4. Transform &amp; geometry derives</h2>
+      <h3 id="transform-macro">4.1 Matrix derives</h3>
+      <ul>
+        <li><code>#[derive(TransformedM3)]</code> – implements <code>Transformed&lt;Matrix3&gt;</code> by forwarding <code>transform_by</code> to the inner type.</li>
+        <li><code>#[derive(TransformedM4)]</code> – same but for full affine transforms (<code>Matrix4</code>).</li>
+      </ul>
+      <p>These macros are essential when your wrappers need to respond to assembly-level transforms without bespoke code for each variant.</p>
+
+      <h3 id="same-geometry">4.2 SelfSameGeometry</h3>
+      <p><code>#[derive(SelfSameGeometry)]</code> plugs into the <code>ToSameGeometry</code> trait, returning a boxed clone of the inner geometry. Use this when you want to erase the concrete type but still provide a canonical representation (e.g., caching surfaces by their base geometry).</p>
+    </section>
+
+    <section id="step-derives">
+      <h2>5. STEP / export derives</h2>
+      <p>Truck’s STEP writer relies on a small set of traits for formatting and entity length calculations.</p>
+
+      <h3 id="step-curve-derives">5.1 StepCurve / StepSurface</h3>
+      <ul>
+        <li><code>#[derive(StepCurve)]</code> – forwards STEP serialization for curves.</li>
+        <li><code>#[derive(StepSurface)]</code> – same for surfaces.</li>
+      </ul>
+      <p>Each variant’s inner type is expected to already implement the relevant STEP trait.</p>
+
+      <h3 id="step-display">5.2 Display helpers</h3>
+      <ul>
+        <li><code>#[derive(StepLength)]</code> – indicates the number of STEP records generated.</li>
+        <li><code>#[derive(DisplayByStep)]</code> – builds user-friendly <code>Display</code> impls using STEP syntax.</li>
+      </ul>
+    </section>
+
+    <section id="debugging">
+      <h2>6. Debugging derived impls</h2>
+      <p>When a derive panics, the error usually points to one of these issues:</p>
+      <ul>
+        <li><strong>Variant shape</strong> – ensure every variant holds exactly one field, with or without a named identifier.</li>
+        <li><strong>Missing trait bounds</strong> – add <code>where</code> clauses so the inner type implements the trait being derived.</li>
+        <li><strong>Unbounded ranges</strong> – the bounded derives panic if a variant reports <code>Bound::Unbounded</code>. Double-check the wrapped type.</li>
+      </ul>
+      <p>Enable <code>RUSTFLAGS="--cfg proc_macro_span"</code> to surface better span information from <code>proc_macro_error</code> if necessary.</p>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-derivers</code> eliminates repetitive forwarding code, letting you:</p>
+      <ul>
+        <li>Wrap geometry primitives in enums/structs without hand-writing trait impls.</li>
+        <li>Keep parameter search/division logic consistent across all curve/surface variants.</li>
+        <li>Integrate transformation and STEP serialization behavior with a single attribute.</li>
+      </ul>
+      <p>Whenever you add a new wrapper type or union of primitives, use these derives to stay compliant with the broader Truck kernel contracts.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li><strong>Features</strong> – enable <code>truck-geotrait</code>’s <code>derive</code> feature (or depend on <code>truck-derivers</code> directly).</li>
+        <li><strong>Shape</strong> – verify each struct/enum variant is a single-field wrapper.</li>
+        <li><strong>Bounds</strong> – add <code>where</code> clauses so inner types implement the traits you derive.</li>
+        <li><strong>Testing</strong> – write regression tests for representative variants; ensure derived impls route to the correct inner behavior.</li>
+        <li><strong>Docs</strong> – update crate READMEs / guides whenever you add or remove derive macros.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

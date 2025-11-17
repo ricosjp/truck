@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-topology ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-topology : B-rep トポロジ</h1>
+    <p>truck-topology : B-rep トポロジ に関する開発者向けガイドです。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#section-1">1. データ構造</a></li>
+      <li><a href="#section-2">2. 向きとトリム</a></li>
+      <li><a href="#section-3">3. 幾何との連携</a></li>
+      <li><a href="#section-4">4. チェックリスト</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+<p>
+      Truck の B-rep は Vertex → Edge → Wire → Face → Shell → Solid という従来の階層に従います。
+      ここでは各構造と向きのルールを簡潔にまとめます。
+    </p>
+    </section>
+
+<section id="section-1">
+      <h2>1. データ構造</h2>
+      <ul>
+        <li><strong>Vertex</strong> : 3D 座標と関連エッジを保持。</li>
+        <li><strong>Edge</strong> : 始点/終点、曲線、方向、UV トリム曲線。</li>
+        <li><strong>Wire</strong> : エッジの閉ループ。外周は CCW、内周は CW。</li>
+        <li><strong>Face</strong> : 曲面 + 外ループ + 内ループ集合。</li>
+        <li><strong>Shell/Solid</strong> : 面を縫い合わせた閉空間。Solid は外殻と空洞殻で構成。</li>
+      </ul>
+    </section>
+
+    <section id="section-2">
+      <h2>2. 向きとトリム</h2>
+      <p>
+        エッジ方向は曲線のパラメータ方向と一致させ、Wire 内での並び順を保ちます。
+        面の UV 空間では外ループが CCW、内ループが CW になるように揃え、法線が外側（シェル基準）を向くようにします。
+      </p>
+    </section>
+
+    <section id="section-3">
+      <h2>3. 幾何との連携</h2>
+      <ul>
+        <li>エッジは <code>ParametricCurve</code>、面は <code>ParametricSurface</code> を参照。</li>
+        <li>トリム曲線は曲面パラメータ空間に保存し、テッセレーションやブーリアンで利用します。</li>
+        <li>modeling / shapeops はこの構造を前提にソリッドを生成・加工します。</li>
+      </ul>
+    </section>
+
+    <section id="section-4">
+      <h2>4. チェックリスト</h2>
+      <ul>
+        <li>Wire が閉じているか、向きが正しいか。</li>
+        <li>エッジの 3D 曲線と UV 曲線の対応が一致しているか。</li>
+        <li>シェルが完全に閉じ、法線が整合しているか。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

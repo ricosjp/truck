@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Shapeops – Boolean & Healing Pipeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Shapeops</h1>
+    <p>Boolean operations & healing</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#pipeline">1. Boolean pipeline</a></li>
+      <li><a href="#intersections">2. Intersection stage</a></li>
+      <li><a href="#classification">3. Classification</a></li>
+      <li><a href="#rebuild">4. Rebuild &amp; trimming</a></li>
+      <li><a href="#healing">5. Healing &amp; diagnostics</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Module Guide</div>
+      
+      <p class="tagline">
+        Performs B-rep Boolean operations (AND/OR/XOR/Subtract) on shells and solids produced by <code>truck-modeling</code>,
+        and contains healing utilities to prepare imported CAD geometry.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-shapeops</div>
+        <div class="badge"><span>Inputs:</span> Solids from truck-modeling</div>
+        <div class="badge"><span>Highlights:</span> Intersection solvers, classification, rebuild, healing tools</div>
+      </div>
+    </section>
+
+    <section id="pipeline">
+      <h2>1. Boolean pipeline</h2>
+      <p>The pipeline mirrors classic B-rep kernels:</p>
+      <ol>
+        <li><strong>Intersections</strong> – find all face/edge intersections between operands.</li>
+        <li><strong>Classification</strong> – classify split faces/edges as inside/outside per Boolean op.</li>
+        <li><strong>Rebuild</strong> – assemble new shells from the kept fragments.</li>
+      </ol>
+    </section>
+
+    <section id="intersections">
+      <h2>2. Intersection stage</h2>
+      <h3 id="face-face">2.1 Face-face intersections</h3>
+      <p>Surface-surface intersections yield curves that split faces and become new trimming loops.</p>
+      <ul>
+        <li>Curves are represented in both UV spaces; clipping occurs before remapping to 3D.</li>
+        <li>Newton-style refinement ensures curves hit intersection tolerance (<code>truck-base::TOLERANCE</code>).</li>
+      </ul>
+
+      <h3 id="edge-face">2.2 Edge-face intersections</h3>
+      <p>Handles cases where an edge pierces the other solid without a clean face-face intersection; ensures loops remain consistent.</p>
+    </section>
+
+    <section id="classification">
+      <h2>3. Classification</h2>
+      <p>Each fragment (face region, edge segment) is classified via point-in-solid queries:</p>
+      <ul>
+        <li>Ray casting or signed distance proxies determine inside/outside.</li>
+        <li>Operator rules (AND/OR/XOR/SUBTRACT) pick which fragments survive; normals flip as needed.</li>
+      </ul>
+    </section>
+
+    <section id="rebuild">
+      <h2>4. Rebuild &amp; trimming</h2>
+      <p>After classification:</p>
+      <ul>
+        <li>Face trims are clipped to the kept regions.</li>
+        <li>Edges are sewn back into loops, respecting orientation.</li>
+        <li>Shells are formed and validated for watertightness before returning the resulting solid(s).</li>
+      </ul>
+    </section>
+
+    <section id="healing">
+      <h2>5. Healing &amp; diagnostics</h2>
+      <p>Shapeops also includes utilities for importing external CAD data:</p>
+      <ul>
+        <li>Welding vertices within tolerance.</li>
+        <li>Fixing small gap trims.</li>
+        <li>Reporting inconsistent orientations or non-manifold conditions.</li>
+      </ul>
+      <p>Run these tools before booleans when working with data from other kernels.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Consistent tolerances</strong> – align on <code>truck-base::tolerance</code> to avoid mismatched comparisons.</li>
+        <li><strong>Trim orientation</strong> – keep outer loops CCW (surface normal perspective) and inner loops CW.</li>
+        <li><strong>Intersection filtering</strong> – use bounding boxes / spatial partitioning to skip obvious non-intersections.</li>
+        <li><strong>Diagnostics</strong> – log when fragments fail classification to help debug kernel issues.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-shapeops</code> performs the heavy lifting for CSG in Truck, splitting, classifying, and rebuilding shells to produce watertight Booleans while also offering healing utilities for imported data.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li>Validate shells before entering the pipeline (orientation, manifoldness).</li>
+        <li>Tune intersection tolerances per operator and document defaults.</li>
+        <li>Ensure classification uses stable point-in-solid logic (avoid ray/geometry degeneracies).</li>
+        <li>Update README/guide when new operations or healing tools are added.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

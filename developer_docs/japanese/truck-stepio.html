@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-stepio ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-stepio : STEP 入出力</h1>
+    <p>truck-stepio : STEP 入出力 に関する開発者向けガイドです。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#section-1">1. インポート</a></li>
+      <li><a href="#section-2">2. エクスポート</a></li>
+      <li><a href="#section-3">3. サンプル CLI</a></li>
+      <li><a href="#section-4">4. ベストプラクティス</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+<p>ISO 10303 (STEP) ファイルを Truck のソリッドへ変換し、逆に STEP へエクスポートするためのクレートです。</p>
+    </section>
+
+<section id="section-1">
+      <h2>1. インポート</h2>
+      <ul>
+        <li>Part 21 テキストをパースしてエンティティ辞書を作成。</li>
+        <li><code>B_SPLINE_CURVE_WITH_KNOTS</code> などを <code>truck-geometry</code> の曲線へマッピング。</li>
+        <li><code>ADVANCED_FACE</code>、<code>FACE_BOUND</code> から <code>truck-topology</code> の face/wire を生成。</li>
+        <li>必要に応じて shapeops のヒーリングを適用し、トレランスを統一する。</li>
+      </ul>
+    </section>
+
+    <section id="section-2">
+      <h2>2. エクスポート</h2>
+      <p>Faces / Shells を辿って STEP エンティティを生成します。<code>StepCurve</code>, <code>StepSurface</code>, <code>StepLength</code> トレイトを実装したジオメトリ型が前提です。</p>
+    </section>
+
+    <section id="section-3">
+      <h2>3. サンプル CLI</h2>
+      <ul>
+        <li><code>shape-to-step input.json output.step</code> : Truck JSON → STEP。</li>
+        <li><code>step-to-mesh input.step</code> : STEP → ソリッド → メッシュ（OBJ）。</li>
+      </ul>
+    </section>
+
+    <section id="section-4">
+      <h2>4. ベストプラクティス</h2>
+      <ul>
+        <li>未知のエンティティはログに残し、後でマッピングを追加する。</li>
+        <li>STEP 側のトレランス値を Truck の内部トレランスへ正規化する。</li>
+        <li>インポート後にワイヤの向きと閉合性を検証し、問題があれば修正またはヒーリングする。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

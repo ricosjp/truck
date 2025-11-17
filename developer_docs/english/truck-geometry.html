@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-geometry Developer Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Overview of truck-geometry crate for knot vectors, B-splines, and NURBS primitives." />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-geometry Developer Guide</h1>
+    <p>Key notes for working with the Truck geometry crate (<code>truck-geometry</code>).</p>
+  </header>
+  <nav aria-label="In-page links">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#resources">Resources</a></li>
+      <li><a href="#usage">Setup &amp; Usage</a></li>
+      <li><a href="#nurbs">NURBS &amp; Knots</a></li>
+      <li><a href="#curves">Curves</a></li>
+      <li><a href="#surfaces">Surfaces</a></li>
+      <li><a href="#refine">Control Net / Refinement</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>
+        <code>truck-geometry</code> provides the spline primitives that power Truck’s CAD kernel. It exposes knot vectors,
+        B-spline / NURBS curves, tensor-product surfaces, and refinement utilities that feed <code>truck-topology</code>
+        and <code>truck-modeling</code>.
+      </p>
+      <ul>
+        <li>Supported toolchain: Rust 1.70+ (confirm MSRV in <code>Cargo.toml</code>).</li>
+        <li>License: MIT / Apache-2.0 dual (see <code>LICENSE</code>).</li>
+        <li>Bug reports: open a GitHub issue and prefix titles with <code>[geometry]</code>.</li>
+      </ul>
+    </section>
+
+    <section id="resources">
+      <h2>Resources</h2>
+      <ul>
+        <li><a href="https://github.com/ricosjp/truck" target="_blank" rel="noopener">GitHub repository</a></li>
+        <li><a href="https://docs.rs/truck-geometry" target="_blank" rel="noopener">docs.rs API reference</a></li>
+        <li><code>README.md</code> / <code>developer_docs/</code>: cross-module guidelines and checklists</li>
+      </ul>
+      <p>When filing PRs, keep the English and Japanese guides in sync.</p>
+    </section>
+
+    <section id="usage">
+      <h2>Setup &amp; Usage</h2>
+      <h3>Build / Test</h3>
+      <pre><code>cargo test -p truck-geometry
+cargo doc -p truck-geometry --open</code></pre>
+      <p>Workflow automation is available through <code>cargo make</code> targets declared in <code>Makefile.toml</code>.</p>
+      <h3>Dependent crates</h3>
+      <ul>
+        <li><code>truck-base</code>: tolerance and numeric utilities shared across the workspace.</li>
+        <li><code>truck-topology</code>: consumes parameter ranges and trimming data.</li>
+      </ul>
+    </section>
+
+    <section id="nurbs">
+      <h2>NURBS &amp; Knot Vectors</h2>
+      <ul>
+        <li>Maintain knots as non-decreasing, typically normalized to [0, 1]; clamp endpoints for CAD interoperability.</li>
+        <li>Multiplicity directly controls continuity; re-check <code>is_smooth()</code> or similar helpers after edits.</li>
+        <li>Use <code>insert_knot</code>, <code>remove_knot</code>, and <code>clamp</code> helpers rather than mutating the raw vector.</li>
+      </ul>
+    </section>
+
+    <section id="curves">
+      <h2>Curves</h2>
+      <p>Curves implement the standard <code>ParametricCurve3D</code> traits and rely on De Boor evaluation.</p>
+      <p>Typical API usage:</p>
+      <pre><code>let p = curve.evaluate(t);
+let dp = curve.der(t);
+let d2 = curve.der2(t);</code></pre>
+      <ul>
+        <li>Keep parameters inside <code>[knots[p], knots[n-p])</code> or normalize them before evaluation.</li>
+        <li>NURBS uses homogeneous coordinates for computation; expose affine results only.</li>
+        <li>Return <code>EvalError</code> for invalid parameters or degenerate weights rather than panicking.</li>
+      </ul>
+    </section>
+
+    <section id="surfaces">
+      <h2>Surfaces</h2>
+      <ul>
+        <li>Construct via tensor products: independent <code>u</code>/<code>v</code> degrees, knot vectors, and control nets.</li>
+        <li>Provide <code>uder</code>, <code>vder</code>, and <code>uvder</code> for partial derivatives; normals are <code>uder × vder</code>.</li>
+        <li>Expose accurate UV ranges for <code>truck-topology</code> trim loops.</li>
+      </ul>
+    </section>
+
+    <section id="refine">
+      <h2>Control Net &amp; Refinement</h2>
+      <ul>
+        <li>Keep edits local—after moving a control point, re-evaluate only the affected span for predictable modeling.</li>
+        <li>Degree elevation, knot insertion, and reparameterization utilities live in the refinement module; reuse them.</li>
+        <li>Tolerance-sensitive code should accept a <code>truck-base</code> tolerance value instead of hard-coded epsilons.</li>
+      </ul>
+      <p>For PRs, add or update unit tests under <code>tests/</code> and run <code>cargo fmt</code> before submitting.</p>
+    </section>
+  </main>
+</body>
+</html>

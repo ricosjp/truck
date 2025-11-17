@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-rendimpl ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-rendimpl : CAD レンダラー</h1>
+    <p>truck-rendimpl : CAD レンダラー に関する開発者向けガイドです。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#section-1">1. パイプライン</a></li>
+      <li><a href="#section-2">2. メッシュアップロード</a></li>
+      <li><a href="#section-3">3. インタラクション</a></li>
+      <li><a href="#section-4">4. チェックリスト</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+<p>truck-platform 上に構築された CAD 向けレンダラーです。truck-modeling / truck-meshalgo が出力するメッシュを GPU へアップロードし、シーンを描画します。</p>
+    </section>
+
+<section id="section-1">
+      <h2>1. パイプライン</h2>
+      <ul>
+        <li><strong>フォワードシェーディング</strong> : 複数ライト、頂点／面カラー、PBR 風シェーディング。</li>
+        <li><strong>ワイヤーフレームオーバーレイ</strong> : メッシュエッジを強調表示。</li>
+        <li><strong>セレクションバッファ</strong> : 非表示のレンダーターゲットに ID を格納し、マウスピックを実現。</li>
+      </ul>
+    </section>
+
+    <section id="section-2">
+      <h2>2. メッシュアップロード</h2>
+      <p>
+        <code>truck-polymesh</code> から頂点・インデックス・法線・UV・インスタンスデータを抽出し、GPU バッファにアップロードします。
+        同じメッシュを複数回描画する場合はインスタンスを使い、変換・色・ハイライト情報を個別に渡します。
+      </p>
+    </section>
+
+    <section id="section-3">
+      <h2>3. インタラクション</h2>
+      <p>カメラ操作（回転・パン・ズーム）や選択ハイライト、HUD 表示など、CAD ビューアに必要な機能をまとめています。</p>
+    </section>
+
+    <section id="section-4">
+      <h2>4. チェックリスト</h2>
+      <ul>
+        <li>メッシュに一意の選択 ID を割り当て、CPU 側のリストと同期する。</li>
+        <li>パイプライン/バッファの再生成を避け、ステージングバッファでデータを更新する。</li>
+        <li>view/projection 行列は truck-base の右手系規約に合わせる。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

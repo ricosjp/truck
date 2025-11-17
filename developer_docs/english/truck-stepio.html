@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Stepio – STEP Import/Export</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Stepio</h1>
+    <p>STEP (ISO 10303) import/export</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#architecture">1. Architecture</a></li>
+      <li><a href="#import">2. Import pipeline</a></li>
+      <li><a href="#export">3. Export pipeline</a></li>
+      <li><a href="#traits">4. Step traits</a></li>
+      <li><a href="#cli">5. CLI tools</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Module Guide</div>
+      
+      <p class="tagline">
+        Bridges Truck solids with STEP files: parses ISO 10303 entities into Truck geometry/topology and exports back to STEP
+        for interoperability with external CAD systems.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-stepio</div>
+        <div class="badge"><span>Formats:</span> ISO 10303-21 (STEP Part 21)</div>
+        <div class="badge"><span>Tools:</span> shape-to-step, step-to-mesh</div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>1. Architecture</h2>
+      <p>Stepio has three layers:</p>
+      <ul>
+        <li><strong>Parser</strong> – reads Part 21 syntax into an intermediate entity graph.</li>
+        <li><strong>Mapper</strong> – converts STEP entities to Truck geometry/topology (and vice versa).</li>
+        <li><strong>CLI</strong> – sample binaries to convert shapes and inspect output.</li>
+      </ul>
+    </section>
+
+    <section id="import">
+      <h2>2. Import pipeline</h2>
+      <h3 id="parse">2.1 Parsing &amp; dictionary</h3>
+      <p>Part 21 text is parsed into a dictionary keyed by entity ID (e.g., <code>#42 = EDGE_CURVE ...</code>). Relationships are resolved using references before geometry creation begins.</p>
+
+      <h3 id="geometry-mapping">2.2 Geometry mapping</h3>
+      <p>Each STEP entity maps to Truck types:</p>
+      <ul>
+        <li><code>EDGE_CURVE</code>, <code>B_SPLINE_CURVE_WITH_KNOTS</code> → <code>ParametricCurve</code>/<code>truck-geometry</code> splines.</li>
+        <li><code>B_SPLINE_SURFACE_WITH_KNOTS</code>, <code>ADVANCED_FACE</code> → surfaces + trimming loops.</li>
+        <li>Topological entities like <code>FACE_BOUND</code>, <code>SHELL_BASED_SURFACE_MODEL</code> → <code>truck-topology</code> faces/shells.</li>
+      </ul>
+
+      <h3 id="healing">2.3 Healing hooks</h3>
+      <p>Shape healing (snap vertices, align trim tolerances) will often run after import to handle noisy data from other CAD systems.</p>
+    </section>
+
+    <section id="export">
+      <h2>3. Export pipeline</h2>
+      <h3 id="encoding">3.1 Entity encoding</h3>
+      <p>When writing STEP, truck-stepio walks shells/faces and emits the corresponding STEP entities in Part 21 syntax. It relies on the STEP traits implemented across geometry types (see below).</p>
+
+      <h3 id="length">3.2 Record counts</h3>
+      <p>Derived traits like <code>StepLength</code> report how many entities a curve/surface produces, allowing the writer to pre-allocate IDs or validate file size.</p>
+    </section>
+
+    <section id="traits">
+      <h2>4. Step traits</h2>
+      <p>Geometry types implement traits from <code>truck-stepio</code> (often derived by <code>truck-derivers</code>):</p>
+      <ul>
+        <li><code>StepCurve</code>, <code>StepSurface</code> – format entity strings.</li>
+        <li><code>DisplayByStep</code> – render human-readable diagnostics.</li>
+        <li><code>StepLength</code> – entity counts.</li>
+      </ul>
+      <p>These traits ensure STEP export stays consistent across all geometry types.</p>
+    </section>
+
+    <section id="cli">
+      <h2>5. CLI tools</h2>
+      <ul>
+        <li><code>shape-to-step</code> – convert Truck JSON shapes to STEP.</li>
+        <li><code>step-to-mesh</code> – parse STEP into shapes and immediately tessellate.</li>
+      </ul>
+      <p>Use these binaries as references when building custom import/export pipelines.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Preserve tolerance</strong> – carry STEP-specified tolerances into Truck to avoid snapping artifacts.</li>
+        <li><strong>Log unknown entities</strong> – report STEP entity types that lack mappings so they can be implemented later.</li>
+        <li><strong>Validate loops</strong> – after import, ensure trim loops are oriented correctly and cover the intended region.</li>
+        <li><strong>Reuse traits</strong> – when adding new curve/surface types, derive the STEP traits to keep serialization consistent.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-stepio</code> handles STEP interoperability for Truck: parsing entity graphs, mapping to Truck geometry/topology, and exporting back to Part 21. It powers the CLI tools and underpins future CAD exchange features.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li>Test new entity mappings with both import and export.</li>
+        <li>Keep tolerance handling consistent with <code>truck-base</code>.</li>
+        <li>Document new STEP traits or CLI flags in README and this guide.</li>
+        <li>Run <code>shape-to-step</code> / <code>step-to-mesh</code> as smoke tests when making changes.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

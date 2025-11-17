@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck 開発ドキュメント (日本語)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck 開発ドキュメント (日本語)</h1>
+    <p>Truck 各モジュールの日本語メモ。座標系から STEP I/O まで一通り確認できます。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#modules">モジュール一覧</a></li>
+      <li><a href="#resources">関連リソース</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+      <p>英語版ドキュメントの要点をかいつまんで日本語化しています。詳細や図版は英語版を参照してください。</p>
+      <ul>
+        <li><strong>対象:</strong> Truck カーネル／ツール開発者</li>
+        <li><strong>更新:</strong> リポジトリの変更に追随</li>
+        <li><strong>構成:</strong> 幾何・トポロジ・モデリング・メッシュ・描画・STEP</li>
+      </ul>
+    </section>
+
+    <section id="modules">
+      <h2>モジュール一覧</h2>
+      <ul>
+        <li><a href="truck-base.html">truck-base</a> — 幾何カーネルの基本規約</li>
+        <li><a href="truck-geotrait.html">truck-geotrait</a> — 曲線・曲面トレイト</li>
+        <li><a href="truck-geometry.html">truck-geometry</a> — NURBS / ノットベクトル</li>
+        <li><a href="truck-topology.html">truck-topology</a> — B-Rep トポロジ</li>
+        <li><a href="truck-modeling.html">truck-modeling</a> — スイープとソリッド生成</li>
+        <li><a href="truck-shapeops.html">truck-shapeops</a> — ブーリアン / ヒーリング</li>
+        <li><a href="truck-meshalgo.html">truck-meshalgo</a> — テッセレーション / メッシュ処理</li>
+        <li><a href="truck-polymesh.html">truck-polymesh</a> — ハーフエッジメッシュ</li>
+        <li><a href="truck-platform.html">truck-platform</a> — WGPU プラットフォーム</li>
+        <li><a href="truck-rendimpl.html">truck-rendimpl</a> — CAD 向けレンダラー</li>
+        <li><a href="truck-derivers.html">truck-derivers</a> — 派生マクロ</li>
+        <li><a href="truck-stepio.html">truck-stepio</a> — STEP I/O</li>
+      </ul>
+    </section>
+
+    <section id="resources">
+      <h2>関連リソース</h2>
+      <ul>
+        <li><a href="https://github.com/ricosjp/truck" target="_blank" rel="noopener">GitHub リポジトリ</a></li>
+        <li><a href="../english/index.html">英語版ドキュメント</a>（詳細はこちら）</li>
+        <li>PR では英語・日本語の両方を更新してください。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

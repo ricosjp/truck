@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-platform ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-platform : WGPU ランタイム</h1>
+    <p>truck-platform : WGPU ランタイム に関する開発者向けガイドです。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#section-1">1. Rendered トレイト</a></li>
+      <li><a href="#section-2">2. WGSL サンドボックス</a></li>
+      <li><a href="#section-3">3. シーンユーティリティ</a></li>
+      <li><a href="#section-4">4. ベストプラクティス</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+<p>Truck のビューア全体を支える WGPU ベースのランタイム層です。デバイス管理、イベントループ、<code>Rendered</code> トレイトを提供し、上位の truck-rendimpl がこの上に構築されています。</p>
+    </section>
+
+<section id="section-1">
+      <h2>1. Rendered トレイト</h2>
+      <ul>
+        <li><code>new(ctx)</code> でパイプライン・バッファを初期化。</li>
+        <li><code>update(dt)</code> でユニフォームやアニメーションを更新。</li>
+        <li><code>render(pass)</code> で描画コマンドを発行。</li>
+      </ul>
+    </section>
+
+    <section id="section-2">
+      <h2>2. WGSL サンドボックス</h2>
+      <p>
+        <code>wgsl-sandbox</code> 例では <code>main_image(coord, env)</code> を実装したシェーダをドラッグ&ドロップでホットリロードし、Shadertoy 風に実験できます。
+      </p>
+      <pre><code>struct Environment {
+  resolution: vec2<f32>;
+  mouse: vec4<f32>;
+  time: f32;
+}</code></pre>
+    </section>
+
+    <section id="section-3">
+      <h2>3. シーンユーティリティ</h2>
+      <ul>
+        <li>インスタンスバッファ、マテリアル定義、カメラ制御など共通処理を提供。</li>
+        <li>truck-rendimpl でも同じ API を経由してメッシュをアップロードします。</li>
+      </ul>
+    </section>
+
+    <section id="section-4">
+      <h2>4. ベストプラクティス</h2>
+      <ul>
+        <li>GPU リソースは <code>Rendered::new</code> でまとめて作成し、フレームごとに再生成しない。</li>
+        <li>シェーダのホットリロードに失敗した場合でもアプリが落ちないように例外処理を入れる。</li>
+        <li>入力イベント（マウス・キーボード）を一定の形式で提供し、ビューアの挙動を統一する。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

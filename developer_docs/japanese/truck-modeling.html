@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-modeling ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-modeling : スイープとフェイス生成</h1>
+    <p>truck-modeling : スイープとフェイス生成 に関する開発者向けガイドです。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#section-1">1. スイープ演算</a></li>
+      <li><a href="#section-2">2. フェイスとシェル</a></li>
+      <li><a href="#section-3">3. チェックリスト</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+<p>このクレートはワイヤと曲面からシェル／ソリッドを構築します。主な演算は Extrude・Revolve・任意経路スイープです。</p>
+    </section>
+
+<section id="section-1">
+      <h2>1. スイープ演算</h2>
+      <ul>
+        <li><strong>Extrude</strong> : ワイヤを平行移動して側面とキャップを作成。エッジの生成元（generator / offset / rail）を記録します。</li>
+        <li><strong>Revolve</strong> : 軸回りに回転。2π 超えや軸交差では面を分割して特異点を避けます。</li>
+        <li><strong>Sweep-along-path</strong> : ガイド曲線に沿って断面を輸送。フレネ座標などで向きを制御します。</li>
+      </ul>
+    </section>
+
+    <section id="section-2">
+      <h2>2. フェイスとシェル</h2>
+      <ul>
+        <li>ワイヤをサポートする曲面を選び、外ループ／内ループとしてトリムを定義します。</li>
+        <li>生成された面を縫い合わせてシェルを構築。必要に応じて複数シェル（空洞付きソリッド）を作成します。</li>
+        <li>トリムは UV 空間で管理し、向き（外 CCW / 内 CW）を維持します。</li>
+      </ul>
+    </section>
+
+    <section id="section-3">
+      <h2>3. チェックリスト</h2>
+      <ul>
+        <li>ワイヤが閉じており平面性が要件を満たしているか。</li>
+        <li>選択したサーフェスが目的のスイープに適しているか（平面/ルールド/ロフト）。</li>
+        <li>エッジの派生関係を記録し、後続のブーリアンやフィレットで参照できるようにする。</li>
+        <li>トリムの UV ループが自己交差していないか確認する。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

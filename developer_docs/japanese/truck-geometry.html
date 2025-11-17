@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>truck-geometry 開発者ガイド</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="truck-geometry クレートに関する NURBS / B-spline 実装の概要と開発者向けメモ" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>truck-geometry 開発者ガイド</h1>
+    <p>Truck プロジェクトのジオメトリ基盤クレート (<code>truck-geometry</code>) に関する要点をまとめています。</p>
+  </header>
+  <nav aria-label="ページ内リンク">
+    <ul>
+      <li><a href="#overview">概要</a></li>
+      <li><a href="#resources">関連リソース</a></li>
+      <li><a href="#usage">セットアップと利用</a></li>
+      <li><a href="#nurbs">NURBS / ノット</a></li>
+      <li><a href="#curves">曲線評価</a></li>
+      <li><a href="#surfaces">曲面</a></li>
+      <li><a href="#refine">リファイン手法</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+      <p>
+        <code>truck-geometry</code> は Truck の CAD カーネルにおける曲線・曲面の核となるクレートです。
+        B-spline / NURBS の評価・微分・再パラメトリ化・次数上げなどをサポートし、
+        上位クレートの <code>truck-topology</code> や <code>truck-modeling</code> に供給されます。
+      </p>
+      <ul>
+        <li>対応 Rust 版: Rust 1.70 以降 (最低バージョンは <code>Cargo.toml</code> を参照)。</li>
+        <li>ライセンス: <code>LICENSE</code> に記載済みの MIT/Apache-2.0 デュアルライセンス。</li>
+        <li>バグ報告: GitHub Issues でモジュール名をタイトルに含める。</li>
+      </ul>
+    </section>
+
+    <section id="resources">
+      <h2>関連リソース</h2>
+      <ul>
+        <li><a href="https://github.com/ricosjp/truck" target="_blank" rel="noopener">GitHub: ricosjp/truck</a></li>
+        <li><a href="https://docs.rs/truck-geometry" target="_blank" rel="noopener">docs.rs: truck-geometry API リファレンス</a></li>
+        <li><code>README.md</code> / <code>developer_docs/</code>: 他モジュールのガイドライン</li>
+      </ul>
+      <p>Pull Request では本ファイルと英語版の差分がずれていないか確認してください。</p>
+    </section>
+
+    <section id="usage">
+      <h2>セットアップと利用</h2>
+      <h3>ビルド</h3>
+      <pre><code>cargo test -p truck-geometry
+cargo doc -p truck-geometry --open</code></pre>
+      <p>ドキュメント生成やベンチマークには <code>Makefile.toml</code> のタスク (<code>cargo make doc</code> など) も利用できます。</p>
+      <h3>依存クレート</h3>
+      <ul>
+        <li><code>truck-base</code>: 数値トレランス定義や線形代数ユーティリティ。</li>
+        <li><code>truck-topology</code>: トリムサーフェスや境界情報を参照する際のコンシューマ。</li>
+      </ul>
+    </section>
+
+    <section id="nurbs">
+      <h2>NURBS / ノットベクトル</h2>
+      <ul>
+        <li>ノット列は非減少、通常は 0–1 に正規化し、端点は clamp 済みを推奨。</li>
+        <li>多重度が連続階数 (continuity) を決定するため、挿入・削除後は <code>is_smooth()</code> 等で検証。</li>
+        <li><code>insert_knot</code> / <code>remove_knot</code> / <code>clamp</code> ヘルパーを経由し、直接の <code>Vec</code> 編集は避ける。</li>
+      </ul>
+    </section>
+
+    <section id="curves">
+      <h2>曲線評価</h2>
+      <p>
+        De Boor 型アルゴリズムで <code>evaluate(t)</code>、<code>der(t)</code>、<code>der2(t)</code> を算出します。
+        パラメータ <code>t</code> は有効区間 (例: <code>[knots[p], knots[n-p])</code>) に射影した上で評価してください。
+        NURBS は重み付き同次座標で演算し、最後に射影する点に注意します。
+      </p>
+      <ul>
+        <li>例外扱いの必要なパラメータ (端点) は <code>EvalError</code> で返却。</li>
+        <li>収束しない場合は <code>truck-base</code> の <code>Tolerance</code> を調整。</li>
+      </ul>
+    </section>
+
+    <section id="surfaces">
+      <h2>曲面</h2>
+      <ul>
+        <li>二方向ノットとコントロールネットをテンソル積して生成。</li>
+        <li><code>uder</code> / <code>vder</code> / <code>uvder</code> による偏微分を提供し、<code>ParametricSurface3D</code> で法線を算出。</li>
+        <li>トリム情報は <code>truck-topology</code> が管理するため、UV 範囲を厳密に返すこと。</li>
+      </ul>
+    </section>
+
+    <section id="refine">
+      <h2>コントロールポイントとリファイン</h2>
+      <ul>
+        <li>ローカル編集を保証するため、ポイント移動後は対象スパンのみ再評価する実装を維持。</li>
+        <li>次数上げ・ノット挿入・再パラメトリ化のユーティリティは <code>Refinement</code> モジュールに集約。</li>
+        <li>トレランス依存操作は <code>truck-base</code> の値を受け取り、デフォルト値をハードコードしない。</li>
+      </ul>
+      <p>Pull Request ではユニットテスト (<code>tests/</code>) に新しいケースを追加し、<code>cargo fmt</code> を実行してください。</p>
+    </section>
+  </main>
+</body>
+</html>

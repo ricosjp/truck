@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Platform – WGPU Runtime & Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Platform</h1>
+    <p>WGPU runtime & CAD viewer utilities</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#architecture">1. Architecture</a></li>
+      <li><a href="#rendered">2. Rendered trait</a></li>
+      <li><a href="#wgsl">3. WGSL sandbox</a></li>
+      <li><a href="#scene">4. Scene graph &amp; viewer</a></li>
+      <li><a href="#integration">5. Integration with truck-rendimpl</a></li>
+      <li><a href="#best-practices">6. Best practices</a></li>
+      <li><a href="#summary">7. Summary</a></li>
+      <li><a href="#checklist">8. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Module Guide</div>
+      
+      <p class="tagline">
+        Provides the WGPU runtime abstractions needed to render Truck’s CAD data—scene graph helpers, input handling,
+        and the WGSL sandbox for rapid shader iteration.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-platform</div>
+        <div class="badge"><span>Backend:</span> WGPU</div>
+        <div class="badge"><span>Highlights:</span> Rendered trait, WGSL sandbox, scene graph utilities</div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>1. Architecture</h2>
+      <p>Platform wraps <code>wgpu</code> into higher-level constructs:</p>
+      <ul>
+        <li>Device/queue setup and swapchain management.</li>
+        <li>Event loop integration for interactive viewers.</li>
+        <li>Trait-based rendering (<code>Rendered</code>) so custom structs can upload buffers and draw.</li>
+        <li>Utility components (camera controllers, input state, GUI overlays) shared by Truck viewers.</li>
+      </ul>
+    </section>
+
+    <section id="rendered">
+      <h2>2. Rendered trait</h2>
+      <p>The <code>Rendered</code> trait is the heart of custom rendering:</p>
+      <h3 id="lifecycle">2.1 Lifecycle hooks</h3>
+      <ul>
+        <li><code>fn new(renderer: &RendererContext) -> Self</code> – create pipelines, buffers, textures.</li>
+        <li><code>fn update(&mut self, dt: f32)</code> – update uniforms, animations.</li>
+        <li><code>fn render(&self, pass: &mut wgpu::RenderPass)</code> – issue draw calls.</li>
+      </ul>
+
+      <h3 id="resources">2.2 Resource management</h3>
+      <p>Platform provides helpers for:</p>
+      <ul>
+        <li>Uploading vertex/index buffers from <code>truck-polymesh</code>.</li>
+        <li>Creating bind groups for uniforms and textures.</li>
+        <li>Sharing pipelines/shaders across multiple rendered objects.</li>
+      </ul>
+    </section>
+
+    <section id="wgsl">
+      <h2>3. WGSL sandbox</h2>
+      <p>The <code>wgsl-sandbox</code> example demonstrates how to hot-reload WGSL shaders and render procedural content.</p>
+      <h3 id="shader-contract">3.1 Shader contract</h3>
+      <pre><code>fn main_image(coord: vec2<f32>, env: Environment) -> vec4<f32></code></pre>
+      <p>Shadertoy-style entry point: implement <code>main_image</code> to produce color output.</p>
+
+      <h3 id="environment">3.2 Environment inputs</h3>
+      <pre><code>struct Environment {
+    resolution: vec2<f32>;
+    mouse: vec4<f32>;
+    time: f32;
+}</code></pre>
+      <p>Equivalent to Shadertoy’s <code>iResolution</code>, <code>iMouse</code>, and <code>iTime</code>.</p>
+
+      <h3 id="workflow">3.3 Workflow</h3>
+      <ul>
+        <li>Launch the binary with a WGSL file path, or drag-and-drop a shader onto the window.</li>
+        <li>Hot reload recompiles the shader and restarts rendering immediately.</li>
+        <li>Examples such as <code>newton-cuberoot.wgsl</code> serve as templates.</li>
+      </ul>
+    </section>
+
+    <section id="scene">
+      <h2>4. Scene graph &amp; viewer</h2>
+      <p>Platform offers building blocks for interactive CAD viewers.</p>
+
+      <h3 id="instances">4.1 Instances &amp; buffers</h3>
+      <ul>
+        <li>Batch instance data (transform, color) into structured buffers.</li>
+        <li>Support for forward/deferred render paths (see <code>truck-rendimpl</code>).</li>
+        <li>Utilities for uploading tessellated meshes or analytic primitives.</li>
+      </ul>
+
+      <h3 id="materials">4.2 Materials &amp; pipelines</h3>
+      <p>Common material definitions (PBR-ish shading) live here so downstream crates can focus on geometry.</p>
+    </section>
+
+    <section id="integration">
+      <h2>5. Integration with truck-rendimpl</h2>
+      <p><code>truck-rendimpl</code> builds on platform: it supplies CAD-specific rendered objects (e.g., edges, face shading, selection). Understanding platform’s traits and context types is necessary before customizing the higher-level renderer.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>6. Best practices</h2>
+      <ul>
+        <li><strong>Re-use pipelines</strong> – avoid creating pipelines per frame; initialize once in <code>Rendered::new</code>.</li>
+        <li><strong>Hot reload safety</strong> – handle shader compilation errors gracefully during drag-and-drop.</li>
+        <li><strong>Input normalization</strong> – expose consistent coordinate conventions (e.g., lower-left origin for shaders).</li>
+        <li><strong>Resource lifetime</strong> – drop GPU resources explicitly when swapping scenes to avoid leaks.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>7. Summary</h2>
+      <p><code>truck-platform</code> abstracts WGPU setup, provides the <code>Rendered</code> trait, and includes tooling such as the WGSL sandbox. It’s the foundation for all visualizers in the Truck ecosystem.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>8. Implementation checklist</h2>
+      <ul>
+        <li><strong>Initialize correctly</strong> – configure WGPU features/swapchain formats before creating rendered objects.</li>
+        <li><strong>Shader contract</strong> – ensure custom shaders respect the sandbox’s <code>main_image</code> signature when using the WGSL sample.</li>
+        <li><strong>Input handling</strong> – forward window events to camera/controllers consistently.</li>
+        <li><strong>Docs/tests</strong> – update README and this guide when adding new viewer features.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

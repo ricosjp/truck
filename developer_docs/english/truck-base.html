@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Base – Geometry Foundations</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Base: Geometry Foundations</h1>
+    <p>Core concepts, conventions, and math utilities shared across the Truck kernel.</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#coordinate-systems">Coordinate systems</a></li>
+      <li><a href="#tolerance">Tolerance strategy</a></li>
+      <li><a href="#points-vectors">Points &amp; vectors</a></li>
+      <li><a href="#transforms">Transforms</a></li>
+      <li><a href="#summary">Summary</a></li>
+      <li><a href="#checklist">Checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <p><strong>Module guide.</strong> truck-base documents the conventions that keep every Truck crate aligned.</p>
+      <ul>
+        <li><strong>Crate:</strong> truck-base</li>
+        <li><strong>Scalar:</strong> f64</li>
+        <li><strong>Coordinates:</strong> right-handed, Z-up</li>
+        <li><strong>Units:</strong> meters (recommended)</li>
+      </ul>
+      <p>
+        <code>truck-base</code> defines the fundamental language of geometry for the Truck CAD kernel. It standardizes:
+      </p>
+      <ul>
+        <li>Coordinate systems and spatial conventions</li>
+        <li>Point, vector and matrix types (via <code>cgmath64</code>)</li>
+        <li>Numeric tolerance strategy</li>
+        <li>Transformation composition and application</li>
+      </ul>
+      <p>
+        All higher-level crates (curves, surfaces, topology, booleans, meshing, constraints) must comply with these rules. Understanding this module is a prerequisite for implementing or extending geometry algorithms within the Truck ecosystem.
+      </p>
+    </section>
+
+    <section id="coordinate-systems">
+      <h2>1. Coordinate systems</h2>
+      <p>
+        Truck uses a right-handed, Z-up Cartesian coordinate system, mirroring
+        <code>cgmath</code> and common CAD kernels such as OpenCascade and Parasolid.
+      </p>
+
+      <h3 id="right-handed-system">1.1 Right-handed system</h3>
+      <p>The system is oriented as follows:</p>
+      <ul>
+        <li><strong>+Z</strong> points “up”.</li>
+        <li>Rotation from <strong>+X</strong> toward <strong>+Y</strong> follows the curl of the right hand.</li>
+        <li>Positive angular motion is counter-clockwise when looking down +Z.</li>
+      </ul>
+
+      <h3 id="world-vs-local">1.2 World vs local space</h3>
+      <p>Truck distinguishes between two types of frames:</p>
+      <ul>
+        <li>
+          <strong>World space</strong> – a single, global frame for the entire model or
+          scene.
+        </li>
+        <li>
+          <strong>Local space</strong> – frames attached to entities such as curves,
+          surfaces or components.
+        </li>
+      </ul>
+      <p>Examples of local frames include:</p>
+      <ul>
+        <li>A curve’s parameter space, where <code>t</code> is mapped to a 3D point.</li>
+        <li>A surface’s <code>(u, v)</code> coordinates describing a patch.</li>
+        <li>An assembly sub-component’s local origin and orientation.</li>
+      </ul>
+      <p>
+        Local coordinates are always interpreted relative to their parent frame and must
+        be converted to world coordinates via Truck’s transform system (see
+        <a href="#transforms">Section 4</a>).
+      </p>
+
+      <h3 id="homogeneous-coords">1.3 Homogeneous coordinates</h3>
+      <p>
+        Internally, Truck uses homogeneous coordinates <code>[x, y, z, w]</code> to
+        implement affine transforms. However:
+      </p>
+      <ul>
+        <li>Public APIs expose only affine points and vectors:</li>
+      </ul>
+      <pre><code>Point2, Point3
+Vector2, Vector3</code></pre>
+      <p>
+        The <code>w</code> component is an implementation detail. User code should not
+        depend on or manipulate homogeneous representations directly.
+      </p>
+    </section>
+
+    <section id="tolerance">
+      <h2>2. Tolerance strategy</h2>
+      <p>
+        Direct equality comparisons on floating-point values are not reliable in
+        geometric contexts (e.g. incidence tests, closure checks, intersection
+        predicates). Truck centralizes numerical tolerances in the
+        <code>tolerance</code> module to ensure consistent behavior.
+      </p>
+
+      <h3 id="global-tolerances">2.1 Global tolerances</h3>
+      <p>Truck defines the following constants:</p>
+      <pre><code>TOLERANCE  = 1e-6
+TOLERANCE2 = (1e-6)^2</code></pre>
+      <ul>
+        <li><code>TOLERANCE</code> is used for distances and scalar differences.</li>
+        <li><code>TOLERANCE2</code> is used for squared distances.</li>
+      </ul>
+      <p>
+        When units are interpreted as meters, <code>TOLERANCE</code> is approximately one
+        micrometer.
+      </p>
+
+      <h3 id="tolerance-helpers">2.2 Traits and helpers</h3>
+      <p>
+        All equality and incidence checks in higher-level crates should be implemented
+        via the provided helpers:
+      </p>
+      <ul>
+        <li><code>Tolerance</code> trait</li>
+        <li>
+          Methods such as <code>Tolerance::near</code> and
+          <code>Tolerance::near2</code>
+        </li>
+        <li>Assertion macros: <code>assert_near!</code>, <code>assert_near2!</code></li>
+      </ul>
+      <p>
+        These utilities ensure that geometric predicates behave consistently, regardless
+        of where they appear in the kernel.
+      </p>
+
+      <h3 id="tighten-loosen">2.3 Tightening vs loosening tolerances</h3>
+      <div class="callout">
+        <strong>Guideline:</strong> Normalize inputs; don’t compensate with looser tolerances.
+      </div>
+      <p>Truck follows two key rules:</p>
+      <ul>
+        <li>
+          <strong>Do not loosen</strong> tolerances to accommodate low-quality input.
+          Instead, pre-process and clean the geometry before it enters the kernel.
+        </li>
+        <li>
+          <strong>Only tighten</strong> tolerances when a specific algorithm demands it,
+          and document the rationale (e.g. highly sensitive intersection routines).
+        </li>
+      </ul>
+      <p>
+        This prevents subtle inconsistencies between different modules and makes
+        robustness issues easier to diagnose.
+      </p>
+
+      <h3 id="origin-trait">2.4 Zero/origin checks</h3>
+      <p>
+        The <code>Origin</code> trait extends <code>Tolerance</code> with helpers such as
+        <code>so_small</code> and <code>so_small2</code>, which report whether a scalar,
+        vector, or point is effectively zero within the global tolerance. Favor these
+        helpers when testing for “origin-ness” (e.g. near-singular normals, degenerate
+        vectors) instead of hand-rolled checks.
+      </p>
+    </section>
+
+    <section id="points-vectors">
+      <h2>3. Points, vectors &amp; normals</h2>
+      <p>
+        Truck re-exports <code>cgmath</code> primitives specialized to <code>f64</code>
+        through the <code>cgmath64</code> module:
+      </p>
+      <pre><code>Point2, Point3
+Vector2, Vector3
+Matrix3, Matrix4
+Quaternion</code></pre>
+
+      <h3 id="affine-semantics">3.1 Affine semantics</h3>
+      <p>
+        Truck relies on CGMath’s type system to distinguish between positions and
+        directions:
+      </p>
+      <ul>
+        <li><strong>Point</strong> – a location in space.</li>
+        <li><strong>Vector</strong> – a direction or displacement.</li>
+      </ul>
+      <p>Valid combinations include:</p>
+      <ul>
+        <li><code>Point3 + Vector3 → Point3</code></li>
+        <li><code>Point3 - Point3 → Vector3</code> (displacement)</li>
+        <li><code>Vector3 + Vector3 → Vector3</code></li>
+      </ul>
+      <p>
+        Operations such as adding two points directly are intentionally disallowed. This
+        eliminates a wide class of geometric mistakes.
+      </p>
+
+      <h3 id="normals">3.2 Normals</h3>
+      <p>
+        Surface normals are represented as normalized <code>Vector3</code> values (unit
+        vectors). Truck provides extension traits (e.g.
+        <code>cgmath_extend_traits</code>) to support:
+      </p>
+      <ul>
+        <li>Normalization and validation</li>
+        <li>Conversions to/from homogeneous coordinates</li>
+        <li>Derivative-based helpers for differential geometry (via <code>ders</code>)</li>
+      </ul>
+      <p>
+        Normals should always be kept unit-length and never treated as points.
+      </p>
+
+      <h3 id="indexing">3.3 Indexing</h3>
+      <p>By convention:</p>
+      <ul>
+        <li><code>v[0] = x</code></li>
+        <li><code>v[1] = y</code></li>
+        <li><code>v[2] = z</code></li>
+      </ul>
+      <p>
+        Any <code>w</code> component exists only in internal homogeneous representations
+        and is not part of the public API.
+      </p>
+    </section>
+
+    <section id="transforms">
+      <h2>4. Transformation system</h2>
+      <p>
+        Transforms in Truck are represented using CGMath matrices and quaternions, all
+        available through the <code>cgmath64</code> re-exports:
+      </p>
+      <ul>
+        <li><code>Matrix3</code> – rotation and uniform scaling</li>
+        <li><code>Matrix4</code> – full affine transforms (rotation, translation, scale)</li>
+        <li><code>Quaternion</code> – for representing rotations compactly</li>
+      </ul>
+
+      <h3 id="construction">4.1 Construction</h3>
+      <p>Typical constructors include:</p>
+      <pre><code>use truck_base::cgmath64::{Matrix4, Vector3, Point3};
+
+let translation = Matrix4::from_translation(Vector3::new(1.0, 2.0, 3.0));
+let scale       = Matrix4::from_nonuniform_scale(2.0, 2.0, 2.0);
+
+let transform   = translation * scale;
+
+let p_local = Point3::new(0.0, 0.0, 0.0);
+let p_world = transform.transform_point(p_local);</code></pre>
+      <p>
+        These helpers should be preferred over manually assembling matrices, as they are
+        easier to read and less error-prone.
+      </p>
+
+      <h3 id="traits">4.2 Transform traits</h3>
+      <p>
+        Transforms are applied using CGMath’s traits such as
+        <code>Transform</code> and <code>EuclideanSpace</code>:
+      </p>
+      <pre><code>let p_world = transform.transform_point(p_local);
+let v_world = transform.transform_vector(v_local);</code></pre>
+      <p>This ensures that:</p>
+      <ul>
+        <li>Points receive rotation and translation.</li>
+        <li>Vectors receive rotation but not translation.</li>
+      </ul>
+
+      <h3 id="composition">4.3 Composition order</h3>
+      <p>
+        Truck composes transforms in parent-to-child order. If
+        <code>world_from_local</code> transforms local coordinates into world space, and
+        <code>local_from_shape</code> transforms shape space into local space, then:
+      </p>
+      <pre><code>let world_from_shape = world_from_local * local_from_shape;</code></pre>
+      <p>
+        Conceptually, the rightmost transform is applied first. This ordering is
+        important for assemblies, nested components, and hierarchical modeling.
+      </p>
+
+      <h3 id="serialization">4.4 Serialization</h3>
+      <p>
+        Truck and CGMath use <strong>column-major</strong> storage for matrices. Any
+        serialized form (JSON, binary, database records, etc.) should preserve
+        column-major ordering to ensure correct round-trips between in-memory and
+        persisted representations.
+      </p>
+    </section>
+
+    <section id="summary">
+      <h2>5. Summary</h2>
+      <p>
+        <code>truck-base</code> defines the core rules that keep the Truck geometry
+        kernel stable, predictable and mathematically coherent:
+      </p>
+      <ul>
+        <li>Right-handed, Z-up coordinate system aligned with <code>cgmath</code></li>
+        <li>Consistent tolerance strategy via the <code>tolerance</code> module</li>
+        <li>Strict separation between points, vectors and normals</li>
+        <li>Well-defined transform construction, application and composition</li>
+      </ul>
+      <p>
+        All higher-level crates and algorithms must respect these conventions. Doing so
+        ensures that curve/surface evaluation, boolean operations, meshing and future
+        extensions – including experimental “sci-fi” features – operate on a shared,
+        well-defined geometric foundation.
+      </p>
+    </section>
+
+    <section id="checklist">
+      <h2>6. Implementation checklist</h2>
+      <p>Before sending geometry/core-kernel PRs, sanity-check the following:</p>
+      <ul>
+        <li><strong>Frames</strong> – confirm world/local transforms follow the parent → child multiplication order.</li>
+        <li><strong>Tolerances</strong> – use <code>Tolerance</code>/<code>Origin</code> helpers; avoid ad-hoc epsilons.</li>
+        <li><strong>Types</strong> – keep points, vectors, and normals distinct (no casting via raw tuples).</li>
+        <li><strong>Matrices</strong> – serialize/store in column-major order to match cgmath.</li>
+        <li><strong>Docs</strong> – update crate README/guide sections (like this file) when conventions change.</li>
+      </ul>
+      <p>
+        Following this checklist keeps the documentation accurate for newcomers while
+        giving experienced engineers a reliable reference.
+      </p>
+    </section>
+  </main>
+</body>
+</html>

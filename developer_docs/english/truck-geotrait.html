@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Geotrait – Geometry Interfaces</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Geotrait</h1>
+    <p>Traits shared by all geometry</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#philosophy">1. Design goals</a></li>
+      <li><a href="#shared">2. Shared helpers</a></li>
+      <li><a href="#curves">3. Curve traits</a></li>
+      <li><a href="#surfaces">4. Surface traits</a></li>
+      <li><a href="#search-helpers">5. Search helpers</a></li>
+      <li><a href="#integration">6. Integrating with truck-geometry</a></li>
+      <li><a href="#derive-macros">7. Derive macros</a></li>
+      <li><a href="#best-practices">8. Best practices</a></li>
+      <li><a href="#summary">9. Summary</a></li>
+      <li><a href="#checklist">10. Implementation checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="pill">Interface Guide</div>
+      
+      <p class="tagline">
+        A tour of the traits that describe curves, surfaces, and parameter search—every geometry implementation in Truck
+        must satisfy this contract.
+      </p>
+      <div class="badge-row">
+        <div class="badge"><span>Crate:</span> truck-geotrait</div>
+        <div class="badge"><span>Consumers:</span> geometry, topology, modeling, CSG</div>
+        <div class="badge"><span>Highlights:</span> ParametricCurve/Surface, parameter search, transformation helpers</div>
+      </div>
+    </section>
+
+    <section id="philosophy">
+      <h2>1. Design goals</h2>
+      <p><code>truck-geotrait</code> keeps geometry and topology loosely coupled:</p>
+      <ul>
+        <li>Geometry crates (e.g. <code>truck-geometry</code>) implement these traits.</li>
+        <li>Topology/modeling crates consume them without knowing the concrete implementations.</li>
+        <li>Procedural macros (<code>truck-derivers</code>) fill in forwarding code for wrapper types.</li>
+      </ul>
+      <p>The traits emphasize:</p>
+      <ul>
+        <li>Consistent parameter domains (bounded or infinite).</li>
+        <li>Derivative access for differential geometry tooling.</li>
+        <li>Search/division interfaces so algorithms can adaptively sample geometry.</li>
+      </ul>
+    </section>
+
+    <section id="shared">
+      <h2>2. Shared helpers</h2>
+      <h3 id="invertible">2.1 Invertible &amp; Transformed</h3>
+      <p>These traits apply to both curves and surfaces:</p>
+      <ul>
+        <li><code>Invertible</code> – reversible orientation (used by edges/wires to flip direction).</li>
+        <li><code>Transformed&lt;Matrix3/4&gt;</code> – apply rotations/affine transforms to control nets and derived points.</li>
+      </ul>
+
+      <h3 id="same-geometry">2.2 ToSameGeometry</h3>
+      <p><code>ToSameGeometry</code> returns an equivalent geometry object (e.g., boxing a concrete curve). This powers caching layers and type erasure in modeling.</p>
+
+      <h3 id="parameter-range">2.3 Parameter ranges</h3>
+      <p>The alias <code>ParameterRange = (Bound&lt;f64&gt;, Bound&lt;f64&gt;)</code> plus helper <code>bound2opt</code> unify how ranges are exposed. Bounded traits panic if either bound is <code>Unbounded</code>, making errors obvious.</p>
+    </section>
+
+    <section id="curves">
+      <h2>3. Curve traits</h2>
+      <h3 id="parametric-curve">3.1 ParametricCurve basics</h3>
+      <p>Implementations map <code>t</code> to a point/vector space:</p>
+      <ul>
+        <li><code>subs(t)</code></li>
+        <li><code>der</code>, <code>der2</code>, <code>der_n</code>, <code>ders</code></li>
+        <li><code>parameter_range</code> and optional <code>period()</code></li>
+      </ul>
+      <p>Type aliases (<code>ParametricCurve2D</code>, <code>ParametricCurve3D</code>) constrain point/vector types.</p>
+
+      <h3 id="bounded-curve">3.2 Bounded &amp; transforms</h3>
+      <ul>
+        <li><code>BoundedCurve</code> – exposes <code>range_tuple()</code>, <code>front</code>, <code>back</code>.</li>
+        <li><code>ParameterTransform</code> – affine remap of parameter domains, with helpers to normalize to [0, 1].</li>
+        <li><code>Cut</code> – splits a curve at <code>t</code>, returning the trailing segment.</li>
+      </ul>
+
+      <h3 id="curve-division">3.3 Parameter division</h3>
+      <p><code>ParameterDivision1D</code> returns adaptive sampling tuples <code>(Vec&lt;t&gt;, Vec&lt;Point&gt;)</code>.</p>
+
+      <h3 id="curve-search">3.4 Parameter search</h3>
+      <p>Traits such as <code>SearchParameterD1</code> and <code>SearchNearestParameterD1</code> project points onto curves using Newton iterations. Higher-level algorithms (e.g. topology trimming) depend on these interfaces to be implemented correctly.</p>
+    </section>
+
+    <section id="surfaces">
+      <h2>4. Surface traits</h2>
+      <h3 id="parametric-surface">4.1 ParametricSurface</h3>
+      <p>Mirrors the curve trait but with two parameters:</p>
+      <ul>
+        <li><code>subs(u, v)</code></li>
+        <li>Partial derivatives (<code>uder</code>, <code>vder</code>, <code>uuder</code>, <code>uvder</code>, <code>vvder</code>, <code>der_mn</code>, <code>ders</code>)</li>
+        <li>Range metadata for both <code>u</code> and <code>v</code></li>
+        <li><code>ParametricSurface3D</code> adds <code>normal</code> + derivatives of normals</li>
+      </ul>
+
+      <h3 id="bounded-surface">4.2 Bounded &amp; include curve</h3>
+      <ul>
+        <li><code>BoundedSurface</code> – ensures finite parameter domains.</li>
+        <li><code>IncludeCurve&lt;C&gt;</code> – reports whether a curve lies on the surface (used to validate trims).</li>
+      </ul>
+
+      <h3 id="surface-division">4.3 UV division &amp; search</h3>
+      <p><code>ParameterDivision2D</code> produces sampling grids; <code>SearchParameterD2</code> projects onto surfaces.</p>
+    </section>
+
+    <section id="search-helpers">
+      <h2>5. Search helpers</h2>
+      <p>The <code>traits/search_parameter.rs</code> module offers Newton-based solvers for parameter search. These are used by both curves and surfaces, and are exposed via the <code>Search*</code> traits. When implementing custom geometry, ensure your <code>ders</code> results are accurate so these solvers converge.</p>
+    </section>
+
+    <section id="integration">
+      <h2>6. Integrating with truck-geometry</h2>
+      <p>Concrete spline implementations in <code>truck-geometry</code> satisfy these traits. If you build new primitives:</p>
+      <ul>
+        <li>Return precise parameter bounds (normalized if necessary).</li>
+        <li>Implement derivative routines needed by search/division.</li>
+        <li>Use <code>truck-derivers</code> macros if your type just wraps existing geometry.</li>
+      </ul>
+    </section>
+
+    <section id="derive-macros">
+      <h2>7. Derive macros</h2>
+      <p>
+        Enabling the <code>derive</code> feature in <code>truck-geotrait</code> pulls in <code>truck-derivers</code>, letting you do:
+      </p>
+      <pre><code>#[derive(ParametricCurve, BoundedCurve, SearchParameterD1)]
+pub enum Curve {
+    Line(LineCurve),
+    Nurbs(NurbsCurve),
+}</code></pre>
+      <p>Each derive forwards methods to the inner type. See <code>docs/truck-derivers.html</code> for the full list.</p>
+    </section>
+
+    <section id="best-practices">
+      <h2>8. Best practices</h2>
+      <ul>
+        <li><strong>Tolerance</strong> – use <code>truck-base::tolerance</code> helpers when comparing parameters.</li>
+        <li><strong>Normalization</strong> – keep parameter domains normalized unless native values are required for interoperability.</li>
+        <li><strong>Zero checks</strong> – use the <code>Origin</code> trait (<code>so_small</code>) for near-zero tests.</li>
+        <li><strong>Documentation</strong> – update README/traits docs when adding traits or changing contracts.</li>
+      </ul>
+    </section>
+
+    <section id="summary">
+      <h2>9. Summary</h2>
+      <p><code>truck-geotrait</code> abstracts geometry operations so the rest of the kernel can be agnostic about concrete curve/surface types. Implementations should:</p>
+      <ul>
+        <li>Provide evaluation/derivative access.</li>
+        <li>Expose accurate parameter domains.</li>
+        <li>Support adaptive sampling and projection via the search/division traits.</li>
+        <li>Handle transforms and orientation changes.</li>
+      </ul>
+    </section>
+
+    <section id="checklist">
+      <h2>10. Implementation checklist</h2>
+      <ul>
+        <li><strong>Bounds</strong> – confirm <code>parameter_range</code> (and bounded variants) return finite values where required.</li>
+        <li><strong>Derivatives</strong> – validate derivative accuracy; search routines depend on them.</li>
+        <li><strong>Transforms</strong> – implement both <code>Transformed&lt;Matrix3&gt;</code> and <code>Transformed&lt;Matrix4&gt;</code> if the geometry will live in 3D.</li>
+        <li><strong>Derives</strong> – use <code>truck-derivers</code> to avoid boilerplate on wrapper enums/structs.</li>
+        <li><strong>Docs/tests</strong> – add examples/tests for new trait impls and update this guide if APIs change.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truck Developer Docs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/docs.css" />
+</head>
+<body>
+  <header>
+    <h1>Truck Developer Docs</h1>
+    <p>A curated set of notes for every Truck crate—geometry, topology, modeling, meshing, rendering, and STEP I/O.</p>
+  </header>
+  <nav aria-label="On this page">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#modules">Module guides</a></li>
+      <li><a href="#resources">Resources</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>
+        Truck is a modular CAD kernel. Each crate has its own quick-reference page in this directory; use them to align on
+        coordinate conventions, APIs, and contributor expectations before opening PRs.
+      </p>
+      <ul>
+        <li><strong>Updated:</strong> Continuous alongside the repo.</li>
+        <li><strong>Audience:</strong> Kernel and tooling engineers.</li>
+        <li><strong>Stack:</strong> Rust, cgmath64, WGPU, STEP.</li>
+      </ul>
+    </section>
+
+    <section id="modules">
+      <h2>Module guides</h2>
+      <ul>
+        <li><strong><a href="truck-base.html">truck-base</a></strong> — coordinate system, tolerance strategy, and transform conventions.</li>
+        <li><strong><a href="truck-geotrait.html">truck-geotrait</a></strong> — parametric curve/surface traits and search helpers.</li>
+        <li><strong><a href="truck-geometry.html">truck-geometry</a></strong> — knot vectors, B-spline/NURBS curves, surfaces, and refinement.</li>
+        <li><strong><a href="truck-topology.html">truck-topology</a></strong> — B-rep data structures and orientation rules.</li>
+        <li><strong><a href="truck-modeling.html">truck-modeling</a></strong> — sweeps, shells, and solid builders.</li>
+        <li><strong><a href="truck-shapeops.html">truck-shapeops</a></strong> — boolean operations, healing, and diagnostics.</li>
+        <li><strong><a href="truck-meshalgo.html">truck-meshalgo</a></strong> — tessellation, quadrangulation, and smoothing.</li>
+        <li><strong><a href="truck-polymesh.html">truck-polymesh</a></strong> — the shared half-edge mesh structure.</li>
+        <li><strong><a href="truck-platform.html">truck-platform</a></strong> — WGPU runtime, scene graph, and WGSL sandbox.</li>
+        <li><strong><a href="truck-rendimpl.html">truck-rendimpl</a></strong> — CAD-specific renderer built on truck-platform.</li>
+        <li><strong><a href="truck-derivers.html">truck-derivers</a></strong> — procedural macros for geometry traits and STEP derives.</li>
+        <li><strong><a href="truck-stepio.html">truck-stepio</a></strong> — STEP import/export mappings.</li>
+      </ul>
+    </section>
+
+    <section id="resources">
+      <h2>Resources</h2>
+      <ul>
+        <li><a href="https://github.com/ricosjp/truck" target="_blank" rel="noopener">GitHub repository</a></li>
+        <li><a href="../japanese/index.html">Japanese docs</a> (mirrors this structure)</li>
+        <li>Update both languages when APIs change; keep README pointers in sync.</li>
+      </ul>
+    </section>
+  </main>
+  <footer>
+    Truck Developer Docs · Built for kernel engineers
+  </footer>
+</body>
+</html>
