@@ -147,6 +147,28 @@ code {
   margin: 1rem 0;
 }
 
+.index-link {
+  padding: 0 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.index-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.index-button:hover {
+  border-color: var(--accent);
+}
+
 pre {
   background: rgba(255, 255, 255, 0.08);
   padding: 0.85rem 1rem;
