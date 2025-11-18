@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Truck Documentation</title>
+    <link rel="stylesheet" href="assets/docs.css">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at top, rgba(102, 217, 255, 0.12), transparent 60%), var(--bg);
+        }
+        .landing-card {
+            background: rgba(7, 9, 16, 0.85);
+            border: 1px solid var(--border);
+            border-radius: 1.1rem;
+            padding: 2.5rem;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        }
+        .language-grid {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+        .language-card {
+            border: 1px solid var(--border);
+            border-radius: 0.85rem;
+            padding: 1.6rem;
+            text-decoration: none;
+            color: inherit;
+            background: rgba(255, 255, 255, 0.02);
+            transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+        }
+        .language-card:hover,
+        .language-card:focus-visible {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .language-card strong {
+            font-size: 1.15rem;
+        }
+        .language-card span {
+            display: block;
+            margin-top: 0.3rem;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 2.2rem;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Truck Documentation</h1>
+        <p class="tagline">Pick your preferred language to browse the rustdoc bundles.</p>
+    </header>
+    <main>
+        <div class="landing-card">
+            <p>
+                Each option links into a self-contained Rustdoc build. Keep shared assets under
+                <code>docs/assets/</code> so both language versions inherit the same theme and scripts.
+            </p>
+            <div class="language-grid">
+                <a class="language-card" href="english/index.html">
+                    <strong>English</strong>
+                    <span>View the English documentation set.</span>
+                </a>
+                <a class="language-card" href="japanese/index.html">
+                    <strong>日本語</strong>
+                    <span>日本語版のドキュメントを開きます。</span>
+                </a>
+            </div>
+            <footer>
+                Need to regenerate docs? Run <code>cargo doc --workspace --no-deps</code> and copy the output into each language folder.
+            </footer>
+        </div>
+    </main>
+</body>
+</html>
