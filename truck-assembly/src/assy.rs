@@ -97,9 +97,9 @@ impl<'a, Matrix, Shape, Attrs> Assembly<'a, Matrix, Shape, Attrs> {
     /// a[1].add_child(a[2]);
     /// a[0].add_child(a[3]);
     /// let third_entity = a[3].entity().borrow().clone();
-    /// 
+    ///
     /// assy.extract_nodes_as_children();
-    /// 
+    ///
     /// assert_eq!(assy.len(), 8);
     /// assert_eq!(a[0].children(), vec![a[1], a[3]]);
     /// assert_eq!(a[1].num_of_children(), 5);
@@ -134,7 +134,7 @@ impl<'a, Matrix, Shape, Attrs> Assembly<'a, Matrix, Shape, Attrs> {
     ///     shapes: vec![5],
     ///     attrs: 0,
     /// });
-    /// 
+    ///
     /// assert_eq!(*a[3].entity().borrow(), third_entity);
     /// ```
     pub fn extract_nodes_as_children(&'a self)

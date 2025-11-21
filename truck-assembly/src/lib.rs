@@ -12,7 +12,7 @@
     unused_qualifications
 )]
 
-/// Abstract DAG structure
-pub mod dag;
 /// Assembly structure
 pub mod assy;
+/// Abstract DAG structure
+pub mod dag;
