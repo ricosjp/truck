@@ -12,6 +12,7 @@ members = [
 	"truck-polymesh",
 	"truck-rendimpl",
 	"truck-shapeops",
+	"truck-assembly",
 	"truck-stepio",
 	"truck-topology",
 	"example-pages-generator",
