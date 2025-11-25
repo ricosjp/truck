@@ -1,4 +1,5 @@
-use rustc_hash::FxHashSet as HashSet;
+#![allow(clippy::mutable_key_type)]
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::cell::{Ref, RefCell, RefMut};
 use typed_arena::Arena;
 
@@ -194,6 +195,148 @@ impl<'a, T> Dag<'a, T> {
             })
             .collect()
     }
+    /// Takes a closure and creates `dst`'s nodes which calls that closure on each entity.
+    /// # Examples
+    /// ```
+    /// use truck_assembly::dag::*;
+    /// let src_dag = Dag::<i32>::new();
+    /// let dst_dag = Dag::<f64>::new();
+    ///
+    /// let a = src_dag.create_nodes(0..3);
+    /// a[0].add_child(a[1]);
+    /// a[0].add_child(a[2]);
+    /// a[1].add_child(a[2]);
+    /// src_dag.map_into(&dst_dag, |n: &i32| 2f64.powi(*n));
+    ///
+    /// assert_eq!(dst_dag.len(), 3);
+    /// let dst_top = dst_dag.top_nodes()[0];
+    /// let top_children = dst_top.children();
+    /// let b = [dst_top, top_children[0], top_children[1]];
+    ///
+    /// assert_eq!(b[0].children(), vec![b[1], b[2]]);
+    /// assert_eq!(*b[0].entity().borrow(), 1.0);
+    /// assert_eq!(b[1].children(), vec![b[2]]);
+    /// assert_eq!(*b[1].entity().borrow(), 2.0);
+    /// assert!(b[2].children().is_empty());
+    /// assert_eq!(*b[2].entity().borrow(), 4.0);
+    /// ```
+    pub fn map_into<'b, F, U>(&'a self, dst: &'b Dag<'b, U>, f: F)
+    where
+        F: Fn(&T) -> U,
+        U: 'b, {
+        // create node
+        let ref_nodes = self.nodes.borrow();
+        let nodes_map: HashMap<_, _> = ref_nodes
+            .iter()
+            .map(|&src_node| (src_node, dst.create_node(f(&*src_node.entity().borrow()))))
+            .collect();
+
+        // copy relationships
+        nodes_map.iter().for_each(|(&src_node, &dst_node)| {
+            // copy parents
+            let ref_src_parents = src_node.parents_ref();
+            let parents_iter = ref_src_parents
+                .iter()
+                .map(|parent| *nodes_map.get(parent).unwrap());
+            dst_node.parents_mut().extend(parents_iter);
+
+            // copy children
+            let ref_src_children = src_node.children_ref();
+            let children_iter = ref_src_children
+                .iter()
+                .map(|child| *nodes_map.get(child).unwrap());
+            dst_node.children_mut().extend(children_iter);
+        });
+    }
+    /// Extends the DAG based on the adjacency lists, and returns added nodes.
+    /// # Examples
+    /// ```
+    /// use truck_assembly::dag::*;
+    /// let dag = Dag::<usize>::new();
+    ///
+    /// let adjacency = [vec![1, 2], vec![3, 4], vec![], vec![], vec![2]];
+    /// let nodes = dag.extend_by_adjacency(0..5, &adjacency).unwrap();
+    ///
+    /// let parents = nodes[2].parents();
+    /// assert_eq!(parents.len(), 2);
+    /// assert_eq!(parents[0], nodes[0]);
+    /// assert_eq!(parents[1], nodes[4]);
+    /// ```
+    /// # Failure
+    /// Returns `None` and does not change `self` if:
+    /// - the length of `entities` does not equals to `adjacency`,
+    /// - there exists an index in `adjacency` which is more than the length of `entities`, or,
+    /// - the added graph has a cycle.
+    ///
+    /// ```
+    /// use truck_assembly::dag::*;
+    /// let dag = Dag::<usize>::new();
+    /// let adjacency = [vec![1, 2], vec![3, 4], vec![], vec![], vec![1, 2]];
+    /// assert!(dag.extend_by_adjacency(0..5, &adjacency).is_none());
+    /// ```
+    pub fn extend_by_adjacency<EntityIter>(
+        &'a self,
+        entities: EntityIter,
+        adjacency: &[Vec<usize>],
+    ) -> Option<Vec<Node<'a, T>>>
+    where
+        EntityIter: IntoIterator<Item = T>,
+        EntityIter::IntoIter: ExactSizeIterator,
+    {
+        let entity_iter = entities.into_iter();
+        let settled = |&idx: &usize| idx < entity_iter.len();
+        if !adjacency.iter().flatten().all(settled) {
+            return None;
+        }
+        if entity_iter.len() != adjacency.len() || has_cycle(adjacency) {
+            return None;
+        }
+
+        let nodes = entity_iter
+            .map(|entity| Node(&*self.arena.alloc(NodeData::new(entity))))
+            .collect::<Vec<_>>();
+
+        for (&node, children) in nodes.iter().zip(adjacency) {
+            for &child_idx in children {
+                let child = nodes[child_idx];
+                node.children_mut().push(child);
+                child.parents_mut().push(node);
+            }
+        }
+
+        self.nodes.borrow_mut().extend(&nodes);
+        Some(nodes)
+    }
+}
+
+fn has_cycle(adjacency: &[Vec<usize>]) -> bool {
+    let mut seen = vec![false; adjacency.len()];
+    let mut finished = vec![false; adjacency.len()];
+
+    while let Some(first) = finished.iter().position(|&x| !x) {
+        if sub_has_cycle(first, adjacency, &mut seen, &mut finished) {
+            return true;
+        }
+    }
+    false
+}
+
+fn sub_has_cycle(
+    cursor: usize,
+    adjacency: &[Vec<usize>],
+    seen: &mut [bool],
+    finished: &mut [bool],
+) -> bool {
+    seen[cursor] = true;
+    for &child in &adjacency[cursor] {
+        if finished[child] {
+            continue;
+        } else if seen[child] || sub_has_cycle(child, adjacency, seen, finished) {
+            return true;
+        }
+    }
+    finished[cursor] = true;
+    false
 }
 
 impl<'a, T> Node<'a, T> {
@@ -325,7 +468,7 @@ impl<'a, T> Node<'a, T> {
     #[inline]
     pub fn add_child(self, child: Self) -> bool {
         let already_child = self.children_ref().contains(&child);
-        let occurs_loop = child.contains_as_descendant(self);
+        let occurs_loop = child.contains_as_descendant(self, &mut Default::default());
         if !already_child && !occurs_loop {
             self.children_mut().push(child);
             child.parents_mut().push(self);
@@ -466,19 +609,14 @@ impl<'a, T> Node<'a, T> {
         }
     }
 
-    fn contains_as_descendant(self, node: Self) -> bool {
-        self.sub_contains_as_descendant(node, &mut Default::default())
-    }
-
-    #[allow(clippy::mutable_key_type)]
-    fn sub_contains_as_descendant(self, node: Self, seen: &mut HashSet<Self>) -> bool {
+    fn contains_as_descendant(self, node: Self, seen: &mut HashSet<Self>) -> bool {
         if self == node {
             return true;
         }
         for &child in &*self.children_ref() {
             if seen.contains(&child) {
                 continue;
-            } else if child.sub_contains_as_descendant(node, seen) {
+            } else if child.contains_as_descendant(node, seen) {
                 return true;
             }
         }
