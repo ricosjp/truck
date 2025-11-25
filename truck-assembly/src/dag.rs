@@ -74,6 +74,13 @@ impl<'a, T> From<Path<'a, T>> for Vec<Node<'a, T>> {
     fn from(value: Path<'a, T>) -> Self { value.0 }
 }
 
+impl<'a, T> IntoIterator for Path<'a, T> {
+    type Item = Node<'a, T>;
+    type IntoIter = std::vec::IntoIter<Node<'a, T>>;
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
 impl<'a, 'b, T> IntoIterator for &'b Path<'a, T> {
     type Item = Node<'a, T>;
     type IntoIter = std::iter::Copied<std::slice::Iter<'b, Node<'a, T>>>;
