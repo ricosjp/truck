@@ -280,14 +280,18 @@ impl<P> BSplineSurface<P> {
     /// The range of the parameter of the surface.
     #[inline(always)]
     pub fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
+        // For B-splines, this is [knot[degree], knot[n_cv]] in each direction,
+        // which is the valid evaluation domain.
+        let udeg = self.knot_vecs.0.len() - self.control_points.len() - 1;
+        let vdeg = self.knot_vecs.1.len() - self.control_points[0].len() - 1;
         (
             (
-                Bound::Included(self.knot_vecs.0[0]),
-                Bound::Included(self.knot_vecs.0[self.knot_vecs.0.len() - 1]),
+                Bound::Included(self.knot_vecs.0[udeg]),
+                Bound::Included(self.knot_vecs.0[self.control_points.len()]),
             ),
             (
-                Bound::Included(self.knot_vecs.1[0]),
-                Bound::Included(self.knot_vecs.1[self.knot_vecs.1.len() - 1]),
+                Bound::Included(self.knot_vecs.1[vdeg]),
+                Bound::Included(self.knot_vecs.1[self.control_points[0].len()]),
             ),
         )
     }
