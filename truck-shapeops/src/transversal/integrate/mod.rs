@@ -137,19 +137,24 @@ pub fn and<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     solid1: &Solid<Point3, C, S>,
     tol: f64,
 ) -> Option<Solid<Point3, C, S>> {
+	println!("AND operation started.");
     let mut iter0 = solid0.boundaries().iter();
     let mut iter1 = solid1.boundaries().iter();
     let shell0 = iter0.next().unwrap();
     let shell1 = iter1.next().unwrap();
+	println!("Processing first pair of shells.");
     let [mut and_shell, _] = process_one_pair_of_shells(shell0, shell1, tol)?;
+	println!("First pair of shells processed.");
     for shell in iter0 {
         let [res, _] = process_one_pair_of_shells(&and_shell, shell, tol)?;
         and_shell = res;
     }
+	println!("First solid's shells processed.");
     for shell in iter1 {
         let [res, _] = process_one_pair_of_shells(&and_shell, shell, tol)?;
         and_shell = res;
     }
+	println!("Second solid's shells processed.");
     let boundaries = and_shell.connected_components();
     Some(Solid::new(boundaries))
 }
