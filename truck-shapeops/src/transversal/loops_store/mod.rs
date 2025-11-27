@@ -1,10 +1,13 @@
 #![allow(clippy::many_single_char_names)]
 
+use std::fmt::format;
+
 use super::*;
 use rustc_hash::FxHashMap as HashMap;
 use truck_base::cgmath64::*;
 use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
+use truck_stepio::r#in;
 use truck_topology::{Vertex, *};
 
 type PolylineCurve = truck_meshalgo::prelude::PolylineCurve<Point3>;
@@ -459,113 +462,124 @@ where
     let mut poly_loops_store1: LoopsStore<_, _> = poly_shell1.face_iter().collect();
     let store0_len = geom_loops_store0.len();
     let store1_len = geom_loops_store1.len();
-    (0..store0_len)
-        .flat_map(move |i| (0..store1_len).map(move |j| (i, j)))
-        .try_for_each(|(face_index0, face_index1)| {
-            let ori0 = geom_shell0[face_index0].orientation();
-            let ori1 = geom_shell1[face_index1].orientation();
-            let surface0 = geom_shell0[face_index0].surface();
-            let surface1 = geom_shell1[face_index1].surface();
-            let polygon0 = poly_shell0[face_index0].surface()?;
-            let polygon1 = poly_shell1[face_index1].surface()?;
-            intersection_curve::intersection_curves(
-                surface0.clone(),
-                &polygon0,
-                surface1.clone(),
-                &polygon1,
-            )?
-            .into_iter()
-            .try_for_each(|(polyline, intersection_curve)| {
-                let mut intersection_curve = intersection_curve.into();
-                let status = ShapesOpStatus::from_is_curve(&intersection_curve)?;
-                let (status0, status1) = match (ori0, ori1) {
-                    (true, true) => (status, status.not()),
-                    (true, false) => (status.not(), status.not()),
-                    (false, true) => (status, status),
-                    (false, false) => (status.not(), status),
-                };
-                if polyline.front().near(&polyline.back()) {
-                    let poly_wire = create_independent_loop(polyline);
-                    poly_loops_store0[face_index0]
-                        .add_independent_loop(BoundaryWire::new(poly_wire.clone(), status0));
-                    poly_loops_store1[face_index1]
-                        .add_independent_loop(BoundaryWire::new(poly_wire, status1));
-                    let geom_wire = create_independent_loop(intersection_curve);
-                    geom_loops_store0[face_index0]
-                        .add_independent_loop(BoundaryWire::new(geom_wire.clone(), status0));
-                    geom_loops_store1[face_index1]
-                        .add_independent_loop(BoundaryWire::new(geom_wire, status1));
-                } else {
-                    let pv0 = Vertex::new(polyline.front());
-                    let pv1 = Vertex::new(polyline.back());
-                    let gv0 = Vertex::new(polyline.front());
-                    let gv1 = Vertex::new(polyline.back());
-                    let mut pemap0 = HashMap::default();
-                    let mut pemap1 = HashMap::default();
-                    let mut gemap0 = HashMap::default();
-                    let mut gemap1 = HashMap::default();
-                    let idx00 =
-                        poly_loops_store0.add_polygon_vertex(face_index0, &pv0, &mut pemap0);
-                    if let Some((wire_index, edge_index, kind)) = idx00 {
-                        geom_loops_store0.add_geom_vertex(
-                            (face_index0, wire_index, edge_index),
-                            &gv0,
-                            kind,
-                            &surface1,
-                            &mut gemap0,
-                        )?;
-                        let polyline = intersection_curve.leader_mut();
-                        *polyline.first_mut().unwrap() = gv0.point();
-                    }
-                    let idx01 =
-                        poly_loops_store0.add_polygon_vertex(face_index0, &pv1, &mut pemap1);
-                    if let Some((wire_index, edge_index, kind)) = idx01 {
-                        geom_loops_store0.add_geom_vertex(
-                            (face_index0, wire_index, edge_index),
-                            &gv1,
-                            kind,
-                            &surface1,
-                            &mut gemap1,
-                        )?;
-                        let polyline = intersection_curve.leader_mut();
-                        *polyline.last_mut().unwrap() = gv1.point();
-                    }
-                    let idx10 =
-                        poly_loops_store1.add_polygon_vertex(face_index1, &pv0, &mut pemap0);
-                    if let Some((wire_index, edge_index, kind)) = idx10 {
-                        geom_loops_store1.add_geom_vertex(
-                            (face_index1, wire_index, edge_index),
-                            &gv0,
-                            kind,
-                            &surface0,
-                            &mut gemap0,
-                        )?;
-                        let polyline = intersection_curve.leader_mut();
-                        *polyline.first_mut().unwrap() = gv0.point();
-                    }
-                    let idx11 =
-                        poly_loops_store1.add_polygon_vertex(face_index1, &pv1, &mut pemap1);
-                    if let Some((wire_index, edge_index, kind)) = idx11 {
-                        geom_loops_store1.add_geom_vertex(
-                            (face_index1, wire_index, edge_index),
-                            &gv1,
-                            kind,
-                            &surface0,
-                            &mut gemap1,
-                        )?;
-                        let polyline = intersection_curve.leader_mut();
-                        *polyline.last_mut().unwrap() = gv1.point();
-                    }
-                    let pedge = Edge::new(&pv0, &pv1, polyline);
-                    let gedge = Edge::new(&gv0, &gv1, intersection_curve.into());
-                    poly_loops_store0[face_index0].add_edge(pedge.clone(), status0);
-                    geom_loops_store0[face_index0].add_edge(gedge.clone(), status0);
-                    poly_loops_store1[face_index1].add_edge(pedge, status1);
-                    geom_loops_store1[face_index1].add_edge(gedge, status1);
-                }
-                Some(())
-            })
-        })?;
+	for (face_index0,face_index1) in (0..store0_len).flat_map(move |i| (0..store1_len).map(move |j| (i, j))){
+		println!("Processing face pair: ({}/{store0_len}, {}/{store1_len})", face_index0, face_index1);
+		let ori0 = geom_shell0[face_index0].orientation();
+		let ori1 = geom_shell1[face_index1].orientation();
+		let surface0 = geom_shell0[face_index0].surface();
+		let surface1 = geom_shell1[face_index1].surface();
+		let polygon0 = poly_shell0[face_index0].surface()?;
+		let polygon1 = poly_shell1[face_index1].surface()?;
+		{
+			// ここでpolygon0: PolygonMesh, polygon1: PolygonMeshをstlで保存するコードを書いて
+			std::fs::create_dir_all("out").unwrap();
+			let mut obj = std::fs::File::create(&format!("out/pair-{face_index0}-{face_index1}.stl")).unwrap();
+			let mut merged = polygon0.clone();
+			merged.merge(polygon1.clone());
+			stl::write(&merged, &mut obj, stl::StlType::Ascii).unwrap();
+			if (face_index0, face_index1) == (5,8){
+				println!("debug breakpoint");
+			}
+		}
+		let intersection_curves=intersection_curve::intersection_curves(
+			surface0.clone(),
+			&polygon0,
+			surface1.clone(),
+			&polygon1,
+		)?;
+		{
+			if intersection_curves.is_empty() {
+				std::fs::remove_file(&format!("out/pair-{face_index0}-{face_index1}.stl")).unwrap();
+			}
+		}
+		println!("Got intersection_curves {}", intersection_curves.len());
+		for (polyline, intersection_curve) in intersection_curves{
+			let mut intersection_curve = intersection_curve.into();
+			let status = ShapesOpStatus::from_is_curve(&intersection_curve)?;
+			let (status0, status1) = match (ori0, ori1) {
+				(true, true) => (status, status.not()),
+				(true, false) => (status.not(), status.not()),
+				(false, true) => (status, status),
+				(false, false) => (status.not(), status),
+			};
+			if polyline.front().near(&polyline.back()) {
+				let poly_wire = create_independent_loop(polyline);
+				poly_loops_store0[face_index0].add_independent_loop(BoundaryWire::new(poly_wire.clone(), status0));
+				poly_loops_store1[face_index1].add_independent_loop(BoundaryWire::new(poly_wire, status1));
+				let geom_wire = create_independent_loop(intersection_curve);
+				geom_loops_store0[face_index0].add_independent_loop(BoundaryWire::new(geom_wire.clone(), status0));
+				geom_loops_store1[face_index1].add_independent_loop(BoundaryWire::new(geom_wire, status1));
+			} else {
+				let pv0 = Vertex::new(polyline.front());
+				let pv1 = Vertex::new(polyline.back());
+				let gv0 = Vertex::new(polyline.front());
+				let gv1 = Vertex::new(polyline.back());
+				let mut pemap0 = HashMap::default();
+				let mut pemap1 = HashMap::default();
+				let mut gemap0 = HashMap::default();
+				let mut gemap1 = HashMap::default();
+				let idx00 =
+					poly_loops_store0.add_polygon_vertex(face_index0, &pv0, &mut pemap0);
+				if let Some((wire_index, edge_index, kind)) = idx00 {
+					geom_loops_store0.add_geom_vertex(
+						(face_index0, wire_index, edge_index),
+						&gv0,
+						kind,
+						&surface1,
+						&mut gemap0,
+					)?;
+					let polyline = intersection_curve.leader_mut();
+					*polyline.first_mut().unwrap() = gv0.point();
+				}
+				let idx01 =
+					poly_loops_store0.add_polygon_vertex(face_index0, &pv1, &mut pemap1);
+				if let Some((wire_index, edge_index, kind)) = idx01 {
+					geom_loops_store0.add_geom_vertex(
+						(face_index0, wire_index, edge_index),
+						&gv1,
+						kind,
+						&surface1,
+						&mut gemap1,
+					)?;
+					let polyline = intersection_curve.leader_mut();
+					*polyline.last_mut().unwrap() = gv1.point();
+				}
+				let idx10 =
+					poly_loops_store1.add_polygon_vertex(face_index1, &pv0, &mut pemap0);
+				if let Some((wire_index, edge_index, kind)) = idx10 {
+					geom_loops_store1.add_geom_vertex(
+						(face_index1, wire_index, edge_index),
+						&gv0,
+						kind,
+						&surface0,
+						&mut gemap0,
+					)?;
+					let polyline = intersection_curve.leader_mut();
+					*polyline.first_mut().unwrap() = gv0.point();
+				}
+				let idx11 =
+					poly_loops_store1.add_polygon_vertex(face_index1, &pv1, &mut pemap1);
+				if let Some((wire_index, edge_index, kind)) = idx11 {
+					geom_loops_store1.add_geom_vertex(
+						(face_index1, wire_index, edge_index),
+						&gv1,
+						kind,
+						&surface0,
+						&mut gemap1,
+					)?;
+					let polyline = intersection_curve.leader_mut();
+					*polyline.last_mut().unwrap() = gv1.point();
+				}
+				let pedge = Edge::new(&pv0, &pv1, polyline);
+				let gedge = Edge::new(&gv0, &gv1, intersection_curve.into());
+				poly_loops_store0[face_index0].add_edge(pedge.clone(), status0);
+				geom_loops_store0[face_index0].add_edge(gedge.clone(), status0);
+				poly_loops_store1[face_index1].add_edge(pedge, status1);
+				geom_loops_store1[face_index1].add_edge(gedge, status1);
+			}
+		}
+		println!("Processed face pair");
+	}
     Some(LoopsStoreQuadruple {
         geom_loops_store0,
         poly_loops_store0,

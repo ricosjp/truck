@@ -24,25 +24,31 @@ where
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     pub fn try_new(surface0: S0, surface1: S1, poly: PolylineCurve<Point3>) -> Option<Self> {
+		println!("元の折れ線={poly:?}");
         let ic = IntersectionCurve::new(&surface0, &surface1, poly);
         let poly = ic.leader();
         let len = poly.len();
+		// これに詰めていく
         let mut polyline = PolylineCurve(Vec::new());
         let mut params0 = PolylineCurve(Vec::new());
         let mut params1 = PolylineCurve(Vec::new());
+		// 最初の点から順にパラメータを求めていく
         for i in 0..len - 1 {
+			println!("Processing point {}/{}", i, len);
             let (q, p0, p1) = ic.search_triple(i as f64, 100)?;
             polyline.push(q);
             params0.push(p0);
             params1.push(p1);
         }
+		println!("end {}", poly[0].near(&poly[len - 1]));
         let (q, p0, p1) = match poly[0].near(&poly[len - 1]) {
             true => (polyline[0], params0[0], params1[0]),
-            false => ic.search_triple((len - 1) as f64, 100)?,
+            false => ic.search_triple((len - 1) as f64, 100)?,// -1を-1.01に変更したらなんか通った
         };
         polyline.push(q);
         params0.push(p0);
         params1.push(p1);
+		println!("出来た折れ線={polyline:?}");
         Some(Self {
             ic: IntersectionCurve::new(surface0, surface1, polyline),
             params0,
@@ -158,21 +164,24 @@ where
     S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
+	println!("Computing intersection curves...");
     let interferences = polygon0.extract_interference(polygon1);
+	println!("Extracted interferences: {}", interferences.len());
     let polylines = super::polyline_construction::construct_polylines(&interferences);
-    polylines
-        .into_iter()
-        .map(|polyline| {
-            Some((
-                polyline.clone(),
-                IntersectionCurveWithParameters::try_new(
-                    surface0.clone(),
-                    surface1.clone(),
-                    polyline,
-                )?,
-            ))
-        })
-        .collect()
+	println!("Constructed polylines: {}", polylines.len());
+	let mut result = Vec::new();
+    for polyline in polylines{
+        let it: IntersectionTuple<S0, S1>=(
+			polyline.clone(),
+			IntersectionCurveWithParameters::try_new(
+				surface0.clone(),
+				surface1.clone(),
+				polyline,
+			)?,
+		);
+		result.push(it);
+	}
+	return Some(result)
 }
 
 #[cfg(test)]
