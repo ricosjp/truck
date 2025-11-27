@@ -77,18 +77,22 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     shell1: &Shell<Point3, C, S>,
     tol: f64,
 ) -> Option<[Shell<Point3, C, S>; 2]> {
+	// 正負を確認しているだけ
     nonpositive_tolerance!(tol);
     let poly_shell0 = shell0.triangulation(tol);
     let poly_shell1 = shell1.triangulation(tol);
+	println!("Triangulations completed.");
     let altshell0: AltCurveShell<C, S> =
         shell0.mapped(|x| *x, |c| Alternative::FirstType(c.clone()), Clone::clone);
     let altshell1: AltCurveShell<C, S> =
         shell1.mapped(|x| *x, |c| Alternative::FirstType(c.clone()), Clone::clone);
+	println!("AND/OR 計算の途中では「元の曲線」と「交差曲線」の両方を扱う必要があるので、FirstType:CとSecondType:IntersectionCurveの和型を使います。");
     let loops_store::LoopsStoreQuadruple {
         geom_loops_store0: loops_store0,
         geom_loops_store1: loops_store1,
         ..
     } = loops_store::create_loops_stores(&altshell0, &poly_shell0, &altshell1, &poly_shell1)?;
+	println!("交差ループ(輪郭)の抽出");
     let mut cls0 = divide_face::divide_faces(&altshell0, &loops_store0, tol)?;
     cls0.integrate_by_component();
     let mut cls1 = divide_face::divide_faces(&altshell1, &loops_store1, tol)?;
