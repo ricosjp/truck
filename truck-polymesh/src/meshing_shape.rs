@@ -1,10 +1,12 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use crate::*;
 
 impl<P> PolylineCurve<P> {
     /// meshing the curve
-    pub fn from_curve<C>(curve: C, range: (f64, f64), tol: f64) -> Self
+    pub fn from_curve<C, T: TesselationSplitMethod>(curve: C, range: (f64, f64), split: T) -> Self
     where C: ParameterDivision1D<Point = P> {
-        PolylineCurve(curve.parameter_division(range, tol).1)
+        PolylineCurve(curve.parameter_division(range, split).1)
     }
 }
 
@@ -13,15 +15,15 @@ impl StructuredMesh {
     /// # Arguments
     /// * `bspsurface` - bspline surface to meshed
     /// * `tol` - standard tolerance for meshing
-    pub fn from_surface<S>(
+    pub fn from_surface<S, T: TesselationSplitMethod>(
         surface: &S,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> StructuredMesh
     where
         S: ParametricSurface3D + ParameterDivision2D,
     {
-        let (div0, div1) = surface.parameter_division(range, tol);
+        let (div0, div1) = surface.parameter_division(range, split);
         create_mesh(surface, div0, div1)
     }
 }

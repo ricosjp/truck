@@ -1,6 +1,7 @@
 use crate::*;
 use js_sys::JsString;
 use truck_meshalgo::tessellation::*;
+use truck_modeling::algo::DefaultSplitParams;
 
 macro_rules! toporedef {
     ($($type: ident, $is: ident, $into: ident, $to: ident),*) => {
@@ -149,7 +150,7 @@ macro_rules! impl_shape {
         impl $type {
             /// meshing shape
             pub fn to_polygon(&self, tol: f64) -> PolygonMesh {
-                self.triangulation(tol).to_polygon().into_wasm()
+                self.triangulation(DefaultSplitParams::new(tol)).to_polygon().into_wasm()
             }
             /// read shape from json
             pub fn from_json(data: &[u8]) -> Option<$type> {

@@ -980,6 +980,8 @@ fn fillet_along_wire(
 #[test]
 fn create_fillet_surface() {
     use truck_meshalgo::prelude::*;
+    use truck_geotrait::algo::DefaultSplitParams;
+
     #[rustfmt::skip]
     let surface0 = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
@@ -1002,8 +1004,8 @@ fn create_fillet_surface() {
     .into();
 
     let mut poly0 =
-        StructuredMesh::from_surface(&surface0, ((0.0, 1.0), (0.0, 1.0)), 0.001).destruct();
-    let poly1 = StructuredMesh::from_surface(&surface1, ((0.0, 1.0), (0.0, 1.0)), 0.001).destruct();
+        StructuredMesh::from_surface(&surface0, ((0.0, 1.0), (0.0, 1.0)), DefaultSplitParams::new(0.001)).destruct();
+    let poly1 = StructuredMesh::from_surface(&surface1, ((0.0, 1.0), (0.0, 1.0)), DefaultSplitParams::new(0.001)).destruct();
     poly0.merge(poly1);
 
     let file0 = std::fs::File::create("edged.obj").unwrap();
@@ -1019,13 +1021,15 @@ fn create_fillet_surface() {
     );
     let surface =
         rolling_ball_fillet_surface(&surface0, &surface1, &curve, 5, |_| 0.3, true).unwrap();
-    let poly = StructuredMesh::from_surface(&surface, ((0.0, 1.0), (0.0, 1.0)), 0.01).destruct();
+    let poly = StructuredMesh::from_surface(&surface, ((0.0, 1.0), (0.0, 1.0)), DefaultSplitParams::new(0.01)).destruct();
     let file1 = std::fs::File::create("fillet.obj").unwrap();
     obj::write(&poly, file1).unwrap();
 }
 
 #[test]
 fn create_simple_fillet() {
+    use truck_geotrait::algo::DefaultSplitParams;
+
     #[rustfmt::skip]
     let surface0: NurbsSurface<_> = BSplineSurface::new(
         (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)),
@@ -1080,20 +1084,22 @@ fn create_simple_fillet() {
     let face1 = Face::new(vec![wire1], surface1);
 
     let shell: Shell = [face0.clone(), face1.clone()].into();
-    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let poly = shell.robust_triangulation(DefaultSplitParams::new(0.001)).to_polygon();
     let file = std::fs::File::create("edged-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
 
     let (face0, face1, fillet) = simple_fillet(&face0, &face1, shared_edge_id, |_| 0.3, 5).unwrap();
 
     let shell: Shell = [face0, face1, fillet].into();
-    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let poly = shell.robust_triangulation(DefaultSplitParams::new(0.001)).to_polygon();
     let file = std::fs::File::create("fillet-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }
 
 #[test]
 fn create_fillet_with_side() {
+    use truck_geotrait::algo::DefaultSplitParams;
+
     let p = [
         Point3::new(0.0, 0.0, 1.0),
         Point3::new(1.0, 0.3, 1.0),
@@ -1167,13 +1173,15 @@ fn create_fillet_with_side() {
 
     let shell: Shell = vec![face0, face1, fillet, side1.unwrap()].into();
 
-    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let poly = shell.robust_triangulation(DefaultSplitParams::new(0.001)).to_polygon();
     let file = std::fs::File::create("fillet-with-edge.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }
 
 #[test]
 fn fillet_to_nurbs() {
+    use truck_geotrait::algo::DefaultSplitParams;
+
     let p = [
         Point3::new(0.0, 0.0, 1.0),
         Point3::new(1.0, 0.0, 1.0),
@@ -1264,7 +1272,7 @@ fn fillet_to_nurbs() {
     ]
     .into();
 
-    let poly = shell.triangulation(0.001).to_polygon();
+    let poly = shell.triangulation(DefaultSplitParams::new(0.001)).to_polygon();
     let file = std::fs::File::create("cylinder.obj").unwrap();
     obj::write(&poly, file).unwrap();
 
@@ -1272,13 +1280,15 @@ fn fillet_to_nurbs() {
         simple_fillet(&shell[0], &shell[1], edge[1].id(), |_| 0.3, 5).unwrap();
     let shell: Shell = [face0, face1, fillet].into();
 
-    let poly = shell.triangulation(0.001).to_polygon();
+    let poly = shell.triangulation(DefaultSplitParams::new(0.001)).to_polygon();
     let file = std::fs::File::create("fillet-cylinder.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }
 
 #[test]
 fn fillet_semi_cube() {
+    use truck_geotrait::algo::DefaultSplitParams;
+
     let p = [
         Point3::new(0.0, 0.0, 1.0),
         Point3::new(1.0, 0.0, 1.0),
@@ -1343,7 +1353,7 @@ fn fillet_semi_cube() {
     ]
     .into();
 
-    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let poly = shell.robust_triangulation(DefaultSplitParams::new(0.001)).to_polygon();
     let file = std::fs::File::create("semi-cube.obj").unwrap();
     obj::write(&poly, file).unwrap();
 
@@ -1377,13 +1387,13 @@ fn fillet_semi_cube() {
     boundary.pop_back();
     assert_eq!(boundary.front_vertex().unwrap(), &v[0]);
 
-    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let poly = shell.robust_triangulation(DefaultSplitParams::new(0.001)).to_polygon();
     let file = std::fs::File::create("pre-fillet-cube.obj").unwrap();
     obj::write(&poly, file).unwrap();
 
     fillet_along_wire(&mut shell, &boundary, |_| 0.2, 5).unwrap();
 
-    let poly = shell.robust_triangulation(0.001).to_polygon();
+    let poly = shell.robust_triangulation(DefaultSplitParams::new(0.001)).to_polygon();
     let file = std::fs::File::create("fillet-cube.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }

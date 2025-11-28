@@ -1,5 +1,6 @@
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use truck_geometry::prelude::*;
+use truck_geotrait::algo::TesselationSplitMethod;
 use truck_meshalgo::rexport_polymesh::*;
 use truck_topology::compress::*;
 
@@ -34,7 +35,7 @@ use split_closed_faces::split_closed_faces;
 /// It has not yet been implemented for cases involving singularities, such as spherical surfaces.
 pub trait SplitClosedEdgesAndFaces {
     /// Splits closed edges and faces
-    fn split_closed_edges_and_faces(&mut self, tol: f64);
+    fn split_closed_edges_and_faces<T: TesselationSplitMethod + 'static>(&mut self, split: T);
 }
 
 impl<C, S> SplitClosedEdgesAndFaces for CompressedShell<Point3, C, S>
@@ -47,13 +48,13 @@ where
         + TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
 {
-    fn split_closed_edges_and_faces(&mut self, tol: f64) {
+    fn split_closed_edges_and_faces<T: TesselationSplitMethod + 'static>(&mut self, split: T) {
         fn sp<S>(surface: &S, point: Point3, hint: Option<(f64, f64)>) -> Option<(f64, f64)>
         where S: SearchParameter<D2, Point = Point3> {
             surface.search_parameter(point, hint, 100)
         }
         split_closed_edges(self);
-        split_closed_faces(self, tol, sp);
+        split_closed_faces(self, split, sp);
     }
 }
 
@@ -67,10 +68,10 @@ where
         + TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
 {
-    fn split_closed_edges_and_faces(&mut self, tol: f64) {
+    fn split_closed_edges_and_faces<T: TesselationSplitMethod + 'static>(&mut self, split: T) {
         self.boundaries
             .iter_mut()
-            .for_each(|shell| shell.split_closed_edges_and_faces(tol))
+            .for_each(|shell| shell.split_closed_edges_and_faces(split))
     }
 }
 
@@ -80,7 +81,7 @@ where
 /// Robust version of [`SplitClosedEdgesAndFaces`] based on [`SearchNearestParameter`].
 pub trait RobustSplitClosedEdgesAndFaces {
     /// Splits closed edges and faces
-    fn robust_split_closed_edges_and_faces(&mut self, tol: f64);
+    fn robust_split_closed_edges_and_faces<T: TesselationSplitMethod + 'static>(&mut self, split: T);
 }
 
 impl<C, S> RobustSplitClosedEdgesAndFaces for CompressedShell<Point3, C, S>
@@ -95,7 +96,7 @@ where
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>,
 {
-    fn robust_split_closed_edges_and_faces(&mut self, tol: f64) {
+    fn robust_split_closed_edges_and_faces<T: TesselationSplitMethod + 'static>(&mut self, split: T) {
         fn sp<S>(surface: &S, point: Point3, hint: Option<(f64, f64)>) -> Option<(f64, f64)>
         where S: SearchParameter<D2, Point = Point3> + SearchNearestParameter<D2, Point = Point3>
         {
@@ -106,7 +107,7 @@ where
                 .or_else(|| surface.search_nearest_parameter(point, None, 100))
         }
         split_closed_edges(self);
-        split_closed_faces(self, tol, sp);
+        split_closed_faces(self, split, sp);
     }
 }
 
@@ -122,9 +123,9 @@ where
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>,
 {
-    fn robust_split_closed_edges_and_faces(&mut self, tol: f64) {
+    fn robust_split_closed_edges_and_faces<T: TesselationSplitMethod + 'static>(&mut self, split: T) {
         let fs = RobustSplitClosedEdgesAndFaces::robust_split_closed_edges_and_faces;
-        self.boundaries.iter_mut().for_each(|shell| fs(shell, tol))
+        self.boundaries.iter_mut().for_each(|shell| fs(shell, split))
     }
 }
 

@@ -146,7 +146,8 @@ macro_rules! methods {
 }
 
 impl<'a, I> Method<I>
-where I: IntoIterator<Item = &'a Variant> + 'a + Copy
+where
+    I: IntoIterator<Item = &'a Variant> + 'a + Copy,
 {
     fn to_token_stream(&'a self) -> TokenStream2 {
         let method_name = &self.name;
@@ -416,7 +417,7 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
             let tys = &tys[1..];
             let methods = methods! {
                 variants, trait_name,
-                fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>),
+                fn parameter_division<T: truck_geotrait::algo::TesselationSplitMethod>(&self, range: (f64, f64), split: T) -> (Vec<f64>, Vec<Self::Point>),
             };
             quote! {
                 #[automatically_derived]
@@ -443,8 +444,8 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
                     #(#where_predicates,)*
                     #field_type: #trait_name {
                     type Point = <#field_type as #trait_name>::Point;
-                    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
-                        self.0.parameter_division(range, tol)
+                    fn parameter_division<T: truck_geotrait::algo::TesselationSplitMethod>(&self, range: (f64, f64), split: T) -> (Vec<f64>, Vec<Self::Point>) {
+                        self.0.parameter_division(range, split)
                     }
                 }
             }
@@ -469,7 +470,7 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
             let tys: Vec<_> = variant.fields.iter().map(|field| &field.ty).collect();
             let methods = methods! {
                 variants, trait_name,
-                fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>),
+                fn parameter_division<T: truck_geotrait::algo::TesselationSplitMethod>(&self, range: ((f64, f64), (f64, f64)), split: T) -> (Vec<f64>, Vec<f64>),
             };
             quote! {
                 #[automatically_derived]
@@ -493,8 +494,8 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name {
-                    fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64) -> (Vec<f64>, Vec<f64>) {
-                        self.0.parameter_division(range, tol)
+                    fn parameter_division<T: truck_geotrait::algo::TesselationSplitMethod>(&self, range: ((f64, f64), (f64, f64)), split: T) -> (Vec<f64>, Vec<f64>) {
+                        self.0.parameter_division(range, split)
                     }
                 }
             }

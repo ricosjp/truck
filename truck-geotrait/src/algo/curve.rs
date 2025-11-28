@@ -73,59 +73,43 @@ where
 /// # Panics
 ///
 /// `tol` must be greater than or equal to `TOLERANCE`.
-pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<C::Point>)
-where
-    C: ParametricCurve,
-    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>, {
-    nonpositive_tolerance!(tol);
-    sub_parameter_division(
-        curve,
-        range,
-        (curve.subs(range.0), curve.subs(range.1)),
-        tol,
-        100,
-    )
-}
-
-fn sub_parameter_division<C>(
+pub fn parameter_division<C, S: TesselationSplitMethod>(
     curve: &C,
     range: (f64, f64),
-    ends: (C::Point, C::Point),
-    tol: f64,
+    split: S,
+) -> (Vec<f64>, Vec<C::Point>)
+where
+    C: ParametricCurve,
+    C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
+{
+    sub_parameter_division(curve, range, split, 100)
+}
+
+fn sub_parameter_division<C, T: TesselationSplitMethod>(
+    curve: &C,
+    range: (f64, f64),
+    split: T,
     trials: usize,
 ) -> (Vec<f64>, Vec<C::Point>)
 where
     C: ParametricCurve,
     C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
 {
-    let gen = ends.0.midpoint(ends.1);
-    let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
-    let t = range.0 * (1.0 - p) + range.1 * p;
-    let mid = ends.0 + (ends.1 - ends.0) * p;
-    let dist2 = curve.subs(t).distance2(mid);
-    if dist2 < tol * tol || trials == 0 {
-        (vec![range.0, range.1], vec![ends.0, ends.1])
-    } else {
+    if trials != 0 && split.split_curve(curve, range) {
         let mid_param = (range.0 + range.1) / 2.0;
-        let mid_value = curve.subs(mid_param);
-        let (mut params, mut pts) = sub_parameter_division(
-            curve,
-            (range.0, mid_param),
-            (ends.0, mid_value),
-            tol,
-            trials - 1,
-        );
+        let (mut params, mut pts) =
+            sub_parameter_division(curve, (range.0, mid_param), split, trials - 1);
         let _ = (params.pop(), pts.pop());
-        let (new_params, new_pts) = sub_parameter_division(
-            curve,
-            (mid_param, range.1),
-            (mid_value, ends.1),
-            tol,
-            trials - 1,
-        );
+        let (new_params, new_pts) =
+            sub_parameter_division(curve, (mid_param, range.1), split, trials - 1);
         params.extend(new_params);
         pts.extend(new_pts);
         (params, pts)
+    } else {
+        (
+            vec![range.0, range.1],
+            vec![curve.subs(range.0), curve.subs(range.1)],
+        )
     }
 }
 

@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 
 impl<V> NurbsCurve<V> {
@@ -392,8 +394,12 @@ where V::Point: MetricSpace<Metric = f64> + HashGen<f64>
 {
     type Point = V::Point;
     #[inline(always)]
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<V::Point>) {
-        algo::curve::parameter_division(self, range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>) {
+        algo::curve::parameter_division(self, range, split)
     }
 }
 

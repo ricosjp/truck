@@ -1,5 +1,6 @@
 use super::*;
 use std::f64::consts::PI;
+use truck_geotrait::algo::DefaultSplitParams;
 use truck_topology::Shell;
 
 #[test]
@@ -193,7 +194,7 @@ fn test_split_closed_face_simple_cylinder_case() {
 
     assert!(Shell::extract(shell.clone()).is_err());
 
-    split_closed_faces(&mut shell, 0.01, sp);
+    split_closed_faces(&mut shell, DefaultSplitParams::new(0.01), sp);
 
     assert!(Shell::extract(shell.clone()).is_ok());
     let CompressedShell {
@@ -455,7 +456,7 @@ fn test_split_closed_face_cylinder_with_hole() {
     };
 
     assert!(Shell::extract(shell.clone()).is_err());
-    split_closed_faces(&mut shell, 0.01, sp);
+    split_closed_faces(&mut shell, DefaultSplitParams::new(0.01), sp);
     assert!(Shell::extract(shell.clone()).is_ok());
 
     let CompressedShell {
@@ -739,7 +740,7 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
     };
 
     assert!(Shell::extract(shell.clone()).is_err());
-    split_closed_faces(&mut shell, 0.01, sp);
+    split_closed_faces(&mut shell, DefaultSplitParams::new(0.01), sp);
     assert!(Shell::extract(shell.clone()).is_ok());
 
     let CompressedShell {
@@ -945,7 +946,7 @@ fn too_simple_cylinder() {
 
     assert!(Shell::extract(shell.clone()).is_err());
     split_closed_edges(&mut shell);
-    split_closed_faces(&mut shell, 0.01, sp);
+    split_closed_faces(&mut shell, DefaultSplitParams::new(0.01), sp);
     assert!(Shell::extract(shell.clone()).is_ok());
 
     let CompressedShell {
@@ -1175,7 +1176,7 @@ fn double_closed_boundary_cylinder() {
 
     assert!(Shell::extract(shell.clone()).is_err());
     split_closed_edges(&mut shell);
-    split_closed_faces(&mut shell, 0.05, sp);
+    split_closed_faces(&mut shell, DefaultSplitParams::new(0.05), sp);
     assert!(Shell::extract(shell.clone()).is_ok());
 
     let CompressedShell {
@@ -1437,7 +1438,7 @@ fn many_closed_boundary_cylinder() {
 
     assert!(Shell::extract(shell.clone()).is_err());
     split_closed_edges(&mut shell);
-    split_closed_faces(&mut shell, 0.05, sp);
+    split_closed_faces(&mut shell, DefaultSplitParams::new(0.05), sp);
     assert!(Shell::extract(shell.clone()).is_ok());
 
     let CompressedShell {
@@ -1528,7 +1529,7 @@ fn step_import() {
         let table = Table::from_step(&step_string).unwrap();
         table.shell.values().cloned().for_each(|step_shell| {
             let mut cshell = table.to_compressed_shell(&step_shell).unwrap();
-            cshell.robust_split_closed_edges_and_faces(0.05);
+            cshell.robust_split_closed_edges_and_faces(DefaultSplitParams::new(0.05));
             truck_topology::Shell::extract(cshell).unwrap();
         });
     });

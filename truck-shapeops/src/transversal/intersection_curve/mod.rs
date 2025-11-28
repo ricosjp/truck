@@ -1,5 +1,6 @@
 use truck_base::cgmath64::*;
 use truck_geometry::prelude::*;
+use truck_geotrait::algo::TesselationSplitMethod;
 use truck_meshalgo::prelude::*;
 
 /// polyline base ntersection curve with parameter
@@ -84,8 +85,8 @@ where
 {
     type Point = Point3;
     #[inline(always)]
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Point3>) {
-        self.ic.parameter_division(range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: (f64, f64), split: T) -> (Vec<f64>, Vec<Point3>) {
+        self.ic.parameter_division(range, split)
     }
 }
 

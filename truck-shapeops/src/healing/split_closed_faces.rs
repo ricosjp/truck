@@ -1,7 +1,9 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 use std::ops::Range;
 
-pub(super) fn split_closed_faces<C, S>(shell: &mut Shell<Point3, C, S>, tol: f64, sp: impl SP<S>)
+pub(super) fn split_closed_faces<C, S, T: TesselationSplitMethod + 'static>(shell: &mut Shell<Point3, C, S>, split: T, sp: impl SP<S>)
 where
     C: ParametricCurve3D
         + BoundedCurve
@@ -10,24 +12,24 @@ where
         + SearchNearestParameter<D1, Point = Point3>
         + TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D, {
-    let to_poly = closure_to_poly(tol);
+    let to_poly = closure_to_poly(split);
     let mut poly_edges: Vec<_> = shell.edges.iter().map(to_poly).collect();
     let len = shell.faces.len();
     (0..len).for_each(|i| {
-        split_face_with_non_closed_boundary(i, shell, &mut poly_edges, &sp, tol);
+        split_face_with_non_closed_boundary(i, shell, &mut poly_edges, &sp, split);
     });
     let len = shell.faces.len();
-    let closure = |i| split_face_with_non_simple_wire(i, shell, &mut poly_edges, &sp, tol);
+    let closure = |i| split_face_with_non_simple_wire(i, shell, &mut poly_edges, &sp, split);
     let new_faces: Vec<_> = (0..len).filter_map(closure).flatten().collect();
     shell.faces.extend(new_faces);
 }
 
-fn split_face_with_non_closed_boundary<C, S>(
+fn split_face_with_non_closed_boundary<C, S, T: TesselationSplitMethod + 'static>(
     face_index: usize,
     shell: &mut Shell<Point3, C, S>,
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
     sp: impl SP<S>,
-    tol: f64,
+    split: T,
 ) -> Option<()>
 where
     C: ParametricCurve3D
@@ -41,7 +43,7 @@ where
     let (divisor, open, closed) =
         non_closed_wires_in_param_divisor(face_index, shell, poly_edges, &sp)?;
     debug_assert_eq!(open.len(), 2);
-    take_vertices_to_intersections(divisor, face_index, shell, poly_edges, &sp, tol);
+    take_vertices_to_intersections(divisor, face_index, shell, poly_edges, &sp, split);
     let Shell { faces, edges, .. } = shell;
     let new_boundaries = split_boundaries_by_divisor(
         &faces[face_index],
@@ -50,18 +52,18 @@ where
         edges,
         poly_edges,
         &sp,
-        tol,
+        split,
     )?;
     let boundaries = &mut faces[face_index].boundaries;
     connect_open_boundaries(boundaries, new_boundaries, divisor, edges, open)
 }
 
-fn split_face_with_non_simple_wire<C, S>(
+fn split_face_with_non_simple_wire<C, S, T: TesselationSplitMethod + 'static>(
     face_index: usize,
     shell: &mut Shell<Point3, C, S>,
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
     sp: impl SP<S>,
-    tol: f64,
+    split: T,
 ) -> Option<Vec<Face<S>>>
 where
     C: ParametricCurve3D
@@ -74,7 +76,7 @@ where
 {
     let Face { boundaries, .. } = &shell.faces[face_index];
     let divisor = find_non_simple_wire_divisor(boundaries, &shell.edges, &shell.vertices)?;
-    split_face_by_divisor(face_index, divisor, shell, poly_edges, sp, tol)
+    split_face_by_divisor(face_index, divisor, shell, poly_edges, sp, split)
 }
 
 // --- find_non_simple_wire_divisor ---
@@ -219,13 +221,13 @@ where
 
 // --- split_face_by_divisor ---
 
-fn split_face_by_divisor<C, S>(
+fn split_face_by_divisor<C, S, T: TesselationSplitMethod + 'static>(
     face_index: usize,
     divisor: (usize, usize),
     shell: &mut Shell<Point3, C, S>,
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
     sp: impl SP<S>,
-    tol: f64,
+    split: T,
 ) -> Option<Vec<Face<S>>>
 where
     C: ParametricCurve3D
@@ -236,7 +238,7 @@ where
         + TryFrom<PCurve<Line<Point2>, S>>,
     S: ParametricSurface3D,
 {
-    take_vertices_to_intersections(divisor, face_index, shell, poly_edges, &sp, tol);
+    take_vertices_to_intersections(divisor, face_index, shell, poly_edges, &sp, split);
     let face = &shell.faces[face_index];
     let new_boundaries = split_boundaries_by_divisor(
         face,
@@ -245,7 +247,7 @@ where
         &mut shell.edges,
         poly_edges,
         &sp,
-        tol,
+        split,
     )?;
     divide_face(
         &mut shell.faces[face_index],
@@ -257,7 +259,7 @@ where
 
 // --- take_vertices_to_intersections ---
 
-fn take_vertices_to_intersections<C, S>(
+fn take_vertices_to_intersections<C, S, T: TesselationSplitMethod + 'static>(
     divisor: (usize, usize),
     face_index: usize,
     Shell {
@@ -267,7 +269,7 @@ fn take_vertices_to_intersections<C, S>(
     }: &mut Shell<Point3, C, S>,
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
     sp: impl SP<S>,
-    tol: f64,
+    split: T,
 ) -> Option<()>
 where
     C: ParametricCurve3D
@@ -303,7 +305,7 @@ where
         if vec.is_empty() {
             return Some(None);
         }
-        let erange = cut_edge_by_intersections(index, vec, edges, poly_edges, vertices, tol);
+        let erange = cut_edge_by_intersections(index, vec, edges, poly_edges, vertices, split);
         Some(Some((index, erange)))
     };
     let new_edges = zip_boundaries(boundaries, &param_boundaries)
@@ -418,13 +420,13 @@ where
     None
 }
 
-fn cut_edge_by_intersections<C>(
+fn cut_edge_by_intersections<C, T: TesselationSplitMethod + 'static>(
     edge_index: usize,
     intersections: Vec<(f64, Point3)>,
     edges: &mut Vec<Edge<C>>,
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
     vertices: &mut Vec<Point3>,
-    tol: f64,
+    split: T,
 ) -> Range<usize>
 where
     C: Cut<Point = Point3> + ParameterDivision1D<Point = Point3>,
@@ -438,7 +440,7 @@ where
         curve: edge.curve.cut(t),
     };
     let mut new_edges: Vec<_> = intersections_iter.map(closure).collect();
-    let to_poly = closure_to_poly(tol);
+    let to_poly = closure_to_poly(split);
     poly_edges[edge_index] = to_poly(edge);
     poly_edges.extend(new_edges.iter().map(to_poly));
     new_edges.last_mut().unwrap().vertices.1 = edge.vertices.1;
@@ -476,7 +478,7 @@ fn insert_new_edges(wire: &mut Wire, pivot_edge_index: usize, inserted_range: Ra
 
 // --- split boundaries ---
 
-fn split_boundaries_by_divisor<C, S>(
+fn split_boundaries_by_divisor<C, S, T: TesselationSplitMethod>(
     Face {
         boundaries,
         surface,
@@ -487,7 +489,7 @@ fn split_boundaries_by_divisor<C, S>(
     edges: &mut Vec<Edge<C>>,
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
     sp: impl SP<S>,
-    tol: f64,
+    split: T,
 ) -> Option<Vec<Wire>>
 where
     C: ParametricCurve3D + BoundedCurve + TryFrom<PCurve<Line<Point2>, S>>,
@@ -497,7 +499,7 @@ where
     let param_vertices = create_param_vertices(boundaries, &param_boundaries, edges);
     let mut duplicated_edges = duplicated_edges(boundaries.iter().flatten().map(|ei| ei.index));
     let vertices_on_divisor = enumerate_vertices_on_divisor(divisor, &param_vertices, surface)?;
-    let new_edges = create_new_edges(&vertices_on_divisor, poly_edges, surface, tol)?;
+    let new_edges = create_new_edges(&vertices_on_divisor, poly_edges, surface, split)?;
     let (new_edge_range, new_edge_indices) = signup_new_edges(edges, new_edges);
     duplicated_edges.extend(new_edge_range);
     let edge_iter = closed.iter().flatten().copied().chain(new_edge_indices);
@@ -665,11 +667,11 @@ fn enumerate_vertices_on_divisor<S: ParametricSurface>(
 
 // --- create_new_edges ---
 
-fn create_new_edges<C, S>(
+fn create_new_edges<C, S, T: TesselationSplitMethod>(
     vertices_on_divisor: &[(f64, (usize, Point2))],
     poly_edges: &mut Vec<PolylineCurve<Point3>>,
     surface: &S,
-    tol: f64,
+    split: T,
 ) -> Option<Vec<Edge<C>>>
 where
     C: TryFrom<PCurve<Line<Point2>, S>>,
@@ -678,7 +680,7 @@ where
     let make_edge = move |p: &[(f64, (usize, Point2))]| {
         let ((_, (v0, uv0)), (_, (v1, uv1))) = (p[0], p[1]);
         let pcurve = PCurve::new(Line(uv0, uv1), surface.clone());
-        poly_edges.push(PolylineCurve::from_curve(&pcurve, (0.0, 1.0), tol));
+        poly_edges.push(PolylineCurve::from_curve(&pcurve, (0.0, 1.0), split));
         Some(Edge {
             vertices: (v0, v1),
             curve: C::try_from(pcurve).ok()?,
@@ -897,9 +899,9 @@ fn closure_get_poly<P: Clone>(
     }
 }
 
-fn closure_to_poly<P, C>(tol: f64) -> impl Fn(&Edge<C>) -> PolylineCurve<P> + 'static
+fn closure_to_poly<P, C, T: TesselationSplitMethod + 'static>(split: T) -> impl Fn(&Edge<C>) -> PolylineCurve<P> + 'static
 where C: BoundedCurve + ParameterDivision1D<Point = P> {
-    move |Edge { curve, .. }: &Edge<C>| PolylineCurve::from_curve(curve, curve.range_tuple(), tol)
+    move |Edge { curve, .. }: &Edge<C>| PolylineCurve::from_curve(curve, curve.range_tuple(), split)
 }
 
 type ZippedEdge<'a> = (&'a EdgeIndex, &'a PolylineCurve<Point2>);

@@ -1,4 +1,5 @@
 use super::*;
+use truck_geotrait::algo::TesselationSplitMethod;
 use std::f64::consts::PI;
 use std::ops::Bound;
 impl ParametricSurface for Sphere {
@@ -64,13 +65,13 @@ impl SearchParameter<D2> for Sphere {
 }
 impl ParameterDivision2D for Sphere {
     #[inline]
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         ((u0, u1), (v0, v1)): ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T
     ) -> (Vec<f64>, Vec<f64>) {
         let range = ((PI / 2.0 - v1, PI / 2.0 - v0), (u0, u1));
-        let (udiv0, vdiv0) = self.0.parameter_division(range, tol);
+        let (udiv0, vdiv0) = self.0.parameter_division(range, split);
         let vdiv = udiv0.into_iter().map(|u| PI / 2.0 - u).collect();
         (vdiv0, vdiv)
     }
