@@ -14,9 +14,11 @@ pub struct CalcOutput<V, M> {
 }
 
 /// jacobian of function
-pub trait Jacobian<V>: Mul<V, Output = V> + Sized {
+pub trait Jacobian<V>: Mul<V, Output = V> + Mul<Self, Output = Self> + Sized {
     #[doc(hidden)]
     fn invert(self) -> Option<Self>;
+    #[doc(hidden)]
+    fn transpose(&self) -> Self;
 }
 
 impl Jacobian<f64> for f64 {
@@ -27,6 +29,10 @@ impl Jacobian<f64> for f64 {
             false => Some(1.0 / self),
         }
     }
+    #[inline(always)]
+    fn transpose(&self) -> Self {
+		*self
+    }
 }
 
 macro_rules! impl_jacobian {
@@ -34,6 +40,7 @@ macro_rules! impl_jacobian {
         impl Jacobian<$vector> for $matrix {
             #[inline(always)]
             fn invert(self) -> Option<Self> { SquareMatrix::invert(&self) }
+			fn transpose(&self) -> Self { Matrix::transpose(self) }
         }
     };
 }
@@ -72,6 +79,34 @@ where
             return Err(log);
         };
         let next = hint - inv * value;
+        if next.near2(&hint) {
+            return Ok(hint);
+        }
+        hint = next;
+    }
+    Err(log)
+}
+
+
+pub fn gauss_newton<V, M>(
+    function: impl Fn(V) -> CalcOutput<V, M>,
+    mut hint: V,
+    trials: usize,
+) -> Result<V, NewtonLog<V>>
+where
+    V: Sub<Output = V> + Copy + Tolerance,
+    M: Jacobian<V>,
+{
+    let mut log = NewtonLog::new(cfg!(debug_assertions), trials);
+    for _ in 0..=trials {
+        log.push(hint);
+        let CalcOutput { value, derivation } = function(hint);
+		let rhs=derivation.transpose() * value;
+        let Some(inv) = (derivation.transpose() * derivation).invert() else {
+            log.set_degenerate(true);
+            return Err(log);
+        };
+        let next = hint - inv * rhs;
         if next.near2(&hint) {
             return Ok(hint);
         }
@@ -137,3 +172,26 @@ mod newtonlog {
     }
 }
 pub use newtonlog::NewtonLog;
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	#[test]
+	fn test_newton() {
+		let function = |x: f64| CalcOutput {
+			value: x * x - 2.0,
+			derivation: 2.0 * x,
+		};
+		let sqrt2 = solve(function, 1.0, 5).unwrap();
+		assert!((sqrt2 - f64::sqrt(2.0)).abs() < 1e-10);
+	}
+	#[test]
+	fn test_gauss_newton() {
+		let function = |x: f64| CalcOutput {
+			value: x * x - 2.0,// (x * x - 2.0).powi(2),
+			derivation: 2.0 * x,//2.*(x*x-2.)*(2.*x),
+		};
+		let sqrt2 = gauss_newton(function, 1.0, 5).unwrap();
+		assert!((sqrt2 - f64::sqrt(2.0)).abs() < 1e-10);
+	}
+}
