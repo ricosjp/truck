@@ -31,13 +31,12 @@ where
     };
 	println!("plane_point={plane_point:?}, plane_normal={plane_normal:?}");
     let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(plane_point, hint0, trials))?;
-	println!("a");
     let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(plane_point, hint1, trials))?;
 	println!("b v_0={:?} 次が収束しないことが問題", Vector4 { x, y, z, w });
     let Vector4 { x, y, z, w } = match newton::solve(function, Vector4 { x, y, z, w }, trials) {
 		Ok(v) => v,
 		Err(e) => {
-			println!("Newton's method failed to converge: {}", e);
+			println!("ニュートン法の軌跡: {}", e);
 			return None
 		}	
 	};
