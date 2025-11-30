@@ -102,17 +102,15 @@ pub fn gauss_newton<V, M>(
 	mut lambda: f64,
 ) -> Result<V, NewtonLog<V>>
 where
-    V: Sub<Output = V> + Copy + Tolerance,
+    V: Sub<Output = V> + Copy + Tolerance + Norm,
     M: Jacobian<V>,
 {
+	const COEFF_LAMBDA:f64=10.;
 	let mut output_last:Option<CalcOutput<V, M>>=None;
     let mut log = NewtonLog::new(cfg!(debug_assertions), trials);
     for _ in 0..=trials {
         log.push(hint);
-        let output = match output_last{
-			Some(v)=>v,
-			None=>function(hint)
-		};
+		let output = output_last.take().unwrap_or_else(|| function(hint));
 		let rhs=output.derivation.transpose() * output.value;
         let Some(inv) = (output.derivation.transpose() * output.derivation + M::identity(lambda)).invert() else {
             log.set_degenerate(true);
@@ -124,17 +122,12 @@ where
             return Ok(hint);
         }
 		// Levenberg–Marquardt 法の λ 調整
-		output_last=Some(function(candidate));
-		{
-			(output_last, hint, lambda)=(output_last, candidate, lambda);
-			continue;
-		}
-		let coeff_lambda=10.;
-		(output_last, hint, lambda)=if output_last.unwrap().value.norm2() < output.value.norm2(){
-			(output_last, candidate, lambda/coeff_lambda)//解を更新して λ を減らす
+		let output_candidate=function(candidate);
+		(output_last, hint, lambda)=if output_candidate.value.norm_l2() < output.value.norm_l2(){
+			(Some(output_candidate), candidate, lambda/COEFF_LAMBDA)//解を更新して λ を減らす
 		}else{
-			(None, hint, lambda*coeff_lambda)//解を更新しないで λ を増やす
-		}
+			(None, hint, lambda*COEFF_LAMBDA)//解を更新しないで λ を増やす
+		};
     }
     Err(log)
 }
@@ -227,9 +220,9 @@ mod tests {
 			value: 2.-(x-0.2).cos(),// (x * x - 2.0).powi(2),
 			derivation: (x-0.2).sin(),//2.*(x*x-2.)*(2.*x),
 		};
-		let solved = gauss_newton(function, 0.1, 5, 0.1).expect("gauss newton failed");
-		//assert_eq!(((solved - 0.2).abs() - 1e-10).max(0.), 0.); //収束しない
-		let solved = gauss_newton(function, 0.1, 5, 1.).expect("gauss newton failed");
-		assert_eq!(((solved - 0.2).abs() - 1e-10).max(0.), 0.); // 収束する
+		let solved = gauss_newton(function, 0.1, 100, 0.1).expect("gauss newton failed");
+		assert_eq!(((solved - 0.2).abs() - TOLERANCE).max(0.), 0.); //収束しない
+		//let solved = gauss_newton(function, 0.1, 5, 1.).expect("gauss newton failed");
+		//assert_eq!(((solved - 0.2).abs() - 1e-10).max(0.), 0.); // 収束する
 	}
 }

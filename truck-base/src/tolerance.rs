@@ -127,3 +127,29 @@ pub trait Origin: Tolerance + Zero {
 }
 
 impl<T: Tolerance + Zero> Origin for T {}
+
+pub trait Norm{
+	/// L1 norm
+	fn norm_l2(&self) -> f64;
+}
+
+impl Norm for f64 {
+	fn norm_l2(&self) -> f64 {
+		self*self
+	}
+}
+
+macro_rules! impl_norm {
+    ($vector: ty) => {
+        impl Norm for $vector {
+			#[inline(always)]
+			fn norm_l2(&self) -> f64 {
+				self.dot(*self).sqrt()
+			}
+        }
+    };
+}
+
+impl_norm!(Vector2);
+impl_norm!(Vector3);
+impl_norm!(Vector4);
