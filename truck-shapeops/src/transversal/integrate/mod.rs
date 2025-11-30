@@ -155,13 +155,13 @@ pub fn and<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
         let [res, _] = process_one_pair_of_shells(&and_shell, shell, tol)?;
         and_shell = res;
     }
-	println!("First solid's shells processed.");
     for shell in iter1 {
         let [res, _] = process_one_pair_of_shells(&and_shell, shell, tol)?;
         and_shell = res;
     }
 	println!("Second solid's shells processed.");
     let boundaries = and_shell.connected_components();
+	println!("AND operation completed.");
     Some(Solid::new(boundaries))
 }
 

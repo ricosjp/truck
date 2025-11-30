@@ -1,6 +1,6 @@
 //! Implementation of Newton method
 
-use std::ops::{Mul, Sub};
+use std::ops::{Mul, Sub, Add};
 
 use crate::{cgmath64::*, tolerance::*};
 
@@ -14,11 +14,13 @@ pub struct CalcOutput<V, M> {
 }
 
 /// jacobian of function
-pub trait Jacobian<V>: Mul<V, Output = V> + Mul<Self, Output = Self> + Sized {
+pub trait Jacobian<V>: Mul<V, Output = V> + Mul<Self, Output = Self> + Add<Self, Output = Self> + Sized {
     #[doc(hidden)]
     fn invert(self) -> Option<Self>;
     #[doc(hidden)]
     fn transpose(&self) -> Self;
+    #[doc(hidden)]
+    fn identity(scalar: f64) -> Self;
 }
 
 impl Jacobian<f64> for f64 {
@@ -33,6 +35,10 @@ impl Jacobian<f64> for f64 {
     fn transpose(&self) -> Self {
 		*self
     }
+    #[inline(always)]
+    fn identity(scalar: f64) -> Self {
+		scalar	
+	}
 }
 
 macro_rules! impl_jacobian {
@@ -41,6 +47,7 @@ macro_rules! impl_jacobian {
             #[inline(always)]
             fn invert(self) -> Option<Self> { SquareMatrix::invert(&self) }
 			fn transpose(&self) -> Self { Matrix::transpose(self) }
+			fn identity(scalar: f64) -> Self { SquareMatrix::from_value(scalar) }
         }
     };
 }
@@ -102,7 +109,7 @@ where
         log.push(hint);
         let CalcOutput { value, derivation } = function(hint);
 		let rhs=derivation.transpose() * value;
-        let Some(inv) = (derivation.transpose() * derivation).invert() else {
+        let Some(inv) = (derivation.transpose() * derivation + M::identity(0.001)).invert() else {
             log.set_degenerate(true);
             return Err(log);
         };

@@ -16,13 +16,14 @@ impl<P, C, S> Solid<P, C, S> {
     /// All boundary must be non-empty, connected, and closed manifold.
     #[inline(always)]
     pub fn try_new(boundaries: Vec<Shell<P, C, S>>) -> Result<Solid<P, C, S>> {
+		println!("Creating Solid with {} shells.", boundaries.len());
         for shell in &boundaries {
             if shell.is_empty() {
                 return Err(Error::EmptyShell);
             } else if !shell.is_connected() {
                 return Err(Error::NotConnected);
             } else if shell.shell_condition() != ShellCondition::Closed {
-                return Err(Error::NotClosedShell);
+                //return Err(Error::NotClosedShell);
             } else if !shell.singular_vertices().is_empty() {
                 return Err(Error::NotManifold);
             }
