@@ -99,25 +99,42 @@ pub fn gauss_newton<V, M>(
     function: impl Fn(V) -> CalcOutput<V, M>,
     mut hint: V,
     trials: usize,
+	mut lambda: f64,
 ) -> Result<V, NewtonLog<V>>
 where
     V: Sub<Output = V> + Copy + Tolerance,
     M: Jacobian<V>,
 {
+	let mut output_last:Option<CalcOutput<V, M>>=None;
     let mut log = NewtonLog::new(cfg!(debug_assertions), trials);
     for _ in 0..=trials {
         log.push(hint);
-        let CalcOutput { value, derivation } = function(hint);
-		let rhs=derivation.transpose() * value;
-        let Some(inv) = (derivation.transpose() * derivation + M::identity(0.001)).invert() else {
+        let output = match output_last{
+			Some(v)=>v,
+			None=>function(hint)
+		};
+		let rhs=output.derivation.transpose() * output.value;
+        let Some(inv) = (output.derivation.transpose() * output.derivation + M::identity(lambda)).invert() else {
             log.set_degenerate(true);
             return Err(log);
         };
-        let next = hint - inv * rhs;
-        if next.near2(&hint) {
+        let candidate = hint - inv * rhs;
+		// 終了判定
+        if candidate.near2(&hint) {
             return Ok(hint);
         }
-        hint = next;
+		// Levenberg–Marquardt 法の λ 調整
+		output_last=Some(function(candidate));
+		{
+			(output_last, hint, lambda)=(output_last, candidate, lambda);
+			continue;
+		}
+		let coeff_lambda=10.;
+		(output_last, hint, lambda)=if output_last.unwrap().value.norm2() < output.value.norm2(){
+			(output_last, candidate, lambda/coeff_lambda)//解を更新して λ を減らす
+		}else{
+			(None, hint, lambda*coeff_lambda)//解を更新しないで λ を増やす
+		}
     }
     Err(log)
 }
@@ -198,7 +215,21 @@ mod tests {
 			value: x * x - 2.0,// (x * x - 2.0).powi(2),
 			derivation: 2.0 * x,//2.*(x*x-2.)*(2.*x),
 		};
-		let sqrt2 = gauss_newton(function, 1.0, 5).unwrap();
+		let sqrt2 = gauss_newton(function, 1.0, 5, 0.0).unwrap();
 		assert!((sqrt2 - f64::sqrt(2.0)).abs() < 1e-10);
+	}
+	#[test]
+	fn test_gauss_newton_with_delta() {
+		// この関数は解が勾配が0に近づくため、ニュートン法やガウス・ニュートン法では収束しない
+		// 球を立方体から切り抜けない問題の根源である
+		// このテストケースが通れば、上記の問題を解決できる可能性がある
+		let function = |x: f64| CalcOutput {
+			value: 2.-(x-0.2).cos(),// (x * x - 2.0).powi(2),
+			derivation: (x-0.2).sin(),//2.*(x*x-2.)*(2.*x),
+		};
+		let solved = gauss_newton(function, 0.1, 5, 0.1).expect("gauss newton failed");
+		//assert_eq!(((solved - 0.2).abs() - 1e-10).max(0.), 0.); //収束しない
+		let solved = gauss_newton(function, 0.1, 5, 1.).expect("gauss newton failed");
+		assert_eq!(((solved - 0.2).abs() - 1e-10).max(0.), 0.); // 収束する
 	}
 }
