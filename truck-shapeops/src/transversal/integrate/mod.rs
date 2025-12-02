@@ -2,6 +2,7 @@ use crate::alternative::Alternative;
 
 use super::*;
 use truck_geometry::prelude::*;
+use truck_geotrait::algo::TesselationSplitMethod;
 use truck_meshalgo::prelude::*;
 use truck_topology::*;
 
@@ -52,16 +53,16 @@ impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where C: ParametricCurve3D
 type AltCurveShell<C, S> =
     Shell<Point3, Alternative<C, IntersectionCurve<PolylineCurve<Point3>, S, S>>, S>;
 
-fn altshell_to_shell<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
+fn altshell_to_shell<C: ShapeOpsCurve<S>, S: ShapeOpsSurface, T: TesselationSplitMethod>(
     altshell: &AltCurveShell<C, S>,
-    tol: f64,
+    split: T,
 ) -> Option<Shell<Point3, C, S>> {
     altshell.try_mapped(
         |p| Some(*p),
         |c| match c {
             Alternative::FirstType(c) => Some(c.clone()),
             Alternative::SecondType(ic) => {
-                let bsp = BSplineCurve::quadratic_approximation(ic, ic.range_tuple(), tol, 100)?;
+                let bsp = BSplineCurve::quadratic_approximation(ic, ic.range_tuple(), split.tol(), 100)?;
                 Some(
                     IntersectionCurve::new(ic.surface0().clone(), ic.surface1().clone(), bsp)
                         .into(),
@@ -72,14 +73,13 @@ fn altshell_to_shell<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     )
 }
 
-fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
+fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface, T: TesselationSplitMethod>(
     shell0: &Shell<Point3, C, S>,
     shell1: &Shell<Point3, C, S>,
-    tol: f64,
+    split: T,
 ) -> Option<[Shell<Point3, C, S>; 2]> {
-    nonpositive_tolerance!(tol);
-    let poly_shell0 = shell0.triangulation(tol);
-    let poly_shell1 = shell1.triangulation(tol);
+    let poly_shell0 = shell0.triangulation(split);
+    let poly_shell1 = shell1.triangulation(split);
     let altshell0: AltCurveShell<C, S> =
         shell0.mapped(|x| *x, |c| Alternative::FirstType(c.clone()), Clone::clone);
     let altshell1: AltCurveShell<C, S> =
@@ -89,9 +89,9 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
         geom_loops_store1: loops_store1,
         ..
     } = loops_store::create_loops_stores(&altshell0, &poly_shell0, &altshell1, &poly_shell1)?;
-    let mut cls0 = divide_face::divide_faces(&altshell0, &loops_store0, tol)?;
+    let mut cls0 = divide_face::divide_faces(&altshell0, &loops_store0, split)?;
     cls0.integrate_by_component();
-    let mut cls1 = divide_face::divide_faces(&altshell1, &loops_store1, tol)?;
+    let mut cls1 = divide_face::divide_faces(&altshell1, &loops_store1, split)?;
     cls1.integrate_by_component();
     let [mut and0, mut or0, unknown0] = cls0.and_or_unknown();
     unknown0.into_iter().try_for_each(|face| {
@@ -126,28 +126,28 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     and0.append(&mut and1);
     or0.append(&mut or1);
     Some([
-        altshell_to_shell(&and0, tol)?,
-        altshell_to_shell(&or0, tol)?,
+        altshell_to_shell(&and0, split)?,
+        altshell_to_shell(&or0, split)?,
     ])
 }
 
 /// AND operation between two solids.
-pub fn and<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
+pub fn and<C: ShapeOpsCurve<S>, S: ShapeOpsSurface, T: TesselationSplitMethod>(
     solid0: &Solid<Point3, C, S>,
     solid1: &Solid<Point3, C, S>,
-    tol: f64,
+    split: T,
 ) -> Option<Solid<Point3, C, S>> {
     let mut iter0 = solid0.boundaries().iter();
     let mut iter1 = solid1.boundaries().iter();
     let shell0 = iter0.next().unwrap();
     let shell1 = iter1.next().unwrap();
-    let [mut and_shell, _] = process_one_pair_of_shells(shell0, shell1, tol)?;
+    let [mut and_shell, _] = process_one_pair_of_shells(shell0, shell1, split)?;
     for shell in iter0 {
-        let [res, _] = process_one_pair_of_shells(&and_shell, shell, tol)?;
+        let [res, _] = process_one_pair_of_shells(&and_shell, shell, split)?;
         and_shell = res;
     }
     for shell in iter1 {
-        let [res, _] = process_one_pair_of_shells(&and_shell, shell, tol)?;
+        let [res, _] = process_one_pair_of_shells(&and_shell, shell, split)?;
         and_shell = res;
     }
     let boundaries = and_shell.connected_components();
@@ -155,22 +155,22 @@ pub fn and<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
 }
 
 /// OR operation between two solids.
-pub fn or<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
+pub fn or<C: ShapeOpsCurve<S>, S: ShapeOpsSurface, T: TesselationSplitMethod>(
     solid0: &Solid<Point3, C, S>,
     solid1: &Solid<Point3, C, S>,
-    tol: f64,
+    split: T,
 ) -> Option<Solid<Point3, C, S>> {
     let mut iter0 = solid0.boundaries().iter();
     let mut iter1 = solid1.boundaries().iter();
     let shell0 = iter0.next().unwrap();
     let shell1 = iter1.next().unwrap();
-    let [_, mut or_shell] = process_one_pair_of_shells(shell0, shell1, tol)?;
+    let [_, mut or_shell] = process_one_pair_of_shells(shell0, shell1, split)?;
     for shell in iter0 {
-        let [_, res] = process_one_pair_of_shells(&or_shell, shell, tol)?;
+        let [_, res] = process_one_pair_of_shells(&or_shell, shell, split)?;
         or_shell = res;
     }
     for shell in iter1 {
-        let [_, res] = process_one_pair_of_shells(&or_shell, shell, tol)?;
+        let [_, res] = process_one_pair_of_shells(&or_shell, shell, split)?;
         or_shell = res;
     }
     let boundaries = or_shell.connected_components();

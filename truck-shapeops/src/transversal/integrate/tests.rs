@@ -1,3 +1,4 @@
+use truck_geotrait::algo::DefaultSplitParams;
 use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 
@@ -13,9 +14,9 @@ fn punched_cube() {
     let f = builder::try_attach_plane(&[w]).unwrap();
     let mut cylinder = builder::tsweep(&f, Vector3::unit_z() * 2.0);
     cylinder.not();
-    let and = crate::and(&cube, &cylinder, 0.05).unwrap();
+    let and = crate::and(&cube, &cylinder, DefaultSplitParams::new(0.05)).unwrap();
 
-    let poly = and.triangulation(0.01).to_polygon();
+    let poly = and.triangulation(DefaultSplitParams::new(0.01)).to_polygon();
     let file = std::fs::File::create("punched-cube.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }

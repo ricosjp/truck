@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{algo::TesselationSplitMethod, *};
 use std::ops::Bound;
 use truck_base::{cgmath64::*, hash::HashGen, tolerance::*};
 
@@ -37,8 +37,12 @@ impl<P> ParameterDivision1D for PolynomialCurve<P>
 where P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>
 {
     type Point = P;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
-        algo::curve::parameter_division(self, range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>) {
+        algo::curve::parameter_division(self, range, split)
     }
 }
 
@@ -181,12 +185,12 @@ impl<P: EuclideanSpace<Scalar = f64>> BoundedSurface for PolynomialSurface<P> {}
 impl<P> ParameterDivision2D for PolynomialSurface<P>
 where P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>
 {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         range: ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
-        algo::surface::parameter_division(self, range, tol)
+        algo::surface::parameter_division(self, range, split)
     }
 }
 

@@ -1,6 +1,7 @@
 use super::*;
 use shell::ShellCondition;
 use truck_geometry::prelude::*;
+use truck_geotrait::algo::DefaultSplitParams;
 use truck_topology::Vertex;
 const TOL: f64 = 0.05;
 
@@ -60,7 +61,7 @@ fn divide_plane_test() {
     ]
     .into_iter()
     .collect();
-    let res = divide_one_face(&face, &loops, 0.01).unwrap();
+    let res = divide_one_face(&face, &loops, DefaultSplitParams::new(0.01)).unwrap();
     assert_eq!(res.len(), 2);
     let (mut or, mut and) = (true, true);
     for (face, status) in res {
@@ -191,18 +192,18 @@ fn independent_intersection() {
     ]
     .into();
     assert_eq!(shell1.shell_condition(), ShellCondition::Closed);
-    let poly_shell0 = shell0.triangulation(TOL);
-    let poly_shell1 = shell1.triangulation(TOL);
+    let poly_shell0 = shell0.triangulation(DefaultSplitParams::new(TOL));
+    let poly_shell1 = shell1.triangulation(DefaultSplitParams::new(TOL));
 
     let LoopsStoreQuadruple {
         geom_loops_store0: loops_store0,
         geom_loops_store1: loops_store1,
         ..
     } = create_loops_stores(&shell0, &poly_shell0, &shell1, &poly_shell1).unwrap();
-    let [and0, or0, unknown0] = divide_faces(&shell0, &loops_store0, TOL)
+    let [and0, or0, unknown0] = divide_faces(&shell0, &loops_store0, DefaultSplitParams::new(TOL))
         .unwrap()
         .and_or_unknown();
-    let [and1, or1, unknown1] = divide_faces(&shell1, &loops_store1, TOL)
+    let [and1, or1, unknown1] = divide_faces(&shell1, &loops_store1, DefaultSplitParams::new(TOL))
         .unwrap()
         .and_or_unknown();
     assert_eq!(and0.len(), 1);

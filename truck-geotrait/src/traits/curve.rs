@@ -1,3 +1,5 @@
+use crate::algo::TesselationSplitMethod;
+
 use super::*;
 use std::fmt::Debug;
 use thiserror::Error;
@@ -149,20 +151,32 @@ pub trait ParameterDivision1D {
     /// # Panics
     ///
     /// `tol` must be greater than or equal to `TOLERANCE`.
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>);
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>);
 }
 
 impl<C: ParameterDivision1D> ParameterDivision1D for &C {
     type Point = C::Point;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
-        (*self).parameter_division(range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>) {
+        (*self).parameter_division(range, split)
     }
 }
 
 impl<C: ParameterDivision1D> ParameterDivision1D for Box<C> {
     type Point = C::Point;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
-        (**self).parameter_division(range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>) {
+        (**self).parameter_division(range, split)
     }
 }
 

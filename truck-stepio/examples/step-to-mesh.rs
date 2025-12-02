@@ -1,6 +1,7 @@
 //! Parse STEP data, extract shape, and meshing.
 
 use clap::Parser;
+use truck_geotrait::algo::DefaultSplitParams;
 use std::path::Path;
 use truck_meshalgo::prelude::*;
 use truck_stepio::r#in::*;
@@ -51,9 +52,9 @@ fn main() {
                 let file_name = format!("{output}-{idx}.json");
                 std::fs::write(file_name, content).unwrap();
             }
-            let pre = shell.robust_triangulation(0.01).to_polygon();
+            let pre = shell.robust_triangulation(DefaultSplitParams::new(0.01)).to_polygon();
             let bdd = pre.bounding_box();
-            shell.robust_triangulation(bdd.diameter() * 0.001)
+            shell.robust_triangulation(DefaultSplitParams::new(bdd.diameter() * 0.001))
         })
         .collect::<Vec<_>>();
 

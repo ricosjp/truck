@@ -1,5 +1,6 @@
 use proptest::prelude::*;
 use truck_geometry::prelude::*;
+use truck_geotrait::algo::DefaultSplitParams;
 
 #[test]
 fn test_substitution() {
@@ -181,7 +182,7 @@ fn test_parameter_division() {
     ];
     let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
     let tol = 0.01;
-    let (div, pts) = bspcurve.parameter_division(bspcurve.range_tuple(), tol);
+    let (div, pts) = bspcurve.parameter_division(bspcurve.range_tuple(), DefaultSplitParams::new(tol));
     let knot_vec = bspcurve.knot_vec();
     assert_eq!(knot_vec[0], div[0]);
     assert_eq!(knot_vec.range_length(), div.last().unwrap() - div[0]);

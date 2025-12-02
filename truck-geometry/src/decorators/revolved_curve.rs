@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 use std::f64::consts::PI;
 
@@ -484,12 +486,12 @@ impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<NurbsCurve<Vector4>> {
 impl<C> ParameterDivision2D for RevolutedCurve<C>
 where C: ParametricCurve3D + ParameterDivision1D<Point = Point3>
 {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         (urange, vrange): ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
-        let curve_division = self.curve.parameter_division(urange, tol);
+        let curve_division = self.curve.parameter_division(urange, split);
         let max = curve_division
             .1
             .into_iter()
@@ -498,7 +500,7 @@ where C: ParametricCurve3D + ParameterDivision1D<Point = Point3>
                 f64::max(max2, h)
             })
             .sqrt();
-        let acos = f64::acos(1.0 - tol / max);
+        let acos = f64::acos(1.0 - split.tol() / max);
         let div: usize = 1 + ((vrange.1 - vrange.0) / acos).floor() as usize;
         let circle_division = (0..=div)
             .map(|j| vrange.0 + (vrange.1 - vrange.0) * j as f64 / div as f64)

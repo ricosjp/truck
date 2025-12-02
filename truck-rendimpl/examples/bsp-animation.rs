@@ -9,6 +9,7 @@ use std::sync::{
 use std::thread::*;
 use truck_modeling::*;
 use truck_platform::*;
+use truck_polymesh::algo::DefaultSplitParams;
 use truck_rendimpl::*;
 use winit::window::Window;
 mod app;
@@ -76,7 +77,7 @@ impl MyApp {
                     let surface0 = surface.clone();
                     drop(surface);
                     let mesh =
-                        StructuredMesh::from_surface(&surface0, surface0.range_tuple(), 0.01);
+                        StructuredMesh::from_surface(&surface0, surface0.range_tuple(), DefaultSplitParams::new(0.01));
                     *object.lock().unwrap() = mesh;
                 }
                 updated.store(true, Ordering::SeqCst);
@@ -114,7 +115,7 @@ impl App for MyApp {
         let mut scene = WindowScene::from_window(window, &desc).await;
         let creator = scene.instance_creator();
         let surface = Self::init_surface(3, 4);
-        let object = StructuredMesh::from_surface(&surface, surface.range_tuple(), 0.01);
+        let object = StructuredMesh::from_surface(&surface, surface.range_tuple(), DefaultSplitParams::new(0.01));
         let instance = creator.create_instance(&object, &Default::default());
         scene.add_object(&instance);
         let object = Arc::new(Mutex::new(object));

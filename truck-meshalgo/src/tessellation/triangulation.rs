@@ -10,6 +10,7 @@ use rustc_hash::FxHashMap as HashMap;
 
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
+use truck_polymesh::algo::TesselationSplitMethod;
 
 type SPoint2 = spade::Point2<f64>;
 type Cdt = ConstrainedDelaunayTriangulation<SPoint2>;
@@ -51,9 +52,9 @@ where
 
 /// Tessellates faces
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn shell_tessellation<'a, C, S>(
+pub(super) fn shell_tessellation<'a, C, S, T: TesselationSplitMethod>(
     shell: &Shell<Point3, C, S>,
-    tol: f64,
+    split: T,
     sp: impl SP<S>,
 ) -> MeshedShell
 where
@@ -71,7 +72,7 @@ where
             let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
             let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
             let curve = edge.curve();
-            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), tol);
+            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), split);
             (id, Edge::debug_new(v0, v1, poly))
         })
         .collect();
@@ -90,16 +91,16 @@ where
             .iter()
             .map(create_boundary)
             .collect();
-        shell_create_polygon(&face.surface(), wires, face.orientation(), tol, &sp)
+        shell_create_polygon(&face.surface(), wires, face.orientation(), split, &sp)
     };
     shell.face_par_iter().map(create_face).collect()
 }
 
 /// Tessellates faces
 #[cfg(any(target_arch = "wasm32", test))]
-pub(super) fn shell_tessellation_single_thread<'a, C, S>(
+pub(super) fn shell_tessellation_single_thread<'a, C, S, T: TesselationSplitMethod>(
     shell: &'a Shell<Point3, C, S>,
-    tol: f64,
+    split: T,
     sp: impl SP<S>,
 ) -> MeshedShell
 where
@@ -120,7 +121,7 @@ where
             let vb = edge.absolute_back();
             let v1 = vmap.entry_or_insert(vb).clone();
             let curve = edge.curve();
-            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), tol);
+            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), split);
             Edge::debug_new(&v0, &v1, poly)
         },
     );
@@ -140,15 +141,15 @@ where
             .iter()
             .map(&mut create_boundary)
             .collect();
-        shell_create_polygon(&face.surface(), wires, face.orientation(), tol, &sp)
+        shell_create_polygon(&face.surface(), wires, face.orientation(), split, &sp)
     };
     shell.face_iter().map(create_face).collect()
 }
 
 /// Tessellates faces
-pub(super) fn cshell_tessellation<'a, C, S>(
+pub(super) fn cshell_tessellation<'a, C, S, T: TesselationSplitMethod>(
     shell: &CompressedShell<Point3, C, S>,
-    tol: f64,
+    split: T,
     sp: impl SP<S>,
 ) -> MeshedCShell
 where
@@ -160,7 +161,7 @@ where
         let curve = &edge.curve;
         CompressedEdge {
             vertices: edge.vertices,
-            curve: PolylineCurve::from_curve(curve, curve.range_tuple(), tol),
+            curve: PolylineCurve::from_curve(curve, curve.range_tuple(), split),
         }
     };
     #[cfg(not(target_arch = "wasm32"))]
@@ -180,8 +181,8 @@ where
         };
         let preboundary: Option<Vec<_>> = boundaries.iter().map(create_boundary).collect();
         let polygon: Option<PolygonMesh> = preboundary.map(|preboundary| {
-            let boundary = PolyBoundary::new(preboundary, &surface, tol);
-            trimming_tessellation(&surface, &boundary, tol)
+            let boundary = PolyBoundary::new(preboundary, &surface, split);
+            trimming_tessellation(&surface, &boundary, split)
         });
         CompressedFace {
             boundaries,
@@ -200,11 +201,11 @@ where
     }
 }
 
-fn shell_create_polygon<S: PreMeshableSurface>(
+fn shell_create_polygon<S: PreMeshableSurface, T: TesselationSplitMethod>(
     surface: &S,
     wires: Vec<Wire<Point3, PolylineCurve>>,
     orientation: bool,
-    tol: f64,
+    split: T,
     sp: impl SP<S>,
 ) -> Face<Point3, PolylineCurve, Option<PolygonMesh>> {
     let preboundary = wires
@@ -215,8 +216,8 @@ fn shell_create_polygon<S: PreMeshableSurface>(
         })
         .collect::<Option<Vec<_>>>();
     let polygon: Option<PolygonMesh> = preboundary.map(|preboundary| {
-        let boundary = PolyBoundary::new(preboundary, &surface, tol);
-        trimming_tessellation(surface, &boundary, tol)
+        let boundary = PolyBoundary::new(preboundary, &surface, split);
+        trimming_tessellation(surface, &boundary, split)
     });
     let mut new_face = Face::debug_new(wires, polygon);
     if !orientation {
@@ -354,7 +355,7 @@ fn loop_orientation(curve: &[SurfacePoint]) -> bool {
 }
 
 impl PolyBoundary {
-    fn new(pieces: Vec<PolyBoundaryPiece>, surface: &impl PreMeshableSurface, tol: f64) -> Self {
+    fn new<T: TesselationSplitMethod>(pieces: Vec<PolyBoundaryPiece>, surface: &impl PreMeshableSurface, split: T) -> Self {
         let (mut closed, mut open) = (Vec::new(), Vec::new());
         pieces.into_iter().for_each(|PolyBoundaryPiece(mut vec)| {
             match vec[0].uv.distance(vec[vec.len() - 1].uv) < 1.0e-3 {
@@ -384,9 +385,9 @@ impl PolyBoundary {
                         let q = curve[curve.len() - 1];
                         let x = (Point2::new(u0, v1), surface.subs(u0, v1)).into();
                         let y = (Point2::new(u1, v1), surface.subs(u1, v1)).into();
-                        let vec0 = polyline_on_surface(surface, q, y, tol);
-                        let vec1 = polyline_on_surface(surface, y, x, tol);
-                        let vec2 = polyline_on_surface(surface, x, p, tol);
+                        let vec0 = polyline_on_surface(surface, q, y, split);
+                        let vec1 = polyline_on_surface(surface, y, x, split);
+                        let vec2 = polyline_on_surface(surface, x, p, split);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.x < p.x - TOLERANCE {
                         normalize_range(&mut curve, 0, (u0, u1));
@@ -394,9 +395,9 @@ impl PolyBoundary {
                         let q = curve[curve.len() - 1];
                         let x = (Point2::new(u1, v0), surface.subs(u1, v0)).into();
                         let y = (Point2::new(u0, v0), surface.subs(u0, v0)).into();
-                        let vec0 = polyline_on_surface(surface, q, y, tol);
-                        let vec1 = polyline_on_surface(surface, y, x, tol);
-                        let vec2 = polyline_on_surface(surface, x, p, tol);
+                        let vec0 = polyline_on_surface(surface, q, y, split);
+                        let vec1 = polyline_on_surface(surface, y, x, split);
+                        let vec2 = polyline_on_surface(surface, x, p, split);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if p.y < q.y - TOLERANCE {
                         normalize_range(&mut curve, 1, (v0, v1));
@@ -404,9 +405,9 @@ impl PolyBoundary {
                         let q = curve[curve.len() - 1];
                         let x = (Point2::new(u0, v0), surface.subs(u0, v0)).into();
                         let y = (Point2::new(u0, v1), surface.subs(u0, v1)).into();
-                        let vec0 = polyline_on_surface(surface, q, y, tol);
-                        let vec1 = polyline_on_surface(surface, y, x, tol);
-                        let vec2 = polyline_on_surface(surface, x, p, tol);
+                        let vec0 = polyline_on_surface(surface, q, y, split);
+                        let vec1 = polyline_on_surface(surface, y, x, split);
+                        let vec2 = polyline_on_surface(surface, x, p, split);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.y < p.y - TOLERANCE {
                         normalize_range(&mut curve, 1, (v0, v1));
@@ -414,9 +415,9 @@ impl PolyBoundary {
                         let q = curve[curve.len() - 1];
                         let x = (Point2::new(u1, v1), surface.subs(u1, v1)).into();
                         let y = (Point2::new(u1, v0), surface.subs(u1, v0)).into();
-                        let vec0 = polyline_on_surface(surface, q, y, tol);
-                        let vec1 = polyline_on_surface(surface, y, x, tol);
-                        let vec2 = polyline_on_surface(surface, x, p, tol);
+                        let vec0 = polyline_on_surface(surface, q, y, split);
+                        let vec1 = polyline_on_surface(surface, y, x, split);
+                        let vec2 = polyline_on_surface(surface, x, p, split);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     }
                 }
@@ -438,8 +439,8 @@ impl PolyBoundary {
                     }
                 }
                 let ((p0, p1), (q0, q1)) = (end_pts(&curve0), end_pts(&curve1));
-                let vec0 = polyline_on_surface(surface, p1, q0, tol);
-                let vec1 = polyline_on_surface(surface, q1, p0, tol);
+                let vec0 = polyline_on_surface(surface, p1, q0, split);
+                let vec1 = polyline_on_surface(surface, q1, p0, split);
                 closed.push(connect_edges([curve0, vec0, curve1, vec1]));
             }
             _ => {}
@@ -452,10 +453,10 @@ impl PolyBoundary {
                     (Point2::new(u1, v1), surface.subs(u1, v1)).into(),
                     (Point2::new(u0, v1), surface.subs(u0, v1)).into(),
                 ];
-                let vec0 = polyline_on_surface(surface, p[0], p[1], tol);
-                let vec1 = polyline_on_surface(surface, p[1], p[2], tol);
-                let vec2 = polyline_on_surface(surface, p[2], p[3], tol);
-                let vec3 = polyline_on_surface(surface, p[3], p[0], tol);
+                let vec0 = polyline_on_surface(surface, p[0], p[1], split);
+                let vec1 = polyline_on_surface(surface, p[1], p[2], split);
+                let vec2 = polyline_on_surface(surface, p[2], p[3], split);
+                let vec3 = polyline_on_surface(surface, p[3], p[0], split);
                 closed.push(connect_edges([vec0, vec1, vec2, vec3]));
             }
         }
@@ -549,12 +550,12 @@ fn spade_round(x: f64) -> f64 {
 }
 
 /// Tessellates one surface trimmed by polyline.
-fn trimming_tessellation<S>(surface: &S, polyboundary: &PolyBoundary, tol: f64) -> PolygonMesh
+fn trimming_tessellation<S, T: TesselationSplitMethod>(surface: &S, polyboundary: &PolyBoundary, split: T) -> PolygonMesh
 where S: PreMeshableSurface {
     let mut triangulation = Cdt::new();
     let mut boundary_map = HashMap::<FixedVertexHandle, Point3>::default();
     polyboundary.insert_to(&mut triangulation, &mut boundary_map);
-    insert_surface(&mut triangulation, surface, polyboundary, tol);
+    insert_surface(&mut triangulation, surface, polyboundary, split);
     let mut mesh = triangulation_into_polymesh(
         triangulation.vertices(),
         triangulation.inner_faces(),
@@ -567,11 +568,11 @@ where S: PreMeshableSurface {
 }
 
 /// Inserts parameter divisions into triangulation.
-fn insert_surface(
+fn insert_surface<T: TesselationSplitMethod>(
     triangulation: &mut Cdt,
     surface: impl PreMeshableSurface,
     polyline: &PolyBoundary,
-    tol: f64,
+    split: T,
 ) {
     let bdb: BoundingBox<Point2> = polyline
         .0
@@ -580,7 +581,7 @@ fn insert_surface(
         .map(std::ops::Deref::deref)
         .collect();
     let range = ((bdb.min()[0], bdb.max()[0]), (bdb.min()[1], bdb.max()[1]));
-    let (udiv, vdiv) = surface.parameter_division(range, tol);
+    let (udiv, vdiv) = surface.parameter_division(range, split);
     let insert_res: Vec<Vec<Option<_>>> = udiv
         .into_iter()
         .map(|u| {
@@ -667,16 +668,16 @@ fn triangulation_into_polymesh<'a>(
     )
 }
 
-fn polyline_on_surface(
+fn polyline_on_surface<T: TesselationSplitMethod>(
     surface: impl PreMeshableSurface,
     p: SurfacePoint,
     q: SurfacePoint,
-    tol: f64,
+    split: T,
 ) -> Vec<SurfacePoint> {
     use truck_geometry::prelude::*;
     let line = Line(p.uv, q.uv);
     let pcurve = PCurve::new(line, &surface);
-    let (vec, _) = pcurve.parameter_division(pcurve.range_tuple(), tol);
+    let (vec, _) = pcurve.parameter_division(pcurve.range_tuple(), split);
     vec.into_iter()
         .map(|t| {
             let uv = line.subs(t);
@@ -691,6 +692,7 @@ fn polyline_on_surface(
 fn par_bench() {
     use std::time::Instant;
     use truck_modeling::*;
+    use truck_polymesh::algo::DefaultSplitParams;
     const JSON: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../resources/shape/bottle.json"
@@ -700,13 +702,13 @@ fn par_bench() {
 
     let instant = Instant::now();
     (0..100).for_each(|_| {
-        let _shell = shell_tessellation(&shell, 0.01, by_search_parameter);
+        let _shell = shell_tessellation(&shell, DefaultSplitParams::new(0.01), by_search_parameter);
     });
     println!("{}ms", instant.elapsed().as_millis());
 
     let instant = Instant::now();
     (0..100).for_each(|_| {
-        let _shell = shell_tessellation_single_thread(&shell, 0.01, by_search_parameter);
+        let _shell = shell_tessellation_single_thread(&shell, DefaultSplitParams::new(0.01), by_search_parameter);
     });
     println!("{}ms", instant.elapsed().as_millis());
 }

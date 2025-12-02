@@ -14,6 +14,7 @@ use std::sync::Arc;
 use truck_meshalgo::prelude::*;
 use truck_modeling::*;
 use truck_platform::*;
+use truck_polymesh::algo::DefaultSplitParams;
 use truck_rendimpl::*;
 use wgpu::*;
 use winit::{dpi::*, event::*, keyboard::*};
@@ -136,7 +137,7 @@ impl MyApp {
             });
         let (size, center) = (bdd_box.size(), bdd_box.center());
         let mat = Matrix4::from_translation(center.to_vec()) * Matrix4::from_scale(size);
-        let mesh_solid = solid.triangulation(size * 0.005);
+        let mesh_solid = solid.triangulation(DefaultSplitParams::new(size * 0.005));
         let curves = mesh_solid
             .edge_iter()
             .map(|edge| edge.curve())

@@ -1,3 +1,5 @@
+use truck_geotrait::algo::DefaultSplitParams;
+
 use super::*;
 use std::fmt::Debug;
 const TOL: f64 = 0.01;
@@ -121,8 +123,8 @@ fn independent_intersection() {
     let wire1: Wire<_, _> = vec![Edge::new(&v10, &v11, arc10), Edge::new(&v11, &v10, arc11)].into();
     let geom_shell0: Shell<_, _, _> = vec![Face::new(vec![wire0], surface0).inverse()].into();
     let geom_shell1: Shell<_, _, _> = vec![Face::new(vec![wire1], surface1)].into();
-    let poly_shell0 = geom_shell0.triangulation(TOL);
-    let poly_shell1 = geom_shell1.triangulation(TOL);
+    let poly_shell0 = geom_shell0.triangulation(DefaultSplitParams::new(TOL));
+    let poly_shell1 = geom_shell1.triangulation(DefaultSplitParams::new(TOL));
 
     // exec create loops stores!
     let LoopsStoreQuadruple {
@@ -352,8 +354,8 @@ fn rotated_intersection() {
     let face11 = Face::new(vec![wire11], surface1);
     let geom_shell1: Shell<_, _, _> = vec![face10, face11].into();
 
-    let poly_shell0 = geom_shell0.triangulation(TOL);
-    let poly_shell1 = geom_shell1.triangulation(TOL);
+    let poly_shell0 = geom_shell0.triangulation(DefaultSplitParams::new(TOL));
+    let poly_shell1 = geom_shell1.triangulation(DefaultSplitParams::new(TOL));
     let file = std::fs::File::create("polyshell0.obj").unwrap();
     obj::write(&poly_shell0.to_polygon(), file).unwrap();
     let file = std::fs::File::create("polyshell1.obj").unwrap();
@@ -605,8 +607,8 @@ fn crossing_edges() {
     let face11 = Face::new(vec![wire11], surface1);
     let geom_shell1: Shell<_, _, _> = vec![face10, face11].into();
 
-    let poly_shell0 = geom_shell0.triangulation(TOL);
-    let poly_shell1 = geom_shell1.triangulation(TOL);
+    let poly_shell0 = geom_shell0.triangulation(DefaultSplitParams::new(TOL));
+    let poly_shell1 = geom_shell1.triangulation(DefaultSplitParams::new(TOL));
     let LoopsStoreQuadruple {
         geom_loops_store0,
         geom_loops_store1,

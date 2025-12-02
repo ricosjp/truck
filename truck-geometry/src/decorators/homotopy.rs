@@ -1,6 +1,7 @@
 use super::*;
 use algo::surface::{SsnpVector, SspVector};
 use control_point::ControlPoint;
+use truck_geotrait::algo::TesselationSplitMethod;
 use std::ops::RangeBounds;
 
 impl<C0, C1> HomotopySurface<C0, C1> {
@@ -99,13 +100,13 @@ where
     C0: ParameterDivision1D,
     C1: ParameterDivision1D,
 {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         (urange, vrange): ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
-        let (mut div, _) = self.curve0.parameter_division(urange, tol);
-        let (div0, _) = self.curve1.parameter_division(urange, tol);
+        let (mut div, _) = self.curve0.parameter_division(urange, split);
+        let (div0, _) = self.curve1.parameter_division(urange, split);
         div.extend(div0);
         div.sort_by(|x, y| x.partial_cmp(y).unwrap());
         div.dedup();

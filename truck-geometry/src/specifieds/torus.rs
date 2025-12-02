@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 use std::f64::consts::PI;
 
@@ -188,16 +190,14 @@ impl SearchNearestParameter<D2> for Torus {
 }
 
 impl ParameterDivision2D for Torus {
-    fn parameter_division(
+    fn parameter_division<T: TesselationSplitMethod>(
         &self,
         (urange, vrange): ((f64, f64), (f64, f64)),
-        tol: f64,
+        split: T,
     ) -> (Vec<f64>, Vec<f64>) {
         let circle = UnitCircle::<Point2>::new();
-        let utol = tol / (self.small_radius() + self.large_radius());
-        let (udiv, _) = circle.parameter_division(urange, utol);
-        let vtol = tol / self.small_radius();
-        let (vdiv, _) = circle.parameter_division(vrange, vtol);
+        let (udiv, _) = circle.parameter_division(urange, split.scale(1.0 / (self.small_radius() + self.large_radius())));
+        let (vdiv, _) = circle.parameter_division(vrange, split.scale(1.0 / self.small_radius()));
         (udiv, vdiv)
     }
 }

@@ -1,5 +1,6 @@
 use crate::*;
 use itertools::Itertools;
+use truck_geotrait::algo::TesselationSplitMethod;
 use std::ops::{Bound, Deref, DerefMut};
 use truck_base::cgmath64::control_point::ControlPoint;
 
@@ -333,7 +334,7 @@ where
 impl<P: ControlPoint<f64>> ParameterDivision1D for PolylineCurve<P> {
     type Point = P;
     #[inline(always)]
-    fn parameter_division(&self, range: (f64, f64), _: f64) -> (Vec<f64>, Vec<P>) {
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: (f64, f64), _: T) -> (Vec<f64>, Vec<P>) {
         let r0 = range.0 as isize + 1;
         let r1 = range.1 as isize;
         let mut res = (vec![range.0], vec![self.subs(range.0)]);
@@ -359,6 +360,8 @@ where
 
 #[test]
 fn polyline_test() {
+    use truck_geotrait::algo::DefaultSplitParams;
+    
     let vec = vec![
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(1.0, 0.0, 0.0),
@@ -397,7 +400,7 @@ fn polyline_test() {
     let t = polyline.search_nearest_parameter(pt, None, 1).unwrap();
     assert!(polyline.der(t).dot(pt - polyline.subs(t)).so_small());
 
-    let div = polyline.parameter_division((1.5, 6.2), 0.0);
+    let div = polyline.parameter_division((1.5, 6.2), DefaultSplitParams::new(0.0001));
     assert_eq!(div.0, vec![1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 6.2]);
     assert_eq!(div.0.len(), div.1.len());
     truck_base::assert_near!(div.1[0], Point3::new(0.5, 0.5, 0.0));

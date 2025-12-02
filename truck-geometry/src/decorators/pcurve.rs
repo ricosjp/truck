@@ -1,5 +1,6 @@
 use super::*;
 use truck_base::cgmath64::control_point::ControlPoint;
+use truck_geotrait::algo::TesselationSplitMethod;
 
 impl<C, S> PCurve<C, S> {
     /// Creates composited
@@ -202,8 +203,12 @@ where
     S::Vector: VectorSpace<Scalar = f64> + ElementWise,
 {
     type Point = S::Point;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<S::Point>) {
-        algo::curve::parameter_division(self, range, tol)
+    fn parameter_division<T: TesselationSplitMethod>(
+        &self,
+        range: (f64, f64),
+        split: T,
+    ) -> (Vec<f64>, Vec<Self::Point>) {
+        algo::curve::parameter_division(self, range, split)
     }
 }
 

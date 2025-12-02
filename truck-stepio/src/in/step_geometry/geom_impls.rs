@@ -97,6 +97,8 @@ impl ToSameGeometry<Surface> for RevolutedCurve<Curve3D> {
 fn builder() {
     use truck_meshalgo::prelude::*;
     use truck_modeling::builder;
+    use truck_geotrait::algo::DefaultSplitParams;
+
     truck_topology::prelude!(Point3, Curve3D, Surface);
 
     // cube
@@ -104,7 +106,7 @@ fn builder() {
     let e = builder::line(&v[0], &v[1]);
     let f = builder::tsweep(&e, Vector3::unit_y());
     let cube: Solid = builder::tsweep(&f, Vector3::unit_z());
-    let mut poly = cube.triangulation(0.1).to_polygon();
+    let mut poly = cube.triangulation(DefaultSplitParams::new(0.1)).to_polygon();
     poly.put_together_same_attrs(1.0e-3).remove_unused_attrs();
     assert_eq!(poly.shell_condition(), ShellCondition::Closed);
 
@@ -117,7 +119,7 @@ fn builder() {
     shell.push(builder::try_attach_plane([boundaries[0].inverse()]).unwrap());
     shell.push(builder::try_attach_plane([boundaries[1].inverse()]).unwrap());
     let cylinder = Solid::new(vec![shell]);
-    let mut poly = cylinder.triangulation(0.1).to_polygon();
+    let mut poly = cylinder.triangulation(DefaultSplitParams::new(0.1)).to_polygon();
     poly.put_together_same_attrs(1.0e-3).remove_unused_attrs();
     assert_eq!(poly.shell_condition(), ShellCondition::Closed);
 
@@ -126,7 +128,7 @@ fn builder() {
     let w = builder::rsweep(&v, Point3::new(1.0, 0.0, 0.0), Vector3::unit_y(), Rad(7.0));
     let f = builder::try_attach_plane([w]).unwrap();
     let torus: Solid = builder::rsweep(&f, Point3::origin(), Vector3::unit_z(), Rad(7.0));
-    let mut poly = torus.triangulation(0.1).to_polygon();
+    let mut poly = torus.triangulation(DefaultSplitParams::new(0.1)).to_polygon();
     poly.put_together_same_attrs(1.0e-3).remove_unused_attrs();
     assert_eq!(poly.shell_condition(), ShellCondition::Closed);
 
@@ -152,7 +154,7 @@ fn builder() {
     }
     shell.extend(hole);
     let solid = Solid::new(vec![shell]);
-    let mut poly = solid.triangulation(0.1).to_polygon();
+    let mut poly = solid.triangulation(DefaultSplitParams::new(0.1)).to_polygon();
     poly.put_together_same_attrs(1.0e-3).remove_unused_attrs();
     assert_eq!(poly.shell_condition(), ShellCondition::Closed);
 }

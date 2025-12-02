@@ -1,3 +1,5 @@
+use truck_geotrait::algo::TesselationSplitMethod;
+
 use super::*;
 use std::f64::consts::PI;
 
@@ -65,7 +67,8 @@ impl<P> ParameterDivision1D for UnitCircle<P>
 where UnitCircle<P>: ParametricCurve<Point = P>
 {
     type Point = P;
-    fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<P>) {
+    fn parameter_division<T: TesselationSplitMethod>(&self, range: (f64, f64), split: T) -> (Vec<f64>, Vec<P>) {
+        let tol = split.tol();
         nonpositive_tolerance!(tol);
         let tol = f64::min(tol, 0.8);
         let delta = 2.0 * f64::acos(1.0 - tol);

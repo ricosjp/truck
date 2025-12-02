@@ -1,4 +1,5 @@
 use proptest::prelude::*;
+use truck_geotrait::algo::DefaultSplitParams;
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;
 
@@ -39,7 +40,7 @@ proptest! {
 #[test]
 fn parameter_division() {
     let c = UnitCircle::<Point2>::new();
-    let (_div, pts) = c.parameter_division(c.range_tuple(), 0.05);
+    let (_div, pts) = c.parameter_division(c.range_tuple(), DefaultSplitParams::new(0.05));
     for a in pts.windows(2) {
         let p = a[0].midpoint(a[1]);
         assert!(p.to_vec().magnitude() > 0.95);
