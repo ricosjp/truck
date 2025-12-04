@@ -21,6 +21,7 @@ chrono = { version = "0.4.42", features = ["wasmbind"] }
 derive_more = { version = "2.0.1", features = ["full"], optional = true }
 ruststep = { version = "0.4.0", optional = true }
 serde = { version = "1.0.228", features = ["derive"], optional = true }
+truck-assembly = { version = "0.1.0", path = "../truck-assembly" }
 truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
 truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", optional = true }
 truck-derivers = { version = "0.1.0", path = "../truck-derivers", optional = true }
