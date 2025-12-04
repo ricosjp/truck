@@ -145,7 +145,7 @@ fn next_point(
     let mat = Matrix3::from_cols(uder + n_uder, vder + n_vder, n);
     let vec = q - p;
     let del = mat.invert().unwrap() * vec;
-    debug_assert!(del.z.so_small());
+    debug_assert!(del.z.so_small(), "{del:?}");
     let (u, v) = (u + del.x, v + del.y);
     (surface.subs(u, v), (u, v))
 }

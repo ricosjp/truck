@@ -1,8 +1,8 @@
-use truck_shapeops::fillet::*;
-use truck_geometry::prelude::*;
 use derive_more::From;
 use itertools::Itertools;
+use truck_geometry::prelude::*;
 use truck_meshalgo::prelude::*;
+use truck_shapeops::fillet::*;
 
 #[derive(
     Clone,
@@ -243,5 +243,156 @@ fn create_fillet_with_side() {
 
     let poly = shell.triangulation(0.005).to_polygon();
     let file = std::fs::File::create("fillet-with-side.obj").unwrap();
+    obj::write(&poly, file).unwrap();
+}
+
+#[test]
+fn complex_surface() {
+    let p: [Point3; _] = [
+        (-2.0, 1.0, 1.0).into(),
+        (2.0, 1.0, 1.0).into(),
+        (-1.0, 0.0, 1.0).into(),
+        (1.0, 0.0, 1.0).into(),
+        (-2.0, 1.0, 0.0).into(),
+        (2.0, 1.0, 0.0).into(),
+        (-1.0, 0.0, 0.0).into(),
+        (1.0, 0.0, 0.0).into(),
+    ];
+    let v = Vertex::news(p);
+
+    let line = |i: usize, j: usize| -> Edge {
+        let curve = Curve::Line(Line(p[i], p[j]));
+        Edge::new(&v[i], &v[j], curve)
+    };
+
+    let ctrl_pts = [
+        p[2],
+        Point3::new(-0.5, 0.25, 0.75),
+        Point3::new(0.0, -0.25, 1.25),
+        Point3::new(0.5, 0.25, 0.75),
+        p[3],
+    ];
+    let curve = BSplineCurve::new(KnotVec::uniform_knot(2, 3), ctrl_pts.to_vec());
+
+    let edge = [
+        line(0, 1),
+        line(0, 2),
+        line(1, 3),
+        Edge::new(&v[2], &v[3], NurbsCurve::from(curve).into()),
+        line(0, 4),
+        line(2, 6),
+        line(3, 7),
+        line(1, 5),
+        line(4, 6),
+        line(6, 7),
+        line(5, 7),
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let knot_vecs = (knot_vec.clone(), knot_vec);
+        let bsp: NurbsSurface<Vector4> = BSplineSurface::new(knot_vecs, control_points).into();
+
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(i, j)| {
+                edge.iter()
+                    .find_map(|edge| {
+                        if edge.front() == &v[i] && edge.back() == &v[j] {
+                            Some(edge.clone())
+                        } else if edge.back() == &v[i] && edge.front() == &v[j] {
+                            Some(edge.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let bsp_surface0 = BSplineSurface::new(
+        (KnotVec::bezier_knot(1), KnotVec::uniform_knot(2, 3)),
+        vec![
+            vec![
+                p[0],
+                Point3::new(-1.0, 1.0, 1.0),
+                Point3::new(0.0, 1.0, 1.0),
+                Point3::new(1.0, 1.0, 1.0),
+                p[1],
+            ],
+            ctrl_pts.to_vec(),
+        ],
+    );
+    let surface0: Surface = NurbsSurface::from(bsp_surface0).into();
+    let bsp_surface1 = BSplineSurface::new(
+        (KnotVec::bezier_knot(1), KnotVec::uniform_knot(2, 3)),
+        vec![
+            ctrl_pts.to_vec(),
+            vec![
+                p[6],
+                Point3::new(-0.5, 0.0, 0.0),
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(0.5, 0.0, 0.0),
+                p[7],
+            ],
+        ],
+    );
+    let surface1: Surface = NurbsSurface::from(bsp_surface1).into();
+
+    let shell = shell![
+        Face::new(
+            vec![wire![
+                edge[1].clone(),
+                edge[3].clone(),
+                edge[2].inverse(),
+                edge[0].inverse(),
+            ]],
+            surface0,
+        ),
+        plane(0, 4, 6, 2),
+        Face::new(
+            vec![wire![
+                edge[5].clone(),
+                edge[9].clone(),
+                edge[6].inverse(),
+                edge[3].inverse(),
+            ]],
+            surface1,
+        ),
+        plane(3, 7, 5, 1),
+    ];
+
+    let poly = shell.triangulation(0.005).to_polygon();
+    let file = std::fs::File::create("edged-long-shell.obj").unwrap();
+    obj::write(&poly, file).unwrap();
+
+    let FilletWithSide {
+        simple_fillet:
+            SimpleFillet {
+                face0,
+                face1,
+                fillet,
+            },
+        side0,
+        side1,
+    } = fillet_with_side(
+        &shell[0],
+        &shell[2],
+        edge[3].id(),
+        Some(&shell[1]),
+        Some(&shell[3]),
+        0.1,
+        0.001,
+    )
+    .unwrap();
+
+    let shell = shell![face0, face1, fillet, side0.unwrap(), side1.unwrap()];
+
+    let poly = shell.triangulation(0.005).to_polygon();
+    let file = std::fs::File::create("filleted-long-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
 }
