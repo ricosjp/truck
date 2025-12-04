@@ -12,9 +12,11 @@ use ruststep::{
 use serde::{Deserialize, Serialize};
 use std::result::Result;
 use std::{collections::HashMap, f64::consts::PI};
+use truck_assembly::assy::*;
 use truck_geometry::prelude as truck;
 use truck_topology::compress::*;
 
+mod convert;
 /// Geometry parsed from STEP that can be handled by truck
 pub mod step_geometry;
 use step_geometry::*;
@@ -22,6 +24,11 @@ use step_geometry::*;
 /// the exchange structure corresponds to a graph in STEP file
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Table {
+    // representation
+    pub representation: HashMap<u64, RepresentationHolder>,
+    pub representation_item: HashMap<u64, RepresentationItemHolder>,
+    pub representation_context: HashMap<u64, RepresentationContextHolder>,
+
     // primitives
     pub cartesian_point: HashMap<u64, CartesianPointHolder>,
     pub direction: HashMap<u64, DirectionHolder>,
@@ -70,6 +77,26 @@ pub struct Table {
     pub oriented_face: HashMap<u64, OrientedFaceHolder>,
     pub shell: HashMap<u64, ShellHolder>,
     pub oriented_shell: HashMap<u64, OrientedShellHolder>,
+    pub shell_based_surface_model: HashMap<u64, ShellBasedSurfaceModelHolder>,
+    pub manifold_solid_brep: HashMap<u64, ManifoldSolidBrepHolder>,
+
+    // assembly
+    pub application_context: HashMap<u64, ApplicationContextHolder>,
+    pub product_context: HashMap<u64, ProductContextHolder>,
+    pub product: HashMap<u64, ProductHolder>,
+    pub product_definition_formation: HashMap<u64, ProductDefinitionFormationHolder>,
+    pub product_definition_context: HashMap<u64, ProductDefinitionContextHolder>,
+    pub product_definition: HashMap<u64, ProductDefinitionHolder>,
+    pub product_definition_shape: HashMap<u64, ProductDefinitionShapeHolder>,
+    pub shape_definition_representation: HashMap<u64, ShapeDefinitionRepresentationHolder>,
+    pub shape_representation: HashMap<u64, ShapeRepresentationHolder>,
+    pub context_dependent_shape_representation:
+        HashMap<u64, ContextDependentShapeRepresentationHolder>,
+    pub shape_representation_relationship: HashMap<u64, ShapeRepresentationRelationshipHolder>,
+    pub shape_representation_relationship_with_transformation:
+        HashMap<u64, ShapeRepresentationRelationshipWithTransformationHolder>,
+    pub next_assembly_usage_occurrence: HashMap<u64, NextAssemblyUsageOccurrenceHolder>,
+    pub item_defined_transformation: HashMap<u64, ItemDefinedTransformationHolder>,
 
     // others
     pub definitional_representation: HashMap<u64, DefinitionalRepresentationHolder>,
@@ -292,6 +319,28 @@ impl Table {
                         }
                     }
                 }
+                "SHELL_BASED_SURFACE_MODEL" => {
+                    self.shell_based_surface_model
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "MANIFOLD_SOLID_BREP" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() == 2 {
+                            self.manifold_solid_brep.insert(
+                                *id,
+                                ManifoldSolidBrepHolder {
+                                    label: Deserialize::deserialize(&params[0])?,
+                                    outer: Deserialize::deserialize(&params[1])?,
+                                    voids: Vec::new(),
+                                },
+                            );
+                        }
+                    }
+                }
+                "BREP_WITH_VOIDS" => {
+                    self.manifold_solid_brep
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
                 "DEFINITIONAL_REPRESENTATION" => {
                     if let Parameter::List(params) = &record.parameter {
                         if params.len() == 3 {
@@ -311,6 +360,76 @@ impl Table {
                             );
                         }
                     }
+                }
+                "APPLICATION_CONTEXT" => {
+                    self.application_context
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "PRODUCT_CONTEXT" => {
+                    self.product_context
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "PRODUCT" => {
+                    self.product
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "PRODUCT_DEFINITION_FORMATION" => {
+                    self.product_definition_formation
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE" => {
+                    if let Parameter::List(params) = &record.parameter {
+                        if params.len() >= 3 {
+                            self.product_definition_formation.insert(
+                                *id,
+                                ProductDefinitionFormationHolder {
+                                    id: Deserialize::deserialize(&params[0])?,
+                                    description: Deserialize::deserialize(&params[1])?,
+                                    of_product: Deserialize::deserialize(&params[2])?,
+                                },
+                            );
+                        }
+                    }
+                }
+                "PRODUCT_DEFINITION_CONTEXT" => {
+                    self.product_definition_context
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "PRODUCT_DEFINITION" => {
+                    self.product_definition
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "PRODUCT_DEFINITION_SHAPE" => {
+                    self.product_definition_shape
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "SHAPE_DEFINITION_REPRESENTATION" => {
+                    self.shape_definition_representation
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "SHAPE_REPRESENTATION" => {
+                    self.shape_representation
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "ADVANCED_BREP_SHAPE_REPRESENTATION" => {
+                    self.shape_representation
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "CONTEXT_DEPENDENT_SHAPE_REPRESENTATION" => {
+                    self.context_dependent_shape_representation
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "SHAPE_REPRESENTATION_RELATIONSHIP" => {
+                    self.shape_representation_relationship
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "NEXT_ASSEMBLY_USAGE_OCCURRENCE" => {
+                    self.next_assembly_usage_occurrence
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
+                }
+                "ITEM_DEFINED_TRANSFORMATION" => {
+                    self.item_defined_transformation
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 _ => {
                     self.dummy.insert(
@@ -597,6 +716,45 @@ impl Table {
                             );
                         }
                     }
+                } else if records.len() == 3 {
+                    match (
+                        records[0].name.as_str(),
+                        &records[0].parameter,
+                        records[1].name.as_str(),
+                        &records[1].parameter,
+                        records[2].name.as_str(),
+                        &records[2].parameter,
+                    ) {
+                        (
+                            "REPRESENTATION_RELATIONSHIP",
+                            Parameter::List(rr_parameter),
+                            "REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION",
+                            Parameter::List(transformation),
+                            "SHAPE_REPRESENTATION_RELATIONSHIP",
+                            _,
+                        ) => {
+                            let entity = ShapeRepresentationRelationshipWithTransformationHolder {
+                                name: Deserialize::deserialize(&rr_parameter[0])?,
+                                description: Deserialize::deserialize(&rr_parameter[1])?,
+                                rep_1: Deserialize::deserialize(&rr_parameter[2])?,
+                                rep_2: Deserialize::deserialize(&rr_parameter[3])?,
+                                transformation_operator: Deserialize::deserialize(
+                                    &transformation[0],
+                                )?,
+                            };
+                            self.shape_representation_relationship_with_transformation
+                                .insert(*id, entity);
+                        }
+                        _ => {
+                            self.dummy.insert(
+                                *id,
+                                DummyHolder {
+                                    record: format!("{records:?}"),
+                                    is_simple: false,
+                                },
+                            );
+                        }
+                    }
                 } else {
                     self.dummy.insert(
                         *id,
@@ -640,6 +798,37 @@ impl<'a> FromIterator<&'a EntityInstance> for Table {
 pub struct Dummy {
     pub record: String,
     pub is_simple: bool,
+}
+
+/// Many geometric and topological elements are contained within this entity's child classes.
+/// Since it is essentially an `Any` type, one must manually map the reference according to the context.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = representation_item)]
+#[holder(generate_deserialize)]
+pub struct RepresentationItem {
+    pub name: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = representation_context)]
+#[holder(generate_deserialize)]
+pub struct RepresentationContext {
+    pub context_identifier: String,
+    pub context_type: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = representation)]
+#[holder(generate_deserialize)]
+pub struct Representation {
+    pub name: String,
+    #[holder(use_place_holder)]
+    pub items: Vec<RepresentationItem>,
+    #[holder(use_place_holder)]
+    pub context_of_items: Vec<RepresentationContext>,
 }
 
 /// `cartesian_point`
@@ -2572,216 +2761,259 @@ pub struct OrientedShell {
     pub orientation: bool,
 }
 
-impl Table {
-    fn place_holder_edge_any_to_index_and_edge_curve(
-        &self,
-        edge: &PlaceHolder<EdgeAnyHolder>,
-    ) -> Option<(u64, EdgeCurveHolder)> {
-        use PlaceHolder::Ref;
-        let Ref(Name::Entity(ref idx)) = edge else {
-            return None;
-        };
-        self.oriented_edge
-            .get(idx)
-            .and_then(|oriented_edge| {
-                Some((
-                    oriented_edge.edge_element_idx()?,
-                    oriented_edge.edge_element_holder(self)?,
-                ))
-            })
-            .or_else(|| {
-                self.edge_curve
-                    .get(idx)
-                    .map(|edge_curve| (*idx, edge_curve.clone()))
-            })
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum ShellAny {
+    #[holder(use_place_holder)]
+    Shell(Shell),
+    #[holder(use_place_holder)]
+    OrientedShell(OrientedShell),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = shell_based_surface_model)]
+#[holder(generate_deserialize)]
+pub struct ShellBasedSurfaceModel {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub sbsm_boundary: Vec<ShellAny>,
+}
+
+/// Also serves as `brep_with_voids`
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = manifold_solid_brep)]
+#[holder(generate_deserialize)]
+pub struct ManifoldSolidBrep {
+    pub label: String,
+    #[holder(use_place_holder)]
+    pub outer: ShellAny,
+    #[holder(use_place_holder)]
+    pub voids: Vec<OrientedShell>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = application_context)]
+#[holder(generate_deserialize)]
+pub struct ApplicationContext {
+    pub application: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = product_context)]
+#[holder(generate_deserialize)]
+pub struct ProductContext {
+    pub name: String,
+    #[holder(use_place_holder)]
+    pub frame_of_reference: ApplicationContext,
+    pub discipline_type: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = product)]
+#[holder(generate_deserialize)]
+pub struct Product {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    #[holder(use_place_holder)]
+    pub frame_of_reference: Vec<ProductContext>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = product_definition_formation)]
+#[holder(generate_deserialize)]
+pub struct ProductDefinitionFormation {
+    pub id: String,
+    pub description: String,
+    #[holder(use_place_holder)]
+    pub of_product: Product,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = product_definition_context)]
+#[holder(generate_deserialize)]
+pub struct ProductDefinitionContext {
+    pub name: String,
+    #[holder(use_place_holder)]
+    pub frame_of_reference: ApplicationContext,
+    pub life_cycle_stage: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = product_definition)]
+#[holder(generate_deserialize)]
+pub struct ProductDefinition {
+    pub id: String,
+    pub description: String,
+    #[holder(use_place_holder)]
+    pub formation: ProductDefinitionFormation,
+    #[holder(use_place_holder)]
+    pub frame_of_reference: ProductDefinitionContext,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(generate_deserialize)]
+pub enum CharacterizedDefinition {
+    #[holder(use_place_holder)]
+    ProductDefinition(Box<ProductDefinition>),
+    #[holder(use_place_holder)]
+    ProductDefinitionShape(Box<ProductDefinitionShape>),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = product_definition_shape)]
+#[holder(generate_deserialize)]
+pub struct ProductDefinitionShape {
+    pub name: String,
+    pub description: String,
+    #[holder(use_place_holder)]
+    pub definition: CharacterizedDefinition,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = shape_representation)]
+#[holder(generate_deserialize)]
+pub struct ShapeRepresentation {
+    pub name: String,
+    #[holder(use_place_holder)]
+    pub items: Vec<RepresentationItem>,
+    #[holder(use_place_holder)]
+    pub context_of_items: RepresentationContext,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = context_dependent_shape_representation)]
+#[holder(generate_deserialize)]
+pub struct ContextDependentShapeRepresentation {
+    #[holder(use_place_holder)]
+    pub representation_relation: ShapeRepresentationRelationshipWithTransformation,
+    #[holder(use_place_holder)]
+    pub represented_product_relation: ProductDefinitionShape,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = shape_definition_representation)]
+#[holder(generate_deserialize)]
+pub struct ShapeDefinitionRepresentation {
+    #[holder(use_place_holder)]
+    pub definition: ProductDefinitionShape,
+    #[holder(use_place_holder)]
+    pub used_representation: ShapeRepresentation,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = shape_representation_relationship)]
+#[holder(generate_deserialize)]
+pub struct ShapeRepresentationRelationship {
+    pub name: String,
+    pub description: String,
+    #[holder(use_place_holder)]
+    pub rep_1: ShapeRepresentation,
+    #[holder(use_place_holder)]
+    pub rep_2: ShapeRepresentation,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = shape_representation_relationship_with_transformation)]
+#[holder(generate_deserialize)]
+pub struct ShapeRepresentationRelationshipWithTransformation {
+    pub name: String,
+    pub description: String,
+    #[holder(use_place_holder)]
+    pub rep_1: ShapeRepresentation,
+    #[holder(use_place_holder)]
+    pub rep_2: ShapeRepresentation,
+    #[holder(use_place_holder)]
+    pub transformation_operator: ItemDefinedTransformation,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = next_assembly_usage_occurrence)]
+#[holder(generate_deserialize)]
+pub struct NextAssemblyUsageOccurrence {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    #[holder(use_place_holder)]
+    pub relating_product_definition: ProductDefinition,
+    #[holder(use_place_holder)]
+    pub related_product_definition: ProductDefinition,
+    pub reference_designator: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
+#[holder(table = Table)]
+#[holder(field = item_defined_transformation)]
+#[holder(generate_deserialize)]
+pub struct ItemDefinedTransformation {
+    name: String,
+    description: String,
+    #[holder(use_place_holder)]
+    transform_item_1: Axis2Placement,
+    #[holder(use_place_holder)]
+    transform_item_2: Axis2Placement,
+}
+
+impl TryFrom<&ItemDefinedTransformation> for Matrix3 {
+    type Error = StepConvertingError;
+    fn try_from(value: &ItemDefinedTransformation) -> Result<Self, Self::Error> {
+        let mat1: Self = (&value.transform_item_1).try_into()?;
+        let mat2: Self = (&value.transform_item_2).try_into()?;
+        Ok(mat2 * mat1.invert().unwrap())
     }
-    fn face_any_to_orientation_and_face(
-        &self,
-        face: Option<FaceAnyHolder>,
-    ) -> Option<(bool, FaceSurfaceHolder)> {
-        match face? {
-            FaceAnyHolder::FaceSurface(face) => Some((true, face)),
-            FaceAnyHolder::OrientedFace(oriented_face) => {
-                let face_element = oriented_face.face_element_holder(self)?;
-                Some((oriented_face.orientation, face_element))
-            }
+}
+
+impl TryFrom<&ItemDefinedTransformation> for Matrix4 {
+    type Error = StepConvertingError;
+    fn try_from(value: &ItemDefinedTransformation) -> Result<Self, Self::Error> {
+        let mat1: Self = (&value.transform_item_1).try_into()?;
+        let mat2: Self = (&value.transform_item_2).try_into()?;
+        Ok(mat2 * mat1.invert().unwrap())
+    }
+}
+
+#[derive(Clone, Debug, derive_more::From)]
+pub enum NodeMatrix {
+    Identity,
+    Transform(Box<ItemDefinedTransformation>),
+}
+
+pub type ProductEntity = Entity<NodeMatrix, u64, String>;
+pub type StepAssembly<'a> = Assembly<'a, NodeMatrix, u64, String>;
+
+impl TryFrom<&NodeMatrix> for Matrix3 {
+    type Error = StepConvertingError;
+    fn try_from(value: &NodeMatrix) -> Result<Self, Self::Error> {
+        match value {
+            NodeMatrix::Identity => Ok(Self::identity()),
+            NodeMatrix::Transform(trans) => (&**trans).try_into(),
         }
     }
+}
 
-    fn shell_vertices(&self, shell: &ShellHolder) -> (Vec<Point3>, HashMap<u64, usize>) {
-        use PlaceHolder::Ref;
-        let mut vidx_map = HashMap::<u64, usize>::new();
-        let vertex_to_point = |v: PlaceHolder<VertexPointHolder>| {
-            if let Ref(Name::Entity(ref idx)) = v {
-                if !vidx_map.contains_key(idx) {
-                    let len = vidx_map.len();
-                    vidx_map.insert(*idx, len);
-                    let p = EntityTable::<VertexPointHolder>::get_owned(self, *idx)
-                        .map_err(|e| eprintln!("{e}"))
-                        .ok()?;
-                    return Some(Point3::from(&p.vertex_geometry));
-                }
-            }
-            None
-        };
-        let vertices: Vec<Point3> = shell
-            .cfs_faces_holder(self)
-            .filter_map(move |face| self.face_any_to_orientation_and_face(face))
-            .flat_map(move |(_, face)| face.bounds_holder(self))
-            .filter_map(move |bound| bound?.bound_holder(self))
-            .flat_map(move |bound| bound.edge_list)
-            .filter_map(move |edge| self.place_holder_edge_any_to_index_and_edge_curve(&edge))
-            .flat_map(move |(_, edge)| [edge.edge_start, edge.edge_end])
-            .filter_map(vertex_to_point)
-            .collect();
-        (vertices, vidx_map)
-    }
-
-    fn shell_edges(
-        &self,
-        shell: &ShellHolder,
-        vidx_map: &HashMap<u64, usize>,
-    ) -> (Vec<CompressedEdge<Curve3D>>, HashMap<u64, usize>) {
-        use PlaceHolder::Ref;
-        let mut eidx_map = HashMap::<u64, usize>::new();
-        let edge_curve_to_compressed_edge = |(idx, edge): (u64, EdgeCurveHolder)| {
-            if eidx_map.contains_key(&idx) {
-                return None;
-            }
-            let len = eidx_map.len();
-            eidx_map.insert(idx, len);
-            let edge_curve = edge
-                .clone()
-                .into_owned(self)
-                .map_err(|e| eprintln!("{e}"))
-                .ok()?;
-            let curve = edge_curve
-                .parse_curve3d()
-                .map_err(|e| eprintln!("{e}"))
-                .ok()?;
-            let Ref(Name::Entity(front_idx)) = edge.edge_start else {
-                return None;
-            };
-            let Ref(Name::Entity(back_idx)) = edge.edge_end else {
-                return None;
-            };
-            Some(CompressedEdge {
-                vertices: (*vidx_map.get(&front_idx)?, *vidx_map.get(&back_idx)?),
-                curve,
-            })
-        };
-        let edges: Vec<CompressedEdge<Curve3D>> = shell
-            .cfs_faces_holder(self)
-            .filter_map(move |face| self.face_any_to_orientation_and_face(face))
-            .flat_map(move |(_, face)| face.bounds_holder(self))
-            .filter_map(move |bound| bound?.bound_holder(self))
-            .flat_map(move |bound| bound.edge_list)
-            .filter_map(move |edge| self.place_holder_edge_any_to_index_and_edge_curve(&edge))
-            .filter_map(edge_curve_to_compressed_edge)
-            .collect();
-        (edges, eidx_map)
-    }
-    fn face_bound_to_edges(
-        &self,
-        bound: FaceBoundHolder,
-        eidx_map: &HashMap<u64, usize>,
-    ) -> Option<Vec<CompressedEdgeIndex>> {
-        use PlaceHolder::Ref;
-        let ori = bound.orientation;
-        let bound = bound.bound_holder(self)?;
-        let mut edges: Vec<CompressedEdgeIndex> = bound
-            .edge_list
-            .into_iter()
-            .filter_map(|edge| {
-                let Ref(Name::Entity(ref idx)) = edge else {
-                    return None;
-                };
-                let edge_idx = if let Some(oriented_edge) = self.oriented_edge.get(idx) {
-                    CompressedEdgeIndex {
-                        index: *eidx_map.get(&oriented_edge.edge_element_idx()?)?,
-                        orientation: oriented_edge.orientation == ori,
-                    }
-                } else {
-                    CompressedEdgeIndex {
-                        index: *eidx_map.get(idx)?,
-                        orientation: ori,
-                    }
-                };
-                Some(edge_idx)
-            })
-            .collect();
-        if !ori {
-            edges.reverse();
+impl TryFrom<&NodeMatrix> for Matrix4 {
+    type Error = StepConvertingError;
+    fn try_from(value: &NodeMatrix) -> Result<Self, Self::Error> {
+        match value {
+            NodeMatrix::Identity => Ok(Self::identity()),
+            NodeMatrix::Transform(trans) => (&**trans).try_into(),
         }
-        Some(edges)
-    }
-
-    fn shell_faces(
-        &self,
-        shell: &ShellHolder,
-        eidx_map: &HashMap<u64, usize>,
-    ) -> Vec<CompressedFace<Surface>> {
-        shell
-            .cfs_faces_holder(self)
-            .filter_map(|face| self.face_any_to_orientation_and_face(face))
-            .filter_map(|(orientation, face)| {
-                let step_surface: SurfaceAny = face
-                    .face_geometry
-                    .clone()
-                    .into_owned(self)
-                    .map_err(|e| eprintln!("{e}"))
-                    .ok()?;
-                let mut surface = Surface::try_from(&step_surface)
-                    .map_err(|e| eprintln!("{e}"))
-                    .ok()?;
-                if !face.same_sense {
-                    surface.invert()
-                }
-                let boundaries: Vec<_> = face
-                    .bounds_holder(self)
-                    .into_iter()
-                    .filter_map(|bound| self.face_bound_to_edges(bound?, eidx_map))
-                    .collect();
-                Some(CompressedFace {
-                    surface,
-                    boundaries,
-                    orientation,
-                })
-            })
-            .collect()
-    }
-
-    /// construct `CompressedShell` of `truck` from `Shell` in STEP file
-    /// # Example
-    /// ```
-    /// use truck_stepio::r#in::{*, step_geometry::*};
-    /// use ruststep::tables::EntityTable;
-    /// // read file
-    /// let step_string = include_str!(concat!(
-    ///     env!("CARGO_MANIFEST_DIR"),
-    ///     "/../resources/step/occt-cube.step",
-    /// ));
-    /// // parse step file
-    /// let exchange = ruststep::parser::parse(&step_string).unwrap();
-    /// // convert the parsing results to a Rust struct
-    /// let table = Table::from_data_section(&exchange.data[0]);
-    /// // take one shell (this is only one shell)
-    /// let step_shell = &table.shell.values().next().unwrap();
-    /// // convert STEP shell to `CompressedShell`
-    /// let cshell = table.to_compressed_shell(step_shell).unwrap();
-    /// // The cube has 6 faces!
-    /// assert_eq!(cshell.faces.len(), 6);
-    /// ```
-    pub fn to_compressed_shell(
-        &self,
-        shell: &ShellHolder,
-    ) -> Result<CompressedShell<Point3, Curve3D, Surface>, StepConvertingError> {
-        let (vertices, vidx_map) = self.shell_vertices(shell);
-        let (edges, eidx_map) = self.shell_edges(shell, &vidx_map);
-        Ok(CompressedShell {
-            vertices,
-            edges,
-            faces: self.shell_faces(shell, &eidx_map),
-        })
     }
 }
