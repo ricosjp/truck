@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix spell and replace `Fn` to `FnMut`.
 - Read assembly from step file.
 - Implement assembly structure handler `truck-assembly`.
 - Downgrade `cargo` for `cargo doc`. cf: https://github.com/rust-lang/rust/issues/148431
