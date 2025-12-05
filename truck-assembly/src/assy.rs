@@ -32,7 +32,7 @@ impl<'a, Matrix, Shape, Attrs> Path<'a, Entity<Matrix, Shape, Attrs>> {
     /// for i in 0..9 {
     ///     node[i].add_child(node[i + 1]);
     /// }
-    /// let path = node[0].maximul_paths_iter().next().unwrap();
+    /// let path = node[0].maximal_paths_iter().next().unwrap();
     /// assert_eq!(path.matrix(), 3628800.0);
     /// ```
     /// # Panics
@@ -50,7 +50,7 @@ impl<'a, Matrix, Shape, Attrs> Path<'a, Entity<Matrix, Shape, Attrs>> {
     ///     node[i].add_child(node[i + 1]);
     /// }
     /// let _x = node[0].entity().borrow_mut();
-    /// let path = node[0].maximul_paths_iter().next().unwrap();
+    /// let path = node[0].maximal_paths_iter().next().unwrap();
     /// path.matrix();
     /// ```
     pub fn matrix(&self) -> Matrix

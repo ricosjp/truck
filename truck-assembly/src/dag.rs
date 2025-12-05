@@ -227,9 +227,9 @@ impl<'a, T> Dag<'a, T> {
     /// assert!(b[2].children().is_empty());
     /// assert_eq!(*b[2].entity().borrow(), 4.0);
     /// ```
-    pub fn map_into<'b, F, U>(&'a self, dst: &'b Dag<'b, U>, f: F)
+    pub fn map_into<'b, F, U>(&'a self, dst: &'b Dag<'b, U>, mut f: F)
     where
-        F: Fn(&T) -> U,
+        F: FnMut(&T) -> U,
         U: 'b, {
         // create node
         let ref_nodes = self.nodes.borrow();
@@ -587,7 +587,7 @@ impl<'a, T> Node<'a, T> {
         Path(vec)
     }
 
-    /// Returns iterator for all maximul paths with the top = `self`.
+    /// Returns iterator for all maximal paths with the top = `self`.
     /// # Examples
     /// ```
     /// use truck_assembly::dag::*;
@@ -598,7 +598,7 @@ impl<'a, T> Node<'a, T> {
     /// a[0].add_child(a[3]);
     /// a[2].add_child(a[3]);
     /// a[2].add_child(a[4]);
-    /// let paths = a[0].maximul_paths_iter().collect::<Vec<_>>();
+    /// let paths = a[0].maximal_paths_iter().collect::<Vec<_>>();
     /// let slices = paths.iter().map(Path::as_slice).collect::<Vec<_>>();
     /// assert_eq!(slices.len(), 4);
     /// assert_eq!(slices[0], &[a[0], a[1]]);
@@ -607,9 +607,9 @@ impl<'a, T> Node<'a, T> {
     /// assert_eq!(slices[3], &[a[0], a[3]]);
     /// ```
     #[inline]
-    pub fn maximul_paths_iter(self) -> impl Iterator<Item = Path<'a, T>> {
+    pub fn maximal_paths_iter(self) -> impl Iterator<Item = Path<'a, T>> {
         let current = self.first_maximal_path();
-        MaximulPathsIter {
+        MaximalPathsIter {
             indices: vec![0; current.len() - 1],
             current,
             end_iter: false,
@@ -671,13 +671,13 @@ impl<'a, T> Iterator for PathsIter<'a, T> {
 }
 
 #[derive(Clone, Debug)]
-struct MaximulPathsIter<'a, T> {
+struct MaximalPathsIter<'a, T> {
     current: Path<'a, T>,
     indices: Vec<usize>,
     end_iter: bool,
 }
 
-impl<'a, T> Iterator for MaximulPathsIter<'a, T> {
+impl<'a, T> Iterator for MaximalPathsIter<'a, T> {
     type Item = Path<'a, T>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.end_iter {

@@ -17,7 +17,7 @@ fn a_little_complex_case() {
     node[8].add_child(node[5]);
 
     assert_eq!(node[0].paths_iter().count(), 16);
-    assert_eq!(node[0].maximul_paths_iter().count(), 5);
+    assert_eq!(node[0].maximal_paths_iter().count(), 5);
 
     assert!(!node[8].add_child(node[2]));
 }

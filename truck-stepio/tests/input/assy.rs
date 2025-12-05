@@ -10,6 +10,6 @@ fn occt_assy() {
     let assy = Assembly::new();
     table.step_assy(&assy).unwrap();
     let top = assy.top_nodes()[0];
-    let paths = top.maximul_paths_iter().collect::<Vec<_>>();
+    let paths = top.maximal_paths_iter().collect::<Vec<_>>();
     assert_eq!(paths.len(), 5);
 }
