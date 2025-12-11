@@ -2995,8 +2995,9 @@ pub enum NodeMatrix {
     Transform(Box<ItemDefinedTransformation>),
 }
 
-pub type ProductEntity = Entity<NodeMatrix, u64, String>;
-pub type StepAssembly<'a> = Assembly<'a, NodeMatrix, u64, String>;
+pub type ProductEntity = NodeEntity<Vec<u64>, String>;
+pub type AssembleEntity = EdgeEntity<NodeMatrix, String>;
+pub type StepAssembly = Assembly<Vec<u64>, String, NodeMatrix, String>;
 
 impl TryFrom<&NodeMatrix> for Matrix3 {
     type Error = StepConvertingError;
