@@ -1,6 +1,5 @@
 use crate::dag;
 pub use dag::{Edge, EdgeMut, Node, NodeMut, Path};
-//use itertools::Itertools;
 use truck_base::cgmath64::One;
 
 /// Entity of the node
