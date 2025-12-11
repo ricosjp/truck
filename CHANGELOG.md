@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Renew DAG structure.
 - Fix spell and replace `Fn` to `FnMut`.
 - Read assembly from step file.
 - Implement assembly structure handler `truck-assembly`.

@@ -1,190 +1,206 @@
 use crate::dag;
-pub use dag::{Node, Path};
-use itertools::Itertools;
+pub use dag::{Edge, EdgeMut, Node, NodeMut, Path};
+//use itertools::Itertools;
 use truck_base::cgmath64::One;
 
-/// Entity of node of assembly
-#[derive(Clone, Debug, PartialEq)]
-pub struct Entity<Matrix, Shape, Attrs> {
-    /// transform matrix
-    pub matrix: Matrix,
-    /// shapes in node
-    pub shapes: Vec<Shape>,
+/// Entity of the node
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct NodeEntity<Shape, NodeAttrs> {
+    /// shape of node
+    pub shape: Shape,
     /// extra attributes (e.g. label, material, and other properties
-    pub attrs: Attrs,
+    pub attrs: NodeAttrs,
+}
+
+impl<Shape> From<Shape> for NodeEntity<Shape, ()> {
+    fn from(shape: Shape) -> Self { Self { shape, attrs: () } }
+}
+
+/// Entity of the edge
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EdgeEntity<Matrix, EdgeAttrs> {
+    /// transform matrix of edge
+    pub matrix: Matrix,
+    /// extra attributes (e.g. label, material, and other properties
+    pub attrs: EdgeAttrs,
+}
+
+impl<Matrix> From<Matrix> for EdgeEntity<Matrix, ()> {
+    fn from(matrix: Matrix) -> Self { Self { matrix, attrs: () } }
 }
 
 /// Assembly
-pub type Assembly<'a, Matrix, Shape, Attrs> = dag::Dag<'a, Entity<Matrix, Shape, Attrs>>;
+pub type Assembly<Shape, NodeAttrs, Matrix, EdgeAttrs> =
+    dag::Dag<NodeEntity<Shape, NodeAttrs>, EdgeEntity<Matrix, EdgeAttrs>>;
 
-impl<'a, Matrix, Shape, Attrs> Path<'a, Entity<Matrix, Shape, Attrs>> {
+impl<'a, Shape, NodeAttrs, Matrix, EdgeAttrs>
+    Path<'a, NodeEntity<Shape, NodeAttrs>, EdgeEntity<Matrix, EdgeAttrs>>
+{
     /// Returns transform matrix of `self`.
     /// # Examples
     /// ```
     /// use truck_assembly::assy::*;
-    /// let assy = Assembly::<f64, (), ()>::new();
-    /// let iter_closure = |i: usize| Entity {
-    ///     matrix: i as f64,
-    ///     shapes: Vec::new(),
-    ///     attrs: (),
-    /// };
-    /// let node = assy.create_nodes((1..=10).map(iter_closure));
-    /// for i in 0..9 {
-    ///     node[i].add_child(node[i + 1]);
+    /// let mut assy = Assembly::<(), (), f64, ()>::new();
+    /// let node = assy.create_nodes([().into(); 11]);
+    /// for i in 0..10 {
+    ///     assy.create_edge(node[i], node[i + 1], ((i + 1) as f64).into());
     /// }
-    /// let path = node[0].maximal_paths_iter().next().unwrap();
+    /// let path = assy.maximal_paths_iter(node[0]).next().unwrap();
     /// assert_eq!(path.matrix(), 3628800.0);
     /// ```
-    /// # Panics
-    /// Panic occurs if a node within the path already holds a mutable reference to an entity.
-    /// ```should_panic
-    /// use truck_assembly::assy::*;
-    /// let assy = Assembly::<f64, (), ()>::new();
-    /// let iter_closure = |i: usize| Entity {
-    ///     matrix: i as f64,
-    ///     shapes: Vec::new(),
-    ///     attrs: (),
-    /// };
-    /// let node = assy.create_nodes((1..=10).map(iter_closure));
-    /// for i in 0..9 {
-    ///     node[i].add_child(node[i + 1]);
-    /// }
-    /// let _x = node[0].entity().borrow_mut();
-    /// let path = node[0].maximal_paths_iter().next().unwrap();
-    /// path.matrix();
-    /// ```
+    #[inline]
     pub fn matrix(&self) -> Matrix
     where Matrix: One + Copy + std::ops::Mul<Output = Matrix> {
-        self.iter().fold(Matrix::one(), |matrix, node| {
-            matrix * node.entity().borrow().matrix
-        })
+        self.edges()
+            .iter()
+            .fold(Matrix::one(), |matrix, node| matrix * node.entity().matrix)
     }
 }
 
-impl<'a, Matrix, Shape, Attrs> Assembly<'a, Matrix, Shape, Attrs> {
-    /// Modify the assembly to achieve the following state.
-    /// - Each node has at most one shape.
-    /// - Nodes with child nodes do not have a shape.
-    ///
+impl<'a, Shape, NodeAttrs, Matrix, EdgeAttrs>
+    Node<'a, NodeEntity<Shape, NodeAttrs>, EdgeEntity<Matrix, EdgeAttrs>>
+{
+    /// Returns the shape
+    #[inline]
+    pub fn shape(self) -> &'a Shape { &self.entity().shape }
+    /// Returns the node attributes
+    #[inline]
+    pub fn attrs(self) -> &'a NodeAttrs { &self.entity().attrs }
+}
+
+impl<'a, Shape, NodeAttrs, Matrix, EdgeAttrs>
+    NodeMut<'a, NodeEntity<Shape, NodeAttrs>, EdgeEntity<Matrix, EdgeAttrs>>
+{
+    /// Returns the shape
+    #[inline]
+    pub fn shape(&'a mut self) -> &'a mut Shape { &mut self.entity().shape }
+    /// Returns the node attributes
+    #[inline]
+    pub fn attrs(&'a mut self) -> &'a mut NodeAttrs { &mut self.entity().attrs }
+}
+
+impl<'a, Matrix, EdgeAttrs> Edge<'a, EdgeEntity<Matrix, EdgeAttrs>> {
+    /// Returns the shape
+    #[inline]
+    pub fn matrix(self) -> &'a Matrix { &self.entity().matrix }
+    /// Returns the node attributes
+    #[inline]
+    pub fn attrs(self) -> &'a EdgeAttrs { &self.entity().attrs }
+}
+
+impl<'a, Matrix, EdgeAttrs> EdgeMut<'a, EdgeEntity<Matrix, EdgeAttrs>> {
+    /// Returns the shape
+    #[inline]
+    pub fn matrix(&'a mut self) -> &'a mut Matrix { &mut self.entity().matrix }
+    /// Returns the node attributes
+    #[inline]
+    pub fn attrs(&'a mut self) -> &'a mut EdgeAttrs { &mut self.entity().attrs }
+}
+
+/// have contents which can be removed
+/// # Example
+/// ```
+/// use truck_assembly::assy::Takeable;
+///
+/// // Takeable::take is same with Option::take.
+/// let mut item = Some(3);
+/// assert_eq!(Takeable::take(&mut item), Some(3));
+/// assert_eq!(item, None);
+///
+/// // For Vec, take is the drain.
+/// let mut vec = vec![1, 2, 3];
+/// assert_eq!(Takeable::take(&mut vec), vec![1, 2, 3]);
+/// assert!(vec.is_empty());
+/// ```
+pub trait Takeable {
+    /// take contents
+    fn take(&mut self) -> Self;
+    /// Return `true` if the contents has been taken.
+    /// # Examples
+    /// ```
+    /// use truck_assembly::assy::Takeable;
+    /// assert!(!Some(()).is_taken());
+    /// assert!(Option::<()>::None.is_taken());
+    /// ```
+    fn is_taken(&self) -> bool;
+}
+
+impl<T> Takeable for Option<T> {
+    #[inline]
+    fn take(&mut self) -> Self { self.take() }
+    #[inline]
+    fn is_taken(&self) -> bool { self.is_none() }
+}
+
+impl<T> Takeable for Vec<T> {
+    #[inline]
+    fn take(&mut self) -> Self { self.split_off(0) }
+    #[inline]
+    fn is_taken(&self) -> bool { self.is_empty() }
+}
+
+impl<Shape, NodeAttrs, Matrix, EdgeAttrs> Assembly<Shape, NodeAttrs, Matrix, EdgeAttrs> {
+    /// Add nodes as needed and set all nodes except the terminal node's shape to “taken”.
     /// Assign default attributes to newly added nodes.
     /// # Examples
     /// ```
     /// use truck_assembly::assy::*;
-    /// let assy = Assembly::<f64, usize, usize>::new();
+    /// let mut assy = Assembly::<Option<usize>, usize, f64, usize>::new();
     /// let a = assy.create_nodes([
-    ///     Entity {
-    ///         matrix: 2.0,
-    ///         shapes: vec![],
+    ///     NodeEntity {
+    ///         shape: None,
     ///         attrs: 1,
     ///     },
-    ///     Entity {
-    ///         matrix: -1.0,
-    ///         shapes: vec![1, 2, 3],
+    ///     NodeEntity {
+    ///         shape: Some(2),
     ///         attrs: 2,
     ///     },
-    ///     Entity {
-    ///         matrix: 4.0,
-    ///         shapes: vec![4, 5],
+    ///     NodeEntity {
+    ///         shape: Some(4),
     ///         attrs: 3,
     ///     },
-    ///     Entity {
-    ///         matrix: -3.0,
-    ///         shapes: vec![6],
-    ///         attrs: 1,
+    ///     NodeEntity {
+    ///         shape: Some(6),
+    ///         attrs: 4,
     ///     },
     /// ]);
-    /// a[0].add_child(a[1]);
-    /// a[1].add_child(a[2]);
-    /// a[0].add_child(a[3]);
-    /// let third_entity = a[3].entity().borrow().clone();
+    /// assy.create_edge(a[0], a[1], EdgeEntity { matrix: 3.0, attrs: 1 });
+    /// assy.create_edge(a[1], a[2], EdgeEntity { matrix: 9.0, attrs: 2 });
+    /// assy.create_edge(a[0], a[3], EdgeEntity { matrix: 6.0, attrs: 3 });
     ///
-    /// assy.extract_nodes_as_children();
+    /// assy.normalize();
     ///
-    /// assert_eq!(assy.len(), 8);
-    /// assert_eq!(a[0].children(), vec![a[1], a[3]]);
-    /// assert_eq!(a[1].num_of_children(), 5);
-    /// assert!(a[1].entity().borrow().shapes.is_empty());
-    /// let child_entities = a[1]
-    ///     .children()
-    ///     .into_iter()
-    ///     .map(|child| child.entity().borrow().clone())
-    ///     .collect::<Vec<_>>();
-    /// assert_eq!(child_entities[0], Entity {
-    ///     matrix: 4.0,
-    ///     shapes: vec![4],
-    ///     attrs: 3,
-    /// });
-    /// assert_eq!(child_entities[1], Entity {
-    ///     matrix: 1.0,
-    ///     shapes: vec![1],
-    ///     attrs: 0,
-    /// });
-    /// assert_eq!(child_entities[2], Entity {
-    ///     matrix: 1.0,
-    ///     shapes: vec![2],
-    ///     attrs: 0,
-    /// });
-    /// assert_eq!(child_entities[3], Entity {
-    ///     matrix: 1.0,
-    ///     shapes: vec![3],
-    ///     attrs: 0,
-    /// });
-    /// assert_eq!(child_entities[4], Entity {
-    ///     matrix: 4.0,
-    ///     shapes: vec![5],
-    ///     attrs: 0,
-    /// });
+    /// assert_eq!(assy.len(), 5);
     ///
-    /// assert_eq!(*a[3].entity().borrow(), third_entity);
+    /// let node = assy.all_nodes().collect::<Vec<_>>();
+    /// assert!(node[1].shape().is_none());
+    /// assert_eq!(*node[4].shape(), Some(2));
+    /// assert_eq!(*node[4].attrs(), 0);
+    ///
+    /// let new_edge = node[1].edges().collect::<Vec<_>>()[1];
+    /// assert_eq!(*new_edge.matrix(), 1.0);
+    /// assert_eq!(*new_edge.attrs(), 0);
     /// ```
-    pub fn extract_nodes_as_children(&'a self)
+    pub fn normalize(&mut self)
     where
         Matrix: Copy + One,
-        Attrs: Default, {
-        let mut added_node = Vec::<Node<'a, _>>::new();
-        self.all_nodes().into_iter().for_each(|node| {
-            if !node.children_ref().is_empty() {
-                let mut entity_ref = node.entity().borrow_mut();
-                let entity_iter = entity_ref.shapes.drain(..).map(|shape| Entity {
-                    matrix: One::one(),
-                    shapes: vec![shape],
+        Shape: Takeable,
+        NodeAttrs: Default,
+        EdgeAttrs: Default, {
+        self.node_indices().for_each(|index| {
+            let node = self.node(index);
+            if !(node.is_terminal() || node.entity().shape.is_taken()) {
+                let shape = self.node_mut(index).entity().shape.take();
+                let new_index = self.create_node(NodeEntity {
+                    shape,
                     attrs: Default::default(),
                 });
-                let new_nodes = self.create_nodes(entity_iter);
-                new_nodes.iter().for_each(|&new_node| {
-                    node.add_child(new_node);
-                });
-                added_node.extend(new_nodes);
-            }
-        });
-        self.nodes.borrow_mut().extend(added_node);
-
-        let mut added_node = Vec::<Node<'a, _>>::new();
-        self.all_nodes().into_iter().for_each(|node| {
-            if node.entity().borrow().shapes.len() > 1 {
-                let mut entity_ref = node.entity().borrow_mut();
-                let matrix = entity_ref.matrix;
-                let entity_iter = entity_ref.shapes.drain(1..).map(|shape| Entity {
-                    matrix,
-                    shapes: vec![shape],
+                let edge_entity = EdgeEntity {
+                    matrix: Matrix::one(),
                     attrs: Default::default(),
-                });
-                let new_nodes = self.create_nodes(entity_iter);
-                node.children_ref()
-                    .iter()
-                    .cartesian_product(&new_nodes)
-                    .for_each(|(&child, &new_node)| {
-                        new_node.add_child(child);
-                    });
-                node.parents_ref()
-                    .iter()
-                    .cartesian_product(&new_nodes)
-                    .for_each(|(&parent, &new_node)| {
-                        new_node.add_parent(parent);
-                    });
-                added_node.extend(new_nodes);
+                };
+                self.create_edge(index, new_index, edge_entity);
             }
         });
-        self.nodes.borrow_mut().extend(added_node);
     }
 }
