@@ -53,16 +53,13 @@ fn main() {
 }
 
 fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
-    let assy = Assembly::new();
-    table.step_assy(&assy).unwrap();
+    let assy = table.step_assy().unwrap();
 
-    let closure = |ProductEntity {
-                       matrix: trans,
-                       shapes: indices,
-                       attrs: name,
-                   }: &ProductEntity| {
-        let matrix = Matrix4::try_from(trans).unwrap();
-        let shapes = indices
+    let node_map = |ProductEntity {
+                        shape: indices,
+                        attrs: name,
+                    }: &ProductEntity| {
+        let shape = indices
             .iter()
             .filter_map(|idx| {
                 let shells = if let Some(step_solid) = table.manifold_solid_brep.get(idx) {
@@ -90,24 +87,26 @@ fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
                 Some(meshed_shells)
             })
             .collect::<Vec<_>>();
-        Entity {
-            matrix,
-            shapes,
+        NodeEntity {
+            shape,
             attrs: name.clone(),
         }
     };
+    let edge_map = |EdgeEntity { matrix: trans, .. }: &AssembleEntity| EdgeEntity {
+        matrix: Matrix4::try_from(trans).unwrap(),
+        attrs: (),
+    };
 
-    let meshed_assy = Assembly::new();
-    assy.map_into(&meshed_assy, closure);
+    let meshed_assy = assy.par_map(node_map, edge_map);
 
     meshed_assy
         .top_nodes()
         .into_iter()
-        .flat_map(|top| top.paths_iter())
+        .flat_map(|top| meshed_assy.paths_iter(top.index()))
         .flat_map(|path| {
             let matrix = path.matrix();
-            let entity = path.terminal_node().entity().borrow().clone();
-            entity.shapes.into_iter().flatten().map(move |mut shell| {
+            let shapes = path.terminal_node().shape().clone();
+            shapes.into_iter().flatten().map(move |mut shell| {
                 shell.vertices.iter_mut().for_each(|v| {
                     *v = matrix.transform_point(*v);
                 });

@@ -308,7 +308,7 @@ impl Table {
         let Some(sr) = self.shape_representation.get(sr_idx) else {
             return Err("failed to reference `shape_representation`".into());
         };
-        let Some(shapes) = sr
+        let Some(shape) = sr
             .items
             .iter()
             .map(|place_holder| {
@@ -323,18 +323,14 @@ impl Table {
             return Err("failed to reference an element of `shape_representation.items`".into());
         };
 
-        Ok(ProductEntity {
-            matrix: NodeMatrix::Identity,
-            shapes,
-            attrs: name,
-        })
+        Ok(ProductEntity { shape, attrs: name })
     }
 
     fn assy_node_entity(
         &self,
         pds_idx: u64,
         next_assy: &NextAssemblyUsageOccurrenceHolder,
-    ) -> Result<(ProductEntity, (u64, u64)), StepConvertingError> {
+    ) -> Result<(AssembleEntity, (u64, u64)), StepConvertingError> {
         let &PlaceHolder::Ref(Name::Entity(parent_idx)) = &next_assy.relating_product_definition
         else {
             return Err("failed to reference the parent node".into());
@@ -372,46 +368,42 @@ impl Table {
         };
         let idtf = srrwt.transformation_operator.clone().into_owned(self)?;
 
-        let entity = ProductEntity {
+        let entity = AssembleEntity {
             matrix: NodeMatrix::Transform(idtf.into()),
-            shapes: Vec::new(),
             attrs: name,
         };
 
         Ok((entity, (parent_idx, child_idx)))
     }
 
-    pub fn step_assy<'a>(&self, assy: &'a StepAssembly<'a>) -> Result<(), StepConvertingError> {
-        let mut product_nodes = HashMap::<u64, ProductEntity>::new();
-        let mut assy_nodes = Vec::<(ProductEntity, (u64, u64))>::new();
+    pub fn step_assy(&self) -> Result<StepAssembly, StepConvertingError> {
+        let mut product_entities = Vec::<ProductEntity>::new();
+        let mut indices_map = HashMap::<u64, usize>::new();
+        let mut assy_nodes = Vec::<(AssembleEntity, (u64, u64))>::new();
         for (&pds_idx, pds) in &self.product_definition_shape {
             let &PlaceHolder::Ref(Name::Entity(idx)) = &pds.definition else {
                 return Err("failed to reference `product_definition_shape.definition`".into());
             };
             if let Some(pd) = self.product_definition.get(&idx) {
-                product_nodes.insert(idx, self.product_node_entity(pds_idx, pd)?);
+                product_entities.push(self.product_node_entity(pds_idx, pd)?);
+                indices_map.insert(idx, product_entities.len() - 1);
             } else if let Some(next_assy) = self.next_assembly_usage_occurrence.get(&idx) {
                 assy_nodes.push(self.assy_node_entity(pds_idx, next_assy)?);
             }
         }
 
-        let node_map: HashMap<_, _> = product_nodes
+        let adjacency = assy_nodes
             .into_iter()
-            .map(|(idx, entity)| (idx, assy.create_node(entity)))
-            .collect();
-        for (entity, (parent_idx, child_idx)) in assy_nodes {
-            let node = assy.create_node(entity);
-            let Some(&parent) = node_map.get(&parent_idx) else {
-                return Err("assembly structure is invalid.".into());
-            };
-            node.add_parent(parent);
-            let Some(&child) = node_map.get(&child_idx) else {
-                return Err("assembly structure is invalid.".into());
-            };
-            node.add_child(child);
-        }
+            .map(|(entity, (from, to))| {
+                let from = *indices_map.get(&from)?;
+                let to = *indices_map.get(&to)?;
+                Some((from, to, entity))
+            })
+            .collect::<Option<Vec<_>>>()
+            .ok_or::<StepConvertingError>("failed to reference `product_definiion_shape`".into())?;
 
-        Ok(())
+        StepAssembly::try_from_adjacency(product_entities, adjacency)
+            .ok_or("maybe the graph has a cycle.".into())
     }
 }
 
