@@ -1,9 +1,0 @@
-cargo run --example tessellate-shape -- ../resources/shape/bottle.json shape-obj/bottle.obj
-cargo run --example tessellate-shape -- ../resources/shape/cube-in-cube.json shape-obj/cube-in-cube.obj
-cargo run --example tessellate-shape -- ../resources/shape/cube.json shape-obj/cube.obj
-cargo run --example tessellate-shape -- ../resources/shape/cylinder.json shape-obj/cylinder.obj
-cargo run --example tessellate-shape -- ../resources/shape/punched-cube-shapeops.json shape-obj/punched-cube-shapeops.obj
-cargo run --example tessellate-shape -- ../resources/shape/punched-cube.json shape-obj/punched-cube.obj
-cargo run --example tessellate-shape -- ../resources/shape/sphere.json shape-obj/sphere.obj
-cargo run --example tessellate-shape -- ../resources/shape/torus-punched-cube.json shape-obj/torus-punched-cube.obj
-cargo run --example tessellate-shape -- ../resources/shape/torus.json shape-obj/torus.obj
