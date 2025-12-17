@@ -11,8 +11,9 @@ fn modeling(radius0: f64, radius1: f64) -> Solid {
         Point3::new(radius0, 0.0, 0.0),
         Vector3::unit_y(),
         Rad(7.0),
+        2,
     );
-    let shell = builder::rsweep(&w, Point3::origin(), Vector3::unit_z(), Rad(7.0));
+    let shell = builder::rsweep(&w, Point3::origin(), Vector3::unit_z(), Rad(7.0), 2);
     Solid::new(vec![shell])
 }
 

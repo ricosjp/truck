@@ -15,6 +15,7 @@ fn main() {
         Point3::origin(),
         Vector3::unit_z(),
         Rad(std::f64::consts::PI / 2.0),
+        2,
     );
     let edge2 = builder::tsweep(wire1.back_vertex().unwrap(), Vector3::new(0.2, -0.2, 0.0));
     let mut wire3 = builder::rsweep(
@@ -22,6 +23,7 @@ fn main() {
         Point3::origin(),
         Vector3::unit_z(),
         Rad(std::f64::consts::PI / 2.0),
+        2,
     );
     let back_edge = wire3.pop_back().unwrap();
     let tmp = Edge::new(back_edge.front(), edge0.front(), back_edge.curve());
