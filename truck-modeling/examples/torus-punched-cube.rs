@@ -20,8 +20,9 @@ fn torus_shell() -> Shell {
         Point3::new(0.5, 0.0, 0.5),
         -Vector3::unit_y(),
         Rad(2.0 * PI),
+        2,
     );
-    builder::rsweep(&w, Point3::origin(), Vector3::unit_z(), Rad(PI / 2.0))
+    builder::rsweep(&w, Point3::origin(), Vector3::unit_z(), Rad(PI / 2.0), 1)
 }
 
 fn find_cube_face(cube_shell: &mut Shell, normal: Vector3) -> Option<&mut Face> {

@@ -111,7 +111,7 @@ fn builder() {
     // cylinder
     let v = builder::vertices([(1.0, 0.0, 1.0), (1.0, 0.0, 0.0)]);
     let e = builder::line(&v[0], &v[1]);
-    let mut shell = builder::rsweep(&e, Point3::origin(), Vector3::unit_z(), Rad(7.0));
+    let mut shell = builder::rsweep(&e, Point3::origin(), Vector3::unit_z(), Rad(7.0), 2);
     let boundaries = shell.extract_boundaries();
     assert_eq!(boundaries.len(), 2);
     shell.push(builder::try_attach_plane([boundaries[0].inverse()]).unwrap());
@@ -123,9 +123,15 @@ fn builder() {
 
     // torus
     let v = builder::vertex((1.5, 0.0, 0.0));
-    let w = builder::rsweep(&v, Point3::new(1.0, 0.0, 0.0), Vector3::unit_y(), Rad(7.0));
+    let w = builder::rsweep(
+        &v,
+        Point3::new(1.0, 0.0, 0.0),
+        Vector3::unit_y(),
+        Rad(7.0),
+        2,
+    );
     let f = builder::try_attach_plane([w]).unwrap();
-    let torus: Solid = builder::rsweep(&f, Point3::origin(), Vector3::unit_z(), Rad(7.0));
+    let torus: Solid = builder::rsweep(&f, Point3::origin(), Vector3::unit_z(), Rad(7.0), 2);
     let mut poly = torus.triangulation(0.1).to_polygon();
     poly.put_together_same_attrs(1.0e-3).remove_unused_attrs();
     assert_eq!(poly.shell_condition(), ShellCondition::Closed);
@@ -140,7 +146,7 @@ fn builder() {
         &builder::vertex((0.5, 0.0, 1.0)),
         &builder::vertex((0.5, 0.0, -1.0)),
     );
-    let hole = builder::rsweep(&line, Point3::origin(), -Vector3::unit_z(), Rad(7.0));
+    let hole = builder::rsweep(&line, Point3::origin(), -Vector3::unit_z(), Rad(7.0), 2);
     let boundary = hole.extract_boundaries();
     assert_eq!(boundary.len(), 2);
     if boundary[0][0].front().point().z < 0.0 {

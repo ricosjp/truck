@@ -9,7 +9,13 @@ fn punched_cube() {
     let cube: Solid = builder::tsweep(&f, Vector3::unit_z());
 
     let v = builder::vertex(Point3::new(0.5, 0.25, -0.5));
-    let w = builder::rsweep(&v, Point3::new(0.5, 0.5, 0.0), Vector3::unit_z(), Rad(7.0));
+    let w = builder::rsweep(
+        &v,
+        Point3::new(0.5, 0.5, 0.0),
+        Vector3::unit_z(),
+        Rad(7.0),
+        3,
+    );
     let f = builder::try_attach_plane(&[w]).unwrap();
     let mut cylinder = builder::tsweep(&f, Vector3::unit_z() * 2.0);
     cylinder.not();
