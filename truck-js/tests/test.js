@@ -21,12 +21,14 @@ Deno.test("rseep torus", async () => {
     [0.75, 0.0, 0.0],
     [0.0, 1.0, 0.0],
     7.0,
+    2,
   );
   const abst = Truck.rsweep(
     w,
     [0.0, 0.0, 0.0],
     [0.0, 0.0, 1.0],
     7.0,
+    2,
   );
   const shell = abst.into_shell();
   const solid = shell.into_solid();

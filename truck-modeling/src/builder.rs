@@ -289,7 +289,7 @@ where
 ///
 /// // make a disk by attaching a plane into circle
 /// let vertex: Vertex = builder::vertex(Point3::new(1.0, 0.0, 0.0));
-/// let circle: Wire = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0));
+/// let circle: Wire = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0), 2);
 /// let disk: Face = builder::try_attach_plane(vec![circle]).unwrap();
 /// # let surface = disk.oriented_surface();
 /// # let normal = surface.normal(0.5, 0.5);
@@ -452,9 +452,11 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 /// # Details
 /// If the absolute value of `angle` is more than 2π rad, then the result is closed shape.
 /// For example, the result of sweeping a disk is a bent cylinder if `angle` is less than 2π rad
-/// and a solid torus if `angle` is more than 2π rad.
+/// and a solid torus if `angle` is no less than 2π rad.
 /// # Remarks
 /// `axis` must be normalized. If not, panics occurs in debug mode.
+/// # Panics
+/// ALways `division > 0` must hold. Moreover, `division >= 2` must hold if `angle` is no less than 2π.
 /// # Examples
 /// ```
 /// // Torus
@@ -462,8 +464,8 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 /// const PI: Rad<f64> = Rad(std::f64::consts::PI);
 ///
 /// let v = builder::vertex(Point3::new(3.0, 0.0, 0.0));
-/// let circle = builder::rsweep(&v, Point3::new(2.0, 0.0, 0.0), Vector3::unit_z(), PI * 2.0);
-/// let torus = builder::rsweep(&circle, Point3::origin(), Vector3::unit_y(), PI * 2.0);
+/// let circle = builder::rsweep(&v, Point3::new(2.0, 0.0, 0.0), Vector3::unit_z(), PI * 2.0, 2);
+/// let torus = builder::rsweep(&circle, Point3::origin(), Vector3::unit_y(), PI * 2.0, 2);
 /// let solid: Solid = Solid::new(vec![torus]);
 /// #
 /// # assert!(solid.is_geometric_consistent());
@@ -492,7 +494,7 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 ///
 /// // Creates the base circle
 /// let v: Vertex = builder::vertex(Point3::new(1.0, 0.0, 4.0));
-/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 4.0), -Vector3::unit_z(), PI * 2.0);
+/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 4.0), -Vector3::unit_z(), PI * 2.0, 2);
 ///
 /// // the result shell of the pipe.
 /// let mut pipe: Shell = Shell::new();
@@ -511,6 +513,7 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 ///     Point3::origin(),
 ///     Vector3::unit_y(),
 ///     PI / 2.0,
+///     2,
 /// );
 /// # let surface = bend_part[0].surface();
 /// pipe.append(&mut bend_part);
@@ -551,17 +554,30 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 /// Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C>,
 /// RevolutedCurve<C>: ToSameGeometry<S>,
 /// ```
-pub fn rsweep<T, Swept, R>(elem: &T, origin: Point3, axis: Vector3, angle: R) -> Swept
+pub fn rsweep<T, Swept, R>(
+    elem: &T,
+    origin: Point3,
+    axis: Vector3,
+    angle: R,
+    division: usize,
+) -> Swept
 where
     T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>,
-    R: Into<Rad<f64>>, {
+    R: Into<Rad<f64>>,
+{
     debug_assert!(axis.magnitude().near(&1.0));
     let angle = angle.into();
     let sign = f64::signum(angle.0);
     if angle.0.abs() >= 2.0 * PI.0 {
-        whole_rsweep(elem, origin, sign * axis)
+        if division < 2 {
+            panic!("division must be 2 or greater for whole rsweep.");
+        }
+        whole_rsweep(elem, origin, sign * axis, division)
     } else {
-        partial_rsweep(elem, origin, sign * axis, angle * sign)
+        if division == 0 {
+            panic!("division must be 1 or greater.");
+        }
+        partial_rsweep(elem, origin, sign * axis, angle * sign, division)
     }
 }
 
@@ -570,8 +586,8 @@ fn partial_rsweep<T: MultiSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>
     origin: Point3,
     axis: Vector3,
     angle: Rad<f64>,
+    division: usize,
 ) -> Swept {
-    let division = if angle.0.abs() < PI.0 { 2 } else { 3 };
     let mat0 = Matrix4::from_translation(-origin.to_vec());
     let mat1 = Matrix4::from_axis_angle(axis, angle / division as f64);
     let mat2 = Matrix4::from_translation(origin.to_vec());
@@ -592,10 +608,10 @@ fn whole_rsweep<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>,
     elem: &T,
     origin: Point3,
     axis: Vector3,
+    division: usize,
 ) -> Swept {
-    const DIVISION: usize = 3;
     let mat0 = Matrix4::from_translation(-origin.to_vec());
-    let mat1 = Matrix4::from_axis_angle(axis, PI * 2.0 / DIVISION as f64);
+    let mat1 = Matrix4::from_axis_angle(axis, PI * 2.0 / division as f64);
     let mat2 = Matrix4::from_translation(origin.to_vec());
     let trsl = mat2 * mat1 * mat0;
     elem.closed_sweep(
@@ -603,10 +619,10 @@ fn whole_rsweep<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>,
         ArcConnector {
             origin,
             axis,
-            angle: PI * 2.0 / DIVISION as f64,
+            angle: PI * 2.0 / division as f64,
         },
         RevoluteConnector { origin, axis },
-        DIVISION,
+        division,
     )
 }
 
@@ -622,8 +638,8 @@ fn whole_rsweep<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>,
 ///     builder::line(&v0, &v1),
 ///     builder::line(&v1, &v2),
 /// ].into();
-/// let cone = builder::cone(&wire, Vector3::unit_y(), Rad(2.0 * PI));
-/// let irregular: Shell = builder::rsweep(&wire, Point3::origin(), Vector3::unit_y(), Rad(2.0 * PI));
+/// let cone = builder::cone(&wire, Vector3::unit_y(), Rad(2.0 * PI), 4);
+/// let irregular: Shell = builder::rsweep(&wire, Point3::origin(), Vector3::unit_y(), Rad(2.0 * PI), 4);
 ///
 /// // the degenerate edge of cone is removed!
 /// assert_eq!(cone[0].boundaries()[0].len(), 3);
@@ -638,7 +654,7 @@ fn whole_rsweep<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>,
 /// // this cone is closed
 /// Solid::new(vec![cone]);
 /// ```
-pub fn cone<C, S, R>(wire: &Wire<C>, axis: Vector3, angle: R) -> Shell<C, S>
+pub fn cone<C, S, R>(wire: &Wire<C>, axis: Vector3, angle: R, division: usize) -> Shell<C, S>
 where
     C: ParametricCurve3D + BoundedCurve + Cut + Invertible + Transformed<Matrix4>,
     S: Invertible,
@@ -666,7 +682,7 @@ where
         wire.push_back(Edge::debug_new(&v0, &v1, curve));
         wire.push_back(Edge::debug_new(&v1, &v2, curve1));
     }
-    let mut shell = rsweep(&wire, pt0, axis, angle);
+    let mut shell = rsweep(&wire, pt0, axis, angle, division);
     let mut edge = shell[0].boundaries()[0][0].clone();
     for i in 0..shell.len() / wire.len() {
         let idx = i * wire.len();
@@ -759,19 +775,25 @@ mod partial_torus {
     #[test]
     fn partial_torus() {
         let v = builder::vertex(Point3::new(0.5, 0.0, 0.0));
-        let w = builder::rsweep(&v, Point3::new(0.75, 0.0, 0.0), Vector3::unit_y(), Rad(7.0));
+        let w = builder::rsweep(
+            &v,
+            Point3::new(0.75, 0.0, 0.0),
+            Vector3::unit_y(),
+            Rad(7.0),
+            2,
+        );
         let face = builder::try_attach_plane(&[w]).unwrap();
         test_shell(&shell![face.clone()], 1.0);
-        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(2.0));
+        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(2.0), 1);
         test_shell(&torus.boundaries()[0], 1.0);
         assert!(torus.is_geometric_consistent());
-        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(5.0));
+        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(5.0), 2);
         test_shell(&torus.boundaries()[0], 1.0);
         assert!(torus.is_geometric_consistent());
-        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-2.0));
+        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-2.0), 1);
         test_shell(&torus.boundaries()[0], -1.0);
         assert!(torus.is_geometric_consistent());
-        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-5.0));
+        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-5.0), 2);
         test_shell(&torus.boundaries()[0], -1.0);
         assert!(torus.is_geometric_consistent());
     }
