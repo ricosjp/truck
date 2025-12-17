@@ -139,7 +139,13 @@ pub fn tsweep(shape: &AbstractShape, vector: &[f64]) -> AbstractShape {
 
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by the rotation.
 #[wasm_bindgen]
-pub fn rsweep(shape: &AbstractShape, origin: &[f64], axis: &[f64], angle: f64) -> AbstractShape {
+pub fn rsweep(
+    shape: &AbstractShape,
+    origin: &[f64],
+    axis: &[f64],
+    angle: f64,
+    division: usize,
+) -> AbstractShape {
     intopt!(Point3, origin, Vector3, axis);
-    derive_all_sweepable!(shape, builder::rsweep, (origin, axis, Rad(angle)))
+    derive_all_sweepable!(shape, builder::rsweep, (origin, axis, Rad(angle), division))
 }
