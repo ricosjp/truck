@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Get more precise part attributions from `Product` and `NextAssemblyUsageOccurrence`.
 - Add the variable `division` to `truck_modeling::builder::rsweep`.
 - Renew DAG structure.
 - Fix spell and replace `Fn` to `FnMut`.

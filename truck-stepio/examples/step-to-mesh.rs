@@ -4,7 +4,7 @@ use clap::Parser;
 use std::path::Path;
 use truck_assembly::assy::*;
 use truck_meshalgo::prelude::*;
-use truck_stepio::r#in::*;
+use truck_stepio::r#in::{convert::*, *};
 use truck_topology::compress::*;
 
 type MeshedCShell = CompressedShell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>;
