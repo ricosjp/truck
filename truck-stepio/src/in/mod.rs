@@ -16,7 +16,7 @@ use truck_assembly::assy::*;
 use truck_geometry::prelude as truck;
 use truck_topology::compress::*;
 
-mod convert;
+pub mod convert;
 /// Geometry parsed from STEP that can be handled by truck
 pub mod step_geometry;
 use step_geometry::*;
@@ -2986,35 +2986,5 @@ impl TryFrom<&ItemDefinedTransformation> for Matrix4 {
         let mat1: Self = (&value.transform_item_1).try_into()?;
         let mat2: Self = (&value.transform_item_2).try_into()?;
         Ok(mat2 * mat1.invert().unwrap())
-    }
-}
-
-#[derive(Clone, Debug, derive_more::From)]
-pub enum NodeMatrix {
-    Identity,
-    Transform(Box<ItemDefinedTransformation>),
-}
-
-pub type ProductEntity = NodeEntity<Vec<u64>, String>;
-pub type AssembleEntity = EdgeEntity<NodeMatrix, String>;
-pub type StepAssembly = Assembly<Vec<u64>, String, NodeMatrix, String>;
-
-impl TryFrom<&NodeMatrix> for Matrix3 {
-    type Error = StepConvertingError;
-    fn try_from(value: &NodeMatrix) -> Result<Self, Self::Error> {
-        match value {
-            NodeMatrix::Identity => Ok(Self::identity()),
-            NodeMatrix::Transform(trans) => (&**trans).try_into(),
-        }
-    }
-}
-
-impl TryFrom<&NodeMatrix> for Matrix4 {
-    type Error = StepConvertingError;
-    fn try_from(value: &NodeMatrix) -> Result<Self, Self::Error> {
-        match value {
-            NodeMatrix::Identity => Ok(Self::identity()),
-            NodeMatrix::Transform(trans) => (&**trans).try_into(),
-        }
     }
 }

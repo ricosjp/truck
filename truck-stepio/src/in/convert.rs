@@ -272,7 +272,46 @@ impl Table {
         }
         Ok(CompressedSolid { boundaries })
     }
+}
 
+#[derive(Clone, Debug, derive_more::From)]
+pub enum NodeMatrix {
+    Identity,
+    Transform(Box<ItemDefinedTransformation>),
+}
+
+#[derive(Clone, Debug)]
+pub struct PartAttrs {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+}
+
+pub type ProductEntity = NodeEntity<Vec<u64>, PartAttrs>;
+pub type AssembleEntity = EdgeEntity<NodeMatrix, PartAttrs>;
+pub type StepAssembly = Assembly<Vec<u64>, PartAttrs, NodeMatrix, PartAttrs>;
+
+impl TryFrom<&NodeMatrix> for Matrix3 {
+    type Error = StepConvertingError;
+    fn try_from(value: &NodeMatrix) -> Result<Self, Self::Error> {
+        match value {
+            NodeMatrix::Identity => Ok(Self::identity()),
+            NodeMatrix::Transform(trans) => (&**trans).try_into(),
+        }
+    }
+}
+
+impl TryFrom<&NodeMatrix> for Matrix4 {
+    type Error = StepConvertingError;
+    fn try_from(value: &NodeMatrix) -> Result<Self, Self::Error> {
+        match value {
+            NodeMatrix::Identity => Ok(Self::identity()),
+            NodeMatrix::Transform(trans) => (&**trans).try_into(),
+        }
+    }
+}
+
+impl Table {
     fn product_node_entity(
         &self,
         pds_idx: u64,
@@ -290,7 +329,11 @@ impl Table {
         let Some(product) = self.product.get(p_idx) else {
             return Err("failed to reference `product`".into());
         };
-        let name = product.name.clone();
+        let attrs = PartAttrs {
+            id: product.id.clone(),
+            name: product.name.clone(),
+            description: product.description.clone(),
+        };
 
         let Some(sdr) = self.shape_definition_representation.values().find(|sdr| {
             let &PlaceHolder::Ref(Name::Entity(idx)) = &sdr.definition else {
@@ -323,7 +366,7 @@ impl Table {
             return Err("failed to reference an element of `shape_representation.items`".into());
         };
 
-        Ok(ProductEntity { shape, attrs: name })
+        Ok(ProductEntity { shape, attrs })
     }
 
     fn assy_node_entity(
@@ -340,7 +383,11 @@ impl Table {
             return Err("failed to reference the child node".into());
         };
 
-        let name = next_assy.name.clone();
+        let attrs = PartAttrs {
+            id: next_assy.id.clone(),
+            name: next_assy.name.clone(),
+            description: next_assy.description.clone(),
+        };
 
         let Some(cdsr) = self
             .context_dependent_shape_representation
@@ -370,7 +417,7 @@ impl Table {
 
         let entity = AssembleEntity {
             matrix: NodeMatrix::Transform(idtf.into()),
-            attrs: name,
+            attrs,
         };
 
         Ok((entity, (parent_idx, child_idx)))
