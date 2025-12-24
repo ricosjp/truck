@@ -18,7 +18,7 @@ vtk = ["vtkio"]
 default = ["analyzers", "filters", "tessellation", "vtk"]
 
 [dependencies]
-derive_more = { version = "2.1.0", features = ["full"] }
+derive_more = { version = "2.1.1", features = ["full"] }
 rustc-hash = "2.1.1"
 array-macro = "2.1.8"
 itertools = "0.14.0"
@@ -34,7 +34,7 @@ vtkio = { version = "0.6.3", optional = true }
 
 [dev-dependencies]
 rand = "0.9.2"
-serde_json = "1.0.145"
+serde_json = "1.0.147"
 proptest = "1.9.0"
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 
