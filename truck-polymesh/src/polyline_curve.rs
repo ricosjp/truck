@@ -40,6 +40,9 @@ impl PolylineCurve<Point2> {
     /// assert!(!hexagon.include(p1));
     /// ```
     pub fn include(&self, c: Point2) -> bool {
+        if self.iter().any(|p| (*p - c).so_small()) {
+            return true;
+        }
         let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
         let r = Vector2::new(f64::cos(t), f64::sin(t));
         self.iter()
@@ -62,7 +65,7 @@ impl PolylineCurve<Point2> {
                 }
             })
             .map(|counter| counter > 0)
-            .unwrap_or(false)
+            .unwrap_or(true)
     }
 }
 
@@ -123,6 +126,9 @@ pub fn include<'a>(
         .into_iter()
         .flat_map(|boundary| boundary.iter().circular_tuple_windows())
         .try_fold(0_i32, move |counter, (p0, p1)| {
+            if (*p0 - c).so_small() {
+                return None;
+            } // Vertex check
             let a = p0 - c;
             let b = p1 - c;
             let s0 = r.x * a.y - r.y * a.x; // v times a
@@ -140,67 +146,91 @@ pub fn include<'a>(
             }
         })
         .map(|counter| counter > 0)
-        .unwrap_or(false)
+        // If the point is on the boundary, the winding number logic might return false (or be undefined).
+        // unique for truck: We treat the boundary as part of the domain (closed set).
+        .unwrap_or(true)
 }
 
 impl<P> AsRef<Vec<P>> for PolylineCurve<P> {
     #[inline(always)]
-    fn as_ref(&self) -> &Vec<P> { &self.0 }
+    fn as_ref(&self) -> &Vec<P> {
+        &self.0
+    }
 }
 
 impl<P> AsMut<Vec<P>> for PolylineCurve<P> {
     #[inline(always)]
-    fn as_mut(&mut self) -> &mut Vec<P> { &mut self.0 }
+    fn as_mut(&mut self) -> &mut Vec<P> {
+        &mut self.0
+    }
 }
 
 impl<P> AsRef<[P]> for PolylineCurve<P> {
     #[inline(always)]
-    fn as_ref(&self) -> &[P] { &self.0 }
+    fn as_ref(&self) -> &[P] {
+        &self.0
+    }
 }
 
 impl<P> AsMut<[P]> for PolylineCurve<P> {
     #[inline(always)]
-    fn as_mut(&mut self) -> &mut [P] { &mut self.0 }
+    fn as_mut(&mut self) -> &mut [P] {
+        &mut self.0
+    }
 }
 
 impl<P> Deref for PolylineCurve<P> {
     type Target = Vec<P>;
     #[inline(always)]
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl<P> DerefMut for PolylineCurve<P> {
     #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 impl<P> From<Vec<P>> for PolylineCurve<P> {
     #[inline(always)]
-    fn from(v: Vec<P>) -> Self { Self(v) }
+    fn from(v: Vec<P>) -> Self {
+        Self(v)
+    }
 }
 
 impl<P> From<PolylineCurve<P>> for Vec<P> {
     #[inline(always)]
-    fn from(v: PolylineCurve<P>) -> Self { v.0 }
+    fn from(v: PolylineCurve<P>) -> Self {
+        v.0
+    }
 }
 
 impl<P> FromIterator<P> for PolylineCurve<P> {
     #[inline(always)]
-    fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self { Self(Vec::from_iter(iter)) }
+    fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
+        Self(Vec::from_iter(iter))
+    }
 }
 
 impl<P> IntoIterator for PolylineCurve<P> {
     type Item = P;
     type IntoIter = std::vec::IntoIter<P>;
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
 }
 
 impl<'a, P> IntoIterator for &'a PolylineCurve<P> {
     type Item = &'a P;
     type IntoIter = std::slice::Iter<'a, P>;
     #[inline(always)]
-    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
 }
 
 impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
@@ -242,7 +272,9 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
         }
     }
     #[inline(always)]
-    fn der2(&self, _: f64) -> P::Diff { P::Diff::zero() }
+    fn der2(&self, _: f64) -> P::Diff {
+        P::Diff::zero()
+    }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
         (
@@ -256,9 +288,13 @@ impl<P: ControlPoint<f64>> BoundedCurve for PolylineCurve<P> {}
 
 impl<P: Clone> Invertible for PolylineCurve<P> {
     #[inline(always)]
-    fn invert(&mut self) { self.reverse(); }
+    fn invert(&mut self) {
+        self.reverse();
+    }
     #[inline(always)]
-    fn inverse(&self) -> Self { Self(self.iter().rev().cloned().collect()) }
+    fn inverse(&self) -> Self {
+        Self(self.iter().rev().cloned().collect())
+    }
 }
 
 impl<P: ControlPoint<f64>> Cut for PolylineCurve<P> {

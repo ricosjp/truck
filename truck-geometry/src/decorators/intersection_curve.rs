@@ -31,7 +31,25 @@ where
     };
     let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(plane_point, hint0, trials))?;
     let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(plane_point, hint1, trials))?;
-    let Vector4 { x, y, z, w } = newton::solve(function, Vector4 { x, y, z, w }, trials).ok()?;
+    let res = newton::solve(function, Vector4 { x, y, z, w }, trials);
+    let Vector4 { x, y, z, w } = match res {
+        Ok(res) => res,
+        Err(_) => {
+            let pt0 = surface0.subs(x, y);
+            let pt1 = surface1.subs(z, w);
+            let n0 = surface0.normal(x, y);
+            let n1 = surface1.normal(z, w);
+            // Newton's method may fail when the Jacobian is singular, which happens
+            // when surfaces are coplanar or tangent.
+            // If the points are close enough and normals are parallel (indicating coplanarity),
+            // we accept the initial guess as a valid intersection point.
+            if pt0.near(&pt1) && n0.cross(n1).magnitude() < TOLERANCE {
+                return Some((pt0, Point2::new(x, y), Point2::new(z, w)));
+            } else {
+                return None;
+            }
+        }
+    };
     let point = surface0.subs(x, y).midpoint(surface1.subs(z, w));
     Some((point, Point2::new(x, y), Point2::new(z, w)))
 }
@@ -48,25 +66,39 @@ impl<C, S0, S1> IntersectionCurve<C, S0, S1> {
     }
     /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
     #[inline(always)]
-    pub fn surface0(&self) -> &S0 { &self.surface0 }
+    pub fn surface0(&self) -> &S0 {
+        &self.surface0
+    }
     /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
     #[inline(always)]
-    pub fn surface1(&self) -> &S1 { &self.surface1 }
+    pub fn surface1(&self) -> &S1 {
+        &self.surface1
+    }
     /// Returns the polyline leading this curve.
     #[inline(always)]
-    pub fn leader(&self) -> &C { &self.leader }
+    pub fn leader(&self) -> &C {
+        &self.leader
+    }
     /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
     #[inline(always)]
-    pub fn surface0_mut(&mut self) -> &mut S0 { &mut self.surface0 }
+    pub fn surface0_mut(&mut self) -> &mut S0 {
+        &mut self.surface0
+    }
     /// This curve is a part of intersection of `self.surface0()` and `self.surface1()`.
     #[inline(always)]
-    pub fn surface1_mut(&mut self) -> &mut S1 { &mut self.surface1 }
+    pub fn surface1_mut(&mut self) -> &mut S1 {
+        &mut self.surface1
+    }
     /// Returns the curve leading this curve.
     #[inline(always)]
-    pub fn leader_mut(&mut self) -> &mut C { &mut self.leader }
+    pub fn leader_mut(&mut self) -> &mut C {
+        &mut self.leader
+    }
     /// destruct `self`.
     #[inline(always)]
-    pub fn destruct(self) -> (S0, S1, C) { (self.surface0, self.surface1, self.leader) }
+    pub fn destruct(self) -> (S0, S1, C) {
+        (self.surface0, self.surface1, self.leader)
+    }
 }
 
 impl<C, S0, S1> IntersectionCurve<C, S0, S1>
@@ -217,7 +249,9 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn subs(&self, t: f64) -> Point3 { self.search_triple(t, 100).unwrap().0 }
+    fn subs(&self, t: f64) -> Point3 {
+        self.search_triple(t, 100).unwrap().0
+    }
     fn der(&self, t: f64) -> Vector3 {
         let IntersectionCurve {
             surface0,
@@ -232,7 +266,9 @@ where
         n * k
     }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Vector3 { self.der_n(2, t) }
+    fn der2(&self, t: f64) -> Vector3 {
+        self.der_n(2, t)
+    }
     #[inline(always)]
     fn der_n(&self, n: usize, t: f64) -> Vector3 {
         match n {
@@ -267,7 +303,9 @@ where
         cders
     }
     #[inline(always)]
-    fn parameter_range(&self) -> ParameterRange { self.leader.parameter_range() }
+    fn parameter_range(&self) -> ParameterRange {
+        self.leader.parameter_range()
+    }
 }
 
 impl<C, S0, S1> BoundedCurve for IntersectionCurve<C, S0, S1>
@@ -308,7 +346,9 @@ where
 }
 
 impl<C: Invertible, S0: Clone, S1: Clone> Invertible for IntersectionCurve<C, S0, S1> {
-    fn invert(&mut self) { self.leader.invert(); }
+    fn invert(&mut self) {
+        self.leader.invert();
+    }
 }
 
 impl<C, S0, S1> SearchParameter<D1> for IntersectionCurve<C, S0, S1>
