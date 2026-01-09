@@ -314,7 +314,7 @@ impl Display for StepHeader {
         let empty_string = [String::new()];
         f.write_fmt(format_args!(
             "HEADER;
-FILE_DESCRIPTION(('Shape Data from Truck'), '2;1');
+FILE_DESCRIPTION(('Shape Data from truck'), '2;1');
 FILE_NAME('{file_name}', '{time_stamp}', {authors}, {organization}, 'truck', '{origination_system}', '{authorization}');
 FILE_SCHEMA(('{schema}'));
 ENDSEC;\n",
