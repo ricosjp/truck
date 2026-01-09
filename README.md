@@ -1,8 +1,8 @@
-# truck - Truck is a rust CAD kernel
+# truck - Truck is a RUst Cad Kernel
 
 ## Overview
 
-Truck is an open-source shape processing kernel by Rust.  
+`truck` is an open-source shape processing kernel by Rust.  
 The broad concept consists of the following three elements.
 
 - Trendy Tools
@@ -88,13 +88,13 @@ visualization of shape and polygon mesh based on platform
 
 ### truck-js
 
-Javascript wrapper of truck.
+Javascript wrapper of `truck`.
 
 ![dependencies](./dependencies.svg)
 
 ## Tutorials
 
-There are some learning resources for using truck v0.6.x series.
+There are some learning resources for using `truck` v0.6.x series.
 
 - [truck-tutorial](https://ricos.gitlab.io/truck-tutorial/v0.6/)
 - [truck-tutorial-ja](https://ricos.gitlab.io/truck-tutorial-ja/v0.6/) (Japanese version)
