@@ -370,9 +370,11 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     fn der2(&self, t: f64) -> P::Diff { self.der_n(2, t) }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
+        // For B-splines, this is [knot[degree], knot[n_cv]], the valid evaluation domain.
+        let deg = self.degree();
         (
-            Bound::Included(self.knot_vec[0]),
-            Bound::Included(self.knot_vec[self.knot_vec.len() - 1]),
+            Bound::Included(self.knot_vec[deg]),
+            Bound::Included(self.knot_vec[self.control_points.len()]),
         )
     }
 }
