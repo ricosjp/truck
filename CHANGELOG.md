@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- In the README, we clarified that the subtitle is the origin of the name “truck,” and changed all instances of the term in the main text to `truck`.
 - Get more precise part attributions from `Product` and `NextAssemblyUsageOccurrence`.
 - Add the variable `division` to `truck_modeling::builder::rsweep`.
 - Renew DAG structure.
@@ -61,7 +62,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2025-12-30
+2026-01-30
 
 ## v0.6
 
