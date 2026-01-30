@@ -44,7 +44,8 @@ where
             // If the points are close enough and normals are parallel (indicating coplanarity),
             // we accept the initial guess as a valid intersection point.
             if pt0.near(&pt1) && n0.cross(n1).magnitude() < TOLERANCE {
-                return Some((pt0, Point2::new(x, y), Point2::new(z, w)));
+                let point = pt0.midpoint(pt1);
+                return Some((point, Point2::new(x, y), Point2::new(z, w)));
             } else {
                 return None;
             }

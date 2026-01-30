@@ -48,6 +48,9 @@ impl PolylineCurve<Point2> {
         self.iter()
             .circular_tuple_windows()
             .try_fold(0_i32, move |counter, (p0, p1)| {
+                if (*p0 - c).so_small() {
+                    return None;
+                } // Vertex check
                 let a = p0 - c;
                 let b = p1 - c;
                 let s0 = r.x * a.y - r.y * a.x; // v times a
