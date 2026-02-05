@@ -8,4 +8,4 @@ rayon = "1.11.0"
 truck-base = { version = "0.5.0", path = "../truck-base" }
 
 [dev-dependencies]
-proptest = { version = "1.9.0", features = ["attr-macro"] }
+proptest = { version = "1.10.0", features = ["attr-macro"] }
