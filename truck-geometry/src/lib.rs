@@ -40,6 +40,9 @@ pub mod specifieds;
 /// Declares some decorators
 pub mod decorators;
 
+/// T-Spline and T-NURCC surface types.
+pub mod t_spline;
+
 /// re-export all modules.
 pub mod prelude {
     use crate::*;
@@ -48,4 +51,5 @@ pub mod prelude {
     pub use errors::*;
     pub use nurbs::*;
     pub use specifieds::*;
+    pub use t_spline::*;
 }

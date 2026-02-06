@@ -256,12 +256,12 @@ where
 
             let make_uv0 = move |&(v, cc): &(f64, ContactCircle)| (v, cc.contact_point0().uv);
             let uv0s = ccs.iter().map(make_uv0).collect::<Vec<_>>();
-            let parameter_curve0 = BSplineCurve::interpole(knot_vec.clone(), uv0s);
+            let parameter_curve0 = BSplineCurve::interpolate(knot_vec.clone(), uv0s);
             let pcurve0 = PCurve::new(&parameter_curve0, fillet_surface.surface0());
 
             let make_uv1 = move |&(v, cc): &(f64, ContactCircle)| (v, cc.contact_point1().uv);
             let uv1s = ccs.iter().map(make_uv1).collect::<Vec<_>>();
-            let parameter_curve1 = BSplineCurve::interpole(knot_vec.clone(), uv1s);
+            let parameter_curve1 = BSplineCurve::interpolate(knot_vec.clone(), uv1s);
             let pcurve1 = PCurve::new(&parameter_curve1, fillet_surface.surface1());
 
             let mut raw_tangent_vecs0 = Vec::new();
@@ -291,9 +291,9 @@ where
                 raw_tangent_vecs1.push((v, vec1.truncate()));
             }
 
-            let tangent_curve0 = BSplineCurve::interpole(knot_vec.clone(), raw_tangent_vecs0);
-            let tangent_curve1 = BSplineCurve::interpole(knot_vec.clone(), raw_tangent_vecs1);
-            let weights_curve = BSplineCurve::interpole(knot_vec.clone(), raw_weights);
+            let tangent_curve0 = BSplineCurve::interpolate(knot_vec.clone(), raw_tangent_vecs0);
+            let tangent_curve1 = BSplineCurve::interpolate(knot_vec.clone(), raw_tangent_vecs1);
+            let weights_curve = BSplineCurve::interpolate(knot_vec.clone(), raw_weights);
             let weights_points = weights_curve.destruct().1;
             let weights = weights_points.into_iter().map(|x| x.x).collect();
 
