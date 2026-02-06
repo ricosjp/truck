@@ -185,7 +185,7 @@ the number of control points: {1}"
     /// ];
     ///
     /// assert!(matches!(
-    ///     BSplineCurve::try_interpole(knot_vec, parameter_points),
+    ///     BSplineCurve::try_interpolate(knot_vec, parameter_points),
     ///     Err(Error::GaussianEliminationFailure),
     /// ));
     /// ```

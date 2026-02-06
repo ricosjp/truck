@@ -2027,7 +2027,7 @@ impl Tmesh<Point3> {
             .map(|row| {
                 let params: Vec<(f64, Point3)> =
                     v_grev.iter().copied().zip(row.iter().copied()).collect();
-                BSplineCurve::try_interpole(v_knots.clone(), params)
+                BSplineCurve::try_interpolate(v_knots.clone(), params)
                     .expect("V-direction interpolation failed")
             })
             .collect();
@@ -2047,7 +2047,7 @@ impl Tmesh<Point3> {
                     .copied()
                     .zip(intermediate.iter().map(|row| row[j]))
                     .collect();
-                let col_curve = BSplineCurve::try_interpole(u_knots.clone(), params)
+                let col_curve = BSplineCurve::try_interpolate(u_knots.clone(), params)
                     .expect("U-direction interpolation failed");
                 col_curve.control_points().to_vec()
             })
