@@ -203,14 +203,14 @@ proptest! {
     }
 }
 
-fn interpole_bezier(points: &[Vector4]) -> BSplineCurve<Vector4> {
+fn interpolate_bezier(points: &[Vector4]) -> BSplineCurve<Vector4> {
     let n = points.len() - 1;
     let parameter_points = points
         .iter()
         .enumerate()
         .map(|(i, p)| (i as f64 / n as f64, *p))
         .collect::<Vec<_>>();
-    BSplineCurve::interpole(KnotVec::bezier_knot(n), parameter_points)
+    BSplineCurve::interpolate(KnotVec::bezier_knot(n), parameter_points)
 }
 
 fn composite_line_bezier(
@@ -222,7 +222,7 @@ fn composite_line_bezier(
     let points = (0..=degree)
         .map(|i| curve.subs(i as f64 / degree as f64))
         .collect::<Vec<_>>();
-    interpole_bezier(&points)
+    interpolate_bezier(&points)
 }
 
 #[derive(Clone, Copy, Debug)]
