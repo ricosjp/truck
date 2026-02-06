@@ -228,7 +228,7 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
         true
     }
 
-    /// Interpole by B-spline curve with the knot vector `knot_vec`.
+    /// Interpolate by B-spline curve with the knot vector `knot_vec`.
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
@@ -240,13 +240,13 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     ///     (0.4, Point3::new(-3.0, 5.0, 6.0)),
     ///     (1.0, Point3::new(6.0, 2.0, 12.0)),
     /// ];
-    /// let curve = BSplineCurve::try_interpole(knot_vec, parameter_points.clone()).unwrap();
+    /// let curve = BSplineCurve::try_interpolate(knot_vec, parameter_points.clone()).unwrap();
     ///
     /// parameter_points.into_iter().for_each(|(t, p)| {
     ///     assert_near!(curve.subs(t), p);
     /// });
     /// ```
-    pub fn try_interpole(
+    pub fn try_interpolate(
         knot_vec: KnotVec,
         mut parameter_points: impl AsMut<[(f64, P)]>,
     ) -> Result<Self> {
@@ -281,9 +281,24 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
         Self::try_new(knot_vec, control_points)
     }
 
-    /// Interpole by B-spline curve with the knot vector `knot_vec`. cf) [`BSplineCurve::try_interpole`].
+    /// Interpolate by B-spline curve with the knot vector `knot_vec`. cf) [`BSplineCurve::try_interpolate`].
+    pub fn interpolate(knot_vec: KnotVec, parameter_points: impl AsMut<[(f64, P)]>) -> Self {
+        Self::try_interpolate(knot_vec, parameter_points).unwrap()
+    }
+
+    /// Deprecated: use [`BSplineCurve::try_interpolate`] instead.
+    #[deprecated(since = "0.6.0", note = "renamed to `try_interpolate`")]
+    pub fn try_interpole(
+        knot_vec: KnotVec,
+        parameter_points: impl AsMut<[(f64, P)]>,
+    ) -> Result<Self> {
+        Self::try_interpolate(knot_vec, parameter_points)
+    }
+
+    /// Deprecated: use [`BSplineCurve::interpolate`] instead.
+    #[deprecated(since = "0.6.0", note = "renamed to `interpolate`")]
     pub fn interpole(knot_vec: KnotVec, parameter_points: impl AsMut<[(f64, P)]>) -> Self {
-        Self::try_interpole(knot_vec, parameter_points).unwrap()
+        Self::interpolate(knot_vec, parameter_points)
     }
 }
 
@@ -325,7 +340,7 @@ where P: ControlPoint<f64> + MetricSpace<Metric = f64> + HashGen<f64>
                     (t, curve.subs(t))
                 })
                 .collect::<Vec<_>>();
-            let bsp = Self::try_interpole(knot_vec, parameter_points).ok()?;
+            let bsp = Self::try_interpolate(knot_vec, parameter_points).ok()?;
             let is_approx = (0..len).all(|i| {
                 let gen = *bsp.control_point(i);
                 let rat = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
