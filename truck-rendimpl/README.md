@@ -18,8 +18,6 @@ In each frame, the NURBS surface is divided into mesh.
 
 ### collision-sphere
 
-
-
 ### material-samples
 
 Material Samples

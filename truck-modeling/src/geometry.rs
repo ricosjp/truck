@@ -199,12 +199,10 @@ impl IncludeCurve<Curve> for Surface {
                 Curve::NurbsCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
-            Surface::TSplineSurface(surface) => {
-                curve.lift_up().control_points().iter().all(|v| {
-                    let p = v.to_point();
-                    surface.search_parameter(p, None, 1).is_some()
-                })
-            }
+            Surface::TSplineSurface(surface) => curve.lift_up().control_points().iter().all(|v| {
+                let p = v.to_point();
+                surface.search_parameter(p, None, 1).is_some()
+            }),
             Surface::RevolutedCurve(surface) => match surface.entity_curve() {
                 &Curve::Line(curve) => {
                     self.include(&Curve::BSplineCurve(BSplineCurve::from(curve)))
