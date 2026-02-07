@@ -2,8 +2,7 @@ use super::*;
 use crate::errors::Error;
 
 impl<P> Tnurcc<P>
-where
-    P: Debug,
+where P: Debug
 {
     /// Creates a new `Tnurcc` instance. `points` is a vector containing the control points in the mesh, and `faces`
     /// describes the connections of the mesh. `faces` must described every face in the mesh, as no `faces` will be
@@ -229,11 +228,32 @@ where
     pub fn new(points: Vec<P>, faces: Vec<[(usize, Vec<(usize, f64)>); 4]>) -> Self {
         Tnurcc::try_new(points, faces).unwrap()
     }
+
+    /// Creates a new `Tnurcc` from a quad mesh. All knot intervals are set to 1.0.
+    /// The mesh must be closed (every edge shared by exactly 2 faces).
+    /// Face winding order should be consistent (counter-clockwise recommended).
+    ///
+    /// # Returns
+    /// - Any error from [`Tnurcc::try_new`] if the mesh is malformed.
+    /// - `Ok(Tnurcc)` on success.
+    pub fn from_quad_mesh(positions: Vec<P>, quad_faces: &[[usize; 4]]) -> Result<Self> {
+        let faces = quad_faces
+            .iter()
+            .map(|face| {
+                [
+                    (face[0], vec![(face[1], 1.0)]),
+                    (face[1], vec![(face[2], 1.0)]),
+                    (face[2], vec![(face[3], 1.0)]),
+                    (face[3], vec![(face[0], 1.0)]),
+                ]
+            })
+            .collect();
+        Tnurcc::try_new(positions, faces)
+    }
 }
 
 impl<P> Tnurcc<P>
-where
-    P: ControlPoint<f64>,
+where P: ControlPoint<f64>
 {
     /// Performs the global subdivide algorithm required by \[Sederberg et al. 2003\] and described
     /// in \[Sederberg et al. 1998\], dubbed "refinement".
@@ -610,8 +630,7 @@ where
                         // Assign corners
                         new_faces[perim_i].write().corners[2] =
                             Some(Arc::clone(&edge.read().origin));
-                        new_faces[perim_i].write().corners[3] =
-                            Some(Arc::clone(&edge.read().dest));
+                        new_faces[perim_i].write().corners[3] = Some(Arc::clone(&edge.read().dest));
 
                         new_faces[next_perim_index].write().corners[1] =
                             Some(Arc::clone(&edge.read().dest));
@@ -639,8 +658,7 @@ where
                             Some(Arc::clone(&edge_conjugates[perim_i]));
 
                         // Assign faces
-                        edge.write().face_right =
-                            Some(Arc::clone(&new_faces[next_perim_index]));
+                        edge.write().face_right = Some(Arc::clone(&new_faces[next_perim_index]));
                         edge_conjugates[perim_i].write().face_right =
                             Some(Arc::clone(&new_faces[perim_i]));
                     }
@@ -732,14 +750,12 @@ where
 }
 
 impl<P> Clone for Tnurcc<P>
-where
-    P: Clone,
+where P: Clone
 {
     fn clone(&self) -> Self {
         let mut new_control_points = Vec::new();
         let mut new_faces = Vec::new();
         let mut new_edges = Vec::new();
-        
 
         // Clone control points (need still to set the reference edge)
         for p in self.control_points.iter() {
@@ -831,13 +847,15 @@ where
         // Set edge connections
         new_edges.iter().for_each(|e| {
             let index = e.read().index;
-            e.write().connections.iter_mut().enumerate().for_each(|(i, c)| {
-                *c = self.edges[index]
-                    .read()
-                    .connections[i]
-                    .as_ref()
-                    .map(|map_e| Arc::clone(&new_edges[map_e.read().index]));
-            });
+            e.write()
+                .connections
+                .iter_mut()
+                .enumerate()
+                .for_each(|(i, c)| {
+                    *c = self.edges[index].read().connections[i]
+                        .as_ref()
+                        .map(|map_e| Arc::clone(&new_edges[map_e.read().index]));
+                });
         });
 
         let new_extraordinary_control_points = self
@@ -867,13 +885,324 @@ impl<P> Drop for Tnurcc<P> {
         }
 
         for edge in self.edges.iter() {
-            edge.write()
-                .connections
-                .iter_mut()
-                .for_each(|o| *o = None);
+            edge.write().connections.iter_mut().for_each(|o| *o = None);
             edge.write().face_left = None;
             edge.write().face_right = None;
         }
+    }
+}
+
+impl<P> Tnurcc<P>
+where P: ControlPoint<f64> + Debug + Clone
+{
+    /// Converts the T-NURCC to a T-mesh by applying CC subdivision and extracting
+    /// a parametric surface patch. The patch is constructed by unfolding the mesh
+    /// from the first face outward via BFS, assigning parametric coordinates based
+    /// on edge knot intervals. Coordinates are normalized to `[0, 1]`.
+    ///
+    /// # Arguments
+    /// * `subdivision_levels` - Number of CC subdivision iterations before extraction.
+    ///
+    /// # Returns
+    /// - `Ok(Tmesh)` on success.
+    /// - Error if subdivision or mesh construction fails.
+    pub fn to_tmesh(&self, subdivision_levels: usize) -> Result<Tmesh<P>> {
+        use std::collections::{HashMap, HashSet, VecDeque};
+
+        let mut tnurcc = self.clone();
+        for _ in 0..subdivision_levels {
+            tnurcc.global_subdivide()?;
+        }
+
+        if tnurcc.faces.is_empty() {
+            return Err(Error::TmeshMalformedMesh);
+        }
+
+        // Phase 1: BFS to assign (s, t) knot coordinates to each vertex.
+        let mut vertex_coords: HashMap<usize, (f64, f64)> = HashMap::new();
+        let mut visited_faces: HashSet<usize> = HashSet::new();
+        let mut queue: VecDeque<Arc<RwLock<TnurccFace<P>>>> = VecDeque::new();
+
+        // Seed from face 0. CCW vertex order: V0(bottom-left), V1(bottom-right),
+        // V2(top-right), V3(top-left). Edge 0 is horizontal, edge 1 is vertical.
+        let seed = Arc::clone(&tnurcc.faces[0]);
+        let seed_verts = TnurccFace::boundry_verticies(Arc::clone(&seed));
+        let seed_edges = TnurccFace::border_edges(Arc::clone(&seed));
+        if seed_verts.len() != 4 || seed_edges.len() != 4 {
+            return Err(Error::TmeshMalformedMesh);
+        }
+
+        let ki_s = seed_edges[0].read().knot_interval;
+        let ki_t = seed_edges[1].read().knot_interval;
+
+        vertex_coords.insert(seed_verts[0].read().index, (0.0, 0.0));
+        vertex_coords.insert(seed_verts[1].read().index, (ki_s, 0.0));
+        vertex_coords.insert(seed_verts[2].read().index, (ki_s, ki_t));
+        vertex_coords.insert(seed_verts[3].read().index, (0.0, ki_t));
+        visited_faces.insert(seed.read().index);
+
+        // Enqueue seed's neighbors.
+        for edge in &seed_edges {
+            if let Some(side) = edge.read().face_side(Arc::clone(&seed)) {
+                let other = match side {
+                    TnurccFaceSide::Left => edge.read().face_right.as_ref().map(Arc::clone),
+                    TnurccFaceSide::Right => edge.read().face_left.as_ref().map(Arc::clone),
+                };
+                if let Some(f) = other {
+                    if !visited_faces.contains(&f.read().index) {
+                        queue.push_back(f);
+                    }
+                }
+            }
+        }
+
+        // BFS with safety limit.
+        let max_iterations = tnurcc.faces.len() * 3;
+        let mut iterations = 0;
+        while let Some(face) = queue.pop_front() {
+            iterations += 1;
+            if iterations > max_iterations {
+                break;
+            }
+
+            let face_index = face.read().index;
+            if visited_faces.contains(&face_index) {
+                continue;
+            }
+
+            let verts = TnurccFace::boundry_verticies(Arc::clone(&face));
+            let edges = TnurccFace::border_edges(Arc::clone(&face));
+            if verts.len() != 4 || edges.len() != 4 {
+                continue;
+            }
+
+            // Find edge k where V_k and V_{(k+1)%4} both have known coordinates.
+            let known_k = (0..4).find(|&k| {
+                let vi = verts[k].read().index;
+                let vj = verts[(k + 1) % 4].read().index;
+                vertex_coords.contains_key(&vi) && vertex_coords.contains_key(&vj)
+            });
+
+            let k = match known_k {
+                Some(k) => k,
+                None => {
+                    queue.push_back(face);
+                    continue;
+                }
+            };
+
+            let pos_k = vertex_coords[&verts[k].read().index];
+            let pos_next = vertex_coords[&verts[(k + 1) % 4].read().index];
+            let delta = (pos_next.0 - pos_k.0, pos_next.1 - pos_k.1);
+
+            // 90 degree CCW rotation of the delta direction (unit vector).
+            let perp = if delta.0.abs() > delta.1.abs() {
+                (0.0, if delta.0 > 0.0 { 1.0 } else { -1.0 })
+            } else {
+                (if delta.1 > 0.0 { -1.0 } else { 1.0 }, 0.0)
+            };
+
+            // Compute the two unknown vertices using perpendicular edge knot intervals.
+            let ki_k1 = edges[(k + 1) % 4].read().knot_interval;
+            let ki_k3 = edges[(k + 3) % 4].read().knot_interval;
+
+            let pos_k2 = (pos_next.0 + perp.0 * ki_k1, pos_next.1 + perp.1 * ki_k1);
+            let pos_k3 = (pos_k.0 + perp.0 * ki_k3, pos_k.1 + perp.1 * ki_k3);
+
+            vertex_coords
+                .entry(verts[(k + 2) % 4].read().index)
+                .or_insert(pos_k2);
+            vertex_coords
+                .entry(verts[(k + 3) % 4].read().index)
+                .or_insert(pos_k3);
+
+            visited_faces.insert(face_index);
+
+            // Enqueue this face's unvisited neighbors.
+            for edge in &edges {
+                if let Some(side) = edge.read().face_side(Arc::clone(&face)) {
+                    let other = match side {
+                        TnurccFaceSide::Left => edge.read().face_right.as_ref().map(Arc::clone),
+                        TnurccFaceSide::Right => edge.read().face_left.as_ref().map(Arc::clone),
+                    };
+                    if let Some(f) = other {
+                        if !visited_faces.contains(&f.read().index) {
+                            queue.push_back(f);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Phase 2: Normalize coordinates to [0, 1].
+        let (min_s, max_s, min_t, max_t) = vertex_coords.values().fold(
+            (
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+            ),
+            |(min_s, max_s, min_t, max_t), &(s, t)| {
+                (min_s.min(s), max_s.max(s), min_t.min(t), max_t.max(t))
+            },
+        );
+        let range_s = max_s - min_s;
+        let range_t = max_t - min_t;
+
+        // Phase 3: Build T-mesh control points with edge conditions everywhere.
+        let mut tmesh_points: HashMap<usize, Arc<RwLock<TmeshControlPoint<P>>>> = HashMap::new();
+        let mut control_points_vec: Vec<Arc<RwLock<TmeshControlPoint<P>>>> = Vec::new();
+
+        for cp in &tnurcc.control_points {
+            let idx = cp.read().index;
+            if let Some(&(s, t)) = vertex_coords.get(&idx) {
+                let norm_s = if range_s.so_small() {
+                    0.5
+                } else {
+                    (s - min_s) / range_s
+                };
+                let norm_t = if range_t.so_small() {
+                    0.5
+                } else {
+                    (t - min_t) / range_t
+                };
+
+                let tcp = TmeshControlPoint {
+                    point: cp.read().point,
+                    connections: [
+                        Some((None, 0.0)),
+                        Some((None, 0.0)),
+                        Some((None, 0.0)),
+                        Some((None, 0.0)),
+                    ],
+                    knot_coordinates: (norm_s, norm_t),
+                };
+                let arc = Arc::new(RwLock::new(tcp));
+                tmesh_points.insert(idx, Arc::clone(&arc));
+                control_points_vec.push(arc);
+            }
+        }
+
+        // Phase 4: Connect adjacent points based on T-NURCC edges.
+        for edge in &tnurcc.edges {
+            let origin_idx = edge.read().origin.read().index;
+            let dest_idx = edge.read().dest.read().index;
+
+            let origin_pos = vertex_coords.get(&origin_idx);
+            let dest_pos = vertex_coords.get(&dest_idx);
+
+            if let (Some(&(os, ot)), Some(&(ds, dt))) = (origin_pos, dest_pos) {
+                let delta_s = ds - os;
+                let delta_t = dt - ot;
+
+                // Skip diagonal/degenerate edges (seam artifacts).
+                if (delta_s.abs().so_small() && delta_t.abs().so_small())
+                    || (!delta_s.so_small() && !delta_t.so_small())
+                {
+                    continue;
+                }
+
+                if let (Some(origin_tcp), Some(dest_tcp)) = (
+                    tmesh_points.get(&origin_idx).map(Arc::clone),
+                    tmesh_points.get(&dest_idx).map(Arc::clone),
+                ) {
+                    let (dir, ki) = if delta_s.abs() > delta_t.abs() {
+                        let ki = if range_s.so_small() {
+                            0.0
+                        } else {
+                            delta_s.abs() / range_s
+                        };
+                        let d = if delta_s > 0.0 {
+                            TmeshDirection::Right
+                        } else {
+                            TmeshDirection::Left
+                        };
+                        (d, ki)
+                    } else {
+                        let ki = if range_t.so_small() {
+                            0.0
+                        } else {
+                            delta_t.abs() / range_t
+                        };
+                        let d = if delta_t > 0.0 {
+                            TmeshDirection::Up
+                        } else {
+                            TmeshDirection::Down
+                        };
+                        (d, ki)
+                    };
+
+                    // Set point connections, only replacing edge conditions.
+                    {
+                        let mut ob = origin_tcp.write();
+                        if ob.connections[dir as usize]
+                            .as_ref()
+                            .is_some_and(|c| c.0.is_none())
+                        {
+                            ob.connections[dir as usize] = Some((Some(Arc::clone(&dest_tcp)), ki));
+                        }
+                    }
+                    {
+                        let mut db = dest_tcp.write();
+                        if db.connections[dir.flip() as usize]
+                            .as_ref()
+                            .is_some_and(|c| c.0.is_none())
+                        {
+                            db.connections[dir.flip() as usize] =
+                                Some((Some(Arc::clone(&origin_tcp)), ki));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Phase 5: Set edge condition weights for boundary vertices.
+        for tcp in &control_points_vec {
+            let mut borrow = tcp.write();
+            for dir in TmeshDirection::iter() {
+                let di = dir as usize;
+                let is_edge_with_zero_weight = borrow.connections[di]
+                    .as_ref()
+                    .is_some_and(|c| c.0.is_none() && c.1 == 0.0);
+                if !is_edge_with_zero_weight {
+                    continue;
+                }
+
+                // Use the nearest point connection's knot interval as weight.
+                let weight = [dir.flip(), dir.clockwise(), dir.anti_clockwise()]
+                    .iter()
+                    .filter_map(|&d| {
+                        borrow.connections[d as usize].as_ref().and_then(|c| {
+                            if c.0.is_some() {
+                                Some(c.1)
+                            } else {
+                                None
+                            }
+                        })
+                    })
+                    .next()
+                    .unwrap_or(if dir.horizontal() {
+                        if range_s.so_small() {
+                            0.1
+                        } else {
+                            ki_s / range_s
+                        }
+                    } else {
+                        if range_t.so_small() {
+                            0.1
+                        } else {
+                            ki_t / range_t
+                        }
+                    });
+
+                borrow.connections[di] = Some((None, weight));
+            }
+        }
+
+        Ok(Tmesh {
+            control_points: control_points_vec,
+            knot_vectors: RwLock::new(None),
+        })
     }
 }
 
@@ -956,13 +1285,10 @@ mod tests {
             // Incedentally verifies that the control point is referenced by the edge
             let iter = TnurccAcwPointIter::from_edge(
                 Arc::clone(&point_edge),
-                point_edge
-                    .read()
-                    .point_end(Arc::clone(&p))
-                    .expect(&format!(
-                        "Point {} should be a side of its incoming edge",
-                        p.read().index,
-                    )),
+                point_edge.read().point_end(Arc::clone(&p)).expect(&format!(
+                    "Point {} should be a side of its incoming edge",
+                    p.read().index,
+                )),
             );
             let next = iter.last().expect(&format!(
                 "Point {} edge-rotation iterator should wrap around and end.",
@@ -988,13 +1314,10 @@ mod tests {
             // recorded valence of the point.
             let iter = TnurccAcwPointIter::from_edge(
                 Arc::clone(&point_edge),
-                point_edge
-                    .read()
-                    .point_end(Arc::clone(&p))
-                    .expect(&format!(
-                        "Point {} should be a side of its incoming edge",
-                        p.read().index,
-                    )),
+                point_edge.read().point_end(Arc::clone(&p)).expect(&format!(
+                    "Point {} should be a side of its incoming edge",
+                    p.read().index,
+                )),
             );
             let acw_calc_valence = iter.count();
             assert!(
@@ -1339,9 +1662,110 @@ mod tests {
         surface
             .global_subdivide()
             .expect("Cloned double subdivide should succeed");
-        
+
         verify_tnurcc_control_points(&surface);
         verify_tnurcc_edges(&surface);
         verify_tnurcc_faces(&surface);
+    }
+
+    #[test]
+    fn t_nurcc_test_from_quad_mesh_cube() {
+        let points = vec![
+            Point3::from((0.0, 0.0, 0.0)),
+            Point3::from((0.0, 0.0, 1.0)),
+            Point3::from((1.0, 0.0, 1.0)),
+            Point3::from((1.0, 0.0, 0.0)),
+            Point3::from((0.0, 1.0, 0.0)),
+            Point3::from((0.0, 1.0, 1.0)),
+            Point3::from((1.0, 1.0, 1.0)),
+            Point3::from((1.0, 1.0, 0.0)),
+        ];
+        // Same winding as make_cube().
+        let faces = [
+            [0, 3, 2, 1],
+            [0, 1, 5, 4],
+            [1, 2, 6, 5],
+            [4, 5, 6, 7],
+            [2, 3, 7, 6],
+            [0, 4, 7, 3],
+        ];
+        let tnurcc = Tnurcc::from_quad_mesh(points, &faces);
+        assert!(
+            tnurcc.is_ok(),
+            "from_quad_mesh should succeed for a cube: {}",
+            tnurcc.err().unwrap()
+        );
+        let tnurcc = tnurcc.unwrap();
+        assert_eq!(tnurcc.control_points.len(), 8);
+        assert_eq!(tnurcc.faces.len(), 6);
+        assert_eq!(tnurcc.edges.len(), 12);
+
+        verify_tnurcc_control_points(&tnurcc);
+        verify_tnurcc_edges(&tnurcc);
+        verify_tnurcc_faces(&tnurcc);
+    }
+
+    #[test]
+    fn t_nurcc_test_from_quad_mesh_open_mesh_rejected() {
+        // An open mesh (not all edges shared by 2 faces) should be rejected.
+        let points = vec![
+            Point3::from((0.0, 0.0, 0.0)),
+            Point3::from((1.0, 0.0, 0.0)),
+            Point3::from((1.0, 1.0, 0.0)),
+            Point3::from((0.0, 1.0, 0.0)),
+        ];
+        // Single quad face — edges have only 1 face each.
+        let faces = [[0, 1, 2, 3]];
+        let result = Tnurcc::from_quad_mesh(points, &faces);
+        assert!(
+            result.is_err(),
+            "Open mesh (single face) should be rejected"
+        );
+    }
+
+    #[test]
+    fn t_nurcc_test_subdivision_point_count() {
+        let mut tnurcc = make_cube().unwrap();
+        // Before: V=8, E=12, F=6.
+        tnurcc
+            .global_subdivide()
+            .expect("Subdivision should succeed");
+        // After 1 CC level: V' = V + E + F = 8 + 12 + 6 = 26.
+        assert_eq!(tnurcc.control_points.len(), 26);
+        assert_eq!(tnurcc.edges.len(), 48);
+        assert_eq!(tnurcc.faces.len(), 24);
+    }
+
+    #[test]
+    fn t_nurcc_test_to_tmesh_cube() {
+        let tnurcc = make_cube().unwrap();
+        let tmesh = tnurcc.to_tmesh(2);
+        assert!(
+            tmesh.is_ok(),
+            "to_tmesh should succeed: {}",
+            tmesh.err().unwrap()
+        );
+        let tmesh = tmesh.unwrap();
+
+        // After 2 subdivisions: V = 98 total, all should be included.
+        assert!(
+            tmesh.control_points().len() > 20,
+            "T-mesh should have many control points, got {}",
+            tmesh.control_points().len()
+        );
+
+        // Verify subs() produces valid (non-NaN) points at several locations.
+        for &(u, v) in &[(0.25, 0.25), (0.5, 0.5), (0.75, 0.75), (0.1, 0.9)] {
+            let p: Point3 = tmesh
+                .subs(u, v)
+                .unwrap_or_else(|e| panic!("subs({}, {}) failed: {}", u, v, e));
+            assert!(
+                !p.x.is_nan() && !p.y.is_nan() && !p.z.is_nan(),
+                "subs({}, {}) returned NaN: {:?}",
+                u,
+                v,
+                p
+            );
+        }
     }
 }

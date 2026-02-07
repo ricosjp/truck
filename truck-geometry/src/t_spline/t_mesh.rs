@@ -2,6 +2,158 @@ use super::*;
 use crate::errors::Error;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::panic::{catch_unwind, AssertUnwindSafe};
+
+/// Evaluates the cubic B-spline basis function at parameter `u` for knot vector `a` (length 5).
+///
+/// The basis function is a piecewise cubic polynomial with 4 segments over `[a[0], a[4])`.
+/// Returns 0 outside this range.
+fn basis_function(u: f64, a: &[f64]) -> f64 {
+    if u < a[0] || a[4] <= u {
+        return 0.0;
+    }
+
+    if u < a[1] {
+        let d = u - a[0];
+        d * d * d / ((a[3] - a[0]) * (a[2] - a[0]) * (a[1] - a[0]))
+    } else if u < a[2] {
+        let scalar = 1.0 / (a[2] - a[1]);
+        let terms: [(usize, usize, usize, usize, usize, usize, usize); 3] = [
+            (0, 0, 2, 3, 0, 2, 0),
+            (0, 1, 3, 3, 0, 3, 1),
+            (1, 1, 4, 4, 1, 3, 1),
+        ];
+        scalar
+            * terms
+                .iter()
+                .fold(0.0, |sum, &(n0, n1, n2, d0, d1, d2, d3)| {
+                    sum + ((u - a[n0]) * (u - a[n1]) * (a[n2] - u))
+                        / ((a[d0] - a[d1]) * (a[d2] - a[d3]))
+                })
+    } else if u < a[3] {
+        let scalar = 1.0 / (a[3] - a[2]);
+        let terms: [(usize, usize, usize, usize, usize, usize, usize); 3] = [
+            (0, 3, 3, 3, 0, 3, 1),
+            (1, 4, 3, 4, 1, 3, 1),
+            (2, 4, 4, 4, 1, 4, 2),
+        ];
+        scalar
+            * terms
+                .iter()
+                .fold(0.0, |sum, &(n0, n1, n2, d0, d1, d2, d3)| {
+                    sum + ((u - a[n0]) * (a[n1] - u) * (a[n2] - u))
+                        / ((a[d0] - a[d1]) * (a[d2] - a[d3]))
+                })
+    } else {
+        let d = a[4] - u;
+        d * d * d / ((a[4] - a[1]) * (a[4] - a[2]) * (a[4] - a[3]))
+    }
+}
+
+/// Evaluates the 1st derivative of the cubic B-spline basis function at parameter `u`.
+fn basis_function_d1(u: f64, a: &[f64]) -> f64 {
+    if u < a[0] || a[4] <= u {
+        return 0.0;
+    }
+
+    if u < a[1] {
+        // N = (u-a0)^3 / D => N' = 3(u-a0)^2 / D.
+        let d = u - a[0];
+        3.0 * d * d / ((a[3] - a[0]) * (a[2] - a[0]) * (a[1] - a[0]))
+    } else if u < a[2] {
+        // Segment 2: sum of terms (u-ai)(u-aj)(ak-u) / denom, times scalar.
+        // Each term is a product of 3 linear factors; derivative via product rule.
+        let scalar = 1.0 / (a[2] - a[1]);
+        let terms: [(usize, usize, usize, usize, usize, usize, usize); 3] = [
+            (0, 0, 2, 3, 0, 2, 0),
+            (0, 1, 3, 3, 0, 3, 1),
+            (1, 1, 4, 4, 1, 3, 1),
+        ];
+        scalar
+            * terms
+                .iter()
+                .fold(0.0, |sum, &(n0, n1, n2, d0, d1, d2, d3)| {
+                    // f = (u-a[n0])(u-a[n1])(a[n2]-u), f' = product rule.
+                    let f0 = u - a[n0];
+                    let f1 = u - a[n1];
+                    let f2 = a[n2] - u;
+                    let denom = (a[d0] - a[d1]) * (a[d2] - a[d3]);
+                    sum + (f1 * f2 + f0 * f2 - f0 * f1) / denom
+                })
+    } else if u < a[3] {
+        let scalar = 1.0 / (a[3] - a[2]);
+        let terms: [(usize, usize, usize, usize, usize, usize, usize); 3] = [
+            (0, 3, 3, 3, 0, 3, 1),
+            (1, 4, 3, 4, 1, 3, 1),
+            (2, 4, 4, 4, 1, 4, 2),
+        ];
+        scalar
+            * terms
+                .iter()
+                .fold(0.0, |sum, &(n0, n1, n2, d0, d1, d2, d3)| {
+                    // f = (u-a[n0])(a[n1]-u)(a[n2]-u), f' = product rule.
+                    let f0 = u - a[n0];
+                    let f1 = a[n1] - u;
+                    let f2 = a[n2] - u;
+                    let denom = (a[d0] - a[d1]) * (a[d2] - a[d3]);
+                    sum + (f1 * f2 - f0 * f2 - f0 * f1) / denom
+                })
+    } else {
+        // N = (a4-u)^3 / D => N' = -3(a4-u)^2 / D.
+        let d = a[4] - u;
+        -3.0 * d * d / ((a[4] - a[1]) * (a[4] - a[2]) * (a[4] - a[3]))
+    }
+}
+
+/// Evaluates the 2nd derivative of the cubic B-spline basis function at parameter `u`.
+fn basis_function_d2(u: f64, a: &[f64]) -> f64 {
+    if u < a[0] || a[4] <= u {
+        return 0.0;
+    }
+
+    if u < a[1] {
+        // N'' = 6(u-a0) / D.
+        6.0 * (u - a[0]) / ((a[3] - a[0]) * (a[2] - a[0]) * (a[1] - a[0]))
+    } else if u < a[2] {
+        let scalar = 1.0 / (a[2] - a[1]);
+        let terms: [(usize, usize, usize, usize, usize, usize, usize); 3] = [
+            (0, 0, 2, 3, 0, 2, 0),
+            (0, 1, 3, 3, 0, 3, 1),
+            (1, 1, 4, 4, 1, 3, 1),
+        ];
+        scalar
+            * terms
+                .iter()
+                .fold(0.0, |sum, &(n0, n1, n2, d0, d1, d2, d3)| {
+                    // f = (u-a[n0])(u-a[n1])(a[n2]-u).
+                    // f'' = 2[(a[n2]-u) - (u-a[n0]) - (u-a[n1])].
+                    // Expanding: f'' = 2(a[n2] + a[n0] + a[n1] - 3u).
+                    let denom = (a[d0] - a[d1]) * (a[d2] - a[d3]);
+                    sum + 2.0 * (a[n2] + a[n0] + a[n1] - 3.0 * u) / denom
+                })
+    } else if u < a[3] {
+        let scalar = 1.0 / (a[3] - a[2]);
+        let terms: [(usize, usize, usize, usize, usize, usize, usize); 3] = [
+            (0, 3, 3, 3, 0, 3, 1),
+            (1, 4, 3, 4, 1, 3, 1),
+            (2, 4, 4, 4, 1, 4, 2),
+        ];
+        scalar
+            * terms
+                .iter()
+                .fold(0.0, |sum, &(n0, n1, n2, d0, d1, d2, d3)| {
+                    // f = (u-a[n0])(a[n1]-u)(a[n2]-u).
+                    // f' = f1*f2 - f0*f2 - f0*f1.
+                    // f'' = -2f2 - 2f1 + 2f0 = 2(f0 - f1 - f2).
+                    // f'' = 2((u-a[n0]) - (a[n1]-u) - (a[n2]-u)) = 2(3u - a[n0] - a[n1] - a[n2]).
+                    let denom = (a[d0] - a[d1]) * (a[d2] - a[d3]);
+                    sum + 2.0 * (3.0 * u - a[n0] - a[n1] - a[n2]) / denom
+                })
+    } else {
+        // N'' = 6(a4-u) / D.
+        6.0 * (a[4] - u) / ((a[4] - a[1]) * (a[4] - a[2]) * (a[4] - a[3]))
+    }
+}
 
 impl<P> Tmesh<P> {
     /// Constructs a new rectangular T-mesh from four points in space and a value for
@@ -64,9 +216,7 @@ impl<P> Tmesh<P> {
     }
 
     /// Returns an immutable reference to the control points vector
-    pub fn control_points(&self) -> &Vec<Arc<RwLock<TmeshControlPoint<P>>>> {
-        &self.control_points
-    }
+    pub fn control_points(&self) -> &Vec<Arc<RwLock<TmeshControlPoint<P>>>> { &self.control_points }
 
     /// Inserts a control point with real space coordinates `p` on the side `connection_side`
     /// of `con`. The knot interval of the connection between con and the new control point
@@ -203,9 +353,7 @@ impl<P> Tmesh<P> {
                 .expect("New points have edge conditions as default connection type.");
         } else {
             // Remove the edge condition created by the constructor.
-            let _ = p
-                .write()
-                .remove_edge_condition(connection_side.clockwise());
+            let _ = p.write().remove_edge_condition(connection_side.clockwise());
 
             // If a point that satisfies Rule 2 from [Sederberg et al. 2003] is found, connect it.
             // Should also never return an error.
@@ -374,14 +522,13 @@ impl<P> Tmesh<P> {
             }
             1 => {
                 // An S-edge is found where the point intersects
-                self
-                    .add_control_point(
-                        p,
-                        Arc::clone(&t_axis_stradle_points[0]),
-                        TmeshDirection::Right,
-                        (knot_coords.0 - point_s_coord) / con_knot,
-                    )
-                    .map_err(|_| Error::TmeshUnkownError)
+                self.add_control_point(
+                    p,
+                    Arc::clone(&t_axis_stradle_points[0]),
+                    TmeshDirection::Right,
+                    (knot_coords.0 - point_s_coord) / con_knot,
+                )
+                .map_err(|_| Error::TmeshUnkownError)
             }
             _ => {
                 // Multiple S-edges are found where the point intersects (Should never happen)
@@ -606,8 +753,7 @@ impl<P> Tmesh<P> {
             // Shouldn't need corner detection due to rule 1 in [Sederberg et al. 2003].
             // (needs testing)
             } else if ic_knot_accumulation > ic_knot_measurment
-                || cur_point.read().con_type(cur_dir.anti_clockwise())
-                    == TmeshConnectionType::Point
+                || cur_point.read().con_type(cur_dir.anti_clockwise()) == TmeshConnectionType::Point
             {
                 return Ok(false);
             }
@@ -667,9 +813,8 @@ impl<P> Tmesh<P> {
 
                     // Travrese with counting until a connection in the clockwise connection is found.
                     // Because all faces must be rectangular, this is guaranteed to be the first "ray intersection".
-                    let traversal_result = cur_point
-                        .read()
-                        .navigate_until_con(dir, dir.clockwise())?;
+                    let traversal_result =
+                        cur_point.read().navigate_until_con(dir, dir.clockwise())?;
                     cur_point = traversal_result.0;
                     // Set the latest pushed value to the intersection length
                     knot_intervals[i] += traversal_result.1;
@@ -735,9 +880,8 @@ impl<P> Tmesh<P> {
 
                         // Traverse down to the lowest point on this edge which is not a T-junction and has not yet crossed the ray.
                         'ray_approaching: loop {
-                            let traversal_result = cur_point
-                                .read()
-                                .navigate_until_con(dir.clockwise(), dir)?;
+                            let traversal_result =
+                                cur_point.read().navigate_until_con(dir.clockwise(), dir)?;
 
                             // Subtract distance as we approach the ray (temp var because the result might be
                             // over the ray, in which case we discard it).
@@ -773,9 +917,8 @@ impl<P> Tmesh<P> {
                         }
 
                         // Traverse accross the "top" of the face, to the other corner
-                        let traversal_result = cur_point
-                            .read()
-                            .navigate_until_con(dir, dir.clockwise())?;
+                        let traversal_result =
+                            cur_point.read().navigate_until_con(dir, dir.clockwise())?;
 
                         // Record the traversal distance as a knot interval (guaranteed to be correct because all faces are rectangular)
                         knot_intervals.push(traversal_result.1);
@@ -818,8 +961,7 @@ impl<P> Tmesh<P> {
 }
 
 impl<P> Tmesh<P>
-where
-    P: PartialEq,
+where P: PartialEq
 {
     /// Finds the first point that was added to a T-mesh with a specific cartesian coordinate
     ///
@@ -857,8 +999,7 @@ where
 }
 
 impl<P> Tmesh<P>
-where
-    P: ControlPoint<f64>,
+where P: ControlPoint<f64>
 {
     /// Attempts to insert a new control point between two existing control points using the technique from \[Sederberg et al. 2003\]
     /// called local knot insertion (LKI), returning the added control point if successful. In order to do so, the knot vectors perpandicular
@@ -1038,15 +1179,12 @@ where
         // d5 and d6
         for point in center_points[2..4].iter() {
             d.push(
-                Tmesh::cast_ray(Arc::clone(point), dir, 1).map_err(|_| Error::TmeshMalformedMesh)?
-                    [0],
+                Tmesh::cast_ray(Arc::clone(point), dir, 1)
+                    .map_err(|_| Error::TmeshMalformedMesh)?[0],
             );
         }
 
-        let cartesian_points: Vec<P> = center_points
-            .iter()
-            .map(|p| *p.read().point())
-            .collect();
+        let cartesian_points: Vec<P> = center_points.iter().map(|p| *p.read().point()).collect();
 
         // Equations 5, 6, and 7 from [Sederberg et al. 2003]. Rmember that P3 is not a point in either
         // cartesian_points or center_points, and arrays in rust are 0 indexed,
@@ -1215,6 +1353,89 @@ where
         }
     }
 
+    /// Convenience wrapper for local knot insertion that automatically inserts intermediate edges
+    /// when `try_absolute_local_knot_insertion` fails due to no straddling edge existing at `(s, t)`.
+    ///
+    /// The method first attempts direct insertion. If no edge straddles the target coordinates, it
+    /// scans the mesh for the nearest horizontal or vertical edge that could be extended through
+    /// the target point, inserts intermediate control points along that edge using LKI, and retries.
+    ///
+    /// This is shape-preserving: the surface is unchanged after refinement.
+    ///
+    /// # Returns
+    /// - `TmeshOutOfBoundsInsertion` if coordinates are outside `[0.0, 1.0]`.
+    /// - `TmeshExistingControlPoint` if a point already exists at the target.
+    /// - `TmeshConnectionNotFound` if no suitable edges can be found even after intermediate insertions.
+    /// - `Ok(Arc<RwLock<TmeshControlPoint<P>>>)` on success.
+    ///
+    /// # Borrows
+    /// See [`Tmesh::try_absolute_local_knot_insertion`].
+    pub fn refine_at(&mut self, s: f64, t: f64) -> Result<Arc<RwLock<TmeshControlPoint<P>>>> {
+        // Try direct insertion first.
+        match self.try_absolute_local_knot_insertion((s, t)) {
+            Ok(cp) => return Ok(cp),
+            Err(Error::TmeshConnectionNotFound) => {}
+            Err(e) => return Err(e),
+        }
+
+        // No straddling edge found. Create one by inserting a full column or row of
+        // intermediate points using LKI. Inferred connections (Rule 2) require matching
+        // points on opposite face edges, so we must insert at ALL t-levels (or s-levels)
+        // to build a connected column (or row). Insertions are done bottom-to-top (or
+        // left-to-right) so each successive point finds its predecessor via Rule 2.
+
+        // Strategy A: Insert a vertical column at s by finding all horizontal edges
+        // that straddle s and inserting LKI points at (s, t_level) for each.
+        let mut h_t_levels: Vec<f64> = Vec::new();
+        for cp in self.control_points.iter() {
+            let r = cp.read();
+            if let Some(con) = r.get(TmeshDirection::Right) {
+                let cp_s = r.knot_coordinates().0;
+                let cp_t = r.knot_coordinates().1;
+                let ki = con.1;
+                if cp_s < s && cp_s + ki > s {
+                    h_t_levels.push(cp_t);
+                }
+            }
+        }
+        // Sort bottom-to-top so inferred connections chain upwards.
+        h_t_levels.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        h_t_levels.dedup_by(|a, b| (*a - *b).so_small());
+
+        if h_t_levels.len() >= 2 {
+            for &t_level in &h_t_levels {
+                self.try_absolute_local_knot_insertion((s, t_level))?;
+            }
+            // Retry — a vertical column now exists at s with edges straddling t.
+            return self.try_absolute_local_knot_insertion((s, t));
+        }
+
+        // Strategy B: Insert a horizontal row at t.
+        let mut v_s_levels: Vec<f64> = Vec::new();
+        for cp in self.control_points.iter() {
+            let r = cp.read();
+            if let Some(con) = r.get(TmeshDirection::Up) {
+                let cp_s = r.knot_coordinates().0;
+                let cp_t = r.knot_coordinates().1;
+                let ki = con.1;
+                if cp_t < t && cp_t + ki > t {
+                    v_s_levels.push(cp_s);
+                }
+            }
+        }
+        v_s_levels.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        v_s_levels.dedup_by(|a, b| (*a - *b).so_small());
+
+        if v_s_levels.len() >= 2 {
+            for &s_level in &v_s_levels {
+                self.try_absolute_local_knot_insertion((s_level, t))?;
+            }
+            return self.try_absolute_local_knot_insertion((s, t));
+        }
+
+        Err(Error::TmeshConnectionNotFound)
+    }
+
     /// Returns the cartesian point corresponding to the parametric coordinates for `self`. Usually the
     /// parametric coordinates are constrained from 0 to 1 for both `s` and `t` as this is the domain of
     /// the T-mesh in parametric space. However, parameters are not checked or forcefully constrained,
@@ -1232,100 +1453,26 @@ where
     /// # Borrows
     /// Immutably borrows every control point in `self`.
     pub fn subs(&self, s: f64, t: f64) -> Result<P> {
-        // Generate knot vectors  if stale
+        // Generate knot vectors if stale.
         if self.knot_vectors.read().is_none() {
             self.generate_knot_vectors()?;
         }
-        // S is horizontal
-        // T is virtical
 
-        // Currently the basis functions for each point are being generated every time `subs` is called
-        // TODO: Move basis functions out of `subs` into `self`
-        let mut basis_evaluations = Vec::new();
-        for (i, _) in self.control_points.iter().enumerate() {
-            // Though using the existing b-spline struct in TRUCK would be nice, unfourtunatly I haven't been able to get it to work, since it is not exactly a b-spline that is being calculated, but a specific b-spline basis function, which I haven't been able to extract from the b-spline struct. In order to produce the correct basis function, a significant ammount of brut force was used. First, the Cox-de Boor recursion formula from https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/B-spline/bspline-basis.html was used with a little lua script to create a series of functions which could be plugged into desmos. Then, they were flattened into one function of considerable length. To see those functions, see https://www.desmos.com/calculator/on6vmapdcb. Then, the equation was simplified and split into four piecewise functions which corresponded to each of the four domains of the original function, where each function contributes one segment of the resulting basis function and does not overlap with any other function. To see those functions, see https://www.desmos.com/calculator/qikhwjjzxy. These final four piecewise functins are used to create the basis functions below.
-            let basis_function = |u: f64, a: Vec<f64>| -> f64 {
-                // If u is out of bounds, return 0.0 quickly before checking which range it falls into.
-                if u < a[0] || a[4] <= u {
-                    return 0.0;
-                }
+        let borrow = self.knot_vectors.read();
+        let all_kvs = borrow
+            .as_ref()
+            .expect("Knot vectors should have successfully generated or an error returned");
 
-                if u < a[1] {
-                    let numerator = u - a[0];
-                    let numerator = numerator * numerator * numerator; // Cubed
-
-                    let mut denominator = a[3] - a[0];
-                    denominator *= a[2] - a[0];
-                    denominator *= a[1] - a[0];
-                    return numerator / denominator;
-                } else if u < a[2] {
-                    let scalar = 1.0 / (a[2] - a[1]);
-                    // Knot vector indices for each of the fractions in N_{2}(u) from the second desmos link.
-                    // Each tuple is a term containing a tuple of indices for the numerator and denominator respectively.
-                    let sum = Vec::from([
-                        ((0, 0, 2), (3, 0, 2, 0)),
-                        ((0, 1, 3), (3, 0, 3, 1)),
-                        ((1, 1, 4), (4, 1, 3, 1)),
-                    ])
-                    .iter()
-                    .fold(0.0, |sum, (num, den)| {
-                        sum + (((u - a[num.0]) * (u - a[num.1]) * (a[num.2] - u))
-                            / ((a[den.0] - a[den.1]) * (a[den.2] - a[den.3])))
-                    });
-
-                    return scalar * sum;
-                } else if u < a[3] {
-                    let scalar = 1.0 / (a[3] - a[2]);
-                    // Knot vector indices for each of the fractions in N_{2}(u) from the second desmos link.
-                    // Each tuple is a term containing a tuple of indices for the numerator and denominator respectively.
-                    let sum = Vec::from([
-                        ((0, 3, 3), (3, 0, 3, 1)),
-                        ((1, 4, 3), (4, 1, 3, 1)),
-                        ((2, 4, 4), (4, 1, 4, 2)),
-                    ])
-                    .iter()
-                    .fold(0.0, |sum, (num, den)| {
-                        sum + (((u - a[num.0]) * (a[num.1] - u) * (a[num.2] - u))
-                            / ((a[den.0] - a[den.1]) * (a[den.2] - a[den.3])))
-                    });
-
-                    return scalar * sum;
-                } else if u < a[4] {
-                    let numerator_base = a[4] - u;
-                    let numerator = numerator_base * numerator_base * numerator_base; // Cubed
-
-                    let mut denominator = a[4] - a[1];
-                    denominator *= a[4] - a[2];
-                    denominator *= a[4] - a[3];
-                    return numerator / denominator;
-                }
-                // Control flow will never reach here, however, rather than having an else statement at the bottom which
-                // is either the out-of-bounds case (most likely) or the final range (not explicit enough for my taste)
-                // I would rather just leave this here for you <3
-                0.0
-            };
-
-            basis_evaluations.push({
-                let borrow = self.knot_vectors.read();
-
-                let knot_vectors = &borrow
-                    .as_ref()
-                    .expect("Knot vectors should have successfully generated or an error returned")
-                    [i];
-
-                let s_eval = basis_function(s, knot_vectors.0.to_vec());
-                let t_eval = basis_function(t, knot_vectors.1.to_vec());
-                s_eval * t_eval
-            });
-        }
+        let num = self.control_points.len();
+        let basis_evaluations: Vec<f64> = all_kvs
+            .iter()
+            .take(num)
+            .map(|kvs| basis_function(s, kvs.0.as_slice()) * basis_function(t, kvs.1.as_slice()))
+            .collect();
 
         let numerator = basis_evaluations
             .iter()
-            .zip(
-                self.control_points()
-                    .iter()
-                    .map(|c| *c.read().point()),
-            )
+            .zip(self.control_points().iter().map(|c| *c.read().point()))
             .fold(P::origin(), |sum, (b, p)| sum + p.to_vec() * *b);
 
         let denominator: f64 = basis_evaluations.iter().sum();
@@ -1505,8 +1652,7 @@ impl<P> fmt::Display for Tmesh<P> {
 }
 
 impl<P> Tmesh<P>
-where
-    P: Clone,
+where P: Clone
 {
     /// Subdivides a mesh by inserting a new control point parametrically halfway between every pair of connected control points
     /// already present in the mesh. This includes any implicit edges created during the subdivision of the mesh. Thus, a 2x2
@@ -1524,9 +1670,7 @@ where
     /// # Borrows
     /// Mutably borrows every control point in `self.control_points`.
     pub fn subdivide<F>(&mut self, f: F) -> Result<()>
-    where
-        F: Fn(P, P) -> P,
-    {
+    where F: Fn(P, P) -> P {
         // Get all (pairs of) control points with horizontal point to point connections
         let righties: Vec<_> = self
             .control_points()
@@ -1579,8 +1723,7 @@ where
 }
 
 impl<P> Clone for Tmesh<P>
-where
-    P: Clone,
+where P: Clone
 {
     fn clone(&self) -> Tmesh<P> {
         // Vector containing new point objects which have the same positions as the points in the original mesh
@@ -1731,8 +1874,7 @@ impl<T> Drop for Tmesh<T> {
 }
 
 impl<T> Tmesh<T>
-where
-    T: Debug + Clone,
+where T: Debug + Clone
 {
     /// Prints the knot vectors for every point in the mesh.
     ///
@@ -1754,8 +1896,420 @@ where
     }
 }
 
-/// Step size for central finite-difference derivative approximation.
+/// Step size for central finite-difference derivative approximation (fallback for orders > 2).
 const DIFF_EPS: f64 = 1.0e-6;
+
+/// Selects the appropriate basis function evaluator for the given derivative order.
+fn basis_function_der(u: f64, a: &[f64], der_order: usize) -> f64 {
+    match der_order {
+        0 => basis_function(u, a),
+        1 => basis_function_d1(u, a),
+        2 => basis_function_d2(u, a),
+        _ => {
+            // Fall back to finite differences for orders > 2.
+            let h = DIFF_EPS;
+            (basis_function_der(u + h, a, der_order - 1)
+                - basis_function_der(u - h, a, der_order - 1))
+                / (2.0 * h)
+        }
+    }
+}
+
+impl<P> Tmesh<P>
+where P: ControlPoint<f64> + Debug + Clone
+{
+    /// Creates a T-mesh from a quad mesh by converting to a T-NURCC, applying
+    /// CC subdivision, and extracting a parametric surface patch.
+    ///
+    /// # Arguments
+    /// * `positions` - Vertex positions of the quad mesh.
+    /// * `quad_faces` - Quad face indices (each face is 4 vertex indices, CCW winding).
+    /// * `subdivision_levels` - Number of CC subdivision iterations.
+    pub fn from_quad_mesh(
+        positions: Vec<P>,
+        quad_faces: &[[usize; 4]],
+        subdivision_levels: usize,
+    ) -> Result<Self> {
+        let tnurcc = Tnurcc::from_quad_mesh(positions, quad_faces)?;
+        tnurcc.to_tmesh(subdivision_levels)
+    }
+
+    /// Converts a cubic `BSplineSurface` into a T-mesh with a regular rectangular grid.
+    ///
+    /// Any cubic B-spline surface is trivially a T-spline with no T-junctions.
+    /// This enables converting existing NURBS/B-spline geometry into T-splines
+    /// for further refinement or editing.
+    ///
+    /// # Errors
+    /// Returns `TmeshNonCubicDegree` if the surface is not degree 3 in both directions.
+    pub fn from_bspline_surface(surface: &BSplineSurface<P>) -> Result<Self> {
+        let (udeg, vdeg) = surface.degrees();
+        if udeg != 3 || vdeg != 3 {
+            return Err(Error::TmeshNonCubicDegree(udeg, vdeg));
+        }
+
+        let u_kv = surface.uknot_vec();
+        let v_kv = surface.vknot_vec();
+        let cps = surface.control_points();
+        let nv = cps[0].len();
+
+        // Normalize knot values to [0,1].
+        let u_min = u_kv[0];
+        let u_range = u_kv[u_kv.len() - 1] - u_min;
+        let v_min = v_kv[0];
+        let v_range = v_kv[v_kv.len() - 1] - v_min;
+
+        let norm_u = |idx: usize| -> f64 {
+            if u_range.so_small() {
+                0.5
+            } else {
+                (u_kv[idx + 2] - u_min) / u_range
+            }
+        };
+        let norm_v = |idx: usize| -> f64 {
+            if v_range.so_small() {
+                0.5
+            } else {
+                (v_kv[idx + 2] - v_min) / v_range
+            }
+        };
+
+        // Create the grid of T-mesh control points.
+        let grid: Vec<Vec<Arc<RwLock<TmeshControlPoint<P>>>>> = cps
+            .iter()
+            .enumerate()
+            .map(|(i, row_cps)| {
+                row_cps
+                    .iter()
+                    .enumerate()
+                    .map(|(j, cp)| {
+                        Arc::new(RwLock::new(TmeshControlPoint {
+                            point: *cp,
+                            connections: [
+                                Some((None, 0.0)),
+                                Some((None, 0.0)),
+                                Some((None, 0.0)),
+                                Some((None, 0.0)),
+                            ],
+                            knot_coordinates: (norm_u(i), norm_v(j)),
+                        }))
+                    })
+                    .collect()
+            })
+            .collect();
+        let all_points: Vec<Arc<RwLock<TmeshControlPoint<P>>>> = grid
+            .iter()
+            .flat_map(|row| row.iter().map(Arc::clone))
+            .collect();
+
+        // Connect adjacent points horizontally (Right/Left).
+        for (i, pair) in grid.windows(2).enumerate() {
+            let ki = norm_u(i + 1) - norm_u(i);
+            for (left, right) in pair[0].iter().zip(pair[1].iter()) {
+                {
+                    let mut w = left.write();
+                    w.connections[TmeshDirection::Right as usize] =
+                        Some((Some(Arc::clone(right)), ki));
+                }
+                {
+                    let mut w = right.write();
+                    w.connections[TmeshDirection::Left as usize] =
+                        Some((Some(Arc::clone(left)), ki));
+                }
+            }
+        }
+
+        // Connect adjacent points vertically (Up/Down).
+        for j in 0..nv - 1 {
+            let ki = norm_v(j + 1) - norm_v(j);
+            for row in &grid {
+                {
+                    let mut w = row[j].write();
+                    w.connections[TmeshDirection::Up as usize] =
+                        Some((Some(Arc::clone(&row[j + 1])), ki));
+                }
+                {
+                    let mut w = row[j + 1].write();
+                    w.connections[TmeshDirection::Down as usize] =
+                        Some((Some(Arc::clone(&row[j])), ki));
+                }
+            }
+        }
+
+        // Set edge condition weights on boundary points.
+        for row in &grid {
+            for cell in row {
+                let mut w = cell.write();
+                for dir in TmeshDirection::iter() {
+                    let di = dir as usize;
+                    let is_zero_edge = w.connections[di]
+                        .as_ref()
+                        .is_some_and(|c| c.0.is_none() && c.1 == 0.0);
+                    if !is_zero_edge {
+                        continue;
+                    }
+                    // Use the nearest interior connection's knot interval.
+                    let weight = [dir.flip(), dir.clockwise(), dir.anti_clockwise()]
+                        .iter()
+                        .filter_map(|&d| {
+                            w.connections[d as usize]
+                                .as_ref()
+                                .and_then(|c| c.0.is_some().then_some(c.1))
+                        })
+                        .next()
+                        .unwrap_or(0.1);
+                    w.connections[di] = Some((None, weight));
+                }
+            }
+        }
+
+        Ok(Tmesh {
+            control_points: all_points,
+            knot_vectors: RwLock::new(None),
+        })
+    }
+}
+
+impl Tmesh<Point3> {
+    /// Evaluates the analytical derivative d^(m+n)S / du^m dv^n at `(u, v)` using the quotient
+    /// rule on the rational surface `S = N / W` where `N = sum(B_i * P_i)` and `W = sum(B_i)`.
+    ///
+    /// Supports analytical derivatives up to 2nd order in each parameter direction.
+    /// Falls back to finite differences for higher orders.
+    fn analytical_der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
+        // Generate knot vectors if stale.
+        if self.knot_vectors.read().is_none() {
+            // SAFETY: `analytical_der_mn` is only called from trait impls and internal methods
+            // that assume a well-formed mesh. Generation failure is unrecoverable here.
+            self.generate_knot_vectors()
+                .expect("T-mesh evaluation failed");
+        }
+
+        let borrow = self.knot_vectors.read();
+        // SAFETY: The `is_none` check above guarantees generation ran; if it succeeded the
+        // value is `Some`.
+        let all_kvs = borrow.as_ref().expect("Knot vectors should be generated");
+
+        let num_points = self.control_points.len();
+        let n_cols = n + 1;
+
+        // Precompute all needed partial basis derivatives: B^(p,q)_i for p in 0..=m, q in 0..=n.
+        // Flat layout with strided indexing [p][q][i] populated in [i][p][q] order — the
+        // transposed iteration prevents a clean iterator chain, so imperative indexing is used.
+        let bd_stride = n_cols * num_points;
+        let mut basis_derivs = vec![0.0f64; (m + 1) * bd_stride];
+        for (i, (s_kv, t_kv)) in all_kvs.iter().enumerate().take(num_points) {
+            let s_slice = s_kv.as_slice();
+            let t_slice = t_kv.as_slice();
+            for p in 0..=m {
+                let s_val = basis_function_der(u, s_slice, p);
+                for q in 0..=n {
+                    let t_val = basis_function_der(v, t_slice, q);
+                    basis_derivs[p * bd_stride + q * num_points + i] = s_val * t_val;
+                }
+            }
+        }
+
+        // Compute partial derivatives of the numerator N and denominator W.
+        // Flat layout: index [p * n_cols + q].
+        let pq_size = (m + 1) * n_cols;
+        let mut n_derivs = vec![Vector3::new(0.0, 0.0, 0.0); pq_size];
+        let mut w_derivs = vec![0.0f64; pq_size];
+
+        for p in 0..=m {
+            for q in 0..=n {
+                let bd_base = p * bd_stride + q * num_points;
+                let mut nx = 0.0;
+                let mut ny = 0.0;
+                let mut nz = 0.0;
+                let mut w = 0.0;
+                for (i, cp) in self.control_points.iter().enumerate() {
+                    let b = basis_derivs[bd_base + i];
+                    let pt = *cp.read().point();
+                    nx += b * pt.x;
+                    ny += b * pt.y;
+                    nz += b * pt.z;
+                    w += b;
+                }
+                let idx = p * n_cols + q;
+                n_derivs[idx] = Vector3::new(nx, ny, nz);
+                w_derivs[idx] = w;
+            }
+        }
+
+        // Precompute binomial coefficients (orders are at most 2, so max index is 2).
+        const BINOM: [[f64; 3]; 3] = [[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [1.0, 2.0, 1.0]];
+
+        // Apply the general Leibniz rule for the derivative of a quotient S = N/W:
+        // S^(m,n) = (1/W) * (N^(m,n) - sum_{(j,k) != (0,0)} C(m,j)*C(n,k) * W^(j,k) * S^(m-j,n-k)).
+        let mut s_derivs = vec![Vector3::new(0.0, 0.0, 0.0); pq_size];
+        let w0 = w_derivs[0];
+
+        #[allow(clippy::needless_range_loop)]
+        for p in 0..=m {
+            for q in 0..=n {
+                let idx = p * n_cols + q;
+                let mut val = n_derivs[idx];
+                for j in 0..=p {
+                    for k in 0..=q {
+                        if j == 0 && k == 0 {
+                            continue;
+                        }
+                        let s_idx = (p - j) * n_cols + (q - k);
+                        val -= s_derivs[s_idx]
+                            * (BINOM[p][j] * BINOM[q][k] * w_derivs[j * n_cols + k]);
+                    }
+                }
+                s_derivs[idx] = val / w0;
+            }
+        }
+
+        s_derivs[m * n_cols + n]
+    }
+
+    /// Computes the Gaussian curvature K at `(u, v)` from the first and second fundamental forms.
+    fn gaussian_curvature(&self, u: f64, v: f64) -> f64 {
+        let su = self.analytical_der_mn(1, 0, u, v);
+        let sv = self.analytical_der_mn(0, 1, u, v);
+        let suu = self.analytical_der_mn(2, 0, u, v);
+        let suv = self.analytical_der_mn(1, 1, u, v);
+        let svv = self.analytical_der_mn(0, 2, u, v);
+
+        let normal = su.cross(sv);
+        let normal_len = normal.magnitude();
+        if normal_len.so_small() {
+            0.0
+        } else {
+            let n = normal / normal_len;
+
+            // First fundamental form coefficients.
+            let cap_e = su.dot(su);
+            let cap_f = su.dot(sv);
+            let cap_g = sv.dot(sv);
+
+            // Second fundamental form coefficients.
+            let e = suu.dot(n);
+            let f = suv.dot(n);
+            let g = svv.dot(n);
+
+            let denom = cap_e * cap_g - cap_f * cap_f;
+            if denom.abs().so_small() {
+                0.0
+            } else {
+                (e * g - f * f) / denom
+            }
+        }
+    }
+
+    /// Adaptively refines the T-mesh by inserting knots where Gaussian curvature exceeds the threshold.
+    ///
+    /// Knot insertion uses `try_absolute_local_knot_insertion`, which requires the target
+    /// coordinate to lie on an existing edge. For each high-curvature cell, the method
+    /// inserts a midpoint on the nearest straddling edge in both the u and v directions.
+    ///
+    /// # Arguments
+    /// * `curvature_threshold` - Minimum absolute Gaussian curvature to trigger refinement.
+    /// * `max_iterations` - Maximum number of refinement passes.
+    /// * `initial_samples` - Grid density in each direction for the first pass (doubles each iteration).
+    ///
+    /// # Returns
+    /// Total number of control points inserted, or an error if refinement fails.
+    pub fn adaptive_refine(
+        &mut self,
+        curvature_threshold: f64,
+        max_iterations: usize,
+        initial_samples: usize,
+    ) -> Result<usize> {
+        let mut total_insertions = 0usize;
+        let mut samples = initial_samples;
+
+        for _ in 0..max_iterations {
+            // Collect all unique knot lines (s and t) from existing control points.
+            let mut s_lines: Vec<f64> = self
+                .control_points
+                .iter()
+                .map(|cp| cp.read().knot_coordinates().0)
+                .collect();
+            let mut t_lines: Vec<f64> = self
+                .control_points
+                .iter()
+                .map(|cp| cp.read().knot_coordinates().1)
+                .collect();
+            s_lines.sort_by(f64::total_cmp);
+            s_lines.dedup_by(|a, b| (*a - *b).so_small());
+            t_lines.sort_by(f64::total_cmp);
+            t_lines.dedup_by(|a, b| (*a - *b).so_small());
+
+            // Sample curvature on a grid and collect cells that exceed the threshold.
+            let step = 1.0 / samples as f64;
+            let high_curvature_cells: Vec<(f64, f64)> = (0..samples)
+                .flat_map(|i| {
+                    let u = (i as f64 + 0.5) * step;
+                    (0..samples).map(move |j| (u, (j as f64 + 0.5) * step))
+                })
+                .filter(|&(u, v)| self.gaussian_curvature(u, v).abs() > curvature_threshold)
+                .collect();
+
+            if high_curvature_cells.is_empty() {
+                break;
+            }
+
+            // For each high-curvature cell, find the straddling edge intervals and
+            // insert midpoints on the existing knot lines.
+            let mut targets: Vec<(f64, f64)> = high_curvature_cells
+                .iter()
+                .flat_map(|&(u, v)| {
+                    // Nearest existing t-line → insert at (u, t_val).
+                    let on_t = t_lines
+                        .iter()
+                        .copied()
+                        .min_by(|a, b| (a - v).abs().total_cmp(&(b - v).abs()))
+                        .map(|t_val| (u, t_val));
+                    // Nearest existing s-line → insert at (s_val, v).
+                    let on_s = s_lines
+                        .iter()
+                        .copied()
+                        .min_by(|a, b| (a - u).abs().total_cmp(&(b - u).abs()))
+                        .map(|s_val| (s_val, v));
+                    on_t.into_iter().chain(on_s)
+                })
+                .collect();
+            targets.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
+            targets.dedup_by(|a, b| (a.0 - b.0).so_small() && (a.1 - b.1).so_small());
+
+            let mut insertions = 0usize;
+            for (u, v) in targets {
+                // Clone before attempting insertion so a panic in LKI
+                // doesn't corrupt the mesh.
+                let backup = self.clone();
+                let result = catch_unwind(AssertUnwindSafe(|| {
+                    self.try_absolute_local_knot_insertion((u, v))
+                }));
+                match result {
+                    Ok(Ok(_)) => insertions += 1,
+                    Ok(Err(Error::TmeshExistingControlPoint))
+                    | Ok(Err(Error::TmeshConnectionNotFound))
+                    | Ok(Err(Error::TmeshControlPointNotFound))
+                    | Ok(Err(Error::TmeshKnotVectorsNotEqual))
+                    | Err(_) => {
+                        // Restore from backup on any structural error or panic.
+                        *self = backup;
+                    }
+                    Ok(Err(e)) => return Err(e),
+                }
+            }
+
+            if insertions == 0 {
+                break;
+            }
+
+            total_insertions += insertions;
+            samples *= 2;
+        }
+
+        Ok(total_insertions)
+    }
+}
 
 impl ParametricSurface for Tmesh<Point3> {
     type Point = Point3;
@@ -1776,6 +2330,11 @@ impl ParametricSurface for Tmesh<Point3> {
             let p = <Self as ParametricSurface>::subs(self, u, v);
             return Vector3::new(p.x, p.y, p.z);
         }
+        // Use analytical derivatives for orders up to 2.
+        if m <= 2 && n <= 2 {
+            return self.analytical_der_mn(m, n, u, v);
+        }
+        // Fall back to finite differences for higher orders.
         let h = DIFF_EPS;
         if m > 0 {
             let forward = self.der_mn(m - 1, n, u + h, v);
@@ -1790,7 +2349,10 @@ impl ParametricSurface for Tmesh<Point3> {
 
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         use std::ops::Bound::Included;
-        ((Included(0.0), Included(1.0)), (Included(0.0), Included(1.0)))
+        (
+            (Included(0.0), Included(1.0)),
+            (Included(0.0), Included(1.0)),
+        )
     }
 }
 
@@ -1814,8 +2376,10 @@ impl Invertible for Tmesh<Point3> {
         // and swapping the (s, t) knot coordinates.
         for cp in &self.control_points {
             let mut w = cp.write();
-            w.connections.swap(TmeshDirection::Up as usize, TmeshDirection::Right as usize);
-            w.connections.swap(TmeshDirection::Down as usize, TmeshDirection::Left as usize);
+            w.connections
+                .swap(TmeshDirection::Up as usize, TmeshDirection::Right as usize);
+            w.connections
+                .swap(TmeshDirection::Down as usize, TmeshDirection::Left as usize);
             w.knot_coordinates = (w.knot_coordinates.1, w.knot_coordinates.0);
         }
         // Invalidate cached knot vectors.
@@ -1884,7 +2448,10 @@ struct TmeshSerde<P> {
 }
 
 impl Serialize for Tmesh<Point3> {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        serializer: S,
+    ) -> std::result::Result<S::Ok, S::Error> {
         let mut points = Vec::with_capacity(self.control_points.len());
         let mut connections = Vec::with_capacity(self.control_points.len());
 
@@ -1896,9 +2463,7 @@ impl Serialize for Tmesh<Point3> {
             for dir in TmeshDirection::iter() {
                 cons[dir as usize] = match r.con_type(dir) {
                     TmeshConnectionType::Tjunction => None,
-                    TmeshConnectionType::Edge => {
-                        Some((None, r.connection_knot(dir).unwrap()))
-                    }
+                    TmeshConnectionType::Edge => Some((None, r.connection_knot(dir).unwrap())),
                     TmeshConnectionType::Point => {
                         let connected = r.conected_point(dir);
                         let idx = self
@@ -1913,12 +2478,18 @@ impl Serialize for Tmesh<Point3> {
             connections.push(cons);
         }
 
-        TmeshSerde { points, connections }.serialize(serializer)
+        TmeshSerde {
+            points,
+            connections,
+        }
+        .serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for Tmesh<Point3> {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> std::result::Result<Self, D::Error> {
         let data = TmeshSerde::<Point3>::deserialize(deserializer)?;
 
         // Create control points with dummy edge conditions.
@@ -1938,10 +2509,7 @@ impl<'de> Deserialize<'de> for Tmesh<Point3> {
                         if points[point_index].read().con_type(dir) == TmeshConnectionType::Point {
                             continue;
                         }
-                        points[point_index]
-                            .write()
-                            .remove_connection(dir)
-                            .ok();
+                        points[point_index].write().remove_connection(dir).ok();
                         points[*con_index]
                             .write()
                             .remove_connection(dir.flip())
@@ -1962,10 +2530,7 @@ impl<'de> Deserialize<'de> for Tmesh<Point3> {
                     }
                 } else {
                     // T-junction.
-                    points[point_index]
-                        .write()
-                        .remove_connection(dir)
-                        .ok();
+                    points[point_index].write().remove_connection(dir).ok();
                 }
             }
         }
@@ -2943,17 +3508,13 @@ mod tests {
                     match p.0.read().con_type(dir) {
                         TmeshConnectionType::Edge => {
                             // Compare knot intervals
-                            if p.0.read().connection_knot(dir)
-                                != p.1.read().connection_knot(dir)
-                            {
+                            if p.0.read().connection_knot(dir) != p.1.read().connection_knot(dir) {
                                 return false;
                             }
                         }
                         TmeshConnectionType::Point => {
                             // Compare knot intervals
-                            if p.0.read().connection_knot(dir)
-                                != p.1.read().connection_knot(dir)
-                            {
+                            if p.0.read().connection_knot(dir) != p.1.read().connection_knot(dir) {
                                 return false;
                             }
 
@@ -3025,9 +3586,7 @@ mod tests {
     }
 
     /// Returns a point half-way between `a` and `b`.
-    fn average_points(a: Point3, b: Point3) -> Point3 {
-        0.5 * (a + ControlPoint::to_vec(b))
-    }
+    fn average_points(a: Point3, b: Point3) -> Point3 { 0.5 * (a + ControlPoint::to_vec(b)) }
 
     /// Subdivides a T-mesh from a two by two into a three by three, checking that the connections and knot vectors
     /// are correct. Does not check if control points are correctly spaced in cartesian space, since that is calculated
@@ -3088,9 +3647,7 @@ mod tests {
     }
 
     /// Checks if two `Point3` instances are eqaul using tollerance.
-    fn points_eq(a: Point3, b: Point3) -> bool {
-        (a.x + a.y + a.z - (b.x + b.y + b.z)).so_small()
-    }
+    fn points_eq(a: Point3, b: Point3) -> bool { (a.x + a.y + a.z - (b.x + b.y + b.z)).so_small() }
 
     /// Test legal local knot insertion by creating two identical surfaces, then performing LKI on one of
     /// them and checking with `subs` if the surfaces differ. In order to maximize any differences between the
@@ -3410,8 +3967,10 @@ mod tests {
             Point3::new(0.0, 1.0, 1.0),
         ];
         let mut mesh = Tmesh::new(points, 1.0);
-        mesh.subdivide(average_points).expect("Subdivision should succeed");
-        mesh.subdivide(average_points).expect("Subdivision should succeed");
+        mesh.subdivide(average_points)
+            .expect("Subdivision should succeed");
+        mesh.subdivide(average_points)
+            .expect("Subdivision should succeed");
 
         let bsp = mesh.to_bspline_surface(8);
 
@@ -3431,6 +3990,495 @@ mod tests {
         assert!(
             max_err < 1.0e-3,
             "Max deviation between T-mesh and B-spline: {max_err:.2e} (expected < 1e-3)."
+        );
+    }
+
+    /// Constructs a non-planar T-mesh for derivative testing.
+    /// Uses the same pattern as `test_t_mesh_local_knot_insertion_no_edge_conditions`.
+    fn make_derivative_test_mesh() -> Tmesh<Point3> {
+        let points = [
+            Point3::from((0.0, 0.0, 0.0)),
+            Point3::from((1.0, 0.0, 1.0)),
+            Point3::from((1.0, 1.0, 0.0)),
+            Point3::from((0.0, 1.0, 1.0)),
+        ];
+        let mut mesh = Tmesh::new(points, 1.0);
+        mesh.subdivide(average_points)
+            .expect("Mesh is not malformed.");
+        mesh.subdivide(average_points)
+            .expect("Mesh is not malformed.");
+
+        // Mangle linearity so derivatives are nontrivial.
+        mesh.map_point(
+            Point3::from((0.25, 0.25, 0.375)),
+            Point3::from((0.25, 0.10, 0.375)),
+        )
+        .expect("Control point is in mesh");
+        mesh.map_point(
+            Point3::from((0.50, 0.25, 0.500)),
+            Point3::from((0.50, 0.30, 0.300)),
+        )
+        .expect("Control point is in mesh");
+        mesh.map_point(
+            Point3::from((0.75, 0.25, 0.625)),
+            Point3::from((0.75, 0.15, 0.625)),
+        )
+        .expect("Control point is in mesh");
+        mesh
+    }
+
+    /// Computes a finite-difference derivative for comparison with analytical derivatives.
+    fn finite_diff_der(mesh: &Tmesh<Point3>, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
+        let h = 1.0e-6;
+        if m == 0 && n == 0 {
+            let p = mesh.subs(u, v).expect("subs should succeed");
+            return Vector3::new(p.x, p.y, p.z);
+        }
+        if m > 0 {
+            let fwd = finite_diff_der(mesh, m - 1, n, u + h, v);
+            let bwd = finite_diff_der(mesh, m - 1, n, u - h, v);
+            (fwd - bwd) / (2.0 * h)
+        } else {
+            let fwd = finite_diff_der(mesh, m, n - 1, u, v + h);
+            let bwd = finite_diff_der(mesh, m, n - 1, u, v - h);
+            (fwd - bwd) / (2.0 * h)
+        }
+    }
+
+    /// Tests analytical derivatives against finite differences at many sample points.
+    #[test]
+    fn test_analytical_derivatives_vs_finite_diff() {
+        let mesh = make_derivative_test_mesh();
+        let n = 10;
+
+        for i in 1..n {
+            let u = i as f64 / n as f64;
+            for j in 1..n {
+                let v = j as f64 / n as f64;
+                // Test all 1st and 2nd order derivatives.
+                // 2nd-order finite differences are inherently less accurate (O(h^2) error
+                // compounds), so use a looser tolerance for them.
+                for &(m, ord_n, tol) in &[
+                    (1, 0, 1.0e-4),
+                    (0, 1, 1.0e-4),
+                    (2, 0, 5.0e-4),
+                    (0, 2, 5.0e-4),
+                    (1, 1, 5.0e-4),
+                ] {
+                    let analytical = mesh.analytical_der_mn(m, ord_n, u, v);
+                    let numerical = finite_diff_der(&mesh, m, ord_n, u, v);
+                    let diff = (analytical - numerical).magnitude();
+                    assert!(
+                        diff < tol,
+                        "Derivative d^({},{}) at ({}, {}) differs: analytical={:?}, numerical={:?}, diff={:.2e}",
+                        m, ord_n, u, v, analytical, numerical, diff
+                    );
+                }
+            }
+        }
+    }
+
+    /// Tests derivative continuity at knot boundaries.
+    #[test]
+    fn test_analytical_derivatives_knot_continuity() {
+        let mesh = make_derivative_test_mesh();
+        let eps = 1.0e-8;
+        let tol = 1.0e-4;
+
+        // Knot boundaries for a 5x5 mesh are at 0.0, 0.25, 0.5, 0.75, 1.0.
+        let knots = [0.25, 0.5, 0.75];
+        for &k in &knots {
+            for &(m, n) in &[(1, 0), (0, 1)] {
+                // Test continuity across u-knot boundary.
+                let left = mesh.analytical_der_mn(m, n, k - eps, 0.5);
+                let right = mesh.analytical_der_mn(m, n, k + eps, 0.5);
+                let diff = (left - right).magnitude();
+                assert!(
+                    diff < tol,
+                    "Derivative d^({},{}) discontinuous at u-knot {}: left={:?}, right={:?}, diff={:.2e}",
+                    m, n, k, left, right, diff
+                );
+
+                // Test continuity across v-knot boundary.
+                let below = mesh.analytical_der_mn(m, n, 0.5, k - eps);
+                let above = mesh.analytical_der_mn(m, n, 0.5, k + eps);
+                let diff = (below - above).magnitude();
+                assert!(
+                    diff < tol,
+                    "Derivative d^({},{}) discontinuous at v-knot {}: below={:?}, above={:?}, diff={:.2e}",
+                    m, n, k, below, above, diff
+                );
+            }
+        }
+    }
+
+    /// Tests derivatives at parametric boundary values.
+    #[test]
+    fn test_analytical_derivatives_at_boundaries() {
+        let mesh = make_derivative_test_mesh();
+        let tol = 1.0e-4;
+        let eps = 1.0e-7;
+
+        // Test at near-boundary points (exact boundary 1.0 is excluded from basis support).
+        for &(u, v) in &[(eps, 0.5), (0.5, eps), (1.0 - eps, 0.5), (0.5, 1.0 - eps)] {
+            for &(m, n) in &[(1, 0), (0, 1)] {
+                let analytical = mesh.analytical_der_mn(m, n, u, v);
+                let numerical = finite_diff_der(&mesh, m, n, u, v);
+                let diff = (analytical - numerical).magnitude();
+                assert!(
+                    diff < tol,
+                    "Boundary derivative d^({},{}) at ({}, {}) differs: diff={:.2e}",
+                    m,
+                    n,
+                    u,
+                    v,
+                    diff
+                );
+            }
+        }
+    }
+
+    /// Tests `refine_at` at a location where an edge already exists — should behave identically
+    /// to `try_absolute_local_knot_insertion`.
+    #[test]
+    fn test_refine_at_existing_edge() {
+        let points = [
+            Point3::from((0.0, 0.0, 0.0)),
+            Point3::from((1.0, 0.0, 1.0)),
+            Point3::from((1.0, 1.0, 2.0)),
+            Point3::from((0.0, 1.0, 1.0)),
+        ];
+        let mut mesh = Tmesh::new(points, 1.0);
+        mesh.subdivide(average_points)
+            .expect("Mesh is not malformed.");
+        mesh.subdivide(average_points)
+            .expect("Mesh is not malformed.");
+
+        let mut reference = mesh.clone();
+
+        // Direct LKI should succeed at this location (on an existing edge).
+        reference
+            .try_absolute_local_knot_insertion((0.3, 0.25))
+            .expect("Direct LKI should succeed");
+
+        // refine_at should produce the same result.
+        mesh.refine_at(0.3, 0.25).expect("refine_at should succeed");
+
+        // Verify surfaces match.
+        let n = 20;
+        for i in 0..n {
+            let u = i as f64 / n as f64;
+            for j in 0..n {
+                let v = j as f64 / n as f64;
+                let a = mesh.subs(u, v).expect("subs should succeed");
+                let b = reference.subs(u, v).expect("subs should succeed");
+                assert!(
+                    (a - b).so_small(),
+                    "Surfaces differ at ({}, {}): refine_at={:?}, direct={:?}",
+                    u,
+                    v,
+                    a,
+                    b
+                );
+            }
+        }
+    }
+
+    /// Tests `refine_at` at a location requiring an intermediate edge insertion.
+    #[test]
+    fn test_refine_at_with_intermediate_edge() {
+        let points = [
+            Point3::from((0.0, 0.0, 0.0)),
+            Point3::from((1.0, 0.0, 1.0)),
+            Point3::from((1.0, 1.0, 2.0)),
+            Point3::from((0.0, 1.0, 1.0)),
+        ];
+        let mut mesh = Tmesh::new(points, 1.0);
+        mesh.subdivide(average_points)
+            .expect("Mesh is not malformed.");
+        mesh.subdivide(average_points)
+            .expect("Mesh is not malformed.");
+
+        let original = mesh.clone();
+
+        // (0.3, 0.3) has no straddling edge — it's in the interior of a face.
+        // Direct LKI would fail.
+        assert!(
+            mesh.clone()
+                .try_absolute_local_knot_insertion((0.3, 0.3))
+                .is_err(),
+            "Direct LKI should fail at (0.3, 0.3) — no straddling edge."
+        );
+
+        // refine_at should succeed by inserting intermediate edges.
+        mesh.refine_at(0.3, 0.3)
+            .expect("refine_at should succeed with intermediate edges");
+
+        // Verify surface is unchanged (shape-preserving).
+        let n = 20;
+        for i in 0..n {
+            let u = i as f64 / n as f64;
+            for j in 0..n {
+                let v = j as f64 / n as f64;
+                let a = mesh.subs(u, v).expect("subs should succeed");
+                let b = original.subs(u, v).expect("subs should succeed");
+                assert!(
+                    (a - b).so_small(),
+                    "Surface changed after refine_at at ({}, {}): refined={:?}, original={:?}",
+                    u,
+                    v,
+                    a,
+                    b
+                );
+            }
+        }
+    }
+
+    /// Tests that `refine_at` preserves the surface shape.
+    #[test]
+    fn test_refine_at_shape_preserving() {
+        let points = [
+            Point3::from((0.0, 0.0, 0.0)),
+            Point3::from((1.0, 0.0, 1.0)),
+            Point3::from((1.0, 1.0, 2.0)),
+            Point3::from((0.0, 1.0, 1.0)),
+        ];
+        let mut mesh = Tmesh::new(points, 1.0);
+        mesh.subdivide(average_points)
+            .expect("Mesh is not malformed.");
+        mesh.subdivide(average_points)
+            .expect("Mesh is not malformed.");
+
+        let original = mesh.clone();
+
+        // Insert on an existing horizontal edge at t=0.
+        mesh.refine_at(0.6, 0.0)
+            .expect("refine_at on edge should succeed");
+
+        // Insert requiring intermediate edges.
+        mesh.refine_at(0.6, 0.5)
+            .expect("refine_at with intermediate should succeed");
+
+        // Verify surface is unchanged.
+        let n = 20;
+        let mut max_err = 0.0f64;
+        for i in 0..n {
+            let u = i as f64 / n as f64;
+            for j in 0..n {
+                let v = j as f64 / n as f64;
+                let a = mesh.subs(u, v).expect("subs should succeed");
+                let b = original.subs(u, v).expect("subs should succeed");
+                let err = (a - b).magnitude();
+                max_err = max_err.max(err);
+            }
+        }
+        assert!(
+            max_err < 1.0e-10,
+            "Surface shape changed after refinement, max error: {max_err:.2e}"
+        );
+    }
+
+    /// Round-trip test: BSplineSurface → Tmesh → evaluate, compare with original.
+    #[test]
+    fn test_from_bspline_surface_round_trip() {
+        use truck_base::cgmath64::*;
+
+        let u_knots = KnotVec::uniform_knot(3, 3);
+        let v_knots = KnotVec::uniform_knot(3, 3);
+        // 3 (degree) + 3 (divisions).
+        let nu = 6;
+        let nv = 6;
+
+        // Build a non-planar cubic B-spline surface.
+        let cps: Vec<Vec<Point3>> = (0..nu)
+            .map(|i| {
+                (0..nv)
+                    .map(|j| {
+                        let x = i as f64 / (nu - 1) as f64;
+                        let y = j as f64 / (nv - 1) as f64;
+                        let z = (x * std::f64::consts::PI).sin() * (y * std::f64::consts::PI).sin();
+                        Point3::new(x, y, z)
+                    })
+                    .collect()
+            })
+            .collect();
+        let bsp = BSplineSurface::new((u_knots, v_knots), cps);
+
+        let tmesh = Tmesh::from_bspline_surface(&bsp).expect("Conversion should succeed");
+
+        // Sample both surfaces and compare.
+        let n = 15;
+        let mut max_err = 0.0f64;
+        for i in 1..n {
+            let u = i as f64 / n as f64;
+            for j in 1..n {
+                let v = j as f64 / n as f64;
+                let p_bsp = ParametricSurface::subs(&bsp, u, v);
+                let p_tmesh = tmesh.subs(u, v).expect("T-mesh eval should succeed");
+                let err = (p_bsp - p_tmesh).magnitude();
+                max_err = max_err.max(err);
+            }
+        }
+        assert!(
+            max_err < 1.0e-6,
+            "BSpline → Tmesh round-trip max error: {max_err:.2e} (expected < 1e-6)"
+        );
+    }
+
+    /// Verifies correct structure: control point count and interior connectivity.
+    #[test]
+    fn test_from_bspline_surface_structure() {
+        let u_knots = KnotVec::uniform_knot(3, 2);
+        let v_knots = KnotVec::uniform_knot(3, 3);
+        let nu = 5;
+        let nv = 6;
+
+        let cps: Vec<Vec<Point3>> = (0..nu)
+            .map(|i| {
+                (0..nv)
+                    .map(|j| Point3::new(i as f64, j as f64, 0.0))
+                    .collect()
+            })
+            .collect();
+        let bsp = BSplineSurface::new((u_knots, v_knots), cps);
+
+        let tmesh = Tmesh::from_bspline_surface(&bsp).expect("Conversion should succeed");
+
+        // Correct number of control points.
+        assert_eq!(tmesh.control_points().len(), nu * nv);
+
+        // Interior points should have 4 point connections.
+        let mut interior_count = 0;
+        for cp in tmesh.control_points() {
+            let r = cp.read();
+            let point_connections: usize = TmeshDirection::iter()
+                .filter(|&d| r.con_type(d) == TmeshConnectionType::Point)
+                .count();
+            if point_connections == 4 {
+                interior_count += 1;
+            }
+        }
+        assert_eq!(
+            interior_count,
+            (nu - 2) * (nv - 2),
+            "Expected {} interior points with 4 connections, got {}",
+            (nu - 2) * (nv - 2),
+            interior_count
+        );
+    }
+
+    /// Non-cubic B-spline surfaces should be rejected.
+    #[test]
+    fn test_from_bspline_surface_non_cubic() {
+        // Degree 2 in u, degree 2 in v.
+        let u_knots = KnotVec::uniform_knot(2, 2);
+        let v_knots = KnotVec::uniform_knot(2, 2);
+        let nu = 4;
+        let nv = 4;
+
+        let cps: Vec<Vec<Point3>> = (0..nu)
+            .map(|i| {
+                (0..nv)
+                    .map(|j| Point3::new(i as f64, j as f64, 0.0))
+                    .collect()
+            })
+            .collect();
+        let bsp = BSplineSurface::new((u_knots, v_knots), cps);
+
+        let result = Tmesh::from_bspline_surface(&bsp);
+        assert!(result.is_err(), "Non-cubic surface should be rejected");
+    }
+
+    /// Flat surface should have zero Gaussian curvature → zero insertions.
+    #[test]
+    fn test_adaptive_refine_flat_surface() {
+        let points = [
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(1.0, 1.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+        ];
+        let mut mesh = Tmesh::new(points, 1.0);
+        mesh.subdivide(average_points).expect("Subdivision ok");
+        mesh.subdivide(average_points).expect("Subdivision ok");
+
+        let insertions = mesh
+            .adaptive_refine(0.01, 3, 5)
+            .expect("Adaptive refine should succeed");
+        assert_eq!(
+            insertions, 0,
+            "Flat surface should have 0 insertions, got {insertions}"
+        );
+    }
+
+    /// Curved surface should get insertions, and the surface shape should be preserved.
+    #[test]
+    fn test_adaptive_refine_curved_surface() {
+        // Use a saddle shape which has intrinsic curvature.
+        let points = [
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 1.0),
+            Point3::new(1.0, 1.0, 0.0),
+            Point3::new(0.0, 1.0, 1.0),
+        ];
+        let mut mesh = Tmesh::new(points, 1.0);
+        mesh.subdivide(average_points).expect("ok");
+        mesh.subdivide(average_points).expect("ok");
+        let original = mesh.clone();
+
+        let insertions = mesh
+            .adaptive_refine(0.1, 2, 5)
+            .expect("Adaptive refine should succeed");
+        assert!(
+            insertions > 0,
+            "Curved surface should have insertions, got 0"
+        );
+
+        // Verify shape preservation.
+        let n = 15;
+        let mut max_err = 0.0f64;
+        for i in 0..n {
+            let u = i as f64 / n as f64;
+            for j in 0..n {
+                let v = j as f64 / n as f64;
+                let a = mesh.subs(u, v).expect("subs ok");
+                let b = original.subs(u, v).expect("subs ok");
+                let err = (a - b).magnitude();
+                max_err = max_err.max(err);
+            }
+        }
+        assert!(
+            max_err < 1.0e-10,
+            "Surface changed after adaptive refinement, max error: {max_err:.2e}"
+        );
+    }
+
+    /// Gaussian curvature should be nonzero at curved regions and ~zero at flat ones.
+    #[test]
+    fn test_gaussian_curvature_sanity() {
+        // Build a flat mesh.
+        let flat_points = [
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(1.0, 1.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+        ];
+        let mut flat = Tmesh::new(flat_points, 1.0);
+        flat.subdivide(average_points).expect("ok");
+        flat.subdivide(average_points).expect("ok");
+
+        let k_flat = flat.gaussian_curvature(0.5, 0.5);
+        assert!(
+            k_flat.abs() < 1.0e-6,
+            "Flat surface curvature should be ~0, got {k_flat:.2e}"
+        );
+
+        // Build a curved mesh (saddle shape with mangled points).
+        let curved = make_derivative_test_mesh();
+        let k_curved = curved.gaussian_curvature(0.3, 0.3);
+        assert!(
+            k_curved.abs() > 1.0e-3,
+            "Curved surface should have significant curvature, got {k_curved:.2e}"
         );
     }
 }

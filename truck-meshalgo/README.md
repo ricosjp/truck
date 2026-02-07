@@ -48,7 +48,7 @@ Adds smooth normals to the stanford bunny.
 An experiment to decompose a mesh into elements for future NURBS-shape approximation of the mesh.
 
 - Input: sample.obj
-- Output: planes_parts_#.obj, others_parts_#.obj
+- Output: planes*parts*#.obj, others*parts*#.obj
 
 ### teapot
 

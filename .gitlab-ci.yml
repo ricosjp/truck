@@ -1,117 +1,117 @@
 stages:
-    - test
-    - pages
-    - deploy
+  - test
+  - pages
+  - deploy
 
 cpu-test:
-    image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
-    stage: test
-    variables:
-        GIT_SUBMODULE_STRATEGY: recursive
-    script:
-        - cargo make ci-cpu-test
+  image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
+  stage: test
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - cargo make ci-cpu-test
 
 cpu-nightly-test:
-    image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
-    stage: test
-    variables:
-        GIT_SUBMODULE_STRATEGY: recursive
-    script:
-        - cargo make ci-cpu-nightly-test
+  image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
+  stage: test
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - cargo make ci-cpu-nightly-test
 
 meshalgo-features-buildcheck:
-    image: rust:latest
-    stage: test
-    variables:
-        GIT_SUBMODULE_STRATEGY: recursive
-    script:
-        - cd truck-meshalgo
-        - cargo check --no-default-features --features analyzers
-        - cargo check --no-default-features --features filters
-        - cargo check --no-default-features --features tessellation
+  image: rust:latest
+  stage: test
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - cd truck-meshalgo
+    - cargo check --no-default-features --features analyzers
+    - cargo check --no-default-features --features filters
+    - cargo check --no-default-features --features tessellation
 
 gpu-test:
-    image: $CI_REGISTRY/ricos/truck/truck/gpu-test:latest
-    stage: test
-    variables:
-        GIT_SUBMODULE_STRATEGY: recursive
-    script:
-        - cargo make ci-gpu-test
-    artifacts:
-        paths:
-            - images
+  image: $CI_REGISTRY/ricos/truck/truck/gpu-test:latest
+  stage: test
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - cargo make ci-gpu-test
+  artifacts:
+    paths:
+      - images
 
 wasm-test:
-    image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
-    stage: test
-    variables:
-        GIT_SUBMODULE_STRATEGY: recursive
-    script:
-        - deno lint
-        - cargo make wasm-test
+  image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
+  stage: test
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - deno lint
+    - cargo make wasm-test
 
 page-build:
-    image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
-    stage: test
-    variables:
-        GIT_SUBMODULE_STRATEGY: recursive
-    script:
-        - mkdir public
-        - cargo make page-build
-        - mv truck-js/pkg public/adhoc-viewer
-        - mv dist public/webgpu-examples
-    artifacts:
-        paths:
-            - public
+  image: $CI_REGISTRY/ricos/truck/truck/wasm-test:latest
+  stage: test
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - mkdir public
+    - cargo make page-build
+    - mv truck-js/pkg public/adhoc-viewer
+    - mv dist public/webgpu-examples
+  artifacts:
+    paths:
+      - public
 
 lint-check:
-    image: rust:latest
-    stage: test
-    variables:
-        GIT_SUBMODULE_STRATEGY: recursive
-    script:
-        - rustup component add clippy
-        - cargo clippy
-        - rustup default nightly
-        - rustup component add rustfmt
-        - cargo fmt -- --check
+  image: rust:latest
+  stage: test
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - rustup component add clippy
+    - cargo clippy
+    - rustup default nightly
+    - rustup component add rustfmt
+    - cargo fmt -- --check
 
 change-log:
-    image: ubuntu:latest
-    stage: test
-    variables:
-        GIT_STRATEGY: clone
-    before_script:
-        - sed -i.bak -e "s%http://archive.ubuntu.com/ubuntu/%http://ftp.jaist.ac.jp/pub/Linux/ubuntu/%g" /etc/apt/sources.list
-        - sed -i.bak -e "s%http://security.ubuntu.com/ubuntu/%http://ftp.jaist.ac.jp/pub/Linux/ubuntu/%g" /etc/apt/sources.list
-        - apt-get update && apt-get install git -y
-        - git fetch
-    script:
-        - bash -c "! git diff --exit-code origin/master CHANGELOG.md"
-    except:
-        - master
-        - tags
+  image: ubuntu:latest
+  stage: test
+  variables:
+    GIT_STRATEGY: clone
+  before_script:
+    - sed -i.bak -e "s%http://archive.ubuntu.com/ubuntu/%http://ftp.jaist.ac.jp/pub/Linux/ubuntu/%g" /etc/apt/sources.list
+    - sed -i.bak -e "s%http://security.ubuntu.com/ubuntu/%http://ftp.jaist.ac.jp/pub/Linux/ubuntu/%g" /etc/apt/sources.list
+    - apt-get update && apt-get install git -y
+    - git fetch
+  script:
+    - bash -c "! git diff --exit-code origin/master CHANGELOG.md"
+  except:
+    - master
+    - tags
 
 readme-generator:
-    image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
-    stage: test
-    variables:
-        GIT_STRATEGY: clone
-    script:
-        - cargo run --bin readme-generator
-        - git diff --exit-code
-    except:
-        - tags
+  image: $CI_REGISTRY/ricos/truck/truck/cpu-test:latest
+  stage: test
+  variables:
+    GIT_STRATEGY: clone
+  script:
+    - cargo run --bin readme-generator
+    - git diff --exit-code
+  except:
+    - tags
 
 pages:
-    image: rust:latest
-    stage: pages
-    script:
-        - rustup install 1.90
-        - rustup run 1.90 cargo doc --no-deps
-        - mv target/doc public/doc
-    artifacts:
-        paths:
-            - public
-    only:
-        - master
+  image: rust:latest
+  stage: pages
+  script:
+    - rustup install 1.90
+    - rustup run 1.90 cargo doc --no-deps
+    - mv target/doc public/doc
+  artifacts:
+    paths:
+      - public
+  only:
+    - master

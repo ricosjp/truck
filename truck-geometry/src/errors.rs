@@ -224,6 +224,9 @@ the number of control points: {1}"
     /// The control point being inserted is out of the bounds of the `Tmesh`.
     #[error("The control point being inserted is out of the bounds of the Tmesh.")]
     TmeshOutOfBoundsInsertion,
+    /// The B-spline surface is not cubic (degree 3) in both directions.
+    #[error("The B-spline surface must be cubic (degree 3) in both directions, got ({0}, {1}).")]
+    TmeshNonCubicDegree(usize, usize),
     /// The two T-NURCC points are already connected.
     #[error("The two points are already connected.")]
     TnurccExistingConnection,

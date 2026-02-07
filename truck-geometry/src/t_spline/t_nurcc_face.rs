@@ -7,7 +7,7 @@ impl<P> TnurccFace<P> {
     ///
     /// # Borrows
     /// Immutably borrows `f` and all edges which define the edge of `f`
-    /// 
+    ///
     /// # Panics
     /// Panics if `f`'s reference `edge` does not reference `f` as a face on either side.
     pub fn boundry_verticies(f: Arc<RwLock<Self>>) -> Vec<Arc<RwLock<TnurccControlPoint<P>>>> {

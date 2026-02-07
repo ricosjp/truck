@@ -679,8 +679,12 @@ mod tests {
         let prmiary_dest = Arc::new(RwLock::new(TnurccControlPoint::new(1, (0.0, 1.0, 0.0))));
 
         // Primary edge
-        let primary_edge =
-            TnurccEdge::new(0, 1.0, Arc::clone(&primary_origin), Arc::clone(&prmiary_dest));
+        let primary_edge = TnurccEdge::new(
+            0,
+            1.0,
+            Arc::clone(&primary_origin),
+            Arc::clone(&prmiary_dest),
+        );
 
         // Faces for orientation
         let left_face = Arc::new(RwLock::new(TnurccFace {
@@ -710,10 +714,10 @@ mod tests {
             (
                 Arc::clone(&secondary_bl),   // Secondary origin
                 Arc::clone(&primary_origin), // Secondary dest
-                Left,                       // Common face
-                Left,                       // Secondary edge common face side
-                LeftCw,                     // Primary edge connection side
-                LeftAcw,                    // Secondary edge connectioin side
+                Left,                        // Common face
+                Left,                        // Secondary edge common face side
+                LeftCw,                      // Primary edge connection side
+                LeftAcw,                     // Secondary edge connectioin side
             ),
             (
                 Arc::clone(&prmiary_dest),
@@ -785,7 +789,8 @@ mod tests {
                 Right => secondary_edge.write().face_right = Some(common_face),
             };
 
-            let con_res = TnurccEdge::connect(Arc::clone(&primary_edge), Arc::clone(&secondary_edge));
+            let con_res =
+                TnurccEdge::connect(Arc::clone(&primary_edge), Arc::clone(&secondary_edge));
             assert!(
                 con_res.is_ok(),
                 "Connection between {:?}->{:?} and {:?}->{:?} failed with error: {}.",
@@ -861,8 +866,12 @@ mod tests {
         let prmiary_dest = Arc::new(RwLock::new(TnurccControlPoint::new(1, (0.0, 1.0, 0.0))));
 
         // The primary edge
-        let primary_edge =
-            TnurccEdge::new(0, 1.0, Arc::clone(&primary_origin), Arc::clone(&prmiary_dest));
+        let primary_edge = TnurccEdge::new(
+            0,
+            1.0,
+            Arc::clone(&primary_origin),
+            Arc::clone(&prmiary_dest),
+        );
 
         // Faces
         let left_face = Arc::new(RwLock::new(TnurccFace {
@@ -889,9 +898,9 @@ mod tests {
             (
                 Arc::clone(&secondary_top), // Secondary origin
                 Arc::clone(&prmiary_dest),  // Secondary dest
-                Right,                     // left_face side
-                [LeftAcw, RightCw],        // Secondary to primary connections
-                [LeftAcw, RightCw],        // Primary to secondary connections
+                Right,                      // left_face side
+                [LeftAcw, RightCw],         // Secondary to primary connections
+                [LeftAcw, RightCw],         // Primary to secondary connections
             ),
             (
                 Arc::clone(&prmiary_dest),
@@ -930,7 +939,8 @@ mod tests {
             }
 
             // Attempt to connect
-            let con_res = TnurccEdge::connect(Arc::clone(&primary_edge), Arc::clone(&secondary_edge));
+            let con_res =
+                TnurccEdge::connect(Arc::clone(&primary_edge), Arc::clone(&secondary_edge));
             assert!(
                 con_res.is_ok(),
                 "Connection between {:?}->{:?} and {:?}->{:?} failed with error: {}.",
@@ -1097,11 +1107,7 @@ mod tests {
             "Middle's incomming edge is incorrect."
         );
         // Check that the new edge's index is correct
-        assert_eq!(
-            other_left.read().index,
-            24,
-            "New edge index is incorrect."
-        );
+        assert_eq!(other_left.read().index, 24, "New edge index is incorrect.");
 
         // Check that the destination point's incoming edge has been correctly set
         assert!(
