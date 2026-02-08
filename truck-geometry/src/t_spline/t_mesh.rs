@@ -3638,7 +3638,7 @@ mod tests {
 
         // Make sure each point still follows the x + y = z scheme (averaging will have no effect on this)
         for point in mesh.control_points.iter() {
-            let p = point.read().point().clone();
+            let p = *point.read().point();
             assert!(
                 (p.x + p.y - p.z).so_small(),
                 "Point does not follow expected cartesian scheme."
@@ -3709,21 +3709,19 @@ mod tests {
             )
             .expect("Local knot insertion should succeed");
 
-        let p3_prime = ins_point.read().point().clone();
+        let p3_prime = *ins_point.read().point();
 
-        let p4_prime = ins_point
+        let p4_prime = *ins_point
             .read()
             .conected_point(TmeshDirection::Right)
             .read()
-            .point()
-            .clone();
+            .point();
 
-        let p2_prime = ins_point
+        let p2_prime = *ins_point
             .read()
             .conected_point(TmeshDirection::Left)
             .read()
-            .point()
-            .clone();
+            .point();
 
         // Values verified via https://www.desmos.com/3d/pitkyckhfn
         assert!(
