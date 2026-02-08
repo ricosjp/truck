@@ -2653,7 +2653,7 @@ mod tests {
         let point_con = &point_borrow.try_conected_point(dir).map_err(|e| (0, e))?;
         let point_equal = Arc::ptr_eq(point_con, &other);
         point_equal
-            .then(|| 0)
+            .then_some(0)
             .ok_or((0, Error::TmeshExistingConnection))?;
 
         // Check that other is connected to point
@@ -2663,7 +2663,7 @@ mod tests {
             .map_err(|e| (1, e))?;
         let other_equal = Arc::ptr_eq(other_con, &point);
         other_equal
-            .then(|| 0)
+            .then_some(0)
             .ok_or((1, Error::TmeshExistingConnection))?;
         Ok(())
     }
