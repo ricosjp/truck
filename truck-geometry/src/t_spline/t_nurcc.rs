@@ -299,7 +299,7 @@ where P: ControlPoint<f64>
             let mut w_vec = Vec::with_capacity(self.faces.len());
             let mut w_points = Vec::with_capacity(self.faces.len());
 
-            let mut cir_points = TnurccFace::boundry_verticies(Arc::clone(face));
+            let mut cir_points = TnurccFace::boundary_vertices(Arc::clone(face));
             // If there are no points defining a face, that is a problem.
             if cir_points.is_empty() {
                 return Err(Error::TnurccMalformedFace);
@@ -926,7 +926,7 @@ where P: ControlPoint<f64> + Debug + Clone
         // Seed from face 0. CCW vertex order: V0(bottom-left), V1(bottom-right),
         // V2(top-right), V3(top-left). Edge 0 is horizontal, edge 1 is vertical.
         let seed = Arc::clone(&tnurcc.faces[0]);
-        let seed_verts = TnurccFace::boundry_verticies(Arc::clone(&seed));
+        let seed_verts = TnurccFace::boundary_vertices(Arc::clone(&seed));
         let seed_edges = TnurccFace::border_edges(Arc::clone(&seed));
         if seed_verts.len() != 4 || seed_edges.len() != 4 {
             return Err(Error::TmeshMalformedMesh);
@@ -970,7 +970,7 @@ where P: ControlPoint<f64> + Debug + Clone
                 continue;
             }
 
-            let verts = TnurccFace::boundry_verticies(Arc::clone(&face));
+            let verts = TnurccFace::boundary_vertices(Arc::clone(&face));
             let edges = TnurccFace::border_edges(Arc::clone(&face));
             if verts.len() != 4 || edges.len() != 4 {
                 continue;

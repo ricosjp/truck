@@ -1,7 +1,7 @@
 use super::*;
 
 impl<P> TnurccFace<P> {
-    /// Returns a vector containing all the points defining the boundry of the current face, in an
+    /// Returns a vector containing all the points defining the boundary of the current face, in an
     /// anti-clockwise order starting from the origin of `f`'s reference edge. Returns an empty vector
     /// if `f` does not have a reference `edge`.
     ///
@@ -10,7 +10,7 @@ impl<P> TnurccFace<P> {
     ///
     /// # Panics
     /// Panics if `f`'s reference `edge` does not reference `f` as a face on either side.
-    pub fn boundry_verticies(f: Arc<RwLock<Self>>) -> Vec<Arc<RwLock<TnurccControlPoint<P>>>> {
+    pub fn boundary_vertices(f: Arc<RwLock<Self>>) -> Vec<Arc<RwLock<TnurccControlPoint<P>>>> {
         if let Some(edge) = f.read().edge.as_ref().map(Arc::clone) {
             let face_side = edge
                 .read()
