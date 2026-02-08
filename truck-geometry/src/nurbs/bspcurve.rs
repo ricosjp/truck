@@ -464,7 +464,10 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineCurve<P> {
     /// // add knots out of the range of the knot vectors.
     /// bspcurve.add_knot(-1.0).add_knot(2.0);
     /// assert_eq!(bspcurve.knot_vec().range_length(), 3.0);
-    /// assert_eq!(bspcurve.front(), Vector2::new(0.0, 0.0));
+    /// // The parameter range [knot[degree], knot[n_cv]] is still [0, 1].
+    /// // front() is unchanged because the triple-0 knot still clamps the left boundary.
+    /// assert_eq!(bspcurve.front(), Vector2::new(-1.0, 1.0));
+    /// // back() becomes origin because add_knot(2.0) breaks right-side clamping.
     /// assert_eq!(bspcurve.back(), Vector2::new(0.0, 0.0));
     /// ```
     pub fn add_knot(&mut self, x: f64) -> &mut Self {
