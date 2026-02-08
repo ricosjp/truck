@@ -291,10 +291,10 @@ impl FromIterator<StlFace> for PolygonMesh {
         let faces: Vec<[Vertex; 3]> = iter.into_iter().map(closure).collect();
         let faces = Faces::from_tri_and_quad_faces(faces, Vec::new());
         let mut positions: Vec<([i64; 3], usize)> = positions.into_iter().collect();
-        positions.sort_by(|a, b| a.1.cmp(&b.1));
+        positions.sort_by_key(|a| a.1);
         let positions: Vec<Point3> = positions.into_iter().map(decode_vector).collect();
         let mut normals: Vec<([i64; 3], usize)> = normals.into_iter().collect();
-        normals.sort_by(|a, b| a.1.cmp(&b.1));
+        normals.sort_by_key(|a| a.1);
         let normals: Vec<Vector3> = normals.into_iter().map(decode_vector).collect();
         PolygonMesh::debug_new(
             StandardAttributes {
