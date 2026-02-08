@@ -324,7 +324,7 @@ impl<P> Tmesh<P> {
             connection_side,
             knot_interval * knot_ratio,
         )
-        .map_err(|_| Error::TmeshUnkownError)?;
+        .map_err(|_| Error::TmeshUnknownError)?;
 
         // p <-> other
         TmeshControlPoint::connect(
@@ -333,7 +333,7 @@ impl<P> Tmesh<P> {
             connection_side,
             knot_interval * (1.0 - knot_ratio),
         )
-        .map_err(|_| Error::TmeshUnkownError)?;
+        .map_err(|_| Error::TmeshUnknownError)?;
 
         // When a new point is added, there can only possibly be edge conditions on
         // the two sides perpendicular to the connection. If there is no edge condition,
@@ -358,7 +358,7 @@ impl<P> Tmesh<P> {
             // If a point that satisfies Rule 2 from [Sederberg et al. 2003] is found, connect it.
             // Should also never return an error.
             self.find_inferred_connection(Arc::clone(&p), connection_side.clockwise())
-                .map_err(|_| Error::TmeshUnkownError)?;
+                .map_err(|_| Error::TmeshUnknownError)?;
         }
 
         if con.read().con_type(connection_side.anti_clockwise()) == TmeshConnectionType::Edge {
@@ -379,7 +379,7 @@ impl<P> Tmesh<P> {
             // If a point that satisfies Rule 2 from [Sederberg et al. 2003] is found, connect it.
             // Should also never return an error.
             self.find_inferred_connection(Arc::clone(&p), connection_side.anti_clockwise())
-                .map_err(|_| Error::TmeshUnkownError)?;
+                .map_err(|_| Error::TmeshUnknownError)?;
         }
 
         // Add control point
@@ -479,7 +479,7 @@ impl<P> Tmesh<P> {
                         TmeshDirection::Up,
                         (knot_coords.1 - point_t_coord) / con_knot,
                     )
-                    .map_err(|_| Error::TmeshUnkownError);
+                    .map_err(|_| Error::TmeshUnknownError);
             }
             _ => {
                 // Multiple T-edges are found where the point intersects (Should never happen)
@@ -528,7 +528,7 @@ impl<P> Tmesh<P> {
                     TmeshDirection::Right,
                     (knot_coords.0 - point_s_coord) / con_knot,
                 )
-                .map_err(|_| Error::TmeshUnkownError)
+                .map_err(|_| Error::TmeshUnknownError)
             }
             _ => {
                 // Multiple S-edges are found where the point intersects (Should never happen)

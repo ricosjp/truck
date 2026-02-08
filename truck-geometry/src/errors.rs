@@ -208,7 +208,7 @@ the number of control points: {1}"
     TmeshConnectionInvalidKnotInterval,
     /// An unknown T-mesh error occurred.
     #[error("An unknown T-mesh error occurred.")]
-    TmeshUnkownError,
+    TmeshUnknownError,
     /// The T-mesh is malformed and should no longer be used.
     #[error("The T-mesh is malformed and should no longer be used.")]
     TmeshMalformedMesh,
