@@ -12,22 +12,22 @@ default = ["step-test"]
 step-test = ["truck-stepio"]
 
 [dependencies]
-derive_more = { version = "2.1.1", features = ["full"] }
-rustc-hash = "2.1.1"
-itertools = "0.14.0"
-truck-base = { version = "0.5.0", path = "../truck-base" }
-truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
-truck-topology = { version = "0.6.0", path = "../truck-topology" }
-truck-meshalgo = { version = "0.4.0", path = "../truck-meshalgo" }
+derive_more = { workspace = true }
+rustc-hash = { workspace = true }
+itertools = { workspace = true }
+truck-base = { workspace = true }
+truck-geometry = { workspace = true }
+truck-topology = { workspace = true }
+truck-meshalgo = { workspace = true }
 
-truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
-truck-stepio = { version = "0.3.0", path = "../truck-stepio", optional = true }
+truck-geotrait = { workspace = true }
+truck-stepio = { workspace = true, optional = true }
 
 [dev-dependencies]
-rand = "0.9.2"
-serde_json = "1.0.149"
-truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
-proptest = "1.10.0"
+rand = { workspace = true }
+serde_json = { workspace = true }
+truck-modeling = { workspace = true }
+proptest = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.3.4", features = ["wasm_js"] }
+getrandom = { workspace = true }

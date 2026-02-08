@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rayon = "1.11.0"
-truck-base = { version = "0.5.0", path = "../truck-base" }
+rayon = { workspace = true }
+truck-base = { workspace = true }
 
 [dev-dependencies]
-proptest = { version = "1.10.0", features = ["attr-macro"] }
+proptest = { workspace = true, features = ["attr-macro"] }
