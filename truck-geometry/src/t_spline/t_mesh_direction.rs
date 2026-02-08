@@ -45,7 +45,7 @@ impl TmeshDirection {
     }
 
     /// Returns true if the direction is UP or DOWN
-    pub fn virtical(self) -> bool {
+    pub fn vertical(self) -> bool {
         match self {
             TmeshDirection::Up => true,
             TmeshDirection::Down => true,
