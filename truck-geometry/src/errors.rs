@@ -247,7 +247,7 @@ the number of control points: {1}"
     TnurccMissingFace,
     /// An edge in T-NURCC constructor has more than 2 faces.
     #[error("An edge in T-NURCC constructor has been defined to have more than 2 faces.")]
-    TnurccEdgeTrippleFace,
+    TnurccEdgeTripleFace,
 }
 
 #[test]

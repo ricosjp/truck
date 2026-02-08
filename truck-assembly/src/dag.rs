@@ -507,7 +507,7 @@ impl<NE, EE> Dag<NE, EE> {
     /// assert!(dag.create_edge(a[0], a[1], 1));
     /// assert_eq!(dag.node(a[0]).edges().len(), 2);
     ///
-    /// // a loop has occured!
+    /// // a loop has occurred!
     /// assert!(!dag.create_edge(a[1], a[0], 2));
     /// assert_eq!(dag.node(a[1]).edges().len(), 0);
     /// ```

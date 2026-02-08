@@ -20,7 +20,7 @@ impl<P> TmeshControlPoint<P> {
     /// Returns an immutable reference to the location of the control point in real space.
     pub fn point(&self) -> &P { &self.point }
 
-    /// Sets the cartesian point of the control point
+    /// Sets the cartesian point of the control point.
     pub fn set_point(&mut self, p: P) { self.point = p; }
 
     // /// Returns an immutable refence to the connections array.
@@ -38,12 +38,12 @@ impl<P> TmeshControlPoint<P> {
         &mut self.connections[dir as usize]
     }
 
-    /// Returns the knot coordinates for `self`
+    /// Returns the knot coordinates for `self`.
     pub fn knot_coordinates(&self) -> (f64, f64) { self.knot_coordinates }
 
     /// Sets the knot coordinates for `self`. Only changes the coordinates if `self`
     /// is not connected to any other points or T-junctions. `t` is the horizontal
-    /// knot coordinate, and `s` is the virtical.
+    /// knot coordinate, and `s` is the vertical.
     ///
     /// # Returns
     /// - `TmeshExistingConnection` if `self` is connected to anything that is not an edge condition
@@ -84,7 +84,7 @@ impl<P> TmeshControlPoint<P> {
         }
     }
 
-    /// Removes the connection in the direction `dir`, making it a T-junction. The connection in direection
+    /// Removes the connection in the direction `dir`, making it a T-junction. The connection in direction
     /// `dir` can be either a point connection or an edge condition. Modifies the connected point to also
     /// remove the connection, if it exists. In the case of an error, nothing is modified.
     ///
@@ -116,7 +116,7 @@ impl<P> TmeshControlPoint<P> {
         }
     }
 
-    /// Removes the edge condition in direction `dir` from a point, replacing it with a T-juction.
+    /// Removes the edge condition in direction `dir` from a point, replacing it with a T-junction.
     ///
     /// # WARNING
     /// USE THIS FUNCTION WITH CARE. Using this function incorrectly will create bugs which
@@ -126,7 +126,7 @@ impl<P> TmeshControlPoint<P> {
     /// # Returns
     /// - `TmeshExistingConnection` if `dir` is not an edge condition.
     ///
-    /// - `Ok` if the edge codition was successfully removed.
+    /// - `Ok` if the edge condition was successfully removed.
     pub fn remove_edge_condition(&mut self, dir: TmeshDirection) -> Result<()> {
         let is_edge = self
             .connection_mut(dir)
@@ -240,7 +240,7 @@ impl<P> TmeshControlPoint<P> {
     /// Returns the knot interval for a connection in the direction `dir`.
     ///
     /// # Returns
-    /// - `None` if a T-junction is found in the directoin `dir`.
+    /// - `None` if a T-junction is found in the direction `dir`.
     ///
     /// - `Some(f64)` otherwise.
     pub fn connection_knot(&self, dir: TmeshDirection) -> Option<f64> {

@@ -1,7 +1,7 @@
 //! # T-Splines
 //! T-Splines are a superset of NURBS, Catmull and Clark surfaces, and B-Splines.
-//! T-meshes and T-NURCCs are surfaces. It does not makes sense to have a T-mesh
-//! curve or T-NURCC curve, so the semantic distinction is omitted
+//! T-meshes and T-NURCCs are surfaces. It does not make sense to have a T-mesh
+//! curve or T-NURCC curve, so the semantic distinction is omitted.
 //!
 //! # Bibliography:
 //! - Sederberg, Thomas & Zheng, Jianmin & Sewell, David & Sabin, Malcolm. (1998).
@@ -45,14 +45,14 @@ pub enum TmeshConnectionType {
 pub struct TmeshControlPoint<P> {
     point: P, // The control point location in Cartesian space
 
-    // The four possible connections to other control points and thier weights.
+    // The four possible connections to other control points and their weights.
     // They are, from index 0-3, the top, right, bottom, and left connections, respectively.
     // A connection may still have a weight even if it does not connect to another control point;
     // For details, see Figure 8 of [Sederberg et al. 2003].
     connections: [Option<TmeshConnection<P>>; 4],
 
     // The "absolute" knot coordinates of the control point in the context of the mesh.
-    // (horizontal, virtical), RIGHT and UP are the directions in which a delta corresponds
+    // (horizontal, vertical), RIGHT and UP are the directions in which a delta corresponds
     // to a positive increase in knot coordinates
     knot_coordinates: (f64, f64),
 }
@@ -70,7 +70,7 @@ pub struct Tmesh<P> {
     knot_vectors: RwLock<Option<Vec<(KnotVec, KnotVec)>>>,
 }
 
-/// # TmeshDirrection
+/// # TmeshDirection
 ///
 /// A C-style enum designed to enforce T-mesh control point directionality.
 #[derive(Clone, PartialEq, Debug, Copy)]

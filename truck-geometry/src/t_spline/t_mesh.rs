@@ -158,7 +158,7 @@ fn basis_function_d2(u: f64, a: &[f64]) -> f64 {
 impl<P> Tmesh<P> {
     /// Constructs a new rectangular T-mesh from four points in space and a value for
     /// outward-facing knot intervals. The result is the following mesh, where the
-    /// numbers are the indecies of the array `points`. The knot interval between
+    /// numbers are the indices of the array `points`. The knot interval between
     /// each point is 1.0.
     /// ```text
     ///  3|   |2
@@ -538,15 +538,15 @@ impl<P> Tmesh<P> {
     }
 
     /// Generates the S and T knot vectors for a particular point. The returned tuple is of the form `(S_vector, T_vector)`,
-    /// where `S_vector` is the horizontal knot vector and `T_vector` is the virtical knot vector. Both knot vectors shall
+    /// where `S_vector` is the horizontal knot vector and `T_vector` is the vertical knot vector. Both knot vectors shall
     /// be of length 5
     ///
     /// # Returns
     /// - `TmeshConnectionNotFound` if a T-junction is unexpectedly found (non-rectangular face)
     ///
-    /// - `TmeshControlPointNotFound` if an edge conditon is unexpectedly found (internal edge condition)
+    /// - `TmeshControlPointNotFound` if an edge condition is unexpectedly found (internal edge condition)
     ///
-    /// - `Ok((KnotVeec, KnotVec))` if knot vectors are successfully generated
+    /// - `Ok((KnotVec, KnotVec))` if knot vectors are successfully generated
     ///
     /// # Borrows
     /// Immutably borrows `p` and all points connected to `p` in all directions for a distance of two knot intervals.
@@ -604,7 +604,7 @@ impl<P> Tmesh<P> {
 
     /// Generates the knot vectors for each control point using the method in \[Sederberg et al. 2003\].
     /// The knot vector for a control point is located at the same index as the control point is in `self.control_points`.
-    /// Each pair of knot vectors is arranged as `(s, t)` where `s` is the horizontal and `t` is the virtical.
+    /// Each pair of knot vectors is arranged as `(s, t)` where `s` is the horizontal and `t` is the vertical.
     ///
     /// # Returns
     /// All errors returned from the function result from a malformed T-mesh and should not
@@ -775,7 +775,7 @@ impl<P> Tmesh<P> {
     ///  
     /// # Borrows
     /// Immutably borrows `p` and any points connected to `p` in the direction `dir`, including points which go around any
-    /// faces created by T-juctions in the direction `dir`, for `num` perpandicular intersections.
+    /// faces created by T-juctions in the direction `dir`, for `num` perpendicular intersections.
     pub fn cast_ray(
         p: Arc<RwLock<TmeshControlPoint<P>>>,
         dir: TmeshDirection,
@@ -853,8 +853,8 @@ impl<P> Tmesh<P> {
                     //
                     // In any case, the path taken shall not cross the ray. It can be guaranteed that any edge
                     // the ray pierces will be accessable by this algorithm due to the rectangular nature of the T-mesh.
-                    // Lets say that there exists a virtical edge which the ray pierces. That edge must be connected on
-                    // either edge to horrizontal edges. At the corners, there will be control points. Thus, two of
+                    // Lets say that there exists a vertical edge which the ray pierces. That edge must be connected on
+                    // either edge to horizontal edges. At the corners, there will be control points. Thus, two of
                     // the control points must be above the ray. Furthermore, to preserve the rectangular nature of
                     // each face, those control points must be connected to two other edges, meaning that at least
                     // one edge from that control point will be pointing up or left, connecting to another edge.
@@ -1002,7 +1002,7 @@ impl<P> Tmesh<P>
 where P: ControlPoint<f64>
 {
     /// Attempts to insert a new control point between two existing control points using the technique from \[Sederberg et al. 2003\]
-    /// called local knot insertion (LKI), returning the added control point if successful. In order to do so, the knot vectors perpandicular
+    /// called local knot insertion (LKI), returning the added control point if successful. In order to do so, the knot vectors perpendicular
     /// to the connection for two control points in both directions (including the control points which define the edge) must be equal.
     /// See the figure below for an example.
     ///
@@ -1021,12 +1021,12 @@ where P: ControlPoint<f64>
     ///
     /// - `{+}` is `p`, which must exist
     /// - `<+>` are the other points which must exist. Any other points (other than `p`) may or may not exist,
-    ///   and LKI will succeed so long as the perpandicular knot vectors are equal for all points `<+>` and `{+}`.
+    ///   and LKI will succeed so long as the perpendicular knot vectors are equal for all points `<+>` and `{+}`.
     /// - `[+]` is the point to be inserted.
-    /// - `t1 - t5` are the knot vectors perpandicular to the axis of insertion
+    /// - `t1 - t5` are the knot vectors perpendicular to the axis of insertion
     /// - `(+)` are points which will not affect or be affected by LKI
     ///
-    /// In the above example, the virtical knot vectors t1, t2, t3, and t4 must be equal
+    /// In the above example, the vertical knot vectors t1, t2, t3, and t4 must be equal
     /// (tollerance is used, so exact floating point equality is not nescessary).
     ///
     /// Other points may exist on any of the horizontal connections, so long as they are not on the primary axis
@@ -1045,7 +1045,7 @@ where P: ControlPoint<f64>
     ///
     /// - `TmeshMalformedMesh` if a knot vector was unable to be constructed for any point.
     ///
-    /// - `TmeshKnotVectorsNotEqual` if the knot vectors perpandicular to `dir` are not all equal (Rule 3 \[Sederberg et al. 2003\]).
+    /// - `TmeshKnotVectorsNotEqual` if the knot vectors perpendicular to `dir` are not all equal (Rule 3 \[Sederberg et al. 2003\]).
     ///
     /// - `TmeshConnectionInvalidKnotInterval` if the connection between `p` and the point in the direction `dir` does
     ///   not have the same knot interval in both directions.
@@ -1055,7 +1055,7 @@ where P: ControlPoint<f64>
     ///
     /// # Borrows
     /// Immutably borrows two points in the direction `dir` of `p` and one in the direction `dir.flip()`, as well as two points in
-    /// either direction perpandicular to `dir` for those points.  
+    /// either direction perpendicular to `dir` for those points.  
     ///
     /// Mutably borrows `p` and the point connecteed to `p` in the direction `dir`, as well as the newly created control point,
     /// which lies between the two.
@@ -1081,7 +1081,7 @@ where P: ControlPoint<f64>
 
         // Rule 3 of T-splines, [Sederberg et al. 2003], states that all (The paper does not specify existing or otherwise,
         // I am assuming that they may or may not exist, however, the connection from the inner two points must not be
-        // a T-junction) perpandicular and in-line knot vectors of length 5 centered on the axis
+        // a T-junction) perpendicular and in-line knot vectors of length 5 centered on the axis
         // of insertion and a distance of at most two knots from the point to be inserted must be equal. See Figure 10 in
         // [Sederberg et al. 2003] for details.
         let mut center_points: Vec<Arc<RwLock<TmeshControlPoint<P>>>> = Vec::with_capacity(4);
@@ -1089,7 +1089,7 @@ where P: ControlPoint<f64>
         // An example insertion for reference
         //
         //   --<+>--{+}--[+]---+--<+>--
-        //      0    1    ~    2   3   <- center_points and knot_vectors indicies
+        //      0    1    ~    2   3   <- center_points and knot_vectors indices
         // {+} is p
         // [+] is the new control point to be inserted
         // <+> may or may not exist (can only insert if they are replaced with edge conditions)
@@ -1106,7 +1106,7 @@ where P: ControlPoint<f64>
         center_points.push(Arc::clone(&p));
         center_points.push({
             let borrow = p.read();
-            // Checked in the begining of the function with match
+            // Checked in the beginning of the function with match
             Arc::clone(&borrow.connected_point(dir))
         });
         center_points.push({
@@ -1186,7 +1186,7 @@ where P: ControlPoint<f64>
 
         let cartesian_points: Vec<P> = center_points.iter().map(|p| *p.read().point()).collect();
 
-        // Equations 5, 6, and 7 from [Sederberg et al. 2003]. Rmember that P3 is not a point in either
+        // Equations 5, 6, and 7 from [Sederberg et al. 2003]. Remember that P3 is not a point in either
         // cartesian_points or center_points, and arrays in rust are 0 indexed,
         let p2_prime = ((cartesian_points[0] * d[3])
             + (cartesian_points[1].to_vec() * (d[0] + d[1] + d[2])))
@@ -1208,9 +1208,9 @@ where P: ControlPoint<f64>
     }
 
     /// Absolute knot coordinate interface for local knot insertion (LKI). Tries to insert a control point
-    /// at the specified absolute knot coordinates `knot_coords` without changing the shape of the resulting surface.h
+    /// at the specified absolute knot coordinates `knot_coords` without changing the shape of the resulting surface.
     /// For details on LKI, see [`Tmesh::try_local_knot_insertion()`]. In order for the function to succeed, an edge must
-    /// exist which passes through the knot coordinates `knot_coords`, that is, eithr two virtical points or horrizontal
+    /// exist which passes through the knot coordinates `knot_coords`, that is, either two vertical points or horizontal
     /// points straddle the parametric coordinates where the new point is to be inserted.
     ///
     /// # Returns
@@ -1224,7 +1224,7 @@ where P: ControlPoint<f64>
     ///
     /// # Borrows
     /// Immutably borrows every control point in `self`, immutably borrows two points in the direction `dir` of `p`
-    /// and one in the direction `dir.flip()`, as well as two points in either direction perpandicular to `dir` for those points.  
+    /// and one in the direction `dir.flip()`, as well as two points in either direction perpendicular to `dir` for those points.  
     ///
     /// Mutably borrows the two control points which straddle the knot coordinates `knot_coords`, as well as the newly created control point,
     /// which lies at those knot coordinates.
@@ -1887,7 +1887,7 @@ where T: Debug + Clone
                 (*borrow.point()).clone()
             };
             let knot_vectors =
-                Tmesh::point_knot_vectors(Arc::clone(point)).expect("Mesh should not be malformd");
+                Tmesh::point_knot_vectors(Arc::clone(point)).expect("Mesh should not be malformed");
             println!("{:?}", cart);
             println!("\tS: {:?}", knot_vectors.0);
             println!("\tT: {:?}", knot_vectors.1);
@@ -3029,13 +3029,13 @@ mod tests {
 
         let mut mesh = Tmesh::new(points, 1.0);
 
-        // Insert virtical aspect of the plus
+        // Insert vertical aspect of the plus
         mesh.try_add_absolute_point(Point3::from((0.0, 0.5, 0.0)), (0.0, 0.5))
             .expect("Legal point insertion");
         mesh.try_add_absolute_point(Point3::from((1.0, 0.5, 0.0)), (1.0, 0.5))
             .expect("Legal point insertion");
 
-        // Insert horrizontal aspect of the plus
+        // Insert horizontal aspect of the plus
         mesh.try_add_absolute_point(Point3::from((0.5, 0.0, 0.0)), (0.5, 0.0))
             .expect("Legal point insertion");
         mesh.try_add_absolute_point(Point3::from((0.5, 1.0, 0.0)), (0.5, 1.0))
@@ -3076,24 +3076,24 @@ mod tests {
             .find(Point3::from((0.2, 0.0, 0.0)))
             .expect("Control point previously inserted into mesh");
 
-        // Left connectioin should be connected to (0, 0, 0), with interval 0.2
+        // Left connection should be connected to (0, 0, 0), with interval 0.2
         assert_eq!(
             knot_interval_check
                 .read()
                 .connection_knot(TmeshDirection::Left)
                 .expect("Known existing connection"),
             0.2,
-            "Knot inverval on LEFT does not match expectation"
+            "Knot interval on LEFT does not match expectation"
         );
 
-        // Right connectioin should be connected to (1, 0, 0), with interval 0.8
+        // Right connection should be connected to (1, 0, 0), with interval 0.8
         assert_eq!(
             knot_interval_check
                 .read()
                 .connection_knot(TmeshDirection::Right)
                 .expect("Known existing connection"),
             0.8,
-            "Knot inverval on RIGHT does not match expectation"
+            "Knot interval on RIGHT does not match expectation"
         );
     }
 
@@ -3805,7 +3805,7 @@ mod tests {
         mesh.subdivide(average_points)
             .expect("Mesh is not malformed.");
 
-        // Insert virtical aspect of the plus
+        // Insert vertical aspect of the plus
         mesh.try_absolute_local_knot_insertion((0.52, 0.00))
             .expect("Legal point insertion");
         mesh.try_absolute_local_knot_insertion((0.52, 0.25))
@@ -3817,7 +3817,7 @@ mod tests {
         mesh.try_absolute_local_knot_insertion((0.52, 1.00))
             .expect("Legal point insertion");
 
-        // Insert horrizontal aspect of the plus
+        // Insert horizontal aspect of the plus
         mesh.try_absolute_local_knot_insertion((0.50, 0.52))
             .expect("Legal point insertion");
         mesh.try_absolute_local_knot_insertion((0.75, 0.52))
@@ -3837,7 +3837,7 @@ mod tests {
 
         // At this point, there is little reason to check if the knot intervals match the expectation, since the
         // center point insertion would have failed, or one of the assertions below would have failed because the
-        // LKI is highly sensative to knot intervals, thus, errors in the algorithm would either lead to a failure
+        // LKI is highly sensitive to knot intervals, thus, errors in the algorithm would either lead to a failure
         // in future insertions, a mismatch in absolut knot coordinates, or a missing point connection (or two).
         for dir in TmeshDirection::iter() {
             assert_eq!(
@@ -3854,7 +3854,7 @@ mod tests {
     /// points affected by LKI. A comparison much like the other LKI insertion tests is done, where two identical meshes
     ///  are constructed, and then compared using `subs` after one has been modified through the use of LKI. Though a T-junction
     /// technically exists in the LKI, none of the LKI rules are broken, since the four required control points still exist,
-    /// and their perpandicular knot vectors are all equal.
+    /// and their perpendicular knot vectors are all equal.
     ///
     /// Uses absolute local knot insertion.
     ///
@@ -3918,7 +3918,7 @@ mod tests {
         )
         .expect("Control point is in mesh");
 
-        // Insert virtical aspect of the plus
+        // Insert vertical aspect of the plus
         mesh.try_absolute_local_knot_insertion((0.27, 0.25))
             .expect("Legal point insertion");
         mesh.try_absolute_local_knot_insertion((0.27, 0.50))
@@ -3928,7 +3928,7 @@ mod tests {
         mesh.try_absolute_local_knot_insertion((0.27, 1.00))
             .expect("Legal point insertion");
 
-        // Insert horrizontal aspect of the plus
+        // Insert horizontal aspect of the plus
         mesh.try_absolute_local_knot_insertion((0.25, 0.52))
             .expect("Legal point insertion");
         mesh.try_absolute_local_knot_insertion((0.50, 0.52))

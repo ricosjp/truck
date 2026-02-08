@@ -343,7 +343,7 @@ impl<P> TnurccEdge<P> {
     /// - `Ok(TnurccControlPoint)` if the edge is successfully split.
     ///
     /// # Borrows
-    /// Mutably borros `e`
+    /// Mutably borrows `e`.
     pub fn split_edge(
         e: Arc<RwLock<TnurccEdge<P>>>,
         edge_index: usize,
@@ -488,7 +488,7 @@ impl<P> TnurccEdge<P> {
     /// # Panics
     /// Panics if any borrows fail.
     ///
-    /// # Undefined Behaviour
+    /// # Undefined Behavior
     /// Undefined if `first` and `other` are the same edge instance, or if all the relevant members are identical between the two.
     pub fn connect(
         first: Arc<RwLock<TnurccEdge<P>>>,

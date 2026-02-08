@@ -5,18 +5,18 @@ impl<P> Tnurcc<P>
 where P: Debug
 {
     /// Creates a new `Tnurcc` instance. `points` is a vector containing the control points in the mesh, and `faces`
-    /// describes the connections of the mesh. `faces` must described every face in the mesh, as no `faces` will be
-    /// infered by the constructor. Each face in `faces` contains 4 edges. Each edge is described by a tuple containing
-    /// an initial point index and a vector containing the other point indicies and knot intervals on the edge.
+    /// describes the connections of the mesh. `faces` must describe every face in the mesh, as no `faces` will be
+    /// inferred by the constructor. Each face in `faces` contains 4 edges. Each edge is described by a tuple containing
+    /// an initial point index and a vector containing the other point indices and knot intervals on the edge.
     /// It is important to note that because there is no sense of orientation in the T-NURCC, the points in edges, and
     /// the edges themselves must be arranged in the correct order prior to instantiating the `Tnurcc` relative to each
-    /// other. All point indicies refer to the indecies of the points in the `points` parameter.
+    /// other. All point indices refer to the indices of the points in the `points` parameter.
     ///
     /// Put together, this means that in an edge, the initial point index must be either the clockwise first corner or
     /// anti-clockwise first corner (Recommended to use anti-clockwise for face culling reasons). That is to say, for the
     /// "top" edge, the "right" corner should be used as the initial point index. Then, the connected points vector should
-    /// contain the indicies of the points in order, sweeping across the "top" edge and their knot intervals. For a visual
-    /// explenation, see the figure below.
+    /// contain the indices of the points in order, sweeping across the "top" edge and their knot intervals. For a visual
+    /// explanation, see the figure below.
     ///
     /// ```text
     ///     0    6   8  9
@@ -29,13 +29,13 @@ where P: Debug
     ///     0  5   7    9
     /// ```
     /// In the above figure, the numbers represent the cartesian coordinate of the points, while the number of `-`
-    /// (minus) or `|` (virtical pipe) characters between them represents the knot interval. In this case, `points`
+    /// (minus) or `|` (vertical pipe) characters between them represents the knot interval. In this case, `points`
     /// might be the vector:
     ///
     /// `[(0, 0), (5, 0), (7, 0), (9, 0), (0, 3), (9, 2), (0, 4), (6, 4), (8, 4), (9, 4)]`
     ///
     /// The `points` vector does not need to have a specific order, however, the ordering of the elements in `points`
-    /// will change the indicies in `faces`. The above example is also only one face, whereas most T-NURCCs will have
+    /// will change the indices in `faces`. The above example is also only one face, whereas most T-NURCCs will have
     /// multiple faces. Each point should be included exactly once in the `points` vector regardless of how many faces
     /// it participates in. Then, the edges for the face, if made anti-clockwise, could be:
     ///
@@ -53,11 +53,11 @@ where P: Debug
     ///
     /// - `TnurccNonRectangularFace` if any face is not parametrically rectangular.
     ///
-    /// - `TnurccEdgeTrippleFace` if any edge lies between three faces.
+    /// - `TnurccEdgeTripleFace` if any edge lies between three faces.
     ///
     /// - `TnurccIncompleteFaceEdge` if any edge is comprised of less than 2 points.
     ///
-    /// - `Ok(Tnurcc)` if the T-NURCC was succsefully created.
+    /// - `Ok(Tnurcc)` if the T-NURCC was successfully created.
     ///
     /// # Panics
     #[allow(clippy::type_complexity)]
@@ -82,11 +82,11 @@ where P: Debug
                 return Err(Error::TnurccNonRectangularFace);
             }
 
-            // Produce a vector containing all the point indicies in the face, in order, such that any two adjacent element
+            // Produce a vector containing all the point indices in the face, in order, such that any two adjacent element
             // in the vector should be connected, and a vector containing each connection's weight.
             let (mut connections, knot_intervals) = face
                 .into_iter()
-                // Converet the format of the side into an array of all points in the side. Remember that sides must,
+                // Convert the format of the side into an array of all points in the side. Remember that sides must,
                 // in addition to specifying the initial point, specify the last point in agreement with the first
                 // point of the next anti-clockwise side. Thus, we can ignore the initial point, since it is contained
                 // in the previous edge's connections vector.
@@ -124,7 +124,7 @@ where P: Debug
             for con_index in 0..existing_edges.len() {
                 if let Some(edge) = existing_edges[con_index].as_ref() {
                     if edge.read().face_right.is_some() {
-                        return Err(Error::TnurccEdgeTrippleFace);
+                        return Err(Error::TnurccEdgeTripleFace);
                     }
 
                     edge.write().face_right = Some(Arc::clone(&face));
@@ -259,8 +259,8 @@ where P: ControlPoint<f64>
     /// in \[Sederberg et al. 1998\], dubbed "refinement".
     ///
     /// # Returns
-    /// - `Ok(())` on succesfull subdivision.
-    /// - `TnurccMalformedFace` if boundary vertecies for a face cannot be collected.
+    /// - `Ok(())` on successful subdivision.
+    /// - `TnurccMalformedFace` if boundary vertices for a face cannot be collected.
     ///
     /// # Panics
     /// - If any borrow fails.
@@ -276,7 +276,7 @@ where P: ControlPoint<f64>
         let mut edge_m_points = Vec::with_capacity(self.edges.len());
         let mut split_edge = vec![false; self.edges.len()];
         // let mut vertex_points = Vec::with_capacity(self.control_points.len());
-        // Used for creation of emtpy edges whose control points are not yet known
+        // Used for creation of empty edges whose control points are not yet known
         let dummy_point = Arc::new(RwLock::new(TnurccControlPoint::new(0, P::origin())));
 
         // Some wrapped functions which apply in the specific case here where edges are being
@@ -321,7 +321,7 @@ where P: ControlPoint<f64>
                             Arc::clone(&a[0]),
                             Arc::clone(&a[1]),
                         )
-                        .expect("adjacent vertecies in a face should be connected by an edge")
+                        .expect("adjacent vertices in a face should be connected by an edge")
                     })
                     .collect::<Vec<_>>();
 
@@ -355,7 +355,7 @@ where P: ControlPoint<f64>
         // Compute the location of the new point which splits every edge in mesh
         // (Equation 13  in \[Sederberg et al. 1998\])
         for edge in self.edges.iter() {
-            // Equivalen to F_{ij} in Equation 13 of \[Sederberg et al. 1998\]
+            // Equivalent to F_{ij} in Equation 13 of \[Sederberg et al. 1998\]
             let f_od = face_points[edge
                 .read()
                 .face_left
@@ -363,7 +363,7 @@ where P: ControlPoint<f64>
                 .expect("All edges should have faces on both sides")
                 .read()
                 .index];
-            // Equivalen to F_{ji} in Equation 13 of \[Sederberg et al. 1998\]
+            // Equivalent to F_{ji} in Equation 13 of \[Sederberg et al. 1998\]
             let f_do = face_points[edge
                 .read()
                 .face_right
@@ -422,7 +422,7 @@ where P: ControlPoint<f64>
                 let origin = edge.read().origin.read().point;
                 let dest = edge.read().dest.read().point;
 
-                // If block not in the paper, but seems nescessary
+                // If block not in the paper, but seems necessary
                 if m_denom.so_small() {
                     (origin + dest.to_vec()) * 0.5
                 } else {
@@ -450,7 +450,7 @@ where P: ControlPoint<f64>
             }
             radial_edges.push(Arc::clone(&radial_edges[0]));
 
-            // Group radial edges into windows of 2. This is not strictly nesessary for the calculations
+            // Group radial edges into windows of 2. This is not strictly necessary for the calculations
             // (in \[Sederberg et al. 1998\] they do not do this), however, it makes aquiring the radial
             // faces around the vertex much easier, as the common face between two edges can be used, and
             // then the first edge in the window will always be the "actionable" edge which is used for
@@ -497,7 +497,7 @@ where P: ControlPoint<f64>
             };
         }
 
-        // Calculate the new know spacings (Section 4.2.1 in \[Sederberg et al. 1998\]) and create the new
+        // Calculate the new knot spacings (Section 4.2.1 in \[Sederberg et al. 1998\]) and create the new
         // edges and faces which complete the subdivision.
         // let original_vertex_count = self.control_points.len();
         for (face_i, f_p) in face_points.into_iter().enumerate() {
@@ -564,14 +564,14 @@ where P: ControlPoint<f64>
                 // Some helper variables to make life a little nicer
                 let edge_index = edge.read().index;
 
-                // Only split edge if it shas not been split before.
+                // Only split edge if it has not been split before.
                 if *split_edge
                     .get(edge_index)
                     .expect("All out of bounds edges should have been filtered out on construction of perim") 
                 {
                     // If the edge is already split, then the edge which was generated by the split is connected to the 
-                    // current edge, since none of the radial edges have been connected yet. The match is nesessary
-                    // because the conjugate may be located in different positioins depending on which face we are
+                    // current edge, since none of the radial edges have been connected yet. The match is necessary
+                    // because the conjugate may be located in different positions depending on which face we are
                     // currently iterating.
                     edge_conjugates.push(
                         match edge
@@ -590,7 +590,7 @@ where P: ControlPoint<f64>
                 } else {
                     // If it is not split, split it
                     split_edge[edge_index] = true;
-                    // No need to check which side is which for knot intervals because the interval is symetrical
+                    // No need to check which side is which for knot intervals because the interval is symmetrical
                     let edge_control_point = TnurccEdge::split_edge(
                         Arc::clone(edge),
                         self.edges.len(),
@@ -622,9 +622,9 @@ where P: ControlPoint<f64>
 
                 // Depending on the orientation of the current edge, different points must be assigned to be the corners of the face.
                 // Recall that corners[0] was set in the constructor. Also note that corners are assigned in an anti-clockwise fashion,
-                // which is not strictly nescessary, but makes keeping track of what is where simpler. Notice that the same corner
-                // indicies for the sme new face indicies are modified every iteration regardless of orientation.
-                // This is also the time to assign the correct faces to the edges, including the face comming out of the new face point.
+                // which is not strictly necessary, but makes keeping track of what is where simpler. Notice that the same corner
+                // indices for the same new face indices are modified every iteration regardless of orientation.
+                // This is also the time to assign the correct faces to the edges, including the face coming out of the new face point.
                 match edge_face_side {
                     TnurccFaceSide::Left => {
                         // Assign corners
@@ -708,16 +708,16 @@ where P: ControlPoint<f64>
 
                 // Connect radial to the perimiter
                 TnurccEdge::connect(Arc::clone(edge), Arc::clone(&radial_edges[perim_i]))
-                    .expect("Edges around the perimeter should always succesfully connect to the radial edge");
+                    .expect("Edges around the perimeter should always successfuly connect to the radial edge");
                 TnurccEdge::connect(Arc::clone(&edge_conjugates[perim_i]), Arc::clone(&radial_edges[perim_i]))
-                    .expect("Edges around the perimeter should always succesfully connect to the radial edge");
+                    .expect("Edges around the perimeter should always successfuly connect to the radial edge");
 
                 // Connect the radials between each other
                 TnurccEdge::connect(
                     Arc::clone(&radial_edges[next_perim_index]),
                     Arc::clone(&radial_edges[perim_i]),
                 )
-                .expect("Radial edges should always succesfully connect between each other");
+                .expect("Radial edges should always successfuly connect between each other");
 
                 // Update valence of edge point
                 edge.read()
@@ -726,7 +726,7 @@ where P: ControlPoint<f64>
                     .write()
                     .valence += 1;
 
-                // This will be overidden several times, not sure exactly how to deal with it without crying...
+                // This will be overridden several times, not sure exactly how to deal with it without crying...
                 f_cp.write()
                     .incoming_edge
                     .replace(Arc::clone(&radial_edges[perim_i]));
@@ -1466,7 +1466,7 @@ mod tests {
         let surface = make_cube();
         assert!(
             surface.is_ok(),
-            "Surface was unsuccesfully created with error: {}.",
+            "Surface was unsuccessfuly created with error: {}.",
             surface.err().unwrap()
         );
         let surface = make_cube().unwrap();
@@ -1482,7 +1482,7 @@ mod tests {
 
     #[test]
     fn t_nurcc_test_cube_control_point_properties() {
-        let t = make_cube().expect("Cube should be succesfully created");
+        let t = make_cube().expect("Cube should be successfuly created");
 
         verify_tnurcc_control_points(&t);
 
@@ -1499,7 +1499,7 @@ mod tests {
 
     #[test]
     fn t_nurcc_test_cube_edge_properties() {
-        let t = make_cube().expect("Cube should be succesfully created");
+        let t = make_cube().expect("Cube should be successfuly created");
 
         verify_tnurcc_edges(&t);
     }

@@ -1,7 +1,7 @@
 use super::*;
 
 impl<P> TnurccControlPoint<P> {
-    /// Createss a new `TnurccControlPoint` instance with index `index`, cartesian point `point`,
+    /// Creates a new `TnurccControlPoint` instance with index `index`, cartesian point `point`,
     /// valence `0`, and no incoming edge (`None`).
     pub fn new(index: usize, point: P) -> Self {
         TnurccControlPoint {
