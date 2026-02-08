@@ -1285,7 +1285,7 @@ mod tests {
             // Incedentally verifies that the control point is referenced by the edge
             let iter = TnurccAcwPointIter::from_edge(
                 Arc::clone(&point_edge),
-                point_edge.read().point_end(Arc::clone(&p)).expect(&format!(
+                point_edge.read().point_end(Arc::clone(p)).expect(&format!(
                     "Point {} should be a side of its incoming edge",
                     p.read().index,
                 )),
@@ -1297,7 +1297,7 @@ mod tests {
 
             // Assert the next acw edge (from the last one returned by the iter)
             // is the same edge as the one it started at
-            let next_point_end = next.read().point_end(Arc::clone(&p)).expect(&format!(
+            let next_point_end = next.read().point_end(Arc::clone(p)).expect(&format!(
                 "Edges reached through point {} iter should be connected to that point",
                 p.read().index,
             ));
@@ -1314,7 +1314,7 @@ mod tests {
             // recorded valence of the point.
             let iter = TnurccAcwPointIter::from_edge(
                 Arc::clone(&point_edge),
-                point_edge.read().point_end(Arc::clone(&p)).expect(&format!(
+                point_edge.read().point_end(Arc::clone(p)).expect(&format!(
                     "Point {} should be a side of its incoming edge",
                     p.read().index,
                 )),
@@ -1437,7 +1437,7 @@ mod tests {
             // should be the original reference edge)
             let next_face_side = last_edge
                 .read()
-                .face_side(Arc::clone(&face))
+                .face_side(Arc::clone(face))
                 .expect("Edges reached through a face iter should be connected to that face");
             let final_edge = last_edge.read().acw_edge_from_side(next_face_side);
             assert!(
