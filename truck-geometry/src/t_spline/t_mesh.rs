@@ -2978,10 +2978,12 @@ mod tests {
         for point_pair in points {
             mesh.add_control_point(
                 Point3::from(point_pair.0),
-                mesh.find(Point3::from(point_pair.1)).expect(&format!(
-                    "Point {:?} is a valid point in the T-mesh",
-                    point_pair.1
-                )),
+                mesh.find(Point3::from(point_pair.1)).unwrap_or_else(|| {
+                    panic!(
+                        "Point {:?} is a valid point in the T-mesh",
+                        point_pair.1
+                    )
+                }),
                 dir,
                 0.5,
             )
@@ -3325,13 +3327,12 @@ mod tests {
         // Construct mesh
         for knot_pair in knot_pairs {
             mesh.try_add_absolute_point(Point3::from((knot_pair.0, knot_pair.1, 0.0)), knot_pair)
-                .expect(
-                    format!(
+                .unwrap_or_else(|_| {
+                    panic!(
                         "Valid addition of control point ({}, {}).",
                         knot_pair.0, knot_pair.1
                     )
-                    .as_str(),
-                );
+                });
         }
 
         mesh
