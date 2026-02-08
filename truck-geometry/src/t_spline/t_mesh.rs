@@ -280,7 +280,7 @@ impl<P> Tmesh<P> {
         // requisit errors in the case that the connection is not of type Point.
         let other_point = {
             let borrow = con.read();
-            Arc::clone(&borrow.try_conected_point(connection_side)?)
+            Arc::clone(&borrow.try_connected_point(connection_side)?)
         };
 
         // Edge weights for p are set to 0.0, however, the final step will overwrite this
@@ -728,7 +728,7 @@ impl<P> Tmesh<P> {
 
             cur_point = {
                 let borrow = cur_point.read();
-                Arc::clone(&borrow.try_conected_point(cur_dir)?)
+                Arc::clone(&borrow.try_connected_point(cur_dir)?)
             };
 
             // Ic found
@@ -936,7 +936,7 @@ impl<P> Tmesh<P> {
                     // Traverse to the next point
                     cur_point = {
                         let borrow = cur_point.read();
-                        Arc::clone(&borrow.conected_point(dir))
+                        Arc::clone(&borrow.connected_point(dir))
                     };
                 }
 
@@ -1096,7 +1096,7 @@ where P: ControlPoint<f64>
         center_points.push({
             match p.read().con_type(dir.flip()) {
                 // Retrieve connected point
-                TmeshConnectionType::Point => Arc::clone(&p.read().conected_point(dir.flip())),
+                TmeshConnectionType::Point => Arc::clone(&p.read().connected_point(dir.flip())),
                 TmeshConnectionType::Edge => return Err(Error::TmeshControlPointNotFound),
                 TmeshConnectionType::Tjunction => {
                     return Err(Error::TmeshConnectionNotFound);
@@ -1107,14 +1107,14 @@ where P: ControlPoint<f64>
         center_points.push({
             let borrow = p.read();
             // Checked in the begining of the function with match
-            Arc::clone(&borrow.conected_point(dir))
+            Arc::clone(&borrow.connected_point(dir))
         });
         center_points.push({
             let borrow = center_points[2].read();
 
             match borrow.con_type(dir.flip()) {
                 // Retrieve connected point
-                TmeshConnectionType::Point => Arc::clone(&borrow.conected_point(dir)),
+                TmeshConnectionType::Point => Arc::clone(&borrow.connected_point(dir)),
                 TmeshConnectionType::Edge => return Err(Error::TmeshControlPointNotFound),
                 TmeshConnectionType::Tjunction => {
                     return Err(Error::TmeshConnectionNotFound);
@@ -1686,7 +1686,7 @@ where P: Clone
                 cont_p.read().point().clone(),
                 cont_p
                     .read()
-                    .conected_point(TmeshDirection::Right)
+                    .connected_point(TmeshDirection::Right)
                     .read()
                     .point()
                     .clone(),
@@ -1709,7 +1709,7 @@ where P: Clone
                 cont_p.read().point().clone(),
                 cont_p
                     .read()
-                    .conected_point(TmeshDirection::Up)
+                    .connected_point(TmeshDirection::Up)
                     .read()
                     .point()
                     .clone(),
@@ -1772,7 +1772,7 @@ where P: Clone
                     ))),
                     // Some((Some(Index), f64))
                     TmeshConnectionType::Point => {
-                        let connected_point = point.read().conected_point(dir);
+                        let connected_point = point.read().connected_point(dir);
 
                         last.push(Some(
                         (Some(
@@ -2465,7 +2465,7 @@ impl Serialize for Tmesh<Point3> {
                     TmeshConnectionType::Tjunction => None,
                     TmeshConnectionType::Edge => Some((None, r.connection_knot(dir).unwrap())),
                     TmeshConnectionType::Point => {
-                        let connected = r.conected_point(dir);
+                        let connected = r.connected_point(dir);
                         let idx = self
                             .control_points
                             .iter()
@@ -2650,7 +2650,7 @@ mod tests {
     ) -> std::result::Result<(), (i32, Error)> {
         // Check that point is connected to other
         let point_borrow = point.read();
-        let point_con = &point_borrow.try_conected_point(dir).map_err(|e| (0, e))?;
+        let point_con = &point_borrow.try_connected_point(dir).map_err(|e| (0, e))?;
         let point_equal = Arc::ptr_eq(point_con, &other);
         point_equal
             .then_some(0)
@@ -2659,7 +2659,7 @@ mod tests {
         // Check that other is connected to point
         let other_borrow = other.read();
         let other_con = &other_borrow
-            .try_conected_point(dir.flip())
+            .try_connected_point(dir.flip())
             .map_err(|e| (1, e))?;
         let other_equal = Arc::ptr_eq(other_con, &point);
         other_equal
@@ -3714,13 +3714,13 @@ mod tests {
 
         let p4_prime = *ins_point
             .read()
-            .conected_point(TmeshDirection::Right)
+            .connected_point(TmeshDirection::Right)
             .read()
             .point();
 
         let p2_prime = *ins_point
             .read()
-            .conected_point(TmeshDirection::Left)
+            .connected_point(TmeshDirection::Left)
             .read()
             .point();
 

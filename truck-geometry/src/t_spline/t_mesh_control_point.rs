@@ -329,7 +329,7 @@ impl<P> TmeshControlPoint<P> {
     /// - `TmeshControlPointNotFound` if the connection in direction `dir` is an edge condition.
     ///
     /// - `Ok(point)` if the connection in direction `dir` is a point, where `point` is the corresponding control point.
-    pub fn try_conected_point(
+    pub fn try_connected_point(
         &self,
         dir: TmeshDirection,
     ) -> Result<Arc<RwLock<TmeshControlPoint<P>>>> {
@@ -351,7 +351,7 @@ impl<P> TmeshControlPoint<P> {
     ///
     /// # Panics
     /// If there is no point connected to self in direction `dir`.
-    pub fn conected_point(&self, dir: TmeshDirection) -> Arc<RwLock<TmeshControlPoint<P>>> {
+    pub fn connected_point(&self, dir: TmeshDirection) -> Arc<RwLock<TmeshControlPoint<P>>> {
         let connected_point = &self
             .get(dir)
             .as_ref()
