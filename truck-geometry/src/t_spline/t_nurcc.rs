@@ -1276,31 +1276,39 @@ mod tests {
     fn verify_tnurcc_control_points(t: &Tnurcc<Point3>) {
         for (i, p) in t.control_points.iter().enumerate() {
             // Incoming edge of the point
-            let point_edge = Arc::clone(p.read().incoming_edge.as_ref().expect(&format!(
-                "Point {} should have an incoming edge",
-                p.read().index,
-            )));
+            let point_edge = Arc::clone(p.read().incoming_edge.as_ref().unwrap_or_else(|| {
+                panic!(
+                    "Point {} should have an incoming edge",
+                    p.read().index,
+                )
+            }));
 
             // Point-based iter will rotate around the current control point
             // Incedentally verifies that the control point is referenced by the edge
             let iter = TnurccAcwPointIter::from_edge(
                 Arc::clone(&point_edge),
-                point_edge.read().point_end(Arc::clone(p)).expect(&format!(
-                    "Point {} should be a side of its incoming edge",
-                    p.read().index,
-                )),
+                point_edge.read().point_end(Arc::clone(p)).unwrap_or_else(|| {
+                    panic!(
+                        "Point {} should be a side of its incoming edge",
+                        p.read().index,
+                    )
+                }),
             );
-            let next = iter.last().expect(&format!(
-                "Point {} edge-rotation iterator should wrap around and end.",
-                p.read().index,
-            ));
+            let next = iter.last().unwrap_or_else(|| {
+                panic!(
+                    "Point {} edge-rotation iterator should wrap around and end.",
+                    p.read().index,
+                )
+            });
 
             // Assert the next acw edge (from the last one returned by the iter)
             // is the same edge as the one it started at
-            let next_point_end = next.read().point_end(Arc::clone(p)).expect(&format!(
-                "Edges reached through point {} iter should be connected to that point",
-                p.read().index,
-            ));
+            let next_point_end = next.read().point_end(Arc::clone(p)).unwrap_or_else(|| {
+                panic!(
+                    "Edges reached through point {} iter should be connected to that point",
+                    p.read().index,
+                )
+            });
             let final_edge = next.read().acw_edge_from_end(next_point_end);
             assert!(
                 std::ptr::eq(final_edge.as_ref(), point_edge.as_ref()),
@@ -1314,10 +1322,12 @@ mod tests {
             // recorded valence of the point.
             let iter = TnurccAcwPointIter::from_edge(
                 Arc::clone(&point_edge),
-                point_edge.read().point_end(Arc::clone(p)).expect(&format!(
-                    "Point {} should be a side of its incoming edge",
-                    p.read().index,
-                )),
+                point_edge.read().point_end(Arc::clone(p)).unwrap_or_else(|| {
+                    panic!(
+                        "Point {} should be a side of its incoming edge",
+                        p.read().index,
+                    )
+                }),
             );
             let acw_calc_valence = iter.count();
             assert!(
@@ -1581,7 +1591,7 @@ mod tests {
                     let side = acw_traverse_edge
                         .read()
                         .face_side(Arc::clone(f))
-                        .expect(format!("Face should be connected to reference edge, error on ACW traversal {} face {}", i, f.read().index).as_str());
+                        .unwrap_or_else(|| panic!("Face should be connected to reference edge, error on ACW traversal {} face {}", i, f.read().index));
                     match side {
                         TnurccFaceSide::Left => acw_traverse_edge
                             .read()
@@ -1601,7 +1611,7 @@ mod tests {
                     let side = cw_traverse_edge
                         .read()
                         .face_side(Arc::clone(f))
-                        .expect(format!("Face should be connected to reference edge, error on CW traversal {} face {}", i, f.read().index).as_str());
+                        .unwrap_or_else(|| panic!("Face should be connected to reference edge, error on CW traversal {} face {}", i, f.read().index));
                     match side {
                         TnurccFaceSide::Left => cw_traverse_edge
                             .read()
