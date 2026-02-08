@@ -28,7 +28,7 @@ fn divide_plane_test() {
         Point3::new(1.0, 1.0, 0.0),
         Point3::new(1.0, 3.0, 0.0),
     ]);
-    let edge = vec![
+    let edge = [
         parabola(&v[0], &v[1], Point3::new(-4.0, 2.0, 0.0)),
         parabola(&v[0], &v[1], Point3::new(4.0, 2.0, 0.0)),
         line(&v[0], &v[1]),
