@@ -3,15 +3,15 @@ use crate::errors::Error;
 use std::fmt;
 
 impl<P> TmeshControlPoint<P> {
-    /// Creates a new T-mesh control point located at the real space coordinate `p`, with edge conditions in all directions with knot interval `inverval`.
-    pub fn new(p: P, inverval: f64) -> TmeshControlPoint<P> {
+    /// Creates a new T-mesh control point located at the real space coordinate `p`, with edge conditions in all directions with knot interval `interval`.
+    pub fn new(p: P, interval: f64) -> TmeshControlPoint<P> {
         TmeshControlPoint {
             point: p,
             connections: [
-                Some((None, inverval)),
-                Some((None, inverval)),
-                Some((None, inverval)),
-                Some((None, inverval)),
+                Some((None, interval)),
+                Some((None, interval)),
+                Some((None, interval)),
+                Some((None, interval)),
             ],
             knot_coordinates: (-1.0, -1.0),
         }

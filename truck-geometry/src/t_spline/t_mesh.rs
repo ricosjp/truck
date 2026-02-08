@@ -440,12 +440,12 @@ impl<P> Tmesh<P> {
         // Check for any T edges which intersect the parametric location of the new point.
         let mut point_t_coord = 0.0;
         let mut con_knot = 0.0;
-        let s_axis_stradle_points = self
+        let s_axis_straddle_points = self
             .control_points
             .iter()
             // Filter all points along the S axis of inserton
             .filter(|point| (point.read().knot_coordinates().0 - knot_coords.0).so_small())
-            // Filter those points to only include the point that stradles the T axis of insertion
+            // Filter those points to only include the point that straddles the T axis of insertion
             .filter(|point| {
                 if let Some(con) = point.read().get(TmeshDirection::Up) {
                     let temp_t_coord = point.read().knot_coordinates().1;
@@ -466,7 +466,7 @@ impl<P> Tmesh<P> {
 
         // Depending on the number of points whose connections intersect the location of the new point,
         // different errors or actions are taken
-        match s_axis_stradle_points.len() {
+        match s_axis_straddle_points.len() {
             // No T-edge instersects the point where the point needs to be inserted,
             // try to find an S edge which intersects the location of the point
             0 => {}
@@ -475,7 +475,7 @@ impl<P> Tmesh<P> {
                 return self
                     .add_control_point(
                         p,
-                        Arc::clone(&s_axis_stradle_points[0]),
+                        Arc::clone(&s_axis_straddle_points[0]),
                         TmeshDirection::Up,
                         (knot_coords.1 - point_t_coord) / con_knot,
                     )
@@ -489,12 +489,12 @@ impl<P> Tmesh<P> {
 
         let mut point_s_coord = 0.0;
         let mut con_knot = 0.0;
-        let t_axis_stradle_points = self
+        let t_axis_straddle_points = self
             .control_points
             .iter()
             // Filter all points along the T axis of inserton
             .filter(|point| (point.read().knot_coordinates().1 - knot_coords.1).so_small())
-            // Filter those points to only include the point that stradles the S axis of insertion
+            // Filter those points to only include the point that straddles the S axis of insertion
             .filter(|point| {
                 if let Some(con) = point.read().get(TmeshDirection::Right) {
                     let temp_s_coord = point.read().knot_coordinates().0;
@@ -515,7 +515,7 @@ impl<P> Tmesh<P> {
 
         // Depending on the number of points whose connections intersect the location of the new point,
         // different errors or actions are taken
-        match t_axis_stradle_points.len() {
+        match t_axis_straddle_points.len() {
             0 => {
                 // No S-edge instersects the point where the point needs to be inserted, return an error
                 Err(Error::TmeshConnectionNotFound)
@@ -524,7 +524,7 @@ impl<P> Tmesh<P> {
                 // An S-edge is found where the point intersects
                 self.add_control_point(
                     p,
-                    Arc::clone(&t_axis_stradle_points[0]),
+                    Arc::clone(&t_axis_straddle_points[0]),
                     TmeshDirection::Right,
                     (knot_coords.0 - point_s_coord) / con_knot,
                 )
@@ -686,7 +686,7 @@ impl<P> Tmesh<P> {
     ) -> Result<bool> {
         let mut cur_point = Arc::clone(&p);
         let mut cur_dir = face_dir.clockwise();
-        let mut ic_knot_measurment = 0.0; // The distance traversed from p to <+>
+        let mut ic_knot_measurement = 0.0; // The distance traversed from p to <+>
         let mut ic_knot_interval = 0.0; // The interval of the ic
 
         // Check that p is not a corner
@@ -708,7 +708,7 @@ impl<P> Tmesh<P> {
             if i == 0 {
                 // Accumulate knot intevals for comparison later. Only accumulate knots that are
                 // related to the current face
-                ic_knot_measurment = accumulation;
+                ic_knot_measurement = accumulation;
             } else if i == 1 {
                 // Accumulate knot intervals for the potential IC knot weight. Only accumulate
                 // knots that are related to the current face
@@ -732,7 +732,7 @@ impl<P> Tmesh<P> {
             };
 
             // Ic found
-            if (ic_knot_measurment - ic_knot_accumulation).so_small() {
+            if (ic_knot_measurement - ic_knot_accumulation).so_small() {
                 let connection_res = TmeshControlPoint::connect(
                     Arc::clone(&p),
                     Arc::clone(&cur_point),
@@ -752,7 +752,7 @@ impl<P> Tmesh<P> {
             // Ic not possible, knot accumulation surpassed measurment or reached face corner.
             // Shouldn't need corner detection due to rule 1 in [Sederberg et al. 2003].
             // (needs testing)
-            } else if ic_knot_accumulation > ic_knot_measurment
+            } else if ic_knot_accumulation > ic_knot_measurement
                 || cur_point.read().con_type(cur_dir.anti_clockwise()) == TmeshConnectionType::Point
             {
                 return Ok(false);
@@ -1211,7 +1211,7 @@ where P: ControlPoint<f64>
     /// at the specified absolute knot coordinates `knot_coords` without changing the shape of the resulting surface.h
     /// For details on LKI, see [`Tmesh::try_local_knot_insertion()`]. In order for the function to succeed, an edge must
     /// exist which passes through the knot coordinates `knot_coords`, that is, eithr two virtical points or horrizontal
-    /// points stradle the parametric coordinates where the new point is to be inserted.
+    /// points straddle the parametric coordinates where the new point is to be inserted.
     ///
     /// # Returns
     /// - `TmeshOutOfBoundsInsertion` if either component of `knot_coords` is not in the range `(0.0, 1.0)`.
@@ -1261,12 +1261,12 @@ where P: ControlPoint<f64>
         // Check for any T edges which intersect the parametric location of the new point.
         let mut point_t_coord = 0.0;
         let mut con_knot = 0.0;
-        let s_axis_stradle_points = self
+        let s_axis_straddle_points = self
             .control_points
             .iter()
             // Filter all points along the S axis of inserton
             .filter(|point| (point.read().knot_coordinates().0 - knot_coords.0).so_small())
-            // Filter those points to only include the point that stradles the T axis of insertion
+            // Filter those points to only include the point that straddles the T axis of insertion
             .filter(|point| {
                 if let Some(con) = point.read().get(TmeshDirection::Up) {
                     let temp_t_coord = point.read().knot_coordinates().1;
@@ -1287,14 +1287,14 @@ where P: ControlPoint<f64>
 
         // Depending on the number of points whose connections intersect the location of the new point,
         // different errors or actions are taken
-        match s_axis_stradle_points.len() {
+        match s_axis_straddle_points.len() {
             // No T-edge instersects the point where the point needs to be inserted,
             // try to find an S edge which intersects the location of the point
             0 => {}
             1 => {
                 // A T-edge is found where the point intersects
                 return self.try_local_knot_insertion(
-                    Arc::clone(&s_axis_stradle_points[0]),
+                    Arc::clone(&s_axis_straddle_points[0]),
                     TmeshDirection::Up,
                     (knot_coords.1 - point_t_coord) / con_knot,
                 );
@@ -1307,12 +1307,12 @@ where P: ControlPoint<f64>
 
         let mut point_s_coord = 0.0;
         let mut con_knot = 0.0;
-        let t_axis_stradle_points = self
+        let t_axis_straddle_points = self
             .control_points
             .iter()
             // Filter all points along the T axis of inserton
             .filter(|point| (point.read().knot_coordinates().1 - knot_coords.1).so_small())
-            // Filter those points to only include the point that stradles the S axis of insertion
+            // Filter those points to only include the point that straddles the S axis of insertion
             .filter(|point| {
                 if let Some(con) = point.read().get(TmeshDirection::Right) {
                     let temp_s_coord = point.read().knot_coordinates().0;
@@ -1333,7 +1333,7 @@ where P: ControlPoint<f64>
 
         // Depending on the number of points whose connections intersect the location of the new point,
         // different errors or actions are taken
-        match t_axis_stradle_points.len() {
+        match t_axis_straddle_points.len() {
             0 => {
                 // No S-edge instersects the point where the point needs to be inserted, return an error
                 Err(Error::TmeshConnectionNotFound)
@@ -1341,7 +1341,7 @@ where P: ControlPoint<f64>
             1 => {
                 // An S-edge is found where the point intersects
                 self.try_local_knot_insertion(
-                    Arc::clone(&t_axis_stradle_points[0]),
+                    Arc::clone(&t_axis_straddle_points[0]),
                     TmeshDirection::Right,
                     (knot_coords.0 - point_s_coord) / con_knot,
                 )
@@ -1536,20 +1536,20 @@ impl<P> fmt::Display for Tmesh<P> {
 
         t_levels = t_levels.into_iter().rev().collect();
 
-        let mut virtical_cons: Vec<bool> = vec![false; s_levels.len()];
+        let mut vertical_cons: Vec<bool> = vec![false; s_levels.len()];
         for (i, (s_level, _)) in s_levels.iter().enumerate() {
             if let Some(point) = t_levels[0]
                 .1
                 .iter()
                 .find(|p| p.read().knot_coordinates().0 == *s_level)
             {
-                virtical_cons[i] =
+                vertical_cons[i] =
                     point.read().con_type(TmeshDirection::Up) != TmeshConnectionType::Tjunction;
             }
         }
         write!(f, "       ")?;
         let mut line = String::new();
-        for con in virtical_cons.iter() {
+        for con in vertical_cons.iter() {
             if *con {
                 line.push_str("|   ");
             } else {
@@ -1576,7 +1576,7 @@ impl<P> fmt::Display for Tmesh<P> {
                     }
 
                     line.push('+');
-                    virtical_cons[i] = point.read().con_type(TmeshDirection::Down)
+                    vertical_cons[i] = point.read().con_type(TmeshDirection::Down)
                         != TmeshConnectionType::Tjunction;
                     line.push_str(match point.read().con_type(TmeshDirection::Right) {
                         TmeshConnectionType::Edge => "--",
@@ -1589,7 +1589,7 @@ impl<P> fmt::Display for Tmesh<P> {
                             "   "
                         }
                     });
-                } else if virtical_cons[i] {
+                } else if vertical_cons[i] {
                     line.push_str("|   ");
                 } else if has_right_edge {
                     line.push_str("----");
@@ -1606,7 +1606,7 @@ impl<P> fmt::Display for Tmesh<P> {
 
             write!(f, "       ")?;
             let mut line = String::new();
-            for con in virtical_cons.iter() {
+            for con in vertical_cons.iter() {
                 if *con {
                     line.push_str("|   ");
                 } else {
@@ -1624,7 +1624,7 @@ impl<P> fmt::Display for Tmesh<P> {
             if i % 2 == 0 {
                 s_demarcations
                     .0
-                    .push(if virtical_cons[i + 1] { '|' } else { ' ' });
+                    .push(if vertical_cons[i + 1] { '|' } else { ' ' });
                 s_demarcations
                     .0
                     .push_str(format!("   {:.2}", s_level.0).as_str());
@@ -1635,7 +1635,7 @@ impl<P> fmt::Display for Tmesh<P> {
             }
         }
 
-        if *virtical_cons
+        if *vertical_cons
             .last()
             .expect("All T-meshes have at least 2 S-levels")
             && s_levels.len().is_multiple_of(2)
