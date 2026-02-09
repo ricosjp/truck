@@ -8,7 +8,7 @@ Reads/writes STEP files from/to truck.
 
 ### shape-to-step
 
-convert from truck shape json to step file.
+Convert a truck shape JSON file to a STEP file.
 
 #### usage
 
@@ -18,4 +18,4 @@ shape-to-step <input shape file> [output shape file]
 
 ### step-to-mesh
 
-Parse STEP data, extract shape, and meshing.
+Parse STEP data, extract shapes, and generate meshes.

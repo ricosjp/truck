@@ -10,10 +10,9 @@ Integrated modeling algorithms by geometry and topology
 
 Modeling a bottle.
 
-This is a technical indicator for comparing with Open CASCADE Technology, a great senior.
+This is a benchmark for comparison with Open CASCADE Technology.
 We want to reproduce the bottle made in the [OCCT tutorial].
-Now, one cannot make a fillet or run boolean operations by truck.
-So, the bottle made by this script is not completed.
+Currently, filleting is not yet supported, so the bottle made by this script is not complete.
 
 Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 

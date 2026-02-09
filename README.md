@@ -2,7 +2,7 @@
 
 ## Overview
 
-`truck` is an open-source shape processing kernel by Rust.  
+`truck` is an open-source shape processing kernel written in Rust.
 The broad concept consists of the following three elements.
 
 - Trendy Tools
@@ -11,20 +11,20 @@ The broad concept consists of the following three elements.
 
 ### Trendy Tools
 
-- We are targeting the next generation of market share using developmental tools: Rust and WebGPU.
-- Advanced optimizations using Rust and WebGPU maximize the performance of each crate.
+- We target next-generation CAD using modern tools: Rust and WebGPU.
+- Advanced optimizations with Rust and WebGPU maximize the performance of each crate.
 
 ### Traditional Arts
 
-- We will break away from the legacy by re-implementing the B-rep with NURBS in the above trendy tools.
-- Safe implementation using Rust to eliminate core dumped for CPU-derived processes.
+- We break away from legacy systems by re-implementing B-rep with NURBS and T-splines using the tools above.
+- Safe implementation using Rust eliminates crashes in CPU-bound processes.
 - Cargo's extensive maintenance features ensure thorough continuous integration.
 
 ### Theseus' ship
 
 - We are modularizing into smaller crates that can be replaced, like [the Ship of Theseus](https://en.wikipedia.org/wiki/Ship_of_Theseus).
-- Based on the many lessons learned in the past, we have given up on overall optimization as a single application, and design as a collection of individual optimized crates.
-- Since unexpected expansions are bound to occur, we deal with uncontrolled expansions in the form of small modules.
+- Based on lessons learned, we have forgone monolithic optimization in favor of designing a collection of individually optimized crates.
+- Since unexpected growth is inevitable, we manage it through small, composable modules.
 
 ## License
 
@@ -34,7 +34,7 @@ Apache License 2.0
 
 ### How to Run Examples
 
-All examples are located under the examples directory in each crates.  
+All examples are located under the examples directory in each crate.
 These examples use the default syntax for running examples, as found in the [Cargo](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples) documentation.
 
 At first, let's run the following example!
@@ -56,7 +56,7 @@ Defines geometric traits: `ParametricCurve`, `ParametricSurface`, and so on.
 
 ### truck-geometry [![Crates.io](https://img.shields.io/crates/v/truck-geometry.svg)](https://crates.io/crates/truck-geometry) [![Docs.rs](https://docs.rs/truck-geometry/badge.svg)](https://docs.rs/truck-geometry)
 
-geometrical structs: knot vector, B-spline and NURBS
+Geometrical structs: knot vector, B-spline, NURBS, and T-spline
 
 ### truck-topology [![Crates.io](https://img.shields.io/crates/v/truck-topology.svg)](https://crates.io/crates/truck-topology) [![Docs.rs](https://docs.rs/truck-topology/badge.svg)](https://docs.rs/truck-topology)
 
@@ -68,7 +68,7 @@ defines polygon data structure and some algorithms handling mesh, including mesh
 
 ### truck-meshalgo [![Crates.io](https://img.shields.io/crates/v/truck-meshalgo.svg)](https://crates.io/crates/truck-meshalgo) [![Docs.rs](https://docs.rs/truck-meshalgo/badge.svg)](https://docs.rs/truck-meshalgo)
 
-Mesh algorighms, include tessellations of the shape.
+Mesh algorithms, including tessellation of shapes.
 
 ### truck-modeling [![Crates.io](https://img.shields.io/crates/v/truck-modeling.svg)](https://crates.io/crates/truck-modeling) [![Docs.rs](https://docs.rs/truck-modeling/badge.svg)](https://docs.rs/truck-modeling)
 
@@ -76,7 +76,7 @@ integrated modeling algorithms by geometry and topology
 
 ### truck-shapeops [![Crates.io](https://img.shields.io/crates/v/truck-shapeops.svg)](https://crates.io/crates/truck-shapeops) [![Docs.rs](https://docs.rs/truck-shapeops/badge.svg)](https://docs.rs/truck-shapeops)
 
-Provides boolean operations to Solid
+Provides boolean operations on solids
 
 ### truck-platform [![Crates.io](https://img.shields.io/crates/v/truck-platform.svg)](https://crates.io/crates/truck-platform) [![Docs.rs](https://docs.rs/truck-platform/badge.svg)](https://docs.rs/truck-platform)
 
@@ -88,7 +88,7 @@ visualization of shape and polygon mesh based on platform
 
 ### truck-js
 
-Javascript wrapper of `truck`.
+JavaScript wrapper for `truck`.
 
 ![dependencies](./dependencies.svg)
 

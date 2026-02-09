@@ -8,16 +8,16 @@ Graphic utility library based on wgpu.
 
 ### wgsl-sandbox
 
-A sample of creating a render object by implementing "Rendered" in a new structure.
+A sample of creating a render object by implementing `Rendered` on a new structure.
 
-One can use xyr WGSL shader in the following way:
+One can use their WGSL shader in the following way:
 
 - Enter the shader path as an argument when executing the program.
 - Drag and drop the shader into the window.
 
 The rule of shaders:
 
-- One can draw a image by implementing the function:
+- One can draw an image by implementing the function:
 
 ```wgsl
 vec4<f32> main_image(coord: vec2<f32>, env: Environment);
