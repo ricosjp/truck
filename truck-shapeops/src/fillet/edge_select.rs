@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use truck_geometry::prelude::Point3;
 use truck_geotrait::{BoundedCurve, ParametricCurve};
@@ -6,7 +6,7 @@ use truck_geotrait::{BoundedCurve, ParametricCurve};
 use super::convert::{convert_shell_in, convert_shell_out, FilletableCurve, FilletableSurface};
 use super::error::FilletError;
 use super::ops;
-use super::params::FilletOptions;
+use super::params::{FilletOptions, RadiusSpec};
 use super::types::*;
 
 type Result<T> = std::result::Result<T, FilletError>;
@@ -28,97 +28,173 @@ fn build_edge_face_map(shell: &Shell) -> HashMap<EdgeID, Vec<usize>> {
     map
 }
 
-/// An edge chain: a sequence of edge IDs sharing the same face pair.
+/// Scans all face boundaries and extracts contiguous runs of selected edges.
 ///
-/// Face indices are resolved at processing time, not at grouping time,
-/// because earlier chains may mutate the shell and invalidate indices.
+/// Returns `(face_idx, ordered edge IDs)` for each maximal run.
+fn collect_boundary_runs(shell: &Shell, selected: &HashSet<EdgeID>) -> Vec<(usize, Vec<EdgeID>)> {
+    let mut candidate_runs = Vec::new();
+
+    for (face_idx, face) in shell.iter().enumerate() {
+        for boundary in face.boundary_iters() {
+            let boundary_edges: Vec<Edge> = boundary.collect();
+            let n = boundary_edges.len();
+            if n == 0 {
+                continue;
+            }
+
+            let is_selected: Vec<bool> = boundary_edges
+                .iter()
+                .map(|e| selected.contains(&e.id()))
+                .collect();
+
+            let boundary_closed =
+                n >= 2 && boundary_edges[0].front() == boundary_edges[n - 1].back();
+
+            if boundary_closed {
+                // Find a non-selected edge to start from so runs don't
+                // get split at the wrap-around seam.
+                if let Some(start) = is_selected.iter().position(|&s| !s) {
+                    let mut run: Vec<EdgeID> = Vec::new();
+                    for offset in 1..=n {
+                        let idx = (start + offset) % n;
+                        if is_selected[idx] {
+                            run.push(boundary_edges[idx].id());
+                        } else if !run.is_empty() {
+                            candidate_runs.push((face_idx, std::mem::take(&mut run)));
+                        }
+                    }
+                    if !run.is_empty() {
+                        candidate_runs.push((face_idx, run));
+                    }
+                } else {
+                    // ALL edges selected → one closed run covering entire boundary.
+                    let ids: Vec<EdgeID> = boundary_edges.iter().map(|e| e.id()).collect();
+                    candidate_runs.push((face_idx, ids));
+                }
+            } else {
+                // Open boundary: linear scan, split on non-selected gaps.
+                let mut run: Vec<EdgeID> = Vec::new();
+                for (i, &sel) in is_selected.iter().enumerate() {
+                    if sel {
+                        run.push(boundary_edges[i].id());
+                    } else if !run.is_empty() {
+                        candidate_runs.push((face_idx, std::mem::take(&mut run)));
+                    }
+                }
+                if !run.is_empty() {
+                    candidate_runs.push((face_idx, run));
+                }
+            }
+        }
+    }
+
+    candidate_runs
+}
+
+/// An edge chain: a contiguous run of selected edges on a single face boundary.
+///
+/// `shared_face_idx` is the face whose boundary contains these edges.
+/// The other face index is resolved at processing time (it may shift as
+/// earlier chains mutate the shell).
 #[derive(Debug)]
 struct Chain {
     edge_ids: Vec<EdgeID>,
+    shared_face_idx: usize,
 }
 
-/// Groups requested edges into chains of connected edges sharing the same face pair.
+/// Groups requested edges into chains by finding contiguous runs of selected
+/// edges along each face boundary.
+///
+/// For each face boundary, maximal contiguous runs of selected edges are
+/// extracted. Each selected edge appears in exactly two candidate runs (one per
+/// adjacent face). The edge is assigned to the longer run (tiebreak: lower face
+/// index). Final chains are sorted longest-first for processing stability.
 fn group_edges_into_chains(
     shell: &Shell,
     edge_ids: &[EdgeID],
     edge_face_map: &HashMap<EdgeID, Vec<usize>>,
 ) -> Result<Vec<Chain>> {
-    // Group edges by their (sorted) face pair.
-    let mut pair_groups: HashMap<(usize, usize), Vec<EdgeID>> = HashMap::new();
+    // 1. Validate all edges are manifold.
     for &eid in edge_ids {
         let faces = edge_face_map.get(&eid).ok_or(FilletError::EdgeNotFound)?;
         if faces.len() != 2 {
             return Err(FilletError::NonManifoldEdge(faces.len()));
         }
-        let key = if faces[0] < faces[1] {
-            (faces[0], faces[1])
-        } else {
-            (faces[1], faces[0])
-        };
-        pair_groups.entry(key).or_default().push(eid);
     }
 
-    // For each face pair group, build connected chains by vertex connectivity.
-    let mut chains = Vec::new();
-    for ((_, _), group_eids) in pair_groups {
-        // Build adjacency: vertex_id -> list of (edge_id, other_vertex_id).
-        let mut vert_adj: HashMap<VertexID, Vec<(EdgeID, VertexID)>> = HashMap::new();
-        let mut edge_map: HashMap<EdgeID, Edge> = HashMap::new();
-        for &eid in &group_eids {
-            // Find the actual edge in the shell.
-            let edge = shell
-                .edge_iter()
-                .find(|e| e.id() == eid)
-                .ok_or(FilletError::EdgeNotFound)?;
-            let (front, back) = edge.ends();
-            let (fid, bid) = (front.id(), back.id());
-            vert_adj.entry(fid).or_default().push((eid, bid));
-            vert_adj.entry(bid).or_default().push((eid, fid));
-            edge_map.insert(eid, edge);
-        }
+    let selected: HashSet<EdgeID> = edge_ids.iter().copied().collect();
 
-        // Walk chains: find endpoints (degree 1) or arbitrary start.
-        let mut used: HashMap<EdgeID, bool> = group_eids.iter().map(|&e| (e, false)).collect();
-        while let Some(&start_eid) = used.iter().find(|(_, &v)| !v).map(|(k, _)| k) {
-            // Find an endpoint to start from (vertex with degree 1 in our subgraph).
-            let start_edge = &edge_map[&start_eid];
-            let (front, back) = start_edge.ends();
-            // Prefer starting at a vertex with degree 1 in the remaining unused edges.
-            let unused_degree = |vid: VertexID| {
-                vert_adj.get(&vid).map_or(0, |v| {
-                    v.iter()
-                        .filter(|(e, _)| !*used.get(e).unwrap_or(&true))
-                        .count()
-                })
-            };
-            let start_vid = if unused_degree(front.id()) <= unused_degree(back.id()) {
-                front.id()
-            } else {
-                back.id()
-            };
+    // 2. For each face boundary, find contiguous runs of selected edges.
+    let candidate_runs = collect_boundary_runs(shell, &selected);
 
-            let mut chain_eids = Vec::new();
-            let mut current_vid = start_vid;
-            loop {
-                let next = vert_adj
-                    .get(&current_vid)
-                    .and_then(|neighbors| neighbors.iter().find(|(eid, _)| !used[eid]).copied());
-                match next {
-                    Some((eid, next_vid)) => {
-                        *used.get_mut(&eid).unwrap() = true;
-                        chain_eids.push(eid);
-                        current_vid = next_vid;
-                    }
-                    None => break,
+    // 3. Each selected edge appears in exactly 2 candidate runs (one per face).
+    //    Assign each edge to its longest run (tiebreak: lower face_idx).
+    let mut edge_best_run: HashMap<EdgeID, usize> = HashMap::new();
+    for (run_idx, (face_idx, run_edges)) in candidate_runs.iter().enumerate() {
+        for &eid in run_edges {
+            let replace = match edge_best_run.get(&eid) {
+                None => true,
+                Some(&prev_idx) => {
+                    let prev_len = candidate_runs[prev_idx].1.len();
+                    let this_len = run_edges.len();
+                    this_len > prev_len
+                        || (this_len == prev_len && *face_idx < candidate_runs[prev_idx].0)
                 }
-            }
-            if !chain_eids.is_empty() {
-                chains.push(Chain {
-                    edge_ids: chain_eids,
-                });
+            };
+            if replace {
+                edge_best_run.insert(eid, run_idx);
             }
         }
     }
+
+    // 4. Collect final chains: process runs longest-first, claiming unclaimed
+    //    edges and splitting on gaps where edges were already claimed.
+    let mut run_order: Vec<usize> = (0..candidate_runs.len()).collect();
+    run_order.sort_by(|&a, &b| {
+        candidate_runs[b]
+            .1
+            .len()
+            .cmp(&candidate_runs[a].1.len())
+            .then(candidate_runs[a].0.cmp(&candidate_runs[b].0))
+    });
+
+    let mut globally_claimed: HashSet<EdgeID> = HashSet::new();
+    let mut chains: Vec<Chain> = Vec::new();
+
+    for run_idx in run_order {
+        let (face_idx, ref run_edges) = candidate_runs[run_idx];
+        // Split this run on already-claimed edges, producing sub-chains.
+        let mut current_run: Vec<EdgeID> = Vec::new();
+        for &eid in run_edges {
+            if globally_claimed.contains(&eid) {
+                if !current_run.is_empty() {
+                    chains.push(Chain {
+                        edge_ids: std::mem::take(&mut current_run),
+                        shared_face_idx: face_idx,
+                    });
+                }
+            } else {
+                current_run.push(eid);
+            }
+        }
+        if !current_run.is_empty() {
+            chains.push(Chain {
+                edge_ids: current_run,
+                shared_face_idx: face_idx,
+            });
+        }
+        // Mark all original run edges as globally claimed.
+        globally_claimed.extend(run_edges);
+    }
+
+    // 5. Sort final chains: longest first, then shared_face_idx for determinism.
+    chains.sort_by(|a, b| {
+        b.edge_ids
+            .len()
+            .cmp(&a.edge_ids.len())
+            .then(a.shared_face_idx.cmp(&b.shared_face_idx))
+    });
+
     Ok(chains)
 }
 
@@ -178,13 +254,24 @@ pub fn fillet_edges(
         }
     }
 
+    // Validate per-edge radius count.
+    if let RadiusSpec::PerEdge(ref radii) = options.radius {
+        if radii.len() != edge_ids.len() {
+            return Err(FilletError::PerEdgeRadiusMismatch {
+                given: radii.len(),
+                expected: edge_ids.len(),
+            });
+        }
+    }
+
     // Reject edges that are too short for the requested fillet radius.
     {
-        let effective_radius = match &options.radius {
-            super::params::RadiusSpec::Constant(r) => *r,
-            super::params::RadiusSpec::Variable(f) => f(0.5),
-        };
-        for &eid in edge_ids {
+        for (i, &eid) in edge_ids.iter().enumerate() {
+            let effective_radius = match &options.radius {
+                RadiusSpec::Constant(r) => *r,
+                RadiusSpec::Variable(f) => f(0.5),
+                RadiusSpec::PerEdge(radii) => radii[i],
+            };
             let edge = shell
                 .edge_iter()
                 .find(|e| e.id() == eid)
@@ -213,12 +300,19 @@ pub fn fillet_edges(
         group_edges_into_chains(shell, edge_ids, &edge_face_map)?
     };
 
+    // Build EdgeID→index map for PerEdge radius lookup.
+    let edge_id_to_idx: HashMap<EdgeID, usize> = edge_ids
+        .iter()
+        .enumerate()
+        .map(|(i, &eid)| (eid, i))
+        .collect();
+
     // Process each chain with a fresh edge-face map, so that mutations from
     // earlier chains don't cause stale face indices.
     for chain in &chains {
         let edge_face_map = build_edge_face_map(shell);
 
-        // Resolve face_a and face_b from the first edge in this chain.
+        // Resolve face_a (shared face from grouping) and face_b from current map.
         let first_eid = chain.edge_ids[0];
         let faces = edge_face_map
             .get(&first_eid)
@@ -226,11 +320,12 @@ pub fn fillet_edges(
         if faces.len() != 2 {
             return Err(FilletError::NonManifoldEdge(faces.len()));
         }
-        let (face_a_idx, face_b_idx) = if faces[0] < faces[1] {
-            (faces[0], faces[1])
-        } else {
-            (faces[1], faces[0])
-        };
+        // face_a is the shared face from boundary-run grouping; face_b is the other.
+        let face_a_idx = chain.shared_face_idx;
+        let face_b_idx = *faces
+            .iter()
+            .find(|&&f| f != face_a_idx)
+            .ok_or(FilletError::EdgeNotFound)?;
 
         if chain.edge_ids.len() == 1 {
             // Single-edge: use fillet_with_side.
@@ -253,14 +348,20 @@ pub fn fillet_edges(
             let side0 = side0_idx.map(|i| shell[i].clone());
             let side1 = side1_idx.map(|i| shell[i].clone());
 
-            let (new_face_a, new_face_b, fillet, new_side0, new_side1) = ops::fillet_with_side(
-                face_a,
-                face_b,
-                eid,
-                side0.as_ref(),
-                side1.as_ref(),
-                options,
-            )?;
+            let chain_opts;
+            let opts = if let RadiusSpec::PerEdge(radii) = &options.radius {
+                chain_opts = FilletOptions {
+                    radius: RadiusSpec::Constant(radii[edge_id_to_idx[&eid]]),
+                    division: options.division,
+                    profile: options.profile.clone(),
+                };
+                &chain_opts
+            } else {
+                options
+            };
+
+            let (new_face_a, new_face_b, fillet, new_side0, new_side1) =
+                ops::fillet_with_side(face_a, face_b, eid, side0.as_ref(), side1.as_ref(), opts)?;
 
             shell[face_a_idx] = new_face_a;
             shell[face_b_idx] = new_face_b;
@@ -276,14 +377,38 @@ pub fn fillet_edges(
             }
             shell.push(fillet);
         } else {
-            // Multi-edge chain: build a Wire and use fillet_along_wire.
-            let wire: Wire = chain
-                .edge_ids
-                .iter()
-                .filter_map(|&eid| shell.edge_iter().find(|e| e.id() == eid))
+            // Multi-edge chain: build a Wire from the shared face's boundary
+            // to get edges in the correct orientation for that face.
+            let chain_id_set: HashSet<EdgeID> = chain.edge_ids.iter().copied().collect();
+            let wire: Wire = shell[face_a_idx]
+                .boundary_iters()
+                .into_iter()
+                .flatten()
+                .filter(|e| chain_id_set.contains(&e.id()))
                 .collect();
 
-            ops::fillet_along_wire(shell, &wire, options)?;
+            let chain_opts;
+            let opts = if let RadiusSpec::PerEdge(radii) = &options.radius {
+                let chain_radii: Vec<f64> = chain
+                    .edge_ids
+                    .iter()
+                    .map(|eid| radii[edge_id_to_idx[eid]])
+                    .collect();
+                let n = chain_radii.len();
+                chain_opts = FilletOptions {
+                    radius: RadiusSpec::Variable(Box::new(move |t: f64| {
+                        let idx = ((t * n as f64).floor() as usize).min(n - 1);
+                        chain_radii[idx]
+                    })),
+                    division: options.division,
+                    profile: options.profile.clone(),
+                };
+                &chain_opts
+            } else {
+                options
+            };
+
+            ops::fillet_along_wire(shell, &wire, opts)?;
         }
     }
     Ok(())

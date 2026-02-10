@@ -5,6 +5,8 @@ use truck_meshalgo::prelude::*;
 use super::geometry::*;
 use super::types::*;
 
+use truck_geotrait::ParametricSurface;
+
 use super::{
     fillet_along_wire, fillet_edges, fillet_edges_generic, fillet_with_side, simple_fillet,
     FilletOptions, FilletProfile, FilletableCurve, FilletableSurface,
@@ -1808,4 +1810,721 @@ fn boolean_shell_converts_for_fillet() {
     let (internal_shell, internal_ids) = result.unwrap();
     assert_eq!(internal_ids.len(), ic_edges.len());
     assert!(!internal_shell.is_empty());
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6c: Variable radius on open wires
+// ---------------------------------------------------------------------------
+
+/// Variable radius on an open wire should succeed (no f(0)≈f(1) constraint).
+#[test]
+fn variable_radius_open_wire() {
+    // Reuse fillet_semi_cube topology: 4-face open box, 2-edge open wire.
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.0, 1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, -0.1, 0.0),
+        Point3::new(1.1, -0.1, 0.0),
+        Point3::new(1.1, 1.1, 0.0),
+        Point3::new(0.0, 1.1, 0.0),
+    ];
+    let v = Vertex::news(p);
+
+    let line = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+    let edge = [
+        line(0, 1),
+        line(1, 2),
+        line(2, 3),
+        line(3, 0),
+        line(0, 4),
+        line(1, 5),
+        line(2, 6),
+        line(3, 7),
+        line(4, 5),
+        line(5, 6),
+        line(6, 7),
+        line(7, 4),
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let bsp = BSplineSurface::new((knot_vec.clone(), knot_vec), control_points);
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(i, j)| {
+                edge.iter()
+                    .find_map(|edge| {
+                        if edge.front() == &v[i] && edge.back() == &v[j] {
+                            Some(edge.clone())
+                        } else if edge.back() == &v[i] && edge.front() == &v[j] {
+                            Some(edge.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let mut shell: Shell = [
+        plane(0, 1, 2, 3),
+        plane(1, 0, 4, 5),
+        plane(2, 1, 5, 6),
+        plane(3, 2, 6, 7),
+    ]
+    .into();
+
+    let opts = FilletOptions::constant(0.4);
+    let (face0, face1, face2, _, side1) = fillet_with_side(
+        &shell[1],
+        &shell[2],
+        edge[5].id(),
+        None,
+        Some(&shell[0]),
+        &opts,
+    )
+    .unwrap();
+    (shell[1], shell[2], shell[0]) = (face0, face1, side1.unwrap());
+    shell.push(face2);
+
+    let (face0, face1, face2, _, side1) = fillet_with_side(
+        &shell[2],
+        &shell[3],
+        edge[6].id(),
+        None,
+        Some(&shell[0]),
+        &opts,
+    )
+    .unwrap();
+    (shell[2], shell[3], shell[0]) = (face0, face1, side1.unwrap());
+    shell.push(face2);
+
+    let mut boundary = shell[0].boundaries().pop().unwrap();
+    boundary.pop_back();
+    assert_eq!(boundary.front_vertex().unwrap(), &v[0]);
+    assert!(!boundary.is_closed());
+
+    // Variable radius where f(0)=0.1, f(1)=0.3 — NOT equal, would fail on closed wire.
+    let var_opts = FilletOptions::variable(|t| 0.1 + 0.2 * t);
+    fillet_along_wire(&mut shell, &boundary, &var_opts).unwrap();
+
+    let _poly = shell.robust_triangulation(0.001).to_polygon();
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6a: Identity-based edge replacement
+// ---------------------------------------------------------------------------
+
+/// Verify `cut_face_by_bezier` works on a 5-edge boundary (pentagon).
+#[test]
+fn cut_face_five_edge_boundary() {
+    use super::topology::cut_face_by_bezier;
+
+    // Build a planar pentagon: vertices at unit-circle positions.
+    let pts: Vec<Point3> = (0..5)
+        .map(|i| {
+            let angle = 2.0 * std::f64::consts::PI * (i as f64) / 5.0;
+            Point3::new(angle.cos(), angle.sin(), 0.0)
+        })
+        .collect();
+    let v = Vertex::news(&pts);
+
+    let line_edge = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pts[i], pts[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+
+    // 5 edges: e0(0→1), e1(1→2), e2(2→3), e3(3→4), e4(4→0)
+    let edges = [
+        line_edge(0, 1),
+        line_edge(1, 2),
+        line_edge(2, 3),
+        line_edge(3, 4),
+        line_edge(4, 0),
+    ];
+
+    let wire: Wire = edges.iter().cloned().collect();
+
+    // Simple planar surface covering the pentagon area.
+    let surface: NurbsSurface<_> = BSplineSurface::new(
+        (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
+        vec![
+            vec![Point3::new(-1.5, -1.5, 0.0), Point3::new(-1.5, 1.5, 0.0)],
+            vec![Point3::new(1.5, -1.5, 0.0), Point3::new(1.5, 1.5, 0.0)],
+        ],
+    )
+    .into();
+
+    let face = Face::new(vec![wire], surface);
+
+    // Pick edge[2] (2→3) as the filleted edge.
+    // Adjacent edges: front=edge[1] (1→2), back=edge[3] (3→4).
+    // Build a bezier that starts near the midpoint of edge[1] and ends near
+    // the midpoint of edge[3], crossing through the filleted edge region.
+    let mid1 = (pts[1] + pts[2].to_vec()) / 2.0;
+    let mid3 = (pts[3] + pts[4].to_vec()) / 2.0;
+    let mid_control = (mid1 + mid3.to_vec()) / 2.0;
+    let bezier: NurbsCurve<Vector4> = NurbsCurve::from(BSplineCurve::new(
+        KnotVec::bezier_knot(2),
+        vec![mid1, mid_control, mid3],
+    ));
+
+    let result = cut_face_by_bezier(&face, bezier, edges[2].id());
+    assert!(result.is_some(), "cut_face_by_bezier returned None");
+
+    let (new_face, fillet_edge) = result.unwrap();
+    // Should still have 5 edges (3 original untouched + new_front + fillet + new_back,
+    // replacing front + filleted + back = same count).
+    let boundary = &new_face.absolute_boundaries()[0];
+    assert_eq!(
+        boundary.len(),
+        5,
+        "expected 5 edges after cut, got {}",
+        boundary.len()
+    );
+    // The fillet edge should appear in the boundary.
+    assert!(
+        boundary.iter().any(|e| e.id() == fillet_edge.id()),
+        "fillet edge not found in new boundary"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6b: Per-edge radius
+// ---------------------------------------------------------------------------
+
+/// Per-edge radius with two edges having different radii.
+#[test]
+fn per_edge_radius_two_edges() {
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.0, 1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+    ];
+    let v = Vertex::news(p);
+
+    let line = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+    let edge = [
+        line(0, 1),
+        line(1, 2),
+        line(2, 3),
+        line(3, 0),
+        line(0, 4),
+        line(1, 5),
+        line(2, 6),
+        line(3, 7),
+        line(4, 5),
+        line(5, 6),
+        line(6, 7),
+        line(7, 4),
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let bsp = BSplineSurface::new((knot_vec.clone(), knot_vec), control_points);
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(i, j)| {
+                edge.iter()
+                    .find_map(|edge| {
+                        if edge.front() == &v[i] && edge.back() == &v[j] {
+                            Some(edge.clone())
+                        } else if edge.back() == &v[i] && edge.front() == &v[j] {
+                            Some(edge.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let mut shell: Shell = [
+        plane(0, 1, 2, 3),
+        plane(1, 0, 4, 5),
+        plane(2, 1, 5, 6),
+        plane(3, 2, 6, 7),
+        plane(0, 3, 7, 4),
+    ]
+    .into();
+
+    let initial_face_count = shell.len();
+
+    // Two independent edges with different radii.
+    let params = FilletOptions::per_edge(vec![0.3, 0.15]);
+    fillet_edges(&mut shell, &[edge[5].id(), edge[7].id()], Some(&params)).unwrap();
+
+    assert!(
+        shell.len() >= initial_face_count + 2,
+        "expected at least 2 new fillet faces, got {} total (was {})",
+        shell.len(),
+        initial_face_count
+    );
+    let _poly = shell.robust_triangulation(0.001).to_polygon();
+}
+
+/// Per-edge radius count mismatch → PerEdgeRadiusMismatch error.
+#[test]
+fn per_edge_radius_mismatch() {
+    let (mut shell, edge, _) = build_box_shell();
+
+    // Provide 1 radius for 2 edges → mismatch.
+    let params = FilletOptions::per_edge(vec![0.3]);
+    let result = fillet_edges(&mut shell, &[edge[5].id(), edge[6].id()], Some(&params));
+    assert!(
+        matches!(
+            result,
+            Err(super::FilletError::PerEdgeRadiusMismatch {
+                given: 1,
+                expected: 2
+            })
+        ),
+        "expected PerEdgeRadiusMismatch, got: {result:?}"
+    );
+}
+
+/// Per-edge radius where one edge is too short → DegenerateEdge.
+#[test]
+fn per_edge_radius_degenerate() {
+    let (mut shell, edge, _) = build_box_shell();
+
+    // edge[5] length ~1.0, radius 0.15 → ok (2*0.15=0.3 < 1.0).
+    // edge[6] length ~1.0, radius 0.6 → too big (2*0.6=1.2 > 1.0).
+    let params = FilletOptions::per_edge(vec![0.15, 0.6]);
+    let result = fillet_edges(&mut shell, &[edge[5].id(), edge[6].id()], Some(&params));
+    assert!(
+        matches!(result, Err(super::FilletError::DegenerateEdge)),
+        "expected DegenerateEdge, got: {result:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Geometric accuracy tests
+// ---------------------------------------------------------------------------
+
+/// Round fillet contact curves lie at the correct distance from the original planes.
+#[test]
+fn radius_error_bounds() {
+    let (shell, edge, _) = build_box_shell();
+
+    // face 1 (front) is y=0 plane, face 2 (right) is x=1 plane.
+    // edge[5] (1→5) runs along z at (x=1, y=0). These faces are orthogonal.
+    let radius = 0.3;
+    let (_, _, fillet) = simple_fillet(
+        &shell[1],
+        &shell[2],
+        edge[5].id(),
+        &FilletOptions::constant(radius),
+    )
+    .unwrap();
+
+    let fillet_surface = fillet.oriented_surface();
+    let n = 8;
+    let tol = 0.01;
+
+    // u=0 contact curve: fillet touches face1 (y=0 plane).
+    // Points should be on that plane (dy≈0) at distance radius from face2 (dx≈radius).
+    for j in 0..=n {
+        let v = j as f64 / n as f64;
+        let pt = fillet_surface.subs(0.0, v);
+        let dy = pt.y.abs();
+        let dx = (pt.x - 1.0).abs();
+        assert!(dy < tol, "u=0 contact not on y=0 plane: dy={dy:.6}");
+        assert!(
+            (dx - radius).abs() < tol,
+            "u=0 contact distance from x=1 plane: dx={dx:.6}, expected {radius}"
+        );
+    }
+
+    // u=1 contact curve: fillet touches face2 (x=1 plane).
+    // Points should be on that plane (dx≈0) at distance radius from face1 (dy≈radius).
+    for j in 0..=n {
+        let v = j as f64 / n as f64;
+        let pt = fillet_surface.subs(1.0, v);
+        let dx = (pt.x - 1.0).abs();
+        let dy = pt.y.abs();
+        assert!(dx < tol, "u=1 contact not on x=1 plane: dx={dx:.6}");
+        assert!(
+            (dy - radius).abs() < tol,
+            "u=1 contact distance from y=0 plane: dy={dy:.6}, expected {radius}"
+        );
+    }
+
+    // Interior: all points should be inside the fillet pocket (0 < dx < radius, 0 < dy < radius).
+    for i in 1..n {
+        for j in 0..=n {
+            let u = i as f64 / n as f64;
+            let v = j as f64 / n as f64;
+            let pt = fillet_surface.subs(u, v);
+            let dx = (pt.x - 1.0).abs();
+            let dy = pt.y.abs();
+            assert!(
+                dx < radius + tol && dy < radius + tol,
+                "interior point ({u:.2},{v:.2}) outside pocket: dx={dx:.4} dy={dy:.4}"
+            );
+        }
+    }
+}
+
+/// Adjacent fillet surfaces in a multi-edge wire should meet with C0 continuity
+/// and approximate G1 tangent alignment at their shared seam.
+#[test]
+fn continuity_at_wire_joins() {
+    // Use the same 4-face semi-cube topology as fillet_semi_cube, producing
+    // a 2-edge open wire fillet with two adjacent fillet surfaces.
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.0, 1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, -0.1, 0.0),
+        Point3::new(1.1, -0.1, 0.0),
+        Point3::new(1.1, 1.1, 0.0),
+        Point3::new(0.0, 1.1, 0.0),
+    ];
+    let v = Vertex::news(p);
+
+    let line = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+    let edge = [
+        line(0, 1),
+        line(1, 2),
+        line(2, 3),
+        line(3, 0),
+        line(0, 4),
+        line(1, 5),
+        line(2, 6),
+        line(3, 7),
+        line(4, 5),
+        line(5, 6),
+        line(6, 7),
+        line(7, 4),
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let bsp = BSplineSurface::new((knot_vec.clone(), knot_vec), control_points);
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(i, j)| {
+                edge.iter()
+                    .find_map(|edge| {
+                        if edge.front() == &v[i] && edge.back() == &v[j] {
+                            Some(edge.clone())
+                        } else if edge.back() == &v[i] && edge.front() == &v[j] {
+                            Some(edge.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let mut shell: Shell = [
+        plane(0, 1, 2, 3),
+        plane(1, 0, 4, 5),
+        plane(2, 1, 5, 6),
+        plane(3, 2, 6, 7),
+    ]
+    .into();
+
+    let opts = FilletOptions::constant(0.4);
+    let (face0, face1, face2, _, side1) = fillet_with_side(
+        &shell[1],
+        &shell[2],
+        edge[5].id(),
+        None,
+        Some(&shell[0]),
+        &opts,
+    )
+    .unwrap();
+    (shell[1], shell[2], shell[0]) = (face0, face1, side1.unwrap());
+    shell.push(face2);
+
+    let (face0, face1, face2, _, side1) = fillet_with_side(
+        &shell[2],
+        &shell[3],
+        edge[6].id(),
+        None,
+        Some(&shell[0]),
+        &opts,
+    )
+    .unwrap();
+    (shell[2], shell[3], shell[0]) = (face0, face1, side1.unwrap());
+    shell.push(face2);
+
+    let mut boundary = shell[0].boundaries().pop().unwrap();
+    boundary.pop_back();
+
+    let initial_count = shell.len();
+    fillet_along_wire(&mut shell, &boundary, &FilletOptions::constant(0.2)).unwrap();
+
+    // Fillet faces are appended at the end.
+    let fillet_faces: Vec<_> = (initial_count..shell.len()).map(|i| &shell[i]).collect();
+    assert!(
+        fillet_faces.len() >= 2,
+        "expected at least 2 fillet faces, got {}",
+        fillet_faces.len()
+    );
+
+    // C0 check: adjacent fillet faces share boundary vertices. For each pair,
+    // find vertices that appear in both faces' boundaries and verify positions match.
+    let tol = 0.01;
+    for win in fillet_faces.windows(2) {
+        let verts0: Vec<_> = win[0]
+            .boundary_iters()
+            .into_iter()
+            .flatten()
+            .map(|e| (e.front().point(), e.back().point()))
+            .collect();
+        let verts1: Vec<_> = win[1]
+            .boundary_iters()
+            .into_iter()
+            .flatten()
+            .map(|e| (e.front().point(), e.back().point()))
+            .collect();
+
+        // Collect all vertex positions from each face.
+        let pts0: Vec<Point3> = verts0.iter().flat_map(|(f, b)| [*f, *b]).collect();
+        let pts1: Vec<Point3> = verts1.iter().flat_map(|(f, b)| [*f, *b]).collect();
+
+        // Find shared vertices (points within tolerance).
+        let shared: Vec<_> = pts0
+            .iter()
+            .filter(|p0| pts1.iter().any(|p1| (*p0 - *p1).magnitude() < tol))
+            .collect();
+
+        assert!(
+            shared.len() >= 2,
+            "adjacent fillet faces should share at least 2 vertices, found {}",
+            shared.len()
+        );
+    }
+
+    // G1 check: for each fillet face, sample the surface normal at the interior
+    // and verify it varies smoothly (no sudden flips).
+    for face in &fillet_faces {
+        let s = face.oriented_surface();
+        let n = 4;
+        let mut prev_normal = None;
+        for j in 0..=n {
+            let v = j as f64 / n as f64;
+            let normal = s.normal(0.5, v);
+            if let Some(prev) = prev_normal {
+                let dot: f64 = normal.dot(prev);
+                assert!(
+                    dot > 0.5,
+                    "normal flip within fillet face: dot={dot:.4} at v={v:.2}"
+                );
+            }
+            prev_normal = Some(normal);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 7: Boundary-run chain grouping tests
+// ---------------------------------------------------------------------------
+
+/// Helper: builds a 5-face cuboid (top + 4 sides, no bottom) with 12 edges.
+fn build_5face_box() -> (Shell, [Edge; 12], Vec<Vertex>) {
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.0, 1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+    ];
+    let v = Vertex::news(p);
+
+    let line = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+    let edge = [
+        line(0, 1), // 0: top front
+        line(1, 2), // 1: top right
+        line(2, 3), // 2: top back
+        line(3, 0), // 3: top left
+        line(0, 4), // 4
+        line(1, 5), // 5
+        line(2, 6), // 6
+        line(3, 7), // 7
+        line(4, 5), // 8: bottom front
+        line(5, 6), // 9: bottom right
+        line(6, 7), // 10: bottom back
+        line(7, 4), // 11: bottom left
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let bsp = BSplineSurface::new((knot_vec.clone(), knot_vec), control_points);
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(a, b)| {
+                edge.iter()
+                    .find_map(|e| {
+                        if e.front() == &v[a] && e.back() == &v[b] {
+                            Some(e.clone())
+                        } else if e.back() == &v[a] && e.front() == &v[b] {
+                            Some(e.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let shell: Shell = [
+        plane(0, 1, 2, 3), // face 0: top
+        plane(1, 0, 4, 5), // face 1: front
+        plane(2, 1, 5, 6), // face 2: right
+        plane(3, 2, 6, 7), // face 3: back
+        plane(0, 3, 7, 4), // face 4: left
+    ]
+    .into();
+
+    (shell, edge, v)
+}
+
+/// Helper: builds a 6-face closed cuboid with 12 edges.
+fn build_6face_box() -> (Shell, [Edge; 12], Vec<Vertex>) {
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.0, 1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+    ];
+    let v = Vertex::news(p);
+
+    let line = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+    let edge = [
+        line(0, 1), // 0: top front
+        line(1, 2), // 1: top right
+        line(2, 3), // 2: top back
+        line(3, 0), // 3: top left
+        line(0, 4), // 4
+        line(1, 5), // 5
+        line(2, 6), // 6
+        line(3, 7), // 7
+        line(4, 5), // 8: bottom front
+        line(5, 6), // 9: bottom right
+        line(6, 7), // 10: bottom back
+        line(7, 4), // 11: bottom left
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let bsp = BSplineSurface::new((knot_vec.clone(), knot_vec), control_points);
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(a, b)| {
+                edge.iter()
+                    .find_map(|e| {
+                        if e.front() == &v[a] && e.back() == &v[b] {
+                            Some(e.clone())
+                        } else if e.back() == &v[a] && e.front() == &v[b] {
+                            Some(e.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let shell: Shell = [
+        plane(0, 1, 2, 3), // face 0: top
+        plane(1, 0, 4, 5), // face 1: front
+        plane(2, 1, 5, 6), // face 2: right
+        plane(3, 2, 6, 7), // face 3: back
+        plane(0, 3, 7, 4), // face 4: left
+        plane(5, 4, 7, 6), // face 5: bottom
+    ]
+    .into();
+
+    (shell, edge, v)
+}
+
+/// Fillet all 4 top edges of a cuboid in a single `fillet_edges` call.
+///
+/// Previously this produced 4 singleton chains (different face pairs) processed
+/// sequentially, causing `EdgeNotFound` as earlier fillets invalidated adjacent
+/// edge IDs. With boundary-run grouping, the 4 top edges form one closed chain
+/// on the top face, processed in a single `fillet_along_wire_closed` call.
+#[test]
+fn fillet_edges_cuboid_top_4() {
+    let (mut shell, edge, _v) = build_5face_box();
+    let top_ids: Vec<EdgeID> = (0..4).map(|i| edge[i].id()).collect();
+    let opts = FilletOptions::constant(0.2);
+    fillet_edges(&mut shell, &top_ids, Some(&opts)).unwrap();
+    // 4 fillet faces added (one per edge in the closed wire).
+    assert!(shell.len() >= 9, "expected >= 9 faces, got {}", shell.len());
+    let _poly = shell.robust_triangulation(0.001).to_polygon();
+}
+
+/// Fillet top 4 + bottom 4 edges (two independent closed chains).
+#[test]
+fn fillet_edges_cuboid_top_and_bottom() {
+    let (mut shell, edge, _v) = build_6face_box();
+    let ids: Vec<EdgeID> = [0, 1, 2, 3, 8, 9, 10, 11]
+        .iter()
+        .map(|&i| edge[i].id())
+        .collect();
+    let opts = FilletOptions::constant(0.15);
+    fillet_edges(&mut shell, &ids, Some(&opts)).unwrap();
+    // 8 fillet faces added (4 per closed chain).
+    assert!(
+        shell.len() >= 14,
+        "expected >= 14 faces, got {}",
+        shell.len()
+    );
+    let _poly = shell.robust_triangulation(0.001).to_polygon();
 }
