@@ -32,13 +32,19 @@ pub fn simple_fillet(
         let surface0 = face0.oriented_surface();
         let surface1 = face1.oriented_surface();
         let curve = filleted_edge.oriented_curve();
-        let make = |radius: &dyn Fn(f64) -> f64| match options.profile {
+        let make = |radius: &dyn Fn(f64) -> f64| match &options.profile {
             FilletProfile::Round => {
                 rolling_ball_fillet_surface(&surface0, &surface1, &curve, division, radius, true)
             }
             FilletProfile::Chamfer => {
                 chamfer_fillet_surface(&surface0, &surface1, &curve, division, radius, true)
             }
+            FilletProfile::Ridge => {
+                ridge_fillet_surface(&surface0, &surface1, &curve, division, radius, true)
+            }
+            FilletProfile::Custom(profile) => custom_fillet_surface(
+                &surface0, &surface1, &curve, division, radius, true, profile,
+            ),
         };
         match &options.radius {
             RadiusSpec::Constant(r) => {
@@ -170,7 +176,7 @@ pub fn fillet_along_wire(shell: &mut Shell, wire: &Wire, options: &FilletOptions
                 &adjacent_faces,
                 move |_| r,
                 division,
-                options.profile,
+                &options.profile,
             )
         }
         RadiusSpec::Variable(f) => fillet_surfaces_along_wire(
@@ -180,7 +186,7 @@ pub fn fillet_along_wire(shell: &mut Shell, wire: &Wire, options: &FilletOptions
             &adjacent_faces,
             f.as_ref(),
             division,
-            options.profile,
+            &options.profile,
         ),
     }
     .ok_or(FilletError::FilletSurfaceComputationFailed)?;

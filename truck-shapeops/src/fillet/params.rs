@@ -1,13 +1,19 @@
 use std::num::NonZeroUsize;
+use truck_geometry::prelude::*;
 
 /// Profile shape for fillet operations.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub enum FilletProfile {
     /// Circular arc cross-section (traditional fillet).
     #[default]
     Round,
     /// Flat ruled surface (chamfer/bevel).
     Chamfer,
+    /// V-shaped ridge: two straight segments meeting at the transit point.
+    Ridge,
+    /// User-provided 2D profile curve. Domain [0,1], maps (0,0)→contact0,
+    /// (1,0)→contact1, y-axis = displacement toward transit.
+    Custom(Box<BSplineCurve<Point2>>),
 }
 
 /// Radius specification for fillet operations.

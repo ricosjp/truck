@@ -211,10 +211,10 @@ pub(super) fn fillet_surfaces_along_wire(
     adjacent_faces: &[FaceBoundaryEdgeIndex],
     radius: impl Fn(f64) -> f64,
     fillet_division: usize,
-    profile: FilletProfile,
+    profile: &FilletProfile,
 ) -> Option<Vec<NurbsSurface<Vector4>>> {
     let wire_faces_iter = wire.edge_iter().zip(adjacent_faces);
-    let create_fillet_surface = move |(edge, face_index): (&Edge, &FaceBoundaryEdgeIndex)| {
+    let create_fillet_surface = |(edge, face_index): (&Edge, &FaceBoundaryEdgeIndex)| {
         let surface0 = &shell[shared_face_index.face_index].oriented_surface();
         let surface1 = &shell[face_index.face_index].oriented_surface();
         let curve = &edge.oriented_curve();
@@ -234,11 +234,13 @@ pub(super) fn fillet_surfaces_along_wire(
         if last_wire {
             rs.remove(0);
         }
-        let expand = match profile {
-            FilletProfile::Round => expand_fillet,
-            FilletProfile::Chamfer => expand_chamfer,
+        let surface = match profile {
+            FilletProfile::Round => expand_fillet(&rs, surface0, surface1),
+            FilletProfile::Chamfer => expand_chamfer(&rs, surface0, surface1),
+            FilletProfile::Ridge => expand_ridge(&rs, surface0, surface1),
+            FilletProfile::Custom(curve) => expand_custom(&rs, surface0, surface1, curve),
         };
-        Some(expand(&rs, surface0, surface1))
+        Some(surface)
     };
     wire_faces_iter.map(create_fillet_surface).collect()
 }
