@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use smallvec::SmallVec;
 use truck_geometry::prelude::Point3;
 use truck_geotrait::{BoundedCurve, ParametricCurve};
 
@@ -11,9 +12,13 @@ use super::types::*;
 
 type Result<T> = std::result::Result<T, FilletError>;
 
+/// Face list for an edge. Manifold edges always have exactly 2 faces,
+/// so `SmallVec<[usize; 2]>` avoids heap allocation.
+type FaceList = SmallVec<[usize; 2]>;
+
 /// Builds a map from [`EdgeID`] to the face indices that contain it.
-fn build_edge_face_map(shell: &Shell) -> HashMap<EdgeID, Vec<usize>> {
-    let mut map: HashMap<EdgeID, Vec<usize>> = HashMap::new();
+fn build_edge_face_map(shell: &Shell) -> HashMap<EdgeID, FaceList> {
+    let mut map: HashMap<EdgeID, FaceList> = HashMap::new();
     shell.iter().enumerate().for_each(|(face_idx, face)| {
         face.edge_iter().for_each(|edge| {
             map.entry(edge.id())
@@ -22,7 +27,7 @@ fn build_edge_face_map(shell: &Shell) -> HashMap<EdgeID, Vec<usize>> {
                         v.push(face_idx);
                     }
                 })
-                .or_insert_with(|| vec![face_idx]);
+                .or_insert_with(|| smallvec::smallvec![face_idx]);
         });
     });
     map
@@ -112,7 +117,7 @@ struct Chain {
 fn group_edges_into_chains(
     shell: &Shell,
     edge_ids: &[EdgeID],
-    edge_face_map: &HashMap<EdgeID, Vec<usize>>,
+    edge_face_map: &HashMap<EdgeID, FaceList>,
 ) -> Result<Vec<Chain>> {
     // 1. Validate all edges are manifold.
     for &eid in edge_ids {
@@ -207,7 +212,7 @@ fn find_side_face(
     face_a_idx: usize,
     face_b_idx: usize,
     vertex_id: VertexID,
-    edge_face_map: &HashMap<EdgeID, Vec<usize>>,
+    edge_face_map: &HashMap<EdgeID, FaceList>,
 ) -> Option<usize> {
     // Find edges incident to vertex_id in face_a or face_b.
     [face_a_idx, face_b_idx]

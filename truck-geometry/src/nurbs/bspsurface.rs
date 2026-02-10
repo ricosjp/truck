@@ -1311,12 +1311,9 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
 
         let uknot_vec = bspcurve0.knot_vec().clone();
         let vknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-        let mut control_points = Vec::new();
-        for i in 0..bspcurve0.control_points().len() {
-            control_points.push(Vec::new());
-            control_points[i].push(*bspcurve0.control_point(i));
-            control_points[i].push(*bspcurve1.control_point(i));
-        }
+        let control_points: Vec<Vec<_>> = (0..bspcurve0.control_points().len())
+            .map(|i| vec![*bspcurve0.control_point(i), *bspcurve1.control_point(i)])
+            .collect();
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
     }
 
