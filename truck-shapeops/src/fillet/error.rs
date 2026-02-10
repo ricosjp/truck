@@ -36,4 +36,7 @@ pub enum FilletError {
         /// Description of which conversion failed.
         context: &'static str,
     },
+    /// The edge is too short for the requested fillet radius.
+    #[error("Edge too short for fillet radius.")]
+    DegenerateEdge,
 }

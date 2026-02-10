@@ -48,7 +48,10 @@ impl FilletableCurve for Curve {
             }
             Curve::BSplineCurve(bsp) => Some(NurbsCurve::from(bsp.clone())),
             Curve::NurbsCurve(nc) => Some(nc.clone()),
-            Curve::IntersectionCurve(_) => None,
+            Curve::IntersectionCurve(ic) => {
+                let range = ic.range_tuple();
+                Some(sample_to_nurbs(range, |t| ic.subs(t), 16))
+            }
         }
     }
     fn from_nurbs_curve(c: NurbsCurve<Vector4>) -> Self { Curve::NurbsCurve(c) }

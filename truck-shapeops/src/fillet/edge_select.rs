@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use truck_geometry::prelude::Point3;
+use truck_geotrait::{BoundedCurve, ParametricCurve};
 
 use super::convert::{convert_shell_in, convert_shell_out, FilletableCurve, FilletableSurface};
 use super::error::FilletError;
@@ -173,6 +174,35 @@ pub fn fillet_edges(
             let faces = edge_face_map.get(&eid).ok_or(FilletError::EdgeNotFound)?;
             if faces.len() != 2 {
                 return Err(FilletError::NonManifoldEdge(faces.len()));
+            }
+        }
+    }
+
+    // Reject edges that are too short for the requested fillet radius.
+    {
+        let effective_radius = match &options.radius {
+            super::params::RadiusSpec::Constant(r) => *r,
+            super::params::RadiusSpec::Variable(f) => f(0.5),
+        };
+        for &eid in edge_ids {
+            let edge = shell
+                .edge_iter()
+                .find(|e| e.id() == eid)
+                .ok_or(FilletError::EdgeNotFound)?;
+            let curve = edge.curve();
+            let (t0, t1) = curve.range_tuple();
+            let n = 10usize;
+            let mut length = 0.0f64;
+            let mut prev = curve.subs(t0);
+            for i in 1..=n {
+                let t = t0 + (t1 - t0) * (i as f64) / (n as f64);
+                let pt = curve.subs(t);
+                let d = pt - prev;
+                length += (d.x * d.x + d.y * d.y + d.z * d.z).sqrt();
+                prev = pt;
+            }
+            if length < 2.0 * effective_radius {
+                return Err(FilletError::DegenerateEdge);
             }
         }
     }

@@ -737,7 +737,10 @@ mod modeling_impls {
                 }
                 ModelCurve::BSplineCurve(bsp) => Some(NurbsCurve::from(bsp.clone())),
                 ModelCurve::NurbsCurve(nc) => Some(nc.clone()),
-                ModelCurve::IntersectionCurve(_) => None,
+                ModelCurve::IntersectionCurve(ic) => {
+                    let range = ic.range_tuple();
+                    Some(sample_to_nurbs(range, |t| ic.subs(t), 16))
+                }
             }
         }
         fn from_nurbs_curve(c: NurbsCurve<Vector4>) -> Self { ModelCurve::NurbsCurve(c) }
@@ -1623,6 +1626,107 @@ fn custom_profile_linear() {
     let _poly = shell.robust_triangulation(0.001).to_polygon();
 }
 
+/// Variable-radius fillet along a closed wire (radius varies 0.15..0.20, f(0) ≈ f(1)).
+#[test]
+fn variable_radius_closed_wire() {
+    let p = [
+        Point3::new(0.0, 0.0, 1.0),
+        Point3::new(1.0, 0.0, 1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.0, 1.0, 1.0),
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 0.0),
+        Point3::new(0.0, 1.0, 0.0),
+    ];
+    let v = Vertex::news(p);
+
+    let line = |i: usize, j: usize| {
+        let bsp = BSplineCurve::new(KnotVec::bezier_knot(1), vec![p[i], p[j]]);
+        Edge::new(&v[i], &v[j], NurbsCurve::from(bsp).into())
+    };
+    let edge = [
+        line(0, 1),
+        line(1, 2),
+        line(2, 3),
+        line(3, 0),
+        line(0, 4),
+        line(1, 5),
+        line(2, 6),
+        line(3, 7),
+        line(4, 5),
+        line(5, 6),
+        line(6, 7),
+        line(7, 4),
+    ];
+
+    let plane = |i: usize, j: usize, k: usize, l: usize| {
+        let control_points = vec![vec![p[i], p[l]], vec![p[j], p[k]]];
+        let knot_vec = KnotVec::bezier_knot(1);
+        let bsp = BSplineSurface::new((knot_vec.clone(), knot_vec), control_points);
+        let wire: Wire = [i, j, k, l]
+            .into_iter()
+            .circular_tuple_windows()
+            .map(|(i, j)| {
+                edge.iter()
+                    .find_map(|edge| {
+                        if edge.front() == &v[i] && edge.back() == &v[j] {
+                            Some(edge.clone())
+                        } else if edge.back() == &v[i] && edge.front() == &v[j] {
+                            Some(edge.inverse())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            })
+            .collect();
+        Face::new(vec![wire], bsp.into())
+    };
+
+    let mut shell: Shell = [
+        plane(0, 1, 2, 3),
+        plane(1, 0, 4, 5),
+        plane(2, 1, 5, 6),
+        plane(3, 2, 6, 7),
+        plane(0, 3, 7, 4),
+    ]
+    .into();
+
+    let initial_face_count = shell.len();
+
+    let closed_wire: Wire = [
+        edge[0].clone(),
+        edge[1].clone(),
+        edge[2].clone(),
+        edge[3].clone(),
+    ]
+    .into();
+    assert!(closed_wire.is_closed());
+
+    // Variable radius: 0.15 at endpoints, peaks at ~0.20 at t=0.5.
+    // f(0) ≈ f(1) ≈ 0.15, satisfying the closed-wire constraint.
+    let opts = FilletOptions::variable(|t| 0.15 + 0.05 * (std::f64::consts::PI * t).sin());
+    fillet_along_wire(&mut shell, &closed_wire, &opts).unwrap();
+
+    assert_eq!(shell.len(), initial_face_count + 4);
+    let _poly = shell.robust_triangulation(0.001).to_polygon();
+}
+
+/// Edge too short for requested fillet radius → DegenerateEdge error.
+#[test]
+fn fillet_rejects_degenerate_edge() {
+    let (mut shell, edge, _) = build_box_shell();
+
+    // The box edges are length 1.0. Request a radius of 0.6 → 2*0.6 = 1.2 > 1.0.
+    let params = FilletOptions::constant(0.6);
+    let result = fillet_edges(&mut shell, &[edge[5].id()], Some(&params));
+    assert!(
+        matches!(result, Err(super::FilletError::DegenerateEdge)),
+        "expected DegenerateEdge, got: {result:?}"
+    );
+}
+
 /// Custom with degree-2 bump (0,0)→(0.5,1.0)→(1,0) — non-trivial shape.
 #[test]
 fn custom_profile_bump() {
@@ -1643,4 +1747,65 @@ fn custom_profile_bump() {
 
     assert!(shell.len() > initial_face_count);
     let _poly = shell.robust_triangulation(0.001).to_polygon();
+}
+
+// ---------------------------------------------------------------------------
+// CSG/boolean-result fillet tests
+// ---------------------------------------------------------------------------
+
+/// Verify that `convert_shell_in` successfully converts a boolean AND result
+/// containing `IntersectionCurve` edges to the internal NURBS representation.
+///
+/// This exercises the `IntersectionCurve` → NURBS sampling path added to
+/// `FilletableCurve::to_nurbs_curve`.
+#[test]
+fn boolean_shell_converts_for_fillet() {
+    use super::convert::convert_shell_in;
+    use truck_modeling::builder;
+
+    // Unit cube at origin.
+    let v = builder::vertex(Point3::origin());
+    let e = builder::tsweep(&v, Vector3::unit_x());
+    let f = builder::tsweep(&e, Vector3::unit_y());
+    let cube: truck_modeling::Solid = builder::tsweep(&f, Vector3::unit_z());
+
+    // Cylinder punching through the cube (same pattern as punched-cube example).
+    let cv = builder::vertex(Point3::new(0.5, 0.25, -0.5));
+    let cw = builder::rsweep(
+        &cv,
+        Point3::new(0.5, 0.5, 0.0),
+        Vector3::unit_z(),
+        Rad(7.0),
+        3,
+    );
+    let cf = builder::try_attach_plane(&[cw]).unwrap();
+    let mut cylinder = builder::tsweep(&cf, Vector3::unit_z() * 2.0);
+    cylinder.not();
+
+    // Boolean AND — produces IntersectionCurve edges.
+    let solid = crate::and(&cube, &cylinder, 0.05).expect("boolean AND failed");
+    let shell = solid.into_boundaries().pop().unwrap();
+
+    // Verify IntersectionCurve edges exist.
+    let ic_edges: Vec<_> = shell
+        .edge_iter()
+        .filter(|e| matches!(e.curve(), truck_modeling::Curve::IntersectionCurve(_)))
+        .collect();
+    assert!(
+        !ic_edges.is_empty(),
+        "expected IntersectionCurve edges in boolean result"
+    );
+
+    // convert_shell_in should succeed now that IntersectionCurve→NURBS is implemented.
+    // Previously this would return UnsupportedGeometry.
+    let result = convert_shell_in(&shell, &ic_edges);
+    assert!(
+        result.is_ok(),
+        "convert_shell_in failed: {:?}",
+        result.err()
+    );
+
+    let (internal_shell, internal_ids) = result.unwrap();
+    assert_eq!(internal_ids.len(), ic_edges.len());
+    assert!(!internal_shell.is_empty());
 }
