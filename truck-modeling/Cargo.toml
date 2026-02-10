@@ -22,6 +22,11 @@ truck-geotrait = { workspace = true, features = ["derive"] }
 truck-geometry = { workspace = true }
 truck-polymesh = { workspace = true }
 truck-topology = { workspace = true }
+truck-shapeops = { workspace = true, optional = true }
+
+[features]
+default = []
+fillet = ["truck-shapeops"]
 
 [dev-dependencies]
 proptest = { workspace = true }

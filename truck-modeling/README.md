@@ -12,7 +12,7 @@ Modeling a bottle.
 
 This is a benchmark for comparison with Open CASCADE Technology.
 We want to reproduce the bottle made in the [OCCT tutorial].
-Currently, filleting is not yet supported, so the bottle made by this script is not complete.
+Filleting is supported via the `fillet` feature flag. Enable with `features = ["fillet"]`.
 
 Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 

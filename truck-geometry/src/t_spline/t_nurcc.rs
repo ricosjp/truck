@@ -1277,22 +1277,22 @@ mod tests {
         for (i, p) in t.control_points.iter().enumerate() {
             // Incoming edge of the point
             let point_edge = Arc::clone(p.read().incoming_edge.as_ref().unwrap_or_else(|| {
-                panic!(
-                    "Point {} should have an incoming edge",
-                    p.read().index,
-                )
+                panic!("Point {} should have an incoming edge", p.read().index,)
             }));
 
             // Point-based iter will rotate around the current control point
             // Incedentally verifies that the control point is referenced by the edge
             let iter = TnurccAcwPointIter::from_edge(
                 Arc::clone(&point_edge),
-                point_edge.read().point_end(Arc::clone(p)).unwrap_or_else(|| {
-                    panic!(
-                        "Point {} should be a side of its incoming edge",
-                        p.read().index,
-                    )
-                }),
+                point_edge
+                    .read()
+                    .point_end(Arc::clone(p))
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Point {} should be a side of its incoming edge",
+                            p.read().index,
+                        )
+                    }),
             );
             let next = iter.last().unwrap_or_else(|| {
                 panic!(
@@ -1322,12 +1322,15 @@ mod tests {
             // recorded valence of the point.
             let iter = TnurccAcwPointIter::from_edge(
                 Arc::clone(&point_edge),
-                point_edge.read().point_end(Arc::clone(p)).unwrap_or_else(|| {
-                    panic!(
-                        "Point {} should be a side of its incoming edge",
-                        p.read().index,
-                    )
-                }),
+                point_edge
+                    .read()
+                    .point_end(Arc::clone(p))
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Point {} should be a side of its incoming edge",
+                            p.read().index,
+                        )
+                    }),
             );
             let acw_calc_valence = iter.count();
             assert!(

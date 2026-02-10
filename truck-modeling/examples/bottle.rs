@@ -2,8 +2,7 @@
 //!
 //! This is a technical indicator for comparing with Open CASCADE Technology, a great senior.
 //! We want to reproduce the bottle made in the [OCCT tutorial].
-//! Now, one cannot make a fillet or run boolean operations by truck.
-//! So, the bottle made by this script is not completed.
+//! Boolean operations are available via truck-shapeops. Filleting is available with the `fillet` feature.
 //!
 //! Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 //!

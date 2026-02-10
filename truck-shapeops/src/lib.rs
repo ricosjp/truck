@@ -18,4 +18,9 @@ pub use healing::{RobustSplitClosedEdgesAndFaces, SplitClosedEdgesAndFaces};
 mod transversal;
 pub use transversal::{and, or, ShapeOpsCurve, ShapeOpsSurface};
 mod alternative;
-mod fillet;
+pub mod fillet;
+pub use fillet::{
+    fillet_along_wire, fillet_edges, fillet_edges_generic, fillet_with_side, simple_fillet,
+    FilletError, FilletOptions, FilletProfile, FilletableCurve, FilletableSurface,
+    ParamCurveLinear, RadiusSpec,
+};

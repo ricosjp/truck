@@ -2979,10 +2979,7 @@ mod tests {
             mesh.add_control_point(
                 Point3::from(point_pair.0),
                 mesh.find(Point3::from(point_pair.1)).unwrap_or_else(|_| {
-                    panic!(
-                        "Point {:?} is a valid point in the T-mesh",
-                        point_pair.1
-                    )
+                    panic!("Point {:?} is a valid point in the T-mesh", point_pair.1)
                 }),
                 dir,
                 0.5,

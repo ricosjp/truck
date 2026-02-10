@@ -110,3 +110,15 @@ mod multi_sweep;
 pub mod primitive;
 mod sweep;
 mod topo_impls;
+
+#[cfg(feature = "fillet")]
+mod fillet_impls;
+
+/// Fillet operations for shell edges.
+///
+/// Requires the `fillet` feature flag. Re-exports from [`truck_shapeops`].
+#[cfg(feature = "fillet")]
+pub use truck_shapeops::{
+    fillet_edges_generic as fillet_edges, FilletError, FilletOptions, FilletProfile,
+    FilletableCurve, FilletableSurface, RadiusSpec,
+};
