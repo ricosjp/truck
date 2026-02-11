@@ -3,7 +3,7 @@ use derive_more::{From, TryInto};
 use serde::{Deserialize, Serialize};
 #[doc(hidden)]
 pub use truck_geometry::prelude::{algo, inv_or_zero};
-pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*};
+pub use truck_geometry::{decorators::*, nurbs::*, specifieds::*, t_spline::*};
 pub use truck_polymesh::PolylineCurve;
 
 /// 3-dimensional curve
@@ -133,6 +133,8 @@ pub enum Surface {
     NurbsSurface(NurbsSurface<Vector4>),
     /// revoluted curve
     RevolutedCurve(Processor<RevolutedCurve<Curve>, Matrix4>),
+    /// T-spline surface
+    TSplineSurface(Tmesh<Point3>),
 }
 
 macro_rules! derive_surface_method {
@@ -142,6 +144,7 @@ macro_rules! derive_surface_method {
             Self::BSplineSurface(got) => $method(got, $($ver), *),
             Self::NurbsSurface(got) => $method(got, $($ver), *),
             Self::RevolutedCurve(got) => $method(got, $($ver), *),
+            Self::TSplineSurface(got) => $method(got, $($ver), *),
         }
     };
 }
@@ -153,6 +156,7 @@ macro_rules! derive_surface_self_method {
             Self::BSplineSurface(got) => Self::BSplineSurface($method(got, $($ver), *)),
             Self::NurbsSurface(got) => Self::NurbsSurface($method(got, $($ver), *)),
             Self::RevolutedCurve(got) => Self::RevolutedCurve($method(got, $($ver), *)),
+            Self::TSplineSurface(got) => Self::TSplineSurface($method(got, $($ver), *)),
         }
     };
 }
@@ -195,6 +199,10 @@ impl IncludeCurve<Curve> for Surface {
                 Curve::NurbsCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
+            Surface::TSplineSurface(surface) => curve.lift_up().control_points().iter().all(|v| {
+                let p = v.to_point();
+                surface.search_parameter(p, None, 1).is_some()
+            }),
             Surface::RevolutedCurve(surface) => match surface.entity_curve() {
                 &Curve::Line(curve) => {
                     self.include(&Curve::BSplineCurve(BSplineCurve::from(curve)))
@@ -262,6 +270,9 @@ impl SearchNearestParameter<D2> for Surface {
                 bspsurface.search_nearest_parameter(point, hint, trials)
             }
             Surface::NurbsSurface(surface) => surface.search_nearest_parameter(point, hint, trials),
+            Surface::TSplineSurface(surface) => {
+                surface.search_nearest_parameter(point, hint, trials)
+            }
             Surface::RevolutedCurve(rotted) => {
                 let hint = match hint.into() {
                     SPHint2D::Parameter(hint0, hint1) => (hint0, hint1),

@@ -12,17 +12,22 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-derive_more = { version = "2.1.1", features = ["full"] }
-itertools = "0.14.0"
-rustc-hash = "2.1.1"
-serde = { version = "1.0.228", features = ["derive"] }
-thiserror = "2.0.18"
-truck-base = { version = "0.5.0", path = "../truck-base" }
-truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive"] }
-truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
-truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
-truck-topology = { version = "0.6.0", path = "../truck-topology" }
+derive_more = { workspace = true }
+itertools = { workspace = true }
+rustc-hash = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+truck-base = { workspace = true }
+truck-geotrait = { workspace = true, features = ["derive"] }
+truck-geometry = { workspace = true }
+truck-polymesh = { workspace = true }
+truck-topology = { workspace = true }
+truck-shapeops = { workspace = true, optional = true }
+
+[features]
+default = []
+fillet = ["truck-shapeops"]
 
 [dev-dependencies]
-proptest = "1.10.0"
-serde_json = "1.0.149"
+proptest = { workspace = true }
+serde_json = { workspace = true }

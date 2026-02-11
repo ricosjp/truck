@@ -2,13 +2,13 @@
 
 [![Crates.io](https://img.shields.io/crates/v/truck-meshalgo.svg)](https://crates.io/crates/truck-meshalgo) [![Docs.rs](https://docs.rs/truck-meshalgo/badge.svg)](https://docs.rs/truck-meshalgo)
 
-Mesh algorigthms, include tessellations of the shape.
+Mesh algorithms, including tessellation of shapes.
 
 ## Sample Codes
 
 ### filleted-cube
 
-An experiment to decompose a mesh into elements for future NURBS-shape approximation of the mesh.
+An experiment to decompose a mesh into elements for future NURBS surface approximation.
 Contains `doc(hidden)` methods.
 
 - Input: filleted_cube.obj
@@ -16,15 +16,14 @@ Contains `doc(hidden)` methods.
 
 ### irregular-sphere
 
-Add the normal to the sphere containing
-the irregular normal generated from the NURBS containing the critical point.
+Add normals to a sphere that contains irregular normals generated from a NURBS surface with critical points.
 
 - Input: irregular_sphere.obj
 - Output: regular_sphere.obj
 
 ### octahedron-subdivision
 
-Apply loop subdivision to regular octahedron.
+Apply loop subdivision to a regular octahedron.
 
 - Input: hardcoded octahedron
 - Output: octahedron.obj, subdivision-octahedron.obj
@@ -45,14 +44,14 @@ Adds smooth normals to the stanford bunny.
 
 ### splitting-sample
 
-An experiment to decompose a mesh into elements for future NURBS-shape approximation of the mesh.
+An experiment to decompose a mesh into elements for future NURBS surface approximation.
 
 - Input: sample.obj
-- Output: planes_parts_#.obj, others_parts_#.obj
+- Output: planes*parts*#.obj, others*parts*#.obj
 
 ### teapot
 
-Adds smooth normals to and quadrangulate the famous teapot.
+Add smooth normals to and quadrangulate the famous teapot.
 
 - Input: teapot.obj
 - Output: quaded_pot.obj

@@ -3,7 +3,7 @@ name = "truck-geometry"
 version = "0.5.0"
 authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
 edition = "2021"
-description = "geometrical structs: knot vector, B-spline and NURBS"
+description = "Geometrical structs: knot vector, B-spline, NURBS, and T-spline"
 homepage = "https://github.com/ricosjp/truck"
 repository = "https://github.com/ricosjp/truck"
 license = "Apache-2.0"
@@ -12,14 +12,15 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-serde = { version = "1.0.228", features = ["derive"] }
-thiserror = "2.0.18"
-truck-base = { version = "0.5.0", path = "../truck-base" }
-truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive"] }
+serde = { workspace = true }
+thiserror = { workspace = true }
+truck-base = { workspace = true }
+truck-geotrait = { workspace = true, features = ["derive"] }
+parking_lot = { workspace = true }
 
 [dev-dependencies]
-truck-geotrait = { version = "0.4.0", path = "../truck-geotrait", features = ["derive", "polynomial"] }
-proptest = { version = "1.10.0", features = ["attr-macro"] }
+truck-geotrait = { workspace = true, features = ["derive", "polynomial"] }
+proptest = { workspace = true, features = ["attr-macro"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.3.4", features = ["wasm_js"] }
+getrandom = { workspace = true }

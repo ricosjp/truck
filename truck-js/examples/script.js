@@ -49,10 +49,9 @@ function onLoad() {
   c.addEventListener("mouseup", mouseUp);
 
   document.querySelector("input").addEventListener("change", fileRead);
-  document.getElementById("download-mesh").addEventListener(
-    "click",
-    downloadObj,
-  );
+  document
+    .getElementById("download-mesh")
+    .addEventListener("click", downloadObj);
 
   gl = c.getContext("webgl2") || c.getContext("experimental-webgl");
 
@@ -133,33 +132,29 @@ function render() {
 }
 
 function rotation(origin, axis, theta, vec) {
-  vec = [
-    vec[0] - origin[0],
-    vec[1] - origin[1],
-    vec[2] - origin[2],
-  ];
+  vec = [vec[0] - origin[0], vec[1] - origin[1], vec[2] - origin[2]];
   vec = [
     (axis[0] * axis[0] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[0] +
-    (axis[0] * axis[1] * (1.0 - Math.cos(theta)) - axis[2] * Math.sin(theta)) *
-      vec[1] +
-    (axis[0] * axis[2] * (1.0 - Math.cos(theta)) + axis[1] * Math.sin(theta)) *
-      vec[2],
+      (axis[0] * axis[1] * (1.0 - Math.cos(theta)) -
+        axis[2] * Math.sin(theta)) *
+        vec[1] +
+      (axis[0] * axis[2] * (1.0 - Math.cos(theta)) +
+        axis[1] * Math.sin(theta)) *
+        vec[2],
     (axis[0] * axis[1] * (1.0 - Math.cos(theta)) + axis[2] * Math.sin(theta)) *
       vec[0] +
-    (axis[1] * axis[1] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[1] +
-    (axis[1] * axis[2] * (1.0 - Math.cos(theta)) - axis[0] * Math.sin(theta)) *
-      vec[2],
+      (axis[1] * axis[1] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[1] +
+      (axis[1] * axis[2] * (1.0 - Math.cos(theta)) -
+        axis[0] * Math.sin(theta)) *
+        vec[2],
     (axis[0] * axis[2] * (1.0 - Math.cos(theta)) - axis[1] * Math.sin(theta)) *
       vec[0] +
-    (axis[1] * axis[2] * (1.0 - Math.cos(theta)) + axis[0] * Math.sin(theta)) *
-      vec[1] +
-    (axis[2] * axis[2] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[2],
+      (axis[1] * axis[2] * (1.0 - Math.cos(theta)) +
+        axis[0] * Math.sin(theta)) *
+        vec[1] +
+      (axis[2] * axis[2] * (1.0 - Math.cos(theta)) + Math.cos(theta)) * vec[2],
   ];
-  return [
-    vec[0] + origin[0],
-    vec[1] + origin[1],
-    vec[2] + origin[2],
-  ];
+  return [vec[0] + origin[0], vec[1] + origin[1], vec[2] + origin[2]];
 }
 
 function mouseMove(e) {
@@ -171,11 +166,11 @@ function mouseMove(e) {
     diff[1] *= 0.01;
     const cameraRightdirection = [
       cameraDirection[1] * cameraUpdirection[2] -
-      cameraDirection[2] * cameraUpdirection[1],
+        cameraDirection[2] * cameraUpdirection[1],
       cameraDirection[2] * cameraUpdirection[0] -
-      cameraDirection[0] * cameraUpdirection[2],
+        cameraDirection[0] * cameraUpdirection[2],
       cameraDirection[0] * cameraUpdirection[1] -
-      cameraDirection[1] * cameraUpdirection[0],
+        cameraDirection[1] * cameraUpdirection[0],
     ];
     const axis = [
       diff[0] * cameraUpdirection[0] - diff[1] * cameraRightdirection[0],
@@ -258,11 +253,8 @@ function fileRead(e) {
       return;
     }
     const box = polygon.bounding_box();
-    const scale = Math.max(
-      box[3] - box[0],
-      box[4] - box[1],
-      box[5] - box[2],
-    ) * 2.0;
+    const scale =
+      Math.max(box[3] - box[0], box[4] - box[1], box[5] - box[2]) * 2.0;
     const boxCenter = [
       (box[0] + box[3]) / 2.0,
       (box[1] + box[4]) / 2.0,
@@ -288,7 +280,7 @@ function downloadObj(e) {
     console.warn("Failed to generate obj.");
     return;
   }
-  const blob = new Blob([(new TextDecoder()).decode(obj)], {
+  const blob = new Blob([new TextDecoder().decode(obj)], {
     type: "text/plain",
   });
   const url = URL.createObjectURL(blob);

@@ -208,7 +208,7 @@ The version is of the bottom crate `truck-rendimpl`.
 ### v0.2.0
 
 - made `truck-polymesh` stable (well-tested and safety)
-  - The member variables of [`PolygonMesh`](https://docs.rs/truck-polymesh/0.2.0/truck_polymesh/struct.PolygonMesh.html) becomes private.  
+  - The member variables of [`PolygonMesh`](https://docs.rs/truck-polymesh/0.2.0/truck_polymesh/struct.PolygonMesh.html) becomes private.
     - Destructive changes to the mesh are provided by [`PolygonMeshEditor`](https://docs.rs/truck-polymesh/0.2.0/truck_polymesh/polygon_mesh/struct.PolygonMeshEditor.html), which checks the regularity of the mesh at dropped time.
   - Mesh handling algorithms are now a public API.
     - The hidden structure `MeshHandler` was abolished and algorithms are managed as traits.
@@ -230,7 +230,7 @@ The version is of the bottom crate `truck-rendimpl`.
     - [`RenderFace`](https://docs.rs/truck-rendimpl/0.1.5/truck_rendimpl/struct.RenderFace.html) was abolished.
   - abolished implementations `Clone` for `*Instance`. Use `*Instance::clone_instance`.
   - The texture of `InstanceState` was changed `wgpu::Texture` from `image::DynamicImage`.  
-  One can generate `Texture` from `DynamicImage` by [`InstanceCreator::create_texture`](https://docs.rs/truck-rendimpl/0.2.0/truck_rendimpl/struct.InstanceCreator.html#method.create_texture).
+    One can generate `Texture` from `DynamicImage` by [`InstanceCreator::create_texture`](https://docs.rs/truck-rendimpl/0.2.0/truck_rendimpl/struct.InstanceCreator.html#method.create_texture).
 - added inherit methods of `truck_geometry::NURBSSurface` from `BSplineSurface`.
 - added a feature `serde` to `cgmath` at `truck-base`.
   - remove the explicit dependency to `cgmath` from `truck-polymesh`.

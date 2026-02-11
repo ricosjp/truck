@@ -18,25 +18,25 @@ vtk = ["vtkio"]
 default = ["analyzers", "filters", "tessellation", "vtk"]
 
 [dependencies]
-derive_more = { version = "2.1.1", features = ["full"] }
-rustc-hash = "2.1.1"
-array-macro = "2.1.8"
-itertools = "0.14.0"
+derive_more = { workspace = true }
+rustc-hash = { workspace = true }
+array-macro = { workspace = true }
+itertools = { workspace = true }
 spade = { version = "2.15.0", optional = true }
-truck-base = { version = "0.5.0", path = "../truck-base" }
-truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
-truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
-truck-topology = { version = "0.6.0", path = "../truck-topology" }
+truck-base = { workspace = true }
+truck-geometry = { workspace = true }
+truck-polymesh = { workspace = true }
+truck-topology = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rayon = "1.11.0"
+rayon = { workspace = true }
 vtkio = { version = "0.6.3", optional = true }
 
 [dev-dependencies]
-rand = "0.9.2"
-serde_json = "1.0.149"
-proptest = "1.10.0"
-truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
+rand = { workspace = true }
+serde_json = { workspace = true }
+proptest = { workspace = true }
+truck-modeling = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.3.4", features = ["wasm_js"] }
+getrandom = { workspace = true }

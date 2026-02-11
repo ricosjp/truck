@@ -1,8 +1,8 @@
 # truck-derivers
 
-Define some derive macros for implements geometric traits.
+Defines derive macros for implementing geometric traits.
 
-The macros defined here are all called by `truck-geotrait`, so there is no need for the user to specify a priori any dependencies on this crate.
+The macros defined here are re-exported by `truck-geotrait`, so users do not need to depend on this crate directly.
 To use the macros used in this crate, activate the feature `derive` in `truck-geotrait`.
 
 ```toml

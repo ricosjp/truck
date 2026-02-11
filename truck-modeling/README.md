@@ -10,10 +10,14 @@ Integrated modeling algorithms by geometry and topology
 
 Modeling a bottle.
 
-This is a technical indicator for comparing with Open CASCADE Technology, a great senior.
+This is a benchmark for comparison with Open CASCADE Technology.
 We want to reproduce the bottle made in the [OCCT tutorial].
-Now, one cannot make a fillet or run boolean operations by truck.
-So, the bottle made by this script is not completed.
+When the `fillet` feature is enabled, the body edges are filleted just like
+the OCCT tutorial (`BRepFilletAPI_MakeFillet` at radius = thickness / 12).
+
+```bash
+cargo run -p truck-modeling --features fillet --example bottle
+```
 
 Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 

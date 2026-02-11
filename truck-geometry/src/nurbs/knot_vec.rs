@@ -526,12 +526,11 @@ impl KnotVec {
             }
         }
 
-        let mut vec = Vec::new();
-        for i in 0..knots.len() {
-            for _ in 0..mults[i] {
-                vec.push(knots[i]);
-            }
-        }
+        let vec: Vec<f64> = knots
+            .iter()
+            .zip(mults.iter())
+            .flat_map(|(&k, &m)| std::iter::repeat_n(k, m))
+            .collect();
         Ok(KnotVec(vec))
     }
     /// Constructs from `Vec<f64>`. do not sort, only check sorted.

@@ -1,7 +1,7 @@
 #![allow(clippy::many_single_char_names)]
 
 use super::*;
-use crate::filters::NormalFilters;
+use crate::filters::{NormalFilters, StructuringFilter};
 use crate::Point2;
 use array_macro::array;
 use handles::FixedVertexHandle;
@@ -21,40 +21,41 @@ pub(super) trait SP<S>:
 }
 impl<S, F> SP<S> for F where F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable {}
 
-pub(super) fn by_search_parameter<S>(
-    surface: &S,
-    point: Point3,
-    hint: Option<(f64, f64)>,
-) -> Option<(f64, f64)>
-where
-    S: MeshableSurface,
-{
-    surface
-        .search_parameter(point, hint, 100)
-        .or_else(|| surface.search_parameter(point, None, 100))
+pub(super) fn search_parameter_sp<S: MeshableSurface>(trials: usize) -> impl SP<S> {
+    move |surface: &S, point: Point3, hint: Option<(f64, f64)>| {
+        surface
+            .search_parameter(point, hint, trials)
+            .or_else(|| surface.search_parameter(point, None, trials))
+    }
 }
 
-pub(super) fn by_search_nearest_parameter<S>(
+pub(super) fn search_nearest_parameter_sp<S: RobustMeshableSurface>(trials: usize) -> impl SP<S> {
+    move |surface: &S, point: Point3, hint: Option<(f64, f64)>| {
+        surface
+            .search_parameter(point, hint, trials)
+            .or_else(|| surface.search_parameter(point, None, trials))
+            .or_else(|| surface.search_nearest_parameter(point, hint, trials))
+            .or_else(|| surface.search_nearest_parameter(point, None, trials))
+    }
+}
+
+/// Compatibility wrapper: searches parameter with 100 trials.
+#[cfg(test)]
+pub(super) fn by_search_parameter<S: MeshableSurface>(
     surface: &S,
     point: Point3,
     hint: Option<(f64, f64)>,
-) -> Option<(f64, f64)>
-where
-    S: RobustMeshableSurface,
-{
-    surface
-        .search_parameter(point, hint, 100)
-        .or_else(|| surface.search_parameter(point, None, 100))
-        .or_else(|| surface.search_nearest_parameter(point, hint, 100))
-        .or_else(|| surface.search_nearest_parameter(point, None, 100))
+) -> Option<(f64, f64)> {
+    search_parameter_sp::<S>(100)(surface, point, hint)
 }
 
 /// Tessellates faces
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) fn shell_tessellation<'a, C, S>(
     shell: &Shell<Point3, C, S>,
-    tol: f64,
+    tolerance: f64,
     sp: impl SP<S>,
+    quad_config: QuadOptions,
 ) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
@@ -71,7 +72,7 @@ where
             let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
             let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
             let curve = edge.curve();
-            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), tol);
+            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), tolerance);
             (id, Edge::debug_new(v0, v1, poly))
         })
         .collect();
@@ -90,7 +91,14 @@ where
             .iter()
             .map(create_boundary)
             .collect();
-        shell_create_polygon(&face.surface(), wires, face.orientation(), tol, &sp)
+        shell_create_polygon(
+            &face.surface(),
+            wires,
+            face.orientation(),
+            tolerance,
+            &sp,
+            quad_config,
+        )
     };
     shell.face_par_iter().map(create_face).collect()
 }
@@ -99,8 +107,9 @@ where
 #[cfg(any(target_arch = "wasm32", test))]
 pub(super) fn shell_tessellation_single_thread<'a, C, S>(
     shell: &'a Shell<Point3, C, S>,
-    tol: f64,
+    tolerance: f64,
     sp: impl SP<S>,
+    quad_config: QuadOptions,
 ) -> MeshedShell
 where
     C: PolylineableCurve + 'a,
@@ -120,7 +129,7 @@ where
             let vb = edge.absolute_back();
             let v1 = vmap.entry_or_insert(vb).clone();
             let curve = edge.curve();
-            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), tol);
+            let poly = PolylineCurve::from_curve(&curve, curve.range_tuple(), tolerance);
             Edge::debug_new(&v0, &v1, poly)
         },
     );
@@ -140,7 +149,14 @@ where
             .iter()
             .map(&mut create_boundary)
             .collect();
-        shell_create_polygon(&face.surface(), wires, face.orientation(), tol, &sp)
+        shell_create_polygon(
+            &face.surface(),
+            wires,
+            face.orientation(),
+            tolerance,
+            &sp,
+            quad_config,
+        )
     };
     shell.face_iter().map(create_face).collect()
 }
@@ -148,8 +164,9 @@ where
 /// Tessellates faces
 pub(super) fn cshell_tessellation<'a, C, S>(
     shell: &CompressedShell<Point3, C, S>,
-    tol: f64,
+    tolerance: f64,
     sp: impl SP<S>,
+    quad_config: QuadOptions,
 ) -> MeshedCShell
 where
     C: PolylineableCurve + 'a,
@@ -160,7 +177,7 @@ where
         let curve = &edge.curve;
         CompressedEdge {
             vertices: edge.vertices,
-            curve: PolylineCurve::from_curve(curve, curve.range_tuple(), tol),
+            curve: PolylineCurve::from_curve(curve, curve.range_tuple(), tolerance),
         }
     };
     #[cfg(not(target_arch = "wasm32"))]
@@ -170,6 +187,21 @@ where
     let tessellate_face = |face: &CompressedFace<S>| {
         let boundaries = face.boundaries.clone();
         let surface = &face.surface;
+
+        // Fast path: untrimmed face with bounded surface domain.
+        let is_untrimmed = boundaries.iter().all(|wire| wire.is_empty());
+        if is_untrimmed {
+            if let (Some(urange), Some(vrange)) = surface.try_range_tuple() {
+                let polygon =
+                    untrimmed_tessellation(surface, (urange, vrange), tolerance, quad_config.mode);
+                return CompressedFace {
+                    boundaries,
+                    orientation: face.orientation,
+                    surface: Some(polygon),
+                };
+            }
+        }
+
         let create_edge = |edge_idx: &CompressedEdgeIndex| match edge_idx.orientation {
             true => Some(edges.get(edge_idx.index)?.curve.clone()),
             false => Some(edges.get(edge_idx.index)?.curve.inverse()),
@@ -180,8 +212,8 @@ where
         };
         let preboundary: Option<Vec<_>> = boundaries.iter().map(create_boundary).collect();
         let polygon: Option<PolygonMesh> = preboundary.map(|preboundary| {
-            let boundary = PolyBoundary::new(preboundary, &surface, tol);
-            trimming_tessellation(&surface, &boundary, tol)
+            let boundary = PolyBoundary::new(preboundary, &surface, tolerance);
+            trimming_tessellation(&surface, &boundary, tolerance, quad_config)
         });
         CompressedFace {
             boundaries,
@@ -204,20 +236,36 @@ fn shell_create_polygon<S: PreMeshableSurface>(
     surface: &S,
     wires: Vec<Wire<Point3, PolylineCurve>>,
     orientation: bool,
-    tol: f64,
+    tolerance: f64,
     sp: impl SP<S>,
+    quad_config: QuadOptions,
 ) -> Face<Point3, PolylineCurve, Option<PolygonMesh>> {
-    let preboundary = wires
-        .iter()
-        .map(|wire: &Wire<_, _>| {
-            let wire_iter = wire.iter().map(Edge::oriented_curve);
-            PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
+    // Fast path: untrimmed face with bounded surface domain.
+    let is_untrimmed = wires.iter().all(|w| w.is_empty());
+    let polygon = if is_untrimmed {
+        if let (Some(urange), Some(vrange)) = surface.try_range_tuple() {
+            Some(untrimmed_tessellation(
+                surface,
+                (urange, vrange),
+                tolerance,
+                quad_config.mode,
+            ))
+        } else {
+            None
+        }
+    } else {
+        let preboundary = wires
+            .iter()
+            .map(|wire: &Wire<_, _>| {
+                let wire_iter = wire.iter().map(Edge::oriented_curve);
+                PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
+            })
+            .collect::<Option<Vec<_>>>();
+        preboundary.map(|preboundary| {
+            let boundary = PolyBoundary::new(preboundary, &surface, tolerance);
+            trimming_tessellation(surface, &boundary, tolerance, quad_config)
         })
-        .collect::<Option<Vec<_>>>();
-    let polygon: Option<PolygonMesh> = preboundary.map(|preboundary| {
-        let boundary = PolyBoundary::new(preboundary, &surface, tol);
-        trimming_tessellation(surface, &boundary, tol)
-    });
+    };
     let mut new_face = Face::debug_new(wires, polygon);
     if !orientation {
         new_face.invert();
@@ -318,8 +366,23 @@ fn get_mindiff(u: f64, u0: f64, up: f64) -> f64 {
     (-2..=2).map(closure).min_by(abs_diff(u0)).unwrap()
 }
 
-#[derive(Debug, Default, Clone)]
-struct PolyBoundary(Vec<Vec<SurfacePoint>>);
+#[derive(Debug, Clone)]
+struct PolyBoundary {
+    loops: Vec<Vec<SurfacePoint>>,
+    /// UV-space axis-aligned bounding box for cheap rejection in `include()`.
+    uv_min: Point2,
+    uv_max: Point2,
+}
+
+impl Default for PolyBoundary {
+    fn default() -> Self {
+        Self {
+            loops: Vec::new(),
+            uv_min: Point2::new(f64::INFINITY, f64::INFINITY),
+            uv_max: Point2::new(f64::NEG_INFINITY, f64::NEG_INFINITY),
+        }
+    }
+}
 
 fn normalize_range(curve: &mut Vec<SurfacePoint>, compidx: usize, (u0, u1): (f64, f64)) {
     let p = curve[0];
@@ -353,8 +416,27 @@ fn loop_orientation(curve: &[SurfacePoint]) -> bool {
         > 0.0
 }
 
+type UvKey = (u64, u64);
+
+fn uv_key(uv: Point2) -> UvKey { (uv.x.to_bits(), uv.y.to_bits()) }
+
+fn surface_point_with_cache(
+    surface: &impl PreMeshableSurface,
+    uv: Point2,
+    point_cache: &mut HashMap<UvKey, Point3>,
+) -> SurfacePoint {
+    let point = *point_cache
+        .entry(uv_key(uv))
+        .or_insert_with(|| surface.subs(uv.x, uv.y));
+    (uv, point).into()
+}
+
 impl PolyBoundary {
-    fn new(pieces: Vec<PolyBoundaryPiece>, surface: &impl PreMeshableSurface, tol: f64) -> Self {
+    fn new(
+        pieces: Vec<PolyBoundaryPiece>,
+        surface: &impl PreMeshableSurface,
+        tolerance: f64,
+    ) -> Self {
         let (mut closed, mut open) = (Vec::new(), Vec::new());
         pieces.into_iter().for_each(|PolyBoundaryPiece(mut vec)| {
             match vec[0].uv.distance(vec[vec.len() - 1].uv) < 1.0e-3 {
@@ -372,6 +454,7 @@ impl PolyBoundary {
             };
             vecs.into_iter().flat_map(closure).collect()
         }
+        let mut point_cache = HashMap::<UvKey, Point3>::default();
         match open.len() {
             1 => {
                 let mut curve = open.pop().unwrap();
@@ -382,41 +465,73 @@ impl PolyBoundary {
                         normalize_range(&mut curve, 0, (u0, u1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
-                        let x = (Point2::new(u0, v1), surface.subs(u0, v1)).into();
-                        let y = (Point2::new(u1, v1), surface.subs(u1, v1)).into();
-                        let vec0 = polyline_on_surface(surface, q, y, tol);
-                        let vec1 = polyline_on_surface(surface, y, x, tol);
-                        let vec2 = polyline_on_surface(surface, x, p, tol);
+                        let x = surface_point_with_cache(
+                            surface,
+                            Point2::new(u0, v1),
+                            &mut point_cache,
+                        );
+                        let y = surface_point_with_cache(
+                            surface,
+                            Point2::new(u1, v1),
+                            &mut point_cache,
+                        );
+                        let vec0 = polyline_on_surface(surface, q, y, tolerance, &mut point_cache);
+                        let vec1 = polyline_on_surface(surface, y, x, tolerance, &mut point_cache);
+                        let vec2 = polyline_on_surface(surface, x, p, tolerance, &mut point_cache);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.x < p.x - TOLERANCE {
                         normalize_range(&mut curve, 0, (u0, u1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
-                        let x = (Point2::new(u1, v0), surface.subs(u1, v0)).into();
-                        let y = (Point2::new(u0, v0), surface.subs(u0, v0)).into();
-                        let vec0 = polyline_on_surface(surface, q, y, tol);
-                        let vec1 = polyline_on_surface(surface, y, x, tol);
-                        let vec2 = polyline_on_surface(surface, x, p, tol);
+                        let x = surface_point_with_cache(
+                            surface,
+                            Point2::new(u1, v0),
+                            &mut point_cache,
+                        );
+                        let y = surface_point_with_cache(
+                            surface,
+                            Point2::new(u0, v0),
+                            &mut point_cache,
+                        );
+                        let vec0 = polyline_on_surface(surface, q, y, tolerance, &mut point_cache);
+                        let vec1 = polyline_on_surface(surface, y, x, tolerance, &mut point_cache);
+                        let vec2 = polyline_on_surface(surface, x, p, tolerance, &mut point_cache);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if p.y < q.y - TOLERANCE {
                         normalize_range(&mut curve, 1, (v0, v1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
-                        let x = (Point2::new(u0, v0), surface.subs(u0, v0)).into();
-                        let y = (Point2::new(u0, v1), surface.subs(u0, v1)).into();
-                        let vec0 = polyline_on_surface(surface, q, y, tol);
-                        let vec1 = polyline_on_surface(surface, y, x, tol);
-                        let vec2 = polyline_on_surface(surface, x, p, tol);
+                        let x = surface_point_with_cache(
+                            surface,
+                            Point2::new(u0, v0),
+                            &mut point_cache,
+                        );
+                        let y = surface_point_with_cache(
+                            surface,
+                            Point2::new(u0, v1),
+                            &mut point_cache,
+                        );
+                        let vec0 = polyline_on_surface(surface, q, y, tolerance, &mut point_cache);
+                        let vec1 = polyline_on_surface(surface, y, x, tolerance, &mut point_cache);
+                        let vec2 = polyline_on_surface(surface, x, p, tolerance, &mut point_cache);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     } else if q.y < p.y - TOLERANCE {
                         normalize_range(&mut curve, 1, (v0, v1));
                         let p = curve[0];
                         let q = curve[curve.len() - 1];
-                        let x = (Point2::new(u1, v1), surface.subs(u1, v1)).into();
-                        let y = (Point2::new(u1, v0), surface.subs(u1, v0)).into();
-                        let vec0 = polyline_on_surface(surface, q, y, tol);
-                        let vec1 = polyline_on_surface(surface, y, x, tol);
-                        let vec2 = polyline_on_surface(surface, x, p, tol);
+                        let x = surface_point_with_cache(
+                            surface,
+                            Point2::new(u1, v1),
+                            &mut point_cache,
+                        );
+                        let y = surface_point_with_cache(
+                            surface,
+                            Point2::new(u1, v0),
+                            &mut point_cache,
+                        );
+                        let vec0 = polyline_on_surface(surface, q, y, tolerance, &mut point_cache);
+                        let vec1 = polyline_on_surface(surface, y, x, tolerance, &mut point_cache);
+                        let vec2 = polyline_on_surface(surface, x, p, tolerance, &mut point_cache);
                         closed.push(connect_edges([vec0, vec1, vec2, curve]));
                     }
                 }
@@ -438,8 +553,8 @@ impl PolyBoundary {
                     }
                 }
                 let ((p0, p1), (q0, q1)) = (end_pts(&curve0), end_pts(&curve1));
-                let vec0 = polyline_on_surface(surface, p1, q0, tol);
-                let vec1 = polyline_on_surface(surface, q1, p0, tol);
+                let vec0 = polyline_on_surface(surface, p1, q0, tolerance, &mut point_cache);
+                let vec1 = polyline_on_surface(surface, q1, p0, tolerance, &mut point_cache);
                 closed.push(connect_edges([curve0, vec0, curve1, vec1]));
             }
             _ => {}
@@ -447,26 +562,45 @@ impl PolyBoundary {
         if !closed.iter().any(|curve| loop_orientation(curve)) {
             if let (Some((u0, u1)), Some((v0, v1))) = surface.try_range_tuple() {
                 let p = [
-                    (Point2::new(u0, v0), surface.subs(u0, v0)).into(),
-                    (Point2::new(u1, v0), surface.subs(u1, v0)).into(),
-                    (Point2::new(u1, v1), surface.subs(u1, v1)).into(),
-                    (Point2::new(u0, v1), surface.subs(u0, v1)).into(),
+                    surface_point_with_cache(surface, Point2::new(u0, v0), &mut point_cache),
+                    surface_point_with_cache(surface, Point2::new(u1, v0), &mut point_cache),
+                    surface_point_with_cache(surface, Point2::new(u1, v1), &mut point_cache),
+                    surface_point_with_cache(surface, Point2::new(u0, v1), &mut point_cache),
                 ];
-                let vec0 = polyline_on_surface(surface, p[0], p[1], tol);
-                let vec1 = polyline_on_surface(surface, p[1], p[2], tol);
-                let vec2 = polyline_on_surface(surface, p[2], p[3], tol);
-                let vec3 = polyline_on_surface(surface, p[3], p[0], tol);
+                let vec0 = polyline_on_surface(surface, p[0], p[1], tolerance, &mut point_cache);
+                let vec1 = polyline_on_surface(surface, p[1], p[2], tolerance, &mut point_cache);
+                let vec2 = polyline_on_surface(surface, p[2], p[3], tolerance, &mut point_cache);
+                let vec3 = polyline_on_surface(surface, p[3], p[0], tolerance, &mut point_cache);
                 closed.push(connect_edges([vec0, vec1, vec2, vec3]));
             }
         }
-        Self(closed)
+        let (mut uv_min, mut uv_max) = (
+            Point2::new(f64::INFINITY, f64::INFINITY),
+            Point2::new(f64::NEG_INFINITY, f64::NEG_INFINITY),
+        );
+        for pt in closed.iter().flatten() {
+            uv_min.x = f64::min(uv_min.x, pt.x);
+            uv_min.y = f64::min(uv_min.y, pt.y);
+            uv_max.x = f64::max(uv_max.x, pt.x);
+            uv_max.y = f64::max(uv_max.y, pt.y);
+        }
+        Self {
+            loops: closed,
+            uv_min,
+            uv_max,
+        }
     }
 
     /// whether `c` is included in the domain with boundary = `self`.
     fn include(&self, c: Point2) -> bool {
+        // AABB early reject.
+        if c.x < self.uv_min.x || c.x > self.uv_max.x || c.y < self.uv_min.y || c.y > self.uv_max.y
+        {
+            return false;
+        }
         let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
         let r = Vector2::new(f64::cos(t), f64::sin(t));
-        self.0
+        self.loops
             .iter()
             .flat_map(|vec| vec.iter().circular_tuple_windows())
             .try_fold(0_i32, move |counter, (p0, p1)| {
@@ -497,7 +631,7 @@ impl PolyBoundary {
         boundary_map: &mut HashMap<FixedVertexHandle, Point3>,
     ) {
         let poly2tri: Vec<_> = self
-            .0
+            .loops
             .iter()
             .flatten()
             .map(|pt| {
@@ -513,7 +647,7 @@ impl PolyBoundary {
             .collect();
         let mut prev: Option<usize> = None;
         let mut counter = 0;
-        self.0
+        self.loops
             .iter()
             .map(Vec::len)
             .flat_map(|len| {
@@ -548,22 +682,597 @@ fn spade_round(x: f64) -> f64 {
     }
 }
 
+/// Tessellates a bounded surface without any trimming.
+///
+/// Generates a structured grid from parameter division, then triangulates
+/// each quad cell into two triangles. Skips CDT and inclusion tests entirely.
+fn untrimmed_tessellation<S>(
+    surface: &S,
+    range: ((f64, f64), (f64, f64)),
+    tolerance: f64,
+    quad_mode: QuadMode,
+) -> PolygonMesh
+where
+    S: PreMeshableSurface,
+{
+    let (udiv, vdiv) = surface.parameter_division(range, tolerance);
+    let nu = udiv.len();
+    let nv = vdiv.len();
+    let mut positions = Vec::with_capacity(nu * nv);
+    let mut uv_coords = Vec::with_capacity(nu * nv);
+    let mut normals = Vec::with_capacity(nu * nv);
+    for u in &udiv {
+        for v in &vdiv {
+            positions.push(surface.subs(*u, *v));
+            uv_coords.push(Vector2::new(*u, *v));
+            normals.push(surface.normal(*u, *v));
+        }
+    }
+    let idx = |i: usize, j: usize| -> usize { i * nv + j };
+    let sv = |k: usize| -> StandardVertex { [k, k, k].into() };
+    let (tri_faces, quad_faces) = if quad_mode == QuadMode::Triangles {
+        let tri_faces: Vec<[StandardVertex; 3]> = (0..nu - 1)
+            .flat_map(|i| {
+                (0..nv - 1).flat_map(move |j| {
+                    let a = idx(i, j);
+                    let b = idx(i, j + 1);
+                    let c = idx(i + 1, j + 1);
+                    let d = idx(i + 1, j);
+                    [[sv(a), sv(b), sv(c)], [sv(a), sv(c), sv(d)]]
+                })
+            })
+            .collect();
+        (tri_faces, Vec::new())
+    } else {
+        let quad_faces: Vec<[StandardVertex; 4]> = (0..nu - 1)
+            .flat_map(|i| {
+                (0..nv - 1).map(move |j| {
+                    let a = idx(i, j);
+                    let b = idx(i, j + 1);
+                    let c = idx(i + 1, j + 1);
+                    let d = idx(i + 1, j);
+                    [sv(a), sv(b), sv(c), sv(d)]
+                })
+            })
+            .collect();
+        (Vec::new(), quad_faces)
+    };
+    let mut mesh = PolygonMesh::debug_new(
+        StandardAttributes {
+            positions,
+            uv_coords,
+            normals,
+        },
+        Faces::from_tri_and_quad_faces(tri_faces, quad_faces),
+    );
+    mesh.make_face_compatible_to_normal();
+    mesh
+}
+
 /// Tessellates one surface trimmed by polyline.
-fn trimming_tessellation<S>(surface: &S, polyboundary: &PolyBoundary, tol: f64) -> PolygonMesh
-where S: PreMeshableSurface {
+fn trimming_tessellation<S>(
+    surface: &S,
+    polyboundary: &PolyBoundary,
+    tolerance: f64,
+    quad_config: QuadOptions,
+) -> PolygonMesh
+where
+    S: PreMeshableSurface,
+{
+    if quad_config.mode == QuadMode::IsoQuads {
+        if let Some(mut mesh) = iso_quad_trimmed_tessellation(surface, polyboundary, tolerance) {
+            mesh.make_face_compatible_to_normal();
+            mesh
+        } else {
+            let mut mesh = cdt_trimming_tessellation(surface, polyboundary, tolerance);
+            mesh.make_face_compatible_to_normal();
+            mesh
+        }
+    } else {
+        let mut mesh = cdt_trimming_tessellation(surface, polyboundary, tolerance);
+        mesh.make_face_compatible_to_normal();
+        apply_quad_mode(&mut mesh, quad_config);
+        mesh
+    }
+}
+
+fn cdt_trimming_tessellation<S>(
+    surface: &S,
+    polyboundary: &PolyBoundary,
+    tolerance: f64,
+) -> PolygonMesh
+where
+    S: PreMeshableSurface,
+{
     let mut triangulation = Cdt::new();
     let mut boundary_map = HashMap::<FixedVertexHandle, Point3>::default();
     polyboundary.insert_to(&mut triangulation, &mut boundary_map);
-    insert_surface(&mut triangulation, surface, polyboundary, tol);
-    let mut mesh = triangulation_into_polymesh(
+    insert_surface(&mut triangulation, surface, polyboundary, tolerance);
+    triangulation_into_polymesh(
         triangulation.vertices(),
         triangulation.inner_faces(),
         surface,
         polyboundary,
         &boundary_map,
+    )
+}
+
+fn iso_quad_trimmed_tessellation<S>(
+    surface: &S,
+    polyboundary: &PolyBoundary,
+    tolerance: f64,
+) -> Option<PolygonMesh>
+where
+    S: PreMeshableSurface,
+{
+    let range = (
+        (polyboundary.uv_min.x, polyboundary.uv_max.x),
+        (polyboundary.uv_min.y, polyboundary.uv_max.y),
     );
+    let (udiv, vdiv) = surface.parameter_division(range, tolerance);
+    let (nu, nv) = (udiv.len(), vdiv.len());
+    if nu < 2 || nv < 2 {
+        return None;
+    }
+    let idx = |i: usize, j: usize| -> usize { i * nv + j };
+    let sv = |k: usize| -> StandardVertex { [k, k, k].into() };
+    let positions = udiv
+        .iter()
+        .flat_map(|u| vdiv.iter().map(move |v| surface.subs(*u, *v)))
+        .collect::<Vec<_>>();
+    let uv_coords = udiv
+        .iter()
+        .flat_map(|u| vdiv.iter().map(move |v| Vector2::new(*u, *v)))
+        .collect::<Vec<_>>();
+    let normals = udiv
+        .iter()
+        .flat_map(|u| vdiv.iter().map(move |v| surface.normal(*u, *v)))
+        .collect::<Vec<_>>();
+    let inside = udiv
+        .iter()
+        .flat_map(|u| {
+            vdiv.iter()
+                .map(move |v| polyboundary.include(Point2::new(*u, *v)))
+        })
+        .collect::<Vec<_>>();
+    let nv_cells = nv - 1;
+    let (udiv_ref, vdiv_ref, inside_ref) = (&udiv, &vdiv, &inside);
+    let full_cells = (0..nu - 1)
+        .flat_map(|i| {
+            (0..nv - 1).map(move |j| {
+                let corner_indices = [idx(i, j), idx(i, j + 1), idx(i + 1, j + 1), idx(i + 1, j)];
+                let corners_inside = corner_indices.into_iter().all(|k| inside_ref[k]);
+                if !corners_inside {
+                    false
+                } else {
+                    let (u0, u1) = (udiv_ref[i], udiv_ref[i + 1]);
+                    let (v0, v1) = (vdiv_ref[j], vdiv_ref[j + 1]);
+                    let center = Point2::new((u0 + u1) * 0.5, (v0 + v1) * 0.5);
+                    let edge_midpoints = [
+                        Point2::new((u0 + u1) * 0.5, v0),
+                        Point2::new(u1, (v0 + v1) * 0.5),
+                        Point2::new((u0 + u1) * 0.5, v1),
+                        Point2::new(u0, (v0 + v1) * 0.5),
+                    ];
+                    polyboundary.include(center)
+                        && edge_midpoints
+                            .into_iter()
+                            .all(|midpoint| polyboundary.include(midpoint))
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+    let interior_quads = full_cells
+        .iter()
+        .enumerate()
+        .filter_map(|(cell_index, is_full)| {
+            if *is_full {
+                let i = cell_index / nv_cells;
+                let j = cell_index % nv_cells;
+                let a = idx(i, j);
+                let b = idx(i, j + 1);
+                let c = idx(i + 1, j + 1);
+                let d = idx(i + 1, j);
+                Some([sv(a), sv(b), sv(c), sv(d)])
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    if interior_quads.is_empty() {
+        None
+    } else {
+        let mut interior_mesh = PolygonMesh::debug_new(
+            StandardAttributes {
+                positions,
+                uv_coords,
+                normals,
+            },
+            Faces::from_tri_and_quad_faces(Vec::new(), interior_quads),
+        );
+        let mut boundary_mesh = cdt_trimming_tessellation(surface, polyboundary, tolerance);
+        let boundary_triangles = boundary_mesh
+            .tri_faces()
+            .iter()
+            .copied()
+            .filter(|triangle| {
+                !triangle_is_in_full_cell(
+                    *triangle,
+                    boundary_mesh.uv_coords(),
+                    &udiv,
+                    &vdiv,
+                    &full_cells,
+                )
+            })
+            .collect::<Vec<_>>();
+        let boundary_quads = boundary_mesh
+            .quad_faces()
+            .iter()
+            .copied()
+            .filter(|quad| {
+                !quad_is_in_full_cell(*quad, boundary_mesh.uv_coords(), &udiv, &vdiv, &full_cells)
+            })
+            .collect::<Vec<_>>();
+        {
+            let editor = boundary_mesh.debug_editor();
+            *editor.faces = Faces::from_tri_and_quad_faces(boundary_triangles, boundary_quads);
+        }
+        interior_mesh.merge(boundary_mesh);
+        Some(interior_mesh)
+    }
+}
+
+fn triangle_is_in_full_cell(
+    triangle: [StandardVertex; 3],
+    uv_coords: &[Vector2],
+    udiv: &[f64],
+    vdiv: &[f64],
+    full_cells: &[bool],
+) -> bool {
+    triangle_center_uv(triangle, uv_coords)
+        .is_some_and(|uv| uv_is_in_full_cell(uv, udiv, vdiv, full_cells))
+}
+
+fn quad_is_in_full_cell(
+    quad: [StandardVertex; 4],
+    uv_coords: &[Vector2],
+    udiv: &[f64],
+    vdiv: &[f64],
+    full_cells: &[bool],
+) -> bool {
+    quad_center_uv(quad, uv_coords).is_some_and(|uv| uv_is_in_full_cell(uv, udiv, vdiv, full_cells))
+}
+
+fn triangle_center_uv(triangle: [StandardVertex; 3], uv_coords: &[Vector2]) -> Option<Vector2> {
+    let uv0 = uv_coords[*triangle[0].uv.as_ref()?];
+    let uv1 = uv_coords[*triangle[1].uv.as_ref()?];
+    let uv2 = uv_coords[*triangle[2].uv.as_ref()?];
+    Some((uv0 + uv1 + uv2) / 3.0)
+}
+
+fn quad_center_uv(quad: [StandardVertex; 4], uv_coords: &[Vector2]) -> Option<Vector2> {
+    let uv0 = uv_coords[*quad[0].uv.as_ref()?];
+    let uv1 = uv_coords[*quad[1].uv.as_ref()?];
+    let uv2 = uv_coords[*quad[2].uv.as_ref()?];
+    let uv3 = uv_coords[*quad[3].uv.as_ref()?];
+    Some((uv0 + uv1 + uv2 + uv3) / 4.0)
+}
+
+fn uv_is_in_full_cell(uv: Vector2, udiv: &[f64], vdiv: &[f64], full_cells: &[bool]) -> bool {
+    if vdiv.len() < 2 {
+        false
+    } else {
+        let nv_cells = vdiv.len() - 1;
+        if let (Some(i), Some(j)) = (
+            parameter_cell_index(udiv, uv.x),
+            parameter_cell_index(vdiv, uv.y),
+        ) {
+            full_cells.get(i * nv_cells + j).copied().unwrap_or(false)
+        } else {
+            false
+        }
+    }
+}
+
+fn parameter_cell_index(parameters: &[f64], value: f64) -> Option<usize> {
+    if parameters.len() < 2 || value < parameters[0] || value > parameters[parameters.len() - 1] {
+        None
+    } else {
+        let upper = parameters.partition_point(|sample| *sample <= value);
+        if upper == 0 {
+            None
+        } else if upper >= parameters.len() {
+            Some(parameters.len() - 2)
+        } else {
+            Some(upper - 1)
+        }
+    }
+}
+
+fn apply_quad_mode(mesh: &mut PolygonMesh, quad_config: QuadOptions) {
+    if quad_config.mode != QuadMode::Triangles {
+        mesh.quadrangulate(quad_config.plane_tolerance, quad_config.score_tolerance);
+        if quad_config.mode == QuadMode::AllQuads {
+            force_all_triangles_to_quads(mesh, quad_config);
+        }
+    }
+}
+
+fn force_all_triangles_to_quads(mesh: &mut PolygonMesh, quad_config: QuadOptions) {
+    if mesh.tri_faces().is_empty() {
+        return;
+    }
+    let normal_blend_angle = quad_config.normal_blend_angle;
+    let triangles = mesh.tri_faces().clone();
+    let mut quadrangles = mesh.quad_faces().clone();
+    let mut midpoint_cache = HashMap::<(VertexKey, VertexKey), StandardVertex>::default();
+    triangles.into_iter().for_each(|triangle| {
+        let [vertex0, vertex1, vertex2] = triangle;
+        let point0 = mesh.positions()[vertex0.pos];
+        let point1 = mesh.positions()[vertex1.pos];
+        let point2 = mesh.positions()[vertex2.pos];
+        let point01 = point0.midpoint(point1);
+        let point12 = point1.midpoint(point2);
+        let point20 = point2.midpoint(point0);
+        let center_point =
+            Point3::from_vec((point0.to_vec() + point1.to_vec() + point2.to_vec()) / 3.0);
+        let split_quads = [
+            [point0, point01, center_point, point20],
+            [point1, point12, center_point, point01],
+            [point2, point20, center_point, point12],
+        ];
+        let quality_ok = split_quads
+            .into_iter()
+            .all(|quad| quad_passes_quality_gates(quad, quad_config));
+        if quality_ok {
+            let midpoint01 = midpoint_for_edge(
+                mesh,
+                &mut midpoint_cache,
+                vertex0,
+                vertex1,
+                normal_blend_angle,
+            );
+            let midpoint12 = midpoint_for_edge(
+                mesh,
+                &mut midpoint_cache,
+                vertex1,
+                vertex2,
+                normal_blend_angle,
+            );
+            let midpoint20 = midpoint_for_edge(
+                mesh,
+                &mut midpoint_cache,
+                vertex2,
+                vertex0,
+                normal_blend_angle,
+            );
+            let center = create_centroid_vertex(mesh, triangle, normal_blend_angle);
+            quadrangles.extend([
+                [vertex0, midpoint01, center, midpoint20],
+                [vertex1, midpoint12, center, midpoint01],
+                [vertex2, midpoint20, center, midpoint12],
+            ]);
+        } else {
+            quadrangles.push([vertex0, vertex1, vertex2, vertex2]);
+        }
+    });
+    {
+        let editor = mesh.debug_editor();
+        *editor.faces = Faces::from_tri_and_quad_faces(Vec::new(), quadrangles);
+    }
     mesh.make_face_compatible_to_normal();
-    mesh
+}
+
+type VertexKey = (usize, Option<usize>, Option<usize>);
+
+fn midpoint_for_edge(
+    mesh: &mut PolygonMesh,
+    midpoint_cache: &mut HashMap<(VertexKey, VertexKey), StandardVertex>,
+    vertex0: StandardVertex,
+    vertex1: StandardVertex,
+    normal_blend_angle: f64,
+) -> StandardVertex {
+    let key = edge_key(vertex0, vertex1);
+    if let Some(vertex) = midpoint_cache.get(&key) {
+        *vertex
+    } else {
+        let midpoint = create_midpoint_vertex(mesh, vertex0, vertex1, normal_blend_angle);
+        midpoint_cache.insert(key, midpoint);
+        midpoint
+    }
+}
+
+fn edge_key(vertex0: StandardVertex, vertex1: StandardVertex) -> (VertexKey, VertexKey) {
+    let key0 = (vertex0.pos, vertex0.uv, vertex0.nor);
+    let key1 = (vertex1.pos, vertex1.uv, vertex1.nor);
+    if key0 <= key1 {
+        (key0, key1)
+    } else {
+        (key1, key0)
+    }
+}
+
+fn quad_passes_quality_gates(quad: [Point3; 4], quad_config: QuadOptions) -> bool {
+    let area = quad_area(quad);
+    let convex = is_convex_quad(quad);
+    let corner_angles_ok = quad.iter().enumerate().all(|(index, _)| {
+        corner_angle(quad, index).is_some_and(|angle| angle <= quad_config.maximum_corner_angle)
+    });
+    area >= quad_config.minimum_area && convex && corner_angles_ok
+}
+
+fn quad_area(quad: [Point3; 4]) -> f64 {
+    triangle_area(quad[0], quad[1], quad[2]) + triangle_area(quad[0], quad[2], quad[3])
+}
+
+fn triangle_area(point0: Point3, point1: Point3, point2: Point3) -> f64 {
+    let vector0 = point1.to_vec() - point0.to_vec();
+    let vector1 = point2.to_vec() - point0.to_vec();
+    vector0.cross(vector1).magnitude() * 0.5
+}
+
+fn is_convex_quad(quad: [Point3; 4]) -> bool {
+    let diagonal0 = quad[1].to_vec() - quad[0].to_vec();
+    let diagonal1 = quad[2].to_vec() - quad[0].to_vec();
+    let normal = diagonal0.cross(diagonal1);
+    if normal.so_small() {
+        false
+    } else {
+        let (has_positive, has_negative, has_nonzero) = quad
+            .iter()
+            .enumerate()
+            .map(|(index, _)| corner_turn(quad, index, normal))
+            .fold(
+                (false, false, false),
+                |(positive, negative, nonzero), turn| {
+                    (
+                        positive || turn > TOLERANCE,
+                        negative || turn < -TOLERANCE,
+                        nonzero || f64::abs(turn) > TOLERANCE,
+                    )
+                },
+            );
+        has_nonzero && !(has_positive && has_negative)
+    }
+}
+
+fn corner_turn(quad: [Point3; 4], index: usize, normal: Vector3) -> f64 {
+    let previous = quad[(index + 3) % 4];
+    let current = quad[index];
+    let next = quad[(index + 1) % 4];
+    let edge0 = current.to_vec() - previous.to_vec();
+    let edge1 = next.to_vec() - current.to_vec();
+    edge0.cross(edge1).dot(normal)
+}
+
+fn corner_angle(quad: [Point3; 4], index: usize) -> Option<f64> {
+    let previous = quad[(index + 3) % 4];
+    let current = quad[index];
+    let next = quad[(index + 1) % 4];
+    let vector0 = previous.to_vec() - current.to_vec();
+    let vector1 = next.to_vec() - current.to_vec();
+    let length0 = vector0.magnitude();
+    let length1 = vector1.magnitude();
+    if length0.so_small() || length1.so_small() {
+        None
+    } else {
+        let cosine = (vector0.dot(vector1) / (length0 * length1)).clamp(-1.0, 1.0);
+        Some(cosine.acos())
+    }
+}
+
+fn create_midpoint_vertex(
+    mesh: &mut PolygonMesh,
+    vertex0: StandardVertex,
+    vertex1: StandardVertex,
+    normal_blend_angle: f64,
+) -> StandardVertex {
+    let point0 = mesh.positions()[vertex0.pos];
+    let point1 = mesh.positions()[vertex1.pos];
+    let position = point0.midpoint(point1);
+    let position_index = mesh.positions().len();
+    mesh.push_position(position);
+
+    let uv_coord = match (vertex0.uv, vertex1.uv) {
+        (Some(index0), Some(index1)) => {
+            Some((mesh.uv_coords()[index0] + mesh.uv_coords()[index1]) / 2.0)
+        }
+        _ => None,
+    };
+    let uv_index = uv_coord.map(|uv_coord| {
+        let index = mesh.uv_coords().len();
+        mesh.push_uv_coord(uv_coord);
+        index
+    });
+
+    let normal = match (vertex0.nor, vertex1.nor) {
+        (Some(index0), Some(index1)) => Some(blend_normals(
+            mesh.normals()[index0],
+            mesh.normals()[index1],
+            normal_blend_angle,
+        )),
+        _ => None,
+    };
+    let normal_index = normal.map(|normal| {
+        let index = mesh.normals().len();
+        mesh.extend_normals([normal]);
+        index
+    });
+
+    StandardVertex {
+        pos: position_index,
+        uv: uv_index,
+        nor: normal_index,
+    }
+}
+
+fn create_centroid_vertex(
+    mesh: &mut PolygonMesh,
+    triangle: [StandardVertex; 3],
+    normal_blend_angle: f64,
+) -> StandardVertex {
+    let [vertex0, vertex1, vertex2] = triangle;
+    let point0 = mesh.positions()[vertex0.pos];
+    let point1 = mesh.positions()[vertex1.pos];
+    let point2 = mesh.positions()[vertex2.pos];
+    let position = Point3::from_vec((point0.to_vec() + point1.to_vec() + point2.to_vec()) / 3.0);
+    let position_index = mesh.positions().len();
+    mesh.push_position(position);
+
+    let uv_coord = match (vertex0.uv, vertex1.uv, vertex2.uv) {
+        (Some(index0), Some(index1), Some(index2)) => Some(
+            (mesh.uv_coords()[index0] + mesh.uv_coords()[index1] + mesh.uv_coords()[index2]) / 3.0,
+        ),
+        _ => None,
+    };
+    let uv_index = uv_coord.map(|uv_coord| {
+        let index = mesh.uv_coords().len();
+        mesh.push_uv_coord(uv_coord);
+        index
+    });
+
+    let normal = match (vertex0.nor, vertex1.nor, vertex2.nor) {
+        (Some(index0), Some(index1), Some(index2)) => {
+            let normal01 = blend_normals(
+                mesh.normals()[index0],
+                mesh.normals()[index1],
+                normal_blend_angle,
+            );
+            Some(blend_normals(
+                normal01,
+                mesh.normals()[index2],
+                normal_blend_angle,
+            ))
+        }
+        _ => None,
+    };
+    let normal_index = normal.map(|normal| {
+        let index = mesh.normals().len();
+        mesh.extend_normals([normal]);
+        index
+    });
+
+    StandardVertex {
+        pos: position_index,
+        uv: uv_index,
+        nor: normal_index,
+    }
+}
+
+fn blend_normals(normal0: Vector3, normal1: Vector3, normal_blend_angle: f64) -> Vector3 {
+    let cosine = normal0.dot(normal1);
+    let min_cosine = f64::cos(normal_blend_angle);
+    let blended = if cosine < min_cosine {
+        normal0
+    } else {
+        normal0 + normal1
+    };
+    let magnitude = blended.magnitude();
+    if magnitude.so_small() {
+        normal0
+    } else {
+        blended / magnitude
+    }
 }
 
 /// Inserts parameter divisions into triangulation.
@@ -571,16 +1280,13 @@ fn insert_surface(
     triangulation: &mut Cdt,
     surface: impl PreMeshableSurface,
     polyline: &PolyBoundary,
-    tol: f64,
+    tolerance: f64,
 ) {
-    let bdb: BoundingBox<Point2> = polyline
-        .0
-        .iter()
-        .flatten()
-        .map(std::ops::Deref::deref)
-        .collect();
-    let range = ((bdb.min()[0], bdb.max()[0]), (bdb.min()[1], bdb.max()[1]));
-    let (udiv, vdiv) = surface.parameter_division(range, tol);
+    let range = (
+        (polyline.uv_min.x, polyline.uv_max.x),
+        (polyline.uv_min.y, polyline.uv_max.y),
+    );
+    let (udiv, vdiv) = surface.parameter_division(range, tolerance);
     let insert_res: Vec<Vec<Option<_>>> = udiv
         .into_iter()
         .map(|u| {
@@ -627,18 +1333,27 @@ fn triangulation_into_polymesh<'a>(
     let mut positions = Vec::<Point3>::new();
     let mut uv_coords = Vec::<Vector2>::new();
     let mut normals = Vec::<Vector3>::new();
+    let mut surface_point_cache = HashMap::<UvKey, Point3>::default();
+    let mut normal_cache = HashMap::<UvKey, Vector3>::default();
     let vmap: HashMap<_, _> = vertices
         .enumerate()
         .map(|(i, v)| {
             let p = *v.as_ref();
+            let uv = Point2::new(p.x, p.y);
+            let key = uv_key(uv);
             let idx = v.fix();
             let point = match boundary_map.get(&idx) {
                 Some(point) => *point,
-                None => surface.subs(p.x, p.y),
+                None => *surface_point_cache
+                    .entry(key)
+                    .or_insert_with(|| surface.subs(p.x, p.y)),
             };
+            let normal = *normal_cache
+                .entry(key)
+                .or_insert_with(|| surface.normal(p.x, p.y));
             positions.push(point);
             uv_coords.push(Vector2::new(p.x, p.y));
-            normals.push(surface.normal(p.x, p.y));
+            normals.push(normal);
             (idx, i)
         })
         .collect();
@@ -671,16 +1386,17 @@ fn polyline_on_surface(
     surface: impl PreMeshableSurface,
     p: SurfacePoint,
     q: SurfacePoint,
-    tol: f64,
+    tolerance: f64,
+    point_cache: &mut HashMap<UvKey, Point3>,
 ) -> Vec<SurfacePoint> {
     use truck_geometry::prelude::*;
     let line = Line(p.uv, q.uv);
     let pcurve = PCurve::new(line, &surface);
-    let (vec, _) = pcurve.parameter_division(pcurve.range_tuple(), tol);
+    let (vec, _) = pcurve.parameter_division(pcurve.range_tuple(), tolerance);
     vec.into_iter()
         .map(|t| {
             let uv = line.subs(t);
-            (uv, surface.subs(uv.x, uv.y)).into()
+            surface_point_with_cache(&surface, uv, point_cache)
         })
         .collect()
 }
@@ -700,13 +1416,18 @@ fn par_bench() {
 
     let instant = Instant::now();
     (0..100).for_each(|_| {
-        let _shell = shell_tessellation(&shell, 0.01, by_search_parameter);
+        let _shell = shell_tessellation(&shell, 0.01, by_search_parameter, QuadOptions::default());
     });
     println!("{}ms", instant.elapsed().as_millis());
 
     let instant = Instant::now();
     (0..100).for_each(|_| {
-        let _shell = shell_tessellation_single_thread(&shell, 0.01, by_search_parameter);
+        let _shell = shell_tessellation_single_thread(
+            &shell,
+            0.01,
+            by_search_parameter,
+            QuadOptions::default(),
+        );
     });
     println!("{}ms", instant.elapsed().as_millis());
 }

@@ -185,12 +185,69 @@ the number of control points: {1}"
     /// ];
     ///
     /// assert!(matches!(
-    ///     BSplineCurve::try_interpole(knot_vec, parameter_points),
+    ///     BSplineCurve::try_interpolate(knot_vec, parameter_points),
     ///     Err(Error::GaussianEliminationFailure),
     /// ));
     /// ```
     #[error("Gaussian elimination is failed.")]
     GaussianEliminationFailure,
+    /// Cannot connect T-mesh control point to an existing connection.
+    #[error("Cannot connect T-mesh control point to an existing connection.")]
+    TmeshExistingConnection,
+    /// Cannot locate the desired control point in the T-mesh.
+    #[error("Cannot locate the desired control point in the T-mesh.")]
+    TmeshControlPointNotFound,
+    /// T-mesh connection does not exist.
+    #[error("T-mesh connection does not exist.")]
+    TmeshConnectionNotFound,
+    /// T-mesh knot ratios for new connections must be between 0.0 and 1.0.
+    #[error("T-mesh knot ratios for new connections must be between 0.0 and 1.0.")]
+    TmeshInvalidKnotRatio,
+    /// T-mesh knot intervals on a connection do not match in both directions.
+    #[error("T-mesh knot intervals on a connection do not match in both directions.")]
+    TmeshConnectionInvalidKnotInterval,
+    /// An unknown T-mesh error occurred.
+    #[error("An unknown T-mesh error occurred.")]
+    TmeshUnknownError,
+    /// The T-mesh is malformed and should no longer be used.
+    #[error("The T-mesh is malformed and should no longer be used.")]
+    TmeshMalformedMesh,
+    /// A knot could not be inserted without violating Rule 3.
+    #[error("A knot could not be inserted into the mesh at the desired location without violating Rule 3.")]
+    TmeshKnotVectorsNotEqual,
+    /// A control point with the same knot coordinates already exists.
+    #[error("A control point with the same knot coordinates already exists.")]
+    TmeshExistingControlPoint,
+    /// The control point passed does not belong to the current `Tmesh`.
+    #[error("The control point passed does not belong to the current Tmesh.")]
+    TmeshForeignControlPoint,
+    /// The control point being inserted is out of the bounds of the `Tmesh`.
+    #[error("The control point being inserted is out of the bounds of the Tmesh.")]
+    TmeshOutOfBoundsInsertion,
+    /// The B-spline surface is not cubic (degree 3) in both directions.
+    #[error("The B-spline surface must be cubic (degree 3) in both directions, got ({0}, {1}).")]
+    TmeshNonCubicDegree(usize, usize),
+    /// The two T-NURCC points are already connected.
+    #[error("The two points are already connected.")]
+    TnurccExistingConnection,
+    /// A T-NURCC face has opposing edges with differing knot intervals.
+    #[error("A T-NURCC face has opposing edges with differing knot intervals.")]
+    TnurccNonRectangularFace,
+    /// A T-NURCC face edge must contain at least 2 control points.
+    #[error("A T-NURCC face edge must contain at least 2 control points.")]
+    TnurccIncompleteFaceEdge,
+    /// A T-NURCC face must have at least two points and one edge defining it.
+    #[error("A T-NURCC face must have at least two points and one edge defining it.")]
+    TnurccMalformedFace,
+    /// Automatically connecting two T-NURCC edges would result in a bad topological state.
+    #[error("Automatically connecting the two edges {0} and {1} would result in a bad topological state.")]
+    TnurccBadConnectionConditions(usize, usize),
+    /// Missing face in T-NURCC constructor.
+    #[error("Missing face in T-NURCC constructor.")]
+    TnurccMissingFace,
+    /// An edge in T-NURCC constructor has more than 2 faces.
+    #[error("An edge in T-NURCC constructor has been defined to have more than 2 faces.")]
+    TnurccEdgeTripleFace,
 }
 
 #[test]

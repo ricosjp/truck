@@ -19,5 +19,45 @@ members = [
 	"readme-generator",
 ]
 
+[workspace.dependencies]
+# Internal crates
+truck-assembly = { version = "0.1.0", path = "truck-assembly" }
+truck-base = { version = "0.5.0", path = "truck-base" }
+truck-derivers = { version = "0.1.0", path = "truck-derivers" }
+truck-geometry = { version = "0.5.0", path = "truck-geometry" }
+truck-geotrait = { version = "0.4.0", path = "truck-geotrait" }
+truck-meshalgo = { version = "0.4.0", path = "truck-meshalgo" }
+truck-modeling = { version = "0.6.0", path = "truck-modeling" }
+truck-platform = { version = "0.6.0", path = "truck-platform" }
+truck-polymesh = { version = "0.6.0", path = "truck-polymesh" }
+truck-shapeops = { version = "0.4.0", path = "truck-shapeops" }
+truck-stepio = { version = "0.3.0", path = "truck-stepio" }
+truck-topology = { version = "0.6.0", path = "truck-topology" }
+
+# External dependencies
+array-macro = "2"
+bytemuck = { version = "1", features = ["derive"] }
+console_error_panic_hook = "0.1"
+console_log = "1"
+derive_more = { version = "2", features = ["full"] }
+env_logger = "0.11"
+getrandom = { version = "0.3", features = ["wasm_js"] }
+image = "0.25"
+itertools = "0.14"
+parking_lot = "0.12"
+pollster = "0.4"
+proptest = "1"
+rand = "0.9"
+rayon = "1"
+rustc-hash = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+smallvec = "1"
+thiserror = "2"
+wasm-bindgen-futures = "0.4"
+web-sys = "0.3"
+web-time = "1"
+winit = "0.30"
+
 [profile.release.package.truck-js]
 opt-level = "z"

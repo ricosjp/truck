@@ -14,21 +14,19 @@ A GUI framework module providing MFC-like API.
 
 Benchmark Animation
 
-In each frame, the NURBS surface is divided into mesh.
+In each frame, the NURBS surface is tessellated into a mesh.
 
 ### collision-sphere
-
-
 
 ### material-samples
 
 Material Samples
 
-- The more right the model, the higher the reflectance.
-- The upper the model, the higher the roughness.
+- The further right the model, the higher the reflectance.
+- The higher the model, the higher the roughness.
 
-The most right and lowest model is black because it does not diffuse light
-and no roughness in microfacet.
+The rightmost, lowest model is black because it does not diffuse light
+and has no microfacet roughness.
 
 ### rotate-objects
 

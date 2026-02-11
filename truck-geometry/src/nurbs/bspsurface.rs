@@ -280,14 +280,18 @@ impl<P> BSplineSurface<P> {
     /// The range of the parameter of the surface.
     #[inline(always)]
     pub fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
+        // For B-splines, this is [knot[degree], knot[n_cv]] in each direction,
+        // which is the valid evaluation domain.
+        let udeg = self.knot_vecs.0.len() - self.control_points.len() - 1;
+        let vdeg = self.knot_vecs.1.len() - self.control_points[0].len() - 1;
         (
             (
-                Bound::Included(self.knot_vecs.0[0]),
-                Bound::Included(self.knot_vecs.0[self.knot_vecs.0.len() - 1]),
+                Bound::Included(self.knot_vecs.0[udeg]),
+                Bound::Included(self.knot_vecs.0[self.control_points.len()]),
             ),
             (
-                Bound::Included(self.knot_vecs.1[0]),
-                Bound::Included(self.knot_vecs.1[self.knot_vecs.1.len() - 1]),
+                Bound::Included(self.knot_vecs.1[vdeg]),
+                Bound::Included(self.knot_vecs.1[self.control_points[0].len()]),
             ),
         )
     }
@@ -1307,12 +1311,9 @@ impl<P: ControlPoint<f64> + Tolerance> BSplineSurface<P> {
 
         let uknot_vec = bspcurve0.knot_vec().clone();
         let vknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-        let mut control_points = Vec::new();
-        for i in 0..bspcurve0.control_points().len() {
-            control_points.push(Vec::new());
-            control_points[i].push(*bspcurve0.control_point(i));
-            control_points[i].push(*bspcurve1.control_point(i));
-        }
+        let control_points: Vec<Vec<_>> = (0..bspcurve0.control_points().len())
+            .map(|i| vec![*bspcurve0.control_point(i), *bspcurve1.control_point(i)])
+            .collect();
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
     }
 

@@ -158,7 +158,7 @@ impl<P: Clone, C: Clone> CompressDirector<P, C> {
     #[inline(always)]
     fn map2vec<K, T>(map: HashMap<K, (usize, T)>) -> Vec<T> {
         let mut vec: Vec<_> = map.into_iter().map(|entry| entry.1).collect();
-        vec.sort_by(|x, y| x.0.cmp(&y.0));
+        vec.sort_by_key(|x| x.0);
         vec.into_iter().map(|x| x.1).collect()
     }
 
