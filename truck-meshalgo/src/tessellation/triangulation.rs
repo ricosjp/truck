@@ -170,6 +170,20 @@ where
     let tessellate_face = |face: &CompressedFace<S>| {
         let boundaries = face.boundaries.clone();
         let surface = &face.surface;
+
+        // Fast path: untrimmed face with bounded surface domain.
+        let is_untrimmed = boundaries.iter().all(|wire| wire.is_empty());
+        if is_untrimmed {
+            if let (Some(urange), Some(vrange)) = surface.try_range_tuple() {
+                let polygon = untrimmed_tessellation(surface, (urange, vrange), tol);
+                return CompressedFace {
+                    boundaries,
+                    orientation: face.orientation,
+                    surface: Some(polygon),
+                };
+            }
+        }
+
         let create_edge = |edge_idx: &CompressedEdgeIndex| match edge_idx.orientation {
             true => Some(edges.get(edge_idx.index)?.curve.clone()),
             false => Some(edges.get(edge_idx.index)?.curve.inverse()),
@@ -207,17 +221,27 @@ fn shell_create_polygon<S: PreMeshableSurface>(
     tol: f64,
     sp: impl SP<S>,
 ) -> Face<Point3, PolylineCurve, Option<PolygonMesh>> {
-    let preboundary = wires
-        .iter()
-        .map(|wire: &Wire<_, _>| {
-            let wire_iter = wire.iter().map(Edge::oriented_curve);
-            PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
+    // Fast path: untrimmed face with bounded surface domain.
+    let is_untrimmed = wires.iter().all(|w| w.is_empty());
+    let polygon = if is_untrimmed {
+        if let (Some(urange), Some(vrange)) = surface.try_range_tuple() {
+            Some(untrimmed_tessellation(surface, (urange, vrange), tol))
+        } else {
+            None
+        }
+    } else {
+        let preboundary = wires
+            .iter()
+            .map(|wire: &Wire<_, _>| {
+                let wire_iter = wire.iter().map(Edge::oriented_curve);
+                PolyBoundaryPiece::try_new(surface, wire_iter, &sp)
+            })
+            .collect::<Option<Vec<_>>>();
+        preboundary.map(|preboundary| {
+            let boundary = PolyBoundary::new(preboundary, &surface, tol);
+            trimming_tessellation(surface, &boundary, tol)
         })
-        .collect::<Option<Vec<_>>>();
-    let polygon: Option<PolygonMesh> = preboundary.map(|preboundary| {
-        let boundary = PolyBoundary::new(preboundary, &surface, tol);
-        trimming_tessellation(surface, &boundary, tol)
-    });
+    };
     let mut new_face = Face::debug_new(wires, polygon);
     if !orientation {
         new_face.invert();
@@ -580,6 +604,56 @@ fn spade_round(x: f64) -> f64 {
         true => 0.0,
         false => x,
     }
+}
+
+/// Tessellates a bounded surface without any trimming.
+///
+/// Generates a structured grid from parameter division, then triangulates
+/// each quad cell into two triangles. Skips CDT and inclusion tests entirely.
+fn untrimmed_tessellation<S>(
+    surface: &S,
+    range: ((f64, f64), (f64, f64)),
+    tol: f64,
+) -> PolygonMesh
+where
+    S: PreMeshableSurface,
+{
+    let (udiv, vdiv) = surface.parameter_division(range, tol);
+    let nu = udiv.len();
+    let nv = vdiv.len();
+    let mut positions = Vec::with_capacity(nu * nv);
+    let mut uv_coords = Vec::with_capacity(nu * nv);
+    let mut normals = Vec::with_capacity(nu * nv);
+    for u in &udiv {
+        for v in &vdiv {
+            positions.push(surface.subs(*u, *v));
+            uv_coords.push(Vector2::new(*u, *v));
+            normals.push(surface.normal(*u, *v));
+        }
+    }
+    let idx = |i: usize, j: usize| -> usize { i * nv + j };
+    let sv = |k: usize| -> StandardVertex { [k, k, k].into() };
+    let tri_faces: Vec<[StandardVertex; 3]> = (0..nu - 1)
+        .flat_map(|i| {
+            (0..nv - 1).flat_map(move |j| {
+                let a = idx(i, j);
+                let b = idx(i, j + 1);
+                let c = idx(i + 1, j + 1);
+                let d = idx(i + 1, j);
+                [[sv(a), sv(b), sv(c)], [sv(a), sv(c), sv(d)]]
+            })
+        })
+        .collect();
+    let mut mesh = PolygonMesh::debug_new(
+        StandardAttributes {
+            positions,
+            uv_coords,
+            normals,
+        },
+        Faces::from_tri_and_quad_faces(tri_faces, Vec::new()),
+    );
+    mesh.make_face_compatible_to_normal();
+    mesh
 }
 
 /// Tessellates one surface trimmed by polyline.
