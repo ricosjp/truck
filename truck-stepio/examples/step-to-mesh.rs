@@ -79,9 +79,9 @@ fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
                 let meshed_shells = shells
                     .into_iter()
                     .map(|shell| {
-                        let pre = shell.robust_triangulation(0.01).to_polygon();
-                        let bdd = pre.bounding_box();
-                        shell.robust_triangulation(bdd.diameter() * 0.001)
+                        let bdd = shell_bounding_box(&shell);
+                        let tol = f64::max(bdd.diameter() * 0.001, TOLERANCE);
+                        shell.robust_triangulation(tol)
                     })
                     .collect::<Vec<_>>();
                 Some(meshed_shells)
@@ -122,6 +122,33 @@ fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
             })
         })
         .collect()
+}
+
+/// Computes bounding box from vertices, edge curves, and bounded surface corners.
+fn shell_bounding_box<C, S>(shell: &CompressedShell<Point3, C, S>) -> BoundingBox<Point3>
+where
+    C: ParametricCurve3D + BoundedCurve,
+    S: ParametricSurface3D, {
+    let mut bdd: BoundingBox<Point3> = shell.vertices.iter().collect();
+    for edge in &shell.edges {
+        let (t0, t1) = edge.curve.range_tuple();
+        // Sample 5 points per edge to capture curvature extent.
+        for i in 0..=4 {
+            let t = t0 + (t1 - t0) * i as f64 / 4.0;
+            bdd.push(edge.curve.subs(t));
+        }
+    }
+    for face in &shell.faces {
+        let (urange, vrange) = face.surface.try_range_tuple();
+        if let (Some((u0, u1)), Some((v0, v1))) = (urange, vrange) {
+            bdd.push(face.surface.subs(u0, v0));
+            bdd.push(face.surface.subs(u1, v0));
+            bdd.push(face.surface.subs(u0, v1));
+            bdd.push(face.surface.subs(u1, v1));
+            bdd.push(face.surface.subs((u0 + u1) / 2.0, (v0 + v1) / 2.0));
+        }
+    }
+    bdd
 }
 
 fn output_obj(polyshells: &[MeshedCShell], path: &Path, condition_check: bool) {
