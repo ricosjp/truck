@@ -63,16 +63,20 @@ pub(super) fn cut_face_by_bezier(
         .iter()
         .cloned()
         .map(|mut boundary| {
-            if let Some(idx) = boundary.iter().position(|edge0| edge0.is_same(&front_edge)) {
-                let len = boundary.len();
-                if face.orientation() {
-                    boundary[idx] = new_front_edge.clone();
-                    boundary[(idx + 1) % len] = fillet_edge.clone();
-                    boundary[(idx + 2) % len] = new_back_edge.clone();
-                } else {
-                    boundary[(len + idx - 2) % len] = new_back_edge.inverse();
-                    boundary[(len + idx - 1) % len] = fillet_edge.inverse();
-                    boundary[idx] = new_front_edge.inverse();
+            let fillet_pos = boundary.iter().position(|e| e.id() == filleted_edge_id);
+            if let Some(fpos) = fillet_pos {
+                let front_pos = boundary.iter().position(|e| e.is_same(&front_edge));
+                let back_pos = boundary.iter().position(|e| e.is_same(&back_edge));
+                if let (Some(fp), Some(bp)) = (front_pos, back_pos) {
+                    if face.orientation() {
+                        boundary[fp] = new_front_edge.clone();
+                        boundary[fpos] = fillet_edge.clone();
+                        boundary[bp] = new_back_edge.clone();
+                    } else {
+                        boundary[fp] = new_front_edge.inverse();
+                        boundary[fpos] = fillet_edge.inverse();
+                        boundary[bp] = new_back_edge.inverse();
+                    }
                 }
             }
             boundary
@@ -126,7 +130,7 @@ pub(super) fn create_new_side(
                 } else {
                     new_boundary[len - edge_idx - 1] = right_face_back_edge.clone();
                     new_boundary[(2 * len - edge_idx - 2) % len] = left_face_front_edge.clone();
-                    new_boundary.insert(len - edge_idx, fillet_edge.clone());
+                    new_boundary.insert(len - edge_idx - 1, fillet_edge.clone());
                 }
             }
             new_boundary

@@ -2,9 +2,15 @@
 //!
 //! This is a technical indicator for comparing with Open CASCADE Technology, a great senior.
 //! We want to reproduce the bottle made in the [OCCT tutorial].
-//! Boolean operations are available via truck-shapeops. Filleting is available with the `fillet` feature.
+//!
+//! When the `fillet` feature is enabled, the body edges are filleted just like
+//! the OCCT tutorial (`BRepFilletAPI_MakeFillet` at radius = thickness / 12).
 //!
 //! Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
+//!
+//! ```bash
+//! cargo run -p truck-modeling --features fillet --example bottle
+//! ```
 //!
 //! [OCCT tutorial]: https://dev.opencascade.org/doc/overview/html/occt__tutorial.html
 
@@ -37,8 +43,45 @@ fn grue_body_neck(body: &mut Shell, neck: Shell) {
     body.extend(neck.into_iter().skip(1));
 }
 
+/// Collect the vertical `Line` edges of a body shell (those spanning the full height).
+#[cfg(feature = "fillet")]
+fn vertical_line_edges(shell: &Shell, height: f64) -> Vec<Edge> {
+    let mut edge_face_count = std::collections::HashMap::new();
+    for face in shell.face_iter() {
+        for wire in face.boundaries() {
+            for edge in wire.edge_iter() {
+                *edge_face_count.entry(edge.id()).or_insert(0u32) += 1;
+            }
+        }
+    }
+    let mut seen = std::collections::HashSet::new();
+    shell
+        .edge_iter()
+        .filter(|e| seen.insert(e.id()))
+        .filter(|e| edge_face_count[&e.id()] == 2)
+        .filter(|e| {
+            matches!(e.oriented_curve(), Curve::Line(_)) && {
+                let p0 = e.front().point();
+                let p1 = e.back().point();
+                (p0.y.abs() < 0.01 && (p1.y - height).abs() < 0.01)
+                    || (p1.y.abs() < 0.01 && (p0.y - height).abs() < 0.01)
+            }
+        })
+        .collect()
+}
+
 fn bottle(height: f64, width: f64, thickness: f64) -> Solid {
     let mut body = body_shell(0.0, height, width, thickness);
+
+    // Fillet the body's vertical edges (Line edges spanning the full height)
+    // matching the OCCT tutorial's BRepFilletAPI_MakeFillet at thickness / 12.
+    #[cfg(feature = "fillet")]
+    {
+        let edges = vertical_line_edges(&body, height);
+        let opts = FilletOptions::constant(thickness / 12.0);
+        fillet_edges(&mut body, &edges, Some(&opts)).expect("body fillet");
+    }
+
     let neck = cylinder(height, height / 10.0, thickness / 4.0);
     grue_body_neck(&mut body, neck);
 
@@ -49,6 +92,14 @@ fn bottle(height: f64, width: f64, thickness: f64) -> Solid {
         width - 2.0 * eps,
         thickness - 2.0 * eps,
     );
+
+    #[cfg(feature = "fillet")]
+    {
+        let edges = vertical_line_edges(&inner_body, height - 2.0 * eps);
+        let opts = FilletOptions::constant((thickness - 2.0 * eps) / 12.0);
+        fillet_edges(&mut inner_body, &edges, Some(&opts)).expect("inner body fillet");
+    }
+
     let inner_neck = cylinder(height - eps, height / 10.0 + eps, thickness / 4.0 - eps);
     grue_body_neck(&mut inner_body, inner_neck);
 

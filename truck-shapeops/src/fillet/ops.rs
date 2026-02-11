@@ -52,6 +52,10 @@ pub fn simple_fillet(
                 make(&|_| r)
             }
             RadiusSpec::Variable(f) => make(f.as_ref()),
+            RadiusSpec::PerEdge(radii) => match radii.first() {
+                Some(&r) => make(&|_| r),
+                None => None,
+            },
         }
         .ok_or(FilletError::GeometryFailed {
             context: "fillet surface computation",
@@ -149,10 +153,13 @@ pub fn fillet_with_side(
 pub fn fillet_along_wire(shell: &mut Shell, wire: &Wire, options: &FilletOptions) -> Result<()> {
     let division = options.division.get();
 
-    // Validate variable radius constraint for wire fillets.
-    if let RadiusSpec::Variable(f) = &options.radius {
-        if !f(0.0).near2(&f(1.0)) {
-            return Err(FilletError::VariableRadiusUnsupported);
+    // Validate variable radius constraint for closed wire fillets.
+    // Open wires don't wrap around, so f(0) ≈ f(1) is only needed for closed wires.
+    if wire.is_closed() {
+        if let RadiusSpec::Variable(f) = &options.radius {
+            if !f(0.0).near2(&f(1.0)) {
+                return Err(FilletError::VariableRadiusUnsupported);
+            }
         }
     }
     if !wire.is_continuous() {
@@ -188,6 +195,18 @@ pub fn fillet_along_wire(shell: &mut Shell, wire: &Wire, options: &FilletOptions
             division,
             &options.profile,
         ),
+        RadiusSpec::PerEdge(radii) => match radii.first() {
+            Some(&r) => fillet_surfaces_along_wire(
+                shell,
+                wire,
+                shared_face_index,
+                &adjacent_faces,
+                move |_| r,
+                division,
+                &options.profile,
+            ),
+            None => None,
+        },
     }
     .ok_or(FilletError::FilletSurfaceComputationFailed)?;
 

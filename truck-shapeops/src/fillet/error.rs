@@ -39,4 +39,12 @@ pub enum FilletError {
     /// The edge is too short for the requested fillet radius.
     #[error("Edge too short for fillet radius.")]
     DegenerateEdge,
+    /// Per-edge radius count does not match the number of edges.
+    #[error("Per-edge radius count ({given}) does not match edge count ({expected}).")]
+    PerEdgeRadiusMismatch {
+        /// Number of radii provided.
+        given: usize,
+        /// Number of edges requested.
+        expected: usize,
+    },
 }

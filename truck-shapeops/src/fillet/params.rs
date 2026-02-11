@@ -27,6 +27,8 @@ pub enum RadiusSpec {
     /// Rejected by [`fillet_along_wire`](super::fillet_along_wire) with
     /// [`FilletError::VariableRadiusUnsupported`](super::FilletError::VariableRadiusUnsupported).
     Variable(Box<dyn Fn(f64) -> f64>),
+    /// Per-edge radius. Length must match the edge count passed to [`fillet_edges`](super::fillet_edges).
+    PerEdge(Vec<f64>),
 }
 
 impl std::fmt::Debug for RadiusSpec {
@@ -34,6 +36,7 @@ impl std::fmt::Debug for RadiusSpec {
         match self {
             Self::Constant(r) => f.debug_tuple("Constant").field(r).finish(),
             Self::Variable(_) => f.debug_tuple("Variable").field(&"<fn>").finish(),
+            Self::PerEdge(v) => f.debug_tuple("PerEdge").field(v).finish(),
         }
     }
 }
@@ -65,6 +68,14 @@ impl FilletOptions {
     pub fn constant(radius: f64) -> Self {
         Self {
             radius: RadiusSpec::Constant(radius),
+            ..Default::default()
+        }
+    }
+
+    /// Creates options with per-edge radii and default division (5).
+    pub fn per_edge(radii: Vec<f64>) -> Self {
+        Self {
+            radius: RadiusSpec::PerEdge(radii),
             ..Default::default()
         }
     }

@@ -12,7 +12,12 @@ Modeling a bottle.
 
 This is a benchmark for comparison with Open CASCADE Technology.
 We want to reproduce the bottle made in the [OCCT tutorial].
-Filleting is supported via the `fillet` feature flag. Enable with `features = ["fillet"]`.
+When the `fillet` feature is enabled, the body edges are filleted just like
+the OCCT tutorial (`BRepFilletAPI_MakeFillet` at radius = thickness / 12).
+
+```bash
+cargo run -p truck-modeling --features fillet --example bottle
+```
 
 Generated json file can be visualized by `simple-shape-viewer`, an example of `truck-rendimpl`.
 
