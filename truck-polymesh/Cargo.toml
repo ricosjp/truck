@@ -21,3 +21,6 @@ serde = { workspace = true }
 truck-base = { workspace = true }
 truck-geotrait = { workspace = true }
 thiserror = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rayon = { workspace = true }
