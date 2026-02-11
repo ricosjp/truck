@@ -23,6 +23,6 @@ mod tests;
 pub use convert::{FilletableCurve, FilletableSurface};
 pub use edge_select::{fillet_edges, fillet_edges_generic};
 pub use error::FilletError;
-pub use ops::{fillet_along_wire, fillet_with_side, simple_fillet};
+pub use ops::{fillet, fillet_along_wire, fillet_with_side};
 pub use params::{FilletOptions, FilletProfile, RadiusSpec};
 pub use types::ParamCurveLinear;

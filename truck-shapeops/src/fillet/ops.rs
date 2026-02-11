@@ -12,7 +12,7 @@ type Result<T> = std::result::Result<T, FilletError>;
 /// Fillets a single shared edge between two faces.
 ///
 /// Returns `(new_face0, new_face1, fillet_face)`.
-pub fn simple_fillet(
+pub fn fillet(
     face0: &Face,
     face1: &Face,
     filleted_edge_id: EdgeID,
@@ -27,7 +27,7 @@ pub fn simple_fillet(
                 context: "filleted edge not found in face0",
             })?;
 
-    let division = options.division.get();
+    let division = options.divisions.get();
     let fillet_surface = {
         let surface0 = face0.oriented_surface();
         let surface1 = face1.oriented_surface();
@@ -110,7 +110,7 @@ pub fn fillet_with_side(
     side1: Option<&Face>,
     options: &FilletOptions,
 ) -> Result<(Face, Face, Face, Option<Face>, Option<Face>)> {
-    let (new_face0, new_face1, fillet) = simple_fillet(face0, face1, filleted_edge_id, options)?;
+    let (new_face0, new_face1, fillet) = fillet(face0, face1, filleted_edge_id, options)?;
 
     let (front_edge0, back_edge0) = {
         let fillet_edge_id = fillet.absolute_boundaries()[0][0].id();
@@ -151,7 +151,7 @@ pub fn fillet_with_side(
 /// Supports both open and closed wires. Modifies `shell` in place by replacing
 /// filleted faces and adding new fillet faces.
 pub fn fillet_along_wire(shell: &mut Shell, wire: &Wire, options: &FilletOptions) -> Result<()> {
-    let division = options.division.get();
+    let division = options.divisions.get();
 
     // Validate variable radius constraint for closed wire fillets.
     // Open wires don't wrap around, so f(0) ≈ f(1) is only needed for closed wires.

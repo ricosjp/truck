@@ -67,7 +67,10 @@ fn fillet_box_edge() {
 
     let initial_face_count = shell.len();
 
-    let params = FilletOptions::constant(0.4);
+    let params = FilletOptions {
+        radius: RadiusSpec::Constant(0.4),
+        ..Default::default()
+    };
     fillet_edges(&mut shell, &[edge[5].clone()], Some(&params)).unwrap();
 
     assert!(shell.len() > initial_face_count);

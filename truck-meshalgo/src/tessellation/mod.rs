@@ -2,21 +2,67 @@ use crate::*;
 use spade::{iterators::*, *};
 use truck_topology::{compress::*, *};
 
-/// Configuration for tessellation.
-#[derive(Clone, Copy, Debug)]
-pub struct TessellationConfig {
-    /// Geometric tolerance for curve and surface approximation.
-    pub tol: f64,
-    /// Maximum number of Newton iterations per parameter search.
-    pub search_trials: usize,
+/// Tessellation output primitive preference.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum QuadMode {
+    /// Keep triangle output.
+    #[default]
+    Triangles,
+    /// Convert triangles to quads when possible.
+    PreferQuads,
+    /// Force all triangles into quads.
+    AllQuads,
+    /// Prefer UV-grid quads and keep non-quad elements near trims.
+    IsoQuads,
 }
 
-impl TessellationConfig {
-    /// Creates a config with default search trials (100).
-    pub fn new(tol: f64) -> Self {
+/// Quad generation options.
+#[derive(Clone, Copy, Debug)]
+pub struct QuadOptions {
+    /// Primitive generation mode.
+    pub mode: QuadMode,
+    /// Coplanarity tolerance used for triangle pairing.
+    pub plane_tolerance: f64,
+    /// Shape score tolerance used for triangle pairing.
+    pub score_tolerance: f64,
+    /// Maximum normal blend angle in radians.
+    pub normal_blend_angle: f64,
+    /// Minimum quad area accepted by the `AllQuads` fallback.
+    pub minimum_area: f64,
+    /// Maximum corner angle accepted by the `AllQuads` fallback.
+    pub maximum_corner_angle: f64,
+}
+
+impl Default for QuadOptions {
+    fn default() -> Self {
         Self {
-            tol,
+            mode: QuadMode::Triangles,
+            plane_tolerance: 0.01,
+            score_tolerance: 1.0,
+            normal_blend_angle: std::f64::consts::PI / 4.0,
+            minimum_area: TOLERANCE * TOLERANCE,
+            maximum_corner_angle: 175.0 * std::f64::consts::PI / 180.0,
+        }
+    }
+}
+
+/// Options for tessellation.
+#[derive(Clone, Copy, Debug)]
+pub struct TessellationOptions {
+    /// Geometric tolerance for curve and surface approximation.
+    pub tolerance: f64,
+    /// Maximum number of Newton iterations per parameter search.
+    pub search_trials: usize,
+    /// Quad generation policy.
+    pub quad: QuadOptions,
+}
+
+impl Default for TessellationOptions {
+    fn default() -> Self {
+        Self {
+            tolerance: 0.01,
             search_trials: 100,
+            quad: QuadOptions::default(),
         }
     }
 }
@@ -153,7 +199,7 @@ pub trait MeshableShape {
     ///
     /// # Panics
     ///
-    /// `tol` must be greater than or equal to `TOLERANCE`.
+    /// `tolerance` must be greater than or equal to `TOLERANCE`.
     ///
     /// # Remarks
     ///
@@ -183,7 +229,7 @@ pub trait MeshableShape {
     /// mesh.put_together_same_attrs(TOLERANCE);
     /// assert_eq!(mesh.shell_condition(), ShellCondition::Closed);
     /// ```
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape;
+    fn triangulation(&self, tolerance: f64) -> Self::MeshedShape;
 }
 
 /// Trait for tessellating `Shell` and `Solid` in `truck-modeling`.
@@ -195,7 +241,7 @@ pub trait RobustMeshableShape {
     ///
     /// # Panics
     ///
-    /// `tol` must be greater than or equal to `TOLERANCE`.
+    /// `tolerance` must be greater than or equal to `TOLERANCE`.
     ///
     /// # Remarks
     ///
@@ -269,78 +315,92 @@ pub trait RobustMeshableShape {
     /// let poly = poly_shell[0].surface().unwrap();
     /// assert!(!poly.positions().is_empty());
     /// ```
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape;
+    fn robust_triangulation(&self, tolerance: f64) -> Self::MeshedShape;
 }
 
-/// Tessellates a [`Shell`] with a [`TessellationConfig`].
-pub fn triangulation_with_config<C: PolylineableCurve, S: MeshableSurface>(
+/// Tessellates a [`Shell`] with a [`TessellationOptions`].
+pub fn triangulation_with<C: PolylineableCurve, S: MeshableSurface>(
     shell: &Shell<Point3, C, S>,
-    config: TessellationConfig,
+    options: TessellationOptions,
 ) -> Shell<Point3, PolylineCurve, Option<PolygonMesh>> {
-    nonpositive_tolerance!(config.tol);
-    let sp = triangulation::search_parameter_sp::<S>(config.search_trials);
+    nonpositive_tolerance!(options.tolerance);
+    let sp = triangulation::search_parameter_sp::<S>(options.search_trials);
     #[cfg(not(target_arch = "wasm32"))]
-    let res = triangulation::shell_tessellation(shell, config.tol, sp);
+    let res = triangulation::shell_tessellation(shell, options.tolerance, sp, options.quad);
     #[cfg(target_arch = "wasm32")]
-    let res = triangulation::shell_tessellation_single_thread(shell, config.tol, sp);
+    let res =
+        triangulation::shell_tessellation_single_thread(shell, options.tolerance, sp, options.quad);
     res
 }
 
-/// Tessellates a [`Shell`] with robust parameter search and a [`TessellationConfig`].
-pub fn robust_triangulation_with_config<C: PolylineableCurve, S: RobustMeshableSurface>(
+/// Tessellates a [`Shell`] with robust parameter search and a [`TessellationOptions`].
+pub fn robust_triangulation_with<C: PolylineableCurve, S: RobustMeshableSurface>(
     shell: &Shell<Point3, C, S>,
-    config: TessellationConfig,
+    options: TessellationOptions,
 ) -> Shell<Point3, PolylineCurve, Option<PolygonMesh>> {
-    nonpositive_tolerance!(config.tol);
-    let sp = triangulation::search_nearest_parameter_sp::<S>(config.search_trials);
+    nonpositive_tolerance!(options.tolerance);
+    let sp = triangulation::search_nearest_parameter_sp::<S>(options.search_trials);
     #[cfg(not(target_arch = "wasm32"))]
-    let res = triangulation::shell_tessellation(shell, config.tol, sp);
+    let res = triangulation::shell_tessellation(shell, options.tolerance, sp, options.quad);
     #[cfg(target_arch = "wasm32")]
-    let res = triangulation::shell_tessellation_single_thread(shell, config.tol, sp);
+    let res =
+        triangulation::shell_tessellation_single_thread(shell, options.tolerance, sp, options.quad);
     res
 }
 
-/// Tessellates a [`CompressedShell`] with a [`TessellationConfig`].
-pub fn cshell_triangulation_with_config<C: PolylineableCurve, S: MeshableSurface>(
+/// Tessellates a [`CompressedShell`] with a [`TessellationOptions`].
+pub fn cshell_triangulation_with<C: PolylineableCurve, S: MeshableSurface>(
     shell: &CompressedShell<Point3, C, S>,
-    config: TessellationConfig,
+    options: TessellationOptions,
 ) -> CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>> {
-    nonpositive_tolerance!(config.tol);
-    let sp = triangulation::search_parameter_sp::<S>(config.search_trials);
-    triangulation::cshell_tessellation(shell, config.tol, sp)
+    nonpositive_tolerance!(options.tolerance);
+    let sp = triangulation::search_parameter_sp::<S>(options.search_trials);
+    triangulation::cshell_tessellation(shell, options.tolerance, sp, options.quad)
 }
 
-/// Tessellates a [`CompressedShell`] with robust parameter search and a [`TessellationConfig`].
-pub fn robust_cshell_triangulation_with_config<C: PolylineableCurve, S: RobustMeshableSurface>(
+/// Tessellates a [`CompressedShell`] with robust parameter search and a [`TessellationOptions`].
+pub fn robust_cshell_triangulation_with<C: PolylineableCurve, S: RobustMeshableSurface>(
     shell: &CompressedShell<Point3, C, S>,
-    config: TessellationConfig,
+    options: TessellationOptions,
 ) -> CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>> {
-    nonpositive_tolerance!(config.tol);
-    let sp = triangulation::search_nearest_parameter_sp::<S>(config.search_trials);
-    triangulation::cshell_tessellation(shell, config.tol, sp)
+    nonpositive_tolerance!(options.tolerance);
+    let sp = triangulation::search_nearest_parameter_sp::<S>(options.search_trials);
+    triangulation::cshell_tessellation(shell, options.tolerance, sp, options.quad)
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C, S> {
     type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
-        triangulation_with_config(self, TessellationConfig::new(tol))
+    fn triangulation(&self, tolerance: f64) -> Self::MeshedShape {
+        triangulation_with(
+            self,
+            TessellationOptions {
+                tolerance,
+                ..Default::default()
+            },
+        )
     }
 }
 
 impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Shell<Point3, C, S> {
     type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
-        robust_triangulation_with_config(self, TessellationConfig::new(tol))
+    fn robust_triangulation(&self, tolerance: f64) -> Self::MeshedShape {
+        robust_triangulation_with(
+            self,
+            TessellationOptions {
+                tolerance,
+                ..Default::default()
+            },
+        )
     }
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C, S> {
     type MeshedShape = Solid<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
+    fn triangulation(&self, tolerance: f64) -> Self::MeshedShape {
         let boundaries = self
             .boundaries()
             .iter()
-            .map(|shell| shell.triangulation(tol))
+            .map(|shell| shell.triangulation(tolerance))
             .collect::<Vec<_>>();
         Solid::new(boundaries)
     }
@@ -348,11 +408,11 @@ impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Solid<Point3, C
 
 impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Solid<Point3, C, S> {
     type MeshedShape = Solid<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
+    fn robust_triangulation(&self, tolerance: f64) -> Self::MeshedShape {
         let boundaries = self
             .boundaries()
             .iter()
-            .map(|shell| shell.robust_triangulation(tol))
+            .map(|shell| shell.robust_triangulation(tolerance))
             .collect::<Vec<_>>();
         Solid::new(boundaries)
     }
@@ -360,8 +420,14 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Sol
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedShell<Point3, C, S> {
     type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
-        cshell_triangulation_with_config(self, TessellationConfig::new(tol))
+    fn triangulation(&self, tolerance: f64) -> Self::MeshedShape {
+        cshell_triangulation_with(
+            self,
+            TessellationOptions {
+                tolerance,
+                ..Default::default()
+            },
+        )
     }
 }
 
@@ -369,18 +435,24 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape
     for CompressedShell<Point3, C, S>
 {
     type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
-        robust_cshell_triangulation_with_config(self, TessellationConfig::new(tol))
+    fn robust_triangulation(&self, tolerance: f64) -> Self::MeshedShape {
+        robust_cshell_triangulation_with(
+            self,
+            TessellationOptions {
+                tolerance,
+                ..Default::default()
+            },
+        )
     }
 }
 
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedSolid<Point3, C, S> {
     type MeshedShape = CompressedSolid<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn triangulation(&self, tol: f64) -> Self::MeshedShape {
+    fn triangulation(&self, tolerance: f64) -> Self::MeshedShape {
         let boundaries = self
             .boundaries
             .iter()
-            .map(|shell| shell.triangulation(tol))
+            .map(|shell| shell.triangulation(tolerance))
             .collect::<Vec<_>>();
         CompressedSolid { boundaries }
     }
@@ -390,11 +462,11 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape
     for CompressedSolid<Point3, C, S>
 {
     type MeshedShape = CompressedSolid<Point3, PolylineCurve, Option<PolygonMesh>>;
-    fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
+    fn robust_triangulation(&self, tolerance: f64) -> Self::MeshedShape {
         let boundaries = self
             .boundaries
             .iter()
-            .map(|shell| shell.robust_triangulation(tol))
+            .map(|shell| shell.robust_triangulation(tolerance))
             .collect::<Vec<_>>();
         CompressedSolid { boundaries }
     }

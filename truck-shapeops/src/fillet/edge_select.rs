@@ -238,7 +238,7 @@ fn find_side_face(
 /// Fillets the specified edges of a shell.
 ///
 /// Resolves face adjacency automatically and dispatches to
-/// [`simple_fillet`](super::simple_fillet)/[`fillet_with_side`](super::fillet_with_side)
+/// [`fillet`](super::fillet)/[`fillet_with_side`](super::fillet_with_side)
 /// for single edges or [`fillet_along_wire`](super::fillet_along_wire) for multi-edge chains.
 pub fn fillet_edges(
     shell: &mut Shell,
@@ -357,7 +357,7 @@ pub fn fillet_edges(
             let opts = if let RadiusSpec::PerEdge(radii) = &options.radius {
                 chain_opts = FilletOptions {
                     radius: RadiusSpec::Constant(radii[edge_id_to_idx[&eid]]),
-                    division: options.division,
+                    divisions: options.divisions,
                     profile: options.profile.clone(),
                 };
                 &chain_opts
@@ -405,7 +405,7 @@ pub fn fillet_edges(
                         let idx = ((t * n as f64).floor() as usize).min(n - 1);
                         chain_radii[idx]
                     })),
-                    division: options.division,
+                    divisions: options.divisions,
                     profile: options.profile.clone(),
                 };
                 &chain_opts

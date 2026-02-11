@@ -78,7 +78,10 @@ fn bottle(height: f64, width: f64, thickness: f64) -> Solid {
     #[cfg(feature = "fillet")]
     {
         let edges = vertical_line_edges(&body, height);
-        let opts = FilletOptions::constant(thickness / 12.0);
+        let opts = FilletOptions {
+            radius: RadiusSpec::Constant(thickness / 12.0),
+            ..Default::default()
+        };
         fillet_edges(&mut body, &edges, Some(&opts)).expect("body fillet");
     }
 
@@ -96,7 +99,10 @@ fn bottle(height: f64, width: f64, thickness: f64) -> Solid {
     #[cfg(feature = "fillet")]
     {
         let edges = vertical_line_edges(&inner_body, height - 2.0 * eps);
-        let opts = FilletOptions::constant((thickness - 2.0 * eps) / 12.0);
+        let opts = FilletOptions {
+            radius: RadiusSpec::Constant((thickness - 2.0 * eps) / 12.0),
+            ..Default::default()
+        };
         fillet_edges(&mut inner_body, &edges, Some(&opts)).expect("inner body fillet");
     }
 

@@ -22,7 +22,7 @@ pub enum RadiusSpec {
     Constant(f64),
     /// Variable radius as a function of normalized parameter `t` in `[0, 1]`.
     ///
-    /// Supported for single-edge fillets ([`simple_fillet`](super::simple_fillet),
+    /// Supported for single-edge fillets ([`fillet`](super::fillet),
     /// [`fillet_with_side`](super::fillet_with_side)).
     /// Rejected by [`fillet_along_wire`](super::fillet_along_wire) with
     /// [`FilletError::VariableRadiusUnsupported`](super::FilletError::VariableRadiusUnsupported).
@@ -47,7 +47,7 @@ pub struct FilletOptions {
     /// Radius specification.
     pub radius: RadiusSpec,
     /// Number of divisions for the rolling ball algorithm. Default: 5.
-    pub division: NonZeroUsize,
+    pub divisions: NonZeroUsize,
     /// Profile shape. Default: [`FilletProfile::Round`].
     pub profile: FilletProfile,
 }
@@ -57,46 +57,8 @@ impl Default for FilletOptions {
         Self {
             radius: RadiusSpec::Constant(0.1),
             // SAFETY: 5 != 0
-            division: NonZeroUsize::new(5).unwrap(),
+            divisions: NonZeroUsize::new(5).unwrap(),
             profile: FilletProfile::default(),
         }
-    }
-}
-
-impl FilletOptions {
-    /// Creates options with a constant radius and default division (5).
-    pub fn constant(radius: f64) -> Self {
-        Self {
-            radius: RadiusSpec::Constant(radius),
-            ..Default::default()
-        }
-    }
-
-    /// Creates options with per-edge radii and default division (5).
-    pub fn per_edge(radii: Vec<f64>) -> Self {
-        Self {
-            radius: RadiusSpec::PerEdge(radii),
-            ..Default::default()
-        }
-    }
-
-    /// Creates options with a variable radius function and default division (5).
-    pub fn variable(f: impl Fn(f64) -> f64 + 'static) -> Self {
-        Self {
-            radius: RadiusSpec::Variable(Box::new(f)),
-            ..Default::default()
-        }
-    }
-
-    /// Sets the division count.
-    pub fn with_division(mut self, division: NonZeroUsize) -> Self {
-        self.division = division;
-        self
-    }
-
-    /// Sets the profile shape.
-    pub fn with_profile(mut self, profile: FilletProfile) -> Self {
-        self.profile = profile;
-        self
     }
 }
