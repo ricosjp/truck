@@ -318,8 +318,23 @@ fn get_mindiff(u: f64, u0: f64, up: f64) -> f64 {
     (-2..=2).map(closure).min_by(abs_diff(u0)).unwrap()
 }
 
-#[derive(Debug, Default, Clone)]
-struct PolyBoundary(Vec<Vec<SurfacePoint>>);
+#[derive(Debug, Clone)]
+struct PolyBoundary {
+    loops: Vec<Vec<SurfacePoint>>,
+    /// UV-space axis-aligned bounding box for cheap rejection in `include()`.
+    uv_min: Point2,
+    uv_max: Point2,
+}
+
+impl Default for PolyBoundary {
+    fn default() -> Self {
+        Self {
+            loops: Vec::new(),
+            uv_min: Point2::new(f64::INFINITY, f64::INFINITY),
+            uv_max: Point2::new(f64::NEG_INFINITY, f64::NEG_INFINITY),
+        }
+    }
+}
 
 fn normalize_range(curve: &mut Vec<SurfacePoint>, compidx: usize, (u0, u1): (f64, f64)) {
     let p = curve[0];
@@ -459,14 +474,33 @@ impl PolyBoundary {
                 closed.push(connect_edges([vec0, vec1, vec2, vec3]));
             }
         }
-        Self(closed)
+        let (mut uv_min, mut uv_max) = (
+            Point2::new(f64::INFINITY, f64::INFINITY),
+            Point2::new(f64::NEG_INFINITY, f64::NEG_INFINITY),
+        );
+        for pt in closed.iter().flatten() {
+            uv_min.x = f64::min(uv_min.x, pt.x);
+            uv_min.y = f64::min(uv_min.y, pt.y);
+            uv_max.x = f64::max(uv_max.x, pt.x);
+            uv_max.y = f64::max(uv_max.y, pt.y);
+        }
+        Self {
+            loops: closed,
+            uv_min,
+            uv_max,
+        }
     }
 
     /// whether `c` is included in the domain with boundary = `self`.
     fn include(&self, c: Point2) -> bool {
+        // AABB early reject.
+        if c.x < self.uv_min.x || c.x > self.uv_max.x || c.y < self.uv_min.y || c.y > self.uv_max.y
+        {
+            return false;
+        }
         let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
         let r = Vector2::new(f64::cos(t), f64::sin(t));
-        self.0
+        self.loops
             .iter()
             .flat_map(|vec| vec.iter().circular_tuple_windows())
             .try_fold(0_i32, move |counter, (p0, p1)| {
@@ -497,7 +531,7 @@ impl PolyBoundary {
         boundary_map: &mut HashMap<FixedVertexHandle, Point3>,
     ) {
         let poly2tri: Vec<_> = self
-            .0
+            .loops
             .iter()
             .flatten()
             .map(|pt| {
@@ -513,7 +547,7 @@ impl PolyBoundary {
             .collect();
         let mut prev: Option<usize> = None;
         let mut counter = 0;
-        self.0
+        self.loops
             .iter()
             .map(Vec::len)
             .flat_map(|len| {
@@ -573,13 +607,10 @@ fn insert_surface(
     polyline: &PolyBoundary,
     tol: f64,
 ) {
-    let bdb: BoundingBox<Point2> = polyline
-        .0
-        .iter()
-        .flatten()
-        .map(std::ops::Deref::deref)
-        .collect();
-    let range = ((bdb.min()[0], bdb.max()[0]), (bdb.min()[1], bdb.max()[1]));
+    let range = (
+        (polyline.uv_min.x, polyline.uv_max.x),
+        (polyline.uv_min.y, polyline.uv_max.y),
+    );
     let (udiv, vdiv) = surface.parameter_division(range, tol);
     let insert_res: Vec<Vec<Option<_>>> = udiv
         .into_iter()
