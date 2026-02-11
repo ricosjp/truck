@@ -2,6 +2,25 @@ use crate::*;
 use spade::{iterators::*, *};
 use truck_topology::{compress::*, *};
 
+/// Configuration for tessellation.
+#[derive(Clone, Copy, Debug)]
+pub struct TessellationConfig {
+    /// Geometric tolerance for curve and surface approximation.
+    pub tol: f64,
+    /// Maximum number of Newton iterations per parameter search.
+    pub search_trials: usize,
+}
+
+impl TessellationConfig {
+    /// Creates a config with default search trials (100).
+    pub fn new(tol: f64) -> Self {
+        Self {
+            tol,
+            search_trials: 100,
+        }
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 mod parallelizable {
     /// Parallelizable by `rayon`.
@@ -253,39 +272,65 @@ pub trait RobustMeshableShape {
     fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape;
 }
 
+/// Tessellates a [`Shell`] with a [`TessellationConfig`].
+pub fn triangulation_with_config<C: PolylineableCurve, S: MeshableSurface>(
+    shell: &Shell<Point3, C, S>,
+    config: TessellationConfig,
+) -> Shell<Point3, PolylineCurve, Option<PolygonMesh>> {
+    nonpositive_tolerance!(config.tol);
+    let sp = triangulation::search_parameter_sp::<S>(config.search_trials);
+    #[cfg(not(target_arch = "wasm32"))]
+    let res = triangulation::shell_tessellation(shell, config.tol, sp);
+    #[cfg(target_arch = "wasm32")]
+    let res = triangulation::shell_tessellation_single_thread(shell, config.tol, sp);
+    res
+}
+
+/// Tessellates a [`Shell`] with robust parameter search and a [`TessellationConfig`].
+pub fn robust_triangulation_with_config<C: PolylineableCurve, S: RobustMeshableSurface>(
+    shell: &Shell<Point3, C, S>,
+    config: TessellationConfig,
+) -> Shell<Point3, PolylineCurve, Option<PolygonMesh>> {
+    nonpositive_tolerance!(config.tol);
+    let sp = triangulation::search_nearest_parameter_sp::<S>(config.search_trials);
+    #[cfg(not(target_arch = "wasm32"))]
+    let res = triangulation::shell_tessellation(shell, config.tol, sp);
+    #[cfg(target_arch = "wasm32")]
+    let res = triangulation::shell_tessellation_single_thread(shell, config.tol, sp);
+    res
+}
+
+/// Tessellates a [`CompressedShell`] with a [`TessellationConfig`].
+pub fn cshell_triangulation_with_config<C: PolylineableCurve, S: MeshableSurface>(
+    shell: &CompressedShell<Point3, C, S>,
+    config: TessellationConfig,
+) -> CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>> {
+    nonpositive_tolerance!(config.tol);
+    let sp = triangulation::search_parameter_sp::<S>(config.search_trials);
+    triangulation::cshell_tessellation(shell, config.tol, sp)
+}
+
+/// Tessellates a [`CompressedShell`] with robust parameter search and a [`TessellationConfig`].
+pub fn robust_cshell_triangulation_with_config<C: PolylineableCurve, S: RobustMeshableSurface>(
+    shell: &CompressedShell<Point3, C, S>,
+    config: TessellationConfig,
+) -> CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>> {
+    nonpositive_tolerance!(config.tol);
+    let sp = triangulation::search_nearest_parameter_sp::<S>(config.search_trials);
+    triangulation::cshell_tessellation(shell, config.tol, sp)
+}
+
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for Shell<Point3, C, S> {
     type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
     fn triangulation(&self, tol: f64) -> Self::MeshedShape {
-        nonpositive_tolerance!(tol);
-        #[cfg(not(target_arch = "wasm32"))]
-        let res = triangulation::shell_tessellation(self, tol, triangulation::by_search_parameter);
-        #[cfg(target_arch = "wasm32")]
-        let res = triangulation::shell_tessellation_single_thread(
-            self,
-            tol,
-            triangulation::by_search_parameter,
-        );
-        res
+        triangulation_with_config(self, TessellationConfig::new(tol))
     }
 }
 
 impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Shell<Point3, C, S> {
     type MeshedShape = Shell<Point3, PolylineCurve, Option<PolygonMesh>>;
     fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
-        nonpositive_tolerance!(tol);
-        #[cfg(not(target_arch = "wasm32"))]
-        let res = triangulation::shell_tessellation(
-            self,
-            tol,
-            triangulation::by_search_nearest_parameter,
-        );
-        #[cfg(target_arch = "wasm32")]
-        let res = triangulation::shell_tessellation_single_thread(
-            self,
-            tol,
-            triangulation::by_search_nearest_parameter,
-        );
-        res
+        robust_triangulation_with_config(self, TessellationConfig::new(tol))
     }
 }
 
@@ -316,8 +361,7 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape for Sol
 impl<C: PolylineableCurve, S: MeshableSurface> MeshableShape for CompressedShell<Point3, C, S> {
     type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
     fn triangulation(&self, tol: f64) -> Self::MeshedShape {
-        nonpositive_tolerance!(tol);
-        triangulation::cshell_tessellation(self, tol, triangulation::by_search_parameter)
+        cshell_triangulation_with_config(self, TessellationConfig::new(tol))
     }
 }
 
@@ -326,8 +370,7 @@ impl<C: PolylineableCurve, S: RobustMeshableSurface> RobustMeshableShape
 {
     type MeshedShape = CompressedShell<Point3, PolylineCurve, Option<PolygonMesh>>;
     fn robust_triangulation(&self, tol: f64) -> Self::MeshedShape {
-        nonpositive_tolerance!(tol);
-        triangulation::cshell_tessellation(self, tol, triangulation::by_search_nearest_parameter)
+        robust_cshell_triangulation_with_config(self, TessellationConfig::new(tol))
     }
 }
 

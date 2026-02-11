@@ -21,32 +21,32 @@ pub(super) trait SP<S>:
 }
 impl<S, F> SP<S> for F where F: Fn(&S, Point3, Option<(f64, f64)>) -> Option<(f64, f64)> + Parallelizable {}
 
-pub(super) fn by_search_parameter<S>(
-    surface: &S,
-    point: Point3,
-    hint: Option<(f64, f64)>,
-) -> Option<(f64, f64)>
-where
-    S: MeshableSurface,
-{
-    surface
-        .search_parameter(point, hint, 100)
-        .or_else(|| surface.search_parameter(point, None, 100))
+pub(super) fn search_parameter_sp<S: MeshableSurface>(trials: usize) -> impl SP<S> {
+    move |surface: &S, point: Point3, hint: Option<(f64, f64)>| {
+        surface
+            .search_parameter(point, hint, trials)
+            .or_else(|| surface.search_parameter(point, None, trials))
+    }
 }
 
-pub(super) fn by_search_nearest_parameter<S>(
+pub(super) fn search_nearest_parameter_sp<S: RobustMeshableSurface>(trials: usize) -> impl SP<S> {
+    move |surface: &S, point: Point3, hint: Option<(f64, f64)>| {
+        surface
+            .search_parameter(point, hint, trials)
+            .or_else(|| surface.search_parameter(point, None, trials))
+            .or_else(|| surface.search_nearest_parameter(point, hint, trials))
+            .or_else(|| surface.search_nearest_parameter(point, None, trials))
+    }
+}
+
+/// Compatibility wrapper: searches parameter with 100 trials.
+#[cfg(test)]
+pub(super) fn by_search_parameter<S: MeshableSurface>(
     surface: &S,
     point: Point3,
     hint: Option<(f64, f64)>,
-) -> Option<(f64, f64)>
-where
-    S: RobustMeshableSurface,
-{
-    surface
-        .search_parameter(point, hint, 100)
-        .or_else(|| surface.search_parameter(point, None, 100))
-        .or_else(|| surface.search_nearest_parameter(point, hint, 100))
-        .or_else(|| surface.search_nearest_parameter(point, None, 100))
+) -> Option<(f64, f64)> {
+    search_parameter_sp::<S>(100)(surface, point, hint)
 }
 
 /// Tessellates faces
