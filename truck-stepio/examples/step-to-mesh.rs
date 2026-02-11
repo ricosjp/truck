@@ -151,6 +151,7 @@ where
     bdd
 }
 
+
 fn output_obj(polyshells: &[MeshedCShell], path: &Path, condition_check: bool) {
     let mut polymesh = PolygonMesh::default();
     polyshells.iter().for_each(|shell| {
