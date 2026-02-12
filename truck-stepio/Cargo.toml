@@ -30,7 +30,7 @@ truck-polymesh = { workspace = true }
 truck-topology = { workspace = true }
 
 [dev-dependencies]
-clap = { version = "4.5.57", features = ["derive"] }
+clap = { version = "4.5.58", features = ["derive"] }
 espr-derive = "0.4.0"
 itertools = { workspace = true }
 serde_json = { workspace = true }
