@@ -1,5 +1,14 @@
 use super::*;
 
+impl From<IntersectionCurve<BSplineCurve<Point3>, Surface, Surface>> for Curve3D {
+    fn from(ic: IntersectionCurve<BSplineCurve<Point3>, Surface, Surface>) -> Self {
+        // Extract the B-spline curve from the intersection curve
+        // The intersection curve stores the approximating B-spline as its leader
+        let (_, _, leader) = ic.destruct();
+        Curve3D::BSplineCurve(leader)
+    }
+}
+
 impl ToSameGeometry<Curve3D> for Line<Point3> {
     #[inline]
     fn to_same_geometry(&self) -> Curve3D { Curve3D::Line(*self) }
