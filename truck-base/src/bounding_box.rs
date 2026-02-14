@@ -28,6 +28,8 @@ pub trait Bounded:
     fn diagonal(self, other: Self) -> Self::Vector;
     #[doc(hidden)]
     fn mid(self, other: Self) -> Self;
+    #[doc(hidden)]
+    fn dimension(self) -> usize;
 }
 
 macro_rules! pr2 {
@@ -76,6 +78,9 @@ macro_rules! impl_bounded {
             fn diagonal(self, other: Self) -> Self::Vector { self - other }
             fn mid(self, other: Self) -> Self {
                 self + (other - self) / (S::one() + S::one())
+            }
+            fn dimension(self)->usize {
+                [$($num),*].len()
             }
         }
     };
@@ -135,7 +140,14 @@ impl<V: Bounded> BoundingBox<V> {
     /// assert!(!bdd_box.is_empty());
     /// ```
     #[inline(always)]
-    pub fn is_empty(self) -> bool { self.0[0] > self.1[0] }
+    pub fn is_empty(self) -> bool {
+        for i in 0..self.0.dimension() {
+            if self.0[i] > self.1[i] {
+                return true;
+            }
+        }
+        false
+    }
     /// Returns the reference to the maximum point.
     /// # Examples
     /// ```
@@ -608,4 +620,35 @@ impl<V: Bounded> PartialOrd for BoundingBox<V> {
             (false, false) => None,
         }
     }
+}
+#[test]
+fn test_bbox_non_crossing() {
+    use crate::cgmath64::Point2;
+    let a = BoundingBox::<Point2>::from_iter(&[
+        Point2::new(2.0, 1.0),
+        Point2::new(3.9999999, 4.999999),
+    ]);
+    let b = BoundingBox::<Point2>::from_iter(&[Point2::new(0.0, 5.0), Point2::new(3.0, 7.0)]);
+    let intersection = a ^ b;
+    assert_eq!(intersection.is_empty(), true);
+}
+#[test]
+fn test_bbox_touch_edge() {
+    use crate::cgmath64::Point2;
+    let a = BoundingBox::<Point2>::from_iter(&[Point2::new(2.0, 1.0), Point2::new(3.0, 4.0)]);
+    let b = BoundingBox::<Point2>::from_iter(&[Point2::new(3.0, 0.0), Point2::new(4.0, 3.0)]);
+    let intersection = a ^ b;
+    assert_eq!(intersection.is_empty(), false);
+    assert_eq!(intersection.min(), Point2::new(3.0, 1.0));
+    assert_eq!(intersection.max(), Point2::new(3.0, 3.0));
+}
+#[test]
+fn test_bbox_touch_corner() {
+    use crate::cgmath64::Point2;
+    let a = BoundingBox::<Point2>::from_iter(&[Point2::new(2.0, 1.0), Point2::new(3.0, 4.0)]);
+    let b = BoundingBox::<Point2>::from_iter(&[Point2::new(3.0, 4.0), Point2::new(4.0, 8.0)]);
+    let intersection = a ^ b;
+    assert_eq!(intersection.is_empty(), false);
+    assert_eq!(intersection.min(), Point2::new(3.0, 4.0));
+    assert_eq!(intersection.max(), Point2::new(3.0, 4.0));
 }
