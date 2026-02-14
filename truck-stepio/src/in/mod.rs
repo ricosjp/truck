@@ -1043,7 +1043,11 @@ impl From<&Axis2Placement3d> for Matrix4 {
         };
         let x = match &axis.ref_direction {
             Some(axis) => Vector3::from(axis),
-            None => Vector3::unit_x(),
+            // may can cause a vector of length 0 later, if z is parallel to x
+            None => match z.near(&Vector3::unit_x()) { 
+                true => Vector3::unit_y(),
+                false => Vector3::unit_x(),
+            },
         };
         let x = (x - x.dot(z) * z).normalize();
         let y = z.cross(x);
